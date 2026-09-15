@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: telme
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:telme}
+    username: ${POSTGRES_USER:telme}
+    password: ${POSTGRES_PASSWORD:telme}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
