@@ -47,7 +47,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # 아래 마이 이그레이션 검사에서 base 브랜치와 비교하려면 전체 이력 필요
+          fetch-depth: 0   # 아래 마이그레이션 검사에서 base 브랜치와 비교하려면 전체 이력 필요
 
       - name: 적용된 마이그레이션 수정 여부 검사
         if: github.event_name == 'pull_request'
