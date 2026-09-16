@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -52,6 +53,24 @@ public class GlobalExceptionHandler {
         		errorCode.getCode(),
         		errorCode.getMessage(),
                 errors
+        );
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(errorResponse);
+    }
+
+    // 잘못된 요청 본문(JSON 파싱 실패 등) 처리
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<CustomResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+
+        log.warn("[HttpMessageNotReadableException] {}", ex.getMessage());
+
+        BaseErrorCode errorCode = CommonErrorCode.BAD_REQUEST;
+
+        CustomResponse<Void> errorResponse = CustomResponse.onFailure(
+        		errorCode.getCode(),
+        		errorCode.getMessage()
         );
 
         return ResponseEntity
