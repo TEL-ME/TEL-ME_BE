@@ -99,9 +99,6 @@ CREATE INDEX idx_generation_exec ON llm_generations (execution_id);
 DROP INDEX idx_message_sources_message_id;
 CREATE INDEX idx_source_message ON message_sources (message_id);
 
--- ── 5. content_hash를 ERD 타입(CHAR(64))으로 맞춤 ──────────────
-ALTER TABLE faqs ALTER COLUMN content_hash TYPE CHAR(64);
-
 -- ── 6. ERD "인덱스" 섹션에 없는 인덱스 제거 ──────────────
 -- idx_faq_embeddings_embedding(HNSW)도 ERD에 없어서 포함해 제거하지만, 코사인 유사도 검색을
 -- 인덱스 없이(순차 스캔으로) 돌리게 되는 영향이 커서 별도로 위험 메시지로 알린다.
@@ -114,7 +111,6 @@ DROP INDEX idx_chat_executions_input_message_id;
 DROP INDEX idx_chat_executions_output_message_id;
 DROP INDEX idx_guests_merged_user_id;
 DROP INDEX idx_social_accounts_user_id;
-DROP INDEX idx_faq_embeddings_embedding;
 DROP INDEX idx_consult_requests_origin_message_id;
 DROP INDEX idx_message_feedback_message_id;
 
