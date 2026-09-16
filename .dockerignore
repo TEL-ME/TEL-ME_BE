@@ -1,0 +1,16 @@
+# 빌드 산출물 · 로컬 캐시
+build/
+.gradle/
+
+# 버전 관리 · IDE
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+
+# 로컬 전용
+.env
+docker/
+docker-compose.yml
+README.md
