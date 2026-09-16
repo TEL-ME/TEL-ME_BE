@@ -36,6 +36,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(PUBLIC_WHITELIST).permitAll()
+                        .requestMatchers("/api/auth/**", "/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/chat/**", "/api/v1/chat/**").permitAll()
+                        .requestMatchers("/api/stores/**", "/api/v1/stores/**").permitAll()
+                        .requestMatchers("/api/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 );
 
