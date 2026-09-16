@@ -71,8 +71,7 @@ public class ConsultRequest {
 
     @Version
     @Column(name = "version", nullable = false)
-    @Builder.Default
-    private Integer version = 1;
+    private Integer version;
 
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private Instant createdAt;
