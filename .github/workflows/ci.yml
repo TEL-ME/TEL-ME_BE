@@ -55,6 +55,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # services 컨테이너는 체크아웃 전에 기동되어 init 스크립트를 마운트할 수 없다.
+      # 로컬 docker-compose 와 같은 SQL 파일을 실행해 확장을 맞춘다.
+      - name: Enable pgvector extension
+        env:
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        run: psql -h localhost -p 5432 -U telme -d telme -f docker/postgres/init/01-extensions.sql
+
       - name: Build
         run: ./gradlew build
 
