@@ -1,4 +1,4 @@
-package com.telme.chat.entity;
+package com.telme.intent.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +13,9 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+
+import com.telme.chat.entity.ChatMessage;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,9 +30,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class QueryRouting {
 
-    public enum Intent { FAQ, STORE, BOTH, UNKNOWN }
+    public enum Intent {
+        FAQ, STORE, BOTH, UNKNOWN
+    }
 
-    public enum Method { RULE, LLM }
+    public enum Method {
+        RULE, LLM
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

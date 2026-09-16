@@ -1,4 +1,4 @@
-package com.telme.chat.entity;
+package com.telme.consult.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +13,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+
+import com.telme.chat.entity.ChatMessage;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,17 +27,21 @@ import lombok.NoArgsConstructor;
  * 별도 Repository는 두지 않는다.
  */
 @Entity
-@Table(name = "consult_conditions",
-        uniqueConstraints = @UniqueConstraint(name = "uk_condition_key", columnNames = {"consult_request_id", "condition_key"}))
+@Table(name = "consult_conditions", uniqueConstraints = @UniqueConstraint(name = "uk_condition_key", columnNames = {
+        "consult_request_id", "condition_key" }))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class ConsultCondition {
 
-    public enum Source { EXTRACTED, ASKED }
+    public enum Source {
+        EXTRACTED, ASKED
+    }
 
-    public enum Status { PENDING, FILLED, DECLINED }
+    public enum Status {
+        PENDING, FILLED, DECLINED
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

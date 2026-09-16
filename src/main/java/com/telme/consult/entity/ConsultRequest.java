@@ -1,4 +1,4 @@
-package com.telme.chat.entity;
+package com.telme.consult.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -14,6 +14,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.entity.ChatSession;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +33,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ConsultRequest {
 
-    public enum Intent { FAQ, STORE }
+    public enum Intent {
+        FAQ, STORE
+    }
 
-    public enum Status { PENDING, WAITING_CONDITION, DONE, CANCELLED }
+    public enum Status {
+        PENDING, WAITING_CONDITION, DONE, CANCELLED
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

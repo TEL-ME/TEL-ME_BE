@@ -1,4 +1,4 @@
-package com.telme.chat.entity;
+package com.telme.feedback.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +13,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+
+import com.telme.chat.entity.ChatMessage;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,9 +36,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class MessageFeedback {
 
-    public enum Rating { LIKE, DISLIKE }
+    public enum Rating {
+        LIKE, DISLIKE
+    }
 
-    public enum ReasonCode { WRONG_INFO, NOT_RELATED, HARD_TO_READ }
+    public enum ReasonCode {
+        WRONG_INFO, NOT_RELATED, HARD_TO_READ
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

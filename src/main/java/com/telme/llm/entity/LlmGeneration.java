@@ -1,4 +1,4 @@
-package com.telme.chat.entity;
+package com.telme.llm.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +12,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+
+import com.telme.chat.entity.ChatExecution;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,9 +29,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LlmGeneration {
 
-    public enum TaskType { ROUTING, RAG_ANSWER, CLARIFICATION, FOLLOW_UP, SUMMARY }
+    public enum TaskType {
+        ROUTING, RAG_ANSWER, CLARIFICATION, FOLLOW_UP, SUMMARY
+    }
 
-    public enum Status { SUCCESS, NO_EVIDENCE, TIMEOUT, CONNECTION_FAILED, MODEL_ERROR, CANCELLED }
+    public enum Status {
+        SUCCESS, NO_EVIDENCE, TIMEOUT, CONNECTION_FAILED, MODEL_ERROR, CANCELLED
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
