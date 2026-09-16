@@ -9,7 +9,7 @@ RAG 기반 AI 통신 상담 및 위치 기반 매장 안내 서비스 **TEL-ME**
 | Java | 21 |
 | Spring Boot | 3.5.16 |
 | Gradle | 8.14.5 (Wrapper) |
-| PostgreSQL | 16 + pgvector 0.8.6 |
+| PostgreSQL | 16 + pgvector 0.8.2 |
 | Ollama | 0.34.0 |
 
 주요 라이브러리: Spring Web · Validation · Data JPA(JdbcTemplate) · Security · Resilience4j · springdoc-openapi · Actuator · Lombok
@@ -28,6 +28,7 @@ cp .env.example .env
 ```
 
 기본값 그대로 실행되므로, 포트가 겹칠 때만 값을 바꾸면 됩니다. `.env`는 커밋하지 않습니다.
+`bootRun`이나 STS는 `.env`를 자동으로 읽지 않습니다. DB 접속값을 바꿨다면 `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`를 애플리케이션 실행 환경에도 같은 값으로 설정합니다.
 
 ### 2. DB 실행
 
