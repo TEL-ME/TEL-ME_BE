@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    # AWS RDS/Aurora PostgreSQL은 SSL 접속을 기본으로 강제/권장하므로 sslmode를 명시한다.
+    # 인증서 검증까지 하려면 verify-full + sslrootcert(RDS 루트 CA 번들 경로)를 추가로 지정한다.
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5432}/${POSTGRES_DB}?sslmode=require
+  flyway:
+    # db/dev-migration(샘플 시드 데이터)은 로컬 전용이다. 운영에서는 스키마 마이그레이션만 적용한다.
+    locations: classpath:db/migration
