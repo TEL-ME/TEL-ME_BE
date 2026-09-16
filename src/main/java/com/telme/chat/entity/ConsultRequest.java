@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,7 @@ public class ConsultRequest {
     @Builder.Default
     private Status status = Status.PENDING;
 
+    @Version
     @Column(name = "version", nullable = false)
     @Builder.Default
     private Integer version = 1;

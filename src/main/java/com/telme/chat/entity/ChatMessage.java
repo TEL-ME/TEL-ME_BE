@@ -18,12 +18,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-/**
- * follow_ups/store_results는 JSONB 컬럼이다. 우선 원본 JSON 문자열로 받아두고,
- * Hibernate 6 JSON 매핑(@JdbcTypeCode(SqlTypes.JSON)) 적용 여부는 실제 DB
- * 연동 후 직렬화 방식(String vs Map)을 확인하고 결정한다 (확인 필요).
- */
 @Entity
 @Table(name = "chat_messages",
         uniqueConstraints = @UniqueConstraint(name = "uk_message_seq", columnNames = {"session_id", "sequence_no"}))
@@ -76,9 +73,11 @@ public class ChatMessage {
     @Column(name = "answer_basis", length = 20)
     private AnswerBasis answerBasis;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "follow_ups", columnDefinition = "jsonb")
     private String followUps;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "store_results", columnDefinition = "jsonb")
     private String storeResults;
 

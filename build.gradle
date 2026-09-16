@@ -32,6 +32,13 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	runtimeOnly 'org.postgresql:postgresql'
 
+	// 스키마 마이그레이션 (로컬 Docker Postgres · AWS RDS 공통)
+	implementation 'org.flywaydb:flyway-core'
+	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+
+	// pgvector: Hibernate 네이티브 vector 매핑 (버전은 Spring Boot의 hibernate.version과 반드시 동일하게 맞출 것)
+	implementation 'org.hibernate.orm:hibernate-vector:6.6.53.Final'
+
 	// 인증
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 

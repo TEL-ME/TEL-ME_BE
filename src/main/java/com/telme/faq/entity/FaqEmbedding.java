@@ -15,11 +15,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Array;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
- * embedding(vector(1024))은 pgvector 전용 타입이라 순수 JPA로 매핑이 안 된다.
- * float[]는 컴파일 통과용 임시 타입이며, 실제 DB 연동 시 pgvector-java 의존성과
- * Hibernate vector 타입 등록이 별도로 필요하다 (확인 필요).
+ * embedding(vector(1024))은 Hibernate 6.4+ 내장 vector 지원(hibernate-vector 모듈)으로
+ * 매핑
+ * @JdbcTypeCode(SqlTypes.VECTOR) + @Array(length=1024)가 DDL의 vector(1024)와 대응
+ * 차원 수를 바꾸면 이 값과 마이그레이션의 vector(1024)를 함께 바꿔야 한다.
  */
 @Entity
 @Table(name = "faq_embeddings")
@@ -29,7 +33,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class FaqEmbedding {
 
-    public enum SyncStatus { PENDING, SYNCED, FAILED }
+    public enum SyncStatus {
+        PENDING, SYNCED, FAILED
+    }
 
     @Id
     @Column(name = "faq_id")
@@ -40,7 +46,9 @@ public class FaqEmbedding {
     @JoinColumn(name = "faq_id")
     private Faq faq;
 
-    @Column(name = "embedding", columnDefinition = "vector(1024)", nullable = false)
+    @Column(name = "embedding", nullable = false)
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 1024)
     private float[] embedding;
 
     @Column(name = "model_name", nullable = false, length = 50)
