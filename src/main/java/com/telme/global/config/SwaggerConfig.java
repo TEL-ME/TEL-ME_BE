@@ -15,16 +15,15 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    private static final String SECURITY_SCHEME_NAME = "BearerAuth";
+    private static final String SECURITY_SCHEME_NAME = "SessionAuth";
 
     @Bean
     public OpenAPI openAPI() {
-        SecurityScheme bearerAuthScheme = new SecurityScheme()
-                .name(SECURITY_SCHEME_NAME)
-                .type(SecurityScheme.Type.HTTP)
-                .scheme("bearer")
-                .bearerFormat("JWT")
-                .description("JWT 토큰을 입력해주세요. (Bearer 접두사는 자동 추가됩니다)");
+        SecurityScheme sessionAuthScheme = new SecurityScheme()
+                .name("JSESSIONID")
+                .type(SecurityScheme.Type.APIKEY)
+                .in(SecurityScheme.In.COOKIE)
+                .description("세션 쿠키 (JSESSIONID)");
 
         SecurityRequirement securityRequirement = new SecurityRequirement()
                 .addList(SECURITY_SCHEME_NAME);
@@ -44,7 +43,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(info)
                 .servers(List.of(localServer))
-                .components(new Components().addSecuritySchemes(SECURITY_SCHEME_NAME, bearerAuthScheme))
+                .components(new Components().addSecuritySchemes(SECURITY_SCHEME_NAME, sessionAuthScheme))
                 .addSecurityItem(securityRequirement);
     }
 }
