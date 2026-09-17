@@ -19,6 +19,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -82,6 +84,7 @@ public class ChatMessage {
     private String storeResults;
 
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    @Generated(event = EventType.INSERT)
     private Instant createdAt;
 
     @Column(name = "completed_at")
