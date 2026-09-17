@@ -15,8 +15,29 @@ import org.springframework.data.repository.query.Param;
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select session from ChatSession session where session.sessionId = :sessionId")
-    Optional<ChatSession> findByIdForUpdate(@Param("sessionId") Long sessionId);
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.userId = :userId
+            """)
+    Optional<ChatSession> findMemberSessionByIdForUpdate(
+            @Param("sessionId") Long sessionId,
+            @Param("userId") Long userId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.userId is null
+              and session.guestId = :guestId
+            """)
+    Optional<ChatSession> findGuestSessionByIdForUpdate(
+            @Param("sessionId") Long sessionId,
+            @Param("guestId") UUID guestId
+    );
 
     @Query("""
             select session

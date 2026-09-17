@@ -133,6 +133,38 @@ class ChatSessionApiIntegrationTest {
                         .session(otherGuestSession))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("CHAT404-0"));
+
+        mockMvc.perform(patch("/api/v1/chat/sessions/{sessionId}/close", sessionId)
+                        .session(guestSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.status").value("CLOSED"));
+    }
+
+    @Test
+    void rejectsMessageExceedingMaximumLength() throws Exception {
+        MvcResult createResult = mockMvc.perform(post("/api/v1/chat/sessions")
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        long sessionId = objectMapper.readTree(createResult.getResponse().getContentAsByteArray())
+                .path("result").path("sessionId").asLong();
+
+        mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"" + "가".repeat(2001) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+
+        mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"" + "가".repeat(2000) + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.result.sequenceNo").value(1));
     }
 
     @Test

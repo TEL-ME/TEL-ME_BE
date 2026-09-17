@@ -139,12 +139,10 @@ public class ChatSessionService {
     }
 
     private ChatSession getOwnedSessionForUpdate(ChatActor actor, Long sessionId) {
-        ChatSession session = chatSessionRepository.findByIdForUpdate(sessionId)
+        return (actor.isMember()
+                ? chatSessionRepository.findMemberSessionByIdForUpdate(sessionId, actor.userId())
+                : chatSessionRepository.findGuestSessionByIdForUpdate(sessionId, actor.guestId()))
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.SESSION_NOT_FOUND));
-        if (!actor.owns(session)) {
-            throw new GeneralException(ChatErrorCode.SESSION_NOT_FOUND);
-        }
-        return session;
     }
 
     private String normalizeNullableTitle(String title) {

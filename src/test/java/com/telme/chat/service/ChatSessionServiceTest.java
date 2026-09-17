@@ -83,7 +83,7 @@ class ChatSessionServiceTest {
                 .userId(7L)
                 .lastActiveAt(Instant.parse("2026-09-17T00:00:00Z"))
                 .build();
-        when(chatSessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(session));
+        when(chatSessionRepository.findMemberSessionByIdForUpdate(10L, 7L)).thenReturn(Optional.of(session));
         when(chatMessageRepository.findMaxSequenceNo(10L)).thenReturn(2);
         when(chatMessageRepository.save(any(ChatMessage.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -130,7 +130,7 @@ class ChatSessionServiceTest {
                 .userId(7L)
                 .status(ChatSession.Status.CLOSED)
                 .build();
-        when(chatSessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(session));
+        when(chatSessionRepository.findMemberSessionByIdForUpdate(10L, 7L)).thenReturn(Optional.of(session));
 
         assertThatThrownBy(() -> chatSessionService.sendMessage(
                 new ChatActor(7L, null),
@@ -144,11 +144,8 @@ class ChatSessionServiceTest {
 
     @Test
     void hidesSessionWhenActorIsNotOwner() {
-        ChatSession session = ChatSession.builder()
-                .sessionId(10L)
-                .userId(8L)
-                .build();
-        when(chatSessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(session));
+        when(chatSessionRepository.findMemberSessionByIdForUpdate(10L, 7L))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> chatSessionService.closeSession(new ChatActor(7L, null), 10L))
                 .isInstanceOf(GeneralException.class)
