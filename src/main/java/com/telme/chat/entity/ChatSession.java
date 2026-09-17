@@ -62,4 +62,16 @@ public class ChatSession {
     @Column(name = "last_active_at", nullable = false)
     @Builder.Default
     private Instant lastActiveAt = Instant.now();
+
+    public void rename(String title) {
+        this.title = title;
+    }
+
+    public void close() {
+        this.status = Status.CLOSED;
+    }
+
+    public void touch(Instant activeAt) {
+        this.lastActiveAt = activeAt;
+    }
 }
