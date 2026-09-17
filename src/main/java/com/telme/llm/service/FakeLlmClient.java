@@ -1,11 +1,13 @@
 package com.telme.llm.service;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 
 @Component
+@ConditionalOnProperty(name = "llm.provider", havingValue = "fake", matchIfMissing = true)
 public class FakeLlmClient implements LlmClient {
 
     private static final String FAKE_TEXT = "[FAKE] 테스트용 응답입니다.";
