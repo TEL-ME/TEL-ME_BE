@@ -10,7 +10,7 @@ public record LlmRequest(
         String systemPrompt,
         String userPrompt,
         ResponseFormat format,
-        // null이면 모델 기본값을 사용
+        // null이면 TaskType별 기본값 사용
         Double temperature,
         Integer maxTokens
 ) {
@@ -20,9 +20,5 @@ public record LlmRequest(
         if (format == null) {
             format = ResponseFormat.TEXT;
         }
-    }
-
-    public enum ResponseFormat {
-        TEXT, JSON
     }
 }
