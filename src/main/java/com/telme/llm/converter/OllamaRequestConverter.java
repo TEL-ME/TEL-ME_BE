@@ -43,9 +43,9 @@ public class OllamaRequestConverter {
             return new Defaults(0.3, 512);
         }
         return switch (taskType) {
-            case ROUTING -> new Defaults(0.0, 256);
+            case ROUTING -> new Defaults(0.0, 512);
             case RAG_ANSWER -> new Defaults(0.2, 1024);
-            case CLARIFICATION, FOLLOW_UP -> new Defaults(0.3, 256);
+            case CLARIFICATION, FOLLOW_UP -> new Defaults(0.3, 512);
             case SUMMARY -> new Defaults(0.3, 512);
         };
     }
