@@ -17,6 +17,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 @Entity
 @Table(name = "chat_executions")
@@ -50,6 +52,7 @@ public class ChatExecution {
     private Status status;
 
     @Column(name = "started_at", nullable = false, updatable = false, insertable = false)
+    @Generated(event = EventType.INSERT)
     private Instant startedAt;
 
     @Column(name = "ended_at")
