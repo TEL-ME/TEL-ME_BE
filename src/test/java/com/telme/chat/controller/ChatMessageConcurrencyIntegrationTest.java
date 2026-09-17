@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.List;

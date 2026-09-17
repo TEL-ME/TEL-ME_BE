@@ -115,6 +115,7 @@ public class ChatSessionService {
         }
 
         Instant completedAt = Instant.now();
+        // TODO(sse): AI 답변도 이 잠금과 순번 발급 경로를 사용하도록 공통 메시지 저장 로직으로 분리한다.
         int nextSequenceNo = chatMessageRepository.findMaxSequenceNo(sessionId) + 1;
         ChatMessage message = chatMessageRepository.save(ChatMessage.builder()
                 .session(session)
@@ -132,6 +133,7 @@ public class ChatSessionService {
                 .status(ChatExecution.Status.RUNNING)
                 .build());
 
+        // TODO(ai): 트랜잭션 커밋 후 executionId를 AI 파이프라인에 전달하고 완료·실패 상태를 갱신한다.
         session.touch(completedAt);
         return chatMessageConverter.toSendResponse(message, execution);
     }

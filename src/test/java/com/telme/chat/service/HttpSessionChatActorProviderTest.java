@@ -1,10 +1,9 @@
-package com.telme.chat.controller;
+package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.exception.ChatErrorCode;
-import com.telme.chat.service.ChatActor;
 import com.telme.global.common.exception.GeneralException;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

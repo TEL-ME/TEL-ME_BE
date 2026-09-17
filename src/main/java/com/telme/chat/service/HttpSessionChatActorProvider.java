@@ -1,8 +1,6 @@
-package com.telme.chat.controller;
+package com.telme.chat.service;
 
 import com.telme.chat.exception.ChatErrorCode;
-import com.telme.chat.service.ChatActor;
-import com.telme.chat.service.ChatActorProvider;
 import com.telme.global.common.exception.GeneralException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class HttpSessionChatActorProvider implements ChatActorProvider {
 
+    // TODO(auth): 인증 공통 식별자 제공 방식이 확정되면 이 세션 속성 기반 구현을 교체하거나 제거한다.
     public static final String USER_ID_ATTRIBUTE = "userId";
     public static final String GUEST_ID_ATTRIBUTE = "guestId";
 

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.member.entity.Guest;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
