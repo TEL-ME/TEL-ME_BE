@@ -15,6 +15,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * userId/guestId는 member 도메인 엔티티를 직접 참조하지 않고 id만 보관한다.
@@ -54,9 +56,22 @@ public class ChatSession {
     private String summary;
 
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    @Generated(event = EventType.INSERT)
     private Instant createdAt;
 
     @Column(name = "last_active_at", nullable = false)
     @Builder.Default
     private Instant lastActiveAt = Instant.now();
+
+    public void rename(String title) {
+        this.title = title;
+    }
+
+    public void close() {
+        this.status = Status.CLOSED;
+    }
+
+    public void touch(Instant activeAt) {
+        this.lastActiveAt = activeAt;
+    }
 }

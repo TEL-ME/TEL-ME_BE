@@ -1,0 +1,12 @@
+package com.telme.chat.dto.res;
+
+import java.time.Instant;
+
+public record ChatSessionUpdateResponse(
+        Long sessionId,
+        String title,
+        String status,
+        Instant createdAt,
+        Instant lastActiveAt
+) {
+}
