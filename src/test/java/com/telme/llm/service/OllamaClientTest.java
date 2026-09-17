@@ -112,6 +112,24 @@ class OllamaClientTest {
     }
 
     @Test
+    @DisplayName("stream 조각에 content가 없으면 건너뛰고 onComplete를 부른다")
+    void stream_content가_없는_조각은_건너뛴다() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess("""
+                        {"message":{"content":"안녕"},"done":false}
+                        {"message":{},"done":false}
+                        {"message":{"content":""},"done":true}
+                        """, NDJSON));
+        RecordingHandler handler = new RecordingHandler();
+
+        ollamaClient.stream(request(), handler);
+
+        assertThat(handler.tokens).containsExactly("안녕");
+        assertThat(handler.completeCount).isEqualTo(1);
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
     @DisplayName("끝 신호 없이 끊기면 onError만 부른다")
     void 끝_신호_없이_끊기면_onError만_호출한다() {
         server.expect(requestTo(CHAT_URL))

@@ -76,7 +76,7 @@ public class OllamaClient implements LlmClient {
                     continue;
                 }
                 OllamaChatResponse chunk = objectMapper.readValue(line, OllamaChatResponse.class);
-                if (chunk.message() != null && !chunk.message().content().isEmpty()) {
+                if (chunk.message() != null && chunk.message().content() != null && !chunk.message().content().isEmpty()) {
                     handler.onToken(chunk.message().content());
                 }
                 if (chunk.done()) {
