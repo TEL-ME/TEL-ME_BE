@@ -4,6 +4,7 @@ public record FaqSearchResponse(
         Long faqId,
         String question,
         String answer,
-        double score
+        double score,
+        Integer version
 ) {
 }
