@@ -168,6 +168,13 @@ class ChatSessionApiIntegrationTest {
     }
 
     @Test
+    void rejectsInvalidSessionListSize() throws Exception {
+        assertInvalidSessionListSize("0");
+        assertInvalidSessionListSize("51");
+        assertInvalidSessionListSize("abc");
+    }
+
+    @Test
     void paginatesSessionListWithoutDuplicates() throws Exception {
         for (int index = 1; index <= 3; index++) {
             mockMvc.perform(post("/api/v1/chat/sessions")
@@ -209,6 +216,15 @@ class ChatSessionApiIntegrationTest {
         entityManager.persist(user);
         entityManager.flush();
         return user;
+    }
+
+    private void assertInvalidSessionListSize(String size) throws Exception {
+        mockMvc.perform(get("/api/v1/chat/sessions")
+                        .session(ownerSession)
+                        .param("size", size))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"))
+                .andExpect(jsonPath("$.result.size").isNotEmpty());
     }
 
     private UUID persistGuest() {
