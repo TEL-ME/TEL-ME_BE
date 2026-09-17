@@ -1,6 +1,7 @@
 package com.telme.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -56,6 +57,39 @@ class OllamaClientTest {
 
         assertThat(result).isEqualTo("파란색");
         server.verify();
+    }
+
+    @Test
+    @DisplayName("generate 응답에 message가 없으면 예외를 던진다")
+    void generate_응답에_message가_없으면_예외() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess("{\"done\":true}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> ollamaClient.generate(request()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("message가 없음");
+    }
+
+    @Test
+    @DisplayName("generate 응답이 완료되지 않았으면 예외를 던진다")
+    void generate_응답이_완료되지_않으면_예외() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess(
+                        "{\"message\":{\"content\":\"파란\"},\"done\":false}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> ollamaClient.generate(request()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("완료되지 않음");
+    }
+
+    @Test
+    @DisplayName("generate 응답 본문이 비어 있으면 예외를 던진다")
+    void generate_응답_본문이_비어있으면_예외() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> ollamaClient.generate(request()))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

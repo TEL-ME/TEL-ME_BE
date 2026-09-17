@@ -37,6 +37,12 @@ public class OllamaClient implements LlmClient {
                 .retrieve()
                 .body(OllamaChatResponse.class);
 
+        if (response == null || response.message() == null) {
+            throw new IllegalStateException("Ollama 응답에 message가 없음");
+        }
+        if (!response.done()) {
+            throw new IllegalStateException("Ollama 응답이 완료되지 않음");
+        }
         return response.message().content();
     }
 
