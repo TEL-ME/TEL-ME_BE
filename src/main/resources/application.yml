@@ -29,3 +29,13 @@ springdoc:
   api-docs:
     path: /v3/api-docs
   show-actuator: false
+
+ollama:
+  url: ${OLLAMA_URL:http://localhost:11434}
+
+llm:
+  # fake: Ollama 없이 고정 응답 / ollama: 로컬 EXAONE 호출
+  provider: ${LLM_PROVIDER:fake}
+  model: ${LLM_MODEL:exaone3.5:7.8b}
+  connect-timeout: 5s
+  read-timeout: 60s
