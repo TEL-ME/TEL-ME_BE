@@ -157,7 +157,9 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.FAILED);
         assertThat(execution.getErrorCode()).isEqualTo("LLM_TIMEOUT");
         assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(failed.messageId());
-        assertThat(historyItem(2).replyToMessageId()).isEqualTo(question.messageId());
+        ChatMessageHistoryItemResponse errorMessage = historyItem(2);
+        assertThat(errorMessage.replyToMessageId()).isEqualTo(question.messageId());
+        assertThat(errorMessage.completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
     }
 
     @Test
@@ -171,7 +173,9 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(cancelled.messageId()).isEqualTo(started.messageId());
         assertThat(cancelled.messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
         assertThat(cancelled.status()).isEqualTo(ChatMessage.Status.CANCELLED);
-        assertThat(findExecution(question.executionId()).getStatus()).isEqualTo(ChatExecution.Status.CANCELLED);
+        ChatExecution execution = findExecution(question.executionId());
+        assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.CANCELLED);
+        assertThat(historyItem(2).completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
     }
 
     @Test
@@ -218,16 +222,18 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
-    void timedOutExecutionNoLongerBlocksNewMessage() {
+    void staleRunningExecutionStillBlocksNewMessage() {
         ChatMessageSendResponse question = send("요금제 알려줘");
         entityManager.flush();
         entityManager.createNativeQuery(
                         "update chat_executions set started_at = now() - interval '1 hour' where execution_id = ?")
                 .setParameter(1, question.executionId())
                 .executeUpdate();
+        entityManager.clear();
 
-        assertThat(chatSessionService.getMessages(actor, sessionId, null, 20).runningExecutionId()).isNull();
-        assertThat(send("다시 질문할게요").sequenceNo()).isEqualTo(2);
+        assertThat(chatSessionService.getMessages(actor, sessionId, null, 20).runningExecutionId())
+                .isEqualTo(question.executionId());
+        assertErrorCode(() -> send("다시 질문할게요"), ChatErrorCode.EXECUTION_IN_PROGRESS);
     }
 
     @Test

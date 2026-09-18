@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.telme.chat.config.ChatExecutionProperties;
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.converter.ChatSessionConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
@@ -22,7 +21,6 @@ import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -31,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class ChatSessionServiceTest {
@@ -48,13 +47,13 @@ class ChatSessionServiceTest {
     private ChatMessageAppender chatMessageAppender;
 
     @Mock
-    private ChatExecutionProperties chatExecutionProperties;
-
-    @Mock
     private ChatSessionConverter chatSessionConverter;
 
     @Mock
     private ChatMessageConverter chatMessageConverter;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ChatSessionService chatSessionService;
@@ -93,7 +92,6 @@ class ChatSessionServiceTest {
                 .lastActiveAt(Instant.parse("2026-09-17T00:00:00Z"))
                 .build();
         when(chatSessionRepository.findMemberSessionByIdForUpdate(10L, 7L)).thenReturn(Optional.of(session));
-        when(chatExecutionProperties.runningTimeout()).thenReturn(Duration.ofMinutes(5));
         when(chatMessageAppender.append(eq(session), any(ChatMessage.ChatMessageBuilder.class)))
                 .thenAnswer(invocation -> invocation.<ChatMessage.ChatMessageBuilder>getArgument(1)
                         .session(session)
@@ -129,6 +127,8 @@ class ChatSessionServiceTest {
         assertThat(session.getLastActiveAt()).isEqualTo(message.getCompletedAt());
         assertThat(response.sequenceNo()).isEqualTo(3);
         assertThat(response.executionStatus()).isEqualTo("RUNNING");
+        verify(eventPublisher).publishEvent(new ChatProcessingCommand(
+                execution.getExecutionId(), 10L, message.getMessageId()));
     }
 
     @Test

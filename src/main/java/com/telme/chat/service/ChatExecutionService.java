@@ -79,7 +79,7 @@ public class ChatExecutionService {
         Instant endedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.ERROR);
-        message.fail(failure.status());
+        message.fail(failure.status(), endedAt);
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
         return ChatOutputMessage.of(execution, message);

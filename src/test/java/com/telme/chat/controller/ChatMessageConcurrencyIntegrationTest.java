@@ -5,13 +5,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.config.ChatExecutionProperties;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatExecutionService;
+import com.telme.chat.service.ChatExecutionTimeoutScheduler;
+import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +34,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -52,6 +60,15 @@ class ChatMessageConcurrencyIntegrationTest {
 
     @Autowired
     private ChatExecutionService chatExecutionService;
+
+    @Autowired
+    private ChatExecutionRepository chatExecutionRepository;
+
+    @Autowired
+    private ChatExecutionProperties chatExecutionProperties;
+
+    @MockitoBean
+    private ChatProcessingPort chatProcessingPort;
 
     private Long userId;
 
@@ -104,34 +121,60 @@ class ChatMessageConcurrencyIntegrationTest {
     }
 
     @Test
-    void assignsDistinctSequenceNumbersWhenTimedOutExecutionFinishesLate() throws Exception {
+    void finishesStaleExecutionOnlyOnceWhenTimeoutRacesLateAnswer() throws Exception {
         long sessionId = createSession();
         long executionId = objectMapper.readTree(postMessage(sessionId, "첫 질문").getResponse().getContentAsByteArray())
                 .path("result").path("executionId").asLong();
         jdbcTemplate.update(
                 "update chat_executions set started_at = now() - interval '1 hour' where execution_id = ?",
                 executionId);
+        assertThat(postMessage(sessionId, "기다리는 중 추가 질문").getResponse().getStatus()).isEqualTo(409);
+
+        ChatExecutionTimeoutScheduler scheduler = new ChatExecutionTimeoutScheduler(
+                chatExecutionRepository, chatExecutionService, chatExecutionProperties);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         try {
-            Future<Integer> userMessage = executor.submit(() -> sequenceNo(sendMessage(sessionId, "추가 질문", ready, start)));
-            Future<Integer> answer = executor.submit(() -> {
+            Future<?> timeout = executor.submit(() -> {
                 ready.countDown();
                 assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
-                return chatExecutionService.completeAnswer(executionId, new ChatAnswer(
-                        ChatMessage.MessageType.ANSWER, "답변", null, null, null)).sequenceNo();
+                scheduler.timeOutStaleExecutions();
+                return null;
+            });
+            Future<Boolean> lateAnswer = executor.submit(() -> {
+                ready.countDown();
+                assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                try {
+                    chatExecutionService.completeAnswer(executionId, new ChatAnswer(
+                            ChatMessage.MessageType.ANSWER, "늦은 답변", null, null, null));
+                    return true;
+                } catch (GeneralException exception) {
+                    assertThat(exception.getErrorCode()).isEqualTo(ChatErrorCode.EXECUTION_NOT_RUNNING);
+                    return false;
+                }
             });
 
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
+            timeout.get(10, TimeUnit.SECONDS);
+            boolean answered = lateAnswer.get(10, TimeUnit.SECONDS);
 
-            List<Integer> sequenceNumbers = List.of(
-                    userMessage.get(10, TimeUnit.SECONDS),
-                    answer.get(10, TimeUnit.SECONDS)
-            );
-            assertThat(sequenceNumbers).containsExactlyInAnyOrder(2, 3);
+            Map<String, Object> execution = jdbcTemplate.queryForMap(
+                    "select status, error_code from chat_executions where execution_id = ?", executionId);
+            if (answered) {
+                assertThat(execution).containsEntry("status", "COMPLETED");
+            } else {
+                assertThat(execution)
+                        .containsEntry("status", "FAILED")
+                        .containsEntry("error_code", "EXECUTION_TIMEOUT");
+            }
+            assertThat(jdbcTemplate.queryForObject(
+                    "select count(*) from chat_messages where session_id = ? and role = 'ASSISTANT'",
+                    Integer.class, sessionId))
+                    .isEqualTo(1);
+            assertThat(postMessage(sessionId, "다음 질문").getResponse().getStatus()).isEqualTo(201);
         } finally {
             executor.shutdownNow();
         }
@@ -166,12 +209,6 @@ class ChatMessageConcurrencyIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MessageRequest(content))))
                 .andReturn();
-    }
-
-    private int sequenceNo(MvcResult result) throws Exception {
-        assertThat(result.getResponse().getStatus()).isEqualTo(201);
-        return objectMapper.readTree(result.getResponse().getContentAsByteArray())
-                .path("result").path("sequenceNo").asInt();
     }
 
     private MockHttpSession chatSession() {

@@ -1,6 +1,5 @@
 package com.telme.chat.service;
 
-import com.telme.chat.config.ChatExecutionProperties;
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.converter.ChatSessionConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
@@ -27,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +42,7 @@ public class ChatSessionService {
     private final ChatMessageAppender chatMessageAppender;
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
-    private final ChatExecutionProperties chatExecutionProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -176,8 +176,9 @@ public class ChatSessionService {
                 .status(ChatExecution.Status.RUNNING)
                 .build());
 
-        // TODO(ai): 트랜잭션 커밋 후 executionId를 AI 파이프라인에 전달하고 완료·실패 상태를 갱신한다.
         session.touch(completedAt);
+        eventPublisher.publishEvent(new ChatProcessingCommand(
+                execution.getExecutionId(), sessionId, message.getMessageId()));
         return chatMessageConverter.toSendResponse(message, execution);
     }
 
@@ -189,11 +190,8 @@ public class ChatSessionService {
     }
 
     private Optional<ChatExecution> findRunningExecution(Long sessionId) {
-        Instant startedAfter = Instant.now().minus(chatExecutionProperties.runningTimeout());
-        return chatExecutionRepository.findExecutionsStartedAfter(
-                        sessionId, ChatExecution.Status.RUNNING, startedAfter, PageRequest.of(0, 1))
-                .stream()
-                .findFirst();
+        return chatExecutionRepository.findFirstBySession_SessionIdAndStatusOrderByStartedAtDesc(
+                sessionId, ChatExecution.Status.RUNNING);
     }
 
     private void validateSessionOwner(ChatActor actor, Long sessionId) {

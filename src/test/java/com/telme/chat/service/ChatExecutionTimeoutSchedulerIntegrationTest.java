@@ -86,6 +86,7 @@ class ChatExecutionTimeoutSchedulerIntegrationTest {
         assertThat(timedOut.getErrorCode()).isEqualTo(ChatExecutionTimeoutScheduler.ERROR_CODE);
         assertThat(timedOut.getOutputMessage().getMessageType()).isEqualTo(ChatMessage.MessageType.ERROR);
         assertThat(timedOut.getOutputMessage().getStatus()).isEqualTo(ChatMessage.Status.TIMEOUT);
+        assertThat(timedOut.getOutputMessage().getCompletedAt()).isEqualTo(timedOut.getEndedAt());
 
         assertThat(entityManager.find(ChatExecution.class, recent.executionId()).getStatus())
                 .isEqualTo(ChatExecution.Status.RUNNING);

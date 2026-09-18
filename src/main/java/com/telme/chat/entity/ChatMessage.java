@@ -107,7 +107,8 @@ public class ChatMessage {
         this.completedAt = completedAt;
     }
 
-    public void fail(Status status) {
+    public void fail(Status status, Instant completedAt) {
         this.status = status;
+        this.completedAt = completedAt;
     }
 }

@@ -22,19 +22,9 @@ public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Lo
             """)
     Optional<ChatExecution> findExecutionByIdForUpdate(@Param("executionId") Long executionId);
 
-    @Query("""
-            select execution
-            from ChatExecution execution
-            where execution.session.sessionId = :sessionId
-              and execution.status = :status
-              and execution.startedAt > :startedAfter
-            order by execution.startedAt desc
-            """)
-    List<ChatExecution> findExecutionsStartedAfter(
-            @Param("sessionId") Long sessionId,
-            @Param("status") ChatExecution.Status status,
-            @Param("startedAfter") Instant startedAfter,
-            Pageable pageable
+    Optional<ChatExecution> findFirstBySession_SessionIdAndStatusOrderByStartedAtDesc(
+            Long sessionId,
+            ChatExecution.Status status
     );
 
     @Query("""
