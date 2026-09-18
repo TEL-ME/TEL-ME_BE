@@ -49,6 +49,19 @@ class IntentConverterTest {
     }
 
     @Test
+    @DisplayName("직렬화 실패 시 toJson은 IllegalArgumentException을 던진다")
+    void toJson_failure_throws_exception() throws Exception {
+        ObjectMapper failingMapper = org.mockito.Mockito.mock(ObjectMapper.class);
+        org.mockito.Mockito.when(failingMapper.writeValueAsString(org.mockito.Mockito.any()))
+                .thenThrow(new com.fasterxml.jackson.core.JsonParseException(null, "error"));
+        IntentConverter failingConverter = new IntentConverter(failingMapper);
+
+        assertThatThrownBy(() -> failingConverter.toJson(Map.of("key", "value")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("조건 JSON 직렬화 실패");
+    }
+
+    @Test
     @DisplayName("null 또는 빈 문자열을 parseConditions에 전달하면 빈 Map을 반환한다")
     void parseConditions_empty_returns_empty_map() {
         assertThat(converter.parseConditions(null)).isEmpty();

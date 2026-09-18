@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
+// LLM 장애 시 시스템이 멈추는 걸 막는 용도입니다.
+// method = RULE로 표기되어 나중에 정확도 분석 때 구분할 수 있는 비상 대체 클래스입니다.
 @Component
 public class RuleBasedRoutingFallback {
 

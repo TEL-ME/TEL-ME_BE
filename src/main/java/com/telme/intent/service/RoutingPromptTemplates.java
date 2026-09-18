@@ -1,5 +1,7 @@
 package com.telme.intent.service;
 
+// 의도 라우팅 프롬프트이며, serviceType은 매장 도메인의 StoreServiceType.Code에 맞춘 템플릿 클래스입니다.
+// 나중에 매장 쪽 코드가 변경되면 여기도 함께 수정해야 합니다.
 public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}

@@ -113,7 +113,7 @@ public class IntentConverter {
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
             log.error("[IntentConverter] conditions -> JSON 직렬화 실패", e);
-            return null;
+            throw new IllegalArgumentException("조건 JSON 직렬화 실패", e);
         }
     }
 
