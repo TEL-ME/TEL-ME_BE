@@ -24,7 +24,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +39,10 @@ public class ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatExecutionRepository chatExecutionRepository;
+    private final ChatMessageAppender chatMessageAppender;
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -93,8 +97,19 @@ public class ChatSessionService {
         List<ChatMessageHistoryItemResponse> messages = page.stream()
                 .map(chatMessageConverter::toHistoryItemResponse)
                 .toList();
+        Long runningExecutionId = findRunningExecution(sessionId)
+                .map(ChatExecution::getExecutionId)
+                .orElse(null);
 
-        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages);
+        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages, runningExecutionId);
+    }
+
+    public ChatExecutionState getExecution(ChatActor actor, Long executionId) {
+        return (actor.isMember()
+                ? chatExecutionRepository.findMemberExecution(executionId, actor.userId())
+                : chatExecutionRepository.findGuestExecution(executionId, actor.guestId()))
+                .map(ChatExecutionState::of)
+                .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
     }
 
     private List<ChatSession> findSessions(
@@ -143,19 +158,17 @@ public class ChatSessionService {
         if (session.getStatus() == ChatSession.Status.CLOSED) {
             throw new GeneralException(ChatErrorCode.SESSION_CLOSED);
         }
+        if (findRunningExecution(sessionId).isPresent()) {
+            throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
+        }
 
         Instant completedAt = Instant.now();
-        // TODO(sse): AI 답변도 이 잠금과 순번 발급 경로를 사용하도록 공통 메시지 저장 로직으로 분리한다.
-        int nextSequenceNo = chatMessageRepository.findMaxSequenceNo(sessionId) + 1;
-        ChatMessage message = chatMessageRepository.save(ChatMessage.builder()
-                .session(session)
-                .sequenceNo(nextSequenceNo)
+        ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
                 .role(ChatMessage.Role.USER)
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .content(request.content())
                 .status(ChatMessage.Status.COMPLETED)
-                .completedAt(completedAt)
-                .build());
+                .completedAt(completedAt));
 
         ChatExecution execution = chatExecutionRepository.save(ChatExecution.builder()
                 .session(session)
@@ -163,8 +176,9 @@ public class ChatSessionService {
                 .status(ChatExecution.Status.RUNNING)
                 .build());
 
-        // TODO(ai): 트랜잭션 커밋 후 executionId를 AI 파이프라인에 전달하고 완료·실패 상태를 갱신한다.
         session.touch(completedAt);
+        eventPublisher.publishEvent(new ChatProcessingCommand(
+                execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent()));
         return chatMessageConverter.toSendResponse(message, execution);
     }
 
@@ -173,6 +187,11 @@ public class ChatSessionService {
                 ? chatSessionRepository.findMemberSessionByIdForUpdate(sessionId, actor.userId())
                 : chatSessionRepository.findGuestSessionByIdForUpdate(sessionId, actor.guestId()))
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.SESSION_NOT_FOUND));
+    }
+
+    private Optional<ChatExecution> findRunningExecution(Long sessionId) {
+        return chatExecutionRepository.findFirstBySession_SessionIdAndStatusOrderByStartedAtDesc(
+                sessionId, ChatExecution.Status.RUNNING);
     }
 
     private void validateSessionOwner(ChatActor actor, Long sessionId) {
