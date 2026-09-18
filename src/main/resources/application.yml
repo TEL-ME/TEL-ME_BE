@@ -39,3 +39,8 @@ llm:
   model: ${LLM_MODEL:exaone3.5:7.8b}
   connect-timeout: 5s
   read-timeout: 60s
+
+embedding:
+  connect-timeout: 5s
+  search-read-timeout: 15s
+  batch-read-timeout: 120s
