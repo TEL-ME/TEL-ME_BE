@@ -3,6 +3,7 @@ package com.telme.chat.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,9 @@ class ChatSessionServiceTest {
 
     @Mock
     private ChatExecutionRepository chatExecutionRepository;
+
+    @Mock
+    private ChatMessageAppender chatMessageAppender;
 
     @Mock
     private ChatSessionConverter chatSessionConverter;
@@ -84,9 +88,11 @@ class ChatSessionServiceTest {
                 .lastActiveAt(Instant.parse("2026-09-17T00:00:00Z"))
                 .build();
         when(chatSessionRepository.findMemberSessionByIdForUpdate(10L, 7L)).thenReturn(Optional.of(session));
-        when(chatMessageRepository.findMaxSequenceNo(10L)).thenReturn(2);
-        when(chatMessageRepository.save(any(ChatMessage.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(chatMessageAppender.append(eq(session), any(ChatMessage.ChatMessageBuilder.class)))
+                .thenAnswer(invocation -> invocation.<ChatMessage.ChatMessageBuilder>getArgument(1)
+                        .session(session)
+                        .sequenceNo(3)
+                        .build());
         when(chatExecutionRepository.save(any(ChatExecution.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(chatMessageConverter.toSendResponse(any(ChatMessage.class), any(ChatExecution.class)))
@@ -104,19 +110,15 @@ class ChatSessionServiceTest {
                 new ChatMessageSendRequest("가까운 매장 알려줘")
         );
 
-        ArgumentCaptor<ChatMessage> messageCaptor = ArgumentCaptor.forClass(ChatMessage.class);
-        verify(chatMessageRepository).save(messageCaptor.capture());
-        ChatMessage message = messageCaptor.getValue();
+        ArgumentCaptor<ChatExecution> executionCaptor = ArgumentCaptor.forClass(ChatExecution.class);
+        verify(chatExecutionRepository).save(executionCaptor.capture());
+        ChatExecution execution = executionCaptor.getValue();
+        ChatMessage message = execution.getInputMessage();
         assertThat(message.getSequenceNo()).isEqualTo(3);
         assertThat(message.getRole()).isEqualTo(ChatMessage.Role.USER);
         assertThat(message.getMessageType()).isEqualTo(ChatMessage.MessageType.QUESTION);
         assertThat(message.getStatus()).isEqualTo(ChatMessage.Status.COMPLETED);
         assertThat(message.getCompletedAt()).isNotNull();
-
-        ArgumentCaptor<ChatExecution> executionCaptor = ArgumentCaptor.forClass(ChatExecution.class);
-        verify(chatExecutionRepository).save(executionCaptor.capture());
-        ChatExecution execution = executionCaptor.getValue();
-        assertThat(execution.getInputMessage()).isSameAs(message);
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.RUNNING);
         assertThat(session.getLastActiveAt()).isEqualTo(message.getCompletedAt());
         assertThat(response.sequenceNo()).isEqualTo(3);

@@ -74,4 +74,16 @@ public class ChatSession {
     public void touch(Instant activeAt) {
         this.lastActiveAt = activeAt;
     }
+
+    public void waitForClarification() {
+        if (this.status == Status.ACTIVE) {
+            this.status = Status.NEED_CLARIFICATION;
+        }
+    }
+
+    public void resume() {
+        if (this.status == Status.NEED_CLARIFICATION) {
+            this.status = Status.ACTIVE;
+        }
+    }
 }

@@ -89,4 +89,25 @@ public class ChatMessage {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    public void complete(
+            MessageType messageType,
+            String content,
+            AnswerBasis answerBasis,
+            String followUps,
+            String storeResults,
+            Instant completedAt
+    ) {
+        this.messageType = messageType;
+        this.content = content;
+        this.answerBasis = answerBasis;
+        this.followUps = followUps;
+        this.storeResults = storeResults;
+        this.status = Status.COMPLETED;
+        this.completedAt = completedAt;
+    }
+
+    public void fail(Status status) {
+        this.status = status;
+    }
 }

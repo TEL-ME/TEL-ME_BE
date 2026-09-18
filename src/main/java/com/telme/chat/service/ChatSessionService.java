@@ -37,6 +37,7 @@ public class ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatExecutionRepository chatExecutionRepository;
+    private final ChatMessageAppender chatMessageAppender;
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
 
@@ -145,17 +146,12 @@ public class ChatSessionService {
         }
 
         Instant completedAt = Instant.now();
-        // TODO(sse): AI 답변도 이 잠금과 순번 발급 경로를 사용하도록 공통 메시지 저장 로직으로 분리한다.
-        int nextSequenceNo = chatMessageRepository.findMaxSequenceNo(sessionId) + 1;
-        ChatMessage message = chatMessageRepository.save(ChatMessage.builder()
-                .session(session)
-                .sequenceNo(nextSequenceNo)
+        ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
                 .role(ChatMessage.Role.USER)
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .content(request.content())
                 .status(ChatMessage.Status.COMPLETED)
-                .completedAt(completedAt)
-                .build());
+                .completedAt(completedAt));
 
         ChatExecution execution = chatExecutionRepository.save(ChatExecution.builder()
                 .session(session)

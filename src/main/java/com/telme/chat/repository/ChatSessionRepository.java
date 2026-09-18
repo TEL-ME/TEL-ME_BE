@@ -23,6 +23,14 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
             select session
             from ChatSession session
             where session.sessionId = :sessionId
+            """)
+    Optional<ChatSession> findSessionByIdForUpdate(@Param("sessionId") Long sessionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
               and session.userId = :userId
             """)
     Optional<ChatSession> findMemberSessionByIdForUpdate(

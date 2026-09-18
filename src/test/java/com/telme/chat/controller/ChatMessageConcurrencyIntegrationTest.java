@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
@@ -46,6 +49,9 @@ class ChatMessageConcurrencyIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ChatExecutionService chatExecutionService;
 
     private Long userId;
 
@@ -94,6 +100,37 @@ class ChatMessageConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    void assignsDistinctSequenceNumbersForUserMessageAndAssistantAnswer() throws Exception {
+        long sessionId = createSession();
+        long executionId = objectMapper.readTree(postMessage(sessionId, "첫 질문").getResponse().getContentAsByteArray())
+                .path("result").path("executionId").asLong();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<Integer> userMessage = executor.submit(() -> sendMessage(sessionId, "추가 질문", ready, start));
+            Future<Integer> answer = executor.submit(() -> {
+                ready.countDown();
+                assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                return chatExecutionService.completeAnswer(executionId, new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "답변", null, null, null)).sequenceNo();
+            });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Integer> sequenceNumbers = List.of(
+                    userMessage.get(10, TimeUnit.SECONDS),
+                    answer.get(10, TimeUnit.SECONDS)
+            );
+            assertThat(sequenceNumbers).containsExactlyInAnyOrder(2, 3);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private long createSession() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/chat/sessions")
                         .session(chatSession())
@@ -115,15 +152,17 @@ class ChatMessageConcurrencyIntegrationTest {
         ready.countDown();
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
 
-        MvcResult result = mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+        return objectMapper.readTree(postMessage(sessionId, content).getResponse().getContentAsByteArray())
+                .path("result").path("sequenceNo").asInt();
+    }
+
+    private MvcResult postMessage(long sessionId, String content) throws Exception {
+        return mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
                         .session(chatSession())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MessageRequest(content))))
                 .andExpect(status().isCreated())
                 .andReturn();
-
-        return objectMapper.readTree(result.getResponse().getContentAsByteArray())
-                .path("result").path("sequenceNo").asInt();
     }
 
     private MockHttpSession chatSession() {

@@ -1,0 +1,122 @@
+package com.telme.chat.service;
+
+import com.telme.chat.converter.ChatMessageConverter;
+import com.telme.chat.entity.ChatExecution;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.entity.ChatSession;
+import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.repository.ChatExecutionRepository;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.global.common.exception.GeneralException;
+import java.time.Instant;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class ChatExecutionService {
+
+    private final ChatExecutionRepository chatExecutionRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ChatMessageAppender chatMessageAppender;
+    private final ChatMessageConverter chatMessageConverter;
+
+    public ChatOutputMessage startAnswer(Long executionId) {
+        ChatExecution execution = getRunningExecution(executionId);
+        if (execution.getOutputMessage() != null) {
+            throw new GeneralException(ChatErrorCode.ANSWER_ALREADY_STARTED);
+        }
+        ChatSession session = lockSession(execution);
+
+        ChatMessage message = appendAssistantMessage(session, execution, ChatMessage.MessageType.ANSWER);
+        execution.attachOutput(message);
+        session.touch(Instant.now());
+        return ChatOutputMessage.of(execution, message);
+    }
+
+    public ChatOutputMessage completeAnswer(Long executionId, ChatAnswer answer) {
+        ChatExecution execution = getRunningExecution(executionId);
+        ChatSession session = lockSession(execution);
+        Instant completedAt = Instant.now();
+
+        ChatMessage message = outputMessage(session, execution, answer.messageType());
+        message.complete(
+                answer.messageType(),
+                answer.content(),
+                answer.answerBasis(),
+                chatMessageConverter.toJson(answer.followUps()),
+                chatMessageConverter.toJson(answer.storeResults()),
+                completedAt
+        );
+        execution.complete(message, completedAt);
+        session.resume();
+        session.touch(completedAt);
+        return ChatOutputMessage.of(execution, message);
+    }
+
+    public ChatOutputMessage askClarification(Long executionId, String question) {
+        if (question == null || question.isBlank()) {
+            throw new IllegalArgumentException("되묻기 질문은 비어 있을 수 없습니다.");
+        }
+
+        ChatExecution execution = getRunningExecution(executionId);
+        ChatSession session = lockSession(execution);
+        Instant completedAt = Instant.now();
+
+        ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
+        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, null, null, completedAt);
+        execution.complete(message, completedAt);
+        session.waitForClarification();
+        session.touch(completedAt);
+        return ChatOutputMessage.of(execution, message);
+    }
+
+    public ChatOutputMessage fail(Long executionId, ChatFailure failure) {
+        ChatExecution execution = getRunningExecution(executionId);
+        ChatSession session = lockSession(execution);
+        Instant endedAt = Instant.now();
+
+        ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.ERROR);
+        message.fail(failure.status());
+        execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
+        session.touch(endedAt);
+        return ChatOutputMessage.of(execution, message);
+    }
+
+    private ChatExecution getRunningExecution(Long executionId) {
+        ChatExecution execution = chatExecutionRepository.findExecutionByIdForUpdate(executionId)
+                .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
+        if (!execution.isRunning()) {
+            throw new GeneralException(ChatErrorCode.EXECUTION_NOT_RUNNING);
+        }
+        return execution;
+    }
+
+    private ChatSession lockSession(ChatExecution execution) {
+        return chatSessionRepository.findSessionByIdForUpdate(execution.getSession().getSessionId())
+                .orElseThrow(() -> new GeneralException(ChatErrorCode.SESSION_NOT_FOUND));
+    }
+
+    private ChatMessage outputMessage(
+            ChatSession session,
+            ChatExecution execution,
+            ChatMessage.MessageType messageType
+    ) {
+        ChatMessage started = execution.getOutputMessage();
+        return started != null ? started : appendAssistantMessage(session, execution, messageType);
+    }
+
+    private ChatMessage appendAssistantMessage(
+            ChatSession session,
+            ChatExecution execution,
+            ChatMessage.MessageType messageType
+    ) {
+        return chatMessageAppender.append(session, ChatMessage.builder()
+                .replyTo(execution.getInputMessage())
+                .role(ChatMessage.Role.ASSISTANT)
+                .messageType(messageType)
+                .status(ChatMessage.Status.GENERATING));
+    }
+}

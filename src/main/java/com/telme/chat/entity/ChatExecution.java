@@ -60,4 +60,25 @@ public class ChatExecution {
 
     @Column(name = "error_code", length = 50)
     private String errorCode;
+
+    public boolean isRunning() {
+        return this.status == Status.RUNNING;
+    }
+
+    public void attachOutput(ChatMessage outputMessage) {
+        this.outputMessage = outputMessage;
+    }
+
+    public void complete(ChatMessage outputMessage, Instant endedAt) {
+        this.outputMessage = outputMessage;
+        this.status = Status.COMPLETED;
+        this.endedAt = endedAt;
+    }
+
+    public void fail(Status status, String errorCode, ChatMessage outputMessage, Instant endedAt) {
+        this.outputMessage = outputMessage;
+        this.status = status;
+        this.errorCode = errorCode;
+        this.endedAt = endedAt;
+    }
 }
