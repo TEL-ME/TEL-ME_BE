@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.*;
+import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.service.CompoundDialoguePlanner;
 import com.telme.consult.service.CompoundDialoguePlanner.Request;
 import com.telme.consult.service.CompoundDialoguePlanner.Status;
 import com.telme.consult.service.DialogueService;
+import com.telme.global.common.exception.GeneralException;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -71,7 +73,7 @@ class LocalConsultDatabaseTest {
         if (guest != null)
             jdbc.update(
                     "INSERT INTO guests(guest_id,expires_at) VALUES (?,now()+interval '1 day') ON"
-                        + " CONFLICT DO NOTHING",
+                            + " CONFLICT DO NOTHING",
                     guest);
         return jdbc.queryForObject(
                 "INSERT INTO chat_sessions(user_id,guest_id) VALUES (?,?) RETURNING session_id",
@@ -203,14 +205,14 @@ class LocalConsultDatabaseTest {
                 replied,
                 jdbc.queryForObject(
                         "SELECT answered_message_id FROM consult_conditions WHERE"
-                            + " consult_request_id=?",
+                                + " consult_request_id=?",
                         Long.class,
                         rid));
         assertEquals(
                 asked,
                 jdbc.queryForObject(
                         "SELECT asked_message_id FROM consult_conditions WHERE"
-                            + " consult_request_id=?",
+                                + " consult_request_id=?",
                         Long.class,
                         rid));
         var correction =
@@ -225,7 +227,7 @@ class LocalConsultDatabaseTest {
         assertNull(
                 jdbc.queryForObject(
                         "SELECT answered_message_id FROM consult_conditions WHERE"
-                            + " consult_request_id=?",
+                                + " consult_request_id=?",
                         Long.class,
                         rid));
         assertEquals(
@@ -354,8 +356,23 @@ class LocalConsultDatabaseTest {
         long finalAnswer = message(session, "ASSISTANT", "ANSWER", "COMPLETED");
         var done = states.complete(session, rid, initial.version(), finalAnswer);
         assertEquals("DONE", done.status());
-        assertThrows(
-                IllegalStateException.class, () -> states.cancel(session, rid, done.version()));
+        var service =
+                new com.telme.consult.service.ConsultService(
+                        states, new DialogueService(p -> fail("종료된 상담은 모델을 호출하지 않음")));
+        var error =
+                assertThrows(
+                        GeneralException.class,
+                        () ->
+                                service.prepare(
+                                        session,
+                                        rid,
+                                        Purpose.GENERAL_FAQ,
+                                        Map.of(),
+                                        LocationStatus.MISSING));
+        assertEquals(ConsultErrorCode.REQUEST_CLOSED, error.getErrorCode());
+        assertEquals(
+                org.springframework.http.HttpStatus.CONFLICT, error.getErrorCode().getStatus());
+        assertThrows(GeneralException.class, () -> states.cancel(session, rid, done.version()));
         var next =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
@@ -366,7 +383,7 @@ class LocalConsultDatabaseTest {
                                         Map.of(),
                                         LocationStatus.MISSING));
         assertThrows(
-                IllegalStateException.class,
+                GeneralException.class,
                 () -> states.save(session, done.version(), next, MessageLinks.none()));
     }
 
@@ -921,7 +938,7 @@ class LocalConsultDatabaseTest {
                 1,
                 jdbc.queryForObject(
                         "SELECT count(*) FROM chat_messages WHERE session_id=? AND"
-                            + " message_type='CLARIFICATION'",
+                                + " message_type='CLARIFICATION'",
                         Integer.class,
                         session));
         assertEquals("WAITING_CONDITION", states.load(session, rid).status());

@@ -6,10 +6,12 @@ import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.consult.repository.JdbcConsultStateStore.ClarificationAlreadyPending;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.repository.JdbcConsultStateStore.Snapshot;
+import com.telme.global.common.exception.GeneralException;
 
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -98,7 +100,7 @@ public class ConsultService {
         }
         var snapshot = stateStore.load(sessionId, requestId);
         if (Set.of("DONE", "CANCELLED").contains(snapshot.status())) {
-            throw new IllegalStateException("Consult request already closed");
+            throw new GeneralException(ConsultErrorCode.REQUEST_CLOSED);
         }
         // 상태를 읽는 트랜잭션은 모델 호출 전에 끝난다.
         var input =

@@ -51,6 +51,7 @@ public final class CompoundDialoguePlanner {
         this.dialogue = Objects.requireNonNull(dialogue);
     }
 
+    // 호출자는 subquery_order 순으로 전달한다. ID 크기로 재정렬하지 않는다.
     public Plan plan(List<Request> requests) {
         var inputs = List.copyOf(requests);
         var ids = new HashSet<Long>();

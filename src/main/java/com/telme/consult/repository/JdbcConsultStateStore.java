@@ -77,7 +77,7 @@ public final class JdbcConsultStateStore {
         var requests =
                 jdbc.query(
                         "SELECT version,status FROM consult_requests WHERE consult_request_id=? AND"
-                            + " session_id=? FOR UPDATE",
+                                + " session_id=? FOR UPDATE",
                         (rs, n) ->
                                 new Snapshot(
                                         requestId,
@@ -92,7 +92,7 @@ public final class JdbcConsultStateStore {
         Map<String, Condition> conditions = new HashMap<>();
         jdbc.query(
                 "SELECT condition_key,condition_value,status FROM consult_conditions WHERE"
-                    + " consult_request_id=?",
+                        + " consult_request_id=?",
                 rs -> {
                     conditions.put(
                             rs.getString("condition_key"),
@@ -144,7 +144,7 @@ public final class JdbcConsultStateStore {
                     var old = read(sessionId, decision.consultRequestId());
                     if (old.version() != expectedVersion) throw new StateConflict();
                     if (Set.of("DONE", "CANCELLED").contains(old.status()))
-                        throw new IllegalStateException("Consult request already closed");
+                        throw new GeneralException(ConsultErrorCode.REQUEST_CLOSED);
                     if (!decision.conditions().keySet().containsAll(old.conditions().keySet()))
                         throw new IllegalArgumentException("Existing conditions must be preserved");
                     boolean keepsWaiting = pendingMessageId != null;
@@ -225,9 +225,9 @@ public final class JdbcConsultStateStore {
                         int later =
                                 jdbc.queryForObject(
                                         "SELECT count(*) FROM chat_messages a JOIN chat_messages q"
-                                            + " ON q.message_id=? WHERE a.message_id=? AND"
-                                            + " a.session_id=q.session_id AND"
-                                            + " a.sequence_no>q.sequence_no",
+                                                + " ON q.message_id=? WHERE a.message_id=? AND"
+                                                + " a.session_id=q.session_id AND"
+                                                + " a.sequence_no>q.sequence_no",
                                         Integer.class,
                                         asked.getFirst(),
                                         links.answerMessageId());
@@ -275,8 +275,8 @@ public final class JdbcConsultStateStore {
                         if (isAnswered)
                             jdbc.update(
                                     "UPDATE consult_conditions SET"
-                                        + " source='ASKED',answered_message_id=? WHERE"
-                                        + " consult_request_id=? AND condition_key=?",
+                                            + " source='ASKED',answered_message_id=? WHERE"
+                                            + " consult_request_id=? AND condition_key=?",
                                     links.answerMessageId(),
                                     old.requestId(),
                                     key);
@@ -284,8 +284,8 @@ public final class JdbcConsultStateStore {
                     // 최종 답변이 저장되기 전에는 상담을 완료하지 않는다.
                     jdbc.update(
                             "UPDATE consult_requests SET"
-                                + " status=?,version=version+1,updated_at=now() WHERE"
-                                + " consult_request_id=?",
+                                    + " status=?,version=version+1,updated_at=now() WHERE"
+                                    + " consult_request_id=?",
                             asks || keepsWaiting ? "WAITING_CONDITION" : "PENDING",
                             old.requestId());
                     return read(sessionId, old.requestId());
@@ -320,11 +320,11 @@ public final class JdbcConsultStateStore {
                     if (matching != 1)
                         throw new IllegalArgumentException(
                                 "Final answer must be a completed later message in this"
-                                    + " conversation");
+                                        + " conversation");
                     jdbc.update(
                             "UPDATE consult_requests SET"
-                                + " status='DONE',version=version+1,updated_at=now() WHERE"
-                                + " consult_request_id=?",
+                                    + " status='DONE',version=version+1,updated_at=now() WHERE"
+                                    + " consult_request_id=?",
                             requestId);
                     return read(sessionId, requestId);
                 });
@@ -338,8 +338,8 @@ public final class JdbcConsultStateStore {
                     requireOpenVersion(old, expectedVersion);
                     jdbc.update(
                             "UPDATE consult_requests SET"
-                                + " status='CANCELLED',version=version+1,updated_at=now() WHERE"
-                                + " consult_request_id=?",
+                                    + " status='CANCELLED',version=version+1,updated_at=now() WHERE"
+                                    + " consult_request_id=?",
                             requestId);
                     return read(sessionId, requestId);
                 });
@@ -348,14 +348,14 @@ public final class JdbcConsultStateStore {
     private void requireOpenVersion(Snapshot old, int expectedVersion) {
         if (old.version() != expectedVersion) throw new StateConflict();
         if (Set.of("DONE", "CANCELLED").contains(old.status()))
-            throw new IllegalStateException("Consult request already closed");
+            throw new GeneralException(ConsultErrorCode.REQUEST_CLOSED);
     }
 
     private void checkMessage(long messageId, long sessionId, String role, String type) {
         int count =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM chat_messages WHERE message_id=? AND session_id=? AND"
-                            + " role=? AND message_type=? AND status='COMPLETED'",
+                                + " role=? AND message_type=? AND status='COMPLETED'",
                         Integer.class,
                         messageId,
                         sessionId,

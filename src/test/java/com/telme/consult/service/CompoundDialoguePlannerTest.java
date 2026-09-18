@@ -55,6 +55,14 @@ class CompoundDialoguePlannerTest {
     }
 
     @Test
+    void clarificationUsesInputOrderRatherThanRequestId() {
+        var result = planner.plan(List.of(store(30), store(10), store(20)));
+        assertEquals(30L, result.clarification().consultRequestId());
+        assertEquals(List.of(10L, 20L), result.deferred());
+        assertEquals(1, calls.get());
+    }
+
+    @Test
     void existingUnansweredQuestionPreventsDuplicateAndNewModelCalls() {
         var waiting = request(2, Purpose.NEARBY_STORE, Status.WAITING_CONDITION, 99L, Map.of());
         var result = planner.plan(List.of(store(3), waiting));
