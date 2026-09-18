@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -37,6 +38,9 @@ class ChatExecutionServiceIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private ChatActor actor;
     private Long sessionId;
@@ -176,6 +180,20 @@ class ChatExecutionServiceIntegrationTest {
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.CANCELLED);
         assertThat(historyItem(2).completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
+    }
+
+    @Test
+    void clarificationIsVisibleToSqlInSameTransaction() {
+        ChatMessageSendResponse question = send("매장 찾아줘");
+
+        ChatOutputMessage clarification = chatExecutionService.askClarification(
+                question.executionId(), "어느 지역 매장을 찾으시나요?");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from chat_messages where message_id = ? and session_id = ?"
+                        + " and role = 'ASSISTANT' and message_type = 'CLARIFICATION' and status = 'COMPLETED'",
+                Integer.class, clarification.messageId(), sessionId))
+                .isEqualTo(1);
     }
 
     @Test

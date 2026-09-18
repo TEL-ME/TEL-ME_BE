@@ -33,7 +33,7 @@ public class ChatExecutionService {
         ChatMessage message = appendAssistantMessage(session, execution, ChatMessage.MessageType.ANSWER);
         execution.attachOutput(message);
         session.touch(Instant.now());
-        return ChatOutputMessage.of(execution, message);
+        return flushed(execution, message);
     }
 
     public ChatOutputMessage completeAnswer(Long executionId, ChatAnswer answer) {
@@ -53,7 +53,7 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.resume();
         session.touch(completedAt);
-        return ChatOutputMessage.of(execution, message);
+        return flushed(execution, message);
     }
 
     public ChatOutputMessage askClarification(Long executionId, String question) {
@@ -70,7 +70,7 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.waitForClarification();
         session.touch(completedAt);
-        return ChatOutputMessage.of(execution, message);
+        return flushed(execution, message);
     }
 
     public ChatOutputMessage fail(Long executionId, ChatFailure failure) {
@@ -82,6 +82,11 @@ public class ChatExecutionService {
         message.fail(failure.status(), endedAt);
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
+        return flushed(execution, message);
+    }
+
+    private ChatOutputMessage flushed(ChatExecution execution, ChatMessage message) {
+        chatExecutionRepository.flush();
         return ChatOutputMessage.of(execution, message);
     }
 
