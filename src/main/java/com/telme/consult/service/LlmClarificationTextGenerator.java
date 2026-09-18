@@ -1,8 +1,10 @@
 package com.telme.consult.service;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
+import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.LlmClient;
 
 import lombok.RequiredArgsConstructor;
@@ -33,11 +35,10 @@ public class LlmClarificationTextGenerator implements ClarificationTextGenerator
                 throw new GenerationUnavailableException("되묻기 모델이 일시적으로 응답할 수 없습니다.", exception);
             }
             throw exception;
-        } catch (IllegalStateException exception) {
-            // 공통 오류 타입 도입 전에는 Ollama의 두 응답 오류만 구분한다.
-            if ("Ollama 응답에 message가 없음".equals(exception.getMessage())
-                    || "Ollama 응답이 완료되지 않음".equals(exception.getMessage())) {
-                throw new GenerationUnavailableException("되묻기 모델 응답이 올바르지 않습니다.", exception);
+        } catch (GeneralException exception) {
+            // 공통 LLM 오류 코드는 모두 고정 질문으로 이어간다.
+            if (exception.getErrorCode() instanceof LlmErrorCode) {
+                throw new GenerationUnavailableException("되묻기 모델을 사용할 수 없습니다.", exception);
             }
             throw exception;
         } catch (ResourceAccessException exception) {
