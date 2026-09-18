@@ -5,7 +5,7 @@ import lombok.Builder;
 import java.util.Map;
 import java.util.Objects;
 
-/** 분석된 조건을 받는다. 복합 질문은 상담 요청별로 나눠서 전달한다. */
+/** HTTP 요청 DTO가 아닌 내부 입력 모델이다. 복합 질문은 상담 요청별로 나눠서 전달한다. */
 @Builder
 public record DialogueInput(
         Long consultRequestId,
@@ -39,7 +39,9 @@ public record DialogueInput(
                     throw new IllegalArgumentException("FILLED condition requires a value");
                 }
                 value = value.strip();
-                if (value.length() > 255) throw new IllegalArgumentException("Condition too long");
+                if (value.length() > 255) {
+                    throw new IllegalArgumentException("Condition too long");
+                }
             } else if (value != null) {
                 throw new IllegalArgumentException("Only FILLED condition can have a value");
             }

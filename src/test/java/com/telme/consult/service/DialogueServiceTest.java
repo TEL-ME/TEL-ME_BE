@@ -1,10 +1,18 @@
 package com.telme.consult.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.telme.consult.dto.DialogueDecision.*;
+import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueDecision.MessageOrigin;
 import com.telme.consult.dto.DialogueInput;
-import com.telme.consult.dto.DialogueInput.*;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.ConditionStatus;
+import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ClarificationTextGenerator.GenerationUnavailableException;
 
 import org.junit.jupiter.api.Test;

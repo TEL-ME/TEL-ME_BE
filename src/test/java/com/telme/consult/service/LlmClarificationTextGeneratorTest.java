@@ -3,7 +3,10 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
@@ -99,6 +102,14 @@ class LlmClarificationTextGeneratorTest {
                                 org.springframework.http.HttpStatus.BAD_REQUEST));
         assertThatThrownBy(() -> service.decide(input(Map.of(), Map.of())))
                 .isInstanceOf(org.springframework.web.client.HttpClientErrorException.class);
+    }
+
+    @Test
+    void unrelatedIllegalStateIsNotHidden() {
+        when(client.generate(any())).thenThrow(new IllegalStateException("잘못된 클라이언트 설정"));
+        assertThatThrownBy(() -> service.decide(input(Map.of(), Map.of())))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("잘못된 클라이언트 설정");
     }
 
     private DialogueInput input(Map<String, Condition> previous, Map<String, Condition> updates) {

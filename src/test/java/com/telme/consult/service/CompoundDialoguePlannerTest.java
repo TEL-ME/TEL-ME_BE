@@ -1,15 +1,24 @@
 package com.telme.consult.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
-import com.telme.consult.dto.DialogueInput.*;
-import com.telme.consult.service.CompoundDialoguePlanner.*;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.service.CompoundDialoguePlanner.Request;
+import com.telme.consult.service.CompoundDialoguePlanner.Status;
+import com.telme.consult.service.CompoundDialoguePlanner.Waiting;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class CompoundDialoguePlannerTest {

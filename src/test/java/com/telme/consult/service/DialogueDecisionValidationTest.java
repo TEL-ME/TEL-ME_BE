@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -15,6 +16,17 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 class DialogueDecisionValidationTest {
+    @Test
+    void missingConditionsIdentifiesInvalidField() {
+        var error =
+                assertThrows(
+                        NullPointerException.class,
+                        () ->
+                                new DialogueDecision(
+                                        1L, Action.PROCEED, null, null, null, MessageOrigin.NONE));
+        assertEquals("conditions", error.getMessage());
+    }
+
     @Test
     void missingActionCannotReachPersistence() {
         assertThrows(

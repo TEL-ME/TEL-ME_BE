@@ -1,10 +1,18 @@
 package com.telme.consult.repository;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
-import com.telme.consult.dto.DialogueInput.*;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.ConditionStatus;
+import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.service.CompoundDialoguePlanner;
@@ -13,15 +21,27 @@ import com.telme.consult.service.CompoundDialoguePlanner.Status;
 import com.telme.consult.service.DialogueService;
 import com.telme.global.common.exception.GeneralException;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.*;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /** 기존 로컬 DB 안의 무작위 전용 스키마만 생성/삭제한다. public 테이블은 사용하지 않는다. */
 @EnabledIfEnvironmentVariable(named = "TELME_DB_TESTS", matches = "true")
@@ -34,8 +54,10 @@ class LocalConsultDatabaseTest {
 
     @BeforeEach
     void setup() throws Exception {
-        String port = System.getenv().getOrDefault("POSTGRES_PORT", "25432");
-        if (!port.matches("[0-9]+")) throw new IllegalArgumentException("Invalid local port");
+        String port = System.getenv().getOrDefault("POSTGRES_PORT", "5432");
+        if (!port.matches("[0-9]+")) {
+            throw new IllegalArgumentException("Invalid local port");
+        }
         String url = "jdbc:postgresql://127.0.0.1:" + port + "/telme";
         String user = System.getenv().getOrDefault("POSTGRES_USER", "telme");
         String password = System.getenv().getOrDefault("POSTGRES_PASSWORD", "telme");
@@ -65,16 +87,18 @@ class LocalConsultDatabaseTest {
 
     @AfterEach
     void cleanup() {
-        if (admin != null && schema != null)
+        if (admin != null && schema != null) {
             admin.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+        }
     }
 
     long session(Long user, UUID guest) {
-        if (guest != null)
+        if (guest != null) {
             jdbc.update(
                     "INSERT INTO guests(guest_id,expires_at) VALUES (?,now()+interval '1 day') ON"
                             + " CONFLICT DO NOTHING",
                     guest);
+        }
         return jdbc.queryForObject(
                 "INSERT INTO chat_sessions(user_id,guest_id) VALUES (?,?) RETURNING session_id",
                 Long.class,
@@ -104,6 +128,19 @@ class LocalConsultDatabaseTest {
                 Long.class,
                 sid,
                 origin);
+    }
+
+    @Test
+    void missingOrDifferentSessionConsultationReturnsNotFound() {
+        long rid = request(session);
+        for (long sid : new long[] {session, session(2L, null)}) {
+            long id = sid == session ? Long.MAX_VALUE : rid;
+            var error = assertThrows(GeneralException.class, () -> states.load(sid, id));
+            assertEquals(ConsultErrorCode.REQUEST_NOT_FOUND, error.getErrorCode());
+            assertEquals(
+                    org.springframework.http.HttpStatus.NOT_FOUND,
+                    error.getErrorCode().getStatus());
+        }
     }
 
     @Test
@@ -576,13 +613,14 @@ class LocalConsultDatabaseTest {
             var ready = new CountDownLatch(2);
             var go = new CountDownLatch(1);
             var outcomes = new ArrayList<Future<Boolean>>();
-            for (var decision : List.of(a, b))
+            for (var decision : List.of(a, b)) {
                 outcomes.add(
                         pool.submit(
                                 () -> {
                                     ready.countDown();
-                                    if (!go.await(5, TimeUnit.SECONDS))
+                                    if (!go.await(5, TimeUnit.SECONDS)) {
                                         throw new IllegalStateException("Start barrier timed out");
+                                    }
                                     try {
                                         states.save(
                                                 session,
@@ -594,10 +632,15 @@ class LocalConsultDatabaseTest {
                                         return false;
                                     }
                                 }));
+            }
             assertTrue(ready.await(5, TimeUnit.SECONDS));
             go.countDown();
             int successes = 0;
-            for (var outcome : outcomes) if (outcome.get(10, TimeUnit.SECONDS)) successes++;
+            for (var outcome : outcomes) {
+                if (outcome.get(10, TimeUnit.SECONDS)) {
+                    successes++;
+                }
+            }
             assertEquals(1, successes);
         }
         var saved = states.load(session, rid);
@@ -900,8 +943,9 @@ class LocalConsultDatabaseTest {
                 outcomes.add(
                         pool.submit(
                                 () -> {
-                                    if (!start.await(5, TimeUnit.SECONDS))
+                                    if (!start.await(5, TimeUnit.SECONDS)) {
                                         throw new IllegalStateException("Start timed out");
+                                    }
                                     try {
                                         transaction.executeWithoutResult(
                                                 status -> {
@@ -931,7 +975,11 @@ class LocalConsultDatabaseTest {
             }
             start.countDown();
             int succeeded = 0;
-            for (var result : outcomes) if (result.get(10, TimeUnit.SECONDS)) succeeded++;
+            for (var result : outcomes) {
+                if (result.get(10, TimeUnit.SECONDS)) {
+                    succeeded++;
+                }
+            }
             assertEquals(1, succeeded);
         }
         assertEquals(

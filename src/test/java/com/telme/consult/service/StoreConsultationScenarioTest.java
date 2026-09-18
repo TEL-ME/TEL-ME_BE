@@ -1,11 +1,17 @@
 package com.telme.consult.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
-import com.telme.consult.dto.DialogueInput.*;
-import com.telme.consult.service.StoreSearchAssessment.*;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.service.StoreSearchAssessment.NextStep;
+import com.telme.consult.service.StoreSearchAssessment.SearchOutcome;
+import com.telme.consult.service.StoreSearchAssessment.SearchStatus;
 
 import org.junit.jupiter.api.Test;
 

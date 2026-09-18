@@ -1,8 +1,11 @@
 package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -80,6 +83,30 @@ class OllamaClarificationConnectionTest {
                 .andRespond(
                         withSuccess(
                                 "{\"message\":{\"content\":\" \"},\"done\":true}",
+                                MediaType.APPLICATION_JSON));
+        assertFallback();
+    }
+
+    @Test
+    void missingMessageUsesTemplate() {
+        server.expect(requestTo("http://localhost:11434/api/chat"))
+                .andRespond(withSuccess("{\"done\":true}", MediaType.APPLICATION_JSON));
+        assertFallback();
+    }
+
+    @Test
+    void emptyResponseUsesTemplate() {
+        server.expect(requestTo("http://localhost:11434/api/chat"))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+        assertFallback();
+    }
+
+    @Test
+    void unfinishedGenerationUsesTemplate() {
+        server.expect(requestTo("http://localhost:11434/api/chat"))
+                .andRespond(
+                        withSuccess(
+                                "{\"message\":{\"content\":\"일부 문장\"},\"done\":false}",
                                 MediaType.APPLICATION_JSON));
         assertFallback();
     }

@@ -4,7 +4,10 @@ import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 
 /** 같은 채팅방의 분해된 상담을 순서대로 판단한다. 소유권·버전 확인은 호출자가 담당한다. */
 public final class CompoundDialoguePlanner {
@@ -56,11 +59,13 @@ public final class CompoundDialoguePlanner {
         var inputs = List.copyOf(requests);
         var ids = new HashSet<Long>();
         for (var request : inputs) {
-            if (!ids.add(request.input().consultRequestId()))
+            if (!ids.add(request.input().consultRequestId())) {
                 throw new IllegalArgumentException("Duplicate consult request id");
+            }
             if ((request.status() == Status.DONE || request.status() == Status.CANCELLED)
-                    && !request.input().updates().isEmpty())
+                    && !request.input().updates().isEmpty()) {
                 throw new IllegalArgumentException("Closed request cannot receive updates");
+            }
         }
         var ready = new ArrayList<DialogueDecision>();
         var guidance = new ArrayList<DialogueDecision>();
@@ -74,16 +79,21 @@ public final class CompoundDialoguePlanner {
                 continue;
             }
             var decision = dialogue.assess(request.input());
-            if (decision.action() == Action.PROCEED) ready.add(decision);
-            else if (decision.action() == Action.ALTERNATIVE_GUIDANCE) guidance.add(decision);
-            else if (request.pendingQuestionMessageId() != null)
+            if (decision.action() == Action.PROCEED) {
+                ready.add(decision);
+            } else if (decision.action() == Action.ALTERNATIVE_GUIDANCE) {
+                guidance.add(decision);
+            } else if (request.pendingQuestionMessageId() != null) {
                 awaiting.add(new Waiting(id, request.pendingQuestionMessageId()));
-            else candidates.add(request);
+            } else {
+                candidates.add(request);
+            }
         }
         // 답을 기다리는 질문이 있으면 새 질문을 만들지 않는다.
         DialogueDecision question = null;
-        if (awaiting.isEmpty() && !candidates.isEmpty())
+        if (awaiting.isEmpty() && !candidates.isEmpty()) {
             question = dialogue.decide(candidates.removeFirst().input());
+        }
         var deferred = candidates.stream().map(r -> r.input().consultRequestId()).toList();
         return new Plan(ready, guidance, question, awaiting, deferred, closed);
     }

@@ -7,7 +7,7 @@ import lombok.Builder;
 import java.util.Map;
 import java.util.Objects;
 
-/** PROCEED는 검색 진행 허용이며, 최종 답변 완료가 아니다. */
+/** HTTP 응답 DTO가 아닌 내부 판단 모델이다. PROCEED는 검색 진행 허용이며, 최종 답변 완료가 아니다. */
 @Builder
 public record DialogueDecision(
         Long consultRequestId,
@@ -34,6 +34,7 @@ public record DialogueDecision(
         }
         Objects.requireNonNull(action, "action");
         Objects.requireNonNull(messageOrigin, "messageOrigin");
+        Objects.requireNonNull(conditions, "conditions");
         conditions = Map.copyOf(conditions);
         if (conditions.keySet().stream().anyMatch(key -> key.isBlank() || key.length() > 50)) {
             throw new IllegalArgumentException("조건 이름이 올바르지 않습니다.");
