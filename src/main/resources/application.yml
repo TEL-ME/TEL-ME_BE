@@ -39,3 +39,7 @@ llm:
   model: ${LLM_MODEL:exaone3.5:7.8b}
   connect-timeout: 5s
   read-timeout: 60s
+  retry:
+    # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
+    max-attempts: 2
+    wait-duration: 1s

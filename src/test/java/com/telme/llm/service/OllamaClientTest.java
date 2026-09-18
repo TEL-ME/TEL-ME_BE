@@ -22,9 +22,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.config.LlmProperties;
 import com.telme.llm.converter.OllamaRequestConverter;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.exception.LlmErrorCode;
 
 class OllamaClientTest {
 
@@ -66,8 +68,9 @@ class OllamaClientTest {
                 .andRespond(withSuccess("{\"done\":true}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> ollamaClient.generate(request()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("message가 없음");
+                .isInstanceOf(GeneralException.class)
+                .extracting(exception -> ((GeneralException) exception).getErrorCode())
+                .isEqualTo(LlmErrorCode.INVALID_RESPONSE);
     }
 
     @Test
@@ -78,8 +81,9 @@ class OllamaClientTest {
                         "{\"message\":{\"content\":\"파란\"},\"done\":false}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> ollamaClient.generate(request()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("완료되지 않음");
+                .isInstanceOf(GeneralException.class)
+                .extracting(exception -> ((GeneralException) exception).getErrorCode())
+                .isEqualTo(LlmErrorCode.INVALID_RESPONSE);
     }
 
     @Test
@@ -89,7 +93,9 @@ class OllamaClientTest {
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> ollamaClient.generate(request()))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(GeneralException.class)
+                .extracting(exception -> ((GeneralException) exception).getErrorCode())
+                .isEqualTo(LlmErrorCode.INVALID_RESPONSE);
     }
 
     @Test
