@@ -178,7 +178,7 @@ public class ChatSessionService {
 
         session.touch(completedAt);
         eventPublisher.publishEvent(new ChatProcessingCommand(
-                execution.getExecutionId(), sessionId, message.getMessageId()));
+                execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent()));
         return chatMessageConverter.toSendResponse(message, execution);
     }
 

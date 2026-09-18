@@ -128,7 +128,7 @@ class ChatSessionServiceTest {
         assertThat(response.sequenceNo()).isEqualTo(3);
         assertThat(response.executionStatus()).isEqualTo("RUNNING");
         verify(eventPublisher).publishEvent(new ChatProcessingCommand(
-                execution.getExecutionId(), 10L, message.getMessageId()));
+                execution.getExecutionId(), 10L, message.getMessageId(), "가까운 매장 알려줘"));
     }
 
     @Test

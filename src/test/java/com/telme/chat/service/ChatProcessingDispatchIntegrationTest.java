@@ -98,7 +98,7 @@ class ChatProcessingDispatchIntegrationTest {
         ChatMessageSendResponse sent = send(sessionId, "요금제 알려줘");
 
         verify(chatProcessingPort, timeout(5_000)).request(
-                new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId()));
+                new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId(), "요금제 알려줘"));
         assertThat(threadName.get()).startsWith(ChatProcessingDispatcher.THREAD_NAME_PREFIX);
     }
 
@@ -132,7 +132,8 @@ class ChatProcessingDispatchIntegrationTest {
     void failsExecutionWhenProcessorLookupFails() {
         Long sessionId = createSession();
         ChatMessageSendResponse sent = send(sessionId, "요금제 알려줘");
-        ChatProcessingCommand command = new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId());
+        ChatProcessingCommand command = new ChatProcessingCommand(
+                sent.executionId(), sessionId, sent.messageId(), "요금제 알려줘");
         verify(chatProcessingPort, timeout(5_000)).request(command);
 
         ObjectProvider<ChatProcessingPort> duplicated = mock(ObjectProvider.class);
@@ -157,7 +158,8 @@ class ChatProcessingDispatchIntegrationTest {
     void failsExecutionRightAfterCommitWhenQueueIsFull() throws Exception {
         Long sessionId = createSession();
         ChatMessageSendResponse sent = send(sessionId, "요금제 알려줘");
-        ChatProcessingCommand command = new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId());
+        ChatProcessingCommand command = new ChatProcessingCommand(
+                sent.executionId(), sessionId, sent.messageId(), "요금제 알려줘");
         verify(chatProcessingPort, timeout(5_000)).request(command);
 
         ThreadPoolTaskExecutor saturated = new ThreadPoolTaskExecutor();
