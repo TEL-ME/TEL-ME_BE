@@ -5,6 +5,8 @@ import com.telme.chat.converter.ChatSessionConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
 import com.telme.chat.dto.req.ChatSessionTitleUpdateRequest;
+import com.telme.chat.dto.res.ChatMessageHistoryItemResponse;
+import com.telme.chat.dto.res.ChatMessageHistoryResponse;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
 import com.telme.chat.dto.res.ChatSessionCreateResponse;
 import com.telme.chat.dto.res.ChatSessionListItemResponse;
@@ -20,6 +22,7 @@ import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -65,6 +68,33 @@ public class ChatSessionService {
                 .toList();
 
         return new ChatSessionListResponse(sessions, nextCursor, hasNext);
+    }
+
+    public ChatMessageHistoryResponse getMessages(
+            ChatActor actor,
+            Long sessionId,
+            Integer beforeSequenceNo,
+            int size
+    ) {
+        validateSessionOwner(actor, sessionId);
+
+        PageRequest limit = PageRequest.of(0, size + 1);
+        List<ChatMessage> queried = beforeSequenceNo == null
+                ? chatMessageRepository.findLatestMessages(sessionId, limit)
+                : chatMessageRepository.findMessagesBefore(sessionId, beforeSequenceNo, limit);
+
+        boolean hasOlderMessages = queried.size() > size;
+        List<ChatMessage> page = new ArrayList<>(queried.subList(0, Math.min(size, queried.size())));
+        Integer nextBeforeSequenceNo = hasOlderMessages
+                ? page.get(page.size() - 1).getSequenceNo()
+                : null;
+
+        Collections.reverse(page);
+        List<ChatMessageHistoryItemResponse> messages = page.stream()
+                .map(chatMessageConverter::toHistoryItemResponse)
+                .toList();
+
+        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages);
     }
 
     private List<ChatSession> findSessions(
@@ -143,6 +173,16 @@ public class ChatSessionService {
                 ? chatSessionRepository.findMemberSessionByIdForUpdate(sessionId, actor.userId())
                 : chatSessionRepository.findGuestSessionByIdForUpdate(sessionId, actor.guestId()))
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.SESSION_NOT_FOUND));
+    }
+
+    private void validateSessionOwner(ChatActor actor, Long sessionId) {
+        boolean owned = actor.isMember()
+                ? chatSessionRepository.existsBySessionIdAndUserId(sessionId, actor.userId())
+                : chatSessionRepository.existsBySessionIdAndUserIdIsNullAndGuestId(sessionId, actor.guestId());
+
+        if (!owned) {
+            throw new GeneralException(ChatErrorCode.SESSION_NOT_FOUND);
+        }
     }
 
     private String normalizeNullableTitle(String title) {
