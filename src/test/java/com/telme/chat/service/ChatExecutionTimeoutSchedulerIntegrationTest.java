@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -92,6 +93,22 @@ class ChatExecutionTimeoutSchedulerIntegrationTest {
                 .isEqualTo(ChatExecution.Status.RUNNING);
 
         assertThat(send(staleSessionId, "다시 질문할게요").sequenceNo()).isEqualTo(3);
+    }
+
+    @Test
+    void findsOnlyStaleRunningExecutionsAfterGivenId() {
+        ChatMessageSendResponse first = send(createSession(), "첫 번째 멈춘 질문");
+        ChatMessageSendResponse second = send(createSession(), "두 번째 멈춘 질문");
+        backdate(first.executionId());
+        backdate(second.executionId());
+        Instant startedBefore = Instant.now().minus(Duration.ofMinutes(5));
+
+        assertThat(chatExecutionRepository.findExecutionIdsStartedBefore(
+                ChatExecution.Status.RUNNING, startedBefore, first.executionId() - 1, PageRequest.of(0, 10)))
+                .containsExactly(first.executionId(), second.executionId());
+        assertThat(chatExecutionRepository.findExecutionIdsStartedBefore(
+                ChatExecution.Status.RUNNING, startedBefore, first.executionId(), PageRequest.of(0, 10)))
+                .containsExactly(second.executionId());
     }
 
     private Long createSession() {

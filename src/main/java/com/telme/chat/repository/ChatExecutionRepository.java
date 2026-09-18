@@ -32,11 +32,13 @@ public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Lo
             from ChatExecution execution
             where execution.status = :status
               and execution.startedAt <= :startedBefore
+              and execution.executionId > :afterId
             order by execution.executionId
             """)
     List<Long> findExecutionIdsStartedBefore(
             @Param("status") ChatExecution.Status status,
             @Param("startedBefore") Instant startedBefore,
+            @Param("afterId") Long afterId,
             Pageable pageable
     );
 

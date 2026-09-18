@@ -21,7 +21,8 @@ import org.springframework.stereotype.Component;
 public class ChatExecutionTimeoutScheduler {
 
     static final String ERROR_CODE = "EXECUTION_TIMEOUT";
-    private static final int BATCH_SIZE = 100;
+    static final int BATCH_SIZE = 100;
+    static final int MAX_BATCHES = 50;
 
     private final ChatExecutionRepository chatExecutionRepository;
     private final ChatExecutionService chatExecutionService;
@@ -33,18 +34,27 @@ public class ChatExecutionTimeoutScheduler {
     }
 
     int timeOutExecutionsStartedBefore(Instant startedBefore) {
-        List<Long> executionIds = chatExecutionRepository.findExecutionIdsStartedBefore(
-                ChatExecution.Status.RUNNING, startedBefore, PageRequest.of(0, BATCH_SIZE));
-
         int timedOut = 0;
-        for (Long executionId : executionIds) {
-            try {
-                chatExecutionService.fail(executionId, new ChatFailure(ChatMessage.Status.TIMEOUT, ERROR_CODE));
-                timedOut++;
-            } catch (GeneralException exception) {
-                log.info("채팅 실행 타임아웃 처리 건너뜀: executionId={}, code={}",
-                        executionId, exception.getErrorCode().getCode());
+        long afterId = 0;
+
+        for (int batch = 0; batch < MAX_BATCHES; batch++) {
+            List<Long> executionIds = chatExecutionRepository.findExecutionIdsStartedBefore(
+                    ChatExecution.Status.RUNNING, startedBefore, afterId, PageRequest.of(0, BATCH_SIZE));
+
+            for (Long executionId : executionIds) {
+                try {
+                    chatExecutionService.fail(executionId, new ChatFailure(ChatMessage.Status.TIMEOUT, ERROR_CODE));
+                    timedOut++;
+                } catch (GeneralException exception) {
+                    log.info("채팅 실행 타임아웃 처리 건너뜀: executionId={}, code={}",
+                            executionId, exception.getErrorCode().getCode());
+                }
             }
+
+            if (executionIds.size() < BATCH_SIZE) {
+                break;
+            }
+            afterId = executionIds.get(executionIds.size() - 1);
         }
 
         if (timedOut > 0) {
