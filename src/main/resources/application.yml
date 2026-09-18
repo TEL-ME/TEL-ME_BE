@@ -41,6 +41,8 @@ llm:
   read-timeout: 60s
 
 embedding:
+  model: ${EMBEDDING_MODEL:bge-m3}
+  dimension: 1024
   connect-timeout: 5s
   search-read-timeout: 15s
   batch-read-timeout: 120s

@@ -1,5 +1,6 @@
 package com.telme.faq.service;
 
+import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.dto.req.EmbedRequest;
 import com.telme.faq.dto.res.EmbedResponse;
 import com.telme.faq.exception.FaqErrorCode;
@@ -16,18 +17,18 @@ import org.springframework.web.client.RestClientException;
 @Component
 public class EmbeddingClient {
 
-    private static final String MODEL = "bge-m3";
-    private static final int EMBEDDING_DIMENSION = 1024;
-
     private final RestClient searchClient;
     private final RestClient batchClient;
+    private final EmbeddingProperties properties;
 
     public EmbeddingClient(
             @Qualifier("embeddingSearchClient") RestClient searchClient,
-            @Qualifier("embeddingBatchClient") RestClient batchClient
+            @Qualifier("embeddingBatchClient") RestClient batchClient,
+            EmbeddingProperties properties
     ) {
         this.searchClient = searchClient;
         this.batchClient = batchClient;
+        this.properties = properties;
     }
 
     // 단건 — 질문 1개 임베딩 (검색용, 짧은 타임아웃)
@@ -57,7 +58,7 @@ public class EmbeddingClient {
         try {
             return client.post()
                     .uri("/api/embed")
-                    .body(new EmbedRequest(MODEL, texts))
+                    .body(new EmbedRequest(properties.model(), texts))
                     .retrieve()
                     .body(EmbedResponse.class);
         } catch (HttpClientErrorException e) {
@@ -86,8 +87,8 @@ public class EmbeddingClient {
                 log.warn("[EmbeddingClient] 응답에 빈(null) 벡터가 포함되어 있습니다.");
                 throw new GeneralException(FaqErrorCode.EMBEDDING_RESPONSE_INVALID);
             }
-            if (vector.length != EMBEDDING_DIMENSION) {
-                log.warn("[EmbeddingClient] 벡터 차원이 {}가 아닙니다: {}", EMBEDDING_DIMENSION, vector.length);
+            if (vector.length != properties.dimension()) {
+                log.warn("[EmbeddingClient] 벡터 차원이 {}가 아닙니다: {}", properties.dimension(), vector.length);
                 throw new GeneralException(FaqErrorCode.EMBEDDING_RESPONSE_INVALID);
             }
         }

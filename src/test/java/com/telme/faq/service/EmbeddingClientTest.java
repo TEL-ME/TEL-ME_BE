@@ -7,10 +7,12 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
+import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.dto.res.EmbedResponse;
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +34,10 @@ class EmbeddingClientTest {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://ollama.test");
         server = MockRestServiceServer.bindTo(builder).build();
         RestClient client = builder.build();
-        embeddingClient = new EmbeddingClient(client, client);
+        var properties =
+                new EmbeddingProperties(
+                        "bge-m3", 1024, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120));
+        embeddingClient = new EmbeddingClient(client, client, properties);
     }
 
     @Test
