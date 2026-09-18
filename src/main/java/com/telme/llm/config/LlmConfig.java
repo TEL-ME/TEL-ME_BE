@@ -11,6 +11,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.service.LlmGenerationRecorder;
+import com.telme.llm.service.RecordingLlmClient;
 import com.telme.llm.service.RetryingLlmClient;
 
 @Configuration
@@ -33,12 +35,17 @@ public class LlmConfig {
                 .build();
     }
 
-    // Ollama 호출만 재시도로 감싼다. Fake는 실패하지 않아 감싸지 않는다
+    // Ollama 호출만 재시도·기록으로 감싼다. Fake는 실패하지 않고 기록할 값도 없어 감싸지 않는다
+    // 기록이 가장 바깥이라 재시도까지 포함한 전체 시간이 남는다
     @Bean
     @Primary
     @ConditionalOnProperty(name = "llm.provider", havingValue = "ollama")
-    public LlmClient retryingLlmClient(
-            @Qualifier("baseLlmClient") LlmClient baseLlmClient, LlmRetryProperties retryProperties) {
-        return new RetryingLlmClient(baseLlmClient, retryProperties);
+    public LlmClient ollamaLlmClient(
+            @Qualifier("baseLlmClient") LlmClient baseLlmClient,
+            LlmProperties properties,
+            LlmRetryProperties retryProperties,
+            LlmGenerationRecorder recorder) {
+        return new RecordingLlmClient(
+                new RetryingLlmClient(baseLlmClient, retryProperties), recorder, properties.model());
     }
 }
