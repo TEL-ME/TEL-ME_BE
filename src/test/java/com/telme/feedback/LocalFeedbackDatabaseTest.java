@@ -28,7 +28,7 @@ class LocalFeedbackDatabaseTest {
 
     @BeforeEach
     void setup() throws Exception {
-        String port = System.getenv().getOrDefault("POSTGRES_PORT", "25432");
+        String port = System.getenv().getOrDefault("POSTGRES_PORT", "5432");
         if (!port.matches("[0-9]+")) throw new IllegalArgumentException("Invalid local port");
         String url = "jdbc:postgresql://127.0.0.1:" + port + "/telme";
         String user = System.getenv().getOrDefault("POSTGRES_USER", "telme");
@@ -194,6 +194,33 @@ class LocalFeedbackDatabaseTest {
             assertEquals(a.get(10, TimeUnit.SECONDS), b.get(10, TimeUnit.SECONDS));
             assertEquals(
                     1, jdbc.queryForObject("SELECT count(*) FROM message_feedback", Integer.class));
+        }
+    }
+
+    @Test
+    void readingFeedbackDoesNotLockChatRows() {
+        feedback.save(answer, owner, like());
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            transaction.executeWithoutResult(
+                    status -> {
+                        assertTrue(feedback.get(answer, owner).isPresent());
+                        var otherConnection =
+                                pool.submit(
+                                        () ->
+                                                jdbc.queryForObject(
+                                                        "SELECT m.message_id FROM chat_messages m"
+                                                            + " JOIN chat_sessions s ON"
+                                                            + " s.session_id=m.session_id WHERE"
+                                                            + " m.message_id=? FOR UPDATE OF s,m"
+                                                            + " NOWAIT",
+                                                        Long.class,
+                                                        answer));
+                        try {
+                            assertEquals(answer, otherConnection.get(3, TimeUnit.SECONDS));
+                        } catch (Exception failure) {
+                            throw new AssertionError("조회가 채팅 행을 잠그면 안 됩니다.", failure);
+                        }
+                    });
         }
     }
 }

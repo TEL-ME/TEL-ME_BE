@@ -1,6 +1,8 @@
 package com.telme.feedback.repository;
 
-import com.telme.feedback.dto.FeedbackModels.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Feedback;
+import com.telme.feedback.dto.FeedbackModels.Input;
 import com.telme.feedback.exception.FeedbackErrorCode;
 import com.telme.global.common.exception.GeneralException;
 

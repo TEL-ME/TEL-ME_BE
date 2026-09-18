@@ -19,7 +19,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/chat/messages/{messageId}/feedback")
@@ -63,11 +69,15 @@ public class FeedbackController {
 
     private Actor actor(HttpServletRequest request) {
         Actor actor = actors.resolve(request);
-        if (actor == null) throw new GeneralException(CommonErrorCode.UNAUTHORIZED);
+        if (actor == null) {
+            throw new GeneralException(CommonErrorCode.UNAUTHORIZED);
+        }
         return actor;
     }
 
     private void checkId(long id) {
-        if (id <= 0) throw new GeneralException(FeedbackErrorCode.INVALID_REQUEST);
+        if (id <= 0) {
+            throw new GeneralException(FeedbackErrorCode.INVALID_REQUEST);
+        }
     }
 }

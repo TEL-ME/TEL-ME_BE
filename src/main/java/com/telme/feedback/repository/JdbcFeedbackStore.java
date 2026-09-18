@@ -1,6 +1,10 @@
 package com.telme.feedback.repository;
 
-import com.telme.feedback.dto.FeedbackModels.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Feedback;
+import com.telme.feedback.dto.FeedbackModels.Input;
+import com.telme.feedback.dto.FeedbackModels.Rating;
+import com.telme.feedback.dto.FeedbackModels.Reason;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -55,16 +59,30 @@ public final class JdbcFeedbackStore implements FeedbackStore {
     public Optional<Feedback> find(long messageId, Actor actor) {
         return tx.execute(
                 status -> {
-                    checkTarget(messageId, actor, false);
+                    // 소유권과 평가를 한 쿼리에서 읽는다. 조회는 채팅 행을 잠그지 않는다.
+                    String ownerFilter =
+                            actor.userId() != null
+                                    ? "s.user_id=?"
+                                    : "s.user_id IS NULL AND s.guest_id=?";
                     List<Feedback> rows =
                             jdbc.query(
-                                    "SELECT * FROM message_feedback WHERE message_id=? AND "
+                                    "SELECT f.* FROM chat_messages m JOIN chat_sessions s ON"
+                                        + " s.session_id=m.session_id LEFT JOIN message_feedback f"
+                                        + " ON f.message_id=m.message_id AND f."
                                             + actorColumn(actor)
-                                            + "=?",
-                                    this::read,
+                                            + "=? WHERE m.message_id=? AND "
+                                            + ownerFilter,
+                                    (rs, n) ->
+                                            rs.getObject("feedback_id") == null
+                                                    ? null
+                                                    : read(rs, n),
+                                    actorId(actor),
                                     messageId,
                                     actorId(actor));
-                    return rows.stream().findFirst();
+                    if (rows.isEmpty()) {
+                        throw new TargetUnavailable();
+                    }
+                    return Optional.ofNullable(rows.getFirst());
                 });
     }
 
@@ -97,18 +115,24 @@ public final class JdbcFeedbackStore implements FeedbackStore {
                                         rs.getString("message_type"),
                                         rs.getString("status")),
                         id);
-        if (targets.isEmpty()) throw new TargetUnavailable();
+        if (targets.isEmpty()) {
+            throw new TargetUnavailable();
+        }
         var t = targets.getFirst();
         // 회원 연결 후 guest_id가 남더라도 과거 게스트에게 접근을 허용하지 않는다.
         boolean owns =
                 actor.userId() != null
                         ? actor.userId().equals(t.userId())
                         : t.userId() == null && actor.guestId().equals(t.guestId());
-        if (!owns) throw new TargetUnavailable();
+        if (!owns) {
+            throw new TargetUnavailable();
+        }
         if (requireAnswer
                 && !("ASSISTANT".equals(t.role())
                         && "ANSWER".equals(t.type())
-                        && "COMPLETED".equals(t.status()))) throw new TargetNotReady();
+                        && "COMPLETED".equals(t.status()))) {
+            throw new TargetNotReady();
+        }
     }
 
     private record Target(Long userId, UUID guestId, String role, String type, String status) {}
