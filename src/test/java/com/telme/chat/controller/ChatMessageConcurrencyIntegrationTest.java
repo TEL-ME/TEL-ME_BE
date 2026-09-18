@@ -77,40 +77,46 @@ class ChatMessageConcurrencyIntegrationTest {
     }
 
     @Test
-    void assignsDistinctSequenceNumbersForConcurrentMessages() throws Exception {
+    void acceptsOnlyOneOfConcurrentMessages() throws Exception {
         long sessionId = createSession();
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         try {
-            Future<Integer> first = executor.submit(() -> sendMessage(sessionId, "첫 번째 질문", ready, start));
-            Future<Integer> second = executor.submit(() -> sendMessage(sessionId, "두 번째 질문", ready, start));
+            Future<MvcResult> first = executor.submit(() -> sendMessage(sessionId, "첫 번째 질문", ready, start));
+            Future<MvcResult> second = executor.submit(() -> sendMessage(sessionId, "두 번째 질문", ready, start));
 
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
 
-            List<Integer> sequenceNumbers = List.of(
-                    first.get(10, TimeUnit.SECONDS),
-                    second.get(10, TimeUnit.SECONDS)
+            List<Integer> statuses = List.of(
+                    first.get(10, TimeUnit.SECONDS).getResponse().getStatus(),
+                    second.get(10, TimeUnit.SECONDS).getResponse().getStatus()
             );
-            assertThat(sequenceNumbers).containsExactlyInAnyOrder(1, 2);
+            assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+            assertThat(jdbcTemplate.queryForObject(
+                    "select count(*) from chat_messages where session_id = ?", Integer.class, sessionId))
+                    .isEqualTo(1);
         } finally {
             executor.shutdownNow();
         }
     }
 
     @Test
-    void assignsDistinctSequenceNumbersForUserMessageAndAssistantAnswer() throws Exception {
+    void assignsDistinctSequenceNumbersWhenTimedOutExecutionFinishesLate() throws Exception {
         long sessionId = createSession();
         long executionId = objectMapper.readTree(postMessage(sessionId, "첫 질문").getResponse().getContentAsByteArray())
                 .path("result").path("executionId").asLong();
+        jdbcTemplate.update(
+                "update chat_executions set started_at = now() - interval '1 hour' where execution_id = ?",
+                executionId);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         try {
-            Future<Integer> userMessage = executor.submit(() -> sendMessage(sessionId, "추가 질문", ready, start));
+            Future<Integer> userMessage = executor.submit(() -> sequenceNo(sendMessage(sessionId, "추가 질문", ready, start)));
             Future<Integer> answer = executor.submit(() -> {
                 ready.countDown();
                 assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
@@ -143,7 +149,7 @@ class ChatMessageConcurrencyIntegrationTest {
                 .path("result").path("sessionId").asLong();
     }
 
-    private int sendMessage(
+    private MvcResult sendMessage(
             long sessionId,
             String content,
             CountDownLatch ready,
@@ -151,9 +157,7 @@ class ChatMessageConcurrencyIntegrationTest {
     ) throws Exception {
         ready.countDown();
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
-
-        return objectMapper.readTree(postMessage(sessionId, content).getResponse().getContentAsByteArray())
-                .path("result").path("sequenceNo").asInt();
+        return postMessage(sessionId, content);
     }
 
     private MvcResult postMessage(long sessionId, String content) throws Exception {
@@ -161,8 +165,13 @@ class ChatMessageConcurrencyIntegrationTest {
                         .session(chatSession())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MessageRequest(content))))
-                .andExpect(status().isCreated())
                 .andReturn();
+    }
+
+    private int sequenceNo(MvcResult result) throws Exception {
+        assertThat(result.getResponse().getStatus()).isEqualTo(201);
+        return objectMapper.readTree(result.getResponse().getContentAsByteArray())
+                .path("result").path("sequenceNo").asInt();
     }
 
     private MockHttpSession chatSession() {

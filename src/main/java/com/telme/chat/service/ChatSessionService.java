@@ -1,5 +1,6 @@
 package com.telme.chat.service;
 
+import com.telme.chat.config.ChatExecutionProperties;
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.converter.ChatSessionConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,7 @@ public class ChatSessionService {
     private final ChatMessageAppender chatMessageAppender;
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
+    private final ChatExecutionProperties chatExecutionProperties;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -94,8 +97,19 @@ public class ChatSessionService {
         List<ChatMessageHistoryItemResponse> messages = page.stream()
                 .map(chatMessageConverter::toHistoryItemResponse)
                 .toList();
+        Long runningExecutionId = findRunningExecution(sessionId)
+                .map(ChatExecution::getExecutionId)
+                .orElse(null);
 
-        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages);
+        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages, runningExecutionId);
+    }
+
+    public ChatExecutionState getExecution(ChatActor actor, Long executionId) {
+        return (actor.isMember()
+                ? chatExecutionRepository.findMemberExecution(executionId, actor.userId())
+                : chatExecutionRepository.findGuestExecution(executionId, actor.guestId()))
+                .map(ChatExecutionState::of)
+                .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
     }
 
     private List<ChatSession> findSessions(
@@ -144,6 +158,9 @@ public class ChatSessionService {
         if (session.getStatus() == ChatSession.Status.CLOSED) {
             throw new GeneralException(ChatErrorCode.SESSION_CLOSED);
         }
+        if (findRunningExecution(sessionId).isPresent()) {
+            throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
+        }
 
         Instant completedAt = Instant.now();
         ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
@@ -169,6 +186,14 @@ public class ChatSessionService {
                 ? chatSessionRepository.findMemberSessionByIdForUpdate(sessionId, actor.userId())
                 : chatSessionRepository.findGuestSessionByIdForUpdate(sessionId, actor.guestId()))
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.SESSION_NOT_FOUND));
+    }
+
+    private Optional<ChatExecution> findRunningExecution(Long sessionId) {
+        Instant startedAfter = Instant.now().minus(chatExecutionProperties.runningTimeout());
+        return chatExecutionRepository.findExecutionsStartedAfter(
+                        sessionId, ChatExecution.Status.RUNNING, startedAfter, PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
     }
 
     private void validateSessionOwner(ChatActor actor, Long sessionId) {

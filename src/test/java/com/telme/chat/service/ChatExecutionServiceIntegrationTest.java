@@ -56,15 +56,12 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
-    void startedAnswerKeepsItsSequenceWhileUserSendsAnotherMessage() {
+    void completesStartedAnswerInPlace() {
         ChatMessageSendResponse question = send("5G 요금제 알려줘");
 
         ChatOutputMessage started = chatExecutionService.startAnswer(question.executionId());
         assertThat(started.sequenceNo()).isEqualTo(2);
         assertThat(started.status()).isEqualTo(ChatMessage.Status.GENERATING);
-
-        ChatMessageSendResponse nextQuestion = send("그리고 로밍은?");
-        assertThat(nextQuestion.sequenceNo()).isEqualTo(3);
 
         ChatOutputMessage completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
@@ -205,6 +202,76 @@ class ChatExecutionServiceIntegrationTest {
                 ChatErrorCode.EXECUTION_NOT_RUNNING);
         assertErrorCode(
                 () -> chatExecutionService.askClarification(Long.MAX_VALUE, "질문"),
+                ChatErrorCode.EXECUTION_NOT_FOUND);
+    }
+
+    @Test
+    void rejectsNewMessageUntilExecutionFinishes() {
+        ChatMessageSendResponse question = send("요금제 알려줘");
+
+        assertErrorCode(() -> send("로밍은?"), ChatErrorCode.EXECUTION_IN_PROGRESS);
+
+        chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", null, null, null));
+
+        assertThat(send("로밍은?").sequenceNo()).isEqualTo(3);
+    }
+
+    @Test
+    void timedOutExecutionNoLongerBlocksNewMessage() {
+        ChatMessageSendResponse question = send("요금제 알려줘");
+        entityManager.flush();
+        entityManager.createNativeQuery(
+                        "update chat_executions set started_at = now() - interval '1 hour' where execution_id = ?")
+                .setParameter(1, question.executionId())
+                .executeUpdate();
+
+        assertThat(chatSessionService.getMessages(actor, sessionId, null, 20).runningExecutionId()).isNull();
+        assertThat(send("다시 질문할게요").sequenceNo()).isEqualTo(2);
+    }
+
+    @Test
+    void historyExposesRunningExecutionUntilItFinishes() {
+        ChatMessageSendResponse question = send("요금제 알려줘");
+
+        assertThat(chatSessionService.getMessages(actor, sessionId, null, 20).runningExecutionId())
+                .isEqualTo(question.executionId());
+
+        chatExecutionService.fail(question.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "MODEL_ERROR"));
+
+        assertThat(chatSessionService.getMessages(actor, sessionId, null, 20).runningExecutionId()).isNull();
+    }
+
+    @Test
+    void returnsExecutionStateOnlyToOwner() {
+        ChatMessageSendResponse question = send("요금제 알려줘");
+
+        ChatExecutionState running = chatSessionService.getExecution(actor, question.executionId());
+        assertThat(running.sessionId()).isEqualTo(sessionId);
+        assertThat(running.status()).isEqualTo(ChatExecution.Status.RUNNING);
+        assertThat(running.outputMessage()).isNull();
+
+        ChatOutputMessage answer = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", null, null, null));
+
+        entityManager.flush();
+        entityManager.clear();
+        ChatExecutionState completed = chatSessionService.getExecution(actor, question.executionId());
+        assertThat(completed.status()).isEqualTo(ChatExecution.Status.COMPLETED);
+        assertThat(completed.outputMessage().messageId()).isEqualTo(answer.messageId());
+        assertThat(completed.outputMessage().sequenceNo()).isEqualTo(2);
+        assertThat(completed.outputMessage().status()).isEqualTo(ChatMessage.Status.COMPLETED);
+
+        User other = User.builder()
+                .email("other-" + UUID.randomUUID() + "@example.com")
+                .name("other")
+                .build();
+        entityManager.persist(other);
+        assertErrorCode(
+                () -> chatSessionService.getExecution(new ChatActor(other.getUserId(), null), question.executionId()),
+                ChatErrorCode.EXECUTION_NOT_FOUND);
+        assertErrorCode(
+                () -> chatSessionService.getExecution(new ChatActor(null, UUID.randomUUID()), question.executionId()),
                 ChatErrorCode.EXECUTION_NOT_FOUND);
     }
 

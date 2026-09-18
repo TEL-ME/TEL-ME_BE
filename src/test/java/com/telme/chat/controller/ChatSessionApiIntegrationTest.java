@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.service.HttpSessionChatActorProvider;
@@ -108,6 +109,47 @@ class ChatSessionApiIntegrationTest {
                         .content("{\"content\":\"추가 질문\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CHAT409-0"));
+    }
+
+    @Test
+    void rejectsNewMessageWhileAnswerIsRunning() throws Exception {
+        long sessionId = createChatSession("실행 중 전송");
+
+        MvcResult sendResult = mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MessageSendRequest("첫 질문"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long executionId = objectMapper.readTree(sendResult.getResponse().getContentAsByteArray())
+                .path("result").path("executionId").asLong();
+
+        mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MessageSendRequest("두 번째 질문"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CHAT409-3"));
+
+        mockMvc.perform(get("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages.length()").value(1))
+                .andExpect(jsonPath("$.result.runningExecutionId").value(executionId));
+
+        finishRunningExecutions(sessionId);
+
+        mockMvc.perform(get("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.runningExecutionId").value(nullValue()));
+
+        mockMvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MessageSendRequest("두 번째 질문"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.result.sequenceNo").value(2));
     }
 
     @Test
@@ -434,6 +476,20 @@ class ChatSessionApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MessageSendRequest(content))))
                 .andExpect(status().isCreated());
+        finishRunningExecutions(sessionId);
+    }
+
+    private void finishRunningExecutions(long sessionId) {
+        entityManager.createQuery("""
+                        update ChatExecution execution
+                        set execution.status = :completed
+                        where execution.session.sessionId = :sessionId
+                          and execution.status = :running
+                        """)
+                .setParameter("completed", ChatExecution.Status.COMPLETED)
+                .setParameter("running", ChatExecution.Status.RUNNING)
+                .setParameter("sessionId", sessionId)
+                .executeUpdate();
     }
 
     private User persistUser(String prefix) {

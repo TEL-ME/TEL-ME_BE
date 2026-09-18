@@ -15,7 +15,8 @@ public enum ChatErrorCode implements BaseErrorCode {
     EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404-1", "채팅 실행 이력을 찾을 수 없습니다."),
     SESSION_CLOSED(HttpStatus.CONFLICT, "CHAT409-0", "종료된 채팅 세션에는 메시지를 보낼 수 없습니다."),
     EXECUTION_NOT_RUNNING(HttpStatus.CONFLICT, "CHAT409-1", "이미 종료된 채팅 실행입니다."),
-    ANSWER_ALREADY_STARTED(HttpStatus.CONFLICT, "CHAT409-2", "이미 답변 생성을 시작한 채팅 실행입니다.");
+    ANSWER_ALREADY_STARTED(HttpStatus.CONFLICT, "CHAT409-2", "이미 답변 생성을 시작한 채팅 실행입니다."),
+    EXECUTION_IN_PROGRESS(HttpStatus.CONFLICT, "CHAT409-3", "이전 질문에 대한 답변을 생성하고 있습니다.");
 
     private final HttpStatus status;
     private final String code;
