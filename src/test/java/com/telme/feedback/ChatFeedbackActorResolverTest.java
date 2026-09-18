@@ -1,7 +1,10 @@
 package com.telme.feedback;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.telme.chat.service.ChatActor;
 import com.telme.chat.service.ChatActorProvider;
@@ -42,6 +45,7 @@ class ChatFeedbackActorResolverTest {
         when(provider.getCurrentActor(request)).thenThrow(new IllegalStateException("expired"));
         assertThrows(IllegalStateException.class, () -> resolver.resolve(request));
     }
+
     @Test
     void memberIdentityWinsWhenPreviousGuestIdRemains() {
         when(provider.getCurrentActor(request)).thenReturn(new ChatActor(1L, UUID.randomUUID()));

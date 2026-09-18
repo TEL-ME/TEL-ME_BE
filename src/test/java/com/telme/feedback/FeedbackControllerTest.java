@@ -1,19 +1,29 @@
 package com.telme.feedback;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.telme.feedback.api.*;
+import com.telme.feedback.api.VerifiedFeedbackActorResolver;
 import com.telme.feedback.controller.FeedbackController;
 import com.telme.feedback.converter.FeedbackConverter;
-import com.telme.feedback.dto.FeedbackModels.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Feedback;
 import com.telme.feedback.repository.FeedbackStore;
 import com.telme.feedback.service.FeedbackService;
 import com.telme.global.common.exception.GlobalExceptionHandler;
 
-import org.junit.jupiter.api.*;
-import org.springframework.test.web.servlet.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
@@ -90,9 +100,10 @@ class FeedbackControllerTest {
                     "{}",
                     "{\"rating\":\"OTHER\"}",
                     "{\"rating\":\"LIKE\",\"reason\":\"WRONG_INFO\"}"
-                })
+                }) {
             mvc.perform(put(url).contentType("application/json").content(body))
                     .andExpect(status().isBadRequest());
+        }
         verifyNoInteractions(service);
     }
 

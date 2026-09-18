@@ -3,7 +3,7 @@ package com.telme.feedback;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import com.telme.feedback.api.*;
+import com.telme.feedback.api.VerifiedFeedbackActorResolver;
 import com.telme.feedback.config.FeedbackConfiguration;
 import com.telme.feedback.controller.FeedbackController;
 import com.telme.feedback.converter.FeedbackConverter;

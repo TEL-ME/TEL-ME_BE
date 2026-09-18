@@ -1,8 +1,12 @@
 package com.telme.feedback;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.telme.feedback.dto.FeedbackModels.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Input;
+import com.telme.feedback.dto.FeedbackModels.Rating;
+import com.telme.feedback.dto.FeedbackModels.Reason;
 
 import org.junit.jupiter.api.Test;
 

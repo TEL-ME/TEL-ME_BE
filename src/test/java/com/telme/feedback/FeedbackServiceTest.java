@@ -1,9 +1,12 @@
 package com.telme.feedback;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.telme.feedback.dto.FeedbackModels.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Input;
+import com.telme.feedback.dto.FeedbackModels.Rating;
 import com.telme.feedback.repository.FeedbackStore;
 import com.telme.feedback.service.FeedbackService;
 

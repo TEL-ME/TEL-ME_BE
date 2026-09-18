@@ -1,20 +1,34 @@
 package com.telme.feedback;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.telme.feedback.dto.FeedbackModels.*;
-import com.telme.feedback.repository.*;
+import com.telme.feedback.dto.FeedbackModels.Actor;
+import com.telme.feedback.dto.FeedbackModels.Input;
+import com.telme.feedback.dto.FeedbackModels.Rating;
+import com.telme.feedback.dto.FeedbackModels.Reason;
+import com.telme.feedback.repository.FeedbackStore;
+import com.telme.feedback.repository.JdbcFeedbackStore;
 import com.telme.feedback.service.FeedbackService;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.*;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /** 기존 로컬 DB 안의 무작위 전용 스키마만 생성/삭제한다. public 테이블은 사용하지 않는다. */
 @EnabledIfEnvironmentVariable(named = "TELME_DB_TESTS", matches = "true")
@@ -29,7 +43,9 @@ class LocalFeedbackDatabaseTest {
     @BeforeEach
     void setup() throws Exception {
         String port = System.getenv().getOrDefault("POSTGRES_PORT", "5432");
-        if (!port.matches("[0-9]+")) throw new IllegalArgumentException("Invalid local port");
+        if (!port.matches("[0-9]+")) {
+            throw new IllegalArgumentException("Invalid local port");
+        }
         String url = "jdbc:postgresql://127.0.0.1:" + port + "/telme";
         String user = System.getenv().getOrDefault("POSTGRES_USER", "telme");
         String password = System.getenv().getOrDefault("POSTGRES_PASSWORD", "telme");
@@ -67,16 +83,18 @@ class LocalFeedbackDatabaseTest {
 
     @AfterEach
     void cleanup() {
-        if (admin != null && schema != null)
+        if (admin != null && schema != null) {
             admin.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+        }
     }
 
     long session(Long user, UUID guest) {
-        if (guest != null)
+        if (guest != null) {
             jdbc.update(
                     "INSERT INTO guests(guest_id,expires_at) VALUES (?,now()+interval '1 day') ON"
                             + " CONFLICT DO NOTHING",
                     guest);
+        }
         return jdbc.queryForObject(
                 "INSERT INTO chat_sessions(user_id,guest_id) VALUES (?,?) RETURNING session_id",
                 Long.class,
