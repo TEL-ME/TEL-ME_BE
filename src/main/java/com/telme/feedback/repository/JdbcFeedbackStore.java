@@ -129,7 +129,7 @@ public final class JdbcFeedbackStore implements FeedbackStore {
         }
         if (requireAnswer
                 && !("ASSISTANT".equals(t.role())
-                        && "ANSWER".equals(t.type())
+                        && ("ANSWER".equals(t.type()) || "STORE_RESULT".equals(t.type()))
                         && "COMPLETED".equals(t.status()))) {
             throw new TargetNotReady();
         }

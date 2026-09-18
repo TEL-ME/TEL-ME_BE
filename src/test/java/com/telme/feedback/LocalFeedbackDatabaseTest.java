@@ -163,10 +163,37 @@ class LocalFeedbackDatabaseTest {
                 List.of(
                         new String[] {"ASSISTANT", "CLARIFICATION", "COMPLETED"},
                         new String[] {"USER", "QUESTION", "COMPLETED"},
-                        new String[] {"ASSISTANT", "ANSWER", "GENERATING"})) {
+                        new String[] {"ASSISTANT", "ANSWER", "GENERATING"},
+                        new String[] {"ASSISTANT", "STORE_RESULT", "GENERATING"},
+                        new String[] {"ASSISTANT", "STORE_RESULT", "FAILED"})) {
             long mid = message(session, values[0], values[1], values[2]);
             assertThrows(
                     FeedbackStore.TargetNotReady.class, () -> feedback.save(mid, owner, like()));
+        }
+    }
+
+    @Test
+    void completedStoreRecommendationCanBeRatedByMemberAndGuest() {
+        var guest = new Actor(null, UUID.randomUUID());
+        for (Actor actor : List.of(owner, guest)) {
+            long sid = actor.userId() != null ? session : session(null, actor.guestId());
+            long mid = message(sid, "ASSISTANT", "STORE_RESULT", "COMPLETED");
+            var first = feedback.save(mid, actor, like());
+            assertEquals(first.id(), feedback.get(mid, actor).orElseThrow().id());
+            var updated =
+                    feedback.save(
+                            mid,
+                            actor,
+                            new Input(Rating.DISLIKE, Reason.WRONG_INFO, "매장 정보 확인이 필요해요"));
+            assertEquals(first.id(), updated.id());
+            assertEquals(Rating.DISLIKE, feedback.get(mid, actor).orElseThrow().input().rating());
+            var other = new Actor(2L, null);
+            assertThrows(FeedbackStore.TargetUnavailable.class, () -> feedback.get(mid, other));
+            assertThrows(
+                    FeedbackStore.TargetUnavailable.class, () -> feedback.save(mid, other, like()));
+            assertThrows(FeedbackStore.TargetUnavailable.class, () -> feedback.cancel(mid, other));
+            feedback.cancel(mid, actor);
+            assertTrue(feedback.get(mid, actor).isEmpty());
         }
     }
 
