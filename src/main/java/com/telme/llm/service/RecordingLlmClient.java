@@ -30,7 +30,13 @@ public class RecordingLlmClient implements LlmClient {
         long startedAt = System.currentTimeMillis();
         RecordingHandler wrapper = new RecordingHandler(handler, startedAt);
 
-        delegate.stream(request, wrapper);
+        try {
+            delegate.stream(request, wrapper);
+        } catch (RuntimeException e) {
+            // 안쪽에서 예외가 그대로 올라와도 기록은 남긴다
+            recorder.record(request, model, Result.failure(e, wrapper.firstTokenMs, elapsed(startedAt)));
+            throw e;
+        }
 
         Result result = wrapper.error == null
                 ? Result.success(wrapper.firstTokenMs, elapsed(startedAt))

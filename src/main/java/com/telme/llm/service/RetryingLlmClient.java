@@ -16,12 +16,12 @@ public class RetryingLlmClient implements LlmClient {
     @Override
     public String generate(LlmRequest request) {
         RuntimeException last = null;
-        for (int attempt = 1; attempt <= properties.maxAttempts(); attempt++) {
+        for (int attempt = 1; attempt <= maxAttempts(); attempt++) {
             try {
                 return delegate.generate(request);
             } catch (RuntimeException e) {
                 last = e;
-                if (attempt == properties.maxAttempts()) {
+                if (attempt == maxAttempts()) {
                     break;
                 }
                 sleep();
@@ -32,7 +32,7 @@ public class RetryingLlmClient implements LlmClient {
 
     @Override
     public void stream(LlmRequest request, LlmStreamHandler handler) {
-        for (int attempt = 1; attempt <= properties.maxAttempts(); attempt++) {
+        for (int attempt = 1; attempt <= maxAttempts(); attempt++) {
             RetryAwareHandler wrapper = new RetryAwareHandler(handler);
             delegate.stream(request, wrapper);
 
@@ -40,13 +40,18 @@ public class RetryingLlmClient implements LlmClient {
                 return;
             }
             // 토큰이 이미 나갔으면 다시 호출하지 않는다. 답변이 중복된다
-            if (wrapper.tokenSent || attempt == properties.maxAttempts()) {
+            if (wrapper.tokenSent || attempt == maxAttempts()) {
                 handler.onError(wrapper.error);
                 return;
             }
             handler.onRetry(attempt, wrapper.error);
             sleep();
         }
+    }
+
+    // 설정이 0 이하로 들어와도 최소 한 번은 호출한다
+    private int maxAttempts() {
+        return Math.max(1, properties.maxAttempts());
     }
 
     private void sleep() {

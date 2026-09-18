@@ -99,6 +99,30 @@ class RecordingLlmClientTest {
         assertThat(handler.completeCount).isZero();
     }
 
+    @Test
+    @DisplayName("안쪽이 예외를 그대로 던져도 기록을 남기고 예외를 전달한다")
+    void stream_예외가_전파돼도_기록한다() {
+        LlmClient throwing = new LlmClient() {
+
+            @Override
+            public String generate(LlmRequest request) {
+                throw new IllegalStateException("boom");
+            }
+
+            @Override
+            public void stream(LlmRequest request, LlmStreamHandler handler) {
+                throw new IllegalStateException("boom");
+            }
+        };
+        CollectingHandler handler = new CollectingHandler();
+
+        assertThatThrownBy(() -> client(throwing).stream(request(42L), handler))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(recorder.results).hasSize(1);
+        assertThat(recorder.results.getFirst().status()).isEqualTo(Status.MODEL_ERROR);
+    }
+
     private RecordingLlmClient client(LlmClient delegate) {
         return new RecordingLlmClient(delegate, recorder, "exaone3.5:7.8b");
     }

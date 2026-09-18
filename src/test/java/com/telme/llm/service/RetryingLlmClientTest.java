@@ -45,6 +45,34 @@ class RetryingLlmClientTest {
     }
 
     @Test
+    @DisplayName("재시도 횟수가 0으로 설정돼도 generate는 한 번 호출하고 원래 예외를 던진다")
+    void generate_재시도_횟수가_0이어도_한_번은_호출한다() {
+        CountingClient delegate = new CountingClient(5);
+        RetryingLlmClient client =
+                new RetryingLlmClient(delegate, new LlmRetryProperties(0, Duration.ZERO));
+
+        assertThatThrownBy(() -> client.generate(request()))
+                .isInstanceOf(GeneralException.class)
+                .extracting(exception -> ((GeneralException) exception).getErrorCode())
+                .isEqualTo(LlmErrorCode.CONNECTION_FAILED);
+        assertThat(delegate.calls).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("재시도 횟수가 0으로 설정돼도 stream은 onError를 한 번 부른다")
+    void stream_재시도_횟수가_0이어도_onError를_호출한다() {
+        StreamStub delegate = new StreamStub(List.of(StreamStub.Behavior.failBeforeToken()));
+        RecordingHandler handler = new RecordingHandler();
+
+        new RetryingLlmClient(delegate, new LlmRetryProperties(0, Duration.ZERO))
+                .stream(request(), handler);
+
+        assertThat(handler.error).isNotNull();
+        assertThat(handler.completeCount).isZero();
+        assertThat(handler.retries).isEmpty();
+    }
+
+    @Test
     @DisplayName("토큰 전에 실패하면 onRetry를 부르고 다시 호출한다")
     void stream_토큰_전_실패는_재시도한다() {
         StreamStub delegate = new StreamStub(List.of(
