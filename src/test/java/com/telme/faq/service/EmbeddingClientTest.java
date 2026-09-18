@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.dto.res.EmbedResponse;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -198,5 +200,24 @@ class EmbeddingClientTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(exception -> ((GeneralException) exception).getErrorCode())
                 .isEqualTo(FaqErrorCode.EMBEDDING_REQUEST_FAILED);
+    }
+
+    @Test
+    @DisplayName("실제 Ollama 응답 형식(부가 필드 포함)을 정상적으로 역직렬화한다")
+    void 실제_ollama_응답_형식을_역직렬화한다() {
+        String vector = "[" + "0.1,".repeat(1023) + "0.1]";
+        String body =
+                """
+                {"model":"bge-m3","embeddings":[%s],"total_duration":11032882713,\
+                "load_duration":10915245380,"prompt_eval_count":11}
+                """
+                        .formatted(vector);
+
+        server.expect(requestTo(EMBED_URL))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        float[] result = embeddingClient.embed("질문");
+
+        assertThat(result).hasSize(1024);
     }
 }
