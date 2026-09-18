@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RetryingLlmClient implements LlmClient {
 
-    private final LlmClient delegate;
+    private final LlmAttemptClient delegate;
     private final LlmRetryProperties properties;
 
     @Override
@@ -18,7 +18,7 @@ public class RetryingLlmClient implements LlmClient {
         RuntimeException last = null;
         for (int attempt = 1; attempt <= maxAttempts(); attempt++) {
             try {
-                return delegate.generate(request);
+                return delegate.generate(request, attempt);
             } catch (RuntimeException e) {
                 last = e;
                 // 다시 호출해도 같은 결과인 오류는 재시도하지 않는다
@@ -35,7 +35,7 @@ public class RetryingLlmClient implements LlmClient {
     public void stream(LlmRequest request, LlmStreamHandler handler) {
         for (int attempt = 1; attempt <= maxAttempts(); attempt++) {
             RetryAwareHandler wrapper = new RetryAwareHandler(handler);
-            delegate.stream(request, wrapper);
+            delegate.stream(request, wrapper, attempt);
 
             if (wrapper.error == null) {
                 return;

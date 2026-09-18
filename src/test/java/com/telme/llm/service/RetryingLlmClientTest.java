@@ -113,6 +113,20 @@ class RetryingLlmClientTest {
     }
 
     @Test
+    @DisplayName("재시도할 때 시도 번호를 안쪽 구현체에 전달한다")
+    void 시도_번호를_전달한다() {
+        CountingClient generateDelegate = new CountingClient(1);
+        new RetryingLlmClient(generateDelegate, properties).generate(request());
+        assertThat(generateDelegate.attempts).containsExactly(1, 2);
+
+        StreamStub streamDelegate = new StreamStub(List.of(
+                StreamStub.Behavior.failBeforeToken(),
+                StreamStub.Behavior.succeed("안녕")));
+        new RetryingLlmClient(streamDelegate, properties).stream(request(), new RecordingHandler());
+        assertThat(streamDelegate.attempts).containsExactly(1, 2);
+    }
+
+    @Test
     @DisplayName("토큰이 나간 뒤 실패하면 재시도하지 않고 onError만 부른다")
     void stream_토큰_후_실패는_재시도하지_않는다() {
         StreamStub delegate = new StreamStub(List.of(
@@ -164,9 +178,10 @@ class RetryingLlmClientTest {
     }
 
     /** 정해진 횟수만큼 실패한 뒤 성공하는 가짜 구현체 */
-    private static final class CountingClient implements LlmClient {
+    private static final class CountingClient implements LlmAttemptClient {
 
         private final int failCount;
+        private final List<Integer> attempts = new ArrayList<>();
         private int calls;
 
         private CountingClient(int failCount) {
@@ -174,8 +189,9 @@ class RetryingLlmClientTest {
         }
 
         @Override
-        public String generate(LlmRequest request) {
+        public String generate(LlmRequest request, int attempt) {
             calls++;
+            attempts.add(attempt);
             if (calls <= failCount) {
                 throw new GeneralException(LlmErrorCode.CONNECTION_FAILED);
             }
@@ -183,12 +199,12 @@ class RetryingLlmClientTest {
         }
 
         @Override
-        public void stream(LlmRequest request, LlmStreamHandler handler) {
+        public void stream(LlmRequest request, LlmStreamHandler handler, int attempt) {
         }
     }
 
     /** 항상 같은 예외로 실패하는 가짜 구현체 */
-    private static final class FailingClient implements LlmClient {
+    private static final class FailingClient implements LlmAttemptClient {
 
         private final RuntimeException failure;
         private int calls;
@@ -198,22 +214,23 @@ class RetryingLlmClientTest {
         }
 
         @Override
-        public String generate(LlmRequest request) {
+        public String generate(LlmRequest request, int attempt) {
             calls++;
             throw failure;
         }
 
         @Override
-        public void stream(LlmRequest request, LlmStreamHandler handler) {
+        public void stream(LlmRequest request, LlmStreamHandler handler, int attempt) {
             calls++;
             handler.onError(failure);
         }
     }
 
     /** 시도마다 정해진 동작을 하는 가짜 구현체 */
-    private static final class StreamStub implements LlmClient {
+    private static final class StreamStub implements LlmAttemptClient {
 
         private final List<Behavior> behaviors;
+        private final List<Integer> attempts = new ArrayList<>();
         private int calls;
 
         private StreamStub(List<Behavior> behaviors) {
@@ -221,12 +238,13 @@ class RetryingLlmClientTest {
         }
 
         @Override
-        public String generate(LlmRequest request) {
+        public String generate(LlmRequest request, int attempt) {
             return "";
         }
 
         @Override
-        public void stream(LlmRequest request, LlmStreamHandler handler) {
+        public void stream(LlmRequest request, LlmStreamHandler handler, int attempt) {
+            attempts.add(attempt);
             Behavior behavior = behaviors.get(Math.min(calls++, behaviors.size() - 1));
             try {
                 for (String token : behavior.tokens) {

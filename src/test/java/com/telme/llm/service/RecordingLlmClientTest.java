@@ -143,6 +143,16 @@ class RecordingLlmClientTest {
         assertThat(handler.completeCount).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("전달받은 시도 번호를 기록에 남긴다")
+    void 시도_번호를_기록한다() {
+        RecordingLlmClient client = client(new StubClient(null));
+
+        client.generate(request(42L), 2);
+
+        assertThat(recorder.results.getFirst().attempt()).isEqualTo(2);
+    }
+
     private RecordingLlmClient client(LlmClient delegate) {
         return new RecordingLlmClient(delegate, recorder, "exaone3.5:7.8b");
     }

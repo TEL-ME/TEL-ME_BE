@@ -34,6 +34,7 @@ public class LlmGenerationRecorder {
             llmGenerationRepository.save(LlmGeneration.builder()
                     .execution(chatExecutionRepository.getReferenceById(request.executionId()))
                     .taskType(request.taskType())
+                    .attempt((short) result.attempt())
                     .model(model)
                     .firstTokenMs(result.firstTokenMs())
                     .totalMs(result.totalMs())
@@ -45,14 +46,15 @@ public class LlmGenerationRecorder {
         }
     }
 
-    public record Result(Status status, Integer firstTokenMs, Integer totalMs, String errorMessage) {
+    public record Result(
+            int attempt, Status status, Integer firstTokenMs, Integer totalMs, String errorMessage) {
 
-        public static Result success(Integer firstTokenMs, long totalMs) {
-            return new Result(Status.SUCCESS, firstTokenMs, (int) totalMs, null);
+        public static Result success(int attempt, Integer firstTokenMs, long totalMs) {
+            return new Result(attempt, Status.SUCCESS, firstTokenMs, (int) totalMs, null);
         }
 
-        public static Result failure(Throwable error, Integer firstTokenMs, long totalMs) {
-            return new Result(toStatus(error), firstTokenMs, (int) totalMs, error.getMessage());
+        public static Result failure(int attempt, Throwable error, Integer firstTokenMs, long totalMs) {
+            return new Result(attempt, toStatus(error), firstTokenMs, (int) totalMs, error.getMessage());
         }
 
         private static Status toStatus(Throwable error) {

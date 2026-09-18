@@ -36,7 +36,7 @@ public class LlmConfig {
     }
 
     // Ollama 호출만 재시도·기록으로 감싼다. Fake는 실패하지 않고 기록할 값도 없어 감싸지 않는다
-    // 기록이 가장 바깥이라 재시도까지 포함한 전체 시간이 남는다
+    // 기록이 재시도 안쪽이라 시도마다 한 줄씩 남는다
     @Bean
     @Primary
     @ConditionalOnProperty(name = "llm.provider", havingValue = "ollama")
@@ -45,7 +45,7 @@ public class LlmConfig {
             LlmProperties properties,
             LlmRetryProperties retryProperties,
             LlmGenerationRecorder recorder) {
-        return new RecordingLlmClient(
-                new RetryingLlmClient(baseLlmClient, retryProperties), recorder, properties.model());
+        return new RetryingLlmClient(
+                new RecordingLlmClient(baseLlmClient, recorder, properties.model()), retryProperties);
     }
 }

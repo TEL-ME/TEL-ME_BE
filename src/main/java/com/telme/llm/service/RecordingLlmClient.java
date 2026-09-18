@@ -8,27 +8,27 @@ import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
-public class RecordingLlmClient implements LlmClient {
+public class RecordingLlmClient implements LlmAttemptClient {
 
     private final LlmClient delegate;
     private final LlmGenerationRecorder recorder;
     private final String model;
 
     @Override
-    public String generate(LlmRequest request) {
+    public String generate(LlmRequest request, int attempt) {
         long startedAt = System.currentTimeMillis();
         try {
             String result = delegate.generate(request);
-            safeRecord(request, Result.success(null, elapsed(startedAt)));
+            safeRecord(request, Result.success(attempt, null, elapsed(startedAt)));
             return result;
         } catch (RuntimeException e) {
-            safeRecord(request, Result.failure(e, null, elapsed(startedAt)));
+            safeRecord(request, Result.failure(attempt, e, null, elapsed(startedAt)));
             throw e;
         }
     }
 
     @Override
-    public void stream(LlmRequest request, LlmStreamHandler handler) {
+    public void stream(LlmRequest request, LlmStreamHandler handler, int attempt) {
         long startedAt = System.currentTimeMillis();
         RecordingHandler wrapper = new RecordingHandler(handler, startedAt);
 
@@ -36,13 +36,13 @@ public class RecordingLlmClient implements LlmClient {
             delegate.stream(request, wrapper);
         } catch (RuntimeException e) {
             // 안쪽에서 예외가 그대로 올라와도 기록은 남긴다
-            safeRecord(request, Result.failure(e, wrapper.firstTokenMs, elapsed(startedAt)));
+            safeRecord(request, Result.failure(attempt, e, wrapper.firstTokenMs, elapsed(startedAt)));
             throw e;
         }
 
         Result result = wrapper.error == null
-                ? Result.success(wrapper.firstTokenMs, elapsed(startedAt))
-                : Result.failure(wrapper.error, wrapper.firstTokenMs, elapsed(startedAt));
+                ? Result.success(attempt, wrapper.firstTokenMs, elapsed(startedAt))
+                : Result.failure(attempt, wrapper.error, wrapper.firstTokenMs, elapsed(startedAt));
         safeRecord(request, result);
     }
 
