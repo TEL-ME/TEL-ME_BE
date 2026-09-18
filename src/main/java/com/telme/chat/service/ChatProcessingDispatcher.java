@@ -62,13 +62,12 @@ class ChatProcessingDispatcher {
     }
 
     private void process(ChatProcessingCommand command) {
-        ChatProcessingPort port = chatProcessingPort.getIfAvailable();
-        if (port == null) {
-            failQuietly(command, NOT_CONNECTED);
-            return;
-        }
-
         try {
+            ChatProcessingPort port = chatProcessingPort.getIfAvailable();
+            if (port == null) {
+                failQuietly(command, NOT_CONNECTED);
+                return;
+            }
             port.request(command);
         } catch (RuntimeException exception) {
             log.error("AI 처리 중 오류: executionId={}", command.executionId(), exception);

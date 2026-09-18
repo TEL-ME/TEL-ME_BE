@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
@@ -22,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -122,6 +125,32 @@ class ChatProcessingDispatchIntegrationTest {
                 assertThat(executionRow(sent.executionId()))
                         .containsEntry("status", "FAILED")
                         .containsEntry("error_code", ChatProcessingDispatcher.PROCESSING_ERROR));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void failsExecutionWhenProcessorLookupFails() {
+        Long sessionId = createSession();
+        ChatMessageSendResponse sent = send(sessionId, "요금제 알려줘");
+        ChatProcessingCommand command = new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId());
+        verify(chatProcessingPort, timeout(5_000)).request(command);
+
+        ObjectProvider<ChatProcessingPort> duplicated = mock(ObjectProvider.class);
+        when(duplicated.getIfAvailable())
+                .thenThrow(new NoUniqueBeanDefinitionException(ChatProcessingPort.class, 2, "처리 구현체 2개"));
+        ChatProcessingDispatcher dispatcher = new ChatProcessingDispatcher(
+                duplicated, chatExecutionService, transactionManager);
+
+        try {
+            dispatcher.dispatch(command);
+
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                    assertThat(executionRow(sent.executionId()))
+                            .containsEntry("status", "FAILED")
+                            .containsEntry("error_code", ChatProcessingDispatcher.PROCESSING_ERROR));
+        } finally {
+            dispatcher.shutdown();
+        }
     }
 
     @Test
