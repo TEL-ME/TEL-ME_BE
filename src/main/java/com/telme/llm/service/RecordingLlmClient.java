@@ -4,8 +4,10 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmGenerationRecorder.Result;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
+@Slf4j
 public class RecordingLlmClient implements LlmClient {
 
     private final LlmClient delegate;
@@ -17,10 +19,10 @@ public class RecordingLlmClient implements LlmClient {
         long startedAt = System.currentTimeMillis();
         try {
             String result = delegate.generate(request);
-            recorder.record(request, model, Result.success(null, elapsed(startedAt)));
+            safeRecord(request, Result.success(null, elapsed(startedAt)));
             return result;
         } catch (RuntimeException e) {
-            recorder.record(request, model, Result.failure(e, null, elapsed(startedAt)));
+            safeRecord(request, Result.failure(e, null, elapsed(startedAt)));
             throw e;
         }
     }
@@ -34,14 +36,23 @@ public class RecordingLlmClient implements LlmClient {
             delegate.stream(request, wrapper);
         } catch (RuntimeException e) {
             // 안쪽에서 예외가 그대로 올라와도 기록은 남긴다
-            recorder.record(request, model, Result.failure(e, wrapper.firstTokenMs, elapsed(startedAt)));
+            safeRecord(request, Result.failure(e, wrapper.firstTokenMs, elapsed(startedAt)));
             throw e;
         }
 
         Result result = wrapper.error == null
                 ? Result.success(wrapper.firstTokenMs, elapsed(startedAt))
                 : Result.failure(wrapper.error, wrapper.firstTokenMs, elapsed(startedAt));
-        recorder.record(request, model, result);
+        safeRecord(request, result);
+    }
+
+    // 기록 저장 실패가 LLM 결과나 원래 예외를 덮지 않도록 여기서 막는다
+    private void safeRecord(LlmRequest request, Result result) {
+        try {
+            recorder.record(request, model, result);
+        } catch (RuntimeException e) {
+            log.warn("[RecordingLlmClient] 호출 기록 저장 실패 executionId={}", request.executionId(), e);
+        }
     }
 
     private long elapsed(long startedAt) {

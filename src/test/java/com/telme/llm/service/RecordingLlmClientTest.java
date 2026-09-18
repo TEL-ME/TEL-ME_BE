@@ -123,6 +123,26 @@ class RecordingLlmClientTest {
         assertThat(recorder.results.getFirst().status()).isEqualTo(Status.MODEL_ERROR);
     }
 
+    @Test
+    @DisplayName("기록 저장이 실패해도 generate 결과와 stream 흐름은 그대로 유지된다")
+    void 기록_저장_실패가_응답을_막지_않는다() {
+        LlmGenerationRecorder failing = new LlmGenerationRecorder(null, null) {
+
+            @Override
+            public void record(LlmRequest request, String model, Result result) {
+                throw new IllegalStateException("기록 저장 실패");
+            }
+        };
+        RecordingLlmClient client = new RecordingLlmClient(new StubClient(null), failing, "exaone3.5:7.8b");
+        CollectingHandler handler = new CollectingHandler();
+
+        assertThat(client.generate(request(42L))).isEqualTo("답변");
+
+        client.stream(request(42L), handler);
+        assertThat(handler.tokens).containsExactly("안녕", "하세요");
+        assertThat(handler.completeCount).isEqualTo(1);
+    }
+
     private RecordingLlmClient client(LlmClient delegate) {
         return new RecordingLlmClient(delegate, recorder, "exaone3.5:7.8b");
     }

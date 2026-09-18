@@ -73,6 +73,30 @@ class RetryingLlmClientTest {
     }
 
     @Test
+    @DisplayName("다시 호출해도 같은 결과인 오류는 재시도하지 않는다")
+    void generate_재시도_대상이_아닌_오류는_바로_전달한다() {
+        FailingClient delegate = new FailingClient(new IllegalArgumentException("잘못된 요청"));
+        RetryingLlmClient client = new RetryingLlmClient(delegate, properties);
+
+        assertThatThrownBy(() -> client.generate(request()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(delegate.calls).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("stream도 재시도 대상이 아닌 오류는 바로 onError로 전달한다")
+    void stream_재시도_대상이_아닌_오류는_바로_전달한다() {
+        FailingClient delegate = new FailingClient(new IllegalArgumentException("잘못된 요청"));
+        RecordingHandler handler = new RecordingHandler();
+
+        new RetryingLlmClient(delegate, properties).stream(request(), handler);
+
+        assertThat(delegate.calls).isEqualTo(1);
+        assertThat(handler.retries).isEmpty();
+        assertThat(handler.error).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("토큰 전에 실패하면 onRetry를 부르고 다시 호출한다")
     void stream_토큰_전_실패는_재시도한다() {
         StreamStub delegate = new StreamStub(List.of(
@@ -160,6 +184,29 @@ class RetryingLlmClientTest {
 
         @Override
         public void stream(LlmRequest request, LlmStreamHandler handler) {
+        }
+    }
+
+    /** 항상 같은 예외로 실패하는 가짜 구현체 */
+    private static final class FailingClient implements LlmClient {
+
+        private final RuntimeException failure;
+        private int calls;
+
+        private FailingClient(RuntimeException failure) {
+            this.failure = failure;
+        }
+
+        @Override
+        public String generate(LlmRequest request) {
+            calls++;
+            throw failure;
+        }
+
+        @Override
+        public void stream(LlmRequest request, LlmStreamHandler handler) {
+            calls++;
+            handler.onError(failure);
         }
     }
 

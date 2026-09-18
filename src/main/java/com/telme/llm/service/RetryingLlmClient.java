@@ -21,7 +21,8 @@ public class RetryingLlmClient implements LlmClient {
                 return delegate.generate(request);
             } catch (RuntimeException e) {
                 last = e;
-                if (attempt == maxAttempts()) {
+                // 다시 호출해도 같은 결과인 오류는 재시도하지 않는다
+                if (!retryable(e) || attempt == maxAttempts()) {
                     break;
                 }
                 sleep();
@@ -40,13 +41,20 @@ public class RetryingLlmClient implements LlmClient {
                 return;
             }
             // 토큰이 이미 나갔으면 다시 호출하지 않는다. 답변이 중복된다
-            if (wrapper.tokenSent || attempt == maxAttempts()) {
+            if (wrapper.tokenSent || !retryable(wrapper.error) || attempt == maxAttempts()) {
                 handler.onError(wrapper.error);
                 return;
             }
             handler.onRetry(attempt, wrapper.error);
             sleep();
         }
+    }
+
+    // 연결 실패·응답 시간 초과처럼 다시 호출하면 해결될 수 있는 오류만 재시도한다
+    private boolean retryable(Throwable error) {
+        return error instanceof GeneralException general
+                && (general.getErrorCode() == LlmErrorCode.CONNECTION_FAILED
+                        || general.getErrorCode() == LlmErrorCode.TIMEOUT);
     }
 
     // 설정이 0 이하로 들어와도 최소 한 번은 호출한다
