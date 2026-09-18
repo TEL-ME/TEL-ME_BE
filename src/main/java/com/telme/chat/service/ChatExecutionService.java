@@ -73,6 +73,20 @@ public class ChatExecutionService {
         return flushed(execution, message);
     }
 
+    public ChatExecutionState completeWithoutOutput(Long executionId) {
+        ChatExecution execution = getRunningExecution(executionId);
+        if (execution.getOutputMessage() != null) {
+            throw new GeneralException(ChatErrorCode.ANSWER_ALREADY_STARTED);
+        }
+        ChatSession session = lockSession(execution);
+        Instant endedAt = Instant.now();
+
+        execution.completeWithoutOutput(endedAt);
+        session.touch(endedAt);
+        chatExecutionRepository.flush();
+        return ChatExecutionState.of(execution);
+    }
+
     public ChatOutputMessage fail(Long executionId, ChatFailure failure) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);

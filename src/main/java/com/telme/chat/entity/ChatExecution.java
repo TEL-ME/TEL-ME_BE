@@ -75,6 +75,11 @@ public class ChatExecution {
         this.endedAt = endedAt;
     }
 
+    public void completeWithoutOutput(Instant endedAt) {
+        this.status = Status.COMPLETED;
+        this.endedAt = endedAt;
+    }
+
     public void fail(Status status, String errorCode, ChatMessage outputMessage, Instant endedAt) {
         this.outputMessage = outputMessage;
         this.status = status;

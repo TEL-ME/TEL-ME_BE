@@ -147,6 +147,41 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
+    void completesWaitingCorrectionWithoutCreatingAnotherClarification() {
+        ChatMessageSendResponse question = send("매장 찾아줘");
+        ChatOutputMessage clarification = chatExecutionService.askClarification(
+                question.executionId(), "어느 지역 매장을 찾으시나요?");
+        ChatMessageSendResponse correction = send("업무는 번호이동으로 바꿔줘");
+
+        ChatExecutionState completed = chatExecutionService.completeWithoutOutput(correction.executionId());
+
+        assertThat(completed.status()).isEqualTo(ChatExecution.Status.COMPLETED);
+        assertThat(completed.outputMessage()).isNull();
+        ChatExecution execution = findExecution(correction.executionId());
+        assertThat(execution.getOutputMessage()).isNull();
+        assertThat(execution.getEndedAt()).isNotNull();
+        assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
+
+        ChatMessageHistoryResponse history = chatSessionService.getMessages(actor, sessionId, null, 50);
+        assertThat(history.messages()).hasSize(3);
+        assertThat(history.messages())
+                .extracting(ChatMessageHistoryItemResponse::messageId)
+                .contains(clarification.messageId());
+        assertThat(history.runningExecutionId()).isNull();
+        assertThat(send("강남역이요").sequenceNo()).isEqualTo(4);
+    }
+
+    @Test
+    void rejectsCompletingWithoutOutputAfterAnswerStarted() {
+        ChatMessageSendResponse question = send("요금제 알려줘");
+        chatExecutionService.startAnswer(question.executionId());
+
+        assertErrorCode(
+                () -> chatExecutionService.completeWithoutOutput(question.executionId()),
+                ChatErrorCode.ANSWER_ALREADY_STARTED);
+    }
+
+    @Test
     void failureWithoutStartedAnswerLeavesErrorMessage() {
         ChatMessageSendResponse question = send("요금제 알려줘");
 
