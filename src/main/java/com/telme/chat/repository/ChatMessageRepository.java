@@ -1,6 +1,8 @@
 package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,4 +15,28 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             where message.session.sessionId = :sessionId
             """)
     int findMaxSequenceNo(@Param("sessionId") Long sessionId);
+
+    @Query("""
+            select message
+            from ChatMessage message
+            where message.session.sessionId = :sessionId
+            order by message.sequenceNo desc
+            """)
+    List<ChatMessage> findLatestMessages(
+            @Param("sessionId") Long sessionId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select message
+            from ChatMessage message
+            where message.session.sessionId = :sessionId
+              and message.sequenceNo < :beforeSequenceNo
+            order by message.sequenceNo desc
+            """)
+    List<ChatMessage> findMessagesBefore(
+            @Param("sessionId") Long sessionId,
+            @Param("beforeSequenceNo") Integer beforeSequenceNo,
+            Pageable pageable
+    );
 }

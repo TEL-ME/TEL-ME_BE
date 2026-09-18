@@ -14,6 +14,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
 
+    boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
+
+    boolean existsBySessionIdAndUserIdIsNullAndGuestId(Long sessionId, UUID guestId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select session

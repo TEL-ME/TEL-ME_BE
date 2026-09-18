@@ -3,6 +3,7 @@ package com.telme.chat.controller;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
 import com.telme.chat.dto.req.ChatSessionTitleUpdateRequest;
+import com.telme.chat.dto.res.ChatMessageHistoryResponse;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
 import com.telme.chat.dto.res.ChatSessionCreateResponse;
 import com.telme.chat.dto.res.ChatSessionListResponse;
@@ -12,11 +13,13 @@ import com.telme.chat.service.ChatActorProvider;
 import com.telme.chat.service.ChatSessionService;
 import com.telme.global.common.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -64,6 +67,34 @@ public class ChatSessionController {
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
         return CustomResponse.onSuccess(chatSessionService.getSessions(actor, cursor, size));
+    }
+
+    @Operation(
+            summary = "대화 이력 조회",
+            description = "최신 메시지 구간을 조회하며 응답은 sequenceNo 오름차순입니다. "
+                    + "hasOlderMessages가 true이면 nextBeforeSequenceNo를 다음 요청에 넣어 더 과거 이력을 조회합니다."
+    )
+    @GetMapping("/{sessionId}/messages")
+    public CustomResponse<ChatMessageHistoryResponse> getMessages(
+            HttpServletRequest servletRequest,
+            @PathVariable Long sessionId,
+            @Parameter(
+                    description = "더 과거 이력을 조회할 때 이전 응답의 nextBeforeSequenceNo 값을 사용합니다. "
+                            + "첫 조회에서는 생략합니다."
+            )
+            @RequestParam(required = false)
+            @Positive(message = "메시지 커서는 1 이상이어야 합니다.")
+            Integer beforeSequenceNo,
+            @Parameter(description = "조회할 메시지 수 (1~50)")
+            @RequestParam(defaultValue = "20")
+            @Min(value = 1, message = "조회 개수는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "조회 개수는 50 이하여야 합니다.")
+            int size
+    ) {
+        ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
+        return CustomResponse.onSuccess(
+                chatSessionService.getMessages(actor, sessionId, beforeSequenceNo, size)
+        );
     }
 
     @Operation(summary = "채팅 세션 제목 변경")
