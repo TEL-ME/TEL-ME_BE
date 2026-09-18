@@ -141,7 +141,12 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(reply.sequenceNo()).isEqualTo(3);
 
         chatExecutionService.completeAnswer(reply.executionId(), new ChatAnswer(
-                ChatMessage.MessageType.STORE_RESULT, "강남역 근처 매장입니다.", null, null, List.of()));
+                ChatMessage.MessageType.STORE_RESULT,
+                "강남역 근처 매장입니다.",
+                null,
+                null,
+                List.of(Map.of("storeId", 1, "name", "강남점"))
+        ));
 
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.ACTIVE);
     }
