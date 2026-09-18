@@ -1,5 +1,6 @@
 package com.telme.intent.service;
 
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.dto.res.LlmRoutingPayload.SubQueryPayload;
 import com.telme.intent.entity.QueryRouting.Intent;
@@ -11,12 +12,6 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
-/**
- * LLM(Ollama) 장애 시 키워드 기반으로 의도를 분류하는 비상 Fallback.
- *
- * LLM만큼 정교하지는 않지만, 시스템이 완전히 멈추는 것을 막아준다.
- * method = RULE로 표기되므로 나중에 6번(AI 품질) 담당이 정확도 분석할 때 구분 가능.
- */
 @Component
 public class RuleBasedRoutingFallback {
 
@@ -31,26 +26,33 @@ public class RuleBasedRoutingFallback {
         "요금", "개통", "해외", "명의", "가입", "혜택"
     );
 
-    // StoreServiceType.Code에 대응하는 패턴
-    private static final Map<String, Pattern> SERVICE_TYPE_PATTERNS = Map.of(
-        "NEW_LINE",     Pattern.compile("신규.*개통|새.*번호"),
-        "PORT_IN",      Pattern.compile("번호.*이동|통신사.*변경"),
-        "NAME_CHANGE",  Pattern.compile("명의.*변경"),
-        "USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")
+    private record ServiceTypeRule(String code, Pattern pattern) {}
+
+    private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
+        new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
+        new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
+        new ServiceTypeRule("PORT_IN",      Pattern.compile("번호.*이동|통신사.*변경")),
+        new ServiceTypeRule("NEW_LINE",     Pattern.compile("신규.*개통|새.*번호"))
     );
 
     public LlmRoutingPayload classify(String text) {
+        if (text == null || text.isBlank()) {
+            return new LlmRoutingPayload(
+                Intent.UNKNOWN, BigDecimal.valueOf(0.50), text != null ? text : "",
+                Collections.emptyMap(), Collections.emptyList()
+            );
+        }
+
         boolean hasStore = STORE_KEYWORDS.stream().anyMatch(text::contains);
         boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains);
         Map<String, String> conditions = extractConditions(text);
 
-        // 둘 다 매칭 → BOTH로 분류하고 서브질의 2개 생성
         if (hasStore && hasFaq) {
             return new LlmRoutingPayload(
                 Intent.BOTH, BigDecimal.valueOf(0.70), text, conditions,
                 List.of(
-                    new SubQueryPayload((short) 1, Intent.FAQ, text, Collections.emptyMap()),
-                    new SubQueryPayload((short) 2, Intent.STORE, text, conditions)
+                    new SubQueryPayload((short) 1, ConsultRequest.Intent.FAQ, text, Collections.emptyMap()),
+                    new SubQueryPayload((short) 2, ConsultRequest.Intent.STORE, text, conditions)
                 )
             );
         }
@@ -58,34 +60,31 @@ public class RuleBasedRoutingFallback {
         if (hasStore) {
             return new LlmRoutingPayload(
                 Intent.STORE, BigDecimal.valueOf(0.80), text, conditions,
-                List.of(new SubQueryPayload((short) 1, Intent.STORE, text, conditions))
+                List.of(new SubQueryPayload((short) 1, ConsultRequest.Intent.STORE, text, conditions))
             );
         }
 
         if (hasFaq) {
             return new LlmRoutingPayload(
                 Intent.FAQ, BigDecimal.valueOf(0.80), text, Collections.emptyMap(),
-                List.of(new SubQueryPayload((short) 1, Intent.FAQ, text, Collections.emptyMap()))
+                List.of(new SubQueryPayload((short) 1, ConsultRequest.Intent.FAQ, text, Collections.emptyMap()))
             );
         }
 
-        // 아무 키워드도 없으면 UNKNOWN
         return new LlmRoutingPayload(
             Intent.UNKNOWN, BigDecimal.valueOf(0.50), text,
             Collections.emptyMap(), Collections.emptyList()
         );
     }
 
-    /** 정규식으로 serviceType 코드를 추출. LLM보다 정밀도는 떨어지지만 없는 것보다 낫다. */
     private Map<String, String> extractConditions(String text) {
         Map<String, String> conditions = new HashMap<>();
-
-        SERVICE_TYPE_PATTERNS.forEach((code, pattern) -> {
-            if (pattern.matcher(text).find()) {
-                conditions.put("serviceType", code);
+        for (ServiceTypeRule rule : SERVICE_TYPE_RULES) {
+            if (rule.pattern().matcher(text).find()) {
+                conditions.put("serviceType", rule.code());
+                break;
             }
-        });
-
+        }
         return conditions;
     }
 }

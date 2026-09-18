@@ -17,14 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 의도 라우팅(Intent) 도메인의 Entity ↔ DTO 변환 컴포넌트.
- *
- * 팀 코딩 컨벤션 규칙 준수:
- *   - 위치: {domain}/converter/{Domain}Converter.java
- *   - @Component 등록
- *   - Service가 주입받아 엔티티-DTO 매핑을 전담
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -32,9 +24,6 @@ public class IntentConverter {
 
     private final ObjectMapper objectMapper;
 
-    /**
-     * LlmRoutingPayload와 원본 메시지로부터 QueryRouting 엔티티 생성.
-     */
     public QueryRouting toQueryRouting(
             ChatMessage message,
             LlmRoutingPayload payload,
@@ -50,9 +39,6 @@ public class IntentConverter {
             .build();
     }
 
-    /**
-     * 분해된 서브질의 정보로부터 ConsultRequest 엔티티 생성.
-     */
     public ConsultRequest toConsultRequest(
             ChatMessage message,
             Short order,
@@ -68,25 +54,24 @@ public class IntentConverter {
             .build();
     }
 
-    /**
-     * 서브질의 추출 조건으로부터 ConsultCondition 엔티티 생성.
-     */
     public ConsultCondition toConsultCondition(
             ConsultRequest consultRequest,
             String conditionKey,
             String conditionValue) {
+
+        ConsultCondition.Status status = (conditionValue != null && !conditionValue.isBlank())
+            ? ConsultCondition.Status.FILLED
+            : ConsultCondition.Status.PENDING;
 
         return ConsultCondition.builder()
             .consultRequest(consultRequest)
             .conditionKey(conditionKey)
             .conditionValue(conditionValue)
             .source(ConsultCondition.Source.EXTRACTED)
+            .status(status)
             .build();
     }
 
-    /**
-     * ConsultRequest 엔티티와 조건 Map으로부터 SubQuery 응답 DTO 생성.
-     */
     public IntentSubQueryResponse toSubQueryResponse(
             ConsultRequest consultRequest,
             Short order,
@@ -103,9 +88,6 @@ public class IntentConverter {
         );
     }
 
-    /**
-     * 저장된 QueryRouting 엔티티와 서브질의 목록으로부터 최종 응답 DTO 생성.
-     */
     public IntentRouteResponse toIntentRouteResponse(
             QueryRouting routing,
             Map<String, String> extractedConditions,
@@ -123,9 +105,6 @@ public class IntentConverter {
         );
     }
 
-    /**
-     * Map -> JSONB 문자열 직렬화.
-     */
     public String toJson(Map<String, String> map) {
         if (map == null || map.isEmpty()) {
             return null;
@@ -138,9 +117,6 @@ public class IntentConverter {
         }
     }
 
-    /**
-     * JSONB 문자열 -> Map 역직렬화.
-     */
     public Map<String, String> parseConditions(String json) {
         if (json == null || json.isBlank()) {
             return Collections.emptyMap();
@@ -149,7 +125,7 @@ public class IntentConverter {
             return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (JsonProcessingException e) {
             log.error("[IntentConverter] JSON -> conditions 역직렬화 실패", e);
-            return Collections.emptyMap();
+            throw new IllegalArgumentException("조건 JSON 역직렬화 실패: " + json, e);
         }
     }
 }

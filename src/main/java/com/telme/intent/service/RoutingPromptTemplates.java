@@ -1,12 +1,5 @@
 package com.telme.intent.service;
 
-/**
- * 의도 라우팅용 시스템 프롬프트.
- *
- * serviceType은 매장 도메인의 StoreServiceType.Code enum에 맞췄다.
- * → NEW_LINE / PORT_IN / NAME_CHANGE / USIM_REISSUE
- * LLM이 이 코드로 추출하면 매장 API 쪽에서 별도 매핑 없이 바로 사용 가능하다.
- */
 public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}

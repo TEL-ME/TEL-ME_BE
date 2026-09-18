@@ -5,14 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-/**
- * 의도 라우팅(Intent) 도메인 전용 에러코드.
- *
- * 팀 코딩 컨벤션 규칙 준수:
- *   - 위치: {domain}/exception/{Domain}ErrorCode.java
- *   - 포맷: {DOMAIN}{HTTP_STATUS}-{Seq} (상태별 0부터 시작)
- *   - 구현: BaseErrorCode 인터페이스 구현 enum
- */
 @Getter
 @AllArgsConstructor
 public enum IntentErrorCode implements BaseErrorCode {

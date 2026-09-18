@@ -1,19 +1,18 @@
 package com.telme.intent.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
-import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.entity.QueryRouting;
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,6 +54,18 @@ class IntentConverterTest {
         assertThat(converter.parseConditions(null)).isEmpty();
         assertThat(converter.parseConditions("")).isEmpty();
         assertThat(converter.parseConditions("   ")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("깨진 JSON 또는 부적절한 구조가 parseConditions에 전달되면 IllegalArgumentException을 던진다")
+    void parseConditions_invalid_json_throws_exception() {
+        assertThatThrownBy(() -> converter.parseConditions("{invalid-json"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("조건 JSON 역직렬화 실패");
+
+        assertThatThrownBy(() -> converter.parseConditions("{\"a\":{\"b\":1}}"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("조건 JSON 역직렬화 실패");
     }
 
     @Test
@@ -101,5 +112,18 @@ class IntentConverterTest {
         assertThat(response.intent()).isEqualTo(ConsultRequest.Intent.STORE);
         assertThat(response.queryText()).isEqualTo("강남역 직영점 위치");
         assertThat(response.conditions()).containsEntry("location", "강남역");
+    }
+
+    @Test
+    @DisplayName("toConsultCondition은 conditionValue가 있으면 FILLED, 없으면 PENDING 상태로 생성한다")
+    void toConsultCondition_status() {
+        ConsultRequest request = ConsultRequest.builder().consultRequestId(1L).build();
+
+        ConsultCondition filledCondition = converter.toConsultCondition(request, "location", "강남역");
+        assertThat(filledCondition.getStatus()).isEqualTo(ConsultCondition.Status.FILLED);
+        assertThat(filledCondition.getSource()).isEqualTo(ConsultCondition.Source.EXTRACTED);
+
+        ConsultCondition pendingCondition = converter.toConsultCondition(request, "location", null);
+        assertThat(pendingCondition.getStatus()).isEqualTo(ConsultCondition.Status.PENDING);
     }
 }
