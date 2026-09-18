@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 import java.util.Optional;
 
-/** 컨트롤러·인증 어댑터 합의 후 Bean으로 등록한다. 수정/취소·게스트 허용은 초기 제안이다. */
+/** 인증 어댑터가 있을 때만 설정에서 Bean으로 등록한다. 회원·비회원의 완료된 상담 답변과 매장 추천 평가를 다룬다. */
 @Transactional(readOnly = true)
 public class FeedbackService {
     private final FeedbackStore store;
