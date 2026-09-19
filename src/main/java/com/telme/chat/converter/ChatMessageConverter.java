@@ -55,6 +55,18 @@ public class ChatMessageConverter {
         );
     }
 
+    public String toJson(List<?> values) {
+        if (values == null) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(values);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("채팅 메시지 JSON 직렬화에 실패했습니다.", exception);
+        }
+    }
+
     private List<String> parseFollowUps(ChatMessage message) {
         JsonNode root = readJson(message, "followUps", message.getFollowUps(), "ARRAY_OF_STRING");
         if (root == null || root.isNull()) {

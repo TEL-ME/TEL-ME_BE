@@ -43,3 +43,12 @@ llm:
     # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
     max-attempts: 2
     wait-duration: 1s
+
+embedding:
+  model: ${EMBEDDING_MODEL:bge-m3}
+  dimension: 1024
+  connect-timeout: 5s
+  search-read-timeout: 15s
+  batch-read-timeout: 120s
+  # 콜드 로드 방지 기동 시 워밍업. 기본 꺼짐 — 실제 배포 환경에서만 true로 켠다.
+  warmup-enabled: ${EMBEDDING_WARMUP_ENABLED:false}
