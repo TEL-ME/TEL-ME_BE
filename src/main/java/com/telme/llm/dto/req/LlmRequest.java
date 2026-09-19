@@ -6,6 +6,8 @@ import lombok.Builder;
 
 @Builder
 public record LlmRequest(
+        // null이면 호출 기록을 남기지 않음
+        Long executionId,
         TaskType taskType,
         String systemPrompt,
         String userPrompt,
