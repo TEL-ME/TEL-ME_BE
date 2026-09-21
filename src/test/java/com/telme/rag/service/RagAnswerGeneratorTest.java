@@ -8,7 +8,10 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.exception.LlmErrorCode;
+import com.telme.llm.entity.LlmGeneration.Status;
+import com.telme.llm.repository.LlmGenerationRepository;
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
@@ -23,6 +26,7 @@ import org.junit.jupiter.api.Test;
 class RagAnswerGeneratorTest {
 
     private final RecordingHandler handler = new RecordingHandler();
+    private final SpyRecorder recorder = new SpyRecorder();
 
     @Test
     @DisplayName("검색 결과가 없으면 LLM을 부르지 않고 안내 문구를 반환한다")
@@ -37,6 +41,7 @@ class RagAnswerGeneratorTest {
         assertThat(result.sources()).isEmpty();
         assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(handler.completed).isTrue();
+        assertThat(recorder.statuses).containsExactly(Status.NO_EVIDENCE);
     }
 
     @Test
@@ -76,6 +81,38 @@ class RagAnswerGeneratorTest {
         assertThat(sent.executionId()).isEqualTo(42L);
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
         assertThat(sent.userPrompt()).contains("[1] Q: 질문1").contains("강남").contains("요금제 바꾸고 싶어요");
+        assertThat(sent.contextCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("토큰 없이 완료되면 INVALID_RESPONSE로 실패시킨다")
+    void 빈_답변은_실패로_처리한다() {
+        LlmClient empty = new LlmClient() {
+            @Override
+            public String generate(LlmRequest request) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void stream(LlmRequest request, LlmStreamHandler handler) {
+                handler.onComplete();
+            }
+        };
+
+        assertThatThrownBy(() -> generator(empty).generate(request(List.of(faq(1L))), handler))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
+                        .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
+    }
+
+    @Test
+    @DisplayName("사용자 질문이 비어 있으면 요청을 만들 수 없다")
+    void 빈_질문은_거부한다() {
+        assertThatThrownBy(() -> AnswerRequest.builder()
+                .userQuery(" ")
+                .searchResults(List.of(faq(1L)))
+                .build())
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -102,7 +139,7 @@ class RagAnswerGeneratorTest {
     }
 
     private RagAnswerGenerator generator(LlmClient client) {
-        return new RagAnswerGenerator(client, new AnswerContextConverter());
+        return new RagAnswerGenerator(client, new AnswerContextConverter(), recorder);
     }
 
     private AnswerRequest request(List<FaqSearchResponse> searchResults) {
@@ -170,6 +207,19 @@ class RagAnswerGeneratorTest {
             handler.onRetry(2, new GeneralException(LlmErrorCode.TIMEOUT));
             handler.onToken("정상 답변");
             handler.onComplete();
+        }
+    }
+
+    private static final class SpyRecorder extends LlmGenerationRecorder {
+        private final List<Status> statuses = new ArrayList<>();
+
+        private SpyRecorder() {
+            super((LlmGenerationRepository) null, null);
+        }
+
+        @Override
+        public void record(LlmRequest request, String model, Result result) {
+            statuses.add(result.status());
         }
     }
 

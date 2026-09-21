@@ -19,6 +19,9 @@ public record AnswerRequest(
 ) {
 
     public AnswerRequest {
+        if (userQuery == null || userQuery.isBlank()) {
+            throw new IllegalArgumentException("사용자 질문은 비어 있을 수 없습니다.");
+        }
         if (conditions == null) {
             conditions = Map.of();
         }

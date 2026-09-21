@@ -52,7 +52,8 @@ public class AnswerContextConverter {
         if (question == null || question.length() <= TITLE_MAX_LENGTH) {
             return question;
         }
-        return question.substring(0, TITLE_MAX_LENGTH);
+        // 이모지 같은 서로게이트 쌍이 반으로 잘리지 않도록 코드포인트 경계에서 자름
+        return question.substring(0, question.offsetByCodePoints(0, question.codePointCount(0, TITLE_MAX_LENGTH)));
     }
 
     private Short toRank(Integer searchRank) {

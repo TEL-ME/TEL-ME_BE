@@ -1,28 +1,34 @@
 package com.telme.rag.service;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
+import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class RagAnswerGenerator implements AnswerGenerator {
 
     private final LlmClient llmClient;
     private final AnswerContextConverter contextConverter;
+    private final LlmGenerationRecorder recorder;
 
     @Override
     public AnswerResult generate(AnswerRequest request, LlmStreamHandler handler) {
         // 근거 없이 호출하면 모델이 지어내므로 여기서 차단
         if (request.searchResults().isEmpty()) {
-            return answerWithoutEvidence(handler);
+            return answerWithoutEvidence(request, handler);
         }
 
         String context = contextConverter.toContext(request.searchResults());
@@ -33,20 +39,30 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .taskType(TaskType.RAG_ANSWER)
                 .systemPrompt(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT)
                 .userPrompt(AnswerPromptTemplates.buildUserPrompt(request, context))
+                .contextCount(request.searchResults().size())
                 .build();
 
         CollectingHandler collector = new CollectingHandler(handler);
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
+        String answer = collector.answer();
+        // 토큰 없이 완료되면 chat이 답변 메시지를 저장할 때 터지므로 여기서 차단
+        if (answer.isBlank()) {
+            throw new GeneralException(LlmErrorCode.INVALID_RESPONSE);
+        }
+
         return AnswerResult.builder()
-                .answer(collector.answer())
+                .answer(answer)
                 // 모델이 실제로 참고한 근거를 알 수 없어 전달한 검색 결과 전부를 기록
                 .sources(contextConverter.toSources(request.searchResults()))
                 .build();
     }
 
-    private AnswerResult answerWithoutEvidence(LlmStreamHandler handler) {
+    private AnswerResult answerWithoutEvidence(AnswerRequest request, LlmStreamHandler handler) {
+        // LLM을 거치지 않아 RecordingLlmClient가 남길 수 없으므로 직접 기록
+        recordNoEvidence(request);
+
         // 화면에도 같은 문구가 나가도록 handler로 전달
         handler.onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         handler.onComplete();
@@ -54,6 +70,21 @@ public class RagAnswerGenerator implements AnswerGenerator {
         return AnswerResult.builder()
                 .answer(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
                 .build();
+    }
+
+    // 기록 저장 실패가 답변을 막지 않도록 여기서 차단
+    private void recordNoEvidence(AnswerRequest request) {
+        LlmRequest llmRequest = LlmRequest.builder()
+                .executionId(request.executionId())
+                .taskType(TaskType.RAG_ANSWER)
+                .userPrompt(request.userQuery())
+                .contextCount(0)
+                .build();
+        try {
+            recorder.record(llmRequest, null, LlmGenerationRecorder.Result.noEvidence());
+        } catch (RuntimeException e) {
+            log.warn("[RagAnswerGenerator] 근거 없음 기록 저장 실패 executionId={}", request.executionId(), e);
+        }
     }
 
     // stream()이 값을 반환하지 않아 최종 답변을 얻기 위한 래퍼
