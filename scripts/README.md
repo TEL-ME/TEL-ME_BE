@@ -56,6 +56,7 @@ python3 scripts/check_policy.py --self-test
 - `category`, `policy_ref`, `question_type`, `persona`가 문서에 정의된 값인지
 - `policy_ref`가 그 카테고리의 항목이 맞는지
 - 답변 수치가 `policy_ref`와 `extra_policy_refs`의 허용값 안에 있는지
+- `extra_policy_refs`가 문자열 배열이고 `question_type`이 `COMPARE`인지
 - `extra_policy_refs`가 실제로 존재하는 항목이고, 선언한 만큼 실제로 인용했는지
 
 허용값 = (`policy_ref` ∪ `extra_policy_refs`) 각각의 정책 항목 블록 ∪ 정책 값 색인 행 ∪ 전체 공통 전제
@@ -72,6 +73,7 @@ python3 scripts/check_policy.py --self-test
 {
   "category": "BILLING",
   "policy_ref": "BILLING-01",
+  "question_type": "COMPARE",
   "extra_policy_refs": ["BILLING-02"],
   "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
   "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. 청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다."
@@ -80,6 +82,12 @@ python3 scripts/check_policy.py --self-test
 
 `generate_faq.py`는 `COMPARE` 조합에만 `"extra_policy_refs": []`를 미리 넣어 준다.
 (비워 두면 대표 항목만 검사)
+
+`COMPARE`가 아닌 질문유형이 값을 채우면 지적
+(다른 유형에서도 받아주면 허용값을 넓히는 우회로가 됨)
+
+형식도 본다. 문자열 배열이 아니면 `extra_policy_refs 형식 오류`
+(배열을 빠뜨린 `"BILLING-02"`, 원소에 숫자가 섞인 경우)
 
 남발을 막기 위해, 선언한 항목의 수치가 답변에 하나도 없으면 `인용하지 않은 extra_policy_refs`로 지적
 
@@ -108,7 +116,7 @@ python3 scripts/check_duplicates.py --self-test
 
 ## 자기 검증
 
-두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 9건, `check_duplicates.py`는 2건).
+두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 12건, `check_duplicates.py`는 2건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 

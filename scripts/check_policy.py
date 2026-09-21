@@ -58,8 +58,18 @@ def check(items: list[dict], tax: Taxonomy, pol: Policy) -> list[Finding]:
             if value and value not in valid:
                 add(i, item, f"알 수 없는 {field}", value)
 
+        declared = item.get(EXTRA_REFS_FIELD) or []
+        if not isinstance(declared, list) or any(not isinstance(e, str) for e in declared):
+            # 문자열이 오면 글자 단위로, 숫자가 오면 TypeError로 죽는다
+            add(i, item, "extra_policy_refs 형식 오류", f"문자열 배열이어야 함: {declared!r}")
+            declared = []
+        elif declared and item.get("question_type") != "COMPARE":
+            # 교차 인용은 COMPARE만 (FAQ_TAXONOMY.md 2절)
+            add(i, item, "COMPARE가 아닌데 extra_policy_refs",
+                f"question_type={item.get('question_type') or '없음'}, {declared}")
+
         extras: list[str] = []
-        for extra in item.get(EXTRA_REFS_FIELD) or []:
+        for extra in declared:
             if extra == ref:
                 add(i, item, "불필요한 extra_policy_refs", f"{extra}는 이미 policy_ref임")
             elif extra not in pol.items:
@@ -160,6 +170,7 @@ SELF_TEST_CASES: list[tuple[dict, str]] = [
             "category": "USIM", "policy_ref": "USIM-01",
             "question": "유심 재발급 얼마예요?",
             "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
             "extra_policy_refs": ["BILLING-02"],
         },
         "인용하지 않은 extra_policy_refs",  # 선언만 하고 안 쓰면 검사만 헐거워진다
@@ -169,9 +180,41 @@ SELF_TEST_CASES: list[tuple[dict, str]] = [
             "category": "USIM", "policy_ref": "USIM-01",
             "question": "유심 재발급 얼마예요?",
             "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
             "extra_policy_refs": ["USIM-99"],
         },
         "알 수 없는 extra_policy_refs",
+    ),
+    # COMPARE가 아닌 유형이 교차 인용으로 허용값을 넓히는 우회로
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원이고, 청구서는 매월 10일 발송됩니다.",
+            "question_type": "FACT",
+            "extra_policy_refs": ["BILLING-02"],
+        },
+        "COMPARE가 아닌데 extra_policy_refs",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": "BILLING-02",  # 배열이 아니라 문자열
+        },
+        "extra_policy_refs 형식 오류",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": ["BILLING-02", 5],  # 원소가 문자열이 아님
+        },
+        "extra_policy_refs 형식 오류",
     ),
 ]
 
