@@ -12,7 +12,9 @@ from pathlib import Path
 
 from telme_docs import Policy, Taxonomy, extract_numbers, load_policy, load_taxonomy
 
-REQUIRED_FIELDS = ("category", "question", "answer", "policy_ref")
+# FAQ_TAXONOMY.md 7절 산출물 형식
+# question_type, persona는 faqs 테이블에는 안 들어가지만 생성 단계 산출물에는 필수
+REQUIRED_FIELDS = ("category", "question", "answer", "policy_ref", "question_type", "persona")
 
 # COMPARE 답변은 정책 항목을 둘 이상 인용.
 # 대표 항목은 policy_ref에 적고 나머지는 이 필드에(FAQ_TAXONOMY.md 2절)
@@ -102,6 +104,16 @@ def check(items: list[dict], tax: Taxonomy, pol: Policy) -> list[Finding]:
 
 
 # 자기 검증: 일부러 틀린 건으로 검출 여부 확인
+
+# 공통값은 여기서 채우고 누락을 검사하는 케이스만 _OMIT으로 명시적으로 뺌
+_OMIT = object()
+_CASE_DEFAULTS = {"question_type": "FACT", "persona": "NOVICE"}
+
+
+def build_case(case: dict) -> dict:
+    merged = {**_CASE_DEFAULTS, **case}
+    return {k: v for k, v in merged.items() if v is not _OMIT}
+
 
 SELF_TEST_CASES: list[tuple[dict, str]] = [
     (
@@ -259,13 +271,51 @@ SELF_TEST_CASES: list[tuple[dict, str]] = [
         },
         "",
     ),
+    # 기간, 갱신 월
+    (
+        {
+            "category": "SERVICE", "policy_ref": "SERVICE-02",
+            "question": "멤버십 등급은 어떻게 정해지나요?",
+            "answer": "멤버십은 4개 등급으로 운영되며, 직전 1년간 납부 금액을 기준으로 "
+                      "매년 1월에 갱신됩니다.",
+        },
+        "",  # 정책과 같은 1년/1월 (통과 기대)
+    ),
+    (
+        {
+            "category": "SERVICE", "policy_ref": "SERVICE-02",
+            "question": "멤버십 등급은 어떻게 정해지나요?",
+            "answer": "멤버십은 4개 등급으로 운영되며, 직전 99년간 납부 금액을 기준으로 "
+                      "매년 6월에 갱신됩니다.",
+        },
+        "정책에 없는 수치",  # 99년/6월
+    ),
+    # 산출물 형식의 메타데이터 누락 (FAQ_TAXONOMY.md 7절)
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": _OMIT,
+        },
+        "필수 필드 누락",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "persona": _OMIT,
+        },
+        "필수 필드 누락",
+    ),
 ]
 
 
 def self_test(tax: Taxonomy, pol: Policy) -> int:
     failures = 0
     for n, (case, expected) in enumerate(SELF_TEST_CASES, 1):
-        kinds = {f.kind for f in check([case], tax, pol)}
+        kinds = {f.kind for f in check([build_case(case)], tax, pol)}
         ok = (expected in kinds) if expected else not kinds
         label = expected or "통과해야 함"
         actual = ", ".join(sorted(kinds)) or "지적 없음"

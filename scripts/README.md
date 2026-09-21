@@ -52,7 +52,7 @@ python3 scripts/check_policy.py --self-test
 
 검사 항목
 
-- 필수 필드(`category`, `question`, `answer`, `policy_ref`) 존재
+- 필수 필드(`category`, `question`, `answer`, `policy_ref`, `question_type`, `persona`) 존재
 - `category`, `policy_ref`, `question_type`, `persona`가 문서에 정의된 값인지
 - `policy_ref`가 그 카테고리의 항목이 맞는지
 - 답변 수치가 `policy_ref`와 `extra_policy_refs`의 허용값 안에 있는지
@@ -74,6 +74,7 @@ python3 scripts/check_policy.py --self-test
   "category": "BILLING",
   "policy_ref": "BILLING-01",
   "question_type": "COMPARE",
+  "persona": "EXPERIENCED",
   "extra_policy_refs": ["BILLING-02"],
   "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
   "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. 청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다."
@@ -96,8 +97,11 @@ python3 scripts/check_policy.py --self-test
 수치가 없는 항목(구비 서류 등)은 대조할 것이 없으므로 제외
 
 단위가 붙은 수치만 본다.
-`7,700원` `2~3 영업일` `50GB` `09:00` `5.9%`는 보고,
+`7,700원` `2~3 영업일` `24개월` `1년` `1월` `50GB` `09:00` `5.9%`는 보고,
 단위 없는 맨숫자(`5G`, `114`, `1588-0000`)는 추출하지 않는다.
+
+단위 목록은 `telme_docs.py`의 `_UNITS`. 교대(`|`)는 앞에서부터 매칭되므로
+`개월`이 `월`보다, `영업일`이 `일`보다 앞에 있어야 한다.
 
 수치가 없는 정책 항목(구비 서류 등)을 참조하면서 답변에 수치를 넣으면 전부 걸린다(의도됨).
 
@@ -118,7 +122,7 @@ python3 scripts/check_duplicates.py --self-test
 
 ## 자기 검증
 
-두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 16건, `check_duplicates.py`는 2건).
+두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
