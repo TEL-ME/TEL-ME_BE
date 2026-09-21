@@ -11,6 +11,8 @@ import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.io.Serializable;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -56,6 +58,17 @@ public class Guest implements Persistable<UUID>, Serializable {
     @Transient
     @Builder.Default
     private boolean isNew = true;
+
+    // guestId 발급 + TTL 기준 expiresAt 계산을 한 곳에 모은다. Clock을 주입받아 시간 의존 테스트가 가능하게 함
+    public static Guest issue(Duration ttl, Clock clock) {
+        Instant issuedAt = clock.instant();
+
+        return Guest.builder()
+                .guestId(UUID.randomUUID())
+                .lastSeenAt(issuedAt)
+                .expiresAt(issuedAt.plus(ttl))
+                .build();
+    }
 
     @Override
     public UUID getId() {

@@ -58,3 +58,8 @@ embedding:
 search:
   # 잠정값 — 무관 질문 유사도 분포 실측(2주차 임계값 캘리브레이션) 전까지의 임시 기준
   similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.7}
+
+member:
+  guest:
+    # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
+    ttl: ${GUEST_TTL:30d}
