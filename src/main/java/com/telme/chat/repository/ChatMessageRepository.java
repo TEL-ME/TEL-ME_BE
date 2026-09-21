@@ -2,6 +2,7 @@ package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -56,4 +57,12 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("excludedType") ChatMessage.MessageType excludedType,
             Pageable pageable
     );
+
+    @Query("""
+            select message
+            from ChatMessage message
+            join fetch message.session
+            where message.messageId = :messageId
+            """)
+    Optional<ChatMessage> findByIdWithSession(@Param("messageId") Long messageId);
 }
