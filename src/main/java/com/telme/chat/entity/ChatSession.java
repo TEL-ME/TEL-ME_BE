@@ -55,6 +55,10 @@ public class ChatSession {
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
 
+    @Column(name = "summary_through_sequence_no", nullable = false)
+    @Builder.Default
+    private Integer summaryThroughSequenceNo = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     @Generated(event = EventType.INSERT)
     private Instant createdAt;

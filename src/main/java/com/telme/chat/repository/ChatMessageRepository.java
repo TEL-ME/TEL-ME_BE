@@ -44,6 +44,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             select message
             from ChatMessage message
             where message.session.sessionId = :sessionId
+              and message.sequenceNo > :afterSequenceNo
               and message.sequenceNo < :beforeSequenceNo
               and message.status = :completedStatus
               and message.messageType <> :excludedType
@@ -51,7 +52,27 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             """)
     List<ChatMessage> findCompletedContextMessagesBefore(
             @Param("sessionId") Long sessionId,
+            @Param("afterSequenceNo") Integer afterSequenceNo,
             @Param("beforeSequenceNo") Integer beforeSequenceNo,
+            @Param("completedStatus") ChatMessage.Status completedStatus,
+            @Param("excludedType") ChatMessage.MessageType excludedType,
+            Pageable pageable
+    );
+
+    @Query("""
+            select message
+            from ChatMessage message
+            where message.session.sessionId = :sessionId
+              and message.sequenceNo > :afterSequenceNo
+              and message.sequenceNo <= :throughSequenceNo
+              and message.status = :completedStatus
+              and message.messageType <> :excludedType
+            order by message.sequenceNo asc
+            """)
+    List<ChatMessage> findOldestCompletedSummaryMessagesAfter(
+            @Param("sessionId") Long sessionId,
+            @Param("afterSequenceNo") Integer afterSequenceNo,
+            @Param("throughSequenceNo") Integer throughSequenceNo,
             @Param("completedStatus") ChatMessage.Status completedStatus,
             @Param("excludedType") ChatMessage.MessageType excludedType,
             Pageable pageable

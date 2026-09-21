@@ -6,6 +6,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties({ChatExecutionProperties.class, ChatContextProperties.class})
+@EnableConfigurationProperties({
+        ChatExecutionProperties.class,
+        ChatContextProperties.class,
+        ChatSummaryProperties.class
+})
 public class ChatConfig {
 }

@@ -24,10 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@RecordApplicationEvents
 class ChatExecutionServiceIntegrationTest {
 
     @Autowired
@@ -41,6 +44,9 @@ class ChatExecutionServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     private ChatActor actor;
     private Long sessionId;
@@ -93,6 +99,8 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(answer.followUps()).containsExactly("가장 저렴한 요금제는?", "데이터 무제한은?");
         assertThat(answer.storeResults()).isNull();
         assertThat(answer.completedAt()).isNotNull();
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .containsExactly(new ChatSummaryRequested(question.executionId(), sessionId, 2));
     }
 
     @Test
@@ -136,6 +144,8 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(clarification.status()).isEqualTo(ChatMessage.Status.COMPLETED);
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
         assertThat(findExecution(question.executionId()).getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .contains(new ChatSummaryRequested(question.executionId(), sessionId, 2));
 
         ChatMessageSendResponse reply = send("강남역이요");
         assertThat(reply.sequenceNo()).isEqualTo(3);
@@ -166,6 +176,8 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(execution.getOutputMessage()).isNull();
         assertThat(execution.getEndedAt()).isNotNull();
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .contains(new ChatSummaryRequested(correction.executionId(), sessionId, 3));
 
         ChatMessageHistoryResponse history = chatSessionService.getMessages(actor, sessionId, null, 50);
         assertThat(history.messages()).hasSize(3);
@@ -201,6 +213,7 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.FAILED);
         assertThat(execution.getErrorCode()).isEqualTo("LLM_TIMEOUT");
         assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(failed.messageId());
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class)).isEmpty();
         ChatMessageHistoryItemResponse errorMessage = historyItem(2);
         assertThat(errorMessage.replyToMessageId()).isEqualTo(question.messageId());
         assertThat(errorMessage.completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
