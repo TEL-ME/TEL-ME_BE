@@ -6,7 +6,7 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
 import com.telme.faq.repository.FaqEmbeddingRepository;
-import java.time.ZoneId;
+import com.telme.global.common.TimeZones;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PgvectorFaqSearchService implements FaqSearchService {
-
-    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
     private final EmbeddingClient embeddingClient;
     private final FaqEmbeddingRepository repository;
@@ -45,26 +43,27 @@ public class PgvectorFaqSearchService implements FaqSearchService {
         }
 
         // repository가 이미 거리순(=유사도 내림차순)으로 정렬해서 반환하므로
-        // 0번째가 최고 score
-        List<Double> scores = candidates.stream()
-                .map(c -> cosineSimilarity(queryVector, c.getEmbedding()))
-                .toList();
-        if (scores.get(0) < similarityThreshold) {
-            return List.of();
-        }
-
+        // 임계값 미만이 한 번 나오면 그 뒤로는 전부 미달 — 그 지점에서 끊음
+        // 호출하는 쪽이 score를 재판정하지 않아도 되도록(FaqSearchService 계약) 항목별로 거름
         List<FaqSearchResponse> results = new ArrayList<>();
-        for (int i = 0; i < candidates.size(); i++) {
-            Faq faq = candidates.get(i).getFaq();
+        int rank = 0;
+        for (FaqEmbedding candidate : candidates) {
+            double score = cosineSimilarity(queryVector, candidate.getEmbedding());
+            // 쿼리 또는 후보가 영벡터이면 분모가 0이 되어 score가 NaN
+            if (!Double.isFinite(score) || score < similarityThreshold) {
+                break;
+            }
+            rank++;
+            Faq faq = candidate.getFaq();
             results.add(new FaqSearchResponse(
                     faq.getFaqId(),
                     faq.getCategory(),
                     faq.getQuestion(),
                     faq.getAnswer(),
-                    scores.get(i),
+                    score,
                     faq.getVersion(),
-                    faq.getUpdatedAt().atZone(ZONE).toLocalDate(),
-                    i + 1));
+                    faq.getUpdatedAt().atZone(TimeZones.KST).toLocalDate(),
+                    rank));
         }
         return results;
     }
