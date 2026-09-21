@@ -62,7 +62,7 @@ class IntentControllerTest {
     void messageNotFound_throws404() {
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         IntentRouteRequest req = new IntentRouteRequest(999L, "테스트 질문");
-        given(chatMessageRepository.findById(999L)).willReturn(Optional.empty());
+        given(chatMessageRepository.findByIdWithSession(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> intentController.route(servletRequest, req))
             .isInstanceOf(GeneralException.class)
@@ -81,7 +81,7 @@ class IntentControllerTest {
         ChatSession session = ChatSession.builder().userId(ownerId).build();
         ChatMessage message = ChatMessage.builder().messageId(10L).session(session).build();
 
-        given(chatMessageRepository.findById(10L)).willReturn(Optional.of(message));
+        given(chatMessageRepository.findByIdWithSession(10L)).willReturn(Optional.of(message));
 
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         given(chatActorProvider.getCurrentActor(servletRequest)).willReturn(new ChatActor(hackerId, null));
@@ -103,7 +103,7 @@ class IntentControllerTest {
         ChatSession session = ChatSession.builder().userId(userId).build();
         ChatMessage message = ChatMessage.builder().messageId(10L).session(session).content("질문").build();
 
-        given(chatMessageRepository.findById(10L)).willReturn(Optional.of(message));
+        given(chatMessageRepository.findByIdWithSession(10L)).willReturn(Optional.of(message));
 
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         given(chatActorProvider.getCurrentActor(servletRequest)).willReturn(new ChatActor(userId, null));
@@ -130,7 +130,7 @@ class IntentControllerTest {
         ChatSession session = ChatSession.builder().guestId(guestId).userId(null).build();
         ChatMessage message = ChatMessage.builder().messageId(20L).session(session).content("게스트 질문").build();
 
-        given(chatMessageRepository.findById(20L)).willReturn(Optional.of(message));
+        given(chatMessageRepository.findByIdWithSession(20L)).willReturn(Optional.of(message));
 
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         given(chatActorProvider.getCurrentActor(servletRequest)).willReturn(new ChatActor(null, guestId));
@@ -159,7 +159,7 @@ class IntentControllerTest {
         ChatSession session = ChatSession.builder().guestId(ownerGuestId).userId(null).build();
         ChatMessage message = ChatMessage.builder().messageId(21L).session(session).build();
 
-        given(chatMessageRepository.findById(21L)).willReturn(Optional.of(message));
+        given(chatMessageRepository.findByIdWithSession(21L)).willReturn(Optional.of(message));
 
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         given(chatActorProvider.getCurrentActor(servletRequest)).willReturn(new ChatActor(null, attackerGuestId));
@@ -178,7 +178,7 @@ class IntentControllerTest {
     @DisplayName("인증되지 않은(세션 없는) 요청 시 401 UNAUTHENTICATED 예외를 던진다")
     void unauthenticatedWhenNoSession() {
         ChatMessage message = ChatMessage.builder().messageId(30L).build();
-        given(chatMessageRepository.findById(30L)).willReturn(Optional.of(message));
+        given(chatMessageRepository.findByIdWithSession(30L)).willReturn(Optional.of(message));
 
         HttpServletRequest servletRequest = mock(HttpServletRequest.class);
         given(chatActorProvider.getCurrentActor(servletRequest))

@@ -44,7 +44,7 @@ public class IntentController {
             throw new IllegalArgumentException("요청 본문은 필수입니다.");
         }
 
-        ChatMessage message = chatMessageRepository.findById(request.messageId())
+        ChatMessage message = chatMessageRepository.findByIdWithSession(request.messageId())
             .orElseThrow(() -> new GeneralException(IntentErrorCode.MESSAGE_NOT_FOUND));
 
         validateOwnership(servletRequest, message);

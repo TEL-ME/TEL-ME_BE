@@ -109,12 +109,17 @@ public class QueryRoutingService {
 
             String json = llmClient.generate(request);
             if (json == null || json.isBlank()) {
-                throw new IllegalStateException("LLM 응답이 비어 있습니다.");
+                throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
             }
 
-            payload = objectMapper.readValue(json, LlmRoutingPayload.class);
+            try {
+                payload = objectMapper.readValue(json, LlmRoutingPayload.class);
+            } catch (JsonProcessingException e) {
+                throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
+            }
+
             if (payload == null) {
-                throw new IllegalStateException("LLM 응답 역직렬화 결과가 null입니다.");
+                throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
             }
 
             method = QueryRouting.Method.LLM;
@@ -123,15 +128,17 @@ public class QueryRoutingService {
                     payload.intent(), payload.confidence());
 
         } catch (GeneralException e) {
-            if (e.getErrorCode() instanceof LlmErrorCode || e.getErrorCode() == IntentErrorCode.LLM_CONNECTION_FAILED) {
-                log.warn("[라우팅] LLM 오류 발생, Rule Fallback으로 전환: {}", e.getMessage());
+            if (e.getErrorCode() instanceof LlmErrorCode
+                    || e.getErrorCode() == IntentErrorCode.LLM_CONNECTION_FAILED
+                    || e.getErrorCode() == IntentErrorCode.LLM_RESPONSE_PARSE_FAILED) {
+                log.warn("[라우팅] LLM 오류 또는 파싱 실패, Rule Fallback으로 전환: {}", e.getMessage());
                 payload = ruleBasedFallback.classify(question);
                 method = QueryRouting.Method.RULE;
             } else {
                 throw e;
             }
-        } catch (RestClientException | JsonProcessingException | IllegalStateException e) {
-            log.warn("[라우팅] LLM 호출 또는 파싱 실패, Rule Fallback으로 전환: {}", e.getMessage());
+        } catch (RestClientException e) {
+            log.warn("[라우팅] LLM 호출 실패, Rule Fallback으로 전환: {}", e.getMessage());
             payload = ruleBasedFallback.classify(question);
             method = QueryRouting.Method.RULE;
         }

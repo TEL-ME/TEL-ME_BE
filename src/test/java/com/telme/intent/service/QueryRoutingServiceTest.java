@@ -180,6 +180,28 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        @DisplayName("LLM 응답이 비어있는 경우 → Rule Fallback으로 전환")
+        void fallbackEmptyResponse() {
+            given(llmClient.generate(any())).willReturn("   ");
+
+            IntentRouteResponse r = service.route(msg("위약금 얼마나 내야 돼?"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(r.method()).isEqualTo(QueryRouting.Method.RULE);
+        }
+
+        @Test
+        @DisplayName("LLM 응답 JSON 파싱 실패 시 → Rule Fallback으로 전환")
+        void fallbackMalformedJson() {
+            given(llmClient.generate(any())).willReturn("This is not valid json");
+
+            IntentRouteResponse r = service.route(msg("강남역 근처 대리점 어디 있어?"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(r.method()).isEqualTo(QueryRouting.Method.RULE);
+        }
+
+        @Test
         @DisplayName("예상치 못한 RuntimeException(NPE 등)은 Fallback으로 삼키지 않고 그대로 전파한다")
         void unexpectedException_propagates() {
             given(llmClient.generate(any())).willThrow(new NullPointerException("unexpected null"));
