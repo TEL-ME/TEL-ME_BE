@@ -9,7 +9,7 @@ public record LlmProperties(
         String model,
         Duration connectTimeout,
         Duration readTimeout,
-        // 모델 한 번에 읽는 토큰 수. 안 보내면 Ollama 기본값 4096으로 동작한다
+        // 모델 한 번에 읽는 토큰 수. 안 보내면 Ollama 기본값 4096
         @DefaultValue("8192") int contextSize
 ) {
 
