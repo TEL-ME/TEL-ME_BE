@@ -6,3 +6,7 @@ spring:
   flyway:
     # db/dev-migration(샘플 시드 데이터)은 로컬 전용이다. 운영에서는 스키마 마이그레이션만 적용한다.
     locations: classpath:db/migration
+
+faq:
+  # 내부 검색 테스트 API. 환경변수 설정과 무관하게 운영에서는 항상 차단.
+  search-test-api-enabled: false
