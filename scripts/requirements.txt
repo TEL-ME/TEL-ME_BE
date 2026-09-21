@@ -1,0 +1,2 @@
+# check_duplicates.py의 쌍 비교 가속용(없어도 순수 파이썬으로 동작)
+numpy>=1.26
