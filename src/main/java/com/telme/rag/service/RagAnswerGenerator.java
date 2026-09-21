@@ -9,6 +9,7 @@ import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
+import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
     @Override
     public AnswerResult generate(AnswerRequest request, LlmStreamHandler handler) {
+        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(handler, "handler");
+
         // 근거 없이 호출하면 모델이 지어내므로 여기서 차단
         if (request.searchResults().isEmpty()) {
             return answerWithoutEvidence(request, handler);

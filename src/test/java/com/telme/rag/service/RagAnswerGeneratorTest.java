@@ -138,6 +138,16 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
+    @DisplayName("handler가 없으면 호출할 수 없다")
+    void handler가_없으면_거부한다() {
+        RagAnswerGenerator generator = generator(new StubClient(List.of("답변")));
+
+        assertThatThrownBy(() -> generator.generate(request(List.of(faq(1L))), null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("handler");
+    }
+
+    @Test
     @DisplayName("사용자 질문이 비어 있으면 요청을 만들 수 없다")
     void 빈_질문은_거부한다() {
         assertThatThrownBy(() -> AnswerRequest.builder()
