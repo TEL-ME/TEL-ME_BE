@@ -15,6 +15,8 @@ import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,49 +51,70 @@ class IntentRouteApiIntegrationTest {
     @MockitoBean
     private LlmClient llmClient;
 
+    private final List<Long> createdSessionIds = new ArrayList<>();
+    private final List<Long> createdUserIds = new ArrayList<>();
+    private final List<UUID> createdGuestIds = new ArrayList<>();
+
     @AfterEach
     void tearDown() {
         transactionTemplate.executeWithoutResult(status -> {
-            jdbcTemplate.update("delete from consult_conditions");
-            jdbcTemplate.update("delete from consult_requests");
-            jdbcTemplate.update("delete from query_routings");
-            jdbcTemplate.update("delete from chat_messages");
-            jdbcTemplate.update("delete from chat_sessions");
-            jdbcTemplate.update("delete from guests");
-            jdbcTemplate.update("delete from users where email like '%routeapi-%'");
+            for (Long sessionId : createdSessionIds) {
+                jdbcTemplate.update("delete from consult_conditions where consult_request_id in (select consult_request_id from consult_requests where session_id = ?)", sessionId);
+                jdbcTemplate.update("delete from consult_requests where session_id = ?", sessionId);
+                jdbcTemplate.update("delete from query_routings where message_id in (select message_id from chat_messages where session_id = ?)", sessionId);
+                jdbcTemplate.update("delete from chat_messages where session_id = ?", sessionId);
+                jdbcTemplate.update("delete from chat_sessions where session_id = ?", sessionId);
+            }
+            for (UUID guestId : createdGuestIds) {
+                jdbcTemplate.update("delete from guests where guest_id = ?", guestId);
+            }
+            for (Long userId : createdUserIds) {
+                jdbcTemplate.update("delete from users where user_id = ?", userId);
+            }
         });
+        createdSessionIds.clear();
+        createdGuestIds.clear();
+        createdUserIds.clear();
     }
 
     private User persistUser(String prefix) {
-        return transactionTemplate.execute(status -> {
-            User user = User.builder()
+        User user = transactionTemplate.execute(status -> {
+            User u = User.builder()
                 .email(prefix + "-" + UUID.randomUUID() + "@example.com")
                 .name(prefix)
                 .build();
-            entityManager.persist(user);
+            entityManager.persist(u);
             entityManager.flush();
-            return user;
+            return u;
         });
+        if (user != null) {
+            createdUserIds.add(user.getUserId());
+        }
+        return user;
     }
 
     private UUID persistGuest() {
-        return transactionTemplate.execute(status -> {
-            UUID guestId = UUID.randomUUID();
+        UUID guestId = transactionTemplate.execute(status -> {
+            UUID gId = UUID.randomUUID();
             Guest guest = Guest.builder()
-                .guestId(guestId)
+                .guestId(gId)
                 .lastSeenAt(Instant.now())
                 .expiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
                 .build();
             entityManager.persist(guest);
             entityManager.flush();
-            return guestId;
+            return gId;
         });
+        if (guestId != null) {
+            createdGuestIds.add(guestId);
+        }
+        return guestId;
     }
 
     private ChatMessage persistMessage(ChatSession session, String content) {
-        return transactionTemplate.execute(status -> {
+        ChatMessage message = transactionTemplate.execute(status -> {
             entityManager.persist(session);
-            ChatMessage message = ChatMessage.builder()
+            ChatMessage msg = ChatMessage.builder()
                 .session(session)
                 .sequenceNo(1)
                 .role(ChatMessage.Role.USER)
@@ -99,10 +122,14 @@ class IntentRouteApiIntegrationTest {
                 .content(content)
                 .status(ChatMessage.Status.COMPLETED)
                 .build();
-            entityManager.persist(message);
+            entityManager.persist(msg);
             entityManager.flush();
-            return message;
+            return msg;
         });
+        if (session.getSessionId() != null) {
+            createdSessionIds.add(session.getSessionId());
+        }
+        return message;
     }
 
     @Test
