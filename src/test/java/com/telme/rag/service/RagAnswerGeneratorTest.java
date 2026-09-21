@@ -3,6 +3,7 @@ package com.telme.rag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.telme.chat.entity.ChatMessage.AnswerBasis;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
@@ -43,6 +44,7 @@ class RagAnswerGeneratorTest {
         assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(handler.completed).isTrue();
         assertThat(recorder.statuses).containsExactly(Status.NO_EVIDENCE);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
     }
 
     @Test
@@ -53,8 +55,42 @@ class RagAnswerGeneratorTest {
         AnswerResult result = generator.generate(request(List.of(faq(1L))), handler);
 
         assertThat(result.answer()).isEqualTo("요금제는 월 1회 변경됩니다.");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
         assertThat(handler.tokens).containsExactly("요금제는 ", "월 1회 ", "변경됩니다.");
         assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("근거를 줘도 모델이 답변 불가 문구를 내놓으면 NO_EVIDENCE로 표시한다")
+    void 모델이_답변_불가면_NO_EVIDENCE() {
+        RagAnswerGenerator generator =
+                generator(new StubClient(List.of(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)));
+
+        AnswerResult result = generator.generate(request(List.of(faq(1L))), handler);
+
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(result.sources()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("조건 키를 읽기 쉬운 말로 바꿔 프롬프트에 넣는다")
+    void 조건_키를_한글로_바꾼다() {
+        StubClient client = new StubClient(List.of("답변"));
+        Map<String, String> conditions = new HashMap<>();
+        conditions.put("location", "강남");
+        conditions.put("serviceType", "NAME_CHANGE");
+
+        AnswerRequest request = AnswerRequest.builder()
+                .userQuery("명의변경하고 싶어요")
+                .conditions(conditions)
+                .searchResults(List.of(faq(1L)))
+                .build();
+
+        generator(client).generate(request, handler);
+
+        assertThat(client.received.userPrompt())
+                .contains("- 지역: 강남")
+                .contains("- 업무 유형: NAME_CHANGE");
     }
 
     @Test
@@ -127,8 +163,8 @@ class RagAnswerGeneratorTest {
         generator(client).generate(request, handler);
 
         assertThat(client.received.userPrompt())
-                .contains("- serviceType: NAME_CHANGE")
-                .doesNotContain("location");
+                .contains("- 업무 유형: NAME_CHANGE")
+                .doesNotContain("지역");
     }
 
     @Test

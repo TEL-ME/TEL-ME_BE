@@ -22,7 +22,14 @@ public final class AnswerPromptTemplates {
         4. 근거에 조건별로 다른 내용이 있는데 고객 조건을 모르면, 조건을 나누어 모두 안내하십시오.
         5. 존댓말로 간결하게 답하십시오. 3~5문장을 넘기지 마십시오.
         6. 근거 번호([1], [2])나 "FAQ에 따르면" 같은 표현은 답변에 쓰지 마십시오.
+        7. 조건에 영문 코드가 있어도 답변에는 쓰지 말고 자연스러운 우리말로 바꿔 쓰십시오.
         """;
+
+    // 조건 키를 모델이 읽기 쉬운 말로 바꾼다. 매핑이 없는 키는 원문 그대로 쓴다
+    private static final Map<String, String> CONDITION_LABELS = Map.of(
+            "location", "지역",
+            "serviceType", "업무 유형"
+    );
 
     public static String buildUserPrompt(AnswerRequest request, String context) {
         return """
@@ -39,7 +46,8 @@ public final class AnswerPromptTemplates {
     private static String formatConditions(Map<String, String> conditions) {
         String formatted = conditions.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-                .map(entry -> "- %s: %s".formatted(entry.getKey(), entry.getValue()))
+                .map(entry -> "- %s: %s".formatted(
+                        CONDITION_LABELS.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue()))
                 .collect(Collectors.joining("\n"));
         return formatted.isEmpty() ? "없음" : formatted;
     }

@@ -1,5 +1,6 @@
 package com.telme.rag.service;
 
+import com.telme.chat.entity.ChatMessage.AnswerBasis;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
@@ -46,11 +47,21 @@ public class RagAnswerGenerator implements AnswerGenerator {
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
+        String answer = collector.answer();
+
         return AnswerResult.builder()
-                .answer(collector.answer())
+                .answer(answer)
+                .answerBasis(toAnswerBasis(answer))
                 // 모델이 실제로 참고한 근거를 알 수 없어 전달한 검색 결과 전부를 기록
                 .sources(contextConverter.toSources(request.searchResults()))
                 .build();
+    }
+
+    // 근거를 줬어도 모델이 답변 불가 문구를 내놓으면 근거 없음으로 본다
+    private AnswerBasis toAnswerBasis(String answer) {
+        return answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                ? AnswerBasis.NO_EVIDENCE
+                : AnswerBasis.GROUNDED;
     }
 
     private AnswerResult answerWithoutEvidence(AnswerRequest request, LlmStreamHandler handler) {
@@ -63,6 +74,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         return AnswerResult.builder()
                 .answer(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                .answerBasis(AnswerBasis.NO_EVIDENCE)
                 .build();
     }
 
