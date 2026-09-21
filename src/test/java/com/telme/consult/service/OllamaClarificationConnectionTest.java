@@ -33,7 +33,7 @@ class OllamaClarificationConnectionTest {
             RestClient.builder().baseUrl("http://localhost:11434");
     private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     private final LlmProperties properties =
-            new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60));
+            new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192);
     private final DialogueService service =
             new DialogueService(
                     new LlmClarificationTextGenerator(
@@ -48,6 +48,7 @@ class OllamaClarificationConnectionTest {
                 .andExpect(jsonPath("$.model").value("exaone3.5:7.8b"))
                 .andExpect(jsonPath("$.stream").value(false))
                 .andExpect(jsonPath("$.options.num_predict").value(128))
+                .andExpect(jsonPath("$.options.num_ctx").value(8192))
                 .andRespond(
                         withSuccess(
                                 "{\"message\":{\"content\":\"어느 지역의 매장을 찾으시나요?\"},\"done\":true}",

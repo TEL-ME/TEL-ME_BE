@@ -91,6 +91,7 @@ public class OllamaClient implements LlmClient {
     }
 
     private void readStreamLines(InputStream body, LlmStreamHandler handler) throws IOException {
+        boolean tokenEmitted = false;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -101,8 +102,13 @@ public class OllamaClient implements LlmClient {
                 if (chunk.message() != null && chunk.message().content() != null
                         && !chunk.message().content().isEmpty()) {
                     handler.onToken(chunk.message().content());
+                    tokenEmitted = true;
                 }
                 if (chunk.done()) {
+                    // 여기서 실패로 처리해야 호출 기록도 실패로 남는다
+                    if (!tokenEmitted) {
+                        throw new GeneralException(LlmErrorCode.INVALID_RESPONSE);
+                    }
                     return;
                 }
             }

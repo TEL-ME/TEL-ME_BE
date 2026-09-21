@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/chat/**", "/api/v1/chat/**").permitAll()
                         .requestMatchers("/api/stores/**", "/api/v1/stores/**").permitAll()
                         .requestMatchers("/api/faq/**", "/api/v1/faq/**").permitAll()
+                        .requestMatchers("/api/intent-routes/**", "/api/v1/intent-routes/**").permitAll()
                         .requestMatchers("/api/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 );
