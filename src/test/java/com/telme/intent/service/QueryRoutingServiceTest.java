@@ -28,18 +28,23 @@ class QueryRoutingServiceTest {
     @Mock LlmClient llmClient;
     @Mock QueryRoutingRepository queryRoutingRepository;
     @Mock ConsultRequestRepository consultRequestRepository;
+    @Mock org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     QueryRoutingService service;
     final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any()))
+            .thenAnswer(inv -> ((org.springframework.transaction.support.TransactionCallback<?>) inv.getArgument(0)).doInTransaction(null));
+
         IntentConverter intentConverter = new IntentConverter(objectMapper);
         service = new QueryRoutingService(
             llmClient, objectMapper,
             queryRoutingRepository, consultRequestRepository,
             new RuleBasedRoutingFallback(),
-            intentConverter
+            intentConverter,
+            transactionTemplate
         );
         org.mockito.Mockito.lenient().when(queryRoutingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(consultRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

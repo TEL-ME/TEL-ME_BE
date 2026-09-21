@@ -45,16 +45,6 @@ public class QueryRoutingService {
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
 
-    public QueryRoutingService(
-            LlmClient llmClient,
-            ObjectMapper objectMapper,
-            QueryRoutingRepository queryRoutingRepository,
-            ConsultRequestRepository consultRequestRepository,
-            RuleBasedRoutingFallback ruleBasedFallback,
-            IntentConverter intentConverter) {
-        this(llmClient, objectMapper, queryRoutingRepository, consultRequestRepository, ruleBasedFallback, intentConverter, null);
-    }
-
     @Autowired
     public QueryRoutingService(
             LlmClient llmClient,
@@ -63,7 +53,7 @@ public class QueryRoutingService {
             ConsultRequestRepository consultRequestRepository,
             RuleBasedRoutingFallback ruleBasedFallback,
             IntentConverter intentConverter,
-            @Autowired(required = false) TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate) {
         this.llmClient = llmClient;
         this.objectMapper = objectMapper;
         this.queryRoutingRepository = queryRoutingRepository;
@@ -147,10 +137,7 @@ public class QueryRoutingService {
     }
 
     private <T> T runInTransaction(Supplier<T> action) {
-        if (transactionTemplate != null) {
-            return transactionTemplate.execute(status -> action.get());
-        }
-        return action.get();
+        return transactionTemplate.execute(status -> action.get());
     }
 
     private IntentRouteResponse executeInTransaction(
