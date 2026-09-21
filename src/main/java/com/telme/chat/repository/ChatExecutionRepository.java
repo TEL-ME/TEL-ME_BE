@@ -14,6 +14,15 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Long> {
 
+    @Query("""
+            select execution
+            from ChatExecution execution
+            join fetch execution.session
+            join fetch execution.inputMessage
+            where execution.executionId = :executionId
+            """)
+    Optional<ChatExecution> findContextExecution(@Param("executionId") Long executionId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select execution
