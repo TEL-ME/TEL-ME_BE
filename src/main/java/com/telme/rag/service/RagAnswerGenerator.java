@@ -1,10 +1,8 @@
 package com.telme.rag.service;
 
 import com.telme.chat.entity.ChatMessage.AnswerBasis;
-import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
-import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
@@ -112,11 +110,6 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         @Override
         public void onComplete() {
-            // 토큰 없이 완료되면 SSE에 완료를 알리기 전에 실패로 돌린다
-            if (collected.isEmpty()) {
-                onError(new GeneralException(LlmErrorCode.INVALID_RESPONSE));
-                return;
-            }
             delegate.onComplete();
         }
 

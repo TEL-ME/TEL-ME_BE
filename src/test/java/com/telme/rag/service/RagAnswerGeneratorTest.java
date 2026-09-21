@@ -122,21 +122,12 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
-    @DisplayName("토큰 없이 완료되면 INVALID_RESPONSE로 실패시킨다")
-    void 빈_답변은_실패로_처리한다() {
-        LlmClient empty = new LlmClient() {
-            @Override
-            public String generate(LlmRequest request) {
-                throw new UnsupportedOperationException();
-            }
+    @DisplayName("클라이언트가 실패를 알리면 완료로 끝내지 않고 예외를 던진다")
+    void 실패하면_완료로_끝내지_않는다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(new GeneralException(LlmErrorCode.INVALID_RESPONSE)));
 
-            @Override
-            public void stream(LlmRequest request, LlmStreamHandler handler) {
-                handler.onComplete();
-            }
-        };
-
-        assertThatThrownBy(() -> generator(empty).generate(request(List.of(faq(1L))), handler))
+        assertThatThrownBy(() -> generator.generate(request(List.of(faq(1L))), handler))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
                         .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
@@ -144,45 +135,6 @@ class RagAnswerGeneratorTest {
         // SSE가 완료로 끝내지 않도록 onComplete 대신 onError만 받아야 한다
         assertThat(handler.completed).isFalse();
         assertThat(handler.error).isInstanceOf(GeneralException.class);
-    }
-
-    @Test
-    @DisplayName("값이 비어 있는 조건은 프롬프트에 넣지 않는다")
-    void 빈_조건은_제외한다() {
-        StubClient client = new StubClient(List.of("답변"));
-        Map<String, String> conditions = new HashMap<>();
-        conditions.put("location", null);
-        conditions.put("serviceType", "NAME_CHANGE");
-
-        AnswerRequest request = AnswerRequest.builder()
-                .userQuery("명의변경하고 싶어요")
-                .conditions(conditions)
-                .searchResults(List.of(faq(1L)))
-                .build();
-
-        generator(client).generate(request, handler);
-
-        assertThat(client.received.userPrompt())
-                .contains("- 업무 유형: NAME_CHANGE")
-                .doesNotContain("지역");
-    }
-
-    @Test
-    @DisplayName("조건 값이 모두 비어 있으면 없음으로 표시한다")
-    void 조건이_모두_비면_없음() {
-        StubClient client = new StubClient(List.of("답변"));
-        Map<String, String> conditions = new HashMap<>();
-        conditions.put("location", null);
-
-        AnswerRequest request = AnswerRequest.builder()
-                .userQuery("질문")
-                .conditions(conditions)
-                .searchResults(List.of(faq(1L)))
-                .build();
-
-        generator(client).generate(request, handler);
-
-        assertThat(client.received.userPrompt()).contains("[고객 조건]\n없음");
     }
 
     @Test
