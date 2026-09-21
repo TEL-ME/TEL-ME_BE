@@ -52,3 +52,7 @@ embedding:
   batch-read-timeout: 120s
   # 콜드 로드 방지 기동 시 워밍업. 기본 꺼짐 — 실제 배포 환경에서만 true로 켠다.
   warmup-enabled: ${EMBEDDING_WARMUP_ENABLED:false}
+
+search:
+  # 잠정값 — 무관 질문 유사도 분포 실측(2주차 임계값 캘리브레이션) 전까지의 임시 기준
+  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.5}
