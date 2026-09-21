@@ -6,6 +6,7 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.llm.exception.LlmStreamCancelledException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +44,15 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
                 @Override
                 public void onToken(String token) {
                     content.append(token);
-                    emitterRegistry.sendEvent(executionId, "token", token);
+                    boolean isConnected = emitterRegistry.sendEvent(executionId, "token", token);
+                    if (!isConnected) {
+                        throw new LlmStreamCancelledException();
+                    }
+                }
+
+                @Override
+                public void onRetry(int attempt, Throwable cause) {
+                    content.setLength(0);
                 }
 
                 @Override

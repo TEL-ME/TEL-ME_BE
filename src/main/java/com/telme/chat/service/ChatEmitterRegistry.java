@@ -31,16 +31,18 @@ public class ChatEmitterRegistry {
         return emitters.containsKey(executionId);
     }
 
-    public void sendEvent(Long executionId, String eventName, Object payload) {
+    public boolean sendEvent(Long executionId, String eventName, Object payload) {
         SseEmitter emitter = emitters.get(executionId);
         if (emitter == null) {
-            return;
+            return false;
         }
         try {
             emitter.send(SseEmitter.event().name(eventName).data(payload));
+            return true;
         } catch (IOException exception) {
             log.info("SSE 전송 실패로 구독 정리: executionId={}", executionId, exception);
             emitters.remove(executionId, emitter);
+            return false;
         }
     }
 

@@ -43,6 +43,7 @@ class LlmChatProcessingPortTest {
         when(chatExecutionService.startAnswer(EXECUTION_ID)).thenReturn(
                 new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
                         ChatMessage.MessageType.ANSWER, ChatMessage.Status.GENERATING));
+        when(emitterRegistry.sendEvent(any(), any(), any())).thenReturn(true);
     }
 
     @Test
@@ -121,6 +122,54 @@ class LlmChatProcessingPortTest {
         verify(chatExecutionService).fail(eq(EXECUTION_ID), any(ChatFailure.class));
         verify(emitterRegistry).fail(eq(EXECUTION_ID), any());
         verify(chatExecutionService, never()).completeAnswer(any(), any());
+    }
+
+    @Test
+    void throwsLlmStreamCancelledExceptionWhenSseClientDisconnects() {
+        when(emitterRegistry.sendEvent(eq(EXECUTION_ID), eq("token"), any())).thenReturn(false);
+
+        doAnswer(invocation -> {
+            LlmStreamHandler handler = invocation.getArgument(1);
+            try {
+                handler.onToken("강남");
+            } catch (com.telme.llm.exception.LlmStreamCancelledException e) {
+                // 이 예외가 발생하면 성공
+                handler.onError(e);
+            }
+            return null;
+        }).when(llmClient).stream(any(LlmRequest.class), any(LlmStreamHandler.class));
+
+        port.request(command);
+
+        verify(chatExecutionService).fail(eq(EXECUTION_ID), any(ChatFailure.class));
+        verify(emitterRegistry).fail(eq(EXECUTION_ID), any());
+    }
+
+    @Test
+    void clearsAccumulatedTokensWhenOnRetryIsCalled() {
+        doAnswer(invocation -> {
+            LlmStreamHandler handler = invocation.getArgument(1);
+            handler.onToken("실패할 ");
+            handler.onToken("내용");
+            handler.onRetry(1, new RuntimeException("Ollama Timeout"));
+            handler.onToken("성공한 ");
+            handler.onToken("답변");
+            handler.onComplete();
+            return null;
+        }).when(llmClient).stream(any(LlmRequest.class), any(LlmStreamHandler.class));
+
+        ChatOutputMessage completed = new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
+                ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED);
+        when(chatExecutionService.completeAnswer(eq(EXECUTION_ID), any(ChatAnswer.class)))
+                .thenReturn(completed);
+
+        port.request(command);
+
+        ArgumentCaptor<ChatAnswer> answerCaptor = ArgumentCaptor.forClass(ChatAnswer.class);
+        verify(chatExecutionService).completeAnswer(eq(EXECUTION_ID), answerCaptor.capture());
+        
+        // 재시도 이전에 모였던 "실패할 내용"은 지워지고 "성공한 답변"만 남아야 함
+        assertThat(answerCaptor.getValue().content()).isEqualTo("성공한 답변");
     }
 
     private void stubStreamThatEmits(String... tokens) {
