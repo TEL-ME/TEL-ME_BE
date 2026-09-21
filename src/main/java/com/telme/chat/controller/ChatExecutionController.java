@@ -57,15 +57,35 @@ public class ChatExecutionController {
             throw new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND);
         }
 
+        // [프론트엔드 연동 주의사항]
+        // 구독 요청 시점에 이미 AI 답변이 종료(COMPLETED/FAILED)된 상태라면, 아래 로직에 의해
+        // 터미널 이벤트(complete/error)를 전송한 직후 연결이 닫히게 됩니다.
+        // 브라우저의 EventSource는 서버가 연결을 닫으면 자동으로 재연결을 시도하므로 무한 재연결 루프에 빠질 수 있습니다.
+        // 따라서 프론트엔드에서는 'complete'나 'error' 이벤트를 수신하면 반드시 eventSource.close()를 명시적으로 호출해야 합니다.
         SseEmitter emitter = new SseEmitter(timeoutMillis());
         if (state.status() != ChatExecution.Status.RUNNING) {
-            // 구독을 걸기 전에 이미 끝난 실행이면, 지금 상태를 바로 흘려보내고 연결을 닫는다.
+            // Fast-path: 구독을 걸기 전에 이미 끝난 실행이면 즉시 종료 처리합니다.
             String eventName = state.status() == ChatExecution.Status.COMPLETED ? "complete" : "error";
             emitterRegistry.sendTerminalNow(emitter, eventName, state);
             return emitter;
         }
 
+        // 1. 상태 체크 전에 일단 무조건 구독 맵에 등록부터 합니다. (위에서 Fast-path 통과한 경우)
         emitterRegistry.register(executionId, emitter);
+
+        // 구독 등록 후 상태를 다시 확인하여, 등록 직전에 AI 처리가 끝난 경우(TOCTOU 경쟁 상태)
+        // 클라이언트가 이벤트를 받지 못하고 무한 대기하는 현상을 방지합니다.
+        ChatExecutionState currentState = chatSessionService.getExecution(actor, executionId);
+        if (currentState.status() != ChatExecution.Status.RUNNING) {
+            String eventName = currentState.status() == ChatExecution.Status.COMPLETED ? "complete" : "error";
+            // 이미 등록된 상태이므로 registry를 통해 이벤트를 보내고 제거 및 종료합니다.
+            if (currentState.status() == ChatExecution.Status.COMPLETED) {
+                emitterRegistry.complete(executionId, currentState);
+            } else {
+                emitterRegistry.fail(executionId, currentState);
+            }
+        }
+
         return emitter;
     }
 
