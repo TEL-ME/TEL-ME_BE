@@ -54,6 +54,8 @@ public class GuestIdentityFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    // TODO: 세션의 guestId가 DB에서 지워졌거나 만료된 경우는 검증하지 않는다(매 요청 DB 조회 비용 때문에 1차는 보류).
+    // 만료 검증·재발급은 후속 작업.
     private boolean hasIdentity(HttpSession session) {
         return session.getAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE) != null
                 || session.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE) != null;
