@@ -58,7 +58,9 @@ def check(items: list[dict], tax: Taxonomy, pol: Policy) -> list[Finding]:
             if value and value not in valid:
                 add(i, item, f"알 수 없는 {field}", value)
 
-        declared = item.get(EXTRA_REFS_FIELD) or []
+        # `or []`를 쓰면 ""·0·{}·false·null 같은 falsy 오입력이 빈 배열로 바뀌어
+        # "필드 없음"과 구분되지 않는다. 필드가 없을 때만 기본값
+        declared = item.get(EXTRA_REFS_FIELD, [])
         if not isinstance(declared, list) or any(not isinstance(e, str) for e in declared):
             # 문자열이 오면 글자 단위로, 숫자가 오면 TypeError로 죽는다
             add(i, item, "extra_policy_refs 형식 오류", f"문자열 배열이어야 함: {declared!r}")
@@ -215,6 +217,47 @@ SELF_TEST_CASES: list[tuple[dict, str]] = [
             "extra_policy_refs": ["BILLING-02", 5],  # 원소가 문자열이 아님
         },
         "extra_policy_refs 형식 오류",
+    ),
+    # falsy 오입력 — 필드가 있는데 배열이 아니면 "필드 없음"으로 넘어가면 안 된다
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": "",
+        },
+        "extra_policy_refs 형식 오류",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": {},
+        },
+        "extra_policy_refs 형식 오류",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": None,  # JSON null
+        },
+        "extra_policy_refs 형식 오류",
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "question_type": "FACT",
+            # 필드 자체가 없으면 정상 (COMPARE가 아니어도 지적하지 않는다)
+        },
+        "",
     ),
 ]
 

@@ -86,8 +86,10 @@ python3 scripts/check_policy.py --self-test
 `COMPARE`가 아닌 질문유형이 값을 채우면 지적
 (다른 유형에서도 받아주면 허용값을 넓히는 우회로가 됨)
 
-형식도 본다. 문자열 배열이 아니면 `extra_policy_refs 형식 오류`
-(배열을 빠뜨린 `"BILLING-02"`, 원소에 숫자가 섞인 경우)
+필드가 있는데 문자열 배열이 아니면 `extra_policy_refs 형식 오류`
+(배열을 빠뜨린 `"BILLING-02"`, 원소에 숫자가 섞인 경우, `""`·`0`·`{}`·`false`·`null`)
+
+필드가 아예 없으면 지적하지 않는다. 있는데 값이 틀린 것과 구분
 
 남발을 막기 위해, 선언한 항목의 수치가 답변에 하나도 없으면 `인용하지 않은 extra_policy_refs`로 지적
 
@@ -116,7 +118,7 @@ python3 scripts/check_duplicates.py --self-test
 
 ## 자기 검증
 
-두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 12건, `check_duplicates.py`는 2건).
+두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 16건, `check_duplicates.py`는 2건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
