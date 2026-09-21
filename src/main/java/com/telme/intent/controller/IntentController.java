@@ -55,11 +55,7 @@ public class IntentController {
 
     private void validateOwnership(HttpServletRequest servletRequest, ChatMessage message) {
         ChatActorProvider actorProvider = chatActorProvider.getIfAvailable();
-        if (actorProvider == null || servletRequest == null) {
-            return;
-        }
-        HttpSession session = servletRequest.getSession(false);
-        if (session == null) {
+        if (actorProvider == null) {
             return;
         }
         ChatActor actor = actorProvider.getCurrentActor(servletRequest);
