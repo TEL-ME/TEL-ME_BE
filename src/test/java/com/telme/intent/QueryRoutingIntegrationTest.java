@@ -163,7 +163,8 @@ class QueryRoutingIntegrationTest {
         assertThat(second.routingId()).isEqualTo(first.routingId());
         assertThat(second.intent()).isEqualTo(first.intent());
 
-        assertThat(queryRoutingRepository.findAll()).hasSize(1);
+        assertThat(consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(message.getMessageId())).hasSize(1);
+        assertThat(queryRoutingRepository.findByMessage_MessageId(message.getMessageId())).isPresent();
     }
 
     @Test
