@@ -44,6 +44,23 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("""
             select message
             from ChatMessage message
+            where message.session.sessionId = :sessionId
+              and message.sequenceNo < :beforeSequenceNo
+              and message.status = :completedStatus
+              and message.messageType <> :excludedType
+            order by message.sequenceNo desc
+            """)
+    List<ChatMessage> findCompletedContextMessagesBefore(
+            @Param("sessionId") Long sessionId,
+            @Param("beforeSequenceNo") Integer beforeSequenceNo,
+            @Param("completedStatus") ChatMessage.Status completedStatus,
+            @Param("excludedType") ChatMessage.MessageType excludedType,
+            Pageable pageable
+    );
+
+    @Query("""
+            select message
+            from ChatMessage message
             join fetch message.session
             where message.messageId = :messageId
             """)

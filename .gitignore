@@ -39,3 +39,10 @@ out/
 ### 환경변수 · OS ###
 .env
 .DS_Store
+
+### Python (scripts/) ###
+venv/
+.venv/
+__pycache__/
+*.pyc
+scripts/data/.embed_cache.json
