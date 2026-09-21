@@ -19,7 +19,8 @@ public record OllamaChatRequest(
 
     public record Options(
             Double temperature,
-            @JsonProperty("num_predict") Integer numPredict
+            @JsonProperty("num_predict") Integer numPredict,
+            @JsonProperty("num_ctx") Integer numCtx
     ) {
     }
 }

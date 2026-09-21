@@ -34,7 +34,8 @@ public class OllamaRequestConverter {
                 .format(request.format() == ResponseFormat.JSON ? "json" : null)
                 .options(new OllamaChatRequest.Options(
                         request.temperature() != null ? request.temperature() : defaults.temperature(),
-                        request.maxTokens() != null ? request.maxTokens() : defaults.maxTokens()))
+                        request.maxTokens() != null ? request.maxTokens() : defaults.maxTokens(),
+                        llmProperties.contextSize()))
                 .build();
     }
 

@@ -39,6 +39,8 @@ llm:
   model: ${LLM_MODEL:exaone3.5:7.8b}
   connect-timeout: 5s
   read-timeout: 60s
+  # 8192면 약 6GB를 쓰고 프롬프트·근거·이전 대화·출력이 모두 들어간다. 모델 자체는 32768까지 지원
+  context-size: ${LLM_CONTEXT_SIZE:8192}
   retry:
     # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
     max-attempts: 2
