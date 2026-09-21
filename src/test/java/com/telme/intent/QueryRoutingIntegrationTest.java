@@ -13,8 +13,11 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.llm.service.LlmClient;
+import com.telme.member.entity.Guest;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -68,6 +71,18 @@ class QueryRoutingIntegrationTest {
         entityManager.persist(user);
         entityManager.flush();
         return user;
+    }
+
+    private UUID persistGuest() {
+        UUID guestId = UUID.randomUUID();
+        Guest guest = Guest.builder()
+            .guestId(guestId)
+            .lastSeenAt(Instant.now())
+            .expiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
+            .build();
+        entityManager.persist(guest);
+        entityManager.flush();
+        return guestId;
     }
 
     @Test
@@ -263,7 +278,7 @@ class QueryRoutingIntegrationTest {
     @Test
     @DisplayName("MockMvc HTTP 라우팅: 게스트 소유자 정상 요청 시 200 OK 반환 (LazyInitializationException 방어 검증)")
     void routeApi_guestOwner_returns200() throws Exception {
-        UUID guestId = UUID.randomUUID();
+        UUID guestId = persistGuest();
         ChatSession session = ChatSession.builder()
             .guestId(guestId)
             .userId(null)
