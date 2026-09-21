@@ -43,10 +43,12 @@ class QueryRoutingServiceTest {
         );
         org.mockito.Mockito.lenient().when(queryRoutingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(consultRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        org.mockito.Mockito.lenient().when(queryRoutingRepository.findByMessage_MessageId(any())).thenReturn(java.util.Optional.empty());
     }
 
     ChatMessage msg(String content) {
         return ChatMessage.builder()
+            .messageId(1L)
             .session(ChatSession.builder().build())
             .content(content)
             .build();
@@ -135,7 +137,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("타임아웃 → FAQ 키워드 매칭으로 분류")
         void fallbackFaq() {
-            given(llmClient.generate(any())).willThrow(new RuntimeException("Ollama timeout"));
+            given(llmClient.generate(any())).willThrow(new org.springframework.web.client.ResourceAccessException("Ollama timeout"));
 
             IntentRouteResponse r = service.route(msg("위약금 얼마나 내야 돼?"));
 
@@ -146,7 +148,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("연결 실패 → STORE 키워드로 분류")
         void fallbackStore() {
-            given(llmClient.generate(any())).willThrow(new RuntimeException("Connection refused"));
+            given(llmClient.generate(any())).willThrow(new org.springframework.web.client.RestClientException("Connection refused"));
 
             IntentRouteResponse r = service.route(msg("강남역 근처 대리점 어디 있어?"));
 
@@ -157,7 +159,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("키워드 없음 → UNKNOWN")
         void fallbackUnknown() {
-            given(llmClient.generate(any())).willThrow(new RuntimeException("error"));
+            given(llmClient.generate(any())).willThrow(new com.telme.global.common.exception.GeneralException(com.telme.intent.exception.IntentErrorCode.LLM_CONNECTION_FAILED));
 
             IntentRouteResponse r = service.route(msg("안녕 반가워"));
 
@@ -168,13 +170,23 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("FAQ+STORE 키워드 혼재 → BOTH, 서브질의 2건")
         void fallbackBoth() {
-            given(llmClient.generate(any())).willThrow(new RuntimeException("GPU OOM"));
+            given(llmClient.generate(any())).willThrow(new com.telme.global.common.exception.GeneralException(com.telme.intent.exception.IntentErrorCode.LLM_CONNECTION_FAILED));
 
             IntentRouteResponse r = service.route(msg("요금제 알려주고 근처 대리점도 찾아줘"));
 
             assertThat(r.intent()).isEqualTo(QueryRouting.Intent.BOTH);
             assertThat(r.method()).isEqualTo(QueryRouting.Method.RULE);
             assertThat(r.subQueries()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("예상치 못한 RuntimeException(NPE 등)은 Fallback으로 삼키지 않고 그대로 전파한다")
+        void unexpectedException_propagates() {
+            given(llmClient.generate(any())).willThrow(new NullPointerException("unexpected null"));
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.route(msg("요금제 알려줘")))
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("unexpected null");
         }
     }
 

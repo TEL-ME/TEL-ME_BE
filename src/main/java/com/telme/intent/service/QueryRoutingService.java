@@ -1,10 +1,12 @@
 package com.telme.intent.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
@@ -19,13 +21,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.RestClientException;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class QueryRoutingService {
 
@@ -35,11 +40,47 @@ public class QueryRoutingService {
     private final ConsultRequestRepository consultRequestRepository;
     private final RuleBasedRoutingFallback ruleBasedFallback;
     private final IntentConverter intentConverter;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
+    public QueryRoutingService(
+            LlmClient llmClient,
+            ObjectMapper objectMapper,
+            QueryRoutingRepository queryRoutingRepository,
+            ConsultRequestRepository consultRequestRepository,
+            RuleBasedRoutingFallback ruleBasedFallback,
+            IntentConverter intentConverter) {
+        this(llmClient, objectMapper, queryRoutingRepository, consultRequestRepository, ruleBasedFallback, intentConverter, null);
+    }
+
+    @Autowired
+    public QueryRoutingService(
+            LlmClient llmClient,
+            ObjectMapper objectMapper,
+            QueryRoutingRepository queryRoutingRepository,
+            ConsultRequestRepository consultRequestRepository,
+            RuleBasedRoutingFallback ruleBasedFallback,
+            IntentConverter intentConverter,
+            @Autowired(required = false) TransactionTemplate transactionTemplate) {
+        this.llmClient = llmClient;
+        this.objectMapper = objectMapper;
+        this.queryRoutingRepository = queryRoutingRepository;
+        this.consultRequestRepository = consultRequestRepository;
+        this.ruleBasedFallback = ruleBasedFallback;
+        this.intentConverter = intentConverter;
+        this.transactionTemplate = transactionTemplate;
+    }
+
     public IntentRouteResponse route(ChatMessage userMessage) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
+        }
+
+        if (userMessage.getMessageId() != null) {
+            Optional<QueryRouting> existing = queryRoutingRepository.findByMessage_MessageId(userMessage.getMessageId());
+            if (existing.isPresent()) {
+                log.info("[라우팅] 이미 라우팅된 메시지입니다. 기존 결과를 반환합니다: messageId={}", userMessage.getMessageId());
+                return buildExistingResponse(existing.get(), userMessage.getMessageId());
+            }
         }
 
         String question = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
@@ -47,21 +88,21 @@ public class QueryRoutingService {
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
             LlmRoutingPayload fallbackPayload = ruleBasedFallback.classify(question);
-            return saveAndBuildResult(userMessage, fallbackPayload, QueryRouting.Method.RULE);
+            return executeInTransaction(userMessage, fallbackPayload, QueryRouting.Method.RULE);
         }
 
         LlmRoutingPayload payload;
         QueryRouting.Method method;
 
         try {
-            LlmRequest request = new LlmRequest(
-                TaskType.ROUTING,
-                RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT,
-                question,
-                ResponseFormat.JSON,
-                0.1,
-                500
-            );
+            LlmRequest request = LlmRequest.builder()
+                .taskType(TaskType.ROUTING)
+                .systemPrompt(RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT)
+                .userPrompt(question)
+                .format(ResponseFormat.JSON)
+                .temperature(0.1)
+                .maxTokens(500)
+                .build();
 
             String json = llmClient.generate(request);
             if (json == null || json.isBlank()) {
@@ -78,12 +119,22 @@ public class QueryRoutingService {
             log.info("[라우팅] LLM 분류 완료 -> intent={}, confidence={}",
                     payload.intent(), payload.confidence());
 
-        } catch (Exception e) {
-            log.warn("[라우팅] LLM 호출 실패, Rule Fallback으로 전환: {}", e.getMessage());
+        } catch (GeneralException | RestClientException | JsonProcessingException | IllegalStateException e) {
+            log.warn("[라우팅] LLM 호출 또는 파싱 실패, Rule Fallback으로 전환: {}", e.getMessage());
             payload = ruleBasedFallback.classify(question);
             method = QueryRouting.Method.RULE;
         }
 
+        return executeInTransaction(userMessage, payload, method);
+    }
+
+    private IntentRouteResponse executeInTransaction(
+            ChatMessage userMessage,
+            LlmRoutingPayload payload,
+            QueryRouting.Method method) {
+        if (transactionTemplate != null) {
+            return transactionTemplate.execute(status -> saveAndBuildResult(userMessage, payload, method));
+        }
         return saveAndBuildResult(userMessage, payload, method);
     }
 
@@ -97,7 +148,14 @@ public class QueryRoutingService {
         }
 
         QueryRouting routing = intentConverter.toQueryRouting(message, payload, method);
-        routing = queryRoutingRepository.save(routing);
+        try {
+            routing = queryRoutingRepository.save(routing);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("[라우팅] 동시 저장 충돌 발생 (messageId={}). 기존 라우팅 결과를 반환합니다.", message.getMessageId());
+            return queryRoutingRepository.findByMessage_MessageId(message.getMessageId())
+                .map(r -> buildExistingResponse(r, message.getMessageId()))
+                .orElseThrow(() -> e);
+        }
 
         List<IntentSubQueryResponse> subQueries = new ArrayList<>();
         List<LlmRoutingPayload.SubQueryPayload> subQueryPayloads = payload.subQueries() != null
@@ -150,6 +208,32 @@ public class QueryRoutingService {
         Map<String, String> extractedConditions = payload.extractedConditions() != null
                 ? payload.extractedConditions()
                 : Collections.emptyMap();
+
+        return intentConverter.toIntentRouteResponse(routing, extractedConditions, subQueries);
+    }
+
+    private IntentRouteResponse buildExistingResponse(QueryRouting routing, Long messageId) {
+        Map<String, String> extractedConditions = intentConverter.parseConditions(routing.getExtractedConditions());
+        List<ConsultRequest> requests = consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(messageId);
+
+        List<IntentSubQueryResponse> subQueries = new ArrayList<>();
+        for (ConsultRequest req : requests) {
+            Map<String, String> condMap = req.getConditions() != null
+                ? req.getConditions().stream().collect(Collectors.toMap(
+                    ConsultCondition::getConditionKey,
+                    ConsultCondition::getConditionValue,
+                    (a, b) -> a
+                ))
+                : Collections.emptyMap();
+
+            subQueries.add(intentConverter.toSubQueryResponse(
+                req,
+                req.getSubqueryOrder(),
+                req.getIntent(),
+                req.getQueryText(),
+                condMap
+            ));
+        }
 
         return intentConverter.toIntentRouteResponse(routing, extractedConditions, subQueries);
     }
