@@ -46,14 +46,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
-        String answer = collector.answer();
-        // 토큰 없이 완료되면 chat이 답변 메시지를 저장할 때 터지므로 여기서 차단
-        if (answer.isBlank()) {
-            throw new GeneralException(LlmErrorCode.INVALID_RESPONSE);
-        }
-
         return AnswerResult.builder()
-                .answer(answer)
+                .answer(collector.answer())
                 // 모델이 실제로 참고한 근거를 알 수 없어 전달한 검색 결과 전부를 기록
                 .sources(contextConverter.toSources(request.searchResults()))
                 .build();
@@ -106,6 +100,11 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         @Override
         public void onComplete() {
+            // 토큰 없이 완료되면 SSE에 완료를 알리기 전에 실패로 돌린다
+            if (collected.isEmpty()) {
+                onError(new GeneralException(LlmErrorCode.INVALID_RESPONSE));
+                return;
+            }
             delegate.onComplete();
         }
 

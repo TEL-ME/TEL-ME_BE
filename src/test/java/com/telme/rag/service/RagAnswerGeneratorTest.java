@@ -104,6 +104,10 @@ class RagAnswerGeneratorTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
                         .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
+
+        // SSE가 완료로 끝내지 않도록 onComplete 대신 onError만 받아야 한다
+        assertThat(handler.completed).isFalse();
+        assertThat(handler.error).isInstanceOf(GeneralException.class);
     }
 
     @Test
