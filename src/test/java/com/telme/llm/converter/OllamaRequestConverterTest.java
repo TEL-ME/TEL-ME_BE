@@ -16,7 +16,7 @@ import com.telme.llm.entity.LlmGeneration.TaskType;
 class OllamaRequestConverterTest {
 
     private final OllamaRequestConverter converter = new OllamaRequestConverter(
-            new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60)));
+            new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
 
     @Test
     @DisplayName("규칙과 질문을 system, user 순서로 담는다")
@@ -31,6 +31,16 @@ class OllamaRequestConverterTest {
                 .containsExactly(
                         tuple("system", "FAQ 내용만 보고 답해"),
                         tuple("user", "유심이 뭐야?"));
+    }
+
+    @Test
+    @DisplayName("설정한 컨텍스트 창 크기를 num_ctx로 담는다")
+    void 컨텍스트_창_크기를_담는다() {
+        OllamaChatRequest result = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("유심이 뭐야?")
+                .build(), false);
+
+        assertThat(result.options().numCtx()).isEqualTo(8192);
     }
 
     @Test

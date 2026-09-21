@@ -42,7 +42,7 @@ class OllamaClientTest {
         server = MockRestServiceServer.bindTo(builder).build();
 
         OllamaRequestConverter converter = new OllamaRequestConverter(
-                new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60)));
+                new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
         ollamaClient = new OllamaClient(builder.build(), converter, new ObjectMapper());
     }
 
