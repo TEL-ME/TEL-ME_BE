@@ -36,6 +36,7 @@ public class LlmGenerationRecorder {
                     .taskType(request.taskType())
                     .attempt((short) result.attempt())
                     .model(model)
+                    .contextCount(request.contextCount())
                     .firstTokenMs(result.firstTokenMs())
                     .totalMs(result.totalMs())
                     .status(result.status())
@@ -51,6 +52,11 @@ public class LlmGenerationRecorder {
 
         public static Result success(int attempt, Integer firstTokenMs, long totalMs) {
             return new Result(attempt, Status.SUCCESS, firstTokenMs, (int) totalMs, null);
+        }
+
+        // 근거가 없어 LLM을 호출하지 않은 경우
+        public static Result noEvidence() {
+            return new Result(1, Status.NO_EVIDENCE, null, null, null);
         }
 
         public static Result failure(int attempt, Throwable error, Integer firstTokenMs, long totalMs) {

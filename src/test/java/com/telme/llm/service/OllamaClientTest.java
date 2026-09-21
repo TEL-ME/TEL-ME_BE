@@ -152,6 +152,24 @@ class OllamaClientTest {
     }
 
     @Test
+    @DisplayName("토큰 없이 끝나면 INVALID_RESPONSE로 onError를 부른다")
+    void 토큰_없이_끝나면_onError만_호출한다() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess("""
+                        {"message":{"content":""},"done":true}
+                        """, NDJSON));
+        RecordingHandler handler = new RecordingHandler();
+
+        ollamaClient.stream(request(), handler);
+
+        assertThat(handler.completeCount).isZero();
+        assertThat(handler.error)
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
+                        .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
+    }
+
+    @Test
     @DisplayName("Ollama가 에러 상태로 응답하면 onError만 부른다")
     void 에러_상태면_onError만_호출한다() {
         server.expect(requestTo(CHAT_URL))

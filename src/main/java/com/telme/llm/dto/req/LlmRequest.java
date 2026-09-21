@@ -14,7 +14,9 @@ public record LlmRequest(
         ResponseFormat format,
         // null이면 TaskType별 기본값 사용
         Double temperature,
-        Integer maxTokens
+        Integer maxTokens,
+        // 호출 기록용. Context에 넣은 근거 수
+        Integer contextCount
 ) {
 
     public LlmRequest {
