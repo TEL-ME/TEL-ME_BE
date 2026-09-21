@@ -13,8 +13,10 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.llm.service.LlmClient;
+import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,11 +43,22 @@ class QueryRoutingIntegrationTest {
     @MockBean
     private LlmClient llmClient;
 
+    private User persistUser(String prefix) {
+        User user = User.builder()
+            .email(prefix + "-" + UUID.randomUUID() + "@example.com")
+            .name(prefix)
+            .build();
+        entityManager.persist(user);
+        entityManager.flush();
+        return user;
+    }
+
     @Test
     @DisplayName("통합 테스트: LLM 정상 응답 시 QueryRouting 및 ConsultRequest DB 영속화와 제약 조건 검증")
     void routeSuccess_persistsEntitiesAndChecksConstraints() {
+        User user = persistUser("router");
         ChatSession session = ChatSession.builder()
-            .userId(100L)
+            .userId(user.getUserId())
             .title("테스트 세션")
             .status(ChatSession.Status.ACTIVE)
             .build();
@@ -112,8 +125,9 @@ class QueryRoutingIntegrationTest {
     @Test
     @DisplayName("통합 테스트: 동일 메시지에 대한 중복 라우팅 요청 시 멱등하게 기존 결과 반환")
     void routeDuplicate_returnsExistingIdempotently() {
+        User user = persistUser("idempotent");
         ChatSession session = ChatSession.builder()
-            .userId(100L)
+            .userId(user.getUserId())
             .title("멱등성 테스트")
             .status(ChatSession.Status.ACTIVE)
             .build();
@@ -155,8 +169,9 @@ class QueryRoutingIntegrationTest {
     @Test
     @DisplayName("통합 테스트: LLM 장애 시 Rule Fallback 전환 및 DB 영속화")
     void routeFallback_whenLlmFails_persistsWithRuleMethod() {
+        User user = persistUser("fallback");
         ChatSession session = ChatSession.builder()
-            .userId(100L)
+            .userId(user.getUserId())
             .title("Fallback 테스트")
             .status(ChatSession.Status.ACTIVE)
             .build();
