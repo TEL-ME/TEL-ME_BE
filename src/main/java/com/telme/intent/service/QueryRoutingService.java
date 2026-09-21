@@ -12,16 +12,19 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.entity.QueryRouting;
+import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.exception.LlmErrorCode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +82,7 @@ public class QueryRoutingService {
             Optional<QueryRouting> existing = queryRoutingRepository.findByMessage_MessageId(userMessage.getMessageId());
             if (existing.isPresent()) {
                 log.info("[라우팅] 이미 라우팅된 메시지입니다. 기존 결과를 반환합니다: messageId={}", userMessage.getMessageId());
-                return buildExistingResponse(existing.get(), userMessage.getMessageId());
+                return runInTransaction(() -> buildExistingResponse(existing.get(), userMessage.getMessageId()));
             }
         }
 
@@ -119,7 +122,15 @@ public class QueryRoutingService {
             log.info("[라우팅] LLM 분류 완료 -> intent={}, confidence={}",
                     payload.intent(), payload.confidence());
 
-        } catch (GeneralException | RestClientException | JsonProcessingException | IllegalStateException e) {
+        } catch (GeneralException e) {
+            if (e.getErrorCode() instanceof LlmErrorCode || e.getErrorCode() == IntentErrorCode.LLM_CONNECTION_FAILED) {
+                log.warn("[라우팅] LLM 오류 발생, Rule Fallback으로 전환: {}", e.getMessage());
+                payload = ruleBasedFallback.classify(question);
+                method = QueryRouting.Method.RULE;
+            } else {
+                throw e;
+            }
+        } catch (RestClientException | JsonProcessingException | IllegalStateException e) {
             log.warn("[라우팅] LLM 호출 또는 파싱 실패, Rule Fallback으로 전환: {}", e.getMessage());
             payload = ruleBasedFallback.classify(question);
             method = QueryRouting.Method.RULE;
@@ -128,14 +139,18 @@ public class QueryRoutingService {
         return executeInTransaction(userMessage, payload, method);
     }
 
+    private <T> T runInTransaction(Supplier<T> action) {
+        if (transactionTemplate != null) {
+            return transactionTemplate.execute(status -> action.get());
+        }
+        return action.get();
+    }
+
     private IntentRouteResponse executeInTransaction(
             ChatMessage userMessage,
             LlmRoutingPayload payload,
             QueryRouting.Method method) {
-        if (transactionTemplate != null) {
-            return transactionTemplate.execute(status -> saveAndBuildResult(userMessage, payload, method));
-        }
-        return saveAndBuildResult(userMessage, payload, method);
+        return runInTransaction(() -> saveAndBuildResult(userMessage, payload, method));
     }
 
     private IntentRouteResponse saveAndBuildResult(

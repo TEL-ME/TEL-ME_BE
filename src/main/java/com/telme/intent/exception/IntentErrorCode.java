@@ -17,10 +17,6 @@ public enum IntentErrorCode implements BaseErrorCode {
         HttpStatus.NOT_FOUND, "INTENT404-1",
         "해당 메시지를 찾을 수 없습니다."
     ),
-    ROUTING_ALREADY_EXISTS(
-        HttpStatus.CONFLICT, "INTENT409-0",
-        "해당 메시지의 라우팅 결과가 이미 존재합니다."
-    ),
     LLM_RESPONSE_PARSE_FAILED(
         HttpStatus.INTERNAL_SERVER_ERROR, "INTENT500-0",
         "LLM 응답 JSON 파싱에 실패했습니다."
