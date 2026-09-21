@@ -14,12 +14,16 @@ import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@ExtendWith(OutputCaptureExtension.class)
 class ChatContextBuilderIntegrationTest {
 
     @Autowired
@@ -204,6 +208,32 @@ class ChatContextBuilderIntegrationTest {
         assertThat(context.history())
                 .extracting(ChatContextMessage::messageId)
                 .containsExactly(recentQuestion.getMessageId(), recentAnswer.getMessageId());
+    }
+
+    @Test
+    void doesNotWarnWhenAnExchangeIsCutOffAtQueryBoundary(CapturedOutput output) {
+        ChatSession session = createSession(null);
+        int sequenceNo = 1;
+        for (int turn = 1; turn <= 9; turn++) {
+            ChatMessage question = message(
+                    session, sequenceNo++, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                    ChatMessage.Status.COMPLETED, "이전 질문 " + turn, null);
+            message(
+                    session, sequenceNo++, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                    ChatMessage.Status.COMPLETED, "이전 답변 " + turn, null, question);
+        }
+        ChatMessage current = message(
+                session, sequenceNo, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "현재 질문", null);
+        ChatExecution execution = execution(session, current, ChatExecution.Status.RUNNING);
+        entityManager.clear();
+
+        ChatContext context = chatContextBuilder.build(new ChatProcessingCommand(
+                execution.getExecutionId(), session.getSessionId(), current.getMessageId(), current.getContent()),
+                4_096);
+
+        assertThat(context.history()).hasSize(16);
+        assertThat(output).doesNotContain("Context에서 연결된 사용자 질문이 없는 어시스턴트 메시지 제외");
     }
 
     @Test

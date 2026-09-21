@@ -65,6 +65,10 @@ public class ChatContextBuilder {
         List<ChatContextMessage> selected = new ArrayList<>();
         int estimatedTokens = 0;
         for (int index = 0; index < candidates.size();) {
+            if (selected.size() >= chatContextProperties.maxHistoryMessages()) {
+                break;
+            }
+
             ContextExchange exchange = nextExchange(candidates, index);
             index += exchange.consumedCandidates();
             if (exchange.messages().isEmpty()) {
