@@ -262,8 +262,12 @@ class Policy:
     def by_category(self, category: str) -> list[PolicyItem]:
         return [i for i in self.items.values() if i.category == category]
 
-    def allowed(self, ref: str) -> frozenset[str]:
-        return self.items[ref].numbers | self.common_numbers
+    # COMPARE 답변은 정책 항목을 여러 개 인용한다 (FAQ_TAXONOMY.md 2절)
+    def allowed(self, *refs: str) -> frozenset[str]:
+        out = self.common_numbers
+        for ref in refs:
+            out = out | self.items[ref].numbers
+        return out
 
 
 def load_policy(path: Path = POLICY_PATH) -> Policy:

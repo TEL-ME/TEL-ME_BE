@@ -47,7 +47,8 @@
     "policy_ref": "PLAN-02",
     "question_type": "COMPARE",
     "persona": "EXPERIENCED",
-    "trigger": "요금 절감"
+    "trigger": "요금 절감",
+    "extra_policy_refs": []
   },
   {
     "slot_id": "PLAN-S03",
@@ -97,7 +98,8 @@
     "policy_ref": "SUBSCRIBE-01",
     "question_type": "COMPARE",
     "persona": "NOVICE",
-    "trigger": "첫 개통"
+    "trigger": "첫 개통",
+    "extra_policy_refs": []
   },
   {
     "slot_id": "SUBSCRIBE-S02",
@@ -147,7 +149,8 @@
     "policy_ref": "PORTING-03",
     "question_type": "COMPARE",
     "persona": "SENIOR",
-    "trigger": "단말 구매"
+    "trigger": "단말 구매",
+    "extra_policy_refs": []
   },
   {
     "slot_id": "NAME_CHANGE-S01",
@@ -197,7 +200,8 @@
     "policy_ref": "TERMINATE-02",
     "question_type": "COMPARE",
     "persona": "EXPERIENCED",
-    "trigger": "장기 해외체류"
+    "trigger": "장기 해외체류",
+    "extra_policy_refs": []
   },
   {
     "slot_id": "TERMINATE-S03",
@@ -247,7 +251,8 @@
     "policy_ref": "ROAMING-01",
     "question_type": "COMPARE",
     "persona": "NOVICE",
-    "trigger": "출장"
+    "trigger": "출장",
+    "extra_policy_refs": []
   },
   {
     "slot_id": "ROAMING-S02",
@@ -297,6 +302,7 @@
     "policy_ref": "SERVICE-03",
     "question_type": "COMPARE",
     "persona": "SENIOR",
-    "trigger": "명의도용 의심"
+    "trigger": "명의도용 의심",
+    "extra_policy_refs": []
   }
 ]

@@ -14,6 +14,10 @@ from telme_docs import Policy, Taxonomy, extract_numbers, load_policy, load_taxo
 
 REQUIRED_FIELDS = ("category", "question", "answer", "policy_ref")
 
+# COMPARE 답변은 정책 항목을 둘 이상 인용.
+# 대표 항목은 policy_ref에 적고 나머지는 이 필드에(FAQ_TAXONOMY.md 2절)
+# 생성, 검증용 메타데이터라 적재 시 제외
+EXTRA_REFS_FIELD = "extra_policy_refs"
 
 @dataclass
 class Finding:
@@ -54,11 +58,33 @@ def check(items: list[dict], tax: Taxonomy, pol: Policy) -> list[Finding]:
             if value and value not in valid:
                 add(i, item, f"알 수 없는 {field}", value)
 
-        allowed = pol.allowed(ref)
-        for bad in sorted(extract_numbers(item["answer"]) - allowed):
+        extras: list[str] = []
+        for extra in item.get(EXTRA_REFS_FIELD) or []:
+            if extra == ref:
+                add(i, item, "불필요한 extra_policy_refs", f"{extra}는 이미 policy_ref임")
+            elif extra not in pol.items:
+                add(i, item, "알 수 없는 extra_policy_refs", extra)
+            else:
+                extras.append(extra)
+
+        refs = [ref, *extras]
+        allowed = pol.allowed(*refs)
+        numbers = extract_numbers(item["answer"])
+        sources = ", ".join(pol.items[r].sources for r in refs)
+
+        for bad in sorted(numbers - allowed):
             add(i, item, "정책에 없는 수치",
-                f"답변의 '{bad}'이 {pol.items[ref].sources}의 허용값에 없음 "
+                f"답변의 '{bad}'이 {sources}의 허용값에 없음 "
                 f"(허용: {', '.join(sorted(allowed)) or '없음'})")
+
+        # 수치가 없는 항목(구비 서류 등)은 대조할 것이 없으므로 제외
+        base = pol.allowed(ref)
+        for extra in extras:
+            contributed = pol.items[extra].numbers - base
+            if contributed and not (contributed & numbers):
+                add(i, item, "인용하지 않은 extra_policy_refs",
+                    f"{extra}의 수치가 답변에 없음 "
+                    f"(추가된 허용값: {', '.join(sorted(contributed))})")
 
     return found
 
@@ -106,6 +132,46 @@ SELF_TEST_CASES: list[tuple[dict, str]] = [
             "answer": "택배로 받으시면 2~3 영업일이 걸립니다.",
         },
         "",  # 범위 전개(통과 기대)
+    ),
+    # COMPARE가 항목을 넘나드는 경우
+    (
+        {
+            "category": "BILLING", "policy_ref": "BILLING-01",
+            "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
+            "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. "
+                      "청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다.",
+            "question_type": "COMPARE",
+            "extra_policy_refs": ["BILLING-02"],
+        },
+        "",  # 인용 항목을 밝히면 통과
+    ),
+    (
+        {
+            "category": "BILLING", "policy_ref": "BILLING-01",
+            "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
+            "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. "
+                      "청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다.",
+            "question_type": "COMPARE",
+        },
+        "정책에 없는 수치",  # 밝히지 않으면 그대로 걸린다
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "extra_policy_refs": ["BILLING-02"],
+        },
+        "인용하지 않은 extra_policy_refs",  # 선언만 하고 안 쓰면 검사만 헐거워진다
+    ),
+    (
+        {
+            "category": "USIM", "policy_ref": "USIM-01",
+            "question": "유심 재발급 얼마예요?",
+            "answer": "유심 재발급 비용은 7,700원입니다.",
+            "extra_policy_refs": ["USIM-99"],
+        },
+        "알 수 없는 extra_policy_refs",
     ),
 ]
 

@@ -55,9 +55,35 @@ python3 scripts/check_policy.py --self-test
 - 필수 필드(`category`, `question`, `answer`, `policy_ref`) 존재
 - `category`, `policy_ref`, `question_type`, `persona`가 문서에 정의된 값인지
 - `policy_ref`가 그 카테고리의 항목이 맞는지
-- 답변 수치가 그 `policy_ref`의 허용값 안에 있는지
+- 답변 수치가 `policy_ref`와 `extra_policy_refs`의 허용값 안에 있는지
+- `extra_policy_refs`가 실제로 존재하는 항목이고, 선언한 만큼 실제로 인용했는지
 
-허용값 = 정책 항목 블록 ∪ 정책 값 색인 행 ∪ 전체 공통 전제.
+허용값 = (`policy_ref` ∪ `extra_policy_refs`) 각각의 정책 항목 블록 ∪ 정책 값 색인 행 ∪ 전체 공통 전제
+
+### COMPARE의 교차 인용
+
+`COMPARE` 답변은 정책 항목을 둘 이상 인용(`FAQ_TAXONOMY.md` 2절)
+
+대표 항목만 `policy_ref`에 적으면 다른 항목의 정상 수치도 "정책에 없는 수치"로 걸림
+
+인용한 나머지 항목을 `extra_policy_refs`에 적으면 그 항목의 수치까지 허용값이 됨
+
+```json
+{
+  "category": "BILLING",
+  "policy_ref": "BILLING-01",
+  "extra_policy_refs": ["BILLING-02"],
+  "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
+  "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. 청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다."
+}
+```
+
+`generate_faq.py`는 `COMPARE` 조합에만 `"extra_policy_refs": []`를 미리 넣어 준다.
+(비워 두면 대표 항목만 검사)
+
+남발을 막기 위해, 선언한 항목의 수치가 답변에 하나도 없으면 `인용하지 않은 extra_policy_refs`로 지적
+
+수치가 없는 항목(구비 서류 등)은 대조할 것이 없으므로 제외
 
 단위가 붙은 수치만 본다.
 `7,700원` `2~3 영업일` `50GB` `09:00` `5.9%`는 보고,
@@ -82,7 +108,8 @@ python3 scripts/check_duplicates.py --self-test
 
 ## 자기 검증
 
-두 검사 스크립트 모두 `--self-test`가 있다. 
+두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 9건, `check_duplicates.py`는 2건).
+
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
 문서 파싱에서도 표를 못 찾거나 행 수가 기대와 다르면 0건으로 넘어가지 않고 `DocumentError`를 던진다.
@@ -93,7 +120,7 @@ python3 scripts/check_duplicates.py --self-test
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
 
-`slot_id`, `question_type`, `persona`, `trigger`는 생성, 검증용 메타데이터다.
+`slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
 `faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.
 `version`은 적재 시 `1`, `content_hash`는 `question + answer`의 SHA-256으로
 적재 스크립트가 계산한다.

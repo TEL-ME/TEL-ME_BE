@@ -9,12 +9,39 @@ import json
 import sys
 from pathlib import Path
 
-from telme_docs import DocumentError, Policy, Taxonomy, load_policy, load_taxonomy
+from telme_docs import (
+    DocumentError,
+    Policy,
+    PolicyItem,
+    Taxonomy,
+    load_policy,
+    load_taxonomy,
+)
+
+def _slot(
+    slot_id: str, code: str, qtype: str, persona: str, trigger: str, item: PolicyItem
+) -> dict[str, object]:
+    slot: dict[str, object] = {
+        "slot_id": slot_id,
+        "category": code,
+        "question_type": qtype,
+        "persona": persona,
+        "trigger": trigger,
+        "policy_ref": item.ref,
+        "policy_title": item.title,
+        "policy_key_values": item.key_values,
+    }
+    # COMPARE 답변은 정책 항목을 둘 이상 인용한다
+    # 대표 항목 외에 실제로 인용한 항목을 여기에 적어야 check_policy.py가 그 항목의 수치도 허용값으로 본다 (FAQ_TAXONOMY.md 2절)
+    if qtype == "COMPARE":
+        slot["extra_policy_refs"] = []
+    return slot
+
 
 # 목표 건수를 15개 조합(질문유형 5 × 페르소나 3)에 균등 배분
 def _slots_for_category(
     code: str, tax: Taxonomy, pol: Policy, quota: int
-) -> list[dict[str, str]]:
+) -> list[dict[str, object]]:
 
     types = list(tax.question_types)
     personas = list(tax.personas)
@@ -26,7 +53,7 @@ def _slots_for_category(
     combos = [(t, p) for t in types for p in personas]
     base, rem = divmod(quota, len(combos))
 
-    slots: list[dict[str, str]] = []
+    slots: list[dict[str, object]] = []
     seq = 0
     for idx, (qtype, persona) in enumerate(combos):
         # 나머지는 앞쪽 조합부터 1건씩
@@ -34,29 +61,23 @@ def _slots_for_category(
         for _ in range(count):
             item = pol.items[refs[seq % len(refs)]]
             slots.append(
-                {
-                    "slot_id": f"{code}-{seq + 1:04d}",
-                    "category": code,
-                    "question_type": qtype,
-                    "persona": persona,
-                    "trigger": triggers[seq % len(triggers)],
-                    "policy_ref": item.ref,
-                    "policy_title": item.title,
-                    "policy_key_values": item.key_values,
-                }
+                _slot(
+                    f"{code}-{seq + 1:04d}", code, qtype, persona,
+                    triggers[seq % len(triggers)], item,
+                )
             )
             seq += 1
     return slots
 
 
-def build_full(tax: Taxonomy, pol: Policy) -> list[dict[str, str]]:
-    slots: list[dict[str, str]] = []
+def build_full(tax: Taxonomy, pol: Policy) -> list[dict[str, object]]:
+    slots: list[dict[str, object]] = []
     for code in tax.categories:
         slots += _slots_for_category(code, tax, pol, tax.quotas[code])
     return slots
 
 # 카테고리 균등 소규모 표
-def build_sample(tax: Taxonomy, pol: Policy, size: int) -> list[dict[str, str]]:
+def build_sample(tax: Taxonomy, pol: Policy, size: int) -> list[dict[str, object]]:
     n_cat = len(tax.categories)
     if size % n_cat:
         raise SystemExit(f"--sample 값은 카테고리 수({n_cat})의 배수여야 함")
@@ -64,7 +85,7 @@ def build_sample(tax: Taxonomy, pol: Policy, size: int) -> list[dict[str, str]]:
 
     types = list(tax.question_types)
     personas = list(tax.personas)
-    slots: list[dict[str, str]] = []
+    slots: list[dict[str, object]] = []
 
     for c, code in enumerate(tax.categories):
         refs = [i.ref for i in pol.by_category(code)]
@@ -73,21 +94,15 @@ def build_sample(tax: Taxonomy, pol: Policy, size: int) -> list[dict[str, str]]:
             i = c * per_cat + j
             item = pol.items[refs[j % len(refs)]]
             slots.append(
-                {
-                    "slot_id": f"{code}-S{j + 1:02d}",
-                    "category": code,
-                    "question_type": types[i % len(types)],
-                    "persona": personas[i % len(personas)],
-                    "trigger": triggers[j % len(triggers)],
-                    "policy_ref": item.ref,
-                    "policy_title": item.title,
-                    "policy_key_values": item.key_values,
-                }
+                _slot(
+                    f"{code}-S{j + 1:02d}", code, types[i % len(types)],
+                    personas[i % len(personas)], triggers[j % len(triggers)], item,
+                )
             )
     return slots
 
 
-def print_summary(slots: list[dict[str, str]], tax: Taxonomy, pol: Policy) -> None:
+def print_summary(slots: list[dict[str, object]], tax: Taxonomy, pol: Policy) -> None:
     def tally(key: str) -> dict[str, int]:
         out: dict[str, int] = {}
         for s in slots:
