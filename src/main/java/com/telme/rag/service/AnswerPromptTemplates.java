@@ -37,11 +37,10 @@ public final class AnswerPromptTemplates {
     }
 
     private static String formatConditions(Map<String, String> conditions) {
-        if (conditions.isEmpty()) {
-            return "없음";
-        }
-        return conditions.entrySet().stream()
+        String formatted = conditions.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
                 .map(entry -> "- %s: %s".formatted(entry.getKey(), entry.getValue()))
                 .collect(Collectors.joining("\n"));
+        return formatted.isEmpty() ? "없음" : formatted;
     }
 }

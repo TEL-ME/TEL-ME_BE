@@ -18,6 +18,7 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -103,6 +104,45 @@ class RagAnswerGeneratorTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
                         .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
+    }
+
+    @Test
+    @DisplayName("값이 비어 있는 조건은 프롬프트에 넣지 않는다")
+    void 빈_조건은_제외한다() {
+        StubClient client = new StubClient(List.of("답변"));
+        Map<String, String> conditions = new HashMap<>();
+        conditions.put("location", null);
+        conditions.put("serviceType", "NAME_CHANGE");
+
+        AnswerRequest request = AnswerRequest.builder()
+                .userQuery("명의변경하고 싶어요")
+                .conditions(conditions)
+                .searchResults(List.of(faq(1L)))
+                .build();
+
+        generator(client).generate(request, handler);
+
+        assertThat(client.received.userPrompt())
+                .contains("- serviceType: NAME_CHANGE")
+                .doesNotContain("location");
+    }
+
+    @Test
+    @DisplayName("조건 값이 모두 비어 있으면 없음으로 표시한다")
+    void 조건이_모두_비면_없음() {
+        StubClient client = new StubClient(List.of("답변"));
+        Map<String, String> conditions = new HashMap<>();
+        conditions.put("location", null);
+
+        AnswerRequest request = AnswerRequest.builder()
+                .userQuery("질문")
+                .conditions(conditions)
+                .searchResults(List.of(faq(1L)))
+                .build();
+
+        generator(client).generate(request, handler);
+
+        assertThat(client.received.userPrompt()).contains("[고객 조건]\n없음");
     }
 
     @Test
