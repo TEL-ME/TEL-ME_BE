@@ -16,7 +16,7 @@ public interface FaqEmbeddingRepository extends JpaRepository<FaqEmbedding, Long
             JOIN FETCH e.faq f
             WHERE f.status = 'ACTIVE' AND e.syncStatus = 'SYNCED'
                   AND e.faqVersion = f.version AND e.modelName = :modelName
-            ORDER BY cosine_distance(e.embedding, :queryVector)
+            ORDER BY cosine_distance(e.embedding, cast(:queryVector as vector))
             LIMIT :topK
             """)
     List<FaqEmbedding> findNearest(

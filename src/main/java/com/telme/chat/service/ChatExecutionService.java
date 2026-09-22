@@ -10,6 +10,7 @@ import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class ChatExecutionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageAppender chatMessageAppender;
     private final ChatMessageConverter chatMessageConverter;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ChatOutputMessage startAnswer(Long executionId) {
         ChatExecution execution = getRunningExecution(executionId);
@@ -53,7 +55,9 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.resume();
         session.touch(completedAt);
-        return flushed(execution, message);
+        ChatOutputMessage output = flushed(execution, message);
+        requestSummary(execution, message.getSequenceNo());
+        return output;
     }
 
     public ChatOutputMessage askClarification(Long executionId, String question) {
@@ -70,7 +74,9 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.waitForClarification();
         session.touch(completedAt);
-        return flushed(execution, message);
+        ChatOutputMessage output = flushed(execution, message);
+        requestSummary(execution, message.getSequenceNo());
+        return output;
     }
 
     public ChatExecutionState completeWithoutOutput(Long executionId) {
@@ -84,7 +90,9 @@ public class ChatExecutionService {
         execution.completeWithoutOutput(endedAt);
         session.touch(endedAt);
         chatExecutionRepository.flush();
-        return ChatExecutionState.of(execution);
+        ChatExecutionState state = ChatExecutionState.of(execution);
+        requestSummary(execution, execution.getInputMessage().getSequenceNo());
+        return state;
     }
 
     public ChatOutputMessage fail(Long executionId, ChatFailure failure) {
@@ -137,5 +145,12 @@ public class ChatExecutionService {
                 .role(ChatMessage.Role.ASSISTANT)
                 .messageType(messageType)
                 .status(ChatMessage.Status.GENERATING));
+    }
+
+    private void requestSummary(ChatExecution execution, Integer completedThroughSequenceNo) {
+        eventPublisher.publishEvent(new ChatSummaryRequested(
+                execution.getExecutionId(),
+                execution.getSession().getSessionId(),
+                completedThroughSequenceNo));
     }
 }

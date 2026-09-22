@@ -63,3 +63,7 @@ member:
   guest:
     # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
     ttl: ${GUEST_TTL:30d}
+
+faq:
+  # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
+  search-test-api-enabled: ${FAQ_SEARCH_TEST_API_ENABLED:false}
