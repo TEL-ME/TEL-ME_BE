@@ -7,6 +7,7 @@ import com.telme.member.entity.User;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,8 @@ class GuestRepositoryTest {
     void 게스트를_회원에게_승계한다() {
         Guest guest = createGuest();
         User user = createUser();
-        Instant mergedAt = Instant.now();
+        // TIMESTAMPTZ는 마이크로초 정밀도라, DB 왕복 후 비교하려면 나노초 단위가 있는 Instant를 미리 잘라야 한다
+        Instant mergedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         int updated = guestRepository.succeedGuest(guest.getGuestId(), user, mergedAt);
 
@@ -42,7 +44,7 @@ class GuestRepositoryTest {
         Guest guest = createGuest();
         User firstUser = createUser();
         User secondUser = createUser();
-        Instant firstMergedAt = Instant.now();
+        Instant firstMergedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         guestRepository.succeedGuest(guest.getGuestId(), firstUser, firstMergedAt);
 
         int updated = guestRepository.succeedGuest(guest.getGuestId(), secondUser, Instant.now());
