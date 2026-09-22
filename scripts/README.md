@@ -8,6 +8,7 @@
 | `check_policy.py` | 답변 수치를 참조 정책 항목의 값과 대조 |
 | `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 |
 | `check_eval_questions.py` | 검색 품질 평가셋(`eval_questions_30.json`)의 정답 매핑·유사도 검증 |
+| `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k/MRR 계산 |
 | `telme_docs.py` | 공통 문서 파서 (직접 실행하면 파싱 결과 요약) |
 
 ## 준비
@@ -153,10 +154,36 @@ python3 scripts/check_eval_questions.py --self-test
 - `--self-test`: 일부러 틀린 예시 10건으로 정적 검사가 내는 지적 12종(`STATIC_KINDS`)이 전부 실제로
   걸리는지 확인한다. 검사 종류를 추가하면 `STATIC_KINDS`와 픽스처에 같이 넣어야 통과.
 
+## 5. 검색 품질 측정
+
+```bash
+python3 scripts/measure_search_quality.py scripts/data/eval_smoke.json
+python3 scripts/measure_search_quality.py scripts/data/eval_questions_30.json --experiment 기준선
+python3 scripts/measure_search_quality.py --self-test
+```
+
+`check_eval_questions.py`가 검증한 평가셋을 실제 검색 API(`/api/v1/faq/search`, TELME-38)에 돌려
+Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`에서 그대로 import해서 쓴다.
+
+**순위 실험(Recall@k·MRR)은 서버를 `SEARCH_SIMILARITY_THRESHOLD=0`으로 띄우고 돌린다.**
+`PgvectorFaqSearchService`가 임계값 미만 후보를 순위를 매기기 전에 잘라내므로, 임계값을 켠 채로
+재면 "랭킹 품질"이 아니라 "임계값 통과 후 랭킹 품질"이 섞여서 측정된다. 임계값 자체를 정하는 건
+별도 단계(2주차 캘리브레이션)에서 한다.
+
+- `--top-k`(기본 3), `--api-url`(기본 `http://localhost:8080/api/v1/faq/search`),
+  `--timeout`(기본 20초 — 서버의 `embedding.search-read-timeout`(15초)보다 길어야 함)
+- `--experiment`를 주면 튜닝 실험 기록표에 붙여넣을 수 있는 한 줄
+  (`| 실험 | 변경 | Recall@1 | Recall@3 | MRR | 담당 |`)도 같이 출력. `--change`/`--owner`(기본 A)로
+  나머지 칸을 채운다.
+- 긍정 질문(`SIMILAR`/`VARIANT`)이 하나도 없으면 recall/mrr은 측정하지 않은 것으로 처리한다 —
+  `--experiment`와 같이 쓰면 가짜 `0.000` 행 대신 에러로 중단한다.
+- `--self-test`: 손으로 계산한 기대값으로 Recall@k/MRR 계산 로직 자체를 검증한다
+  (경계값, 무관 질문 제외, 긍정 질문 0건 등 7건).
+
 ## 자기 검증
 
-세 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
-`check_eval_questions.py`는 10건).
+네 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
+`check_eval_questions.py`는 10건, `measure_search_quality.py`는 7건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
@@ -168,6 +195,7 @@ python3 scripts/check_eval_questions.py --self-test
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
 | `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
+| `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 검색 결과가 항상 빈 배열로 온다 — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
 
 `slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
 `faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.
