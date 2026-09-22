@@ -11,6 +11,9 @@ public final class AnswerPromptTemplates {
     // 프롬프트 2번 규칙의 문구와 동일하게 유지
     public static final String NO_EVIDENCE_ANSWER = "안내드릴 수 있는 정보가 없습니다.";
 
+    // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
+    public static final String PROMPT_VERSION = "rag-answer-v2";
+
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
         아래에 주어진 FAQ 근거만 사용해 고객 질문에 답변하십시오.
@@ -29,7 +32,7 @@ public final class AnswerPromptTemplates {
         10. "더 궁금한 점 있으시면", "문의해 주세요" 같은 맺음말을 붙이지 마십시오.
         """;
 
-    // 조건 키를 모델이 읽기 쉬운 말로 바꾼다. 매핑이 없는 키는 원문 그대로 쓴다
+    // 조건 키를 읽기 쉬운 말로 변환
     private static final Map<String, String> CONDITION_LABELS = Map.of(
             "location", "지역",
             "serviceType", "업무 유형"

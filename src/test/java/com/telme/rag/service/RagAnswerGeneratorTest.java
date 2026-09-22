@@ -119,6 +119,7 @@ class RagAnswerGeneratorTest {
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
         assertThat(sent.userPrompt()).contains("[1] Q: 질문1").contains("강남").contains("요금제 바꾸고 싶어요");
         assertThat(sent.contextCount()).isEqualTo(1);
+        assertThat(sent.promptVersion()).isEqualTo(AnswerPromptTemplates.PROMPT_VERSION);
     }
 
     @Test
