@@ -101,6 +101,24 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(answer.completedAt()).isNotNull();
         assertThat(applicationEvents.stream(ChatSummaryRequested.class))
                 .containsExactly(new ChatSummaryRequested(question.executionId(), sessionId, 2));
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class)).isEmpty();
+    }
+
+    @Test
+    void requestsTitleOnlyAfterFirstUntitledSessionExecutionCompletes() {
+        sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest(null)).sessionId();
+        ChatMessageSendResponse firstQuestion = send("가족 결합 요금제를 알려줘");
+
+        chatExecutionService.completeAnswer(firstQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "가족 결합 상품을 안내해 드릴게요.", null, null, null));
+
+        ChatMessageSendResponse secondQuestion = send("할인 금액도 알려줘");
+        chatExecutionService.completeAnswer(secondQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "할인 금액도 안내해 드릴게요.", null, null, null));
+
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class))
+                .containsExactly(new ChatSessionTitleRequested(
+                        firstQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"));
     }
 
     @Test

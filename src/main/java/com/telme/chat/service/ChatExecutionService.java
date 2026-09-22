@@ -56,7 +56,7 @@ public class ChatExecutionService {
         session.resume();
         session.touch(completedAt);
         ChatOutputMessage output = flushed(execution, message);
-        requestSummary(execution, message.getSequenceNo());
+        requestPostProcessing(execution, message.getSequenceNo());
         return output;
     }
 
@@ -75,7 +75,7 @@ public class ChatExecutionService {
         session.waitForClarification();
         session.touch(completedAt);
         ChatOutputMessage output = flushed(execution, message);
-        requestSummary(execution, message.getSequenceNo());
+        requestPostProcessing(execution, message.getSequenceNo());
         return output;
     }
 
@@ -91,7 +91,7 @@ public class ChatExecutionService {
         session.touch(endedAt);
         chatExecutionRepository.flush();
         ChatExecutionState state = ChatExecutionState.of(execution);
-        requestSummary(execution, execution.getInputMessage().getSequenceNo());
+        requestPostProcessing(execution, execution.getInputMessage().getSequenceNo());
         return state;
     }
 
@@ -147,10 +147,24 @@ public class ChatExecutionService {
                 .status(ChatMessage.Status.GENERATING));
     }
 
-    private void requestSummary(ChatExecution execution, Integer completedThroughSequenceNo) {
+    private void requestPostProcessing(ChatExecution execution, Integer completedThroughSequenceNo) {
         eventPublisher.publishEvent(new ChatSummaryRequested(
                 execution.getExecutionId(),
                 execution.getSession().getSessionId(),
                 completedThroughSequenceNo));
+        requestSessionTitle(execution);
+    }
+
+    private void requestSessionTitle(ChatExecution execution) {
+        ChatSession session = execution.getSession();
+        ChatMessage inputMessage = execution.getInputMessage();
+        if ((session.getTitle() != null && !session.getTitle().isBlank())
+                || inputMessage.getSequenceNo() != 1) {
+            return;
+        }
+        eventPublisher.publishEvent(new ChatSessionTitleRequested(
+                execution.getExecutionId(),
+                session.getSessionId(),
+                inputMessage.getContent()));
     }
 }

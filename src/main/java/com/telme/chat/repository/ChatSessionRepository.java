@@ -18,6 +18,18 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update ChatSession session
+            set session.title = :title
+            where session.sessionId = :sessionId
+              and (session.title is null or trim(session.title) = '')
+            """)
+    int updateTitleIfMissing(
+            @Param("sessionId") Long sessionId,
+            @Param("title") String title
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
             set session.summary = :summary,
                 session.summaryThroughSequenceNo = :throughSequenceNo
             where session.sessionId = :sessionId
