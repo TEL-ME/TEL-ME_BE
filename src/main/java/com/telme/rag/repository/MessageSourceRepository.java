@@ -8,8 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface MessageSourceRepository extends JpaRepository<MessageSource, Long> {
 
-    // 파생 delete는 엔티티를 지우는 방식이라 flush 시 INSERT가 DELETE보다 먼저 나간다.
-    // 지우고 다시 넣는 순서를 보장하려고 벌크 delete를 쓴다
+    // 파생 delete는 flush 시 INSERT가 DELETE보다 먼저 나가서 지우고 넣는 순서가 보장되지 않음
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from MessageSource source where source.message.messageId = :messageId")
     void deleteByMessageId(@Param("messageId") Long messageId);

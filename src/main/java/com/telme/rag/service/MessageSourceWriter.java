@@ -21,19 +21,16 @@ class MessageSourceWriter {
     private final MessageSourceRepository messageSourceRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    // 답변 메시지는 호출 전에 이미 커밋된다. 저장 실패가 호출한 쪽 트랜잭션을
-    // 롤백 대상으로 만들지 않도록 별도 트랜잭션으로 분리한다
+    // 답변 메시지는 호출 전에 이미 커밋되므로 저장 실패를 호출한 쪽과 분리한다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void write(Long answerMessageId, List<AnswerSource> sources) {
-        // 같은 답변으로 다시 호출돼도 근거가 쌓이지 않도록 먼저 지운다
         messageSourceRepository.deleteByMessageId(answerMessageId);
         messageSourceRepository.saveAll(sources.stream()
                 .map(source -> toEntity(answerMessageId, source))
                 .toList());
     }
 
-    // title_snapshot 컬럼 길이를 넘기면 근거 전체가 저장되지 않아 AnswerContextConverter에 이어 여기서도 막는다.
-    // varchar 길이는 코드포인트 기준이라 length()가 아니라 codePointCount로 판단한다
+    // varchar 길이는 코드포인트 기준이라 length()로 판단하면 이모지가 불필요하게 잘린다
     private String truncateTitle(String title) {
         if (title == null || title.codePointCount(0, title.length()) <= TITLE_MAX_LENGTH) {
             return title;

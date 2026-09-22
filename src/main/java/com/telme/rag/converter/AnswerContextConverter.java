@@ -48,7 +48,7 @@ public class AnswerContextConverter {
                 .build();
     }
 
-    // varchar 길이는 코드포인트 기준이라 length()가 아니라 codePointCount로 판단한다
+    // varchar 길이는 코드포인트 기준이라 length()로 판단하면 이모지가 불필요하게 잘린다
     private String truncateTitle(String question) {
         if (question == null || question.codePointCount(0, question.length()) <= TITLE_MAX_LENGTH) {
             return question;
