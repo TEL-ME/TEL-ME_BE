@@ -41,7 +41,9 @@ def compute_metrics(
     negatives = [o for o in outcomes if o.question_type == "UNRELATED"]
     total = len(positives)
     if total == 0:
-        metrics = {f"recall@{k}": 0.0 for k in k_values} | {"mrr": 0.0}
+        # 긍정 질문이 0건이면 recall/mrr은 "측정 안 됨"이지 0이 아니다 — 키 자체를 안 넣어서
+        # format_experiment_row의 기존 가드가 가짜 0.000 행 대신 명확한 에러를 내게 한다
+        metrics: dict[str, float] = {}
         if negatives:
             metrics["unrelated_rejection_rate"] = sum(not o.has_results for o in negatives) / len(negatives)
         return metrics
@@ -80,7 +82,7 @@ SELF_TEST_CASES: list[tuple[str, list[SearchOutcome], dict[str, float]]] = [
     (
         "빈 리스트",
         [],
-        {"recall@1": 0.0, "recall@3": 0.0, "recall@5": 0.0, "mrr": 0.0},
+        {},
     ),
     (
         # 정확히 경계(3등)는 recall@3엔 포함, recall@1엔 미포함 — off-by-one 검출용
@@ -96,10 +98,10 @@ SELF_TEST_CASES: list[tuple[str, list[SearchOutcome], dict[str, float]]] = [
          "mrr": 1.0, "unrelated_rejection_rate": 0.5},
     ),
     (
+        # recall/mrr 키 자체가 없어야 한다(측정 안 됨과 0을 구분) — self_test()가 키 집합까지 정확히 비교
         "전부 UNRELATED (긍정 질문 없음)",
         [SearchOutcome("UNRELATED", None, False), SearchOutcome("UNRELATED", None, True)],
-        {"recall@1": 0.0, "recall@3": 0.0, "recall@5": 0.0, "mrr": 0.0,
-         "unrelated_rejection_rate": 0.5},
+        {"unrelated_rejection_rate": 0.5},
     ),
 ]
 
@@ -108,7 +110,8 @@ def self_test() -> int:
     failures = 0
     for n, (label, outcomes, expected) in enumerate(SELF_TEST_CASES, 1):
         actual = compute_metrics(outcomes)
-        ok = all(math.isclose(actual[key], value, abs_tol=1e-9) for key, value in expected.items())
+        ok = (set(actual) == set(expected)
+              and all(math.isclose(actual[key], value, abs_tol=1e-9) for key, value in expected.items()))
         tail = "" if ok else f" → 실제: {actual}, 기대: {expected}"
         print(f"  {'OK  ' if ok else 'FAIL'} {n}. {label}{tail}")
         failures += 0 if ok else 1
@@ -203,7 +206,10 @@ def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> 
 # 튜닝 실험 규칙 문서의 표(실험 | 변경 내용 | Recall@1 | Recall@3 | MRR | 담당)에 그대로 붙여넣을 수 있는 한 줄
 def format_experiment_row(experiment: str, change: str, metrics: dict[str, float], owner: str) -> str:
     if "recall@1" not in metrics or "recall@3" not in metrics:
-        raise SystemExit("실험 기록표는 recall@1·recall@3가 필요합니다 (--top-k를 3 이상으로 주세요)")
+        raise SystemExit(
+            "실험 기록표는 recall@1·recall@3가 필요합니다 — "
+            "--top-k가 3 미만이거나, 평가셋에 SIMILAR/VARIANT(긍정 질문)가 하나도 없으면 측정되지 않습니다"
+        )
     return (
         f"| {experiment} | {change} | {metrics['recall@1']:.3f} | "
         f"{metrics['recall@3']:.3f} | {metrics['mrr']:.3f} | {owner} |"
