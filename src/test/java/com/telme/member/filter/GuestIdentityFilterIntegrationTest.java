@@ -2,6 +2,7 @@ package com.telme.member.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import jakarta.servlet.http.HttpSession;
@@ -28,6 +29,15 @@ class GuestIdentityFilterIntegrationTest {
         var result = mockMvc.perform(get("/actuator/health")).andReturn();
 
         // 필터가 request.getSession()을 호출하지 않았다면 새 세션이 생기지 않는다
+        assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    @DisplayName("OPTIONS 요청은 대상 URL이어도 세션 자체를 만들지 않는다")
+    void OPTIONS_요청이면_세션을_만들지_않는다() throws Exception {
+        var result = mockMvc.perform(options("/api/v1/chat/sessions")).andReturn();
+
+        // 쿠키 없이 들어온 OPTIONS 요청이 request.getSession()을 호출하지 않았다면 새 세션이 생기지 않는다
         assertThat(result.getRequest().getSession(false)).isNull();
     }
 

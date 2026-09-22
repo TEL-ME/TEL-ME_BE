@@ -99,6 +99,17 @@ class GuestIdentityFilterTest {
     }
 
     @Test
+    @DisplayName("OPTIONS 요청이면 세션에 guestId를 만들지 않는다")
+    void OPTIONS_요청이면_발급하지_않는다() throws Exception {
+        MockHttpSession session = session();
+
+        filter.doFilter(requestWithSession("OPTIONS", "/api/v1/chat/sessions", session), new MockHttpServletResponse(), mock(FilterChain.class));
+
+        assertThat(session.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE)).isNull();
+        verify(guestIdentityService, never()).issueGuest();
+    }
+
+    @Test
     @DisplayName("같은 세션의 동시 요청에서도 Guest가 한 번만 발급된다")
     void 동시_요청에서도_한_번만_발급한다() throws Exception {
         when(guestIdentityService.issueGuest()).thenAnswer(invocation -> {
@@ -176,7 +187,11 @@ class GuestIdentityFilterTest {
     }
 
     private MockHttpServletRequest requestWithSession(String uri, MockHttpSession session) {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
+        return requestWithSession("GET", uri, session);
+    }
+
+    private MockHttpServletRequest requestWithSession(String method, String uri, MockHttpSession session) {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
         request.setSession(session);
         return request;
     }
