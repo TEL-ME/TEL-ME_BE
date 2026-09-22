@@ -8,6 +8,7 @@ import argparse
 import json
 import math
 import re
+import socket
 import sys
 import urllib.error
 import urllib.parse
@@ -117,7 +118,14 @@ def self_test() -> int:
 
 
 def load_eval_set(path: Path) -> list[dict]:
-    items = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SystemExit(f"{path}: 파일을 읽을 수 없습니다: {exc}") from None
+    try:
+        items = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"{path}: JSON 형식이 아닙니다: {exc}") from None
     if not isinstance(items, list) or not items:
         raise SystemExit(f"{path}: 비어 있지 않은 평가 질문 배열이 필요합니다")
     for index, item in enumerate(items, 1):
@@ -154,6 +162,11 @@ def search(question: str, top_k: int, api_url: str, timeout: int) -> list[dict]:
         raise SystemExit(f"검색 API가 오류 응답을 반환함 (HTTP {e.code}): {error_body}") from None
     except urllib.error.URLError as e:
         raise SystemExit(f"검색 API 호출 실패: {e}\n  {api_url} 기동 여부 확인") from None
+    except socket.timeout:
+        raise SystemExit(
+            f"검색 API 응답 대기 시간 초과(timeout={timeout}s) — "
+            f"Ollama 콜드 스타트 등으로 서버가 느릴 수 있습니다: {api_url}"
+        ) from None
 
     # 서버 에러는 "정답 못 찾음"이 아니라 인프라 문제라 조용히 넘기지 않고 바로 중단한다
     if not body.get("isSuccess", False):
