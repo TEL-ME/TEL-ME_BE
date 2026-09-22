@@ -18,7 +18,16 @@ public class ChatEmitterRegistry {
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public void register(Long executionId, SseEmitter emitter) {
-        emitters.put(executionId, emitter);
+        SseEmitter previous = emitters.put(executionId, emitter);
+        if (previous != null) {
+            log.info("새로운 SSE 구독으로 기존 연결 명시적 종료: executionId={}", executionId);
+            try {
+                previous.complete();
+            } catch (Exception ignored) {
+                // already completed
+            }
+        }
+        
         emitter.onCompletion(() -> emitters.remove(executionId, emitter));
         emitter.onTimeout(() -> {
             emitters.remove(executionId, emitter);
