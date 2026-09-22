@@ -48,7 +48,7 @@ public class ChatEmitterRegistry {
         try {
             emitter.send(SseEmitter.event().name(eventName).data(payload));
             return true;
-        } catch (IOException exception) {
+        } catch (IOException | IllegalStateException exception) {
             log.info("SSE 전송 실패로 구독 정리: executionId={}", executionId, exception);
             emitters.remove(executionId, emitter);
             return false;
@@ -82,7 +82,7 @@ public class ChatEmitterRegistry {
     private void sendQuietly(SseEmitter emitter, String eventName, Object payload) {
         try {
             emitter.send(SseEmitter.event().name(eventName).data(payload));
-        } catch (IOException exception) {
+        } catch (IOException | IllegalStateException exception) {
             log.info("SSE 종료 이벤트 전송 실패", exception);
         }
     }
