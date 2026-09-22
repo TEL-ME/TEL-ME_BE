@@ -133,6 +133,14 @@ python3 scripts/check_duplicates.py --self-test
 | 파일 | 내용 |
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
+| `data/faq_slots_1150.json` | `generate_faq.py --out`로 생성한 1,150건 조합표(문장 없음). `slot_id`로 끝까지 추적 |
+| `data/faq_full_300.json` | 1차 300건(카테고리 10종 × 30건). 조합표에서 (질문유형 × 페르소나) 15조합마다 2건씩, 정책 항목이 고르게 섞이도록 고른 부분집합. `faq_sample_30.json` 30건을 문자 그대로 포함 |
+| `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일하고(`content_hash` 불변) 뒤 850건이 나머지 슬롯. 카테고리·질문유형·페르소나·`policy_ref` 분포가 `generate_faq.py --summary`와 정확히 일치 |
+
+`faq_full_300.json`을 남겨두는 이유: 적재를 300건 → 1,150건 두 번에 나눠서 건수 증가에 따른 Recall 변화를 재기 위해서다.
+1차 300건은 2차에서 한 글자도 고치지 않았다(고치면 `content_hash`가 바뀌어 `eval_questions_30.json`의 정답 매핑이 끊긴다).
+
+두 파일 모두 `check_policy.py`, `check_duplicates.py`(question / `--field both`, 임계값 0.95)를 전체 건 기준으로 통과했다.
 
 `slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
 `faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.
