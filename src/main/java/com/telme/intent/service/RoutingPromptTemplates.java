@@ -1,5 +1,7 @@
 package com.telme.intent.service;
 
+import java.util.Set;
+
 // 의도 라우팅 프롬프트이며, serviceType은 매장 도메인의 StoreServiceType.Code에 맞춘 템플릿 클래스입니다.
 // 나중에 매장 쪽 코드가 변경되면 여기도 함께 수정해야 합니다.
 public final class RoutingPromptTemplates {
@@ -50,4 +52,49 @@ public final class RoutingPromptTemplates {
           ]
         }
         """;
+
+    public static final String FOLLOW_UP_SYSTEM_PROMPT = """
+        당신은 LG U+ 통신 고객센터 AI 상담의 후속 답변 분석기입니다.
+        직전 턴에서 상담에 필요한 조건을 고객에게 되물었고, 지금 입력은 그 되묻기에 대한 고객의 답변입니다.
+        고객 답변에서 조건 값을 추출하십시오. 새로운 질문으로 해석하거나 의도를 다시 분류하지 마십시오.
+
+        [조건 정의]
+        - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
+        - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+
+        [상태 판정 기준]
+        - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
+          ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
+        - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
+        - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
+
+        [예시]
+        되묻는 중인 조건: location
+        고객 답변: "강남역이요"
+        응답: {"conditions":[{"key":"location","status":"FILLED","value":"강남역"}]}
+
+        되묻는 중인 조건: location
+        고객 답변: "그냥 알려주기 싫어요"
+        응답: {"conditions":[{"key":"location","status":"DECLINED","value":null}]}
+
+        되묻는 중인 조건: location
+        고객 답변: "홍대입구역 근처에서 번호이동 하려고요"
+        응답: {"conditions":[{"key":"location","status":"FILLED","value":"홍대입구역"},{"key":"serviceType","status":"FILLED","value":"PORT_IN"}]}
+
+        되묻는 중인 조건: location
+        고객 답변: "음 글쎄요"
+        응답: {"conditions":[]}
+
+        [응답 형식 - 반드시 아래 JSON만 출력]
+        {
+          "conditions": [
+            { "key": "location" | "serviceType", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
+          ]
+        }
+        """;
+
+    public static String followUpUserPrompt(Set<String> pendingKeys, String reply) {
+        String keys = (pendingKeys == null || pendingKeys.isEmpty()) ? "location" : String.join(", ", pendingKeys);
+        return "되묻는 중인 조건: " + keys + "\n고객 답변: \"" + reply + "\"";
+    }
 }
