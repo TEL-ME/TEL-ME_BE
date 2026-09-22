@@ -11,6 +11,8 @@ public enum FaqErrorCode implements BaseErrorCode {
 
     EMBEDDING_REQUEST_INVALID(HttpStatus.BAD_REQUEST, "FAQ400-0", "임베딩 요청이 올바르지 않습니다."),
     INVALID_TOP_K(HttpStatus.BAD_REQUEST, "FAQ400-1", "topK는 0보다 커야 합니다."),
+    LOAD_FILE_INVALID(HttpStatus.BAD_REQUEST, "FAQ400-2", "FAQ 적재 파일이 올바르지 않습니다."),
+    FAQ_NOT_FOUND(HttpStatus.NOT_FOUND, "FAQ404-0", "FAQ를 찾을 수 없습니다."),
     EMBEDDING_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "FAQ500-0", "임베딩 응답이 올바르지 않습니다."),
     EMBEDDING_REQUEST_REJECTED(HttpStatus.INTERNAL_SERVER_ERROR, "FAQ500-1", "임베딩 요청이 Ollama에서 거부되었습니다."),
     EMBEDDING_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "FAQ503-0", "임베딩 서버 호출에 실패했습니다.");
