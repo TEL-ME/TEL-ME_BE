@@ -1,0 +1,165 @@
+package com.telme.member.service;
+
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.feedback.repository.FeedbackStore;
+import com.telme.global.common.exception.GeneralException;
+import com.telme.member.converter.MemberConverter;
+import com.telme.member.dto.req.LoginRequest;
+import com.telme.member.dto.req.SignUpRequest;
+import com.telme.member.dto.res.LoginResponse;
+import com.telme.member.dto.res.SignUpResponse;
+import com.telme.member.entity.User;
+import com.telme.member.exception.MemberErrorCode;
+import com.telme.member.repository.GuestRepository;
+import com.telme.member.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import java.time.Clock;
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@Service
+@RequiredArgsConstructor
+public class MemberAuthService {
+
+    private static final String EMAIL_UNIQUE_CONSTRAINT = "users_email_key";
+
+    private final UserRepository userRepository;
+    private final GuestRepository guestRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final MemberConverter memberConverter;
+    private final SecurityContextRepository securityContextRepository;
+    private final Clock clock;
+    // FeedbackStore는 telme.feedback.enabled가 꺼져 있으면 빈이 등록되지 않으므로 ObjectProvider로 선택 주입한다
+    private final ObjectProvider<FeedbackStore> feedbackStoreProvider;
+    // DB 승계·저장을 커밋까지 끝낸 뒤에만 세션에 로그인 상태를 반영하기 위해 트랜잭션 경계를 직접 다룬다
+    private final TransactionTemplate transactionTemplate;
+    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+
+    public SignUpResponse signUp(SignUpRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        UUID guestId = readGuestId(httpRequest.getSession());
+
+        // 커밋이 끝나기 전에는 세션에 아무 것도 반영하지 않는다 — 커밋 실패 시 DB는 롤백되는데 세션만 로그인 상태로 남는 것을 막는다
+        User saved = transactionTemplate.execute(status -> {
+            if (userRepository.findByEmail(request.email()).isPresent()) {
+                throw new GeneralException(MemberErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+
+            User user = User.builder()
+                    .email(request.email())
+                    .passwordHash(passwordEncoder.encode(request.password()))
+                    .build();
+
+            User savedUser;
+            try {
+                savedUser = userRepository.save(user);
+            } catch (DataIntegrityViolationException exception) {
+                // findByEmail 통과 직후 동시 INSERT 대비 최종 방어선 — email UNIQUE 제약(users_email_key)인지 확인 후에만 변환
+                if (!isEmailUniqueViolation(exception)) {
+                    throw exception;
+                }
+                throw new GeneralException(MemberErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+
+            if (guestId != null) {
+                succeedGuest(guestId, savedUser);
+            }
+            return savedUser;
+        });
+
+        completeSessionLogin(saved, guestId, httpRequest, httpResponse);
+        return memberConverter.toSignUpResponse(saved);
+    }
+
+    public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        UUID guestId = readGuestId(httpRequest.getSession());
+
+        User user = transactionTemplate.execute(status -> {
+            User found = userRepository.findByEmail(request.email())
+                    .filter(candidate -> passwordEncoder.matches(request.password(), candidate.getPasswordHash()))
+                    .orElseThrow(() -> new GeneralException(MemberErrorCode.INVALID_CREDENTIALS));
+
+            // 비밀번호 검증 이후에만 상태를 본다 — 계정 존재 여부가 새로 노출되지 않는다
+            if (found.getStatus() == User.Status.SUSPENDED) {
+                throw new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED);
+            }
+            if (found.getStatus() == User.Status.WITHDRAWN) {
+                throw new GeneralException(MemberErrorCode.ACCOUNT_WITHDRAWN);
+            }
+
+            if (guestId != null) {
+                succeedGuest(guestId, found);
+            }
+            return found;
+        });
+
+        completeSessionLogin(user, guestId, httpRequest, httpResponse);
+        return memberConverter.toLoginResponse(user);
+    }
+
+    // DB 커밋 후에만 호출 — 세션ID 재발급 -> SecurityContext 저장 -> userId 설정, 가입/로그인 공통
+    private void completeSessionLogin(
+            User user, UUID guestId, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        HttpSession session = httpRequest.getSession();
+        if (guestId != null) {
+            // 승계 처리는 1회로 끝나야 한다 — 지우지 않으면 같은 세션에서 재로그인 시 이미 승계된 게스트를 다시 읽어 재승계를 시도한다
+            session.removeAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE);
+        }
+
+        // 세션 고정 공격 방지 — invalidate 후 재생성 대신 속성을 유지한 채 ID만 바꾼다
+        httpRequest.changeSessionId();
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getUserId(), null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        // SecurityContextHolderFilter는 로드만 하고 저장은 안 하므로 명시적으로 저장해야 다음 요청에서도 인증이 유지된다
+        securityContextRepository.saveContext(context, httpRequest, httpResponse);
+
+        session.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, user.getUserId());
+    }
+
+    // 세션 무효화 + SecurityContext 초기화 — 다음 요청은 GuestIdentityFilter가 새 게스트로 발급
+    public void logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        logoutHandler.logout(httpRequest, httpResponse, authentication);
+    }
+
+    private void succeedGuest(UUID guestId, User user) {
+        // merged_user_id가 비어있는 행만 원자적 갱신 — 동시 승계 레이스에서 하나만 통과시켜 채팅·피드백도 그 요청만 이어감
+        int updated = guestRepository.succeedGuest(guestId, user, clock.instant());
+        if (updated > 0) {
+            chatSessionRepository.succeedGuestSessions(guestId, user.getUserId());
+            feedbackStoreProvider.ifAvailable(store -> store.succeedGuestFeedback(guestId, user.getUserId()));
+        }
+    }
+
+    private boolean isEmailUniqueViolation(DataIntegrityViolationException exception) {
+        return exception.getCause() instanceof ConstraintViolationException constraintViolation
+                && EMAIL_UNIQUE_CONSTRAINT.equals(constraintViolation.getConstraintName());
+    }
+
+    private UUID readGuestId(HttpSession session) {
+        Object value = session.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE);
+        return value instanceof UUID uuid ? uuid : null;
+    }
+}
