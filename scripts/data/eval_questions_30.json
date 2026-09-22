@@ -93,7 +93,7 @@
   {
     "eval_id": "EVAL-14",
     "type": "VARIANT",
-    "question": "입대하면 번호가 자동으로 정지되나요, 아니면 제가 직접 해지 신청을 해야 하나요?",
+    "question": "군대 가면 번호 해지가 알아서 되는 거예요, 아니면 제가 신청해야 하는 거예요?",
     "expected_content_hash": "e5b2ce42adeb2196a6bf48d5e8104add8ff6c110d5fc36a916f7525d1623c6aa",
     "expected_slot_id": "TERMINATE-S01"
   },
