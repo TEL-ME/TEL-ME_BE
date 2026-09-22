@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.faq.service.FaqSearchService;
 import com.telme.global.config.SecurityConfig;
+import com.telme.member.service.GuestIdentityService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ class FaqSearchControllerDisabledTest {
 
     @MockitoBean
     private FaqSearchService faqSearchService;
+
+    @MockitoBean
+    private GuestIdentityService guestIdentityService;
 
     @Test
     @DisplayName("faq.search-test-api-enabled=false면 FaqSearchController 빈이 등록되지 않는다")

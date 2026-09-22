@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.global.config.SecurityConfig;
+import com.telme.member.service.GuestIdentityService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class FaqSearchControllerTest {
 
     @MockitoBean
     private FaqSearchService faqSearchService;
+
+    @MockitoBean
+    private GuestIdentityService guestIdentityService;
 
     @Test
     @WithMockUser

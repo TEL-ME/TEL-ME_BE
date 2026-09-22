@@ -7,6 +7,7 @@
 | `generate_faq.py` | 카테고리 × 질문유형 × 페르소나 × 사유 조합표를 목표 건수에 맞춰 배분 |
 | `check_policy.py` | 답변 수치를 참조 정책 항목의 값과 대조 |
 | `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 |
+| `check_eval_questions.py` | 검색 품질 평가셋(`eval_questions_30.json`)의 정답 매핑·유사도 검증 |
 | `telme_docs.py` | 공통 문서 파서 (직접 실행하면 파싱 결과 요약) |
 
 ## 준비
@@ -120,9 +121,42 @@ python3 scripts/check_duplicates.py --self-test
 - 임베딩은 `scripts/data/.embed_cache.json`에 캐시된다(git 제외)
 - `--field both`는 질문+답변을 이어 붙여 본다. 질문이 달라도 답변이 같은 건을 찾을 때 쓴다.
 
+## 4. 검색 품질 평가셋 검증
+
+```bash
+python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json
+python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json --live
+python3 scripts/check_eval_questions.py --self-test
+```
+
+`data/eval_questions_30.json`은 Recall@k/MRR 측정용 질문 30건이다. 
+
+각 질문은
+`SIMILAR`(원문 재표현) / `VARIANT`(같은 FAQ가 정답이지만 표현, 상황을 크게 바꿈) / `UNRELATED`(30건 어디에도 정답 없음) 중 하나로 라벨링되고, 정답은 `faq_id`가 아니라
+`expected_content_hash`(대상 FAQ의 `SHA-256(question + answer)`)로 매핑된다.
+
+`faq_id`는 적재할 때마다 DB가 새로 발급해 재적재하면 깨지지만, `content_hash`는 문장 내용에서만 정해지므로 몇 번을 다시 적재해도 살아남는다.
+
+- 정적 검사(기본, Ollama 불필요): 정확히 30건인지, `type`이 세 값 중 하나인지,
+  `SIMILAR`/`VARIANT`의 `expected_content_hash`가 `faq_sample_30.json`에 실제로 존재하는
+  해시인지(수동 편집 사고로 어긋나지 않았는지), `UNRELATED`는 해시와 `expected_slot_id`가
+  `null`인지 확인. 
+
+- 유형별 10건씩인지, 카테고리 10종마다 `SIMILAR`·`VARIANT`가 정확히 1건씩인지(해시로 찾은 FAQ의 `category` 기준이라 `expected_slot_id`를 잘못 적어도 못 속임),
+  그리고 `expected_slot_id`가 해시가 가리키는 FAQ의 `slot_id`와 일치하는지 분포도 확인
+
+- `--live`(Ollama 필요, `check_duplicates.py`와 같은 임베딩 경로 재사용): 각 `SIMILAR`/
+  `VARIANT` 질문을 실제로 임베딩해서 자신의 정답 FAQ가 30건 중 최고 유사도로 나오는지 확인하고,
+  `UNRELATED` 10건의 유사도 분포(최댓값/평균)를 출력한다. 이 평가셋을 넘기기 전에
+  "이 질문이 실제로 의도한 FAQ를 가리키는가"를 미리 실측해두는 단계.
+
+- `--self-test`: 일부러 틀린 예시 10건으로 정적 검사가 내는 지적 12종(`STATIC_KINDS`)이 전부 실제로
+  걸리는지 확인한다. 검사 종류를 추가하면 `STATIC_KINDS`와 픽스처에 같이 넣어야 통과.
+
 ## 자기 검증
 
-두 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건).
+세 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
+`check_eval_questions.py`는 10건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
@@ -133,6 +167,7 @@ python3 scripts/check_duplicates.py --self-test
 | 파일 | 내용 |
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
+| `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
 | `data/faq_slots_1150.json` | `generate_faq.py --out`로 생성한 1,150건 조합표(문장 없음). `slot_id`로 끝까지 추적 |
 | `data/faq_full_300.json` | 1차 300건(카테고리 10종 × 30건). 조합표에서 (질문유형 × 페르소나) 15조합마다 2건씩, 정책 항목이 고르게 섞이도록 고른 부분집합. `faq_sample_30.json` 30건을 문자 그대로 포함 |
 | `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일하고(`content_hash` 불변) 뒤 850건이 나머지 슬롯. 카테고리·질문유형·페르소나·`policy_ref` 분포가 `generate_faq.py --summary`와 정확히 일치 |

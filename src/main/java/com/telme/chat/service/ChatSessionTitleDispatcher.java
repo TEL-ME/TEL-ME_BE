@@ -10,26 +10,26 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-class ChatSummaryDispatcher {
+class ChatSessionTitleDispatcher {
 
-    private final ChatSummaryService chatSummaryService;
+    private final ChatSessionTitleService titleService;
     private final ChatBackgroundTaskExecutor backgroundTaskExecutor;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void dispatch(ChatSummaryRequested request) {
+    public void dispatch(ChatSessionTitleRequested request) {
         try {
-            backgroundTaskExecutor.execute(() -> summarize(request));
+            backgroundTaskExecutor.execute(() -> generate(request));
         } catch (TaskRejectedException exception) {
-            log.warn("상담 요약 요청을 대기열에 추가하지 못함: executionId={}, sessionId={}",
+            log.warn("세션 제목 생성 요청을 대기열에 추가하지 못함: executionId={}, sessionId={}",
                     request.executionId(), request.sessionId(), exception);
         }
     }
 
-    private void summarize(ChatSummaryRequested request) {
+    private void generate(ChatSessionTitleRequested request) {
         try {
-            chatSummaryService.summarizeIfNeeded(request);
+            titleService.generateIfMissing(request);
         } catch (RuntimeException exception) {
-            log.warn("상담 요약 생성 실패, 다음 완료 요청에서 재시도: executionId={}, sessionId={}",
+            log.warn("세션 제목 자동 생성 실패: executionId={}, sessionId={}",
                     request.executionId(), request.sessionId(), exception);
         }
     }
