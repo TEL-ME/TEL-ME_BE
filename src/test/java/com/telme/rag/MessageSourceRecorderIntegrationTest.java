@@ -88,6 +88,37 @@ class MessageSourceRecorderIntegrationTest {
     }
 
     @Test
+    @DisplayName("같은 답변으로 다시 저장해도 근거가 쌓이지 않는다")
+    void 다시_저장해도_쌓이지_않는다() {
+        Long messageId = persistAnswerMessage();
+
+        messageSourceRecorder.record(messageId, List.of(source(1L, 1)));
+        messageSourceRecorder.record(messageId, List.of(source(1L, 1), source(2L, 2)));
+
+        assertThat(savedSources(messageId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("제목이 길어도 잘라서 저장한다")
+    void 긴_제목을_잘라_저장한다() {
+        Long messageId = persistAnswerMessage();
+        AnswerSource longTitle = AnswerSource.builder()
+                .faqId(1L)
+                .titleSnapshot("가".repeat(250))
+                .faqVersion(1)
+                .faqUpdatedAt(LocalDate.of(2026, 9, 17))
+                .searchRank((short) 1)
+                .score(new BigDecimal("0.9123"))
+                .build();
+
+        messageSourceRecorder.record(messageId, List.of(longTitle));
+
+        List<MessageSource> saved = savedSources(messageId);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.getFirst().getTitleSnapshot()).hasSize(200);
+    }
+
+    @Test
     @DisplayName("저장이 실패해도 호출한 쪽 트랜잭션은 계속 진행된다")
     void 저장_실패가_호출한_쪽을_막지_않는다() {
         Long missingMessageId = -1L;
