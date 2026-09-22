@@ -41,18 +41,32 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
 
             StringBuilder content = new StringBuilder();
             llmClient.stream(request, new LlmStreamHandler() {
+                private boolean wasRegistered = false;
+
                 @Override
                 public void onToken(String token) {
                     content.append(token);
-                    boolean isConnected = emitterRegistry.sendEvent(executionId, "token", token);
-                    if (!isConnected) {
+                    
+                    if (!wasRegistered && emitterRegistry.isRegistered(executionId)) {
+                        wasRegistered = true;
+                    }
+
+                    if (emitterRegistry.isRegistered(executionId)) {
+                        boolean isConnected = emitterRegistry.sendEvent(executionId, "token", token);
+                        if (!isConnected) {
+                            throw new LlmStreamCancelledException();
+                        }
+                    } else if (wasRegistered) {
+                        // 한 번 연결된 적이 있는데 지금 등록 안 되어 있다면 클라이언트가 이탈한 것
                         throw new LlmStreamCancelledException();
                     }
+                    // 아직 구독하러 오지 않은 상태라면(wasRegistered == false) 조용히 버퍼에만 쌓음
                 }
 
                 @Override
                 public void onRetry(int attempt, Throwable cause) {
                     content.setLength(0);
+                    emitterRegistry.sendEvent(executionId, "status", "RETRYING");
                 }
 
                 @Override
@@ -71,19 +85,26 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
                 @Override
                 public void onError(Throwable error) {
                     log.warn("AI 응답 생성 실패: executionId={}", executionId, error);
+                    ChatFailure chatFailure = (error instanceof LlmStreamCancelledException)
+                            ? new ChatFailure(ChatMessage.Status.CANCELLED, "USER_CANCELLED")
+                            : new ChatFailure(ChatMessage.Status.FAILED, toErrorCode(error));
                     try {
-                        chatExecutionService.fail(executionId,
-                                new ChatFailure(ChatMessage.Status.FAILED, toErrorCode(error)));
+                        chatExecutionService.fail(executionId, chatFailure);
                     } finally {
                         // DB 업데이트 중 에러가 나더라도 클라이언트 연결은 반드시 종료
-                        emitterRegistry.fail(executionId, error.getMessage());
+                        emitterRegistry.fail(executionId, chatFailure);
                     }
                 }
             });
         } catch (RuntimeException exception) {
             log.error("AI 요청 초기화 중 동기적 오류: executionId={}", executionId, exception);
-            // 디스패처로 예외가 전파되기 전에 SSE 클라이언트 연결부터 정리
-            emitterRegistry.fail(executionId, exception.getMessage());
+            ChatFailure chatFailure = new ChatFailure(ChatMessage.Status.FAILED, toErrorCode(exception));
+            try {
+                chatExecutionService.fail(executionId, chatFailure);
+            } finally {
+                // 디스패처로 예외가 전파되기 전에 SSE 클라이언트 연결부터 정리
+                emitterRegistry.fail(executionId, chatFailure);
+            }
             throw exception;
         }
     }

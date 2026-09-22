@@ -7,7 +7,9 @@ import com.telme.chat.service.ChatActor;
 import com.telme.chat.service.ChatActorProvider;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatExecutionState;
+import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatSessionService;
+import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -65,8 +67,12 @@ public class ChatExecutionController {
         SseEmitter emitter = new SseEmitter(timeoutMillis());
         if (state.status() != ChatExecution.Status.RUNNING) {
             // Fast-path: 구독을 걸기 전에 이미 끝난 실행이면 즉시 종료 처리합니다.
-            String eventName = state.status() == ChatExecution.Status.COMPLETED ? "complete" : "error";
-            emitterRegistry.sendTerminalNow(emitter, eventName, state);
+            if (state.status() == ChatExecution.Status.COMPLETED) {
+                emitterRegistry.sendTerminalNow(emitter, "complete", state);
+            } else {
+                ChatFailure chatFailure = new ChatFailure(ChatMessage.Status.valueOf(state.status().name()), state.errorCode());
+                emitterRegistry.sendTerminalNow(emitter, "error", chatFailure);
+            }
             return emitter;
         }
 
@@ -77,12 +83,12 @@ public class ChatExecutionController {
         // 클라이언트가 이벤트를 받지 못하고 무한 대기하는 현상을 방지합니다.
         ChatExecutionState currentState = chatSessionService.getExecution(actor, executionId);
         if (currentState.status() != ChatExecution.Status.RUNNING) {
-            String eventName = currentState.status() == ChatExecution.Status.COMPLETED ? "complete" : "error";
             // 이미 등록된 상태이므로 registry를 통해 이벤트를 보내고 제거 및 종료합니다.
             if (currentState.status() == ChatExecution.Status.COMPLETED) {
                 emitterRegistry.complete(executionId, currentState);
             } else {
-                emitterRegistry.fail(executionId, currentState);
+                ChatFailure chatFailure = new ChatFailure(ChatMessage.Status.valueOf(currentState.status().name()), currentState.errorCode());
+                emitterRegistry.fail(executionId, chatFailure);
             }
         }
 

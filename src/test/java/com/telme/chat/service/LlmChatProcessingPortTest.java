@@ -43,6 +43,7 @@ class LlmChatProcessingPortTest {
         when(chatExecutionService.startAnswer(EXECUTION_ID)).thenReturn(
                 new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
                         ChatMessage.MessageType.ANSWER, ChatMessage.Status.GENERATING));
+        when(emitterRegistry.isRegistered(EXECUTION_ID)).thenReturn(true);
         when(emitterRegistry.sendEvent(any(), any(), any())).thenReturn(true);
     }
 
@@ -109,7 +110,7 @@ class LlmChatProcessingPortTest {
         verify(chatExecutionService).fail(eq(EXECUTION_ID), failureCaptor.capture());
         assertThat(failureCaptor.getValue().status()).isEqualTo(ChatMessage.Status.FAILED);
         assertThat(failureCaptor.getValue().errorCode()).isEqualTo(LlmErrorCode.TIMEOUT.getCode());
-        verify(emitterRegistry).fail(EXECUTION_ID, timeout.getMessage());
+        verify(emitterRegistry).fail(eq(EXECUTION_ID), any(ChatFailure.class));
     }
 
     @Test
