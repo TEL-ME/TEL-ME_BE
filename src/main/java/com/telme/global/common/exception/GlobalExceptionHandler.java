@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.beans.BeanInstantiationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -33,6 +34,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(errorCode.getErrorResponse());
+    }
+
+    // 생성자 예외가 BeanInstantiationException으로 감싸진 경우 처리
+    @ExceptionHandler(BeanInstantiationException.class)
+    public ResponseEntity<CustomResponse<Void>> handleBeanInstantiationException(BeanInstantiationException ex) {
+        if (ex.getCause() instanceof GeneralException generalException) {
+            return handleCustomException(generalException);
+        }
+        return handleAllException(ex);
     }
 
     // @Valid 검증 예외 처리

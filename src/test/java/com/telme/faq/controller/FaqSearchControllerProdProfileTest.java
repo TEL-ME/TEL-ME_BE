@@ -1,0 +1,38 @@
+package com.telme.faq.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.telme.faq.service.FaqSearchService;
+import com.telme.global.config.SecurityConfig;
+import com.telme.member.service.GuestIdentityService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+@WebMvcTest(FaqSearchController.class)
+@Import(SecurityConfig.class)
+@ActiveProfiles("prod")
+@TestPropertySource(properties = "faq.search-test-api-enabled=true")
+class FaqSearchControllerProdProfileTest {
+
+    @Autowired
+    private ApplicationContext context;
+
+    @MockitoBean
+    private FaqSearchService faqSearchService;
+
+    @MockitoBean
+    private GuestIdentityService guestIdentityService;
+
+    @Test
+    @DisplayName("prod 프로파일이면 프로퍼티가 true로 유출돼도 컨트롤러 빈이 생기지 않는다")
+    void prod_프로파일이면_프로퍼티가_true여도_컨트롤러_빈이_없다() {
+        assertThat(context.getBeanNamesForType(FaqSearchController.class)).isEmpty();
+    }
+}

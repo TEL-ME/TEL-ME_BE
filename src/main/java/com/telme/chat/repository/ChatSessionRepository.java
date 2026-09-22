@@ -9,10 +9,48 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
+
+    @Query("""
+            select case when count(session) > 0 then true else false end
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.title is not null
+              and trim(session.title) <> ''
+            """)
+    boolean hasTitle(@Param("sessionId") Long sessionId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.title = :title
+            where session.sessionId = :sessionId
+              and (session.title is null or trim(session.title) = '')
+            """)
+    int updateTitleIfMissing(
+            @Param("sessionId") Long sessionId,
+            @Param("title") String title
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.summary = :summary,
+                session.summaryThroughSequenceNo = :throughSequenceNo
+            where session.sessionId = :sessionId
+              and session.summaryThroughSequenceNo = :expectedSequenceNo
+              and session.summaryThroughSequenceNo < :throughSequenceNo
+            """)
+    int updateSummaryIfCurrent(
+            @Param("sessionId") Long sessionId,
+            @Param("summary") String summary,
+            @Param("expectedSequenceNo") Integer expectedSequenceNo,
+            @Param("throughSequenceNo") Integer throughSequenceNo
+    );
 
     boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
 

@@ -24,10 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@RecordApplicationEvents
 class ChatExecutionServiceIntegrationTest {
 
     @Autowired
@@ -41,6 +44,9 @@ class ChatExecutionServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     private ChatActor actor;
     private Long sessionId;
@@ -93,6 +99,45 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(answer.followUps()).containsExactly("가장 저렴한 요금제는?", "데이터 무제한은?");
         assertThat(answer.storeResults()).isNull();
         assertThat(answer.completedAt()).isNotNull();
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .containsExactly(new ChatSummaryRequested(question.executionId(), sessionId, 2));
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class)).isEmpty();
+    }
+
+    @Test
+    void requestsTitleForSuccessfulUntitledSessionExecutionsUntilTitleIsStored() {
+        sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest(null)).sessionId();
+        ChatMessageSendResponse firstQuestion = send("가족 결합 요금제를 알려줘");
+
+        chatExecutionService.completeAnswer(firstQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "가족 결합 상품을 안내해 드릴게요.", null, null, null));
+
+        ChatMessageSendResponse secondQuestion = send("할인 금액도 알려줘");
+        chatExecutionService.completeAnswer(secondQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "할인 금액도 안내해 드릴게요.", null, null, null));
+
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class))
+                .containsExactly(
+                        new ChatSessionTitleRequested(
+                                firstQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"),
+                        new ChatSessionTitleRequested(
+                                secondQuestion.executionId(), sessionId, "할인 금액도 알려줘"));
+    }
+
+    @Test
+    void requestsTitleFromNextSuccessfulExecutionWhenFirstExecutionFails() {
+        sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest(null)).sessionId();
+        ChatMessageSendResponse failedQuestion = send("요금제를 알려줘");
+        chatExecutionService.fail(
+                failedQuestion.executionId(), new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
+
+        ChatMessageSendResponse successfulQuestion = send("가족 결합 요금제를 알려줘");
+        chatExecutionService.completeAnswer(successfulQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "가족 결합 상품을 안내해 드릴게요.", null, null, null));
+
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class))
+                .containsExactly(new ChatSessionTitleRequested(
+                        successfulQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"));
     }
 
     @Test
@@ -136,6 +181,8 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(clarification.outputMessage().status()).isEqualTo(ChatMessage.Status.COMPLETED);
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
         assertThat(findExecution(question.executionId()).getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .contains(new ChatSummaryRequested(question.executionId(), sessionId, 2));
 
         ChatMessageSendResponse reply = send("강남역이요");
         assertThat(reply.sequenceNo()).isEqualTo(3);
@@ -166,6 +213,8 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(execution.getOutputMessage()).isNull();
         assertThat(execution.getEndedAt()).isNotNull();
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class))
+                .contains(new ChatSummaryRequested(correction.executionId(), sessionId, 3));
 
         ChatMessageHistoryResponse history = chatSessionService.getMessages(actor, sessionId, null, 50);
         assertThat(history.messages()).hasSize(3);
@@ -201,6 +250,7 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.FAILED);
         assertThat(execution.getErrorCode()).isEqualTo("LLM_TIMEOUT");
         assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(failed.outputMessage().messageId());
+        assertThat(applicationEvents.stream(ChatSummaryRequested.class)).isEmpty();
         ChatMessageHistoryItemResponse errorMessage = historyItem(2);
         assertThat(errorMessage.replyToMessageId()).isEqualTo(question.messageId());
         assertThat(errorMessage.completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());

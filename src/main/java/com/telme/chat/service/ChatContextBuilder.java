@@ -56,6 +56,7 @@ public class ChatContextBuilder {
 
         List<ChatMessage> candidates = chatMessageRepository.findCompletedContextMessagesBefore(
                 command.sessionId(),
+                execution.getSession().getSummaryThroughSequenceNo(),
                 inputMessage.getSequenceNo(),
                 ChatMessage.Status.COMPLETED,
                 ChatMessage.MessageType.ERROR,
