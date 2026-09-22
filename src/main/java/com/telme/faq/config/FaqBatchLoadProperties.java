@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 // FAQ 배치 적재 설정
 // batchSize = embedBatch 1회 건수 = 트랜잭션 1개 건수
+// 적재 러너는 단일 프로세스 전제(중복 판정이 content_hash 조회 시점 기준이라 동시 실행은 안전하지 않다)
 @ConfigurationProperties(prefix = "faq.batch-load")
 public record FaqBatchLoadProperties(
         @DefaultValue("false") boolean enabled,

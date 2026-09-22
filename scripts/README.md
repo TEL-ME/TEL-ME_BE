@@ -171,6 +171,7 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
 ```
 
 - 같은 파일을 다시 돌려도 안전하다(신규 적재 0건). 중간에 실패해도 재실행하면 이어서 적재된다
+- 적재는 한 번에 한 프로세스만 돌린다. 이미 있는 건을 거르는 기준이 적재 직전에 읽은 `content_hash` 목록이라, 두 프로세스가 같이 돌면 서로가 넣는 중인 건을 못 보고 같은 FAQ를 두 번 넣는다
 - `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 무시된다
 ## 자기 검증
 

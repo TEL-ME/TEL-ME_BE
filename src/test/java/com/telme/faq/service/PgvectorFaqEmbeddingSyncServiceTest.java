@@ -48,6 +48,9 @@ class PgvectorFaqEmbeddingSyncServiceTest {
     @DisplayName("upsert는 기존 임베딩 행을 새 벡터로 덮어쓴다")
     void upsert는_기존_행을_갱신한다() {
         when(embeddingClient.embed(anyString())).thenReturn(vector(0.5f));
+        // 기존 값을 다른 모델명으로 바꿔둔다
+        // 시드와 기대값이 같으면 모델명 갱신이 빠져도 통과한다
+        jdbcTemplate.update("UPDATE faq_embeddings SET model_name = 'stale-model' WHERE faq_id = ?", SEED_FAQ_ID);
 
         service.upsert(SEED_FAQ_ID);
         embeddingRepository.flush();
