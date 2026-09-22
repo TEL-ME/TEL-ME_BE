@@ -154,7 +154,28 @@ python3 scripts/check_eval_questions.py --self-test
 - `--self-test`: 일부러 틀린 예시 10건으로 정적 검사가 내는 지적 12종(`STATIC_KINDS`)이 전부 실제로
   걸리는지 확인한다. 검사 종류를 추가하면 `STATIC_KINDS`와 픽스처에 같이 넣어야 통과.
 
-## 5. 검색 품질 측정
+## 5. 적재 (Java)
+
+만든 JSON을 DB(`faqs` + `faq_embeddings`)에 넣는 것은 Java 쪽 배치 로더가.
+해시 계산 규칙(`content_hash`)이 Python과 Java 두 벌로 갈라지지 않도록, 적재는 애플리케이션이 맡는다.
+
+```bash
+docker compose --profile ollama up -d
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./gradlew bootJar
+
+# 1차 300건 → 2차는 파일만 바꿔서 같은 명령. 이미 들어간 건은 content_hash로 건너뛴다
+java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
+  --faq.batch-load.enabled=true --faq.batch-load.path=scripts/data/faq_full_300.json
+java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
+  --faq.batch-load.enabled=true --faq.batch-load.path=scripts/data/faq_full_1150.json
+```
+
+- 같은 파일을 다시 돌려도 안전하다(신규 적재 0건). 중간에 실패해도 재실행하면 이어서 적재된다
+- 적재는 한 번에 한 프로세스만 돌린다. 이미 있는 건을 거르는 기준이 적재 직전에 읽은 `content_hash` 목록이라, 두 프로세스가 같이 돌면 서로가 넣는 중인 건을 못 보고 같은 FAQ를 두 번 넣는다
+- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 무시된다
+
+## 6. 검색 품질 측정
 
 ```bash
 python3 scripts/measure_search_quality.py scripts/data/eval_smoke.json
