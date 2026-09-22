@@ -171,12 +171,15 @@ class FeedbackApiIntegrationTest {
     }
 
     @Test
-    void requestWithoutIdentityIsUnauthorized() throws Exception {
+    void requestWithoutIdentityGetsFreshGuestAndSeesNotFound() throws Exception {
+        // GuestIdentityFilter가 /api/v1/chat/** 전체에 걸려, 세션이 없어도 새 게스트로 자동 식별된다.
+        // 그 게스트는 이 메시지를 만든 적이 없으므로 401이 아니라 404로 응답한다.
         mvc.perform(get(URL, answer))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("CHAT401-0"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("FEEDBACK404-0"));
         mvc.perform(put(URL, answer).contentType(MediaType.APPLICATION_JSON).content("{\"rating\":\"LIKE\"}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("FEEDBACK404-0"));
     }
 
     ResultActions save(MockHttpSession session, long messageId, String body) throws Exception {
