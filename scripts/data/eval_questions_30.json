@@ -1,0 +1,212 @@
+[
+  {
+    "eval_id": "EVAL-01",
+    "type": "SIMILAR",
+    "question": "요금제는 한 달에 몇 번까지 바꿀 수 있나요?",
+    "expected_content_hash": "763d0fa11d9fc199d3da41d1cb5999444beba393d45b66fbf0453cb1c1eb3087",
+    "expected_slot_id": "BILLING-S01"
+  },
+  {
+    "eval_id": "EVAL-02",
+    "type": "VARIANT",
+    "question": "지난달에 이미 요금제를 바꿨는데 이번 달에 또 바꾸면 무슨 문제 생기나요?",
+    "expected_content_hash": "763d0fa11d9fc199d3da41d1cb5999444beba393d45b66fbf0453cb1c1eb3087",
+    "expected_slot_id": "BILLING-S01"
+  },
+  {
+    "eval_id": "EVAL-03",
+    "type": "SIMILAR",
+    "question": "요금제 종류가 많아서 헷갈리는데 어떤 게 있나요?",
+    "expected_content_hash": "0ffe4c60fb1645e7ec19ffa802cb28fcf0513c1062d73cfd06d88fce3d95b85c",
+    "expected_slot_id": "PLAN-S01"
+  },
+  {
+    "eval_id": "EVAL-04",
+    "type": "VARIANT",
+    "question": "5G 요금제랑 LTE 요금제랑 알뜰 요금제 종류가 각각 몇 개씩 있는지 정리해서 알려주실 수 있나요?",
+    "expected_content_hash": "0ffe4c60fb1645e7ec19ffa802cb28fcf0513c1062d73cfd06d88fce3d95b85c",
+    "expected_slot_id": "PLAN-S01"
+  },
+  {
+    "eval_id": "EVAL-05",
+    "type": "SIMILAR",
+    "question": "휴대폰 유심을 잃어버렸는데 새로 받으려면 어떻게 해요?",
+    "expected_content_hash": "a4b7cbd9995b22c662944d57f2388d4b31ed2706d68596a6a19fdebbbf6511f3",
+    "expected_slot_id": "USIM-S01"
+  },
+  {
+    "eval_id": "EVAL-06",
+    "type": "VARIANT",
+    "question": "칩이 없어져서 폰을 못 쓰는데 지금 매장 가면 바로 받을 수 있나요, 아니면 택배로 시켜야 하나요?",
+    "expected_content_hash": "a4b7cbd9995b22c662944d57f2388d4b31ed2706d68596a6a19fdebbbf6511f3",
+    "expected_slot_id": "USIM-S01"
+  },
+  {
+    "eval_id": "EVAL-07",
+    "type": "SIMILAR",
+    "question": "폰을 처음 개통하려는데 신분증은 뭘 준비해야 하나요?",
+    "expected_content_hash": "6df10198380caf1c2cf955b39d357a04e142717ceed001ab77e523785095c429",
+    "expected_slot_id": "SUBSCRIBE-S01"
+  },
+  {
+    "eval_id": "EVAL-08",
+    "type": "VARIANT",
+    "question": "외국인인데 여권만 있으면 개통 가능한가요, 아니면 다른 서류도 필요한가요?",
+    "expected_content_hash": "6df10198380caf1c2cf955b39d357a04e142717ceed001ab77e523785095c429",
+    "expected_slot_id": "SUBSCRIBE-S01"
+  },
+  {
+    "eval_id": "EVAL-09",
+    "type": "SIMILAR",
+    "question": "번호이동 신청하면 당일에 바로 처리되나요?",
+    "expected_content_hash": "591a023e702da80158b8bcf7b24bf0bebf1852acd2b469f8f100edffd3a93287",
+    "expected_slot_id": "PORTING-S01"
+  },
+  {
+    "eval_id": "EVAL-10",
+    "type": "VARIANT",
+    "question": "저녁 늦게 통신사 이동 신청하면 그날 안에 처리되나요, 아니면 다음 날 넘어가나요?",
+    "expected_content_hash": "591a023e702da80158b8bcf7b24bf0bebf1852acd2b469f8f100edffd3a93287",
+    "expected_slot_id": "PORTING-S01"
+  },
+  {
+    "eval_id": "EVAL-11",
+    "type": "SIMILAR",
+    "question": "아버지 명의에서 제 명의로 바꾸려면 어떻게 해야 하나요?",
+    "expected_content_hash": "2694adb4aca6c777d42fbb16b9335c0d3245f342a18295e8c847a3001f86fe42",
+    "expected_slot_id": "NAME_CHANGE-S01"
+  },
+  {
+    "eval_id": "EVAL-12",
+    "type": "VARIANT",
+    "question": "아버지가 지방에 계셔서 같이 매장에 갈 수가 없는데 명의변경할 다른 방법 없나요?",
+    "expected_content_hash": "2694adb4aca6c777d42fbb16b9335c0d3245f342a18295e8c847a3001f86fe42",
+    "expected_slot_id": "NAME_CHANGE-S01"
+  },
+  {
+    "eval_id": "EVAL-13",
+    "type": "SIMILAR",
+    "question": "군입대 때문에 쓰던 번호를 해지하려면 어떻게 하나요?",
+    "expected_content_hash": "e5b2ce42adeb2196a6bf48d5e8104add8ff6c110d5fc36a916f7525d1623c6aa",
+    "expected_slot_id": "TERMINATE-S01"
+  },
+  {
+    "eval_id": "EVAL-14",
+    "type": "VARIANT",
+    "question": "입대하면 번호가 자동으로 정지되나요, 아니면 제가 직접 해지 신청을 해야 하나요?",
+    "expected_content_hash": "e5b2ce42adeb2196a6bf48d5e8104add8ff6c110d5fc36a916f7525d1623c6aa",
+    "expected_slot_id": "TERMINATE-S01"
+  },
+  {
+    "eval_id": "EVAL-15",
+    "type": "SIMILAR",
+    "question": "단말기 할부는 몇 개월로 할 수 있나요?",
+    "expected_content_hash": "452b3a29dbafbf02e2ce2a03740d5b354a564370599c4344e5498653e2863b58",
+    "expected_slot_id": "DEVICE-S01"
+  },
+  {
+    "eval_id": "EVAL-16",
+    "type": "VARIANT",
+    "question": "새 폰 할부를 24개월로 할지 30개월로 할지 고민되는데, 기간을 짧게 하면 수수료를 덜 내나요?",
+    "expected_content_hash": "452b3a29dbafbf02e2ce2a03740d5b354a564370599c4344e5498653e2863b58",
+    "expected_slot_id": "DEVICE-S01"
+  },
+  {
+    "eval_id": "EVAL-17",
+    "type": "SIMILAR",
+    "question": "일주일 정도 해외 출장 가는데 로밍은 뭐가 저렴한가요?",
+    "expected_content_hash": "07e45ce56e939d782811eb2c53e99fe220b79f8154345633e1cfa48de4ac5974",
+    "expected_slot_id": "ROAMING-S01"
+  },
+  {
+    "eval_id": "EVAL-18",
+    "type": "VARIANT",
+    "question": "데이터 무제한 로밍이 있던데 일주일 쓰면 얼마 나오나요?",
+    "expected_content_hash": "07e45ce56e939d782811eb2c53e99fe220b79f8154345633e1cfa48de4ac5974",
+    "expected_slot_id": "ROAMING-S01"
+  },
+  {
+    "eval_id": "EVAL-19",
+    "type": "SIMILAR",
+    "question": "부가서비스를 해지하면 그 달 이용료는 안 내도 되나요?",
+    "expected_content_hash": "d8276b53477837fdb51b11cfc56ddebe458c46907806b8dcacf93515d76a9deb",
+    "expected_slot_id": "SERVICE-S01"
+  },
+  {
+    "eval_id": "EVAL-20",
+    "type": "VARIANT",
+    "question": "부가서비스는 신청하면 바로 적용되던데 해지는 왜 바로 안 되나요?",
+    "expected_content_hash": "d8276b53477837fdb51b11cfc56ddebe458c46907806b8dcacf93515d76a9deb",
+    "expected_slot_id": "SERVICE-S01"
+  },
+  {
+    "eval_id": "EVAL-21",
+    "type": "UNRELATED",
+    "question": "내일 서울 날씨 어때요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-22",
+    "type": "UNRELATED",
+    "question": "김치찌개 맛있게 끓이는 방법 알려주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-23",
+    "type": "UNRELATED",
+    "question": "요즘 볼만한 영화 추천해주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-24",
+    "type": "UNRELATED",
+    "question": "오늘 환율이 얼마인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-25",
+    "type": "UNRELATED",
+    "question": "인터넷이랑 폰이랑 같이 쓰면 결합할인 얼마나 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-26",
+    "type": "UNRELATED",
+    "question": "영상통화 무료로 몇 분까지 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-27",
+    "type": "UNRELATED",
+    "question": "해외에서 산 폰 그대로 국내에서 개통할 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-28",
+    "type": "UNRELATED",
+    "question": "5G 특화 요금제에 포함된 OTT 혜택이 뭐가 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-29",
+    "type": "UNRELATED",
+    "question": "가족 결합하면 데이터 몇 GB씩 나눠 쓸 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-30",
+    "type": "UNRELATED",
+    "question": "분실한 폰 위치 추적 서비스 신청하려면 어떻게 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  }
+]
