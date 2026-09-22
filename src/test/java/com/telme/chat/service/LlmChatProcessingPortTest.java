@@ -41,8 +41,7 @@ class LlmChatProcessingPortTest {
     @BeforeEach
     void stubStartAnswer() {
         when(chatExecutionService.startAnswer(EXECUTION_ID)).thenReturn(
-                new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
-                        ChatMessage.MessageType.ANSWER, ChatMessage.Status.GENERATING));
+                new ChatExecutionState(SESSION_ID, EXECUTION_ID, com.telme.chat.entity.ChatExecution.Status.RUNNING, null, new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2, ChatMessage.MessageType.ANSWER, ChatMessage.Status.GENERATING)));
         when(emitterRegistry.isRegistered(EXECUTION_ID)).thenReturn(true);
         when(emitterRegistry.sendEvent(any(), any(), any())).thenReturn(true);
     }
@@ -56,7 +55,7 @@ class LlmChatProcessingPortTest {
         InOrder inOrder = inOrder(chatExecutionService, llmClient);
         inOrder.verify(chatExecutionService).startAnswer(EXECUTION_ID);
         inOrder.verify(llmClient).stream(any(), any());
-        verify(emitterRegistry).sendEvent(eq(EXECUTION_ID), eq("start"), any(ChatOutputMessage.class));
+        verify(emitterRegistry).sendEvent(eq(EXECUTION_ID), eq("start"), any(ChatExecutionState.class));
     }
 
     @Test
@@ -86,8 +85,7 @@ class LlmChatProcessingPortTest {
     @Test
     void completesAnswerWithAccumulatedContentAndNotifiesRegistry() {
         stubStreamThatEmits("강남", "역점입니다");
-        ChatOutputMessage completed = new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
-                ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED);
+        ChatExecutionState completed = new ChatExecutionState(SESSION_ID, EXECUTION_ID, com.telme.chat.entity.ChatExecution.Status.RUNNING, null, new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2, ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
         when(chatExecutionService.completeAnswer(eq(EXECUTION_ID), any(ChatAnswer.class)))
                 .thenReturn(completed);
 
@@ -159,8 +157,7 @@ class LlmChatProcessingPortTest {
             return null;
         }).when(llmClient).stream(any(LlmRequest.class), any(LlmStreamHandler.class));
 
-        ChatOutputMessage completed = new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2,
-                ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED);
+        ChatExecutionState completed = new ChatExecutionState(SESSION_ID, EXECUTION_ID, com.telme.chat.entity.ChatExecution.Status.RUNNING, null, new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 502L, 2, ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
         when(chatExecutionService.completeAnswer(eq(EXECUTION_ID), any(ChatAnswer.class)))
                 .thenReturn(completed);
 

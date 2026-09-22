@@ -63,11 +63,11 @@ class ChatExecutionServiceIntegrationTest {
     void completesStartedAnswerInPlace() {
         ChatMessageSendResponse question = send("5G 요금제 알려줘");
 
-        ChatOutputMessage started = chatExecutionService.startAnswer(question.executionId());
-        assertThat(started.sequenceNo()).isEqualTo(2);
+        ChatExecutionState started = chatExecutionService.startAnswer(question.executionId());
+        assertThat(started.outputMessage().sequenceNo()).isEqualTo(2);
         assertThat(started.status()).isEqualTo(ChatMessage.Status.GENERATING);
 
-        ChatOutputMessage completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+        ChatExecutionState completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
                 "5G 요금제는 세 가지입니다.",
                 ChatMessage.AnswerBasis.GROUNDED,
@@ -75,13 +75,13 @@ class ChatExecutionServiceIntegrationTest {
                 null
         ));
 
-        assertThat(completed.messageId()).isEqualTo(started.messageId());
-        assertThat(completed.sequenceNo()).isEqualTo(2);
+        assertThat(completed.outputMessage().messageId()).isEqualTo(started.outputMessage().messageId());
+        assertThat(completed.outputMessage().sequenceNo()).isEqualTo(2);
         assertThat(completed.status()).isEqualTo(ChatMessage.Status.COMPLETED);
 
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
-        assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(started.messageId());
+        assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(started.outputMessage().messageId());
         assertThat(execution.getEndedAt()).isNotNull();
 
         ChatMessageHistoryItemResponse answer = historyItem(2);
@@ -110,7 +110,7 @@ class ChatExecutionServiceIntegrationTest {
     void completesAnswerWithoutStartByAppendingMessage() {
         ChatMessageSendResponse question = send("강남역 매장 알려줘");
 
-        ChatOutputMessage completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+        ChatExecutionState completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
                 ChatMessage.MessageType.STORE_RESULT,
                 "강남역 근처 매장입니다.",
                 null,
@@ -118,7 +118,7 @@ class ChatExecutionServiceIntegrationTest {
                 List.of(Map.of("storeId", 1, "name", "강남점"))
         ));
 
-        assertThat(completed.sequenceNo()).isEqualTo(2);
+        assertThat(completed.outputMessage().sequenceNo()).isEqualTo(2);
         ChatMessageHistoryItemResponse answer = historyItem(2);
         assertThat(answer.messageType()).isEqualTo("STORE_RESULT");
         assertThat(answer.status()).isEqualTo("COMPLETED");
@@ -129,10 +129,10 @@ class ChatExecutionServiceIntegrationTest {
     void clarificationWaitsForUserAndNextAnswerResumesSession() {
         ChatMessageSendResponse question = send("매장 찾아줘");
 
-        ChatOutputMessage clarification = chatExecutionService.askClarification(
+        ChatExecutionState clarification = chatExecutionService.askClarification(
                 question.executionId(), "어느 지역 매장을 찾으시나요?");
 
-        assertThat(clarification.messageType()).isEqualTo(ChatMessage.MessageType.CLARIFICATION);
+        assertThat(clarification.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.CLARIFICATION);
         assertThat(clarification.status()).isEqualTo(ChatMessage.Status.COMPLETED);
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
         assertThat(findExecution(question.executionId()).getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
@@ -154,7 +154,7 @@ class ChatExecutionServiceIntegrationTest {
     @Test
     void completesWaitingCorrectionWithoutCreatingAnotherClarification() {
         ChatMessageSendResponse question = send("매장 찾아줘");
-        ChatOutputMessage clarification = chatExecutionService.askClarification(
+        ChatExecutionState clarification = chatExecutionService.askClarification(
                 question.executionId(), "어느 지역 매장을 찾으시나요?");
         ChatMessageSendResponse correction = send("업무는 번호이동으로 바꿔줘");
 
@@ -171,7 +171,7 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(history.messages()).hasSize(3);
         assertThat(history.messages())
                 .extracting(ChatMessageHistoryItemResponse::messageId)
-                .contains(clarification.messageId());
+                .contains(clarification.outputMessage().messageId());
         assertThat(history.runningExecutionId()).isNull();
         assertThat(send("강남역이요").sequenceNo()).isEqualTo(4);
     }
@@ -190,17 +190,17 @@ class ChatExecutionServiceIntegrationTest {
     void failureWithoutStartedAnswerLeavesErrorMessage() {
         ChatMessageSendResponse question = send("요금제 알려줘");
 
-        ChatOutputMessage failed = chatExecutionService.fail(
+        ChatExecutionState failed = chatExecutionService.fail(
                 question.executionId(), new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
 
-        assertThat(failed.sequenceNo()).isEqualTo(2);
-        assertThat(failed.messageType()).isEqualTo(ChatMessage.MessageType.ERROR);
+        assertThat(failed.outputMessage().sequenceNo()).isEqualTo(2);
+        assertThat(failed.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.ERROR);
         assertThat(failed.status()).isEqualTo(ChatMessage.Status.TIMEOUT);
 
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.FAILED);
         assertThat(execution.getErrorCode()).isEqualTo("LLM_TIMEOUT");
-        assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(failed.messageId());
+        assertThat(execution.getOutputMessage().getMessageId()).isEqualTo(failed.outputMessage().messageId());
         ChatMessageHistoryItemResponse errorMessage = historyItem(2);
         assertThat(errorMessage.replyToMessageId()).isEqualTo(question.messageId());
         assertThat(errorMessage.completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
@@ -209,13 +209,13 @@ class ChatExecutionServiceIntegrationTest {
     @Test
     void failureAfterStartMarksGeneratingMessage() {
         ChatMessageSendResponse question = send("요금제 알려줘");
-        ChatOutputMessage started = chatExecutionService.startAnswer(question.executionId());
+        ChatExecutionState started = chatExecutionService.startAnswer(question.executionId());
 
-        ChatOutputMessage cancelled = chatExecutionService.fail(
+        ChatExecutionState cancelled = chatExecutionService.fail(
                 question.executionId(), new ChatFailure(ChatMessage.Status.CANCELLED, "USER_CANCELLED"));
 
-        assertThat(cancelled.messageId()).isEqualTo(started.messageId());
-        assertThat(cancelled.messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
+        assertThat(cancelled.outputMessage().messageId()).isEqualTo(started.outputMessage().messageId());
+        assertThat(cancelled.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
         assertThat(cancelled.status()).isEqualTo(ChatMessage.Status.CANCELLED);
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.CANCELLED);
@@ -226,13 +226,13 @@ class ChatExecutionServiceIntegrationTest {
     void clarificationIsVisibleToSqlInSameTransaction() {
         ChatMessageSendResponse question = send("매장 찾아줘");
 
-        ChatOutputMessage clarification = chatExecutionService.askClarification(
+        ChatExecutionState clarification = chatExecutionService.askClarification(
                 question.executionId(), "어느 지역 매장을 찾으시나요?");
 
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from chat_messages where message_id = ? and session_id = ?"
                         + " and role = 'ASSISTANT' and message_type = 'CLARIFICATION' and status = 'COMPLETED'",
-                Integer.class, clarification.messageId(), sessionId))
+                Integer.class, clarification.outputMessage().messageId(), sessionId))
                 .isEqualTo(1);
     }
 
@@ -315,14 +315,14 @@ class ChatExecutionServiceIntegrationTest {
         assertThat(running.status()).isEqualTo(ChatExecution.Status.RUNNING);
         assertThat(running.outputMessage()).isNull();
 
-        ChatOutputMessage answer = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+        ChatExecutionState answer = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
                 ChatMessage.MessageType.ANSWER, "답변", null, null, null));
 
         entityManager.flush();
         entityManager.clear();
         ChatExecutionState completed = chatSessionService.getExecution(actor, question.executionId());
         assertThat(completed.status()).isEqualTo(ChatExecution.Status.COMPLETED);
-        assertThat(completed.outputMessage().messageId()).isEqualTo(answer.messageId());
+        assertThat(completed.outputMessage().messageId()).isEqualTo(answer.outputMessage().messageId());
         assertThat(completed.outputMessage().sequenceNo()).isEqualTo(2);
         assertThat(completed.outputMessage().status()).isEqualTo(ChatMessage.Status.COMPLETED);
 

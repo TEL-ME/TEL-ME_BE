@@ -29,7 +29,7 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
     public void request(ChatProcessingCommand command) {
         Long executionId = command.executionId();
         try {
-            ChatOutputMessage started = chatExecutionService.startAnswer(executionId);
+            ChatExecutionState started = chatExecutionService.startAnswer(executionId);
             emitterRegistry.sendEvent(executionId, "start", started);
 
             LlmRequest request = LlmRequest.builder()
@@ -74,7 +74,7 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
                     try {
                         ChatAnswer answer = new ChatAnswer(
                                 ChatMessage.MessageType.ANSWER, content.toString(), null, null, null);
-                        ChatOutputMessage output = chatExecutionService.completeAnswer(executionId, answer);
+                        ChatExecutionState output = chatExecutionService.completeAnswer(executionId, answer);
                         emitterRegistry.complete(executionId, output);
                     } catch (RuntimeException exception) {
                         // 빈 답변 등으로 ChatAnswer 생성 자체가 실패하면 실패 처리로 이어간다.
