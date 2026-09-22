@@ -29,12 +29,8 @@ class FeedbackValidationTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new Input(Rating.DISLIKE, Reason.WRONG_INFO, "가".repeat(1001)));
-        assertThrows(
-        		IllegalArgumentException.class,
-        		() -> new Input(Rating.DISLIKE, null, null));
-        assertThrows(
-        		IllegalArgumentException.class,
-        		() -> new Input(Rating.LIKE, null, "좋아요"));
+		assertThrows(IllegalArgumentException.class, () -> new Input(Rating.DISLIKE, null, null));
+		assertThrows(IllegalArgumentException.class, () -> new Input(Rating.LIKE, null, "좋아요"));
         assertNull(new Input(Rating.LIKE, null, "  ").comment());
     }
 }

@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.telme.chat.service.HttpSessionChatActorProvider;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import com.telme.chat.service.HttpSessionChatActorProvider;
 
 /** 피드백 활성화 상태의 실제 컨텍스트로 Security → 컨트롤러 → 서비스 → DB 흐름을 검증한다. 테스트마다 롤백된다. */
 @SpringBootTest(properties = "telme.feedback.enabled=true")
@@ -68,7 +68,16 @@ class FeedbackApiIntegrationTest {
                 .andExpect(jsonPath("$.result.reason").value("WRONG_INFO"))
                 .andExpect(jsonPath("$.result.comment").value("요금이 달라요"));
         assertFeedbackRows(answer, 1);
-        
+
+        // DISLIKE → LIKE 시 기존 reason·comment가 제거되고 행은 그대로 유지된다
+        save(owner, answer, "{\"rating\":\"LIKE\"}")
+        		.andExpect(status().isOk())
+        		.andExpect(jsonPath("$.result.messageId").value(answer))
+        		.andExpect(jsonPath("$.result.rating").value("LIKE"))
+        		.andExpect(jsonPath("$.result.reason").doesNotExist())
+        		.andExpect(jsonPath("$.result.comment").doesNotExist());
+        assertFeedbackRows(answer, 1);
+
         mvc.perform(delete(URL, answer).session(owner)).andExpect(status().isOk());
         mvc.perform(get(URL, answer).session(owner))
                 .andExpect(status().isOk())
@@ -105,7 +114,7 @@ class FeedbackApiIntegrationTest {
         mvc.perform(get(URL, answer).session(owner))
                 .andExpect(jsonPath("$.result.rating").value("LIKE"));
     }
-    
+
     @Test
     void membersAndGuestsCannotCrossAccess() throws Exception {
         UUID guestId = UUID.randomUUID();
@@ -138,7 +147,7 @@ class FeedbackApiIntegrationTest {
         long error = message(ownerSession, "ASSISTANT", "ERROR", "COMPLETED");
         long timeout = message(ownerSession, "ASSISTANT", "ANSWER", "TIMEOUT");
         long cancelled = message(ownerSession, "ASSISTANT", "STORE_RESULT", "CANCELLED");
-        
+
         for (long id : new long[] {question, generating, clarification, error, timeout, cancelled}) {
             save(owner, id, "{\"rating\":\"LIKE\"}")
                     .andExpect(status().isConflict())
@@ -154,6 +163,9 @@ class FeedbackApiIntegrationTest {
         save(owner, answer, "{\"rating\":\"LIKE\",\"reason\":\"WRONG_INFO\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
+        save(owner, answer, "{\"rating\":\"DISLIKE\"}")
+        		.andExpect(status().isBadRequest())
+        		.andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
         save(owner, answer, "{\"rating\":\"OTHER\"}").andExpect(status().isBadRequest());
         assertFeedbackRows(answer, 0);
     }
@@ -173,7 +185,7 @@ class FeedbackApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
     }
-    
+
     void expectUnavailable(MockHttpServletRequestBuilder request) throws Exception {
         mvc.perform(request)
                 .andExpect(status().isNotFound())
@@ -200,7 +212,7 @@ class FeedbackApiIntegrationTest {
                 userId,
                 guestId);
     }
-    
+
     long message(long sessionId, String role, String type, String status) {
         return jdbc.queryForObject(
                 "INSERT INTO chat_messages(session_id,sequence_no,role,message_type,status,content)"
