@@ -7,8 +7,8 @@ import java.util.List;
 public interface FaqSearchService {
 
     /**
-     * 임계값 판정은 검색 쪽에서 처리함 — 최고 유사도가 임계값 미만이면 빈 리스트를 반환
-     * 호출하는 쪽은 결과가 비었는지만 보면 되고, score로 직접 재판정할 필요 없음
+     * 각 검색 결과에 임계값을 적용하며, 임계값 이상인 결과만 반환한다.
+     * 호출하는 쪽은 score로 직접 재판정할 필요가 없다.
      */
     List<FaqSearchResponse> search(FaqSearchRequest request);
 }

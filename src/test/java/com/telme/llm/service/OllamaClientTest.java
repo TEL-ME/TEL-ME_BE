@@ -42,7 +42,7 @@ class OllamaClientTest {
         server = MockRestServiceServer.bindTo(builder).build();
 
         OllamaRequestConverter converter = new OllamaRequestConverter(
-                new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60)));
+                new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
         ollamaClient = new OllamaClient(builder.build(), converter, new ObjectMapper());
     }
 
@@ -149,6 +149,24 @@ class OllamaClientTest {
 
         assertThat(handler.error).isNotNull();
         assertThat(handler.completeCount).isZero();
+    }
+
+    @Test
+    @DisplayName("토큰 없이 끝나면 INVALID_RESPONSE로 onError를 부른다")
+    void 토큰_없이_끝나면_onError만_호출한다() {
+        server.expect(requestTo(CHAT_URL))
+                .andRespond(withSuccess("""
+                        {"message":{"content":""},"done":true}
+                        """, NDJSON));
+        RecordingHandler handler = new RecordingHandler();
+
+        ollamaClient.stream(request(), handler);
+
+        assertThat(handler.completeCount).isZero();
+        assertThat(handler.error)
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
+                        .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
     }
 
     @Test
