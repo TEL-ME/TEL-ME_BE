@@ -26,18 +26,19 @@ class MessageSourceWriter {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void write(Long answerMessageId, List<AnswerSource> sources) {
         // 같은 답변으로 다시 호출돼도 근거가 쌓이지 않도록 먼저 지운다
-        messageSourceRepository.deleteByMessage_MessageId(answerMessageId);
+        messageSourceRepository.deleteByMessageId(answerMessageId);
         messageSourceRepository.saveAll(sources.stream()
                 .map(source -> toEntity(answerMessageId, source))
                 .toList());
     }
 
-    // title_snapshot 컬럼 길이를 넘기면 근거 전체가 저장되지 않아 여기서도 막는다
+    // title_snapshot 컬럼 길이를 넘기면 근거 전체가 저장되지 않아 AnswerContextConverter에 이어 여기서도 막는다.
+    // varchar 길이는 코드포인트 기준이라 length()가 아니라 codePointCount로 판단한다
     private String truncateTitle(String title) {
-        if (title == null || title.length() <= TITLE_MAX_LENGTH) {
+        if (title == null || title.codePointCount(0, title.length()) <= TITLE_MAX_LENGTH) {
             return title;
         }
-        return title.substring(0, title.offsetByCodePoints(0, title.codePointCount(0, TITLE_MAX_LENGTH)));
+        return title.substring(0, title.offsetByCodePoints(0, TITLE_MAX_LENGTH));
     }
 
     private MessageSource toEntity(Long answerMessageId, AnswerSource source) {

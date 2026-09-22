@@ -43,6 +43,14 @@ class MessageSourceRecorderTest {
     }
 
     @Test
+    @DisplayName("근거 목록이 null이어도 예외를 내보내지 않는다")
+    void 근거가_null이어도_안전하다() {
+        assertThatCode(() -> recorder.record(10L, null)).doesNotThrowAnyException();
+
+        assertThat(writer.calls).isEmpty();
+    }
+
+    @Test
     @DisplayName("저장이 실패해도 예외를 밖으로 내보내지 않는다")
     void 저장_실패를_삼킨다() {
         writer.failure = new IllegalStateException("저장 실패");

@@ -16,7 +16,7 @@ public class MessageSourceRecorder {
 
     // 트랜잭션 커밋은 writer 호출이 끝날 때 일어나므로 여기서 감싸야 실패를 붙잡을 수 있다
     public void record(Long answerMessageId, List<AnswerSource> sources) {
-        if (answerMessageId == null || sources.isEmpty()) {
+        if (answerMessageId == null || sources == null || sources.isEmpty()) {
             return;
         }
 
