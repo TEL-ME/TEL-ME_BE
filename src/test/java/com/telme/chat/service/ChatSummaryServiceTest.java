@@ -94,6 +94,45 @@ class ChatSummaryServiceTest {
     }
 
     @Test
+    void normalizesLlmOutputBeforeSaving() {
+        when(store.prepare(request)).thenReturn(Optional.of(snapshot));
+        when(llmClient.generate(any())).thenReturn("""
+                <previous_summary>
+                - **고객 요구**: 가족 결합 할인 확인
+                - [미해결 질문](https://example.com): 할인 금액 확인 필요
+                </previous_summary>
+                """);
+        when(store.saveIfCurrent(
+                snapshot,
+                "고객 요구: 가족 결합 할인 확인 미해결 질문: 할인 금액 확인 필요"
+        )).thenReturn(true);
+
+        assertThat(service.summarizeIfNeeded(request)).isTrue();
+
+        verify(store).saveIfCurrent(
+                snapshot,
+                "고객 요구: 가족 결합 할인 확인 미해결 질문: 할인 금액 확인 필요"
+        );
+    }
+
+    @Test
+    void rejectsResponseContainingOnlyFormattingWithoutMovingCursor() {
+        when(store.prepare(request)).thenReturn(Optional.of(snapshot));
+        when(llmClient.generate(any())).thenReturn("""
+                <summary>
+                ```text
+                ```
+                </summary>
+                """);
+
+        assertThatThrownBy(() -> service.summarizeIfNeeded(request))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(exception -> assertThat(((GeneralException) exception).getErrorCode())
+                        .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
+        verify(store, never()).saveIfCurrent(any(), any());
+    }
+
+    @Test
     void doesNotOverwriteNewerSummary() {
         when(store.prepare(request)).thenReturn(Optional.of(snapshot));
         when(llmClient.generate(any())).thenReturn("늦게 끝난 요약");

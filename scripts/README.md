@@ -203,6 +203,14 @@ Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`�
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
 | `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
 | `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 실제 쿼리와 유사도가 임계값을 넘을 가능성이 낮다(실측으로는 항상 빈 배열이었으나, 가짜 벡터라는 사실 자체가 그걸 보장하지는 않는다) — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
+| `data/faq_slots_1150.json` | `generate_faq.py --out`로 생성한 1,150건 조합표(문장 없음). `slot_id`로 끝까지 추적 |
+| `data/faq_full_300.json` | 1차 300건(카테고리 10종 × 30건). 조합표에서 (질문유형 × 페르소나) 15조합마다 2건씩, 정책 항목이 고르게 섞이도록 고른 부분집합. `faq_sample_30.json` 30건의 `question`·`answer`를 문자 그대로 포함(`content_hash` 동일). 단 `slot_id`·`trigger`는 1,150건 조합표 기준이라 샘플 표의 `S01` 번호·사유와는 다르다 |
+| `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일하고(`content_hash` 불변) 뒤 850건이 나머지 슬롯. 모든 항목이 `slot_id`·`trigger`를 갖고 있어 `faq_slots_1150.json`의 어느 칸에서 나왔는지 역추적된다. 분포는 `generate_faq.py --summary`와 정확히 일치 |
+
+`faq_full_300.json`을 남겨두는 이유: 적재를 300건 → 1,150건 두 번에 나눠서 건수 증가에 따른 Recall 변화를 재기 위해서다.
+1차 300건은 2차에서 한 글자도 고치지 않았다(고치면 `content_hash`가 바뀌어 `eval_questions_30.json`의 정답 매핑이 끊긴다).
+
+두 파일 모두 `check_policy.py`, `check_duplicates.py`(question / `--field both`, 임계값 0.95)를 전체 건 기준으로 통과했다.
 
 `slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
 `faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.

@@ -26,6 +26,7 @@ public class ChatSummaryService {
     }
 
     private boolean generateAndSave(ChatSummarySnapshot snapshot) {
+        // TODO: 내용 검증이 필요해지면 고객 조건, 안내 내용, 미해결 질문을 구조화된 응답으로 강제한다.
         LlmRequest request = LlmRequest.builder()
                 .executionId(snapshot.executionId())
                 .taskType(TaskType.SUMMARY)
@@ -35,12 +36,12 @@ public class ChatSummaryService {
                 .maxTokens(properties.maxOutputTokens())
                 .build();
 
-        String generated = llmClient.generate(request);
-        if (generated == null || generated.isBlank()) {
+        String summary = ChatSummaryNormalizer.normalize(llmClient.generate(request));
+        if (summary == null) {
             throw new GeneralException(LlmErrorCode.INVALID_RESPONSE);
         }
 
-        boolean saved = chatSummaryStore.saveIfCurrent(snapshot, generated.trim());
+        boolean saved = chatSummaryStore.saveIfCurrent(snapshot, summary);
         if (!saved) {
             log.info("더 최신 상담 요약이 있어 생성 결과를 저장하지 않음: sessionId={}, expectedSequenceNo={}",
                     snapshot.sessionId(), snapshot.expectedSequenceNo());
