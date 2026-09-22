@@ -178,7 +178,8 @@ Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`�
 - 긍정 질문(`SIMILAR`/`VARIANT`)이 하나도 없으면 recall/mrr은 측정하지 않은 것으로 처리한다 —
   `--experiment`와 같이 쓰면 가짜 `0.000` 행 대신 에러로 중단한다.
 - threshold=0으로 돌리면 "정답 hit score(최소/중앙값)"와 "UNRELATED top-1 score(최댓값)"도 같이
-  찍는다. 임계값을 몇으로 잡을지 캘리브레이션할 때 이 두 숫자 사이 어딘가가 후보가 된다.
+  찍는다. 정답 hit score 최소값이 UNRELATED top-1 최댓값보다 높으면 그 사이가 임계값 후보고,
+  두 분포가 겹치면(반대가 되면) 깔끔하게 나누는 값 자체가 없다는 뜻이라 그것대로 유용한 진단이다.
 - 정답을 못 찾은 질문은 `eval_id`로 나열된다. 그중에서도 같은 정답 FAQ를 공유하는 `SIMILAR`/
   `VARIANT`가 **둘 다** 한 번도 안 나온 경우만 따로 "적재 누락 의심"으로 표시한다 — 한쪽만 못
   찾았으면 그 FAQ는 실제로 있는 거라(다른 쪽이 찾았으니) 검색 품질 문제고, 둘 다 못 찾았으면
@@ -201,7 +202,7 @@ Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`�
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
 | `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
-| `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 검색 결과가 항상 빈 배열로 온다 — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
+| `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 실제 쿼리와 유사도가 임계값을 넘을 가능성이 낮다(실측으로는 항상 빈 배열이었으나, 가짜 벡터라는 사실 자체가 그걸 보장하지는 않는다) — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
 
 `slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
 `faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.
