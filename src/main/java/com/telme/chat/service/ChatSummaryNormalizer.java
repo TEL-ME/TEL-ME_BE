@@ -26,6 +26,7 @@ final class ChatSummaryNormalizer {
     private static final Pattern HEADING = Pattern.compile("^#{1,6}\\s+");
     private static final Pattern LIST_MARKER = Pattern.compile("^(?:[-*+]\\s+|\\d+[.)]\\s+|>\\s*)");
     private static final Pattern MARKDOWN_LINK = Pattern.compile("\\[([^]\\r\\n]+)]\\([^)]*\\)");
+    private static final Pattern MEANINGFUL_TEXT = Pattern.compile("[\\p{L}\\p{N}]");
 
     private ChatSummaryNormalizer() {
     }
@@ -51,7 +52,7 @@ final class ChatSummaryNormalizer {
                 .replaceAll("\\s+", " ")
                 .trim();
 
-        return normalized.isEmpty() ? null : normalized;
+        return MEANINGFUL_TEXT.matcher(normalized).find() ? normalized : null;
     }
 
     private static String extractSummaryBlock(String value) {

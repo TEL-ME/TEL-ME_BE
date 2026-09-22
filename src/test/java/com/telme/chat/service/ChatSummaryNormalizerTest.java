@@ -66,6 +66,9 @@ class ChatSummaryNormalizerTest {
         assertThat(ChatSummaryNormalizer.normalize(null)).isNull();
         assertThat(ChatSummaryNormalizer.normalize("   ")).isNull();
         assertThat(ChatSummaryNormalizer.normalize("<summary>```</summary>")).isNull();
+        assertThat(ChatSummaryNormalizer.normalize("---")).isNull();
+        assertThat(ChatSummaryNormalizer.normalize("***")).isNull();
+        assertThat(ChatSummaryNormalizer.normalize("___")).isNull();
     }
 
     @Test
