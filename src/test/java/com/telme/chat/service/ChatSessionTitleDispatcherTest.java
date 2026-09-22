@@ -11,21 +11,22 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
-class ChatSummaryDispatcherTest {
+class ChatSessionTitleDispatcherTest {
 
     @Test
-    void dispatchesSummaryOutsideCallerThread() {
-        ChatSummaryService service = mock(ChatSummaryService.class);
+    void dispatchesTitleGenerationOutsideCallerThread() {
+        ChatSessionTitleService service = mock(ChatSessionTitleService.class);
+        ChatSessionTitleRequested request = new ChatSessionTitleRequested(1L, 2L, "요금제 알려줘");
         AtomicReference<String> threadName = new AtomicReference<>();
         doAnswer(invocation -> {
             threadName.set(Thread.currentThread().getName());
             return true;
-        }).when(service).summarizeIfNeeded(new ChatSummaryRequested(1L, 2L, 3));
+        }).when(service).generateIfMissing(request);
         ChatBackgroundTaskExecutor executor = new ChatBackgroundTaskExecutor();
-        ChatSummaryDispatcher dispatcher = new ChatSummaryDispatcher(service, executor);
+        ChatSessionTitleDispatcher dispatcher = new ChatSessionTitleDispatcher(service, executor);
 
         try {
-            dispatcher.dispatch(new ChatSummaryRequested(1L, 2L, 3));
+            dispatcher.dispatch(request);
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
                     assertThat(threadName.get()).startsWith(ChatBackgroundTaskExecutor.THREAD_NAME_PREFIX));
@@ -35,19 +36,19 @@ class ChatSummaryDispatcherTest {
     }
 
     @Test
-    void isolatesSummaryFailureFromCaller() {
-        ChatSummaryService service = mock(ChatSummaryService.class);
-        ChatSummaryRequested request = new ChatSummaryRequested(1L, 2L, 3);
-        doThrow(new IllegalStateException("summary failed"))
-                .when(service).summarizeIfNeeded(request);
+    void isolatesTitleGenerationFailureFromCaller() {
+        ChatSessionTitleService service = mock(ChatSessionTitleService.class);
+        ChatSessionTitleRequested request = new ChatSessionTitleRequested(1L, 2L, "요금제 알려줘");
+        doThrow(new IllegalStateException("title failed"))
+                .when(service).generateIfMissing(request);
         ChatBackgroundTaskExecutor executor = new ChatBackgroundTaskExecutor();
-        ChatSummaryDispatcher dispatcher = new ChatSummaryDispatcher(service, executor);
+        ChatSessionTitleDispatcher dispatcher = new ChatSessionTitleDispatcher(service, executor);
 
         try {
             dispatcher.dispatch(request);
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
-                    verify(service).summarizeIfNeeded(request));
+                    verify(service).generateIfMissing(request));
         } finally {
             executor.shutdown();
         }
