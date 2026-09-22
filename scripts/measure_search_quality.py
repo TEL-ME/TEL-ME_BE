@@ -9,6 +9,7 @@ import json
 import math
 import re
 import socket
+import statistics
 import sys
 import urllib.error
 import urllib.parse
@@ -31,6 +32,9 @@ class SearchOutcome:
     question_type: str
     returned_rank: int | None
     has_results: bool
+    eval_id: str | None = None
+    # 긍정 질문은 매칭된 결과의 score, UNRELATED는 top-1 score(임계값 진단용)
+    score: float | None = None
 
 
 def compute_metrics(
@@ -185,11 +189,15 @@ def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> 
     outcomes = []
     for item in eval_items:
         results = search(item["question"], top_k, api_url, timeout)
+        eval_id = item.get("eval_id")
         if item["type"] == "UNRELATED":
-            outcomes.append(SearchOutcome("UNRELATED", None, bool(results)))
+            scores = [r["score"] for r in results if isinstance(r.get("score"), (int, float))]
+            top_score = max(scores) if scores else None
+            outcomes.append(SearchOutcome("UNRELATED", None, bool(results), eval_id, top_score))
             continue
         expected_hash = item["expected_content_hash"]
         rank = None
+        score = None
         for result in results:
             if content_hash(result) != expected_hash:
                 continue
@@ -198,9 +206,31 @@ def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> 
             # "정답 못 찾음"으로 조용히 넘기지 않고 바로 중단한다
             if not isinstance(rank, int) or not 1 <= rank <= top_k:
                 raise SystemExit(f"검색 API 응답의 searchRank가 잘못됨(topK={top_k}): {result}")
+            score = result.get("score")
             break
-        outcomes.append(SearchOutcome(item["type"], rank, bool(results)))
+        outcomes.append(SearchOutcome(item["type"], rank, bool(results), eval_id, score))
     return outcomes
+
+
+def find_missed(eval_items: list[dict], outcomes: list[SearchOutcome]) -> tuple[list, list]:
+    """(개별 miss한 eval_id 목록, 같은 정답 해시를 공유하는 질문이 전부 못 찾아 적재 누락이 의심되는 eval_id 목록)."""
+    missed = [o.eval_id for o in outcomes if o.question_type != "UNRELATED" and o.returned_rank is None]
+
+    hash_to_eval_ids: dict[str, list] = {}
+    hash_found: dict[str, bool] = {}
+    for item, outcome in zip(eval_items, outcomes):
+        if item["type"] == "UNRELATED":
+            continue
+        h = item["expected_content_hash"]
+        hash_to_eval_ids.setdefault(h, []).append(item.get("eval_id"))
+        hash_found[h] = hash_found.get(h, False) or outcome.returned_rank is not None
+
+    never_found = [
+        eval_id
+        for h, eval_ids in hash_to_eval_ids.items() if not hash_found[h]
+        for eval_id in eval_ids
+    ]
+    return missed, never_found
 
 
 # 튜닝 실험 규칙 문서의 표(실험 | 변경 내용 | Recall@1 | Recall@3 | MRR | 담당)에 그대로 붙여넣을 수 있는 한 줄
@@ -249,11 +279,21 @@ def main() -> int:
     for key, value in metrics.items():
         print(f"  {key}: {value:.3f}")
 
-    positives = sum(1 for o in outcomes if o.question_type != "UNRELATED")
-    loosest_recall = metrics.get(f"recall@{max(k_values)}") if k_values else None
-    if positives and loosest_recall == 0.0:
-        print("\n  경고: 정답을 하나도 못 찾았습니다. 검색 품질 문제가 아니라 "
-              "평가셋의 정답 FAQ가 DB에 아직 적재되지 않았을 수 있습니다 — 먼저 확인하세요.")
+    # 임계값 캘리브레이션 진단 — SEARCH_SIMILARITY_THRESHOLD=0으로 돌렸을 때만 의미 있다
+    hit_scores = [o.score for o in outcomes
+                  if o.question_type != "UNRELATED" and o.returned_rank is not None and o.score is not None]
+    unrelated_top_scores = [o.score for o in outcomes if o.question_type == "UNRELATED" and o.score is not None]
+    if hit_scores:
+        print(f"\n  정답 hit score — 최소 {min(hit_scores):.4f}, 중앙값 {statistics.median(hit_scores):.4f}")
+    if unrelated_top_scores:
+        print(f"  UNRELATED top-1 score — 최댓값 {max(unrelated_top_scores):.4f}")
+
+    missed, never_found = find_missed(eval_items, outcomes)
+    if missed:
+        print(f"\n  정답 못 찾은 질문(eval_id): {missed}")
+    if never_found:
+        print(f"  경고: 다음 정답 FAQ는 어느 질문에서도 한 번도 안 나왔습니다(적재 누락 의심) — "
+              f"eval_id: {never_found}")
 
     if args.experiment:
         print()
