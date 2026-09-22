@@ -99,7 +99,9 @@ class ChatProcessingDispatchIntegrationTest {
 
         verify(chatProcessingPort, timeout(5_000)).request(
                 new ChatProcessingCommand(sent.executionId(), sessionId, sent.messageId(), "요금제 알려줘"));
-        assertThat(threadName.get()).startsWith(ChatProcessingDispatcher.THREAD_NAME_PREFIX);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertThat(threadName.get())
+                        .startsWith(ChatProcessingDispatcher.THREAD_NAME_PREFIX));
     }
 
     @Test

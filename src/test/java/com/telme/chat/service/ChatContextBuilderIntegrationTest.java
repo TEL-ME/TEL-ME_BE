@@ -275,6 +275,49 @@ class ChatContextBuilderIntegrationTest {
                 .hasMessage("현재 질문이 Context 토큰 예산을 초과합니다.");
     }
 
+    @Test
+    void excludesMessagesAlreadyIncludedInSummary() {
+        User user = User.builder()
+                .email("summarized-" + UUID.randomUUID() + "@example.com")
+                .name("context")
+                .build();
+        entityManager.persist(user);
+        ChatSession session = ChatSession.builder()
+                .userId(user.getUserId())
+                .summary("첫 번째 질문과 답변은 이미 요약됨")
+                .summaryThroughSequenceNo(2)
+                .build();
+        entityManager.persist(session);
+        entityManager.flush();
+
+        ChatMessage summarizedQuestion = message(
+                session, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "이미 요약된 질문", null);
+        message(
+                session, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "이미 요약된 답변", null, summarizedQuestion);
+        ChatMessage recentQuestion = message(
+                session, 3, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "최근 질문", null);
+        ChatMessage recentAnswer = message(
+                session, 4, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "최근 답변", null, recentQuestion);
+        ChatMessage current = message(
+                session, 5, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "현재 질문", null);
+        ChatExecution execution = execution(session, current, ChatExecution.Status.RUNNING);
+        entityManager.clear();
+
+        ChatContext context = chatContextBuilder.build(new ChatProcessingCommand(
+                execution.getExecutionId(), session.getSessionId(), current.getMessageId(), current.getContent()),
+                4_096);
+
+        assertThat(context.summary()).isEqualTo("첫 번째 질문과 답변은 이미 요약됨");
+        assertThat(context.history())
+                .extracting(ChatContextMessage::messageId)
+                .containsExactly(recentQuestion.getMessageId(), recentAnswer.getMessageId());
+    }
+
     private ChatSession createSession(String summary) {
         User user = User.builder()
                 .email("context-" + UUID.randomUUID() + "@example.com")
