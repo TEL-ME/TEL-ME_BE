@@ -19,6 +19,9 @@ public class AnswerGuard {
 
     // 모델이 답변 불가 문구 뒤에 설명을 덧붙이는 경우가 있음
     public String trimAfterNoEvidence(String answer) {
+        if (answer == null) {
+            return "";
+        }
         int found = answer.indexOf(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         if (found < 0) {
             return answer;

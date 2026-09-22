@@ -35,6 +35,12 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("답변이 null이면 빈 문자열로 둔다")
+    void 답변이_null이면_빈_문자열() {
+        assertThat(guard.trimAfterNoEvidence(null)).isEmpty();
+    }
+
+    @Test
     @DisplayName("답변 불가 문구가 없으면 그대로 둔다")
     void 일반_답변은_그대로_둔다() {
         String answer = "요금제는 한 달에 1회만 변경 가능합니다.";
