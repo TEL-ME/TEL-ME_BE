@@ -22,6 +22,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
     private final LlmClient llmClient;
     private final AnswerContextConverter contextConverter;
+    private final AnswerGuard answerGuard;
     private final LlmGenerationRecorder recorder;
 
     @Override
@@ -49,7 +50,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
-        String answer = collector.answer();
+        String answer = answerGuard.trimAfterNoEvidence(collector.answer());
+        answerGuard.verifyAmounts(answer, context);
 
         return AnswerResult.builder()
                 .answer(answer)

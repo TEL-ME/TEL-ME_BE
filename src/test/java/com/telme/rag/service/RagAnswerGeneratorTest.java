@@ -181,7 +181,7 @@ class RagAnswerGeneratorTest {
     }
 
     private RagAnswerGenerator generator(LlmClient client) {
-        return new RagAnswerGenerator(client, new AnswerContextConverter(), recorder);
+        return new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(), recorder);
     }
 
     private AnswerRequest request(List<FaqSearchResponse> searchResults) {
