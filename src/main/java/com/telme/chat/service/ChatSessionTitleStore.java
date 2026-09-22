@@ -11,6 +11,11 @@ class ChatSessionTitleStore {
 
     private final ChatSessionRepository chatSessionRepository;
 
+    @Transactional(readOnly = true)
+    public boolean hasTitle(Long sessionId) {
+        return chatSessionRepository.hasTitle(sessionId);
+    }
+
     @Transactional
     public boolean saveIfMissing(Long sessionId, String title) {
         return chatSessionRepository.updateTitleIfMissing(sessionId, title) == 1;

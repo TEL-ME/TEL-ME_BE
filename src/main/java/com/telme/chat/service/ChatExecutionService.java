@@ -158,8 +158,7 @@ public class ChatExecutionService {
     private void requestSessionTitle(ChatExecution execution) {
         ChatSession session = execution.getSession();
         ChatMessage inputMessage = execution.getInputMessage();
-        if ((session.getTitle() != null && !session.getTitle().isBlank())
-                || inputMessage.getSequenceNo() != 1) {
+        if (session.getTitle() != null && !session.getTitle().isBlank()) {
             return;
         }
         eventPublisher.publishEvent(new ChatSessionTitleRequested(

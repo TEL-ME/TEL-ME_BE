@@ -105,7 +105,7 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
-    void requestsTitleOnlyAfterFirstUntitledSessionExecutionCompletes() {
+    void requestsTitleForSuccessfulUntitledSessionExecutionsUntilTitleIsStored() {
         sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest(null)).sessionId();
         ChatMessageSendResponse firstQuestion = send("가족 결합 요금제를 알려줘");
 
@@ -117,8 +117,27 @@ class ChatExecutionServiceIntegrationTest {
                 ChatMessage.MessageType.ANSWER, "할인 금액도 안내해 드릴게요.", null, null, null));
 
         assertThat(applicationEvents.stream(ChatSessionTitleRequested.class))
+                .containsExactly(
+                        new ChatSessionTitleRequested(
+                                firstQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"),
+                        new ChatSessionTitleRequested(
+                                secondQuestion.executionId(), sessionId, "할인 금액도 알려줘"));
+    }
+
+    @Test
+    void requestsTitleFromNextSuccessfulExecutionWhenFirstExecutionFails() {
+        sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest(null)).sessionId();
+        ChatMessageSendResponse failedQuestion = send("요금제를 알려줘");
+        chatExecutionService.fail(
+                failedQuestion.executionId(), new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
+
+        ChatMessageSendResponse successfulQuestion = send("가족 결합 요금제를 알려줘");
+        chatExecutionService.completeAnswer(successfulQuestion.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "가족 결합 상품을 안내해 드릴게요.", null, null, null));
+
+        assertThat(applicationEvents.stream(ChatSessionTitleRequested.class))
                 .containsExactly(new ChatSessionTitleRequested(
-                        firstQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"));
+                        successfulQuestion.executionId(), sessionId, "가족 결합 요금제를 알려줘"));
     }
 
     @Test

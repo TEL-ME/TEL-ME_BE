@@ -20,6 +20,10 @@ class ChatSessionTitleService {
     private final ChatSessionTitleProperties properties;
 
     public boolean generateIfMissing(ChatSessionTitleRequested requested) {
+        if (titleStore.hasTitle(requested.sessionId())) {
+            return false;
+        }
+
         LlmRequest request = LlmRequest.builder()
                 .executionId(requested.executionId())
                 .taskType(TaskType.SESSION_TITLE)

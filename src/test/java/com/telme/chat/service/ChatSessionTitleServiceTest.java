@@ -78,6 +78,16 @@ class ChatSessionTitleServiceTest {
     }
 
     @Test
+    void skipsLlmWhenSessionAlreadyHasTitle() {
+        when(titleStore.hasTitle(20L)).thenReturn(true);
+
+        assertThat(service.generateIfMissing(requested)).isFalse();
+
+        verify(llmClient, never()).generate(any());
+        verify(titleStore, never()).saveIfMissing(any(), any());
+    }
+
+    @Test
     void keepsTitleAssignedWhileLlmWasRunning() {
         when(llmClient.generate(any())).thenReturn("요금제 상담");
         when(titleStore.saveIfMissing(20L, "요금제 상담")).thenReturn(false);

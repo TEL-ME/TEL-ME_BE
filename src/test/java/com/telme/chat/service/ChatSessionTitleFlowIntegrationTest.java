@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,19 @@ class ChatSessionTitleFlowIntegrationTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    private Long userId;
+    private Long sessionId;
+
+    @AfterEach
+    void cleanUp() {
+        if (sessionId != null) {
+            jdbcTemplate.update("delete from chat_sessions where session_id = ?", sessionId);
+        }
+        if (userId != null) {
+            jdbcTemplate.update("delete from users where user_id = ?", userId);
+        }
+    }
 
     @Test
     void generatesTitleAfterFirstExecutionCommits() {
@@ -78,6 +92,8 @@ class ChatSessionTitleFlowIntegrationTest {
                 .build();
         entityManager.persist(execution);
         entityManager.flush();
+        userId = user.getUserId();
+        sessionId = session.getSessionId();
         return new TestExecution(session.getSessionId(), execution.getExecutionId());
     }
 

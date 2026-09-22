@@ -27,6 +27,10 @@ class ChatSessionTitleStoreIntegrationTest {
         ChatSession blankTitled = createSession(" ");
         ChatSession manuallyTitled = createSession("직접 지정한 제목");
 
+        assertThat(titleStore.hasTitle(untitled.getSessionId())).isFalse();
+        assertThat(titleStore.hasTitle(blankTitled.getSessionId())).isFalse();
+        assertThat(titleStore.hasTitle(manuallyTitled.getSessionId())).isTrue();
+
         assertThat(titleStore.saveIfMissing(untitled.getSessionId(), "자동 생성 제목")).isTrue();
         assertThat(titleStore.saveIfMissing(blankTitled.getSessionId(), "빈 제목 대체")).isTrue();
         assertThat(titleStore.saveIfMissing(manuallyTitled.getSessionId(), "덮어쓸 제목")).isFalse();
