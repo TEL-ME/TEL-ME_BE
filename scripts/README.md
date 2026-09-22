@@ -8,6 +8,7 @@
 | `check_policy.py` | 답변 수치를 참조 정책 항목의 값과 대조 |
 | `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 |
 | `check_eval_questions.py` | 검색 품질 평가셋(`eval_questions_30.json`)의 정답 매핑·유사도 검증 |
+| `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k/MRR 계산 |
 | `telme_docs.py` | 공통 문서 파서 (직접 실행하면 파싱 결과 요약) |
 
 ## 준비
@@ -173,10 +174,46 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
 - 같은 파일을 다시 돌려도 안전하다(신규 적재 0건). 중간에 실패해도 재실행하면 이어서 적재된다
 - 적재는 한 번에 한 프로세스만 돌린다. 이미 있는 건을 거르는 기준이 적재 직전에 읽은 `content_hash` 목록이라, 두 프로세스가 같이 돌면 서로가 넣는 중인 건을 못 보고 같은 FAQ를 두 번 넣는다
 - `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 무시된다
+
+## 6. 검색 품질 측정
+
+```bash
+python3 scripts/measure_search_quality.py scripts/data/eval_smoke.json
+python3 scripts/measure_search_quality.py scripts/data/eval_questions_30.json --experiment 기준선
+python3 scripts/measure_search_quality.py --self-test
+```
+
+`check_eval_questions.py`가 검증한 평가셋을 실제 검색 API(`/api/v1/faq/search`, TELME-38)에 돌려
+Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`에서 그대로 import해서 쓴다.
+
+**순위 실험(Recall@k·MRR)은 서버를 `SEARCH_SIMILARITY_THRESHOLD=0`으로 띄우고 돌린다.**
+`PgvectorFaqSearchService`가 임계값 미만 후보를 순위를 매기기 전에 잘라내므로, 임계값을 켠 채로
+재면 "랭킹 품질"이 아니라 "임계값 통과 후 랭킹 품질"이 섞여서 측정된다. 임계값 자체를 정하는 건
+별도 단계(2주차 캘리브레이션)에서 한다.
+
+- `--top-k`(기본 3), `--api-url`(기본 `http://localhost:8080/api/v1/faq/search`),
+  `--timeout`(기본 20초 — 서버의 `embedding.search-read-timeout`(15초)보다 길어야 함)
+- `--experiment`를 주면 튜닝 실험 기록표에 붙여넣을 수 있는 한 줄
+  (`| 실험 | 변경 | Recall@1 | Recall@3 | MRR | 담당 |`)도 같이 출력. `--change`/`--owner`(기본 A)로
+  나머지 칸을 채운다.
+- 긍정 질문(`SIMILAR`/`VARIANT`)이 하나도 없으면 recall/mrr은 측정하지 않은 것으로 처리한다 —
+  `--experiment`와 같이 쓰면 가짜 `0.000` 행 대신 에러로 중단한다.
+- threshold=0으로 돌리면 "정답 hit score(최소/중앙값)"와 "UNRELATED top-1 score(최댓값)"도 같이
+  찍는다. 정답 hit score 최소값이 UNRELATED top-1 최댓값보다 높으면 그 사이가 임계값 후보고,
+  두 분포가 겹치면(반대가 되면) 깔끔하게 나누는 값 자체가 없다는 뜻이라 그것대로 유용한 진단이다.
+- 정답을 못 찾은 질문은 `eval_id`로 나열된다. 그중 같은 정답 FAQ를 공유하는 `SIMILAR`/`VARIANT`가
+  **둘 다** 한 번도 안 나온 경우는 따로 표시한다.
+- 그 FAQ가 적재 자체가 안 됐거나, 적재는 됐는데 임베딩·텍스트 구성 문제로 top-k에 못 든 것이다.
+  둘 중 어느 쪽인지는 `content_hash`로 `faqs`를 조회해서 먼저 가린다 — 후보가 많아질수록(예:
+  1,150건) 적재된 FAQ도 두 질문이 나란히 top-k 밖으로 밀리는 경우가 드물지 않아, "둘 다 못 찾음"을
+  곧장 "DB에 없음"으로 해석하면 오탐이 된다.
+- `--self-test`: 손으로 계산한 기대값으로 Recall@k/MRR 계산 로직 자체를 검증한다
+  (경계값, 무관 질문 제외, 긍정 질문 0건 등 7건).
+
 ## 자기 검증
 
-세 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
-`check_eval_questions.py`는 10건).
+네 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
+`check_eval_questions.py`는 10건, `measure_search_quality.py`는 7건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 
@@ -188,6 +225,7 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
 | --- | --- |
 | `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
 | `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
+| `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 실제 쿼리와 유사도가 임계값을 넘을 가능성이 낮다(실측으로는 항상 빈 배열이었으나, 가짜 벡터라는 사실 자체가 그걸 보장하지는 않는다) — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
 | `data/faq_slots_1150.json` | `generate_faq.py --out`로 생성한 1,150건 조합표(문장 없음). `slot_id`로 끝까지 추적 |
 | `data/faq_full_300.json` | 1차 300건(카테고리 10종 × 30건). 조합표에서 (질문유형 × 페르소나) 15조합마다 2건씩, 정책 항목이 고르게 섞이도록 고른 부분집합. `faq_sample_30.json` 30건의 `question`·`answer`를 문자 그대로 포함(`content_hash` 동일). 단 `slot_id`·`trigger`는 1,150건 조합표 기준이라 샘플 표의 `S01` 번호·사유와는 다르다 |
 | `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일하고(`content_hash` 불변) 뒤 850건이 나머지 슬롯. 모든 항목이 `slot_id`·`trigger`를 갖고 있어 `faq_slots_1150.json`의 어느 칸에서 나왔는지 역추적된다. 분포는 `generate_faq.py --summary`와 정확히 일치 |
