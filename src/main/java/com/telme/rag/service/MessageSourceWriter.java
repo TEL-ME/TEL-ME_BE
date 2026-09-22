@@ -8,7 +8,6 @@ import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
@@ -21,8 +20,7 @@ class MessageSourceWriter {
     private final MessageSourceRepository messageSourceRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    // 답변 메시지는 호출 전에 이미 커밋되므로 저장 실패를 호출한 쪽과 분리한다
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void write(Long answerMessageId, List<AnswerSource> sources) {
         messageSourceRepository.deleteByMessageId(answerMessageId);
         messageSourceRepository.saveAll(sources.stream()

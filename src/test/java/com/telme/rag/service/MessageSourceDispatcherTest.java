@@ -10,16 +10,19 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.task.TaskRejectedException;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-class MessageSourceRecorderTest {
+class MessageSourceDispatcherTest {
 
     private final RecordingWriter writer = new RecordingWriter();
-    private final MessageSourceRecorder recorder = new MessageSourceRecorder(writer);
+    private final MessageSourceDispatcher dispatcher =
+            new MessageSourceDispatcher(writer, sameThreadExecutor());
 
     @Test
     @DisplayName("근거 목록을 그대로 저장에 넘긴다")
     void 근거를_저장에_넘긴다() {
-        recorder.record(10L, List.of(source(1L), source(2L)));
+        dispatcher.dispatch(new AnswerSourcesReady(10L, List.of(source(1L), source(2L))));
 
         assertThat(writer.calls).hasSize(1);
         assertThat(writer.calls.getFirst().messageId()).isEqualTo(10L);
@@ -29,15 +32,7 @@ class MessageSourceRecorderTest {
     @Test
     @DisplayName("근거가 없으면 저장하지 않는다")
     void 근거가_없으면_저장하지_않는다() {
-        recorder.record(10L, List.of());
-
-        assertThat(writer.calls).isEmpty();
-    }
-
-    @Test
-    @DisplayName("답변 메시지가 없으면 저장하지 않는다")
-    void messageId가_없으면_저장하지_않는다() {
-        recorder.record(null, List.of(source(1L)));
+        dispatcher.dispatch(new AnswerSourcesReady(10L, List.of()));
 
         assertThat(writer.calls).isEmpty();
     }
@@ -45,7 +40,8 @@ class MessageSourceRecorderTest {
     @Test
     @DisplayName("근거 목록이 null이어도 예외를 내보내지 않는다")
     void 근거가_null이어도_안전하다() {
-        assertThatCode(() -> recorder.record(10L, null)).doesNotThrowAnyException();
+        assertThatCode(() -> dispatcher.dispatch(new AnswerSourcesReady(10L, null)))
+                .doesNotThrowAnyException();
 
         assertThat(writer.calls).isEmpty();
     }
@@ -55,8 +51,38 @@ class MessageSourceRecorderTest {
     void 저장_실패를_삼킨다() {
         writer.failure = new IllegalStateException("저장 실패");
 
-        assertThatCode(() -> recorder.record(10L, List.of(source(1L))))
+        assertThatCode(() -> dispatcher.dispatch(new AnswerSourcesReady(10L, List.of(source(1L)))))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("대기열이 가득 차도 예외를 밖으로 내보내지 않는다")
+    void 대기열이_가득_차도_안전하다() {
+        MessageSourceDispatcher rejecting =
+                new MessageSourceDispatcher(writer, rejectingExecutor());
+
+        assertThatCode(() -> rejecting.dispatch(new AnswerSourcesReady(10L, List.of(source(1L)))))
+                .doesNotThrowAnyException();
+
+        assertThat(writer.calls).isEmpty();
+    }
+
+    private ThreadPoolTaskExecutor sameThreadExecutor() {
+        return new ThreadPoolTaskExecutor() {
+            @Override
+            public void execute(Runnable task) {
+                task.run();
+            }
+        };
+    }
+
+    private ThreadPoolTaskExecutor rejectingExecutor() {
+        return new ThreadPoolTaskExecutor() {
+            @Override
+            public void execute(Runnable task) {
+                throw new TaskRejectedException("대기열 가득 참");
+            }
+        };
     }
 
     private AnswerSource source(long faqId) {
