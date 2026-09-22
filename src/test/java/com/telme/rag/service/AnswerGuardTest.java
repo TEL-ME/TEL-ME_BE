@@ -24,6 +24,17 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("답변 불가 문구 앞의 답변은 남긴다")
+    void 답변_불가_앞은_남긴다() {
+        String answer = "요금제는 한 달에 1회 변경 가능합니다. 그 외 조건은 "
+                + AnswerPromptTemplates.NO_EVIDENCE_ANSWER + " 고객센터로 문의해 주세요.";
+
+        assertThat(guard.trimAfterNoEvidence(answer))
+                .isEqualTo("요금제는 한 달에 1회 변경 가능합니다. 그 외 조건은 "
+                        + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
     @DisplayName("답변 불가 문구가 없으면 그대로 둔다")
     void 일반_답변은_그대로_둔다() {
         String answer = "요금제는 한 달에 1회만 변경 가능합니다.";
@@ -37,7 +48,7 @@ class AnswerGuardTest {
         String context = "데이터 무제한은 하루 12,100원입니다.";
         String answer = "일주일이면 총 84,700원이 됩니다.";
 
-        assertThatThrownBy(() -> guard.verifyAmounts(answer, context))
+        assertThatThrownBy(() -> guard.verifyAmounts(answer, context, "로밍 얼마인가요?"))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getErrorCode())
                         .isEqualTo(LlmErrorCode.INVALID_RESPONSE));
@@ -49,7 +60,18 @@ class AnswerGuardTest {
         String context = "7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원입니다.";
         String answer = "7일 기간권 39,000원을 추천드립니다.";
 
-        assertThatCode(() -> guard.verifyAmounts(answer, context)).doesNotThrowAnyException();
+        assertThatCode(() -> guard.verifyAmounts(answer, context, "로밍 얼마인가요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("고객이 질문에 쓴 금액을 되받는 것은 통과시킨다")
+    void 질문에_있는_금액은_통과한다() {
+        String context = "요금제 변경은 월 1회 가능합니다.";
+        String answer = "말씀하신 50,000원 요금제는 월 1회 변경 가능합니다.";
+
+        assertThatCode(() -> guard.verifyAmounts(answer, context, "50,000원 요금제도 바꿀 수 있나요?"))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -58,13 +80,21 @@ class AnswerGuardTest {
         String context = "번호이동 처리는 매일 09:00부터 20:00까지 진행됩니다.";
         String answer = "매일 오전 9시부터 오후 8시까지 신청하실 수 있습니다.";
 
-        assertThatCode(() -> guard.verifyAmounts(answer, context)).doesNotThrowAnyException();
+        assertThatCode(() -> guard.verifyAmounts(answer, context, "번호이동 언제 되나요?"))
+                .doesNotThrowAnyException();
     }
 
     @Test
     @DisplayName("쉼표 표기가 달라도 같은 금액으로 본다")
     void 쉼표_표기가_달라도_통과한다() {
-        assertThatCode(() -> guard.verifyAmounts("39000원입니다.", "39,000원입니다."))
+        assertThatCode(() -> guard.verifyAmounts("39000원입니다.", "39,000원입니다.", ""))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("long 범위를 넘는 금액도 파싱 오류 없이 검사한다")
+    void 아주_큰_금액도_검사한다() {
+        assertThatThrownBy(() -> guard.verifyAmounts("12345678901234567890원입니다.", "9,900원입니다.", ""))
+                .isInstanceOf(GeneralException.class);
     }
 }

@@ -52,7 +52,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         collector.rethrowIfFailed();
 
         String answer = answerGuard.trimAfterNoEvidence(collector.answer());
-        answerGuard.verifyAmounts(answer, context);
+        answerGuard.verifyAmounts(answer, context, request.userQuery());
 
         return AnswerResult.builder()
                 .answer(answer)
@@ -63,7 +63,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
     }
 
     private AnswerBasis toAnswerBasis(String answer) {
-        return answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+        return answer.startsWith(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
                 ? AnswerBasis.NO_EVIDENCE
                 : AnswerBasis.GROUNDED;
     }
