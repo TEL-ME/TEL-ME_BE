@@ -42,6 +42,8 @@ public class GuestIdentityFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         HttpSession session = request.getSession();
 
+        // TODO: 쿠키 없는 최초 동시 요청은 세션이 갈려 guest가 중복 발급될 수 있음(뮤텍스는 같은 세션 내 경합만 방지).
+        // 완전한 해결은 클라이언트가 guestId를 선발급해 헤더로 전달하는 방식으로 전환 필요(프런트 연동 시 후속 작업).
         if (!hasIdentity(session)) {
             synchronized (WebUtils.getSessionMutex(session)) {
                 if (!hasIdentity(session)) {

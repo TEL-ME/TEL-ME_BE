@@ -128,6 +128,35 @@ class GuestIdentityFilterTest {
     }
 
     @Test
+    @DisplayName("쿠키 없는 최초 방문에서 서로 다른 세션으로 동시 요청이 오면 guest가 중복 발급된다(알려진 한계)")
+    void 서로_다른_세션의_동시_요청은_각각_발급한다() throws Exception {
+        when(guestIdentityService.issueGuest()).thenAnswer(invocation -> UUID.randomUUID());
+        MockHttpSession sessionA = session();
+        MockHttpSession sessionB = session();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        Future<?> futureA = pool.submit(() -> {
+            start.await();
+            filter.doFilter(requestWithSession("/api/v1/chat/sessions", sessionA), new MockHttpServletResponse(), mock(FilterChain.class));
+            return null;
+        });
+        Future<?> futureB = pool.submit(() -> {
+            start.await();
+            filter.doFilter(requestWithSession("/api/v1/chat/sessions", sessionB), new MockHttpServletResponse(), mock(FilterChain.class));
+            return null;
+        });
+        start.countDown();
+        futureA.get();
+        futureB.get();
+        pool.shutdown();
+
+        verify(guestIdentityService, times(2)).issueGuest();
+        assertThat(sessionA.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE))
+                .isNotEqualTo(sessionB.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE));
+    }
+
+    @Test
     @DisplayName("필터 통과 후 HttpSessionChatActorProvider가 같은 guestId를 반환한다")
     void 필터_이후_ChatActorProvider가_같은_guestId를_반환한다() throws Exception {
         UUID issued = UUID.randomUUID();
