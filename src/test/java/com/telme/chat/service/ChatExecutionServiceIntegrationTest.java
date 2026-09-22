@@ -65,7 +65,7 @@ class ChatExecutionServiceIntegrationTest {
 
         ChatExecutionState started = chatExecutionService.startAnswer(question.executionId());
         assertThat(started.outputMessage().sequenceNo()).isEqualTo(2);
-        assertThat(started.status()).isEqualTo(ChatMessage.Status.GENERATING);
+        assertThat(started.outputMessage().status()).isEqualTo(ChatMessage.Status.GENERATING);
 
         ChatExecutionState completed = chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
@@ -77,7 +77,7 @@ class ChatExecutionServiceIntegrationTest {
 
         assertThat(completed.outputMessage().messageId()).isEqualTo(started.outputMessage().messageId());
         assertThat(completed.outputMessage().sequenceNo()).isEqualTo(2);
-        assertThat(completed.status()).isEqualTo(ChatMessage.Status.COMPLETED);
+        assertThat(completed.outputMessage().status()).isEqualTo(ChatMessage.Status.COMPLETED);
 
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
@@ -133,7 +133,7 @@ class ChatExecutionServiceIntegrationTest {
                 question.executionId(), "어느 지역 매장을 찾으시나요?");
 
         assertThat(clarification.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.CLARIFICATION);
-        assertThat(clarification.status()).isEqualTo(ChatMessage.Status.COMPLETED);
+        assertThat(clarification.outputMessage().status()).isEqualTo(ChatMessage.Status.COMPLETED);
         assertThat(findSession().getStatus()).isEqualTo(ChatSession.Status.NEED_CLARIFICATION);
         assertThat(findExecution(question.executionId()).getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
 
@@ -195,7 +195,7 @@ class ChatExecutionServiceIntegrationTest {
 
         assertThat(failed.outputMessage().sequenceNo()).isEqualTo(2);
         assertThat(failed.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.ERROR);
-        assertThat(failed.status()).isEqualTo(ChatMessage.Status.TIMEOUT);
+        assertThat(failed.outputMessage().status()).isEqualTo(ChatMessage.Status.TIMEOUT);
 
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.FAILED);
@@ -216,7 +216,7 @@ class ChatExecutionServiceIntegrationTest {
 
         assertThat(cancelled.outputMessage().messageId()).isEqualTo(started.outputMessage().messageId());
         assertThat(cancelled.outputMessage().messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
-        assertThat(cancelled.status()).isEqualTo(ChatMessage.Status.CANCELLED);
+        assertThat(cancelled.outputMessage().status()).isEqualTo(ChatMessage.Status.CANCELLED);
         ChatExecution execution = findExecution(question.executionId());
         assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.CANCELLED);
         assertThat(historyItem(2).completedAt()).isEqualTo(findExecution(question.executionId()).getEndedAt());
