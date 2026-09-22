@@ -213,7 +213,10 @@ def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> 
 
 
 def find_missed(eval_items: list[dict], outcomes: list[SearchOutcome]) -> tuple[list, list]:
-    """(개별 miss한 eval_id 목록, 같은 정답 해시를 공유하는 질문이 전부 못 찾아 적재 누락이 의심되는 eval_id 목록)."""
+    """(개별 miss한 eval_id 목록, 같은 정답 해시를 공유하는 질문이 전부 못 찾은 eval_id 목록).
+    후자는 적재 누락인지 검색 실패인지 이 함수만으로는 가릴 수 없다 — content_hash로 faqs를
+    직접 조회해야 한다. 후보가 많아질수록 "적재는 됐지만 둘 다 top-k 밖으로 밀려난" 경우가
+    드물지 않아, 이 목록을 곧장 "적재 누락"으로 해석하면 오탐이 된다."""
     missed = [o.eval_id for o in outcomes if o.question_type != "UNRELATED" and o.returned_rank is None]
 
     hash_to_eval_ids: dict[str, list] = {}
@@ -292,8 +295,10 @@ def main() -> int:
     if missed:
         print(f"\n  정답 못 찾은 질문(eval_id): {missed}")
     if never_found:
-        print(f"  경고: 다음 정답 FAQ는 어느 질문에서도 한 번도 안 나왔습니다(적재 누락 의심) — "
+        print(f"  참고: 다음 정답 FAQ는 같은 정답을 공유하는 질문(SIMILAR/VARIANT) 모두에서 한 번도 안 나왔습니다 — "
               f"eval_id: {never_found}")
+        print("  적재 자체가 안 됐는지, 적재는 됐는데 top-k 밖으로 밀려난 것인지는 이 목록만으로 "
+              "가릴 수 없습니다 — content_hash로 faqs를 직접 조회해서 확인하세요.")
 
     if args.experiment:
         print()
