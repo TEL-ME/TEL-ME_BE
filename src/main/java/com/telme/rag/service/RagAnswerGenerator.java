@@ -62,8 +62,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .build();
     }
 
+    // 잘라낸 답변은 문구로 끝난다. 앞에 "죄송합니다." 같은 서두가 남을 수 있어 포함 여부로 본다
     private AnswerBasis toAnswerBasis(String answer) {
-        return answer.startsWith(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+        return answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
                 ? AnswerBasis.NO_EVIDENCE
                 : AnswerBasis.GROUNDED;
     }

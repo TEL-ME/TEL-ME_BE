@@ -31,23 +31,35 @@ class AnswerGuardTest {
     }
 
     @Test
-    @DisplayName("답변 불가 문구 앞에 서두가 붙어도 잘라낸다")
-    void 서두가_붙어도_잘라낸다() {
+    @DisplayName("쉼표로 끝나는 서두가 붙어도 뒤를 잘라낸다")
+    void 쉼표_서두() {
         String answer = "죄송합니다, " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER
                 + " 기상청 웹사이트를 참고해 주세요.";
 
         assertThat(guard.trimAfterNoEvidence(answer))
-                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+                .isEqualTo("죄송합니다, " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test
-    @DisplayName("조건별 안내 중간에 나온 답변 불가 문구는 자르지 않는다")
-    void 조건별_안내는_보존한다() {
+    @DisplayName("마침표로 끝나는 서두가 붙어도 뒤를 잘라낸다")
+    void 마침표_서두() {
+        String answer = "죄송합니다. " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 기상청 웹사이트를 참고해 주세요.";
+
+        assertThat(guard.trimAfterNoEvidence(answer))
+                .isEqualTo("죄송합니다. " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("앞 문장은 남기고 문구 뒤만 잘라낸다")
+    void 앞_문장은_남긴다() {
         String answer = "신규 가입은 24개월 약정입니다. 기기변경은 "
                 + AnswerPromptTemplates.NO_EVIDENCE_ANSWER
                 + " 번호이동은 30개월까지 가능합니다.";
 
-        assertThat(guard.trimAfterNoEvidence(answer)).isEqualTo(answer);
+        assertThat(guard.trimAfterNoEvidence(answer))
+                .isEqualTo("신규 가입은 24개월 약정입니다. 기기변경은 "
+                        + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test
