@@ -68,9 +68,12 @@ class MemberAuthServiceTest {
             return action.doInTransaction(null);
         }
     };
+    private final GuestSuccessionService guestSuccessionService =
+            new GuestSuccessionService(guestRepository, chatSessionRepository, clock, feedbackStoreProvider);
+    private final MemberStatusChecker memberStatusChecker = new MemberStatusChecker();
     private final MemberAuthService memberAuthService = new MemberAuthService(
-            userRepository, guestRepository, chatSessionRepository, passwordEncoder,
-            memberConverter, securityContextRepository, clock, feedbackStoreProvider, transactionTemplate);
+            userRepository, passwordEncoder, memberConverter, securityContextRepository,
+            guestSuccessionService, memberStatusChecker, transactionTemplate);
 
     @AfterEach
     void clearSecurityContext() {
@@ -354,9 +357,8 @@ class MemberAuthServiceTest {
             }
         };
         MemberAuthService service = new MemberAuthService(
-                userRepository, guestRepository, chatSessionRepository, passwordEncoder,
-                memberConverter, securityContextRepository, clock, feedbackStoreProvider,
-                committingThenFailingTemplate);
+                userRepository, passwordEncoder, memberConverter, securityContextRepository,
+                guestSuccessionService, memberStatusChecker, committingThenFailingTemplate);
 
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, guestId);

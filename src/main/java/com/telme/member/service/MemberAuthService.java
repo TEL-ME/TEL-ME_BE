@@ -1,8 +1,6 @@
 package com.telme.member.service;
 
-import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.chat.service.HttpSessionChatActorProvider;
-import com.telme.feedback.repository.FeedbackStore;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.converter.MemberConverter;
 import com.telme.member.dto.req.LoginRequest;
@@ -11,18 +9,15 @@ import com.telme.member.dto.res.LoginResponse;
 import com.telme.member.dto.res.SignUpResponse;
 import com.telme.member.entity.User;
 import com.telme.member.exception.MemberErrorCode;
-import com.telme.member.repository.GuestRepository;
 import com.telme.member.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -44,14 +39,11 @@ public class MemberAuthService {
     private static final String DUMMY_PASSWORD_HASH = "$2a$10$SOUYRlvZh8tfmnADbmsOAeSgXPOdelwf/EX31iKbTPWNtdhvHvw.G";
 
     private final UserRepository userRepository;
-    private final GuestRepository guestRepository;
-    private final ChatSessionRepository chatSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final MemberConverter memberConverter;
     private final SecurityContextRepository securityContextRepository;
-    private final Clock clock;
-    // FeedbackStore는 telme.feedback.enabled가 꺼져 있으면 빈이 등록되지 않으므로 ObjectProvider로 선택 주입한다
-    private final ObjectProvider<FeedbackStore> feedbackStoreProvider;
+    private final GuestSuccessionService guestSuccessionService;
+    private final MemberStatusChecker memberStatusChecker;
     // DB 승계·저장을 커밋까지 끝낸 뒤에만 세션에 로그인 상태를 반영하기 위해 트랜잭션 경계를 직접 다룬다
     private final TransactionTemplate transactionTemplate;
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
@@ -84,7 +76,7 @@ public class MemberAuthService {
             }
 
             if (guestId != null) {
-                succeedGuest(guestId, savedUser);
+                guestSuccessionService.succeedGuest(guestId, savedUser);
             }
             return savedUser;
         });
@@ -104,16 +96,11 @@ public class MemberAuthService {
                 .orElseThrow(() -> new GeneralException(MemberErrorCode.INVALID_CREDENTIALS));
 
         // 비밀번호 검증 이후에만 상태를 본다 — 상태 코드로는 계정 존재 여부가 노출되지 않는다(응답 시간은 위에서 별도로 맞춤)
-        if (found.getStatus() == User.Status.SUSPENDED) {
-            throw new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED);
-        }
-        if (found.getStatus() == User.Status.WITHDRAWN) {
-            throw new GeneralException(MemberErrorCode.ACCOUNT_WITHDRAWN);
-        }
+        memberStatusChecker.checkActive(found);
 
         if (guestId != null) {
             // DB 쓰기(게스트 승계)가 있을 때만 트랜잭션을 연다 — 커밋 성공 후에만 세션 반영은 그대로 유지
-            transactionTemplate.executeWithoutResult(status -> succeedGuest(guestId, found));
+            transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, found));
         }
 
         completeSessionLogin(found, guestId, httpRequest, httpResponse);
@@ -148,15 +135,6 @@ public class MemberAuthService {
     public void logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         logoutHandler.logout(httpRequest, httpResponse, authentication);
-    }
-
-    private void succeedGuest(UUID guestId, User user) {
-        // merged_user_id가 비어있는 행만 원자적 갱신 — 동시 승계 레이스에서 하나만 통과시켜 채팅·피드백도 그 요청만 이어감
-        int updated = guestRepository.succeedGuest(guestId, user, clock.instant());
-        if (updated > 0) {
-            chatSessionRepository.succeedGuestSessions(guestId, user.getUserId());
-            feedbackStoreProvider.ifAvailable(store -> store.succeedGuestFeedback(guestId, user.getUserId()));
-        }
     }
 
     private boolean isEmailUniqueViolation(DataIntegrityViolationException exception) {
