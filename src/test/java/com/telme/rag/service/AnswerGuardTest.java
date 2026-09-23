@@ -31,6 +31,16 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("답변 불가 문구 앞에 서두가 붙어도 잘라낸다")
+    void 서두가_붙어도_잘라낸다() {
+        String answer = "죄송합니다, " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 기상청 웹사이트를 참고해 주세요.";
+
+        assertThat(guard.trimAfterNoEvidence(answer))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
     @DisplayName("조건별 안내 중간에 나온 답변 불가 문구는 자르지 않는다")
     void 조건별_안내는_보존한다() {
         String answer = "신규 가입은 24개월 약정입니다. 기기변경은 "

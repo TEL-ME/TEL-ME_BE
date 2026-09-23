@@ -18,21 +18,28 @@ public class AnswerGuard {
     private static final Pattern AMOUNT = Pattern.compile(
             "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?\\s*원");
 
+    private static final Set<Integer> SENTENCE_END = Set.of((int) '.', (int) '?', (int) '!');
+
     private static final BigInteger[] UNITS = {
             BigInteger.valueOf(100_000_000L), BigInteger.valueOf(10_000L), BigInteger.ONE
     };
 
     // 모델이 답변 불가 문구 뒤에 설명을 덧붙이는 경우가 있음.
-    // 조건별 안내 중간에 나온 문구는 뒤 내용이 사라지므로 건드리지 않는다
+    // 앞에 다른 문장이 끝나 있으면 조건별 안내로 보고, 뒤 내용이 사라지지 않게 건드리지 않는다
     public String trimAfterNoEvidence(String answer) {
         if (answer == null) {
             return "";
         }
-        String trimmed = answer.strip();
-        if (!trimmed.startsWith(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)) {
+        int found = answer.indexOf(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        if (found < 0 || hasSentenceEnd(answer.substring(0, found))) {
             return answer;
         }
         return AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+    }
+
+    // "죄송합니다," 같은 서두는 문장이 끝나지 않아 여기서 걸리지 않는다
+    private boolean hasSentenceEnd(String prefix) {
+        return prefix.chars().anyMatch(SENTENCE_END::contains);
     }
 
     // 근거의 금액을 계산해 없던 금액을 만들어내는 경우가 있음
