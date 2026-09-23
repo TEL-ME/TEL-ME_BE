@@ -5,10 +5,9 @@
 UPDATE message_feedback SET reason_code = NULL WHERE rating = 'LIKE' AND reason_code IS NOT NULL;
 UPDATE message_feedback SET comment = NULL WHERE rating = 'LIKE' AND comment IS NOT NULL;
 
--- DISLIKE인데 사유가 없는 행은 사유를 추측해 채울 수 없어 삭제한다.
--- 배포 전 로컬 DB 기준 0건 확인함 (다른 환경에 남아 있을 경우를 대비한 방어적 처리).
-DELETE FROM message_feedback WHERE rating = 'DISLIKE' AND reason_code IS NULL;
-
+-- DISLIKE인데 사유가 없는 행은 임의로 지우거나 채우지 않는다.
+-- 그런 행이 남아 있으면 아래 제약 추가가 그 자리에서 실패해 배포가 막히므로,
+-- 실패하면 데이터를 먼저 조사하고 팀 정책을 정한 뒤 처리한다.
 ALTER TABLE message_feedback
     ADD CONSTRAINT ck_feedback_dislike_reason
         CHECK (
