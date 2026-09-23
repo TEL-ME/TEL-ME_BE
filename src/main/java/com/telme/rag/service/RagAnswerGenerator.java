@@ -47,12 +47,12 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .promptVersion(AnswerPromptTemplates.PROMPT_VERSION)
                 .build();
 
-        CollectingHandler collector = new CollectingHandler(handler);
+        CollectingHandler collector =
+                new CollectingHandler(handler, answerGuard, context, request.userQuery());
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
-        String answer = answerGuard.trimAfterNoEvidence(collector.answer());
-        answerGuard.verifyAmounts(answer, context, request.userQuery());
+        String answer = collector.answer();
 
         return AnswerResult.builder()
                 .answer(answer)
@@ -101,11 +101,19 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private static final class CollectingHandler implements LlmStreamHandler {
 
         private final LlmStreamHandler delegate;
+        private final AnswerGuard answerGuard;
+        private final String context;
+        private final String userQuery;
         private final StringBuilder collected = new StringBuilder();
+        private String answer = "";
         private RuntimeException failure;
 
-        private CollectingHandler(LlmStreamHandler delegate) {
+        private CollectingHandler(
+                LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery) {
             this.delegate = delegate;
+            this.answerGuard = answerGuard;
+            this.context = context;
+            this.userQuery = userQuery;
         }
 
         @Override
@@ -114,8 +122,11 @@ public class RagAnswerGenerator implements AnswerGenerator {
             delegate.onToken(token);
         }
 
+        // 여기서 검사해야 호출 기록이 실패로 남는다. stream()이 끝난 뒤에 막으면 SUCCESS가 이미 들어간다
         @Override
         public void onComplete() {
+            answer = answerGuard.trimAfterNoEvidence(collected.toString());
+            answerGuard.verifyAmounts(answer, context, userQuery);
             delegate.onComplete();
         }
 
@@ -136,7 +147,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         }
 
         private String answer() {
-            return collected.toString();
+            return answer;
         }
 
         private void rethrowIfFailed() {
