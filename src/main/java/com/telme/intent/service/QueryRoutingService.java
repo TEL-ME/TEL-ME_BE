@@ -10,10 +10,12 @@ import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.FollowUpRouteResponse;
+import com.telme.intent.dto.res.FollowUpRouteResponse.Disposition;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
+import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
@@ -83,6 +85,16 @@ public class QueryRoutingService {
     }
 
     public IntentRouteResponse route(ChatMessage userMessage, ChatContext context) {
+        return route(userMessage, context, false);
+    }
+
+    /** 단일 상담 연결용 진입점. 복합 질문은 저장하기 전에 차단한다. */
+    public IntentRouteResponse routeSingleConsult(ChatMessage userMessage, ChatContext context) {
+        return route(userMessage, context, true);
+    }
+
+    private IntentRouteResponse route(
+            ChatMessage userMessage, ChatContext context, boolean singleConsultOnly) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
         }
@@ -91,7 +103,10 @@ public class QueryRoutingService {
             Optional<QueryRouting> existing = queryRoutingRepository.findByMessage_MessageId(userMessage.getMessageId());
             if (existing.isPresent()) {
                 log.info("[라우팅] 이미 라우팅된 메시지입니다. 기존 결과를 반환합니다: messageId={}", userMessage.getMessageId());
-                return runInTransaction(() -> buildExistingResponse(existing.get(), userMessage.getMessageId()));
+                IntentRouteResponse result =
+                    runInTransaction(() -> buildExistingResponse(existing.get(), userMessage.getMessageId()));
+                ensureSingleConsultSupported(result, singleConsultOnly);
+                return result;
             }
         }
 
@@ -100,6 +115,7 @@ public class QueryRoutingService {
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
             LlmRoutingPayload fallbackPayload = ruleBasedFallback.classify(question);
+            ensureSingleConsultSupported(fallbackPayload, singleConsultOnly);
             return executeInTransaction(userMessage, fallbackPayload, QueryRouting.Method.RULE);
         }
 
@@ -152,6 +168,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
+        ensureSingleConsultSupported(payload, singleConsultOnly);
         return executeInTransaction(userMessage, payload, method);
     }
 
@@ -203,16 +220,54 @@ public class QueryRoutingService {
 
         // 조건이 하나도 안 잡히면 되묻기가 반복되므로 규칙으로 한 번 더 시도한다
         if (extracted.isEmpty() && method == QueryRouting.Method.LLM) {
-            ExtractedConditions ruleBased =
-                toExtractedConditions(ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys()));
-            if (!ruleBased.isEmpty()) {
-                extracted = ruleBased;
+            LlmFollowUpPayload rulePayload =
+                ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload);
+            if (!ruleConditions.isEmpty()
+                    || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
+                payload = rulePayload;
+                extracted = ruleConditions;
                 method = QueryRouting.Method.RULE;
             }
         }
 
         return new FollowUpRouteResponse(
-            waiting.consultRequestId(), extracted.values(), extracted.declinedKeys(), method);
+            waiting.consultRequestId(),
+            extracted.values(),
+            extracted.declinedKeys(),
+            method,
+            disposition(payload.responseType(), extracted));
+    }
+
+    private Disposition disposition(ResponseType responseType, ExtractedConditions extracted) {
+        if (!extracted.isEmpty()) {
+            return Disposition.CONDITION_RESPONSE;
+        }
+        return responseType == ResponseType.NEW_QUESTION
+            ? Disposition.NEW_QUESTION
+            : Disposition.DEFERRED;
+    }
+
+    private void ensureSingleConsultSupported(
+            LlmRoutingPayload payload, boolean singleConsultOnly) {
+        if (!singleConsultOnly || payload == null) {
+            return;
+        }
+        int subQueryCount = payload.subQueries() == null ? 0 : payload.subQueries().size();
+        if (payload.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+            throw new IllegalStateException("현재 Chat 상담 연결은 단일 하위 질문만 지원합니다.");
+        }
+    }
+
+    private void ensureSingleConsultSupported(
+            IntentRouteResponse response, boolean singleConsultOnly) {
+        if (!singleConsultOnly || response == null) {
+            return;
+        }
+        int subQueryCount = response.subQueries() == null ? 0 : response.subQueries().size();
+        if (response.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+            throw new IllegalStateException("현재 Chat 상담 연결은 단일 하위 질문만 지원합니다.");
+        }
     }
 
     private LlmFollowUpPayload requestFollowUpAnalysis(String reply, Set<String> pendingKeys) {

@@ -168,6 +168,37 @@ class QueryRoutingServiceFollowUpTest {
         assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
         assertThat(response.conditions()).isEmpty();
         assertThat(response.declinedKeys()).isEmpty();
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.DEFERRED);
+    }
+
+    @Test
+    @DisplayName("대기 중 별개의 새 질문은 조건 답변과 구분한다")
+    void analyzeFollowUp_marksNewQuestion() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"NEW_QUESTION\",\"conditions\":[]}");
+
+        FollowUpRouteResponse response =
+                service.analyzeFollowUp(SESSION_ID, "5G 요금제는 얼마예요?");
+
+        assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.disposition())
+                .isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
+        assertThat(response.conditions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("기존 형식의 빈 LLM 응답도 규칙이 새 질문으로 판정하면 다시 라우팅한다")
+    void analyzeFollowUp_usesRuleDispositionForLegacyEmptyResponse() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        FollowUpRouteResponse response =
+                service.analyzeFollowUp(SESSION_ID, "5G 요금제는 얼마예요?");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.disposition())
+                .isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
     }
 
     @Test

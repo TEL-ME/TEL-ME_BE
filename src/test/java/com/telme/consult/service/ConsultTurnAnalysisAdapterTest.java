@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -111,6 +113,30 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(turn.answeredField()).isNull();
         assertThat(turn.originalUserQuery()).isEqualTo("요금 납부 방법");
         assertThat(turn.searchQuery()).isEqualTo("요금 납부 방법");
+    }
+
+    @Test
+    void directGuidanceDoesNotPrepareConsultation() {
+        var context = new Context(1, 10, "오늘 날씨 어때?", List.of());
+        var answer =
+                new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER,
+                        "통신 관련 질문을 입력해 주세요.",
+                        ChatMessage.AnswerBasis.OUT_OF_SCOPE,
+                        List.of(),
+                        null);
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        value -> AnalysisResult.direct(answer),
+                        preparation,
+                        new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "오늘 날씨 어때?"));
+
+        assertThat(turn.directAnswer()).isSameAs(answer);
+        assertThat(turn.preparation()).isNull();
+        verifyNoInteractions(preparation);
     }
 
     @Test

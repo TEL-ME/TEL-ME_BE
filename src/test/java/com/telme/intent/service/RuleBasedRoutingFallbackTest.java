@@ -101,8 +101,19 @@ class RuleBasedRoutingFallbackTest {
     void classifyFollowUp_ackOrDeferral_returnsNoCondition(String reply) {
         LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
 
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.DEFERRED);
         assertThat(result.conditions())
                 .noneMatch(condition -> "location".equals(condition.key()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5G 요금제는 얼마예요?", "로밍 방법 알려주세요", "가까운 매장 찾아줘"})
+    @DisplayName("되묻기와 관계없는 새 질문은 후속 조건값으로 사용하지 않는다")
+    void classifyFollowUp_newQuestion_isSeparated(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.NEW_QUESTION);
+        assertThat(result.conditions()).isEmpty();
     }
 
     @ParameterizedTest

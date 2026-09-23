@@ -55,6 +55,26 @@ public class ConsultChatPersistenceService {
         return state;
     }
 
+    /** 상담 요청을 만들지 않는 UNKNOWN 안내 답변을 정상 완료한다. */
+    @Transactional
+    public ChatExecutionState persistDirectAnswer(
+            long executionId, long sessionId, ChatAnswer answer) {
+        Objects.requireNonNull(answer, "answer");
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        return state;
+    }
+
     // 답변 저장에 성공했을 때만 상담도 완료한다.
     @Transactional
     public ChatExecutionState persistFinalAnswer(

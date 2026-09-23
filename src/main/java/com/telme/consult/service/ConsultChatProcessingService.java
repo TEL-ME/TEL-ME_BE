@@ -67,6 +67,13 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     private void process(ChatProcessingCommand command) {
         AnalyzedTurn turn = analyzer.analyze(command);
+        if (turn.directAnswer() != null) {
+            var completed =
+                    persistence.persistDirectAnswer(
+                            command.executionId(), command.sessionId(), turn.directAnswer());
+            events.completed(command.executionId(), completed);
+            return;
+        }
         var result = turn.preparation();
         if (result.waitingForReply()) {
             var completed =
@@ -182,21 +189,45 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             String answeredField,
             Purpose purpose,
             String originalUserQuery,
-            String searchQuery) {
+            String searchQuery,
+            ChatAnswer directAnswer) {
+        public AnalyzedTurn(
+                ConsultService.PreparationResult preparation,
+                String answeredField,
+                Purpose purpose,
+                String originalUserQuery,
+                String searchQuery) {
+            this(preparation, answeredField, purpose, originalUserQuery, searchQuery, null);
+        }
+
+        public static AnalyzedTurn direct(ChatAnswer answer) {
+            return new AnalyzedTurn(null, null, null, null, null, Objects.requireNonNull(answer));
+        }
+
         public AnalyzedTurn {
-            Objects.requireNonNull(preparation, "preparation");
-            Objects.requireNonNull(purpose, "purpose");
-            if (answeredField != null && answeredField.isBlank()) {
-                throw new IllegalArgumentException("후속 조건 이름은 비어 있을 수 없습니다.");
+            if (directAnswer != null) {
+                if (preparation != null
+                        || answeredField != null
+                        || purpose != null
+                        || originalUserQuery != null
+                        || searchQuery != null) {
+                    throw new IllegalArgumentException("직접 답변에는 상담 분석 결과를 함께 넣을 수 없습니다.");
+                }
+            } else {
+                Objects.requireNonNull(preparation, "preparation");
+                Objects.requireNonNull(purpose, "purpose");
+                if (answeredField != null && answeredField.isBlank()) {
+                    throw new IllegalArgumentException("후속 조건 이름은 비어 있을 수 없습니다.");
+                }
+                if (originalUserQuery == null || originalUserQuery.isBlank()) {
+                    throw new IllegalArgumentException("상담 원문이 필요합니다.");
+                }
+                if (searchQuery == null || searchQuery.isBlank()) {
+                    throw new IllegalArgumentException("검색할 질문이 필요합니다.");
+                }
+                originalUserQuery = originalUserQuery.strip();
+                searchQuery = searchQuery.strip();
             }
-            if (originalUserQuery == null || originalUserQuery.isBlank()) {
-                throw new IllegalArgumentException("상담 원문이 필요합니다.");
-            }
-            if (searchQuery == null || searchQuery.isBlank()) {
-                throw new IllegalArgumentException("검색할 질문이 필요합니다.");
-            }
-            originalUserQuery = originalUserQuery.strip();
-            searchQuery = searchQuery.strip();
         }
     }
 

@@ -1,5 +1,6 @@
 package com.telme.consult.service;
 
+import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
@@ -44,6 +45,12 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
         }
         AnalysisResult result = Objects.requireNonNull(analysis.analyze(context), "analysisResult");
+        if (result.reroute()) {
+            throw new IllegalStateException("새 질문 재라우팅 결과가 처리되지 않았습니다.");
+        }
+        if (result.directAnswer() != null) {
+            return AnalyzedTurn.direct(result.directAnswer());
+        }
         if (result.followup() != null) {
             Resolution resolution =
                     followupConverter.resolve(
@@ -103,12 +110,35 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
     public record AnalysisResult(
             IntentSubQueryResponse initialQuery,
             FollowupAnalysis followup,
-            LocationStatus locationStatus) {
+            LocationStatus locationStatus,
+            ChatAnswer directAnswer,
+            boolean reroute) {
+        public AnalysisResult(
+                IntentSubQueryResponse initialQuery,
+                FollowupAnalysis followup,
+                LocationStatus locationStatus) {
+            this(initialQuery, followup, locationStatus, null, false);
+        }
+
+        public static AnalysisResult direct(ChatAnswer answer) {
+            return new AnalysisResult(null, null, null, Objects.requireNonNull(answer), false);
+        }
+
+        public static AnalysisResult rerouteRequest() {
+            return new AnalysisResult(null, null, null, null, true);
+        }
+
         public AnalysisResult {
-            if ((initialQuery == null) == (followup == null)) {
-                throw new IllegalArgumentException("최초 질문 또는 후속 답변 하나가 필요합니다.");
+            int selected = (initialQuery != null ? 1 : 0)
+                    + (followup != null ? 1 : 0)
+                    + (directAnswer != null ? 1 : 0)
+                    + (reroute ? 1 : 0);
+            if (selected != 1) {
+                throw new IllegalArgumentException("분석 결과 하나가 필요합니다.");
             }
-            Objects.requireNonNull(locationStatus, "locationStatus");
+            if (initialQuery != null || followup != null) {
+                Objects.requireNonNull(locationStatus, "locationStatus");
+            }
         }
     }
 

@@ -362,6 +362,40 @@ class ConsultChatPersistenceIntegrationTest {
     }
 
     @Test
+    void processingPortCompletesUnknownGuidanceWithoutConsultPreparation() {
+        var answer =
+                new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER,
+                        "통신 관련 질문을 입력해 주세요.",
+                        ChatMessage.AnswerBasis.OUT_OF_SCOPE,
+                        List.of(),
+                        null);
+        var events = new RecordingEvents();
+        var processor =
+                new ConsultChatProcessingService(
+                        command -> ConsultChatProcessingService.AnalyzedTurn.direct(answer),
+                        input -> {
+                            throw new AssertionError("UNKNOWN 안내에서는 RAG를 호출하지 않는다.");
+                        },
+                        persistence,
+                        new ConfirmedConditionConverter(),
+                        events);
+
+        processor.request(processingCommand());
+
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        assertThat(
+                        text(
+                                "SELECT content FROM chat_messages WHERE message_id=(SELECT"
+                                        + " output_message_id FROM chat_executions WHERE"
+                                        + " execution_id=?)",
+                                executionId))
+                .isEqualTo("통신 관련 질문을 입력해 주세요.");
+        assertThat(events.sequence).containsExactly("complete:COMPLETED");
+    }
+
+    @Test
     void processingPortSavesClarificationWithoutSearching() {
         var prepared =
                 consult.prepareTurn(

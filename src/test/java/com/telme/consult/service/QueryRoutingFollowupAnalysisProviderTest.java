@@ -67,6 +67,22 @@ class QueryRoutingFollowupAnalysisProviderTest {
                 .isInstanceOf(GeneralException.class);
     }
 
+    @Test
+    void newQuestionRequestsInitialRouting() {
+        when(routing.analyzeFollowUp(3L, "5G 요금제는 얼마예요?"))
+                .thenReturn(
+                        new FollowUpRouteResponse(
+                                11L,
+                                Map.of(),
+                                Set.of(),
+                                QueryRouting.Method.LLM,
+                                FollowUpRouteResponse.Disposition.NEW_QUESTION));
+
+        var result = provider.analyze(context("5G 요금제는 얼마예요?"));
+
+        assertThat(result.reroute()).isTrue();
+    }
+
     private Context context(String message) {
         return new Context(
                 3L,

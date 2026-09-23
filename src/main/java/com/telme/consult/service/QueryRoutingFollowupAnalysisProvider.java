@@ -30,6 +30,9 @@ public final class QueryRoutingFollowupAnalysisProvider implements FollowupAnaly
         if (!result.hasTarget()) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
+        if (result.disposition() == FollowUpRouteResponse.Disposition.NEW_QUESTION) {
+            return AnalysisResult.rerouteRequest();
+        }
         return new AnalysisResult(
                 null,
                 new FollowupAnalysis(
