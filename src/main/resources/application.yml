@@ -66,6 +66,12 @@ search:
   # 잠정값 — 무관 질문 유사도 분포 실측(2주차 임계값 캘리브레이션) 전까지의 임시 기준
   similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.7}
 
+telme:
+  chat:
+    pipeline:
+      # 채팅 답변 파이프라인(ChatPipelineProcessor). false면 모든 질문이 AI_NOT_CONNECTED로 끝난다(장애 시 차단용).
+      enabled: ${CHAT_PIPELINE_ENABLED:true}
+
 member:
   guest:
     # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
