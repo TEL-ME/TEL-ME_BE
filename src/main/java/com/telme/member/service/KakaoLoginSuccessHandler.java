@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,9 +29,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 // KakaoOAuth2UserService는 원본 카카오 클레임만 넘긴다 — 로그인인지 계정연결인지,
 // 어떤 회원으로 귀결되는지는 세션에 접근 가능한 여기서 전부 판단한다
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final String DEFAULT_FAILURE_REASON = "OAUTH2_LOGIN_FAILED";
 
     private final SocialMemberFinder socialMemberFinder;
     private final UserRepository userRepository;
@@ -48,12 +52,18 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException {
-        KakaoOAuth2User kakaoPrincipal = (KakaoOAuth2User) authentication.getPrincipal();
-        User user = resolveUser(request, response, kakaoPrincipal.getProviderUserId(), kakaoPrincipal.getEmail());
-        if (user == null) {
-            return;
+        try {
+            KakaoOAuth2User kakaoPrincipal = (KakaoOAuth2User) authentication.getPrincipal();
+            User user = resolveUser(request, response, kakaoPrincipal.getProviderUserId(), kakaoPrincipal.getEmail());
+            if (user == null) {
+                return;
+            }
+            finalizeSession(user, request, response);
+        } catch (RuntimeException exception) {
+            // 예상 밖 오류(DB 연결 오류, 동시 생성 재조회 실패 등)까지 여기서 막는다 — 원인은 내부 로그에만 남기고 프론트에는 고정 사유만 보낸다
+            log.error("카카오 로그인 처리 중 예상하지 못한 오류", exception);
+            redirectFailure(request, response, DEFAULT_FAILURE_REASON);
         }
-        finalizeSession(user, request, response);
     }
 
     private User resolveUser(HttpServletRequest request, HttpServletResponse response, String providerUserId, String email)
@@ -154,12 +164,28 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         Long existingUserId = readSessionUserId(request);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         if (existingUserId != null) {
-            userRepository.findById(existingUserId).ifPresent(existingUser -> context.setAuthentication(
-                    new UsernamePasswordAuthenticationToken(existingUser.getUserId(), null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + existingUser.getRole().name())))));
+            try {
+                userRepository.findById(existingUserId).ifPresentOrElse(
+                        existingUser -> context.setAuthentication(
+                                new UsernamePasswordAuthenticationToken(existingUser.getUserId(), null,
+                                        List.of(new SimpleGrantedAuthority("ROLE_" + existingUser.getRole().name())))),
+                        () -> removeSessionUserId(request));
+            } catch (RuntimeException exception) {
+                // 복원을 위한 재조회 자체가 실패하면(연결 실패와 같은 DB 장애 등) 복원을 포기하고 로그아웃 상태로 정리한다
+                log.error("인증 복원을 위한 회원 재조회 실패 — 세션을 로그아웃 상태로 정리한다", exception);
+                removeSessionUserId(request);
+            }
         }
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, request, response);
+    }
+
+    // 세션 userId만 남고 SecurityContext는 비어 어긋나지 않도록, 복원 실패(예외)와 회원 없음(Optional.empty) 둘 다 여기로 모은다
+    private void removeSessionUserId(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE);
+        }
     }
 
     private String redirectUri(boolean success, String reason) {

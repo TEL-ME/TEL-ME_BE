@@ -39,6 +39,19 @@ class KakaoOAuth2UserServiceTest {
     }
 
     @Test
+    @DisplayName("카카오 이메일은 소문자로 정규화해서 추출한다")
+    void 이메일은_소문자로_정규화된다() {
+        Map<String, Object> attributes = Map.of(
+                "id", 12346L,
+                "kakao_account", Map.of("email", "User@Kakao.COM", "is_email_verified", true, "is_email_valid", true));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getEmail()).isEqualTo("user@kakao.com");
+    }
+
+    @Test
     @DisplayName("kakao_account가 없으면 email 없이 추출한다")
     void kakao_account가_없으면_email_null() {
         Map<String, Object> attributes = Map.of("id", 999L);

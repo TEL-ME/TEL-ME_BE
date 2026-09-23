@@ -26,7 +26,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class CurrentMemberResolverTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final CurrentMemberResolver resolver = new CurrentMemberResolver(userRepository);
+    private final MemberStatusChecker memberStatusChecker = new MemberStatusChecker();
+    private final CurrentMemberResolver resolver = new CurrentMemberResolver(userRepository, memberStatusChecker);
 
     @AfterEach
     void clearSecurityContext() {
@@ -93,6 +94,20 @@ class CurrentMemberResolverTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.UNAUTHENTICATED);
+    }
+
+    @Test
+    @DisplayName("정지된 회원이면 상태 오류를 던진다")
+    void 정지된_회원은_거부() {
+        authenticateAs(1L);
+        MockHttpServletRequest request = requestWithUserId(1L);
+        User user = User.builder().userId(1L).status(User.Status.SUSPENDED).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> resolver.resolve(request))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
     }
 
     private void authenticateAs(Long userId) {

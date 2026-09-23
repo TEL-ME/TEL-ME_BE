@@ -153,6 +153,21 @@ class KakaoLoginSuccessHandlerTest {
     }
 
     @Test
+    @DisplayName("일반 로그인 - 예상 밖 런타임 오류가 나도 예외를 던지지 않고 고정 사유로 리다이렉트하며 SecurityContext를 비운다")
+    void 예상밖_오류는_고정_사유로_리다이렉트() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-14", null))
+                .thenThrow(new IllegalStateException("동시 생성 재조회 실패 시뮬레이션"));
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-14", null));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=OAUTH2_LOGIN_FAILED");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
     @DisplayName("연결 모드 - pending과 세션 userId가 일치하면 연결하고 세션을 유지한다")
     void 연결_모드_정상_연결() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -241,6 +256,70 @@ class KakaoLoginSuccessHandlerTest {
         assertThat(restored.getPrincipal()).isEqualTo(30L);
         assertThat(restored.getAuthorities()).extracting(Object::toString).containsExactly("ROLE_ADMIN");
         verify(securityContextRepository).saveContext(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("연결 모드 - 예상 밖 오류가 나도 원래 회원 인증으로 복원한다")
+    void 연결_모드_예상밖_오류도_원래_회원_인증으로_복원() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
+        kakaoLinkPendingStore.issue(request, 30L);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User targetUser = User.builder().userId(30L).build();
+        when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-15", targetUser))
+                .thenThrow(new IllegalStateException("예상 밖 오류 시뮬레이션"));
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-15", null));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=OAUTH2_LOGIN_FAILED");
+        Authentication restored = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(restored.getPrincipal()).isEqualTo(30L);
+    }
+
+    @Test
+    @DisplayName("연결 모드 - 인증 복원을 위한 재조회마저 실패하면 예외를 던지지 않고 로그아웃 상태로 정리한다")
+    void 연결_모드_복원용_재조회도_실패하면_로그아웃_상태로_정리() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
+        kakaoLinkPendingStore.issue(request, 30L);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User targetUser = User.builder().userId(30L).build();
+        when(userRepository.findById(30L))
+                .thenReturn(Optional.of(targetUser))
+                .thenThrow(new RuntimeException("DB 장애 시뮬레이션 — 복원용 재조회"));
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-16", targetUser))
+                .thenThrow(new IllegalStateException("DB 장애로 인한 연결 실패 시뮬레이션"));
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-16", null));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=OAUTH2_LOGIN_FAILED");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getSession(false).getAttribute(USER_ID_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    @DisplayName("연결 모드 - 복원 대상 회원이 그 사이 삭제됐으면(Optional.empty) 세션 userId도 함께 지운다")
+    void 연결_모드_복원_대상_회원이_없으면_세션_userId도_지운다() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
+        kakaoLinkPendingStore.issue(request, 30L);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User targetUser = User.builder().userId(30L).build();
+        when(userRepository.findById(30L))
+                .thenReturn(Optional.of(targetUser))
+                .thenReturn(Optional.empty());
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-17", targetUser))
+                .thenThrow(new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-17", null));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-3");
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getSession(false).getAttribute(USER_ID_ATTRIBUTE)).isNull();
     }
 
     @Test

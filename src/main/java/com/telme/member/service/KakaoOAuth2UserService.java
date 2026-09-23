@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -44,6 +45,7 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
             return null;
         }
         Object email = account.get("email");
-        return email == null ? null : String.valueOf(email);
+        // 일반 가입·로그인 DTO와 같은 규칙으로 정규화 — 아니면 대소문자만 다른 카카오 이메일이 기존 계정을 못 찾는다
+        return email == null ? null : String.valueOf(email).toLowerCase(Locale.ROOT);
     }
 }
