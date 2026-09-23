@@ -1,0 +1,4 @@
+[
+  {"question": "요금제 변경은 언제 가능한가요?", "expected_content_hash": "a5a6fd51ea2399b4f0b3fac16c62607d03adcb044939f43c6ee2aa1a21da8883", "type": "VARIANT"},
+  {"question": "유심 재발급 어떻게 하나요?", "expected_content_hash": "7e1930c897edf4af4d5a1ffb858deec680065d86f112cb5dbd92df3e0b12e3ee", "type": "SIMILAR"}
+]

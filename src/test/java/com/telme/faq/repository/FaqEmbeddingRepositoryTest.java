@@ -74,16 +74,7 @@ class FaqEmbeddingRepositoryTest {
         }
 
         // 시드 faqId=1의 embedding을 PENDING으로 바꿔서 findNearest 결과에서 빠지는지 확인
-        FaqEmbedding seed = repository.findById(1L).orElseThrow();
-        FaqEmbedding pending = FaqEmbedding.builder()
-                .faqId(seed.getFaqId())
-                .faq(seed.getFaq())
-                .embedding(seed.getEmbedding())
-                .modelName(seed.getModelName())
-                .faqVersion(seed.getFaqVersion())
-                .syncStatus(FaqEmbedding.SyncStatus.PENDING)
-                .build();
-        repository.saveAndFlush(pending);
+        jdbcTemplate.update("UPDATE faq_embeddings SET sync_status = 'PENDING' WHERE faq_id = 1");
 
         List<FaqEmbedding> result = repository.findNearest(queryVector, 2, MODEL);
 

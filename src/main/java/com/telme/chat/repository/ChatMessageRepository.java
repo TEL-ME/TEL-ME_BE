@@ -3,12 +3,17 @@ package com.telme.chat.repository;
 import com.telme.chat.entity.ChatMessage;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+
+    boolean existsByMessageIdAndSession_UserId(Long messageId, Long userId);
+
+    boolean existsByMessageIdAndSession_UserIdIsNullAndSession_GuestId(Long messageId, UUID guestId);
 
     @Query("""
             select coalesce(max(message.sequenceNo), 0)

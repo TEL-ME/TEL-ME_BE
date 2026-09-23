@@ -56,6 +56,17 @@ class AnswerContextConverterTest {
     }
 
     @Test
+    @DisplayName("이모지 제목은 코드포인트 기준으로 자른다")
+    void toSources_이모지_제목을_코드포인트로_자른다() {
+        String emojiQuestion = "\uD83D\uDE00".repeat(150);
+
+        AnswerSource source = converter.toSources(List.of(faq(1L, emojiQuestion, "답변", 1))).getFirst();
+
+        // 코드포인트 150개는 한도 200 이내라 자르지 않는다
+        assertThat(source.titleSnapshot().codePointCount(0, source.titleSnapshot().length())).isEqualTo(150);
+    }
+
+    @Test
     @DisplayName("검색 순위가 없으면 null로 담는다")
     void toSources_순위가_없으면_null() {
         AnswerSource source = converter.toSources(List.of(faq(1L, "질문", "답변", null))).getFirst();
