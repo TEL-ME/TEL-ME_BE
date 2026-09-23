@@ -101,8 +101,8 @@ class ClarificationPersistenceIntegrationTest {
         assertThat(condition).containsEntry("condition_value", "강남역");
         assertThat(condition.get("answered_message_id")).isEqualTo(fixture.followUpMessageId());
 
-        // 최종 답변 저장 전까지는 상담을 완료하지 않고 PENDING으로 되돌린다
-        assertThat(loadRequestStatus(fixture.consultRequestId())).isEqualTo("PENDING");
+        // 조건 저장 후 PENDING으로 돌아왔다가, 매장 안내가 최종 답변으로 저장되면 상담을 완료한다
+        assertThat(loadRequestStatus(fixture.consultRequestId())).isEqualTo("DONE");
     }
 
     @Test
@@ -121,7 +121,8 @@ class ClarificationPersistenceIntegrationTest {
         assertThat(condition.get("condition_value")).isNull();
         assertThat(condition.get("answered_message_id")).isEqualTo(fixture.followUpMessageId());
 
-        assertThat(loadRequestStatus(fixture.consultRequestId())).isEqualTo("PENDING");
+        // 지역 없이 안내할 수 없다는 답을 끝으로 이 상담은 닫는다
+        assertThat(loadRequestStatus(fixture.consultRequestId())).isEqualTo("DONE");
     }
 
     @Test

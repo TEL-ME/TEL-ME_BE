@@ -3,6 +3,7 @@ package com.telme.intent.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -915,5 +916,81 @@ class ChatPipelineProcessorTest {
                     .sources(Collections.emptyList())
                     .build();
         });
+    }
+
+    @Test
+    @DisplayName("상담 완료: FAQ 답변이 저장되면 그 답변으로 FAQ 상담을 완료한다")
+    void consult_faqAnswer_completesFaqConsult() {
+        Long executionId = 400L;
+        givenRoutedQuestion(executionId, 40L, "5G 요금제 알려줘", QueryRouting.Intent.FAQ,
+                List.of(subQuery(41L, ConsultRequest.Intent.FAQ)));
+        given(chatExecutionService.completeAnswer(eq(executionId), any()))
+                .willReturn(completedWithOutput(executionId, 77L));
+        given(consultServiceProvider.getIfAvailable()).willReturn(consultService);
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 40L, "5G 요금제 알려줘"));
+
+        verify(consultService).complete(10L, 41L, 77L);
+    }
+
+    @Test
+    @DisplayName("상담 완료: 복합 질의에서 지역을 묻고 끝나면 답한 FAQ 상담만 완료하고 매장 상담은 남긴다")
+    void consult_bothWithoutLocation_completesOnlyFaqConsult() {
+        Long executionId = 401L;
+        givenRoutedQuestion(executionId, 42L, "5G 요금제 알려주고 대리점도 찾아줘", QueryRouting.Intent.BOTH,
+                List.of(subQuery(43L, ConsultRequest.Intent.FAQ), subQuery(44L, ConsultRequest.Intent.STORE)));
+        given(chatExecutionService.completeAnswer(eq(executionId), any()))
+                .willReturn(completedWithOutput(executionId, 78L));
+        given(consultServiceProvider.getIfAvailable()).willReturn(consultService);
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 42L, "5G 요금제 알려주고 대리점도 찾아줘"));
+
+        verify(consultService).complete(10L, 43L, 78L);
+        verify(consultService, never()).complete(anyLong(), eq(44L), anyLong());
+    }
+
+    @Test
+    @DisplayName("상담 완료: 완료 기록이 실패해도 이미 나간 답변의 실행을 실패로 바꾸지 않는다")
+    void consult_whenCompletionFails_keepsExecutionCompleted() {
+        Long executionId = 402L;
+        givenRoutedQuestion(executionId, 45L, "5G 요금제 알려줘", QueryRouting.Intent.FAQ,
+                List.of(subQuery(46L, ConsultRequest.Intent.FAQ)));
+        given(chatExecutionService.completeAnswer(eq(executionId), any()))
+                .willReturn(completedWithOutput(executionId, 79L));
+        given(consultServiceProvider.getIfAvailable()).willReturn(consultService);
+        willThrow(new IllegalStateException("상태 충돌")).given(consultService).complete(10L, 46L, 79L);
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 45L, "5G 요금제 알려줘"));
+
+        verify(chatExecutionService, never()).fail(any(), any());
+        verify(chatStreamPublisher).publishCompleted(eq(executionId), any());
+        verify(chatStreamPublisher, never()).publishFailed(any(), any());
+    }
+
+    private void givenRoutedQuestion(
+            Long executionId,
+            Long messageId,
+            String text,
+            QueryRouting.Intent intent,
+            List<IntentRouteResponse.IntentSubQueryResponse> subQueries) {
+        ChatSession session = ChatSession.builder().sessionId(10L).status(ChatSession.Status.ACTIVE).build();
+        ChatMessage message = ChatMessage.builder().messageId(messageId).session(session).content(text).build();
+        given(chatMessageRepository.findByIdWithSession(messageId)).willReturn(Optional.of(message));
+        given(queryRoutingService.route(eq(message), any())).willReturn(new IntentRouteResponse(
+                executionId, messageId, intent, text,
+                BigDecimal.valueOf(0.95), QueryRouting.Method.LLM,
+                Collections.emptyMap(), subQueries));
+        given(faqSearchService.search(any())).willReturn(Collections.emptyList());
+    }
+
+    private IntentRouteResponse.IntentSubQueryResponse subQuery(Long consultRequestId, ConsultRequest.Intent intent) {
+        return new IntentRouteResponse.IntentSubQueryResponse(
+                consultRequestId, (short) 1, intent, "질의", Collections.emptyMap());
+    }
+
+    private ChatExecutionState completedWithOutput(Long executionId, Long outputMessageId) {
+        return new ChatExecutionState(10L, executionId, ChatExecution.Status.COMPLETED, null,
+                new ChatOutputMessage(10L, executionId, outputMessageId, 2,
+                        ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
     }
 }

@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -119,7 +120,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             case STORE -> handleStoreIntent(command, routing, rawContent);
             case BOTH -> handleBothIntent(command, routing, rawContent);
             case UNKNOWN -> handleUnknownIntent(command);
-            case FAQ -> handleFaqOrGeneralIntent(command, rawContent);
+            case FAQ -> handleFaqOrGeneralIntent(command, routing, rawContent);
         }
     }
 
@@ -147,7 +148,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         // 대기 중인 상담이 없을 때 임의의 상담을 갱신하지 않도록 바로 매장 안내로 끝낸다
         if (consultService == null || !followUp.hasTarget()) {
-            completeStoreResult(command, resolveLocation(followUp, rawContent));
+            completeStoreResult(command, resolveLocation(followUp, rawContent), List.of());
             return;
         }
 
@@ -162,7 +163,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 resolveLocationStatus(followUp));
 
         if (prep == null) {
-            completeStoreResult(command, resolveLocation(followUp, rawContent));
+            completeStoreResult(command, resolveLocation(followUp, rawContent), List.of());
             return;
         }
 
@@ -179,7 +180,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         }
 
         if (prep.prepared() == null || prep.prepared().decision() == null) {
-            completeStoreResult(command, resolveLocation(followUp, rawContent));
+            completeStoreResult(command, resolveLocation(followUp, rawContent), List.of());
             return;
         }
 
@@ -201,7 +202,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             case ALTERNATIVE_GUIDANCE -> {
                 consultService.persist(
                         prep.prepared(), new MessageLinks(null, answerMessageId, answeredField));
-                completeAnswer(
+                ChatExecutionState guided = completeAnswer(
                         command.executionId(),
                         new ChatAnswer(
                                 ChatMessage.MessageType.ANSWER,
@@ -210,12 +211,14 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                                 Collections.emptyList(),
                                 null),
                         "");
+                completeConsults(command, List.of(followUp.consultRequestId()), guided);
             }
             // 사용자 원문("강남역이요") 대신 상담 모듈이 정규화한 값을 써야 안내 문구가 자연스럽다
             case PROCEED -> {
                 consultService.persist(
                         prep.prepared(), new MessageLinks(null, answerMessageId, answeredField));
-                completeStoreResult(command, resolveLocation(decision, followUp, rawContent));
+                completeStoreResult(
+                        command, resolveLocation(decision, followUp, rawContent), List.of(followUp.consultRequestId()));
             }
         }
     }
@@ -314,7 +317,11 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("영업시간 문의", "매장 방문 예약"),
                     List.of(storeInfo)
             );
-            completeAnswer(command.executionId(), answer, relay.relayed());
+            ChatExecutionState completed = completeAnswer(command.executionId(), answer, relay.relayed());
+            completeConsults(
+                    command,
+                    consultRequestIdsOf(routing, ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE),
+                    completed);
         } else {
             String combinedContent = faqAnswerText + "\n\n[매장 안내]\n가까운 매장 방문을 원하시면 지역(역 이름이나 동네)을 알려주세요.";
             ChatAnswer answer = new ChatAnswer(
@@ -324,7 +331,9 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("가까운 매장 찾기", "고객센터 연결"),
                     null
             );
-            completeAnswer(command.executionId(), answer, relay.relayed());
+            ChatExecutionState completed = completeAnswer(command.executionId(), answer, relay.relayed());
+            // 매장 부분은 지역을 묻는 안내로 끝나 아직 답하지 않았으므로 FAQ 상담만 닫는다
+            completeConsults(command, consultRequestIdsOf(routing, ConsultRequest.Intent.FAQ), completed);
         }
     }
 
@@ -354,10 +363,10 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             return;
         }
 
-        completeStoreResult(command, location);
+        completeStoreResult(command, location, consultRequestIdsOf(routing, ConsultRequest.Intent.STORE));
     }
 
-    private void completeStoreResult(ChatProcessingCommand command, String location) {
+    private void completeStoreResult(ChatProcessingCommand command, String location, List<Long> consultRequestIds) {
         Map<String, Object> storeInfo = Map.of(
                 "name", location + " 직영점",
                 "address", location + " 인근",
@@ -372,10 +381,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 List.of(storeInfo)
         );
 
-        completeAnswer(command.executionId(), answer, "");
+        ChatExecutionState completed = completeAnswer(command.executionId(), answer, "");
+        completeConsults(command, consultRequestIds, completed);
     }
 
-    private void handleFaqOrGeneralIntent(ChatProcessingCommand command, String rawContent) {
+    private void handleFaqOrGeneralIntent(
+            ChatProcessingCommand command, IntentRouteResponse routing, String rawContent) {
         // 빈 입력을 "요금제 안내"로 대신 검색하면 묻지 않은 FAQ가 근거로 붙는다
         if (rawContent.isBlank()) {
             answerEmptyQuestion(command);
@@ -397,7 +408,8 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 null
         );
 
-        completeAnswer(command.executionId(), answer, relay.relayed());
+        ChatExecutionState completed = completeAnswer(command.executionId(), answer, relay.relayed());
+        completeConsults(command, consultRequestIdsOf(routing, ConsultRequest.Intent.FAQ), completed);
     }
 
     private void answerEmptyQuestion(ChatProcessingCommand command) {
@@ -421,11 +433,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
     // 저장을 먼저 끝내고 알린다. 모델이 넘기지 않은 나머지(고정 문구, 덧붙인 매장 안내, 생성 실패 폴백)만 이어 보내고,
     // 넘긴 문구와 저장한 답변이 어긋나면(AnswerGuard가 잘라낸 경우 등) 화면은 완료 알림 뒤 저장된 답변으로 맞춘다
-    private void completeAnswer(Long executionId, ChatAnswer answer, String relayed) {
+    private ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer, String relayed) {
         ChatExecutionState completed = chatExecutionService.completeAnswer(executionId, answer);
         String content = answer.content();
         String rest = content.startsWith(relayed) ? content.substring(relayed.length()) : "";
         notifyCompleted(executionId, completed, rest);
+        return completed;
     }
 
     // 이미 저장이 끝났으니 구독자가 떠났어도 멈출 이유가 없어 전송 결과는 보지 않는다
@@ -434,6 +447,40 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             chatStreamPublisher.publishToken(executionId, rest);
         }
         chatStreamPublisher.publishCompleted(executionId, state);
+    }
+
+    // 이번 턴에 답한 상담만 닫는다. 답변은 이미 저장·전송됐으므로 완료 기록이 실패해도 실행을 실패로 되돌리지 않는다
+    private void completeConsults(
+            ChatProcessingCommand command, List<Long> consultRequestIds, ChatExecutionState completed) {
+        if (consultRequestIds.isEmpty() || command.sessionId() == null
+                || completed == null || completed.outputMessage() == null) {
+            return;
+        }
+        ConsultService consultService = consultServiceProvider.getIfAvailable();
+        if (consultService == null) {
+            return;
+        }
+        Long finalMessageId = completed.outputMessage().messageId();
+        for (Long consultRequestId : consultRequestIds) {
+            try {
+                consultService.complete(command.sessionId(), consultRequestId, finalMessageId);
+            } catch (Exception e) {
+                log.warn("[파이프라인] 상담 완료 처리 실패: sessionId={}, consultRequestId={}",
+                        command.sessionId(), consultRequestId, e);
+            }
+        }
+    }
+
+    private List<Long> consultRequestIdsOf(IntentRouteResponse routing, ConsultRequest.Intent... intents) {
+        if (routing == null || routing.subQueries() == null) {
+            return List.of();
+        }
+        List<ConsultRequest.Intent> answered = List.of(intents);
+        return routing.subQueries().stream()
+                .filter(subQuery -> answered.contains(subQuery.intent()))
+                .map(IntentRouteResponse.IntentSubQueryResponse::consultRequestId)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     // 실패 기록이 안 되더라도(타임아웃 정리로 이미 끝난 실행 등) 구독은 닫아야 화면이 SSE 타임아웃까지 기다리지 않는다
