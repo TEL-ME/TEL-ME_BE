@@ -9,7 +9,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties(EmbeddingProperties.class)
+@EnableConfigurationProperties({EmbeddingProperties.class, FaqBatchLoadProperties.class})
 public class EmbeddingConfig {
 
     @Bean

@@ -74,3 +74,12 @@ member:
 faq:
   # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
   search-test-api-enabled: ${FAQ_SEARCH_TEST_API_ENABLED:false}
+  batch-load:
+    # FAQ 배치 적재(FaqBatchLoadRunner). true로 기동하면 path의 JSON을 적재하고 exit-after면 종료
+    # 이미 적재된 content_hash는 건너뛰므로 같은 파일을 다시 돌려도 안전
+    enabled: ${FAQ_BATCH_LOAD_ENABLED:false}
+    path: ${FAQ_BATCH_LOAD_PATH:scripts/data/faq_full_300.json}
+    # embedBatch 1회 건수 = 트랜잭션 1개 건수
+    # Ollama가 요청을 순차 처리하므로 50 상한
+    batch-size: 50
+    exit-after: true
