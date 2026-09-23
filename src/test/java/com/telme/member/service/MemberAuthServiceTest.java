@@ -106,13 +106,16 @@ class MemberAuthServiceTest {
         SignUpRequest request = new SignUpRequest("dup@example.com", "password123");
         when(userRepository.findByEmail("dup@example.com"))
                 .thenReturn(Optional.of(User.builder().userId(1L).email("dup@example.com").build()));
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
 
         assertThatThrownBy(() -> memberAuthService.signUp(
-                request, new MockHttpServletRequest(), new MockHttpServletResponse()))
+                request, httpRequest, new MockHttpServletResponse()))
                 .isInstanceOf(GeneralException.class)
                 .extracting(exception -> ((GeneralException) exception).getErrorCode())
                 .isEqualTo(MemberErrorCode.EMAIL_ALREADY_EXISTS);
         verify(securityContextRepository, never()).saveContext(any(), any(), any());
+        // 실패한 가입은 세션이 필요 없다 — 쿠키 없는 요청이 반복돼도 빈 서버 세션이 쌓이지 않아야 한다
+        assertThat(httpRequest.getSession(false)).isNull();
     }
 
     @Test
@@ -189,15 +192,18 @@ class MemberAuthServiceTest {
     @DisplayName("존재하지 않는 이메일이면 로그인 실패 처리한다")
     void 이메일이_없으면_로그인_실패() {
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
 
         assertThatThrownBy(() -> memberAuthService.login(
                 new LoginRequest("nobody@example.com", "password123"),
-                new MockHttpServletRequest(), new MockHttpServletResponse()))
+                httpRequest, new MockHttpServletResponse()))
                 .isInstanceOf(GeneralException.class)
                 .extracting(exception -> ((GeneralException) exception).getErrorCode())
                 .isEqualTo(MemberErrorCode.INVALID_CREDENTIALS);
         // 계정이 없어도 해시 비교를 한 번 수행해 응답 시간으로 계정 존재 여부가 드러나지 않게 한다
         verify(passwordEncoder).matches(eq("password123"), any());
+        // 실패한 로그인은 세션이 필요 없다 — 쿠키 없는 요청이 반복돼도 빈 서버 세션이 쌓이지 않아야 한다
+        assertThat(httpRequest.getSession(false)).isNull();
     }
 
     @Test

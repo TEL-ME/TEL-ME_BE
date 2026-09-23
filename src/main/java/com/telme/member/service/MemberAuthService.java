@@ -57,7 +57,7 @@ public class MemberAuthService {
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
     public SignUpResponse signUp(SignUpRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        UUID guestId = readGuestId(httpRequest.getSession());
+        UUID guestId = readGuestId(httpRequest);
         // BCrypt 해싱은 CPU 작업이라 DB 커넥션을 잡기 전에 끝낸다
         String passwordHash = passwordEncoder.encode(request.password());
 
@@ -94,7 +94,7 @@ public class MemberAuthService {
     }
 
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        UUID guestId = readGuestId(httpRequest.getSession());
+        UUID guestId = readGuestId(httpRequest);
 
         // 조회·해시 비교는 DB 쓰기가 없어 트랜잭션이 필요 없다 — BCrypt 비교로 커넥션을 오래 잡지 않는다
         Optional<User> candidate = userRepository.findByEmail(request.email());
@@ -164,7 +164,12 @@ public class MemberAuthService {
                 && EMAIL_UNIQUE_CONSTRAINT.equals(constraintViolation.getConstraintName());
     }
 
-    private UUID readGuestId(HttpSession session) {
+    // getSession(false) — 실패한 로그인·중복 가입까지 세션이 없는 요청마다 빈 세션을 새로 만들지 않도록 조회만 한다
+    private UUID readGuestId(HttpServletRequest httpRequest) {
+        HttpSession session = httpRequest.getSession(false);
+        if (session == null) {
+            return null;
+        }
         Object value = session.getAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE);
         return value instanceof UUID uuid ? uuid : null;
     }
