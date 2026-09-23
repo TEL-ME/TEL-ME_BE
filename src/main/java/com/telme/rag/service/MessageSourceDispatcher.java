@@ -29,8 +29,9 @@ class MessageSourceDispatcher {
         this.executor = executor;
     }
 
-    // 커밋 전에 저장하면 답변 메시지가 아직 안 보여 FK 위반이 난다
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    // 커밋 전에 저장하면 답변 메시지가 아직 안 보여 FK 위반이 난다.
+    // 파이프라인은 답변 저장이 끝난 뒤 트랜잭션 밖에서 발행하므로 fallbackExecution으로 받는다
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void dispatch(AnswerSourcesReady event) {
         if (event.sources().isEmpty()) {
             return;
