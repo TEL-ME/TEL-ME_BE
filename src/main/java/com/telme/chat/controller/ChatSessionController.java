@@ -5,6 +5,7 @@ import com.telme.chat.dto.req.ChatSessionCreateRequest;
 import com.telme.chat.dto.req.ChatSessionTitleUpdateRequest;
 import com.telme.chat.dto.res.ChatMessageHistoryResponse;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
+import com.telme.chat.dto.res.ChatMessageSourcesResponse;
 import com.telme.chat.dto.res.ChatSessionCreateResponse;
 import com.telme.chat.dto.res.ChatSessionListResponse;
 import com.telme.chat.dto.res.ChatSessionUpdateResponse;
@@ -94,6 +95,19 @@ public class ChatSessionController {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
         return CustomResponse.onSuccess(
                 chatSessionService.getMessages(actor, sessionId, beforeSequenceNo, size)
+        );
+    }
+
+    @Operation(summary = "답변 근거 조회", description = "특정 채팅 메시지에 저장된 FAQ 근거를 검색 순위대로 조회합니다.")
+    @GetMapping("/{sessionId}/messages/{messageId}/sources")
+    public CustomResponse<ChatMessageSourcesResponse> getMessageSources(
+            HttpServletRequest servletRequest,
+            @PathVariable Long sessionId,
+            @PathVariable Long messageId
+    ) {
+        ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
+        return CustomResponse.onSuccess(
+                chatSessionService.getMessageSources(actor, sessionId, messageId)
         );
     }
 

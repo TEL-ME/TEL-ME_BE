@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.converter.ChatMessageConverter;
+import com.telme.chat.converter.ChatMessageSourceConverter;
 import com.telme.chat.converter.ChatSessionConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
@@ -8,6 +9,7 @@ import com.telme.chat.dto.req.ChatSessionTitleUpdateRequest;
 import com.telme.chat.dto.res.ChatMessageHistoryItemResponse;
 import com.telme.chat.dto.res.ChatMessageHistoryResponse;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
+import com.telme.chat.dto.res.ChatMessageSourcesResponse;
 import com.telme.chat.dto.res.ChatSessionCreateResponse;
 import com.telme.chat.dto.res.ChatSessionListItemResponse;
 import com.telme.chat.dto.res.ChatSessionListResponse;
@@ -20,6 +22,7 @@ import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.rag.repository.MessageSourceRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +45,8 @@ public class ChatSessionService {
     private final ChatMessageAppender chatMessageAppender;
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
+    private final ChatMessageSourceConverter chatMessageSourceConverter;
+    private final MessageSourceRepository messageSourceRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -110,6 +115,22 @@ public class ChatSessionService {
                 : chatExecutionRepository.findGuestExecution(executionId, actor.guestId()))
                 .map(ChatExecutionState::of)
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
+    }
+
+    public ChatMessageSourcesResponse getMessageSources(
+            ChatActor actor,
+            Long sessionId,
+            Long messageId
+    ) {
+        validateSessionOwner(actor, sessionId);
+        if (!chatMessageRepository.existsByMessageIdAndSession_SessionId(messageId, sessionId)) {
+            throw new GeneralException(ChatErrorCode.MESSAGE_NOT_FOUND);
+        }
+
+        return chatMessageSourceConverter.toResponse(
+                messageId,
+                messageSourceRepository.findByMessage_MessageIdOrderBySearchRankAsc(messageId)
+        );
     }
 
     private List<ChatSession> findSessions(

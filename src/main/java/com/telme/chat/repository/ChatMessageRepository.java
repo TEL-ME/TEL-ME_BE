@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
+    boolean existsByMessageIdAndSession_SessionId(Long messageId, Long sessionId);
+
     @Query("""
             select coalesce(max(message.sequenceNo), 0)
             from ChatMessage message
