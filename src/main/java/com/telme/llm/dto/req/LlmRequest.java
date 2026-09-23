@@ -16,7 +16,9 @@ public record LlmRequest(
         Double temperature,
         Integer maxTokens,
         // 호출 기록용. Context에 넣은 근거 수
-        Integer contextCount
+        Integer contextCount,
+        // 호출 기록용. 사용한 프롬프트 버전
+        String promptVersion
 ) {
 
     public LlmRequest {

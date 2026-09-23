@@ -48,12 +48,12 @@ public class AnswerContextConverter {
                 .build();
     }
 
+    // varchar 길이는 코드포인트 기준이라 length()로 판단하면 이모지가 불필요하게 잘린다
     private String truncateTitle(String question) {
-        if (question == null || question.length() <= TITLE_MAX_LENGTH) {
+        if (question == null || question.codePointCount(0, question.length()) <= TITLE_MAX_LENGTH) {
             return question;
         }
-        // 이모지 같은 서로게이트 쌍이 반으로 잘리지 않도록 코드포인트 경계에서 자름
-        return question.substring(0, question.offsetByCodePoints(0, question.codePointCount(0, TITLE_MAX_LENGTH)));
+        return question.substring(0, question.offsetByCodePoints(0, TITLE_MAX_LENGTH));
     }
 
     private Short toRank(Integer searchRank) {
