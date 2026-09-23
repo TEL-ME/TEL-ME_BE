@@ -22,7 +22,6 @@ import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
-import com.telme.rag.repository.MessageSourceRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +45,7 @@ public class ChatSessionService {
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
     private final ChatMessageSourceConverter chatMessageSourceConverter;
-    private final MessageSourceRepository messageSourceRepository;
+    private final ChatMessageSourceQueryPort chatMessageSourceQueryPort;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -129,7 +128,7 @@ public class ChatSessionService {
 
         return chatMessageSourceConverter.toResponse(
                 messageId,
-                messageSourceRepository.findByMessage_MessageIdOrderBySearchRankAsc(messageId)
+                chatMessageSourceQueryPort.findByMessageId(messageId)
         );
     }
 

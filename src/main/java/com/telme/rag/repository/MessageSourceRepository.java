@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface MessageSourceRepository extends JpaRepository<MessageSource, Long> {
 
-    List<MessageSource> findByMessage_MessageIdOrderBySearchRankAsc(Long messageId);
+    List<MessageSource> findByMessage_MessageIdOrderBySearchRankAscSourceIdAsc(Long messageId);
 
     // 파생 delete는 flush 시 INSERT가 DELETE보다 먼저 나가서 지우고 넣는 순서가 보장되지 않음
     @Modifying(clearAutomatically = true, flushAutomatically = true)

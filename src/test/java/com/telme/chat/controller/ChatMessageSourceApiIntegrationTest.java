@@ -89,10 +89,9 @@ class ChatMessageSourceApiIntegrationTest {
     }
 
     @Test
-    void hidesSourcesFromNonOwnerAndRejectsMessageFromAnotherSession() throws Exception {
+    void hidesSourcesFromNonOwner() throws Exception {
         ChatSession sourceSession = persistMemberChatSession(owner.getUserId());
         ChatMessage answer = persistAnswer(sourceSession, 1);
-        ChatSession otherOwnedSession = persistMemberChatSession(owner.getUserId());
 
         mockMvc.perform(get(
                         "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
@@ -100,6 +99,13 @@ class ChatMessageSourceApiIntegrationTest {
                         .session(otherSession))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("CHAT404-0"));
+    }
+
+    @Test
+    void rejectsMessageFromAnotherSession() throws Exception {
+        ChatSession sourceSession = persistMemberChatSession(owner.getUserId());
+        ChatMessage answer = persistAnswer(sourceSession, 1);
+        ChatSession otherOwnedSession = persistMemberChatSession(owner.getUserId());
 
         mockMvc.perform(get(
                         "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
@@ -110,10 +116,26 @@ class ChatMessageSourceApiIntegrationTest {
     }
 
     @Test
+    void rejectsMissingMessage() throws Exception {
+        ChatSession session = persistMemberChatSession(owner.getUserId());
+
+        mockMvc.perform(get(
+                        "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
+                        session.getSessionId(), Long.MAX_VALUE)
+                        .session(ownerSession))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CHAT404-2"));
+    }
+
+    @Test
     void guestCanReadSourcesFromOwnedSession() throws Exception {
         UUID guestId = persistGuest();
         ChatSession session = persistGuestChatSession(guestId);
         ChatMessage answer = persistAnswer(session, 1);
+        Faq faq = persistFaq("게스트 조회 근거");
+        persistSource(answer, faq, "게스트 조회 근거", (short) 1, "0.9000");
+        entityManager.flush();
+        entityManager.clear();
 
         mockMvc.perform(get(
                         "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
@@ -121,7 +143,60 @@ class ChatMessageSourceApiIntegrationTest {
                         .session(guestSession(guestId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.messageId").value(answer.getMessageId()))
-                .andExpect(jsonPath("$.result.sources.length()").value(0));
+                .andExpect(jsonPath("$.result.sources.length()").value(1))
+                .andExpect(jsonPath("$.result.sources[0].faqId").value(faq.getFaqId()));
+    }
+
+    @Test
+    void memberCannotReadGuestSessionSources() throws Exception {
+        UUID guestId = persistGuest();
+        ChatSession guestChatSession = persistGuestChatSession(guestId);
+        ChatMessage answer = persistAnswer(guestChatSession, 1);
+
+        mockMvc.perform(get(
+                        "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
+                        guestChatSession.getSessionId(), answer.getMessageId())
+                        .session(ownerSession))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CHAT404-0"));
+    }
+
+    @Test
+    void guestCannotReadMemberSessionSources() throws Exception {
+        UUID guestId = persistGuest();
+        ChatSession memberChatSession = persistMemberChatSession(owner.getUserId());
+        ChatMessage answer = persistAnswer(memberChatSession, 1);
+
+        mockMvc.perform(get(
+                        "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
+                        memberChatSession.getSessionId(), answer.getMessageId())
+                        .session(guestSession(guestId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CHAT404-0"));
+    }
+
+    @Test
+    void ordersEqualAndMissingRanksBySourceId() throws Exception {
+        ChatSession session = persistMemberChatSession(owner.getUserId());
+        ChatMessage answer = persistAnswer(session, 1);
+        Faq firstFaq = persistFaq("첫 번째 동일 순위 근거");
+        Faq secondFaq = persistFaq("두 번째 동일 순위 근거");
+        Faq unrankedFaq = persistFaq("순위 없는 근거");
+
+        persistSource(answer, firstFaq, "첫 번째 동일 순위 근거", (short) 1, "0.9000");
+        persistSource(answer, secondFaq, "두 번째 동일 순위 근거", (short) 1, "0.8000");
+        persistSource(answer, unrankedFaq, "순위 없는 근거", null, "0.7000");
+        entityManager.flush();
+        entityManager.clear();
+
+        mockMvc.perform(get(
+                        "/api/v1/chat/sessions/{sessionId}/messages/{messageId}/sources",
+                        session.getSessionId(), answer.getMessageId())
+                        .session(ownerSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.sources[0].title").value("첫 번째 동일 순위 근거"))
+                .andExpect(jsonPath("$.result.sources[1].title").value("두 번째 동일 순위 근거"))
+                .andExpect(jsonPath("$.result.sources[2].title").value("순위 없는 근거"));
     }
 
     private User persistUser(String prefix) {
@@ -196,7 +271,7 @@ class ChatMessageSourceApiIntegrationTest {
             ChatMessage message,
             Faq faq,
             String title,
-            short searchRank,
+            Short searchRank,
             String score
     ) {
         entityManager.persist(MessageSource.builder()
