@@ -7,7 +7,10 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -24,6 +27,7 @@ import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatOutputMessage;
 import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.service.ChatStreamPublisher;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Condition;
@@ -38,6 +42,7 @@ import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
@@ -54,6 +59,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
@@ -88,6 +94,9 @@ class ChatPipelineProcessorTest {
     @Mock
     private ObjectProvider<ConsultService> consultServiceProvider;
 
+    @Mock
+    private ChatStreamPublisher chatStreamPublisher;
+
     private ChatPipelineProcessor processor;
 
     @BeforeEach
@@ -100,7 +109,8 @@ class ChatPipelineProcessorTest {
                 queryRoutingService,
                 faqSearchService,
                 answerGenerator,
-                consultServiceProvider
+                consultServiceProvider,
+                chatStreamPublisher
         );
     }
 
@@ -762,5 +772,148 @@ class ChatPipelineProcessorTest {
         processor.request(invalidCmd);
 
         verify(chatExecutionService).fail(eq(200L), argThat(f -> f.errorCode().equals("MESSAGE_NOT_FOUND")));
+    }
+
+    @Test
+    @DisplayName("스트리밍: 모델 토큰을 구독자에게 넘기고, 시작은 답변 생성 전·완료는 저장 후에 알린다")
+    void streaming_relaysTokensBetweenStartAndCompletion() {
+        Long executionId = 300L;
+        givenFaqQuestion(executionId, 30L, "5G 요금제 알려줘", QueryRouting.Intent.FAQ);
+        given(chatStreamPublisher.publishToken(any(), any())).willReturn(true);
+        givenStreamedAnswer("5G 요금제는 ", "월 55,000원부터입니다.");
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 30L, "5G 요금제 알려줘"));
+
+        InOrder order = inOrder(chatExecutionService, chatStreamPublisher);
+        order.verify(chatExecutionService).startAnswer(executionId);
+        order.verify(chatStreamPublisher).publishStarted(eq(executionId), any());
+        order.verify(chatStreamPublisher).publishToken(executionId, "5G 요금제는 ");
+        order.verify(chatStreamPublisher).publishToken(executionId, "월 55,000원부터입니다.");
+        order.verify(chatExecutionService).completeAnswer(eq(executionId), any());
+        order.verify(chatStreamPublisher).publishCompleted(eq(executionId), any());
+        // 모델이 이미 넘긴 답변을 완료 시점에 다시 보내지 않는다
+        verify(chatStreamPublisher, times(2)).publishToken(eq(executionId), any());
+    }
+
+    @Test
+    @DisplayName("스트리밍: 구독자가 떠나 생성이 멈추면 근거 없음 답변으로 완료하지 않고 CANCELLED로 기록한다")
+    void streaming_whenSubscriberLeaves_cancelsExecution() {
+        Long executionId = 301L;
+        givenFaqQuestion(executionId, 31L, "로밍 요금 알려줘", QueryRouting.Intent.FAQ);
+        given(chatStreamPublisher.publishToken(any(), any())).willReturn(false);
+        givenStreamedAnswer("로밍은 ");
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 31L, "로밍 요금 알려줘"));
+
+        ChatFailure cancelled = new ChatFailure(ChatMessage.Status.CANCELLED, "USER_CANCELLED");
+        verify(chatExecutionService, never()).completeAnswer(any(), any());
+        verify(chatExecutionService).fail(executionId, cancelled);
+        verify(chatStreamPublisher).publishFailed(executionId, cancelled);
+    }
+
+    @Test
+    @DisplayName("스트리밍: 복합 질의는 모델 답변 뒤에 덧붙인 매장 안내만 저장 후 이어 보낸다")
+    void streaming_bothIntent_sendsOnlyAppendedStoreGuide() {
+        Long executionId = 302L;
+        givenFaqQuestion(executionId, 32L, "5G 요금제 알려주고 대리점도 찾아줘", QueryRouting.Intent.BOTH);
+        given(chatStreamPublisher.publishToken(any(), any())).willReturn(true);
+        givenStreamedAnswer("5G 요금제는 월 55,000원부터입니다.");
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 32L, "5G 요금제 알려주고 대리점도 찾아줘"));
+
+        verify(chatStreamPublisher).publishToken(executionId, "5G 요금제는 월 55,000원부터입니다.");
+        verify(chatStreamPublisher).publishToken(eq(executionId), argThat(rest ->
+                rest.startsWith("\n\n[매장 안내]") && !rest.contains("55,000원")));
+    }
+
+    @Test
+    @DisplayName("스트리밍: 답변 생성이 토큰 없이 실패하면 저장한 근거 없음 문구를 보내고 완료를 알린다")
+    void streaming_whenGenerationFailsBeforeTokens_sendsFallbackText() {
+        Long executionId = 303L;
+        givenFaqQuestion(executionId, 33L, "위약금 얼마예요?", QueryRouting.Intent.FAQ);
+        given(answerGenerator.generate(any(), any())).willThrow(new IllegalStateException("LLM 연결 실패"));
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 33L, "위약금 얼마예요?"));
+
+        verify(chatStreamPublisher).publishToken(executionId, AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        verify(chatStreamPublisher).publishCompleted(eq(executionId), any());
+    }
+
+    @Test
+    @DisplayName("스트리밍: 넘긴 토큰과 저장한 답변이 어긋나면(AnswerGuard가 잘라낸 경우) 나머지를 억지로 보내지 않는다")
+    void streaming_whenStoredAnswerDiffersFromRelayed_sendsNothingMore() {
+        Long executionId = 304L;
+        givenFaqQuestion(executionId, 34L, "해지 방법 알려줘", QueryRouting.Intent.FAQ);
+        given(chatStreamPublisher.publishToken(any(), any())).willReturn(true);
+        given(answerGenerator.generate(any(), any())).willAnswer(invocation -> {
+            LlmStreamHandler handler = invocation.getArgument(1);
+            handler.onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER + " 추가 설명");
+            return AnswerResult.builder()
+                    .answer(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                    .answerBasis(ChatMessage.AnswerBasis.NO_EVIDENCE)
+                    .sources(Collections.emptyList())
+                    .build();
+        });
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 34L, "해지 방법 알려줘"));
+
+        verify(chatStreamPublisher).publishToken(eq(executionId), any());
+        verify(chatStreamPublisher).publishCompleted(eq(executionId), any());
+    }
+
+    @Test
+    @DisplayName("스트리밍: 지역을 되물으면 질문 문구를 보내고 완료를 알린다")
+    void streaming_storeIntentWithoutLocation_sendsQuestionAndCompletes() {
+        Long executionId = 305L;
+        givenFaqQuestion(executionId, 35L, "가까운 대리점 어디야?", QueryRouting.Intent.STORE);
+
+        processor.request(new ChatProcessingCommand(executionId, 10L, 35L, "가까운 대리점 어디야?"));
+
+        verify(chatStreamPublisher).publishToken(eq(executionId), argThat(question -> question.contains("지역")));
+        verify(chatStreamPublisher).publishCompleted(eq(executionId), any());
+        verify(chatStreamPublisher, never()).publishStarted(any(), any());
+    }
+
+    @Test
+    @DisplayName("스트리밍: 실패 기록이 안 되는 이미 끝난 실행이어도 구독은 닫는다")
+    void streaming_whenFailureCannotBeRecorded_stillClosesSubscription() {
+        given(chatMessageRepository.findByIdWithSession(999L)).willReturn(Optional.empty());
+        willThrow(new IllegalStateException("이미 종료된 실행")).given(chatExecutionService).fail(eq(306L), any());
+
+        processor.request(new ChatProcessingCommand(306L, 10L, 999L, "안녕"));
+
+        verify(chatStreamPublisher).publishFailed(eq(306L), argThat(f -> f.errorCode().equals("MESSAGE_NOT_FOUND")));
+    }
+
+    private void givenFaqQuestion(Long executionId, Long messageId, String text, QueryRouting.Intent intent) {
+        ChatSession session = ChatSession.builder().sessionId(10L).status(ChatSession.Status.ACTIVE).build();
+        ChatMessage message = ChatMessage.builder().messageId(messageId).session(session).content(text).build();
+        given(chatMessageRepository.findByIdWithSession(messageId)).willReturn(Optional.of(message));
+
+        IntentRouteResponse routing = new IntentRouteResponse(
+                executionId, messageId, intent, text,
+                BigDecimal.valueOf(0.95), QueryRouting.Method.LLM,
+                Collections.emptyMap(), Collections.emptyList()
+        );
+        given(queryRoutingService.route(eq(message), any())).willReturn(routing);
+        if (intent != QueryRouting.Intent.STORE) {
+            given(faqSearchService.search(any())).willReturn(List.of(new FaqSearchResponse(
+                    1L, "BILLING", "5G 요금제", "5G 요금제 설명", 0.9, 1, LocalDate.now(), 1)));
+        }
+    }
+
+    // 실제 RagAnswerGenerator처럼 토큰을 handler로 흘린 뒤 모은 답변을 돌려주고, handler가 던진 예외는 그대로 전파한다
+    private void givenStreamedAnswer(String... tokens) {
+        given(answerGenerator.generate(any(), any())).willAnswer(invocation -> {
+            LlmStreamHandler handler = invocation.getArgument(1);
+            for (String token : tokens) {
+                handler.onToken(token);
+            }
+            return AnswerResult.builder()
+                    .answer(String.join("", tokens))
+                    .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                    .sources(Collections.emptyList())
+                    .build();
+        });
     }
 }

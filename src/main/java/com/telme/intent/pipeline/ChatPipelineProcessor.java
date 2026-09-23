@@ -12,6 +12,8 @@ import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.ChatStreamPublisher;
+import com.telme.chat.service.ChatStreamRelay;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.ConditionStatus;
@@ -27,7 +29,7 @@ import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
-import com.telme.llm.service.LlmStreamHandler;
+import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
@@ -57,20 +59,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     private static final int ROUTING_CONTEXT_TOKEN_BUDGET = 1024;
     private static final String EMPTY_QUESTION_MESSAGE = "궁금하신 내용을 문장으로 입력해 주시면 확인해 드리겠습니다.";
 
-    // SSE 토큰 스트리밍 연결 전까지 쓰는 빈 핸들러. AnswerGenerator는 null 핸들러를 허용하지 않는다
-    private static final LlmStreamHandler NO_STREAMING = new LlmStreamHandler() {
-        @Override
-        public void onToken(String token) {
-        }
-
-        @Override
-        public void onComplete() {
-        }
-
-        @Override
-        public void onError(Throwable error) {
-        }
-    };
+    private static final String USER_CANCELLED = "USER_CANCELLED";
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatSessionRepository chatSessionRepository;
@@ -80,6 +69,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     private final FaqSearchService faqSearchService;
     private final AnswerGenerator answerGenerator;
     private final ObjectProvider<ConsultService> consultServiceProvider;
+    private final ChatStreamPublisher chatStreamPublisher;
 
     @Override
     public void request(ChatProcessingCommand command) {
@@ -90,13 +80,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         try {
             processInternal(command);
+        } catch (LlmStreamCancelledException e) {
+            log.info("[파이프라인] 구독자 이탈로 답변 생성 중단: executionId={}", command.executionId());
+            fail(command.executionId(), new ChatFailure(ChatMessage.Status.CANCELLED, USER_CANCELLED));
         } catch (Exception e) {
             log.error("[파이프라인] AI 처리 중 예외 발생: executionId={}", command.executionId(), e);
-            try {
-                chatExecutionService.fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "AI_PROCESSING_ERROR"));
-            } catch (Exception ex) {
-                log.info("[파이프라인] 실행 실패 기록 생략: {}", ex.getMessage());
-            }
+            fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "AI_PROCESSING_ERROR"));
         }
     }
 
@@ -105,7 +94,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         ChatMessage inputMessage =
                 chatMessageRepository.findByIdWithSession(command.inputMessageId()).orElse(null);
         if (inputMessage == null) {
-            chatExecutionService.fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "MESSAGE_NOT_FOUND"));
+            fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "MESSAGE_NOT_FOUND"));
             return;
         }
 
@@ -149,8 +138,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         Long sessionId = session != null ? session.getSessionId() : command.sessionId();
         if (sessionId == null) {
             log.warn("[파이프라인] 되묻기 응답의 세션을 확인할 수 없습니다: executionId={}", command.executionId());
-            chatExecutionService.fail(
-                    command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "SESSION_NOT_FOUND"));
+            fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "SESSION_NOT_FOUND"));
             return;
         }
 
@@ -185,7 +173,8 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             }
             log.info("[파이프라인] 되묻기 응답 대기 유지: executionId={}, pendingMessageId={}",
                     command.executionId(), prep.pendingMessageId());
-            chatExecutionService.completeWithoutOutput(command.executionId());
+            ChatExecutionState state = chatExecutionService.completeWithoutOutput(command.executionId());
+            chatStreamPublisher.publishCompleted(command.executionId(), state);
             return;
         }
 
@@ -206,19 +195,21 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 consultService.persist(
                         prep.prepared(),
                         new MessageLinks(asked.outputMessage().messageId(), answerMessageId, answeredField));
+                notifyCompleted(command.executionId(), asked, messageOr(decision, LOCATION_ASK_MESSAGE));
             }
             // 조건 저장이 실패하면 사용자에게 성공 답변이 나가지 않도록 저장을 먼저 한다
             case ALTERNATIVE_GUIDANCE -> {
                 consultService.persist(
                         prep.prepared(), new MessageLinks(null, answerMessageId, answeredField));
-                chatExecutionService.completeAnswer(
+                completeAnswer(
                         command.executionId(),
                         new ChatAnswer(
                                 ChatMessage.MessageType.ANSWER,
                                 messageOr(decision, LOCATION_DECLINED_MESSAGE),
                                 ChatMessage.AnswerBasis.OUT_OF_SCOPE,
                                 Collections.emptyList(),
-                                null));
+                                null),
+                        "");
             }
             // 사용자 원문("강남역이요") 대신 상담 모듈이 정규화한 값을 써야 안내 문구가 자연스럽다
             case PROCEED -> {
@@ -299,9 +290,10 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         List<FaqSearchResponse> searchResults = searchFaq(faqQueryText);
 
-        chatExecutionService.startAnswer(command.executionId());
+        startAnswer(command.executionId());
 
-        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, extractedConditions);
+        ChatStreamRelay relay = new ChatStreamRelay(command.executionId(), chatStreamPublisher);
+        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, extractedConditions, relay);
         String faqAnswerText = answerTextOr(answerResult);
         ChatMessage.AnswerBasis answerBasis = answerBasisOf(answerResult);
 
@@ -322,7 +314,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("영업시간 문의", "매장 방문 예약"),
                     List.of(storeInfo)
             );
-            chatExecutionService.completeAnswer(command.executionId(), answer);
+            completeAnswer(command.executionId(), answer, relay.relayed());
         } else {
             String combinedContent = faqAnswerText + "\n\n[매장 안내]\n가까운 매장 방문을 원하시면 지역(역 이름이나 동네)을 알려주세요.";
             ChatAnswer answer = new ChatAnswer(
@@ -332,12 +324,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("가까운 매장 찾기", "고객센터 연결"),
                     null
             );
-            chatExecutionService.completeAnswer(command.executionId(), answer);
+            completeAnswer(command.executionId(), answer, relay.relayed());
         }
     }
 
     private void handleUnknownIntent(ChatProcessingCommand command) {
-        chatExecutionService.startAnswer(command.executionId());
+        startAnswer(command.executionId());
 
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
@@ -347,7 +339,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 null
         );
 
-        chatExecutionService.completeAnswer(command.executionId(), answer);
+        completeAnswer(command.executionId(), answer, "");
     }
 
     private void handleStoreIntent(ChatProcessingCommand command, IntentRouteResponse routing, String rawContent) {
@@ -356,7 +348,9 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 : null;
 
         if (location == null || location.isBlank()) {
-            chatExecutionService.askClarification(command.executionId(), LOCATION_ASK_MESSAGE);
+            ChatExecutionState asked =
+                    chatExecutionService.askClarification(command.executionId(), LOCATION_ASK_MESSAGE);
+            notifyCompleted(command.executionId(), asked, LOCATION_ASK_MESSAGE);
             return;
         }
 
@@ -378,7 +372,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 List.of(storeInfo)
         );
 
-        chatExecutionService.completeAnswer(command.executionId(), answer);
+        completeAnswer(command.executionId(), answer, "");
     }
 
     private void handleFaqOrGeneralIntent(ChatProcessingCommand command, String rawContent) {
@@ -390,9 +384,10 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         List<FaqSearchResponse> searchResults = searchFaq(rawContent);
 
-        chatExecutionService.startAnswer(command.executionId());
+        startAnswer(command.executionId());
 
-        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, Collections.emptyMap());
+        ChatStreamRelay relay = new ChatStreamRelay(command.executionId(), chatStreamPublisher);
+        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, Collections.emptyMap(), relay);
 
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
@@ -402,11 +397,11 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 null
         );
 
-        chatExecutionService.completeAnswer(command.executionId(), answer);
+        completeAnswer(command.executionId(), answer, relay.relayed());
     }
 
     private void answerEmptyQuestion(ChatProcessingCommand command) {
-        chatExecutionService.startAnswer(command.executionId());
+        startAnswer(command.executionId());
 
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
@@ -416,7 +411,40 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 null
         );
 
-        chatExecutionService.completeAnswer(command.executionId(), answer);
+        completeAnswer(command.executionId(), answer, "");
+    }
+
+    private void startAnswer(Long executionId) {
+        ChatExecutionState started = chatExecutionService.startAnswer(executionId);
+        chatStreamPublisher.publishStarted(executionId, started);
+    }
+
+    // 저장을 먼저 끝내고 알린다. 모델이 넘기지 않은 나머지(고정 문구, 덧붙인 매장 안내, 생성 실패 폴백)만 이어 보내고,
+    // 넘긴 문구와 저장한 답변이 어긋나면(AnswerGuard가 잘라낸 경우 등) 화면은 완료 알림 뒤 저장된 답변으로 맞춘다
+    private void completeAnswer(Long executionId, ChatAnswer answer, String relayed) {
+        ChatExecutionState completed = chatExecutionService.completeAnswer(executionId, answer);
+        String content = answer.content();
+        String rest = content.startsWith(relayed) ? content.substring(relayed.length()) : "";
+        notifyCompleted(executionId, completed, rest);
+    }
+
+    // 이미 저장이 끝났으니 구독자가 떠났어도 멈출 이유가 없어 전송 결과는 보지 않는다
+    private void notifyCompleted(Long executionId, ChatExecutionState state, String rest) {
+        if (!rest.isEmpty()) {
+            chatStreamPublisher.publishToken(executionId, rest);
+        }
+        chatStreamPublisher.publishCompleted(executionId, state);
+    }
+
+    // 실패 기록이 안 되더라도(타임아웃 정리로 이미 끝난 실행 등) 구독은 닫아야 화면이 SSE 타임아웃까지 기다리지 않는다
+    private void fail(Long executionId, ChatFailure failure) {
+        try {
+            chatExecutionService.fail(executionId, failure);
+        } catch (Exception e) {
+            log.info("[파이프라인] 실행 실패 기록 생략: {}", e.getMessage());
+        } finally {
+            chatStreamPublisher.publishFailed(executionId, failure);
+        }
     }
 
     private List<FaqSearchResponse> searchFaq(String queryText) {
@@ -434,7 +462,8 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             ChatProcessingCommand command,
             String userQuery,
             List<FaqSearchResponse> searchResults,
-            Map<String, String> conditions) {
+            Map<String, String> conditions,
+            ChatStreamRelay relay) {
 
         // 분해된 서브질의가 아닌 사용자 원문을 넘긴다
         AnswerRequest answerRequest = AnswerRequest.builder()
@@ -445,7 +474,10 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 .build();
 
         try {
-            return answerGenerator.generate(answerRequest, NO_STREAMING);
+            return answerGenerator.generate(answerRequest, relay);
+        } catch (LlmStreamCancelledException e) {
+            // 구독자가 떠나 멈춘 생성을 근거 없음 답변으로 완료하면 이력과 품질 지표가 틀어지므로 취소로 올려보낸다
+            throw e;
         } catch (Exception e) {
             log.error("[파이프라인] RAG 답변 생성 실패: {}", e.getMessage());
             return null;
