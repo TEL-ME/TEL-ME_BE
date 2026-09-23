@@ -64,13 +64,13 @@ class KakaoAccountLinkServiceTest {
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-1", matchedUser)).thenReturn(matchedUser);
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-1", "match@example.com", matchedUser)).thenReturn(matchedUser);
 
         LoginResponse response = service.confirmLink(
                 new KakaoLinkConfirmRequest("password123"), request, new MockHttpServletResponse());
 
         assertThat(response).isEqualTo(new LoginResponse(10L, "match@example.com"));
-        verify(socialMemberFinder).linkExisting(KAKAO, "kakao-1", matchedUser);
+        verify(socialMemberFinder).linkExisting(KAKAO, "kakao-1", "match@example.com", matchedUser);
         assertThatThrownBy(() -> pendingKakaoLinkStore.require(request)).isInstanceOf(GeneralException.class);
     }
 
@@ -89,7 +89,7 @@ class KakaoAccountLinkServiceTest {
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.INVALID_CREDENTIALS);
 
-        verify(socialMemberFinder, never()).linkExisting(any(), any(), any());
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
         PendingKakaoLink pending = pendingKakaoLinkStore.require(request);
         assertThat(pending.failedAttempts()).isEqualTo(1);
     }
@@ -109,7 +109,7 @@ class KakaoAccountLinkServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
-        verify(socialMemberFinder, never()).linkExisting(any(), any(), any());
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
     }
 
     @Test
@@ -136,7 +136,7 @@ class KakaoAccountLinkServiceTest {
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-1", matchedUser)).thenReturn(matchedUser);
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-1", "match@example.com", matchedUser)).thenReturn(matchedUser);
 
         service.confirmLink(new KakaoLinkConfirmRequest("password123"), request, new MockHttpServletResponse());
 

@@ -50,7 +50,8 @@ public class KakaoAccountLinkService {
         // 하나의 트랜잭션으로 묶지 않는다(참여 트랜잭션이 rollback-only로 표시되면 그 복구 자체가 무효화된다) —
         // login()과 동일하게 각각 독립된 트랜잭션으로 순차 처리하고, 둘 다 끝난 뒤에만 세션에 반영한다
         UUID guestId = guestIdResolver.resolve(httpRequest);
-        User linkedUser = socialMemberFinder.linkExisting(SocialAccount.Provider.KAKAO, pending.providerUserId(), matchedUser);
+        User linkedUser = socialMemberFinder.linkExisting(
+                SocialAccount.Provider.KAKAO, pending.providerUserId(), pending.matchedEmail(), matchedUser);
         if (guestId != null) {
             transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, linkedUser));
         }

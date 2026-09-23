@@ -4,6 +4,7 @@ import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -133,10 +134,24 @@ class SocialMemberFinderTest {
     void linkExisting_정상_연결() {
         User existing = User.builder().userId(8L).email("link@example.com").build();
 
-        User result = finder.linkExisting(KAKAO, "kakao-7", existing);
+        User result = finder.linkExisting(KAKAO, "kakao-7", "provider@example.com", existing);
 
         assertThat(result).isEqualTo(existing);
-        verify(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        verify(socialAccountRepository).saveAndFlush(argThat(account ->
+                account.getUser().equals(existing)
+                        && account.getProvider() == KAKAO
+                        && account.getProviderUserId().equals("kakao-7")
+                        && account.getEmail().equals("provider@example.com")));
+    }
+
+    @Test
+    @DisplayName("소셜 제공자가 이메일을 주지 않으면 연결 계정의 이메일도 null로 저장한다")
+    void linkExisting_소셜_이메일이_없으면_null_저장() {
+        User existing = User.builder().userId(8L).email("telme@example.com").build();
+
+        finder.linkExisting(KAKAO, "kakao-no-email", null, existing);
+
+        verify(socialAccountRepository).saveAndFlush(argThat(account -> account.getEmail() == null));
     }
 
     @Test
@@ -148,7 +163,7 @@ class SocialMemberFinderTest {
         doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
                 .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
 
-        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-8", existing))
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-8", "provider@example.com", existing))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
@@ -166,7 +181,7 @@ class SocialMemberFinderTest {
         when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-9"))
                 .thenReturn(Optional.of(alreadyLinked));
 
-        User result = finder.linkExisting(KAKAO, "kakao-9", existing);
+        User result = finder.linkExisting(KAKAO, "kakao-9", "provider@example.com", existing);
 
         assertThat(result).isEqualTo(existing);
     }
@@ -184,7 +199,7 @@ class SocialMemberFinderTest {
         when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-10"))
                 .thenReturn(Optional.of(linkedToOther));
 
-        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-10", existing))
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-10", "provider@example.com", existing))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);

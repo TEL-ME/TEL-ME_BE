@@ -78,13 +78,14 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             return null;
         }
         if (pending != null) {
-            return resolveLinkMode(request, response, pending, providerUserId);
+            return resolveLinkMode(request, response, pending, providerUserId, email);
         }
         return resolveLoginMode(request, response, providerUserId, email);
     }
 
     private User resolveLinkMode(
-            HttpServletRequest request, HttpServletResponse response, KakaoLinkPending pending, String providerUserId)
+            HttpServletRequest request, HttpServletResponse response, KakaoLinkPending pending,
+            String providerUserId, String providerEmail)
             throws IOException {
         // pending만 믿지 않고 세션의 현재 로그인 상태와 대조 — 다른 탭에서 로그인 상태가 바뀌었을 수 있다
         if (!pending.targetUserId().equals(readSessionUserId(request))) {
@@ -95,7 +96,8 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             User targetUser = userRepository.findById(pending.targetUserId())
                     .orElseThrow(() -> new GeneralException(MemberErrorCode.UNAUTHENTICATED));
             memberStatusChecker.checkActive(targetUser);
-            return socialMemberFinder.linkExisting(SocialAccount.Provider.KAKAO, providerUserId, targetUser);
+            return socialMemberFinder.linkExisting(
+                    SocialAccount.Provider.KAKAO, providerUserId, providerEmail, targetUser);
         } catch (GeneralException exception) {
             redirectFailure(request, response, exception.getErrorCode().getCode());
             return null;

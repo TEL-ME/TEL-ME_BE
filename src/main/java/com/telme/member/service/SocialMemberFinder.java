@@ -37,14 +37,16 @@ public class SocialMemberFinder {
 
     // 이미 연결된 회원(matchedUserId)에 새 소셜 계정을 붙인다 — email 충돌로 findOrCreate가 중단시킨 뒤,
     // 본인확인(비밀번호 등)을 통과한 호출자만 이 메서드로 실제 연결을 완료한다
-    public User linkExisting(SocialAccount.Provider provider, String providerUserId, User existingUser) {
+    public User linkExisting(
+            SocialAccount.Provider provider, String providerUserId, String providerEmail, User existingUser) {
         try {
             transactionTemplate.executeWithoutResult(status ->
                     socialAccountRepository.saveAndFlush(SocialAccount.builder()
                             .user(existingUser)
                             .provider(provider)
                             .providerUserId(providerUserId)
-                            .email(existingUser.getEmail())
+                            // 소셜 제공자가 실제로 전달한 이메일만 저장한다. 동의 범위에 이메일이 없으면 null이다.
+                            .email(providerEmail)
                             .build()));
             return existingUser;
         } catch (DataIntegrityViolationException exception) {

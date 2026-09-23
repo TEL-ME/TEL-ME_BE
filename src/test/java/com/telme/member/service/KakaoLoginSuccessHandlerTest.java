@@ -176,11 +176,12 @@ class KakaoLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-6", targetUser)).thenReturn(targetUser);
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-6", "kakao@example.com", targetUser))
+                .thenReturn(targetUser);
 
-        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-6", null));
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-6", "kakao@example.com"));
 
-        verify(socialMemberFinder).linkExisting(KAKAO, "kakao-6", targetUser);
+        verify(socialMemberFinder).linkExisting(KAKAO, "kakao-6", "kakao@example.com", targetUser);
         assertThat(request.getSession().getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(30L);
         assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/oauth/callback?success=true");
     }
@@ -195,7 +196,7 @@ class KakaoLoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-7", null));
 
-        verify(socialMemberFinder, never()).linkExisting(any(), any(), any());
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=KAKAO_LINK_SESSION_MISMATCH");
     }
@@ -212,7 +213,7 @@ class KakaoLoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-8", null));
 
-        verify(socialMemberFinder, never()).linkExisting(any(), any(), any());
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER403-0");
     }
@@ -226,7 +227,7 @@ class KakaoLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-9", targetUser))
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-9", null, targetUser))
                 .thenThrow(new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-9", null));
@@ -244,7 +245,7 @@ class KakaoLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).role(User.Role.ADMIN).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-10", targetUser))
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-10", null, targetUser))
                 .thenThrow(new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-10", null));
@@ -267,7 +268,7 @@ class KakaoLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-15", targetUser))
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-15", null, targetUser))
                 .thenThrow(new IllegalStateException("예상 밖 오류 시뮬레이션"));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-15", null));
@@ -289,7 +290,7 @@ class KakaoLoginSuccessHandlerTest {
         when(userRepository.findById(30L))
                 .thenReturn(Optional.of(targetUser))
                 .thenThrow(new RuntimeException("DB 장애 시뮬레이션 — 복원용 재조회"));
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-16", targetUser))
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-16", null, targetUser))
                 .thenThrow(new IllegalStateException("DB 장애로 인한 연결 실패 시뮬레이션"));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-16", null));
@@ -311,7 +312,7 @@ class KakaoLoginSuccessHandlerTest {
         when(userRepository.findById(30L))
                 .thenReturn(Optional.of(targetUser))
                 .thenReturn(Optional.empty());
-        when(socialMemberFinder.linkExisting(KAKAO, "kakao-17", targetUser))
+        when(socialMemberFinder.linkExisting(KAKAO, "kakao-17", null, targetUser))
                 .thenThrow(new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-17", null));
@@ -360,7 +361,7 @@ class KakaoLoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-13", null));
 
         verify(socialMemberFinder, never()).findOrCreate(any(), any(), any());
-        verify(socialMemberFinder, never()).linkExisting(any(), any(), any());
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER400-0");
     }
