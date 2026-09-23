@@ -39,6 +39,7 @@ import com.telme.intent.service.QueryRoutingService;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.service.AnswerPromptTemplates;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -207,7 +208,7 @@ class ChatPipelineProcessorTest {
     }
 
     @Test
-    @DisplayName("RAG 답변 생성이 실패해 기본 문구로 내려가면 GROUNDED가 아닌 NO_EVIDENCE로 마감한다")
+    @DisplayName("RAG 답변 생성이 실패하면 NO_EVIDENCE 근거와 함께 '확인됨'을 암시하지 않는 문구로 마감한다")
     void handleFaqIntent_whenGenerationFails_marksNoEvidence() {
         Long executionId = 120L;
         Long sessionId = 10L;
@@ -230,8 +231,10 @@ class ChatPipelineProcessorTest {
 
         processor.request(new ChatProcessingCommand(executionId, sessionId, messageId, userRawText));
 
+        // 근거가 없는데 "확인된 안내 정보입니다" 같은 문구로 있는 척하면 안 된다 (세연님 리뷰)
         verify(chatExecutionService).completeAnswer(eq(executionId), argThat(ans ->
-                ans.answerBasis() == ChatMessage.AnswerBasis.NO_EVIDENCE));
+                ans.answerBasis() == ChatMessage.AnswerBasis.NO_EVIDENCE
+                        && ans.content().equals(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)));
     }
 
     @Test
@@ -628,6 +631,43 @@ class ChatPipelineProcessorTest {
                 ans.content().contains("[매장 안내]") &&
                 ans.content().contains("신촌 인근에서 방문 가능한 매장") &&
                 ans.storeResults() != null && !ans.storeResults().isEmpty()));
+    }
+
+    @Test
+    @DisplayName("복합 질의(BOTH)에서 RAG 답변 생성이 실패하면 NO_EVIDENCE 근거와 근거 없음 문구로 결합한다")
+    void handleBothIntent_whenGenerationFails_marksNoEvidence() {
+        Long executionId = 124L;
+        Long sessionId = 10L;
+        Long messageId = 24L;
+        String userRawText = "위약금 알려주고 신촌 대리점도 찾아줘";
+
+        ChatSession session = ChatSession.builder().sessionId(sessionId).status(ChatSession.Status.ACTIVE).build();
+        ChatMessage message = ChatMessage.builder().messageId(messageId).session(session).content(userRawText).build();
+
+        given(chatMessageRepository.findByIdWithSession(messageId)).willReturn(Optional.of(message));
+
+        IntentRouteResponse.IntentSubQueryResponse subFaq = new IntentRouteResponse.IntentSubQueryResponse(
+                1L, (short) 1, ConsultRequest.Intent.FAQ, "위약금 안내", Collections.emptyMap()
+        );
+        IntentRouteResponse.IntentSubQueryResponse subStore = new IntentRouteResponse.IntentSubQueryResponse(
+                2L, (short) 2, ConsultRequest.Intent.STORE, "신촌 대리점 찾기", Map.of("location", "신촌")
+        );
+        IntentRouteResponse routing = new IntentRouteResponse(
+                14L, messageId, QueryRouting.Intent.BOTH, "위약금 및 신촌 매장",
+                BigDecimal.valueOf(0.97), QueryRouting.Method.LLM,
+                Map.of("location", "신촌"), List.of(subFaq, subStore)
+        );
+        given(queryRoutingService.route(eq(message), any())).willReturn(routing);
+        given(faqSearchService.search(any())).willReturn(Collections.emptyList());
+        given(answerGenerator.generate(any(), any()))
+                .willThrow(new IllegalStateException("근거 이탈 답변 차단"));
+
+        processor.request(new ChatProcessingCommand(executionId, sessionId, messageId, userRawText));
+
+        // 근거가 없는데 "안내 정보입니다" 같은 문구로 있는 척하면 안 된다 (세연님 리뷰)
+        verify(chatExecutionService).completeAnswer(eq(executionId), argThat(ans ->
+                ans.answerBasis() == ChatMessage.AnswerBasis.NO_EVIDENCE
+                        && ans.content().startsWith(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)));
     }
 
     @Test

@@ -31,6 +31,7 @@ import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.service.AnswerPromptTemplates;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -300,7 +301,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         chatExecutionService.startAnswer(command.executionId());
 
         AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, extractedConditions);
-        String faqAnswerText = answerTextOr(answerResult, "문의하신 통신 서비스 관련 안내 정보입니다.");
+        String faqAnswerText = answerTextOr(answerResult);
         ChatMessage.AnswerBasis answerBasis = answerBasisOf(answerResult);
 
         String location = extractedConditions.get(FollowUpRouteResponse.LOCATION_KEY);
@@ -394,7 +395,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
-                answerTextOr(answerResult, "문의하신 내용에 대해 확인된 안내 정보입니다."),
+                answerTextOr(answerResult),
                 answerBasisOf(answerResult),
                 List.of("관련 요금제 보기", "고객센터 연결"),
                 null
@@ -450,10 +451,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         }
     }
 
-    private String answerTextOr(AnswerResult answerResult, String fallback) {
+    // 생성 실패 시 answerBasisOf()가 NO_EVIDENCE를 반환하므로, 폴백 문구도 "확인됨"을
+    // 암시하지 않는 rag 모듈의 근거 없음 문구를 그대로 써서 근거·문구 불일치를 막는다
+    private String answerTextOr(AnswerResult answerResult) {
         return (answerResult != null && answerResult.answer() != null && !answerResult.answer().isBlank())
                 ? answerResult.answer()
-                : fallback;
+                : AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
     }
 
     // 생성이 실패해 기본 문구로 내려가면 근거가 없으므로 GROUNDED로 저장하지 않는다
