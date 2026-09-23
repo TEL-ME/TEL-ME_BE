@@ -196,6 +196,8 @@ class MemberAuthServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(exception -> ((GeneralException) exception).getErrorCode())
                 .isEqualTo(MemberErrorCode.INVALID_CREDENTIALS);
+        // 계정이 없어도 해시 비교를 한 번 수행해 응답 시간으로 계정 존재 여부가 드러나지 않게 한다
+        verify(passwordEncoder).matches(eq("password123"), any());
     }
 
     @Test

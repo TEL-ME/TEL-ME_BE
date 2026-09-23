@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
@@ -39,6 +40,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class MemberAuthService {
 
     private static final String EMAIL_UNIQUE_CONSTRAINT = "users_email_key";
+    // 계정이 없을 때도 이 해시와 비교해 응답 시간을 맞춘다(계정 존재 여부가 시간차로 드러나지 않게) — 실제 사용자 해시 아님
+    private static final String DUMMY_PASSWORD_HASH = "$2a$10$SOUYRlvZh8tfmnADbmsOAeSgXPOdelwf/EX31iKbTPWNtdhvHvw.G";
 
     private final UserRepository userRepository;
     private final GuestRepository guestRepository;
@@ -55,6 +58,8 @@ public class MemberAuthService {
 
     public SignUpResponse signUp(SignUpRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         UUID guestId = readGuestId(httpRequest.getSession());
+        // BCrypt 해싱은 CPU 작업이라 DB 커넥션을 잡기 전에 끝낸다
+        String passwordHash = passwordEncoder.encode(request.password());
 
         // 커밋이 끝나기 전에는 세션에 아무 것도 반영하지 않는다 — 커밋 실패 시 DB는 롤백되는데 세션만 로그인 상태로 남는 것을 막는다
         User saved = transactionTemplate.execute(status -> {
@@ -64,7 +69,7 @@ public class MemberAuthService {
 
             User user = User.builder()
                     .email(request.email())
-                    .passwordHash(passwordEncoder.encode(request.password()))
+                    .passwordHash(passwordHash)
                     .build();
 
             User savedUser;
@@ -91,27 +96,28 @@ public class MemberAuthService {
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         UUID guestId = readGuestId(httpRequest.getSession());
 
-        User user = transactionTemplate.execute(status -> {
-            User found = userRepository.findByEmail(request.email())
-                    .filter(candidate -> passwordEncoder.matches(request.password(), candidate.getPasswordHash()))
-                    .orElseThrow(() -> new GeneralException(MemberErrorCode.INVALID_CREDENTIALS));
+        // 조회·해시 비교는 DB 쓰기가 없어 트랜잭션이 필요 없다 — BCrypt 비교로 커넥션을 오래 잡지 않는다
+        Optional<User> candidate = userRepository.findByEmail(request.email());
+        boolean passwordMatches = passwordEncoder.matches(
+                request.password(), candidate.map(User::getPasswordHash).orElse(DUMMY_PASSWORD_HASH));
+        User found = candidate.filter(u -> passwordMatches)
+                .orElseThrow(() -> new GeneralException(MemberErrorCode.INVALID_CREDENTIALS));
 
-            // 비밀번호 검증 이후에만 상태를 본다 — 계정 존재 여부가 새로 노출되지 않는다
-            if (found.getStatus() == User.Status.SUSPENDED) {
-                throw new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED);
-            }
-            if (found.getStatus() == User.Status.WITHDRAWN) {
-                throw new GeneralException(MemberErrorCode.ACCOUNT_WITHDRAWN);
-            }
+        // 비밀번호 검증 이후에만 상태를 본다 — 상태 코드로는 계정 존재 여부가 노출되지 않는다(응답 시간은 위에서 별도로 맞춤)
+        if (found.getStatus() == User.Status.SUSPENDED) {
+            throw new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED);
+        }
+        if (found.getStatus() == User.Status.WITHDRAWN) {
+            throw new GeneralException(MemberErrorCode.ACCOUNT_WITHDRAWN);
+        }
 
-            if (guestId != null) {
-                succeedGuest(guestId, found);
-            }
-            return found;
-        });
+        if (guestId != null) {
+            // DB 쓰기(게스트 승계)가 있을 때만 트랜잭션을 연다 — 커밋 성공 후에만 세션 반영은 그대로 유지
+            transactionTemplate.executeWithoutResult(status -> succeedGuest(guestId, found));
+        }
 
-        completeSessionLogin(user, guestId, httpRequest, httpResponse);
-        return memberConverter.toLoginResponse(user);
+        completeSessionLogin(found, guestId, httpRequest, httpResponse);
+        return memberConverter.toLoginResponse(found);
     }
 
     // DB 커밋 후에만 호출 — 세션ID 재발급 -> SecurityContext 저장 -> userId 설정, 가입/로그인 공통
