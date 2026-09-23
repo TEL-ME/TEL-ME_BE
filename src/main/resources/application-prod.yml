@@ -7,6 +7,13 @@ spring:
     # db/dev-migration(샘플 시드 데이터)은 로컬 전용이다. 운영에서는 스키마 마이그레이션만 적용한다.
     locations: classpath:db/migration
 
+server:
+  servlet:
+    session:
+      cookie:
+        # 운영은 항상 HTTPS라 쿠키를 HTTPS 연결에서만 전송하도록 강제. 로컬은 http라 여기서만 켠다.
+        secure: true
+
 faq:
   # 내부 검색 테스트 API. 환경변수 설정과 무관하게 운영에서는 항상 차단.
   search-test-api-enabled: false

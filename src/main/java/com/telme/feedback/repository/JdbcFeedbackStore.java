@@ -87,6 +87,18 @@ public final class JdbcFeedbackStore implements FeedbackStore {
     }
 
     @Override
+    public void succeedGuestFeedback(UUID guestId, long userId) {
+        // guest_id는 이력 보존을 위해 유지한다. chat_sessions 승계(succeedGuestSessions)와 같은 방식.
+        tx.executeWithoutResult(
+                status ->
+                        jdbc.update(
+                                "UPDATE message_feedback SET user_id=? WHERE guest_id=? AND"
+                                        + " user_id IS NULL",
+                                userId,
+                                guestId));
+    }
+
+    @Override
     public void delete(long messageId, Actor actor) {
         tx.executeWithoutResult(
                 status -> {

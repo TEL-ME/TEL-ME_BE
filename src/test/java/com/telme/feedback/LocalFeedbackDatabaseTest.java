@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 class LocalFeedbackDatabaseTest {
     JdbcTemplate admin, jdbc;
     FeedbackService feedback;
+    FeedbackStore store;
     TransactionTemplate transaction;
     String schema;
     final Actor owner = new Actor(1L, null);
@@ -68,7 +69,9 @@ class LocalFeedbackDatabaseTest {
         jdbc.execute("INSERT INTO users(user_id,name) VALUES (1,'test owner'),(2,'test other')");
         var tx = new TransactionTemplate(new DataSourceTransactionManager(ds));
         transaction = tx;
-        var target = new FeedbackService(new JdbcFeedbackStore(jdbc, tx));
+        var jdbcStore = new JdbcFeedbackStore(jdbc, tx);
+        store = jdbcStore;
+        var target = new FeedbackService(jdbcStore);
         var interceptor = new org.springframework.transaction.interceptor.TransactionInterceptor();
         interceptor.setTransactionManager(tx.getTransactionManager());
         interceptor.setTransactionAttributeSource(
@@ -267,5 +270,37 @@ class LocalFeedbackDatabaseTest {
                         }
                     });
         }
+    }
+
+    @Test
+    void succeedGuestFeedbackTransfersOwnershipAndKeepsGuestIdForHistory() {
+        var guest = new Actor(null, UUID.randomUUID());
+        long sid = session(null, guest.guestId());
+        long mid = message(sid, "ASSISTANT", "ANSWER", "COMPLETED");
+        feedback.save(mid, guest, like());
+
+        store.succeedGuestFeedback(guest.guestId(), 2L);
+
+        Long userId = jdbc.queryForObject(
+                "SELECT user_id FROM message_feedback WHERE message_id=?", Long.class, mid);
+        UUID guestIdAfter = jdbc.queryForObject(
+                "SELECT guest_id FROM message_feedback WHERE message_id=?", UUID.class, mid);
+        assertEquals(2L, userId);
+        assertEquals(guest.guestId(), guestIdAfter);
+    }
+
+    @Test
+    void succeedGuestFeedbackIgnoresRowsAlreadySucceeded() {
+        var guest = new Actor(null, UUID.randomUUID());
+        long sid = session(null, guest.guestId());
+        long mid = message(sid, "ASSISTANT", "ANSWER", "COMPLETED");
+        feedback.save(mid, guest, like());
+
+        store.succeedGuestFeedback(guest.guestId(), 2L);
+        store.succeedGuestFeedback(guest.guestId(), 1L);
+
+        Long userId = jdbc.queryForObject(
+                "SELECT user_id FROM message_feedback WHERE message_id=?", Long.class, mid);
+        assertEquals(2L, userId);
     }
 }
