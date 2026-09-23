@@ -56,8 +56,8 @@ embedding:
   warmup-enabled: ${EMBEDDING_WARMUP_ENABLED:false}
 
 search:
-  # 잠정값 — 무관 질문 유사도 분포 실측(2주차 임계값 캘리브레이션) 전까지의 임시 기준
-  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.7}
+  # TELME-55 캘리브레이션 결과(1,150건 기준) — 정답 hit 최저 0.693, UNRELATED top-1 최댓값 0.7156으로 겹쳐 완전한 분리값은 없음, 절충값으로 확정
+  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.71}
 
 member:
   guest:
