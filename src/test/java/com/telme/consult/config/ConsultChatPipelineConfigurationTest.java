@@ -16,7 +16,7 @@ import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
-import com.telme.consult.service.FaqSearchAnswerProvider;
+import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.faq.service.FaqSearchService;
@@ -65,7 +65,7 @@ class ConsultChatPipelineConfigurationTest {
                             assertThat(context).hasSingleBean(TurnAnalyzer.class);
                             assertThat(context).hasSingleBean(AnalysisProvider.class);
                             assertThat(context).hasSingleBean(AnswerProvider.class);
-                            assertThat(context).hasSingleBean(FaqSearchAnswerProvider.class);
+                            assertThat(context).hasSingleBean(PurposeRoutingAnswerProvider.class);
                             assertThat(context)
                                     .hasSingleBean(RagSearchResultAnswerGenerator.class);
                             assertThat(context).hasSingleBean(ConsultChatEvents.class);

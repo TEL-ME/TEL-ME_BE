@@ -5,6 +5,8 @@ import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFactory;
+import com.telme.consult.service.PurposeRoutingAnswerProvider;
+import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
 
@@ -28,8 +30,9 @@ public class ConsultRagAnswerConfiguration {
     }
 
     @Bean
-    FaqSearchAnswerProvider consultFaqAnswerProvider(
+    AnswerProvider consultAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
-        return new FaqSearchAnswerProvider(searches, answers);
+        return new PurposeRoutingAnswerProvider(
+                new FaqSearchAnswerProvider(searches, answers));
     }
 }
