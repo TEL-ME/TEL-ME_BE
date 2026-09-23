@@ -71,11 +71,11 @@ class FeedbackApiIntegrationTest {
 
         // DISLIKE → LIKE 시 기존 reason·comment가 제거되고 행은 그대로 유지된다
         save(owner, answer, "{\"rating\":\"LIKE\"}")
-        		.andExpect(status().isOk())
-        		.andExpect(jsonPath("$.result.messageId").value(answer))
-        		.andExpect(jsonPath("$.result.rating").value("LIKE"))
-        		.andExpect(jsonPath("$.result.reason").doesNotExist())
-        		.andExpect(jsonPath("$.result.comment").doesNotExist());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messageId").value(answer))
+                .andExpect(jsonPath("$.result.rating").value("LIKE"))
+                .andExpect(jsonPath("$.result.reason").doesNotExist())
+                .andExpect(jsonPath("$.result.comment").doesNotExist());
         assertFeedbackRows(answer, 1);
 
         mvc.perform(delete(URL, answer).session(owner)).andExpect(status().isOk());
@@ -164,8 +164,8 @@ class FeedbackApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
         save(owner, answer, "{\"rating\":\"DISLIKE\"}")
-        		.andExpect(status().isBadRequest())
-        		.andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
         save(owner, answer, "{\"rating\":\"OTHER\"}").andExpect(status().isBadRequest());
         assertFeedbackRows(answer, 0);
     }
