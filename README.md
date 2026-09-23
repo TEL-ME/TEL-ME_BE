@@ -52,7 +52,7 @@ STS에서는 `File → Import → Gradle → Existing Gradle Project`로 불러�
 | http://localhost:8080/actuator/health | 서버 상태 확인 |
 | http://localhost:8080/swagger-ui/index.html | API 문서 |
 
-> 현재 Spring Security 기본 설정 상태라 API 문서 등 대부분의 요청이 401을 반환합니다. 인증 설정이 추가되면 이 안내를 갱신합니다.
+채팅 API는 회원 세션이나 자동 발급된 게스트 세션으로 이용할 수 있습니다. 피드백 기능의 활성화 방법과 요청 형식은 [피드백 API 문서](docs/feedback-api.md)를 참고하세요.
 
 ### 4. 종료
 
