@@ -144,4 +144,12 @@ public class ConsultService {
         return stateStore.save(
                 prepared.sessionId(), prepared.expectedVersion(), prepared.decision(), links);
     }
+
+    // 최종 답변 메시지가 커밋된 뒤 호출한다. 잠근 뒤 읽은 현재 버전으로 닫으며,
+    // 아직 조건을 기다리는 상담인지·최종 메시지가 맞는지는 stateStore.complete가 검증한다.
+    @Transactional
+    public Snapshot complete(long sessionId, long requestId, long finalMessageId) {
+        var snapshot = stateStore.load(sessionId, requestId);
+        return stateStore.complete(sessionId, requestId, snapshot.version(), finalMessageId);
+    }
 }
