@@ -2,6 +2,7 @@ package com.telme.faq.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -23,22 +24,50 @@ class FaqEmbeddingRepositoryTest {
     private FaqEmbeddingRepository repository;
 
     @Autowired
+    private FaqRepository faqRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("코사인 거리가 가까운 순으로 정렬해서 반환한다")
     void 거리순으로_정렬해서_반환한다() {
-        // 시드 faqId=1의 embedding과 동일한 패턴 (0.001 + 0.0004 * (n % 13))
+        // 시드나 로컬에 적재된 다른 FAQ와 절대 안 섞이도록 이 테스트 전용 modelName으로 격리
+        String testModel = "test-order-model";
         float[] queryVector = new float[1024];
+        float[] closeVector = new float[1024]; // queryVector와 완전 일치 → distance 0
+        float[] farVector = new float[1024]; // queryVector와 직교 → distance 1
         for (int i = 0; i < 1024; i++) {
-            queryVector[i] = 0.001f + 0.0004f * (i % 13);
+            queryVector[i] = closeVector[i] = (i % 2 == 0) ? 1f : 0f;
+            farVector[i] = (i % 2 == 0) ? 0f : 1f;
         }
+        FaqEmbedding close = saveEmbedding("가까운 FAQ", closeVector, testModel);
+        FaqEmbedding far = saveEmbedding("먼 FAQ", farVector, testModel);
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 2, MODEL);
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 2, testModel);
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getFaqId()).isEqualTo(1L); // 완전 일치하는 쪽이 1등
-        assertThat(result.get(0).getFaq().getQuestion()).isNotBlank(); // JOIN FETCH로 연관 로딩됨
+        assertThat(result.get(0).embedding().getFaqId()).isEqualTo(close.getFaqId());
+        assertThat(result.get(0).embedding().getFaq().getQuestion()).isEqualTo("가까운 FAQ"); // JOIN FETCH로 연관 로딩됨
+        assertThat(result.get(0).distance()).isCloseTo(0.0, org.assertj.core.data.Offset.offset(1e-6));
+        assertThat(result.get(1).embedding().getFaqId()).isEqualTo(far.getFaqId());
+        assertThat(result.get(0).distance()).isLessThan(result.get(1).distance()); // 반환 순서와 distance 오름차순이 같다
+    }
+
+    private FaqEmbedding saveEmbedding(String question, float[] vector, String modelName) {
+        Faq faq = faqRepository.save(Faq.builder()
+                .category("BILLING")
+                .question(question)
+                .answer("답변")
+                .build());
+        return repository.save(FaqEmbedding.builder()
+                .faqId(faq.getFaqId())
+                .faq(faq)
+                .embedding(vector)
+                .modelName(modelName)
+                .faqVersion(faq.getVersion())
+                .syncStatus(FaqEmbedding.SyncStatus.SYNCED)
+                .build());
     }
 
     @Test
@@ -46,7 +75,7 @@ class FaqEmbeddingRepositoryTest {
     void topK_개수만큼만_반환한다() {
         float[] queryVector = new float[1024];
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 1, MODEL);
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 1, MODEL);
 
         assertThat(result).hasSize(1);
     }
@@ -60,9 +89,9 @@ class FaqEmbeddingRepositoryTest {
         }
         jdbcTemplate.update("UPDATE faqs SET status = 'HIDDEN' WHERE faq_id = 1");
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 2, MODEL);
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 2, MODEL);
 
-        assertThat(result).extracting(FaqEmbedding::getFaqId).doesNotContain(1L);
+        assertThat(result).extracting(m -> m.embedding().getFaqId()).doesNotContain(1L);
     }
 
     @Test
@@ -76,9 +105,9 @@ class FaqEmbeddingRepositoryTest {
         // 시드 faqId=1의 embedding을 PENDING으로 바꿔서 findNearest 결과에서 빠지는지 확인
         jdbcTemplate.update("UPDATE faq_embeddings SET sync_status = 'PENDING' WHERE faq_id = 1");
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 2, MODEL);
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 2, MODEL);
 
-        assertThat(result).extracting(FaqEmbedding::getFaqId).doesNotContain(1L);
+        assertThat(result).extracting(m -> m.embedding().getFaqId()).doesNotContain(1L);
     }
 
     @Test
@@ -91,9 +120,9 @@ class FaqEmbeddingRepositoryTest {
         // FAQ 내용은 수정됐는데(version=2) 재임베딩은 아직 안 끝난 상황을 재현
         jdbcTemplate.update("UPDATE faqs SET version = 2 WHERE faq_id = 1");
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 2, MODEL);
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 2, MODEL);
 
-        assertThat(result).extracting(FaqEmbedding::getFaqId).doesNotContain(1L);
+        assertThat(result).extracting(m -> m.embedding().getFaqId()).doesNotContain(1L);
     }
 
     @Test
@@ -104,7 +133,7 @@ class FaqEmbeddingRepositoryTest {
             queryVector[i] = 0.001f + 0.0004f * (i % 13);
         }
 
-        List<FaqEmbedding> result = repository.findNearest(queryVector, 2, "other-model");
+        List<FaqNearestMatch> result = repository.findNearest(queryVector, 2, "other-model");
 
         assertThat(result).isEmpty();
     }
