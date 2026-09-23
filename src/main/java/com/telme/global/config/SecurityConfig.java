@@ -1,6 +1,9 @@
 package com.telme.global.config;
 
 import com.telme.member.filter.GuestIdentityFilter;
+import com.telme.member.service.KakaoLoginFailureHandler;
+import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.KakaoOAuth2UserService;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,9 +14,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -32,11 +37,19 @@ public class SecurityConfig {
             "/actuator/info"
     };
 
+    private static final String[] OAUTH2_WHITELIST = {
+            "/oauth2/authorization/**",
+            "/login/oauth2/code/**"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             GuestIdentityFilter guestIdentityFilter,
-            SecurityContextRepository securityContextRepository
+            SecurityContextRepository securityContextRepository,
+            KakaoOAuth2UserService kakaoOAuth2UserService,
+            KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
+            KakaoLoginFailureHandler kakaoLoginFailureHandler
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -47,9 +60,20 @@ public class SecurityConfig {
                 // 로그인 서비스가 이 저장소로 SecurityContext를 명시적으로 저장 (SecurityContextHolderFilter는 자동 저장 안 함)
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .addFilterAfter(guestIdentityFilter, SecurityContextHolderFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(kakaoOAuth2UserService))
+                        .successHandler(kakaoLoginSuccessHandler)
+                        .failureHandler(kakaoLoginFailureHandler)
+                )
+                // oauth2Login을 켜면 Spring이 미인증 요청의 기본 처리를 카카오 로그인 리다이렉트로 바꿔버린다.
+                // /api/** 는 브라우저 리다이렉트가 아니라 API 호출이므로 기존 403 응답을 유지한다.
+                .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
+                        new Http403ForbiddenEntryPoint(),
+                        PathPatternRequestMatcher.withDefaults().matcher("/api/**")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(PUBLIC_WHITELIST).permitAll()
+                        .requestMatchers(OAUTH2_WHITELIST).permitAll()
                         .requestMatchers("/api/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/chat/**", "/api/v1/chat/**").permitAll()
                         .requestMatchers("/api/stores/**", "/api/v1/stores/**").permitAll()

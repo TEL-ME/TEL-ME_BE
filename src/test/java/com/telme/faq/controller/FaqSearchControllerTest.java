@@ -10,6 +10,9 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.service.GuestIdentityService;
+import com.telme.member.service.KakaoLoginFailureHandler;
+import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.KakaoOAuth2UserService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +39,16 @@ class FaqSearchControllerTest {
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
+
+    // SecurityConfig가 securityFilterChain 빈에서 요구하는 OAuth2 로그인 의존성 — 웹 슬라이스에는 없어 목으로 채운다
+    @MockitoBean
+    private KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    @MockitoBean
+    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+
+    @MockitoBean
+    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
 
     @Test
     @WithMockUser

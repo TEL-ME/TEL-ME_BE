@@ -13,6 +13,9 @@ import com.telme.member.dto.res.LoginResponse;
 import com.telme.member.dto.res.SignUpResponse;
 import com.telme.member.exception.MemberErrorCode;
 import com.telme.member.service.GuestIdentityService;
+import com.telme.member.service.KakaoLoginFailureHandler;
+import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberAuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,16 @@ class MemberAuthControllerTest {
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
+
+    // SecurityConfig가 securityFilterChain 빈에서 요구하는 OAuth2 로그인 의존성 — 웹 슬라이스에는 없어 목으로 채운다
+    @MockitoBean
+    private KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    @MockitoBean
+    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+
+    @MockitoBean
+    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
 
     @Test
     @DisplayName("정상 요청이면 200과 가입 결과를 반환한다")
