@@ -30,6 +30,7 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
         Long executionId = command.executionId();
         try {
             ChatExecutionState started = chatExecutionService.startAnswer(executionId);
+            boolean initialRegistered = emitterRegistry.isRegistered(executionId);
             emitterRegistry.sendEvent(executionId, "start", started);
 
             LlmRequest request = LlmRequest.builder()
@@ -41,7 +42,7 @@ public class LlmChatProcessingPort implements ChatProcessingPort {
 
             StringBuilder content = new StringBuilder();
             llmClient.stream(request, new LlmStreamHandler() {
-                private boolean wasRegistered = false;
+                private boolean wasRegistered = initialRegistered;
 
                 @Override
                 public void onToken(String token) {
