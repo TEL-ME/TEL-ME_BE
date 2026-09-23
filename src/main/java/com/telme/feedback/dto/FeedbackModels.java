@@ -31,29 +31,29 @@ public final class FeedbackModels {
     }
 
     public record Input(Rating rating, Reason reason, String comment) {
-		public Input {
-			Objects.requireNonNull(rating, "rating");
-			if (rating == Rating.DISLIKE && reason == null) {
-				throw new IllegalArgumentException("Reason is required when rating is DISLIKE");
-			}
-			if (rating != Rating.DISLIKE && reason != null) {
-				throw new IllegalArgumentException("Reason is for DISLIKE only");
-			}
-			if (comment != null) {
-				comment = comment.strip();
-				if (comment.isEmpty()) {
-					comment = null;
-				}
-			}
-			if (comment != null) {
-				if (comment.length() > 1000) {
-					throw new IllegalArgumentException("Comment exceeds 1000 characters");
-				}
-				if (rating != Rating.DISLIKE) {
-					throw new IllegalArgumentException("Comment is for DISLIKE only");
-				}
-			}
-		}
+        public Input {
+            Objects.requireNonNull(rating, "rating");
+            if (rating == Rating.DISLIKE && reason == null) {
+                throw new IllegalArgumentException("Reason is required when rating is DISLIKE");
+            }
+            if (rating != Rating.DISLIKE && reason != null) {
+                throw new IllegalArgumentException("Reason is for DISLIKE only");
+            }
+            if (comment != null) {
+                comment = comment.strip();
+                if (comment.isEmpty()) {
+                    comment = null;
+                }
+            }
+            if (comment != null) {
+                if (comment.length() > 1000) {
+                    throw new IllegalArgumentException("Comment exceeds 1000 characters");
+                }
+                if (rating != Rating.DISLIKE) {
+                    throw new IllegalArgumentException("Comment is for DISLIKE only");
+                }
+            }
+        }
     }
 
     public record Feedback(
