@@ -208,12 +208,14 @@ Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`�
   1,150건) 적재된 FAQ도 두 질문이 나란히 top-k 밖으로 밀리는 경우가 드물지 않아, "둘 다 못 찾음"을
   곧장 "DB에 없음"으로 해석하면 오탐이 된다.
 - `--self-test`: 손으로 계산한 기대값으로 Recall@k/MRR 계산 로직 자체를 검증한다
-  (경계값, 무관 질문 제외, 긍정 질문 0건 등 7건).
+  (경계값, 무관 질문 제외, 긍정 질문 0건 등 7건 + 지연시간 통계 3건).
+- 요청마다 응답 시간(초)도 재서 평균·p95(ms)를 같이 찍는다(요청 전송~응답 수신 구간만, JSON 파싱
+  등은 제외). topK 값을 바꿔가며 Recall 개선폭과 지연시간 증가폭을 같이 비교할 때 쓴다(TELME-59).
 
 ## 자기 검증
 
 네 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
-`check_eval_questions.py`는 10건, `measure_search_quality.py`는 7건).
+`check_eval_questions.py`는 10건, `measure_search_quality.py`는 10건).
 
 통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
 

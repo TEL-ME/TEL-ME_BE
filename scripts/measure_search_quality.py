@@ -11,6 +11,7 @@ import re
 import socket
 import statistics
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -110,6 +111,26 @@ SELF_TEST_CASES: list[tuple[str, list[SearchOutcome], dict[str, float]]] = [
 ]
 
 
+def latency_stats(latencies: list[float]) -> dict[str, float]:
+    """초 단위 응답 시간 목록 -> 평균/p95(ms). 빈 목록이면 빈 dict(측정 안 됨과 0 구분)."""
+    if not latencies:
+        return {}
+    sorted_latencies = sorted(latencies)
+    p95_index = max(0, math.ceil(0.95 * len(sorted_latencies)) - 1)
+    return {
+        "mean_ms": statistics.mean(latencies) * 1000,
+        "p95_ms": sorted_latencies[p95_index] * 1000,
+    }
+
+
+LATENCY_SELF_TEST_CASES: list[tuple[str, list[float], dict[str, float]]] = [
+    ("빈 목록", [], {}),
+    ("단건", [0.1], {"mean_ms": 100.0, "p95_ms": 100.0}),
+    # 5건 중 p95는 ceil(0.95*5)=5번째(인덱스 4, 1초=1000ms) -> 오름차순 정렬 후 마지막 값
+    ("5건", [0.1, 0.2, 0.3, 0.4, 1.0], {"mean_ms": 400.0, "p95_ms": 1000.0}),
+]
+
+
 def self_test() -> int:
     failures = 0
     for n, (label, outcomes, expected) in enumerate(SELF_TEST_CASES, 1):
@@ -119,9 +140,21 @@ def self_test() -> int:
         tail = "" if ok else f" → 실제: {actual}, 기대: {expected}"
         print(f"  {'OK  ' if ok else 'FAIL'} {n}. {label}{tail}")
         failures += 0 if ok else 1
+    print(f"자기 검증(Recall/MRR) {len(SELF_TEST_CASES)}건 중 {failures}건 실패")
 
-    print(f"\n자기 검증 {len(SELF_TEST_CASES)}건 중 {failures}건 실패")
-    return 1 if failures else 0
+    latency_failures = 0
+    for n, (label, latencies, expected) in enumerate(LATENCY_SELF_TEST_CASES, 1):
+        actual = latency_stats(latencies)
+        ok = (set(actual) == set(expected)
+              and all(math.isclose(actual[key], value, abs_tol=1e-9) for key, value in expected.items()))
+        tail = "" if ok else f" → 실제: {actual}, 기대: {expected}"
+        print(f"  {'OK  ' if ok else 'FAIL'} {n}. {label}{tail}")
+        latency_failures += 0 if ok else 1
+    print(f"\n자기 검증(지연시간) {len(LATENCY_SELF_TEST_CASES)}건 중 {latency_failures}건 실패")
+
+    total_failures = failures + latency_failures
+    print(f"\n전체 자기 검증 {len(SELF_TEST_CASES) + len(LATENCY_SELF_TEST_CASES)}건 중 {total_failures}건 실패")
+    return 1 if total_failures else 0
 
 
 def load_eval_set(path: Path) -> list[dict]:
@@ -158,12 +191,14 @@ def content_hash(result: dict) -> str:
         raise SystemExit(f"검색 API 응답에 FAQ 질문·답변이 없습니다: {result}") from exc
 
 
-def search(question: str, top_k: int, api_url: str, timeout: int) -> list[dict]:
+def search(question: str, top_k: int, api_url: str, timeout: int) -> tuple[list[dict], float]:
+    """(결과, 응답 시간(초))를 반환. 응답 시간은 요청 전송~응답 수신까지만 잰다(JSON 파싱 등은 제외)."""
     query = urllib.parse.urlencode({"query": question, "topK": top_k})
     req = urllib.request.Request(f"{api_url}?{query}")
+    start = time.perf_counter()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read())
+            raw = resp.read()
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
         raise SystemExit(f"검색 API가 오류 응답을 반환함 (HTTP {e.code}): {error_body}") from None
@@ -174,6 +209,8 @@ def search(question: str, top_k: int, api_url: str, timeout: int) -> list[dict]:
             f"검색 API 응답 대기 시간 초과(timeout={timeout}s) — "
             f"Ollama 콜드 스타트 등으로 서버가 느릴 수 있습니다: {api_url}"
         ) from None
+    elapsed = time.perf_counter() - start
+    body = json.loads(raw)
 
     # 서버 에러는 "정답 못 찾음"이 아니라 인프라 문제라 조용히 넘기지 않고 바로 중단한다
     if not body.get("isSuccess", False):
@@ -182,13 +219,15 @@ def search(question: str, top_k: int, api_url: str, timeout: int) -> list[dict]:
     results = body.get("result")
     if not isinstance(results, list):
         raise SystemExit(f"검색 API 결과 형식 오류: {body}")
-    return results
+    return results, elapsed
 
 
-def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> list[SearchOutcome]:
+def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> tuple[list[SearchOutcome], list[float]]:
     outcomes = []
+    latencies = []
     for item in eval_items:
-        results = search(item["question"], top_k, api_url, timeout)
+        results, elapsed = search(item["question"], top_k, api_url, timeout)
+        latencies.append(elapsed)
         eval_id = item.get("eval_id")
         if item["type"] == "UNRELATED":
             scores = [r["score"] for r in results if isinstance(r.get("score"), (int, float))]
@@ -209,7 +248,7 @@ def evaluate(eval_items: list[dict], top_k: int, api_url: str, timeout: int) -> 
             score = result.get("score")
             break
         outcomes.append(SearchOutcome(item["type"], rank, bool(results), eval_id, score))
-    return outcomes
+    return outcomes, latencies
 
 
 def find_missed(eval_items: list[dict], outcomes: list[SearchOutcome]) -> tuple[list, list]:
@@ -273,7 +312,7 @@ def main() -> int:
 
     eval_items = load_eval_set(args.path)
 
-    outcomes = evaluate(eval_items, args.top_k, args.api_url, args.timeout)
+    outcomes, latencies = evaluate(eval_items, args.top_k, args.api_url, args.timeout)
     # 요청한 topK를 넘는 순위는 애초에 API가 안 돌려주므로, 그 이상의 recall@k는 측정한 게 아니라 표시하지 않는다
     k_values = tuple(k for k in (1, 3, 5) if k <= args.top_k)
     metrics = compute_metrics(outcomes, k_values=k_values)
@@ -281,6 +320,10 @@ def main() -> int:
     print(f"{args.path} — {len(eval_items)}건 평가 (topK={args.top_k})")
     for key, value in metrics.items():
         print(f"  {key}: {value:.3f}")
+
+    lat = latency_stats(latencies)
+    if lat:
+        print(f"\n  응답 지연시간 — 평균 {lat['mean_ms']:.1f}ms, p95 {lat['p95_ms']:.1f}ms (n={len(latencies)})")
 
     # 임계값 캘리브레이션 진단 — SEARCH_SIMILARITY_THRESHOLD=0으로 돌렸을 때만 의미 있다
     hit_scores = [o.score for o in outcomes
