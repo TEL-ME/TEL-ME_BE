@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.feedback.repository.FeedbackStore;
 
 /** 피드백 활성화 상태의 실제 컨텍스트로 Security → 컨트롤러 → 서비스 → DB 흐름을 검증한다. 테스트마다 롤백된다. */
 @SpringBootTest(properties = "telme.feedback.enabled=true")
@@ -35,6 +36,7 @@ class FeedbackApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired FeedbackStore feedbackStore;
 
     MockHttpSession owner;
     long ownerId;
@@ -81,17 +83,22 @@ class FeedbackApiIntegrationTest {
     }
     
     @Test
-    void historyHidesFeedbackLeftByPreviousGuestOwner() throws Exception {
+    void historyShowsGuestFeedbackSucceededOnLogin() throws Exception {
         UUID guestId = UUID.randomUUID();
         long guestChat = chatSession(null, guestId);
         long guestAnswer = message(guestChat, "ASSISTANT", "ANSWER", "COMPLETED");
         save(guestSession(guestId), guestAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        // 로그인 승계: 세션과 피드백이 회원에게 넘어가고, guest_id는 이력용으로 함께 남는다
         jdbc.update("UPDATE chat_sessions SET user_id=? WHERE session_id=?", ownerId, guestChat);
+        feedbackStore.succeedGuestFeedback(guestId, ownerId);
 
+        mvc.perform(get(URL, guestAnswer).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.rating").value("LIKE"));
         mvc.perform(get(HISTORY_URL, guestChat).session(owner))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
-                .andExpect(jsonPath("$.result.messages[0].myFeedback").value(nullValue()));
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
     }
 
     @Test

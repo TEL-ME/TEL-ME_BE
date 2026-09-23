@@ -177,11 +177,13 @@ public final class JdbcFeedbackStore implements FeedbackStore {
 
     private Feedback read(ResultSet rs, int n) throws SQLException {
         var reason = rs.getString("reason_code");
+     // 로그인 승계 후에는 user_id와 guest_id가 함께 남으므로 회원 신원을 우선한다.
+        var userId = rs.getObject("user_id", Long.class);
         return new Feedback(
                 rs.getLong("feedback_id"),
                 rs.getLong("message_id"),
-                new Actor(
-                        rs.getObject("user_id", Long.class), rs.getObject("guest_id", UUID.class)),
+                userId != null ? new Actor(userId, null) : new Actor(null, 
+                        rs.getObject("guest_id", UUID.class)),
                 new Input(
                         Rating.valueOf(rs.getString("rating")),
                         reason == null ? null : Reason.valueOf(reason),
