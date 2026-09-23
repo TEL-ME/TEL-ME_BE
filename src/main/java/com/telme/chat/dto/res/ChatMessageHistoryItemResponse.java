@@ -23,11 +23,15 @@ public record ChatMessageHistoryItemResponse(
         List<Map<String, Object>> storeResults,
         Instant createdAt,
         Instant completedAt,
-        @Schema(description = "현재 사용자가 이 메세지를 평가할 수 있는지 여부")
+        @Schema(description = "피드백 기능이 켜져 있고, 완료된 ASSISTANT ANSWER 또는 STORE_RESULT이면 true")
         boolean ratable,
-        @Schema(description = "현재 사용자가 남긴 평가, 미작성이면 null")
+        @Schema(description = "현재 사용자가 남긴 평가. 미작성 또는 피드백 기능 비활성화 시 null")
         MyFeedback myFeedback
 ) {
-    public record MyFeedback(String rating, String reason, String comment) {
+    public record MyFeedback(
+            String rating,
+            @Schema(description = "DISLIKE 사유 코드: WRONG_INFO(정보 오류), NOT_RELATED(관련 없음), "
+                    + "HARD_TO_READ(읽기 어려움). LIKE이면 null") String reason,
+            String comment) {
     }
 }
