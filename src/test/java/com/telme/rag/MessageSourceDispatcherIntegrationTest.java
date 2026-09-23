@@ -155,6 +155,17 @@ class MessageSourceDispatcherIntegrationTest {
         assertThat(countSources(missingMessageId)).isZero();
     }
 
+    @Test
+    @DisplayName("트랜잭션 밖에서 발행해도 근거를 저장한다")
+    void 트랜잭션_밖_발행도_저장한다() {
+        Long messageId = transactionTemplate.execute(status -> persistAnswerMessage());
+
+        // 파이프라인은 답변 저장이 끝난 뒤 트랜잭션 없이 발행한다
+        eventPublisher.publishEvent(new AnswerSourcesReady(messageId, List.of(source(1L, 1))));
+
+        await().atMost(TIMEOUT).untilAsserted(() -> assertThat(savedSources(messageId)).hasSize(1));
+    }
+
     // 답변 메시지를 INSERT한 트랜잭션 안에서 발행한다. 실제 호출부와 같은 순서
     private Long publishInsideMessageTransaction(List<AnswerSource> sources) {
         return publishInsideMessageTransaction(sources, Duration.ZERO);

@@ -32,6 +32,7 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
 import com.telme.rag.service.AnswerPromptTemplates;
+import com.telme.rag.service.AnswerSourcesReady;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -80,6 +82,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     private final FaqSearchService faqSearchService;
     private final AnswerGenerator answerGenerator;
     private final ObjectProvider<ConsultService> consultServiceProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void request(ChatProcessingCommand command) {
@@ -322,7 +325,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("영업시간 문의", "매장 방문 예약"),
                     List.of(storeInfo)
             );
-            chatExecutionService.completeAnswer(command.executionId(), answer);
+            completeWithSources(command.executionId(), answer, answerResult);
         } else {
             String combinedContent = faqAnswerText + "\n\n[매장 안내]\n가까운 매장 방문을 원하시면 지역(역 이름이나 동네)을 알려주세요.";
             ChatAnswer answer = new ChatAnswer(
@@ -332,7 +335,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     List.of("가까운 매장 찾기", "고객센터 연결"),
                     null
             );
-            chatExecutionService.completeAnswer(command.executionId(), answer);
+            completeWithSources(command.executionId(), answer, answerResult);
         }
     }
 
@@ -402,7 +405,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                 null
         );
 
-        chatExecutionService.completeAnswer(command.executionId(), answer);
+        completeWithSources(command.executionId(), answer, answerResult);
     }
 
     private void answerEmptyQuestion(ChatProcessingCommand command) {
@@ -450,6 +453,16 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             log.error("[파이프라인] RAG 답변 생성 실패: {}", e.getMessage());
             return null;
         }
+    }
+
+    // 근거는 답변 메시지가 저장된 뒤에 남긴다. 저장 전에 발행하면 FK 위반이 난다
+    private void completeWithSources(Long executionId, ChatAnswer answer, AnswerResult answerResult) {
+        ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
+        if (answerResult == null || state == null || state.outputMessage() == null) {
+            return;
+        }
+        eventPublisher.publishEvent(new AnswerSourcesReady(
+                state.outputMessage().messageId(), answerResult.sources()));
     }
 
     // 생성 실패 시 answerBasisOf()가 NO_EVIDENCE를 반환하므로, 폴백 문구도 "확인됨"을
