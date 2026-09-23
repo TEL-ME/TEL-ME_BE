@@ -93,6 +93,10 @@ member:
   guest:
     # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
     ttl: ${GUEST_TTL:30d}
+  oauth2:
+    # 소셜 로그인 성공/실패 후 리다이렉트할 프론트엔드 기준 URL. 프론트 미배포 상태에서도
+    # 앱은 뜨도록 로컬 더미값을 기본값으로 둔다.
+    frontend-uri: ${FRONTEND_URL:http://localhost:3000}
 
 faq:
   # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
