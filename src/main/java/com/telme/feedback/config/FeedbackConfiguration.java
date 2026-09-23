@@ -39,7 +39,7 @@ public class FeedbackConfiguration {
         // 인증 어댑터 없는 활성화를 막기 위해 사용하지 않더라도 주입을 유지한다.
         return new FeedbackService(feedbackStore);
     }
-    
+
     @Bean
     ChatFeedbackReader chatFeedbackReader(FeedbackService feedbackService) {
         return new ChatFeedbackReaderAdapter(feedbackService);

@@ -438,7 +438,7 @@ class ChatSessionApiIntegrationTest {
                 .andExpect(jsonPath("$.result.messages[1].followUps").value(nullValue()))
                 .andExpect(jsonPath("$.result.messages[1].storeResults").value(nullValue()));
     }
-    
+
     @Test
     void historyHasNoFeedbackStateWhenFeedbackIsDisabled() throws Exception {
         long sessionId = createChatSession("피드백 비활성화");

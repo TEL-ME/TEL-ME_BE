@@ -50,7 +50,7 @@ class FeedbackApiIntegrationTest {
         ownerSession = chatSession(ownerId, null);
         answer = message(ownerSession, "ASSISTANT", "ANSWER", "COMPLETED");
     }
-    
+
     @Test
     void historyShowsOwnFeedbackAndRatableState() throws Exception {
         save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
@@ -70,7 +70,36 @@ class FeedbackApiIntegrationTest {
                 .andExpect(jsonPath("$.result.messages[2].ratable").value(false))
                 .andExpect(jsonPath("$.result.messages[2].myFeedback").value(nullValue()));
     }
-    
+
+    @Test
+    void guestFeedbackFollowsHistoryPaginationAndStaysPrivate() throws Exception {
+        UUID guestId = UUID.randomUUID();
+        long sessionId = chatSession(null, guestId);
+        long firstAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
+        long secondAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
+        MockHttpSession guest = guestSession(guestId);
+        save(guest, firstAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guest).param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.hasOlderMessages").value(true))
+                .andExpect(jsonPath("$.result.nextBeforeSequenceNo").value(2))
+                .andExpect(jsonPath("$.result.messages[0].messageId").value(secondAnswer))
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback").value(nullValue()));
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guest)
+                        .param("size", "1").param("beforeSequenceNo", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.hasOlderMessages").value(false))
+                .andExpect(jsonPath("$.result.messages[0].messageId").value(firstAnswer))
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guestSession(UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void historyTreatsMemberWithLeftoverGuestIdAsMember() throws Exception {
         save(owner, answer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
@@ -81,7 +110,7 @@ class FeedbackApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
     }
-    
+
     @Test
     void historyShowsGuestFeedbackSucceededOnLogin() throws Exception {
         UUID guestId = UUID.randomUUID();

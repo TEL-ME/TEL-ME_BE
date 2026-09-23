@@ -25,21 +25,21 @@ public class ChatFeedbackReaderAdapter implements ChatFeedbackReader {
         Map<Long, Feedback> mine = service.getAll(
                 ratable.stream().map(ChatMessage::getMessageId).toList(),
                 ChatFeedbackActorResolver.toActor(actor));
-        
+
         Map<Long, State> states = new HashMap<>();
         for (ChatMessage message : ratable) {
             states.put(message.getMessageId(), new State(true, toMyFeedback(mine.get(message.getMessageId()))));
         }
         return states;
     }
-    
+
     private boolean isRatable(ChatMessage message) {
         return FeedbackModels.isRatable(
-                message.getRole().name(), 
-                message.getMessageType().name(), 
+                message.getRole().name(),
+                message.getMessageType().name(),
                 message.getStatus() == null ? null : message.getStatus().name());
     }
-    
+
     private MyFeedback toMyFeedback(Feedback feedback) {
         if (feedback == null) {
             return null;

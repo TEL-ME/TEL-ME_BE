@@ -182,7 +182,7 @@ public final class JdbcFeedbackStore implements FeedbackStore {
         return new Feedback(
                 rs.getLong("feedback_id"),
                 rs.getLong("message_id"),
-                userId != null ? new Actor(userId, null) : new Actor(null, 
+                userId != null ? new Actor(userId, null) : new Actor(null,
                         rs.getObject("guest_id", UUID.class)),
                 new Input(
                         Rating.valueOf(rs.getString("rating")),

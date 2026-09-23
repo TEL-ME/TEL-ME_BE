@@ -29,6 +29,5 @@ public record ChatMessageHistoryItemResponse(
         MyFeedback myFeedback
 ) {
     public record MyFeedback(String rating, String reason, String comment) {
-        
     }
 }
