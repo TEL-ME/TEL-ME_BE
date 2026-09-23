@@ -41,6 +41,7 @@ dependencies {
 
 	// 인증
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
 	// 복원력 (타임아웃 · 재시도 · Bulkhead)
 	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.4.0'

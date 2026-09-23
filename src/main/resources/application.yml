@@ -15,6 +15,29 @@ spring:
     # 운영 DB(AWS RDS)를 실수로 날리는 사고를 막기 위한 전역 안전장치. 로컬에서 스키마를 초기화하고
     # 싶으면 `podman-compose down -v`로 볼륨을 지우는 쪽을 쓰고, 이 값은 프로파일별로 풀지 않는다.
     clean-disabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            # 빈 값이면 앱이 기동조차 안 되므로(Spring의 필수 검증), 카카오 키 없는 팀원도
+            # 앱은 뜨게 더미값을 기본값으로 둔다 — 실제 카카오 로그인만 안 될 뿐 다른 기능엔 영향 없음
+            client-id: ${KAKAO_CLIENT_ID:dummy-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:dummy-client-secret}
+            # 카카오는 기본값(client_secret_basic)이 아니라 이 방식을 요구한다
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            # 카카오 개발자 콘솔의 "카카오 로그인 리다이렉트 URI"에 등록한 값과 반드시 일치해야 한다
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: profile_nickname, account_email
+        provider:
+          # 카카오는 Spring Security의 공통 프로바이더 목록(google 등)에 없어 직접 지정한다
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            # 카카오 사용자 정보 응답의 최상위 식별자 필드명
+            user-name-attribute: id
 
 server:
   servlet:
