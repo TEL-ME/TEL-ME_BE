@@ -16,6 +16,13 @@ spring:
     # 싶으면 `podman-compose down -v`로 볼륨을 지우는 쪽을 쓰고, 이 값은 프로파일별로 풀지 않는다.
     clean-disabled: true
 
+server:
+  servlet:
+    session:
+      cookie:
+        # 브라우저 기본값(SameSite 미지정 시 Lax 취급)에 기대지 않고 서버가 명시
+        same-site: lax
+
 springdoc:
   default-consumes-media-type: application/json;charset=UTF-8
   default-produces-media-type: application/json;charset=UTF-8
