@@ -160,6 +160,38 @@ class MemberAuthControllerTest {
     }
 
     @Test
+    @DisplayName("로그인 이메일 형식이 아니면 400을 반환한다")
+    void 로그인_이메일_형식_오류면_400을_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new LoginRequestJson("not-an-email", "password123"))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("로그인 이메일이 255자를 초과하면 400을 반환한다")
+    void 로그인_이메일이_255자를_초과하면_400을_반환한다() throws Exception {
+        String domain = String.join(".", "x".repeat(62), "x".repeat(62), "x".repeat(62), "x".repeat(62));
+        String tooLongEmail = "user@" + domain;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new LoginRequestJson(tooLongEmail, "password123"))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("로그인 비밀번호가 UTF-8 기준 72바이트를 넘으면 400을 반환한다")
+    void 로그인_비밀번호가_72바이트를_넘으면_400을_반환한다() throws Exception {
+        String password73Bytes = "a".repeat(73);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new LoginRequestJson("login@example.com", password73Bytes))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("로그인 실패면 401과 에러 코드를 반환한다")
     void 로그인_실패면_401을_반환한다() throws Exception {
         when(memberAuthService.login(any(), any(), any()))
