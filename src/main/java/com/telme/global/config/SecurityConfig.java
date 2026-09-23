@@ -42,6 +42,15 @@ public class SecurityConfig {
             "/login/oauth2/code/**"
     };
 
+    // /api/v1/auth/** 는 대부분 permitAll이지만, 이 하위 경로는 로그인된 회원 자신만 호출할 수 있어야 한다 —
+    // authorizeHttpRequests는 먼저 매칭된 규칙이 우선이라 더 넓은 permitAll보다 앞에 선언한다
+    private static final String[] AUTHENTICATED_AUTH_WHITELIST = {
+            "/api/auth/login-methods/**",
+            "/api/v1/auth/login-methods/**",
+            "/api/auth/kakao/link-start",
+            "/api/v1/auth/kakao/link-start"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -74,6 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(PUBLIC_WHITELIST).permitAll()
                         .requestMatchers(OAUTH2_WHITELIST).permitAll()
+                        .requestMatchers(AUTHENTICATED_AUTH_WHITELIST).authenticated()
                         .requestMatchers("/api/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/chat/**", "/api/v1/chat/**").permitAll()
                         .requestMatchers("/api/stores/**", "/api/v1/stores/**").permitAll()

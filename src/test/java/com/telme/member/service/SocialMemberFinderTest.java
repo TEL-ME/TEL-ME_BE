@@ -112,4 +112,81 @@ class SocialMemberFinderTest {
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(GeneralException.class);
     }
+
+    @Test
+    @DisplayName("이메일이 기존 회원과 일치하면 새 회원을 만들지 않고 연결 필요 예외를 던진다")
+    void 이메일이_일치하면_생성을_중단한다() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-6")).thenReturn(Optional.empty());
+        User existing = User.builder().userId(7L).email("match@example.com").build();
+        when(userRepository.findByEmail("match@example.com")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-6", "match@example.com"))
+                .isInstanceOf(SocialEmailAlreadyLinkedException.class)
+                .extracting(e -> ((SocialEmailAlreadyLinkedException) e).getMatchedUserId())
+                .isEqualTo(7L);
+        verify(userRepository, never()).save(any());
+        verify(socialAccountRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("linkExisting은 기존 회원에 새 소셜 계정을 연결한다")
+    void linkExisting_정상_연결() {
+        User existing = User.builder().userId(8L).email("link@example.com").build();
+
+        User result = finder.linkExisting(KAKAO, "kakao-7", existing);
+
+        assertThat(result).isEqualTo(existing);
+        verify(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+    }
+
+    @Test
+    @DisplayName("이미 해당 provider가 연결된 회원이면 거부한다")
+    void linkExisting_이미_provider가_있으면_거부() {
+        User existing = User.builder().userId(9L).email("link2@example.com").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_user_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-8", existing))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+    }
+
+    @Test
+    @DisplayName("같은 회원의 동시 중복 연결 요청은 이미 연결된 상태로 그대로 성공 처리한다")
+    void linkExisting_같은_회원의_동시_요청은_성공_처리() {
+        User existing = User.builder().userId(10L).email("link3@example.com").build();
+        SocialAccount alreadyLinked = SocialAccount.builder().user(existing).provider(KAKAO).providerUserId("kakao-9").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-9"))
+                .thenReturn(Optional.of(alreadyLinked));
+
+        User result = finder.linkExisting(KAKAO, "kakao-9", existing);
+
+        assertThat(result).isEqualTo(existing);
+    }
+
+    @Test
+    @DisplayName("다른 회원에게 이미 연결된 소셜 계정이면 거부한다")
+    void linkExisting_다른_회원에_연결된_계정이면_거부() {
+        User existing = User.builder().userId(11L).email("link4@example.com").build();
+        User otherUser = User.builder().userId(99L).build();
+        SocialAccount linkedToOther = SocialAccount.builder().user(otherUser).provider(KAKAO).providerUserId("kakao-10").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-10"))
+                .thenReturn(Optional.of(linkedToOther));
+
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-10", existing))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+    }
 }

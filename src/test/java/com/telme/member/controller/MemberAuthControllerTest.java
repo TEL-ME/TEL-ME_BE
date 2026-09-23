@@ -2,8 +2,10 @@ package com.telme.member.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +14,10 @@ import com.telme.global.config.SecurityConfig;
 import com.telme.member.dto.res.LoginResponse;
 import com.telme.member.dto.res.SignUpResponse;
 import com.telme.member.exception.MemberErrorCode;
+import com.telme.member.service.EmailLoginMethodService;
 import com.telme.member.service.GuestIdentityService;
+import com.telme.member.service.KakaoAccountLinkService;
+import com.telme.member.service.KakaoLinkStartService;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
@@ -22,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,6 +44,15 @@ class MemberAuthControllerTest {
 
     @MockitoBean
     private MemberAuthService memberAuthService;
+
+    @MockitoBean
+    private KakaoAccountLinkService kakaoAccountLinkService;
+
+    @MockitoBean
+    private EmailLoginMethodService emailLoginMethodService;
+
+    @MockitoBean
+    private KakaoLinkStartService kakaoLinkStartService;
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
@@ -260,6 +275,46 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true));
+    }
+
+    @Test
+    @DisplayName("이메일 로그인 방법 추가는 인증 없이 호출하면 403을 반환한다")
+    void 이메일_로그인_방법_추가는_미인증이면_403() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login-methods/email")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new SignUpRequestJson("kakao@example.com", "password123"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("이메일 로그인 방법 추가는 인증된 상태면 호출할 수 있다")
+    void 이메일_로그인_방법_추가는_인증되면_호출된다() throws Exception {
+        when(emailLoginMethodService.addEmailLogin(any(), any())).thenReturn(new SignUpResponse(1L, "kakao@example.com"));
+
+        mockMvc.perform(post("/api/v1/auth/login-methods/email")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new SignUpRequestJson("kakao@example.com", "password123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.email").value("kakao@example.com"));
+    }
+
+    @Test
+    @DisplayName("카카오 연결 시작은 인증 없이 호출하면 403을 반환한다")
+    void 카카오_연결_시작은_미인증이면_403() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/kakao/link-start"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("카카오 연결 시작은 인증된 상태면 카카오 인증 화면으로 리다이렉트한다")
+    void 카카오_연결_시작은_인증되면_리다이렉트된다() throws Exception {
+        when(kakaoLinkStartService.start(any())).thenReturn("/oauth2/authorization/kakao");
+
+        mockMvc.perform(get("/api/v1/auth/kakao/link-start"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/kakao"));
     }
 
     private record SignUpRequestJson(String email, String password) {

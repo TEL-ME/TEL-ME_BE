@@ -1,17 +1,10 @@
 package com.telme.member.service;
 
-import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.telme.global.common.exception.GeneralException;
-import com.telme.member.entity.User;
-import com.telme.member.exception.MemberErrorCode;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -25,41 +18,62 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 
 class KakaoOAuth2UserServiceTest {
 
-    private final SocialMemberFinder socialMemberFinder = mock(SocialMemberFinder.class);
     private final DefaultOAuth2UserService delegate = mock(DefaultOAuth2UserService.class);
-    private final KakaoOAuth2UserService service = new KakaoOAuth2UserService(socialMemberFinder, delegate);
+    private final KakaoOAuth2UserService service = new KakaoOAuth2UserService(delegate);
     private final OAuth2UserRequest request = mock(OAuth2UserRequest.class);
 
     @Test
-    @DisplayName("카카오 id·kakao_account.email을 추출해 회원을 조회하고 KakaoOAuth2User로 감싼다")
-    void 정상_흐름이면_회원을_찾아_감싼다() {
+    @DisplayName("카카오 id·인증된 kakao_account.email을 추출한다")
+    void 정상_흐름이면_원본_클레임을_추출한다() {
         Map<String, Object> attributes = Map.of(
                 "id", 12345L,
-                "kakao_account", Map.of("email", "user@kakao.com"));
+                "kakao_account", Map.of("email", "user@kakao.com", "is_email_verified", true, "is_email_valid", true));
         when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
-        User user = User.builder().userId(7L).role(User.Role.ADMIN).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "12345", "user@kakao.com")).thenReturn(user);
 
         OAuth2User result = service.loadUser(request);
 
         assertThat(result).isInstanceOf(KakaoOAuth2User.class);
         KakaoOAuth2User kakaoUser = (KakaoOAuth2User) result;
-        assertThat(kakaoUser.getUserId()).isEqualTo(7L);
-        assertThat(kakaoUser.getAuthorities())
-                .extracting(Object::toString)
-                .containsExactly("ROLE_ADMIN");
+        assertThat(kakaoUser.getProviderUserId()).isEqualTo("12345");
+        assertThat(kakaoUser.getEmail()).isEqualTo("user@kakao.com");
     }
 
     @Test
-    @DisplayName("kakao_account가 없으면 email 없이 조회한다")
+    @DisplayName("kakao_account가 없으면 email 없이 추출한다")
     void kakao_account가_없으면_email_null() {
         Map<String, Object> attributes = Map.of("id", 999L);
         when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
-        when(socialMemberFinder.findOrCreate(eq(KAKAO), eq("999"), any())).thenReturn(User.builder().userId(1L).build());
 
-        service.loadUser(request);
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
 
-        verify(socialMemberFinder).findOrCreate(KAKAO, "999", null);
+        assertThat(result.getProviderUserId()).isEqualTo("999");
+        assertThat(result.getEmail()).isNull();
+    }
+
+    @Test
+    @DisplayName("이메일이 미인증 상태면 email 없이 추출한다")
+    void 이메일_미인증이면_email_null() {
+        Map<String, Object> attributes = Map.of(
+                "id", 998L,
+                "kakao_account", Map.of("email", "unverified@kakao.com", "is_email_verified", false, "is_email_valid", true));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getEmail()).isNull();
+    }
+
+    @Test
+    @DisplayName("이메일이 다른 계정에 재사용돼 만료(is_email_valid=false)면 email 없이 추출한다")
+    void 이메일_재사용_만료면_email_null() {
+        Map<String, Object> attributes = Map.of(
+                "id", 997L,
+                "kakao_account", Map.of("email", "reused@kakao.com", "is_email_verified", true, "is_email_valid", false));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getEmail()).isNull();
     }
 
     @Test
@@ -69,20 +83,6 @@ class KakaoOAuth2UserServiceTest {
         when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
 
         assertThatThrownBy(() -> service.loadUser(request)).isInstanceOf(OAuth2AuthenticationException.class);
-    }
-
-    @Test
-    @DisplayName("회원 상태 오류(GeneralException)는 OAuth2AuthenticationException으로 변환된다")
-    void 상태_오류는_OAuth2예외로_변환() {
-        Map<String, Object> attributes = Map.of("id", 1L);
-        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
-        when(socialMemberFinder.findOrCreate(KAKAO, "1", null))
-                .thenThrow(new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED));
-
-        assertThatThrownBy(() -> service.loadUser(request))
-                .isInstanceOf(OAuth2AuthenticationException.class)
-                .extracting(e -> ((OAuth2AuthenticationException) e).getError().getErrorCode())
-                .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED.getCode());
     }
 
     private OAuth2User rawUser(Map<String, Object> attributes) {

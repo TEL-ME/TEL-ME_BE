@@ -3,6 +3,8 @@ package com.telme.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.member.config.Oauth2Properties;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -14,7 +16,11 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 class KakaoLoginFailureHandlerTest {
 
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
-    private final KakaoLoginFailureHandler handler = new KakaoLoginFailureHandler(oauth2Properties);
+    private final Clock clock = Clock.systemDefaultZone().withZone(ZoneOffset.UTC);
+    private final KakaoLinkPendingStore kakaoLinkPendingStore = new KakaoLinkPendingStore(clock);
+    private final PendingKakaoLinkStore pendingKakaoLinkStore = new PendingKakaoLinkStore(clock);
+    private final KakaoLoginFailureHandler handler =
+            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkPendingStore, pendingKakaoLinkStore);
 
     @Test
     @DisplayName("OAuth2AuthenticationException이면 오류 코드를 reason으로 실어 리다이렉트한다")
@@ -56,5 +62,19 @@ class KakaoLoginFailureHandlerTest {
         String redirectedUrl = response.getRedirectedUrl();
         assertThat(redirectedUrl).doesNotContain("a&b=c evil");
         assertThat(redirectedUrl).startsWith("http://localhost:3000/oauth/callback?success=false&reason=a%26b%3Dc");
+    }
+
+    @Test
+    @DisplayName("카카오 인증 자체가 실패해도 진행 중이던 연결/이메일-연결 pending 정보를 모두 지운다")
+    void 인증_실패시_pending_정보를_모두_지운다() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        kakaoLinkPendingStore.issue(request, 30L);
+        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+
+        handler.onAuthenticationFailure(request, response, new BadCredentialsException("카카오 인증 취소"));
+
+        assertThat(request.getSession(false).getAttribute(KakaoLinkPendingStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(PendingKakaoLinkStore.SESSION_ATTRIBUTE)).isNull();
     }
 }
