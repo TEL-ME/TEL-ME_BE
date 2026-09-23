@@ -9,7 +9,7 @@ import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextBuilder;
 import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatFailure;
-import com.telme.chat.service.ChatOutputMessage;
+import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.consult.dto.DialogueDecision;
@@ -201,10 +201,11 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
         switch (decision.action()) {
             case ASK -> {
                 // asked_message_id를 남기려면 되묻기 메시지를 만든 뒤에 저장해야 한다
-                ChatOutputMessage asked = chatExecutionService.askClarification(
+                ChatExecutionState asked = chatExecutionService.askClarification(
                         command.executionId(), messageOr(decision, LOCATION_ASK_MESSAGE));
                 consultService.persist(
-                        prep.prepared(), new MessageLinks(asked.messageId(), answerMessageId, answeredField));
+                        prep.prepared(),
+                        new MessageLinks(asked.outputMessage().messageId(), answerMessageId, answeredField));
             }
             // 조건 저장이 실패하면 사용자에게 성공 답변이 나가지 않도록 저장을 먼저 한다
             case ALTERNATIVE_GUIDANCE -> {

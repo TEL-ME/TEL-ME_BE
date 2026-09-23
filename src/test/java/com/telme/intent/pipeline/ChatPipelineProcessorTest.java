@@ -11,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.repository.ChatMessageRepository;
@@ -19,6 +20,7 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextBuilder;
 import com.telme.chat.service.ChatExecutionService;
+import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatOutputMessage;
 import com.telme.chat.service.ChatProcessingCommand;
@@ -374,8 +376,9 @@ class ChatPipelineProcessorTest {
 
         Long clarificationMessageId = 555L;
         given(chatExecutionService.askClarification(eq(executionId), any())).willReturn(
-                new ChatOutputMessage(sessionId, executionId, clarificationMessageId, 2,
-                        ChatMessage.MessageType.CLARIFICATION, ChatMessage.Status.COMPLETED));
+                new ChatExecutionState(sessionId, executionId, ChatExecution.Status.COMPLETED, null,
+                        new ChatOutputMessage(sessionId, executionId, clarificationMessageId, 2,
+                                ChatMessage.MessageType.CLARIFICATION, ChatMessage.Status.COMPLETED)));
 
         ChatProcessingCommand command = new ChatProcessingCommand(executionId, sessionId, messageId, userFollowUpText);
         processor.request(command);
