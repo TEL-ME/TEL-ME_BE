@@ -11,9 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** 모든 메서드는 현재 대화 소유권을 검증한다. Actor는 인증 계층이 검증한 값이다.
- *  findByMessageIds는 소유권 검증 X, 호출하는 쪽이 대상 메세지의 소유권을 먼저 확인한다.
-*/
+/** 모든 메서드는 현재 대화 소유권을 검증한다. Actor는 인증 계층이 검증한 값이다. */
 public interface FeedbackStore {
     Feedback upsert(long messageId, Actor actor, Input input);
 

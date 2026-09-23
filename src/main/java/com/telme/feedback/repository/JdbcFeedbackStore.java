@@ -107,13 +107,25 @@ public final class JdbcFeedbackStore implements FeedbackStore {
             return Map.of();
         }
         String placeholders = String.join(",", Collections.nCopies(messageIds.size(), "?"));
-        String sql = "SELECT * FROM message_feedback WHERE message_id IN (" + placeholders
-                + ") AND " + actorColumn(actor) + "=?";
-        Object[] params = new Object[messageIds.size() + 1];
+        String ownerFilter =
+                actor.userId() != null
+                        ? "s.user_id=?"
+                        : "s.user_id IS NULL AND s.guest_id=?";
+        String sql =
+                "SELECT f.* FROM message_feedback f JOIN chat_messages m ON"
+                        + " m.message_id=f.message_id JOIN chat_sessions s ON"
+                        + " s.session_id=m.session_id WHERE f.message_id IN ("
+                        + placeholders
+                        + ") AND f."
+                        + actorColumn(actor)
+                        + "=? AND "
+                        + ownerFilter;
+        Object[] params = new Object[messageIds.size() + 2];
         for (int i = 0; i < messageIds.size(); i++) {
             params[i] = messageIds.get(i);
         }
         params[messageIds.size()] = actorId(actor);
+        params[messageIds.size() + 1] = actorId(actor);
         return jdbc.query(sql, this::read, params).stream()
                 .collect(Collectors.toMap(Feedback::messageId, f -> f));
     }
