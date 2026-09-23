@@ -156,6 +156,7 @@ class LocalFeedbackDatabaseTest {
         feedback.save(mid, guest, like());
         jdbc.update("UPDATE chat_sessions SET user_id=1 WHERE session_id=?", sid);
         assertThrows(FeedbackStore.TargetUnavailable.class, () -> feedback.get(mid, guest));
+        assertTrue(feedback.getAll(List.of(mid), guest).isEmpty());
         assertThrows(
                 FeedbackStore.TargetUnavailable.class, () -> feedback.save(mid, guest, like()));
     }

@@ -31,7 +31,7 @@ class ChatMessageConverterTest {
                 .storeResults("[{\"storeId\":3,\"name\":\"텔미 강남점\"}]")
                 .build();
 
-        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message);
+        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message, false, null);
 
         assertThat(response.followUps()).containsExactly("다른 매장도 보여줘");
         assertThat(response.storeResults()).singleElement().satisfies(store -> {
@@ -58,7 +58,7 @@ class ChatMessageConverterTest {
                 .storeResults("[1,2,3]")
                 .build();
 
-        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message);
+        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message, false, null);
 
         assertThat(response.content()).isEqualTo("응답 본문");
         assertThat(response.followUps()).isNull();
@@ -83,7 +83,7 @@ class ChatMessageConverterTest {
                 .storeResults("[[1,2]]")
                 .build();
 
-        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message);
+        ChatMessageHistoryItemResponse response = converter.toHistoryItemResponse(message, false, null);
 
         assertThat(response.followUps()).isNull();
         assertThat(response.storeResults()).isNull();

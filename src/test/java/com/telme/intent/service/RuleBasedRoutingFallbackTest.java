@@ -3,11 +3,15 @@ package com.telme.intent.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.entity.QueryRouting.Intent;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RuleBasedRoutingFallbackTest {
 
@@ -89,5 +93,36 @@ class RuleBasedRoutingFallbackTest {
         LlmRoutingPayload result = fallback.classify("신규 개통도 하고 유심 재발급도 대리점에서 가능한가요?");
 
         assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"잠깐만요", "네", "넵", "음 글쎄요", "나중에요", "이따 알려드릴게요", "생각 좀 해볼게요"})
+    @DisplayName("호응·보류 표현은 지역으로 보지 않아 되묻기를 유지할 수 있도록 빈 조건을 반환한다")
+    void classifyFollowUp_ackOrDeferral_returnsNoCondition(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.conditions())
+                .noneMatch(condition -> "location".equals(condition.key()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"강남역이요", "신촌", "홍대입구역 쪽으로 가려고요"})
+    @DisplayName("실제 지역 답변은 그대로 location 조건으로 추출한다")
+    void classifyFollowUp_realLocation_returnsFilledCondition(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.FILLED);
+    }
+
+    @Test
+    @DisplayName("명시적으로 거절하면 대기 중이던 조건을 DECLINED로 표시한다")
+    void classifyFollowUp_declined_marksDeclined() {
+        LlmFollowUpPayload result = fallback.classifyFollowUp("그냥 알려주기 싫어요", Set.of("location"));
+
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.DECLINED);
     }
 }
