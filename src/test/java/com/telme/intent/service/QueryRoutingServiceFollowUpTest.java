@@ -158,6 +158,19 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("조건이 아닌 짧은 답변은 지역으로 오인하지 않고 기존 질문 대기를 유지한다")
+    void analyzeFollowUp_doesNotTreatPauseAsLocation() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "잠깐만요");
+
+        assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
     @DisplayName("정의되지 않은 조건 키는 상담 모듈로 넘기지 않는다")
     void analyzeFollowUp_ignoresUnknownConditionKeys() {
         givenWaitingConsultExists();

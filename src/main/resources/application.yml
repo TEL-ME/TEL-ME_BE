@@ -83,3 +83,11 @@ faq:
     # Ollama가 요청을 순차 처리하므로 50 상한
     batch-size: 50
     exit-after: true
+
+telme:
+  consult:
+    # 상담 기능은 연결 모듈이 모두 준비된 환경에서 명시적으로 켠다.
+    persistence-enabled: ${CONSULT_PERSISTENCE_ENABLED:false}
+    llm-enabled: ${CONSULT_LLM_ENABLED:false}
+    chat-integration-enabled: ${CONSULT_CHAT_INTEGRATION_ENABLED:false}
+    rag-integration-enabled: ${CONSULT_RAG_INTEGRATION_ENABLED:false}
