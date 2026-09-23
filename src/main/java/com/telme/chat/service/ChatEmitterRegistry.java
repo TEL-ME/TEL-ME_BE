@@ -22,9 +22,12 @@ public class ChatEmitterRegistry {
         if (previous != null) {
             log.info("새로운 SSE 구독으로 기존 연결 명시적 종료: executionId={}", executionId);
             try {
+                // 이전 연결 탭에게 강제 종료됨을 알림 (프론트에서 eventSource.close()를 호출하여 무한 재연결 방지)
+                previous.send(SseEmitter.event().name("error").data("CONNECTED_ELSEWHERE"));
+            } catch (IOException | IllegalStateException ignored) {
+                // 이미 끊어져 전송할 수 없는 경우 무시
+            } finally {
                 previous.complete();
-            } catch (Exception ignored) {
-                // already completed
             }
         }
         
