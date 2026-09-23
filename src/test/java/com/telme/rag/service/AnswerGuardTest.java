@@ -112,6 +112,15 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("원으로 시작하는 낱말은 금액으로 보지 않는다")
+    void 원으로_시작하는_낱말은_금액이_아니다() {
+        String context = "요금제 변경은 한 달에 1회만 가능합니다.";
+
+        assertThatCode(() -> guard.verifyAmounts("남은 할부 1 원금과 3 원인을 확인하세요.", context, ""))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("금액이 아닌 숫자는 검사하지 않는다")
     void 금액이_아닌_숫자는_통과한다() {
         String context = "번호이동 처리는 매일 09:00부터 20:00까지 진행됩니다.";

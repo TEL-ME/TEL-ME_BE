@@ -14,9 +14,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class AnswerGuard {
 
-    // 억·만 단위와 원 단위를 함께 잡는다. "30만 원"과 "300,000원"이 같은 값이어야 한다
+    // 억·만 단위와 원 단위를 함께 잡는다. "30만 원"과 "300,000원"이 같은 값이어야 한다.
+    // 공백은 단위 뒤에만 허용한다. "1 원금"처럼 원으로 시작하는 낱말을 금액으로 읽지 않기 위해서다
     private static final Pattern AMOUNT = Pattern.compile(
-            "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?\\s*원");
+            "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
 
     private static final Set<Integer> SENTENCE_END = Set.of((int) '.', (int) '?', (int) '!');
 
