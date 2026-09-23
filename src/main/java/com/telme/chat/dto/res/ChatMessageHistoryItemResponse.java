@@ -22,6 +22,12 @@ public record ChatMessageHistoryItemResponse(
         )
         List<Map<String, Object>> storeResults,
         Instant createdAt,
-        Instant completedAt
+        Instant completedAt,
+        @Schema(description = "현재 사용자가 이 메세지를 평가할 수 있는지 여부")
+        boolean ratable,
+        @Schema(description = "현재 사용자가 남긴 평가, 미작성이면 null")
+        MyFeedback myFeedback
 ) {
+    public record MyFeedback(String rating, String reason, String comment) {
+    }
 }

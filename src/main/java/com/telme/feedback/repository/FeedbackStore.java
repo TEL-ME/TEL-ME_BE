@@ -6,6 +6,8 @@ import com.telme.feedback.dto.FeedbackModels.Input;
 import com.telme.feedback.exception.FeedbackErrorCode;
 import com.telme.global.common.exception.GeneralException;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +16,8 @@ public interface FeedbackStore {
     Feedback upsert(long messageId, Actor actor, Input input);
 
     Optional<Feedback> find(long messageId, Actor actor);
+
+    Map<Long, Feedback> findByMessageIds(List<Long> messageIds, Actor actor);
 
     void delete(long messageId, Actor actor);
 
