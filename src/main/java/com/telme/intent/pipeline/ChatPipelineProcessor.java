@@ -5,8 +5,11 @@ import com.telme.chat.entity.ChatSession;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextBuilder;
 import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatFailure;
+import com.telme.chat.service.ChatOutputMessage;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.consult.dto.DialogueDecision;
@@ -15,6 +18,7 @@ import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.service.ConsultService;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -23,6 +27,10 @@ import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmStreamHandler;
+import com.telme.rag.dto.req.AnswerRequest;
+import com.telme.rag.dto.res.AnswerResult;
+import com.telme.rag.service.AnswerGenerator;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,10 +52,29 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     private static final String LOCATION_DECLINED_MESSAGE = "검색 지역 없이는 가까운 매장을 안내하기 어려워요.";
     private static final String STORE_PHONE = "02-1234-5678";
     private static final int FAQ_SEARCH_TOP_K = 3;
+    // 라우팅은 분류만 하면 되므로 답변 생성보다 훨씬 작은 예산을 쓴다
+    private static final int ROUTING_CONTEXT_TOKEN_BUDGET = 1024;
+    private static final String EMPTY_QUESTION_MESSAGE = "궁금하신 내용을 문장으로 입력해 주시면 확인해 드리겠습니다.";
+
+    // SSE 토큰 스트리밍 연결 전까지 쓰는 빈 핸들러. AnswerGenerator는 null 핸들러를 허용하지 않는다
+    private static final LlmStreamHandler NO_STREAMING = new LlmStreamHandler() {
+        @Override
+        public void onToken(String token) {
+        }
+
+        @Override
+        public void onComplete() {
+        }
+
+        @Override
+        public void onError(Throwable error) {
+        }
+    };
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatExecutionService chatExecutionService;
+    private final ChatContextBuilder chatContextBuilder;
     private final QueryRoutingService queryRoutingService;
     private final FaqSearchService faqSearchService;
     private final AnswerGenerator answerGenerator;
@@ -73,7 +100,9 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     }
 
     private void processInternal(ChatProcessingCommand command) {
-        ChatMessage inputMessage = chatMessageRepository.findById(command.inputMessageId()).orElse(null);
+        // 파이프라인은 트랜잭션 밖에서 돌아 session을 지연 로딩하면 LazyInitializationException이 난다
+        ChatMessage inputMessage =
+                chatMessageRepository.findByIdWithSession(command.inputMessageId()).orElse(null);
         if (inputMessage == null) {
             chatExecutionService.fail(command.executionId(), new ChatFailure(ChatMessage.Status.FAILED, "MESSAGE_NOT_FOUND"));
             return;
@@ -91,7 +120,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             return;
         }
 
-        IntentRouteResponse routing = queryRoutingService.route(inputMessage);
+        IntentRouteResponse routing = queryRoutingService.route(inputMessage, buildRoutingContext(command));
         QueryRouting.Intent intent = routing != null && routing.intent() != null
                 ? routing.intent()
                 : QueryRouting.Intent.UNKNOWN;
@@ -101,6 +130,17 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             case BOTH -> handleBothIntent(command, routing, rawContent);
             case UNKNOWN -> handleUnknownIntent(command);
             case FAQ -> handleFaqOrGeneralIntent(command, rawContent);
+        }
+    }
+
+    // Context 조립 실패로 분류 자체가 막히면 안 되므로 질문만으로 라우팅하도록 떨어뜨린다
+    private ChatContext buildRoutingContext(ChatProcessingCommand command) {
+        try {
+            return chatContextBuilder.build(command, ROUTING_CONTEXT_TOKEN_BUDGET);
+        } catch (Exception e) {
+            log.warn("[파이프라인] 라우팅 Context 조립 실패, 현재 질문만으로 분류합니다: executionId={}, reason={}",
+                    command.executionId(), e.getMessage());
+            return null;
         }
     }
 
@@ -124,47 +164,78 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
 
         Map<String, Condition> updates = toConsultUpdates(followUp);
 
-        ConsultService.PreparationResult prep;
-        try {
-            prep = consultService.prepareTurn(
-                    sessionId,
-                    followUp.consultRequestId(),
-                    Purpose.NEARBY_STORE,
-                    updates,
-                    resolveLocationStatus(followUp));
-        } catch (Exception e) {
-            log.warn("[파이프라인] 되묻기 조건 갱신 실패, 기본 매장 안내로 fallback: {}", e.getMessage());
+        // 상태 충돌이나 저장 오류를 매장 안내로 감추면 실패가 성공처럼 보이므로 실행 실패로 전달한다
+        ConsultService.PreparationResult prep = consultService.prepareTurn(
+                sessionId,
+                followUp.consultRequestId(),
+                Purpose.NEARBY_STORE,
+                updates,
+                resolveLocationStatus(followUp));
+
+        if (prep == null) {
             completeStoreResult(command, resolveLocation(followUp, rawContent));
             return;
         }
 
-        if (prep == null || prep.prepared() == null || prep.prepared().decision() == null) {
-            if (prep != null && prep.waitingForReply()) {
-                // 새 답변을 만들면 이미 보낸 되묻기 질문이 중복된다
-                log.info("[파이프라인] 되묻기 응답 대기 유지: executionId={}, pendingMessageId={}",
-                        command.executionId(), prep.pendingMessageId());
-                chatExecutionService.completeWithoutOutput(command.executionId());
-                return;
+        // 이미 보낸 되묻기 질문은 그대로 두고, 정정된 조건만 저장한다
+        if (prep.waitingForReply()) {
+            if (prep.prepared() != null) {
+                consultService.persistWaitingChanges(prep);
             }
+            log.info("[파이프라인] 되묻기 응답 대기 유지: executionId={}, pendingMessageId={}",
+                    command.executionId(), prep.pendingMessageId());
+            chatExecutionService.completeWithoutOutput(command.executionId());
+            return;
+        }
+
+        if (prep.prepared() == null || prep.prepared().decision() == null) {
             completeStoreResult(command, resolveLocation(followUp, rawContent));
             return;
         }
 
         DialogueDecision decision = prep.prepared().decision();
+        String answeredField = resolveAnsweredField(followUp);
+        Long answerMessageId = answeredField != null ? command.inputMessageId() : null;
+
         switch (decision.action()) {
-            case ASK -> chatExecutionService.askClarification(
-                    command.executionId(), messageOr(decision, LOCATION_ASK_MESSAGE));
-            case ALTERNATIVE_GUIDANCE -> chatExecutionService.completeAnswer(
-                    command.executionId(),
-                    new ChatAnswer(
-                            ChatMessage.MessageType.ANSWER,
-                            messageOr(decision, LOCATION_DECLINED_MESSAGE),
-                            ChatMessage.AnswerBasis.OUT_OF_SCOPE,
-                            Collections.emptyList(),
-                            null));
+            case ASK -> {
+                // asked_message_id를 남기려면 되묻기 메시지를 만든 뒤에 저장해야 한다
+                ChatOutputMessage asked = chatExecutionService.askClarification(
+                        command.executionId(), messageOr(decision, LOCATION_ASK_MESSAGE));
+                consultService.persist(
+                        prep.prepared(), new MessageLinks(asked.messageId(), answerMessageId, answeredField));
+            }
+            // 조건 저장이 실패하면 사용자에게 성공 답변이 나가지 않도록 저장을 먼저 한다
+            case ALTERNATIVE_GUIDANCE -> {
+                consultService.persist(
+                        prep.prepared(), new MessageLinks(null, answerMessageId, answeredField));
+                chatExecutionService.completeAnswer(
+                        command.executionId(),
+                        new ChatAnswer(
+                                ChatMessage.MessageType.ANSWER,
+                                messageOr(decision, LOCATION_DECLINED_MESSAGE),
+                                ChatMessage.AnswerBasis.OUT_OF_SCOPE,
+                                Collections.emptyList(),
+                                null));
+            }
             // 사용자 원문("강남역이요") 대신 상담 모듈이 정규화한 값을 써야 안내 문구가 자연스럽다
-            case PROCEED -> completeStoreResult(command, resolveLocation(decision, followUp, rawContent));
+            case PROCEED -> {
+                consultService.persist(
+                        prep.prepared(), new MessageLinks(null, answerMessageId, answeredField));
+                completeStoreResult(command, resolveLocation(decision, followUp, rawContent));
+            }
         }
+    }
+
+    // 상담이 되묻기 질문과 답변 메시지를 이어 붙일 수 있도록 방금 답한 조건 이름을 고른다
+    private String resolveAnsweredField(FollowUpRouteResponse followUp) {
+        if (!followUp.conditions().isEmpty()) {
+            return followUp.conditions().keySet().iterator().next();
+        }
+        if (!followUp.declinedKeys().isEmpty()) {
+            return followUp.declinedKeys().iterator().next();
+        }
+        return null;
     }
 
     // 상담 모듈이 Map을 직접 받는 진입점이 생기기 전까지 prepareTurn 시그니처에 맞춰 변환한다
@@ -205,6 +276,12 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     }
 
     private void handleBothIntent(ChatProcessingCommand command, IntentRouteResponse routing, String rawContent) {
+        // 빈 입력으로 검색하면 묻지 않은 FAQ가 근거로 붙는다
+        if (rawContent.isBlank()) {
+            answerEmptyQuestion(command);
+            return;
+        }
+
         String faqQueryText = rawContent;
         if (routing != null && routing.subQueries() != null) {
             faqQueryText = routing.subQueries().stream()
@@ -214,39 +291,19 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
                     .orElse(rawContent);
         }
 
-        List<FaqSearchResponse> searchResults = Collections.emptyList();
-        try {
-            List<FaqSearchResponse> res = faqSearchService.search(new FaqSearchRequest(faqQueryText, FAQ_SEARCH_TOP_K));
-            if (res != null) {
-                searchResults = res;
-            }
-        } catch (Exception e) {
-            log.warn("[파이프라인] BOTH 의도 FAQ 검색 실패: {}", e.getMessage());
-        }
+        Map<String, String> extractedConditions = routing != null && routing.extractedConditions() != null
+                ? routing.extractedConditions()
+                : Collections.emptyMap();
+
+        List<FaqSearchResponse> searchResults = searchFaq(faqQueryText);
 
         chatExecutionService.startAnswer(command.executionId());
 
-        // RAG 쪽 요청으로 분해된 서브질의가 아닌 사용자 원문을 넘긴다
-        AnswerRequest answerRequest = AnswerRequest.builder()
-                .executionId(command.executionId())
-                .userQuery(command.content() != null ? command.content() : "")
-                .searchResults(searchResults)
-                .build();
+        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, extractedConditions);
+        String faqAnswerText = answerTextOr(answerResult, "문의하신 통신 서비스 관련 안내 정보입니다.");
+        ChatMessage.AnswerBasis answerBasis = answerBasisOf(answerResult);
 
-        AnswerResult answerResult = null;
-        try {
-            answerResult = answerGenerator.generate(answerRequest, null);
-        } catch (Exception e) {
-            log.error("[파이프라인] BOTH 의도 RAG 답변 생성 실패: {}", e.getMessage());
-        }
-
-        String faqAnswerText = (answerResult != null && answerResult.answer() != null && !answerResult.answer().isBlank())
-                ? answerResult.answer()
-                : "문의하신 통신 서비스 관련 안내 정보입니다.";
-
-        String location = routing != null && routing.extractedConditions() != null
-                ? routing.extractedConditions().get(FollowUpRouteResponse.LOCATION_KEY)
-                : null;
+        String location = extractedConditions.get(FollowUpRouteResponse.LOCATION_KEY);
 
         if (location != null && !location.isBlank()) {
             Map<String, Object> storeInfo = Map.of(
@@ -259,7 +316,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             ChatAnswer answer = new ChatAnswer(
                     ChatMessage.MessageType.ANSWER,
                     combinedContent,
-                    ChatMessage.AnswerBasis.GROUNDED,
+                    answerBasis,
                     List.of("영업시간 문의", "매장 방문 예약"),
                     List.of(storeInfo)
             );
@@ -269,7 +326,7 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
             ChatAnswer answer = new ChatAnswer(
                     ChatMessage.MessageType.ANSWER,
                     combinedContent,
-                    ChatMessage.AnswerBasis.GROUNDED,
+                    answerBasis,
                     List.of("가까운 매장 찾기", "고객센터 연결"),
                     null
             );
@@ -323,45 +380,88 @@ public class ChatPipelineProcessor implements ChatProcessingPort {
     }
 
     private void handleFaqOrGeneralIntent(ChatProcessingCommand command, String rawContent) {
-        String queryText = !rawContent.isBlank() ? rawContent : "요금제 안내";
-
-        List<FaqSearchResponse> searchResults = Collections.emptyList();
-        try {
-            List<FaqSearchResponse> res = faqSearchService.search(new FaqSearchRequest(queryText, FAQ_SEARCH_TOP_K));
-            if (res != null) {
-                searchResults = res;
-            }
-        } catch (Exception e) {
-            log.warn("[파이프라인] FAQ 검색 실패, 검색 결과 없이 답변 생성: {}", e.getMessage());
+        // 빈 입력을 "요금제 안내"로 대신 검색하면 묻지 않은 FAQ가 근거로 붙는다
+        if (rawContent.isBlank()) {
+            answerEmptyQuestion(command);
+            return;
         }
+
+        List<FaqSearchResponse> searchResults = searchFaq(rawContent);
 
         chatExecutionService.startAnswer(command.executionId());
 
-        AnswerRequest answerRequest = AnswerRequest.builder()
-                .executionId(command.executionId())
-                .userQuery(command.content() != null ? command.content() : "")
-                .searchResults(searchResults)
-                .build();
-
-        AnswerResult answerResult = null;
-        try {
-            answerResult = answerGenerator.generate(answerRequest, null);
-        } catch (Exception e) {
-            log.error("[파이프라인] RAG 답변 생성 실패: {}", e.getMessage());
-        }
-
-        String answerText = (answerResult != null && answerResult.answer() != null && !answerResult.answer().isBlank())
-                ? answerResult.answer()
-                : "문의하신 내용에 대해 확인된 안내 정보입니다.";
+        AnswerResult answerResult = generateAnswer(command, rawContent, searchResults, Collections.emptyMap());
 
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
-                answerText,
-                ChatMessage.AnswerBasis.GROUNDED,
+                answerTextOr(answerResult, "문의하신 내용에 대해 확인된 안내 정보입니다."),
+                answerBasisOf(answerResult),
                 List.of("관련 요금제 보기", "고객센터 연결"),
                 null
         );
 
         chatExecutionService.completeAnswer(command.executionId(), answer);
+    }
+
+    private void answerEmptyQuestion(ChatProcessingCommand command) {
+        chatExecutionService.startAnswer(command.executionId());
+
+        ChatAnswer answer = new ChatAnswer(
+                ChatMessage.MessageType.ANSWER,
+                EMPTY_QUESTION_MESSAGE,
+                ChatMessage.AnswerBasis.OUT_OF_SCOPE,
+                List.of("5G 요금제 추천", "가까운 매장 찾기"),
+                null
+        );
+
+        chatExecutionService.completeAnswer(command.executionId(), answer);
+    }
+
+    private List<FaqSearchResponse> searchFaq(String queryText) {
+        try {
+            List<FaqSearchResponse> results =
+                    faqSearchService.search(new FaqSearchRequest(queryText, FAQ_SEARCH_TOP_K));
+            return results != null ? results : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("[파이프라인] FAQ 검색 실패, 검색 결과 없이 답변 생성: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private AnswerResult generateAnswer(
+            ChatProcessingCommand command,
+            String userQuery,
+            List<FaqSearchResponse> searchResults,
+            Map<String, String> conditions) {
+
+        // 분해된 서브질의가 아닌 사용자 원문을 넘긴다
+        AnswerRequest answerRequest = AnswerRequest.builder()
+                .executionId(command.executionId())
+                .userQuery(userQuery)
+                .conditions(conditions)
+                .searchResults(searchResults)
+                .build();
+
+        try {
+            return answerGenerator.generate(answerRequest, NO_STREAMING);
+        } catch (Exception e) {
+            log.error("[파이프라인] RAG 답변 생성 실패: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String answerTextOr(AnswerResult answerResult, String fallback) {
+        return (answerResult != null && answerResult.answer() != null && !answerResult.answer().isBlank())
+                ? answerResult.answer()
+                : fallback;
+    }
+
+    // 생성이 실패해 기본 문구로 내려가면 근거가 없으므로 GROUNDED로 저장하지 않는다
+    private ChatMessage.AnswerBasis answerBasisOf(AnswerResult answerResult) {
+        if (answerResult == null || answerResult.answerBasis() == null
+                || answerResult.answer() == null || answerResult.answer().isBlank()) {
+            return ChatMessage.AnswerBasis.NO_EVIDENCE;
+        }
+        return answerResult.answerBasis();
     }
 }

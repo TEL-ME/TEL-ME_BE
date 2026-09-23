@@ -3,6 +3,7 @@ package com.telme.intent.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.service.ChatContext;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
@@ -76,7 +77,12 @@ public class QueryRoutingService {
         this.transactionTemplate = transactionTemplate;
     }
 
+    // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
     public IntentRouteResponse route(ChatMessage userMessage) {
+        return route(userMessage, null);
+    }
+
+    public IntentRouteResponse route(ChatMessage userMessage, ChatContext context) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
         }
@@ -104,7 +110,7 @@ public class QueryRoutingService {
             LlmRequest request = LlmRequest.builder()
                 .taskType(TaskType.ROUTING)
                 .systemPrompt(RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT)
-                .userPrompt(question)
+                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context, question))
                 .format(ResponseFormat.JSON)
                 .temperature(0.1)
                 .maxTokens(500)
@@ -339,6 +345,15 @@ public class QueryRoutingService {
                 ? payload.subQueries()
                 : Collections.emptyList();
 
+        // 상위 의도가 있는데 분해 결과가 비면 상담 요청이 하나도 안 만들어져 이후 처리가 통째로 빠진다
+        if (subQueryPayloads.isEmpty()) {
+            subQueryPayloads = defaultSubQueries(payload, message);
+            if (!subQueryPayloads.isEmpty()) {
+                log.info("[라우팅] 하위 질의가 비어 기본 하위 질의를 생성합니다: intent={}, 생성 건수={}",
+                        payload.intent(), subQueryPayloads.size());
+            }
+        }
+
         for (int i = 0; i < subQueryPayloads.size(); i++) {
             LlmRoutingPayload.SubQueryPayload sub = subQueryPayloads.get(i);
             if (sub == null) {
@@ -387,6 +402,38 @@ public class QueryRoutingService {
                 : Collections.emptyMap();
 
         return intentConverter.toIntentRouteResponse(routing, extractedConditions, subQueries);
+    }
+
+    // LLM이 intent만 주고 subQueries를 비워 보내도 상담 요청은 만들어져야 한다
+    private List<LlmRoutingPayload.SubQueryPayload> defaultSubQueries(
+            LlmRoutingPayload payload, ChatMessage message) {
+
+        String queryText = payload.refinedQuery() != null && !payload.refinedQuery().isBlank()
+                ? payload.refinedQuery()
+                : (message != null && message.getContent() != null ? message.getContent().trim() : "");
+
+        // UNKNOWN은 상담할 내용이 없고, 질의 문구가 없으면 만들 수 있는 하위 질의도 없다
+        if (queryText.isBlank() || payload.intent() == QueryRouting.Intent.UNKNOWN) {
+            return Collections.emptyList();
+        }
+
+        Map<String, String> conditions = payload.extractedConditions() != null
+                ? payload.extractedConditions()
+                : Collections.emptyMap();
+
+        return switch (payload.intent()) {
+            case FAQ -> List.of(new LlmRoutingPayload.SubQueryPayload(
+                    (short) 1, ConsultRequest.Intent.FAQ, queryText, Collections.emptyMap()));
+            case STORE -> List.of(new LlmRoutingPayload.SubQueryPayload(
+                    (short) 1, ConsultRequest.Intent.STORE, queryText, conditions));
+            // BOTH는 한쪽만 만들면 나머지 의도의 상담이 누락된다
+            case BOTH -> List.of(
+                    new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, queryText, Collections.emptyMap()),
+                    new LlmRoutingPayload.SubQueryPayload(
+                            (short) 2, ConsultRequest.Intent.STORE, queryText, conditions));
+            case UNKNOWN -> Collections.emptyList();
+        };
     }
 
     private IntentRouteResponse buildExistingResponse(QueryRouting routing, Long messageId) {

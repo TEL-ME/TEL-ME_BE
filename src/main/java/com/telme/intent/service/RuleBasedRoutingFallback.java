@@ -46,6 +46,18 @@ public class RuleBasedRoutingFallback {
     // 접미사 없이 지역명만 답하는 경우("신촌", "판교")를 받기 위한 길이 상한
     private static final int BARE_LOCATION_MAX_LENGTH = 20;
 
+    // "네", "음"처럼 호응만 하는 답변이 지역으로 잡히면 되묻기를 유지하지 못한다.
+    // "네거리"를 거르지 않도록 답변 전체가 호응일 때만 막는다
+    private static final Pattern ACK_ONLY_PATTERN = Pattern.compile(
+        "^(네|넵|예|응|음|어|아|그래|알겠|오케이|ok|okay)[요오은는\\s.!~]*$",
+        Pattern.CASE_INSENSITIVE
+    );
+
+    // "잠깐만요", "나중에요"처럼 답을 미루는 표현도 지역이 아니다
+    private static final Pattern DEFERRAL_PATTERN = Pattern.compile(
+        "잠(깐|시)|이따|나중|기다|생각\\s*(좀|해)|고민|보류|글쎄|몰라|모르"
+    );
+
     private static final List<String> STORE_KEYWORDS = List.of(
         "매장", "대리점", "지점", "직영점", "가까운", "근처",
         "위치", "어디", "주소", "방문", "영업시간", "찾아줘", "찾아주세요"
@@ -146,7 +158,14 @@ public class RuleBasedRoutingFallback {
             return matcher.group();
         }
         // 길면 지역이 아닌 다른 발화로 보고 되묻기를 유지한다
-        return reply.length() <= BARE_LOCATION_MAX_LENGTH && !reply.contains("?") ? reply : null;
+        if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
+            return null;
+        }
+        // 짧다고 모두 지역으로 보면 "네", "잠깐만요"까지 FILLED가 되어 되묻기가 끊긴다
+        if (ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
+            return null;
+        }
+        return reply;
     }
 
     private Map<String, String> extractConditions(String text) {
