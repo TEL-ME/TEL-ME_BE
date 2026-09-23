@@ -28,9 +28,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 // 되묻기 후속 답변이 상담 DB에 실제로 반영되는지 검증한다.
 // ConsultService.prepare()가 활성 트랜잭션을 거부하므로 @Transactional 없이 실행하고 직접 정리한다.
+// 이 두 플래그 조합은 이 클래스에서만 써서 Spring이 컨텍스트를 새로 캐싱한다.
+// 다른 테스트들과 공유 설정을 그대로 두고, 이 클래스가 새로 여는 커넥션 풀만
+// 작게 잡아 전체 스위트를 한 번에 돌릴 때 max_connections를 넘기지 않게 한다.
 @SpringBootTest(properties = {
         "telme.chat.pipeline.enabled=true",
-        "telme.consult.persistence-enabled=true"
+        "telme.consult.persistence-enabled=true",
+        "spring.datasource.hikari.maximum-pool-size=2"
 })
 class ClarificationPersistenceIntegrationTest {
 
