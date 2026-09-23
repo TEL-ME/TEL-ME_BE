@@ -1,5 +1,6 @@
 package com.telme.feedback;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,20 +31,67 @@ import com.telme.chat.service.HttpSessionChatActorProvider;
 @Transactional
 class FeedbackApiIntegrationTest {
     static final String URL = "/api/v1/chat/messages/{messageId}/feedback";
+    static final String HISTORY_URL = "/api/v1/chat/sessions/{sessionId}/messages";
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
 
     MockHttpSession owner;
+    long ownerId;
     long ownerSession;
     long answer;
 
     @BeforeEach
     void setUp() {
-        long userId = user("owner");
-        owner = memberSession(userId);
-        ownerSession = chatSession(userId, null);
+        ownerId = user("owner");
+        owner = memberSession(ownerId);
+        ownerSession = chatSession(ownerId, null);
         answer = message(ownerSession, "ASSISTANT", "ANSWER", "COMPLETED");
+    }
+    
+    @Test
+    void historyShowsOwnFeedbackAndRatableState() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
+                .andExpect(status().isOk());
+        message(ownerSession, "ASSISTANT", "ANSWER", "COMPLETED");
+        message(ownerSession, "USER", "QUESTION", "COMPLETED");
+
+        // sequenceNo 오름차순: [0] 평가한 답변, [1] 평가 안 한 답변, [2] 질문
+        mvc.perform(get(HISTORY_URL, ownerSession).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("DISLIKE"))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.reason").value("WRONG_INFO"))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.comment").value("요금이 달라요"))
+                .andExpect(jsonPath("$.result.messages[1].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[1].myFeedback").value(nullValue()))
+                .andExpect(jsonPath("$.result.messages[2].ratable").value(false))
+                .andExpect(jsonPath("$.result.messages[2].myFeedback").value(nullValue()));
+    }
+    
+    @Test
+    void historyTreatsMemberWithLeftoverGuestIdAsMember() throws Exception {
+        save(owner, answer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        MockHttpSession loggedInAfterGuest = memberSession(ownerId);
+        loggedInAfterGuest.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, UUID.randomUUID());
+
+        mvc.perform(get(HISTORY_URL, ownerSession).session(loggedInAfterGuest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
+    }
+    
+    @Test
+    void historyHidesFeedbackLeftByPreviousGuestOwner() throws Exception {
+        UUID guestId = UUID.randomUUID();
+        long guestChat = chatSession(null, guestId);
+        long guestAnswer = message(guestChat, "ASSISTANT", "ANSWER", "COMPLETED");
+        save(guestSession(guestId), guestAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        jdbc.update("UPDATE chat_sessions SET user_id=? WHERE session_id=?", ownerId, guestChat);
+
+        mvc.perform(get(HISTORY_URL, guestChat).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback").value(nullValue()));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.telme.feedback.repository;
 
+import com.telme.feedback.dto.FeedbackModels;
 import com.telme.feedback.dto.FeedbackModels.Actor;
 import com.telme.feedback.dto.FeedbackModels.Feedback;
 import com.telme.feedback.dto.FeedbackModels.Input;
@@ -11,10 +12,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** PR #7 테이블을 그대로 이용한다. 신규 테이블·엔티티 없음. 인증 통합 전 자동 등록하지 않는다. */
 public final class JdbcFeedbackStore implements FeedbackStore {
@@ -97,6 +101,22 @@ public final class JdbcFeedbackStore implements FeedbackStore {
                                 userId,
                                 guestId));
     }
+    @Override
+    public Map<Long, Feedback> findByMessageIds(List<Long> messageIds, Actor actor) {
+        if (messageIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", Collections.nCopies(messageIds.size(), "?"));
+        String sql = "SELECT * FROM message_feedback WHERE message_id IN (" + placeholders
+                + ") AND " + actorColumn(actor) + "=?";
+        Object[] params = new Object[messageIds.size() + 1];
+        for (int i = 0; i < messageIds.size(); i++) {
+            params[i] = messageIds.get(i);
+        }
+        params[messageIds.size()] = actorId(actor);
+        return jdbc.query(sql, this::read, params).stream()
+                .collect(Collectors.toMap(Feedback::messageId, f -> f));
+    }
 
     @Override
     public void delete(long messageId, Actor actor) {
@@ -140,9 +160,7 @@ public final class JdbcFeedbackStore implements FeedbackStore {
             throw new TargetUnavailable();
         }
         if (requireAnswer
-                && !("ASSISTANT".equals(t.role())
-                        && ("ANSWER".equals(t.type()) || "STORE_RESULT".equals(t.type()))
-                        && "COMPLETED".equals(t.status()))) {
+                && !FeedbackModels.isRatable(t.role(), t.type(), t.status())) {
             throw new TargetNotReady();
         }
     }

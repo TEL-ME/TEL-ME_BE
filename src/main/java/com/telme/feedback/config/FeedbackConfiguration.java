@@ -1,7 +1,9 @@
 package com.telme.feedback.config;
 
 import com.telme.chat.service.ChatActorProvider;
+import com.telme.chat.service.ChatFeedbackReader;
 import com.telme.feedback.api.ChatFeedbackActorResolver;
+import com.telme.feedback.api.ChatFeedbackReaderAdapter;
 import com.telme.feedback.api.VerifiedFeedbackActorResolver;
 import com.telme.feedback.repository.FeedbackStore;
 import com.telme.feedback.repository.JdbcFeedbackStore;
@@ -36,5 +38,10 @@ public class FeedbackConfiguration {
             VerifiedFeedbackActorResolver verifiedIdentityRequired) {
         // 인증 어댑터 없는 활성화를 막기 위해 사용하지 않더라도 주입을 유지한다.
         return new FeedbackService(feedbackStore);
+    }
+    
+    @Bean
+    ChatFeedbackReader chatFeedbackReader(FeedbackService feedbackService) {
+        return new ChatFeedbackReaderAdapter(feedbackService);
     }
 }
