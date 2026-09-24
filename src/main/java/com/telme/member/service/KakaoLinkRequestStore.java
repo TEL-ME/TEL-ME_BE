@@ -56,6 +56,18 @@ public class KakaoLinkRequestStore {
         return pending;
     }
 
+    public void clearIfStateMatches(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        String state = request.getParameter("state");
+        if (session == null || state == null) {
+            return;
+        }
+        KakaoLinkRequest pending = (KakaoLinkRequest) session.getAttribute(SESSION_ATTRIBUTE);
+        if (pending != null && state.equals(pending.state())) {
+            session.removeAttribute(SESSION_ATTRIBUTE);
+        }
+    }
+
     public void clear(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {

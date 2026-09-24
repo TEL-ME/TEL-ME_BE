@@ -20,7 +20,7 @@ class KakaoLoginFailureHandlerTest {
     private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
     private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
     private final KakaoLoginFailureHandler handler =
-            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkRequestStore, kakaoEmailMatchStore);
+            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkRequestStore);
 
     @Test
     @DisplayName("OAuth2AuthenticationException이면 오류 코드를 reason으로 실어 리다이렉트한다")
@@ -65,16 +65,45 @@ class KakaoLoginFailureHandlerTest {
     }
 
     @Test
-    @DisplayName("카카오 인증 자체가 실패해도 진행 중이던 연결/이메일-연결 pending 정보를 모두 지운다")
-    void 인증_실패시_pending_정보를_모두_지운다() throws Exception {
+    void 실패한_state와_일치하는_연결만_제거한다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "current-state");
+        request.setParameter("state", "current-state");
         kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
 
-        handler.onAuthenticationFailure(request, response, new BadCredentialsException("카카오 인증 취소"));
+        handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
+                new BadCredentialsException("카카오 인증 취소"));
 
-        assertThat(request.getSession(false).getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
-        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+    }
+
+    @Test
+    void 이전_콜백이_실패해도_새_연결을_완료할_수_있다() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "old-state");
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "new-state");
+        request.setParameter("state", "old-state");
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
+
+        handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
+                new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));
+
+        request.setParameter("state", "new-state");
+        assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
+        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+    }
+
+    @Test
+    void state가_없는_실패는_인가_시작_전_연결_정보를_보존한다() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        String token = kakaoLinkRequestStore.issue(request, 30L);
+
+        handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
+                new BadCredentialsException("잘못된 콜백"));
+
+        kakaoLinkRequestStore.bind(request, token, "new-state");
+        request.setParameter("state", "new-state");
+        assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
     }
 }
