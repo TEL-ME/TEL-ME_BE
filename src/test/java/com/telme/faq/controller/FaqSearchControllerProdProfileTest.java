@@ -1,6 +1,7 @@
 package com.telme.faq.controller;
 
 import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,6 +29,9 @@ class FaqSearchControllerProdProfileTest {
 
     @Autowired
     private ApplicationContext context;
+
+    @MockitoBean
+    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
 
     @MockitoBean
     private KakaoLinkRequestStore kakaoLinkRequestStore;

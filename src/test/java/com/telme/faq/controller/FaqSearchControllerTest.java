@@ -1,6 +1,7 @@
 package com.telme.faq.controller;
 
 import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,9 @@ class FaqSearchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
 
     @MockitoBean
     private KakaoLinkRequestStore kakaoLinkRequestStore;

@@ -1,6 +1,7 @@
 package com.telme.member.controller;
 
 import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -45,6 +46,9 @@ class MemberAuthControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
+    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+
+    @MockitoBean
     private KakaoLinkRequestStore kakaoLinkRequestStore;
 
     @MockitoBean
@@ -71,6 +75,16 @@ class MemberAuthControllerTest {
 
     @MockitoBean
     private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+
+    @Test
+    void 인가_시작_실패는_전용_핸들러로_전달한다() throws Exception {
+        org.mockito.Mockito.doThrow(new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED))
+                .when(kakaoLinkRequestStore).bind(any(), any(), any());
+
+        mockMvc.perform(get("/oauth2/authorization/kakao").param("link_token", "invalid-token"));
+
+        org.mockito.Mockito.verify(kakaoAuthorizationFailureHandler).onAuthenticationFailure(any(), any(), any());
+    }
 
     @Test
     @DisplayName("정상 요청이면 200과 가입 결과를 반환한다")

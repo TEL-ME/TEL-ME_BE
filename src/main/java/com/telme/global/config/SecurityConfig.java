@@ -2,6 +2,9 @@ package com.telme.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.filter.GuestIdentityFilter;
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import org.springframework.security.config.ObjectPostProcessor;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import com.telme.member.config.KakaoAuthorizationRequestResolver;
 import com.telme.member.service.KakaoLinkRequestStore;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -63,6 +66,7 @@ public class SecurityConfig {
             KakaoOAuth2UserService kakaoOAuth2UserService,
             KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
             KakaoLoginFailureHandler kakaoLoginFailureHandler,
+            KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             ClientRegistrationRepository clientRegistrationRepository,
             KakaoLinkRequestStore kakaoLinkRequestStore
@@ -77,6 +81,13 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .addFilterAfter(guestIdentityFilter, SecurityContextHolderFilter.class)
                 .oauth2Login(oauth2 -> oauth2
+                        .withObjectPostProcessor(new ObjectPostProcessor<OAuth2AuthorizationRequestRedirectFilter>() {
+                            @Override
+                            public <O extends OAuth2AuthorizationRequestRedirectFilter> O postProcess(O filter) {
+                                filter.setAuthenticationFailureHandler(kakaoAuthorizationFailureHandler);
+                                return filter;
+                            }
+                        })
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(
                                 new KakaoAuthorizationRequestResolver(
                                         new DefaultOAuth2AuthorizationRequestResolver(

@@ -3,6 +3,12 @@ package com.telme.member.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import com.telme.member.service.KakaoLinkRequest;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockFilterChain;
+import java.time.Instant;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.service.KakaoLinkRequestStore;
 import java.time.Clock;
@@ -96,6 +102,44 @@ class KakaoAuthorizationRequestResolverTest {
         request.setParameter("link_token", "invalid-token");
 
         assertThatThrownBy(() -> resolver.resolve(request)).isInstanceOf(OAuth2AuthenticationException.class);
+    }
+
+    @Test
+    void 재사용_토큰은_500_대신_실패_화면으로_이동하고_현재_연결은_보존한다() throws Exception {
+        MockHttpServletRequest request = authorizationRequest(new MockHttpSession());
+        request.setParameter("link_token", store.issue(request, 30L));
+        OAuth2AuthorizationRequest authorization = resolver.resolve(request);
+        var filter = new OAuth2AuthorizationRequestRedirectFilter(resolver);
+        filter.setAuthenticationFailureHandler(new KakaoAuthorizationFailureHandler(
+                new Oauth2Properties("http://localhost:3000")));
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(302);
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER400-0");
+        request.setParameter("state", authorization.getState());
+        assertThat(store.consume(request).targetUserId()).isEqualTo(30L);
+    }
+
+    @Test
+    void 만료된_토큰은_실패_화면으로_이동한다() throws Exception {
+        MockHttpServletRequest request = authorizationRequest(new MockHttpSession());
+        request.setParameter("link_token", "expired-token");
+        request.getSession().setAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE,
+                new KakaoLinkRequest(30L,
+                        Instant.now().minusSeconds(240), "expired-token", null));
+        var filter = new OAuth2AuthorizationRequestRedirectFilter(resolver);
+        filter.setAuthenticationFailureHandler(new KakaoAuthorizationFailureHandler(
+                new Oauth2Properties("http://localhost:3000")));
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(302);
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER400-0");
     }
 
     private MockHttpServletRequest authorizationRequest(MockHttpSession session) {
