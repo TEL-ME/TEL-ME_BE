@@ -131,7 +131,7 @@ class KakaoLoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-4", "match@example.com"));
 
         assertThat(response.getRedirectedUrl())
-                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-2");
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-1");
         // PendingKakaoLinkStore(5-2)에 저장됐는지 require()로 확인
         PendingKakaoLink pending = pendingKakaoLinkStore.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-4");
@@ -233,7 +233,7 @@ class KakaoLoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-9", null));
 
         assertThat(response.getRedirectedUrl())
-                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-3");
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-2");
     }
 
     @Test
@@ -318,7 +318,7 @@ class KakaoLoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-17", null));
 
         assertThat(response.getRedirectedUrl())
-                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-3");
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-2");
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(request.getSession(false).getAttribute(USER_ID_ATTRIBUTE)).isNull();
     }

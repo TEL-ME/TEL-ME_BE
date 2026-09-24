@@ -35,8 +35,9 @@ public class SocialMemberFinder {
         return user;
     }
 
-    // 이미 연결된 회원(matchedUserId)에 새 소셜 계정을 붙인다 — email 충돌로 findOrCreate가 중단시킨 뒤,
-    // 본인확인(비밀번호 등)을 통과한 호출자만 이 메서드로 실제 연결을 완료한다
+    // 이미 있는 회원(existingUser)에 새 소셜 계정을 붙인다 — 호출자가 그 회원 본인임을 먼저 확인한 뒤에만 불러야 한다.
+    // 확인 방법은 호출 경로마다 다르다: 이메일 충돌로 findOrCreate가 중단된 뒤 비밀번호로 확인하는 경로(B, KakaoAccountLinkService),
+    // 로그인 세션 + 카카오 인증 자체로 확인하는 경로(A-1, KakaoLoginSuccessHandler) — 후자는 findOrCreate를 거치지 않는다
     public User linkExisting(
             SocialAccount.Provider provider, String providerUserId, String providerEmail, User existingUser) {
         try {

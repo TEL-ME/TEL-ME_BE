@@ -63,7 +63,7 @@ public class MemberAuthController {
     }
 
     @Operation(summary = "카카오 계정을 기존 이메일 계정에 연결",
-            description = "카카오 로그인 중 이메일이 일치하는 기존 계정을 발견했을 때(reason=MEMBER409-2), "
+            description = "카카오 로그인 중 이메일이 일치하는 기존 계정을 발견했을 때(reason=MEMBER409-1), "
                     + "비밀번호 확인 후 그 계정에 카카오 로그인을 연결하고 로그인 처리한다.")
     @PostMapping("/kakao/link")
     public CustomResponse<LoginResponse> confirmKakaoLink(
