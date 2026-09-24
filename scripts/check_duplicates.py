@@ -96,6 +96,15 @@ def cosine(v1: list[float], v2: list[float]) -> float:
     return float(sum(x * y for x, y in zip(unit[0], unit[1])))
 
 # 임계값 이상 쌍 목록과 전체 최고 유사도
+# 질문만 같은 중복과 답변만 같은 중복은 서로 안 잡히므로 필드를 골라서 본다
+def _text(item: dict, field: str) -> str:
+    if field == "question":
+        return item["question"]
+    if field == "answer":
+        return item["answer"]
+    return f"{item['question']}\n{item['answer']}"
+
+
 def similar_pairs(
     vectors: list[list[float]], threshold: float
 ) -> tuple[list[tuple[int, int, float]], float]:
@@ -146,8 +155,8 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     ap.add_argument("--batch", type=int, default=DEFAULT_BATCH,
                     help="1회 전송 건수")
-    ap.add_argument("--field", choices=("question", "both"), default="question",
-                    help="question만 볼지, question+answer를 이어 볼지")
+    ap.add_argument("--field", choices=("question", "answer", "both"), default="question",
+                    help="question / answer / question+answer 중 무엇을 비교할지")
     ap.add_argument("--cache",
                     default=str(Path(__file__).parent / "data" / ".embed_cache.json"),
                     help="임베딩 캐시 경로 (--cache '' 로 비활성)")
@@ -162,11 +171,7 @@ def main() -> int:
         ap.error("검사할 JSON 경로 필요 (또는 --self-test)")
 
     items = json.loads(args.path.read_text(encoding="utf-8"))
-    texts = [
-        i["question"] if args.field == "question"
-        else f"{i['question']}\n{i['answer']}"
-        for i in items
-    ]
+    texts = [_text(i, args.field) for i in items]
 
     print(f"{args.path} — {len(items)}건, 필드 {args.field}, 임계값 {args.threshold}")
     pairs, peak = similar_pairs(embed_all(texts, args.batch, cache), args.threshold)

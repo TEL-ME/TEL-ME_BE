@@ -1,0 +1,1128 @@
+[
+  {
+    "eval_id": "EVAL-001",
+    "type": "SIMILAR",
+    "question": "청구서가 두 번 온 것 같은데 어떻게 하나요?",
+    "expected_content_hash": [
+      "729f2273e0dc851f63b3a36a0207379a2f66ae4856b2b3eae2db971f8b1c4387"
+    ],
+    "expected_slot_id": "BILLING-0105"
+  },
+  {
+    "eval_id": "EVAL-002",
+    "type": "SIMILAR",
+    "question": "요금을 안 내면 언제부터 전화를 못 쓰나요?",
+    "expected_content_hash": [
+      "1b31315b6881e351a2159f2a840fefa452129bc086f830f74ff01dc35e355e08"
+    ],
+    "expected_slot_id": "BILLING-0024"
+  },
+  {
+    "eval_id": "EVAL-003",
+    "type": "SIMILAR",
+    "question": "이번 달에 요금제를 변경할 수 있을까요?",
+    "expected_content_hash": [
+      "d36f6026da1100739469c8902430309ca3f5112beaeea0ec7d8ad6724802a45f"
+    ],
+    "expected_slot_id": "BILLING-0092"
+  },
+  {
+    "eval_id": "EVAL-004",
+    "type": "SIMILAR",
+    "question": "가상계좌가 무엇인가요?",
+    "expected_content_hash": [
+      "8c08056a7b4911d36a2e97f5bb05cc3e6b25ee729952a1d0cd9a2c522ae863cb"
+    ],
+    "expected_slot_id": "BILLING-0026"
+  },
+  {
+    "eval_id": "EVAL-005",
+    "type": "SIMILAR",
+    "question": "한 번 교환한 단말을 다시 교환할 수 있나요?",
+    "expected_content_hash": [
+      "d81925c5415ae2447915eed55221e39c5c90bfdcc8e31c995f5d2fbd10cafbbe"
+    ],
+    "expected_slot_id": "DEVICE-0064"
+  },
+  {
+    "eval_id": "EVAL-006",
+    "type": "SIMILAR",
+    "question": "휴대폰을 분실했을 때 가장 먼저 무엇을 해야 하나요?",
+    "expected_content_hash": [
+      "600e091dbdf3a7f25986dabdd2bdd05c0bbea311d5de15d073d207eef26bbb92"
+    ],
+    "expected_slot_id": "DEVICE-0031"
+  },
+  {
+    "eval_id": "EVAL-007",
+    "type": "SIMILAR",
+    "question": "6개월이 지난 후 기기변경 절차가 어떻게 되나요?",
+    "expected_content_hash": [
+      "1735ad57d15f34cf9c1441997556d3c2f8d463f92b1770c5a1fcd5b9f38fb219"
+    ],
+    "expected_slot_id": "DEVICE-0038"
+  },
+  {
+    "eval_id": "EVAL-008",
+    "type": "SIMILAR",
+    "question": "할부금이 남아 있어도 새 단말 할부가 가능한가요?",
+    "expected_content_hash": [
+      "3747fef4878fdaa4f8586d0afd38611e5b48734cfaebae7ef581cc4ea3ba036b",
+      "19b14c84098b06ae1a3ace4818b32db79181f624b126ad6537b2dc7ca29bfbe4"
+    ],
+    "expected_slot_id": "DEVICE-0057"
+  },
+  {
+    "eval_id": "EVAL-009",
+    "type": "SIMILAR",
+    "question": "직접 방문하는 것과 위임장을 보내는 것 중 어느 쪽이 빠른가요?",
+    "expected_content_hash": [
+      "7795ddf88268e9223b0351ed2fe119a0d296c58c1c8b2e9238053e6d0063a5ee"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0088"
+  },
+  {
+    "eval_id": "EVAL-010",
+    "type": "SIMILAR",
+    "question": "신용 심사에서 떨어지면 명의변경이 불가능한가요?",
+    "expected_content_hash": [
+      "8eb75dc5cf0709917a0b53dbab50732ab697470a632ae25d372af40d6ab8c6a8"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0021"
+  },
+  {
+    "eval_id": "EVAL-011",
+    "type": "SIMILAR",
+    "question": "가족 간에는 명의변경 수수료가 면제되나요?",
+    "expected_content_hash": [
+      "52c14ab146d66b678157f976f9a02f44a4cf0356892f118e6dfad466886421d7"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0041"
+  },
+  {
+    "eval_id": "EVAL-012",
+    "type": "SIMILAR",
+    "question": "할부금이 없으면 신용 심사 없이 명의변경이 되나요?",
+    "expected_content_hash": [
+      "28c8ac790f4d0792d1c7bec9c46f6877015b0d89ffa3c18512b224500ed4554a"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0045"
+  },
+  {
+    "eval_id": "EVAL-013",
+    "type": "SIMILAR",
+    "question": "데이터를 보내려는데 전송이 되지 않습니다",
+    "expected_content_hash": [
+      "e019b21041f747d910647c433343ba7156489d9c7aa6600301afcbe7d7c0cf21"
+    ],
+    "expected_slot_id": "PLAN-0118"
+  },
+  {
+    "eval_id": "EVAL-014",
+    "type": "SIMILAR",
+    "question": "5G 요금제 종류를 알려주세요",
+    "expected_content_hash": [
+      "4abc8a1b367e9ebb34e73e076b4d348811db81e1217fc68f7168daea41d1013e"
+    ],
+    "expected_slot_id": "PLAN-0116"
+  },
+  {
+    "eval_id": "EVAL-015",
+    "type": "SIMILAR",
+    "question": "알뜰 미니 요금제는 얼마인가요?",
+    "expected_content_hash": [
+      "1cecafed7b6c7a196b422b99a3e243802dac291c8c46d89fdb7e3f24cc7b03d6"
+    ],
+    "expected_slot_id": "PLAN-0025"
+  },
+  {
+    "eval_id": "EVAL-016",
+    "type": "SIMILAR",
+    "question": "데이터 소진 후 400kbps에서 영상 시청이 되나요?",
+    "expected_content_hash": [
+      "3b8534af61caaac807d3998df43b6f722839ecd4220f6c2027084f9ab1bc1bfe"
+    ],
+    "expected_slot_id": "PLAN-0077"
+  },
+  {
+    "eval_id": "EVAL-017",
+    "type": "SIMILAR",
+    "question": "미납 요금이 조금 있어도 번호이동이 되나요?",
+    "expected_content_hash": [
+      "77c9622a87414b50d763dd2f1f75daddf451f558e179c8401278477a70753141"
+    ],
+    "expected_slot_id": "PORTING-0070"
+  },
+  {
+    "eval_id": "EVAL-018",
+    "type": "SIMILAR",
+    "question": "개통한 지 두 달인데 번호이동이 가능한가요?",
+    "expected_content_hash": [
+      "9a5130774c296cd2def61e12489ae46b04b2c834bba936cd01a2a5c0005470fd"
+    ],
+    "expected_slot_id": "PORTING-0067"
+  },
+  {
+    "eval_id": "EVAL-019",
+    "type": "SIMILAR",
+    "question": "철회 기간 14일은 영업일 기준인가요?",
+    "expected_content_hash": [
+      "5b1844f354b6692601666f1d4256ab06ae0a9018a532798f478ee4f259e4fefe"
+    ],
+    "expected_slot_id": "PORTING-0108"
+  },
+  {
+    "eval_id": "EVAL-020",
+    "type": "SIMILAR",
+    "question": "다른 통신사로 번호를 가져가려면 어떻게 하나요?",
+    "expected_content_hash": [
+      "32cbd7bb8ea36a5f76438bbb1f2e8428915833d491094328f912a871ec99e068",
+      "f31157cc9dbd2ee6e744eee918ea30fcb871cbb06bb17afbbb34765ef10a6e17",
+      "9e0e3ab53d4462d45c2aeb3475a4867ac5672071e1c2c78d4bbf1f6d5d58a377"
+    ],
+    "expected_slot_id": "PORTING-0045"
+  },
+  {
+    "eval_id": "EVAL-021",
+    "type": "SIMILAR",
+    "question": "고객센터 전화로 로밍을 신청하는 방법을 알려주세요",
+    "expected_content_hash": [
+      "5c7c6231f46e70759cb312e4aaa0c7a1af523c2d5ebfe6c6736d424b12696ae9"
+    ],
+    "expected_slot_id": "ROAMING-0027"
+  },
+  {
+    "eval_id": "EVAL-022",
+    "type": "SIMILAR",
+    "question": "출국 전날에도 로밍 가입 여부를 확인할 수 있나요?",
+    "expected_content_hash": [
+      "6a0178facc6a119038f46db86881f37dd509fb8dea3f306a94bb4bb9a0920662"
+    ],
+    "expected_slot_id": "ROAMING-0040"
+  },
+  {
+    "eval_id": "EVAL-023",
+    "type": "SIMILAR",
+    "question": "한도 초과 후 본인 인증을 하는 것과 그냥 두는 것의 차이가 뭔가요?",
+    "expected_content_hash": [
+      "607ed02e2b50c6e852fd8374d5fed497b7ec41f8540e73d0a4982919d509013a"
+    ],
+    "expected_slot_id": "ROAMING-0078"
+  },
+  {
+    "eval_id": "EVAL-024",
+    "type": "SIMILAR",
+    "question": "태블릿도 로밍을 따로 신청해야 하나요?",
+    "expected_content_hash": [
+      "805819d1ad26b3689b1847fedcb627bba2d3794111c2b8239a573e914eed7515"
+    ],
+    "expected_slot_id": "ROAMING-0049"
+  },
+  {
+    "eval_id": "EVAL-025",
+    "type": "SIMILAR",
+    "question": "멤버십 등급이 갑자기 내려간 이유가 뭔가요?",
+    "expected_content_hash": [
+      "25a561e5cc3705e2701dd10fbed206b18023e8799151a356f7c0011844ebb939"
+    ],
+    "expected_slot_id": "SERVICE-0042"
+  },
+  {
+    "eval_id": "EVAL-026",
+    "type": "SIMILAR",
+    "question": "명의도용 조사에는 기간이 얼마나 걸리나요?",
+    "expected_content_hash": [
+      "6ea884555b0854d1494e10703c86a9dcc685fe8bada29022c2dfe200aba74b1f"
+    ],
+    "expected_slot_id": "SERVICE-0009"
+  },
+  {
+    "eval_id": "EVAL-027",
+    "type": "SIMILAR",
+    "question": "평일 저녁 7시 이후에 매장 방문이 가능한가요?",
+    "expected_content_hash": [
+      "1bcfcff738deab87353c84a01557b5133c0b73d2a21b0dfcd24e51475985187f"
+    ],
+    "expected_slot_id": "SERVICE-0033"
+  },
+  {
+    "eval_id": "EVAL-028",
+    "type": "SIMILAR",
+    "question": "4년 전 요금 납부 기록을 발급받을 수 있나요?",
+    "expected_content_hash": [
+      "2b01a6bfac83381b7f208b0dcfa9cfedaf22f9f471af088345734429e72428f3"
+    ],
+    "expected_slot_id": "SERVICE-0045"
+  },
+  {
+    "eval_id": "EVAL-029",
+    "type": "SIMILAR",
+    "question": "외국인이 법인 대표여도 별도 심사를 받나요?",
+    "expected_content_hash": [
+      "4206479940be9ddb3a6268026e219cf7a8afc873064f586d21b1dc825ae2c859"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0068"
+  },
+  {
+    "eval_id": "EVAL-030",
+    "type": "SIMILAR",
+    "question": "법인 담당자인데 제 신분증으로는 개통이 안 된다고 합니다",
+    "expected_content_hash": [
+      "fcce741a647d9db376c7f951978c727524ae3745a1a9a98284c93c7ed4eefe6a"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0089"
+  },
+  {
+    "eval_id": "EVAL-031",
+    "type": "SIMILAR",
+    "question": "손주 이름으로 새로 개통하려면 어떻게 하나요?",
+    "expected_content_hash": [
+      "8ba9e6a862d266243a5a46e025b1f3dc58467caecb19a28f653c0b7eeba50113"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0050"
+  },
+  {
+    "eval_id": "EVAL-032",
+    "type": "SIMILAR",
+    "question": "법인 명의로 개통하려는데 심사 때문에 안 된다고 합니다",
+    "expected_content_hash": [
+      "d63bc43505e28adf1a9277feb77bf09db7d6ca84ef9e64be27103616efe3a671"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0084"
+  },
+  {
+    "eval_id": "EVAL-033",
+    "type": "SIMILAR",
+    "question": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른가요?",
+    "expected_content_hash": [
+      "9cb4759f179ad3154d3f5a3badbd296abc58e50ec31a0f47b59e02c4d5a6739e"
+    ],
+    "expected_slot_id": "TERMINATE-0113"
+  },
+  {
+    "eval_id": "EVAL-034",
+    "type": "SIMILAR",
+    "question": "분실 해지할 때 일시 납부와 할부 유지의 총액이 다른가요?",
+    "expected_content_hash": [
+      "b29589342b1b19f529b9cde7857c910bcce2778aa53fb45bc397fd62fc9b37ca"
+    ],
+    "expected_slot_id": "TERMINATE-0103"
+  },
+  {
+    "eval_id": "EVAL-035",
+    "type": "SIMILAR",
+    "question": "군 입대하면 위약금을 면제받을 수 있나요?",
+    "expected_content_hash": [
+      "9ec5d2dd553a0cc16969d0836b3b7051c552c8110e9335f7b6602cbf6826ec9c"
+    ],
+    "expected_slot_id": "TERMINATE-0066"
+  },
+  {
+    "eval_id": "EVAL-036",
+    "type": "SIMILAR",
+    "question": "한동안 안 쓸 예정인데 일시정지하려면 어떻게 하나요?",
+    "expected_content_hash": [
+      "69c3ef8437ffa4260297a18bf0b452f335d957141de7291d934279ab17052a28"
+    ],
+    "expected_slot_id": "TERMINATE-0044"
+  },
+  {
+    "eval_id": "EVAL-037",
+    "type": "SIMILAR",
+    "question": "eSIM이 무엇인가요?",
+    "expected_content_hash": [
+      "98d7c01252d0ca1a20d095658f5dba8ac2ae5588b12d98839f437076549076ee"
+    ],
+    "expected_slot_id": "USIM-0023"
+  },
+  {
+    "eval_id": "EVAL-038",
+    "type": "SIMILAR",
+    "question": "신분증 없이 유심을 발급받을 수 있나요?",
+    "expected_content_hash": [
+      "70b752d5ace2a84efd0e054bce046ba0039abaec4877ead6d44bfb4c0025da8c"
+    ],
+    "expected_slot_id": "USIM-0054"
+  },
+  {
+    "eval_id": "EVAL-039",
+    "type": "SIMILAR",
+    "question": "유심을 새로 받으면 예전 유심도 계속 쓸 수 있나요?",
+    "expected_content_hash": [
+      "c592dda63f92b804983eeb816dee379cf2bb6df4b544142ba93d56bd23624641"
+    ],
+    "expected_slot_id": "USIM-0092"
+  },
+  {
+    "eval_id": "EVAL-040",
+    "type": "SIMILAR",
+    "question": "새 폰에 유심이 맞지 않는데 어떻게 하나요?",
+    "expected_content_hash": [
+      "10503982ad9476b967a3cd92d49676b1e49ec2495c87b16fba4230ac420209cf"
+    ],
+    "expected_slot_id": "USIM-0089"
+  },
+  {
+    "eval_id": "EVAL-041",
+    "type": "VARIANT",
+    "question": "이번 달에 고지서를 두 통 받았습니다. 하나만 내면 되는 건지 확인 부탁드려요",
+    "expected_content_hash": [
+      "729f2273e0dc851f63b3a36a0207379a2f66ae4856b2b3eae2db971f8b1c4387"
+    ],
+    "expected_slot_id": "BILLING-0105"
+  },
+  {
+    "eval_id": "EVAL-042",
+    "type": "VARIANT",
+    "question": "연체되면 며칠 만에 발신이 막히고 수신은 또 언제 막히는지 알려주세요",
+    "expected_content_hash": [
+      "1b31315b6881e351a2159f2a840fefa452129bc086f830f74ff01dc35e355e08"
+    ],
+    "expected_slot_id": "BILLING-0024"
+  },
+  {
+    "eval_id": "EVAL-043",
+    "type": "VARIANT",
+    "question": "지난달에 한 번 바꿨는데 이달에 또 바꿔도 되는지 궁금합니다",
+    "expected_content_hash": [
+      "d36f6026da1100739469c8902430309ca3f5112beaeea0ec7d8ad6724802a45f"
+    ],
+    "expected_slot_id": "BILLING-0092"
+  },
+  {
+    "eval_id": "EVAL-044",
+    "type": "VARIANT",
+    "question": "요금 낼 때 은행 계좌번호가 따로 뜨던데 그게 뭔지 설명해 주세요",
+    "expected_content_hash": [
+      "8c08056a7b4911d36a2e97f5bb05cc3e6b25ee729952a1d0cd9a2c522ae863cb"
+    ],
+    "expected_slot_id": "BILLING-0026"
+  },
+  {
+    "eval_id": "EVAL-045",
+    "type": "VARIANT",
+    "question": "지난주에 색상 때문에 한 번 바꿨는데 이번엔 액정이 이상해서 또 바꾸고 싶어요",
+    "expected_content_hash": [
+      "d81925c5415ae2447915eed55221e39c5c90bfdcc8e31c995f5d2fbd10cafbbe"
+    ],
+    "expected_slot_id": "DEVICE-0064"
+  },
+  {
+    "eval_id": "EVAL-046",
+    "type": "VARIANT",
+    "question": "지하철에서 폰을 놓고 내렸습니다. 지금 당장 뭘 해야 할까요",
+    "expected_content_hash": [
+      "600e091dbdf3a7f25986dabdd2bdd05c0bbea311d5de15d073d207eef26bbb92"
+    ],
+    "expected_slot_id": "DEVICE-0031"
+  },
+  {
+    "eval_id": "EVAL-047",
+    "type": "VARIANT",
+    "question": "약정 반년 지났는데 새 폰으로 갈아타려면 뭘 준비해서 어디로 가야 하나요",
+    "expected_content_hash": [
+      "1735ad57d15f34cf9c1441997556d3c2f8d463f92b1770c5a1fcd5b9f38fb219"
+    ],
+    "expected_slot_id": "DEVICE-0038"
+  },
+  {
+    "eval_id": "EVAL-048",
+    "type": "VARIANT",
+    "question": "지금 폰 값 아직 다 안 갚았는데 액정이 나가서 새로 사야 합니다. 할부 또 되나요",
+    "expected_content_hash": [
+      "3747fef4878fdaa4f8586d0afd38611e5b48734cfaebae7ef581cc4ea3ba036b",
+      "19b14c84098b06ae1a3ace4818b32db79181f624b126ad6537b2dc7ca29bfbe4"
+    ],
+    "expected_slot_id": "DEVICE-0057"
+  },
+  {
+    "eval_id": "EVAL-049",
+    "type": "VARIANT",
+    "question": "제가 못 가서 동생을 보내려는데 제가 가는 것보다 오래 걸릴까요",
+    "expected_content_hash": [
+      "7795ddf88268e9223b0351ed2fe119a0d296c58c1c8b2e9238053e6d0063a5ee"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0088"
+  },
+  {
+    "eval_id": "EVAL-050",
+    "type": "VARIANT",
+    "question": "심사에서 부결됐다는 문자를 받았는데 명의 바꾸는 게 아예 안 되는 건가요",
+    "expected_content_hash": [
+      "8eb75dc5cf0709917a0b53dbab50732ab697470a632ae25d372af40d6ab8c6a8"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0021"
+  },
+  {
+    "eval_id": "EVAL-051",
+    "type": "VARIANT",
+    "question": "아버지 회선을 제 이름으로 돌리려는데 돈이 드는지 알고 싶습니다",
+    "expected_content_hash": [
+      "52c14ab146d66b678157f976f9a02f44a4cf0356892f118e6dfad466886421d7"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0041"
+  },
+  {
+    "eval_id": "EVAL-052",
+    "type": "VARIANT",
+    "question": "폰 값은 다 치렀습니다. 이 경우에도 심사를 또 받아야 하나요",
+    "expected_content_hash": [
+      "28c8ac790f4d0792d1c7bec9c46f6877015b0d89ffa3c18512b224500ed4554a"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0045"
+  },
+  {
+    "eval_id": "EVAL-053",
+    "type": "VARIANT",
+    "question": "친구한테 데이터 나눠주려니까 자꾸 실패한다고 떠요. 왜 그런가요",
+    "expected_content_hash": [
+      "e019b21041f747d910647c433343ba7156489d9c7aa6600301afcbe7d7c0cf21"
+    ],
+    "expected_slot_id": "PLAN-0118"
+  },
+  {
+    "eval_id": "EVAL-054",
+    "type": "VARIANT",
+    "question": "5G로 바꾸려는데 상품 이름이 뭐뭐 있는지 목록 좀 보여주세요",
+    "expected_content_hash": [
+      "4abc8a1b367e9ebb34e73e076b4d348811db81e1217fc68f7168daea41d1013e"
+    ],
+    "expected_slot_id": "PLAN-0116"
+  },
+  {
+    "eval_id": "EVAL-055",
+    "type": "VARIANT",
+    "question": "제일 싼 알뜰 상품 월 얼마고 데이터는 얼마나 주는지 알려주세요",
+    "expected_content_hash": [
+      "1cecafed7b6c7a196b422b99a3e243802dac291c8c46d89fdb7e3f24cc7b03d6"
+    ],
+    "expected_slot_id": "PLAN-0025"
+  },
+  {
+    "eval_id": "EVAL-056",
+    "type": "VARIANT",
+    "question": "기본 데이터 다 쓰고 나서 유튜브 보려니까 계속 버퍼링이 걸립니다",
+    "expected_content_hash": [
+      "3b8534af61caaac807d3998df43b6f722839ecd4220f6c2027084f9ab1bc1bfe"
+    ],
+    "expected_slot_id": "PLAN-0077"
+  },
+  {
+    "eval_id": "EVAL-057",
+    "type": "VARIANT",
+    "question": "요금 몇 천원 밀린 게 있는데 그대로 다른 통신사로 옮겨도 되나요",
+    "expected_content_hash": [
+      "77c9622a87414b50d763dd2f1f75daddf451f558e179c8401278477a70753141"
+    ],
+    "expected_slot_id": "PORTING-0070"
+  },
+  {
+    "eval_id": "EVAL-058",
+    "type": "VARIANT",
+    "question": "가입한 지 얼마 안 됐는데 벌써 통신사를 바꾸고 싶습니다. 될까요",
+    "expected_content_hash": [
+      "9a5130774c296cd2def61e12489ae46b04b2c834bba936cd01a2a5c0005470fd"
+    ],
+    "expected_slot_id": "PORTING-0067"
+  },
+  {
+    "eval_id": "EVAL-059",
+    "type": "VARIANT",
+    "question": "개통 취소할 수 있는 기간이 주말 빼고 세는 건지 그냥 날짜로 세는 건지 헷갈려요",
+    "expected_content_hash": [
+      "5b1844f354b6692601666f1d4256ab06ae0a9018a532798f478ee4f259e4fefe"
+    ],
+    "expected_slot_id": "PORTING-0108"
+  },
+  {
+    "eval_id": "EVAL-060",
+    "type": "VARIANT",
+    "question": "쓰던 번호 그대로 회사만 옮기고 싶은데 뭘 들고 어디로 가야 하나요",
+    "expected_content_hash": [
+      "32cbd7bb8ea36a5f76438bbb1f2e8428915833d491094328f912a871ec99e068",
+      "f31157cc9dbd2ee6e744eee918ea30fcb871cbb06bb17afbbb34765ef10a6e17",
+      "9e0e3ab53d4462d45c2aeb3475a4867ac5672071e1c2c78d4bbf1f6d5d58a377"
+    ],
+    "expected_slot_id": "PORTING-0045"
+  },
+  {
+    "eval_id": "EVAL-061",
+    "type": "VARIANT",
+    "question": "인터넷이 서툴러서 상담원 통해 해외 데이터 신청하고 싶은데 얼마나 걸리나요",
+    "expected_content_hash": [
+      "5c7c6231f46e70759cb312e4aaa0c7a1af523c2d5ebfe6c6736d424b12696ae9"
+    ],
+    "expected_slot_id": "ROAMING-0027"
+  },
+  {
+    "eval_id": "EVAL-062",
+    "type": "VARIANT",
+    "question": "내일 새벽 비행기인데 지금 신청이 제대로 됐는지 어디서 볼 수 있을까요",
+    "expected_content_hash": [
+      "6a0178facc6a119038f46db86881f37dd509fb8dea3f306a94bb4bb9a0920662"
+    ],
+    "expected_slot_id": "ROAMING-0040"
+  },
+  {
+    "eval_id": "EVAL-063",
+    "type": "VARIANT",
+    "question": "해외에서 데이터가 막혔다는 안내를 받았는데 인증하면 뭐가 달라지나요",
+    "expected_content_hash": [
+      "607ed02e2b50c6e852fd8374d5fed497b7ec41f8540e73d0a4982919d509013a"
+    ],
+    "expected_slot_id": "ROAMING-0078"
+  },
+  {
+    "eval_id": "EVAL-064",
+    "type": "VARIANT",
+    "question": "여행 갈 때 아이패드도 들고 가는데 폰만 신청하면 같이 되는 거 아닌가요",
+    "expected_content_hash": [
+      "805819d1ad26b3689b1847fedcb627bba2d3794111c2b8239a573e914eed7515"
+    ],
+    "expected_slot_id": "ROAMING-0049"
+  },
+  {
+    "eval_id": "EVAL-065",
+    "type": "VARIANT",
+    "question": "작년이랑 똑같이 쓰는 것 같은데 등급이 한 단계 떨어져 있습니다",
+    "expected_content_hash": [
+      "25a561e5cc3705e2701dd10fbed206b18023e8799151a356f7c0011844ebb939"
+    ],
+    "expected_slot_id": "SERVICE-0042"
+  },
+  {
+    "eval_id": "EVAL-066",
+    "type": "VARIANT",
+    "question": "제 이름으로 모르는 회선이 개통돼서 신고했는데 결과가 언제 나오나요",
+    "expected_content_hash": [
+      "6ea884555b0854d1494e10703c86a9dcc685fe8bada29022c2dfe200aba74b1f"
+    ],
+    "expected_slot_id": "SERVICE-0009"
+  },
+  {
+    "eval_id": "EVAL-067",
+    "type": "VARIANT",
+    "question": "퇴근이 늦어서 8시쯤 들르려는데 그 시간에 문을 열어 두나요",
+    "expected_content_hash": [
+      "1bcfcff738deab87353c84a01557b5133c0b73d2a21b0dfcd24e51475985187f"
+    ],
+    "expected_slot_id": "SERVICE-0033"
+  },
+  {
+    "eval_id": "EVAL-068",
+    "type": "VARIANT",
+    "question": "회사 제출용으로 오래된 납부 내역이 필요한데 조회가 안 됩니다",
+    "expected_content_hash": [
+      "2b01a6bfac83381b7f208b0dcfa9cfedaf22f9f471af088345734429e72428f3"
+    ],
+    "expected_slot_id": "SERVICE-0045"
+  },
+  {
+    "eval_id": "EVAL-069",
+    "type": "VARIANT",
+    "question": "대표가 외국 국적인 회사인데 개통 절차가 더 까다로워지는지 궁금합니다",
+    "expected_content_hash": [
+      "4206479940be9ddb3a6268026e219cf7a8afc873064f586d21b1dc825ae2c859"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0068"
+  },
+  {
+    "eval_id": "EVAL-070",
+    "type": "VARIANT",
+    "question": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
+    "expected_content_hash": [
+      "fcce741a647d9db376c7f951978c727524ae3745a1a9a98284c93c7ed4eefe6a"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0089"
+  },
+  {
+    "eval_id": "EVAL-071",
+    "type": "VARIANT",
+    "question": "열여섯 살 손자 폰을 만들어 주려는데 할머니가 가도 되는지, 서류는 뭐가 필요한지요",
+    "expected_content_hash": [
+      "8ba9e6a862d266243a5a46e025b1f3dc58467caecb19a28f653c0b7eeba50113"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0050"
+  },
+  {
+    "eval_id": "EVAL-072",
+    "type": "VARIANT",
+    "question": "회사 이름으로 신청했더니 결과를 기다리라고만 하는데 왜 바로 안 되나요",
+    "expected_content_hash": [
+      "d63bc43505e28adf1a9277feb77bf09db7d6ca84ef9e64be27103616efe3a671"
+    ],
+    "expected_slot_id": "SUBSCRIBE-0084"
+  },
+  {
+    "eval_id": "EVAL-073",
+    "type": "VARIANT",
+    "question": "폰을 잃어버렸습니다. 지금 전화로 정지하는 게 빠른가요 매장이 빠른가요",
+    "expected_content_hash": [
+      "9cb4759f179ad3154d3f5a3badbd296abc58e50ec31a0f47b59e02c4d5a6739e"
+    ],
+    "expected_slot_id": "TERMINATE-0113"
+  },
+  {
+    "eval_id": "EVAL-074",
+    "type": "VARIANT",
+    "question": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
+    "expected_content_hash": [
+      "b29589342b1b19f529b9cde7857c910bcce2778aa53fb45bc397fd62fc9b37ca"
+    ],
+    "expected_slot_id": "TERMINATE-0103"
+  },
+  {
+    "eval_id": "EVAL-075",
+    "type": "VARIANT",
+    "question": "다음 달에 입대합니다. 약정이 남았는데 해지하면 얼마를 물어야 하나요",
+    "expected_content_hash": [
+      "9ec5d2dd553a0cc16969d0836b3b7051c552c8110e9335f7b6602cbf6826ec9c"
+    ],
+    "expected_slot_id": "TERMINATE-0066"
+  },
+  {
+    "eval_id": "EVAL-076",
+    "type": "VARIANT",
+    "question": "장기 출장으로 몇 달 폰을 안 쓸 건데 번호는 살려 두고 싶습니다",
+    "expected_content_hash": [
+      "69c3ef8437ffa4260297a18bf0b452f335d957141de7291d934279ab17052a28"
+    ],
+    "expected_slot_id": "TERMINATE-0044"
+  },
+  {
+    "eval_id": "EVAL-077",
+    "type": "VARIANT",
+    "question": "요즘 칩 안 넣고 쓰는 방식이 있다던데 아무 폰에서나 되는 건가요",
+    "expected_content_hash": [
+      "98d7c01252d0ca1a20d095658f5dba8ac2ae5588b12d98839f437076549076ee"
+    ],
+    "expected_slot_id": "USIM-0023"
+  },
+  {
+    "eval_id": "EVAL-078",
+    "type": "VARIANT",
+    "question": "지갑을 잃어버려서 신분증이 없는데 유심만 먼저 받을 수 있을까요",
+    "expected_content_hash": [
+      "70b752d5ace2a84efd0e054bce046ba0039abaec4877ead6d44bfb4c0025da8c"
+    ],
+    "expected_slot_id": "USIM-0054"
+  },
+  {
+    "eval_id": "EVAL-079",
+    "type": "VARIANT",
+    "question": "깨진 유심을 교체했는데 옛날 칩을 예비로 보관해도 되는지 궁금합니다",
+    "expected_content_hash": [
+      "c592dda63f92b804983eeb816dee379cf2bb6df4b544142ba93d56bd23624641"
+    ],
+    "expected_slot_id": "USIM-0092"
+  },
+  {
+    "eval_id": "EVAL-080",
+    "type": "VARIANT",
+    "question": "기기를 바꿨더니 칩 크기가 달라서 안 들어갑니다. 어디서 바꿔야 하나요",
+    "expected_content_hash": [
+      "10503982ad9476b967a3cd92d49676b1e49ec2495c87b16fba4230ac420209cf"
+    ],
+    "expected_slot_id": "USIM-0089"
+  },
+  {
+    "eval_id": "EVAL-081",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "내일 서울 날씨가 어떻게 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-082",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "김치찌개 맛있게 끓이는 방법 알려주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-083",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "요즘 볼만한 영화 추천해 주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-084",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "오늘 달러 환율이 얼마인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-085",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "지하철 2호선 막차 시간이 몇 시예요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-086",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "다이어트 식단은 어떻게 짜는 게 좋나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-087",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "파이썬에서 리스트 정렬하는 방법 알려주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-088",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "삼성전자 주가가 지금 얼마인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-089",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "어제 축구 경기 결과 알려주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-090",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "병원 진료 예약은 어떻게 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-091",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "강아지 사료는 하루에 얼마나 줘야 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-092",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "전세 대출 한도는 어떻게 정해지나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-093",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "노트북 하나 추천해 주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-094",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "이 문장 영어로 번역해 주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-095",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "헬스장 등록할 때 뭘 확인해야 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-096",
+    "type": "UNRELATED",
+    "unrelated_kind": "OFF_DOMAIN",
+    "question": "원두는 어떻게 보관하는 게 좋나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-097",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "인터넷이랑 TV까지 묶으면 얼마나 할인되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-098",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "집전화를 새로 설치하려면 어떻게 신청하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-099",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "와이파이 공유기는 대여인가요 구매인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-100",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "휴대폰 파손 보험은 어디서 가입하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-101",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "제휴카드로 요금 결제하면 얼마나 깎이나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-102",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "멤버십으로 영화관 할인도 받을 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-103",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "우리 동네가 5G 커버리지에 들어가는지 어떻게 확인해요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-104",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "스팸 문자 차단 서비스는 어떻게 신청하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-105",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "통화 녹음 기능을 켜려면 어떻게 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-106",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "해외에서 산 폰을 국내에서 그대로 쓸 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-107",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "고객센터 상담원 채용은 어디에 공고가 올라오나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-108",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "대리점을 창업하려면 어떤 절차를 밟나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-109",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "알뜰폰 업체별 요금을 비교해 주세요",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-110",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "통신요금도 연말정산 소득공제가 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-111",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "휴대폰 소액결제를 아예 막아 둘 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-112",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "데이터 쉐어링 전용 요금제는 따로 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-113",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "아이 워치용 요금제는 어떤 게 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-114",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "통신사 앱에 로그인이 안 되는데 어떻게 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-115",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "지하철 와이파이는 따로 신청해야 쓰나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-116",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "번호이동하면 카카오톡 대화 내용도 옮겨지나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-117",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "쓰던 폰 중고로 팔면 얼마나 받을 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-118",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "통신사에서 주는 클라우드 저장 공간은 몇 기가인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-119",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "VoLTE 설정은 어디에서 켜나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-120",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT",
+    "question": "요금제 상담을 매장에서 미리 예약할 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-121",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "eSIM 발급 비용 2,750원은 부가세가 포함된 금액인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-122",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "유심 재발급 비용은 카드로 결제할 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-123",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "유심 재발급 비용은 현금영수증 발급이 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-124",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "단말 할부 수수료 연 5.9%는 단리인가요 복리인가요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-125",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "해지할 때 쓰던 유심은 반납해야 하나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-126",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "일시정지 기간에도 단말 할부금은 청구되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-127",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "로밍 요금은 현지 통화로 청구되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-128",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동 후에도 기존 통신사 멤버십을 쓸 수 있나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-129",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의변경 수수료가 없으면 인지세도 안 내나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  },
+  {
+    "eval_id": "EVAL-130",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "단말 할부 이자도 소득공제가 되나요?",
+    "expected_content_hash": null,
+    "expected_slot_id": null
+  }
+]

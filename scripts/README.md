@@ -1,34 +1,31 @@
-# FAQ 생성, 검증 스크립트
+# FAQ 생성·검증·측정 스크립트
 
-`docs/POLICY.md`와 `docs/FAQ_TAXONOMY.md`를 기준으로 FAQ 데이터를 만들고 검증
+기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`
 
-| 스크립트 | 역할 |
-| --- | --- |
-| `generate_faq.py` | 카테고리 × 질문유형 × 페르소나 × 사유 조합표를 목표 건수에 맞춰 배분 |
-| `check_policy.py` | 답변 수치를 참조 정책 항목의 값과 대조 |
-| `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 |
-| `check_eval_questions.py` | 검색 품질 평가셋(`eval_questions_30.json`)의 정답 매핑·유사도 검증 |
-| `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k/MRR 계산 |
-| `telme_docs.py` | 공통 문서 파서 (직접 실행하면 파싱 결과 요약) |
+| 스크립트 | 역할 | Ollama |
+| --- | --- | --- |
+| `generate_faq.py` | 카테고리 × 질문유형 × 페르소나 조합표 생성 (문장 없음) | - |
+| `check_policy.py` | 답변 수치를 정책 항목 값과 대조 | - |
+| `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 | 필요 |
+| `check_eval_questions.py` | 평가셋 형식·정답 매핑 검증 | `--live`만 |
+| `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k·MRR 계산 | 서버 경유 |
+| `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
+| `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
+| `telme_docs.py` | 공통 문서 파서 | - |
 
 ## 준비
 
-`generate_faq.py`, `check_policy.py`는 파이썬 3.11 이상만 있으면 된다. 외부 패키지 없음.
-
-`check_duplicates.py`만 Ollama가 필요
-
 ```bash
-docker compose --profile ollama up -d
+docker compose --profile ollama up -d        # 임베딩 쓰는 스크립트만
 docker exec telme-ollama ollama pull bge-m3
+pip install -r scripts/requirements.txt      # numpy (없어도 동작, 1,000건 이상에서 느림)
 ```
 
-1,000건 규모에서 쌍 비교가 느리면 numpy를 넣는다.
-(없으면 순수 파이썬으로 동작)
+- 파이썬 3.11 이상
+- 임베딩 캐시: `scripts/data/.embed_cache.json` (git 제외)
 
-```bash
-python3 -m venv venv && source venv/bin/activate
-pip install -r scripts/requirements.txt
-```
+---
 
 ## 1. 조합표 생성
 
@@ -38,12 +35,10 @@ python3 scripts/generate_faq.py --out scripts/data/faq_slots_1150.json
 python3 scripts/generate_faq.py --sample 30 --out scripts/data/faq_slots_30.json
 ```
 
-문장은 생성하지 않는다. 어떤 조합을 몇 건 써야 하는지와 각 칸에 인용할 정책 항목
-(`policy_ref`, 제목, 핵심 수치)만 내보낸다. 여기에 `question`, `answer`를 채운 것이
-`docs/FAQ_TAXONOMY.md` 7절의 산출물 형식.
-
-`trigger`는 참고값이다. 같은 조합 안에서 문장을 벌리기 위한 변형 장치라, 배정된 사유가
-정책 항목과 어색하면 무시하고 자연스러운 쪽으로 쓴다.
+- 출력: 조합별 목표 건수 + 인용할 정책 항목(`policy_ref`, 제목, 핵심 수치)
+- `question`·`answer`는 사람이 채움
+- `trigger`는 참고값. 정책 항목과 어색하면 무시 가능
+- `COMPARE` 조합에만 `"extra_policy_refs": []`를 미리 넣어 줌
 
 ## 2. 정책 대조
 
@@ -54,188 +49,183 @@ python3 scripts/check_policy.py --self-test
 
 검사 항목
 
-- 필수 필드(`category`, `question`, `answer`, `policy_ref`, `question_type`, `persona`) 존재
-- `category`, `policy_ref`, `question_type`, `persona`가 문서에 정의된 값인지
-- `policy_ref`가 그 카테고리의 항목이 맞는지
-- 답변 수치가 `policy_ref`와 `extra_policy_refs`의 허용값 안에 있는지
-- `extra_policy_refs`가 문자열 배열이고 `question_type`이 `COMPARE`인지
-- `extra_policy_refs`가 실제로 존재하는 항목이고, 선언한 만큼 실제로 인용했는지
+- 필수 필드 존재, 열거값이 문서 정의와 일치, `policy_ref`가 해당 카테고리 항목인지
+- 답변 수치가 허용값 안에 있는지 - 허용값 = (`policy_ref` ∪ `extra_policy_refs`)의 정책 블록 ∪ 정책 값 색인 ∪ 공통 전제
+- `extra_policy_refs`가 문자열 배열이고 `question_type`이 `COMPARE`인지, 실제로 인용했는지
 
-허용값 = (`policy_ref` ∪ `extra_policy_refs`) 각각의 정책 항목 블록 ∪ 정책 값 색인 행 ∪ 전체 공통 전제
+수치 추출
 
-### COMPARE의 교차 인용
+- 단위가 붙은 값만 대상 (`7,700원` `2~3 영업일` `24개월` `50GB` `09:00` `5.9%`)
+- 단위 없는 맨숫자 제외 (`5G` `114` `1588-0000`)
+- 단위 목록은 `telme_docs.py`의 `_UNITS`. 교대(`|`) 앞쪽이 먼저 매칭되므로 `개월` > `월`, `영업일` > `일` 순서 유지
 
-`COMPARE` 답변은 정책 항목을 둘 이상 인용(`FAQ_TAXONOMY.md` 2절)
+`COMPARE` 교차 인용
 
-대표 항목만 `policy_ref`에 적으면 다른 항목의 정상 수치도 "정책에 없는 수치"로 걸림
-
-인용한 나머지 항목을 `extra_policy_refs`에 적으면 그 항목의 수치까지 허용값이 됨
-
-```json
-{
-  "category": "BILLING",
-  "policy_ref": "BILLING-01",
-  "question_type": "COMPARE",
-  "persona": "EXPERIENCED",
-  "extra_policy_refs": ["BILLING-02"],
-  "question": "요금제 바꾸면 청구가 어떻게 되나요? 납부일도 같이 알려주세요",
-  "answer": "요금제는 월 1회 변경할 수 있고 신청일 다음 날 00:00부터 적용됩니다. 청구서는 매월 10일 발송되고 납부 기한은 매월 25일입니다."
-}
-```
-
-`generate_faq.py`는 `COMPARE` 조합에만 `"extra_policy_refs": []`를 미리 넣어 준다.
-(비워 두면 대표 항목만 검사)
-
-`COMPARE`가 아닌 질문유형이 값을 채우면 지적
-(다른 유형에서도 받아주면 허용값을 넓히는 우회로가 됨)
-
-필드가 있는데 문자열 배열이 아니면 `extra_policy_refs 형식 오류`
-(배열을 빠뜨린 `"BILLING-02"`, 원소에 숫자가 섞인 경우, `""`·`0`·`{}`·`false`·`null`)
-
-필드가 아예 없으면 지적하지 않는다. 있는데 값이 틀린 것과 구분
-
-남발을 막기 위해, 선언한 항목의 수치가 답변에 하나도 없으면 `인용하지 않은 extra_policy_refs`로 지적
-
-수치가 없는 항목(구비 서류 등)은 대조할 것이 없으므로 제외
-
-단위가 붙은 수치만 본다.
-`7,700원` `2~3 영업일` `24개월` `1년` `1월` `50GB` `09:00` `5.9%`는 보고,
-단위 없는 맨숫자(`5G`, `114`, `1588-0000`)는 추출하지 않는다.
-
-단위 목록은 `telme_docs.py`의 `_UNITS`. 교대(`|`)는 앞에서부터 매칭되므로
-`개월`이 `월`보다, `영업일`이 `일`보다 앞에 있어야 한다.
-
-수치가 없는 정책 항목(구비 서류 등)을 참조하면서 답변에 수치를 넣으면 전부 걸린다(의도됨).
+- `COMPARE` 답변은 정책 항목을 둘 이상 인용 (`FAQ_TAXONOMY.md` 2절)
+- 대표 항목만 `policy_ref`에 적으면 나머지 항목의 정상 수치가 "정책에 없는 수치"로 검출됨
+- 인용한 나머지를 `extra_policy_refs`에 기재하면 허용값에 포함
 
 ## 3. 중복 탐지
 
 ```bash
-python3 scripts/check_duplicates.py scripts/data/faq_sample_30.json
-python3 scripts/check_duplicates.py scripts/data/faq_sample_30.json --threshold 0.93 --field both
+python3 scripts/check_duplicates.py scripts/data/faq_full_1150.json
+python3 scripts/check_duplicates.py scripts/data/faq_full_1150.json --field answer
 python3 scripts/check_duplicates.py --self-test
 ```
 
-`bge-m3`로 임베딩해 코사인 유사도가 임계값(기본 `0.95`) 이상인 쌍을 출력한다.
-임계값 미만이어도 최고 유사도를 함께 찍는다.
+- `--field`: `question`(기본) / `answer` / `both` - **세 가지를 모두 실행**
+  - 질문만 같은 중복과 답변만 같은 중복은 서로 검출되지 않음
+  - 실제로 답변이 사실상 같은 FAQ 233쌍이 `question`·`both` 검사를 통과한 사례 있음 (`docs/SEARCH_TUNING.md` 11절)
+- `--threshold` 기본 0.95, `--batch` 기본 50
+- 임계값 미만이어도 최고 유사도는 출력
 
-- `--batch` 기본 50
-- 임베딩은 `scripts/data/.embed_cache.json`에 캐시된다(git 제외)
-- `--field both`는 질문+답변을 이어 붙여 본다. 질문이 달라도 답변이 같은 건을 찾을 때 쓴다.
-
-## 4. 검색 품질 평가셋 검증
+## 4. 평가셋 검증
 
 ```bash
-python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json
+python3 scripts/check_eval_questions.py scripts/data/eval_questions_130.json --faq scripts/data/faq_full_1150.json
 python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json --live
 python3 scripts/check_eval_questions.py --self-test
 ```
 
-`data/eval_questions_30.json`은 Recall@k/MRR 측정용 질문 30건이다. 
+정답 매핑
 
-각 질문은
-`SIMILAR`(원문 재표현) / `VARIANT`(같은 FAQ가 정답이지만 표현, 상황을 크게 바꿈) / `UNRELATED`(30건 어디에도 정답 없음) 중 하나로 라벨링되고, 정답은 `faq_id`가 아니라
-`expected_content_hash`(대상 FAQ의 `SHA-256(question + answer)`)로 매핑된다.
+- 정답은 `faq_id`가 아니라 `expected_content_hash` = `SHA-256(question + answer)`
+  - `faq_id`는 재적재 시 새로 발급되지만 `content_hash`는 문장 내용에만 의존
+- 답변이 사실상 같은 FAQ가 여럿이면 배열로 기재 (모두 정답 처리)
 
-`faq_id`는 적재할 때마다 DB가 새로 발급해 재적재하면 깨지지만, `content_hash`는 문장 내용에서만 정해지므로 몇 번을 다시 적재해도 살아남는다.
+정적 검사 (Ollama 불필요)
 
-- 정적 검사(기본, Ollama 불필요): 정확히 30건인지, `type`이 세 값 중 하나인지,
-  `SIMILAR`/`VARIANT`의 `expected_content_hash`가 `faq_sample_30.json`에 실제로 존재하는
-  해시인지(수동 편집 사고로 어긋나지 않았는지), `UNRELATED`는 해시와 `expected_slot_id`가
-  `null`인지 확인. 
+- `type` 값, 긍정 질문 해시의 실존 여부, 배열 내 중복
+- `UNRELATED`의 해시·`expected_slot_id`가 `null`인지, `unrelated_kind`가 정의된 값인지
+- `expected_slot_id`가 해시가 가리키는 FAQ와 일치하는지
+- 대칭성: SIMILAR/VARIANT 건수 일치, 카테고리별 건수 균등
 
-- 유형별 10건씩인지, 카테고리 10종마다 `SIMILAR`·`VARIANT`가 정확히 1건씩인지(해시로 찾은 FAQ의 `category` 기준이라 `expected_slot_id`를 잘못 적어도 못 속임),
-  그리고 `expected_slot_id`가 해시가 가리키는 FAQ의 `slot_id`와 일치하는지 분포도 확인
+`--live` (Ollama 필요)
 
-- `--live`(Ollama 필요, `check_duplicates.py`와 같은 임베딩 경로 재사용): 각 `SIMILAR`/
-  `VARIANT` 질문을 실제로 임베딩해서 자신의 정답 FAQ가 30건 중 최고 유사도로 나오는지 확인하고,
-  `UNRELATED` 10건의 유사도 분포(최댓값/평균)를 출력한다. 이 평가셋을 넘기기 전에
-  "이 질문이 실제로 의도한 FAQ를 가리키는가"를 미리 실측해두는 단계.
+- 긍정 질문을 임베딩해 정답 FAQ가 최고 유사도인지 확인, `UNRELATED` 유사도 분포 출력
 
-- `--self-test`: 일부러 틀린 예시 10건으로 정적 검사가 내는 지적 12종(`STATIC_KINDS`)이 전부 실제로
-  걸리는지 확인한다. 검사 종류를 추가하면 `STATIC_KINDS`와 픽스처에 같이 넣어야 통과.
+`--self-test`
+
+- 일부러 틀린 픽스처로 지적 15종(`STATIC_KINDS`)이 모두 검출되는지 확인
+- 검사 종류 추가 시 `STATIC_KINDS`와 픽스처에 함께 반영
 
 ## 5. 적재 (Java)
 
-만든 JSON을 DB(`faqs` + `faq_embeddings`)에 넣는 것은 Java 쪽 배치 로더가.
-해시 계산 규칙(`content_hash`)이 Python과 Java 두 벌로 갈라지지 않도록, 적재는 애플리케이션이 맡는다.
-
 ```bash
-docker compose --profile ollama up -d
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ./gradlew bootJar
-
-# 1차 300건 → 2차는 파일만 바꿔서 같은 명령. 이미 들어간 건은 content_hash로 건너뛴다
-java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
-  --faq.batch-load.enabled=true --faq.batch-load.path=scripts/data/faq_full_300.json
 java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
   --faq.batch-load.enabled=true --faq.batch-load.path=scripts/data/faq_full_1150.json
 ```
 
-- 같은 파일을 다시 돌려도 안전하다(신규 적재 0건). 중간에 실패해도 재실행하면 이어서 적재된다
-- 적재는 한 번에 한 프로세스만 돌린다. 이미 있는 건을 거르는 기준이 적재 직전에 읽은 `content_hash` 목록이라, 두 프로세스가 같이 돌면 서로가 넣는 중인 건을 못 보고 같은 FAQ를 두 번 넣는다
-- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 무시된다
+- 해시 계산 규칙이 Python·Java로 갈라지지 않도록 적재는 애플리케이션이 담당
+- 같은 파일 재실행 안전 (이미 적재된 `content_hash`는 건너뜀). 중간 실패 시 재실행하면 이어서 진행
+- **단일 프로세스로만 실행.** 중복 판정 기준이 적재 직전 조회한 `content_hash` 목록이라 동시 실행 시 중복 적재 가능
+- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 제외
+
+### 전량 재임베딩
+
+```bash
+java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0 \
+  --faq.reembed.enabled=true --faq.embedding-text.variant=Q_A
+```
+
+- 임베딩 텍스트 구성(`faq.embedding-text.variant`)을 바꾸면 기존 벡터가 전부 무효
+- `content_hash`는 질문·답변에서만 나오므로 적재 로더로는 갱신되지 않음
+- 1,150건 기준 약 70초. 건너뛰기 없음 → 재실행은 처음부터
+- 단일 프로세스로만 실행
+- ⚠ **dev 시드 FAQ 2건(`faq_id` 1, 2)도 덮어씀**
+  - 시드 임베딩은 고정 패턴이고 `FaqEmbeddingRepositoryTest`·`FaqSearchApiIntegrationTest`가 이를 전제
+  - 로컬에서 두 테스트가 깨지면 `dev-migration/V2__seed_sample_data.sql`의 벡터를 다시 넣을 것
+  - CI는 DB를 새로 생성하므로 영향 없음
 
 ## 6. 검색 품질 측정
 
 ```bash
-python3 scripts/measure_search_quality.py scripts/data/eval_smoke.json
-python3 scripts/measure_search_quality.py scripts/data/eval_questions_30.json --experiment 기준선
+# 측정용 서버 (임계값 해제)
+FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 \
+  java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=18090
+
+python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
+  --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+  --by-category --dump-json .measure/raw-1150-Q_A.json
+
 python3 scripts/measure_search_quality.py --self-test
 ```
 
-`check_eval_questions.py`가 검증한 평가셋을 실제 검색 API(`/api/v1/faq/search`, TELME-38)에 돌려
-Recall@1/3/5, MRR을 계산한다. `content_hash`는 `check_eval_questions.py`에서 그대로 import해서 쓴다.
+- **순위 실험은 `SEARCH_SIMILARITY_THRESHOLD=0`으로 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
 
-**순위 실험(Recall@k·MRR)은 서버를 `SEARCH_SIMILARITY_THRESHOLD=0`으로 띄우고 돌린다.**
-`PgvectorFaqSearchService`가 임계값 미만 후보를 순위를 매기기 전에 잘라내므로, 임계값을 켠 채로
-재면 "랭킹 품질"이 아니라 "임계값 통과 후 랭킹 품질"이 섞여서 측정된다. 임계값 자체를 정하는 건
-별도 단계(2주차 캘리브레이션)에서 한다.
+주요 옵션
 
-- `--top-k`(기본 3), `--api-url`(기본 `http://localhost:8080/api/v1/faq/search`),
-  `--timeout`(기본 20초 — 서버의 `embedding.search-read-timeout`(15초)보다 길어야 함)
-- `--experiment`를 주면 튜닝 실험 기록표에 붙여넣을 수 있는 한 줄
-  (`| 실험 | 변경 | Recall@1 | Recall@3 | MRR | 담당 |`)도 같이 출력. `--change`/`--owner`(기본 A)로
-  나머지 칸을 채운다.
-- 긍정 질문(`SIMILAR`/`VARIANT`)이 하나도 없으면 recall/mrr은 측정하지 않은 것으로 처리한다 —
-  `--experiment`와 같이 쓰면 가짜 `0.000` 행 대신 에러로 중단한다.
-- threshold=0으로 돌리면 "정답 hit score(최소/중앙값)"와 "UNRELATED top-1 score(최댓값)"도 같이
-  찍는다. 정답 hit score 최소값이 UNRELATED top-1 최댓값보다 높으면 그 사이가 임계값 후보고,
-  두 분포가 겹치면(반대가 되면) 깔끔하게 나누는 값 자체가 없다는 뜻이라 그것대로 유용한 진단이다.
-- 정답을 못 찾은 질문은 `eval_id`로 나열된다. 그중 같은 정답 FAQ를 공유하는 `SIMILAR`/`VARIANT`가
-  **둘 다** 한 번도 안 나온 경우는 따로 표시한다.
-- 그 FAQ가 적재 자체가 안 됐거나, 적재는 됐는데 임베딩·텍스트 구성 문제로 top-k에 못 든 것이다.
-  둘 중 어느 쪽인지는 `content_hash`로 `faqs`를 조회해서 먼저 가린다 — 후보가 많아질수록(예:
-  1,150건) 적재된 FAQ도 두 질문이 나란히 top-k 밖으로 밀리는 경우가 드물지 않아, "둘 다 못 찾음"을
-  곧장 "DB에 없음"으로 해석하면 오탐이 된다.
-- `--self-test`: 손으로 계산한 기대값으로 Recall@k/MRR 계산 로직 자체를 검증한다
-  (경계값, 무관 질문 제외, 긍정 질문 0건 등 7건).
+| 옵션 | 설명 |
+| --- | --- |
+| `--top-k` | 기본 3 |
+| `--api-url` | 기본 `http://localhost:8080/api/v1/faq/search` |
+| `--timeout` | 기본 20초 (서버 `embedding.search-read-timeout` 15초보다 커야 함) |
+| `--by-category` | `expected_slot_id` 접두사로 묶어 카테고리별 Recall·MRR 출력 |
+| `--dump-json <경로>` | 질문별 top-k 원시 결과 저장. 임계값·top-k 스윕을 오프라인 계산할 때 필수 |
+| `--experiment` / `--change` / `--owner` | 실험 기록표용 한 줄 출력 |
+
+출력 진단
+
+- 임계값 0 측정 시 "정답 hit score(최소·중앙값)"와 "UNRELATED top-1 최댓값" 출력
+  - 정답 최소 > 무관 최댓값이면 그 사이가 임계값 후보. 겹치면 분리 가능한 단일 값 없음
+- `unrelated_kind`별 거부율 분리 출력
+- 정답 미검출 질문을 `eval_id`로 나열. 같은 정답을 공유하는 질문이 모두 실패하면 별도 표시
+  - "적재 누락"과 "top-k 밖으로 밀림" 구분은 `content_hash`로 `faqs` 조회 필요
+
+## 7. 격자 분석
+
+```bash
+python3 scripts/analyze_search_grid.py .measure/raw-1150-*.json
+```
+
+- 입력: `--dump-json` 결과만. DB·Ollama 불필요
+- 계산: 구성 × top-k(1/3/5/10) × 임계값(0.55~0.85) 조합 전체
+- 출력: 최적 조합, 구성별 최선, 민감도(거부율 하한 0.90/0.95/1.00), 임계값별 추이
+- 선택 규칙: 무관 거부율 하한 이상에서 Recall@3 최대 (`--min-rejection`으로 조정)
+- 수집 오염 탐지: 임계값 0 수집인데 top-k보다 적게 반환된 문항이 있으면 경고
+
+## 8. 자기검색 평가셋
+
+```bash
+python3 scripts/make_selfretrieval_eval.py
+```
+
+- `faq_full_1150.json`의 `question`을 그대로 쿼리로 사용하는 평가셋 생성 (카테고리당 65~160건)
+- 용도: 카테고리 내부 혼동도 측정 (유사 질문 견고성 아님)
+- 제약: `QUESTION_ONLY` 구성에서는 쿼리와 문서가 같은 문자열이라 유사도 1.0으로 포화
+
+---
 
 ## 자기 검증
 
-네 검사 스크립트 모두 `--self-test`가 있다(`check_policy.py`는 20건, `check_duplicates.py`는 2건,
-`check_eval_questions.py`는 10건, `measure_search_quality.py`는 7건).
+| 스크립트 | 케이스 |
+| --- | --- |
+| `check_policy.py` | 20건 |
+| `check_duplicates.py` | 2건 |
+| `check_eval_questions.py` | 15종 |
+| `measure_search_quality.py` | 9건 |
 
-통과만 봐서는 검사가 실제로 도는지 알 수 없어, 일부러 틀린 건을 넣어 잡히는지 확인한다.
-
-문서 파싱에서도 표를 못 찾거나 행 수가 기대와 다르면 0건으로 넘어가지 않고 `DocumentError`를 던진다.
+- 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
+- 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
 
 ## 산출물
 
 | 파일 | 내용 |
 | --- | --- |
-| `data/faq_sample_30.json` | 검색 품질 측정용 샘플 30건. 카테고리 10종 × 3건, 질문유형 6건씩, 페르소나 10건씩 |
-| `data/eval_questions_30.json` | 검색 품질 평가 질문 30건. `SIMILAR`/`VARIANT` 각 10건(카테고리 10종 대칭 커버) + `UNRELATED` 10건(완전 무관 4 + 도메인 인접 6). 정답은 `expected_content_hash`로 매핑 |
-| `data/eval_smoke.json` | `measure_search_quality.py` 스모크 테스트용 더미 질문 2건. dev 시드(`V2__seed_sample_data.sql`)의 더미 FAQ 2건 기준인데, 그 시드의 임베딩 자체가 실제 Ollama 값이 아니라 고정 패턴이라 실제 쿼리와 유사도가 임계값을 넘을 가능성이 낮다(실측으로는 항상 빈 배열이었으나, 가짜 벡터라는 사실 자체가 그걸 보장하지는 않는다) — 검색 품질이 아니라 스크립트가 API와 정상 통신하는지 확인하는 용도 |
-| `data/faq_slots_1150.json` | `generate_faq.py --out`로 생성한 1,150건 조합표(문장 없음). `slot_id`로 끝까지 추적 |
-| `data/faq_full_300.json` | 1차 300건(카테고리 10종 × 30건). 조합표에서 (질문유형 × 페르소나) 15조합마다 2건씩, 정책 항목이 고르게 섞이도록 고른 부분집합. `faq_sample_30.json` 30건의 `question`·`answer`를 문자 그대로 포함(`content_hash` 동일). 단 `slot_id`·`trigger`는 1,150건 조합표 기준이라 샘플 표의 `S01` 번호·사유와는 다르다 |
-| `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일하고(`content_hash` 불변) 뒤 850건이 나머지 슬롯. 모든 항목이 `slot_id`·`trigger`를 갖고 있어 `faq_slots_1150.json`의 어느 칸에서 나왔는지 역추적된다. 분포는 `generate_faq.py --summary`와 정확히 일치 |
+| `data/faq_slots_1150.json` | 1,150건 조합표(문장 없음). `slot_id`로 추적 |
+| `data/faq_full_300.json` | 1차 300건. `faq_sample_30.json` 30건을 문자 그대로 포함 |
+| `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일 |
+| `data/faq_sample_30.json` | 샘플 30건. 카테고리 10종 × 3건 |
+| `data/eval_questions_30.json` | 평가 질문 30건. 긍정 20 + 무관 10 |
+| `data/eval_questions_130.json` | 평가 질문 130건. 긍정 80 + 무관 50(완전무관 16 / 도메인인접 24 / 경계 10). 정답은 배열 |
+| `data/eval_selfretrieval_1150.json` | 자기검색 평가셋 1,150건 |
+| `data/eval_smoke.json` | API 통신 확인용 더미 2건. 품질 측정용 아님 |
 
-`faq_full_300.json`을 남겨두는 이유: 적재를 300건 → 1,150건 두 번에 나눠서 건수 증가에 따른 Recall 변화를 재기 위해서다.
-1차 300건은 2차에서 한 글자도 고치지 않았다(고치면 `content_hash`가 바뀌어 `eval_questions_30.json`의 정답 매핑이 끊긴다).
+데이터 규칙
 
-두 파일 모두 `check_policy.py`, `check_duplicates.py`(question / `--field both`, 임계값 0.95)를 전체 건 기준으로 통과했다.
-
-`slot_id`, `question_type`, `persona`, `trigger`, `extra_policy_refs`는 생성, 검증용 메타데이터다.
-`faqs` 테이블에는 넣지 않고 적재 시점에 제외한다.
-`version`은 적재 시 `1`, `content_hash`는 `question + answer`의 SHA-256으로
-적재 스크립트가 계산한다.
+- `faq_full_300.json` 유지 이유: 건수 증가에 따른 Recall 변화 측정 (300 → 1,150)
+- 1차 300건은 2차에서 수정 금지. 수정 시 `content_hash`가 바뀌어 평가셋 매핑이 끊김
+- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 생성·검증용 메타데이터. `faqs` 테이블 제외
+- `version`은 적재 시 1, `content_hash`는 적재 시 애플리케이션이 계산
+- 평가셋 선택 기준: 코퍼스 규모 비교에는 `eval_questions_30.json` 사용. `eval_questions_130.json`은 대상 FAQ 40건 중 6건만 300건 부분집합에 포함되어 규모 비교 불가
