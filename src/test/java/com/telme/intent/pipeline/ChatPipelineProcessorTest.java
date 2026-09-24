@@ -40,7 +40,9 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
+import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.service.AnswerSourcesReady;
 import com.telme.rag.service.AnswerPromptTemplates;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -57,6 +59,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class ChatPipelineProcessorTest {
@@ -88,6 +91,9 @@ class ChatPipelineProcessorTest {
     @Mock
     private ObjectProvider<ConsultService> consultServiceProvider;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private ChatPipelineProcessor processor;
 
     @BeforeEach
@@ -100,7 +106,8 @@ class ChatPipelineProcessorTest {
                 queryRoutingService,
                 faqSearchService,
                 answerGenerator,
-                consultServiceProvider
+                consultServiceProvider,
+                eventPublisher
         );
     }
 
@@ -149,6 +156,97 @@ class ChatPipelineProcessorTest {
                 ans.messageType() == ChatMessage.MessageType.ANSWER &&
                 ans.answerBasis() == ChatMessage.AnswerBasis.GROUNDED &&
                 ans.content().contains("5G 요금제는 월 55,000원부터")));
+    }
+
+    @Test
+    @DisplayName("FAQ 답변이 저장되면 근거 저장 이벤트를 발행한다")
+    void handleFaqIntent_publishesSources() {
+        Long executionId = 200L;
+        Long sessionId = 20L;
+        Long messageId = 2L;
+        Long answerMessageId = 555L;
+
+        givenFaqRouting(executionId, sessionId, messageId, "유심 재발급 얼마예요?");
+        AnswerSource source = AnswerSource.builder()
+                .faqId(7L).titleSnapshot("유심 재발급 비용").searchRank((short) 1).build();
+        given(answerGenerator.generate(any(), any())).willReturn(AnswerResult.builder()
+                .answer("7,700원입니다.")
+                .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                .sources(List.of(source))
+                .build());
+        given(chatExecutionService.completeAnswer(eq(executionId), any()))
+                .willReturn(executionState(sessionId, executionId, answerMessageId));
+
+        processor.request(new ChatProcessingCommand(executionId, sessionId, messageId, "유심 재발급 얼마예요?"));
+
+        ArgumentCaptor<AnswerSourcesReady> captor = ArgumentCaptor.forClass(AnswerSourcesReady.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().answerMessageId()).isEqualTo(answerMessageId);
+        assertThat(captor.getValue().sources()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("답변 메시지가 없으면 근거 저장 이벤트를 발행하지 않는다")
+    void handleFaqIntent_skipsPublishWhenNoOutputMessage() {
+        Long executionId = 201L;
+        Long sessionId = 21L;
+        Long messageId = 3L;
+
+        givenFaqRouting(executionId, sessionId, messageId, "유심 재발급 얼마예요?");
+        given(answerGenerator.generate(any(), any())).willReturn(AnswerResult.builder()
+                .answer("7,700원입니다.")
+                .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                .sources(Collections.emptyList())
+                .build());
+        given(chatExecutionService.completeAnswer(eq(executionId), any()))
+                .willReturn(executionState(sessionId, executionId, null));
+
+        processor.request(new ChatProcessingCommand(executionId, sessionId, messageId, "유심 재발급 얼마예요?"));
+
+        verify(eventPublisher, never()).publishEvent(any(AnswerSourcesReady.class));
+    }
+
+    @Test
+    @DisplayName("매장 안내처럼 근거가 없는 경로는 이벤트를 발행하지 않는다")
+    void handleStoreIntent_doesNotPublishSources() {
+        Long executionId = 202L;
+        Long sessionId = 22L;
+        Long messageId = 4L;
+        String userRawText = "강남역 근처 매장 알려줘";
+
+        ChatSession session = ChatSession.builder().sessionId(sessionId).status(ChatSession.Status.ACTIVE).build();
+        ChatMessage message = ChatMessage.builder()
+                .messageId(messageId).session(session).content(userRawText).build();
+        given(chatMessageRepository.findByIdWithSession(messageId)).willReturn(Optional.of(message));
+        given(queryRoutingService.route(eq(message), any())).willReturn(new IntentRouteResponse(
+                1L, messageId, QueryRouting.Intent.STORE, userRawText,
+                BigDecimal.valueOf(0.97), QueryRouting.Method.LLM,
+                Map.of("location", "강남역"), Collections.emptyList()));
+
+        processor.request(new ChatProcessingCommand(executionId, sessionId, messageId, userRawText));
+
+        verify(eventPublisher, never()).publishEvent(any(AnswerSourcesReady.class));
+    }
+
+    private void givenFaqRouting(Long executionId, Long sessionId, Long messageId, String userRawText) {
+        ChatSession session = ChatSession.builder().sessionId(sessionId).status(ChatSession.Status.ACTIVE).build();
+        ChatMessage message = ChatMessage.builder()
+                .messageId(messageId).session(session).content(userRawText).build();
+        given(chatMessageRepository.findByIdWithSession(messageId)).willReturn(Optional.of(message));
+        given(queryRoutingService.route(eq(message), any())).willReturn(new IntentRouteResponse(
+                1L, messageId, QueryRouting.Intent.FAQ, userRawText,
+                BigDecimal.valueOf(0.95), QueryRouting.Method.LLM,
+                Collections.emptyMap(), Collections.emptyList()));
+        given(faqSearchService.search(any())).willReturn(List.of(new FaqSearchResponse(
+                1L, "SUBSCRIBE", "유심 재발급", "7,700원입니다.", 0.9, 1, LocalDate.now(), 1)));
+    }
+
+    private ChatExecutionState executionState(Long sessionId, Long executionId, Long answerMessageId) {
+        ChatOutputMessage output = answerMessageId == null ? null : new ChatOutputMessage(
+                sessionId, executionId, answerMessageId, 2,
+                ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED);
+        return new ChatExecutionState(
+                sessionId, executionId, ChatExecution.Status.COMPLETED, null, output);
     }
 
     @Test
