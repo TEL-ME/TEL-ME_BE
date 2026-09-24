@@ -15,10 +15,7 @@ from pathlib import Path
 from check_duplicates import DEFAULT_BATCH, cosine, embed_all
 
 VALID_TYPES = ("SIMILAR", "VARIANT", "UNRELATED")
-EXPECTED_COUNT = 30
-# SIMILAR/VARIANT 각 10건(카테고리 10종에 1건씩 대칭 커버) + UNRELATED 10건
-EXPECTED_PER_TYPE = 10
-EXPECTED_PER_CATEGORY = 1  # 카테고리마다 SIMILAR 1건, VARIANT 1건
+VALID_UNRELATED_KINDS = ("OFF_DOMAIN", "ADJACENT", "ADJACENT_HARD")
 
 DEFAULT_FAQ_PATH = Path(__file__).parent / "data" / "faq_sample_30.json"
 
@@ -47,13 +44,14 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
     def add(i: int, item: dict, kind: str, detail: str) -> None:
         found.append(Finding(i, item.get("eval_id", "?"), kind, detail))
 
-    if len(items) != EXPECTED_COUNT:
-        found.append(Finding(-1, "-", "건수 불일치", f"{len(items)}건 (기대 {EXPECTED_COUNT}건)"))
+    if not items:
+        found.append(Finding(-1, "-", "빈 평가셋", "0건"))
 
     seen_ids: set[str] = set()
     type_count: Counter[str] = Counter()
     # (category, type) -> 건수. 해시가 유효한 SIMILAR/VARIANT만 센다
     coverage: Counter[tuple[str, str]] = Counter()
+    unrelated_kind_count: Counter[str] = Counter()
 
     for i, item in enumerate(items):
         eval_id = item.get("eval_id")
@@ -82,17 +80,26 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
                 add(i, item, "UNRELATED인데 expected_content_hash가 있음", str(expected_hash))
             if expected_slot is not None:
                 add(i, item, "UNRELATED인데 expected_slot_id가 있음", str(expected_slot))
+            kind = item.get("unrelated_kind")
+            if kind is not None and kind not in VALID_UNRELATED_KINDS:
+                add(i, item, "알 수 없는 unrelated_kind", str(kind))
+            else:
+                unrelated_kind_count[kind or "(없음)"] += 1
             continue
 
-        # SIMILAR / VARIANT
-        if not expected_hash:
+        # SIMILAR / VARIANT - 해시는 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때)
+        hashes = expected_hash if isinstance(expected_hash, list) else [expected_hash]
+        if not expected_hash or not all(isinstance(h, str) and h for h in hashes):
             add(i, item, "expected_content_hash 없음", f"type={item_type}")
             continue
-        faq = faq_by_hash.get(expected_hash)
-        if faq is None:
-            add(i, item, "faq_sample_30.json에 없는 해시",
-                f"{expected_hash[:12]}... (질문, 답변 수정으로 해시가 바뀌었을 수 있음)")
+        if len(set(hashes)) != len(hashes):
+            add(i, item, "expected_content_hash 중복", str(hashes))
+        missing = [h for h in hashes if h not in faq_by_hash]
+        if missing:
+            add(i, item, "FAQ 파일에 없는 해시",
+                f"{missing[0][:12]}... (질문, 답변 수정으로 해시가 바뀌었을 수 있음)")
             continue
+        faq = faq_by_hash[hashes[0]]
 
         # expected_slot_id는 사람 확인용 메타데이터지만, 해시가 가리키는 FAQ와 어긋나면
         # 리뷰어가 엉뚱한 FAQ를 보고 판단하게 되므로 대조한다
@@ -101,19 +108,26 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
                 f"명시 {expected_slot}, 해시가 가리키는 FAQ는 {faq.get('slot_id')}")
         coverage[(faq["category"], item_type)] += 1
 
-    for t in VALID_TYPES:
-        if type_count[t] != EXPECTED_PER_TYPE:
-            found.append(Finding(-1, "-", "유형별 건수 불일치",
-                                 f"{t} {type_count[t]}건 (기대 {EXPECTED_PER_TYPE}건)"))
+    # 건수를 고정하지 않고 대칭성만 본다 — 평가셋 크기는 늘어날 수 있지만
+    # SIMILAR/VARIANT가 한쪽으로 쏠리거나 특정 카테고리만 많으면 지표가 왜곡된다
+    if type_count["SIMILAR"] != type_count["VARIANT"]:
+        found.append(Finding(-1, "-", "유형 불균형",
+                             f"SIMILAR {type_count['SIMILAR']}건, VARIANT {type_count['VARIANT']}건"))
 
-    categories = sorted({f["category"] for f in faq_by_hash.values()})
-    for cat in categories:
-        for t in ("SIMILAR", "VARIANT"):
-            n = coverage[(cat, t)]
-            if n != EXPECTED_PER_CATEGORY:
-                found.append(Finding(-1, "-", "카테고리 커버 불일치",
-                                     f"{cat} {t} {n}건 (기대 {EXPECTED_PER_CATEGORY}건)"))
+    covered = sorted({cat for cat, _ in coverage})
+    per_cat = {cat: coverage[(cat, "SIMILAR")] + coverage[(cat, "VARIANT")] for cat in covered}
+    if per_cat and len(set(per_cat.values())) > 1:
+        detail = ", ".join(f"{c} {n}건" for c, n in sorted(per_cat.items(), key=lambda x: x[1]))
+        found.append(Finding(-1, "-", "카테고리 불균형", detail))
+    for cat in covered:
+        if coverage[(cat, "SIMILAR")] != coverage[(cat, "VARIANT")]:
+            found.append(Finding(-1, "-", "카테고리 유형 불균형",
+                                 f"{cat} SIMILAR {coverage[(cat, 'SIMILAR')]}건, "
+                                 f"VARIANT {coverage[(cat, 'VARIANT')]}건"))
 
+    kinds = ", ".join(f"{k} {n}건" for k, n in sorted(unrelated_kind_count.items()))
+    print(f"  구성: SIMILAR {type_count['SIMILAR']} / VARIANT {type_count['VARIANT']} / "
+          f"UNRELATED {type_count['UNRELATED']} ({kinds}), 카테고리 {len(covered)}종")
     return found
 
 
@@ -186,7 +200,7 @@ def report(findings: list[Finding]) -> int:
 # check_static()이 낼 수 있는 지적 종류 전부
 # self_test 픽스처는 이 각각을 최소 1건씩 유발해야 한다
 STATIC_KINDS = (
-    "건수 불일치",
+    "빈 평가셋",
     "eval_id 없음",
     "eval_id 중복",
     "question 없음",
@@ -194,10 +208,13 @@ STATIC_KINDS = (
     "UNRELATED인데 expected_content_hash가 있음",
     "UNRELATED인데 expected_slot_id가 있음",
     "expected_content_hash 없음",
-    "faq_sample_30.json에 없는 해시",
+    "expected_content_hash 중복",
+    "FAQ 파일에 없는 해시",
     "expected_slot_id 불일치",
-    "유형별 건수 불일치",
-    "카테고리 커버 불일치",
+    "알 수 없는 unrelated_kind",
+    "유형 불균형",
+    "카테고리 불균형",
+    "카테고리 유형 불균형",
 )
 
 
@@ -230,10 +247,20 @@ def self_test() -> int:
          "expected_content_hash": None, "expected_slot_id": "USIM-S01"},        # SIMILAR/VARIANT인데 해시 없음
         {"eval_id": "T09", "type": "VARIANT", "question": "slot_id를 잘못 적음",
          "expected_content_hash": plan_hash, "expected_slot_id": "USIM-S01"},   # expected_slot_id 불일치
+        {"eval_id": "T10", "type": "UNRELATED", "question": "종류 오타",
+         "unrelated_kind": "ADJACENT_HAD",                                      # 알 수 없는 unrelated_kind
+         "expected_content_hash": None, "expected_slot_id": None},
+        {"eval_id": "T11", "type": "SIMILAR", "question": "같은 해시를 두 번 적음",
+         "expected_content_hash": [usim_hash, usim_hash],                       # 배열 안 중복
+         "expected_slot_id": "USIM-S01"},
+        {"eval_id": "T12", "type": "VARIANT", "question": "배열로 적은 정상 케이스",
+         "expected_content_hash": [usim_hash, plan_hash],                       # 정상 (복수 정답)
+         "expected_slot_id": "USIM-S01"},
     ]
-    # 10건 픽스처라 "건수 불일치"와 "유형별 건수 불일치"는 자동적으로 걸림
-    # "카테고리 커버 불일치"는 USIM SIMILAR가 여러 건이고 PLAN SIMILAR가 0건이라 걸림
+    # 픽스처가 SIMILAR 6 / VARIANT 4라 "유형 불균형"이 걸리고,
+    # USIM만 여러 건이고 PLAN은 1건이라 "카테고리 불균형"과 "카테고리 유형 불균형"도 걸린다
     findings = check_static(items, faq_by_hash)
+    findings += check_static([], faq_by_hash)   # 빈 평가셋
     kinds = {f.kind for f in findings}
 
     ok = True
