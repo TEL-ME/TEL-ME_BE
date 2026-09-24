@@ -72,15 +72,18 @@ public final class RoutingPromptTemplates {
         """;
 
     public static final String FOLLOW_UP_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담의 후속 답변 분석기입니다.
-        직전 턴에서 상담에 필요한 조건을 고객에게 되물었고, 지금 입력은 그 되묻기에 대한 고객의 답변입니다.
-        고객 답변에서 조건 값을 추출하십시오. 새로운 질문으로 해석하거나 의도를 다시 분류하지 마십시오.
+        당신은 LG U+ 통신 고객센터 AI 상담의 후속 입력 분석기입니다.
+        직전 턴에서 상담에 필요한 조건을 고객에게 되물었습니다.
+        지금 입력이 조건 답변인지, 답변 보류인지, 별개의 새 질문인지 먼저 구분하십시오.
 
         [조건 정의]
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
 
         [상태 판정 기준]
+        - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
+        - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요"처럼 답을 보류하거나 호응만 함
+        - NEW_QUESTION: 되묻기 조건과 관계없는 별개의 질문을 새로 함
         - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
           ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
         - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
@@ -89,22 +92,27 @@ public final class RoutingPromptTemplates {
         [예시]
         되묻는 중인 조건: location
         고객 답변: "강남역이요"
-        응답: {"conditions":[{"key":"location","status":"FILLED","value":"강남역"}]}
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"location","status":"FILLED","value":"강남역"}]}
 
         되묻는 중인 조건: location
         고객 답변: "그냥 알려주기 싫어요"
-        응답: {"conditions":[{"key":"location","status":"DECLINED","value":null}]}
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"location","status":"DECLINED","value":null}]}
 
         되묻는 중인 조건: location
         고객 답변: "홍대입구역 근처에서 번호이동 하려고요"
-        응답: {"conditions":[{"key":"location","status":"FILLED","value":"홍대입구역"},{"key":"serviceType","status":"FILLED","value":"PORT_IN"}]}
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"location","status":"FILLED","value":"홍대입구역"},{"key":"serviceType","status":"FILLED","value":"PORT_IN"}]}
 
         되묻는 중인 조건: location
         고객 답변: "음 글쎄요"
-        응답: {"conditions":[]}
+        응답: {"responseType":"DEFERRED","conditions":[]}
+
+        되묻는 중인 조건: location
+        고객 답변: "5G 요금제는 얼마예요?"
+        응답: {"responseType":"NEW_QUESTION","conditions":[]}
 
         [응답 형식 - 반드시 아래 JSON만 출력]
         {
+          "responseType": "CONDITION_RESPONSE" | "DEFERRED" | "NEW_QUESTION",
           "conditions": [
             { "key": "location" | "serviceType", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
           ]
