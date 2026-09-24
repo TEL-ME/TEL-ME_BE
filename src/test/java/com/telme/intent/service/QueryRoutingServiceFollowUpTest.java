@@ -24,6 +24,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -171,17 +173,19 @@ class QueryRoutingServiceFollowUpTest {
         assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.DEFERRED);
     }
 
-    @Test
-    @DisplayName("대기 중 별개의 새 질문은 조건 답변과 구분한다")
-    void analyzeFollowUp_marksNewQuestion() {
+    @ParameterizedTest
+    @ValueSource(strings = {"5G 요금제는 얼마예요?", "로밍 요금", "해지 위약금"})
+    @DisplayName("LLM이 새 질문으로 판정한 결과를 규칙 폴백이 조건값으로 덮지 않는다")
+    void analyzeFollowUp_marksNewQuestion(String reply) {
         givenWaitingConsultExists();
         given(llmClient.generate(any())).willReturn(
                 "{\"responseType\":\"NEW_QUESTION\",\"conditions\":[]}");
 
         FollowUpRouteResponse response =
-                service.analyzeFollowUp(SESSION_ID, "5G 요금제는 얼마예요?");
+                service.analyzeFollowUp(SESSION_ID, reply);
 
         assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
         assertThat(response.disposition())
                 .isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
         assertThat(response.conditions()).isEmpty();

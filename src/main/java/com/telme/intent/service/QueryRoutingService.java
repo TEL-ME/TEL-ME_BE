@@ -218,8 +218,11 @@ public class QueryRoutingService {
 
         ExtractedConditions extracted = toExtractedConditions(payload);
 
-        // 조건이 하나도 안 잡히면 되묻기가 반복되므로 규칙으로 한 번 더 시도한다
-        if (extracted.isEmpty() && method == QueryRouting.Method.LLM) {
+        // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
+        // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
+        if (extracted.isEmpty()
+                && method == QueryRouting.Method.LLM
+                && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
             ExtractedConditions ruleConditions = toExtractedConditions(rulePayload);
