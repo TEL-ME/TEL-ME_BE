@@ -47,6 +47,7 @@ class KakaoLoginSuccessHandlerTest {
     private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
     private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
     private final SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
+    private final LoginCompletionService loginCompletionService = new LoginCompletionService(securityContextRepository);
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
     private final TransactionTemplate transactionTemplate = new TransactionTemplate() {
         @Override
@@ -56,7 +57,8 @@ class KakaoLoginSuccessHandlerTest {
     };
     private final KakaoLoginSuccessHandler handler = new KakaoLoginSuccessHandler(
             socialMemberFinder, userRepository, memberStatusChecker, guestSuccessionService, guestIdResolver,
-            kakaoLinkRequestStore, kakaoEmailMatchStore, securityContextRepository, oauth2Properties, transactionTemplate);
+            loginCompletionService, kakaoLinkRequestStore, kakaoEmailMatchStore, securityContextRepository,
+            oauth2Properties, transactionTemplate);
 
     @AfterEach
     void clearSecurityContext() {
@@ -93,6 +95,21 @@ class KakaoLoginSuccessHandlerTest {
 
         verify(guestSuccessionService, never()).succeedGuest(any(), any());
         assertThat(request.getSession().getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(9L);
+    }
+
+    @Test
+    @DisplayName("일반 로그인 - 성공하면 세션 고정 공격 방지를 위해 세션 ID가 바뀐다")
+    void 일반_로그인_성공시_세션_ID가_바뀐다() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        String originalSessionId = request.getSession().getId();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User user = User.builder().userId(18L).build();
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-18", null)).thenReturn(user);
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-18", null));
+
+        assertThat(request.getSession(false).getId()).isNotEqualTo(originalSessionId);
+        assertThat(request.getSession(false).getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(18L);
     }
 
     @Test

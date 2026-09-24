@@ -41,6 +41,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final MemberStatusChecker memberStatusChecker;
     private final GuestSuccessionService guestSuccessionService;
     private final GuestIdResolver guestIdResolver;
+    private final LoginCompletionService loginCompletionService;
     private final KakaoLinkRequestStore kakaoLinkRequestStore;
     private final KakaoEmailMatchStore kakaoEmailMatchStore;
     private final SecurityContextRepository securityContextRepository;
@@ -130,20 +131,9 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             }
         }
 
-        HttpSession session = request.getSession();
-        if (guestId != null) {
-            session.removeAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE);
-        }
-        session.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, user.getUserId());
-
-        // 지금까지 SecurityContext엔 원본 카카오 클레임(KakaoOAuth2User)이 담겨 있다 — 실제로 해석된 회원 기준으로 교체
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getUserId(), null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-        securityContextRepository.saveContext(context, request, response);
+        // 지금까지 SecurityContext엔 원본 카카오 클레임(KakaoOAuth2User)이 담겨 있다 — 이메일 로그인과 같은
+        // completeLogin()에 맡겨 실제로 해석된 회원 기준으로 교체(세션ID 재발급 포함)한다
+        loginCompletionService.completeLogin(user, guestId, request, response);
 
         response.sendRedirect(redirectUri(true, null));
     }
