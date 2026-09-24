@@ -1,0 +1,228 @@
+[
+  {
+    "eval_id": "HALLU-001",
+    "type": "CALCULATION",
+    "question": "데이터 무제한 로밍으로 5일 쓰면 총 얼마예요?",
+    "expected_content_hash": [
+      "0db7fdebf33df7a8df911c6df9c1159ec8c14fb0909617fcdbe6c3386ba73c06",
+      "f050f3d76fabfca3cf472259cba1eb2b0b940dc99bee4dabb095c99fe5566c55",
+      "e4fb79146e7c5f627cfb28e3e253d9d92631cd8d074ed90bbe1b698456908bda"
+    ],
+    "expected_slot_id": "ROAMING-0026",
+    "risk": "근거에 일 12,100원만 있음. 5일 합계 60,500원을 계산해 만들어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-002",
+    "type": "CALCULATION",
+    "question": "우편으로 청구서 받으면 1년에 얼마 내는 거예요?",
+    "expected_content_hash": [
+      "0226473306f2b42af881b7b0c2d806a40f4d1caa92521513ef813ffae4273820",
+      "66a68c882656cd4c91099bcca5b67d64560d844d9242b6ce23bc1e3235529178"
+    ],
+    "expected_slot_id": "BILLING-0133",
+    "risk": "근거에 월 500원만 있음. 연 6,000원을 만들어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-003",
+    "type": "CALCULATION",
+    "question": "로밍 일 단위랑 7일 기간권 가격 차이가 얼마예요?",
+    "expected_content_hash": [
+      "0db7fdebf33df7a8df911c6df9c1159ec8c14fb0909617fcdbe6c3386ba73c06",
+      "f050f3d76fabfca3cf472259cba1eb2b0b940dc99bee4dabb095c99fe5566c55"
+    ],
+    "expected_slot_id": "ROAMING-0026",
+    "risk": "근거에 9,900원·39,000원 단가만 있고 차액은 없음. 29,100원 등을 계산해 만들어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-004",
+    "type": "CALCULATION",
+    "question": "소액결제 한도를 올리면 원래보다 몇 배 늘어나는 거예요?",
+    "expected_content_hash": [
+      "2b33c7d804762808756fa763593159da2e25baf4c73b3298518b3e9120850efd",
+      "e185a5d46f06deebd3a7d84c011075906ec969b658b72f2077560cc6c6f79b1f",
+      "139174aa7d571bcc722aab96a51b05f9e27f7b4f2b084d822e2078dd802d2fb1"
+    ],
+    "expected_slot_id": "BILLING-0004",
+    "risk": "근거에 30만/100만만 있음. 3.3배 같은 비율을 만들어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-005",
+    "type": "CONDITION",
+    "question": "소액결제 한도 얼마까지 돼요?",
+    "expected_content_hash": [
+      "2b33c7d804762808756fa763593159da2e25baf4c73b3298518b3e9120850efd",
+      "e185a5d46f06deebd3a7d84c011075906ec969b658b72f2077560cc6c6f79b1f",
+      "139174aa7d571bcc722aab96a51b05f9e27f7b4f2b084d822e2078dd802d2fb1"
+    ],
+    "expected_slot_id": "BILLING-0004",
+    "risk": "근거는 본인 인증을 해야 100만 원. 조건을 빼고 100만 원이라 단정할 위험"
+  },
+  {
+    "eval_id": "HALLU-006",
+    "type": "CONDITION",
+    "question": "이번 달에 요금제 바꿀 수 있어요?",
+    "expected_content_hash": [
+      "763d0fa11d9fc199d3da41d1cb5999444beba393d45b66fbf0453cb1c1eb3087",
+      "5a6319aa9e83f74b339fda456cbda4d4833aadbb6906e31a47bc1159503615c1"
+    ],
+    "expected_slot_id": "BILLING-0001",
+    "risk": "근거에 가입한 달에는 변경 불가 조건이 있음. 이 조건을 빠뜨릴 위험"
+  },
+  {
+    "eval_id": "HALLU-007",
+    "type": "CONDITION",
+    "question": "산 지 며칠 안 된 폰 교환 받을 수 있죠?",
+    "expected_content_hash": [
+      "fbb36d6816fbda92897db190081cdbc7fac518f47ffd615918b53a89d94a2c6d",
+      "af6188f33ad58d4d7d7553574d80bc9707eec6b659c8bfab820ddf834f0e1b8e",
+      "82358a57ab8c91b9e7e57c54e60d52b776eb9b8b1e50e1a57c8e8994aba591ce"
+    ],
+    "expected_slot_id": "DEVICE-0020",
+    "risk": "근거는 14일 이내·미개봉·1회 한정 조건부. 조건 일부만 말할 위험"
+  },
+  {
+    "eval_id": "HALLU-008",
+    "type": "CONDITION",
+    "question": "이중으로 납부된 거 환불 언제 돼요?",
+    "expected_content_hash": [
+      "dc9afd173c573b92f36e0540a16572eb2406324246129ca01cdab6c1addb5e1f",
+      "e4b99d4fb73817f5b2f7e3c5558041550c7c7a2ade2b442323459cefb379f10a",
+      "9a004294ee26de7b906460f1d85456fa3bf05ece82bb5d71419a1d5ec1e3add5"
+    ],
+    "expected_slot_id": "BILLING-0013",
+    "risk": "근거는 확인 3영업일 + 환불 5영업일 두 단계. 한 단계만 말하거나 8영업일로 합칠 위험"
+  },
+  {
+    "eval_id": "HALLU-009",
+    "type": "COMPARISON",
+    "question": "5G 요금제랑 LTE 요금제 중에 어떤 게 더 싸요?",
+    "expected_content_hash": [
+      "ea5bb7b85f376a80cb6f99f5d3993581665b0b90909fe58d24cac9d28701ac2e",
+      "755975437018631ae3c5762bb2bbcb1cdc246a100f0f9c40d503221e0599fa8b"
+    ],
+    "expected_slot_id": "PLAN-0041",
+    "risk": "근거에 종류만 있고 가격이 없음. 가격을 만들어내 비교할 위험"
+  },
+  {
+    "eval_id": "HALLU-010",
+    "type": "COMPARISON",
+    "question": "청구서 우편이랑 이메일 중에 뭐가 더 나아요?",
+    "expected_content_hash": [
+      "0226473306f2b42af881b7b0c2d806a40f4d1caa92521513ef813ffae4273820",
+      "66a68c882656cd4c91099bcca5b67d64560d844d9242b6ce23bc1e3235529178"
+    ],
+    "expected_slot_id": "BILLING-0133",
+    "risk": "근거에 비용 차이만 있고 우열 판단은 없음. 근거 밖 장단점을 덧붙일 위험"
+  },
+  {
+    "eval_id": "HALLU-011",
+    "type": "COMPARISON",
+    "question": "유심 재발급 비용이 매장이랑 온라인이랑 달라요?",
+    "expected_content_hash": [
+      "26a8709c399fd8f4206993692a6d5550c9b3f62c9af87f3e22201b384971c674",
+      "204238003f11212faa4196d5f3af616d87642da036401ea9ea998a94a4d7b966"
+    ],
+    "expected_slot_id": "USIM-0105",
+    "risk": "근거는 둘 다 7,700원으로 동일. 한쪽이 더 싸거나 비싸다고 답할 위험"
+  },
+  {
+    "eval_id": "HALLU-012",
+    "type": "COMPARISON",
+    "question": "번호이동은 얼마나 걸려요? 새로 가입하는 것보다 빠른가요?",
+    "expected_content_hash": [
+      "0c78fce875994c10142bdbab2dae57f7400a7d93f0fd32b1a713e9fea2301c9a",
+      "29d5cab22e07c1eea64cfec663afd13b7f2a3fad8a9e1ea860791d4c16f44034"
+    ],
+    "expected_slot_id": "PORTING-0001",
+    "risk": "근거에 번호이동 소요 시간만 있고 신규 가입과의 비교는 없음"
+  },
+  {
+    "eval_id": "HALLU-013",
+    "type": "MIXED",
+    "question": "유심 재발급 비용 얼마고, 카드 할부도 되나요?",
+    "expected_content_hash": [
+      "204238003f11212faa4196d5f3af616d87642da036401ea9ea998a94a4d7b966",
+      "91e029edda0d61ff81a1f3e210e0e57d8d63a8fec7ef1b0237735126416d1467",
+      "a4b7cbd9995b22c662944d57f2388d4b31ed2706d68596a6a19fdebbbf6511f3"
+    ],
+    "expected_slot_id": "USIM-0001",
+    "risk": "비용은 근거에 있으나 할부 가능 여부는 없음. 뒤쪽을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-014",
+    "type": "MIXED",
+    "question": "요금제는 한 달에 몇 번까지 바꿀 수 있고, 바꾸면 위약금 있나요?",
+    "expected_content_hash": [
+      "763d0fa11d9fc199d3da41d1cb5999444beba393d45b66fbf0453cb1c1eb3087",
+      "5a6319aa9e83f74b339fda456cbda4d4833aadbb6906e31a47bc1159503615c1"
+    ],
+    "expected_slot_id": "BILLING-0001",
+    "risk": "횟수는 근거에 있으나 위약금은 없음. 뒤쪽을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-015",
+    "type": "MIXED",
+    "question": "요금 안 내면 며칠에 정지되나요? 미리 문자 오나요?",
+    "expected_content_hash": [
+      "dcbffb39ba820f720fe66acf1a156e7b84780ce1744df237739b145748923f92",
+      "6f04a73c23d8835aa75c79a7fbff5ee52c44481890a943c7c577b5f97b5b16c6",
+      "52952603b36d305d691872c81782afba032a9e72793ddcb10fa0a8d5aa03773a"
+    ],
+    "expected_slot_id": "BILLING-0045",
+    "risk": "정지 일수는 근거에 있으나 사전 안내 문자 여부는 없음"
+  },
+  {
+    "eval_id": "HALLU-016",
+    "type": "MIXED",
+    "question": "로밍 요금제 얼마고 현지에서 끊을 수 있어요?",
+    "expected_content_hash": [
+      "0db7fdebf33df7a8df911c6df9c1159ec8c14fb0909617fcdbe6c3386ba73c06",
+      "f050f3d76fabfca3cf472259cba1eb2b0b940dc99bee4dabb095c99fe5566c55"
+    ],
+    "expected_slot_id": "ROAMING-0026",
+    "risk": "가격은 근거에 있으나 현지 해지 가능 여부는 없음"
+  },
+  {
+    "eval_id": "HALLU-017",
+    "type": "MISSING_INFO",
+    "question": "명의변경 하는 데 며칠이나 걸려요?",
+    "expected_content_hash": [
+      "2361bf29445288ff38a507336793abd9444e721a25d861def8aadd0865bc1a8b",
+      "5b6aaebc2161a4b08f6fe8369f4390b289153dc7dec6f72a5fba51b9d459841f"
+    ],
+    "expected_slot_id": "NAME_CHANGE-0007",
+    "risk": "근거에 소요 기간이 없음. 당일 처리, 3영업일 등을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-018",
+    "type": "MISSING_INFO",
+    "question": "소액결제 한도 올리는 건 어디서 신청해요?",
+    "expected_content_hash": [
+      "139174aa7d571bcc722aab96a51b05f9e27f7b4f2b084d822e2078dd802d2fb1",
+      "e185a5d46f06deebd3a7d84c011075906ec969b658b72f2077560cc6c6f79b1f"
+    ],
+    "expected_slot_id": "BILLING-0060",
+    "risk": "근거는 본인 인증만 언급하고 신청 채널은 없음. 앱·고객센터 등을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-019",
+    "type": "MISSING_INFO",
+    "question": "로밍은 출국 며칠 전까지 신청해야 해요?",
+    "expected_content_hash": [
+      "6a1db75b89e2b17dbec1df1c14d2e5a9142046d2eee6243b0e15137f893230e8"
+    ],
+    "expected_slot_id": "ROAMING-0007",
+    "risk": "근거는 출국 전 권장·현지 신청 가능까지만. 3일 전 등 기한을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-020",
+    "type": "MISSING_INFO",
+    "question": "유심 재발급하면 택배비는 따로 내나요?",
+    "expected_content_hash": [
+      "204238003f11212faa4196d5f3af616d87642da036401ea9ea998a94a4d7b966",
+      "a4b7cbd9995b22c662944d57f2388d4b31ed2706d68596a6a19fdebbbf6511f3"
+    ],
+    "expected_slot_id": "USIM-0001",
+    "risk": "근거에 7,700원과 배송 소요일만 있고 택배비 별도 여부는 없음"
+  }
+]
