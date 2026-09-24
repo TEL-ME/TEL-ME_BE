@@ -13,11 +13,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-class PendingKakaoLinkStoreTest {
+class KakaoEmailMatchStoreTest {
 
     private final Instant now = Instant.parse("2026-09-23T00:00:00Z");
     private final MutableClock clock = new MutableClock(now);
-    private final PendingKakaoLinkStore store = new PendingKakaoLinkStore(clock);
+    private final KakaoEmailMatchStore store = new KakaoEmailMatchStore(clock);
 
     @Test
     @DisplayName("발급 직후에는 그대로 조회된다")
@@ -25,7 +25,7 @@ class PendingKakaoLinkStoreTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
         store.issue(request, "kakao-1", 10L, "match@example.com");
-        PendingKakaoLink pending = store.require(request);
+        KakaoEmailMatch pending = store.require(request);
 
         assertThat(pending.providerUserId()).isEqualTo("kakao-1");
         assertThat(pending.matchedUserId()).isEqualTo(10L);
@@ -56,7 +56,7 @@ class PendingKakaoLinkStoreTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
-        assertThat(request.getSession(false).getAttribute(PendingKakaoLinkStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test
@@ -66,8 +66,8 @@ class PendingKakaoLinkStoreTest {
         store.issue(request, "kakao-1", 10L, "match@example.com");
 
         for (int i = 0; i < 5; i++) {
-            PendingKakaoLink pending = (PendingKakaoLink)
-                    request.getSession(false).getAttribute(PendingKakaoLinkStore.SESSION_ATTRIBUTE);
+            KakaoEmailMatch pending = (KakaoEmailMatch)
+                    request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE);
             store.registerFailedAttempt(request, pending);
         }
 
@@ -85,7 +85,7 @@ class PendingKakaoLinkStoreTest {
 
         store.issue(request, "kakao-new", 20L, "new@example.com");
 
-        PendingKakaoLink pending = store.require(request);
+        KakaoEmailMatch pending = store.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-new");
         assertThat(pending.matchedUserId()).isEqualTo(20L);
     }

@@ -45,7 +45,7 @@ class KakaoAccountLinkServiceTest {
     private final GuestIdResolver guestIdResolver = new GuestIdResolver();
     private final MemberConverter memberConverter = new MemberConverter();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-23T00:00:00Z"), ZoneOffset.UTC);
-    private final PendingKakaoLinkStore pendingKakaoLinkStore = new PendingKakaoLinkStore(clock);
+    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
     private final TransactionTemplate transactionTemplate = new TransactionTemplate() {
         @Override
         public <T> T execute(TransactionCallback<T> action) {
@@ -53,14 +53,14 @@ class KakaoAccountLinkServiceTest {
         }
     };
     private final KakaoAccountLinkService service = new KakaoAccountLinkService(
-            pendingKakaoLinkStore, userRepository, passwordEncoder, memberStatusChecker, socialMemberFinder,
+            kakaoEmailMatchStore, userRepository, passwordEncoder, memberStatusChecker, socialMemberFinder,
             guestSuccessionService, loginCompletionService, guestIdResolver, memberConverter, transactionTemplate);
 
     @Test
     @DisplayName("비밀번호가 맞으면 연결하고 로그인 처리한 뒤 pending 정보를 지운다")
     void 정상_연결() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);
@@ -71,14 +71,14 @@ class KakaoAccountLinkServiceTest {
 
         assertThat(response).isEqualTo(new LoginResponse(10L, "match@example.com"));
         verify(socialMemberFinder).linkExisting(KAKAO, "kakao-1", "match@example.com", matchedUser);
-        assertThatThrownBy(() -> pendingKakaoLinkStore.require(request)).isInstanceOf(GeneralException.class);
+        assertThatThrownBy(() -> kakaoEmailMatchStore.require(request)).isInstanceOf(GeneralException.class);
     }
 
     @Test
     @DisplayName("비밀번호가 틀리면 실패 시도를 기록하고 연결하지 않는다")
     void 비밀번호_틀리면_실패_기록() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("wrong", "HASHED")).thenReturn(false);
@@ -90,7 +90,7 @@ class KakaoAccountLinkServiceTest {
                 .isEqualTo(MemberErrorCode.INVALID_CREDENTIALS);
 
         verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
-        PendingKakaoLink pending = pendingKakaoLinkStore.require(request);
+        KakaoEmailMatch pending = kakaoEmailMatchStore.require(request);
         assertThat(pending.failedAttempts()).isEqualTo(1);
     }
 
@@ -98,7 +98,7 @@ class KakaoAccountLinkServiceTest {
     @DisplayName("연결 대상 회원이 정지 상태면 거부한다")
     void 정지된_회원은_거부() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED")
                 .status(User.Status.SUSPENDED).build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
@@ -132,7 +132,7 @@ class KakaoAccountLinkServiceTest {
         session.setAttribute(GUEST_ID_ATTRIBUTE, guestId);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setSession(session);
-        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);

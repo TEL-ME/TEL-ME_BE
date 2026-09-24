@@ -44,8 +44,8 @@ class KakaoLoginSuccessHandlerTest {
     private final GuestSuccessionService guestSuccessionService = mock(GuestSuccessionService.class);
     private final GuestIdResolver guestIdResolver = new GuestIdResolver();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-24T00:00:00Z"), ZoneOffset.UTC);
-    private final KakaoLinkPendingStore kakaoLinkPendingStore = new KakaoLinkPendingStore(clock);
-    private final PendingKakaoLinkStore pendingKakaoLinkStore = new PendingKakaoLinkStore(clock);
+    private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
+    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
     private final SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
     private final TransactionTemplate transactionTemplate = new TransactionTemplate() {
@@ -56,7 +56,7 @@ class KakaoLoginSuccessHandlerTest {
     };
     private final KakaoLoginSuccessHandler handler = new KakaoLoginSuccessHandler(
             socialMemberFinder, userRepository, memberStatusChecker, guestSuccessionService, guestIdResolver,
-            kakaoLinkPendingStore, pendingKakaoLinkStore, securityContextRepository, oauth2Properties, transactionTemplate);
+            kakaoLinkRequestStore, kakaoEmailMatchStore, securityContextRepository, oauth2Properties, transactionTemplate);
 
     @AfterEach
     void clearSecurityContext() {
@@ -132,8 +132,8 @@ class KakaoLoginSuccessHandlerTest {
 
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-1");
-        // PendingKakaoLinkStore(5-2)에 저장됐는지 require()로 확인
-        PendingKakaoLink pending = pendingKakaoLinkStore.require(request);
+        // KakaoEmailMatchStore(5-2)에 저장됐는지 require()로 확인
+        KakaoEmailMatch pending = kakaoEmailMatchStore.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-4");
         assertThat(pending.matchedUserId()).isEqualTo(20L);
     }
@@ -172,7 +172,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_정상_연결() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -191,7 +191,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_세션_불일치시_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 99L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-7", null));
@@ -206,7 +206,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_정지_회원은_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).status(User.Status.SUSPENDED).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -223,7 +223,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_이미_연결된_계정이면_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -241,7 +241,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_실패시_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).role(User.Role.ADMIN).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -264,7 +264,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_예상밖_오류도_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -284,7 +284,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원용_재조회도_실패하면_로그아웃_상태로_정리() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L))
@@ -306,7 +306,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원_대상_회원이_없으면_세션_userId도_지운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkPendingStore.issue(request, 30L);
+        kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L))
@@ -340,14 +340,14 @@ class KakaoLoginSuccessHandlerTest {
     @DisplayName("이전에 남아있던 B pending은 이번 로그인 결과와 섞이지 않고 지워진다")
     void 이전_B_pending은_섞이지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        pendingKakaoLinkStore.issue(request, "old-kakao-id", 999L, "old@example.com");
+        kakaoEmailMatchStore.issue(request, "old-kakao-id", 999L, "old@example.com");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
         when(socialMemberFinder.findOrCreate(KAKAO, "kakao-12", null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-12", null));
 
-        assertThat(request.getSession(false).getAttribute(PendingKakaoLinkStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test
@@ -355,7 +355,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_pending_만료시_일반_로그인으로_새지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         Instant longAgo = clock.instant().minusSeconds(600);
-        request.getSession().setAttribute(KakaoLinkPendingStore.SESSION_ATTRIBUTE, new KakaoLinkPending(30L, longAgo));
+        request.getSession().setAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE, new KakaoLinkRequest(30L, longAgo));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-13", null));

@@ -18,8 +18,8 @@ public class KakaoLoginFailureHandler implements AuthenticationFailureHandler {
     private static final String DEFAULT_REASON = "OAUTH2_LOGIN_FAILED";
 
     private final Oauth2Properties oauth2Properties;
-    private final KakaoLinkPendingStore kakaoLinkPendingStore;
-    private final PendingKakaoLinkStore pendingKakaoLinkStore;
+    private final KakaoLinkRequestStore kakaoLinkRequestStore;
+    private final KakaoEmailMatchStore kakaoEmailMatchStore;
 
     @Override
     public void onAuthenticationFailure(
@@ -27,8 +27,8 @@ public class KakaoLoginFailureHandler implements AuthenticationFailureHandler {
             throws IOException {
         // 카카오 인증 자체가 실패(취소·state 불일치·토큰 교환 실패 등)해도 진행 중이던 pending 정보는 지운다 —
         // 안 지우면 다음 일반 로그인 시도에 이전 연결 모드가 잘못 적용될 수 있다
-        kakaoLinkPendingStore.clear(request);
-        pendingKakaoLinkStore.clear(request);
+        kakaoLinkRequestStore.clear(request);
+        kakaoEmailMatchStore.clear(request);
 
         String reason = exception instanceof OAuth2AuthenticationException oauth2Exception
                 ? oauth2Exception.getError().getErrorCode()

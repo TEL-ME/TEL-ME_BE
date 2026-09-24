@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RequiredArgsConstructor
 public class KakaoAccountLinkService {
 
-    private final PendingKakaoLinkStore pendingKakaoLinkStore;
+    private final KakaoEmailMatchStore kakaoEmailMatchStore;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MemberStatusChecker memberStatusChecker;
@@ -33,14 +33,14 @@ public class KakaoAccountLinkService {
 
     public LoginResponse confirmLink(
             KakaoLinkConfirmRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        PendingKakaoLink pending = pendingKakaoLinkStore.require(httpRequest);
+        KakaoEmailMatch pending = kakaoEmailMatchStore.require(httpRequest);
 
         // pending 발급 시점에 이미 존재를 확인한 회원이라 등록 시점과 달리 존재 여부를 시간차로 감출 필요가 없다
         User matchedUser = userRepository.findById(pending.matchedUserId())
                 .orElseThrow(() -> new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED));
 
         if (!passwordEncoder.matches(request.password(), matchedUser.getPasswordHash())) {
-            pendingKakaoLinkStore.registerFailedAttempt(httpRequest, pending);
+            kakaoEmailMatchStore.registerFailedAttempt(httpRequest, pending);
             throw new GeneralException(MemberErrorCode.INVALID_CREDENTIALS);
         }
 
@@ -56,7 +56,7 @@ public class KakaoAccountLinkService {
             transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, linkedUser));
         }
 
-        pendingKakaoLinkStore.clear(httpRequest);
+        kakaoEmailMatchStore.clear(httpRequest);
         loginCompletionService.completeLogin(linkedUser, guestId, httpRequest, httpResponse);
         return memberConverter.toLoginResponse(linkedUser);
     }

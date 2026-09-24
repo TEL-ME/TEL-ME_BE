@@ -17,10 +17,10 @@ class KakaoLoginFailureHandlerTest {
 
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
     private final Clock clock = Clock.systemDefaultZone().withZone(ZoneOffset.UTC);
-    private final KakaoLinkPendingStore kakaoLinkPendingStore = new KakaoLinkPendingStore(clock);
-    private final PendingKakaoLinkStore pendingKakaoLinkStore = new PendingKakaoLinkStore(clock);
+    private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
+    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
     private final KakaoLoginFailureHandler handler =
-            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkPendingStore, pendingKakaoLinkStore);
+            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkRequestStore, kakaoEmailMatchStore);
 
     @Test
     @DisplayName("OAuth2AuthenticationException이면 오류 코드를 reason으로 실어 리다이렉트한다")
@@ -69,12 +69,12 @@ class KakaoLoginFailureHandlerTest {
     void 인증_실패시_pending_정보를_모두_지운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        kakaoLinkPendingStore.issue(request, 30L);
-        pendingKakaoLinkStore.issue(request, "kakao-1", 10L, "match@example.com");
+        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
 
         handler.onAuthenticationFailure(request, response, new BadCredentialsException("카카오 인증 취소"));
 
-        assertThat(request.getSession(false).getAttribute(KakaoLinkPendingStore.SESSION_ATTRIBUTE)).isNull();
-        assertThat(request.getSession(false).getAttribute(PendingKakaoLinkStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 }

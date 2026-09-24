@@ -41,8 +41,8 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final MemberStatusChecker memberStatusChecker;
     private final GuestSuccessionService guestSuccessionService;
     private final GuestIdResolver guestIdResolver;
-    private final KakaoLinkPendingStore kakaoLinkPendingStore;
-    private final PendingKakaoLinkStore pendingKakaoLinkStore;
+    private final KakaoLinkRequestStore kakaoLinkRequestStore;
+    private final KakaoEmailMatchStore kakaoEmailMatchStore;
     private final SecurityContextRepository securityContextRepository;
     private final Oauth2Properties oauth2Properties;
     private final TransactionTemplate transactionTemplate;
@@ -68,11 +68,11 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private User resolveUser(HttpServletRequest request, HttpServletResponse response, String providerUserId, String email)
             throws IOException {
-        pendingKakaoLinkStore.clear(request);
+        kakaoEmailMatchStore.clear(request);
 
-        KakaoLinkPending pending;
+        KakaoLinkRequest pending;
         try {
-            pending = kakaoLinkPendingStore.consume(request);
+            pending = kakaoLinkRequestStore.consume(request);
         } catch (GeneralException exception) {
             redirectFailure(request, response, exception.getErrorCode().getCode());
             return null;
@@ -84,7 +84,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private User resolveLinkMode(
-            HttpServletRequest request, HttpServletResponse response, KakaoLinkPending pending,
+            HttpServletRequest request, HttpServletResponse response, KakaoLinkRequest pending,
             String providerUserId, String providerEmail)
             throws IOException {
         // pending만 믿지 않고 세션의 현재 로그인 상태와 대조 — 다른 탭에서 로그인 상태가 바뀌었을 수 있다
@@ -109,7 +109,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         try {
             return socialMemberFinder.findOrCreate(SocialAccount.Provider.KAKAO, providerUserId, email);
         } catch (SocialEmailAlreadyLinkedException exception) {
-            pendingKakaoLinkStore.issue(request, providerUserId, exception.getMatchedUserId(), exception.getMatchedEmail());
+            kakaoEmailMatchStore.issue(request, providerUserId, exception.getMatchedUserId(), exception.getMatchedEmail());
             redirectFailure(request, response, MemberErrorCode.EMAIL_LINK_REQUIRED.getCode());
             return null;
         } catch (GeneralException exception) {

@@ -14,11 +14,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-class KakaoLinkPendingStoreTest {
+class KakaoLinkRequestStoreTest {
 
     private final Instant now = Instant.parse("2026-09-24T00:00:00Z");
     private final MutableClock clock = new MutableClock(now);
-    private final KakaoLinkPendingStore store = new KakaoLinkPendingStore(clock);
+    private final KakaoLinkRequestStore store = new KakaoLinkRequestStore(clock);
 
     @Test
     @DisplayName("발급 직후에는 그대로 조회되고, 읽으면 제거된다(단일 사용)")
@@ -26,7 +26,7 @@ class KakaoLinkPendingStoreTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
         store.issue(request, 30L);
-        KakaoLinkPending pending = store.consume(request);
+        KakaoLinkRequest pending = store.consume(request);
 
         assertThat(pending.targetUserId()).isEqualTo(30L);
         assertThat(store.consume(request)).isNull();
@@ -52,7 +52,7 @@ class KakaoLinkPendingStoreTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
-        assertThat(request.getSession(false).getAttribute(KakaoLinkPendingStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test
