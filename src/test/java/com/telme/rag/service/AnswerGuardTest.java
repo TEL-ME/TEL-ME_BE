@@ -155,4 +155,50 @@ class AnswerGuardTest {
         assertThatThrownBy(() -> guard.verifyAmounts("12345678901234567890원입니다.", "9,900원입니다.", ""))
                 .isInstanceOf(GeneralException.class);
     }
+
+    @Test
+    @DisplayName("근거에 없는 안내 창구가 들어간 문장만 걷어낸다")
+    void 근거에_없는_창구_문장_제거() {
+        String answer = "유심 재발급 비용은 7,700원입니다. 자세한 내용은 샵 이벤트 페이지를 확인해 주세요.";
+        String context = "유심 재발급 비용이 얼마예요? 7,700원입니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "유심 얼마예요?"))
+                .isEqualTo("유심 재발급 비용은 7,700원입니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 창구는 그대로 둔다")
+    void 근거에_있는_창구는_유지() {
+        String answer = "매장을 방문하시면 즉시 발급됩니다.";
+        String context = "유심은 어디서 받아요? 매장을 방문하시면 즉시 발급됩니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "어디서 받아요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("고객이 질문에 쓴 창구는 지어낸 것이 아니다")
+    void 질문에_있는_창구는_유지() {
+        String answer = "고객센터로 문의하시면 확인됩니다.";
+        String context = "문의는 어떻게 하나요? 담당 부서에서 확인해 드립니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "고객센터로 물어봐야 하나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("남는 문장이 없으면 근거 없음으로 돌린다")
+    void 전부_걷히면_근거_없음() {
+        String answer = "샵 이벤트 페이지에서 확인해 주세요. 홈페이지 메뉴에서도 가능합니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, "유심 비용은 7,700원입니다.", "어디서 봐요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("답변이 null이나 공백이면 그대로 둔다")
+    void 창구_검사_빈_입력() {
+        assertThat(guard.trimUngroundedChannels(null, "근거", "질문")).isEmpty();
+        assertThat(guard.trimUngroundedChannels("  ", "근거", "질문")).isEqualTo("  ");
+    }
 }

@@ -127,6 +127,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         @Override
         public void onComplete() {
             answer = answerGuard.trimAfterNoEvidence(collected.toString());
+            answer = answerGuard.trimUngroundedChannels(answer, context, userQuery);
             answerGuard.verifyAmounts(answer, context, userQuery);
             delegate.onComplete();
         }

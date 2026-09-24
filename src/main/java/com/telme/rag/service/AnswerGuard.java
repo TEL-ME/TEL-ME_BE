@@ -35,6 +35,44 @@ public class AnswerGuard {
         return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_ANSWER.length()).strip();
     }
 
+    // 근거에 없는 안내 창구를 지어내는 경우가 있음. 프롬프트 3번 규칙이 있어도 막히지 않아 문장째 걷어낸다.
+    // FAQ 1,150건에 "샵", "이벤트"는 한 번도 없는데 "샵 이벤트 페이지"가 답변에 나온다
+    private static final Set<String> CHANNELS = Set.of(
+            "샵", "이벤트", "홈페이지", "페이지", "사이트", "앱", "메뉴",
+            "고객센터", "콜센터", "매장", "대리점", "지점"
+    );
+
+    // 문장 끝에서 자른다. 금액과 달리 답변 전체를 막지 않는 것은 나머지 문장은 근거대로인 경우가 많아서다
+    private static final Pattern SENTENCE = Pattern.compile("(?<=[.!?])\\s+");
+
+    public String trimUngroundedChannels(String answer, String context, String userQuery) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        String allowed = (context == null ? "" : context) + " " + (userQuery == null ? "" : userQuery);
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            Set<String> invented = ungroundedChannels(sentence, allowed);
+            if (invented.isEmpty()) {
+                kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+                continue;
+            }
+            log.warn("[AnswerGuard] 근거에 없는 안내 창구로 문장 제거: {} | {}", invented, sentence);
+        }
+        // 전부 걷히면 남길 내용이 없다. 지어낸 안내만 있던 답변이라 근거 없음으로 돌린다
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private Set<String> ungroundedChannels(String sentence, String allowed) {
+        Set<String> invented = new LinkedHashSet<>();
+        for (String channel : CHANNELS) {
+            if (sentence.contains(channel) && !allowed.contains(channel)) {
+                invented.add(channel);
+            }
+        }
+        return invented;
+    }
+
     // 근거의 금액을 계산해 없던 금액을 만들어내는 경우가 있음
     public void verifyAmounts(String answer, String context, String userQuery) {
         Set<BigInteger> invented = amountsIn(answer);
