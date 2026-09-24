@@ -193,7 +193,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_정상_연결() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -212,7 +213,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_세션_불일치시_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 99L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-7", null));
@@ -228,7 +230,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_비활성_회원은_인증을_제거한다(User.Status status) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).status(status).build();
         SecurityContextHolder.getContext().setAuthentication(authenticationOf("kakao-8", null));
@@ -253,7 +256,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_이미_연결된_계정이면_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -271,7 +275,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_실패시_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).role(User.Role.ADMIN).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -294,7 +299,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_예상밖_오류도_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
@@ -314,7 +320,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원용_재조회도_실패하면_로그아웃_상태로_정리() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L))
@@ -336,7 +343,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원_대상_회원이_없으면_세션_userId도_지운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.issue(request, 30L);
+        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
         when(userRepository.findById(30L))
@@ -385,7 +393,8 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_pending_만료시_일반_로그인으로_새지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         Instant longAgo = clock.instant().minusSeconds(600);
-        request.getSession().setAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE, new KakaoLinkRequest(30L, longAgo));
+        request.getSession().setAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE, new KakaoLinkRequest(30L, longAgo, null, "link-state"));
+        request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-13", null));

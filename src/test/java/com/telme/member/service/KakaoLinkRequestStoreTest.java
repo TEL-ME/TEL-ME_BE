@@ -25,7 +25,8 @@ class KakaoLinkRequestStoreTest {
     void 발급_직후_조회하면_제거된다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
-        store.issue(request, 30L);
+        store.bind(request, store.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
         KakaoLinkRequest pending = store.consume(request);
 
         assertThat(pending.targetUserId()).isEqualTo(30L);
@@ -44,7 +45,8 @@ class KakaoLinkRequestStoreTest {
     @DisplayName("3분이 지나면 만료 예외를 던지고(연결 시도가 있었다는 신호) 세션에서도 제거된다 — null과 구분")
     void 만료되면_예외() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, 30L);
+        store.bind(request, store.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
 
         clock.advance(Duration.ofMinutes(4));
 
@@ -59,9 +61,11 @@ class KakaoLinkRequestStoreTest {
     @DisplayName("재발급하면 이전 pending을 덮어쓴다")
     void 재발급하면_덮어쓴다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, 10L);
+        store.bind(request, store.issue(request, 10L), "link-state");
+        request.setParameter("state", "link-state");
 
-        store.issue(request, 20L);
+        store.bind(request, store.issue(request, 20L), "link-state");
+        request.setParameter("state", "link-state");
 
         assertThat(store.consume(request).targetUserId()).isEqualTo(20L);
     }
@@ -70,7 +74,8 @@ class KakaoLinkRequestStoreTest {
     @DisplayName("clear 하면 더 이상 조회되지 않는다")
     void clear하면_사라진다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, 30L);
+        store.bind(request, store.issue(request, 30L), "link-state");
+        request.setParameter("state", "link-state");
 
         store.clear(request);
 

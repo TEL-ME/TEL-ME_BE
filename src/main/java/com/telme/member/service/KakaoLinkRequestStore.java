@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,14 +19,26 @@ public class KakaoLinkRequestStore {
 
     private final Clock clock;
 
-    // 세션당 진행 중인 카카오 OAuth 흐름은 하나만 지원 — 새로 시작하면 이전 것을 덮어쓴다
-    public void issue(HttpServletRequest request, Long targetUserId) {
-        request.getSession().setAttribute(SESSION_ATTRIBUTE, new KakaoLinkRequest(targetUserId, clock.instant()));
+    public String issue(HttpServletRequest request, Long targetUserId) {
+        String token = UUID.randomUUID().toString();
+        request.getSession().setAttribute(SESSION_ATTRIBUTE,
+                new KakaoLinkRequest(targetUserId, clock.instant(), token, null));
+        return token;
     }
 
-    // 읽는 즉시 제거(단일 사용). 반환값 null은 "연결 시도 자체가 없었음"(일반 로그인)을 뜻하고,
-    // 있었지만 만료된 경우는 null이 아니라 예외로 구분한다 — 둘을 같이 취급하면 연결 시도가 있었는데
-    // 늦게 돌아온 콜백이 조용히 일반 로그인/가입으로 처리돼버린다
+    public void bind(HttpServletRequest request, String startToken, String state) {
+        HttpSession session = request.getSession(false);
+        KakaoLinkRequest pending = session == null ? null
+                : (KakaoLinkRequest) session.getAttribute(SESSION_ATTRIBUTE);
+        if (pending == null || pending.isExpired(clock.instant(), TTL)
+                || pending.startToken() == null || !pending.startToken().equals(startToken)
+                || state == null) {
+            throw new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+        }
+        session.setAttribute(SESSION_ATTRIBUTE,
+                new KakaoLinkRequest(pending.targetUserId(), pending.issuedAt(), null, state));
+    }
+
     public KakaoLinkRequest consume(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {
@@ -36,7 +49,8 @@ public class KakaoLinkRequestStore {
         if (pending == null) {
             return null;
         }
-        if (pending.isExpired(clock.instant(), TTL)) {
+        if (pending.isExpired(clock.instant(), TTL)
+                || pending.state() == null || !pending.state().equals(request.getParameter("state"))) {
             throw new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
         }
         return pending;

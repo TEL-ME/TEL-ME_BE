@@ -2,6 +2,10 @@ package com.telme.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.filter.GuestIdentityFilter;
+import com.telme.member.config.KakaoAuthorizationRequestResolver;
+import com.telme.member.service.KakaoLinkRequestStore;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
@@ -59,7 +63,9 @@ public class SecurityConfig {
             KakaoOAuth2UserService kakaoOAuth2UserService,
             KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
             KakaoLoginFailureHandler kakaoLoginFailureHandler,
-            RestAuthenticationEntryPoint restAuthenticationEntryPoint
+            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+            ClientRegistrationRepository clientRegistrationRepository,
+            KakaoLinkRequestStore kakaoLinkRequestStore
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -71,6 +77,11 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .addFilterAfter(guestIdentityFilter, SecurityContextHolderFilter.class)
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(
+                                new KakaoAuthorizationRequestResolver(
+                                        new DefaultOAuth2AuthorizationRequestResolver(
+                                                clientRegistrationRepository, "/oauth2/authorization"),
+                                        kakaoLinkRequestStore)))
                         .userInfoEndpoint(userInfo -> userInfo.userService(kakaoOAuth2UserService))
                         .successHandler(kakaoLoginSuccessHandler)
                         .failureHandler(kakaoLoginFailureHandler)

@@ -19,7 +19,7 @@ public class KakaoLinkStartService {
     public String start(HttpServletRequest httpRequest) {
         User currentUser = currentMemberResolver.resolve(httpRequest);
         kakaoEmailMatchStore.clear(httpRequest);
-        kakaoLinkRequestStore.issue(httpRequest, currentUser.getUserId());
-        return KAKAO_AUTHORIZE_PATH;
+        String token = kakaoLinkRequestStore.issue(httpRequest, currentUser.getUserId());
+        return KAKAO_AUTHORIZE_PATH + "?link_token=" + token;
     }
 }

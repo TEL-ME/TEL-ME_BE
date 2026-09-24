@@ -29,7 +29,10 @@ class KakaoLinkStartServiceTest {
 
         String redirect = service.start(request);
 
-        assertThat(redirect).isEqualTo("/oauth2/authorization/kakao");
+        assertThat(redirect).startsWith("/oauth2/authorization/kakao?link_token=");
+        String token = redirect.substring(redirect.indexOf('=') + 1);
+        kakaoLinkRequestStore.bind(request, token, "link-state");
+        request.setParameter("state", "link-state");
         assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
     }
 

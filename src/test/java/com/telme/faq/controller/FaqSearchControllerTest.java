@@ -1,5 +1,7 @@
 package com.telme.faq.controller;
 
+import com.telme.member.service.KakaoLinkRequestStore;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -33,6 +35,9 @@ class FaqSearchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private KakaoLinkRequestStore kakaoLinkRequestStore;
 
     @MockitoBean
     private FaqSearchService faqSearchService;
