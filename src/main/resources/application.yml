@@ -71,6 +71,13 @@ member:
     # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
     ttl: ${GUEST_TTL:30d}
 
+rag:
+  evidence-check:
+    # 검색이 통과시킨 근거가 질문에 실제로 답하는지 LLM에 한 번 더 묻는다
+    # 호출이 하나 늘어 응답이 느려진다. 측정 후 기본값을 정한다
+    enabled: ${RAG_EVIDENCE_CHECK_ENABLED:false}
+    max-tokens: 300
+
 faq:
   # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
   search-test-api-enabled: ${FAQ_SEARCH_TEST_API_ENABLED:false}
