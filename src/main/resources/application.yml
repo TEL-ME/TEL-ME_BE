@@ -56,8 +56,8 @@ embedding:
   warmup-enabled: ${EMBEDDING_WARMUP_ENABLED:false}
 
 search:
-  # 잠정값 — 무관 질문 유사도 분포 실측(2주차 임계값 캘리브레이션) 전까지의 임시 기준
-  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.7}
+  # 격자 측정 결과: FAQ 1,150건 + 임베딩 텍스트 Q_A + bge-m3 + 평가셋 130건 기준
+  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.72}
 
 member:
   guest:
@@ -67,6 +67,16 @@ member:
 faq:
   # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
   search-test-api-enabled: ${FAQ_SEARCH_TEST_API_ENABLED:false}
+  embedding-text:
+    # 임베딩에 넣을 텍스트 구성. QUESTION_ONLY | Q_A | CATEGORY_Q_A | Q_A_HEAD200
+    # 바꾸면 기존 벡터가 무효라 faq.reembed로 전량 재임베딩해야 한다
+    variant: ${FAQ_EMBEDDING_TEXT_VARIANT:Q_A}
+  reembed:
+    # 전량 재임베딩(FaqReembedRunner). true로 기동하면 faqs 전체를 다시 임베딩하고 exit-after면 종료
+    # 건너뛰기가 없어 재실행은 처음부터 다시 돈다
+    enabled: ${FAQ_REEMBED_ENABLED:false}
+    batch-size: 50
+    exit-after: true
   batch-load:
     # FAQ 배치 적재(FaqBatchLoadRunner). true로 기동하면 path의 JSON을 적재하고 exit-after면 종료
     # 이미 적재된 content_hash는 건너뛰므로 같은 파일을 다시 돌려도 안전
