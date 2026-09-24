@@ -1,7 +1,7 @@
 # FAQ 생성·검증·측정 스크립트
 
 기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과·결정 근거: `docs/SEARCH_TUNING.md`
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |

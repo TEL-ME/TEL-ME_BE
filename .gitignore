@@ -46,3 +46,6 @@ venv/
 __pycache__/
 *.pyc
 scripts/data/.embed_cache.json
+
+### 검색 품질 측정 원시 결과 (재생성 가능, docs/SEARCH_TUNING.md 13절) ###
+.measure/
