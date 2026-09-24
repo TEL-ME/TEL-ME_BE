@@ -6,6 +6,7 @@ import static com.telme.intent.dto.res.FollowUpRouteResponse.SERVICE_TYPE_KEY;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
+import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
 import com.telme.intent.dto.res.LlmFollowUpPayload.Status;
 import com.telme.intent.dto.res.LlmRoutingPayload;
 import com.telme.intent.dto.res.LlmRoutingPayload.SubQueryPayload;
@@ -56,6 +57,11 @@ public class RuleBasedRoutingFallback {
     // "잠깐만요", "나중에요"처럼 답을 미루는 표현도 지역이 아니다
     private static final Pattern DEFERRAL_PATTERN = Pattern.compile(
         "잠(깐|시)|이따|나중|기다|생각\\s*(좀|해)|고민|보류|글쎄|몰라|모르"
+    );
+
+    private static final Pattern NEW_QUESTION_PATTERN = Pattern.compile(
+        "[?？]|알려\\s*(줘|주세요)|설명해|추천해|찾아\\s*(줘|주세요)"
+        + "|어떻게|뭐야|무엇|되나요|돼요|인가요"
     );
 
     private static final List<String> STORE_KEYWORDS = List.of(
@@ -123,7 +129,7 @@ public class RuleBasedRoutingFallback {
     // LLM이 조건을 하나도 뽑지 못했을 때의 대체 경로로도 쓰인다
     public LlmFollowUpPayload classifyFollowUp(String text, Set<String> pendingKeys) {
         if (text == null || text.isBlank()) {
-            return new LlmFollowUpPayload(Collections.emptyList());
+            return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
         }
 
         String reply = text.trim();
@@ -132,9 +138,19 @@ public class RuleBasedRoutingFallback {
             Set<String> declinedKeys = (pendingKeys == null || pendingKeys.isEmpty())
                 ? Set.of(LOCATION_KEY)
                 : pendingKeys;
-            return new LlmFollowUpPayload(declinedKeys.stream()
-                .map(key -> new ConditionPayload(key, Status.DECLINED, null))
-                .toList());
+            return new LlmFollowUpPayload(
+                ResponseType.CONDITION_RESPONSE,
+                declinedKeys.stream()
+                    .map(key -> new ConditionPayload(key, Status.DECLINED, null))
+                    .toList());
+        }
+
+        if (ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
+            return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
+        }
+
+        if (NEW_QUESTION_PATTERN.matcher(reply).find()) {
+            return new LlmFollowUpPayload(ResponseType.NEW_QUESTION, Collections.emptyList());
         }
 
         List<ConditionPayload> conditions = new ArrayList<>();
@@ -149,7 +165,10 @@ public class RuleBasedRoutingFallback {
             conditions.add(new ConditionPayload(SERVICE_TYPE_KEY, Status.FILLED, serviceType));
         }
 
-        return new LlmFollowUpPayload(conditions);
+        ResponseType responseType = conditions.isEmpty()
+            ? ResponseType.DEFERRED
+            : ResponseType.CONDITION_RESPONSE;
+        return new LlmFollowUpPayload(responseType, conditions);
     }
 
     private String extractLocation(String reply) {

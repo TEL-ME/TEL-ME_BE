@@ -1,8 +1,11 @@
 package com.telme.intent.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
@@ -118,6 +121,28 @@ class QueryRoutingServiceTest {
             assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
             assertThat(r.subQueries().get(1).intent()).isEqualTo(ConsultRequest.Intent.STORE);
             assertThat(r.subQueries().get(1).conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        @Test
+        @DisplayName("단일 상담 진입점은 BOTH를 저장 전에 차단한다")
+        void singleConsultBlocksBothBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"BOTH","confidence":0.99,
+                 "refinedQuery":"5G 요금제와 신촌 매장",
+                 "extractedConditions":{"location":"신촌"},
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제","conditions":{}},
+                   {"order":2,"intent":"STORE","queryText":"신촌 매장","conditions":{"location":"신촌"}}
+                 ]}
+                """);
+            ChatMessage message = msg("5G 요금제와 신촌 매장 알려줘");
+
+            assertThatThrownBy(() -> service.routeSingleConsult(message, null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("단일 하위 질문");
+
+            verify(queryRoutingRepository, never()).save(any());
+            verify(consultRequestRepository, never()).save(any());
         }
 
         @Test

@@ -24,6 +24,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -155,6 +157,52 @@ class QueryRoutingServiceFollowUpTest {
 
         assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
         assertThat(response.conditions()).containsEntry("location", "홍대입구역");
+    }
+
+    @Test
+    @DisplayName("조건이 아닌 짧은 답변은 지역으로 오인하지 않고 기존 질문 대기를 유지한다")
+    void analyzeFollowUp_doesNotTreatPauseAsLocation() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "잠깐만요");
+
+        assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.declinedKeys()).isEmpty();
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.DEFERRED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5G 요금제는 얼마예요?", "로밍 요금", "해지 위약금"})
+    @DisplayName("LLM이 새 질문으로 판정한 결과를 규칙 폴백이 조건값으로 덮지 않는다")
+    void analyzeFollowUp_marksNewQuestion(String reply) {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"NEW_QUESTION\",\"conditions\":[]}");
+
+        FollowUpRouteResponse response =
+                service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
+        assertThat(response.disposition())
+                .isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
+        assertThat(response.conditions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("기존 형식의 빈 LLM 응답도 규칙이 새 질문으로 판정하면 다시 라우팅한다")
+    void analyzeFollowUp_usesRuleDispositionForLegacyEmptyResponse() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        FollowUpRouteResponse response =
+                service.analyzeFollowUp(SESSION_ID, "5G 요금제는 얼마예요?");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.disposition())
+                .isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
     }
 
     @Test
