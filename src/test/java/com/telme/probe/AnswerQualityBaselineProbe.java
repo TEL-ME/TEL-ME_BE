@@ -53,6 +53,9 @@ class AnswerQualityBaselineProbe {
             "scripts/data/eval_answer_quality_20.json"
     );
     private static final int TOP_K = 3;
+    // 기본은 0. 서비스 기본값(0.2)의 영향을 보려면 TELME_PROBE_TEMP로 바꾼다
+    private static final double TEMPERATURE =
+            Double.parseDouble(System.getenv().getOrDefault("TELME_PROBE_TEMP", "0"));
 
     @Autowired
     private FaqSearchService faqSearchService;
@@ -242,7 +245,7 @@ class AnswerQualityBaselineProbe {
                     .taskType(r.taskType())
                     .systemPrompt(r.systemPrompt())
                     .userPrompt(r.userPrompt())
-                    .temperature(0.0)
+                    .temperature(TEMPERATURE)
                     .maxTokens(r.maxTokens())
                     .format(r.format())
                     .contextCount(r.contextCount())

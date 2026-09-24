@@ -84,7 +84,7 @@ class OllamaRequestConverterTest {
                 .userPrompt("유심이 뭐야?")
                 .build(), false);
 
-        assertThat(result.options().temperature()).isEqualTo(0.2);
+        assertThat(result.options().temperature()).isEqualTo(0.0);
         assertThat(result.options().numPredict()).isEqualTo(1024);
     }
 
