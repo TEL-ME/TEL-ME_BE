@@ -25,7 +25,7 @@ public class ChatExecutionService {
     private final ChatMessageConverter chatMessageConverter;
     private final ApplicationEventPublisher eventPublisher;
 
-    public ChatOutputMessage startAnswer(Long executionId) {
+    public ChatExecutionState startAnswer(Long executionId) {
         ChatExecution execution = getRunningExecution(executionId);
         if (execution.getOutputMessage() != null) {
             throw new GeneralException(ChatErrorCode.ANSWER_ALREADY_STARTED);
@@ -35,10 +35,10 @@ public class ChatExecutionService {
         ChatMessage message = appendAssistantMessage(session, execution, ChatMessage.MessageType.ANSWER);
         execution.attachOutput(message);
         session.touch(Instant.now());
-        return flushed(execution, message);
+        return flushed(execution);
     }
 
-    public ChatOutputMessage completeAnswer(Long executionId, ChatAnswer answer) {
+    public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         Instant completedAt = Instant.now();
@@ -55,12 +55,13 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.resume();
         session.touch(completedAt);
-        ChatOutputMessage output = flushed(execution, message);
+        ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
+
     }
 
-    public ChatOutputMessage askClarification(Long executionId, String question) {
+    public ChatExecutionState askClarification(Long executionId, String question) {
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("되묻기 질문은 비어 있을 수 없습니다.");
         }
@@ -74,7 +75,7 @@ public class ChatExecutionService {
         execution.complete(message, completedAt);
         session.waitForClarification();
         session.touch(completedAt);
-        ChatOutputMessage output = flushed(execution, message);
+        ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
     }
@@ -95,7 +96,7 @@ public class ChatExecutionService {
         return state;
     }
 
-    public ChatOutputMessage fail(Long executionId, ChatFailure failure) {
+    public ChatExecutionState fail(Long executionId, ChatFailure failure) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         Instant endedAt = Instant.now();
@@ -104,12 +105,12 @@ public class ChatExecutionService {
         message.fail(failure.status(), endedAt);
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
-        return flushed(execution, message);
+        return flushed(execution);
     }
 
-    private ChatOutputMessage flushed(ChatExecution execution, ChatMessage message) {
+    private ChatExecutionState flushed(ChatExecution execution) {
         chatExecutionRepository.flush();
-        return ChatOutputMessage.of(execution, message);
+        return ChatExecutionState.of(execution);
     }
 
     private ChatExecution getRunningExecution(Long executionId) {

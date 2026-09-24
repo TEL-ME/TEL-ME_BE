@@ -7,6 +7,8 @@ import com.telme.feedback.repository.FeedbackStore;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -28,6 +30,11 @@ public class FeedbackService {
     public Optional<Feedback> get(long messageId, Actor actor) {
         validate(messageId, actor);
         return store.find(messageId, actor);
+    }
+
+    public Map<Long, Feedback> getAll(List<Long> messageIds, Actor actor) {
+        Objects.requireNonNull(actor, "authenticated actor");
+        return store.findByMessageIds(messageIds, actor);
     }
 
     @Transactional

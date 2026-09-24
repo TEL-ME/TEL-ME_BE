@@ -64,4 +64,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// @SpringBootTest 설정 조합마다 컨텍스트·HikariCP 풀이 따로 뜨는데, 기본 풀 크기(10)로는
+	// 컨텍스트 수만 늘어도 Postgres max_connections(기본 100)를 넘을 수 있어 테스트 한정으로 줄인다
+	systemProperty 'spring.datasource.hikari.maximum-pool-size', '3'
 }

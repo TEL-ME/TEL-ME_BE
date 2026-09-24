@@ -33,16 +33,24 @@ public final class FeedbackModels {
     public record Input(Rating rating, Reason reason, String comment) {
         public Input {
             Objects.requireNonNull(rating, "rating");
-            if (rating == Rating.LIKE && reason != null) {
+            if (rating == Rating.DISLIKE && reason == null) {
+                throw new IllegalArgumentException("Reason is required when rating is DISLIKE");
+            }
+            if (rating != Rating.DISLIKE && reason != null) {
                 throw new IllegalArgumentException("Reason is for DISLIKE only");
             }
             if (comment != null) {
                 comment = comment.strip();
+                if (comment.isEmpty()) {
+                    comment = null;
+                }
+            }
+            if (comment != null) {
                 if (comment.length() > 1000) {
                     throw new IllegalArgumentException("Comment exceeds 1000 characters");
                 }
-                if (comment.isEmpty()) {
-                    comment = null;
+                if (rating != Rating.DISLIKE) {
+                    throw new IllegalArgumentException("Comment is for DISLIKE only");
                 }
             }
         }
@@ -55,4 +63,10 @@ public final class FeedbackModels {
             Input input,
             Instant createdAt,
             Instant updatedAt) {}
+
+    public static boolean isRatable(String role, String messageType, String status) {
+        return "ASSISTANT".equals(role)
+                && ("ANSWER".equals(messageType) || "STORE_RESULT".equals(messageType))
+                && "COMPLETED".equals(status);
+    }
 }

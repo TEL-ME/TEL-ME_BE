@@ -38,7 +38,7 @@ public class ChatMessageConverter {
         );
     }
 
-    public ChatMessageHistoryItemResponse toHistoryItemResponse(ChatMessage message) {
+    public ChatMessageHistoryItemResponse toHistoryItemResponse(ChatMessage message, boolean ratable, ChatMessageHistoryItemResponse.MyFeedback myFeedback) {
         return new ChatMessageHistoryItemResponse(
                 message.getMessageId(),
                 message.getSequenceNo(),
@@ -51,7 +51,9 @@ public class ChatMessageConverter {
                 parseFollowUps(message),
                 parseStoreResults(message),
                 message.getCreatedAt(),
-                message.getCompletedAt()
+                message.getCompletedAt(),
+                ratable,
+                myFeedback
         );
     }
 

@@ -24,8 +24,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class ChatSessionService {
     private final ChatSessionConverter chatSessionConverter;
     private final ChatMessageConverter chatMessageConverter;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectProvider<ChatFeedbackReader> chatFeedbackReader;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -94,8 +97,14 @@ public class ChatSessionService {
                 : null;
 
         Collections.reverse(page);
+        ChatFeedbackReader reader = chatFeedbackReader.getIfAvailable();
+        Map<Long, ChatFeedbackReader.State> feedback = reader == null ? Map.of() : reader.read(actor, page);
         List<ChatMessageHistoryItemResponse> messages = page.stream()
-                .map(chatMessageConverter::toHistoryItemResponse)
+                .map(message -> {
+                    ChatFeedbackReader.State state = feedback.getOrDefault(
+                            message.getMessageId(), ChatFeedbackReader.State.UNAVAILABLE);
+                    return chatMessageConverter.toHistoryItemResponse(message, state.ratable(), state.myFeedback());
+                })
                 .toList();
         Long runningExecutionId = findRunningExecution(sessionId)
                 .map(ChatExecution::getExecutionId)

@@ -37,6 +37,7 @@ public class LlmGenerationRecorder {
                     .attempt((short) result.attempt())
                     .model(model)
                     .contextCount(request.contextCount())
+                    .promptVersion(request.promptVersion())
                     .firstTokenMs(result.firstTokenMs())
                     .totalMs(result.totalMs())
                     .status(result.status())
