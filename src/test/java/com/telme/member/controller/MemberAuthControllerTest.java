@@ -278,12 +278,14 @@ class MemberAuthControllerTest {
     }
 
     @Test
-    @DisplayName("이메일 로그인 방법 추가는 인증 없이 호출하면 403을 반환한다")
-    void 이메일_로그인_방법_추가는_미인증이면_403() throws Exception {
+    @DisplayName("이메일 로그인 방법 추가는 인증 없이 호출하면 401과 다른 API 오류와 같은 형식의 JSON을 반환한다")
+    void 이메일_로그인_방법_추가는_미인증이면_401() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login-methods/email")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new SignUpRequestJson("kakao@example.com", "password123"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value(MemberErrorCode.UNAUTHENTICATED.getCode()));
     }
 
     @Test
@@ -300,10 +302,12 @@ class MemberAuthControllerTest {
     }
 
     @Test
-    @DisplayName("카카오 연결 시작은 인증 없이 호출하면 403을 반환한다")
-    void 카카오_연결_시작은_미인증이면_403() throws Exception {
+    @DisplayName("카카오 연결 시작은 인증 없이 호출하면 401과 다른 API 오류와 같은 형식의 JSON을 반환한다")
+    void 카카오_연결_시작은_미인증이면_401() throws Exception {
         mockMvc.perform(get("/api/v1/auth/kakao/link-start"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value(MemberErrorCode.UNAUTHENTICATED.getCode()));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.telme.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.filter.GuestIdentityFilter;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
@@ -14,7 +15,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -58,7 +58,8 @@ public class SecurityConfig {
             SecurityContextRepository securityContextRepository,
             KakaoOAuth2UserService kakaoOAuth2UserService,
             KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
-            KakaoLoginFailureHandler kakaoLoginFailureHandler
+            KakaoLoginFailureHandler kakaoLoginFailureHandler,
+            RestAuthenticationEntryPoint restAuthenticationEntryPoint
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -74,10 +75,9 @@ public class SecurityConfig {
                         .successHandler(kakaoLoginSuccessHandler)
                         .failureHandler(kakaoLoginFailureHandler)
                 )
-                // oauth2Login을 켜면 Spring이 미인증 요청의 기본 처리를 카카오 로그인 리다이렉트로 바꿔버린다.
-                // /api/** 는 브라우저 리다이렉트가 아니라 API 호출이므로 기존 403 응답을 유지한다.
+                // oauth2Login 기본값(카카오 리다이렉트) 대신 /api/**는 다른 API 오류와 같은 형식(401 JSON)으로 응답한다
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
-                        new Http403ForbiddenEntryPoint(),
+                        restAuthenticationEntryPoint,
                         PathPatternRequestMatcher.withDefaults().matcher("/api/**")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
@@ -104,6 +104,12 @@ public class SecurityConfig {
     @Bean
     public SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
+    }
+
+    // @Component 대신 여기 @Bean으로 둬야 슬라이스 테스트(@Import(SecurityConfig.class))에서도 잡힌다
+    @Bean
+    public RestAuthenticationEntryPoint restAuthenticationEntryPoint(ObjectMapper objectMapper) {
+        return new RestAuthenticationEntryPoint(objectMapper);
     }
 
     // @Component 자동 등록으로 인한 서블릿 중복 실행을 막기 위해 비활성화
