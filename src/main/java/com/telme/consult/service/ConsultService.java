@@ -31,7 +31,8 @@ public class ConsultService {
     @Builder
     public record PreparedTurn(long sessionId, int expectedVersion, DialogueDecision decision) {
         public PreparedTurn {
-            if (sessionId <= 0 || expectedVersion <= 0) {
+            // JPA @Version은 새 엔티티를 0부터 시작하므로 0도 유효한 초기 버전이다.
+            if (sessionId <= 0 || expectedVersion < 0) {
                 throw new IllegalArgumentException("Invalid consultation reference");
             }
             Objects.requireNonNull(decision, "decision");

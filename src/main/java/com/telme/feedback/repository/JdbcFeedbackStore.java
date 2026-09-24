@@ -1,5 +1,6 @@
 package com.telme.feedback.repository;
 
+import com.telme.feedback.dto.FeedbackModels;
 import com.telme.feedback.dto.FeedbackModels.Actor;
 import com.telme.feedback.dto.FeedbackModels.Feedback;
 import com.telme.feedback.dto.FeedbackModels.Input;
@@ -11,10 +12,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** PR #7 테이블을 그대로 이용한다. 신규 테이블·엔티티 없음. 인증 통합 전 자동 등록하지 않는다. */
 public final class JdbcFeedbackStore implements FeedbackStore {
@@ -87,6 +91,46 @@ public final class JdbcFeedbackStore implements FeedbackStore {
     }
 
     @Override
+    public void succeedGuestFeedback(UUID guestId, long userId) {
+        // guest_id는 이력 보존을 위해 유지한다. chat_sessions 승계(succeedGuestSessions)와 같은 방식.
+        tx.executeWithoutResult(
+                status ->
+                        jdbc.update(
+                                "UPDATE message_feedback SET user_id=? WHERE guest_id=? AND"
+                                        + " user_id IS NULL",
+                                userId,
+                                guestId));
+    }
+    @Override
+    public Map<Long, Feedback> findByMessageIds(List<Long> messageIds, Actor actor) {
+        if (messageIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", Collections.nCopies(messageIds.size(), "?"));
+        String ownerFilter =
+                actor.userId() != null
+                        ? "s.user_id=?"
+                        : "s.user_id IS NULL AND s.guest_id=?";
+        String sql =
+                "SELECT f.* FROM message_feedback f JOIN chat_messages m ON"
+                        + " m.message_id=f.message_id JOIN chat_sessions s ON"
+                        + " s.session_id=m.session_id WHERE f.message_id IN ("
+                        + placeholders
+                        + ") AND f."
+                        + actorColumn(actor)
+                        + "=? AND "
+                        + ownerFilter;
+        Object[] params = new Object[messageIds.size() + 2];
+        for (int i = 0; i < messageIds.size(); i++) {
+            params[i] = messageIds.get(i);
+        }
+        params[messageIds.size()] = actorId(actor);
+        params[messageIds.size() + 1] = actorId(actor);
+        return jdbc.query(sql, this::read, params).stream()
+                .collect(Collectors.toMap(Feedback::messageId, f -> f));
+    }
+
+    @Override
     public void delete(long messageId, Actor actor) {
         tx.executeWithoutResult(
                 status -> {
@@ -128,9 +172,7 @@ public final class JdbcFeedbackStore implements FeedbackStore {
             throw new TargetUnavailable();
         }
         if (requireAnswer
-                && !("ASSISTANT".equals(t.role())
-                        && ("ANSWER".equals(t.type()) || "STORE_RESULT".equals(t.type()))
-                        && "COMPLETED".equals(t.status()))) {
+                && !FeedbackModels.isRatable(t.role(), t.type(), t.status())) {
             throw new TargetNotReady();
         }
     }
@@ -147,11 +189,13 @@ public final class JdbcFeedbackStore implements FeedbackStore {
 
     private Feedback read(ResultSet rs, int n) throws SQLException {
         var reason = rs.getString("reason_code");
+     // 로그인 승계 후에는 user_id와 guest_id가 함께 남으므로 회원 신원을 우선한다.
+        var userId = rs.getObject("user_id", Long.class);
         return new Feedback(
                 rs.getLong("feedback_id"),
                 rs.getLong("message_id"),
-                new Actor(
-                        rs.getObject("user_id", Long.class), rs.getObject("guest_id", UUID.class)),
+                userId != null ? new Actor(userId, null) : new Actor(null,
+                        rs.getObject("guest_id", UUID.class)),
                 new Input(
                         Rating.valueOf(rs.getString("rating")),
                         reason == null ? null : Reason.valueOf(reason),

@@ -52,6 +52,16 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
             @Param("throughSequenceNo") Integer throughSequenceNo
     );
 
+    // 로그인 시 게스트로 만든 채팅 세션을 회원 계정으로 승계. guest_id는 이력 보존을 위해 유지
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.userId = :userId
+            where session.guestId = :guestId
+              and session.userId is null
+            """)
+    int succeedGuestSessions(@Param("guestId") UUID guestId, @Param("userId") Long userId);
+
     boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
 
     boolean existsBySessionIdAndUserIdIsNullAndGuestId(Long sessionId, UUID guestId);

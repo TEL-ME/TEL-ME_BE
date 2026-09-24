@@ -1,8 +1,11 @@
 package com.telme.intent.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
@@ -118,6 +121,28 @@ class QueryRoutingServiceTest {
             assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
             assertThat(r.subQueries().get(1).intent()).isEqualTo(ConsultRequest.Intent.STORE);
             assertThat(r.subQueries().get(1).conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        @Test
+        @DisplayName("단일 상담 진입점은 BOTH를 저장 전에 차단한다")
+        void singleConsultBlocksBothBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"BOTH","confidence":0.99,
+                 "refinedQuery":"5G 요금제와 신촌 매장",
+                 "extractedConditions":{"location":"신촌"},
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제","conditions":{}},
+                   {"order":2,"intent":"STORE","queryText":"신촌 매장","conditions":{"location":"신촌"}}
+                 ]}
+                """);
+            ChatMessage message = msg("5G 요금제와 신촌 매장 알려줘");
+
+            assertThatThrownBy(() -> service.routeSingleConsult(message, null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("단일 하위 질문");
+
+            verify(queryRoutingRepository, never()).save(any());
+            verify(consultRequestRepository, never()).save(any());
         }
 
         @Test
@@ -269,6 +294,87 @@ class QueryRoutingServiceTest {
             assertThat(r.subQueries().get(0).order()).isEqualTo((short) 1);
             assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
             assertThat(r.subQueries().get(0).queryText()).isEqualTo("매장 안내");
+        }
+    }
+
+    @Nested
+    @DisplayName("상위 의도는 있는데 subQueries가 비어 온 경우")
+    class EmptySubQueries {
+
+        @Test
+        @DisplayName("FAQ → refinedQuery로 FAQ 하위 질의 1건을 만든다")
+        void faq_createsDefaultSubQuery() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"위약금 계산 기준",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("위약금 어떻게 계산돼?"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(r.subQueries()).hasSize(1);
+            assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+            assertThat(r.subQueries().get(0).queryText()).isEqualTo("위약금 계산 기준");
+        }
+
+        @Test
+        @DisplayName("STORE → 추출된 조건을 그대로 실은 STORE 하위 질의를 만든다")
+        void store_carriesExtractedConditions() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.94,"refinedQuery":"강남역 유심 재발급 매장",
+                 "extractedConditions":{"location":"강남역","serviceType":"USIM_REISSUE"},
+                 "subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("강남역에서 유심 재발급 되는 매장 알려줘"));
+
+            assertThat(r.subQueries()).hasSize(1);
+            assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.STORE);
+            assertThat(r.subQueries().get(0).conditions())
+                .containsEntry("location", "강남역")
+                .containsEntry("serviceType", "USIM_REISSUE");
+        }
+
+        @Test
+        @DisplayName("BOTH → 한쪽 상담이 누락되지 않도록 FAQ·STORE 하위 질의를 모두 만든다")
+        void both_createsFaqAndStoreSubQueries() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"BOTH","confidence":0.97,"refinedQuery":"5G 요금제 및 신촌 매장",
+                 "extractedConditions":{"location":"신촌"},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("5G 요금제 알려주고 신촌 매장도 찾아줘"));
+
+            assertThat(r.subQueries()).hasSize(2);
+            assertThat(r.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+            assertThat(r.subQueries().get(1).conditions()).containsEntry("location", "신촌");
+        }
+
+        @Test
+        @DisplayName("refinedQuery가 비면 사용자 원문으로 하위 질의를 만든다")
+        void fallsBackToRawContent() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.90,"refinedQuery":"","extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("로밍 요금 알려줘"));
+
+            assertThat(r.subQueries()).hasSize(1);
+            assertThat(r.subQueries().get(0).queryText()).isEqualTo("로밍 요금 알려줘");
+        }
+
+        @Test
+        @DisplayName("UNKNOWN은 상담할 내용이 없어 하위 질의를 만들지 않는다")
+        void unknown_createsNothing() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"","extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("오늘 날씨 어때?"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(r.subQueries()).isEmpty();
         }
     }
 }

@@ -440,6 +440,26 @@ class ChatSessionApiIntegrationTest {
     }
 
     @Test
+    void historyHasNoFeedbackStateWhenFeedbackIsDisabled() throws Exception {
+        long sessionId = createChatSession("피드백 비활성화");
+        entityManager.persist(ChatMessage.builder()
+                .session(entityManager.find(ChatSession.class, sessionId))
+                .sequenceNo(1)
+                .role(ChatMessage.Role.ASSISTANT)
+                .messageType(ChatMessage.MessageType.ANSWER)
+                .content("완료된 답변")
+                .status(ChatMessage.Status.COMPLETED)
+                .build());
+        entityManager.flush();
+
+        mockMvc.perform(get("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
+                        .session(ownerSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(false))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback").value(nullValue()));
+    }
+
+    @Test
     void rejectsInvalidMessageHistoryParameters() throws Exception {
         long sessionId = createChatSession("파라미터 테스트");
 

@@ -1,2 +1,2 @@
-// 피드백 도메인 Controller 계층. 구현 예정
+// 피드백 API와 요청자 식별을 담당한다.
 package com.telme.feedback.controller;

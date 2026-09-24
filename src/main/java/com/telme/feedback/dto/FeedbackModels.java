@@ -63,4 +63,10 @@ public final class FeedbackModels {
             Input input,
             Instant createdAt,
             Instant updatedAt) {}
+
+    public static boolean isRatable(String role, String messageType, String status) {
+        return "ASSISTANT".equals(role)
+                && ("ANSWER".equals(messageType) || "STORE_RESULT".equals(messageType))
+                && "COMPLETED".equals(status);
+    }
 }

@@ -1,5 +1,6 @@
 package com.telme.feedback;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.feedback.repository.FeedbackStore;
 
 /** 피드백 활성화 상태의 실제 컨텍스트로 Security → 컨트롤러 → 서비스 → DB 흐름을 검증한다. 테스트마다 롤백된다. */
 @SpringBootTest(properties = "telme.feedback.enabled=true")
@@ -30,20 +32,102 @@ import com.telme.chat.service.HttpSessionChatActorProvider;
 @Transactional
 class FeedbackApiIntegrationTest {
     static final String URL = "/api/v1/chat/messages/{messageId}/feedback";
+    static final String HISTORY_URL = "/api/v1/chat/sessions/{sessionId}/messages";
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired FeedbackStore feedbackStore;
 
     MockHttpSession owner;
+    long ownerId;
     long ownerSession;
     long answer;
 
     @BeforeEach
     void setUp() {
-        long userId = user("owner");
-        owner = memberSession(userId);
-        ownerSession = chatSession(userId, null);
+        ownerId = user("owner");
+        owner = memberSession(ownerId);
+        ownerSession = chatSession(ownerId, null);
         answer = message(ownerSession, "ASSISTANT", "ANSWER", "COMPLETED");
+    }
+
+    @Test
+    void historyShowsOwnFeedbackAndRatableState() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
+                .andExpect(status().isOk());
+        message(ownerSession, "ASSISTANT", "ANSWER", "COMPLETED");
+        message(ownerSession, "USER", "QUESTION", "COMPLETED");
+
+        // sequenceNo 오름차순: [0] 평가한 답변, [1] 평가 안 한 답변, [2] 질문
+        mvc.perform(get(HISTORY_URL, ownerSession).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("DISLIKE"))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.reason").value("WRONG_INFO"))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.comment").value("요금이 달라요"))
+                .andExpect(jsonPath("$.result.messages[1].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[1].myFeedback").value(nullValue()))
+                .andExpect(jsonPath("$.result.messages[2].ratable").value(false))
+                .andExpect(jsonPath("$.result.messages[2].myFeedback").value(nullValue()));
+    }
+
+    @Test
+    void guestFeedbackFollowsHistoryPaginationAndStaysPrivate() throws Exception {
+        UUID guestId = UUID.randomUUID();
+        long sessionId = chatSession(null, guestId);
+        long firstAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
+        long secondAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
+        MockHttpSession guest = guestSession(guestId);
+        save(guest, firstAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guest).param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.hasOlderMessages").value(true))
+                .andExpect(jsonPath("$.result.nextBeforeSequenceNo").value(2))
+                .andExpect(jsonPath("$.result.messages[0].messageId").value(secondAnswer))
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback").value(nullValue()));
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guest)
+                        .param("size", "1").param("beforeSequenceNo", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.hasOlderMessages").value(false))
+                .andExpect(jsonPath("$.result.messages[0].messageId").value(firstAnswer))
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
+
+        mvc.perform(get(HISTORY_URL, sessionId).session(guestSession(UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void historyTreatsMemberWithLeftoverGuestIdAsMember() throws Exception {
+        save(owner, answer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        MockHttpSession loggedInAfterGuest = memberSession(ownerId);
+        loggedInAfterGuest.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, UUID.randomUUID());
+
+        mvc.perform(get(HISTORY_URL, ownerSession).session(loggedInAfterGuest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
+    }
+
+    @Test
+    void historyShowsGuestFeedbackSucceededOnLogin() throws Exception {
+        UUID guestId = UUID.randomUUID();
+        long guestChat = chatSession(null, guestId);
+        long guestAnswer = message(guestChat, "ASSISTANT", "ANSWER", "COMPLETED");
+        save(guestSession(guestId), guestAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        // 로그인 승계: 세션과 피드백이 회원에게 넘어가고, guest_id는 이력용으로 함께 남는다
+        jdbc.update("UPDATE chat_sessions SET user_id=? WHERE session_id=?", ownerId, guestChat);
+        feedbackStore.succeedGuestFeedback(guestId, ownerId);
+
+        mvc.perform(get(URL, guestAnswer).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.rating").value("LIKE"));
+        mvc.perform(get(HISTORY_URL, guestChat).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.messages[0].ratable").value(true))
+                .andExpect(jsonPath("$.result.messages[0].myFeedback.rating").value("LIKE"));
     }
 
     @Test
