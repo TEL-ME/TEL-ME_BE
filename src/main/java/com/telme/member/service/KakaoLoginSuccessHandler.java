@@ -163,10 +163,15 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         if (existingUserId != null) {
             try {
                 userRepository.findById(existingUserId).ifPresentOrElse(
-                        existingUser -> context.setAuthentication(
-                                new UsernamePasswordAuthenticationToken(existingUser.getUserId(), null,
-                                        List.of(new SimpleGrantedAuthority("ROLE_" + existingUser.getRole().name())))),
+                        existingUser -> {
+                            memberStatusChecker.checkActive(existingUser);
+                            context.setAuthentication(
+                                    new UsernamePasswordAuthenticationToken(existingUser.getUserId(), null,
+                                            List.of(new SimpleGrantedAuthority("ROLE_" + existingUser.getRole().name()))));
+                        },
                         () -> removeSessionUserId(request));
+            } catch (GeneralException exception) {
+                removeSessionUserId(request);
             } catch (RuntimeException exception) {
                 // 복원을 위한 재조회 자체가 실패하면(연결 실패와 같은 DB 장애 등) 복원을 포기하고 로그아웃 상태로 정리한다
                 log.error("인증 복원을 위한 회원 재조회 실패 — 세션을 로그아웃 상태로 정리한다", exception);

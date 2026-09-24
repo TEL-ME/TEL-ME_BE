@@ -26,6 +26,10 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
@@ -218,21 +222,30 @@ class KakaoLoginSuccessHandlerTest {
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=KAKAO_LINK_SESSION_MISMATCH");
     }
 
-    @Test
-    @DisplayName("연결 모드 - 대상 회원이 정지 상태면 연결하지 않는다")
-    void 연결_모드_정지_회원은_거부() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = User.Status.class, names = {"SUSPENDED", "WITHDRAWN"})
+    @DisplayName("연결 모드 - 정지·탈퇴 회원은 연결을 거부하고 인증과 세션 userId를 제거한다")
+    void 연결_모드_비활성_회원은_인증을_제거한다(User.Status status) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
         kakaoLinkRequestStore.issue(request, 30L);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        User targetUser = User.builder().userId(30L).status(User.Status.SUSPENDED).build();
+        User targetUser = User.builder().userId(30L).status(status).build();
+        SecurityContextHolder.getContext().setAuthentication(authenticationOf("kakao-8", null));
         when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-8", null));
 
         verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
+        MemberErrorCode errorCode = status == User.Status.SUSPENDED
+                ? MemberErrorCode.ACCOUNT_SUSPENDED : MemberErrorCode.ACCOUNT_WITHDRAWN;
         assertThat(response.getRedirectedUrl())
-                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER403-0");
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=" + errorCode.getCode());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getSession(false).getAttribute(USER_ID_ATTRIBUTE)).isNull();
+        ArgumentCaptor<SecurityContext> contextCaptor = ArgumentCaptor.forClass(SecurityContext.class);
+        verify(securityContextRepository).saveContext(contextCaptor.capture(), any(), any());
+        assertThat(contextCaptor.getValue().getAuthentication()).isNull();
     }
 
     @Test
