@@ -29,6 +29,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 // KakaoOAuth2UserService는 원본 카카오 클레임만 넘긴다 — 로그인인지 계정연결인지,
 // 어떤 회원으로 귀결되는지는 세션에 접근 가능한 여기서 전부 판단한다
+//
+// 소셜 로그인 흐름 3가지 : 
+// A-1(로그인 회원이 카카오 연결 시작 — resolveLinkMode)
+// B(카카오 로그인 중 이메일 일치 회원 발견 — resolveLoginMode에서 시작해 KakaoAccountLinkService.confirmLink로 이어짐)
+// A-2(소셜 전용 회원이 이메일 로그인을 추가 — 카카오 인증 자체가 없어 이 클래스를 거치지 않고 EmailLoginMethodService가 처리)
 @Slf4j
 @Component
 @RequiredArgsConstructor

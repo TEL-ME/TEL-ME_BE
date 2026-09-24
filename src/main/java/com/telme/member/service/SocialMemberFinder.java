@@ -57,20 +57,14 @@ public class SocialMemberFinder {
 
     private User resolveLinkConflict(
             DataIntegrityViolationException exception, SocialAccount.Provider provider, String providerUserId, User existingUser) {
-        if (isUserProviderUniqueViolation(exception)) {
-            // 이 회원은 이미 해당 provider가 연결돼 있음 — 회원당 provider 1개 정책 위반
-            throw new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+        if (!isUserProviderUniqueViolation(exception) && !isSocialUniqueViolation(exception)) {
+            throw exception;
         }
-        if (isSocialUniqueViolation(exception)) {
-            // 동시 중복 클릭 등 — 이미 이 소셜 계정이 연결돼 있다면 대상이 같은 회원일 때만 그대로 성공 처리(멱등)
-            SocialAccount winner = socialAccountRepository.findByProviderAndProviderUserId(provider, providerUserId)
-                    .orElseThrow(() -> exception);
-            if (!winner.getUser().getUserId().equals(existingUser.getUserId())) {
-                throw new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
-            }
-            return existingUser;
-        }
-        throw exception;
+        // 어느 제약이 보고됐든, 이미 붙어 있는 계정이 같은 회원의 같은 소셜 계정이면 멱등 성공
+        return socialAccountRepository.findByProviderAndProviderUserId(provider, providerUserId)
+                .filter(existing -> existing.getUser().getUserId().equals(existingUser.getUserId()))
+                .map(existing -> existingUser)
+                .orElseThrow(() -> new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
     }
 
     private User createNew(SocialAccount.Provider provider, String providerUserId, String email) {

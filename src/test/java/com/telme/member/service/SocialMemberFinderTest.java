@@ -187,6 +187,24 @@ class SocialMemberFinderTest {
     }
 
     @Test
+    @DisplayName("이미 연결된 자기 자신의 계정을 다시 연결해도, user-provider 제약이 먼저 보고돼도 성공 처리한다")
+    void linkExisting_같은_회원의_같은_계정_재연결은_어느_제약이_보고되든_성공_처리() {
+        User existing = User.builder().userId(12L).email("link5@example.com").build();
+        SocialAccount alreadyLinked = SocialAccount.builder().user(existing).provider(KAKAO).providerUserId("kakao-11").build();
+        // 동시 중복 클릭 시 uk_social_provider가 아니라 uk_social_user_provider가 먼저 보고될 수도 있다
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_user_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-11"))
+                .thenReturn(Optional.of(alreadyLinked));
+
+        User result = finder.linkExisting(KAKAO, "kakao-11", "provider@example.com", existing);
+
+        assertThat(result).isEqualTo(existing);
+    }
+
+    @Test
     @DisplayName("다른 회원에게 이미 연결된 소셜 계정이면 거부한다")
     void linkExisting_다른_회원에_연결된_계정이면_거부() {
         User existing = User.builder().userId(11L).email("link4@example.com").build();
