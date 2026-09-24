@@ -58,17 +58,20 @@ def evaluate(items: list[dict], top_k: int, threshold: float, k_values=(1, 3, 5)
         wanted = set(expected if isinstance(expected, list) else [expected])
         ranks.append(next(r["rank"] for r in item["results"] if r["content_hash"] in wanted))
 
+    # 측정 대상이 없으면 키를 넣지 않는다
     out = {}
-    for k in k_values:
-        if k > top_k:
-            continue
-        out[f"recall@{k}"] = sum(1 for r in ranks if r is not None and r <= k) / len(positives)
-    out["mrr"] = sum(1 / r if r else 0.0 for r in ranks) / len(positives)
+    if positives:
+        for k in k_values:
+            if k > top_k:
+                continue
+            out[f"recall@{k}"] = sum(1 for r in ranks if r is not None and r <= k) / len(positives)
+        out["mrr"] = sum(1 / r if r else 0.0 for r in ranks) / len(positives)
 
-    out["rejection"] = sum(1 for i in negatives if rejected(i, threshold)) / len(negatives)
-    for kind in sorted({i.get("unrelated_kind") for i in negatives if i.get("unrelated_kind")}):
-        group = [i for i in negatives if i.get("unrelated_kind") == kind]
-        out[f"rejection:{kind}"] = sum(1 for i in group if rejected(i, threshold)) / len(group)
+    if negatives:
+        out["rejection"] = sum(1 for i in negatives if rejected(i, threshold)) / len(negatives)
+        for kind in sorted({i.get("unrelated_kind") for i in negatives if i.get("unrelated_kind")}):
+            group = [i for i in negatives if i.get("unrelated_kind") == kind]
+            out[f"rejection:{kind}"] = sum(1 for i in group if rejected(i, threshold)) / len(group)
     return out
 
 
@@ -92,7 +95,7 @@ def auc(items: list[dict]) -> float:
 
 def best_row(rows: list[dict], min_rejection: float) -> dict | None:
     """거부율 제약을 지키는 조합 중 Recall@3 최대. 동률이면 MRR, 그다음 낮은 임계값."""
-    ok = [r for r in rows if r["rejection"] >= min_rejection and "recall@3" in r]
+    ok = [r for r in rows if r.get("rejection", 0.0) >= min_rejection and "recall@3" in r]
     if not ok:
         return None
     return max(ok, key=lambda r: (r["recall@3"], r["mrr"], -r["threshold"]))
@@ -131,7 +134,8 @@ def main() -> int:
     print(f"\n## 최적 조합 (거부율 ≥ {args.min_rejection}, Recall@3 최대)\n")
     best = best_row(all_rows, args.min_rejection)
     if best is None:
-        print(f"  제약을 만족하는 조합이 없습니다 (최고 거부율 {max(r['rejection'] for r in all_rows):.3f})")
+        best_rejection = max((r.get("rejection", 0.0) for r in all_rows), default=0.0)
+        print(f"  제약을 만족하는 조합이 없습니다 (최고 거부율 {best_rejection:.3f})")
     else:
         print(f"  {best['variant']} / top-{best['top_k']} / threshold {best['threshold']}")
         print(f"  Recall@1 {best['recall@1']:.3f}  Recall@3 {best['recall@3']:.3f}  "

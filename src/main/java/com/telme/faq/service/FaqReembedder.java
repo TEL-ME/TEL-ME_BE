@@ -7,6 +7,8 @@ import com.telme.faq.entity.FaqEmbedding;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.faq.repository.FaqRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -69,10 +71,16 @@ public class FaqReembedder {
     }
 
     private void saveChunk(List<Faq> chunk, List<float[]> vectors, int[] counts) {
+        // 청크 전체를 한 번에 조회
+        Map<Long, FaqEmbedding> existingById = faqEmbeddingRepository
+                .findAllById(chunk.stream().map(Faq::getFaqId).toList())
+                .stream()
+                .collect(Collectors.toMap(FaqEmbedding::getFaqId, embedding -> embedding));
+
         for (int i = 0; i < chunk.size(); i++) {
             Faq faq = chunk.get(i);
             float[] vector = vectors.get(i);
-            FaqEmbedding existing = faqEmbeddingRepository.findById(faq.getFaqId()).orElse(null);
+            FaqEmbedding existing = existingById.get(faq.getFaqId());
             if (existing != null) {
                 existing.refresh(vector, embeddingProperties.model(), faq.getVersion());
                 counts[0]++;

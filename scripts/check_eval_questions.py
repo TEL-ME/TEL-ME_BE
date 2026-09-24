@@ -99,17 +99,24 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
             add(i, item, "FAQ 파일에 없는 해시",
                 f"{missing[0][:12]}... (질문, 답변 수정으로 해시가 바뀌었을 수 있음)")
             continue
-        faq = faq_by_hash[hashes[0]]
+        matched = [faq_by_hash[h] for h in hashes]
+
+        # 배열 전체가 같은 카테고리여야 한다
+        # 서로 다른 카테고리가 섞이면 카테고리별 집계가 첫 해시에 쏠린다
+        matched_categories = sorted({faq["category"] for faq in matched})
+        if len(matched_categories) > 1:
+            add(i, item, "정답 배열의 카테고리 불일치", ", ".join(matched_categories))
+            continue
 
         # expected_slot_id는 사람 확인용 메타데이터지만, 해시가 가리키는 FAQ와 어긋나면
-        # 리뷰어가 엉뚱한 FAQ를 보고 판단하게 되므로 대조한다
-        if expected_slot != faq.get("slot_id"):
+        # 리뷰어가 엉뚱한 FAQ를 보고 판단하게 되므로 대조한다(배열이면 그중 하나와 맞으면 된다)
+        matched_slots = [faq.get("slot_id") for faq in matched]
+        if expected_slot not in matched_slots:
             add(i, item, "expected_slot_id 불일치",
-                f"명시 {expected_slot}, 해시가 가리키는 FAQ는 {faq.get('slot_id')}")
-        coverage[(faq["category"], item_type)] += 1
+                f"명시 {expected_slot}, 해시가 가리키는 FAQ는 {matched_slots}")
+        coverage[(matched_categories[0], item_type)] += 1
 
-    # 건수를 고정하지 않고 대칭성만 본다 — 평가셋 크기는 늘어날 수 있지만
-    # SIMILAR/VARIANT가 한쪽으로 쏠리거나 특정 카테고리만 많으면 지표가 왜곡된다
+    # 건수를 고정하지 않고 대칭성만
     if type_count["SIMILAR"] != type_count["VARIANT"]:
         found.append(Finding(-1, "-", "유형 불균형",
                              f"SIMILAR {type_count['SIMILAR']}건, VARIANT {type_count['VARIANT']}건"))
@@ -209,6 +216,7 @@ STATIC_KINDS = (
     "UNRELATED인데 expected_slot_id가 있음",
     "expected_content_hash 없음",
     "expected_content_hash 중복",
+    "정답 배열의 카테고리 불일치",
     "FAQ 파일에 없는 해시",
     "expected_slot_id 불일치",
     "알 수 없는 unrelated_kind",
@@ -222,9 +230,11 @@ STATIC_KINDS = (
 def self_test() -> int:
     usim = {"slot_id": "USIM-S01", "category": "USIM"}
     plan = {"slot_id": "PLAN-S01", "category": "PLAN"}
+    usim2 = {"slot_id": "USIM-S02", "category": "USIM"}
     usim_hash = content_hash("유심 재발급 얼마예요?", "7,700원입니다.")
+    usim_hash2 = content_hash("유심 값이 얼마인가요?", "7,700원입니다.")
     plan_hash = content_hash("요금제 종류가 뭐예요?", "5G 4종, LTE 3종, 알뜰 2종입니다.")
-    faq_by_hash = {usim_hash: usim, plan_hash: plan}
+    faq_by_hash = {usim_hash: usim, usim_hash2: usim2, plan_hash: plan}
 
     items = [
         {"eval_id": "T01", "type": "SIMILAR", "question": "유심 재발급 비용이 얼마인가요?",
@@ -253,9 +263,12 @@ def self_test() -> int:
         {"eval_id": "T11", "type": "SIMILAR", "question": "같은 해시를 두 번 적음",
          "expected_content_hash": [usim_hash, usim_hash],                       # 배열 안 중복
          "expected_slot_id": "USIM-S01"},
-        {"eval_id": "T12", "type": "VARIANT", "question": "배열로 적은 정상 케이스",
-         "expected_content_hash": [usim_hash, plan_hash],                       # 정상 (복수 정답)
+        {"eval_id": "T12", "type": "VARIANT", "question": "배열에 다른 카테고리가 섞임",
+         "expected_content_hash": [usim_hash, plan_hash],                       # 카테고리 불일치
          "expected_slot_id": "USIM-S01"},
+        {"eval_id": "T13", "type": "SIMILAR", "question": "배열 안의 두 번째 slot_id를 적은 정상 케이스",
+         "expected_content_hash": [usim_hash, usim_hash2],                      # 정상 (같은 카테고리 복수 정답)
+         "expected_slot_id": "USIM-S02"},
     ]
     # 픽스처가 SIMILAR 6 / VARIANT 4라 "유형 불균형"이 걸리고,
     # USIM만 여러 건이고 PLAN은 1건이라 "카테고리 불균형"과 "카테고리 유형 불균형"도 걸린다
