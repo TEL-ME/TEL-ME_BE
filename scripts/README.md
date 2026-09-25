@@ -1,7 +1,7 @@
 # FAQ 생성·검증·측정 스크립트
 
 기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간)
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |
@@ -11,6 +11,7 @@
 | `check_eval_questions.py` | 평가셋 형식·정답 매핑 검증 | `--live`만 |
 | `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k·MRR 계산 | 서버 경유 |
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
+| `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |
 
@@ -197,6 +198,24 @@ python3 scripts/make_selfretrieval_eval.py
 - 용도: 카테고리 내부 혼동도 측정 (유사 질문 견고성 아님)
 - 제약: `QUESTION_ONLY` 구성에서는 쿼리와 문서가 같은 문자열이라 유사도 1.0으로 포화
 
+## 9. 실패 원인 분류
+
+```bash
+python3 scripts/classify_search_failures.py .measure/raw-1150-Q_A.json --list
+python3 scripts/classify_search_failures.py .measure/raw-before.json .measure/raw-after.json \
+  --threshold 0.72,<개선 후 임계값> --cutoff 0.8152
+python3 scripts/classify_search_failures.py --self-test
+```
+
+- 입력: `--dump-json` 결과(임계값 0 수집). 평가셋 경로는 원시 결과에 기록된 값을 쓰고, 정답 FAQ 질문은 `--faq`(기본 `faq_full_1150.json`)에서 `content_hash`로 찾음. DB·서버 불필요
+- **저장소 루트에서 실행.** 원시 결과에 평가셋 경로가 상대경로로 기록돼 있음. 다른 위치에서 실행하면 `--eval`로 지정
+- 결과가 빈 문항이 있으면(임계값을 켠 채 수집) 분류하지 않고 멈춤
+- 그룹: 1등 정답 여부 × 1등 점수 ≥ `--threshold`(기본 0.72) → A 정상 / B 정답인데 점수 미달 / C 1등부터 오답 / D 오답인데 통과
+- 원인: 사용자 질문과 정답 FAQ 질문의 유사도가 기준선 이상이면 문서 쪽(B는 답변 희석, C·D는 비슷한 FAQ에 밀림), 미만이면 질문 쪽
+- 기준선: 생략하면 첫 파일의 A 그룹 최솟값. **전후 비교 때는 `--cutoff`로 고정** — 기준선이 움직이면 비교가 안 됨
+- 파일을 여러 개 넣으면 원인별 건수 비교표와 원인이 바뀐 문항 목록 출력
+- 결과·해석: `docs/SEARCH_FAILURE_ANALYSIS.md`
+
 ---
 
 ## 자기 검증
@@ -207,6 +226,7 @@ python3 scripts/make_selfretrieval_eval.py
 | `check_duplicates.py` | 2건 |
 | `check_eval_questions.py` | 15종 |
 | `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
+| `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
