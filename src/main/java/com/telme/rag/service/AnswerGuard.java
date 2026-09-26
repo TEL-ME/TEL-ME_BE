@@ -19,9 +19,10 @@ public class AnswerGuard {
     private static final Pattern AMOUNT = Pattern.compile(
             "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
 
-    // "3영업일"처럼 숫자와 단위 사이에 글자가 끼면 걸리지 않는다
+    // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
     private static final Pattern MEASURE = Pattern.compile(
-            "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(배|%|일|개월|시간|분|GB|회|년)");
+            "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
+                    + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|배|%|일|개월|시간|분|GB|회|년)");
 
     private static final BigInteger[] UNITS = {
             BigInteger.valueOf(100_000_000L), BigInteger.valueOf(10_000L), BigInteger.ONE
@@ -119,7 +120,11 @@ public class AnswerGuard {
         }
         Matcher matcher = MEASURE.matcher(text);
         while (matcher.find()) {
-            measures.add(matcher.group(1).replace(",", "") + matcher.group(2));
+            String unit = matcher.group(3);
+            if (matcher.group(1) != null) {
+                measures.add(matcher.group(1).replace(",", "") + unit);
+            }
+            measures.add(matcher.group(2).replace(",", "") + unit);
         }
         return measures;
     }

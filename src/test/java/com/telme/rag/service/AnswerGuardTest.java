@@ -224,6 +224,38 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("근거에 없는 영업일 수를 차단한다")
+    void 근거에_없는_영업일_차단() {
+        String answer = "배송에는 5영업일이 걸립니다.";
+        String context = "배송에는 3영업일이 걸립니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("5영업일");
+    }
+
+    @Test
+    @DisplayName("영업일 범위의 양쪽 값이 근거에 있으면 통과시킨다")
+    void 영업일_범위_통과() {
+        String answer = "배송에는 2~3영업일이 걸립니다.";
+        String context = "온라인 신청 시 택배로 2~3 영업일이 걸립니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("근거 범위에 없는 영업일 값을 차단한다")
+    void 영업일_범위_밖_차단() {
+        String answer = "배송에는 3~5 영업일이 걸립니다.";
+        String context = "온라인 신청 시 택배로 2~3 영업일이 걸립니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("5영업일");
+    }
+
+    @Test
     @DisplayName("근거에 없는 비교 표현이 든 문장을 걷어낸다")
     void 근거에_없는_비교_문장_제거() {
         String answer = "우편은 월 500원이고 이메일은 무료입니다. 이메일이 더 저렴하고 편리합니다.";

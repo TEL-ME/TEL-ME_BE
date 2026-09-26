@@ -132,9 +132,12 @@ def parse_verdict(text):
                 return verdict, str(data.get("reason", ""))[:60]
         except json.JSONDecodeError:
             pass
-    for label in LABELS:
-        if label in text.lower():
-            return label, ""
+    labels = set(re.findall(
+        r"(?<![a-z])(" + "|".join(sorted(LABELS, key=len, reverse=True)) + r")(?![a-z])",
+        text.lower(),
+    ))
+    if len(labels) == 1:
+        return labels.pop(), ""
     return None, text[:60]
 
 

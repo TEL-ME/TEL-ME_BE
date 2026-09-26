@@ -59,7 +59,7 @@ class AnswerQualityBaselineProbe {
             "scripts/data/eval_answer_quality_20.json"
     );
     private static final int TOP_K = 3;
-    // 기본은 0. 서비스 기본값(0.2)의 영향을 보려면 TELME_PROBE_TEMP로 바꾼다
+    // 기본은 서비스와 같은 0. 이전 운영값(0.2)과 비교할 때만 TELME_PROBE_TEMP로 바꾼다
     private static final double TEMPERATURE =
             Double.parseDouble(System.getenv().getOrDefault("TELME_PROBE_TEMP", "0"));
 
@@ -276,8 +276,8 @@ class AnswerQualityBaselineProbe {
     }
 
     /**
-     * 운영 기본값은 temperature 0.2라 같은 질문에도 답변이 매번 달라진다.
-     * 전후 비교가 불가능해 측정 동안만 0으로 고정한다. 운영 설정은 건드리지 않는다.
+     * 답변 품질을 같은 조건에서 비교할 수 있도록 측정값을 temperature 0으로 고정한다.
+     * 이전 운영값 0.2의 영향을 재현할 때는 TELME_PROBE_TEMP로 덮어쓴다.
      */
     @TestConfiguration
     static class ZeroTemperatureConfig {
