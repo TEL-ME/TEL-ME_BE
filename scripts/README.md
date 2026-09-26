@@ -1,7 +1,7 @@
 # FAQ 생성·검증·측정 스크립트
 
 기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과·결정 근거: `docs/SEARCH_TUNING.md`
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |
@@ -172,6 +172,8 @@ python3 scripts/measure_search_quality.py --self-test
 - `unrelated_kind`별 거부율 분리 출력
 - 정답 미검출 질문을 `eval_id`로 나열. 같은 정답을 공유하는 질문이 모두 실패하면 별도 표시
   - "적재 누락"과 "top-k 밖으로 밀림" 구분은 `content_hash`로 `faqs` 조회 필요
+- 요청마다 응답 시간(초)도 재서 평균·p95(ms)를 같이 찍는다(요청 전송~응답 수신 구간만, JSON 파싱
+  등은 제외). topK 값을 바꿔가며 Recall 개선폭과 지연시간 증가폭을 같이 비교할 때 쓴다(TELME-59).
 
 ## 7. 격자 분석
 
@@ -204,7 +206,7 @@ python3 scripts/make_selfretrieval_eval.py
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
 | `check_eval_questions.py` | 15종 |
-| `measure_search_quality.py` | 9건 |
+| `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
