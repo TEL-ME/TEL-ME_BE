@@ -12,6 +12,12 @@ import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URLEncoder;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -188,6 +194,66 @@ class AnswerQualityBaselineProbe {
         return e.getClass().getSimpleName() + ": " + e.getMessage();
     }
 
+    // 측정 전용. 스트리밍 없이 한 번에 받아 토큰 하나로 흘린다
+    private static final class BedrockLlmClient implements LlmClient {
+
+        private static final String MODEL = "openai.gpt-oss-120b-1:0";
+        private final HttpClient http = HttpClient.newHttpClient();
+        private final ObjectMapper mapper = new ObjectMapper();
+
+        @Override
+        public String generate(LlmRequest request) {
+            return call(request);
+        }
+
+        @Override
+        public void stream(LlmRequest request, LlmStreamHandler handler) {
+            handler.onToken(call(request));
+            handler.onComplete();
+        }
+
+        private String call(LlmRequest request) {
+            String prompt = (request.systemPrompt() == null ? "" : request.systemPrompt() + "\n\n")
+                    + request.userPrompt();
+            String body;
+            try {
+                body = mapper.writeValueAsString(Map.of(
+                        "messages", List.of(Map.of("role", "user",
+                                "content", List.of(Map.of("text", prompt)))),
+                        "inferenceConfig", Map.of("maxTokens", 2048, "temperature", 0),
+                        "additionalModelRequestFields", Map.of("reasoning_effort", "low")));
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+
+            String url = "https://bedrock-runtime."
+                    + System.getenv().getOrDefault("AWS_REGION", "us-east-1")
+                    + ".amazonaws.com/model/" + URLEncoder.encode(MODEL, StandardCharsets.UTF_8)
+                    + "/converse";
+            try {
+                HttpResponse<String> response = http.send(HttpRequest.newBuilder(URI.create(url))
+                        .header("Authorization", "Bearer " + System.getenv("BEDROCK_API_KEY"))
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofMinutes(2))
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build(), HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() != 200) {
+                    throw new IllegalStateException("Bedrock " + response.statusCode() + " " + response.body());
+                }
+                StringBuilder text = new StringBuilder();
+                for (JsonNode block : mapper.readTree(response.body())
+                        .path("output").path("message").path("content")) {
+                    if (block.has("text")) {
+                        text.append(block.get("text").asText());
+                    }
+                }
+                return text.toString().strip();
+            } catch (IOException | InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
     private record EvalCase(String evalId, String type, String question, String risk) {
     }
 
@@ -223,6 +289,10 @@ class AnswerQualityBaselineProbe {
                 public Object postProcessAfterInitialization(Object bean, String name) throws BeansException {
                     if (!"ollamaLlmClient".equals(name) || !(bean instanceof LlmClient delegate)) {
                         return bean;
+                    }
+                    // 남은 환각이 파이프라인 탓인지 모델 탓인지 가르기 위해 생성만 외부 모델로 바꾼다
+                    if ("bedrock".equals(System.getenv("TELME_PROBE_LLM"))) {
+                        return new BedrockLlmClient();
                     }
                     return new LlmClient() {
                         @Override
