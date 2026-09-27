@@ -13,6 +13,8 @@
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
+| `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
+| `check_stores.py` | 매장 데이터 제약·분포 검증 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |
 
 ## 준비
@@ -226,6 +228,8 @@ python3 scripts/classify_search_failures.py --self-test
 | `check_duplicates.py` | 2건 |
 | `check_eval_questions.py` | 15종 |
 | `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
+| `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
+| `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
