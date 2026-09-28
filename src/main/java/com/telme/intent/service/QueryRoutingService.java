@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -58,7 +59,9 @@ public class QueryRoutingService {
     private static final BigDecimal MIN_USABLE_CONFIDENCE = new BigDecimal("0.5");
     private static final Set<String> SERVICE_TYPES = Set.of(
         "NEW_LINE", "PORT_IN", "NAME_CHANGE", "USIM_REISSUE");
-    private static final Pattern NUMBER = Pattern.compile("\\d+(?:[.,]\\d+)?");
+    private static final Pattern NUMBER = Pattern.compile(
+        "\\d+(?:[.,]\\d+)?\\s*(?:TB|GB|MB|KB|G|테라바이트|기가바이트|메가바이트|테라|기가|메가|만원|원|개월|달|년|일|시간|분|회|개|%)?",
+        Pattern.CASE_INSENSITIVE);
     private static final Pattern PLACE = Pattern.compile(
         "[가-힣A-Za-z0-9]{1,14}(?:역|읍|면|공항|터미널|사거리)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
@@ -316,7 +319,9 @@ public class QueryRoutingService {
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
             String value = matcher.group();
-            values.add(pattern == NUMBER ? value.replace(",", "") : value);
+            values.add(pattern == NUMBER
+                    ? value.replace(",", "").replaceAll("\\s+", "").toUpperCase(Locale.ROOT)
+                    : value);
         }
         return values;
     }

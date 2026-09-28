@@ -506,6 +506,33 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        void numericUnitChangeUsesOriginalQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"15개월 요금제",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"15개월 요금제"}]}
+                """);
+            String original = "15GB 요금제 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(original), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(original);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+        }
+
+        @Test
+        void spacingInNumericUnitDoesNotChangeMeaning() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"15 GB 요금제 종류",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"15 GB 요금제 종류"}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg("15GB 요금제 알려줘"), null);
+
+            assertThat(result.refinedQuery()).isEqualTo("15 GB 요금제 종류");
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("15 GB 요금제 종류");
+        }
+
+        @Test
         void currentLocationOverridesHistoricalLocation() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
