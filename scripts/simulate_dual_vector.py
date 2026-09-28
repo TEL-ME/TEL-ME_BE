@@ -101,16 +101,32 @@ def tally(qa: dict, qo: dict, cov: dict, qa_threshold: float, qo_threshold: floa
 
 
 # SEARCH_FAILURE_ANALYSIS.md 8.2절 규칙: 현행과 같은 무관 거부율을 지키는 값 중 기존 긍정 Recall이 최대.
+# 여기에 현행에서 맞던 ANSWER가 하나도 깨지지 않을 것을 더한다(보강 평가셋을 넣은 목적).
+# 건수로 비교하면 하나 잃고 하나 얻은 경우가 같은 수로 가려지므로 문항 집합으로 비교한다.
 # 보강 평가셋만 넣으면 기존 긍정이나 무관이 0건일 수 있어, 그때는 규칙이 성립하지 않으므로 고르지 않는다
 def pick_threshold(base: dict, runs: dict) -> tuple[float | None, str | None]:
     if base["기존 긍정"][1] == 0:
         return None, "SIMILAR/VARIANT 질문이 없습니다. eval_questions_130 원시 결과를 함께 넣으세요"
     if base["무관"][1] == 0:
         return None, "무관 질문이 없어 거부율 조건을 확인할 수 없습니다"
-    keep = [t for t, r in runs.items() if r["무관"][0] >= base["무관"][0]]
+    keep = [t for t, r in runs.items()
+            if r["무관"][0] >= base["무관"][0] and base["ANSWER"][2] <= r["ANSWER"][2]]
     if not keep:
-        return None, "현행 거부율을 지키는 t가 후보에 없습니다. 더 높은 값을 넣어 보세요"
+        return None, "현행 거부율을 지키면서 ANSWER 손실이 없는 t가 후보에 없습니다. 더 높은 값을 넣어 보세요"
     return max(keep, key=lambda t: (runs[t]["기존 긍정"][0], -t)), None
+
+
+# 원시 결과에 코퍼스 구성이 기록되지 않아 --qa와 --qo를 바꿔 넣어도 평가셋 검사는 통과한다.
+# 구성 라벨이 생기기 전까지는 파일 이름으로라도 확인한다(EVAL_SET_SUPPLEMENT.md 4.1절 지문 확인이 실제 근거)
+def variant_warnings(qa_paths: list[Path], qo_paths: list[Path]) -> list[str]:
+    warnings = []
+    for path in qa_paths:
+        if "QUESTION_ONLY" in path.name or "Q_A" not in path.name:
+            warnings.append(f"--qa {path.name}: 파일 이름에 Q_A가 없거나 QUESTION_ONLY가 들어 있습니다")
+    for path in qo_paths:
+        if "QUESTION_ONLY" not in path.name:
+            warnings.append(f"--qo {path.name}: 파일 이름에 QUESTION_ONLY가 없습니다")
+    return warnings
 
 
 def row(label: str, t: dict) -> str:
@@ -139,14 +155,22 @@ def self_test() -> int:
         (covered({"expected_content_hash": ["a1"], "results": qo}), False),
         (covered({"expected_content_hash": "b1", "results": qo}), True),  # 문자열 정답
     ]
-    # 최적 t 선택: (성공 수, 전체 수)만 본다
-    t = lambda pos, unrel: {"기존 긍정": pos, "무관": unrel}
+    # 최적 t 선택: 기존 긍정·무관은 (성공 수, 전체 수), ANSWER는 성공 문항 집합까지 본다
+    t = lambda pos, unrel, ans=("A1", "A2"): {"기존 긍정": pos, "무관": unrel,
+                                             "ANSWER": (len(ans), 3, set(ans))}
     base = t((30, 80), (62, 70))
     runs = {0.85: t((40, 80), (60, 70)), 0.88: t((37, 80), (62, 70)), 0.90: t((37, 80), (62, 70))}
     checks += [
         (pick_threshold(base, runs)[0], 0.88),  # 거부율 유지 + 긍정 최대, 동률이면 낮은 t
         (pick_threshold(t((0, 0), (62, 70)), runs)[0], None),  # 기존 긍정 0건(보강 평가셋만)
         (pick_threshold(t((30, 80), (0, 0)), runs)[0], None),  # 무관 0건
+        (pick_threshold(base, {**runs, 0.88: t((37, 80), (62, 70), ("A1",))})[0], 0.90),  # ANSWER 손실 t는 건너뜀
+        (pick_threshold(base, {**runs, 0.88: t((37, 80), (62, 70), ("A1", "A3")),
+                               0.90: t((37, 80), (62, 70), ("A1", "A3"))})[0], None),  # 하나 잃고 하나 얻어도 손실
+    ]
+    checks += [
+        (variant_warnings([Path("raw-1150-Q_A.json")], [Path("raw-1150-QUESTION_ONLY.json")]), []),
+        (len(variant_warnings([Path("raw-1150-QUESTION_ONLY.json")], [Path("raw-1150-Q_A.json")])), 2),  # 뒤바뀜
     ]
     failed = [(i, got, want) for i, (got, want) in enumerate(checks) if got != want]
     for i, got, want in failed:
@@ -183,6 +207,8 @@ def main() -> int:
     if not args.qa or not args.qo:
         ap.error("--qa와 --qo 원시 결과 경로 필요 (또는 --self-test)")
 
+    for warning in variant_warnings(args.qa, args.qo):
+        print(f"주의: {warning} - EVAL_SET_SUPPLEMENT.md 4.1절 지문으로 코퍼스 구성을 확인하세요")
     qa, qo = load_runs(args.qa), load_runs(args.qo)
     if signature(qa) != signature(qo):
         diff = sorted(e for e in set(qa) | set(qo) if signature(qa).get(e) != signature(qo).get(e))
@@ -213,7 +239,7 @@ def main() -> int:
         print(f"\n최적 t를 고르지 않습니다: {reason}")
         return 0
     b, r = base, runs[best]
-    print(f"\n현행 거부율({b['무관'][0]}/{b['무관'][1]})을 지키는 t 중 기존 긍정 최대: t = {best} "
+    print(f"\n현행 거부율({b['무관'][0]}/{b['무관'][1]})을 지키고 ANSWER 손실이 없는 t 중 기존 긍정 최대: t = {best} "
           f"({b['기존 긍정'][0]} → {r['기존 긍정'][0]}, Recall@{args.top_k} "
           f"{b['기존 긍정'][0] / b['기존 긍정'][1]:.3f} → {r['기존 긍정'][0] / r['기존 긍정'][1]:.3f})")
     print(f"  살아나는 긍정: {sorted(r['기존 긍정'][2] - b['기존 긍정'][2])}")

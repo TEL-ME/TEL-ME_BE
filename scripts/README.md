@@ -287,7 +287,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
-| `simulate_dual_vector.py` | 18건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 3: 정상·기존 긍정 0건·무관 0건) |
+| `simulate_dual_vector.py` | 22건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 5: 정상·기존 긍정 0건·무관 0건·ANSWER 손실·잃고 얻은 손실 + 구성 경고 2) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
