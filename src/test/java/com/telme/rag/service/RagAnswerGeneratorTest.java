@@ -15,6 +15,8 @@ import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.rag.config.EvidenceCheckProperties;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import java.time.LocalDate;
@@ -50,13 +52,13 @@ class RagAnswerGeneratorTest {
     @Test
     @DisplayName("토큰을 handler로 보내면서 최종 답변을 모아 반환한다")
     void 토큰을_모아_답변을_만든다() {
-        RagAnswerGenerator generator = generator(new StubClient(List.of("요금제는 ", "월 1회 ", "변경됩니다.")));
+        RagAnswerGenerator generator = generator(new StubClient(List.of("요금제는 ", "한 달에 한 번 ", "변경됩니다.")));
 
         AnswerResult result = generator.generate(request(List.of(faq(1L))), handler);
 
-        assertThat(result.answer()).isEqualTo("요금제는 월 1회 변경됩니다.");
+        assertThat(result.answer()).isEqualTo("요금제는 한 달에 한 번 변경됩니다.");
         assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
-        assertThat(handler.tokens).containsExactly("요금제는 ", "월 1회 ", "변경됩니다.");
+        assertThat(handler.tokens).containsExactly("요금제는 ", "한 달에 한 번 ", "변경됩니다.");
         assertThat(handler.completed).isTrue();
     }
 
@@ -182,7 +184,11 @@ class RagAnswerGeneratorTest {
     }
 
     private RagAnswerGenerator generator(LlmClient client) {
-        return new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(), recorder);
+        // 판정은 꺼진 상태가 기본이라 항상 통과한다
+        EvidenceRelevanceChecker checker = new EvidenceRelevanceChecker(
+                client, new ObjectMapper(), new EvidenceCheckProperties(false, 300));
+        return new RagAnswerGenerator(
+                client, new AnswerContextConverter(), new AnswerGuard(), checker, recorder);
     }
 
     private AnswerRequest request(List<FaqSearchResponse> searchResults) {

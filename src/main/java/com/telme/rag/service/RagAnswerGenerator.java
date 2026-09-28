@@ -23,6 +23,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final LlmClient llmClient;
     private final AnswerContextConverter contextConverter;
     private final AnswerGuard answerGuard;
+    private final EvidenceRelevanceChecker relevanceChecker;
     private final LlmGenerationRecorder recorder;
 
     @Override
@@ -36,6 +37,13 @@ public class RagAnswerGenerator implements AnswerGenerator {
         }
 
         String context = contextConverter.toContext(request.searchResults());
+
+        // 검색은 문장 유사도로만 걸러 묻는 항목이 근거에 없는 질문도 통과시킨다
+        if (!relevanceChecker.canAnswer(request.executionId(), request.userQuery(), context)) {
+            log.info("[RagAnswerGenerator] 근거가 질문에 답하지 않아 생성을 건너뛴다 executionId={}",
+                    request.executionId());
+            return answerWithoutEvidence(request, handler);
+        }
 
         // temperature, maxTokens는 TaskType별 기본값 사용
         LlmRequest llmRequest = LlmRequest.builder()
@@ -127,7 +135,10 @@ public class RagAnswerGenerator implements AnswerGenerator {
         @Override
         public void onComplete() {
             answer = answerGuard.trimAfterNoEvidence(collected.toString());
+            answer = answerGuard.trimUngroundedChannels(answer, context, userQuery);
+            answer = answerGuard.trimUngroundedComparisons(answer, context, userQuery);
             answerGuard.verifyAmounts(answer, context, userQuery);
+            answerGuard.verifyMeasures(answer, context, userQuery);
             delegate.onComplete();
         }
 

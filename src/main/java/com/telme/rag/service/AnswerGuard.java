@@ -19,6 +19,11 @@ public class AnswerGuard {
     private static final Pattern AMOUNT = Pattern.compile(
             "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
 
+    // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
+    private static final Pattern MEASURE = Pattern.compile(
+            "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
+                    + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|배|%|일|개월|시간|분|GB|회|년)");
+
     private static final BigInteger[] UNITS = {
             BigInteger.valueOf(100_000_000L), BigInteger.valueOf(10_000L), BigInteger.ONE
     };
@@ -35,6 +40,57 @@ public class AnswerGuard {
         return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_ANSWER.length()).strip();
     }
 
+    // 프롬프트 3번 규칙이 있어도 지어내 문장째 걷어낸다
+    private static final Set<String> CHANNELS = Set.of(
+            "샵", "이벤트", "홈페이지", "페이지", "사이트", "앱", "메뉴",
+            "고객센터", "콜센터", "매장", "대리점", "지점"
+    );
+
+    private static final Set<String> COMPARISONS = Set.of(
+            // "보다"는 "이보다 오래 걸리면"처럼 우열 비교가 아닌 쓰임이 많아 뺀다
+            "제일", "가장", "유리", "저렴", "비싸", "빠릅", "편리", "나은", "낫습", "우수"
+    );
+
+    // 나머지 문장은 근거대로인 경우가 많아 금액과 달리 답변 전체를 막지 않는다
+    private static final Pattern SENTENCE = Pattern.compile("(?<=[.!?])\\s+");
+
+    public String trimUngroundedComparisons(String answer, String context, String userQuery) {
+        return trimSentences(answer, context, userQuery, COMPARISONS, "근거에 없는 비교 표현");
+    }
+
+    public String trimUngroundedChannels(String answer, String context, String userQuery) {
+        return trimSentences(answer, context, userQuery, CHANNELS, "근거에 없는 안내 창구");
+    }
+
+    private String trimSentences(
+            String answer, String context, String userQuery, Set<String> words, String reason) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        String allowed = (context == null ? "" : context) + " " + (userQuery == null ? "" : userQuery);
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            Set<String> invented = ungrounded(sentence, allowed, words);
+            if (invented.isEmpty()) {
+                kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+                continue;
+            }
+            log.warn("[AnswerGuard] {}로 문장 제거: {} | {}", reason, invented, sentence);
+        }
+        // 지어낸 문장만 있던 답변이라 근거 없음으로 돌린다
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private Set<String> ungrounded(String sentence, String allowed, Set<String> words) {
+        Set<String> invented = new LinkedHashSet<>();
+        for (String channel : words) {
+            if (sentence.contains(channel) && !allowed.contains(channel)) {
+                invented.add(channel);
+            }
+        }
+        return invented;
+    }
+
     // 근거의 금액을 계산해 없던 금액을 만들어내는 경우가 있음
     public void verifyAmounts(String answer, String context, String userQuery) {
         Set<BigInteger> invented = amountsIn(answer);
@@ -45,6 +101,32 @@ public class AnswerGuard {
             log.warn("[AnswerGuard] 근거에 없는 금액 발견: {}", invented);
             throw new AnswerGuardException("근거에 없는 금액: " + invented);
         }
+    }
+
+    public void verifyMeasures(String answer, String context, String userQuery) {
+        Set<String> invented = measuresIn(answer);
+        invented.removeAll(measuresIn(context));
+        invented.removeAll(measuresIn(userQuery));
+        if (!invented.isEmpty()) {
+            log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
+            throw new AnswerGuardException("근거에 없는 수치: " + invented);
+        }
+    }
+
+    private Set<String> measuresIn(String text) {
+        Set<String> measures = new LinkedHashSet<>();
+        if (text == null) {
+            return measures;
+        }
+        Matcher matcher = MEASURE.matcher(text);
+        while (matcher.find()) {
+            String unit = matcher.group(3);
+            if (matcher.group(1) != null) {
+                measures.add(matcher.group(1).replace(",", "") + unit);
+            }
+            measures.add(matcher.group(2).replace(",", "") + unit);
+        }
+        return measures;
     }
 
     private Set<BigInteger> amountsIn(String text) {

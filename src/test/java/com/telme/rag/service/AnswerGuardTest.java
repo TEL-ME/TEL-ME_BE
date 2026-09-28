@@ -155,4 +155,123 @@ class AnswerGuardTest {
         assertThatThrownBy(() -> guard.verifyAmounts("12345678901234567890원입니다.", "9,900원입니다.", ""))
                 .isInstanceOf(GeneralException.class);
     }
+
+    @Test
+    @DisplayName("근거에 없는 안내 창구가 들어간 문장만 걷어낸다")
+    void 근거에_없는_창구_문장_제거() {
+        String answer = "유심 재발급 비용은 7,700원입니다. 자세한 내용은 샵 이벤트 페이지를 확인해 주세요.";
+        String context = "유심 재발급 비용이 얼마예요? 7,700원입니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "유심 얼마예요?"))
+                .isEqualTo("유심 재발급 비용은 7,700원입니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 창구는 그대로 둔다")
+    void 근거에_있는_창구는_유지() {
+        String answer = "매장을 방문하시면 즉시 발급됩니다.";
+        String context = "유심은 어디서 받아요? 매장을 방문하시면 즉시 발급됩니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "어디서 받아요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("고객이 질문에 쓴 창구는 지어낸 것이 아니다")
+    void 질문에_있는_창구는_유지() {
+        String answer = "고객센터로 문의하시면 확인됩니다.";
+        String context = "문의는 어떻게 하나요? 담당 부서에서 확인해 드립니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, context, "고객센터로 물어봐야 하나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("남는 문장이 없으면 근거 없음으로 돌린다")
+    void 전부_걷히면_근거_없음() {
+        String answer = "샵 이벤트 페이지에서 확인해 주세요. 홈페이지 메뉴에서도 가능합니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, "유심 비용은 7,700원입니다.", "어디서 봐요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("답변이 null이나 공백이면 그대로 둔다")
+    void 창구_검사_빈_입력() {
+        assertThat(guard.trimUngroundedChannels(null, "근거", "질문")).isEmpty();
+        assertThat(guard.trimUngroundedChannels("  ", "근거", "질문")).isEqualTo("  ");
+    }
+
+    @Test
+    @DisplayName("근거 숫자로 만든 배수를 차단한다")
+    void 근거에_없는_배수_차단() {
+        String answer = "기본 30만 원에서 100만 원까지 올라가니 약 3.3배 늘어납니다.";
+        String context = "본인 인증을 하면 기본 월 30만 원에서 최대 월 100만 원까지 상향됩니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "몇 배 늘어나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("3.3배");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 수치는 통과시킨다")
+    void 근거에_있는_수치는_통과() {
+        String answer = "개통 후 14일 이내이고 1회에 한해 가능합니다.";
+        String context = "개통 후 14일 이내에 미개봉이면 1회에 한해 교환할 수 있습니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "교환 되나요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("근거에 없는 영업일 수를 차단한다")
+    void 근거에_없는_영업일_차단() {
+        String answer = "배송에는 5영업일이 걸립니다.";
+        String context = "배송에는 3영업일이 걸립니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("5영업일");
+    }
+
+    @Test
+    @DisplayName("영업일 범위의 양쪽 값이 근거에 있으면 통과시킨다")
+    void 영업일_범위_통과() {
+        String answer = "배송에는 2~3영업일이 걸립니다.";
+        String context = "온라인 신청 시 택배로 2~3 영업일이 걸립니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("근거 범위에 없는 영업일 값을 차단한다")
+    void 영업일_범위_밖_차단() {
+        String answer = "배송에는 3~5 영업일이 걸립니다.";
+        String context = "온라인 신청 시 택배로 2~3 영업일이 걸립니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "배송은 얼마나 걸리나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("5영업일");
+    }
+
+    @Test
+    @DisplayName("근거에 없는 비교 표현이 든 문장을 걷어낸다")
+    void 근거에_없는_비교_문장_제거() {
+        String answer = "우편은 월 500원이고 이메일은 무료입니다. 이메일이 더 저렴하고 편리합니다.";
+        String context = "우편 청구서는 월 500원, 이메일 청구서는 무료입니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "뭐가 나아요?"))
+                .isEqualTo("우편은 월 500원이고 이메일은 무료입니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 비교 표현은 그대로 둔다")
+    void 근거에_있는_비교는_유지() {
+        String answer = "매장이 온라인보다 빠릅니다.";
+        String context = "매장에서 발급받으면 온라인 택배 신청보다 빠릅니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "뭐가 빨라요?"))
+                .isEqualTo(answer);
+    }
 }
