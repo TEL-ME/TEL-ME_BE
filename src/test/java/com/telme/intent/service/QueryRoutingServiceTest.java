@@ -603,6 +603,86 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역");
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "거기 매장 가면 몇 시까지 해?",
+                "거기서 유심 재발급하면 돼?",
+                "거기서 요금제 바꾸면 돼?",
+                "그 지역 매장 알려줘",
+                "거기 통화내역 알려줘",
+                "거기서 요금제 변경하면 매장 할인돼?",
+                "거기서 매장에 들어가면 매장 혜택 있어?"
+        })
+        void conditionalEndingOrGenericRegionDoesNotHideHistoricalLocation(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역"}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg(question), context(question, "강남역 매장 알려줘"));
+
+            assertThat(result.refinedQuery()).isEqualTo("강남역 매장");
+            assertThat(result.extractedConditions()).containsEntry("location", "강남역");
+            assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "그거 부산역 매장 가면 몇 시까지 해?",
+                "그거 양평군 용문면 매장 알려줘",
+                "그거 대가면에서 매장 알려줘"
+        })
+        void explicitNewPlaceInReferentialQuestionOverridesHistoricalLocation(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역"}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg(question), context(question, "강남역 매장 알려줘"));
+
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.extractedConditions()).doesNotContainKey("location");
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("location");
+        }
+
+        @Test
+        void inventedBareMyeonIsNotUsedAsSearchQuery() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"가상면 매장",
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"가상면 매장"}]}
+                """);
+            String question = "강남역 매장 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
+        }
+
+        @Test
+        void explicitAdministrativeMyeonCanBeUsedAsCurrentLocation() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"용문면 매장",
+                 "extractedConditions":{"location":"용문면"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"용문면 매장",
+                  "conditions":{"location":"용문면"}}]}
+                """);
+            String question = "양평군 용문면 매장 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg(question), context(question, "강남역 매장 알려줘"));
+
+            assertThat(result.refinedQuery()).isEqualTo("용문면 매장");
+            assertThat(result.extractedConditions()).containsEntry("location", "용문면");
+            assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "용문면");
+        }
+
         private ChatContext context(String question, String previousQuestion) {
             return new ChatContext(1L, 1L, null, java.util.List.of(
                     new ChatContextMessage(2L, 1, ChatMessage.Role.USER,

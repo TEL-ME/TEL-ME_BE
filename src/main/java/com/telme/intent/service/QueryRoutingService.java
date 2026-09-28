@@ -63,9 +63,11 @@ public class QueryRoutingService {
         "\\d+(?:[.,]\\d+)?\\s*(?:TB|GB|MB|KB|G|테라바이트|기가바이트|메가바이트|테라|기가|메가|만원|원|개월|달|년|일|시간|분|회|개|%)?",
         Pattern.CASE_INSENSITIVE);
     private static final Pattern PLACE = Pattern.compile(
-        "[가-힣A-Za-z0-9]{1,14}(?:역|읍|면|공항|터미널|사거리)");
+        "(?<![가-힣A-Za-z0-9])[가-힣A-Za-z0-9]{2,14}(?:역|읍|면|공항|터미널|사거리)");
+    private static final Pattern ADMIN_AREA_BEFORE = Pattern.compile("(?:시|군|구)\\s+$");
+    private static final Pattern LOCATION_PARTICLE_AFTER = Pattern.compile("^(?:에서|에|으로|로)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
-        "그거|그건|거기|아까|앞서|그때|이거|저거|방금|그러면|그럼");
+        "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
@@ -311,19 +313,40 @@ public class QueryRoutingService {
     }
 
     private boolean hasUnsupportedToken(Pattern pattern, String source, String reference) {
-        return !tokens(pattern, reference).containsAll(tokens(pattern, source));
+        return !tokens(pattern, reference).containsAll(tokens(pattern, source, pattern == PLACE));
     }
 
     private Set<String> tokens(Pattern pattern, String text) {
+        return tokens(pattern, text, false);
+    }
+
+    private Set<String> tokens(Pattern pattern, String text, boolean candidatePlace) {
         Set<String> values = new LinkedHashSet<>();
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
             String value = matcher.group();
+            if (pattern == PLACE && !looksLikePlace(value, text, matcher.start(), matcher.end(), candidatePlace)) {
+                continue;
+            }
             values.add(pattern == NUMBER
                     ? value.replace(",", "").replaceAll("\\s+", "").toUpperCase(Locale.ROOT)
                     : value);
         }
         return values;
+    }
+
+    private boolean looksLikePlace(String value, String text, int start, int end, boolean candidatePlace) {
+        if (value.endsWith("지역") || value.endsWith("영역") || value.endsWith("내역")) {
+            return false;
+        }
+        // 모델이 만든 검색어는 더 넓게 검사해 단독 '면' 지명도 근거 없이 추가되지 못하게 한다.
+        if (candidatePlace && value.endsWith("면")) {
+            return !value.endsWith("하면");
+        }
+        // '면'은 조건 어미와 겹치므로 행정구역 표기나 바로 붙은 장소 조사로만 판별한다.
+        return !value.endsWith("면")
+                || ADMIN_AREA_BEFORE.matcher(text.substring(0, start)).find()
+                || LOCATION_PARTICLE_AFTER.matcher(text.substring(end)).find();
     }
 
     private String referenceText(Pattern pattern, String question, ChatContext context) {
