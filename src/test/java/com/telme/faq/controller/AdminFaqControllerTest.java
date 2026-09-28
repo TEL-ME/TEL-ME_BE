@@ -1,0 +1,104 @@
+package com.telme.faq.controller;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.telme.faq.dto.res.AdminFaqListItemResponse;
+import com.telme.faq.dto.res.AdminFaqListResponse;
+import com.telme.faq.service.AdminFaqQueryService;
+import com.telme.global.config.SecurityConfig;
+import com.telme.member.service.GuestIdentityService;
+import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.service.KakaoLoginFailureHandler;
+import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.KakaoOAuth2UserService;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+// SecurityConfig 미Import 시 @WebMvcTest가 기본 보안 설정으로 돌아 ADMIN 제한이 검증되지 않음
+@WebMvcTest(AdminFaqController.class)
+@Import(SecurityConfig.class)
+class AdminFaqControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private AdminFaqQueryService adminFaqQueryService;
+
+    @MockitoBean
+    private GuestIdentityService guestIdentityService;
+
+    // SecurityConfig가 securityFilterChain 빈에서 요구하는 OAuth2 로그인 의존성 — 웹 슬라이스에는 없어 목으로 채운다
+    @MockitoBean
+    private KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    @MockitoBean
+    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+
+    @MockitoBean
+    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+
+    @MockitoBean
+    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+
+    @MockitoBean
+    private KakaoLinkRequestStore kakaoLinkRequestStore;
+
+    @Test
+    @DisplayName("로그인하지 않으면 401을 반환한다")
+    void 비인증_요청은_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/faqs")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    @DisplayName("ADMIN이 아니면 403을 반환한다")
+    void 일반_회원은_403을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/faqs")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 200과 목록을 반환한다")
+    void 관리자는_200을_반환한다() throws Exception {
+        when(adminFaqQueryService.getFaqs(any())).thenReturn(new AdminFaqListResponse(
+                List.of(new AdminFaqListItemResponse(
+                        1L, "USIM", "유심 재발급은 어떻게 하나요?", 1, "ACTIVE", 0L, Instant.now())),
+                0, 20, 1, 1));
+
+        mockMvc.perform(get("/api/v1/admin/faqs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.result.faqs[0].faqId").value(1))
+                .andExpect(jsonPath("$.result.faqs[0].citationCount").value(0));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("정렬 값이 enum에 없으면 400을 반환한다")
+    void 잘못된_정렬_값은_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/faqs").param("sort", "UNKNOWN"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("size가 100을 넘으면 400을 반환한다")
+    void size가_너무_크면_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/faqs").param("size", "101"))
+                .andExpect(status().isBadRequest());
+    }
+}

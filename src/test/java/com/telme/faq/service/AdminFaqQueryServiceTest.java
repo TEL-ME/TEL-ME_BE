@@ -1,0 +1,141 @@
+package com.telme.faq.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.telme.faq.dto.req.AdminFaqSearchRequest;
+import com.telme.faq.dto.req.AdminFaqSort;
+import com.telme.faq.dto.req.AdminFaqStatusFilter;
+import com.telme.faq.dto.res.AdminFaqListItemResponse;
+import com.telme.faq.dto.res.AdminFaqListResponse;
+import com.telme.faq.entity.Faq;
+import com.telme.faq.repository.FaqRepository;
+import com.telme.global.common.exception.GeneralException;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+// 로컬에 적재된 FAQ 1,150건과 섞이지 않도록 이 테스트 전용 카테고리로 거른다.
+// 각 테스트는 트랜잭션 롤백으로 시드에 영향 없음
+@SpringBootTest
+@Transactional
+class AdminFaqQueryServiceTest {
+
+    private static final String CATEGORY = "TEST-ADMIN-FAQ";
+    private static final long SEED_MESSAGE_ID = 2L;
+
+    @Autowired
+    private AdminFaqQueryService service;
+
+    @Autowired
+    private FaqRepository faqRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private Long cited;
+    private Long neverCited;
+    private Long hidden;
+
+    @BeforeEach
+    void setUp() {
+        cited = save("해지 위약금은 얼마인가요?", "남은 약정 개월수에 따라 달라집니다.", Faq.Status.ACTIVE);
+        neverCited = save("eSIM은 무엇인가요?", "유심 없이 개통하는 방식입니다.", Faq.Status.ACTIVE);
+        hidden = save("사용하지 않는 안내입니다.", "숨긴 문서입니다.", Faq.Status.HIDDEN);
+
+        cite(cited);
+        cite(cited);
+    }
+
+    @Test
+    @DisplayName("한 번도 근거로 쓰이지 않은 FAQ도 인용 0건으로 목록에 나온다")
+    void 인용_0건인_FAQ도_목록에_나온다() {
+        List<AdminFaqListItemResponse> faqs = search(AdminFaqSort.RECENT, AdminFaqStatusFilter.ACTIVE, null).faqs();
+
+        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId)
+                .containsExactlyInAnyOrder(cited, neverCited);
+        assertThat(citationOf(faqs, neverCited)).isZero();
+        assertThat(citationOf(faqs, cited)).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("인용 적은 순으로 정렬하면 인용 0건이 먼저 나온다")
+    void 인용_적은_순으로_정렬한다() {
+        List<AdminFaqListItemResponse> faqs =
+                search(AdminFaqSort.CITATION_ASC, AdminFaqStatusFilter.ACTIVE, null).faqs();
+
+        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(neverCited, cited);
+    }
+
+    @Test
+    @DisplayName("인용 많은 순으로 정렬하면 순서가 뒤집힌다")
+    void 인용_많은_순으로_정렬한다() {
+        List<AdminFaqListItemResponse> faqs =
+                search(AdminFaqSort.CITATION_DESC, AdminFaqStatusFilter.ACTIVE, null).faqs();
+
+        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(cited, neverCited);
+    }
+
+    @Test
+    @DisplayName("상태를 주지 않으면 ACTIVE만 나오고 ALL이면 숨김까지 나온다")
+    void 기본_상태는_ACTIVE만_조회한다() {
+        assertThat(search(null, null, null).faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .doesNotContain(hidden);
+        assertThat(search(null, AdminFaqStatusFilter.ALL, null).faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .contains(hidden);
+    }
+
+    @Test
+    @DisplayName("검색어는 질문과 답변 본문에서 모두 찾는다")
+    void 검색어로_질문과_답변을_찾는다() {
+        assertThat(search(null, null, "eSIM").faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .containsExactly(neverCited);
+        assertThat(search(null, null, "약정").faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .containsExactly(cited);
+    }
+
+    @Test
+    @DisplayName("단건 조회는 인용 횟수를 함께 반환한다")
+    void 단건_조회는_인용_횟수를_함께_준다() {
+        assertThat(service.getFaq(cited).citationCount()).isEqualTo(2L);
+        assertThat(service.getFaq(neverCited).citationCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("없는 FAQ를 조회하면 FAQ404-0을 던진다")
+    void 없는_FAQ는_예외를_던진다() {
+        assertThatThrownBy(() -> service.getFaq(-1L)).isInstanceOf(GeneralException.class);
+    }
+
+    private AdminFaqListResponse search(AdminFaqSort sort, AdminFaqStatusFilter status, String keyword) {
+        return service.getFaqs(new AdminFaqSearchRequest(keyword, CATEGORY, status, sort, null, null));
+    }
+
+    private long citationOf(List<AdminFaqListItemResponse> faqs, Long faqId) {
+        return faqs.stream()
+                .filter(faq -> faq.faqId().equals(faqId))
+                .findFirst()
+                .orElseThrow()
+                .citationCount();
+    }
+
+    private Long save(String question, String answer, Faq.Status status) {
+        return faqRepository.saveAndFlush(Faq.builder()
+                .category(CATEGORY)
+                .question(question)
+                .answer(answer)
+                .status(status)
+                .build()).getFaqId();
+    }
+
+    private void cite(Long faqId) {
+        jdbcTemplate.update(
+                "INSERT INTO message_sources (message_id, faq_id, search_rank, score) VALUES (?, ?, ?, ?)",
+                SEED_MESSAGE_ID, faqId, 1, 0.9);
+    }
+}
