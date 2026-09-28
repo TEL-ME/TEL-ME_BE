@@ -1,7 +1,7 @@
 # FAQ 생성·검증·측정 스크립트
 
 기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류)
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류), `docs/EVAL_SET_SUPPLEMENT.md`(평가셋 보강·이중 벡터 사전 검증)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |
@@ -12,6 +12,7 @@
 | `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k·MRR 계산 | 서버 경유 |
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
+| `simulate_dual_vector.py` | `Q_A`·`QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
 | `check_stores.py` | 매장 데이터 제약·분포 + 시드 SQL 대조 | - |
@@ -86,9 +87,23 @@ python3 scripts/check_duplicates.py --self-test
 
 ```bash
 python3 scripts/check_eval_questions.py scripts/data/eval_questions_130.json --faq scripts/data/faq_full_1150.json
+python3 scripts/check_eval_questions.py scripts/data/eval_questions_supplement_50.json --faq scripts/data/faq_full_1150.json --live
 python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json --live
 python3 scripts/check_eval_questions.py --self-test
 ```
+
+평가셋 파일
+
+| 파일 | 구성 | 용도 |
+| --- | --- | --- |
+| `eval_questions_130.json` | SIMILAR 40 / VARIANT 40 / UNRELATED 50 | 확정값 기준 평가셋. 기존 문서 수치와 비교하려면 수정하지 않는다 |
+| `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/EVAL_SET_SUPPLEMENT.md`). 130건과 함께 측정 |
+
+질문 유형
+
+- `SIMILAR` / `VARIANT`: FAQ 질문의 가벼운 / 큰 변형
+- `ANSWER`: FAQ 질문 변형이 아니라 **답변에만 있는 값·용어로 묻는 질문**. 긍정 질문으로 집계
+- `UNRELATED`: 답이 없어야 하는 질문. `unrelated_kind`는 `OFF_DOMAIN` / `ADJACENT` / `ADJACENT_HARD`
 
 정답 매핑
 
@@ -101,15 +116,19 @@ python3 scripts/check_eval_questions.py --self-test
 - `type` 값, 긍정 질문 해시의 실존 여부, 배열 내 중복
 - `UNRELATED`의 해시·`expected_slot_id`가 `null`인지, `unrelated_kind`가 정의된 값인지
 - `expected_slot_id`가 해시가 가리키는 FAQ와 일치하는지
-- 대칭성: SIMILAR/VARIANT 건수 일치, 카테고리별 건수 균등
+- 대칭성: SIMILAR/VARIANT 건수 일치, 카테고리별 건수 균등. `ANSWER`는 짝이 없어 ANSWER끼리 카테고리별 건수만 따로 본다
 
 `--live` (Ollama 필요)
 
-- 긍정 질문을 임베딩해 정답 FAQ가 최고 유사도인지 확인, `UNRELATED` 유사도 분포 출력
+- SIMILAR/VARIANT: 정답 FAQ(배열이면 그중 하나)의 질문이 최고 유사도인지 확인
+- `ANSWER`: 실패로 거르지 않고 "FAQ 질문으로도 커버됨 / 답변에만 있음"으로 참고 분류만 출력
+  - 이 분류로 문항을 고르거나 고치지 않는다. 정답 FAQ 질문 유사도는 `QUESTION_ONLY` 검색 점수와 같은 계산이라, 이 값으로 고르면 평가셋이 그 구성에 불리하게 기운다
+- `UNRELATED` 유사도 분포 출력
 
 `--self-test`
 
-- 일부러 틀린 픽스처로 지적 15종(`STATIC_KINDS`)이 모두 검출되는지 확인
+- 일부러 틀린 픽스처로 지적 17종(`STATIC_KINDS`)이 모두 검출되는지 확인
+- ANSWER + UNRELATED만 있는 정상 평가셋에서 지적이 없는지(오탐) 확인
 - 검사 종류 추가 시 `STATIC_KINDS`와 픽스처에 함께 반영
 
 ## 5. 적재 (Java)
@@ -263,11 +282,12 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | --- | --- |
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
-| `check_eval_questions.py` | 15종 |
-| `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
+| `check_eval_questions.py` | 17종 + 정상 평가셋 오탐 1건 |
+| `measure_search_quality.py` | 13건 (Recall/MRR 8 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
+| `simulate_dual_vector.py` | 18건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 3: 정상·기존 긍정 0건·무관 0건) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생

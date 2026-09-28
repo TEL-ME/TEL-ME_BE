@@ -40,6 +40,8 @@ done
 docker exec telme-postgres psql -U telme -d telme -tAc \
   "select count(*), md5(string_agg(embedding::text, ',' order by faq_id)) from faq_embeddings;"
 ```
+기준값: `Q_A`는 `1150|4c6faa4addd8f37e5e7b5921f0882207`, `QUESTION_ONLY`는 `1150|2343d78abdb1daa5b22062a3e574a971` (`EVAL_SET_SUPPLEMENT.md` 4.1절, 130건 재측정으로 확인). 코퍼스(`faq_full_1150.json`)나 임베딩 모델이 바뀌면 값도 바뀐다.
+
 이 문서의 3·4절 수치는 코퍼스가 `Q_A`임을 확인(AUC 0.8390 일치)한 뒤 측정한 값이다.
 
 ## 3. 결과 (워밍업 + 코퍼스 검증 후, n=130)
