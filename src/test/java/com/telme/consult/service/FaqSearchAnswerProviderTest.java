@@ -34,6 +34,7 @@ class FaqSearchAnswerProviderTest {
                 List.of(
                         new FaqSearchResponse(
                                 7L,
+                                null,
                                 "USIM",
                                 "유심 재발급은 어디서 하나요?",
                                 "가까운 매장에서 재발급할 수 있습니다.",
