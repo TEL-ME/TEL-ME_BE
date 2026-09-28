@@ -30,7 +30,7 @@ public class AdminFaqController {
     @Operation(
             summary = "FAQ 목록 조회",
             description = "검색어·카테고리·상태로 거른 FAQ를 인용 횟수와 함께 반환합니다. "
-                    + "상태 기본값은 ACTIVE이며 ALL을 주면 숨김·삭제까지 모두 봅니다. "
+                    + "카테고리는 10종 코드 중 하나이고, 상태 기본값은 ACTIVE이며 ALL을 주면 숨김·삭제까지 모두 봅니다. "
                     + "정렬은 RECENT(최근 수정 순), CITATION_DESC, CITATION_ASC 중 하나입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),

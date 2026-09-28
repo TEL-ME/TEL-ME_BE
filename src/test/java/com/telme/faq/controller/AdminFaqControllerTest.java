@@ -97,6 +97,15 @@ class AdminFaqControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    @DisplayName("카테고리가 10종에 없으면 빈 목록이 아니라 400을 반환한다")
+    void 잘못된_카테고리는_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/faqs").param("category", "usim"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("size가 100을 넘으면 400을 반환한다")
     void size가_너무_크면_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/faqs").param("size", "101"))
