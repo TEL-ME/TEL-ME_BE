@@ -65,7 +65,7 @@ public class RuleBasedRoutingFallback {
     );
 
     private static final Pattern STORE_LOOKUP_PATTERN = Pattern.compile(
-        "가까운|근처|주변|찾|어디|위치|주소|영업시간|주차|몇\\s*시|연락처"
+        "가까운|근처|주변|찾|어디|위치|주소|영업시간|주차|몇\\s*시|연락처|알려|있나요|있어|보여"
     );
     private static final Pattern STORE_ENTITY_PATTERN = Pattern.compile(
         "매장|대리점|지점|직영점|[가-힣A-Za-z0-9]+역점"
@@ -74,6 +74,10 @@ public class RuleBasedRoutingFallback {
         "알려\\s*주고|설명\\s*해\\s*주고|추천\\s*해\\s*주고|그리고|또\\s+매장|뿐만 아니라"
     );
     private static final Pattern CANCEL_SERVICE_PATTERN = Pattern.compile("(?<!정)해지");
+    private static final Pattern STORE_VISIT_POLICY_PATTERN = Pattern.compile(
+        "매장\\s*방문.*(가능|방법|절차)|매장에서.*(처리|신청|예약)"
+    );
+    private static final Pattern STORE_RESULT_REQUEST_PATTERN = Pattern.compile("찾|어디|위치|주소|곳");
 
     private static final List<String> FAQ_KEYWORDS = List.of(
         "요금제", "할인", "약정", "위약금", "로밍", "유심", "eSIM",
@@ -101,7 +105,9 @@ public class RuleBasedRoutingFallback {
         }
 
         boolean hasStore = STORE_ENTITY_PATTERN.matcher(text).find()
-            && STORE_LOOKUP_PATTERN.matcher(text).find();
+            && STORE_LOOKUP_PATTERN.matcher(text).find()
+            && (!STORE_VISIT_POLICY_PATTERN.matcher(text).find()
+                || STORE_RESULT_REQUEST_PATTERN.matcher(text).find());
         boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains)
             || CANCEL_SERVICE_PATTERN.matcher(text).find()
             || (!hasStore && STORE_ENTITY_PATTERN.matcher(text).find()
@@ -208,5 +214,14 @@ public class RuleBasedRoutingFallback {
             }
         }
         return conditions;
+    }
+
+    boolean matchesServiceType(String code, String text) {
+        return SERVICE_TYPE_RULES.stream()
+                .anyMatch(rule -> rule.code().equals(code) && rule.pattern().matcher(text).find());
+    }
+
+    boolean hasServiceTypeMention(String text) {
+        return SERVICE_TYPE_RULES.stream().anyMatch(rule -> rule.pattern().matcher(text).find());
     }
 }

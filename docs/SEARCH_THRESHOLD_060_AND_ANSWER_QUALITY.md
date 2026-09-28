@@ -52,5 +52,3 @@
 - [`SEARCH_FAILURE_ANALYSIS.md`](SEARCH_FAILURE_ANALYSIS.md): 130개 검색 평가의 실패 원인 분석
 - [`ANSWER_QUALITY.md`](ANSWER_QUALITY.md): 답변 프롬프트와 가드의 단계별 평가
 - [`TOPK_LATENCY.md`](TOPK_LATENCY.md): 임계값과 top-k 조합의 검색 및 지연시간 측정
-- [`../PersonalDocs/rag-pipeline-compare.md`](../PersonalDocs/rag-pipeline-compare.md): EXAONE 및 Qwen3 근거 적합성 판정 비교
-- [`../PersonalDocs/rag-pipeline-compare/retrieval_boost_followup.py`](../PersonalDocs/rag-pipeline-compare/retrieval_boost_followup.py): EXAONE 판정 프롬프트 STRICT 변형을 포함한 재현 코드

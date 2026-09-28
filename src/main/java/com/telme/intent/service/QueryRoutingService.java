@@ -298,9 +298,8 @@ public class QueryRoutingService {
         if (candidate == null || candidate.isBlank()) {
             return candidate;
         }
-        String evidence = groundingText(question, context);
-        if (hasUnsupportedToken(NUMBER, candidate, evidence)
-                || hasUnsupportedToken(PLACE, candidate, evidence)
+        if (hasUnsupportedToken(NUMBER, candidate, referenceText(NUMBER, question, context))
+                || hasUnsupportedToken(PLACE, candidate, referenceText(PLACE, question, context))
                 || (preserveNumbers && hasUnsupportedToken(NUMBER, question, candidate))) {
             log.info("[라우팅] 검색 질문의 수치 또는 지역이 원문과 맞지 않아 원문을 사용합니다.");
             return question;
@@ -309,17 +308,26 @@ public class QueryRoutingService {
     }
 
     private boolean hasUnsupportedToken(Pattern pattern, String source, String reference) {
-        Matcher matcher = pattern.matcher(source);
+        return !tokens(pattern, reference).containsAll(tokens(pattern, source));
+    }
+
+    private Set<String> tokens(Pattern pattern, String text) {
+        Set<String> values = new LinkedHashSet<>();
+        Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
-            if (!reference.contains(matcher.group())) {
-                return true;
-            }
+            String value = matcher.group();
+            values.add(pattern == NUMBER ? value.replace(",", "") : value);
         }
-        return false;
+        return values;
+    }
+
+    private String referenceText(Pattern pattern, String question, ChatContext context) {
+        // 현재 질문에 새 조건이 명시되면 이전 대화의 같은 종류 조건은 검증 근거로 사용하지 않는다.
+        return tokens(pattern, question).isEmpty() ? groundingText(question, context) : question;
     }
 
     private String groundingText(String question, ChatContext context) {
-        if (context == null) {
+        if (context == null || !CONTEXT_REFERENCE.matcher(question).find()) {
             return question;
         }
         return question + " " + (context.summary() == null ? "" : context.summary()) + " "
@@ -334,7 +342,9 @@ public class QueryRoutingService {
         if (conditions == null || conditions.isEmpty()) {
             return Collections.emptyMap();
         }
-        String evidence = groundingText(question, context);
+        String locationEvidence = referenceText(PLACE, question, context);
+        String serviceTypeEvidence = ruleBasedFallback.hasServiceTypeMention(question)
+                ? question : groundingText(question, context);
         Map<String, String> valid = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : conditions.entrySet()) {
             String key = entry.getKey();
@@ -345,10 +355,14 @@ public class QueryRoutingService {
                 continue;
             }
             if (FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
-                    && !SERVICE_TYPES.contains(value)) {
+                    && (!SERVICE_TYPES.contains(value)
+                        || !ruleBasedFallback.matchesServiceType(value, serviceTypeEvidence))) {
                 continue;
             }
-            if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && !evidence.contains(value)) {
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
+                    && (!locationEvidence.contains(value)
+                        || (!tokens(PLACE, value).isEmpty()
+                            && !tokens(PLACE, locationEvidence).containsAll(tokens(PLACE, value))))) {
                 continue;
             }
             valid.put(key, value);

@@ -37,6 +37,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
         List<FaqSearchResponse> originalResults = search(input.originalUserQuery());
+        // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
         if (!originalResults.isEmpty()
                 || input.originalUserQuery().equals(input.searchQuery())) {
             return originalResults;

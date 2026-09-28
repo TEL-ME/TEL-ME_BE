@@ -72,6 +72,22 @@ class RuleBasedRoutingFallbackTest {
         assertThat(fallback.classify("매장 방문이 가능한가요?").intent()).isEqualTo(Intent.FAQ);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"강남역 매장 알려줘", "강남역 매장 있나요?"})
+    void naturalStoreLookupIsStore(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.STORE);
+    }
+
+    @Test
+    void storeVisitProcedureIsStillFaq() {
+        assertThat(fallback.classify("매장 방문 방법 알려줘").intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @Test
+    void visitPhraseWithStoreResultRequestIsStore() {
+        assertThat(fallback.classify("강남역 매장 방문 가능한 곳 알려줘").intent()).isEqualTo(Intent.STORE);
+    }
+
     @Test
     @DisplayName("FAQ 키워드와 매장 키워드가 모두 포함된 경우 BOTH로 분류하고 서브질의 2개를 생성한다")
     void classify_both_keywords() {

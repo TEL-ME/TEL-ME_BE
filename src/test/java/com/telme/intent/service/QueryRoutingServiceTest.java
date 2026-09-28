@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
+import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -485,6 +489,97 @@ class QueryRoutingServiceTest {
             IntentRouteResponse result = service.routeSingleConsult(msg(original), null);
 
             assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+        }
+
+        @Test
+        void numericTokenMustMatchCompletely() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"15GB와 5GB 요금제 비교",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"15GB와 5GB 요금제 비교"}]}
+                """);
+            String original = "15GB 요금제 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(original), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(original);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+        }
+
+        @Test
+        void currentLocationOverridesHistoricalLocation() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역"}}]}
+                """);
+            String original = "부산역 매장 알려줘";
+            ChatContext context = context(original, "강남역 매장 알려줘");
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(original), context);
+
+            assertThat(result.refinedQuery()).isEqualTo(original);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+            assertThat(result.extractedConditions()).doesNotContainKey("location");
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("location");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"PORT_IN", "NAME_CHANGE", "USIM_REISSUE", "NEW_LINE"})
+        void unsupportedServiceTypeIsRemovedEvenIfItIsKnownCode(String serviceType) {
+            given(llmClient.generate(any())).willReturn(("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"강남역","serviceType":"%s"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역","serviceType":"%s"}}]}
+                """).formatted(serviceType, serviceType));
+
+            IntentRouteResponse result = service.routeSingleConsult(msg("강남역 매장 알려줘"), null);
+
+            assertThat(result.extractedConditions()).containsEntry("location", "강남역")
+                    .doesNotContainKey("serviceType");
+            assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역")
+                    .doesNotContainKey("serviceType");
+        }
+
+        @Test
+        void currentServiceTypeOverridesHistoricalServiceType() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"번호이동 매장",
+                 "extractedConditions":{"serviceType":"USIM_REISSUE"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"번호이동 매장",
+                  "conditions":{"serviceType":"USIM_REISSUE"}}]}
+                """);
+            String original = "그거 번호이동 매장 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg(original), context(original, "유심 재발급 매장 알려줘"));
+
+            assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
+        @Test
+        void referentialQuestionMayReuseHistoricalLocation() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역"}}]}
+                """);
+            String original = "거기 매장 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg(original), context(original, "강남역 매장 알려줘"));
+
+            assertThat(result.refinedQuery()).isEqualTo("강남역 매장");
+            assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역");
+        }
+
+        private ChatContext context(String question, String previousQuestion) {
+            return new ChatContext(1L, 1L, null, java.util.List.of(
+                    new ChatContextMessage(2L, 1, ChatMessage.Role.USER,
+                            ChatMessage.MessageType.QUESTION, previousQuestion, null)), question, 100);
         }
 
         @Test
