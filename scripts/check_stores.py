@@ -83,6 +83,10 @@ def check_fields(stores: list[dict], problems: list[str]) -> None:
         if store.get("status") not in STATUSES:
             problems.append(f"{label}: status '{store.get('status')}' (허용 {sorted(STATUSES)})")
 
+        # 어느 대역이든 무작위 번호는 실제 가입자 번호와 겹칠 수 있어 아예 넣지 않는다
+        if store.get("phone") is not None:
+            problems.append(f"{label}: phone '{store.get('phone')}' — 실제 번호와 겹치지 않도록 NULL이어야 함")
+
     for store_id, count in ids.items():
         if count > 1:
             problems.append(f"store_id {store_id}가 {count}번 나옴")
@@ -224,6 +228,7 @@ def self_test() -> int:
         ("좌표 범위 밖", problems_for(latitude="41.000000"), 1),
         ("status 오타", problems_for(status="CLOSED"), 1),
         ("이름 초과", problems_for(name="가" * 101), 1),
+        ("전화번호 있음", problems_for(phone="070-8123-4567"), 1),
         ("요일 6개", problems_for(hours=ok["hours"][:6]), 1),
         ("요일 중복", problems_for(hours=ok["hours"][:6] + [ok["hours"][0]]), 1),
         ("휴무인데 시간 있음",

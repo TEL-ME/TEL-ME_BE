@@ -242,7 +242,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 - 소상공인시장진흥공단 상가(상권)정보, **2026-06 판본** (`소상공인시장진흥공단_상가(상권)정보_20260630.zip`)
 - 공공데이터포털 <https://www.data.go.kr/data/15083033/fileData.do> — 회원가입 후 파일 다운로드
 - 압축을 풀면 시도별 CSV 16개(강원·경기·경남·경북·대구·대전·부산·서울·세종·울산·인천·전남광주·전북·제주·충남·충북). 합계 약 1.5GB라 저장소에 넣지 않는다
-- 가져오는 값은 좌표·도로명주소·법정동코드뿐이다. 상호는 `텔미 {시군구}{n}호점`으로 만들고, 영업시간·가능 업무는 시드로 생성하며, 전화번호는 넣지 않는다(`phone` NULL)
+- 가져오는 값은 좌표·도로명주소·법정동코드뿐이다. 상호는 `텔미 {시군구}{n}호점`으로 만들고, 영업시간·가능 업무는 시드로 생성하며, 전화번호는 넣지 않는다(`phone` NULL - `check_stores.py`가 NULL인지 검사한다)
 - 주소·좌표는 공공데이터 기반이며 실제 TEL-ME 매장이 아니다. 상호·영업시간·가능 업무는 실제 업체 정보와 무관하다
 
 **입력 순서와 재현성**
@@ -266,7 +266,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `check_eval_questions.py` | 15종 |
 | `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
-| `check_stores.py` | 13건 (필드 5 + 영업시간 4 + 업무 3 + 중복 1) |
+| `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
