@@ -49,6 +49,10 @@ public class Faq {
     @Column(name = "content_hash", length = 64)
     private String contentHash;
 
+    // 내용이 바뀌어도 유지되는 식별자(원본 JSON의 slot_id). 원본에 없는 FAQ는 null
+    @Column(name = "slot_id", length = 50, unique = true)
+    private String slotId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
@@ -66,4 +70,12 @@ public class Faq {
 
     @Column(name = "updated_at", nullable = false, insertable = false)
     private Instant updatedAt;
+
+    // slot_id 도입 전에 적재된 행에 식별자를 채울 때만 쓴다. 이미 있는 slot_id는 바꾸지 않는다
+    public void assignSlotId(String slotId) {
+        if (this.slotId != null) {
+            throw new IllegalStateException("이미 slot_id가 있는 FAQ: " + faqId);
+        }
+        this.slotId = slotId;
+    }
 }

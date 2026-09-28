@@ -28,8 +28,8 @@ public class FaqBatchLoadRunner {
         int exitCode = 0;
         try {
             FaqBatchLoader.LoadResult result = loader.load(Path.of(properties.path()));
-            log.info("[FaqBatchLoadRunner] 완료 - 파일 {}건, 파일 내 중복 {}건, 이미 적재됨 {}건, 신규 적재 {}건",
-                    result.total(), result.duplicateInFile(), result.alreadyInDb(), result.inserted());
+            log.info("[FaqBatchLoadRunner] 완료 - 파일 {}건, 파일 내 중복 {}건, 이미 적재됨 {}건, slot_id 채움 {}건, 신규 적재 {}건",
+                    result.total(), result.duplicateInFile(), result.alreadyInDb(), result.backfilled(), result.inserted());
         } catch (RuntimeException e) {
             log.error("[FaqBatchLoadRunner] 적재 실패 - 커밋된 청크는 유지됨. 원인 해결 후 재실행하면 이어서 적재됩니다.", e);
             exitCode = 1;
