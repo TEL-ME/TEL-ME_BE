@@ -11,10 +11,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface FaqRepository extends JpaRepository<Faq, Long> {
 
-    // 조건을 안 준 항목은 "%"로 넘어온다
+    // 조건을 안 준 항목은 "%"로 넘어온다. 검색어 안의 %와 _는 호출부에서 역슬래시로 막아 보낸다
     String ADMIN_FILTER = """
-            where (lower(faq.question) like :keyword or lower(faq.answer) like :keyword)
-              and faq.category like :category
+            where (lower(faq.question) like :keyword escape '\\'
+                    or lower(faq.answer) like :keyword escape '\\')
+              and faq.category like :category escape '\\'
               and faq.status in :statuses
             """;
 

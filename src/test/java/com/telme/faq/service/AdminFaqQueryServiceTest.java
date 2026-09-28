@@ -41,12 +41,14 @@ class AdminFaqQueryServiceTest {
     private Long cited;
     private Long neverCited;
     private Long hidden;
+    private Long percent;
 
     @BeforeEach
     void setUp() {
         cited = save("해지 위약금은 얼마인가요?", "남은 약정 개월수에 따라 달라집니다.", Faq.Status.ACTIVE);
         neverCited = save("eSIM은 무엇인가요?", "유심 없이 개통하는 방식입니다.", Faq.Status.ACTIVE);
         hidden = save("사용하지 않는 안내입니다.", "숨긴 문서입니다.", Faq.Status.HIDDEN);
+        percent = save("결합 할인은 얼마인가요?", "회선당 10% 할인됩니다.", Faq.Status.ACTIVE);
 
         cite(cited);
         cite(cited);
@@ -58,7 +60,7 @@ class AdminFaqQueryServiceTest {
         List<AdminFaqListItemResponse> faqs = search(AdminFaqSort.RECENT, AdminFaqStatusFilter.ACTIVE, null).faqs();
 
         assertThat(faqs).extracting(AdminFaqListItemResponse::faqId)
-                .containsExactlyInAnyOrder(cited, neverCited);
+                .containsExactlyInAnyOrder(cited, neverCited, percent);
         assertThat(citationOf(faqs, neverCited)).isZero();
         assertThat(citationOf(faqs, cited)).isEqualTo(2L);
     }
@@ -69,7 +71,7 @@ class AdminFaqQueryServiceTest {
         List<AdminFaqListItemResponse> faqs =
                 search(AdminFaqSort.CITATION_ASC, AdminFaqStatusFilter.ACTIVE, null).faqs();
 
-        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(neverCited, cited);
+        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(neverCited, percent, cited);
     }
 
     @Test
@@ -78,7 +80,7 @@ class AdminFaqQueryServiceTest {
         List<AdminFaqListItemResponse> faqs =
                 search(AdminFaqSort.CITATION_DESC, AdminFaqStatusFilter.ACTIVE, null).faqs();
 
-        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(cited, neverCited);
+        assertThat(faqs).extracting(AdminFaqListItemResponse::faqId).containsExactly(cited, neverCited, percent);
     }
 
     @Test
@@ -97,6 +99,22 @@ class AdminFaqQueryServiceTest {
                 .containsExactly(neverCited);
         assertThat(search(null, null, "약정").faqs()).extracting(AdminFaqListItemResponse::faqId)
                 .containsExactly(cited);
+    }
+
+    @Test
+    @DisplayName("검색어의 %는 와일드카드가 아니라 글자 그대로 찾는다")
+    void 검색어의_퍼센트를_글자로_찾는다() {
+        assertThat(search(null, null, "10%").faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .containsExactly(percent);
+        // 이스케이프가 없으면 패턴이 %%%가 되어 전체가 나온다
+        assertThat(search(null, null, "%").faqs()).extracting(AdminFaqListItemResponse::faqId)
+                .containsExactly(percent);
+    }
+
+    @Test
+    @DisplayName("검색어의 _는 아무 글자나가 아니라 글자 그대로 찾는다")
+    void 검색어의_언더바를_글자로_찾는다() {
+        assertThat(search(null, null, "_").faqs()).isEmpty();
     }
 
     @Test
