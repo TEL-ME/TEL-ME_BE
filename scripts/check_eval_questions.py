@@ -26,6 +26,23 @@ def content_hash(question: str, answer: str) -> str:
     return hashlib.sha256((question + answer).encode("utf-8")).hexdigest()
 
 
+# 정답은 slot_id로 적는다(TELME-73). content_hash는 FAQ 내용을 고치면 바뀌지만 slot_id는 유지된다
+# 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때). 문자열에 set()을 쓰면 글자 집합이 되므로 여기서 맞춘다
+def expected_slots(item: dict) -> set[str]:
+    value = item.get("expected_slot_id")
+    if value is None:
+        return set()
+    return set(value) if isinstance(value, list) else {value}
+
+
+# measure_search_quality.py --dump-json 결과를 읽는 스크립트가 공통으로 쓴다
+# TELME-73 이전 원시 결과는 결과마다 content_hash만 있고 slot_id가 없다
+def require_slot_dump(dump: dict, path: Path) -> None:
+    if any("slot_id" not in r for item in dump["items"] for r in item["results"]):
+        raise SystemExit(f"{path}: 결과에 slot_id가 없는 예전 원시 결과입니다 - "
+                         "measure_search_quality.py --dump-json으로 다시 수집하세요")
+
+
 @dataclass
 class Finding:
     index: int
@@ -34,12 +51,12 @@ class Finding:
     detail: str
 
 
-def load_faq_hashes(faq_path: Path) -> dict[str, dict]:
+def load_faq_slots(faq_path: Path) -> dict[str, dict]:
     faqs = json.loads(faq_path.read_text(encoding="utf-8"))
-    return {content_hash(f["question"], f["answer"]): f for f in faqs}
+    return {f["slot_id"]: f for f in faqs}
 
 
-def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Finding]:
+def check_static(items: list[dict], faq_by_slot: dict[str, dict]) -> list[Finding]:
     found: list[Finding] = []
 
     def add(i: int, item: dict, kind: str, detail: str) -> None:
@@ -50,7 +67,7 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
 
     seen_ids: set[str] = set()
     type_count: Counter[str] = Counter()
-    # (category, type) -> 건수. 해시가 유효한 SIMILAR/VARIANT만 센다
+    # (category, type) -> 건수. 정답 slot_id가 유효한 SIMILAR/VARIANT만 센다
     coverage: Counter[tuple[str, str]] = Counter()
     # ANSWER는 SIMILAR/VARIANT 짝이 없어 대칭 검사에 섞으면 안 되므로 따로 센다
     answer_coverage: Counter[str] = Counter()
@@ -90,33 +107,34 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
                 unrelated_kind_count[kind or "(없음)"] += 1
             continue
 
-        # SIMILAR / VARIANT / ANSWER - 해시는 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때)
-        hashes = expected_hash if isinstance(expected_hash, list) else [expected_hash]
-        if not expected_hash or not all(isinstance(h, str) and h for h in hashes):
-            add(i, item, "expected_content_hash 없음", f"type={item_type}")
+        # SIMILAR / VARIANT / ANSWER - slot_id는 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때)
+        slots = expected_slot if isinstance(expected_slot, list) else [expected_slot]
+        if not expected_slot or not all(isinstance(s, str) and s for s in slots):
+            add(i, item, "expected_slot_id 없음", f"type={item_type}")
             continue
-        if len(set(hashes)) != len(hashes):
-            add(i, item, "expected_content_hash 중복", str(hashes))
-        missing = [h for h in hashes if h not in faq_by_hash]
+        if len(set(slots)) != len(slots):
+            add(i, item, "expected_slot_id 중복", str(slots))
+        missing = [s for s in slots if s not in faq_by_slot]
         if missing:
-            add(i, item, "FAQ 파일에 없는 해시",
-                f"{missing[0][:12]}... (질문, 답변 수정으로 해시가 바뀌었을 수 있음)")
+            add(i, item, "FAQ 파일에 없는 slot_id", f"{missing[0]} (다른 코퍼스 파일과 대조하고 있는지 확인)")
             continue
-        matched = [faq_by_hash[h] for h in hashes]
+        matched = [faq_by_slot[s] for s in slots]
 
         # 배열 전체가 같은 카테고리여야 한다
-        # 서로 다른 카테고리가 섞이면 카테고리별 집계가 첫 해시에 쏠린다
+        # 서로 다른 카테고리가 섞이면 카테고리별 집계가 첫 slot_id에 쏠린다
         matched_categories = sorted({faq["category"] for faq in matched})
         if len(matched_categories) > 1:
             add(i, item, "정답 배열의 카테고리 불일치", ", ".join(matched_categories))
             continue
 
-        # expected_slot_id는 사람 확인용 메타데이터지만, 해시가 가리키는 FAQ와 어긋나면
-        # 리뷰어가 엉뚱한 FAQ를 보고 판단하게 되므로 대조한다(배열이면 그중 하나와 맞으면 된다)
-        matched_slots = [faq.get("slot_id") for faq in matched]
-        if expected_slot not in matched_slots:
-            add(i, item, "expected_slot_id 불일치",
-                f"명시 {expected_slot}, 해시가 가리키는 FAQ는 {matched_slots}")
+        # expected_content_hash는 참고용이지만, 적혀 있으면 slot_id가 가리키는 FAQ 내용과 맞아야 한다
+        # 어긋나면 FAQ 문장이 바뀌었거나 정답을 잘못 옮긴 것이라 리뷰어가 엉뚱한 FAQ를 보고 판단하게 된다
+        if expected_hash is not None:
+            hashes = expected_hash if isinstance(expected_hash, list) else [expected_hash]
+            matched_hashes = {content_hash(faq["question"], faq["answer"]) for faq in matched}
+            if set(hashes) != matched_hashes:
+                add(i, item, "expected_content_hash 불일치",
+                    f"slot_id {slots}의 FAQ 내용과 다름 (FAQ 문장이 바뀌었는지 확인)")
         if item_type == "ANSWER":
             answer_coverage[matched_categories[0]] += 1
         else:
@@ -157,7 +175,7 @@ def check_live(
 ) -> list[Finding]:
     found: list[Finding] = []
     faq_texts = [f["question"] for f in faqs]
-    faq_hashes = [content_hash(f["question"], f["answer"]) for f in faqs]
+    faq_slots = [f["slot_id"] for f in faqs]
 
     similar_or_variant = [it for it in items if it.get("type") in ("SIMILAR", "VARIANT")]
     answer_items = [it for it in items if it.get("type") == "ANSWER"]
@@ -172,24 +190,23 @@ def check_live(
     for item in similar_or_variant:
         vec = eval_vectors[item["eval_id"]]
         scored = sorted(
-            ((cosine(vec, fv), fh) for fv, fh in zip(faq_vectors, faq_hashes)),
+            ((cosine(vec, fv), fs) for fv, fs in zip(faq_vectors, faq_slots)),
             key=lambda x: -x[0],
         )
-        top_score, top_hash = scored[0]
-        expected = item.get("expected_content_hash")
-        # 정답이 배열이면 그중 하나가 1위면 된다. 문자열과 배열을 == 로 비교하면 항상 False가 된다
-        expected_set = set(expected if isinstance(expected, list) else [expected])
-        ok = top_hash in expected_set
+        top_score, top_slot = scored[0]
+        # 정답이 배열이면 그중 하나가 1위면 된다
+        expected_set = expected_slots(item)
+        ok = top_slot in expected_set
         mark = "OK" if ok else "FAIL"
         print(f"  {mark}  [{item['eval_id']}] {item['type']:7s} 최고유사도 {top_score:.4f}"
               f"  {item['question']}")
         if not ok:
-            expected_score = next((s for s, h in scored if h in expected_set), None)
+            expected_score = next((s for s, slot in scored if slot in expected_set), None)
             found.append(Finding(
                 -1, item["eval_id"], "기대 FAQ가 최고 유사도가 아님",
-                f"1위 해시 {top_hash[:12]}..., 기대 해시 {sorted(expected_set)[0][:12]}... "
-                f"(기대 해시 유사도 {expected_score:.4f})" if expected_score is not None
-                else f"1위 해시 {top_hash[:12]}..., 기대 해시가 faq 목록에 없음",
+                f"1위 {top_slot}, 기대 {sorted(expected_set)[0]} "
+                f"(기대 FAQ 유사도 {expected_score:.4f})" if expected_score is not None
+                else f"1위 {top_slot}, 기대 slot_id가 faq 목록에 없음",
             ))
 
     # ANSWER는 실패로 걸러내지 않고 참고로만 나눈다. 정답 FAQ 질문 유사도는 질문만 임베딩한
@@ -200,13 +217,12 @@ def check_live(
     for item in answer_items:
         vec = eval_vectors[item["eval_id"]]
         scored = sorted(
-            ((cosine(vec, fv), fh) for fv, fh in zip(faq_vectors, faq_hashes)),
+            ((cosine(vec, fv), fs) for fv, fs in zip(faq_vectors, faq_slots)),
             key=lambda x: -x[0],
         )
-        expected = item["expected_content_hash"]
-        expected_set = set(expected if isinstance(expected, list) else [expected])
+        expected_set = expected_slots(item)
         rank, score = next(
-            ((r, s) for r, (s, h) in enumerate(scored, 1) if h in expected_set), (None, None))
+            ((r, s) for r, (s, slot) in enumerate(scored, 1) if slot in expected_set), (None, None))
         covered = rank == 1
         if covered:
             covered_ids.append(item["eval_id"])
@@ -254,11 +270,11 @@ STATIC_KINDS = (
     "알 수 없는 type",
     "UNRELATED인데 expected_content_hash가 있음",
     "UNRELATED인데 expected_slot_id가 있음",
-    "expected_content_hash 없음",
-    "expected_content_hash 중복",
+    "expected_slot_id 없음",
+    "expected_slot_id 중복",
     "정답 배열의 카테고리 불일치",
-    "FAQ 파일에 없는 해시",
-    "expected_slot_id 불일치",
+    "FAQ 파일에 없는 slot_id",
+    "expected_content_hash 불일치",
     "알 수 없는 unrelated_kind",
     "유형 불균형",
     "카테고리 불균형",
@@ -269,59 +285,53 @@ STATIC_KINDS = (
 
 # 일부러 틀린 예시를 넣어 검사기가 실제로 잡아내는지 확인
 def self_test() -> int:
-    usim = {"slot_id": "USIM-S01", "category": "USIM"}
-    plan = {"slot_id": "PLAN-S01", "category": "PLAN"}
-    usim2 = {"slot_id": "USIM-S02", "category": "USIM"}
-    usim_hash = content_hash("유심 재발급 얼마예요?", "7,700원입니다.")
-    usim_hash2 = content_hash("유심 값이 얼마인가요?", "7,700원입니다.")
-    plan_hash = content_hash("요금제 종류가 뭐예요?", "5G 4종, LTE 3종, 알뜰 2종입니다.")
-    faq_by_hash = {usim_hash: usim, usim_hash2: usim2, plan_hash: plan}
+    usim = {"slot_id": "USIM-0001", "category": "USIM", "question": "유심 재발급 얼마예요?", "answer": "7,700원입니다."}
+    usim2 = {"slot_id": "USIM-0002", "category": "USIM", "question": "유심 값이 얼마인가요?", "answer": "7,700원입니다."}
+    plan = {"slot_id": "PLAN-0001", "category": "PLAN",
+            "question": "요금제 종류가 뭐예요?", "answer": "5G 4종, LTE 3종, 알뜰 2종입니다."}
+    faq_by_slot = {f["slot_id"]: f for f in (usim, usim2, plan)}
+    usim_hash = content_hash(usim["question"], usim["answer"])
+    plan_hash = content_hash(plan["question"], plan["answer"])
 
     items = [
         {"eval_id": "T01", "type": "SIMILAR", "question": "유심 재발급 비용이 얼마인가요?",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # 정상
+         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-0001"},     # 정상
         {"eval_id": "T02", "type": "UNRELATED", "question": "날씨 어때요?",
-         "expected_content_hash": None, "expected_slot_id": None},              # 정상
+         "expected_content_hash": None, "expected_slot_id": None},                # 정상
         {"eval_id": "T03", "type": "VARIANT", "question": "유심 값이 얼마죠?",
-         "expected_content_hash": "0" * 64, "expected_slot_id": "USIM-S01"},    # 존재 안 하는 해시
+         "expected_slot_id": "USIM-9999"},                                        # 존재 안 하는 slot_id
         {"eval_id": "T04", "type": "UNRELATED", "question": "영화 추천해줘",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # UNRELATED인데 해시·slot_id 있음
+         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-0001"},     # UNRELATED인데 해시·slot_id 있음
         {"eval_id": "T01", "type": "SIMILAR", "question": "중복 id",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # eval_id 중복 (+ USIM SIMILAR 2건째)
-        {"type": "SIMILAR", "question": "id가 없어요",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # eval_id 없음
-        {"eval_id": "T06", "type": "SIMILAR", "question": "",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # question 없음
-        {"eval_id": "T07", "type": "SIMILA", "question": "오타 type",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},   # 알 수 없는 type
-        {"eval_id": "T08", "type": "VARIANT", "question": "해시를 빠뜨림",
-         "expected_content_hash": None, "expected_slot_id": "USIM-S01"},        # SIMILAR/VARIANT인데 해시 없음
-        {"eval_id": "T09", "type": "VARIANT", "question": "slot_id를 잘못 적음",
-         "expected_content_hash": plan_hash, "expected_slot_id": "USIM-S01"},   # expected_slot_id 불일치
+         "expected_slot_id": "USIM-0001"},                                        # eval_id 중복 (+ USIM SIMILAR 2건째)
+        {"type": "SIMILAR", "question": "id가 없어요", "expected_slot_id": "USIM-0001"},   # eval_id 없음
+        {"eval_id": "T06", "type": "SIMILAR", "question": "", "expected_slot_id": "USIM-0001"},  # question 없음
+        {"eval_id": "T07", "type": "SIMILA", "question": "오타 type", "expected_slot_id": "USIM-0001"},  # 알 수 없는 type
+        {"eval_id": "T08", "type": "VARIANT", "question": "slot_id를 빠뜨림",
+         "expected_content_hash": usim_hash, "expected_slot_id": None},           # SIMILAR/VARIANT인데 slot_id 없음
+        {"eval_id": "T09", "type": "VARIANT", "question": "해시를 다른 FAQ 것으로 적음",
+         "expected_content_hash": usim_hash, "expected_slot_id": "PLAN-0001"},     # expected_content_hash 불일치
         {"eval_id": "T10", "type": "UNRELATED", "question": "종류 오타",
-         "unrelated_kind": "ADJACENT_HAD",                                      # 알 수 없는 unrelated_kind
+         "unrelated_kind": "ADJACENT_HAD",                                        # 알 수 없는 unrelated_kind
          "expected_content_hash": None, "expected_slot_id": None},
-        {"eval_id": "T11", "type": "SIMILAR", "question": "같은 해시를 두 번 적음",
-         "expected_content_hash": [usim_hash, usim_hash],                       # 배열 안 중복
-         "expected_slot_id": "USIM-S01"},
+        {"eval_id": "T11", "type": "SIMILAR", "question": "같은 slot_id를 두 번 적음",
+         "expected_slot_id": ["USIM-0001", "USIM-0001"]},                        # 배열 안 중복
         {"eval_id": "T12", "type": "VARIANT", "question": "배열에 다른 카테고리가 섞임",
-         "expected_content_hash": [usim_hash, plan_hash],                       # 카테고리 불일치
-         "expected_slot_id": "USIM-S01"},
-        {"eval_id": "T13", "type": "SIMILAR", "question": "배열 안의 두 번째 slot_id를 적은 정상 케이스",
-         "expected_content_hash": [usim_hash, usim_hash2],                      # 정상 (같은 카테고리 복수 정답)
-         "expected_slot_id": "USIM-S02"},
+         "expected_slot_id": ["USIM-0001", "PLAN-0001"]},                        # 카테고리 불일치
+        {"eval_id": "T13", "type": "SIMILAR", "question": "같은 카테고리 복수 정답",
+         "expected_slot_id": ["USIM-0001", "USIM-0002"]},                        # 정상 (해시 없이 slot_id만)
         {"eval_id": "T14", "type": "ANSWER", "question": "7,700원이 유심값인가요?",
-         "expected_content_hash": [usim_hash, usim_hash2], "expected_slot_id": "USIM-S01"},
+         "expected_slot_id": ["USIM-0001", "USIM-0002"]},
         {"eval_id": "T15", "type": "ANSWER", "question": "7,700원 내라는데 재발급 비용이에요?",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},
+         "expected_content_hash": [usim_hash], "expected_slot_id": ["USIM-0001"]},  # 정상 (배열 해시도 대조)
         {"eval_id": "T16", "type": "ANSWER", "question": "알뜰 2종은 뭐예요?",
-         "expected_content_hash": plan_hash, "expected_slot_id": "PLAN-S01"},
+         "expected_slot_id": "PLAN-0001"},
     ]
     # 픽스처가 SIMILAR 6 / VARIANT 4라 "유형 불균형"이 걸리고,
     # USIM만 여러 건이고 PLAN은 1건이라 "카테고리 불균형"과 "카테고리 유형 불균형"도 걸린다
     # ANSWER는 USIM 2건 / PLAN 1건이라 "ANSWER 카테고리 불균형"이 걸린다
-    findings = check_static(items, faq_by_hash)
-    findings += check_static([], faq_by_hash)   # 빈 평가셋
+    findings = check_static(items, faq_by_slot)
+    findings += check_static([], faq_by_slot)   # 빈 평가셋
     kinds = {f.kind for f in findings}
 
     ok = True
@@ -333,23 +343,39 @@ def self_test() -> int:
     if unexpected:
         ok = False
         print(f"  FAIL STATIC_KINDS에 없는 지적 종류: {sorted(unexpected)}")
+    # 정상으로 적은 문항(T01, T13, T15)은 지적이 없어야 한다
+    false_alarms = sorted({f.eval_id for f in findings if f.eval_id in ("T13", "T15")}
+                          | {f.eval_id for f in findings if f.eval_id == "T01" and f.kind != "eval_id 중복"})
+    if false_alarms:
+        ok = False
+        print(f"  FAIL 정상 문항 오탐: {false_alarms}")
 
     # 보강 평가셋처럼 ANSWER + UNRELATED만 있는 균형 잡힌 파일은 아무 지적도 없어야 한다
     # (SIMILAR/VARIANT 0건을 불균형으로 오탐하지 않는지)
     clean = [
         {"eval_id": "C01", "type": "ANSWER", "question": "7,700원이 유심값인가요?",
-         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},
+         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-0001"},
         {"eval_id": "C02", "type": "ANSWER", "question": "알뜰 2종은 뭐예요?",
-         "expected_content_hash": plan_hash, "expected_slot_id": "PLAN-S01"},
+         "expected_content_hash": plan_hash, "expected_slot_id": "PLAN-0001"},
         {"eval_id": "C03", "type": "UNRELATED", "unrelated_kind": "ADJACENT_HARD",
          "question": "유심 재발급 비용은 카드로 결제할 수 있나요?",
          "expected_content_hash": None, "expected_slot_id": None},
     ]
-    clean_findings = check_static(clean, faq_by_hash)
+    clean_findings = check_static(clean, faq_by_slot)
     clean_ok = not clean_findings
     ok = ok and clean_ok
     tail = "" if clean_ok else f" → {[f.kind for f in clean_findings]}"
     print(f"  {'OK  지적 없음' if clean_ok else 'FAIL 오탐'}  ANSWER + UNRELATED 정상 평가셋{tail}")
+
+    checks = [
+        (expected_slots({"expected_slot_id": "USIM-0001"}), {"USIM-0001"}),  # 문자열이 글자 집합이 되지 않는다
+        (expected_slots({"expected_slot_id": ["USIM-0001", "USIM-0002"]}), {"USIM-0001", "USIM-0002"}),
+        (expected_slots({"expected_slot_id": None}), set()),
+    ]
+    for got, want in checks:
+        passed = got == want
+        ok = ok and passed
+        print(f"  {'OK  ' if passed else 'FAIL'} expected_slots → {got}")
     return 0 if ok else 1
 
 
@@ -357,7 +383,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", nargs="?", type=Path, help="검사할 eval_questions JSON")
     ap.add_argument("--faq", type=Path, default=DEFAULT_FAQ_PATH,
-                    help="정답 매핑 대조 대상 FAQ JSON (기본: faq_sample_30.json)")
+                    help="정답 slot_id 대조 대상 FAQ JSON (기본: faq_sample_30.json)")
     ap.add_argument("--live", action="store_true",
                     help="Ollama로 실제 임베딩해 유사도까지 확인 (정적 검사 통과 후 실행)")
     ap.add_argument("--batch", type=int, default=DEFAULT_BATCH)
@@ -374,17 +400,17 @@ def main() -> int:
 
     items = json.loads(args.path.read_text(encoding="utf-8"))
     faqs = json.loads(args.faq.read_text(encoding="utf-8"))
-    faq_by_hash = load_faq_hashes(args.faq)
+    faq_by_slot = load_faq_slots(args.faq)
 
     print(f"{args.path} - {len(items)}건, 대조 대상 {args.faq} {len(faqs)}건")
-    findings = check_static(items, faq_by_hash)
+    findings = check_static(items, faq_by_slot)
     static_result = report(findings)
 
     if not args.live:
         return static_result
 
     if static_result != 0:
-        print("\n정적 검사 실패 - --live 생략 (해시부터 고친 뒤 재실행)")
+        print("\n정적 검사 실패 - --live 생략 (정답 slot_id부터 고친 뒤 재실행)")
         return static_result
 
     cache = Path(args.cache) if args.cache else None

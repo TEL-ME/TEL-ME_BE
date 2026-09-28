@@ -7,7 +7,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import socket
 import statistics
 import sys
@@ -18,7 +17,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from check_eval_questions import VALID_TYPES
+from check_eval_questions import VALID_TYPES, expected_slots
 from check_eval_questions import content_hash as _content_hash
 
 DEFAULT_API_URL = "http://localhost:8080/api/v1/faq/search"
@@ -38,13 +37,15 @@ class SearchOutcome:
     # 긍정 질문은 매칭된 결과의 score, UNRELATED는 top-1 score(임계값 진단용)
     score: float | None = None
     unrelated_kind: str | None = None
+    # 정답 slot_id가 없는 긍정 질문(eval_smoke.json의 시드 FAQ)은 API 호출만 하고 지표에서 뺀다
+    scored: bool = True
 
 
 def compute_metrics(
     outcomes: list[SearchOutcome],
     k_values: tuple[int, ...] = (1, 3, 5),
 ) -> dict[str, float]:
-    positives = [o for o in outcomes if o.question_type != "UNRELATED"]
+    positives = [o for o in outcomes if o.question_type != "UNRELATED" and o.scored]
     negatives = [o for o in outcomes if o.question_type == "UNRELATED"]
     total = len(positives)
     if total == 0:
@@ -118,6 +119,12 @@ SELF_TEST_CASES: list[tuple[str, list[SearchOutcome], dict[str, float]]] = [
         {"recall@1": 0.5, "recall@3": 0.5, "recall@5": 0.5,
          "mrr": 0.5, "unrelated_rejection_rate": 1.0},
     ),
+    (
+        # 정답 slot_id가 없는 긍정 질문은 못 찾음(0)으로 세지 않고 분모에서 뺀다
+        "정답 slot_id 없는 긍정 질문은 집계 제외",
+        [SearchOutcome("SIMILAR", 1, True), SearchOutcome("SIMILAR", None, True, scored=False)],
+        {"recall@1": 1.0, "recall@3": 1.0, "recall@5": 1.0, "mrr": 1.0},
+    ),
 ]
 
 
@@ -142,7 +149,7 @@ LATENCY_SELF_TEST_CASES: list[tuple[str, list[float], dict[str, float]]] = [
 
 
 # 카테고리 분해 자기 검증: (라벨, 평가 항목, 결과, 기대 recall@1, 기대 건수, 기대 제외 건수)
-def _item(kind: str, slot_id: str | None) -> dict:
+def _item(kind: str, slot_id: str | list[str] | None) -> dict:
     item = {"type": kind}
     if slot_id is not None:
         item["expected_slot_id"] = slot_id
@@ -153,8 +160,8 @@ CATEGORY_SELF_TEST_CASES: list[tuple[str, list[dict], list[SearchOutcome], dict,
     (
         # 무관 질문은 카테고리가 없으므로 집계에서 아예 빠져야 한다
         "카테고리 2종 + UNRELATED",
-        [_item("SIMILAR", "BILLING-S01"), _item("VARIANT", "BILLING-S02"),
-         _item("SIMILAR", "USIM-S01"), _item("UNRELATED", None)],
+        [_item("SIMILAR", "BILLING-0001"), _item("VARIANT", ["BILLING-0002", "BILLING-0003"]),
+         _item("SIMILAR", "USIM-0001"), _item("UNRELATED", None)],
         [SearchOutcome("SIMILAR", 1, True), SearchOutcome("VARIANT", None, True),
          SearchOutcome("SIMILAR", 1, True), SearchOutcome("UNRELATED", None, False)],
         {"BILLING": 0.5, "USIM": 1.0},
@@ -164,7 +171,7 @@ CATEGORY_SELF_TEST_CASES: list[tuple[str, list[dict], list[SearchOutcome], dict,
     (
         # slot_id가 없는 긍정 질문은 조용히 섞이지 않고 제외 건수로 보고돼야 한다
         "slot_id 없는 긍정 질문",
-        [_item("SIMILAR", "PLAN-S01"), _item("SIMILAR", None)],
+        [_item("SIMILAR", "PLAN-0001"), _item("SIMILAR", None)],
         [SearchOutcome("SIMILAR", 1, True), SearchOutcome("SIMILAR", 1, True)],
         {"PLAN": 1.0},
         {"PLAN": 1},
@@ -229,19 +236,19 @@ def load_eval_set(path: Path) -> list[dict]:
         if not isinstance(item, dict) or not isinstance(item.get("question"), str) or not item["question"].strip():
             raise SystemExit(f"{path}: {index}번 질문 형식 오류")
         kind = item.get("type")
-        expected = item.get("expected_content_hash")
+        expected = item.get("expected_slot_id")
         if kind not in VALID_TYPES:
             raise SystemExit(f"{path}: {index}번 type 오류: {kind}")
         if kind == "UNRELATED":
             if expected is not None:
-                raise SystemExit(f"{path}: {index}번 무관 질문의 정답 해시는 null이어야 합니다")
+                raise SystemExit(f"{path}: {index}번 무관 질문의 정답 slot_id는 null이어야 합니다")
             if item.get("unrelated_kind") is not None and not isinstance(item["unrelated_kind"], str):
                 raise SystemExit(f"{path}: {index}번 unrelated_kind 형식 오류")
-        else:
+        elif expected is not None:
             # 답변이 사실상 같은 FAQ가 여럿이면 어느 쪽이 나와도 정답이라 배열로 적는다
-            hashes = expected if isinstance(expected, list) else [expected]
-            if not hashes or not all(isinstance(h, str) and re.fullmatch(r"[0-9a-f]{64}", h) for h in hashes):
-                raise SystemExit(f"{path}: {index}번 정답 해시 형식 오류")
+            slots = expected if isinstance(expected, list) else [expected]
+            if not slots or not all(isinstance(s, str) and s for s in slots):
+                raise SystemExit(f"{path}: {index}번 정답 slot_id 형식 오류")
     return items
 
 
@@ -251,6 +258,13 @@ def content_hash(result: dict) -> str:
         return _content_hash(result["question"], result["answer"])
     except (KeyError, TypeError) as exc:
         raise SystemExit(f"검색 API 응답에 FAQ 질문·답변이 없습니다: {result}") from exc
+
+
+def slot_id(result: dict) -> str | None:
+    """정답 비교 기준(TELME-73). 원본 JSON에 없는 FAQ(시드, 관리자 생성)는 null이 정상이다."""
+    if "slotId" not in result:
+        raise SystemExit(f"검색 API 응답에 slotId가 없습니다 - TELME-73 이후 서버인지 확인하세요: {result}")
+    return result["slotId"]
 
 
 def search(question: str, top_k: int, api_url: str, timeout: int) -> tuple[list[dict], float]:
@@ -305,7 +319,7 @@ def evaluate(
                 "expected_slot_id": item.get("expected_slot_id"),
                 "expected_content_hash": item.get("expected_content_hash"),
                 "results": [{"rank": r.get("searchRank"), "score": r.get("score"),
-                             "content_hash": content_hash(r)} for r in results],
+                             "slot_id": slot_id(r), "content_hash": content_hash(r)} for r in results],
             })
         if item["type"] == "UNRELATED":
             scores = [r["score"] for r in results if isinstance(r.get("score"), (int, float))]
@@ -313,12 +327,14 @@ def evaluate(
             outcomes.append(SearchOutcome("UNRELATED", None, bool(results), eval_id, top_score,
                                           item.get("unrelated_kind")))
             continue
-        expected = item["expected_content_hash"]
-        expected_hashes = set(expected if isinstance(expected, list) else [expected])
+        expected = expected_slots(item)
+        if not expected:
+            outcomes.append(SearchOutcome(item["type"], None, bool(results), eval_id, scored=False))
+            continue
         rank = None
         score = None
         for result in results:
-            if content_hash(result) not in expected_hashes:
+            if slot_id(result) not in expected:
                 continue
             rank = result.get("searchRank")
             # searchRank는 API 계약상 항상 1..top_k 범위로 와야 한다 — 없거나 범위를 벗어나면
@@ -332,37 +348,39 @@ def evaluate(
 
 
 def find_missed(eval_items: list[dict], outcomes: list[SearchOutcome]) -> tuple[list, list]:
-    """(개별 miss한 eval_id 목록, 같은 정답 해시를 공유하는 질문이 전부 못 찾은 eval_id 목록).
-    후자는 적재 누락인지 검색 실패인지 이 함수만으로는 가릴 수 없다 — content_hash로 faqs를
+    """(개별 miss한 eval_id 목록, 같은 정답 slot_id를 공유하는 질문이 전부 못 찾은 eval_id 목록).
+    후자는 적재 누락인지 검색 실패인지 이 함수만으로는 가릴 수 없다 — slot_id로 faqs를
     직접 조회해야 한다. 후보가 많아질수록 "적재는 됐지만 둘 다 top-k 밖으로 밀려난" 경우가
     드물지 않아, 이 목록을 곧장 "적재 누락"으로 해석하면 오탐이 된다."""
-    missed = [o.eval_id for o in outcomes if o.question_type != "UNRELATED" and o.returned_rank is None]
+    missed = [o.eval_id for o in outcomes
+              if o.question_type != "UNRELATED" and o.scored and o.returned_rank is None]
 
-    hash_to_eval_ids: dict[str, list] = {}
-    hash_found: dict[str, bool] = {}
+    slot_to_eval_ids: dict[tuple, list] = {}
+    slot_found: dict[tuple, bool] = {}
     for item, outcome in zip(eval_items, outcomes):
-        if item["type"] == "UNRELATED":
+        if item["type"] == "UNRELATED" or not outcome.scored:
             continue
-        expected = item["expected_content_hash"]
         # 정답이 배열이면 조합 전체를 하나의 키로 본다(같은 정답군을 노린 질문끼리 묶기 위해)
-        key = tuple(sorted(expected)) if isinstance(expected, list) else (expected,)
-        hash_to_eval_ids.setdefault(key, []).append(item.get("eval_id"))
-        hash_found[key] = hash_found.get(key, False) or outcome.returned_rank is not None
+        key = tuple(sorted(expected_slots(item)))
+        slot_to_eval_ids.setdefault(key, []).append(item.get("eval_id"))
+        slot_found[key] = slot_found.get(key, False) or outcome.returned_rank is not None
 
     never_found = [
         eval_id
-        for h, eval_ids in hash_to_eval_ids.items() if not hash_found[h]
+        for key, eval_ids in slot_to_eval_ids.items() if not slot_found[key]
         for eval_id in eval_ids
     ]
     return missed, never_found
 
 
 def category_of(item: dict) -> str | None:
-    """expected_slot_id의 접두사가 카테고리다 (BILLING-S01 → BILLING), 없으면 None."""
-    slot_id = item.get("expected_slot_id")
-    if not isinstance(slot_id, str) or "-" not in slot_id:
+    """expected_slot_id의 접두사가 카테고리다 (BILLING-0001 → BILLING), 없으면 None.
+    배열이면 첫 slot_id로 본다(check_eval_questions.py가 배열 전체의 카테고리가 같은지 검사한다)."""
+    slots = item.get("expected_slot_id")
+    first = slots[0] if isinstance(slots, list) and slots else slots
+    if not isinstance(first, str) or "-" not in first:
         return None
-    return slot_id.rsplit("-", 1)[0]
+    return first.rsplit("-", 1)[0]
 
 
 def metrics_by_category(
@@ -409,7 +427,7 @@ def main() -> int:
                     help=f"API 호출 제한 시간(초), 기본 {DEFAULT_TIMEOUT_SEC}")
     ap.add_argument("--self-test", action="store_true", help="계산 로직 자체 검증")
     ap.add_argument("--dump-json", type=Path,
-                    help="질문별 top-k 원시 결과(rank·score·content_hash)를 JSON으로 저장. "
+                    help="질문별 top-k 원시 결과(rank·score·slot_id·content_hash)를 JSON으로 저장. "
                          "임계값·top-k 스윕을 다시 호출하지 않고 오프라인에서 계산할 때 쓴다")
     ap.add_argument("--by-category", action="store_true",
                     help="expected_slot_id 접두사로 묶어 카테고리별 Recall/MRR도 출력")
@@ -444,6 +462,9 @@ def main() -> int:
     print(f"{args.path} — {len(eval_items)}건 평가 (topK={args.top_k})")
     for key, value in metrics.items():
         print(f"  {key}: {value:.3f}")
+    unscored = [o.eval_id for o in outcomes if not o.scored]
+    if unscored:
+        print(f"  (정답 slot_id가 없어 Recall·MRR 집계에서 뺀 긍정 질문 {len(unscored)}건 - API 호출만 확인)")
 
     lat = latency_stats(latencies)
     if lat:
@@ -474,7 +495,7 @@ def main() -> int:
         print(f"  참고: 다음 정답 FAQ는 같은 정답을 공유하는 긍정 질문 모두에서 한 번도 안 나왔습니다 — "
               f"eval_id: {never_found}")
         print("  적재 자체가 안 됐는지, 적재는 됐는데 top-k 밖으로 밀려난 것인지는 이 목록만으로 "
-              "가릴 수 없습니다 - content_hash로 faqs를 직접 조회해서 확인하세요.")
+              "가릴 수 없습니다 - slot_id로 faqs를 직접 조회해서 확인하세요.")
 
     if args.by_category:
         per_category, counts, skipped = metrics_by_category(eval_items, outcomes, k_values=k_values)
