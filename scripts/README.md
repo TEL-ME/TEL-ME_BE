@@ -14,7 +14,7 @@
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
-| `check_stores.py` | 매장 데이터 제약·분포 검증 | - |
+| `check_stores.py` | 매장 데이터 제약·분포 + 시드 SQL 대조 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |
 
 ## 준비
@@ -220,6 +220,43 @@ python3 scripts/classify_search_failures.py --self-test
 
 ---
 
+## 10. 매장 가상 데이터
+
+```bash
+# 1) 공공데이터 CSV → 매장 JSON + dev 시드 SQL
+python3 scripts/generate_stores.py <시도별 CSV...> \
+  --out scripts/data/stores.json --sql src/main/resources/db/dev-migration/V<다음버전>__seed_stores.sql
+
+# 2) 검증 (제약 + 분포 + 시드 SQL 대조)
+python3 scripts/check_stores.py
+python3 scripts/check_stores.py --self-test
+
+# 3) JSON만 손본 경우 SQL 재생성 (CSV 불필요)
+python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_stores as g; \
+  open('src/main/resources/db/dev-migration/V7__seed_stores.sql','w',encoding='utf-8')\
+  .write(g.to_sql(json.load(open('scripts/data/stores.json',encoding='utf-8'))))"
+```
+
+**데이터 출처**
+
+- 소상공인시장진흥공단 상가(상권)정보, **2026-06 판본** (`소상공인시장진흥공단_상가(상권)정보_20260630.zip`)
+- 공공데이터포털 <https://www.data.go.kr/data/15083033/fileData.do> — 회원가입 후 파일 다운로드
+- 압축을 풀면 시도별 CSV 16개(강원·경기·경남·경북·대구·대전·부산·서울·세종·울산·인천·전남광주·전북·제주·충남·충북). 합계 약 1.5GB라 저장소에 넣지 않는다
+- 가져오는 값은 좌표·도로명주소·법정동코드뿐이다. 상호는 `텔미 {시군구}{n}호점`으로 만들고, 영업시간·가능 업무는 시드로 생성하며, 전화번호는 넣지 않는다(`phone` NULL)
+- 주소·좌표는 공공데이터 기반이며 실제 TEL-ME 매장이 아니다. 상호·영업시간·가능 업무는 실제 업체 정보와 무관하다
+
+**입력 순서와 재현성**
+
+- 파일 인자 순서대로 읽고 파일당 앞 `--max-per-file`(기본 3000)건의 업종 조건에 걸리는 후보만 모은다
+- 따라서 입력 파일 목록이나 순서가 다르면 같은 `--seed`로도 결과가 달라진다. 시도 파일명 오름차순(위 목록 순서)을 기준으로 둔다
+- 업종 필터 기본값은 `핸드폰 소매|통신기기 소매|이동통신` (`--industry`로 변경). 수리업·중고 소매업은 걸리지 않는다
+- 컬럼명은 판본마다 달라 못 찾으면 `--lat-col` 등으로 지정한다
+- 커밋된 `scripts/data/stores.json`은 위 기준으로 생성한 뒤 `phone`만 NULL로 정리한 판본이다. CSV에서 다시 생성하면 난수 스트림이 달라져 업무·영업시간·상태 배분이 바뀐다. 지금 데이터의 분포를 유지해야 하면 3)으로 SQL만 다시 뽑는다
+- 시드 SQL은 손으로 고치지 않는다. `check_stores.py`가 `to_sql(stores.json)`과 파일을 대조해 불일치를 잡는다
+- 이미 머지된 시드 SQL은 재생성하지 않는다. Flyway 체크섬이 깨져 앱이 기동하지 않는다. 데이터가 바뀌면 새 버전 파일을 추가한다 (`docs/flyway.md`)
+
+---
+
 ## 자기 검증
 
 | 스크립트 | 케이스 |
@@ -229,7 +266,7 @@ python3 scripts/classify_search_failures.py --self-test
 | `check_eval_questions.py` | 15종 |
 | `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
-| `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
+| `check_stores.py` | 13건 (필드 5 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인

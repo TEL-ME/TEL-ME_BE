@@ -7,12 +7,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
+import sys
 from collections import Counter, defaultdict
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 DEFAULT_PATH = Path(__file__).parent / "data" / "stores.json"
+DEFAULT_SQL = (Path(__file__).parent.parent / "src" / "main" / "resources"
+               / "db" / "dev-migration" / "V7__seed_stores.sql")
 SERVICE_CODES = {"NEW_LINE", "PORT_IN", "NAME_CHANGE", "USIM_REISSUE"}
 STATUSES = {"OPEN", "CLOSED_DOWN"}
 # V1 스키마 상한. 넘으면 적재에서 잘린다
@@ -22,7 +24,6 @@ LON_RANGE = (Decimal("124.6"), Decimal("132"))
 # 이 반경에 3개 이상 모인 곳이 있어야 최근접 정렬 순서를 검증할 수 있다
 CLUSTER_KM = 1.0
 CLUSTER_MIN = 3
-PHONE_RE = re.compile(r"^070-8\d{3}-\d{4}$")
 
 
 def load(path: Path) -> list[dict]:
@@ -82,10 +83,6 @@ def check_fields(stores: list[dict], problems: list[str]) -> None:
         if store.get("status") not in STATUSES:
             problems.append(f"{label}: status '{store.get('status')}' (허용 {sorted(STATUSES)})")
 
-        phone = store.get("phone")
-        if phone and not PHONE_RE.match(phone):
-            problems.append(f"{label}: phone '{phone}' — 실번호가 섞이지 않게 070-8xxx-xxxx 형식만 쓴다")
-
     for store_id, count in ids.items():
         if count > 1:
             problems.append(f"store_id {store_id}가 {count}번 나옴")
@@ -126,6 +123,35 @@ def check_services(stores: list[dict], problems: list[str]) -> None:
             problems.append(f"{label}: 알 수 없는 업무 코드 {sorted(unknown)}")
         if len(services) != len(set(services)):
             problems.append(f"{label}: 업무 코드 중복 ({services}) - PK가 (store_id, service_type_id)다")
+
+
+def check_generated_sql(stores: list[dict], sql_path: Path, problems: list[str]) -> None:
+    """커밋된 시드 SQL이 지금 JSON에서 생성한 것과 같은지 본다.
+
+    SQL은 손으로 고치지 않는 파일이라, 다르면 JSON만 고치고 재생성을 잊은 것이다.
+    """
+    sys.path.insert(0, str(Path(__file__).parent))
+    try:
+        from generate_stores import to_sql
+    except ImportError as exc:
+        problems.append(f"generate_stores.py를 불러올 수 없어 SQL 대조를 못 했습니다: {exc}")
+        return
+
+    if not sql_path.exists():
+        problems.append(f"{sql_path}: 시드 SQL이 없습니다 (--sql로 경로를 지정하거나 --no-sql로 건너뛰세요)")
+        return
+
+    expected = to_sql(stores)
+    actual = sql_path.read_text(encoding="utf-8")
+    if expected == actual:
+        print(f"  시드 SQL 대조: {sql_path.name} == to_sql({DEFAULT_PATH.name})")
+        return
+
+    exp_lines, act_lines = expected.splitlines(), actual.splitlines()
+    first = next((i + 1 for i, (a, b) in enumerate(zip(exp_lines, act_lines)) if a != b),
+                 min(len(exp_lines), len(act_lines)) + 1)
+    problems.append(f"{sql_path.name}이 JSON에서 생성한 SQL과 다릅니다 (처음 다른 행 {first}). "
+                    f"생성기로 다시 뽑으세요: python3 scripts/generate_stores.py ... --sql {sql_path}")
 
 
 def report_distribution(stores: list[dict]) -> list[str]:
@@ -176,7 +202,7 @@ def report_distribution(stores: list[dict]) -> list[str]:
 
 
 def self_test() -> int:
-    ok = {"store_id": 1, "name": "텔미 강남1호점", "phone": "070-8123-4567",
+    ok = {"store_id": 1, "name": "텔미 강남1호점", "phone": None,
           "address": "서울 강남구 테헤란로 1", "region_code": "1168010100",
           "latitude": "37.500000", "longitude": "127.030000", "status": "OPEN",
           "services": ["NEW_LINE"], "hours": [
@@ -198,7 +224,6 @@ def self_test() -> int:
         ("좌표 범위 밖", problems_for(latitude="41.000000"), 1),
         ("status 오타", problems_for(status="CLOSED"), 1),
         ("이름 초과", problems_for(name="가" * 101), 1),
-        ("실번호 형식", problems_for(phone="02-1234-5678"), 1),
         ("요일 6개", problems_for(hours=ok["hours"][:6]), 1),
         ("요일 중복", problems_for(hours=ok["hours"][:6] + [ok["hours"][0]]), 1),
         ("휴무인데 시간 있음",
@@ -234,6 +259,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", nargs="?", type=Path, default=DEFAULT_PATH,
                     help=f"매장 JSON (기본 {DEFAULT_PATH.name})")
+    ap.add_argument("--sql", type=Path, default=DEFAULT_SQL,
+                    help=f"대조할 시드 SQL (기본 {DEFAULT_SQL.name})")
+    ap.add_argument("--no-sql", action="store_true", help="시드 SQL 대조를 건너뛴다")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
@@ -247,6 +275,8 @@ def main() -> int:
     check_services(stores, problems)
 
     print(f"{args.path} — 매장 {len(stores)}건 검증")
+    if not args.no_sql:
+        check_generated_sql(stores, args.sql, problems)
     warnings = report_distribution(stores)
 
     if problems:

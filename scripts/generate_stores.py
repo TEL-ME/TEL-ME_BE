@@ -29,9 +29,12 @@ COLUMNS = {
 DEFAULT_INDUSTRY = "핸드폰 소매|통신기기 소매|이동통신"
 DEFAULT_MAX_PER_FILE = 3000  # 시도별 CSV가 수백 MB라 파일당 후보를 끊는다
 SERVICE_CODES = ("NEW_LINE", "PORT_IN", "NAME_CHANGE", "USIM_REISSUE")
-# 상호, 전화는 실데이터를 쓰지 않는다
+# 상호는 실데이터를 쓰지 않는다. 전화번호는 어느 대역을 쓰든 실제 가입자 번호와 겹칠 수 있어 아예 넣지 않는다
 BRAND = "텔미"
-PHONE_PREFIX = "070-8"  # 착신 없는 대역
+# V2 샘플 매장 2곳의 region_code를 V7과 같은 10자리 법정동코드로 맞춘다.
+# V2는 이미 develop에 머지돼 직접 고치면 Flyway 체크섬이 깨지므로 시드 SQL 끝에서 UPDATE한다.
+# 값은 같은 판본 공공데이터에서 확인 (테헤란로 123 → 역삼동, 센텀중앙로 45 → 우동)
+V2_SAMPLE_REGION_CODES = ((1, "1168010100"), (2, "2635010500"))
 
 # 최근접 검색 검증에 밀집, 중거리, 공백이 다 필요해서 시도별로 배정
 REGION_QUOTA = {
@@ -204,7 +207,7 @@ def build(candidates: list[dict], count: int, start_id: int, seed: int) -> list[
         stores.append({
             "store_id": start_id + offset,
             "name": name,
-            "phone": f"{PHONE_PREFIX}{rng.randint(100, 999)}-{rng.randint(1000, 9999)}",
+            "phone": None,
             "address": row["address"],
             "region_code": row["region_code"] or None,
             "latitude": str(row["lat"]),
@@ -229,7 +232,7 @@ def to_sql(stores: list[dict]) -> str:
     """dev-migration용 INSERT. service_type_id는 code로 조회해 기존 마스터를 쓴다"""
     out = [
         "-- 매장 가상 데이터. 좌표·주소·법정동코드는 공공데이터(소상공인시장진흥공단 상가(상권)정보 2026-06)에서",
-        "-- 가져왔고 상호·전화·영업시간·가능업무는 실제 업체 정보X",
+        "-- 가져왔고 상호·영업시간·가능업무는 실제 업체 정보X. 전화번호는 넣지 않는다(phone NULL)",
         "-- scripts/generate_stores.py --sql 로 생성한다. 손으로 고치지 말 것.",
         "-- day_of_week는 1(월)~7(일). V6가 CHECK로 고정한다.",
         "",
@@ -265,6 +268,10 @@ def to_sql(stores: list[dict]) -> str:
     out.append("-- PK를 직접 지정했으므로 시퀀스를 맞춘다. 안 하면 다음 INSERT에서 PK 충돌")
     out.append("SELECT setval(pg_get_serial_sequence('stores', 'store_id'),"
                " (SELECT max(store_id) FROM stores));")
+    out.append("")
+    out.append("-- V2 샘플 매장의 region_code가 'SEOUL'/'BUSAN'이라 형식이 섞인다. V7과 같은 법정동코드로 맞춘다")
+    for store_id, code in V2_SAMPLE_REGION_CODES:
+        out.append(f"UPDATE stores SET region_code = {sql_literal(code)} WHERE store_id = {store_id};")
     return "\n".join(out) + "\n"
 
 
@@ -293,7 +300,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("csv", nargs="*", type=Path, help="공공데이터 상가정보 CSV (시도별 파일 여러 개 가능)")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"출력 JSON (기본 {DEFAULT_OUT.name})")
-    ap.add_argument("--sql", type=Path, help="dev-migration용 SQL도 함께 생성 (예: V6__seed_stores.sql)")
+    ap.add_argument("--sql", type=Path, help="dev-migration용 SQL도 함께 생성 (예: V<다음버전>__seed_stores.sql)")
     ap.add_argument("--count", type=int, default=DEFAULT_COUNT, help=f"매장 건수 (기본 {DEFAULT_COUNT})")
     ap.add_argument("--start-id", type=int, default=101,
                     help="store_id 시작값 (기본 101 — V2 샘플 1·2번을 비켜 둔다)")
