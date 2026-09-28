@@ -38,9 +38,9 @@ done
 확인은 임계값과 무관한 AUC로 한다. `SEARCH_TUNING.md` 10절의 Q_A 행 AUC(0.8390)와 비교해 같으면 코퍼스가 맞고, 다르면 재임베딩이 필요하다. DB 지문으로 더 빠르게 확인할 수도 있다:
 ```bash
 docker exec telme-postgres psql -U telme -d telme -tAc \
-  "select count(*), md5(string_agg(embedding::text, ',' order by faq_id)) from faq_embeddings;"
+  "select count(*), md5(string_agg(e.embedding::text, ',' order by e.faq_id)) from faq_embeddings e join faqs f using (faq_id) where f.policy_ref not like 'POLICY-%';"
 ```
-기준값: `Q_A`는 `1150|4c6faa4addd8f37e5e7b5921f0882207`, `QUESTION_ONLY`는 `1150|2343d78abdb1daa5b22062a3e574a971` (`EVAL_SET_SUPPLEMENT.md` 4.1절, 130건 재측정으로 확인). 코퍼스(`faq_full_1150.json`)나 임베딩 모델이 바뀌면 값도 바뀐다.
+기준값: `Q_A`는 `1150|4c6faa4addd8f37e5e7b5921f0882207`, `QUESTION_ONLY`는 `1150|2343d78abdb1daa5b22062a3e574a971` (`EVAL_SET_SUPPLEMENT.md` 4.1절, 130건 재측정으로 확인). V2 dev 시드 FAQ 2건(`policy_ref`가 `POLICY-`로 시작)은 빼고 계산한다. 코퍼스(`faq_full_1150.json`)나 임베딩 모델이 바뀌면 값도 바뀐다.
 
 이 문서의 3·4절 수치는 코퍼스가 `Q_A`임을 확인(AUC 0.8390 일치)한 뒤 측정한 값이다.
 
@@ -109,7 +109,7 @@ python3 scripts/analyze_search_grid.py .measure/raw-1150-Q_A.json
 측정 전에 코퍼스가 `Q_A`인지 먼저 확인한다(2.2절 참고):
 ```bash
 docker exec telme-postgres psql -U telme -d telme -tAc \
-  "select count(*), md5(string_agg(embedding::text, ',' order by faq_id)) from faq_embeddings;"
+  "select count(*), md5(string_agg(e.embedding::text, ',' order by e.faq_id)) from faq_embeddings e join faqs f using (faq_id) where f.policy_ref not like 'POLICY-%';"
 # 다르면 재임베딩
 FAQ_REEMBED_ENABLED=true FAQ_EMBEDDING_TEXT_VARIANT=Q_A \
   java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0

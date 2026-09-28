@@ -200,7 +200,7 @@ python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
 java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0 \
   --faq.reembed.enabled=true --faq.embedding-text.variant=Q_A
 docker exec telme-postgres psql -U telme -d telme -tAc \
-  "select count(*), md5(string_agg(embedding::text, ',' order by faq_id)) from faq_embeddings;"
+  "select count(*), md5(string_agg(e.embedding::text, ',' order by e.faq_id)) from faq_embeddings e join faqs f using (faq_id) where f.policy_ref not like 'POLICY-%';"
 
 # 4) 5.1·5.2절 표: Q_A 결과와 나란히 분류 (0.85 기준은 --threshold 0.72,0.85)
 python3 scripts/classify_search_failures.py \
