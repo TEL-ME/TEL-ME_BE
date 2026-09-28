@@ -12,6 +12,7 @@ import com.telme.faq.entity.Faq;
 import com.telme.faq.repository.FaqRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,6 +85,31 @@ class AdminFaqQueryServiceTest {
     }
 
     @Test
+    @DisplayName("최근 수정 순은 수정 시각이 같으면 faqId 내림차순으로 가른다")
+    void 최근_수정_순은_faqId로_동점을_가른다() {
+        // 한 트랜잭션에서 저장해 updatedAt이 모두 같다. 두 번째 정렬 기준이 없으면 순서가 흔들린다
+        assertThat(search(AdminFaqSort.RECENT, AdminFaqStatusFilter.ACTIVE, null).faqs())
+                .extracting(AdminFaqListItemResponse::faqId)
+                .containsExactly(percent, neverCited, cited);
+    }
+
+    @Test
+    @DisplayName("인용순 정렬도 페이지를 나눠 조회하면 중복이나 누락이 없다")
+    void 인용순_정렬도_페이징된다() {
+        AdminFaqListResponse first = searchPage(AdminFaqSort.CITATION_ASC, 0, 2);
+        AdminFaqListResponse second = searchPage(AdminFaqSort.CITATION_ASC, 1, 2);
+
+        // group by 쿼리는 count 쿼리를 따로 주고 있어 전체 건수가 조인 결과로 부풀지 않는지 본다
+        assertThat(first.totalElements()).isEqualTo(3);
+        assertThat(first.totalPages()).isEqualTo(2);
+
+        List<Long> merged = Stream.concat(first.faqs().stream(), second.faqs().stream())
+                .map(AdminFaqListItemResponse::faqId)
+                .toList();
+        assertThat(merged).containsExactly(neverCited, percent, cited);
+    }
+
+    @Test
     @DisplayName("상태를 주지 않으면 ACTIVE만 나오고 ALL이면 숨김까지 나온다")
     void 기본_상태는_ACTIVE만_조회한다() {
         assertThat(search(null, null, null).faqs()).extracting(AdminFaqListItemResponse::faqId)
@@ -132,6 +158,10 @@ class AdminFaqQueryServiceTest {
 
     private AdminFaqListResponse search(AdminFaqSort sort, AdminFaqStatusFilter status, String keyword) {
         return service.getFaqs(new AdminFaqSearchRequest(keyword, CATEGORY, status, sort, null, null));
+    }
+
+    private AdminFaqListResponse searchPage(AdminFaqSort sort, int page, int size) {
+        return service.getFaqs(new AdminFaqSearchRequest(null, CATEGORY, null, sort, page, size));
     }
 
     private long citationOf(List<AdminFaqListItemResponse> faqs, Long faqId) {
