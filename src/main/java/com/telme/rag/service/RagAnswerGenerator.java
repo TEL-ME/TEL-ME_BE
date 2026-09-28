@@ -10,6 +10,7 @@ import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
         }
 
         String context = contextConverter.toContext(request.searchResults());
+        String answerEvidence = request.searchResults().stream()
+                .map(result -> result.answer() == null ? "" : result.answer())
+                .collect(Collectors.joining("\n"));
 
         // 검색은 문장 유사도로만 걸러 묻는 항목이 근거에 없는 질문도 통과시킨다
         if (!relevanceChecker.canAnswer(request.executionId(), request.userQuery(), context)) {
@@ -56,7 +60,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .build();
 
         CollectingHandler collector =
-                new CollectingHandler(handler, answerGuard, context, request.userQuery());
+                new CollectingHandler(handler, answerGuard, answerEvidence, request.userQuery());
         llmClient.stream(llmRequest, collector);
         collector.rethrowIfFailed();
 
@@ -137,6 +141,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
             answer = answerGuard.trimAfterNoEvidence(collected.toString());
             answer = answerGuard.trimUngroundedChannels(answer, context, userQuery);
             answer = answerGuard.trimUngroundedComparisons(answer, context, userQuery);
+            answer = answerGuard.trimUngroundedPolicyAttributes(answer, context, userQuery);
+            answer = answerGuard.trimUnsupportedPolicyClaims(answer, context);
+            answer = answerGuard.trimContradictedChargeClaims(answer, context);
             answerGuard.verifyAmounts(answer, context, userQuery);
             answerGuard.verifyMeasures(answer, context, userQuery);
             delegate.onComplete();
