@@ -34,7 +34,7 @@ public class AdminFaqController {
                     + "정렬은 RECENT(최근 수정 순), CITATION_DESC, CITATION_ASC 중 하나입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: 길이 또는 범위 오류"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-1: enum 값, 길이 또는 범위 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음")
     })

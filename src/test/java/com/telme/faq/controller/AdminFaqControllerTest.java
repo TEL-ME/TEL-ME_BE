@@ -91,7 +91,8 @@ class AdminFaqControllerTest {
     @DisplayName("정렬 값이 enum에 없으면 400을 반환한다")
     void 잘못된_정렬_값은_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/faqs").param("sort", "UNKNOWN"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
     }
 
     @Test
@@ -99,6 +100,7 @@ class AdminFaqControllerTest {
     @DisplayName("size가 100을 넘으면 400을 반환한다")
     void size가_너무_크면_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/faqs").param("size", "101"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
     }
 }
