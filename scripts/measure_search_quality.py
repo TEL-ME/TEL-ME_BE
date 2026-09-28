@@ -18,6 +18,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+from check_eval_questions import VALID_TYPES
 from check_eval_questions import content_hash as _content_hash
 
 DEFAULT_API_URL = "http://localhost:8080/api/v1/faq/search"
@@ -108,6 +109,14 @@ SELF_TEST_CASES: list[tuple[str, list[SearchOutcome], dict[str, float]]] = [
         "전부 UNRELATED (긍정 질문 없음)",
         [SearchOutcome("UNRELATED", None, False), SearchOutcome("UNRELATED", None, True)],
         {"unrelated_rejection_rate": 0.5},
+    ),
+    (
+        # ANSWER는 UNRELATED가 아니므로 긍정 질문으로 Recall 분모에 들어가야 한다
+        "ANSWER도 긍정 질문으로 집계",
+        [SearchOutcome("SIMILAR", 1, True), SearchOutcome("ANSWER", None, True),
+         SearchOutcome("UNRELATED", None, False)],
+        {"recall@1": 0.5, "recall@3": 0.5, "recall@5": 0.5,
+         "mrr": 0.5, "unrelated_rejection_rate": 1.0},
     ),
 ]
 
@@ -221,7 +230,7 @@ def load_eval_set(path: Path) -> list[dict]:
             raise SystemExit(f"{path}: {index}번 질문 형식 오류")
         kind = item.get("type")
         expected = item.get("expected_content_hash")
-        if kind not in ("SIMILAR", "VARIANT", "UNRELATED"):
+        if kind not in VALID_TYPES:
             raise SystemExit(f"{path}: {index}번 type 오류: {kind}")
         if kind == "UNRELATED":
             if expected is not None:
@@ -383,7 +392,7 @@ def format_experiment_row(experiment: str, change: str, metrics: dict[str, float
     if "recall@1" not in metrics or "recall@3" not in metrics:
         raise SystemExit(
             "실험 기록표는 recall@1·recall@3가 필요합니다 — "
-            "--top-k가 3 미만이거나, 평가셋에 SIMILAR/VARIANT(긍정 질문)가 하나도 없으면 측정되지 않습니다"
+            "--top-k가 3 미만이거나, 평가셋에 긍정 질문(SIMILAR/VARIANT/ANSWER)이 하나도 없으면 측정되지 않습니다"
         )
     return (
         f"| {experiment} | {change} | {metrics['recall@1']:.3f} | "
@@ -462,7 +471,7 @@ def main() -> int:
     if missed:
         print(f"\n  정답 못 찾은 질문(eval_id): {missed}")
     if never_found:
-        print(f"  참고: 다음 정답 FAQ는 같은 정답을 공유하는 질문(SIMILAR/VARIANT) 모두에서 한 번도 안 나왔습니다 — "
+        print(f"  참고: 다음 정답 FAQ는 같은 정답을 공유하는 긍정 질문 모두에서 한 번도 안 나왔습니다 — "
               f"eval_id: {never_found}")
         print("  적재 자체가 안 됐는지, 적재는 됐는데 top-k 밖으로 밀려난 것인지는 이 목록만으로 "
               "가릴 수 없습니다 - content_hash로 faqs를 직접 조회해서 확인하세요.")
