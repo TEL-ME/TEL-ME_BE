@@ -57,9 +57,25 @@ class RuleBasedRoutingFallbackTest {
     }
 
     @Test
+    void storeVisitPolicyIsFaqRatherThanStoreLookup() {
+        LlmRoutingPayload result = fallback.classify(
+                "유심 분실 시 매장 방문과 택배 신청 중 어떻게 재발급받나요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.FAQ);
+        assertThat(result.subQueries()).singleElement()
+                .extracting(LlmRoutingPayload.SubQueryPayload::intent)
+                .isEqualTo(ConsultRequest.Intent.FAQ);
+    }
+
+    @Test
+    void storeVisitPossibilityWithoutLookupIsFaq() {
+        assertThat(fallback.classify("매장 방문이 가능한가요?").intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @Test
     @DisplayName("FAQ 키워드와 매장 키워드가 모두 포함된 경우 BOTH로 분류하고 서브질의 2개를 생성한다")
     void classify_both_keywords() {
-        LlmRoutingPayload result = fallback.classify("로밍 요금제 변경하고 싶은데 강남역 대리점 찾아줘");
+        LlmRoutingPayload result = fallback.classify("로밍 요금제 변경 방법 알려주고 강남역 대리점 찾아줘");
 
         assertThat(result.intent()).isEqualTo(Intent.BOTH);
         assertThat(result.confidence().doubleValue()).isEqualTo(0.70);
@@ -79,11 +95,17 @@ class RuleBasedRoutingFallbackTest {
     }
 
     @Test
+    void ordinaryPhraseContainingCancelSyllablesIsNotTelecomIntent() {
+        assertThat(fallback.classify("전세 대출 한도는 어떻게 정해지나요?").intent())
+                .isEqualTo(Intent.UNKNOWN);
+    }
+
+    @Test
     @DisplayName("유심 재발급 관련 키워드가 있으면 serviceType 조건으로 USIM_REISSUE를 추출한다")
     void extract_conditions_serviceType() {
         LlmRoutingPayload result = fallback.classify("유심 재발급 받으려면 대리점 어디로 가야 하나요?");
 
-        assertThat(result.intent()).isEqualTo(Intent.BOTH);
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
         assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
     }
 
@@ -93,6 +115,12 @@ class RuleBasedRoutingFallbackTest {
         LlmRoutingPayload result = fallback.classify("신규 개통도 하고 유심 재발급도 대리점에서 가능한가요?");
 
         assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
+    }
+
+    @Test
+    void specificStoreLookupWithPhoneWordIsNotCompoundQuestion() {
+        assertThat(fallback.classify("가까운 휴대폰 매장 위치 알려줘").intent())
+                .isEqualTo(Intent.STORE);
     }
 
     @ParameterizedTest

@@ -64,15 +64,23 @@ public class RuleBasedRoutingFallback {
         + "|어떻게|뭐야|무엇|되나요|돼요|인가요"
     );
 
-    private static final List<String> STORE_KEYWORDS = List.of(
-        "매장", "대리점", "지점", "직영점", "가까운", "근처",
-        "위치", "어디", "주소", "방문", "영업시간", "찾아줘", "찾아주세요"
+    private static final Pattern STORE_LOOKUP_PATTERN = Pattern.compile(
+        "가까운|근처|주변|찾|어디|위치|주소|영업시간|주차|몇\\s*시|연락처"
     );
+    private static final Pattern STORE_ENTITY_PATTERN = Pattern.compile(
+        "매장|대리점|지점|직영점|[가-힣A-Za-z0-9]+역점"
+    );
+    private static final Pattern SEPARATE_REQUESTS_PATTERN = Pattern.compile(
+        "알려\\s*주고|설명\\s*해\\s*주고|추천\\s*해\\s*주고|그리고|또\\s+매장|뿐만 아니라"
+    );
+    private static final Pattern CANCEL_SERVICE_PATTERN = Pattern.compile("(?<!정)해지");
 
     private static final List<String> FAQ_KEYWORDS = List.of(
         "요금제", "할인", "약정", "위약금", "로밍", "유심", "eSIM",
-        "기기변경", "번호이동", "해지", "부가서비스", "결합", "데이터",
-        "요금", "개통", "해외", "명의", "가입", "혜택"
+        "기기변경", "번호이동", "부가서비스", "결합", "데이터",
+        "요금", "개통", "해외", "명의", "가입", "혜택", "재발급", "분실", "택배",
+        "통신", "휴대폰", "핸드폰", "폰", "단말", "할부", "통화", "청구", "납부", "인터넷", "번호", "보험",
+        "5G", "LTE", "USIM", "이심", "유플러스", "U+"
     );
 
     private record ServiceTypeRule(String code, Pattern pattern) {}
@@ -92,11 +100,15 @@ public class RuleBasedRoutingFallback {
             );
         }
 
-        boolean hasStore = STORE_KEYWORDS.stream().anyMatch(text::contains);
-        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains);
+        boolean hasStore = STORE_ENTITY_PATTERN.matcher(text).find()
+            && STORE_LOOKUP_PATTERN.matcher(text).find();
+        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains)
+            || CANCEL_SERVICE_PATTERN.matcher(text).find()
+            || (!hasStore && STORE_ENTITY_PATTERN.matcher(text).find()
+                && (text.contains("방문") || text.contains("처리") || text.contains("가능")));
         Map<String, String> conditions = extractConditions(text);
 
-        if (hasStore && hasFaq) {
+        if (hasStore && hasFaq && SEPARATE_REQUESTS_PATTERN.matcher(text).find()) {
             return new LlmRoutingPayload(
                 Intent.BOTH, BigDecimal.valueOf(0.70), text, conditions,
                 List.of(
@@ -115,7 +127,7 @@ public class RuleBasedRoutingFallback {
 
         if (hasFaq) {
             return new LlmRoutingPayload(
-                Intent.FAQ, BigDecimal.valueOf(0.80), text, Collections.emptyMap(),
+                Intent.FAQ, BigDecimal.valueOf(0.80), text, conditions,
                 List.of(new SubQueryPayload((short) 1, ConsultRequest.Intent.FAQ, text, Collections.emptyMap()))
             );
         }

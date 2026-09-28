@@ -49,7 +49,8 @@ class QueryRoutingServiceTest {
             intentConverter,
             transactionTemplate
         );
-        org.mockito.Mockito.lenient().when(queryRoutingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        org.mockito.Mockito.lenient().when(queryRoutingRepository.saveAndFlush(any()))
+                .thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(consultRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(queryRoutingRepository.findByMessage_MessageId(any())).thenReturn(java.util.Optional.empty());
     }
@@ -141,8 +142,31 @@ class QueryRoutingServiceTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("단일 하위 질문");
 
-            verify(queryRoutingRepository, never()).save(any());
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("단일 FAQ 질문이 여러 하위 질의로 나뉘어도 모든 조건을 합쳐 한 건으로 저장한다")
+        void singleConsultCombinesFaqSubQueries() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,
+                 "refinedQuery":"5G, LTE, 알뜰 요금제 종류를 각각 알려줘",
+                 "extractedConditions":{},
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"알뜰 요금제 종류","conditions":{}}
+                 ]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).hasSize(1);
+            assertThat(result.subQueries().getFirst().queryText())
+                    .isEqualTo("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요");
         }
 
         @Test
@@ -232,6 +256,24 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        @DisplayName("LLM이 업무 코드를 최상위 intent로 쓰면 원문으로 FAQ 분류를 다시 한다")
+        void invalidServiceTypeIntentFallsBackToOriginalQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"NAME_CHANGE","confidence":0.99,
+                 "refinedQuery":"명의변경 절차","extractedConditions":{},"subQueries":[]}
+                """);
+
+            String question = "아버지 명의에서 제 명의로 바꾸려면 어떻게 해야 하나요?";
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo(question);
+        }
+
+        @Test
         @DisplayName("예상치 못한 RuntimeException(NPE 등)은 Fallback으로 삼키지 않고 그대로 전파한다")
         void unexpectedException_propagates() {
             given(llmClient.generate(any())).willThrow(new NullPointerException("unexpected null"));
@@ -281,19 +323,196 @@ class QueryRoutingServiceTest {
         }
 
         @Test
-        @DisplayName("서브질의에 null이나 비정상 값이 포함되어도 안전하게 기본값으로 보정된다")
+        @DisplayName("하위 의도가 비어 있으면 상위 의도로 보정하고 순서를 다시 매긴다")
         void subQueryWithNullFields_handledSafely() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"STORE","confidence":0.90,"refinedQuery":"매장 안내",
-                 "subQueries":[{"order":null,"intent":null,"queryText":null,"conditions":{"": "val", "key": null, "validKey": "validVal"}}]}
+                 "subQueries":[{"order":99,"intent":null,"queryText":null,
+                  "conditions":{"": "val", "key": null, "validKey": "validVal"}}]}
                 """);
 
             IntentRouteResponse r = service.route(msg("매장 찾아줘"));
 
             assertThat(r.subQueries()).hasSize(1);
             assertThat(r.subQueries().get(0).order()).isEqualTo((short) 1);
-            assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+            assertThat(r.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.STORE);
             assertThat(r.subQueries().get(0).queryText()).isEqualTo("매장 안내");
+            assertThat(r.subQueries().get(0).conditions()).isEmpty();
+        }
+
+        @Test
+        void conflictingTopLevelAndSubQueryFallsBackBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.99,"refinedQuery":"명의변경 절차",
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"명의변경 매장"}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("명의변경 절차 알려줘"));
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                    .isEqualTo(ConsultRequest.Intent.FAQ);
+        }
+
+        @Test
+        void incompleteBothFallsBackInsteadOfSavingPartialConsult() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"BOTH","confidence":0.99,"refinedQuery":"요금제와 근처 매장",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제"}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("요금제 알려주고 근처 매장도 찾아줘"));
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries()).hasSize(2);
+        }
+
+        @Test
+        void unknownWithSubQueryFallsBackToOriginalTelecomQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.9,"subQueries":[
+                 {"order":1,"intent":"FAQ","queryText":"로밍 요금"}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("로밍 요금 알려줘"));
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+        }
+
+        @Test
+        void validQuestionWithoutRuleKeywordKeepsModelClassification() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.99,"refinedQuery":"가상계좌란 무엇인가",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"가상계좌란 무엇인가"}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg("가상계좌가 무엇인가요?"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.subQueries()).hasSize(1);
+        }
+
+        @Test
+        void lowConfidenceDoesNotCreateConsultRequest() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.3,"refinedQuery":"로밍 요금",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금"}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg("로밍 요금 알려줘"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.subQueries()).isEmpty();
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void outOfRangeConfidenceFallsBackToRule() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":1.3,"refinedQuery":"로밍 요금",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금"}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("로밍 요금 알려줘"));
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+        }
+
+        @Test
+        void ungroundedAndUnsupportedConditionsAreRemoved() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                 "extractedConditions":{"location":"부산역","serviceType":"MADE_UP","branch":"강남역"},
+                 "subQueries":[{"order":7,"intent":"STORE","queryText":"강남역 매장",
+                  "conditions":{"location":"강남역","serviceType":"MADE_UP","branch":"강남역"}}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("강남역 매장 찾아줘"));
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.extractedConditions()).isEmpty();
+            assertThat(result.subQueries().getFirst().order()).isEqualTo((short) 1);
+            assertThat(result.subQueries().getFirst().conditions())
+                    .containsExactlyEntriesOf(java.util.Map.of("location", "강남역"));
+        }
+
+        @Test
+        void topLevelStoreConditionsReachSingleStoreConsultRequest() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 유심 매장",
+                 "extractedConditions":{"location":"강남역","serviceType":"USIM_REISSUE"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 유심 매장",
+                  "conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("강남역 유심 재발급 매장 찾아줘"));
+
+            assertThat(result.subQueries().getFirst().conditions())
+                    .containsEntry("location", "강남역")
+                    .containsEntry("serviceType", "USIM_REISSUE");
+        }
+
+        @Test
+        void inventedPriceAndPlaceAreNotUsedAsSearchQuery() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"강남역 5G 요금제 39000원",
+                 "subQueries":[{"order":1,"intent":"FAQ",
+                  "queryText":"강남역 5G 요금제 39000원"}]}
+                """);
+            String original = "5G 요금제 가격 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(original), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(original);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+        }
+
+        @Test
+        void omittedNumericConstraintUsesOriginalQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"할부 수수료 차이",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"할부 수수료 차이"}]}
+                """);
+            String original = "24개월과 30개월 할부 수수료 차이 알려줘";
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(original), null);
+
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(original);
+        }
+
+        @Test
+        void concurrentRoutingReusesCommittedWinnerAfterInsertConflict() {
+            ChatMessage message = msg("요금제 알려줘");
+            QueryRouting winner = QueryRouting.builder()
+                    .routingId(44L)
+                    .message(message)
+                    .intent(QueryRouting.Intent.FAQ)
+                    .refinedQuery("요금제 알려줘")
+                    .confidence(new java.math.BigDecimal("0.9"))
+                    .method(QueryRouting.Method.LLM)
+                    .build();
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"요금제 알려줘",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 알려줘"}]}
+                """);
+            given(queryRoutingRepository.findByMessage_MessageId(1L))
+                    .willReturn(java.util.Optional.empty(), java.util.Optional.of(winner));
+            given(queryRoutingRepository.saveAndFlush(any()))
+                    .willThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+            given(consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(1L))
+                    .willReturn(java.util.List.of());
+
+            IntentRouteResponse result = service.route(message);
+
+            assertThat(result.routingId()).isEqualTo(44L);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
         }
     }
 
