@@ -106,7 +106,17 @@ public class AnswerGuard {
     private static final Set<String> GENERIC_TOPIC_WORDS = Set.of(
             "최근", "최대", "이내", "이하", "이전", "범위", "발급", "제공", "지원", "가능",
             "불가", "서비스", "정보", "기록", "신청", "처리", "사용", "이용", "경우", "고객",
-            "내용", "안내", "해당", "완료", "일반적", "기준");
+            "내용", "안내", "해당", "완료", "일반적", "기준", "기능", "지원하지", "제공하지",
+            "않습니다", "않아요", "미지원");
+
+    private static final Pattern ATTRIBUTE_NEGATIVE = Pattern.compile(
+            "(?:불가|불가능|할\\s*수\\s*없|(?:지원|제공)하지\\s*않|"
+                    + "(?:결제|발급|포함)(?:가|는|이)?\\s*(?:되지\\s*않|안\\s*되|불가)|"
+                    + "포함되어\\s*있지\\s*않|없(?:습니다|어요))");
+    private static final Pattern ATTRIBUTE_POSITIVE = Pattern.compile(
+            "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요)|"
+                    + "(?:결제|발급|포함)(?:가|는|이)?\\s*(?:됩니다|돼요|가능)|"
+                    + "포함되어\\s*있)");
 
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
     private static final Pattern CHARGE_ABSENT = Pattern.compile(
@@ -153,7 +163,8 @@ public class AnswerGuard {
         for (String sentence : SENTENCE.split(answer.strip())) {
             Set<String> invented = new LinkedHashSet<>();
             for (String attribute : POLICY_ATTRIBUTES) {
-                if (!sentence.contains(attribute) || contains(context, attribute)) {
+                if (!sentence.contains(attribute)
+                        || isPolicyAttributeSupported(attribute, sentence, context)) {
                     continue;
                 }
                 boolean safeNoEvidence = contains(userQuery, attribute)
@@ -170,6 +181,49 @@ public class AnswerGuard {
             log.warn("[AnswerGuard] 근거에 없는 정책 속성으로 문장 제거: {} | {}", invented, sentence);
         }
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private boolean isPolicyAttributeSupported(
+            String attribute, String answerSentence, String context) {
+        if (context == null) {
+            return false;
+        }
+
+        ClaimPolarity answerPolarity = attributePolarity(answerSentence, attribute);
+        boolean mentioned = false;
+        for (String evidenceSentence : SENTENCE.split(context)) {
+            if (!evidenceSentence.contains(attribute)) {
+                continue;
+            }
+            mentioned = true;
+            ClaimPolarity evidencePolarity = attributePolarity(evidenceSentence, attribute);
+            if (answerPolarity == ClaimPolarity.UNKNOWN
+                    || evidencePolarity == ClaimPolarity.UNKNOWN
+                    || answerPolarity == evidencePolarity) {
+                return true;
+            }
+        }
+        return mentioned && answerPolarity == ClaimPolarity.UNKNOWN;
+    }
+
+    private ClaimPolarity attributePolarity(String sentence, String attribute) {
+        if (sentence == null) {
+            return ClaimPolarity.UNKNOWN;
+        }
+        int index = sentence.indexOf(attribute);
+        if (index < 0) {
+            return ClaimPolarity.UNKNOWN;
+        }
+        int start = Math.max(0, index - 20);
+        int end = Math.min(sentence.length(), index + attribute.length() + 50);
+        String scope = sentence.substring(start, end);
+        if (ATTRIBUTE_NEGATIVE.matcher(scope).find()) {
+            return ClaimPolarity.ABSENT;
+        }
+        if (ATTRIBUTE_POSITIVE.matcher(scope).find()) {
+            return ClaimPolarity.PRESENT;
+        }
+        return ClaimPolarity.UNKNOWN;
     }
 
     public String trimUnsupportedPolicyClaims(String answer, String context) {

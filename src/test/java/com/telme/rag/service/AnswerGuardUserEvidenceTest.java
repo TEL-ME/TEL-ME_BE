@@ -323,6 +323,47 @@ class AnswerGuardUserEvidenceTest {
     }
 
     @Test
+    @DisplayName("카드 결제 불가 근거로 카드 결제 가능 답변을 통과시키지 않는다")
+    void 정책_속성의_긍정과_부정을_구분한다() {
+        String answer = "유심 재발급 비용은 카드로 결제할 수 있습니다.";
+        String context = "유심 재발급 비용은 카드로 결제할 수 없습니다.";
+
+        assertThat(guard.trimUngroundedPolicyAttributes(
+                answer, context, "유심 재발급 비용은 카드로 결제할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("카드 결제 가능 근거와 같은 답변은 유지한다")
+    void 정책_속성의_같은_극성은_유지한다() {
+        String answer = "유심 재발급 비용은 카드로 결제할 수 있습니다.";
+        String context = "유심 재발급 비용은 카드로 결제할 수 있습니다.";
+
+        assertThat(guard.trimUngroundedPolicyAttributes(
+                answer, context, "유심 재발급 비용은 카드로 결제할 수 있나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 기능의 미지원 근거를 현재 기능의 근거로 사용하지 않는다")
+    void 기능_미지원_정책은_대상_기능까지_일치해야_한다() {
+        String answer = "eSIM 발급 기능은 지원하지 않습니다.";
+        String context = "로밍 요금제 변경 기능은 지원하지 않습니다.";
+
+        assertThat(guard.trimUnsupportedPolicyClaims(answer, context))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("같은 기능의 미지원 근거는 유지한다")
+    void 같은_기능의_미지원_정책은_유지한다() {
+        String answer = "eSIM 발급 기능은 지원하지 않습니다.";
+        String context = "eSIM 발급 기능은 지원하지 않습니다.";
+
+        assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
+    }
+
+    @Test
     @DisplayName("근거에 있는 정책 단정은 유지한다")
     void 근거에_있는_정책_단정은_유지한다() {
         String answer = "번호이동은 반드시 20시 전에 신청해야 합니다.";
