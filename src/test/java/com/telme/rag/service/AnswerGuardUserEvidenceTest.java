@@ -177,6 +177,28 @@ class AnswerGuardUserEvidenceTest {
     }
 
     @Test
+    @DisplayName("질문에만 나온 속도를 사실로 확정하면 차단한다")
+    void 질문에만_나온_속도를_영상_시청_가능_근거로_쓰지_않는다() {
+        String answer = "데이터 소진 후에도 400kbps 속도로 영상 시청이 가능합니다.";
+        String context = "속도 제한 상태라 고화질 영상은 어렵습니다. 언리미티드 요금제는 제한이 없습니다.";
+
+        assertThatThrownBy(() -> guard.applyEvidencePolicy(
+                answer, context, "데이터 소진 후 400kbps에서 영상 시청이 되나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("400kbps");
+    }
+
+    @Test
+    @DisplayName("근거에 명시된 속도는 답변에서 사용할 수 있다")
+    void 근거에_있는_속도는_답변에서_사용할_수_있다() {
+        String answer = "소진 후 400kbps 속도로 이용할 수 있습니다.";
+        String context = "데이터 소진 후 400kbps 속도로 이용할 수 있습니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "데이터 소진 후 속도는 얼마인가요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("근거의 상한을 넘는 사용자 기간이 범위 밖이라는 답변은 통과시킨다")
     void 근거의_상한을_넘는_사용자_기간을_범위_밖으로_안내하면_통과한다() {
         String answer = "요금납부확인서는 최근 3년분까지만 발급 가능하여 4년 전 기록은 제공되지 않습니다.";
@@ -205,6 +227,26 @@ class AnswerGuardUserEvidenceTest {
 
         assertThat(guard.trimUngroundedComparisons(answer, context, "이메일이 더 저렴하고 편리한가요?"))
                 .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 절차 난이도 평가를 제거한다")
+    void 근거에_없는_간단하다는_평가를_제거한다() {
+        String answer = "절차는 비교적 간단하지만, 정확한 안내는 매장 직원에게 문의하세요.";
+        String context = "매장에서 기기변경을 신청하고 기존 할부금을 완납하거나 승계할 수 있습니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "기기변경 절차를 알려주세요."))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 절차가 간단하다고 명시되어 있으면 유지한다")
+    void 근거에_있는_간단하다는_평가를_유지한다() {
+        String answer = "기기변경 절차는 간단합니다.";
+        String context = "기기변경은 신분증을 가지고 매장에 방문하면 되어 절차가 간단합니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "기기변경 절차를 알려주세요."))
+                .isEqualTo(answer);
     }
 
     @Test
@@ -361,6 +403,47 @@ class AnswerGuardUserEvidenceTest {
         String context = "eSIM 발급 기능은 지원하지 않습니다.";
 
         assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("카드 발급 안내만으로 카드 결제 가능 주장을 근거화하지 않는다")
+    void 카드_발급_근거로_카드_결제_주장을_통과시키지_않는다() {
+        String answer = "카드 결제가 가능합니다.";
+        String context = "신용카드 발급 절차는 앱에서 확인할 수 있습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "카드 결제가 되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("할부금이 없는 명의변경 안내는 정책 속성 가드가 유지한다")
+    void 명의변경_조건부_할부_안내는_유지한다() {
+        String answer = "네, 할부금이 없는 경우 신용 심사 없이 바로 명의변경이 가능합니다.";
+        String context = "단말 할부금이 없으면 신용 심사 없이 진행됩니다. "
+                + "할부금이 없으면 별도 심사 없이 진행되지만, 할부금이 남아 있으면 양수인의 신용 심사를 거쳐야 합니다.";
+
+        assertThat(guard.trimUngroundedPolicyAttributes(answer, context, "할부금이 없으면 신용 심사 없이 명의변경이 되나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 항목의 수수료 근거를 명의변경 수수료 판정에 섞지 않는다")
+    void 다른_항목의_수수료_근거가_명의변경_수수료를_허용하지_않는다() {
+        String answer = "명의변경 수수료가 발생합니다.";
+        String context = "명의변경 수수료는 없습니다. 유심 재발급 수수료는 발생합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "명의변경 수수료가 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("로밍 변경 미지원 근거를 로밍 해지 미지원 주장에 재사용하지 않는다")
+    void 로밍_변경_근거로_로밍_해지_미지원_주장을_통과시키지_않는다() {
+        String answer = "로밍 해지 기능은 제공하지 않습니다.";
+        String context = "로밍 변경 기능은 제공하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 해지 기능을 지원하나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test

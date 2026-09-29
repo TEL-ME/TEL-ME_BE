@@ -138,14 +138,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         // 여기서 검사해야 호출 기록이 실패로 남는다. stream()이 끝난 뒤에 막으면 SUCCESS가 이미 들어간다
         @Override
         public void onComplete() {
-            answer = answerGuard.trimAfterNoEvidence(collected.toString());
-            answer = answerGuard.trimUngroundedChannels(answer, context, userQuery);
-            answer = answerGuard.trimUngroundedComparisons(answer, context, userQuery);
-            answer = answerGuard.trimUngroundedPolicyAttributes(answer, context, userQuery);
-            answer = answerGuard.trimUnsupportedPolicyClaims(answer, context);
-            answer = answerGuard.trimContradictedChargeClaims(answer, context);
-            answerGuard.verifyAmounts(answer, context, userQuery);
-            answerGuard.verifyMeasures(answer, context, userQuery);
+            answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
             delegate.onComplete();
         }
 

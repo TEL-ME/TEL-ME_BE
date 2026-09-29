@@ -27,7 +27,7 @@ public class AnswerGuard {
     // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
     private static final Pattern MEASURE = Pattern.compile(
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
-                    + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|배|%|일|개월|시간|분|GB|회|년)");
+                    + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)");
 
     // 운영 시간처럼 시각 자체가 정책인 경우도 숫자 근거로 검사한다. 9:00과 09:00은 같은 값이다
     private static final Pattern CLOCK_TIME = Pattern.compile(
@@ -97,7 +97,7 @@ public class AnswerGuard {
     private static final Pattern DEPENDENT_EXPLANATION = Pattern.compile(
             "^(?:이는|이것은|그 이유는|이 때문에|그 결과|이로 인해)");
     private static final Pattern NORMALIZED_MEASURE = Pattern.compile(
-            "^(\\d+(?:\\.\\d+)?)(영업일|배|%|일|개월|시간|분|GB|회|년)$");
+            "^(\\d+(?:\\.\\d+)?)(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)$");
 
     private static final Pattern TOPIC_WORD = Pattern.compile("[가-힣A-Za-z]{2,}");
     private static final Pattern TOPIC_PARTICLE = Pattern.compile(
@@ -119,6 +119,9 @@ public class AnswerGuard {
                     + "포함되어\\s*있)");
 
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
+    private static final Set<String> GENERIC_CHARGE_WORDS = Set.of(
+            "수수료", "위약금", "발생", "부과", "무료", "면제", "없습니다", "없어요", "있습니다", "있어요");
+    private static final Map<FeatureAction, Pattern> FEATURE_ACTION_PATTERNS = featureActionPatterns();
     private static final Pattern CHARGE_ABSENT = Pattern.compile(
             "(?:무료|면제(?:됩니다|합니다|돼요)|(?:수수료|위약금).{0,20}(?:없(?:습니다|어요)|"
                     + "(?:발생|부과)(?:하지|되지)\\s*않))");
@@ -127,6 +130,22 @@ public class AnswerGuard {
                     + "(?:발생|부과)(?:합니다|됩니다|돼요)|있(?:습니다|어요)))");
 
     private static final Map<PolicyClaim, Pattern> POLICY_CLAIM_PATTERNS = policyClaimPatterns();
+
+    /**
+     * 생성된 답변에 근거 정책을 순서대로 적용한다.
+     * 문장 제거가 먼저 실행되어야 남은 답변의 수치만 검증할 수 있으므로 순서를 이곳에서 관리한다.
+     */
+    public String applyEvidencePolicy(String answer, String context, String userQuery) {
+        String filtered = trimAfterNoEvidence(answer);
+        filtered = trimUngroundedChannels(filtered, context, userQuery);
+        filtered = trimUngroundedComparisons(filtered, context, userQuery);
+        filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
+        filtered = trimUnsupportedPolicyClaims(filtered, context);
+        filtered = trimContradictedChargeClaims(filtered, context);
+        verifyAmounts(filtered, context, userQuery);
+        verifyMeasures(filtered, context, userQuery);
+        return filtered;
+    }
 
     public String trimUngroundedComparisons(String answer, String context, String userQuery) {
         if (answer == null || answer.isBlank()) {
@@ -196,10 +215,19 @@ public class AnswerGuard {
                 continue;
             }
             mentioned = true;
+            if ("카드".equals(attribute)
+                    && !hasMatchingPolicyAction(
+                    answerSentence, evidenceSentence, Set.of(FeatureAction.PAYMENT))) {
+                continue;
+            }
             ClaimPolarity evidencePolarity = attributePolarity(evidenceSentence, attribute);
-            if (answerPolarity == ClaimPolarity.UNKNOWN
+            boolean sameKnownPolarity = answerPolarity != ClaimPolarity.UNKNOWN
+                    && evidencePolarity != ClaimPolarity.UNKNOWN
+                    && answerPolarity == evidencePolarity;
+            if ("카드".equals(attribute) ? sameKnownPolarity
+                    : answerPolarity == ClaimPolarity.UNKNOWN
                     || evidencePolarity == ClaimPolarity.UNKNOWN
-                    || answerPolarity == evidencePolarity) {
+                    || sameKnownPolarity) {
                 return true;
             }
         }
@@ -258,16 +286,27 @@ public class AnswerGuard {
         for (String sentence : SENTENCE.split(answer.strip())) {
             boolean contradicted = false;
             for (String topic : CHARGE_TOPICS) {
-                if (!sentence.contains(topic) || !contains(context, topic)) {
+                if (!sentence.contains(topic) || context == null) {
                     continue;
                 }
                 ClaimPolarity answerPolarity = chargePolarity(sentence, topic);
-                ClaimPolarity contextPolarity = chargePolarity(context, topic);
-                if (answerPolarity != ClaimPolarity.UNKNOWN
-                        && contextPolarity != ClaimPolarity.UNKNOWN
-                        && answerPolarity != contextPolarity) {
-                    contradicted = true;
-                    log.warn("[AnswerGuard] 근거와 반대인 비용 정책으로 문장 제거: {} | {}", topic, sentence);
+                if (answerPolarity == ClaimPolarity.UNKNOWN) {
+                    continue;
+                }
+                for (String evidenceSentence : SENTENCE.split(context)) {
+                    if (!evidenceSentence.contains(topic)
+                            || !sharesChargeSubject(sentence, evidenceSentence)) {
+                        continue;
+                    }
+                    ClaimPolarity evidencePolarity = chargePolarity(evidenceSentence, topic);
+                    if (evidencePolarity != ClaimPolarity.UNKNOWN
+                            && answerPolarity != evidencePolarity) {
+                        contradicted = true;
+                        log.warn("[AnswerGuard] 근거와 반대인 비용 정책으로 문장 제거: {} | {}", topic, sentence);
+                        break;
+                    }
+                }
+                if (contradicted) {
                     break;
                 }
             }
@@ -411,6 +450,15 @@ public class AnswerGuard {
         return words;
     }
 
+    private boolean sharesChargeSubject(String answerSentence, String evidenceSentence) {
+        Set<String> answerTopics = topicWords(answerSentence);
+        Set<String> evidenceTopics = topicWords(evidenceSentence);
+        answerTopics.removeAll(GENERIC_CHARGE_WORDS);
+        evidenceTopics.removeAll(GENERIC_CHARGE_WORDS);
+        answerTopics.retainAll(evidenceTopics);
+        return !answerTopics.isEmpty();
+    }
+
     private Set<PolicyClaim> policyClaimsIn(String text) {
         Set<PolicyClaim> claims = new LinkedHashSet<>();
         if (text == null) {
@@ -431,11 +479,53 @@ public class AnswerGuard {
         Pattern pattern = POLICY_CLAIM_PATTERNS.get(claim);
         for (String evidenceSentence : SENTENCE.split(context)) {
             if (pattern.matcher(evidenceSentence).find()
-                    && sharesPolicyTopic(sentence, evidenceSentence)) {
+                    && sharesPolicyTopic(sentence, evidenceSentence)
+                    && (claim != PolicyClaim.FEATURE_UNAVAILABLE
+                    || hasMatchingPolicyAction(sentence, evidenceSentence, Set.of()))) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean hasMatchingPolicyAction(
+            String answerSentence, String evidenceSentence, Set<FeatureAction> requiredActions) {
+        Set<FeatureAction> answerActions = featureActions(answerSentence);
+        Set<FeatureAction> evidenceActions = featureActions(evidenceSentence);
+        if (!requiredActions.isEmpty()) {
+            answerActions.retainAll(requiredActions);
+            evidenceActions.retainAll(requiredActions);
+        }
+        if (answerActions.isEmpty() || evidenceActions.isEmpty()) {
+            return false;
+        }
+        answerActions.retainAll(evidenceActions);
+        return !answerActions.isEmpty();
+    }
+
+    private Set<FeatureAction> featureActions(String text) {
+        Set<FeatureAction> actions = new LinkedHashSet<>();
+        if (text == null) {
+            return actions;
+        }
+        FEATURE_ACTION_PATTERNS.forEach((action, pattern) -> {
+            if (pattern.matcher(text).find()) {
+                actions.add(action);
+            }
+        });
+        return actions;
+    }
+
+    private static Map<FeatureAction, Pattern> featureActionPatterns() {
+        Map<FeatureAction, Pattern> patterns = new EnumMap<>(FeatureAction.class);
+        patterns.put(FeatureAction.CHANGE, Pattern.compile("(?:변경|바꾸)"));
+        patterns.put(FeatureAction.TERMINATE, Pattern.compile("(?:해지|취소)"));
+        patterns.put(FeatureAction.ISSUE, Pattern.compile("(?:재?발급)"));
+        patterns.put(FeatureAction.REGISTER, Pattern.compile("(?:신청|가입|등록|접수)"));
+        patterns.put(FeatureAction.PAYMENT, Pattern.compile("(?:결제|납부)"));
+        patterns.put(FeatureAction.USE, Pattern.compile("(?:이용|사용)"));
+        patterns.put(FeatureAction.LOOKUP, Pattern.compile("(?:조회|확인)"));
+        return Map.copyOf(patterns);
     }
 
     private ClaimPolarity chargePolarity(String text, String topic) {
@@ -519,6 +609,7 @@ public class AnswerGuard {
         patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리)"));
         patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile("(?:편리|간편|편의|편한|편하)"));
         patterns.put(ComparisonClaim.STABLE, Pattern.compile("안정"));
+        patterns.put(ComparisonClaim.SIMPLE, Pattern.compile("(?:간단|수월|복잡하지\\s*않)"));
         patterns.put(ComparisonClaim.BETTER, Pattern.compile("(?:나은|낫(?:다|습|아요|습니다)|더\\s*좋)"));
         patterns.put(ComparisonClaim.ADVANTAGEOUS, Pattern.compile("유리"));
         patterns.put(ComparisonClaim.SUPERIOR, Pattern.compile("우수"));
@@ -606,6 +697,7 @@ public class AnswerGuard {
         FASTER,
         CONVENIENT,
         STABLE,
+        SIMPLE,
         BETTER,
         ADVANTAGEOUS,
         SUPERIOR
@@ -616,6 +708,16 @@ public class AnswerGuard {
         BUSINESS_DAY_BASIS,
         HARD_DEADLINE,
         FEATURE_UNAVAILABLE
+    }
+
+    private enum FeatureAction {
+        CHANGE,
+        TERMINATE,
+        ISSUE,
+        REGISTER,
+        PAYMENT,
+        USE,
+        LOOKUP
     }
 
     private enum ClaimPolarity {
