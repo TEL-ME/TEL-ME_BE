@@ -449,7 +449,7 @@ class RagAnswerGeneratorTest {
     private FaqSearchResponse faq(Long faqId, String question, String answer) {
         return new FaqSearchResponse(
                 faqId, null, "BILLING", question, answer,
-                0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue());
+                0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue(), null);
     }
 
     private static final class StubClient implements LlmClient {

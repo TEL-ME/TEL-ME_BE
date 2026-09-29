@@ -106,6 +106,67 @@ class FaqEmbeddingRepositoryTest {
     }
 
     @Test
+    @DisplayName("질문 벡터 조회는 질문 벡터 기준 거리순으로 정렬한다")
+    void 질문_벡터_기준_거리순으로_정렬한다() {
+        String testModel = "test-question-order-model";
+        float[] queryVector = alternating(0);
+        // 질문 벡터와 질문+답변 벡터를 반대로 줘서, 정렬이 질문 벡터 기준인지 드러나게 한다
+        FaqEmbedding close = saveEmbedding("질문이 가까운 FAQ", alternating(1), alternating(0), testModel);
+        FaqEmbedding far = saveEmbedding("질문이 먼 FAQ", alternating(0), alternating(1), testModel);
+
+        List<FaqNearestMatch> result = repository.findNearestByQuestionVector(queryVector, 2, testModel);
+
+        assertThat(result).extracting(m -> m.embedding().getFaqId())
+                .containsExactly(close.getFaqId(), far.getFaqId());
+        assertThat(result.get(0).distance()).isCloseTo(0.0, org.assertj.core.data.Offset.offset(1e-6));
+        assertThat(result.get(0).embedding().getFaq().getQuestion()).isEqualTo("질문이 가까운 FAQ");
+    }
+
+    @Test
+    @DisplayName("질문 벡터 조회는 질문 벡터가 비어 있는 행을 뺀다")
+    void 질문_벡터가_없으면_제외한다() {
+        String testModel = "test-question-null-model";
+        FaqEmbedding filled = saveEmbedding("질문 벡터 있음", alternating(0), alternating(0), testModel);
+        saveEmbedding("질문 벡터 없음", alternating(0), testModel);
+
+        List<FaqNearestMatch> result = repository.findNearestByQuestionVector(alternating(0), 10, testModel);
+
+        assertThat(result).extracting(m -> m.embedding().getFaqId()).containsExactly(filled.getFaqId());
+    }
+
+    @Test
+    @DisplayName("질문 벡터 조회도 비활성·미동기화·버전 불일치·다른 모델 임베딩을 뺀다")
+    void 질문_벡터_조회도_기존_필터를_적용한다() {
+        String testModel = "test-question-filter-model";
+        float[] vector = alternating(0);
+        FaqEmbedding valid = saveEmbedding("정상", vector, vector, testModel);
+        Long hidden = saveEmbedding("비활성", vector, vector, testModel).getFaqId();
+        Long pending = saveEmbedding("미동기화", vector, vector, testModel).getFaqId();
+        Long stale = saveEmbedding("버전 불일치", vector, vector, testModel).getFaqId();
+        saveEmbedding("다른 모델", vector, vector, "other-question-model");
+        // 저장한 행이 DB에 먼저 들어가야 JdbcTemplate UPDATE가 0건으로 끝나지 않는다
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE faqs SET status = 'HIDDEN' WHERE faq_id = ?", hidden);
+        jdbcTemplate.update("UPDATE faq_embeddings SET sync_status = 'PENDING' WHERE faq_id = ?", pending);
+        jdbcTemplate.update("UPDATE faqs SET version = version + 1 WHERE faq_id = ?", stale);
+        // 바뀐 값을 영속성 컨텍스트 캐시가 아니라 DB에서 읽게 한다
+        entityManager.clear();
+
+        List<FaqNearestMatch> result = repository.findNearestByQuestionVector(vector, 10, testModel);
+
+        assertThat(result).extracting(m -> m.embedding().getFaqId()).containsExactly(valid.getFaqId());
+    }
+
+    // 짝수/홀수 성분만 1인 벡터. 0과 1은 서로 직교해 코사인 거리 1, 같으면 0
+    private static float[] alternating(int parity) {
+        float[] vector = new float[1024];
+        for (int i = 0; i < 1024; i++) {
+            vector[i] = (i % 2 == parity) ? 1f : 0f;
+        }
+        return vector;
+    }
+
+    @Test
     @DisplayName("topK 개수만큼만 반환한다")
     void topK_개수만큼만_반환한다() {
         float[] queryVector = new float[1024];

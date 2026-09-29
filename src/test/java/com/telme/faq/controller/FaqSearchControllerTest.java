@@ -65,13 +65,14 @@ class FaqSearchControllerTest {
     void 정상_요청이면_200을_반환한다() throws Exception {
         when(faqSearchService.search(any())).thenReturn(List.of(
                 new FaqSearchResponse(1L, "USIM-0001", "USIM", "유심 재발급 얼마예요?", "7,700원입니다.",
-                        0.9, 1, LocalDate.of(2026, 9, 21), 1)));
+                        0.9, 1, LocalDate.of(2026, 9, 21), 1, "Q_A")));
 
         mockMvc.perform(get("/api/v1/faq/search").param("query", "유심 재발급 얼마예요?"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result[0].faqId").value(1))
-                .andExpect(jsonPath("$.result[0].slotId").value("USIM-0001"));
+                .andExpect(jsonPath("$.result[0].slotId").value("USIM-0001"))
+                .andExpect(jsonPath("$.result[0].matchedVariant").value("Q_A"));
     }
 
     @Test
