@@ -18,10 +18,13 @@ public final class RoutingPromptTemplates {
         고객 입력을 분석하여 의도(intent)를 분류하고, 복합 질문은 하위 질문으로 분해하십시오.
         
         [분류 기준]
-        1. FAQ: 요금제, 부가서비스, 결합할인, 로밍, 위약금, 번호이동, 기기변경 등 통신 정책/서비스 질의
-        2. STORE: 대리점/매장 위치, 영업시간, 가까운 지점, 방문 관련 질의
+        1. FAQ: 요금제, 부가서비스, 결합할인, 로밍, 위약금, 번호이동, 기기변경, 유심 재발급, 명의변경, 해지 등 통신 정책/서비스 질의
+        2. STORE: 특정 지역의 대리점/매장 찾기, 위치, 영업시간 등 지점 정보 질의
         3. BOTH: FAQ와 매장 안내가 동시에 필요한 복합 질의
         4. UNKNOWN: 인사, 잡담, 통신과 무관한 질의
+        - 매장에서 처리할 수 있는지, 매장 방문과 택배 중 무엇이 가능한지 묻는 것은 지점 검색이 아니라 FAQ이다.
+        - 해지, 재발급, 명의변경 방법을 묻는 통신 질문은 UNKNOWN이 아니다.
+        - 최상위 intent에는 FAQ, STORE, BOTH, UNKNOWN만 쓴다. NAME_CHANGE, USIM_REISSUE 등 매장 업무 코드는 intent가 아니다.
         
         [매장 업무 코드 - serviceType 추출 시 아래 값만 사용]
         - NEW_LINE: 신규 개통
@@ -36,12 +39,38 @@ public final class RoutingPromptTemplates {
         - 이전 대화에서 확인된 지역·업무 코드는 현재 질문에 필요하면 extractedConditions에 채운다.
         - refinedQuery에는 지시어를 실제 대상으로 바꾼 문장을 담는다. ("거기 영업시간" -> "강남역 매장 영업시간")
 
+        [검색 질문 보존]
+        - 현재 질문이나 이전 대화에 없는 지역, 상품, 기간, 조건을 추측해 추가하지 않는다.
+        - 질문이 여러 대상이나 조건을 함께 묻는다면 FAQ 하위 질문에 모두 남긴다. 5G, LTE, 알뜰 요금제를 묻는 질문을 5G만으로 줄이지 않는다.
+        - FAQ만 묻는 질문은 조건이 여러 개여도 subQueries에 FAQ 한 건만 넣고, queryText에 전체 질문의 조건을 담는다.
+        - 서로 다른 업무인 FAQ와 지점 검색을 함께 요청한 경우에만 FAQ와 STORE 하위 질문을 각각 한 건씩 넣는다.
+        - 의미가 같은 검색 질문으로 바꾸기 어렵다면 사용자 원문을 refinedQuery와 FAQ queryText에 그대로 사용한다.
+        - 질문에 없는 다른 업무나 행동을 검색 질문에 추가하지 않는다. 해지를 물으면 번호이동을 추가하지 않는다.
+
         [Few-Shot 예시]
         질문: "너겟 요금제 5G 무제한 결합할인 조건이 어떻게 되나요?"
         응답: {"intent":"FAQ","confidence":0.98,"refinedQuery":"너겟 요금제 5G 무제한 결합할인 조건","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"너겟 요금제 5G 무제한 결합할인 조건","conditions":{}}]}
+
+        질문: "부모님 명의 휴대폰을 제 명의로 바꾸려면 무엇이 필요한가요?"
+        응답: {
+          "intent":"FAQ","confidence":0.96,
+          "refinedQuery":"부모님에서 자녀로 휴대폰 명의변경 필요 서류와 절차",
+          "extractedConditions":{},
+          "subQueries":[{"order":1,"intent":"FAQ",
+            "queryText":"부모님에서 자녀로 휴대폰 명의변경 필요 서류와 절차","conditions":{}}]
+        }
         
         질문: "강남역 근처에 유심 교체할 수 있는 매장 있어?"
         응답: {"intent":"STORE","confidence":0.95,"refinedQuery":"강남역 유심 재발급 매장","extractedConditions":{"location":"강남역","serviceType":"USIM_REISSUE"},"subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 유심 재발급 가능 매장","conditions":{"location":"강남역","serviceType":"USIM_REISSUE"}}]}
+
+        질문: "유심을 잃어버렸는데 매장 방문과 택배 신청 중 어떻게 재발급받을 수 있나요?"
+        응답: {
+          "intent":"FAQ","confidence":0.95,
+          "refinedQuery":"유심 분실 시 매장 방문과 택배 재발급 가능 여부",
+          "extractedConditions":{},
+          "subQueries":[{"order":1,"intent":"FAQ",
+            "queryText":"유심 분실 시 매장 방문과 택배 재발급 가능 여부","conditions":{}}]
+        }
         
         질문: "5G 요금제 추천해주고, 신촌에서 번호이동 가능한 대리점 찾아줘"
         응답: {"intent":"BOTH","confidence":0.99,"refinedQuery":"5G 요금제 추천 및 신촌 번호이동 매장","extractedConditions":{"location":"신촌","serviceType":"PORT_IN"},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G 요금제 종류 및 추천","conditions":{}},{"order":2,"intent":"STORE","queryText":"신촌 번호이동 가능 매장","conditions":{"location":"신촌","serviceType":"PORT_IN"}}]}

@@ -11,8 +11,10 @@ import com.telme.faq.service.FaqSearchService;
 import java.util.List;
 import java.util.Objects;
 
-/** 정제된 상담 질문으로 FAQ를 검색하고 검색 결과를 실제 답변 생성 단계에 넘긴다. */
+/** 사용자 원문을 우선 검색하고 근거가 없을 때 정제 질문으로 보완한다. */
 public final class FaqSearchAnswerProvider implements AnswerProvider {
+    private static final int SEARCH_TOP_K = 3;
+
     private final FaqSearchService searches;
     private final SearchResultAnswerGenerator answers;
 
@@ -28,10 +30,23 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         if (input.purpose() != Purpose.GENERAL_FAQ) {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
         }
-        List<FaqSearchResponse> results =
-                List.copyOf(searches.search(new FaqSearchRequest(input.searchQuery(), null)));
+        List<FaqSearchResponse> results = searchWithOriginalAndRefinedQuery(input);
         return Objects.requireNonNull(
                 answers.generate(input, results), "generatedAnswer");
+    }
+
+    private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
+        List<FaqSearchResponse> originalResults = search(input.originalUserQuery());
+        // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
+        if (!originalResults.isEmpty()
+                || input.originalUserQuery().equals(input.searchQuery())) {
+            return originalResults;
+        }
+        return search(input.searchQuery());
+    }
+
+    private List<FaqSearchResponse> search(String query) {
+        return List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
     }
 
     /** RAG 구현과의 경계다. 검색 결과가 없어도 답변 불가 처리를 위해 호출한다. */

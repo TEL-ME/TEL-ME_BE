@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""검색 품질 평가셋(eval_questions_30.json) 검증"""
+"""검색 품질 평가셋(eval_questions_*.json) 검증"""
 
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ from pathlib import Path
 
 from check_duplicates import DEFAULT_BATCH, cosine, embed_all
 
-VALID_TYPES = ("SIMILAR", "VARIANT", "UNRELATED")
+# ANSWER: FAQ 질문 변형이 아니라 답변에만 있는 값·용어로 묻는 질문 (TELME-69)
+VALID_TYPES = ("SIMILAR", "VARIANT", "ANSWER", "UNRELATED")
 VALID_UNRELATED_KINDS = ("OFF_DOMAIN", "ADJACENT", "ADJACENT_HARD")
 
 DEFAULT_FAQ_PATH = Path(__file__).parent / "data" / "faq_sample_30.json"
@@ -51,6 +52,8 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
     type_count: Counter[str] = Counter()
     # (category, type) -> 건수. 해시가 유효한 SIMILAR/VARIANT만 센다
     coverage: Counter[tuple[str, str]] = Counter()
+    # ANSWER는 SIMILAR/VARIANT 짝이 없어 대칭 검사에 섞으면 안 되므로 따로 센다
+    answer_coverage: Counter[str] = Counter()
     unrelated_kind_count: Counter[str] = Counter()
 
     for i, item in enumerate(items):
@@ -87,7 +90,7 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
                 unrelated_kind_count[kind or "(없음)"] += 1
             continue
 
-        # SIMILAR / VARIANT - 해시는 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때)
+        # SIMILAR / VARIANT / ANSWER - 해시는 문자열 하나 또는 배열(답변이 사실상 같은 FAQ가 여럿일 때)
         hashes = expected_hash if isinstance(expected_hash, list) else [expected_hash]
         if not expected_hash or not all(isinstance(h, str) and h for h in hashes):
             add(i, item, "expected_content_hash 없음", f"type={item_type}")
@@ -114,7 +117,10 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
         if expected_slot not in matched_slots:
             add(i, item, "expected_slot_id 불일치",
                 f"명시 {expected_slot}, 해시가 가리키는 FAQ는 {matched_slots}")
-        coverage[(matched_categories[0], item_type)] += 1
+        if item_type == "ANSWER":
+            answer_coverage[matched_categories[0]] += 1
+        else:
+            coverage[(matched_categories[0], item_type)] += 1
 
     # 건수를 고정하지 않고 대칭성만
     if type_count["SIMILAR"] != type_count["VARIANT"]:
@@ -132,9 +138,14 @@ def check_static(items: list[dict], faq_by_hash: dict[str, dict]) -> list[Findin
                                  f"{cat} SIMILAR {coverage[(cat, 'SIMILAR')]}건, "
                                  f"VARIANT {coverage[(cat, 'VARIANT')]}건"))
 
+    if answer_coverage and len(set(answer_coverage.values())) > 1:
+        detail = ", ".join(f"{c} {n}건" for c, n in sorted(answer_coverage.items(), key=lambda x: x[1]))
+        found.append(Finding(-1, "-", "ANSWER 카테고리 불균형", detail))
+
     kinds = ", ".join(f"{k} {n}건" for k, n in sorted(unrelated_kind_count.items()))
     print(f"  구성: SIMILAR {type_count['SIMILAR']} / VARIANT {type_count['VARIANT']} / "
-          f"UNRELATED {type_count['UNRELATED']} ({kinds}), 카테고리 {len(covered)}종")
+          f"ANSWER {type_count['ANSWER']} / UNRELATED {type_count['UNRELATED']} ({kinds}), "
+          f"카테고리 {len(set(covered) | set(answer_coverage))}종")
     return found
 
 
@@ -149,6 +160,7 @@ def check_live(
     faq_hashes = [content_hash(f["question"], f["answer"]) for f in faqs]
 
     similar_or_variant = [it for it in items if it.get("type") in ("SIMILAR", "VARIANT")]
+    answer_items = [it for it in items if it.get("type") == "ANSWER"]
     unrelated = [it for it in items if it.get("type") == "UNRELATED"]
 
     all_texts = faq_texts + [it["question"] for it in items]
@@ -165,20 +177,48 @@ def check_live(
         )
         top_score, top_hash = scored[0]
         expected = item.get("expected_content_hash")
-        ok = top_hash == expected
+        # 정답이 배열이면 그중 하나가 1위면 된다. 문자열과 배열을 == 로 비교하면 항상 False가 된다
+        expected_set = set(expected if isinstance(expected, list) else [expected])
+        ok = top_hash in expected_set
         mark = "OK" if ok else "FAIL"
         print(f"  {mark}  [{item['eval_id']}] {item['type']:7s} 최고유사도 {top_score:.4f}"
               f"  {item['question']}")
         if not ok:
-            expected_score = next((s for s, h in scored if h == expected), None)
+            expected_score = next((s for s, h in scored if h in expected_set), None)
             found.append(Finding(
                 -1, item["eval_id"], "기대 FAQ가 최고 유사도가 아님",
-                f"1위 해시 {top_hash[:12]}..., 기대 해시 {str(expected)[:12]}... "
+                f"1위 해시 {top_hash[:12]}..., 기대 해시 {sorted(expected_set)[0][:12]}... "
                 f"(기대 해시 유사도 {expected_score:.4f})" if expected_score is not None
                 else f"1위 해시 {top_hash[:12]}..., 기대 해시가 faq 목록에 없음",
             ))
 
-    print(f"\n[UNRELATED] {len(unrelated)}건 - 30건 대비 유사도 분포 (낮을수록 좋음)")
+    # ANSWER는 실패로 걸러내지 않고 참고로만 나눈다. 정답 FAQ 질문 유사도는 질문만 임베딩한
+    # 검색 점수와 같은 계산이라, 이 값으로 문항을 고르면 평가셋이 그 구성에 불리하게 기운다
+    # 1위면 "FAQ 질문으로도 커버됨", 아니면 "답변에만 있음"(질문 벡터 구성의 손실 위험 구간)
+    print(f"\n[ANSWER] {len(answer_items)}건 - 참고: 정답 FAQ 질문 유사도 순위 (문항 선별에 쓰지 말 것)")
+    covered_ids: list[str] = []
+    for item in answer_items:
+        vec = eval_vectors[item["eval_id"]]
+        scored = sorted(
+            ((cosine(vec, fv), fh) for fv, fh in zip(faq_vectors, faq_hashes)),
+            key=lambda x: -x[0],
+        )
+        expected = item["expected_content_hash"]
+        expected_set = set(expected if isinstance(expected, list) else [expected])
+        rank, score = next(
+            ((r, s) for r, (s, h) in enumerate(scored, 1) if h in expected_set), (None, None))
+        covered = rank == 1
+        if covered:
+            covered_ids.append(item["eval_id"])
+        rank_text = f"{rank}위 ({score:.4f})" if rank is not None else "목록에 없음"
+        group = "FAQ 질문으로도 커버됨" if covered else "답변에만 있음"
+        print(f"  [{item['eval_id']}] 정답 FAQ 질문 유사도 {rank_text} - {group}  {item['question']}")
+    if answer_items:
+        print(f"\n  FAQ 질문으로도 커버됨 {len(covered_ids)}건 / 답변에만 있음 "
+              f"{len(answer_items) - len(covered_ids)}건")
+        print(f"  커버됨: {covered_ids}")
+
+    print(f"\n[UNRELATED] {len(unrelated)}건 - FAQ {len(faqs)}건 대비 유사도 분포 (낮을수록 좋음)")
     unrelated_maxes = []
     for item in unrelated:
         vec = eval_vectors[item["eval_id"]]
@@ -223,6 +263,7 @@ STATIC_KINDS = (
     "유형 불균형",
     "카테고리 불균형",
     "카테고리 유형 불균형",
+    "ANSWER 카테고리 불균형",
 )
 
 
@@ -269,9 +310,16 @@ def self_test() -> int:
         {"eval_id": "T13", "type": "SIMILAR", "question": "배열 안의 두 번째 slot_id를 적은 정상 케이스",
          "expected_content_hash": [usim_hash, usim_hash2],                      # 정상 (같은 카테고리 복수 정답)
          "expected_slot_id": "USIM-S02"},
+        {"eval_id": "T14", "type": "ANSWER", "question": "7,700원이 유심값인가요?",
+         "expected_content_hash": [usim_hash, usim_hash2], "expected_slot_id": "USIM-S01"},
+        {"eval_id": "T15", "type": "ANSWER", "question": "7,700원 내라는데 재발급 비용이에요?",
+         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},
+        {"eval_id": "T16", "type": "ANSWER", "question": "알뜰 2종은 뭐예요?",
+         "expected_content_hash": plan_hash, "expected_slot_id": "PLAN-S01"},
     ]
     # 픽스처가 SIMILAR 6 / VARIANT 4라 "유형 불균형"이 걸리고,
     # USIM만 여러 건이고 PLAN은 1건이라 "카테고리 불균형"과 "카테고리 유형 불균형"도 걸린다
+    # ANSWER는 USIM 2건 / PLAN 1건이라 "ANSWER 카테고리 불균형"이 걸린다
     findings = check_static(items, faq_by_hash)
     findings += check_static([], faq_by_hash)   # 빈 평가셋
     kinds = {f.kind for f in findings}
@@ -285,6 +333,23 @@ def self_test() -> int:
     if unexpected:
         ok = False
         print(f"  FAIL STATIC_KINDS에 없는 지적 종류: {sorted(unexpected)}")
+
+    # 보강 평가셋처럼 ANSWER + UNRELATED만 있는 균형 잡힌 파일은 아무 지적도 없어야 한다
+    # (SIMILAR/VARIANT 0건을 불균형으로 오탐하지 않는지)
+    clean = [
+        {"eval_id": "C01", "type": "ANSWER", "question": "7,700원이 유심값인가요?",
+         "expected_content_hash": usim_hash, "expected_slot_id": "USIM-S01"},
+        {"eval_id": "C02", "type": "ANSWER", "question": "알뜰 2종은 뭐예요?",
+         "expected_content_hash": plan_hash, "expected_slot_id": "PLAN-S01"},
+        {"eval_id": "C03", "type": "UNRELATED", "unrelated_kind": "ADJACENT_HARD",
+         "question": "유심 재발급 비용은 카드로 결제할 수 있나요?",
+         "expected_content_hash": None, "expected_slot_id": None},
+    ]
+    clean_findings = check_static(clean, faq_by_hash)
+    clean_ok = not clean_findings
+    ok = ok and clean_ok
+    tail = "" if clean_ok else f" → {[f.kind for f in clean_findings]}"
+    print(f"  {'OK  지적 없음' if clean_ok else 'FAIL 오탐'}  ANSWER + UNRELATED 정상 평가셋{tail}")
     return 0 if ok else 1
 
 
