@@ -119,7 +119,7 @@ class FaqSearchAnswerProviderTest {
     void searchesRefinedQueryWhenOriginalSearchHasNoEvidence() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var found = new FaqSearchResponse(
-                7L, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
+                7L, null, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
                 0.80, 1, LocalDate.of(2026, 9, 21), 1);
         when(searches.search(any())).thenAnswer(invocation -> {
             FaqSearchRequest request = invocation.getArgument(0);
