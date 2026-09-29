@@ -12,6 +12,7 @@ import com.telme.rag.repository.MessageSourceRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,7 @@ public class AdminFaqCommandService {
         String contentHash = FaqContentHash.of(request.question(), request.answer());
         rejectDuplicate(request.question(), request.answer(), contentHash, null);
 
-        Faq faq = faqRepository.save(Faq.builder()
+        Faq faq = saveOrRejectDuplicate(Faq.builder()
                 .category(request.category().name())
                 .question(request.question())
                 .answer(request.answer())
@@ -72,7 +73,7 @@ public class AdminFaqCommandService {
             embeddingSyncService.upsert(faqId);
         }
         // 트리거가 채우는 updated_at은 UPDATE가 나간 뒤에야 읽힌다. 안 하면 응답에 수정 전 시각이 나간다
-        faqRepository.flush();
+        flushOrRejectDuplicate();
         log.info("[AdminFaq] 수정 faqId={} contentChanged={} version={}", faqId, contentChanged, faq.getVersion());
         return converter.toDetail(faq, citationCount(faqId));
     }
@@ -82,6 +83,24 @@ public class AdminFaqCommandService {
         Faq faq = findFaq(faqId);
         faq.changeStatus(Faq.Status.DELETED, adminId);
         log.info("[AdminFaq] 삭제 faqId={} adminId={}", faqId, adminId);
+    }
+
+    // 앱 검사는 조회와 저장이 떨어져 있어 동시에 들어오면 둘 다 통과한다.
+    // 그때는 uk_faqs_content_active 인덱스가 막고, 여기서 같은 응답으로 바꾼다
+    private Faq saveOrRejectDuplicate(Faq faq) {
+        try {
+            return faqRepository.saveAndFlush(faq);
+        } catch (DataIntegrityViolationException e) {
+            throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+        }
+    }
+
+    private void flushOrRejectDuplicate() {
+        try {
+            faqRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+        }
     }
 
     // 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.

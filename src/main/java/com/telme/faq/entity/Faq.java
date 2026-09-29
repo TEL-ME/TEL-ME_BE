@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -47,6 +48,12 @@ public class Faq {
     @Column(name = "version", nullable = false)
     @Builder.Default
     private Integer version = 1;
+
+    // 저장할 때마다 오른다. version은 질문·답변이 바뀔 때만 오르는 내용 버전이라 겸용할 수 없다
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    @Builder.Default
+    private Integer lockVersion = 0;
 
     @Column(name = "content_hash", length = 64)
     private String contentHash;
