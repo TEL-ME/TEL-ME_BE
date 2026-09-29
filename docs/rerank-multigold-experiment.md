@@ -61,11 +61,3 @@
 3. 비슷한 주제지만 근거가 질문의 세부 조건을 답하지 못하는 사례를 후속 근거 적합성 평가에 포함해 주세요.
 
 이번 구현은 별도 실험 워크트리에서 진행했고, develop 설정은 바꾸지 않았다. Java 리랭커 기능은 `search.rerank.enabled` 기본값이 `false`다.
-
-## 상세 자료
-
-- [실험 원인 분석](retrieval-root-cause-analysis.md)
-- [후속 질문 검색 비교](refined-query-selection-experiment.md)
-- [보완 정답 라벨](rerank-multigold-exp/multigold_labels.json), [사람이 제외한 동치 판정과 이유](rerank-multigold-exp/review_overrides.json)
-- [기존 라벨과 보완 라벨의 검색 결과 비교](rerank-multigold-exp/eval_rerank_result.json), [실제 앱 검색 결과 채점](rerank-multigold-exp/e2e_scored.json)
-- [실험 코드와 나머지 원자료](rerank-multigold-exp/)
