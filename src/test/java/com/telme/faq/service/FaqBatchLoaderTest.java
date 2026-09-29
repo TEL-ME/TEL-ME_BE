@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.faq.service.FaqBatchLoader.LoadResult;
@@ -17,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,11 +58,22 @@ class FaqBatchLoaderTest {
         doAnswer(inv -> {
             List<String> texts = inv.getArgument(0);
             List<float[]> out = new ArrayList<>();
-            for (int i = 0; i < texts.size(); i++) {
-                out.add(new float[1024]);
+            for (String text : texts) {
+                out.add(vectorOf(text));
             }
             return out;
         }).when(embeddingClient).embedBatch(anyList());
+    }
+
+    // 텍스트마다 다른 벡터를 돌려준다.
+    // 전부 같은 값이면 본문 벡터와 질문 벡터가 실제로 다른 텍스트에서 나왔는지를 단언할 수 없다
+    private static float[] vectorOf(String text) {
+        float[] v = new float[1024];
+        int seed = text.hashCode();
+        for (int i = 0; i < v.length; i++) {
+            v[i] = Math.floorMod(seed + i * 31, 97) / 97f;
+        }
+        return v;
     }
 
     @AfterEach
@@ -200,6 +211,27 @@ class FaqBatchLoaderTest {
     }
 
     @Test
+    @DisplayName("적재한 행은 본문, 질문 두 벡터를 갖고 서로 다르다")
+    void 두_벡터를_함께_저장한다() throws IOException {
+        loader.load(write("g.json", List.<String[]>of(row(1))), BATCH);
+
+        Map<String, Object> stored = jdbcTemplate.queryForMap(
+                "SELECT (e.embedding IS NOT NULL) AS qa, (e.embedding_question IS NOT NULL) AS qo, "
+                        + "(e.embedding = e.embedding_question) AS same "
+                        + "FROM faq_embeddings e JOIN faqs f ON f.faq_id = e.faq_id WHERE f.slot_id = ?",
+                "LOADER-TEST-1");
+
+        assertThat(stored.get("qa")).isEqualTo(true);
+        assertThat(stored.get("qo")).isEqualTo(true);
+        assertThat(stored.get("same")).isEqualTo(false); // 질문만 구성이라 본문 벡터와 달라야 한다
+        // 본문 1회 + 질문 1회, 각각 다른 텍스트로 부른다
+        verify(embeddingClient).embedBatch(List.of(
+                textAssembler.assemble("USIM", MARK + " 질문 1", "답변 1")));
+        verify(embeddingClient).embedBatch(List.of(
+                textAssembler.assembleQuestion(MARK + " 질문 1")));
+    }
+
+    @Test
     @DisplayName("파일 안에서 slot_id가 같으면 내용이 달라도 첫 건만 넣는다")
     void 파일_내_slot_중복() throws IOException {
         LoadResult result = loader.load(write("c.json", List.of(row(1),
@@ -226,9 +258,19 @@ class FaqBatchLoaderTest {
     @Test
     @DisplayName("두 번째 청크에서 실패해도 첫 청크는 커밋되어 남고, 재실행하면 이어서 적재한다")
     void 청크_단위로_커밋된다() throws IOException {
-        when(embeddingClient.embedBatch(anyList()))
-                .thenReturn(List.of(new float[1024], new float[1024]))
-                .thenThrow(new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED));
+        // 이중 벡터라 청크당 embedBatch가 2회(본문, 질문) 돈다.
+        // 호출 순서로 실패를 심으면 첫 청크에서 터지므로, 두 번째 청크에 들어갈 내용으로 가른다
+        doAnswer(inv -> {
+            List<String> texts = inv.getArgument(0);
+            if (texts.stream().anyMatch(t -> t.contains(MARK + " 질문 3"))) {
+                throw new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED);
+            }
+            List<float[]> out = new ArrayList<>();
+            for (String text : texts) {
+                out.add(vectorOf(text));
+            }
+            return out;
+        }).when(embeddingClient).embedBatch(anyList());
         Path p = write("f.json", List.of(row(1), row(2), row(3), row(4), row(5)));
 
         assertThatThrownBy(() -> loader.load(p, BATCH)).isInstanceOf(GeneralException.class);

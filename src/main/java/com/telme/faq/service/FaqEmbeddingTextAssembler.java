@@ -22,6 +22,16 @@ public class FaqEmbeddingTextAssembler {
         return properties.variant().assemble(category, question, answer);
     }
 
+    // 이중 벡터의 두 번째 구성
+    // 설정 variant와 무관하게 질문만 뽑는다
+    public String assembleQuestion(Faq faq) {
+        return assembleQuestion(faq.getQuestion());
+    }
+
+    public String assembleQuestion(String question) {
+        return FaqEmbeddingTextVariant.QUESTION_ONLY.assemble(null, question, null);
+    }
+
     public FaqEmbeddingTextVariant variant() {
         return properties.variant();
     }
