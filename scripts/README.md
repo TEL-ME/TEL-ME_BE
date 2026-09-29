@@ -157,14 +157,88 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0 \
 
 - 임베딩 텍스트 구성(`faq.embedding-text.variant`)을 바꾸면 기존 벡터가 전부 무효
 - `content_hash`는 질문, 답변에서만 나오므로 적재 로더로는 갱신되지 않음
-- **1,150건 약 140초.** 이중 벡터(TELME-79)로 청크마다 임베딩을 2회 부른다(`Q_A` + `QUESTION_ONLY`). 건너뛰기 없음, 재실행은 처음부터
-  - `variant`가 이미 `QUESTION_ONLY`면 1회만 부르고 같은 벡터를 양쪽에 쓴다(약 70초)
+- **1,150건 약 140초.** 벡터를 두 벌 만들어서다(아래 절). 건너뛰기 없음, 재실행은 처음부터
 - **질문 벡터가 빈 DB는 이 명령으로 채운다.** `embedding_question`이 NULL인 행은 이중 벡터 검색에서 빠진다
 - 단일 프로세스로만 실행
 - ⚠ **dev 시드 FAQ 2건(`faq_id` 1, 2)도 덮어씀**
   - 시드 임베딩은 고정 패턴이고 `FaqEmbeddingRepositoryTest`, `FaqSearchApiIntegrationTest`가 이를 전제
   - 로컬에서 두 테스트가 깨지면 `dev-migration/V2__seed_sample_data.sql`의 벡터를 다시 넣을 것
   - CI는 DB를 새로 생성하므로 영향 없음
+
+### FAQ 벡터는 두 벌이다
+
+FAQ 한 건마다 벡터를 둘 저장한다. 검색이 둘 다 조회해 합친다(이중 벡터, TELME-77/79/76/83).
+
+| 컬럼 | 임베딩한 텍스트 | 잘 잡는 질문 |
+| --- | --- | --- |
+| `embedding` | `faq.embedding-text.variant` 구성(기본 `Q_A` = 질문 + 답변) | 답변 내용을 묻는 질문 |
+| `embedding_question` | 질문만(`QUESTION_ONLY` 고정) | 표현을 바꿔 묻는 질문 |
+
+**왜 두 벌인가.** `Q_A`는 답변이 훨씬 길어 벡터가 답변 단어에 끌려간다. 뜻은 같은데 말투가 다른 질문을 놓친다. 질문끼리 비교하는 벡터를 하나 더 두면 그걸 잡는다. 전환이 아니라 병행인 이유는, `QUESTION_ONLY`로 바꾸면 답변에만 있는 값을 묻는 질문을 잃기 때문이다. 근거는 `docs/SEARCH_TUNING.md` 15절.
+
+두 번째 구성은 **설정으로 열지 않고 코드에 고정**했다. 임베딩 구성이 설정 축 2개가 되면 측정할 조합이 배로 늘어난다.
+
+**쓰는 경로가 3곳이다.** 셋 다 두 벡터를 같은 트랜잭션에서 쓴다.
+
+| 경로 | 언제 | 실행 |
+| --- | --- | --- |
+| 배치 적재 | JSON 최초 적재 | `faq.batch-load.enabled=true` |
+| 전량 재임베딩 | 구성 변경, 질문 벡터 백필 | `faq.reembed.enabled=true` |
+| 단건 동기화 | 관리자가 FAQ를 등록, 수정 | 관리자 API가 자동 호출 |
+
+한 경로라도 빠뜨리면 그 경로로 들어온 행만 `embedding_question`이 NULL로 남고, 질문 벡터 검색에서 통째로 빠진다.
+
+**비용.** 청크마다 임베딩을 2회 부른다(본문 1회 + 질문 1회). 한 호출당 건수는 50건 그대로다.
+
+| 항목 | 이전 | 이후 |
+| --- | --- | --- |
+| 1,150건 재임베딩 | 약 70초 | **약 140초** |
+| 청크당 HTTP 호출 | 1회 | 2회 |
+| 검색 시 DB 조회 | 1회 | 2회 (임베딩 호출은 1회 그대로) |
+
+`variant`가 이미 `QUESTION_ONLY`면 두 텍스트가 같아 1회만 부르고 같은 벡터를 양쪽에 쓴다(약 70초).
+
+**정합성 확인.** 백필 후, 그리고 대량 적재 후에 돌린다.
+
+```bash
+docker exec telme-postgres psql -U telme -d telme -c \
+  "select count(*) total,
+          count(*) filter (where embedding is null)                   qa_null,
+          count(*) filter (where embedding_question is null)          qo_null,
+          count(*) filter (where embedding = embedding_question)      same,
+          count(*) filter (where sync_status <> 'SYNCED')             not_synced
+     from faq_embeddings e join faqs f using (faq_id) where f.status = 'ACTIVE';"
+```
+
+`total`을 뺀 나머지가 전부 **0**이어야 한다.
+
+- `qo_null > 0`: 질문 벡터가 빈 행이 있다. 전량 재임베딩을 돌린다
+- `same > 0`: 두 컬럼에 **같은 벡터**가 들어갔다. 이중 벡터가 성립하지 않는다. `variant`가 `QUESTION_ONLY`가 아닌데 이 값이 나오면 쓰기 경로 버그다
+- `not_synced > 0`: 재임베딩이 중간에 끊겼다. 다시 돌린다
+
+stale 벡터(FAQ는 수정됐는데 재임베딩이 안 끝난 상태)도 같이 본다.
+
+```bash
+docker exec telme-postgres psql -U telme -d telme -tAc \
+  "select count(*) from faq_embeddings e join faqs f using (faq_id)
+    where e.faq_version <> f.version;"
+```
+
+**코퍼스 지문.** 재임베딩은 `embedding`(`Q_A`)도 다시 계산한다. 기존 측정치와 비교하려면 지문이 같아야 한다. 기준값은 `docs/EVAL_SET_SUPPLEMENT.md` 4.1절.
+
+```bash
+docker exec telme-postgres psql -U telme -d telme -tAc \
+  "select count(*), md5(string_agg(e.embedding::text, ',' order by e.faq_id))
+     from faq_embeddings e join faqs f using (faq_id)
+    where f.policy_ref not like 'POLICY-%';"
+```
+
+**되돌리기.** 이중 벡터 조회는 환경변수로 끈다. 재배포가 필요 없고 벡터는 그대로 남는다.
+
+```
+SEARCH_DUAL_VECTOR_ENABLED=false
+```
+
 
 ## 6. 검색 품질 측정
 
