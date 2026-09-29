@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Admin Faq", description = "관리자 FAQ 조회")
@@ -78,6 +79,7 @@ public class AdminFaqController {
             @ApiResponse(responseCode = "503", description = "FAQ503-0: 임베딩 서버 호출 실패")
     })
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public CustomResponse<AdminFaqDetailResponse> createFaq(
             @Valid @RequestBody AdminFaqSaveRequest request,
             @AuthenticationPrincipal Long adminId) {

@@ -26,7 +26,6 @@ public class AdminFaqCommandService {
     private final MessageSourceRepository messageSourceRepository;
     private final AdminFaqConverter converter;
 
-    // 관리자가 만든 FAQ는 원본 JSON에 없어 slot_id를 채우지 않는다
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
         Faq faq = faqRepository.save(Faq.builder()
                 .category(request.category().name())
