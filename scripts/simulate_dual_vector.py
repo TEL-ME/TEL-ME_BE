@@ -8,6 +8,8 @@ import argparse
 import json
 from pathlib import Path
 
+from check_eval_questions import expected_slots, require_slot_dump
+
 DEFAULT_QA_THRESHOLD = 0.72
 DEFAULT_QO_THRESHOLDS = [0.85, 0.87, 0.88, 0.89, 0.90, 0.92, 0.95]
 # ChatPipelineProcessor·FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
@@ -35,35 +37,25 @@ def load_json(path: Path):
 # LLM에 넘어가는 개수가 현행과 같아지고 Recall@top_k로 비교할 수 있다
 def merge(qa: list[dict], qo: list[dict], qa_threshold: float, qo_threshold: float | None,
           top_k: int, order: str = "qo") -> list[str]:
-    a = [r["content_hash"] for r in qa[:top_k] if r["score"] >= qa_threshold]
-    b = [r["content_hash"] for r in qo[:top_k] if r["score"] >= qo_threshold] if qo_threshold is not None else []
+    a = [r["slot_id"] for r in qa[:top_k] if r["score"] >= qa_threshold]
+    b = [r["slot_id"] for r in qo[:top_k] if r["score"] >= qo_threshold] if qo_threshold is not None else []
     merged: list[str] = []
-    for h in (b + a if order == "qo" else a + b):
-        if h not in merged:
-            merged.append(h)
+    for slot in (b + a if order == "qo" else a + b):
+        if slot not in merged:
+            merged.append(slot)
     return merged[:top_k]
-
-
-# 평가셋은 정답을 문자열 하나 또는 배열로 적는다. 문자열에 set()을 쓰면 글자 집합이 되므로 여기서 맞춘다
-def expected_hashes(item: dict) -> set[str]:
-    value = item.get("expected_content_hash")
-    if value is None:
-        return set()
-    if isinstance(value, list):
-        return set(value)
-    return {value}
 
 
 # 정답 FAQ 중 하나의 질문이 사용자 질문과 가장 가까우면 "FAQ 질문으로도 커버됨".
 # QUESTION_ONLY 검색 1위가 곧 FAQ 질문 유사도 1위라 원시 결과만으로 가른다(check_eval_questions.py --live와 같은 분류)
 def covered(qo_item: dict) -> bool:
-    return bool(qo_item["results"]) and qo_item["results"][0]["content_hash"] in expected_hashes(qo_item)
+    return bool(qo_item["results"]) and qo_item["results"][0]["slot_id"] in expected_slots(qo_item)
 
 
 def success(item: dict, served: list[str]) -> bool:
     if item["type"] == "UNRELATED":
         return not served
-    return bool(set(served) & expected_hashes(item))
+    return bool(set(served) & expected_slots(item))
 
 
 def load_runs(paths: list[Path]) -> dict[str, dict]:
@@ -72,6 +64,7 @@ def load_runs(paths: list[Path]) -> dict[str, dict]:
         dump = load_json(path)
         if not isinstance(dump, dict) or not dump.get("items"):
             raise SystemExit(f"{path}: --dump-json으로 만든 파일이 아닙니다")
+        require_slot_dump(dump, path)
         empty = [i["eval_id"] for i in dump["items"] if not i["results"]]
         if empty:
             raise SystemExit(f"{path}: 결과가 빈 문항 {len(empty)}건 (예: {empty[:3]}) - "
@@ -84,7 +77,7 @@ def load_runs(paths: list[Path]) -> dict[str, dict]:
 
 
 def signature(items: dict[str, dict]) -> dict:
-    return {e: (i["type"], i.get("unrelated_kind"), tuple(sorted(expected_hashes(i))))
+    return {e: (i["type"], i.get("unrelated_kind"), tuple(sorted(expected_slots(i))))
             for e, i in items.items()}
 
 
@@ -134,10 +127,10 @@ def row(label: str, t: dict) -> str:
 
 
 def self_test() -> int:
-    r = lambda *pairs: [{"content_hash": h, "score": s} for h, s in pairs]
+    r = lambda *pairs: [{"slot_id": slot, "score": s} for slot, s in pairs]
     qa = r(("a1", 0.80), ("a2", 0.75), ("a3", 0.70))
     qo = r(("b1", 0.90), ("a1", 0.89), ("b3", 0.80))
-    unrelated = {"type": "UNRELATED", "expected_content_hash": None}
+    unrelated = {"type": "UNRELATED", "expected_slot_id": None}
     checks = [
         (merge(qa, qo, 0.72, None, 3), ["a1", "a2"]),                    # Q_A 단독: 임계값 미만(a3) 제외
         (merge(qa, qo, 0.72, 0.88, 3), ["b1", "a1", "a2"]),              # 질문만 우선, a1 중복 제거
@@ -149,11 +142,11 @@ def self_test() -> int:
         (merge(r(("x", 0.9), ("y", 0.9), ("z", 0.9), ("ok", 0.9)), [], 0.72, None, 3), ["x", "y", "z"]),  # top-k 밖
         (success(unrelated, []), True),
         (success(unrelated, ["b1"]), False),
-        (success({"type": "ANSWER", "expected_content_hash": ["a2", "zz"]}, ["b1", "a2"]), True),  # 배열 정답
-        (success({"type": "SIMILAR", "expected_content_hash": "a2"}, ["b1", "a2"]), True),  # 문자열 정답(30건 평가셋)
-        (covered({"expected_content_hash": ["b1"], "results": qo}), True),
-        (covered({"expected_content_hash": ["a1"], "results": qo}), False),
-        (covered({"expected_content_hash": "b1", "results": qo}), True),  # 문자열 정답
+        (success({"type": "ANSWER", "expected_slot_id": ["a2", "zz"]}, ["b1", "a2"]), True),  # 배열 정답
+        (success({"type": "SIMILAR", "expected_slot_id": "a2"}, ["b1", "a2"]), True),  # 문자열 정답(30건 평가셋)
+        (covered({"expected_slot_id": ["b1"], "results": qo}), True),
+        (covered({"expected_slot_id": ["a1"], "results": qo}), False),
+        (covered({"expected_slot_id": "b1", "results": qo}), True),  # 문자열 정답
     ]
     # 최적 t 선택: 기존 긍정·무관은 (성공 수, 전체 수), ANSWER는 성공 문항 집합까지 본다
     t = lambda pos, unrel, ans=("A1", "A2"): {"기존 긍정": pos, "무관": unrel,
@@ -212,7 +205,7 @@ def main() -> int:
     qa, qo = load_runs(args.qa), load_runs(args.qo)
     if signature(qa) != signature(qo):
         diff = sorted(e for e in set(qa) | set(qo) if signature(qa).get(e) != signature(qo).get(e))
-        raise SystemExit(f"--qa와 --qo의 평가셋이 다릅니다 (eval_id·type·정답 해시가 다른 문항 {len(diff)}건, "
+        raise SystemExit(f"--qa와 --qo의 평가셋이 다릅니다 (eval_id·type·정답 slot_id가 다른 문항 {len(diff)}건, "
                          f"예: {diff[:3]}) - 같은 평가셋으로 수집한 파일끼리만 합칠 수 있습니다")
     cov = {e: i["type"] == "ANSWER" and covered(qo[e]) for e, i in qo.items()}
 

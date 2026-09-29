@@ -33,7 +33,7 @@ class PgvectorFaqSearchServiceTest {
                     new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)));
 
     @Test
-    @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 score·rank와 함께 반환한다")
+    @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 slotId·score·rank와 함께 반환한다")
     void 정상_검색이면_score와_rank를_매겨_반환한다() {
         when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
         FaqNearestMatch same = matchOf(1L, "BILLING", "요금제 질문", 0.0); // distance 0 → score 1.0
@@ -44,6 +44,7 @@ class PgvectorFaqSearchServiceTest {
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).faqId()).isEqualTo(1L);
+        assertThat(result.get(0).slotId()).isEqualTo("BILLING-0001");
         assertThat(result.get(0).score()).isEqualTo(1.0);
         assertThat(result.get(0).searchRank()).isEqualTo(1);
         assertThat(result.get(1).faqId()).isEqualTo(2L);
@@ -121,6 +122,7 @@ class PgvectorFaqSearchServiceTest {
     private FaqNearestMatch matchOf(long faqId, String category, String question, double distance) {
         Faq faq = Faq.builder()
                 .faqId(faqId)
+                .slotId(String.format("%s-%04d", category, faqId))
                 .category(category)
                 .question(question)
                 .answer("답변")

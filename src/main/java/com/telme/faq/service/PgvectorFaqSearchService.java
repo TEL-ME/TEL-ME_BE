@@ -54,6 +54,7 @@ public class PgvectorFaqSearchService implements FaqSearchService {
             Faq faq = candidate.embedding().getFaq();
             results.add(new FaqSearchResponse(
                     faq.getFaqId(),
+                    faq.getSlotId(),
                     faq.getCategory(),
                     faq.getQuestion(),
                     faq.getAnswer(),
