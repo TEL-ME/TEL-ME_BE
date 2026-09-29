@@ -80,7 +80,7 @@ public class PgvectorFaqSearchService implements FaqSearchService {
                     faq.getVersion(),
                     faq.getUpdatedAt().atZone(TimeZones.KST).toLocalDate(),
                     rank,
-                    variant));
+                    variant.name()));
         }
         return results;
     }

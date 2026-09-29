@@ -72,7 +72,8 @@ class PgvectorFaqSearchServiceTest {
 
         assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(3L, 1L, 2L);
         assertThat(result).extracting(FaqSearchResponse::matchedVariant).containsExactly(
-                FaqEmbeddingTextVariant.QUESTION_ONLY, FaqEmbeddingTextVariant.QUESTION_ONLY, FaqEmbeddingTextVariant.Q_A);
+                FaqEmbeddingTextVariant.QUESTION_ONLY.name(), FaqEmbeddingTextVariant.QUESTION_ONLY.name(),
+                FaqEmbeddingTextVariant.Q_A.name());
         assertThat(result).extracting(FaqSearchResponse::searchRank).containsExactly(1, 2, 3);
         verify(embeddingClient, times(1)).embed("질문");
     }
@@ -89,7 +90,7 @@ class PgvectorFaqSearchServiceTest {
         List<FaqSearchResponse> result = dualVectorService.search(new FaqSearchRequest("질문", 3));
 
         assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L);
-        assertThat(result.getFirst().matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A);
+        assertThat(result.getFirst().matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A.name());
     }
 
     @Test
@@ -119,7 +120,7 @@ class PgvectorFaqSearchServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).faqId()).isEqualTo(1L);
         assertThat(result.get(0).slotId()).isEqualTo("BILLING-0001");
-        assertThat(result.get(0).matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A);
+        assertThat(result.get(0).matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A.name());
         assertThat(result.get(0).score()).isEqualTo(1.0);
         assertThat(result.get(0).searchRank()).isEqualTo(1);
         assertThat(result.get(1).faqId()).isEqualTo(2L);

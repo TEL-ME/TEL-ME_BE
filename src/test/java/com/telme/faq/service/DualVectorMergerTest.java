@@ -32,7 +32,7 @@ class DualVectorMergerTest {
         assertThat(merged).extracting(FaqSearchResponse::faqId).containsExactly(10L, 20L);
         assertThat(merged.getFirst().score()).isEqualTo(0.90);
         assertThat(merged).extracting(FaqSearchResponse::matchedVariant)
-                .containsExactly(FaqEmbeddingTextVariant.QUESTION_ONLY, FaqEmbeddingTextVariant.Q_A);
+                .containsExactly(FaqEmbeddingTextVariant.QUESTION_ONLY.name(), FaqEmbeddingTextVariant.Q_A.name());
     }
 
     @Test
@@ -93,6 +93,6 @@ class DualVectorMergerTest {
 
     private static FaqSearchResponse result(long faqId, double score, int rank, FaqEmbeddingTextVariant variant) {
         return new FaqSearchResponse(faqId, "BILLING-" + faqId, "BILLING", "질문" + faqId, "답변" + faqId,
-                score, 1, LocalDate.of(2026, 9, 29), rank, variant);
+                score, 1, LocalDate.of(2026, 9, 29), rank, variant.name());
     }
 }
