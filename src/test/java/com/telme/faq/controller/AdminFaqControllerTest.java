@@ -118,6 +118,26 @@ class AdminFaqControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 수정에 200과 고친 FAQ를 반환한다")
+    void 관리자는_수정할_수_있다() throws Exception {
+        when(adminFaqCommandService.update(any(Long.class), any(), any())).thenReturn(detail());
+
+        mockMvc.perform(putFaq(VALID_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.faqId").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 삭제에 200을 반환한다")
+    void 관리자는_삭제할_수_있다() throws Exception {
+        mockMvc.perform(delete("/api/v1/admin/faqs/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true));
+    }
+
+    @Test
     @WithMockUser(roles = "USER")
     @DisplayName("ADMIN이 아니면 등록·수정·삭제가 모두 403이다")
     void 일반_회원은_쓰기가_막힌다() throws Exception {

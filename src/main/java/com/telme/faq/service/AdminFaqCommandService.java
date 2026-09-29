@@ -28,12 +28,15 @@ public class AdminFaqCommandService {
     private final AdminFaqConverter converter;
 
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
+        String contentHash = FaqContentHash.of(request.question(), request.answer());
+        rejectDuplicate(contentHash, null);
+
         Faq faq = faqRepository.save(Faq.builder()
                 .category(request.category().name())
                 .question(request.question())
                 .answer(request.answer())
                 .policyRef(request.policyRef())
-                .contentHash(FaqContentHash.of(request.question(), request.answer()))
+                .contentHash(contentHash)
                 .status(request.status() == null ? Faq.Status.ACTIVE : request.status())
                 .createdBy(adminId)
                 .updatedBy(adminId)
@@ -47,13 +50,16 @@ public class AdminFaqCommandService {
 
     public AdminFaqDetailResponse update(Long faqId, AdminFaqSaveRequest request, Long adminId) {
         Faq faq = findFaq(faqId);
+        String contentHash = FaqContentHash.of(request.question(), request.answer());
+        rejectDuplicate(contentHash, faqId);
+
         String embeddingTextBefore = textAssembler.assemble(faq);
         boolean contentChanged = faq.update(
                 request.category().name(),
                 request.question(),
                 request.answer(),
                 request.policyRef(),
-                FaqContentHash.of(request.question(), request.answer()),
+                contentHash,
                 adminId);
         // 상태를 안 주면 그대로 둔다. 기본값을 ACTIVE로 두면 숨긴 FAQ의 오타만 고쳐도 다시 공개된다
         if (request.status() != null) {
@@ -76,6 +82,16 @@ public class AdminFaqCommandService {
         Faq faq = findFaq(faqId);
         faq.changeStatus(Faq.Status.DELETED, adminId);
         log.info("[AdminFaq] 삭제 faqId={} adminId={}", faqId, adminId);
+    }
+
+    // 배치 적재와 같은 기준으로 막는다. 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.
+    // 수정은 자기 자신이 걸리므로 제외한다
+    private void rejectDuplicate(String contentHash, Long selfFaqId) {
+        boolean duplicated = faqRepository.findByContentHashIn(List.of(contentHash)).stream()
+                .anyMatch(other -> !other.getFaqId().equals(selfFaqId));
+        if (duplicated) {
+            throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+        }
     }
 
     // 수정 응답도 조회와 같은 모양을 유지한다. 근거로 쓰인 적 없으면 집계에 안 잡혀 0으로 둔다

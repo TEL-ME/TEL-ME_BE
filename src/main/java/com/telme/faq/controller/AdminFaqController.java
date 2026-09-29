@@ -70,12 +70,14 @@ public class AdminFaqController {
     @Operation(
             summary = "FAQ 등록",
             description = "저장하면서 content_hash를 계산하고 임베딩을 만듭니다. "
+                    + "질문과 답변이 같은 FAQ가 이미 있으면 409로 막습니다. "
                     + "임베딩 생성에 실패하면 등록도 취소됩니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "등록 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: 필수값 또는 길이 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-0: 질문과 답변이 같은 FAQ가 이미 있음"),
             @ApiResponse(responseCode = "503", description = "FAQ503-0: 임베딩 서버 호출 실패")
     })
     @PostMapping
@@ -98,6 +100,7 @@ public class AdminFaqController {
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-0: 질문과 답변이 같은 FAQ가 이미 있음"),
             @ApiResponse(responseCode = "503", description = "FAQ503-0: 임베딩 서버 호출 실패")
     })
     @PutMapping("/{faqId}")

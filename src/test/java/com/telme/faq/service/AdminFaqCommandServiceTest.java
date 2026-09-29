@@ -139,6 +139,36 @@ class AdminFaqCommandServiceTest {
     }
 
     @Test
+    @DisplayName("질문과 답변이 같은 FAQ를 또 등록하면 FAQ409-0을 던진다")
+    void 같은_내용을_두_번_등록하면_예외를_던진다() {
+        created();
+
+        assertThatThrownBy(() -> service.create(request(FaqCategory.PLAN, QUESTION, ANSWER), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("다른 FAQ와 같은 내용으로 수정해도 FAQ409-0을 던진다")
+    void 다른_FAQ와_같은_내용으로는_수정할_수_없다() {
+        created();
+        Long other = service.create(request(FaqCategory.SERVICE, "다른 질문", "다른 답변."), ADMIN_ID).faqId();
+
+        assertThatThrownBy(() -> service.update(other, request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("자기 자신과 같은 내용으로 다시 저장하는 것은 막지 않는다")
+    void 자기_내용_그대로_저장은_막지_않는다() {
+        Long faqId = created();
+
+        AdminFaqDetailResponse updated = service.update(
+                faqId, request(FaqCategory.PLAN, QUESTION, ANSWER), ADMIN_ID);
+
+        assertThat(updated.category()).isEqualTo(FaqCategory.PLAN.name());
+    }
+
+    @Test
     @DisplayName("없는 FAQ를 수정하거나 삭제하면 FAQ404-0을 던진다")
     void 없는_FAQ는_예외를_던진다() {
         assertThatThrownBy(() -> service.update(-1L, request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID))
