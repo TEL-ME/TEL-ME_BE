@@ -32,6 +32,9 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
     // 배치 적재에서 slot_id 도입 전에 들어간 행을 찾아 slot_id를 채울 때 사용
     List<Faq> findByContentHashInAndSlotIdIsNullOrderByFaqIdAsc(Collection<String> contentHashes);
 
+    // 관리자 등록·수정이 같은 내용을 두 건 만들지 않게 확인할 때 사용
+    List<Faq> findByContentHash(String contentHash);
+
     @Query(value = "select faq.faqId from Faq faq " + ADMIN_FILTER
             + " order by faq.updatedAt desc, faq.faqId desc",
             countQuery = ADMIN_COUNT)

@@ -87,7 +87,7 @@ public class AdminFaqCommandService {
     // 배치 적재와 같은 기준으로 막는다. 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.
     // 수정은 자기 자신이 걸리므로 제외한다
     private void rejectDuplicate(String contentHash, Long selfFaqId) {
-        boolean duplicated = faqRepository.findByContentHashIn(List.of(contentHash)).stream()
+        boolean duplicated = faqRepository.findByContentHash(contentHash).stream()
                 .anyMatch(other -> !other.getFaqId().equals(selfFaqId));
         if (duplicated) {
             throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
