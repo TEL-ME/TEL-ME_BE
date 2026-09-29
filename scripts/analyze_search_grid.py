@@ -8,6 +8,8 @@ import argparse
 import json
 from pathlib import Path
 
+from check_eval_questions import expected_slots, require_slot_dump
+
 DEFAULT_TOP_KS = (1, 3, 5, 10)
 DEFAULT_THRESHOLDS = tuple(round(0.55 + 0.01 * i, 2) for i in range(31))  # 0.55 ~ 0.85
 DEFAULT_MIN_REJECTION = 0.95
@@ -22,19 +24,19 @@ def load(path: Path) -> dict:
         raise SystemExit(f"{path}: JSON 형식이 아닙니다: {exc}") from None
     if not isinstance(raw, dict) or not raw.get("items"):
         raise SystemExit(f"{path}: --dump-json으로 만든 파일이 아닙니다")
+    require_slot_dump(raw, path)
     return raw
 
 
 def score_of(item: dict, top_k: int, threshold: float) -> float | None:
     """정답이 top_k 안에 있고 임계값을 통과하면 그 score, 못 찾으면 None."""
-    expected = item["expected_content_hash"]
-    wanted = set(expected if isinstance(expected, list) else [expected])
+    wanted = expected_slots(item)
     for result in item["results"]:
         rank, score = result["rank"], result["score"]
         if rank is None or rank > top_k:
             continue
         # 결과는 score 내림차순이라 정답이 임계값을 넘으면 앞 순위도 전부 넘는다
-        if result["content_hash"] in wanted:
+        if result["slot_id"] in wanted:
             return score if score is not None and score >= threshold else None
     return None
 
@@ -54,9 +56,8 @@ def evaluate(items: list[dict], top_k: int, threshold: float, k_values=(1, 3, 5)
         if hit is None:
             ranks.append(None)
             continue
-        expected = item["expected_content_hash"]
-        wanted = set(expected if isinstance(expected, list) else [expected])
-        ranks.append(next(r["rank"] for r in item["results"] if r["content_hash"] in wanted))
+        wanted = expected_slots(item)
+        ranks.append(next(r["rank"] for r in item["results"] if r["slot_id"] in wanted))
 
     # 측정 대상이 없으면 키를 넣지 않는다
     out = {}

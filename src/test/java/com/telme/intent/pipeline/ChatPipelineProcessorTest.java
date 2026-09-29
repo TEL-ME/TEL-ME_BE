@@ -131,7 +131,7 @@ class ChatPipelineProcessorTest {
         );
         given(queryRoutingService.route(eq(message), any())).willReturn(routing);
 
-        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, "BILLING", "5G 요금제", "5G 요금제 설명", 0.9, 1, LocalDate.now(), 1));
+        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, null, "BILLING", "5G 요금제", "5G 요금제 설명", 0.9, 1, LocalDate.now(), 1));
         given(faqSearchService.search(any())).willReturn(faqs);
 
         AnswerResult answerResult = AnswerResult.builder()
@@ -238,7 +238,7 @@ class ChatPipelineProcessorTest {
                 BigDecimal.valueOf(0.95), QueryRouting.Method.LLM,
                 Collections.emptyMap(), Collections.emptyList()));
         given(faqSearchService.search(any())).willReturn(List.of(new FaqSearchResponse(
-                1L, "SUBSCRIBE", "유심 재발급", "7,700원입니다.", 0.9, 1, LocalDate.now(), 1)));
+                1L, null, "SUBSCRIBE", "유심 재발급", "7,700원입니다.", 0.9, 1, LocalDate.now(), 1)));
     }
 
     private ChatExecutionState executionState(Long sessionId, Long executionId, Long answerMessageId) {
@@ -706,7 +706,7 @@ class ChatPipelineProcessorTest {
         );
         given(queryRoutingService.route(eq(message), any())).willReturn(routing);
 
-        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, "BILLING", "5G 요금제 안내", "5G 요금제 상세", 0.9, 1, LocalDate.now(), 1));
+        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, null, "BILLING", "5G 요금제 안내", "5G 요금제 상세", 0.9, 1, LocalDate.now(), 1));
         given(faqSearchService.search(any())).willReturn(faqs);
 
         AnswerResult answerResult = AnswerResult.builder()
@@ -798,7 +798,7 @@ class ChatPipelineProcessorTest {
         );
         given(queryRoutingService.route(eq(message), any())).willReturn(routing);
 
-        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, "BILLING", "5G 요금제 안내", "5G 요금제 상세", 0.9, 1, LocalDate.now(), 1));
+        List<FaqSearchResponse> faqs = List.of(new FaqSearchResponse(1L, null, "BILLING", "5G 요금제 안내", "5G 요금제 상세", 0.9, 1, LocalDate.now(), 1));
         given(faqSearchService.search(any())).willReturn(faqs);
 
         AnswerResult answerResult = AnswerResult.builder()

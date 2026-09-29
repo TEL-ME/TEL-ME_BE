@@ -20,7 +20,23 @@
    "9b0a465b449857c8a385befc42570db31f80db2f8c20e934e61f4cc2f460bf94",
    "adb6ae24dbee9dddf89821128df8baeacdebb655e265fe3ef2a4035071f582ca"
   ],
-  "expected_slot_id": "BILLING-0006"
+  "expected_slot_id": [
+   "BILLING-0006",
+   "BILLING-0020",
+   "BILLING-0034",
+   "BILLING-0048",
+   "BILLING-0055",
+   "BILLING-0069",
+   "BILLING-0083",
+   "BILLING-0097",
+   "BILLING-0104",
+   "BILLING-0111",
+   "BILLING-0118",
+   "BILLING-0132",
+   "BILLING-0139",
+   "BILLING-0146",
+   "BILLING-0153"
+  ]
  },
  {
   "eval_id": "EVAL-132",
@@ -36,7 +52,16 @@
    "6efc9a3cbf634147b03d6be61762212edf2e12ce12e36fe1ebe360c5a74edcb4",
    "0b8bb889f221d8aab7078ea6c5001c82dce859939ca39497e59e63a849b79402"
   ],
-  "expected_slot_id": "BILLING-0003"
+  "expected_slot_id": [
+   "BILLING-0003",
+   "BILLING-0017",
+   "BILLING-0031",
+   "BILLING-0045",
+   "BILLING-0052",
+   "BILLING-0094",
+   "BILLING-0143",
+   "BILLING-0150"
+  ]
  },
  {
   "eval_id": "EVAL-133",
@@ -55,7 +80,19 @@
    "0b7137414ab74090c671b84baebe6eda10337287dc3e582f73101985511235e2",
    "6841db4f416c07c40ebe95760e7ba29ba38dea445c7811779e4bb5edff19540e"
   ],
-  "expected_slot_id": "BILLING-0011"
+  "expected_slot_id": [
+   "BILLING-0011",
+   "BILLING-0018",
+   "BILLING-0025",
+   "BILLING-0039",
+   "BILLING-0046",
+   "BILLING-0053",
+   "BILLING-0088",
+   "BILLING-0095",
+   "BILLING-0102",
+   "BILLING-0116",
+   "BILLING-0137"
+  ]
  },
  {
   "eval_id": "EVAL-134",
@@ -88,7 +125,33 @@
    "d839459775d145d8ce29c0636ac7fcd61fbd1b720b52a5ed1e09527b8d4cba24",
    "91ac9395c7cbb285fb170012eb7f3d625e111fbc5380714ae58f82999a84675e"
   ],
-  "expected_slot_id": "PLAN-0002"
+  "expected_slot_id": [
+   "PLAN-0002",
+   "PLAN-0007",
+   "PLAN-0012",
+   "PLAN-0017",
+   "PLAN-0032",
+   "PLAN-0037",
+   "PLAN-0042",
+   "PLAN-0052",
+   "PLAN-0062",
+   "PLAN-0067",
+   "PLAN-0072",
+   "PLAN-0077",
+   "PLAN-0092",
+   "PLAN-0097",
+   "PLAN-0102",
+   "PLAN-0122",
+   "PLAN-0127",
+   "PLAN-0132",
+   "PLAN-0137",
+   "PLAN-0142",
+   "PLAN-0035",
+   "PLAN-0075",
+   "PLAN-0085",
+   "PLAN-0140",
+   "PLAN-0145"
+  ]
  },
  {
   "eval_id": "EVAL-135",
@@ -116,7 +179,28 @@
    "884ca2a2715a775ba5b52b4600da37b7680cd87791499056eaf5403cf1d76d81",
    "9ad39d91b1cb28a035fb0fd265122398efbda82ac197500a5fb0b45ab63cbc7e"
   ],
-  "expected_slot_id": "PLAN-0008"
+  "expected_slot_id": [
+   "PLAN-0008",
+   "PLAN-0018",
+   "PLAN-0023",
+   "PLAN-0028",
+   "PLAN-0033",
+   "PLAN-0048",
+   "PLAN-0053",
+   "PLAN-0068",
+   "PLAN-0073",
+   "PLAN-0078",
+   "PLAN-0088",
+   "PLAN-0093",
+   "PLAN-0108",
+   "PLAN-0113",
+   "PLAN-0123",
+   "PLAN-0128",
+   "PLAN-0133",
+   "PLAN-0138",
+   "PLAN-0143",
+   "PLAN-0148"
+  ]
  },
  {
   "eval_id": "EVAL-136",
@@ -126,7 +210,10 @@
    "28f2de5fdef806939dd28c956b16f0f2bc35cb5f68ec420d58e96e0db78ff8a9",
    "91d6bc3bc5560662c4c683d4679cffa00417cfaea41def27169ef53885f191de"
   ],
-  "expected_slot_id": "PLAN-0020"
+  "expected_slot_id": [
+   "PLAN-0020",
+   "PLAN-0135"
+  ]
  },
  {
   "eval_id": "EVAL-137",
@@ -152,7 +239,26 @@
    "477264faa394e67e92cfb05e0c8e5db574ad05bae41a237ab211fc460550a291",
    "4e7b56d6115c6ddd4acef9b636e7b5b4f82d3b80b8c555df19b7b870c22090fd"
   ],
-  "expected_slot_id": "USIM-0001"
+  "expected_slot_id": [
+   "USIM-0001",
+   "USIM-0005",
+   "USIM-0009",
+   "USIM-0017",
+   "USIM-0025",
+   "USIM-0029",
+   "USIM-0033",
+   "USIM-0041",
+   "USIM-0049",
+   "USIM-0061",
+   "USIM-0069",
+   "USIM-0081",
+   "USIM-0085",
+   "USIM-0097",
+   "USIM-0101",
+   "USIM-0105",
+   "USIM-0109",
+   "USIM-0113"
+  ]
  },
  {
   "eval_id": "EVAL-138",
@@ -183,7 +289,31 @@
    "ac9a7dd88f1560f6b8fadfa09a24dbf2c43b0dc2ceb97a34baea327ccf35735b",
    "a42f0d18eff7ad4b61da715ffef07fb219883a4f109dbf376e4240988dd8febd"
   ],
-  "expected_slot_id": "USIM-0011"
+  "expected_slot_id": [
+   "USIM-0011",
+   "USIM-0015",
+   "USIM-0019",
+   "USIM-0023",
+   "USIM-0027",
+   "USIM-0031",
+   "USIM-0035",
+   "USIM-0039",
+   "USIM-0043",
+   "USIM-0047",
+   "USIM-0055",
+   "USIM-0063",
+   "USIM-0067",
+   "USIM-0071",
+   "USIM-0075",
+   "USIM-0079",
+   "USIM-0083",
+   "USIM-0087",
+   "USIM-0091",
+   "USIM-0099",
+   "USIM-0103",
+   "USIM-0111",
+   "USIM-0115"
+  ]
  },
  {
   "eval_id": "EVAL-139",
@@ -216,7 +346,33 @@
    "055dca32078c74ffc43255f3417e49c5b31a501eb8272156d6923f8c64bfdfab",
    "6334a2f5a128d4885260a81bbbb78f5328ab5f1338f518b34e157f1597c82e12"
   ],
-  "expected_slot_id": "USIM-0002"
+  "expected_slot_id": [
+   "USIM-0002",
+   "USIM-0006",
+   "USIM-0010",
+   "USIM-0022",
+   "USIM-0026",
+   "USIM-0030",
+   "USIM-0034",
+   "USIM-0038",
+   "USIM-0042",
+   "USIM-0046",
+   "USIM-0050",
+   "USIM-0058",
+   "USIM-0062",
+   "USIM-0066",
+   "USIM-0070",
+   "USIM-0074",
+   "USIM-0078",
+   "USIM-0082",
+   "USIM-0086",
+   "USIM-0090",
+   "USIM-0098",
+   "USIM-0102",
+   "USIM-0106",
+   "USIM-0110",
+   "USIM-0114"
+  ]
  },
  {
   "eval_id": "EVAL-140",
@@ -237,7 +393,21 @@
    "24a4678986dc3cb7af24a22dbcbc3b8f7f4da9667171a122bf4b0776eb1456c9",
    "154bad6b6bd5af719d16d5682eac6346a81bb0aa4c1258d66421ff60de710cb6"
   ],
-  "expected_slot_id": "SUBSCRIBE-0002"
+  "expected_slot_id": [
+   "SUBSCRIBE-0002",
+   "SUBSCRIBE-0006",
+   "SUBSCRIBE-0010",
+   "SUBSCRIBE-0014",
+   "SUBSCRIBE-0018",
+   "SUBSCRIBE-0022",
+   "SUBSCRIBE-0034",
+   "SUBSCRIBE-0054",
+   "SUBSCRIBE-0074",
+   "SUBSCRIBE-0078",
+   "SUBSCRIBE-0086",
+   "SUBSCRIBE-0094",
+   "SUBSCRIBE-0106"
+  ]
  },
  {
   "eval_id": "EVAL-141",
@@ -262,7 +432,25 @@
    "7ffb1f4b7f42453f9de5dcff3d076beaf77f94b53fa654f4ef8a9c39b806c22d",
    "af9e17ad8d331b335d677c7607ea4259c1e657ef49802fd64ada852f111e8f80"
   ],
-  "expected_slot_id": "SUBSCRIBE-0003"
+  "expected_slot_id": [
+   "SUBSCRIBE-0003",
+   "SUBSCRIBE-0011",
+   "SUBSCRIBE-0015",
+   "SUBSCRIBE-0019",
+   "SUBSCRIBE-0031",
+   "SUBSCRIBE-0035",
+   "SUBSCRIBE-0039",
+   "SUBSCRIBE-0043",
+   "SUBSCRIBE-0047",
+   "SUBSCRIBE-0055",
+   "SUBSCRIBE-0059",
+   "SUBSCRIBE-0063",
+   "SUBSCRIBE-0087",
+   "SUBSCRIBE-0091",
+   "SUBSCRIBE-0095",
+   "SUBSCRIBE-0099",
+   "SUBSCRIBE-0119"
+  ]
  },
  {
   "eval_id": "EVAL-142",
@@ -291,7 +479,29 @@
    "fcce741a647d9db376c7f951978c727524ae3745a1a9a98284c93c7ed4eefe6a",
    "86916d640aef9ca33aabeef416f7495cb73ca4415d5cb61cabe977c8566828a2"
   ],
-  "expected_slot_id": "SUBSCRIBE-0004"
+  "expected_slot_id": [
+   "SUBSCRIBE-0004",
+   "SUBSCRIBE-0012",
+   "SUBSCRIBE-0020",
+   "SUBSCRIBE-0024",
+   "SUBSCRIBE-0028",
+   "SUBSCRIBE-0032",
+   "SUBSCRIBE-0044",
+   "SUBSCRIBE-0056",
+   "SUBSCRIBE-0064",
+   "SUBSCRIBE-0068",
+   "SUBSCRIBE-0084",
+   "SUBSCRIBE-0092",
+   "SUBSCRIBE-0100",
+   "SUBSCRIBE-0104",
+   "SUBSCRIBE-0108",
+   "SUBSCRIBE-0112",
+   "SUBSCRIBE-0116",
+   "SUBSCRIBE-0120",
+   "SUBSCRIBE-0124",
+   "SUBSCRIBE-0089",
+   "SUBSCRIBE-0114"
+  ]
  },
  {
   "eval_id": "EVAL-143",
@@ -319,7 +529,28 @@
    "40dfeb60d2b5b785b818632cddebfdfcefddef1284dc19174ae19af511e675ca",
    "dd2de498f987b8a76029d4766b69c3e8bddfb54447f787790276f102706f3def"
   ],
-  "expected_slot_id": "PORTING-0004"
+  "expected_slot_id": [
+   "PORTING-0004",
+   "PORTING-0008",
+   "PORTING-0012",
+   "PORTING-0020",
+   "PORTING-0024",
+   "PORTING-0028",
+   "PORTING-0032",
+   "PORTING-0036",
+   "PORTING-0040",
+   "PORTING-0044",
+   "PORTING-0048",
+   "PORTING-0060",
+   "PORTING-0076",
+   "PORTING-0084",
+   "PORTING-0088",
+   "PORTING-0092",
+   "PORTING-0096",
+   "PORTING-0100",
+   "PORTING-0104",
+   "PORTING-0112"
+  ]
  },
  {
   "eval_id": "EVAL-144",
@@ -345,7 +576,26 @@
    "bde381c7db434ac69936f5d529dfd92c7846d0206e45459101719cab0ec07fc7",
    "ca5fa8a03eb44e6e36748c12a31e8e10f354fc49161358d3c81e9d2e2faed7b4"
   ],
-  "expected_slot_id": "PORTING-0005"
+  "expected_slot_id": [
+   "PORTING-0005",
+   "PORTING-0013",
+   "PORTING-0021",
+   "PORTING-0025",
+   "PORTING-0029",
+   "PORTING-0033",
+   "PORTING-0037",
+   "PORTING-0041",
+   "PORTING-0049",
+   "PORTING-0053",
+   "PORTING-0057",
+   "PORTING-0061",
+   "PORTING-0065",
+   "PORTING-0069",
+   "PORTING-0085",
+   "PORTING-0097",
+   "PORTING-0105",
+   "PORTING-0113"
+  ]
  },
  {
   "eval_id": "EVAL-145",
@@ -377,7 +627,32 @@
    "4d8a216930f767860c1d2db64de85d038b381b550e50d444ca6ce9d41b45c36b",
    "9a604eedfdcdae6bb7d38b717b10388b15d6c36a45a3743ee120dcaed7620ffd"
   ],
-  "expected_slot_id": "PORTING-0003"
+  "expected_slot_id": [
+   "PORTING-0003",
+   "PORTING-0007",
+   "PORTING-0011",
+   "PORTING-0015",
+   "PORTING-0027",
+   "PORTING-0031",
+   "PORTING-0035",
+   "PORTING-0039",
+   "PORTING-0043",
+   "PORTING-0047",
+   "PORTING-0051",
+   "PORTING-0055",
+   "PORTING-0059",
+   "PORTING-0063",
+   "PORTING-0075",
+   "PORTING-0083",
+   "PORTING-0087",
+   "PORTING-0091",
+   "PORTING-0095",
+   "PORTING-0099",
+   "PORTING-0103",
+   "PORTING-0107",
+   "PORTING-0111",
+   "PORTING-0115"
+  ]
  },
  {
   "eval_id": "EVAL-146",
@@ -407,7 +682,30 @@
    "39df2b8e978f24de26d72649aca5b90c7e3cf6e54836d5134c51ff79e5356f62",
    "285ca2b6c50bd2863d62424b1dc30455ccd6f30276df682cee5b2666cc089b22"
   ],
-  "expected_slot_id": "NAME_CHANGE-0005"
+  "expected_slot_id": [
+   "NAME_CHANGE-0005",
+   "NAME_CHANGE-0008",
+   "NAME_CHANGE-0011",
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0017",
+   "NAME_CHANGE-0020",
+   "NAME_CHANGE-0023",
+   "NAME_CHANGE-0026",
+   "NAME_CHANGE-0029",
+   "NAME_CHANGE-0032",
+   "NAME_CHANGE-0035",
+   "NAME_CHANGE-0044",
+   "NAME_CHANGE-0047",
+   "NAME_CHANGE-0050",
+   "NAME_CHANGE-0059",
+   "NAME_CHANGE-0065",
+   "NAME_CHANGE-0071",
+   "NAME_CHANGE-0074",
+   "NAME_CHANGE-0077",
+   "NAME_CHANGE-0080",
+   "NAME_CHANGE-0086",
+   "NAME_CHANGE-0089"
+  ]
  },
  {
   "eval_id": "EVAL-147",
@@ -427,7 +725,20 @@
    "9b880e6228f17025c78caefe9c527603b7798a588708ce4e694659f8a8b74737",
    "de6a985f926aa85ce662eac2753fc6cc353e4b7aa5530e874c958c06a5ad5dc4"
   ],
-  "expected_slot_id": "NAME_CHANGE-0006"
+  "expected_slot_id": [
+   "NAME_CHANGE-0006",
+   "NAME_CHANGE-0042",
+   "NAME_CHANGE-0045",
+   "NAME_CHANGE-0051",
+   "NAME_CHANGE-0057",
+   "NAME_CHANGE-0063",
+   "NAME_CHANGE-0066",
+   "NAME_CHANGE-0075",
+   "NAME_CHANGE-0078",
+   "NAME_CHANGE-0081",
+   "NAME_CHANGE-0087",
+   "NAME_CHANGE-0090"
+  ]
  },
  {
   "eval_id": "EVAL-148",
@@ -461,7 +772,34 @@
    "cf65a6ab09950c49e90aef78ac85ccdcca0a3a616cd4fc3d94ba56431ab020c4",
    "dd0a52676741526912b3c1e5271e485b0965cc34ffb06cda337d066035c8549f"
   ],
-  "expected_slot_id": "NAME_CHANGE-0001"
+  "expected_slot_id": [
+   "NAME_CHANGE-0001",
+   "NAME_CHANGE-0004",
+   "NAME_CHANGE-0007",
+   "NAME_CHANGE-0010",
+   "NAME_CHANGE-0013",
+   "NAME_CHANGE-0016",
+   "NAME_CHANGE-0019",
+   "NAME_CHANGE-0022",
+   "NAME_CHANGE-0025",
+   "NAME_CHANGE-0028",
+   "NAME_CHANGE-0031",
+   "NAME_CHANGE-0034",
+   "NAME_CHANGE-0037",
+   "NAME_CHANGE-0040",
+   "NAME_CHANGE-0043",
+   "NAME_CHANGE-0046",
+   "NAME_CHANGE-0049",
+   "NAME_CHANGE-0055",
+   "NAME_CHANGE-0058",
+   "NAME_CHANGE-0064",
+   "NAME_CHANGE-0067",
+   "NAME_CHANGE-0073",
+   "NAME_CHANGE-0076",
+   "NAME_CHANGE-0079",
+   "NAME_CHANGE-0082",
+   "NAME_CHANGE-0085"
+  ]
  },
  {
   "eval_id": "EVAL-149",
@@ -495,7 +833,34 @@
    "47af70b59740183433ecf253f5b3ae91883844c3d875b2bd828bc89fe69c383d",
    "3adcb7e16619d00a62f8e76044760a5513154d8ba6372aabe2e67de9d3d82885"
   ],
-  "expected_slot_id": "TERMINATE-0002"
+  "expected_slot_id": [
+   "TERMINATE-0002",
+   "TERMINATE-0006",
+   "TERMINATE-0010",
+   "TERMINATE-0014",
+   "TERMINATE-0018",
+   "TERMINATE-0022",
+   "TERMINATE-0026",
+   "TERMINATE-0030",
+   "TERMINATE-0034",
+   "TERMINATE-0038",
+   "TERMINATE-0042",
+   "TERMINATE-0046",
+   "TERMINATE-0054",
+   "TERMINATE-0062",
+   "TERMINATE-0066",
+   "TERMINATE-0074",
+   "TERMINATE-0078",
+   "TERMINATE-0082",
+   "TERMINATE-0086",
+   "TERMINATE-0090",
+   "TERMINATE-0094",
+   "TERMINATE-0098",
+   "TERMINATE-0102",
+   "TERMINATE-0106",
+   "TERMINATE-0110",
+   "TERMINATE-0114"
+  ]
  },
  {
   "eval_id": "EVAL-150",
@@ -522,7 +887,27 @@
    "773beec51bcb0b9be0c4f44eeb9f59559c84c26ce479f13b006a09d1b6528c81",
    "ab4469c0185225f19ba6c2827c65d17dad65c1744ae7f2a665137b8cfd7a1cb8"
   ],
-  "expected_slot_id": "TERMINATE-0004"
+  "expected_slot_id": [
+   "TERMINATE-0004",
+   "TERMINATE-0008",
+   "TERMINATE-0012",
+   "TERMINATE-0016",
+   "TERMINATE-0020",
+   "TERMINATE-0024",
+   "TERMINATE-0028",
+   "TERMINATE-0032",
+   "TERMINATE-0036",
+   "TERMINATE-0040",
+   "TERMINATE-0044",
+   "TERMINATE-0048",
+   "TERMINATE-0052",
+   "TERMINATE-0056",
+   "TERMINATE-0064",
+   "TERMINATE-0072",
+   "TERMINATE-0084",
+   "TERMINATE-0104",
+   "TERMINATE-0112"
+  ]
  },
  {
   "eval_id": "EVAL-151",
@@ -548,7 +933,26 @@
    "d01679e1649105d061aa279ddbdec152ca38aa8a49e0e76b2cc9e96a3a932995",
    "eac6f366bf1fe0db0633ac6170a33a18ef1e93d7a3851865f869a3da4e050f25"
   ],
-  "expected_slot_id": "TERMINATE-0001"
+  "expected_slot_id": [
+   "TERMINATE-0001",
+   "TERMINATE-0005",
+   "TERMINATE-0009",
+   "TERMINATE-0013",
+   "TERMINATE-0017",
+   "TERMINATE-0025",
+   "TERMINATE-0029",
+   "TERMINATE-0033",
+   "TERMINATE-0037",
+   "TERMINATE-0045",
+   "TERMINATE-0061",
+   "TERMINATE-0065",
+   "TERMINATE-0073",
+   "TERMINATE-0081",
+   "TERMINATE-0085",
+   "TERMINATE-0089",
+   "TERMINATE-0097",
+   "TERMINATE-0108"
+  ]
  },
  {
   "eval_id": "EVAL-152",
@@ -586,7 +990,38 @@
    "de516a6d58d43b24d5eaa32367b9e185b960ab00d0c5ba03e5e50dc325ddb489",
    "f775c00d89cc51e203c6595d697682e35fcfbfbdcf06a0b0102682cd4983ac7e"
   ],
-  "expected_slot_id": "DEVICE-0001"
+  "expected_slot_id": [
+   "DEVICE-0001",
+   "DEVICE-0005",
+   "DEVICE-0009",
+   "DEVICE-0013",
+   "DEVICE-0017",
+   "DEVICE-0021",
+   "DEVICE-0029",
+   "DEVICE-0033",
+   "DEVICE-0037",
+   "DEVICE-0041",
+   "DEVICE-0045",
+   "DEVICE-0049",
+   "DEVICE-0053",
+   "DEVICE-0057",
+   "DEVICE-0061",
+   "DEVICE-0065",
+   "DEVICE-0069",
+   "DEVICE-0073",
+   "DEVICE-0077",
+   "DEVICE-0081",
+   "DEVICE-0085",
+   "DEVICE-0089",
+   "DEVICE-0093",
+   "DEVICE-0101",
+   "DEVICE-0109",
+   "DEVICE-0113",
+   "DEVICE-0117",
+   "DEVICE-0121",
+   "DEVICE-0125",
+   "DEVICE-0129"
+  ]
  },
  {
   "eval_id": "EVAL-153",
@@ -620,7 +1055,34 @@
    "bdb24f5672ac950a2c9480c1be38037bd35982faa1932d5cc9d2b28b0ebb5040",
    "fb8c7bd8c836fa73cbec141705e84d70e94299618bfb93a1363c19d7d86815a7"
   ],
-  "expected_slot_id": "DEVICE-0003"
+  "expected_slot_id": [
+   "DEVICE-0003",
+   "DEVICE-0007",
+   "DEVICE-0015",
+   "DEVICE-0019",
+   "DEVICE-0023",
+   "DEVICE-0027",
+   "DEVICE-0035",
+   "DEVICE-0039",
+   "DEVICE-0043",
+   "DEVICE-0047",
+   "DEVICE-0059",
+   "DEVICE-0063",
+   "DEVICE-0067",
+   "DEVICE-0075",
+   "DEVICE-0079",
+   "DEVICE-0083",
+   "DEVICE-0087",
+   "DEVICE-0095",
+   "DEVICE-0099",
+   "DEVICE-0103",
+   "DEVICE-0107",
+   "DEVICE-0111",
+   "DEVICE-0115",
+   "DEVICE-0119",
+   "DEVICE-0123",
+   "DEVICE-0127"
+  ]
  },
  {
   "eval_id": "EVAL-154",
@@ -658,7 +1120,38 @@
    "fa0b8bf6c2ce2aec9276f1d3ddb92f9f5bd59e9808383514c7d57b0c026277d3",
    "d12dd1fc630baef66274348c28877689fceb48281163819f9123b880b83f55ac"
   ],
-  "expected_slot_id": "DEVICE-0004"
+  "expected_slot_id": [
+   "DEVICE-0004",
+   "DEVICE-0008",
+   "DEVICE-0012",
+   "DEVICE-0016",
+   "DEVICE-0020",
+   "DEVICE-0024",
+   "DEVICE-0028",
+   "DEVICE-0032",
+   "DEVICE-0036",
+   "DEVICE-0040",
+   "DEVICE-0044",
+   "DEVICE-0048",
+   "DEVICE-0052",
+   "DEVICE-0056",
+   "DEVICE-0060",
+   "DEVICE-0068",
+   "DEVICE-0072",
+   "DEVICE-0076",
+   "DEVICE-0080",
+   "DEVICE-0084",
+   "DEVICE-0088",
+   "DEVICE-0092",
+   "DEVICE-0100",
+   "DEVICE-0104",
+   "DEVICE-0108",
+   "DEVICE-0112",
+   "DEVICE-0116",
+   "DEVICE-0120",
+   "DEVICE-0124",
+   "DEVICE-0128"
+  ]
  },
  {
   "eval_id": "EVAL-155",
@@ -677,7 +1170,19 @@
    "07e45ce56e939d782811eb2c53e99fe220b79f8154345633e1cfa48de4ac5974",
    "0bc3815b1003d939edb8987aaff3477bff89605033f7a223487fe743653ea056"
   ],
-  "expected_slot_id": "ROAMING-0001"
+  "expected_slot_id": [
+   "ROAMING-0001",
+   "ROAMING-0011",
+   "ROAMING-0016",
+   "ROAMING-0021",
+   "ROAMING-0026",
+   "ROAMING-0046",
+   "ROAMING-0051",
+   "ROAMING-0056",
+   "ROAMING-0061",
+   "ROAMING-0066",
+   "ROAMING-0071"
+  ]
  },
  {
   "eval_id": "EVAL-156",
@@ -695,7 +1200,18 @@
    "7767184fa81f5ee4415551ec6b3a61f8f75044b3a3fe151cbe8c3c87b7b83942",
    "607ed02e2b50c6e852fd8374d5fed497b7ec41f8540e73d0a4982919d509013a"
   ],
-  "expected_slot_id": "ROAMING-0018"
+  "expected_slot_id": [
+   "ROAMING-0018",
+   "ROAMING-0023",
+   "ROAMING-0028",
+   "ROAMING-0033",
+   "ROAMING-0038",
+   "ROAMING-0043",
+   "ROAMING-0053",
+   "ROAMING-0058",
+   "ROAMING-0063",
+   "ROAMING-0078"
+  ]
  },
  {
   "eval_id": "EVAL-157",
@@ -705,7 +1221,10 @@
    "805819d1ad26b3689b1847fedcb627bba2d3794111c2b8239a573e914eed7515",
    "5579941a666b1e26a67e9b312dafea113e35b5be20bcbc7d152e70ce0d716302"
   ],
-  "expected_slot_id": "ROAMING-0049"
+  "expected_slot_id": [
+   "ROAMING-0049",
+   "ROAMING-0074"
+  ]
  },
  {
   "eval_id": "EVAL-158",
@@ -723,7 +1242,18 @@
    "7b1f311016506dae5ddbfd77d114c3e4f8ab14d54fdedde7f259507932512eaa",
    "a4339920130e262817306cdd985129719c08da8a89a22bb3c27495ef3c90bb0b"
   ],
-  "expected_slot_id": "SERVICE-0011"
+  "expected_slot_id": [
+   "SERVICE-0011",
+   "SERVICE-0016",
+   "SERVICE-0021",
+   "SERVICE-0026",
+   "SERVICE-0031",
+   "SERVICE-0036",
+   "SERVICE-0046",
+   "SERVICE-0051",
+   "SERVICE-0056",
+   "SERVICE-0061"
+  ]
  },
  {
   "eval_id": "EVAL-159",
@@ -738,7 +1268,15 @@
    "f14420bd41a9fecf77513f7b66c0f5f5a92747aca68f057c4275531bc930326c",
    "38bed345331142b76f6cb28352141060c1e39ff0c88732ffb4196fcc93073188"
   ],
-  "expected_slot_id": "SERVICE-0010"
+  "expected_slot_id": [
+   "SERVICE-0010",
+   "SERVICE-0020",
+   "SERVICE-0025",
+   "SERVICE-0030",
+   "SERVICE-0055",
+   "SERVICE-0060",
+   "SERVICE-0065"
+  ]
  },
  {
   "eval_id": "EVAL-160",
@@ -757,7 +1295,19 @@
    "29a773f044187bca27667d773cddc9ea6872862e132b3d7f91d08e0686a82311",
    "9b6edcfa469070f08ec8112c9baf4dc2ad3aaa2e93be9f91421965373e5bf8ef"
   ],
-  "expected_slot_id": "SERVICE-0004"
+  "expected_slot_id": [
+   "SERVICE-0004",
+   "SERVICE-0014",
+   "SERVICE-0019",
+   "SERVICE-0024",
+   "SERVICE-0029",
+   "SERVICE-0034",
+   "SERVICE-0039",
+   "SERVICE-0049",
+   "SERVICE-0054",
+   "SERVICE-0059",
+   "SERVICE-0064"
+  ]
  },
  {
   "eval_id": "EVAL-161",
