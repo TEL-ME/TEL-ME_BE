@@ -10,7 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 from check_duplicates import DEFAULT_BATCH, cosine, embed_all
-from check_eval_questions import content_hash
+from check_eval_questions import expected_slots, require_slot_dump
 
 DEFAULT_THRESHOLD = 0.72
 # ChatPipelineProcessor·FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
@@ -37,9 +37,9 @@ def load_json(path: Path):
 
 # 그룹은 1등만 본다(top-1 분석). 서비스가 실제로 정답을 넘겼는지는 delivered()로 따로 센다
 def group_of(item: dict, threshold: float) -> str:
-    wanted = set(item["expected_content_hash"])
+    wanted = expected_slots(item)
     top = item["results"][0]
-    correct = top["content_hash"] in wanted
+    correct = top["slot_id"] in wanted
     passed = top["score"] >= threshold
     if correct:
         return "A" if passed else "B"
@@ -48,11 +48,11 @@ def group_of(item: dict, threshold: float) -> str:
 
 # PgvectorFaqSearchService와 같은 규칙: 점수순으로 보다가 임계값 미만이 나오면 거기서 끊는다
 def delivered(item: dict, top_k: int, threshold: float) -> bool:
-    wanted = set(item["expected_content_hash"])
+    wanted = expected_slots(item)
     for result in item["results"][:top_k]:
         if result["score"] < threshold:
             return False
-        if result["content_hash"] in wanted:
+        if result["slot_id"] in wanted:
             return True
     return False
 
@@ -68,39 +68,39 @@ def cause_of(group: str, qq: float, cutoff: float) -> str:
 
 
 def signature(dump: dict) -> dict:
-    return {i["eval_id"]: (i["type"], tuple(sorted(i["expected_content_hash"] or []))) for i in dump["items"]}
+    return {i["eval_id"]: (i["type"], tuple(sorted(expected_slots(i)))) for i in dump["items"]}
 
 
-def analyze(dump: dict, eval_by_id: dict, faq_by_hash: dict, threshold: float, top_k: int,
+def analyze(dump: dict, eval_by_id: dict, faq_by_slot: dict, threshold: float, top_k: int,
             batch: int, cache: Path | None) -> list[dict]:
     cases = []
     for item in dump["items"]:
         if item["type"] not in ("SIMILAR", "VARIANT"):
             continue
-        missing = [h for h in item["expected_content_hash"] if h not in faq_by_hash]
+        expected = sorted(expected_slots(item))
+        missing = [s for s in expected if s not in faq_by_slot]
         if missing:
-            raise SystemExit(f"{item['eval_id']}: 정답 해시가 FAQ 파일에 없습니다 ({missing[0][:12]}...)")
+            raise SystemExit(f"{item['eval_id']}: 정답 slot_id가 FAQ 파일에 없습니다 ({missing[0]})")
         top = item["results"][0]
         cases.append({
             "eval_id": item["eval_id"],
             "type": item["type"],
             "question": eval_by_id[item["eval_id"]]["question"],
-            "expected": item["expected_content_hash"],
+            "expected": expected,
             "group": group_of(item, threshold),
             "delivered": delivered(item, top_k, threshold),
             "top1_score": top["score"],
-            "top1_category": faq_by_hash.get(top["content_hash"], {}).get("category"),
-            "correct_rank": next((r["rank"] for r in item["results"]
-                                  if r["content_hash"] in set(item["expected_content_hash"])), None),
+            "top1_category": faq_by_slot.get(top["slot_id"], {}).get("category"),
+            "correct_rank": next((r["rank"] for r in item["results"] if r["slot_id"] in set(expected)), None),
         })
 
-    faq_hashes = sorted({h for c in cases for h in c["expected"]})
-    vectors = embed_all([c["question"] for c in cases] + [faq_by_hash[h]["question"] for h in faq_hashes],
+    faq_slots = sorted({s for c in cases for s in c["expected"]})
+    vectors = embed_all([c["question"] for c in cases] + [faq_by_slot[s]["question"] for s in faq_slots],
                         batch, cache)
-    faq_vec = dict(zip(faq_hashes, vectors[len(cases):]))
+    faq_vec = dict(zip(faq_slots, vectors[len(cases):]))
     for case, vec in zip(cases, vectors):
-        case["qq"] = max(cosine(vec, faq_vec[h]) for h in case["expected"])
-        case["correct_category"] = faq_by_hash[case["expected"][0]]["category"]
+        case["qq"] = max(cosine(vec, faq_vec[s]) for s in case["expected"])
+        case["correct_category"] = faq_by_slot[case["expected"][0]]["category"]
     return cases
 
 
@@ -174,10 +174,10 @@ def compare(names: list[str], runs: list[list[dict]], top_k: int) -> None:
 
 
 def self_test() -> int:
-    item = lambda top_hash, score: {"expected_content_hash": ["ok"],
-                                    "results": [{"content_hash": top_hash, "score": score}]}
-    ranked = lambda *pairs: {"expected_content_hash": ["ok"],
-                             "results": [{"content_hash": h, "score": s} for h, s in pairs]}
+    item = lambda top_slot, score: {"expected_slot_id": ["ok"],
+                                    "results": [{"slot_id": top_slot, "score": score}]}
+    ranked = lambda *pairs: {"expected_slot_id": ["ok"],
+                             "results": [{"slot_id": slot, "score": s} for slot, s in pairs]}
     checks = [
         (group_of(item("ok", 0.80), 0.72), "A"),
         (group_of(item("ok", 0.70), 0.72), "B"),
@@ -193,6 +193,7 @@ def self_test() -> int:
         (delivered(ranked(("no", 0.80), ("ok", 0.75)), 3, 0.72), True),  # D지만 2위 정답이 전달됨
         (delivered(ranked(("no", 0.80), ("ok", 0.70)), 3, 0.72), False),  # 2위 정답이 임계값 미달
         (delivered(ranked(("n1", 0.9), ("n2", 0.9), ("n3", 0.9), ("ok", 0.9)), 3, 0.72), False),  # top-k 밖
+        (group_of({"expected_slot_id": "ok", "results": [{"slot_id": "ok", "score": 0.8}]}, 0.72), "A"),  # 문자열 정답
     ]
     for invalid in ("0", "11"):
         try:
@@ -255,13 +256,14 @@ def main() -> int:
         ap.error(f"--threshold는 1개이거나 파일 수({len(args.paths)})만큼 줘야 합니다")
 
     cache = Path(args.cache) if args.cache else None
-    faq_by_hash = {content_hash(f["question"], f["answer"]): f for f in load_json(args.faq)}
+    faq_by_slot = {f["slot_id"]: f for f in load_json(args.faq)}
 
     names, runs, base = [], [], None
     for path, threshold in zip(args.paths, thresholds):
         dump = load_json(path)
         if not isinstance(dump, dict) or not dump.get("items"):
             raise SystemExit(f"{path}: --dump-json으로 만든 파일이 아닙니다")
+        require_slot_dump(dump, path)
         empty = [i["eval_id"] for i in dump["items"] if not i["results"]]
         if empty:
             raise SystemExit(f"{path}: 결과가 빈 문항 {len(empty)}건 (예: {empty[:3]}) - "
@@ -271,12 +273,12 @@ def main() -> int:
             base = (path, sig)
         elif sig != base[1]:
             diff = sorted(e for e in set(sig) | set(base[1]) if sig.get(e) != base[1].get(e))
-            raise SystemExit(f"{path}: {base[0]}와 평가셋이 다릅니다 (eval_id·type·정답 해시가 다른 문항 "
+            raise SystemExit(f"{path}: {base[0]}와 평가셋이 다릅니다 (eval_id·type·정답 slot_id가 다른 문항 "
                              f"{len(diff)}건, 예: {diff[:3]}) - 같은 평가셋으로 수집한 파일끼리만 비교할 수 있습니다")
         eval_path = args.eval or Path(dump["path"])
         eval_by_id = {e["eval_id"]: e for e in load_json(eval_path)}
         names.append(path.stem.replace("raw-", ""))
-        runs.append(analyze(dump, eval_by_id, faq_by_hash, threshold, args.top_k, args.batch, cache))
+        runs.append(analyze(dump, eval_by_id, faq_by_slot, threshold, args.top_k, args.batch, cache))
 
     passed = [c["qq"] for c in runs[0] if c["group"] == "A"]
     if args.cutoff is None and not passed:

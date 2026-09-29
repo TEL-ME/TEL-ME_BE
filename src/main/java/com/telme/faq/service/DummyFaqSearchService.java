@@ -18,10 +18,10 @@ public class DummyFaqSearchService implements FaqSearchService {
     // V2 시드 데이터 FAQ 사용함
     @Override
     public List<FaqSearchResponse> search(FaqSearchRequest request) {
-        FaqSearchResponse billing = new FaqSearchResponse(1L, "BILLING", "요금제는 언제 변경할 수 있나요?",
+        FaqSearchResponse billing = new FaqSearchResponse(1L, null, "BILLING", "요금제는 언제 변경할 수 있나요?",
                 "요금제는 매월 1회, 영업일 기준 변경 신청일로부터 다음날 자정에 적용됩니다.",
                 0.91, 1, SAMPLE_UPDATED_AT, null);
-        FaqSearchResponse usim = new FaqSearchResponse(2L, "USIM", "유심 재발급은 어떻게 하나요?",
+        FaqSearchResponse usim = new FaqSearchResponse(2L, null, "USIM", "유심 재발급은 어떻게 하나요?",
                 "가까운 매장을 방문해 신분증을 지참하시면 즉시 재발급이 가능합니다.",
                 0.85, 1, SAMPLE_UPDATED_AT, null);
 
@@ -40,7 +40,7 @@ public class DummyFaqSearchService implements FaqSearchService {
         List<FaqSearchResponse> ranked = new ArrayList<>();
         for (int i = 0; i < limited.size(); i++) {
             FaqSearchResponse r = limited.get(i);
-            ranked.add(new FaqSearchResponse(r.faqId(), r.category(), r.question(), r.answer(),
+            ranked.add(new FaqSearchResponse(r.faqId(), r.slotId(), r.category(), r.question(), r.answer(),
                     r.score(), r.version(), r.updatedAt(), i + 1));
         }
         return ranked;

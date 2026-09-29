@@ -6,7 +6,9 @@
     "expected_content_hash": [
       "729f2273e0dc851f63b3a36a0207379a2f66ae4856b2b3eae2db971f8b1c4387"
     ],
-    "expected_slot_id": "BILLING-0105"
+    "expected_slot_id": [
+      "BILLING-0105"
+    ]
   },
   {
     "eval_id": "EVAL-002",
@@ -15,7 +17,9 @@
     "expected_content_hash": [
       "1b31315b6881e351a2159f2a840fefa452129bc086f830f74ff01dc35e355e08"
     ],
-    "expected_slot_id": "BILLING-0024"
+    "expected_slot_id": [
+      "BILLING-0024"
+    ]
   },
   {
     "eval_id": "EVAL-003",
@@ -24,7 +28,9 @@
     "expected_content_hash": [
       "d36f6026da1100739469c8902430309ca3f5112beaeea0ec7d8ad6724802a45f"
     ],
-    "expected_slot_id": "BILLING-0092"
+    "expected_slot_id": [
+      "BILLING-0092"
+    ]
   },
   {
     "eval_id": "EVAL-004",
@@ -33,7 +39,9 @@
     "expected_content_hash": [
       "8c08056a7b4911d36a2e97f5bb05cc3e6b25ee729952a1d0cd9a2c522ae863cb"
     ],
-    "expected_slot_id": "BILLING-0026"
+    "expected_slot_id": [
+      "BILLING-0026"
+    ]
   },
   {
     "eval_id": "EVAL-005",
@@ -42,7 +50,9 @@
     "expected_content_hash": [
       "d81925c5415ae2447915eed55221e39c5c90bfdcc8e31c995f5d2fbd10cafbbe"
     ],
-    "expected_slot_id": "DEVICE-0064"
+    "expected_slot_id": [
+      "DEVICE-0064"
+    ]
   },
   {
     "eval_id": "EVAL-006",
@@ -51,7 +61,9 @@
     "expected_content_hash": [
       "600e091dbdf3a7f25986dabdd2bdd05c0bbea311d5de15d073d207eef26bbb92"
     ],
-    "expected_slot_id": "DEVICE-0031"
+    "expected_slot_id": [
+      "DEVICE-0031"
+    ]
   },
   {
     "eval_id": "EVAL-007",
@@ -60,7 +72,9 @@
     "expected_content_hash": [
       "1735ad57d15f34cf9c1441997556d3c2f8d463f92b1770c5a1fcd5b9f38fb219"
     ],
-    "expected_slot_id": "DEVICE-0038"
+    "expected_slot_id": [
+      "DEVICE-0038"
+    ]
   },
   {
     "eval_id": "EVAL-008",
@@ -70,7 +84,10 @@
       "3747fef4878fdaa4f8586d0afd38611e5b48734cfaebae7ef581cc4ea3ba036b",
       "19b14c84098b06ae1a3ace4818b32db79181f624b126ad6537b2dc7ca29bfbe4"
     ],
-    "expected_slot_id": "DEVICE-0057"
+    "expected_slot_id": [
+      "DEVICE-0057",
+      "DEVICE-0065"
+    ]
   },
   {
     "eval_id": "EVAL-009",
@@ -79,7 +96,9 @@
     "expected_content_hash": [
       "7795ddf88268e9223b0351ed2fe119a0d296c58c1c8b2e9238053e6d0063a5ee"
     ],
-    "expected_slot_id": "NAME_CHANGE-0088"
+    "expected_slot_id": [
+      "NAME_CHANGE-0088"
+    ]
   },
   {
     "eval_id": "EVAL-010",
@@ -88,7 +107,9 @@
     "expected_content_hash": [
       "8eb75dc5cf0709917a0b53dbab50732ab697470a632ae25d372af40d6ab8c6a8"
     ],
-    "expected_slot_id": "NAME_CHANGE-0021"
+    "expected_slot_id": [
+      "NAME_CHANGE-0021"
+    ]
   },
   {
     "eval_id": "EVAL-011",
@@ -97,7 +118,9 @@
     "expected_content_hash": [
       "52c14ab146d66b678157f976f9a02f44a4cf0356892f118e6dfad466886421d7"
     ],
-    "expected_slot_id": "NAME_CHANGE-0041"
+    "expected_slot_id": [
+      "NAME_CHANGE-0041"
+    ]
   },
   {
     "eval_id": "EVAL-012",
@@ -106,7 +129,9 @@
     "expected_content_hash": [
       "28c8ac790f4d0792d1c7bec9c46f6877015b0d89ffa3c18512b224500ed4554a"
     ],
-    "expected_slot_id": "NAME_CHANGE-0045"
+    "expected_slot_id": [
+      "NAME_CHANGE-0045"
+    ]
   },
   {
     "eval_id": "EVAL-013",
@@ -115,7 +140,9 @@
     "expected_content_hash": [
       "e019b21041f747d910647c433343ba7156489d9c7aa6600301afcbe7d7c0cf21"
     ],
-    "expected_slot_id": "PLAN-0118"
+    "expected_slot_id": [
+      "PLAN-0118"
+    ]
   },
   {
     "eval_id": "EVAL-014",
@@ -124,7 +151,9 @@
     "expected_content_hash": [
       "4abc8a1b367e9ebb34e73e076b4d348811db81e1217fc68f7168daea41d1013e"
     ],
-    "expected_slot_id": "PLAN-0116"
+    "expected_slot_id": [
+      "PLAN-0116"
+    ]
   },
   {
     "eval_id": "EVAL-015",
@@ -133,7 +162,9 @@
     "expected_content_hash": [
       "1cecafed7b6c7a196b422b99a3e243802dac291c8c46d89fdb7e3f24cc7b03d6"
     ],
-    "expected_slot_id": "PLAN-0025"
+    "expected_slot_id": [
+      "PLAN-0025"
+    ]
   },
   {
     "eval_id": "EVAL-016",
@@ -142,7 +173,9 @@
     "expected_content_hash": [
       "3b8534af61caaac807d3998df43b6f722839ecd4220f6c2027084f9ab1bc1bfe"
     ],
-    "expected_slot_id": "PLAN-0077"
+    "expected_slot_id": [
+      "PLAN-0077"
+    ]
   },
   {
     "eval_id": "EVAL-017",
@@ -151,7 +184,9 @@
     "expected_content_hash": [
       "77c9622a87414b50d763dd2f1f75daddf451f558e179c8401278477a70753141"
     ],
-    "expected_slot_id": "PORTING-0070"
+    "expected_slot_id": [
+      "PORTING-0070"
+    ]
   },
   {
     "eval_id": "EVAL-018",
@@ -160,7 +195,9 @@
     "expected_content_hash": [
       "9a5130774c296cd2def61e12489ae46b04b2c834bba936cd01a2a5c0005470fd"
     ],
-    "expected_slot_id": "PORTING-0067"
+    "expected_slot_id": [
+      "PORTING-0067"
+    ]
   },
   {
     "eval_id": "EVAL-019",
@@ -169,7 +206,9 @@
     "expected_content_hash": [
       "5b1844f354b6692601666f1d4256ab06ae0a9018a532798f478ee4f259e4fefe"
     ],
-    "expected_slot_id": "PORTING-0108"
+    "expected_slot_id": [
+      "PORTING-0108"
+    ]
   },
   {
     "eval_id": "EVAL-020",
@@ -180,7 +219,11 @@
       "f31157cc9dbd2ee6e744eee918ea30fcb871cbb06bb17afbbb34765ef10a6e17",
       "9e0e3ab53d4462d45c2aeb3475a4867ac5672071e1c2c78d4bbf1f6d5d58a377"
     ],
-    "expected_slot_id": "PORTING-0045"
+    "expected_slot_id": [
+      "PORTING-0045",
+      "PORTING-0018",
+      "PORTING-0042"
+    ]
   },
   {
     "eval_id": "EVAL-021",
@@ -189,7 +232,9 @@
     "expected_content_hash": [
       "5c7c6231f46e70759cb312e4aaa0c7a1af523c2d5ebfe6c6736d424b12696ae9"
     ],
-    "expected_slot_id": "ROAMING-0027"
+    "expected_slot_id": [
+      "ROAMING-0027"
+    ]
   },
   {
     "eval_id": "EVAL-022",
@@ -198,7 +243,9 @@
     "expected_content_hash": [
       "6a0178facc6a119038f46db86881f37dd509fb8dea3f306a94bb4bb9a0920662"
     ],
-    "expected_slot_id": "ROAMING-0040"
+    "expected_slot_id": [
+      "ROAMING-0040"
+    ]
   },
   {
     "eval_id": "EVAL-023",
@@ -207,7 +254,9 @@
     "expected_content_hash": [
       "607ed02e2b50c6e852fd8374d5fed497b7ec41f8540e73d0a4982919d509013a"
     ],
-    "expected_slot_id": "ROAMING-0078"
+    "expected_slot_id": [
+      "ROAMING-0078"
+    ]
   },
   {
     "eval_id": "EVAL-024",
@@ -216,7 +265,9 @@
     "expected_content_hash": [
       "805819d1ad26b3689b1847fedcb627bba2d3794111c2b8239a573e914eed7515"
     ],
-    "expected_slot_id": "ROAMING-0049"
+    "expected_slot_id": [
+      "ROAMING-0049"
+    ]
   },
   {
     "eval_id": "EVAL-025",
@@ -225,7 +276,9 @@
     "expected_content_hash": [
       "25a561e5cc3705e2701dd10fbed206b18023e8799151a356f7c0011844ebb939"
     ],
-    "expected_slot_id": "SERVICE-0042"
+    "expected_slot_id": [
+      "SERVICE-0042"
+    ]
   },
   {
     "eval_id": "EVAL-026",
@@ -234,7 +287,9 @@
     "expected_content_hash": [
       "6ea884555b0854d1494e10703c86a9dcc685fe8bada29022c2dfe200aba74b1f"
     ],
-    "expected_slot_id": "SERVICE-0009"
+    "expected_slot_id": [
+      "SERVICE-0009"
+    ]
   },
   {
     "eval_id": "EVAL-027",
@@ -243,7 +298,9 @@
     "expected_content_hash": [
       "1bcfcff738deab87353c84a01557b5133c0b73d2a21b0dfcd24e51475985187f"
     ],
-    "expected_slot_id": "SERVICE-0033"
+    "expected_slot_id": [
+      "SERVICE-0033"
+    ]
   },
   {
     "eval_id": "EVAL-028",
@@ -252,7 +309,9 @@
     "expected_content_hash": [
       "2b01a6bfac83381b7f208b0dcfa9cfedaf22f9f471af088345734429e72428f3"
     ],
-    "expected_slot_id": "SERVICE-0045"
+    "expected_slot_id": [
+      "SERVICE-0045"
+    ]
   },
   {
     "eval_id": "EVAL-029",
@@ -261,7 +320,9 @@
     "expected_content_hash": [
       "4206479940be9ddb3a6268026e219cf7a8afc873064f586d21b1dc825ae2c859"
     ],
-    "expected_slot_id": "SUBSCRIBE-0068"
+    "expected_slot_id": [
+      "SUBSCRIBE-0068"
+    ]
   },
   {
     "eval_id": "EVAL-030",
@@ -270,7 +331,9 @@
     "expected_content_hash": [
       "fcce741a647d9db376c7f951978c727524ae3745a1a9a98284c93c7ed4eefe6a"
     ],
-    "expected_slot_id": "SUBSCRIBE-0089"
+    "expected_slot_id": [
+      "SUBSCRIBE-0089"
+    ]
   },
   {
     "eval_id": "EVAL-031",
@@ -279,7 +342,9 @@
     "expected_content_hash": [
       "8ba9e6a862d266243a5a46e025b1f3dc58467caecb19a28f653c0b7eeba50113"
     ],
-    "expected_slot_id": "SUBSCRIBE-0050"
+    "expected_slot_id": [
+      "SUBSCRIBE-0050"
+    ]
   },
   {
     "eval_id": "EVAL-032",
@@ -288,7 +353,9 @@
     "expected_content_hash": [
       "d63bc43505e28adf1a9277feb77bf09db7d6ca84ef9e64be27103616efe3a671"
     ],
-    "expected_slot_id": "SUBSCRIBE-0084"
+    "expected_slot_id": [
+      "SUBSCRIBE-0084"
+    ]
   },
   {
     "eval_id": "EVAL-033",
@@ -297,7 +364,9 @@
     "expected_content_hash": [
       "9cb4759f179ad3154d3f5a3badbd296abc58e50ec31a0f47b59e02c4d5a6739e"
     ],
-    "expected_slot_id": "TERMINATE-0113"
+    "expected_slot_id": [
+      "TERMINATE-0113"
+    ]
   },
   {
     "eval_id": "EVAL-034",
@@ -306,7 +375,9 @@
     "expected_content_hash": [
       "b29589342b1b19f529b9cde7857c910bcce2778aa53fb45bc397fd62fc9b37ca"
     ],
-    "expected_slot_id": "TERMINATE-0103"
+    "expected_slot_id": [
+      "TERMINATE-0103"
+    ]
   },
   {
     "eval_id": "EVAL-035",
@@ -315,7 +386,9 @@
     "expected_content_hash": [
       "9ec5d2dd553a0cc16969d0836b3b7051c552c8110e9335f7b6602cbf6826ec9c"
     ],
-    "expected_slot_id": "TERMINATE-0066"
+    "expected_slot_id": [
+      "TERMINATE-0066"
+    ]
   },
   {
     "eval_id": "EVAL-036",
@@ -324,7 +397,9 @@
     "expected_content_hash": [
       "69c3ef8437ffa4260297a18bf0b452f335d957141de7291d934279ab17052a28"
     ],
-    "expected_slot_id": "TERMINATE-0044"
+    "expected_slot_id": [
+      "TERMINATE-0044"
+    ]
   },
   {
     "eval_id": "EVAL-037",
@@ -333,7 +408,9 @@
     "expected_content_hash": [
       "98d7c01252d0ca1a20d095658f5dba8ac2ae5588b12d98839f437076549076ee"
     ],
-    "expected_slot_id": "USIM-0023"
+    "expected_slot_id": [
+      "USIM-0023"
+    ]
   },
   {
     "eval_id": "EVAL-038",
@@ -342,7 +419,9 @@
     "expected_content_hash": [
       "70b752d5ace2a84efd0e054bce046ba0039abaec4877ead6d44bfb4c0025da8c"
     ],
-    "expected_slot_id": "USIM-0054"
+    "expected_slot_id": [
+      "USIM-0054"
+    ]
   },
   {
     "eval_id": "EVAL-039",
@@ -351,7 +430,9 @@
     "expected_content_hash": [
       "c592dda63f92b804983eeb816dee379cf2bb6df4b544142ba93d56bd23624641"
     ],
-    "expected_slot_id": "USIM-0092"
+    "expected_slot_id": [
+      "USIM-0092"
+    ]
   },
   {
     "eval_id": "EVAL-040",
@@ -360,7 +441,9 @@
     "expected_content_hash": [
       "10503982ad9476b967a3cd92d49676b1e49ec2495c87b16fba4230ac420209cf"
     ],
-    "expected_slot_id": "USIM-0089"
+    "expected_slot_id": [
+      "USIM-0089"
+    ]
   },
   {
     "eval_id": "EVAL-041",
@@ -369,7 +452,9 @@
     "expected_content_hash": [
       "729f2273e0dc851f63b3a36a0207379a2f66ae4856b2b3eae2db971f8b1c4387"
     ],
-    "expected_slot_id": "BILLING-0105"
+    "expected_slot_id": [
+      "BILLING-0105"
+    ]
   },
   {
     "eval_id": "EVAL-042",
@@ -378,7 +463,9 @@
     "expected_content_hash": [
       "1b31315b6881e351a2159f2a840fefa452129bc086f830f74ff01dc35e355e08"
     ],
-    "expected_slot_id": "BILLING-0024"
+    "expected_slot_id": [
+      "BILLING-0024"
+    ]
   },
   {
     "eval_id": "EVAL-043",
@@ -387,7 +474,9 @@
     "expected_content_hash": [
       "d36f6026da1100739469c8902430309ca3f5112beaeea0ec7d8ad6724802a45f"
     ],
-    "expected_slot_id": "BILLING-0092"
+    "expected_slot_id": [
+      "BILLING-0092"
+    ]
   },
   {
     "eval_id": "EVAL-044",
@@ -396,7 +485,9 @@
     "expected_content_hash": [
       "8c08056a7b4911d36a2e97f5bb05cc3e6b25ee729952a1d0cd9a2c522ae863cb"
     ],
-    "expected_slot_id": "BILLING-0026"
+    "expected_slot_id": [
+      "BILLING-0026"
+    ]
   },
   {
     "eval_id": "EVAL-045",
@@ -405,7 +496,9 @@
     "expected_content_hash": [
       "d81925c5415ae2447915eed55221e39c5c90bfdcc8e31c995f5d2fbd10cafbbe"
     ],
-    "expected_slot_id": "DEVICE-0064"
+    "expected_slot_id": [
+      "DEVICE-0064"
+    ]
   },
   {
     "eval_id": "EVAL-046",
@@ -414,7 +507,9 @@
     "expected_content_hash": [
       "600e091dbdf3a7f25986dabdd2bdd05c0bbea311d5de15d073d207eef26bbb92"
     ],
-    "expected_slot_id": "DEVICE-0031"
+    "expected_slot_id": [
+      "DEVICE-0031"
+    ]
   },
   {
     "eval_id": "EVAL-047",
@@ -423,7 +518,9 @@
     "expected_content_hash": [
       "1735ad57d15f34cf9c1441997556d3c2f8d463f92b1770c5a1fcd5b9f38fb219"
     ],
-    "expected_slot_id": "DEVICE-0038"
+    "expected_slot_id": [
+      "DEVICE-0038"
+    ]
   },
   {
     "eval_id": "EVAL-048",
@@ -433,7 +530,10 @@
       "3747fef4878fdaa4f8586d0afd38611e5b48734cfaebae7ef581cc4ea3ba036b",
       "19b14c84098b06ae1a3ace4818b32db79181f624b126ad6537b2dc7ca29bfbe4"
     ],
-    "expected_slot_id": "DEVICE-0057"
+    "expected_slot_id": [
+      "DEVICE-0057",
+      "DEVICE-0065"
+    ]
   },
   {
     "eval_id": "EVAL-049",
@@ -442,7 +542,9 @@
     "expected_content_hash": [
       "7795ddf88268e9223b0351ed2fe119a0d296c58c1c8b2e9238053e6d0063a5ee"
     ],
-    "expected_slot_id": "NAME_CHANGE-0088"
+    "expected_slot_id": [
+      "NAME_CHANGE-0088"
+    ]
   },
   {
     "eval_id": "EVAL-050",
@@ -451,7 +553,9 @@
     "expected_content_hash": [
       "8eb75dc5cf0709917a0b53dbab50732ab697470a632ae25d372af40d6ab8c6a8"
     ],
-    "expected_slot_id": "NAME_CHANGE-0021"
+    "expected_slot_id": [
+      "NAME_CHANGE-0021"
+    ]
   },
   {
     "eval_id": "EVAL-051",
@@ -460,7 +564,9 @@
     "expected_content_hash": [
       "52c14ab146d66b678157f976f9a02f44a4cf0356892f118e6dfad466886421d7"
     ],
-    "expected_slot_id": "NAME_CHANGE-0041"
+    "expected_slot_id": [
+      "NAME_CHANGE-0041"
+    ]
   },
   {
     "eval_id": "EVAL-052",
@@ -469,7 +575,9 @@
     "expected_content_hash": [
       "28c8ac790f4d0792d1c7bec9c46f6877015b0d89ffa3c18512b224500ed4554a"
     ],
-    "expected_slot_id": "NAME_CHANGE-0045"
+    "expected_slot_id": [
+      "NAME_CHANGE-0045"
+    ]
   },
   {
     "eval_id": "EVAL-053",
@@ -478,7 +586,9 @@
     "expected_content_hash": [
       "e019b21041f747d910647c433343ba7156489d9c7aa6600301afcbe7d7c0cf21"
     ],
-    "expected_slot_id": "PLAN-0118"
+    "expected_slot_id": [
+      "PLAN-0118"
+    ]
   },
   {
     "eval_id": "EVAL-054",
@@ -487,7 +597,9 @@
     "expected_content_hash": [
       "4abc8a1b367e9ebb34e73e076b4d348811db81e1217fc68f7168daea41d1013e"
     ],
-    "expected_slot_id": "PLAN-0116"
+    "expected_slot_id": [
+      "PLAN-0116"
+    ]
   },
   {
     "eval_id": "EVAL-055",
@@ -496,7 +608,9 @@
     "expected_content_hash": [
       "1cecafed7b6c7a196b422b99a3e243802dac291c8c46d89fdb7e3f24cc7b03d6"
     ],
-    "expected_slot_id": "PLAN-0025"
+    "expected_slot_id": [
+      "PLAN-0025"
+    ]
   },
   {
     "eval_id": "EVAL-056",
@@ -505,7 +619,9 @@
     "expected_content_hash": [
       "3b8534af61caaac807d3998df43b6f722839ecd4220f6c2027084f9ab1bc1bfe"
     ],
-    "expected_slot_id": "PLAN-0077"
+    "expected_slot_id": [
+      "PLAN-0077"
+    ]
   },
   {
     "eval_id": "EVAL-057",
@@ -514,7 +630,9 @@
     "expected_content_hash": [
       "77c9622a87414b50d763dd2f1f75daddf451f558e179c8401278477a70753141"
     ],
-    "expected_slot_id": "PORTING-0070"
+    "expected_slot_id": [
+      "PORTING-0070"
+    ]
   },
   {
     "eval_id": "EVAL-058",
@@ -523,7 +641,9 @@
     "expected_content_hash": [
       "9a5130774c296cd2def61e12489ae46b04b2c834bba936cd01a2a5c0005470fd"
     ],
-    "expected_slot_id": "PORTING-0067"
+    "expected_slot_id": [
+      "PORTING-0067"
+    ]
   },
   {
     "eval_id": "EVAL-059",
@@ -532,7 +652,9 @@
     "expected_content_hash": [
       "5b1844f354b6692601666f1d4256ab06ae0a9018a532798f478ee4f259e4fefe"
     ],
-    "expected_slot_id": "PORTING-0108"
+    "expected_slot_id": [
+      "PORTING-0108"
+    ]
   },
   {
     "eval_id": "EVAL-060",
@@ -543,7 +665,11 @@
       "f31157cc9dbd2ee6e744eee918ea30fcb871cbb06bb17afbbb34765ef10a6e17",
       "9e0e3ab53d4462d45c2aeb3475a4867ac5672071e1c2c78d4bbf1f6d5d58a377"
     ],
-    "expected_slot_id": "PORTING-0045"
+    "expected_slot_id": [
+      "PORTING-0045",
+      "PORTING-0018",
+      "PORTING-0042"
+    ]
   },
   {
     "eval_id": "EVAL-061",
@@ -552,7 +678,9 @@
     "expected_content_hash": [
       "5c7c6231f46e70759cb312e4aaa0c7a1af523c2d5ebfe6c6736d424b12696ae9"
     ],
-    "expected_slot_id": "ROAMING-0027"
+    "expected_slot_id": [
+      "ROAMING-0027"
+    ]
   },
   {
     "eval_id": "EVAL-062",
@@ -561,7 +689,9 @@
     "expected_content_hash": [
       "6a0178facc6a119038f46db86881f37dd509fb8dea3f306a94bb4bb9a0920662"
     ],
-    "expected_slot_id": "ROAMING-0040"
+    "expected_slot_id": [
+      "ROAMING-0040"
+    ]
   },
   {
     "eval_id": "EVAL-063",
@@ -570,7 +700,9 @@
     "expected_content_hash": [
       "607ed02e2b50c6e852fd8374d5fed497b7ec41f8540e73d0a4982919d509013a"
     ],
-    "expected_slot_id": "ROAMING-0078"
+    "expected_slot_id": [
+      "ROAMING-0078"
+    ]
   },
   {
     "eval_id": "EVAL-064",
@@ -579,7 +711,9 @@
     "expected_content_hash": [
       "805819d1ad26b3689b1847fedcb627bba2d3794111c2b8239a573e914eed7515"
     ],
-    "expected_slot_id": "ROAMING-0049"
+    "expected_slot_id": [
+      "ROAMING-0049"
+    ]
   },
   {
     "eval_id": "EVAL-065",
@@ -588,7 +722,9 @@
     "expected_content_hash": [
       "25a561e5cc3705e2701dd10fbed206b18023e8799151a356f7c0011844ebb939"
     ],
-    "expected_slot_id": "SERVICE-0042"
+    "expected_slot_id": [
+      "SERVICE-0042"
+    ]
   },
   {
     "eval_id": "EVAL-066",
@@ -597,7 +733,9 @@
     "expected_content_hash": [
       "6ea884555b0854d1494e10703c86a9dcc685fe8bada29022c2dfe200aba74b1f"
     ],
-    "expected_slot_id": "SERVICE-0009"
+    "expected_slot_id": [
+      "SERVICE-0009"
+    ]
   },
   {
     "eval_id": "EVAL-067",
@@ -606,7 +744,9 @@
     "expected_content_hash": [
       "1bcfcff738deab87353c84a01557b5133c0b73d2a21b0dfcd24e51475985187f"
     ],
-    "expected_slot_id": "SERVICE-0033"
+    "expected_slot_id": [
+      "SERVICE-0033"
+    ]
   },
   {
     "eval_id": "EVAL-068",
@@ -615,7 +755,9 @@
     "expected_content_hash": [
       "2b01a6bfac83381b7f208b0dcfa9cfedaf22f9f471af088345734429e72428f3"
     ],
-    "expected_slot_id": "SERVICE-0045"
+    "expected_slot_id": [
+      "SERVICE-0045"
+    ]
   },
   {
     "eval_id": "EVAL-069",
@@ -624,7 +766,9 @@
     "expected_content_hash": [
       "4206479940be9ddb3a6268026e219cf7a8afc873064f586d21b1dc825ae2c859"
     ],
-    "expected_slot_id": "SUBSCRIBE-0068"
+    "expected_slot_id": [
+      "SUBSCRIBE-0068"
+    ]
   },
   {
     "eval_id": "EVAL-070",
@@ -633,7 +777,9 @@
     "expected_content_hash": [
       "fcce741a647d9db376c7f951978c727524ae3745a1a9a98284c93c7ed4eefe6a"
     ],
-    "expected_slot_id": "SUBSCRIBE-0089"
+    "expected_slot_id": [
+      "SUBSCRIBE-0089"
+    ]
   },
   {
     "eval_id": "EVAL-071",
@@ -642,7 +788,9 @@
     "expected_content_hash": [
       "8ba9e6a862d266243a5a46e025b1f3dc58467caecb19a28f653c0b7eeba50113"
     ],
-    "expected_slot_id": "SUBSCRIBE-0050"
+    "expected_slot_id": [
+      "SUBSCRIBE-0050"
+    ]
   },
   {
     "eval_id": "EVAL-072",
@@ -651,7 +799,9 @@
     "expected_content_hash": [
       "d63bc43505e28adf1a9277feb77bf09db7d6ca84ef9e64be27103616efe3a671"
     ],
-    "expected_slot_id": "SUBSCRIBE-0084"
+    "expected_slot_id": [
+      "SUBSCRIBE-0084"
+    ]
   },
   {
     "eval_id": "EVAL-073",
@@ -660,7 +810,9 @@
     "expected_content_hash": [
       "9cb4759f179ad3154d3f5a3badbd296abc58e50ec31a0f47b59e02c4d5a6739e"
     ],
-    "expected_slot_id": "TERMINATE-0113"
+    "expected_slot_id": [
+      "TERMINATE-0113"
+    ]
   },
   {
     "eval_id": "EVAL-074",
@@ -669,7 +821,9 @@
     "expected_content_hash": [
       "b29589342b1b19f529b9cde7857c910bcce2778aa53fb45bc397fd62fc9b37ca"
     ],
-    "expected_slot_id": "TERMINATE-0103"
+    "expected_slot_id": [
+      "TERMINATE-0103"
+    ]
   },
   {
     "eval_id": "EVAL-075",
@@ -678,7 +832,9 @@
     "expected_content_hash": [
       "9ec5d2dd553a0cc16969d0836b3b7051c552c8110e9335f7b6602cbf6826ec9c"
     ],
-    "expected_slot_id": "TERMINATE-0066"
+    "expected_slot_id": [
+      "TERMINATE-0066"
+    ]
   },
   {
     "eval_id": "EVAL-076",
@@ -687,7 +843,9 @@
     "expected_content_hash": [
       "69c3ef8437ffa4260297a18bf0b452f335d957141de7291d934279ab17052a28"
     ],
-    "expected_slot_id": "TERMINATE-0044"
+    "expected_slot_id": [
+      "TERMINATE-0044"
+    ]
   },
   {
     "eval_id": "EVAL-077",
@@ -696,7 +854,9 @@
     "expected_content_hash": [
       "98d7c01252d0ca1a20d095658f5dba8ac2ae5588b12d98839f437076549076ee"
     ],
-    "expected_slot_id": "USIM-0023"
+    "expected_slot_id": [
+      "USIM-0023"
+    ]
   },
   {
     "eval_id": "EVAL-078",
@@ -705,7 +865,9 @@
     "expected_content_hash": [
       "70b752d5ace2a84efd0e054bce046ba0039abaec4877ead6d44bfb4c0025da8c"
     ],
-    "expected_slot_id": "USIM-0054"
+    "expected_slot_id": [
+      "USIM-0054"
+    ]
   },
   {
     "eval_id": "EVAL-079",
@@ -714,7 +876,9 @@
     "expected_content_hash": [
       "c592dda63f92b804983eeb816dee379cf2bb6df4b544142ba93d56bd23624641"
     ],
-    "expected_slot_id": "USIM-0092"
+    "expected_slot_id": [
+      "USIM-0092"
+    ]
   },
   {
     "eval_id": "EVAL-080",
@@ -723,7 +887,9 @@
     "expected_content_hash": [
       "10503982ad9476b967a3cd92d49676b1e49ec2495c87b16fba4230ac420209cf"
     ],
-    "expected_slot_id": "USIM-0089"
+    "expected_slot_id": [
+      "USIM-0089"
+    ]
   },
   {
     "eval_id": "EVAL-081",

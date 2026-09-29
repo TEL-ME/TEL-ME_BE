@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.rag.config.EvidenceCheckProperties;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
+import com.telme.rag.exception.AnswerGuardException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -183,6 +184,239 @@ class RagAnswerGeneratorTest {
         assertThat(handler.retries).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("사용자 질문의 금액을 근거 없이 확정한 답변은 생성 완료로 처리하지 않는다")
+    void 질문의_금액을_사실로_확정하면_생성_완료하지_않는다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(List.of("네, 5일 로밍 요금은 총 84,700원입니다.")));
+        AnswerRequest request = request(
+                "5일 로밍 요금이 84,700원 맞나요?",
+                List.of(faq(1L, "데이터 무제한 로밍은 하루 12,100원입니다.")));
+
+        assertThatThrownBy(() -> generator.generate(request, handler))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("84700");
+
+        assertThat(handler.completed).isFalse();
+    }
+
+    @Test
+    @DisplayName("사용자 입력값을 사실 확정 없이 되받은 답변은 생성 완료한다")
+    void 사용자_입력값을_되받은_답변은_생성_완료한다() {
+        String answer = "말씀하신 5일 일정은 안내된 정보에 없습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "5일 여행인데 언제 로밍을 신청하나요?",
+                List.of(faq(1L, "로밍은 출국 전에 신청하는 것이 좋습니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("FAQ 질문에만 있는 금액은 답변 근거로 인정하지 않는다")
+    void FAQ_질문의_금액은_답변_근거가_아니다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(List.of("5일 로밍 요금은 총 84,700원입니다.")));
+        AnswerRequest request = request(
+                "5일 로밍 요금은 얼마인가요?",
+                List.of(faq(
+                        1L,
+                        "5일 로밍 요금이 84,700원인가요?",
+                        "데이터 무제한 로밍은 하루 12,100원입니다.")));
+
+        assertThatThrownBy(() -> generator.generate(request, handler))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("84700");
+    }
+
+    @Test
+    @DisplayName("FAQ 답변의 상한을 넘는 사용자 기간을 범위 밖으로 안내하면 생성 완료한다")
+    void FAQ_답변의_상한을_넘는_사용자_기간은_범위_밖으로_안내한다() {
+        String answer = "요금납부확인서는 최근 3년분까지만 발급 가능하여 4년 전 기록은 제공되지 않습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "4년 전 요금 납부 기록을 발급받을 수 있나요?",
+                List.of(faq(
+                        1L,
+                        "4년 전 요금 낸 기록이 필요한데 안 나와요",
+                        "요금납부확인서는 최근 3년분까지만 발급됩니다. 그 이전 기록은 발급 범위 밖입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("FAQ 근거와 의미가 같은 비교 표현은 단어가 달라도 생성 완료한다")
+    void FAQ_근거와_같은_비교_표현은_단어가_달라도_생성_완료한다() {
+        String answer = "제일 싼 알뜰 요금제는 월 15,000원이며 데이터는 1.5GB 제공됩니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "제일 싼 알뜰 상품의 가격과 데이터를 알려주세요.",
+                List.of(faq(
+                        1L,
+                        "가장 저렴한 요금제가 무엇인가요?",
+                        "알뜰 미니는 월 15,000원으로 가장 저렴하며 데이터 1.5GB를 제공합니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("근거에 없는 부가세 포함 답변은 근거 없음으로 처리한다")
+    void 근거에_없는_부가세_포함을_제거한다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(List.of("eSIM 발급 비용 2,750원은 부가세가 포함된 금액입니다.")));
+        AnswerRequest request = request(
+                "부가세 포함인가요?",
+                List.of(faq(1L, "eSIM 발급 비용은 2,750원입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 카드와 현금 결제 답변은 근거 없음으로 처리한다")
+    void 근거에_없는_결제_수단을_제거한다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(List.of("유심 재발급 비용은 현금이나 카드로 결제가 가능합니다.")));
+        AnswerRequest request = request(
+                "카드 결제가 되나요?",
+                List.of(faq(1L, "유심 재발급 비용은 7,700원입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 현금영수증과 뒤따르는 절차 안내를 함께 제거한다")
+    void 근거에_없는_현금영수증과_절차_안내를_제거한다() {
+        String answer = "현금영수증 발급이 가능합니다. 발급 시 관련 절차를 요청하시면 됩니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "현금영수증 발급이 되나요?",
+                List.of(faq(1L, "유심 재발급 비용은 7,700원입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 정책 문장만 제거하고 근거 문장은 유지한다")
+    void 근거에_없는_택배비와_위약금_문장만_제거한다() {
+        String answer = "재발급 비용은 7,700원입니다. 택배비는 이 금액에 포함됩니다. 위약금은 없습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "추가 비용이 있나요?",
+                List.of(faq(1L, "재발급 비용은 7,700원이며 택배로 2~3 영업일이 걸립니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo("재발급 비용은 7,700원입니다.");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+    }
+
+    @Test
+    @DisplayName("질문한 정책이 근거에 없다고 명시한 답변은 유지한다")
+    void 정책_근거_없음_안내는_유지한다() {
+        String answer = "제공된 정보에는 카드 할부에 대한 내용이 포함되어 있지 않습니다."
+                + " 할부 관련 사항은 매장에 문의해 주세요.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "카드 할부도 되나요?",
+                List.of(faq(1L, "유심 재발급 비용은 7,700원입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer())
+                .isEqualTo("제공된 정보에는 카드 할부에 대한 내용이 포함되어 있지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 명시된 카드 결제 정책은 유지한다")
+    void 근거에_있는_정책은_유지한다() {
+        String answer = "신용카드로 납부할 수 있습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "카드 납부가 되나요?",
+                List.of(faq(1L, "요금은 계좌이체와 신용카드로 납부할 수 있습니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("RAG 완료 시 근거와 반대인 수수료 문장만 제거한다")
+    void 근거와_반대인_수수료_문장만_제거한다() {
+        String answer = "가족 간에도 명의변경 수수료는 면제되지 않습니다. "
+                + "모든 명의변경에 대해 수수료가 발생하지 않습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "가족 간에는 명의변경 수수료가 면제되나요?",
+                List.of(faq(1L, "가족 여부와 상관없이 명의변경 수수료는 없습니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo("모든 명의변경에 대해 수수료가 발생하지 않습니다.");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+    }
+
+    @Test
+    @DisplayName("RAG 완료 시 근거에 없는 기능 미지원 문장만 제거한다")
+    void 근거에_없는_기능_미지원_문장만_제거한다() {
+        String answer = "로밍은 하루 9,900원입니다. 로밍 요금제 변경 기능은 제공하지 않습니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "로밍 요금제 얼마고 현지에서 끊을 수 있어요?",
+                List.of(faq(1L, "일 단위 로밍 요금제는 9,900원입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo("로밍은 하루 9,900원입니다.");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+    }
+
+    @Test
+    @DisplayName("RAG 완료 시 근거 없는 마감 시점과 종속 설명을 함께 제거한다")
+    void 근거에_없는_마감과_종속_설명을_함께_제거한다() {
+        String answer = "최소한 출국 당일 아침까지는 로밍 신청을 완료해야 합니다. "
+                + "이는 신청 후 처리 시간을 고려한 것입니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request(
+                "로밍은 출국 며칠 전까지 신청해야 하나요?",
+                List.of(faq(1L, "출국 전 신청을 권장하지만 현지 도착 후에도 신청할 수 있습니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+    }
+
+    @Test
+    @DisplayName("RAG 완료 시 다른 정책의 상한을 근거로 사용하면 차단한다")
+    void 다른_정책의_상한을_근거로_사용하면_차단한다() {
+        RagAnswerGenerator generator = generator(
+                new StubClient(List.of("요금납부확인서는 4년 전 기록은 제공되지 않습니다.")));
+        AnswerRequest request = request(
+                "4년 전 요금납부확인서를 발급할 수 있나요?",
+                List.of(faq(1L, "통화기록은 최근 3년분까지만 조회할 수 있습니다.")));
+
+        assertThatThrownBy(() -> generator.generate(request, handler))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("4년");
+    }
+
     private RagAnswerGenerator generator(LlmClient client) {
         // 판정은 꺼진 상태가 기본이라 항상 통과한다
         EvidenceRelevanceChecker checker = new EvidenceRelevanceChecker(
@@ -192,17 +426,29 @@ class RagAnswerGeneratorTest {
     }
 
     private AnswerRequest request(List<FaqSearchResponse> searchResults) {
+        return request("요금제 바꾸고 싶어요", searchResults);
+    }
+
+    private AnswerRequest request(String userQuery, List<FaqSearchResponse> searchResults) {
         return AnswerRequest.builder()
                 .executionId(42L)
-                .userQuery("요금제 바꾸고 싶어요")
+                .userQuery(userQuery)
                 .conditions(Map.of("location", "강남"))
                 .searchResults(searchResults)
                 .build();
     }
 
     private FaqSearchResponse faq(Long faqId) {
+        return faq(faqId, "답변" + faqId);
+    }
+
+    private FaqSearchResponse faq(Long faqId, String answer) {
+        return faq(faqId, "질문" + faqId, answer);
+    }
+
+    private FaqSearchResponse faq(Long faqId, String question, String answer) {
         return new FaqSearchResponse(
-                faqId, "BILLING", "질문" + faqId, "답변" + faqId,
+                faqId, null, "BILLING", question, answer,
                 0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue());
     }
 

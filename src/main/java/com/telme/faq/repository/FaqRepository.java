@@ -26,8 +26,15 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
             + "left join MessageSource source on source.faqId = faq.faqId " + ADMIN_FILTER
             + " group by faq.faqId ";
 
-    // 배치 적재에서 이미 들어간 건을 건너뛸 때 사용
-    List<Faq> findByContentHashIn(Collection<String> contentHashes);
+    // 배치 적재에서 이미 들어간 slot을 건너뛸 때 사용
+    List<Faq> findBySlotIdIn(Collection<String> slotIds);
+
+    // 배치 적재에서 slot_id 도입 전에 들어간 행을 찾아 slot_id를 채울 때 사용
+    List<Faq> findByContentHashInAndSlotIdIsNullOrderByFaqIdAsc(Collection<String> contentHashes);
+
+    // 관리자 등록·수정이 같은 내용을 두 건 만들지 않게 확인할 때 사용.
+    // 삭제한 FAQ는 같은 내용으로 다시 만들 수 있어야 해서 제외한다
+    List<Faq> findByContentHashAndStatusNot(String contentHash, Faq.Status status);
 
     @Query(value = "select faq.faqId from Faq faq " + ADMIN_FILTER
             + " order by faq.updatedAt desc, faq.faqId desc",
