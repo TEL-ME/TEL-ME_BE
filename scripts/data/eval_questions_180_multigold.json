@@ -3247,16 +3247,11 @@
   },
   {
     "eval_id": "EVAL-172",
-    "type": "ANSWER",
+    "type": "UNRELATED",
     "unrelated_kind": "ADJACENT_HARD",
     "question": "돌아가신 부모님 명의 회선을 제 이름으로 바꾸려면 서류가 뭐가 필요해요?",
-    "expected_content_hash": [
-      "4611c327920e0603d78cd77791105b302c1e6376041811a6754b4ee6f138e6e2"
-    ],
-    "expected_slot_id": [
-      "NAME_CHANGE-0067"
-    ],
-    "relabeled_from": "UNRELATED"
+    "expected_content_hash": null,
+    "expected_slot_id": null
   },
   {
     "eval_id": "EVAL-173",
