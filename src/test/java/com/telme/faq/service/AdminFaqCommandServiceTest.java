@@ -103,6 +103,29 @@ class AdminFaqCommandServiceTest {
     }
 
     @Test
+    @DisplayName("상태를 주지 않고 수정하면 숨긴 FAQ가 다시 공개되지 않는다")
+    void 상태를_생략한_수정은_기존_상태를_유지한다() {
+        Long faqId = created();
+        service.update(faqId, new AdminFaqSaveRequest(
+                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN), ADMIN_ID);
+
+        service.update(faqId, request(FaqCategory.SERVICE, QUESTION, "답변만 고칩니다."), ADMIN_ID);
+
+        assertThat(faqRepository.findById(faqId).orElseThrow().getStatus()).isEqualTo(Faq.Status.HIDDEN);
+    }
+
+    @Test
+    @DisplayName("상태를 주면 그 상태로 바뀐다")
+    void 상태를_주면_바뀐다() {
+        Long faqId = created();
+
+        service.update(faqId, new AdminFaqSaveRequest(
+                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN), ADMIN_ID);
+
+        assertThat(faqRepository.findById(faqId).orElseThrow().getStatus()).isEqualTo(Faq.Status.HIDDEN);
+    }
+
+    @Test
     @DisplayName("삭제하면 상태만 DELETED로 바뀌고 임베딩은 지우지 않는다")
     void 삭제는_상태만_바꾼다() {
         Long faqId = created();

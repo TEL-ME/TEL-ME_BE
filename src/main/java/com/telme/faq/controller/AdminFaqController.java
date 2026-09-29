@@ -73,7 +73,7 @@ public class AdminFaqController {
                     + "임베딩 생성에 실패하면 등록도 취소됩니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "등록 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON400-1: 필수값, 길이 또는 enum 값 오류"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: 필수값 또는 길이 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "503", description = "FAQ503-0: 임베딩 서버 호출 실패")
@@ -89,11 +89,12 @@ public class AdminFaqController {
 
     @Operation(
             summary = "FAQ 수정",
-            description = "질문이나 답변이 바뀐 경우에만 content_hash와 version이 올라가고 임베딩을 다시 만듭니다. "
-                    + "카테고리만 바꾸면 버전은 그대로입니다.")
+            description = "질문이나 답변이 바뀐 경우에만 content_hash와 version이 올라갑니다. "
+                    + "카테고리만 바꾸면 버전은 그대로이고, 임베딩에 카테고리를 넣는 구성에서만 다시 만듭니다. "
+                    + "status를 생략하면 기존 상태를 그대로 둡니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "수정 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON400-1: 필수값, 길이 또는 enum 값 오류"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: 필수값 또는 길이 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),

@@ -152,7 +152,8 @@ class AdminFaqControllerTest {
         mockMvc.perform(postFaq("""
                 {"category":"usim","question":"질문입니다.","answer":"답변입니다."}
                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-0"));
     }
 
     @Test

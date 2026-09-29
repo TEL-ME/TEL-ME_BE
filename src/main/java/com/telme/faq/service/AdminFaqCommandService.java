@@ -24,6 +24,7 @@ public class AdminFaqCommandService {
     private final FaqRepository faqRepository;
     private final FaqEmbeddingSyncService embeddingSyncService;
     private final MessageSourceRepository messageSourceRepository;
+    private final FaqEmbeddingTextAssembler textAssembler;
     private final AdminFaqConverter converter;
 
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
@@ -33,7 +34,7 @@ public class AdminFaqCommandService {
                 .answer(request.answer())
                 .policyRef(request.policyRef())
                 .contentHash(FaqContentHash.of(request.question(), request.answer()))
-                .status(request.status())
+                .status(request.status() == null ? Faq.Status.ACTIVE : request.status())
                 .createdBy(adminId)
                 .updatedBy(adminId)
                 .build());
@@ -46,6 +47,7 @@ public class AdminFaqCommandService {
 
     public AdminFaqDetailResponse update(Long faqId, AdminFaqSaveRequest request, Long adminId) {
         Faq faq = findFaq(faqId);
+        String embeddingTextBefore = textAssembler.assemble(faq);
         boolean contentChanged = faq.update(
                 request.category().name(),
                 request.question(),
@@ -53,10 +55,14 @@ public class AdminFaqCommandService {
                 request.policyRef(),
                 FaqContentHash.of(request.question(), request.answer()),
                 adminId);
-        faq.changeStatus(request.status(), adminId);
+        // 상태를 안 주면 그대로 둔다. 기본값을 ACTIVE로 두면 숨긴 FAQ의 오타만 고쳐도 다시 공개된다
+        if (request.status() != null) {
+            faq.changeStatus(request.status(), adminId);
+        }
 
-        // 카테고리만 바뀐 경우는 임베딩 텍스트(Q_A)가 그대로라 다시 만들 이유가 없다
-        if (contentChanged) {
+        // 버전이 오르면 e.faqVersion = f.version이 어긋나 반드시 다시 만들어야 하고,
+        // CATEGORY_Q_A처럼 카테고리를 넣는 구성이면 카테고리만 바뀌어도 벡터가 낡는다
+        if (contentChanged || !textAssembler.assemble(faq).equals(embeddingTextBefore)) {
             embeddingSyncService.upsert(faqId);
         }
         // 트리거가 채우는 updated_at은 UPDATE가 나간 뒤에야 읽힌다. 안 하면 응답에 수정 전 시각이 나간다
