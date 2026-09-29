@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.telme.faq.dto.res.AdminFaqListItemResponse;
 import com.telme.faq.dto.res.AdminFaqListResponse;
+import com.telme.faq.service.AdminFaqCommandService;
 import com.telme.faq.service.AdminFaqQueryService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.service.GuestIdentityService;
@@ -37,6 +38,9 @@ class AdminFaqControllerTest {
 
     @MockitoBean
     private AdminFaqQueryService adminFaqQueryService;
+
+    @MockitoBean
+    private AdminFaqCommandService adminFaqCommandService;
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
