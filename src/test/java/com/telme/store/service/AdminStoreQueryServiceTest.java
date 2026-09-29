@@ -133,6 +133,22 @@ class AdminStoreQueryServiceTest {
         assertThat(detail.hours().getLast().openTime()).isNull();
         assertThat(detail.hours().getFirst().openTime()).isEqualTo(LocalTime.of(10, 0));
     }
+    
+    @Test
+    @DisplayName("영업시간이 빠진 요일은 채우지 않고 DB에 있는 요일만 반환한다")
+    void 빠진_요일은_채우지_않는다() {
+        entityManager.createQuery(
+                        "delete from StoreHours h where h.id.storeId = :storeId and h.id.dayOfWeek = 7")
+                .setParameter("storeId", gangnam)
+                .executeUpdate();
+        entityManager.clear();
+
+        AdminStoreDetailResponse detail = service.getStore(gangnam);
+
+        assertThat(detail.hours()).hasSize(6);
+        assertThat(detail.hours()).extracting(AdminStoreDetailResponse.Hours::dayOfWeek)
+                .doesNotContain("SUNDAY");
+    }
 
     @Test
     @DisplayName("폐점 매장도 상세 조회할 수 있다")
