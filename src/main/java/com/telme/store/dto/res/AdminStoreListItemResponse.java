@@ -1,5 +1,6 @@
 package com.telme.store.dto.res;
 
+import java.time.Instant;
 import java.util.List;
 
 public record AdminStoreListItemResponse(
@@ -8,7 +9,8 @@ public record AdminStoreListItemResponse(
         String address,
         String phone,
         List<AdminStoreServiceResponse> services,
-        String status
+        String status,
+        Instant updatedAt
         ) {
 
 }

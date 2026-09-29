@@ -47,9 +47,12 @@ public class AdminStoreConverter {
                 store.getAddress(),
                 store.getPhone(),
                 toServices(store),
-                store.getStatus().name());
+                store.getStatus().name(),
+                store.getUpdatedAt());
     }
     
+    // DB에 있는 요일만 반환한다. 빠진 요일을 휴무로 채우면 실제 휴무와 데이터 없음이 구분되지 않는다.
+    // 7일 보장은 매장 등록·수정 API에서 검증한다.
     private List<AdminStoreDetailResponse.Hours> toHours(Store store) {
         return store.getHours().stream()
                 .sorted(Comparator.comparing((StoreHours hours) -> hours.getId().getDayOfWeek()))

@@ -98,6 +98,7 @@ class AdminStoreQueryServiceTest {
         assertThat(item.services()).extracting(AdminStoreServiceResponse::name)
                 .containsExactly("신규가입", "유심재발급");
         assertThat(item.status()).isEqualTo("OPEN");
+        assertThat(item.updatedAt()).isNotNull();
         assertThat(response.totalElements()).isEqualTo(1);
     }
 

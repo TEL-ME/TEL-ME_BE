@@ -32,7 +32,7 @@ public class AdminStoreQueryService {
                 request.keywordPattern(),
                 request.status().toStatuses(),
                 PageRequest.of(request.page(), request.size()));
-        return converter.toListResponse(storeIds, orderdStores(storeIds.getContent()));
+        return converter.toListResponse(storeIds, orderedStores(storeIds.getContent()));
     }
     
     public AdminStoreDetailResponse getStore(long storeId) {
@@ -42,7 +42,7 @@ public class AdminStoreQueryService {
     }
     
     // in 조회는 순서를 보장하지 않아 페이지에서 받은 id 순서대로 다시 맞춘다
-    private List<Store> orderdStores(List<Long> storeIds) {
+    private List<Store> orderedStores(List<Long> storeIds) {
         if(storeIds.isEmpty()) {
             return List.of();
         }

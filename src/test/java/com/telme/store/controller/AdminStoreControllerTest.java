@@ -20,6 +20,7 @@ import com.telme.store.dto.res.AdminStoreListResponse;
 import com.telme.store.dto.res.AdminStoreServiceResponse;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.service.AdminStoreQueryService;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ class AdminStoreControllerTest {
     void 관리자는_200을_반환한다() throws Exception {
         when(adminStoreQueryService.getStores(any())).thenReturn(new AdminStoreListResponse(
                 List.of(new AdminStoreListItemResponse(1L, "텔미 강남점", "서울특별시 강남구 테헤란로 123", null,
-                        List.of(new AdminStoreServiceResponse("NEW_LINE", "신규가입")), "OPEN")),
+                        List.of(new AdminStoreServiceResponse("NEW_LINE", "신규가입")), "OPEN", Instant.now())),
                 0, 20, 1, 1));
 
         mockMvc.perform(get(URL))
