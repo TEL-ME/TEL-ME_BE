@@ -113,7 +113,7 @@
 
 ```bash
 docker exec telme-postgres psql -U telme -d telme -tAc \
-  "select count(*), md5(string_agg(e.embedding:text, ',' order by e.faq_id)) from faq_embeddings e join faqs f using (faq_id) where f.policy_ref not like 'POLICY-%';"
+  "select count(*), md5(string_agg(e.embedding::text, ',' order by e.faq_id)) from faq_embeddings e join faqs f using (faq_id) where f.policy_ref not like 'POLICY-%';"
 ```
 
 | 구성 | `count`, `md5` (위 쿼리, 시드 제외) |
@@ -203,7 +203,7 @@ docker exec telme-postgres psql -U telme -d telme -tAc \
 | 합치기 규칙 | 합집합 | 중복 제거 → `QUESTION_ONLY` 우선 → 3개 컷 | 동일 |
 
 - **t = 0.88은 여유가 거의 없다.** EVAL-175가 0.877로 0.003 차이다
-- **시뮬레이션이 실측과 일치했다(TELME-83).** 살아나는 7건(`EVAL-006, 007, 013, 014, 025, 037, 040`)까지 같았고, 7절에서 우려한 HNSW 후보 집합 차이는 없었다. 상세는 `SEARCH_TUNING.md` 15절
+- **시뮬레이션이 실측과 일치했다(TELME-83).** 살아나는 7건(`EVAL-006, 007, 013, 014, 025, 037, 040`)까지 같았고, 7절에서 우려한 HNSW 후보 집합 차이는 지표에 영향이 없었다(후보가 바뀐 문항은 4건, 같은 후보끼리의 점수와 지표는 동일). 상세는 `SEARCH_TUNING.md` 15절
 - **답변형 손실은 세부 그룹까지 0건이다.** 질문 벡터 구성이 손해를 볼 구간으로 지목했던 "답변에만 있음" 15건도 8건 그대로다(3.1절). 다만 15건 기준이라 이 그룹의 작은 손실은 배제하지 못한다
 
 ## 7. 한계

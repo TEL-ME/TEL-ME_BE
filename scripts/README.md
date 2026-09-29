@@ -233,7 +233,7 @@ docker exec telme-postgres psql -U telme -d telme -tAc \
     where f.policy_ref not like 'POLICY-%';"
 ```
 
-**되돌리기.** 이중 벡터 조회는 환경변수로 끈다. 재배포가 필요 없고 벡터는 그대로 남는다.
+**되돌리기.** 이중 벡터 조회는 환경변수로 끈다. 저장된 벡터를 지우거나 다시 임베딩할 필요는 없지만, `search.dual-vector.enabled`는 기동 시 한 번 읽는 설정이라(`SearchProperties` record, 런타임 재적용 없음) **애플리케이션 재시작이 필요하다.**
 
 ```
 SEARCH_DUAL_VECTOR_ENABLED=false
