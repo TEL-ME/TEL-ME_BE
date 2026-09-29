@@ -84,10 +84,11 @@ public class AdminFaqCommandService {
         log.info("[AdminFaq] 삭제 faqId={} adminId={}", faqId, adminId);
     }
 
-    // 배치 적재와 같은 기준으로 막는다. 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.
-    // 수정은 자기 자신이 걸리므로 제외한다
+    // 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.
+    // 수정은 자기 자신이, 삭제한 FAQ는 다시 만들 수 있어야 해서 함께 제외한다
     private void rejectDuplicate(String contentHash, Long selfFaqId) {
-        boolean duplicated = faqRepository.findByContentHash(contentHash).stream()
+        boolean duplicated = faqRepository
+                .findByContentHashAndStatusNot(contentHash, Faq.Status.DELETED).stream()
                 .anyMatch(other -> !other.getFaqId().equals(selfFaqId));
         if (duplicated) {
             throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);

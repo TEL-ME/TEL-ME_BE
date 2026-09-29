@@ -169,6 +169,32 @@ class AdminFaqCommandServiceTest {
     }
 
     @Test
+    @DisplayName("이어 붙인 해시가 같아도 질문·답변이 바뀌면 버전이 오른다")
+    void 경계가_다른_조합도_변경으로_본다() {
+        Long faqId = service.create(request(FaqCategory.SERVICE, "가나", "다라"), ADMIN_ID).faqId();
+        clearInvocations(embeddingSyncService);
+
+        // "가나"+"다라"와 "가나다"+"라"는 이어 붙이면 같은 글자라 해시가 같다
+        AdminFaqDetailResponse updated = service.update(
+                faqId, request(FaqCategory.SERVICE, "가나다", "라"), ADMIN_ID);
+
+        assertThat(updated.version()).isEqualTo(2);
+        verify(embeddingSyncService).upsert(faqId);
+    }
+
+    @Test
+    @DisplayName("삭제한 FAQ와 같은 내용은 다시 등록할 수 있다")
+    void 삭제한_내용은_다시_등록할_수_있다() {
+        Long faqId = created();
+        service.delete(faqId, ADMIN_ID);
+
+        AdminFaqDetailResponse again = service.create(request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID);
+
+        assertThat(again.faqId()).isNotEqualTo(faqId);
+        assertThat(again.status()).isEqualTo(Faq.Status.ACTIVE.name());
+    }
+
+    @Test
     @DisplayName("없는 FAQ를 수정하거나 삭제하면 FAQ404-0을 던진다")
     void 없는_FAQ는_예외를_던진다() {
         assertThatThrownBy(() -> service.update(-1L, request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID))
