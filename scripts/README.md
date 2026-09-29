@@ -167,8 +167,8 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0 \
 ## 6. 검색 품질 측정
 
 ```bash
-# 측정용 서버 (임계값 해제)
-FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 \
+# 측정용 서버 (임계값 해제). 질문 벡터(--vector QUESTION)는 임계값이 따로라 둘 다 0으로 푼다
+FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0 \
   java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=18090
 
 python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
@@ -178,7 +178,8 @@ python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
 python3 scripts/measure_search_quality.py --self-test
 ```
 
-- **순위 실험은 `SEARCH_SIMILARITY_THRESHOLD=0`으로 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
+- **순위 실험은 임계값을 0으로 풀고 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
+  - `SEARCH_SIMILARITY_THRESHOLD`는 질문+답변 벡터(`QA`)에만 적용된다. 질문 벡터(`QUESTION`)는 `SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD`(기본 0.88)로 잘리므로 함께 0으로 푼다
 - 정답은 검색 응답의 `slotId`로 비교. 응답에 `slotId`가 없으면(TELME-73 이전 서버) 바로 중단
 - 정답 `slot_id`가 있는 평가셋인데 검색 결과의 `slotId`가 전부 null이면(로더를 아직 안 돌린 DB) Recall 0.000을 내지 않고 중단. 7·9절 스크립트도 이런 원시 결과는 거부
 - 정답 `slot_id`가 없는 긍정 질문(`eval_smoke.json`)은 API 호출만 하고 Recall·MRR에서 뺀 뒤 건수만 표시
@@ -190,6 +191,7 @@ python3 scripts/measure_search_quality.py --self-test
 | `--top-k` | 기본 3 |
 | `--api-url` | 기본 `http://localhost:8080/api/v1/faq/search` |
 | `--timeout` | 기본 20초 (서버 `embedding.search-read-timeout` 15초보다 커야 함) |
+| `--vector QA\|QUESTION\|DUAL` | 검색에 쓸 벡터. 생략하면 서버 설정(`search.dual-vector.enabled`)을 따름. 이중 벡터 임계값 재탐색은 `QA`·`QUESTION`을 따로 수집하고, 원시 결과에 수집 벡터가 기록됨 |
 | `--by-category` | `expected_slot_id` 접두사로 묶어 카테고리별 Recall·MRR 출력 |
 | `--dump-json <경로>` | 질문별 top-k 원시 결과(순위·점수·`slot_id`·`content_hash`) 저장. 임계값·top-k 스윕을 오프라인 계산할 때 필수. TELME-73 이전에 수집한 파일은 `slot_id`가 없어 7·9절 스크립트가 거부하므로 다시 수집 |
 | `--experiment` / `--change` / `--owner` | 실험 기록표용 한 줄 출력 |
@@ -203,6 +205,28 @@ python3 scripts/measure_search_quality.py --self-test
   - "적재 누락"과 "top-k 밖으로 밀림" 구분은 `slot_id`로 `faqs` 조회 필요
 - 요청마다 응답 시간(초)도 재서 평균·p95(ms)를 같이 찍는다(요청 전송~응답 수신 구간만, JSON 파싱
   등은 제외). topK 값을 바꿔가며 Recall 개선폭과 지연시간 증가폭을 같이 비교할 때 쓴다(TELME-59).
+
+### 이중 벡터 임계값 재탐색
+
+위 측정용 서버(두 임계값 0)에서 벡터별 원시 결과를 따로 모은 뒤, 오프라인으로 질문 벡터 임계값을 고른다. 130건과 보강 50건을 **함께** 넣어야 무관 거부와 답변형 손실 조건을 같이 본다.
+
+```bash
+for f in eval_questions_130:130 eval_questions_supplement_50:supp50; do
+  python3 scripts/measure_search_quality.py scripts/data/${f%%:*}.json \
+    --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+    --vector QA --dump-json .measure/raw-${f##*:}-Q_A.json
+  python3 scripts/measure_search_quality.py scripts/data/${f%%:*}.json \
+    --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+    --vector QUESTION --dump-json .measure/raw-${f##*:}-QUESTION_ONLY.json
+done
+
+python3 scripts/simulate_dual_vector.py \
+  --qa .measure/raw-130-Q_A.json .measure/raw-supp50-Q_A.json \
+  --qo .measure/raw-130-QUESTION_ONLY.json .measure/raw-supp50-QUESTION_ONLY.json
+```
+
+- 원시 결과에 수집 벡터가 기록돼, `--qa`와 `--qo`를 바꿔 넣으면 시뮬레이터가 멈춘다
+- 고른 값은 운영 임계값으로 서버를 다시 띄워 `--vector DUAL`로 실측해 시뮬레이션과 맞는지 확인한다
 
 ## 7. 격자 분석
 
@@ -294,7 +318,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
-| `simulate_dual_vector.py` | 22건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 5: 정상·기존 긍정 0건·무관 0건·ANSWER 손실·잃고 얻은 손실 + 구성 경고 2) |
+| `simulate_dual_vector.py` | 26건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 5: 정상·기존 긍정 0건·무관 0건·ANSWER 손실·잃고 얻은 손실 + 구성 경고 2 + 수집 벡터 확인 4) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생

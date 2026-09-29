@@ -58,17 +58,32 @@ def success(item: dict, served: list[str]) -> bool:
     return bool(set(served) & expected_slots(item))
 
 
-def load_runs(paths: list[Path]) -> dict[str, dict]:
+# --vector로 수집한 원시 결과에는 수집 벡터가 기록된다(TELME-84). 기록이 있으면 파일 이름보다 이 값을 믿는다
+# --vector 없이 수집한 파일은 기록이 null이라 파일 이름 경고(variant_warnings)만 적용된다
+def vector_mismatch(dump: dict, expected: str) -> str | None:
+    recorded = dump.get("vector")
+    if recorded is None or recorded == expected:
+        return None
+    return f"--vector {recorded}로 수집한 파일입니다(필요: {expected})"
+
+
+def load_runs(paths: list[Path], expected_vector: str) -> dict[str, dict]:
     items: dict[str, dict] = {}
     for path in paths:
         dump = load_json(path)
         if not isinstance(dump, dict) or not dump.get("items"):
             raise SystemExit(f"{path}: --dump-json으로 만든 파일이 아닙니다")
+        mismatch = vector_mismatch(dump, expected_vector)
+        if mismatch:
+            raise SystemExit(f"{path}: {mismatch} - --qa에는 QA, --qo에는 QUESTION으로 수집한 파일을 넣으세요")
         require_slot_dump(dump, path)
         empty = [i["eval_id"] for i in dump["items"] if not i["results"]]
         if empty:
+            # 벡터마다 임계값 설정이 따로라, 풀어야 하는 값도 벡터에 따라 다르다
+            setting = ("SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0" if expected_vector == "QUESTION"
+                       else "SEARCH_SIMILARITY_THRESHOLD=0")
             raise SystemExit(f"{path}: 결과가 빈 문항 {len(empty)}건 (예: {empty[:3]}) - "
-                             "임계값 0(SEARCH_SIMILARITY_THRESHOLD=0)으로 수집한 파일이 아닙니다")
+                             f"임계값 0({setting})으로 수집한 파일이 아닙니다")
         for item in dump["items"]:
             if item["eval_id"] in items:
                 raise SystemExit(f"{path}: eval_id 중복 {item['eval_id']} - 같은 평가셋을 두 번 넣었는지 확인하세요")
@@ -164,6 +179,10 @@ def self_test() -> int:
     checks += [
         (variant_warnings([Path("raw-1150-Q_A.json")], [Path("raw-1150-QUESTION_ONLY.json")]), []),
         (len(variant_warnings([Path("raw-1150-QUESTION_ONLY.json")], [Path("raw-1150-Q_A.json")])), 2),  # 뒤바뀜
+        (vector_mismatch({"vector": "QA"}, "QA"), None),
+        (vector_mismatch({"vector": None}, "QUESTION"), None),  # --vector 없이 수집한 파일은 이름 경고로만
+        (vector_mismatch({"vector": "QA"}, "QUESTION") is not None, True),  # --qo에 QA 결과를 넣음
+        (vector_mismatch({"vector": "DUAL"}, "QA") is not None, True),  # 이미 합친 결과
     ]
     failed = [(i, got, want) for i, (got, want) in enumerate(checks) if got != want]
     for i, got, want in failed:
@@ -202,7 +221,7 @@ def main() -> int:
 
     for warning in variant_warnings(args.qa, args.qo):
         print(f"주의: {warning} - EVAL_SET_SUPPLEMENT.md 4.1절 지문으로 코퍼스 구성을 확인하세요")
-    qa, qo = load_runs(args.qa), load_runs(args.qo)
+    qa, qo = load_runs(args.qa, "QA"), load_runs(args.qo, "QUESTION")
     if signature(qa) != signature(qo):
         diff = sorted(e for e in set(qa) | set(qo) if signature(qa).get(e) != signature(qo).get(e))
         raise SystemExit(f"--qa와 --qo의 평가셋이 다릅니다 (eval_id·type·정답 slot_id가 다른 문항 {len(diff)}건, "
