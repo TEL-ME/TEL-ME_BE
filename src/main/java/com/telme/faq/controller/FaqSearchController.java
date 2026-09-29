@@ -27,7 +27,8 @@ public class FaqSearchController {
 
     private final FaqSearchService faqSearchService;
 
-    @Operation(summary = "질문으로 FAQ 검색", description = "질문 문자열로 top-K FAQ를 score와 함께 반환한다.")
+    @Operation(summary = "질문으로 FAQ 검색", description = "질문 문자열로 top-K FAQ를 score와 함께 반환한다. "
+            + "vector(QA, QUESTION, DUAL)를 주면 설정과 상관없이 그 벡터로 검색한다(측정용).")
     @GetMapping("/search")
     public CustomResponse<List<FaqSearchResponse>> search(@Valid @ParameterObject @ModelAttribute FaqSearchRequest request) {
         return CustomResponse.onSuccess(faqSearchService.search(request));
