@@ -30,6 +30,7 @@ public class AdminFaqCommandService {
     private final FaqEmbeddingTextAssembler textAssembler;
     private final AdminFaqConverter converter;
     private final EntityManager entityManager;
+    private final FaqContentConstraintChecker constraintChecker;
 
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
         String contentHash = FaqContentHash.of(request.question(), request.answer());
@@ -86,6 +87,8 @@ public class AdminFaqCommandService {
     public void delete(Long faqId, Long adminId) {
         Faq faq = findFaq(faqId);
         faq.changeStatus(Faq.Status.DELETED, adminId);
+        // 상태 변경도 UPDATE라 잠금에 걸린다. 커밋까지 미루면 충돌이 여기서 안 잡혀 500으로 나간다
+        flushOrRejectConflict();
         log.info("[AdminFaq] 삭제 faqId={} adminId={}", faqId, adminId);
     }
 
@@ -95,7 +98,7 @@ public class AdminFaqCommandService {
         try {
             return faqRepository.saveAndFlush(faq);
         } catch (DataIntegrityViolationException e) {
-            throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+            throw toConflict(e);
         }
     }
 
@@ -105,10 +108,18 @@ public class AdminFaqCommandService {
         try {
             faqRepository.flush();
         } catch (DataIntegrityViolationException e) {
-            throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+            throw toConflict(e);
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new GeneralException(FaqErrorCode.CONCURRENT_UPDATE);
         }
+    }
+
+    // 중복 인덱스가 아니면 원래 예외를 그대로 보낸다. 길이·NOT NULL 오류를 중복이라고 안내하면 안 된다
+    private RuntimeException toConflict(DataIntegrityViolationException exception) {
+        if (!constraintChecker.isViolation(exception)) {
+            return exception;
+        }
+        return new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
     }
 
     // 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.

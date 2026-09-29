@@ -90,6 +90,49 @@ class AdminFaqConcurrentCreateTest {
     }
 
     @Test
+    @DisplayName("수정과 삭제가 동시에 들어오면 나중 요청이 FAQ409-1로 막힌다")
+    void 수정과_삭제가_겹치면_막힌다() throws Exception {
+        Long faqId = service.create(request(), ADMIN_ID).faqId();
+
+        List<Future<Object>> results = runTogether(
+                () -> service.update(faqId, request(QUESTION, ANSWER + " 고침"), ADMIN_ID),
+                () -> {
+                    service.delete(faqId, ADMIN_ID);
+                    return null;
+                });
+
+        assertThat(results.stream().filter(this::threw).count()).isEqualTo(1);
+        assertThat(lastErrorCode).isEqualTo(FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("같은 FAQ를 동시에 삭제하면 나중 요청이 FAQ409-1로 막힌다")
+    void 동시에_삭제하면_막힌다() throws Exception {
+        Long faqId = service.create(request(), ADMIN_ID).faqId();
+
+        List<Future<Object>> results = runTogether(
+                () -> {
+                    service.delete(faqId, ADMIN_ID);
+                    return null;
+                },
+                () -> {
+                    service.delete(faqId, ADMIN_ID);
+                    return null;
+                });
+
+        assertThat(results.stream().filter(this::threw).count()).isEqualTo(1);
+        assertThat(lastErrorCode).isEqualTo(FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("중복이 아닌 제약 위반은 중복 오류로 바꾸지 않는다")
+    void 다른_제약_위반은_그대로_둔다() {
+        // created_by에 users 외래키가 있어 없는 관리자 id로 저장하면 다른 제약에 걸린다
+        assertThatThrownBy(() -> service.create(request(), -1L))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     @DisplayName("삭제한 뒤에는 같은 내용을 다시 넣을 수 있다")
     void 삭제_후에는_다시_넣을_수_있다() {
         Long faqId = service.create(request(), ADMIN_ID).faqId();
