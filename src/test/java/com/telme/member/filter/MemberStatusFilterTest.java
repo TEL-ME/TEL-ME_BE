@@ -95,6 +95,32 @@ class MemberStatusFilterTest {
     }
 
     @Test
+    @DisplayName("로그인 뒤 회원이 사라지면 401이 된다")
+    void 회원이_사라지면_401이_된다() throws Exception {
+        MockHttpSession session = signUp("gone@example.com");
+        entityManager.createQuery("delete from User u where u.email = :email")
+                .setParameter("email", "gone@example.com")
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        mockMvc.perform(get(ADMIN_API).session(session))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MEMBER401-1"));
+    }
+
+    @Test
+    @DisplayName("로그인 뒤 권한이 올라가면 관리자 API가 바로 열린다")
+    void 권한이_올라가면_열린다() throws Exception {
+        MockHttpSession session = signUp("promote@example.com");
+        mockMvc.perform(get(ADMIN_API).session(session)).andExpect(status().isForbidden());
+
+        changeRole("promote@example.com", User.Role.ADMIN);
+
+        mockMvc.perform(get(ADMIN_API).session(session)).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("로그인하지 않은 요청은 그대로 401이다")
     void 비인증_요청은_401이다() throws Exception {
         mockMvc.perform(get(ADMIN_API)).andExpect(status().isUnauthorized());
@@ -110,19 +136,34 @@ class MemberStatusFilterTest {
         return session;
     }
 
+    // 가입하면 자동 로그인된다. 시드 계정을 지우면 FAQ 작성자 FK에 걸려 별도 계정을 만든다
+    private MockHttpSession signUp(String email) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mockMvc.perform(post("/api/v1/auth/signup")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"filtertest1234\"}"))
+                .andExpect(status().isOk());
+        return session;
+    }
+
     private void changeStatus(User.Status status) {
-        update("update User u set u.status = :value where u.email = :email", status);
+        update("update User u set u.status = :value where u.email = :email", status, ADMIN_EMAIL);
     }
 
     private void changeRole(User.Role role) {
-        update("update User u set u.role = :value where u.email = :email", role);
+        update("update User u set u.role = :value where u.email = :email", role, ADMIN_EMAIL);
+    }
+
+    private void changeRole(String email, User.Role role) {
+        update("update User u set u.role = :value where u.email = :email", role, email);
     }
 
     // 필터가 1차 캐시에 남은 예전 값을 읽지 않도록 비운다
-    private void update(String jpql, Object value) {
+    private void update(String jpql, Object value, String email) {
         entityManager.createQuery(jpql)
                 .setParameter("value", value)
-                .setParameter("email", ADMIN_EMAIL)
+                .setParameter("email", email)
                 .executeUpdate();
         entityManager.flush();
         entityManager.clear();

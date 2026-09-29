@@ -2,7 +2,10 @@ package com.telme.member.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.entity.User;
+import com.telme.global.common.code.BaseErrorCode;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.member.exception.MemberErrorCode;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,6 +41,7 @@ public class MemberStatusFilter extends OncePerRequestFilter {
     );
 
     private final UserRepository userRepository;
+    private final MemberStatusChecker memberStatusChecker;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -65,9 +69,11 @@ public class MemberStatusFilter extends OncePerRequestFilter {
         }
 
         User user = found.get();
-        MemberErrorCode blocked = blockedReason(user);
-        if (blocked != null) {
-            reject(response, blocked);
+        // 상태별 규칙은 MemberStatusChecker 한 곳에서 관리한다. 필터는 예외를 응답으로 바꾸기만 한다
+        try {
+            memberStatusChecker.checkActive(user);
+        } catch (GeneralException e) {
+            reject(response, e.getErrorCode());
             return;
         }
 
@@ -84,14 +90,6 @@ public class MemberStatusFilter extends OncePerRequestFilter {
         return authentication.getPrincipal() instanceof Long userId ? userId : null;
     }
 
-    private MemberErrorCode blockedReason(User user) {
-        return switch (user.getStatus()) {
-            case ACTIVE -> null;
-            case SUSPENDED -> MemberErrorCode.ACCOUNT_SUSPENDED;
-            case WITHDRAWN -> MemberErrorCode.ACCOUNT_WITHDRAWN;
-        };
-    }
-
     // 로그인 이후 role이 바뀌었을 수 있어 현재 값으로 다시 세운다. 판정은 스프링이 한다.
     // 세션에 저장된 SecurityContext를 직접 고치면 저장소를 거치지 않고 세션 내용이 바뀌므로 새로 만들어 넣는다
     private void refreshAuthorities(Long userId, User user) {
@@ -102,7 +100,7 @@ public class MemberStatusFilter extends OncePerRequestFilter {
     }
 
     // 필터 단계라 GlobalExceptionHandler가 못 잡는다. 다른 API 오류와 같은 형식으로 직접 쓴다
-    private void reject(HttpServletResponse response, MemberErrorCode errorCode) throws IOException {
+    private void reject(HttpServletResponse response, BaseErrorCode errorCode) throws IOException {
         response.setStatus(errorCode.getStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");

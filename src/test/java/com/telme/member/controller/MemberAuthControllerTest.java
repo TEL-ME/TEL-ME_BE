@@ -1,6 +1,7 @@
 package com.telme.member.controller;
 
 import com.telme.member.repository.UserRepository;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
@@ -37,7 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 // SecurityConfig 미Import 시 @WebMvcTest가 기본 보안 설정으로 돌아 permitAll이 검증되지 않음
 @WebMvcTest(MemberAuthController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, MemberStatusChecker.class})
 class MemberAuthControllerTest {
 
     @Autowired

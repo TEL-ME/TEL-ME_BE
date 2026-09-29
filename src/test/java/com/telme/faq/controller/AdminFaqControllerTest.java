@@ -16,6 +16,7 @@ import com.telme.faq.service.AdminFaqCommandService;
 import com.telme.faq.service.AdminFaqQueryService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.repository.UserRepository;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.GuestIdentityService;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 import com.telme.member.service.KakaoLinkRequestStore;
@@ -37,7 +38,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 // SecurityConfig 미Import 시 @WebMvcTest가 기본 보안 설정으로 돌아 ADMIN 제한이 검증되지 않음
 @WebMvcTest(AdminFaqController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, MemberStatusChecker.class})
 class AdminFaqControllerTest {
 
     @Autowired

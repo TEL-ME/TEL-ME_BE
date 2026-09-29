@@ -1,6 +1,7 @@
 package com.telme.faq.controller;
 
 import com.telme.member.repository.UserRepository;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
@@ -23,7 +24,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @WebMvcTest(FaqSearchController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, MemberStatusChecker.class})
 @ActiveProfiles("prod")
 @TestPropertySource(properties = "faq.search-test-api-enabled=true")
 class FaqSearchControllerProdProfileTest {
