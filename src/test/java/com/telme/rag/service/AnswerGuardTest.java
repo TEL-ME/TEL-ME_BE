@@ -94,13 +94,14 @@ class AnswerGuardTest {
     }
 
     @Test
-    @DisplayName("고객이 질문에 쓴 금액을 되받는 것은 통과시킨다")
-    void 질문에_있는_금액은_통과한다() {
+    @DisplayName("고객 질문의 금액을 언급해도 근거 없음이 명확하지 않으면 차단한다")
+    void 질문의_금액을_언급만_하면_차단한다() {
         String context = "요금제 변경은 월 1회 가능합니다.";
         String answer = "말씀하신 50,000원 요금제는 월 1회 변경 가능합니다.";
 
-        assertThatCode(() -> guard.verifyAmounts(answer, context, "50,000원 요금제도 바꿀 수 있나요?"))
-                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> guard.verifyAmounts(answer, context, "50,000원 요금제도 바꿀 수 있나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("50000");
     }
 
     @Test
@@ -177,9 +178,9 @@ class AnswerGuardTest {
     }
 
     @Test
-    @DisplayName("고객이 질문에 쓴 창구는 지어낸 것이 아니다")
-    void 질문에_있는_창구는_유지() {
-        String answer = "고객센터로 문의하시면 확인됩니다.";
+    @DisplayName("고객이 질문에 쓴 창구를 되받는 문장은 유지한다")
+    void 질문에_있는_창구를_되받으면_유지() {
+        String answer = "말씀하신 고객센터 이용 여부는 안내된 정보에 없습니다.";
         String context = "문의는 어떻게 하나요? 담당 부서에서 확인해 드립니다.";
 
         assertThat(guard.trimUngroundedChannels(answer, context, "고객센터로 물어봐야 하나요?"))
@@ -221,6 +222,59 @@ class AnswerGuardTest {
 
         assertThatCode(() -> guard.verifyMeasures(answer, context, "교환 되나요?"))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("소수점과 공백 표기가 달라도 같은 수치와 단위로 본다")
+    void 소수점과_공백_표기가_달라도_같은_수치로_본다() {
+        String answer = "기본 제공량은 1.50 GB입니다.";
+        String context = "기본 제공량은 1.5GB입니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "데이터 제공량이 얼마인가요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("숫자가 같아도 단위가 달라지면 차단한다")
+    void 숫자가_같아도_단위가_달라지면_차단한다() {
+        String answer = "이 혜택은 15개월 동안 제공됩니다.";
+        String context = "이 요금제는 데이터 15GB를 제공합니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "혜택이 어떻게 되나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("15개월");
+    }
+
+    @Test
+    @DisplayName("시각의 앞자리 0이 생략돼도 같은 운영 시간으로 본다")
+    void 시각의_앞자리_0이_생략돼도_통과한다() {
+        String answer = "번호이동은 9:00부터 20:00까지 가능합니다.";
+        String context = "번호이동 업무는 매일 09:00부터 20:00까지 운영됩니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(answer, context, "번호이동은 언제 되나요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("근거와 다른 운영 시간을 차단한다")
+    void 근거와_다른_운영_시간을_차단한다() {
+        String answer = "상담은 10:00부터 20:00까지 가능합니다.";
+        String context = "상담 운영 시간은 10:00부터 19:00까지입니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "상담 시간은 언제인가요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("20:00");
+    }
+
+    @Test
+    @DisplayName("질문에만 있는 운영 시간을 사실로 확정하면 차단한다")
+    void 질문에만_있는_운영_시간을_차단한다() {
+        String answer = "상담은 20:00까지 운영합니다.";
+        String context = "상담은 평일 19:00까지 운영합니다.";
+
+        assertThatThrownBy(() -> guard.verifyMeasures(answer, context, "20:00까지 하나요?"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("20:00");
     }
 
     @Test
@@ -274,4 +328,65 @@ class AnswerGuardTest {
         assertThat(guard.trimUngroundedComparisons(answer, context, "뭐가 빨라요?"))
                 .isEqualTo(answer);
     }
+
+    @Test
+    @DisplayName("같은 의미의 비교 표현은 단어가 달라도 유지한다")
+    void 같은_의미의_비교_표현은_유지() {
+        String answer = "알뜰 미니가 제일 싸고 데이터 1.5GB를 제공합니다.";
+        String context = "알뜰 미니는 가장 저렴하며 데이터 1.5GB가 제공됩니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "제일 싼 요금제가 뭔가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("형태가 달라도 근거에 없는 빠르다는 비교는 제거한다")
+    void 형태가_달라도_근거에_없는_빠르다는_비교는_제거() {
+        String answer = "매장 처리가 더 빨라요.";
+        String context = "매장과 온라인 모두 신청 즉시 처리됩니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "어디서 처리하나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("비싸다는 근거를 싸다는 근거로 잘못 사용하지 않는다")
+    void 비싸다는_표현은_싸다는_근거가_아니다() {
+        String answer = "알뜰 요금제가 더 싸요.";
+        String context = "프리미엄 요금제는 상대적으로 비싸요.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "두 요금제를 비교해 주세요."))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 유리하다는 비교는 제거한다")
+    void 근거에_없는_유리하다는_비교는_제거한다() {
+        String answer = "온라인 신청이 더 유리합니다.";
+        String context = "온라인과 매장에서 모두 신청할 수 있습니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "어디서 신청할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거에 있는 유리하다는 비교는 유지한다")
+    void 근거에_있는_유리하다는_비교는_유지한다() {
+        String answer = "당일 이용에는 매장 개통이 유리합니다.";
+        String context = "당일 이용이 필요하시면 매장 개통이 유리합니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "어디서 개통하는 게 좋나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 안정적이라는 판단은 제거한다")
+    void 근거에_없는_안정적이라는_판단은_제거한다() {
+        String answer = "우편 청구서는 월 500원입니다. 우편은 안정적으로 받아볼 수 있습니다.";
+        String context = "우편 청구서는 월 500원입니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "뭐가 더 나아요?"))
+                .isEqualTo("우편 청구서는 월 500원입니다.");
+    }
+
 }
