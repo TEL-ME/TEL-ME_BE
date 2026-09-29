@@ -2,12 +2,17 @@ package com.telme.faq.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.dto.res.AdminFaqListItemResponse;
 import com.telme.faq.dto.res.AdminFaqListResponse;
+import com.telme.faq.service.AdminFaqCommandService;
 import com.telme.faq.service.AdminFaqQueryService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.service.GuestIdentityService;
@@ -23,9 +28,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 // SecurityConfig 미Import 시 @WebMvcTest가 기본 보안 설정으로 돌아 ADMIN 제한이 검증되지 않음
 @WebMvcTest(AdminFaqController.class)
@@ -37,6 +44,9 @@ class AdminFaqControllerTest {
 
     @MockitoBean
     private AdminFaqQueryService adminFaqQueryService;
+
+    @MockitoBean
+    private AdminFaqCommandService adminFaqCommandService;
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
@@ -97,6 +107,77 @@ class AdminFaqControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 등록에 201과 만들어진 FAQ를 반환한다")
+    void 관리자는_등록할_수_있다() throws Exception {
+        when(adminFaqCommandService.create(any(), any())).thenReturn(detail());
+
+        mockMvc.perform(postFaq(VALID_BODY))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.result.faqId").value(1))
+                .andExpect(jsonPath("$.result.version").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 수정에 200과 고친 FAQ를 반환한다")
+    void 관리자는_수정할_수_있다() throws Exception {
+        when(adminFaqCommandService.update(any(Long.class), any(), any())).thenReturn(detail());
+
+        mockMvc.perform(putFaq(VALID_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.faqId").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 삭제에 200을 반환한다")
+    void 관리자는_삭제할_수_있다() throws Exception {
+        mockMvc.perform(delete("/api/v1/admin/faqs/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true));
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    @DisplayName("ADMIN이 아니면 등록·수정·삭제가 모두 403이다")
+    void 일반_회원은_쓰기가_막힌다() throws Exception {
+        mockMvc.perform(postFaq(VALID_BODY)).andExpect(status().isForbidden());
+        mockMvc.perform(putFaq(VALID_BODY)).andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/admin/faqs/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("로그인하지 않으면 등록·수정·삭제가 모두 401이다")
+    void 비인증_요청은_쓰기가_막힌다() throws Exception {
+        mockMvc.perform(postFaq(VALID_BODY)).andExpect(status().isUnauthorized());
+        mockMvc.perform(putFaq(VALID_BODY)).andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/v1/admin/faqs/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("질문이 비어 있으면 400을 반환한다")
+    void 질문이_없으면_400을_반환한다() throws Exception {
+        mockMvc.perform(postFaq("""
+                {"category":"SERVICE","question":"  ","answer":"답변입니다."}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("등록 카테고리가 10종에 없으면 400을 반환한다")
+    void 등록_카테고리가_잘못되면_400을_반환한다() throws Exception {
+        mockMvc.perform(postFaq("""
+                {"category":"usim","question":"질문입니다.","answer":"답변입니다."}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-0"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("카테고리가 10종에 없으면 빈 목록이 아니라 400을 반환한다")
     void 잘못된_카테고리는_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/faqs").param("category", "usim"))
@@ -111,5 +192,25 @@ class AdminFaqControllerTest {
         mockMvc.perform(get("/api/v1/admin/faqs").param("size", "101"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON400-1"));
+    }
+
+    private static final String VALID_BODY = """
+            {"category":"SERVICE","question":"질문입니다.","answer":"답변입니다."}
+            """;
+
+    private MockHttpServletRequestBuilder postFaq(String body) {
+        return post("/api/v1/admin/faqs")
+                .contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+
+    private MockHttpServletRequestBuilder putFaq(String body) {
+        return put("/api/v1/admin/faqs/1")
+                .contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+
+    private AdminFaqDetailResponse detail() {
+        return new AdminFaqDetailResponse(
+                1L, "SERVICE", "질문입니다.", "답변입니다.", null, 1, "hash", "ACTIVE",
+                0L, 2L, 2L, Instant.now(), Instant.now());
     }
 }
