@@ -42,7 +42,7 @@ class FaqSearchAnswerProviderTest {
                                 0.91,
                                 1,
                                 LocalDate.of(2026, 9, 21),
-                                1));
+                                1, null));
         when(searches.search(any())).thenReturn(found);
         AtomicReference<List<FaqSearchResponse>> received = new AtomicReference<>();
         ChatAnswer expected =
@@ -120,7 +120,7 @@ class FaqSearchAnswerProviderTest {
         FaqSearchService searches = mock(FaqSearchService.class);
         var found = new FaqSearchResponse(
                 7L, null, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
-                0.80, 1, LocalDate.of(2026, 9, 21), 1);
+                0.80, 1, LocalDate.of(2026, 9, 21), 1, null);
         when(searches.search(any())).thenAnswer(invocation -> {
             FaqSearchRequest request = invocation.getArgument(0);
             return request.query().equals("요금제 변경 횟수") ? List.of(found) : List.of();

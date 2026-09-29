@@ -1,6 +1,7 @@
 package com.telme.faq.service;
 
 import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -19,17 +20,20 @@ public class PgvectorFaqSearchService implements FaqSearchService {
     private final FaqEmbeddingRepository repository;
     private final EmbeddingProperties embeddingProperties;
     private final SearchProperties searchProperties;
+    private final FaqEmbeddingTextProperties embeddingTextProperties;
 
     public PgvectorFaqSearchService(
             EmbeddingClient embeddingClient,
             FaqEmbeddingRepository repository,
             EmbeddingProperties embeddingProperties,
-            SearchProperties searchProperties
+            SearchProperties searchProperties,
+            FaqEmbeddingTextProperties embeddingTextProperties
     ) {
         this.embeddingClient = embeddingClient;
         this.repository = repository;
         this.embeddingProperties = embeddingProperties;
         this.searchProperties = searchProperties;
+        this.embeddingTextProperties = embeddingTextProperties;
     }
 
     @Override
@@ -37,12 +41,14 @@ public class PgvectorFaqSearchService implements FaqSearchService {
         float[] queryVector = embeddingClient.embed(request.query());
         List<FaqNearestMatch> candidates =
                 repository.findNearest(queryVector, request.topK(), embeddingProperties.model());
-        return toResponses(candidates, searchProperties.similarityThreshold());
+        // faq_embeddings.embedding은 faq.embedding-text.variant 구성으로 만든 벡터다
+        return toResponses(candidates, searchProperties.similarityThreshold(), embeddingTextProperties.variant());
     }
 
     // repository가 이미 거리순으로 정렬해 반환하므로, 임계값 미달이 한 번 나오면 그 지점에서 끊는다
     // 이중 벡터 검색에서는 벡터마다 임계값이 달라 threshold를 받는다
-    private List<FaqSearchResponse> toResponses(List<FaqNearestMatch> candidates, double threshold) {
+    private List<FaqSearchResponse> toResponses(
+            List<FaqNearestMatch> candidates, double threshold, FaqEmbeddingTextVariant variant) {
         List<FaqSearchResponse> results = new ArrayList<>();
         int rank = 0;
         for (FaqNearestMatch candidate : candidates) {
@@ -61,7 +67,8 @@ public class PgvectorFaqSearchService implements FaqSearchService {
                     score,
                     faq.getVersion(),
                     faq.getUpdatedAt().atZone(TimeZones.KST).toLocalDate(),
-                    rank));
+                    rank,
+                    variant));
         }
         return results;
     }

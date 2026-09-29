@@ -35,12 +35,14 @@ public final class DualVectorMerger {
     private static FaqSearchResponse withRank(FaqSearchResponse result, int rank) {
         return new FaqSearchResponse(
                 result.faqId(),
+                result.slotId(),
                 result.category(),
                 result.question(),
                 result.answer(),
                 result.score(),
                 result.version(),
                 result.updatedAt(),
-                rank);
+                rank,
+                result.matchedVariant());
     }
 }

@@ -77,7 +77,8 @@ class FaqSearchApiIntegrationTest {
             mockMvc.perform(get("/api/v1/faq/search").param("query", "유심 재발급 비용이 얼마인가요?"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isSuccess").value(true))
-                    .andExpect(jsonPath("$.result[0].faqId").value(faq.getFaqId()));
+                    .andExpect(jsonPath("$.result[0].faqId").value(faq.getFaqId()))
+                    .andExpect(jsonPath("$.result[0].matchedVariant").value("Q_A"));
         }
     }
 }

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -30,10 +31,11 @@ class PgvectorFaqSearchServiceTest {
             new EmbeddingProperties(MODEL, 3, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120));
     private final PgvectorFaqSearchService service =
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
-                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)));
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)),
+                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
 
     @Test
-    @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 slotId·score·rank와 함께 반환한다")
+    @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 slotId·score·rank·찾은 벡터와 함께 반환한다")
     void 정상_검색이면_score와_rank를_매겨_반환한다() {
         when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
         FaqNearestMatch same = matchOf(1L, "BILLING", "요금제 질문", 0.0); // distance 0 → score 1.0
@@ -45,6 +47,7 @@ class PgvectorFaqSearchServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).faqId()).isEqualTo(1L);
         assertThat(result.get(0).slotId()).isEqualTo("BILLING-0001");
+        assertThat(result.get(0).matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A);
         assertThat(result.get(0).score()).isEqualTo(1.0);
         assertThat(result.get(0).searchRank()).isEqualTo(1);
         assertThat(result.get(1).faqId()).isEqualTo(2L);

@@ -203,7 +203,7 @@ class RagAnswerGeneratorTest {
     private FaqSearchResponse faq(Long faqId) {
         return new FaqSearchResponse(
                 faqId, null, "BILLING", "질문" + faqId, "답변" + faqId,
-                0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue());
+                0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue(), null);
     }
 
     private static final class StubClient implements LlmClient {
