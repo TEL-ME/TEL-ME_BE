@@ -64,6 +64,7 @@ public class QueryRoutingService {
         Pattern.CASE_INSENSITIVE);
     private static final Pattern PLACE = Pattern.compile(
         "(?<![가-힣A-Za-z0-9])[가-힣A-Za-z0-9]{2,14}(?:역|읍|면|공항|터미널|사거리)");
+    private static final Pattern CONDITIONAL_ENDING = Pattern.compile("(?:하면|려면|되면|으면)$");
     private static final Pattern ADMIN_AREA_BEFORE = Pattern.compile("(?:시|군|구)\\s+$");
     private static final Pattern LOCATION_PARTICLE_AFTER = Pattern.compile("^(?:에서|에|으로|로)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
@@ -313,7 +314,20 @@ public class QueryRoutingService {
     }
 
     private boolean hasUnsupportedToken(Pattern pattern, String source, String reference) {
-        return !tokens(pattern, reference).containsAll(tokens(pattern, source, pattern == PLACE));
+        Set<String> referenceTokens = tokens(pattern, reference);
+        Set<String> sourceTokens = tokens(pattern, source, pattern == PLACE);
+        if (pattern == PLACE) {
+            sourceTokens.removeIf(token -> containsPlacePhrase(reference, token));
+        }
+        return !referenceTokens.containsAll(sourceTokens);
+    }
+
+    private boolean containsPlacePhrase(String text, String placePhrase) {
+        if (text == null) {
+            return false;
+        }
+        Pattern phrase = Pattern.compile("(?<![가-힣A-Za-z0-9])" + Pattern.quote(placePhrase));
+        return phrase.matcher(text).find();
     }
 
     private Set<String> tokens(Pattern pattern, String text) {
@@ -341,7 +355,7 @@ public class QueryRoutingService {
         }
         // 모델이 만든 검색어는 더 넓게 검사해 단독 '면' 지명도 근거 없이 추가되지 못하게 한다.
         if (candidatePlace && value.endsWith("면")) {
-            return !value.endsWith("하면");
+            return !CONDITIONAL_ENDING.matcher(value).find();
         }
         // '면'은 조건 어미와 겹치므로 행정구역 표기나 바로 붙은 장소 조사로만 판별한다.
         return !value.endsWith("면")

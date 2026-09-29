@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -663,6 +664,39 @@ class QueryRoutingServiceTest {
 
             assertThat(result.refinedQuery()).isEqualTo(question);
             assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "유심을 바꾸려면 어떻게 해?, 유심을 바꾸려면 필요한 절차",
+                "유심 개통되면 요금은 어떻게 확인해?, 유심 개통되면 요금 확인 방법",
+                "할인이 있으면 어떻게 신청해?, 할인 있으면 신청 방법"
+        })
+        void conditionalEndingsInSearchQueryAreNotInventedPlaces(String question, String refinedQuery) {
+            given(llmClient.generate(any())).willReturn(("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"%s",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"%s"}]}
+                """).formatted(refinedQuery, refinedQuery));
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
+        }
+
+        @Test
+        void conditionalPhraseCopiedFromQuestionIsNotTreatedAsInventedPlace() {
+            String question = "문의해주시면 요금제 변경 방법 알려주세요";
+            String refinedQuery = "문의해주시면 요금제 변경 절차";
+            given(llmClient.generate(any())).willReturn(("""
+                {"intent":"FAQ","confidence":0.9,"refinedQuery":"%s",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"%s"}]}
+                """).formatted(refinedQuery, refinedQuery));
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
         }
 
         @Test
