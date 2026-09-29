@@ -81,20 +81,20 @@ class QueryRoutingIntegrationTest {
               "confidence": 0.95,
               "refinedQuery": "강남역점 위치 및 주차 안내",
               "extractedConditions": {
-                "branch": "강남역점"
+                "location": "강남역점"
               },
               "subQueries": [
                 {
                   "order": 1,
                   "intent": "STORE",
                   "queryText": "강남역점 위치 안내",
-                  "conditions": { "branch": "강남역점" }
+                  "conditions": { "location": "강남역점" }
                 },
                 {
                   "order": 2,
                   "intent": "STORE",
                   "queryText": "강남역점 주차 가능 여부",
-                  "conditions": { "branch": "강남역점" }
+                  "conditions": { "location": "강남역점" }
                 }
               ]
             }

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 class FaqContentHashTest {
 
-    // scripts/data/faq_sample_30.json의 BILLING-S01. 기대값은 Python hashlib으로 계산한 것
+    // scripts/data/faq_sample_30.json의 BILLING-0001. 기대값은 Python hashlib으로 계산한 것
     private static final String QUESTION = "요금제 바꾸는 거 한 달에 몇 번까지 되나요?";
     private static final String ANSWER = "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, "
             + "그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.";

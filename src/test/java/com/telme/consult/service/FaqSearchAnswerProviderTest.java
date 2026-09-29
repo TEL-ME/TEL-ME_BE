@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -28,12 +29,13 @@ import java.util.concurrent.atomic.AtomicReference;
 class FaqSearchAnswerProviderTest {
 
     @Test
-    void searchesRefinedQueryAndPassesResultsToAnswerGeneration() {
+    void searchesOriginalQueryAndPassesResultsToAnswerGeneration() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var found =
                 List.of(
                         new FaqSearchResponse(
                                 7L,
+                                null,
                                 "USIM",
                                 "유심 재발급은 어디서 하나요?",
                                 "가까운 매장에서 재발급할 수 있습니다.",
@@ -71,7 +73,7 @@ class FaqSearchAnswerProviderTest {
 
         var request = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(searches).search(request.capture());
-        assertThat(request.getValue().query()).isEqualTo("유심 재발급 가능 매장");
+        assertThat(request.getValue().query()).isEqualTo("유심 재발급은 어디서 하나요?");
         assertThat(request.getValue().topK()).isEqualTo(3);
         assertThat(received.get()).containsExactlyElementsOf(found);
         assertThat(received.get()).isNotEmpty();
@@ -114,6 +116,52 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
+    void searchesRefinedQueryWhenOriginalSearchHasNoEvidence() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var found = new FaqSearchResponse(
+                7L, null, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
+                0.80, 1, LocalDate.of(2026, 9, 21), 1);
+        when(searches.search(any())).thenAnswer(invocation -> {
+            FaqSearchRequest request = invocation.getArgument(0);
+            return request.query().equals("요금제 변경 횟수") ? List.of(found) : List.of();
+        });
+        AtomicReference<List<FaqSearchResponse>> received = new AtomicReference<>();
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) -> {
+            received.set(results);
+            return GeneratedAnswer.withoutSources(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER, "월 1회 변경할 수 있습니다.",
+                    ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
+        });
+
+        provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "요금제는 한 달에 몇 번까지 바꿀 수 있나요?", "요금제 변경 횟수", Map.of()));
+
+        var requests = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches, times(2)).search(requests.capture());
+        assertThat(requests.getAllValues()).extracting(FaqSearchRequest::query)
+                .containsExactly("요금제는 한 달에 몇 번까지 바꿀 수 있나요?", "요금제 변경 횟수");
+        assertThat(received.get()).containsExactly(found);
+    }
+
+    @Test
+    void doesNotRepeatSearchWhenOriginalQuestionIsAlreadyTheSearchQuery() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "안내드릴 수 있는 정보가 없습니다.",
+                        ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)));
+
+        provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "요금제는 한 달에 몇 번까지 바꿀 수 있나요?",
+                "요금제는 한 달에 몇 번까지 바꿀 수 있나요?", Map.of()));
+
+        verify(searches, times(1)).search(any());
+    }
+
+    @Test
     void storePurposeIsNotSentToFaqSearch() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var provider =
@@ -144,4 +192,5 @@ class FaqSearchAnswerProviderTest {
 
         verifyNoInteractions(searches);
     }
+
 }

@@ -448,7 +448,7 @@ class RagAnswerGeneratorTest {
 
     private FaqSearchResponse faq(Long faqId, String question, String answer) {
         return new FaqSearchResponse(
-                faqId, "BILLING", question, answer,
+                faqId, null, "BILLING", question, answer,
                 0.9, 1, LocalDate.of(2026, 9, 17), faqId.intValue());
     }
 

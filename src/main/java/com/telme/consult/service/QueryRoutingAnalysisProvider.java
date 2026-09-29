@@ -9,8 +9,11 @@ import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
 import com.telme.consult.service.FollowupContextService.Context;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting.Intent;
+import com.telme.intent.entity.QueryRouting.Method;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -18,6 +21,10 @@ import java.util.Objects;
 public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
     private static final String UNKNOWN_GUIDANCE =
             "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.";
+    private static final String UNCERTAIN_GUIDANCE =
+            "질문을 정확히 분류하기 어렵습니다. 궁금한 통신 서비스나 매장 정보를 조금 더 구체적으로 알려주세요.";
+    private static final String COMPOUND_GUIDANCE =
+            "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요.";
     private final ChatMessageRepository messages;
     private final QueryRoutingService routing;
     private final FollowupAnalysisProvider followups;
@@ -53,13 +60,25 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                         .filter(value -> value.getRole() == ChatMessage.Role.USER)
                         .filter(value -> value.getMessageType() == ChatMessage.MessageType.QUESTION)
                         .orElseThrow(() -> new IllegalArgumentException("라우팅할 사용자 메시지가 없습니다."));
-        IntentRouteResponse result =
-                routing.routeSingleConsult(message, context.routingContext());
+        IntentRouteResponse result;
+        try {
+            result = routing.routeSingleConsult(message, context.routingContext());
+        } catch (UnsupportedCompoundQuestionException exception) {
+            return AnalysisResult.direct(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER,
+                    COMPOUND_GUIDANCE,
+                    null,
+                    List.of("요금제 알려줘", "가까운 매장 찾아줘"),
+                    null));
+        }
         if (result.intent() == Intent.UNKNOWN) {
             return AnalysisResult.direct(
                     new ChatAnswer(
                             ChatMessage.MessageType.ANSWER,
-                            UNKNOWN_GUIDANCE,
+                            result.method() == Method.LLM
+                                    && result.confidence() != null
+                                    && result.confidence().compareTo(new BigDecimal("0.5")) < 0
+                                            ? UNCERTAIN_GUIDANCE : UNKNOWN_GUIDANCE,
                             ChatMessage.AnswerBasis.OUT_OF_SCOPE,
                             List.of("요금제 알려줘", "가까운 매장 찾아줘"),
                             null));

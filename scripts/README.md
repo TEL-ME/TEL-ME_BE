@@ -1,7 +1,7 @@
 # FAQ 생성·검증·측정 스크립트
 
 기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류)
+측정 결과·결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률·지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류), `docs/EVAL_SET_SUPPLEMENT.md`(평가셋 보강·이중 벡터 사전 검증)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |
@@ -12,6 +12,7 @@
 | `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k·MRR 계산 | 서버 경유 |
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
+| `simulate_dual_vector.py` | `Q_A`·`QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
 | `check_stores.py` | 매장 데이터 제약·분포 + 시드 SQL 대조 | - |
@@ -86,30 +87,49 @@ python3 scripts/check_duplicates.py --self-test
 
 ```bash
 python3 scripts/check_eval_questions.py scripts/data/eval_questions_130.json --faq scripts/data/faq_full_1150.json
+python3 scripts/check_eval_questions.py scripts/data/eval_questions_supplement_50.json --faq scripts/data/faq_full_1150.json --live
 python3 scripts/check_eval_questions.py scripts/data/eval_questions_30.json --live
 python3 scripts/check_eval_questions.py --self-test
 ```
 
+평가셋 파일
+
+| 파일 | 구성 | 용도 |
+| --- | --- | --- |
+| `eval_questions_130.json` | SIMILAR 40 / VARIANT 40 / UNRELATED 50 | 확정값 기준 평가셋. 기존 문서 수치와 비교하려면 수정하지 않는다 |
+| `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/EVAL_SET_SUPPLEMENT.md`). 130건과 함께 측정 |
+
+질문 유형
+
+- `SIMILAR` / `VARIANT`: FAQ 질문의 가벼운 / 큰 변형
+- `ANSWER`: FAQ 질문 변형이 아니라 **답변에만 있는 값·용어로 묻는 질문**. 긍정 질문으로 집계
+- `UNRELATED`: 답이 없어야 하는 질문. `unrelated_kind`는 `OFF_DOMAIN` / `ADJACENT` / `ADJACENT_HARD`
+
 정답 매핑
 
-- 정답은 `faq_id`가 아니라 `expected_content_hash` = `SHA-256(question + answer)`
-  - `faq_id`는 재적재 시 새로 발급되지만 `content_hash`는 문장 내용에만 의존
+- 정답은 `expected_slot_id` (TELME-73)
+  - `faq_id`는 재적재 시 새로 발급되고, `content_hash`는 FAQ 내용을 고치면 바뀐다. `slot_id`는 둘 다 영향을 받지 않는다
 - 답변이 사실상 같은 FAQ가 여럿이면 배열로 기재 (모두 정답 처리)
+- `expected_content_hash`는 참고용으로 남겨 둔다. 적혀 있으면 정적 검사가 `slot_id`의 FAQ 내용과 맞는지 대조한다
 
 정적 검사 (Ollama 불필요)
 
-- `type` 값, 긍정 질문 해시의 실존 여부, 배열 내 중복
-- `UNRELATED`의 해시·`expected_slot_id`가 `null`인지, `unrelated_kind`가 정의된 값인지
-- `expected_slot_id`가 해시가 가리키는 FAQ와 일치하는지
-- 대칭성: SIMILAR/VARIANT 건수 일치, 카테고리별 건수 균등
+- `type` 값, 긍정 질문 `slot_id`의 실존 여부(`--faq` 파일 기준), 배열 내 중복, 배열 안 카테고리 일치
+- `UNRELATED`의 `expected_slot_id`·해시가 `null`인지, `unrelated_kind`가 정의된 값인지
+- `expected_content_hash`가 적혀 있으면 `slot_id`가 가리키는 FAQ 내용과 일치하는지
+- 대칭성: SIMILAR/VARIANT 건수 일치, 카테고리별 건수 균등. `ANSWER`는 짝이 없어 ANSWER끼리 카테고리별 건수만 따로 본다
 
 `--live` (Ollama 필요)
 
-- 긍정 질문을 임베딩해 정답 FAQ가 최고 유사도인지 확인, `UNRELATED` 유사도 분포 출력
+- SIMILAR/VARIANT: 정답 FAQ(배열이면 그중 하나)의 질문이 최고 유사도인지 확인
+- `ANSWER`: 실패로 거르지 않고 "FAQ 질문으로도 커버됨 / 답변에만 있음"으로 참고 분류만 출력
+  - 이 분류로 문항을 고르거나 고치지 않는다. 정답 FAQ 질문 유사도는 `QUESTION_ONLY` 검색 점수와 같은 계산이라, 이 값으로 고르면 평가셋이 그 구성에 불리하게 기운다
+- `UNRELATED` 유사도 분포 출력
 
 `--self-test`
 
-- 일부러 틀린 픽스처로 지적 15종(`STATIC_KINDS`)이 모두 검출되는지 확인
+- 일부러 틀린 픽스처로 지적 17종(`STATIC_KINDS`)이 모두 검출되는지 확인
+- ANSWER + UNRELATED만 있는 정상 평가셋에서 지적이 없는지(오탐) 확인
 - 검사 종류 추가 시 `STATIC_KINDS`와 픽스처에 함께 반영
 
 ## 5. 적재 (Java)
@@ -121,9 +141,12 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar \
 ```
 
 - 해시 계산 규칙이 Python·Java로 갈라지지 않도록 적재는 애플리케이션이 담당
-- 같은 파일 재실행 안전 (이미 적재된 `content_hash`는 건너뜀). 중간 실패 시 재실행하면 이어서 진행
-- **단일 프로세스로만 실행.** 중복 판정 기준이 적재 직전 조회한 `content_hash` 목록이라 동시 실행 시 중복 적재 가능
-- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 제외
+- 같은 파일 재실행 안전 (이미 적재된 `slot_id`는 건너뜀). 중간 실패 시 재실행하면 이어서 진행
+- **이미 있는 `slot_id`는 JSON 내용이 달라도 덮어쓰지 않음.** FAQ 원본은 DB(관리자 수정)라서, JSON을 고쳐도 적재된 DB에는 반영되지 않는다
+- `slot_id`가 없는 기존 행(TELME-73 이전 적재)은 `content_hash`가 같으면 새로 넣지 않고 `slot_id`만 채움. 벡터는 그대로
+- `slot_id`가 비어 있는 항목이 하나라도 있으면 DB를 건드리기 전에 실패
+- **단일 프로세스로만 실행.** 중복 판정 기준이 적재 직전 조회한 `slot_id` 목록이라 동시 실행 시 중복 적재 가능
+- `slot_id`는 `faqs.slot_id`에 저장. `question_type`·`persona`·`trigger`·`extra_policy_refs`는 적재 시 제외
 
 ### 전량 재임베딩
 
@@ -156,6 +179,9 @@ python3 scripts/measure_search_quality.py --self-test
 ```
 
 - **순위 실험은 `SEARCH_SIMILARITY_THRESHOLD=0`으로 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
+- 정답은 검색 응답의 `slotId`로 비교. 응답에 `slotId`가 없으면(TELME-73 이전 서버) 바로 중단
+- 정답 `slot_id`가 있는 평가셋인데 검색 결과의 `slotId`가 전부 null이면(로더를 아직 안 돌린 DB) Recall 0.000을 내지 않고 중단. 7·9절 스크립트도 이런 원시 결과는 거부
+- 정답 `slot_id`가 없는 긍정 질문(`eval_smoke.json`)은 API 호출만 하고 Recall·MRR에서 뺀 뒤 건수만 표시
 
 주요 옵션
 
@@ -165,7 +191,7 @@ python3 scripts/measure_search_quality.py --self-test
 | `--api-url` | 기본 `http://localhost:8080/api/v1/faq/search` |
 | `--timeout` | 기본 20초 (서버 `embedding.search-read-timeout` 15초보다 커야 함) |
 | `--by-category` | `expected_slot_id` 접두사로 묶어 카테고리별 Recall·MRR 출력 |
-| `--dump-json <경로>` | 질문별 top-k 원시 결과 저장. 임계값·top-k 스윕을 오프라인 계산할 때 필수 |
+| `--dump-json <경로>` | 질문별 top-k 원시 결과(순위·점수·`slot_id`·`content_hash`) 저장. 임계값·top-k 스윕을 오프라인 계산할 때 필수. TELME-73 이전에 수집한 파일은 `slot_id`가 없어 7·9절 스크립트가 거부하므로 다시 수집 |
 | `--experiment` / `--change` / `--owner` | 실험 기록표용 한 줄 출력 |
 
 출력 진단
@@ -174,7 +200,7 @@ python3 scripts/measure_search_quality.py --self-test
   - 정답 최소 > 무관 최댓값이면 그 사이가 임계값 후보. 겹치면 분리 가능한 단일 값 없음
 - `unrelated_kind`별 거부율 분리 출력
 - 정답 미검출 질문을 `eval_id`로 나열. 같은 정답을 공유하는 질문이 모두 실패하면 별도 표시
-  - "적재 누락"과 "top-k 밖으로 밀림" 구분은 `content_hash`로 `faqs` 조회 필요
+  - "적재 누락"과 "top-k 밖으로 밀림" 구분은 `slot_id`로 `faqs` 조회 필요
 - 요청마다 응답 시간(초)도 재서 평균·p95(ms)를 같이 찍는다(요청 전송~응답 수신 구간만, JSON 파싱
   등은 제외). topK 값을 바꿔가며 Recall 개선폭과 지연시간 증가폭을 같이 비교할 때 쓴다(TELME-59).
 
@@ -209,7 +235,7 @@ python3 scripts/classify_search_failures.py .measure/raw-before.json .measure/ra
 python3 scripts/classify_search_failures.py --self-test
 ```
 
-- 입력: `--dump-json` 결과(임계값 0 수집). 평가셋 경로는 원시 결과에 기록된 값을 쓰고, 정답 FAQ 질문은 `--faq`(기본 `faq_full_1150.json`)에서 `content_hash`로 찾음. DB·서버 불필요
+- 입력: `--dump-json` 결과(임계값 0 수집). 평가셋 경로는 원시 결과에 기록된 값을 쓰고, 정답 FAQ 질문은 `--faq`(기본 `faq_full_1150.json`)에서 `slot_id`로 찾음. DB·서버 불필요
 - **저장소 루트에서 실행.** 원시 결과에 평가셋 경로가 상대경로로 기록돼 있음. 다른 위치에서 실행하면 `--eval`로 지정
 - 결과가 빈 문항이 있으면(임계값을 켠 채 수집) 분류하지 않고 멈춤
 - 그룹: 1등 정답 여부 × 1등 점수 ≥ `--threshold`(기본 0.72) → A 정상 / B 정답인데 점수 미달 / C 1등부터 오답 / D 오답인데 통과
@@ -263,11 +289,12 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | --- | --- |
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
-| `check_eval_questions.py` | 15종 |
-| `measure_search_quality.py` | 12건 (Recall/MRR 7 + 카테고리 2 + 지연시간 3) |
+| `check_eval_questions.py` | 17종 + 오탐 2건(정상 문항, 정상 평가셋) + 정답 slot 집합 3건(문자열·배열·null) + slot 미적재 검사 4건(전부 null·smoke·일부 null·결과 없음) |
+| `measure_search_quality.py` | 14건 (Recall/MRR 9 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
-| `classify_search_failures.py` | 16건 (그룹 판정 5 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
+| `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
+| `simulate_dual_vector.py` | 22건 (합치기 8: 우선순위·중복 제거·3개 컷·임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열·배열 정답 모두 + 최적 t 선택 5: 정상·기존 긍정 0건·무관 0건·ANSWER 손실·잃고 얻은 손실 + 구성 경고 2) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
@@ -279,16 +306,17 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `data/faq_slots_1150.json` | 1,150건 조합표(문장 없음). `slot_id`로 추적 |
 | `data/faq_full_300.json` | 1차 300건. `faq_sample_30.json` 30건을 문자 그대로 포함 |
 | `data/faq_full_1150.json` | 전체 1,150건. 앞 300건은 `faq_full_300.json`과 동일 |
-| `data/faq_sample_30.json` | 샘플 30건. 카테고리 10종 × 3건 |
-| `data/eval_questions_30.json` | 평가 질문 30건. 긍정 20 + 무관 10 |
+| `data/faq_sample_30.json` | 샘플 30건. 카테고리 10종 × 3건. `slot_id`는 1,150건 파일의 같은 FAQ와 동일 (TELME-73 전에는 `BILLING-S01` 형식) |
+| `data/eval_questions_30.json` | 평가 질문 30건. 긍정 20 + 무관 10. 샘플 30·300·1,150건 어느 코퍼스로도 측정 가능 |
 | `data/eval_questions_130.json` | 평가 질문 130건. 긍정 80 + 무관 50(완전무관 16 / 도메인인접 24 / 경계 10). 정답은 배열 |
 | `data/eval_selfretrieval_1150.json` | 자기검색 평가셋 1,150건 |
-| `data/eval_smoke.json` | API 통신 확인용 더미 2건. 품질 측정용 아님 |
+| `data/eval_smoke.json` | API 통신 확인용 더미 2건. 품질 측정용 아님. 정답이 dev 시드 FAQ(`slot_id` 없음)라 Recall 집계에서 빠짐 |
 
 데이터 규칙
 
 - `faq_full_300.json` 유지 이유: 건수 증가에 따른 Recall 변화 측정 (300 → 1,150)
-- 1차 300건은 2차에서 수정 금지. 수정 시 `content_hash`가 바뀌어 평가셋 매핑이 끊김
-- `slot_id`·`question_type`·`persona`·`trigger`·`extra_policy_refs`는 생성·검증용 메타데이터. `faqs` 테이블 제외
+- 1차 300건은 2차에서 수정 금지. 로더가 이미 있는 `slot_id`를 건너뛰어 수정이 적재된 DB에 반영되지 않고, 평가셋의 `expected_content_hash`(참고용)와도 어긋남
+- 같은 FAQ는 모든 파일에서 같은 `slot_id`. 다르면 이어서 적재할 때 같은 내용이 새 행으로 한 번 더 들어감
+- `question_type`·`persona`·`trigger`·`extra_policy_refs`는 생성·검증용 메타데이터. `faqs` 테이블 제외 (`slot_id`는 `faqs.slot_id`에 저장)
 - `version`은 적재 시 1, `content_hash`는 적재 시 애플리케이션이 계산
 - 평가셋 선택 기준: 코퍼스 규모 비교에는 `eval_questions_30.json` 사용. `eval_questions_130.json`은 대상 FAQ 40건 중 6건만 300건 부분집합에 포함되어 규모 비교 불가
