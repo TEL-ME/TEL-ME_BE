@@ -23,4 +23,21 @@ public interface FaqEmbeddingRepository extends JpaRepository<FaqEmbedding, Long
             @Param("queryVector") float[] queryVector,
             @Param("topK") int topK,
             @Param("modelName") String modelName);
+
+    // findNearest()와 같은 필터로 질문만(QUESTION_ONLY) 벡터를 조회한다. 이중 벡터 검색에서 쓴다
+    // 질문 벡터는 nullable이라 아직 채우지 않은 행은 뺀다. 한 쿼리에 두 벡터 정렬을 넣으면 HNSW 인덱스를 못 타서 쿼리를 나눈다
+    @Query("""
+            SELECT new com.telme.faq.repository.FaqNearestMatch(e, cosine_distance(e.embeddingQuestion, cast(:queryVector as vector)))
+            FROM FaqEmbedding e
+            JOIN FETCH e.faq f
+            WHERE f.status = 'ACTIVE' AND e.syncStatus = 'SYNCED'
+                  AND e.faqVersion = f.version AND e.modelName = :modelName
+                  AND e.embeddingQuestion IS NOT NULL
+            ORDER BY cosine_distance(e.embeddingQuestion, cast(:queryVector as vector))
+            LIMIT :topK
+            """)
+    List<FaqNearestMatch> findNearestByQuestionVector(
+            @Param("queryVector") float[] queryVector,
+            @Param("topK") int topK,
+            @Param("modelName") String modelName);
 }

@@ -42,7 +42,19 @@ public class PgvectorFaqSearchService implements FaqSearchService {
         List<FaqNearestMatch> candidates =
                 repository.findNearest(queryVector, request.topK(), embeddingProperties.model());
         // faq_embeddings.embedding은 faq.embedding-text.variant 구성으로 만든 벡터다
-        return toResponses(candidates, searchProperties.similarityThreshold(), embeddingTextProperties.variant());
+        List<FaqSearchResponse> results =
+                toResponses(candidates, searchProperties.similarityThreshold(), embeddingTextProperties.variant());
+
+        SearchProperties.DualVector dualVector = searchProperties.dualVector();
+        if (!dualVector.enabled()) {
+            return results;
+        }
+        // 같은 질의 벡터로 질문만 벡터를 한 번 더 조회한다. 임베딩 호출은 그대로이고 DB 조회만 한 번 늘어난다
+        List<FaqNearestMatch> questionCandidates =
+                repository.findNearestByQuestionVector(queryVector, request.topK(), embeddingProperties.model());
+        List<FaqSearchResponse> questionResults = toResponses(
+                questionCandidates, dualVector.questionThreshold(), FaqEmbeddingTextVariant.QUESTION_ONLY);
+        return DualVectorMerger.merge(questionResults, results, request.topK());
     }
 
     // repository가 이미 거리순으로 정렬해 반환하므로, 임계값 미달이 한 번 나오면 그 지점에서 끊는다

@@ -1,7 +1,13 @@
 package com.telme.faq.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.telme.faq.config.EmbeddingProperties;
@@ -23,6 +29,7 @@ class PgvectorFaqSearchServiceTest {
 
     private static final float[] QUERY_VECTOR = {1f, 0f, 0f};
     private static final double THRESHOLD = 0.5;
+    private static final double QUESTION_THRESHOLD = 0.88;
     private static final String MODEL = "bge-m3";
 
     private final EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
@@ -33,6 +40,71 @@ class PgvectorFaqSearchServiceTest {
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
                     new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)),
                     new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
+    private final PgvectorFaqSearchService dualVectorService =
+            new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD)),
+                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
+
+    @Test
+    @DisplayName("이중 벡터가 꺼져 있으면 질문 벡터를 조회하지 않는다")
+    void 이중_벡터가_꺼져_있으면_질문_벡터를_조회하지_않는다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.0)));
+
+        List<FaqSearchResponse> result = service.search(new FaqSearchRequest("질문", 3));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L);
+        verify(repository, never()).findNearestByQuestionVector(any(), anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("이중 벡터가 켜지면 질문 벡터 결과를 앞에 두고 합치며, 임베딩은 한 번만 호출한다")
+    void 이중_벡터가_켜지면_질문_벡터_결과를_앞에_두고_합친다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(1L, "BILLING", "요금제 질문", 0.2),   // score 0.8
+                matchOf(2L, "USIM", "유심 질문", 0.3)));       // score 0.7
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(3L, "PLAN", "요금제 종류 질문", 0.05), // score 0.95
+                matchOf(1L, "BILLING", "요금제 질문", 0.1)));  // score 0.9, Q_A 쪽과 중복
+
+        List<FaqSearchResponse> result = dualVectorService.search(new FaqSearchRequest("질문", 3));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(3L, 1L, 2L);
+        assertThat(result).extracting(FaqSearchResponse::matchedVariant).containsExactly(
+                FaqEmbeddingTextVariant.QUESTION_ONLY, FaqEmbeddingTextVariant.QUESTION_ONLY, FaqEmbeddingTextVariant.Q_A);
+        assertThat(result).extracting(FaqSearchResponse::searchRank).containsExactly(1, 2, 3);
+        verify(embeddingClient, times(1)).embed("질문");
+    }
+
+    @Test
+    @DisplayName("질문 벡터에는 질문 벡터 임계값을 따로 적용한다")
+    void 질문_벡터에는_별도_임계값을_적용한다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        // 같은 score 0.8이라도 Q_A 임계값(0.5)은 넘고 질문 벡터 임계값(0.88)은 못 넘는다
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.2)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL))
+                .thenReturn(List.of(matchOf(2L, "USIM", "유심 질문", 0.2)));
+
+        List<FaqSearchResponse> result = dualVectorService.search(new FaqSearchRequest("질문", 3));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L);
+        assertThat(result.getFirst().matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A);
+    }
+
+    @Test
+    @DisplayName("합친 결과는 요청한 topK로 자른다")
+    void 합친_결과는_topK로_자른다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 2, MODEL)).thenReturn(List.of(
+                matchOf(1L, "BILLING", "요금제 질문", 0.2), matchOf(2L, "USIM", "유심 질문", 0.3)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 2, MODEL)).thenReturn(List.of(
+                matchOf(3L, "PLAN", "요금제 종류 질문", 0.05), matchOf(4L, "ROAMING", "로밍 질문", 0.1)));
+
+        List<FaqSearchResponse> result = dualVectorService.search(new FaqSearchRequest("질문", 2));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(3L, 4L);
+    }
 
     @Test
     @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 slotId·score·rank·찾은 벡터와 함께 반환한다")
