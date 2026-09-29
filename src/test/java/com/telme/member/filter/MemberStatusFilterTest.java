@@ -83,6 +83,18 @@ class MemberStatusFilterTest {
     }
 
     @Test
+    @DisplayName("로그인이 필요한 인증 API도 정지되면 막힌다")
+    void 인증_API도_상태_검사를_지나간다() throws Exception {
+        MockHttpSession session = login();
+        changeStatus(User.Status.SUSPENDED);
+
+        // /api/v1/auth/** 를 통째로 빼면 이 경로가 중앙 검사를 건너뛴다
+        mockMvc.perform(post("/api/v1/auth/kakao/link-start").session(session))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER403-0"));
+    }
+
+    @Test
     @DisplayName("로그인하지 않은 요청은 그대로 401이다")
     void 비인증_요청은_401이다() throws Exception {
         mockMvc.perform(get(ADMIN_API)).andExpect(status().isUnauthorized());

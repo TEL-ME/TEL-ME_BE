@@ -30,10 +30,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class MemberStatusFilter extends OncePerRequestFilter {
 
-    // 정지된 회원도 로그아웃은 할 수 있어야 세션을 버릴 수 있다
+    // 정지된 회원도 세션은 버릴 수 있어야 해서 로그아웃만 뺀다.
+    // 로그인·가입 같은 공개 API는 비로그인 요청이라 userId가 없어 어차피 그대로 지나간다
     private static final RequestMatcher SKIP_PATHS = new OrRequestMatcher(
-            PathPatternRequestMatcher.withDefaults().matcher("/api/auth/**"),
-            PathPatternRequestMatcher.withDefaults().matcher("/api/v1/auth/**")
+            PathPatternRequestMatcher.withDefaults().matcher("/api/auth/logout"),
+            PathPatternRequestMatcher.withDefaults().matcher("/api/v1/auth/logout")
     );
 
     private final UserRepository userRepository;
