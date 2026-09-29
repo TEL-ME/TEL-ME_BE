@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,9 @@ class FaqEmbeddingRepositoryTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     @DisplayName("코사인 거리가 가까운 순으로 정렬해서 반환한다")
@@ -55,6 +59,10 @@ class FaqEmbeddingRepositoryTest {
     }
 
     private FaqEmbedding saveEmbedding(String question, float[] vector, String modelName) {
+        return saveEmbedding(question, vector, null, modelName);
+    }
+
+    private FaqEmbedding saveEmbedding(String question, float[] vector, float[] questionVector, String modelName) {
         Faq faq = faqRepository.save(Faq.builder()
                 .category("BILLING")
                 .question(question)
@@ -64,10 +72,37 @@ class FaqEmbeddingRepositoryTest {
                 .faqId(faq.getFaqId())
                 .faq(faq)
                 .embedding(vector)
+                .embeddingQuestion(questionVector)
                 .modelName(modelName)
                 .faqVersion(faq.getVersion())
                 .syncStatus(FaqEmbedding.SyncStatus.SYNCED)
                 .build());
+    }
+
+    // embedding_question은 nullable이라 값이 없는 행과 있는 행이 섞인다.
+    // vector 매핑이 두 번째 컬럼에서도 동작하는지(차원 보존, null 허용) 확인한다
+    @Test
+    @DisplayName("질문 벡터를 저장하면 1024차원 그대로 읽히고, 안 넣으면 null이다")
+    void 질문_벡터를_저장하고_다시_읽는다() {
+        String testModel = "test-question-vector-model";
+        float[] docVector = new float[1024];
+        float[] questionVector = new float[1024];
+        for (int i = 0; i < 1024; i++) {
+            docVector[i] = (i % 2 == 0) ? 1f : 0f;
+            questionVector[i] = i / 1024f;
+        }
+        Long withQuestion = saveEmbedding("질문 벡터 있음", docVector, questionVector, testModel).getFaqId();
+        Long withoutQuestion = saveEmbedding("질문 벡터 없음", docVector, testModel).getFaqId();
+        // 영속성 컨텍스트 캐시가 아니라 DB에서 다시 읽도록 flush + clear
+        entityManager.flush();
+        entityManager.clear();
+
+        FaqEmbedding saved = repository.findById(withQuestion).orElseThrow();
+        FaqEmbedding empty = repository.findById(withoutQuestion).orElseThrow();
+
+        assertThat(saved.getEmbeddingQuestion()).hasSize(1024).containsExactly(questionVector);
+        assertThat(saved.getEmbedding()).containsExactly(docVector); // 기존 컬럼은 그대로
+        assertThat(empty.getEmbeddingQuestion()).isNull();
     }
 
     @Test
