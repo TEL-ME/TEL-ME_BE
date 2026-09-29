@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
@@ -90,10 +91,13 @@ public class MemberStatusFilter extends OncePerRequestFilter {
         };
     }
 
-    // 로그인 이후 role이 바뀌었을 수 있어 현재 값으로 다시 세운다. 판정은 스프링이 한다
+    // 로그인 이후 role이 바뀌었을 수 있어 현재 값으로 다시 세운다. 판정은 스프링이 한다.
+    // 세션에 저장된 SecurityContext를 직접 고치면 저장소를 거치지 않고 세션 내용이 바뀌므로 새로 만들어 넣는다
     private void refreshAuthorities(Long userId, User user) {
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(
                 userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))));
+        SecurityContextHolder.setContext(context);
     }
 
     // 필터 단계라 GlobalExceptionHandler가 못 잡는다. 다른 API 오류와 같은 형식으로 직접 쓴다

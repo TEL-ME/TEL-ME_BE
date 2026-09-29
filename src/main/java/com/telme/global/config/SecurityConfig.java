@@ -81,6 +81,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 // 로그인 서비스가 이 저장소로 SecurityContext를 명시적으로 저장 (SecurityContextHolderFilter는 자동 저장 안 함)
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
+                // 세션에서 SecurityContext를 꺼낸 뒤여야 누구인지 알 수 있어 이 필터 뒤에 둔다
                 .addFilterAfter(memberStatusFilter, SecurityContextHolderFilter.class)
                 .addFilterAfter(guestIdentityFilter, SecurityContextHolderFilter.class)
                 .oauth2Login(oauth2 -> oauth2
