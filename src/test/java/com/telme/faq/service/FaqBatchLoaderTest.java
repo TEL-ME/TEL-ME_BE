@@ -3,7 +3,9 @@ package com.telme.faq.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.telme.faq.exception.FaqErrorCode;
@@ -43,6 +45,8 @@ class FaqBatchLoaderTest {
     private FaqBatchLoader loader;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private FaqEmbeddingTextAssembler textAssembler;
     @MockitoBean
     private EmbeddingClient embeddingClient;
     @TempDir
@@ -72,7 +76,8 @@ class FaqBatchLoaderTest {
         for (int i = 0; i < rows.size(); i++) {
             String[] r = rows.get(i);
             if (i > 0) sb.append(',');
-            sb.append("{\"slot_id\":\"X-0001\",\"trigger\":\"무시\",\"question_type\":\"FACT\",\"persona\":\"NOVICE\",")
+            sb.append("{\"slot_id\":\"").append(r[3]).append("\",")
+                    .append("\"trigger\":\"무시\",\"question_type\":\"FACT\",\"persona\":\"NOVICE\",")
                     .append("\"category\":\"").append(r[0]).append("\",")
                     .append("\"question\":\"").append(r[1]).append("\",")
                     .append("\"answer\":\"").append(r[2]).append("\",")
@@ -84,8 +89,9 @@ class FaqBatchLoaderTest {
         return p;
     }
 
+    // {category, question, answer, slot_id}
     private static String[] row(int n) {
-        return new String[]{"USIM", MARK + " 질문 " + n, "답변 " + n};
+        return new String[]{"USIM", MARK + " 질문 " + n, "답변 " + n, "LOADER-TEST-" + n};
     }
 
     private int countLoaded() {
@@ -95,11 +101,11 @@ class FaqBatchLoaderTest {
     }
 
     @Test
-    @DisplayName("파일의 건을 faqs와 faq_embeddings에 함께 넣고, 메타데이터 필드는 무시한다")
+    @DisplayName("파일의 건을 faqs와 faq_embeddings에 함께 넣고, slot_id는 저장하고 나머지 메타데이터 필드는 무시한다")
     void 적재하면_두_테이블에_같이_들어간다() throws IOException {
         LoadResult result = loader.load(write("a.json", List.of(row(1), row(2), row(3))), BATCH);
 
-        assertThat(result).isEqualTo(new LoadResult(3, 0, 0, 3));
+        assertThat(result).isEqualTo(new LoadResult(3, 0, 0, 0, 3));
         assertThat(countLoaded()).isEqualTo(3);
         Integer version = jdbcTemplate.queryForObject(
                 "SELECT e.faq_version FROM faq_embeddings e JOIN faqs f ON f.faq_id = e.faq_id WHERE f.question = ?",
@@ -108,17 +114,20 @@ class FaqBatchLoaderTest {
         String hash = jdbcTemplate.queryForObject(
                 "SELECT content_hash FROM faqs WHERE question = ?", String.class, MARK + " 질문 1");
         assertThat(hash).isEqualTo(FaqContentHash.of(MARK + " 질문 1", "답변 1"));
+        String slotId = jdbcTemplate.queryForObject(
+                "SELECT slot_id FROM faqs WHERE question = ?", String.class, MARK + " 질문 1");
+        assertThat(slotId).isEqualTo("LOADER-TEST-1");
     }
 
     @Test
-    @DisplayName("같은 파일을 다시 적재하면 content_hash가 같은 건은 건너뛴다")
+    @DisplayName("같은 파일을 다시 적재하면 slot_id가 같은 건은 건너뛴다")
     void 재실행하면_건너뛴다() throws IOException {
         Path p = write("a.json", List.of(row(1), row(2), row(3)));
         loader.load(p, BATCH);
 
         LoadResult second = loader.load(p, BATCH);
 
-        assertThat(second).isEqualTo(new LoadResult(3, 0, 3, 0));
+        assertThat(second).isEqualTo(new LoadResult(3, 0, 3, 0, 0));
         assertThat(countLoaded()).isEqualTo(3);
     }
 
@@ -129,7 +138,7 @@ class FaqBatchLoaderTest {
 
         LoadResult result = loader.load(write("b.json", List.of(row(1), row(2), row(3), row(4), row(5))), BATCH);
 
-        assertThat(result).isEqualTo(new LoadResult(5, 0, 3, 2));
+        assertThat(result).isEqualTo(new LoadResult(5, 0, 3, 0, 2));
         assertThat(countLoaded()).isEqualTo(5);
     }
 
@@ -138,14 +147,74 @@ class FaqBatchLoaderTest {
     void 파일_내_중복() throws IOException {
         LoadResult result = loader.load(write("d.json", List.of(row(1), row(1), row(2))), BATCH);
 
-        assertThat(result).isEqualTo(new LoadResult(3, 1, 0, 2));
+        assertThat(result).isEqualTo(new LoadResult(3, 1, 0, 0, 2));
         assertThat(countLoaded()).isEqualTo(2);
     }
 
     @Test
     @DisplayName("answer가 빈 건이 하나라도 있으면 DB를 건드리기 전에 실패한다")
     void 형식_오류면_아무것도_안_넣는다() throws IOException {
-        Path p = write("e.json", List.of(row(1), new String[]{"USIM", MARK + " 질문 X", ""}));
+        Path p = write("e.json", List.of(row(1), new String[]{"USIM", MARK + " 질문 X", "", "LOADER-TEST-X"}));
+
+        assertThatThrownBy(() -> loader.load(p, BATCH))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(FaqErrorCode.LOAD_FILE_INVALID);
+        assertThat(countLoaded()).isZero();
+    }
+
+    @Test
+    @DisplayName("같은 slot_id로 내용이 바뀐 건이 들어와도 DB 내용을 덮어쓰지 않는다")
+    void 이미_있는_slot은_내용이_달라도_건너뛴다() throws IOException {
+        loader.load(write("a.json", List.<String[]>of(row(1))), BATCH);
+
+        LoadResult result = loader.load(write("b.json",
+                List.<String[]>of(new String[]{"USIM", MARK + " 질문 1", "바뀐 답변", "LOADER-TEST-1"})), BATCH);
+
+        assertThat(result).isEqualTo(new LoadResult(1, 0, 1, 0, 0));
+        assertThat(countLoaded()).isEqualTo(1);
+        String answer = jdbcTemplate.queryForObject(
+                "SELECT answer FROM faqs WHERE slot_id = ?", String.class, "LOADER-TEST-1");
+        assertThat(answer).isEqualTo("답변 1");
+    }
+
+    @Test
+    @DisplayName("slot_id가 없는 기존 행은 content_hash가 같으면 새로 넣지 않고 slot_id만 채운다")
+    void slot_id가_없는_행은_content_hash로_채운다() throws IOException {
+        loader.load(write("a.json", List.of(row(1), row(2))), BATCH);
+        jdbcTemplate.update("UPDATE faqs SET slot_id = NULL WHERE question LIKE ?", MARK + "%");
+        Long faqId = jdbcTemplate.queryForObject(
+                "SELECT faq_id FROM faqs WHERE question = ?", Long.class, MARK + " 질문 1");
+        clearInvocations(embeddingClient);
+
+        LoadResult result = loader.load(write("b.json", List.of(row(1), row(2), row(3))), BATCH);
+
+        assertThat(result).isEqualTo(new LoadResult(3, 0, 0, 2, 1));
+        assertThat(countLoaded()).isEqualTo(3);
+        Long sameFaqId = jdbcTemplate.queryForObject(
+                "SELECT faq_id FROM faqs WHERE slot_id = ?", Long.class, "LOADER-TEST-1");
+        assertThat(sameFaqId).isEqualTo(faqId);
+        // 채운 행은 재임베딩하지 않고 신규 1건만 임베딩한다
+        verify(embeddingClient).embedBatch(List.of(
+                textAssembler.assemble("USIM", MARK + " 질문 3", "답변 3")));
+    }
+
+    @Test
+    @DisplayName("파일 안에서 slot_id가 같으면 내용이 달라도 첫 건만 넣는다")
+    void 파일_내_slot_중복() throws IOException {
+        LoadResult result = loader.load(write("c.json", List.of(row(1),
+                new String[]{"USIM", MARK + " 질문 9", "답변 9", "LOADER-TEST-1"})), BATCH);
+
+        assertThat(result).isEqualTo(new LoadResult(2, 1, 0, 0, 1));
+        String question = jdbcTemplate.queryForObject(
+                "SELECT question FROM faqs WHERE slot_id = ?", String.class, "LOADER-TEST-1");
+        assertThat(question).isEqualTo(MARK + " 질문 1");
+    }
+
+    @Test
+    @DisplayName("slot_id가 빈 건이 하나라도 있으면 DB를 건드리기 전에 실패한다")
+    void slot_id가_없으면_아무것도_안_넣는다() throws IOException {
+        Path p = write("e.json", List.of(row(1), new String[]{"USIM", MARK + " 질문 X", "답변 X", ""}));
 
         assertThatThrownBy(() -> loader.load(p, BATCH))
                 .isInstanceOf(GeneralException.class)
@@ -167,7 +236,7 @@ class FaqBatchLoaderTest {
 
         stubEmbedding();
         LoadResult resumed = loader.load(p, BATCH);
-        assertThat(resumed).isEqualTo(new LoadResult(5, 0, 2, 3));
+        assertThat(resumed).isEqualTo(new LoadResult(5, 0, 2, 0, 3));
         assertThat(countLoaded()).isEqualTo(5);
     }
 }

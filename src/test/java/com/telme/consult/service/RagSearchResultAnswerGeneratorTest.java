@@ -68,6 +68,7 @@ class RagSearchResultAnswerGeneratorTest {
                 List.of(
                         new FaqSearchResponse(
                                 9L,
+                                null,
                                 "매장",
                                 "강남역 인근 매장은 어디인가요?",
                                 "강남역 주변 매장을 안내합니다.",
