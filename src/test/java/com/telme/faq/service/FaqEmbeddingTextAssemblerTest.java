@@ -31,6 +31,17 @@ class FaqEmbeddingTextAssemblerTest {
         assertThat(assembler(variant).assemble(CATEGORY, QUESTION, ANSWER)).isEqualTo(expected);
     }
 
+    @ParameterizedTest(name = "variant={0}")
+    @CsvSource({"QUESTION_ONLY", "Q_A", "CATEGORY_Q_A", "Q_A_HEAD200"})
+    @DisplayName("assembleQuestion은 설정 variant와 무관하게 질문만 돌려준다")
+    void 질문_조립은_설정과_무관하다(FaqEmbeddingTextVariant variant) {
+        FaqEmbeddingTextAssembler assembler = assembler(variant);
+        Faq faq = Faq.builder().category(CATEGORY).question(QUESTION).answer(ANSWER).build();
+
+        assertThat(assembler.assembleQuestion(QUESTION)).isEqualTo(QUESTION);
+        assertThat(assembler.assembleQuestion(faq)).isEqualTo(QUESTION);
+    }
+
     @Test
     @DisplayName("엔티티를 넘겨도 같은 문자열")
     void 엔티티와_문자열_오버로드가_같은_결과를_낸다() {
