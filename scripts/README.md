@@ -180,6 +180,7 @@ python3 scripts/measure_search_quality.py --self-test
 
 - **순위 실험은 `SEARCH_SIMILARITY_THRESHOLD=0`으로 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
 - 정답은 검색 응답의 `slotId`로 비교. 응답에 `slotId`가 없으면(TELME-73 이전 서버) 바로 중단
+- 정답 `slot_id`가 있는 평가셋인데 검색 결과의 `slotId`가 전부 null이면(로더를 아직 안 돌린 DB) Recall 0.000을 내지 않고 중단. 7·9절 스크립트도 이런 원시 결과는 거부
 - 정답 `slot_id`가 없는 긍정 질문(`eval_smoke.json`)은 API 호출만 하고 Recall·MRR에서 뺀 뒤 건수만 표시
 
 주요 옵션
@@ -288,7 +289,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | --- | --- |
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
-| `check_eval_questions.py` | 17종 + 오탐 2건(정상 문항, 정상 평가셋) + 정답 slot 집합 3건(문자열·배열·null) |
+| `check_eval_questions.py` | 17종 + 오탐 2건(정상 문항, 정상 평가셋) + 정답 slot 집합 3건(문자열·배열·null) + slot 미적재 검사 4건(전부 null·smoke·일부 null·결과 없음) |
 | `measure_search_quality.py` | 14건 (Recall/MRR 9 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |

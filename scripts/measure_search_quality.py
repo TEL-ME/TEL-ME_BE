@@ -17,7 +17,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from check_eval_questions import VALID_TYPES, expected_slots
+from check_eval_questions import VALID_TYPES, expected_slots, require_filled_slots
 from check_eval_questions import content_hash as _content_hash
 
 DEFAULT_API_URL = "http://localhost:8080/api/v1/faq/search"
@@ -307,9 +307,11 @@ def evaluate(
 ) -> tuple[list[SearchOutcome], list[float]]:
     outcomes = []
     latencies = []
+    returned_slots = []
     for item in eval_items:
         results, elapsed = search(item["question"], top_k, api_url, timeout)
         latencies.append(elapsed)
+        returned_slots.extend(slot_id(r) for r in results)
         eval_id = item.get("eval_id")
         if raw_sink is not None:
             raw_sink.append({
@@ -344,6 +346,8 @@ def evaluate(
             score = result.get("score")
             break
         outcomes.append(SearchOutcome(item["type"], rank, bool(results), eval_id, score))
+    # --dump-json 없이 돌려도 걸리도록 전체 결과를 모은 뒤 한 번 검사한다
+    require_filled_slots(eval_items, returned_slots, api_url)
     return outcomes, latencies
 
 

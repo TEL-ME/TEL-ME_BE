@@ -41,6 +41,17 @@ def require_slot_dump(dump: dict, path: Path) -> None:
     if any("slot_id" not in r for item in dump["items"] for r in item["results"]):
         raise SystemExit(f"{path}: 결과에 slot_id가 없는 예전 원시 결과입니다 - "
                          "measure_search_quality.py --dump-json으로 다시 수집하세요")
+    require_filled_slots(dump["items"], [r["slot_id"] for item in dump["items"] for r in item["results"]], path)
+
+
+# 결과의 slot_id가 전부 null이면 로더를 아직 안 돌린 DB다. 그대로 두면 모든 긍정 질문이 miss로 집계돼
+# "설정이 덜 됐다"가 아니라 "검색 품질이 0이다"로 보인다
+# 시드·관리자 생성 FAQ는 slot_id가 없는 게 정상이라 개별 null은 통과시키고,
+# 정답 slot_id가 있는 문항이 있는데 결과가 전부 null일 때만 멈춘다(eval_smoke.json은 정답 slot_id가 없어 걸리지 않는다)
+def require_filled_slots(items: list[dict], result_slots: list[str | None], source: object) -> None:
+    if any(expected_slots(item) for item in items) and result_slots and all(s is None for s in result_slots):
+        raise SystemExit(f"{source}: 검색 결과의 slot_id가 전부 비어 있습니다 - "
+                         "FAQ 적재 로더를 한 번 실행해 slot_id를 채우세요 (scripts/README.md 5절)")
 
 
 @dataclass
@@ -376,6 +387,25 @@ def self_test() -> int:
         passed = got == want
         ok = ok and passed
         print(f"  {'OK  ' if passed else 'FAIL'} expected_slots → {got}")
+
+    # (라벨, 평가 항목, 결과 slot_id, 멈춰야 하는지)
+    scored = [{"type": "SIMILAR", "expected_slot_id": "USIM-0001"}, {"type": "UNRELATED"}]
+    smoke = [{"type": "SIMILAR", "expected_content_hash": usim_hash}]
+    fill_cases = [
+        ("정답 slot_id가 있는데 결과가 전부 null → 로더 미실행", scored, [None, None, None], True),
+        ("정답 slot_id 없는 smoke + 시드 DB(전부 null) → 정상", smoke, [None, None], False),
+        ("일부만 null(시드·관리자 생성 FAQ 섞임) → 정상", scored, ["USIM-0001", None], False),
+        ("결과가 하나도 없음 → 정상(거부율 측정 등)", scored, [], False),
+    ]
+    for label, fill_items, slots, should_stop in fill_cases:
+        try:
+            require_filled_slots(fill_items, slots, "self-test")
+            stopped = False
+        except SystemExit:
+            stopped = True
+        passed = stopped == should_stop
+        ok = ok and passed
+        print(f"  {'OK  ' if passed else 'FAIL'} require_filled_slots {label}")
     return 0 if ok else 1
 
 
