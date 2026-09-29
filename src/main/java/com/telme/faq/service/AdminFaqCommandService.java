@@ -29,7 +29,7 @@ public class AdminFaqCommandService {
 
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
         String contentHash = FaqContentHash.of(request.question(), request.answer());
-        rejectDuplicate(contentHash, null);
+        rejectDuplicate(request.question(), request.answer(), contentHash, null);
 
         Faq faq = faqRepository.save(Faq.builder()
                 .category(request.category().name())
@@ -51,7 +51,7 @@ public class AdminFaqCommandService {
     public AdminFaqDetailResponse update(Long faqId, AdminFaqSaveRequest request, Long adminId) {
         Faq faq = findFaq(faqId);
         String contentHash = FaqContentHash.of(request.question(), request.answer());
-        rejectDuplicate(contentHash, faqId);
+        rejectDuplicate(request.question(), request.answer(), contentHash, faqId);
 
         String embeddingTextBefore = textAssembler.assemble(faq);
         boolean contentChanged = faq.update(
@@ -85,11 +85,12 @@ public class AdminFaqCommandService {
     }
 
     // 같은 내용이 두 건이면 검색 top-k를 나눠 먹어 근거가 줄어든다.
-    // 수정은 자기 자신이, 삭제한 FAQ는 다시 만들 수 있어야 해서 함께 제외한다
-    private void rejectDuplicate(String contentHash, Long selfFaqId) {
+    // 해시는 후보만 좁히고 같은 내용인지는 질문·답변으로 판단한다 (Faq.update와 같은 이유)
+    private void rejectDuplicate(String question, String answer, String contentHash, Long selfFaqId) {
         boolean duplicated = faqRepository
                 .findByContentHashAndStatusNot(contentHash, Faq.Status.DELETED).stream()
-                .anyMatch(other -> !other.getFaqId().equals(selfFaqId));
+                .filter(other -> !other.getFaqId().equals(selfFaqId))
+                .anyMatch(other -> other.getQuestion().equals(question) && other.getAnswer().equals(answer));
         if (duplicated) {
             throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
         }

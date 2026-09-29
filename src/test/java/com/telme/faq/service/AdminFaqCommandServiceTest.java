@@ -183,6 +183,18 @@ class AdminFaqCommandServiceTest {
     }
 
     @Test
+    @DisplayName("이어 붙인 해시가 같아도 내용이 다르면 등록을 막지 않는다")
+    void 해시만_같은_다른_내용은_등록된다() {
+        service.create(request(FaqCategory.SERVICE, "가나", "다라"), ADMIN_ID);
+
+        // "가나"+"다라"와 "가나다"+"라"는 이어 붙이면 같은 글자라 해시가 같다
+        AdminFaqDetailResponse other = service.create(request(FaqCategory.SERVICE, "가나다", "라"), ADMIN_ID);
+
+        assertThat(other.faqId()).isNotNull();
+        assertThat(other.question()).isEqualTo("가나다");
+    }
+
+    @Test
     @DisplayName("삭제한 FAQ와 같은 내용은 다시 등록할 수 있다")
     void 삭제한_내용은_다시_등록할_수_있다() {
         Long faqId = created();

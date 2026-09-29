@@ -80,8 +80,7 @@ public class Faq {
     // 반환값이 true면 호출부가 재임베딩까지 해야 한다
     public boolean update(
             String category, String question, String answer, String policyRef, String newHash, Long updatedBy) {
-        // 해시는 질문과 답변을 구분자 없이 이어 붙여 만들어, 경계가 다른 조합이 같은 값이 된다.
-        // ("ab", "c")와 ("a", "bc")가 그 예라 변경 여부는 각각 비교해서 판단한다
+        // 해시는 질문·답변을 구분자 없이 이어 붙여 만들어 ("ab", "c")와 ("a", "bc")가 같은 값이다
         boolean contentChanged = !question.equals(this.question) || !answer.equals(this.answer);
 
         this.category = category;
@@ -89,7 +88,7 @@ public class Faq {
         this.answer = answer;
         this.policyRef = policyRef;
         this.updatedBy = updatedBy;
-        // slot_id 도입 전에 적재돼 해시가 비어 있는 행도 저장할 때 채워진다
+        // dev 시드처럼 해시가 비어 있는 행도 저장할 때 채워진다
         this.contentHash = newHash;
         if (contentChanged) {
             this.version = version + 1;
@@ -97,7 +96,6 @@ public class Faq {
         return contentChanged;
     }
 
-    // 삭제도 상태 변경이라 임베딩은 그대로 둔다. 검색이 f.status = 'ACTIVE'로 이미 거른다
     public void changeStatus(Status status, Long updatedBy) {
         this.status = status;
         this.updatedBy = updatedBy;
