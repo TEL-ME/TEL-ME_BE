@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.faq.dto.req.AdminFaqSaveRequest;
 import com.telme.faq.entity.FaqCategory;
+import com.telme.faq.exception.FaqErrorCode;
+import com.telme.global.common.code.BaseErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -41,6 +43,8 @@ class AdminFaqConcurrentCreateTest {
     @MockitoBean
     private FaqEmbeddingSyncService embeddingSyncService;
 
+    private BaseErrorCode lastErrorCode;
+
     @AfterEach
     void cleanUp() {
         jdbcTemplate.update("DELETE FROM faq_embeddings WHERE faq_id IN (SELECT faq_id FROM faqs WHERE question LIKE ?)",
@@ -70,6 +74,19 @@ class AdminFaqConcurrentCreateTest {
                 "INSERT INTO faqs (category, question, answer, version, status) VALUES (?, ?, ?, 1, 'ACTIVE')",
                 FaqCategory.SERVICE.name(), QUESTION, ANSWER))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("같은 FAQ를 동시에 수정하면 나중 저장이 FAQ409-1로 막힌다")
+    void 동시에_수정하면_나중_저장이_막힌다() throws Exception {
+        Long faqId = service.create(request(), ADMIN_ID).faqId();
+
+        List<Future<Object>> results = runTogether(
+                () -> service.update(faqId, request(QUESTION, ANSWER + " 첫 번째 수정"), ADMIN_ID),
+                () -> service.update(faqId, request(QUESTION, ANSWER + " 두 번째 수정"), ADMIN_ID));
+
+        assertThat(results.stream().filter(this::threw).count()).isEqualTo(1);
+        assertThat(lastErrorCode).isEqualTo(FaqErrorCode.CONCURRENT_UPDATE);
     }
 
     @Test
@@ -112,6 +129,7 @@ class AdminFaqConcurrentCreateTest {
             return false;
         } catch (Exception e) {
             assertThat(e.getCause()).isInstanceOf(GeneralException.class);
+            lastErrorCode = ((GeneralException) e.getCause()).getErrorCode();
             return true;
         }
     }
@@ -122,6 +140,10 @@ class AdminFaqConcurrentCreateTest {
     }
 
     private AdminFaqSaveRequest request() {
-        return new AdminFaqSaveRequest(FaqCategory.SERVICE, QUESTION, ANSWER, null, null);
+        return request(QUESTION, ANSWER);
+    }
+
+    private AdminFaqSaveRequest request(String question, String answer) {
+        return new AdminFaqSaveRequest(FaqCategory.SERVICE, question, answer, null, null);
     }
 }

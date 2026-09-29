@@ -9,10 +9,12 @@ import com.telme.faq.repository.FaqRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.repository.FaqCitationCount;
 import com.telme.rag.repository.MessageSourceRepository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class AdminFaqCommandService {
     private final MessageSourceRepository messageSourceRepository;
     private final FaqEmbeddingTextAssembler textAssembler;
     private final AdminFaqConverter converter;
+    private final EntityManager entityManager;
 
     public AdminFaqDetailResponse create(AdminFaqSaveRequest request, Long adminId) {
         String contentHash = FaqContentHash.of(request.question(), request.answer());
@@ -73,7 +76,8 @@ public class AdminFaqCommandService {
             embeddingSyncService.upsert(faqId);
         }
         // 트리거가 채우는 updated_at은 UPDATE가 나간 뒤에야 읽힌다. 안 하면 응답에 수정 전 시각이 나간다
-        flushOrRejectDuplicate();
+        flushOrRejectConflict();
+        entityManager.refresh(faq);
         log.info("[AdminFaq] 수정 faqId={} contentChanged={} version={}", faqId, contentChanged, faq.getVersion());
         return converter.toDetail(faq, citationCount(faqId));
     }
@@ -95,11 +99,15 @@ public class AdminFaqCommandService {
         }
     }
 
-    private void flushOrRejectDuplicate() {
+    // 수정은 중복 인덱스와 lock_version 둘 다 걸릴 수 있어 함께 받는다.
+    // 잠금 충돌은 내가 읽은 뒤 다른 관리자가 먼저 저장했다는 뜻이라 관리자가 할 일이 다르다
+    private void flushOrRejectConflict() {
         try {
             faqRepository.flush();
         } catch (DataIntegrityViolationException e) {
             throw new GeneralException(FaqErrorCode.DUPLICATE_CONTENT);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new GeneralException(FaqErrorCode.CONCURRENT_UPDATE);
         }
     }
 
