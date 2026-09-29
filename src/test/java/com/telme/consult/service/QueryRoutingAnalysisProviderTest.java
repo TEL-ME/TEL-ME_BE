@@ -21,6 +21,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -213,5 +214,46 @@ class QueryRoutingAnalysisProviderTest {
         assertThatThrownBy(() -> provider.analyze(context))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("단일 상담");
+    }
+
+    @Test
+    void unsupportedCompoundQuestionReturnsSplitGuidance() {
+        var context = new Context(3L, 7L, "요금제와 근처 매장 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null))
+                .thenThrow(new UnsupportedCompoundQuestionException());
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.directAnswer()).isNotNull();
+        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.initialQuery()).isNull();
+    }
+
+    @Test
+    void lowConfidenceReturnsClarificationGuidance() {
+        var context = new Context(3L, 7L, "로밍 요금 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null))
+                .thenReturn(new IntentRouteResponse(
+                        5L, 7L, QueryRouting.Intent.UNKNOWN, "로밍 요금 알려줘",
+                        new BigDecimal("0.3"), QueryRouting.Method.LLM,
+                        Map.of(), List.of()));
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.directAnswer().content()).contains("구체적으로");
     }
 }
