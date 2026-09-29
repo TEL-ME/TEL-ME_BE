@@ -91,6 +91,11 @@ embedding:
 search:
   # 격자 측정 결과: FAQ 1,150건 + 임베딩 텍스트 Q_A + bge-m3 + 평가셋 130건 기준
   similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.72}
+  dual-vector:
+    # 질문만 벡터(QUESTION_ONLY)를 함께 검색해 합친다. 질문만 벡터 백필과 재측정 전까지 꺼 둔다
+    enabled: ${SEARCH_DUAL_VECTOR_ENABLED:false}
+    # TELME-69 시뮬레이션에서 무관 질문 거부율을 지키며 고른 값. 재측정 후 확정한다
+    question-threshold: ${SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD:0.88}
 
 member:
   guest:

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
@@ -28,7 +29,8 @@ class PgvectorFaqSearchServiceTest {
     private final EmbeddingProperties embeddingProperties =
             new EmbeddingProperties(MODEL, 3, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120));
     private final PgvectorFaqSearchService service =
-            new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties, THRESHOLD);
+            new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)));
 
     @Test
     @DisplayName("여러 candidates가 모두 임계값 이상이면 전체를 score·rank와 함께 반환한다")

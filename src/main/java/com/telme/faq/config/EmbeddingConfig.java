@@ -13,7 +13,8 @@ import org.springframework.web.client.RestClient;
         EmbeddingProperties.class,
         FaqBatchLoadProperties.class,
         FaqEmbeddingTextProperties.class,
-        FaqReembedProperties.class
+        FaqReembedProperties.class,
+        SearchProperties.class
 })
 public class EmbeddingConfig {
 
