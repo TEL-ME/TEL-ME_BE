@@ -10,6 +10,7 @@ import com.telme.faq.dto.res.AdminFaqListItemResponse;
 import com.telme.faq.dto.res.AdminFaqListResponse;
 import com.telme.faq.service.AdminFaqQueryService;
 import com.telme.global.config.SecurityConfig;
+import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestIdentityService;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 import com.telme.member.service.KakaoLinkRequestStore;
@@ -34,6 +35,11 @@ class AdminFaqControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // MemberStatusFilter가 요청마다 회원을 읽어 SecurityConfig가 이 빈을 요구한다.
+    // 슬라이스 테스트의 principal은 문자열이라 필터는 그대로 통과시킨다
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private AdminFaqQueryService adminFaqQueryService;

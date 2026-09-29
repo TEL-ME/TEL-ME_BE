@@ -1,5 +1,6 @@
 package com.telme.faq.controller;
 
+import com.telme.member.repository.UserRepository;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
@@ -36,6 +37,11 @@ class FaqSearchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // MemberStatusFilter가 요청마다 회원을 읽어 SecurityConfig가 이 빈을 요구한다.
+    // 슬라이스 테스트의 principal은 문자열이라 필터는 그대로 통과시킨다
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;

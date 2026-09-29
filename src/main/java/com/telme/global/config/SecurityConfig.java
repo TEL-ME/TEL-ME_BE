@@ -2,6 +2,7 @@ package com.telme.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.filter.GuestIdentityFilter;
+import com.telme.member.filter.MemberStatusFilter;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
@@ -62,6 +63,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             GuestIdentityFilter guestIdentityFilter,
+            MemberStatusFilter memberStatusFilter,
             SecurityContextRepository securityContextRepository,
             KakaoOAuth2UserService kakaoOAuth2UserService,
             KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
@@ -79,6 +81,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 // 로그인 서비스가 이 저장소로 SecurityContext를 명시적으로 저장 (SecurityContextHolderFilter는 자동 저장 안 함)
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
+                .addFilterAfter(memberStatusFilter, SecurityContextHolderFilter.class)
                 .addFilterAfter(guestIdentityFilter, SecurityContextHolderFilter.class)
                 .oauth2Login(oauth2 -> oauth2
                         .withObjectPostProcessor(new ObjectPostProcessor<OAuth2AuthorizationRequestRedirectFilter>() {
@@ -141,6 +144,16 @@ public class SecurityConfig {
     ) {
         FilterRegistrationBean<GuestIdentityFilter> registration =
                 new FilterRegistrationBean<>(guestIdentityFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<MemberStatusFilter> memberStatusFilterRegistration(
+            MemberStatusFilter memberStatusFilter
+    ) {
+        FilterRegistrationBean<MemberStatusFilter> registration =
+                new FilterRegistrationBean<>(memberStatusFilter);
         registration.setEnabled(false);
         return registration;
     }
