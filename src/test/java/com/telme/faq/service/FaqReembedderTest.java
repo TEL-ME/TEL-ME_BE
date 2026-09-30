@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.telme.faq.entity.FaqEmbedding;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.faq.repository.FaqRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,13 +51,24 @@ class FaqReembedderTest {
         doAnswer(inv -> {
             List<String> texts = inv.getArgument(0);
             List<float[]> out = new ArrayList<>();
-            for (int i = 0; i < texts.size(); i++) {
-                float[] vector = new float[1024];
-                vector[0] = 0.42f;
-                out.add(vector);
+            for (String text : texts) {
+                out.add(vectorOf(text));
             }
             return out;
         }).when(embeddingClient).embedBatch(anyList());
+    }
+
+    // 텍스트마다 다른 벡터를 돌려준다.
+    // 전부 같은 값이면 본문 벡터와 질문 벡터가 실제로 다른 텍스트에서 나왔는지를 단언할 수 없다.
+    // 첫 성분은 기존 단언(0.42f)을 위해 고정
+    private static float[] vectorOf(String text) {
+        float[] v = new float[1024];
+        v[0] = 0.42f;
+        int seed = text.hashCode();
+        for (int i = 1; i < v.length; i++) {
+            v[i] = Math.floorMod(seed + i * 31, 97) / 97f;
+        }
+        return v;
     }
 
     @Test
@@ -110,5 +124,33 @@ class FaqReembedderTest {
     void 잘못된_batchSize는_거부한다() {
         assertThatThrownBy(() -> reembedder.reembedAll(0)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> reembedder.reembedAll(51)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("기존 행을 갱신할 때 본문, 질문 두 벡터를 함께 채우고 둘은 서로 다르다")
+    void 두_벡터를_함께_갱신한다() {
+        jdbcTemplate.update("UPDATE faq_embeddings SET embedding_question = NULL WHERE faq_id = ?", SEED_FAQ_ID);
+
+        reembedder.reembedAll(50);
+        faqEmbeddingRepository.flush();
+
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT (embedding IS NOT NULL) AS qa, (embedding_question IS NOT NULL) AS qo, "
+                        + "(embedding = embedding_question) AS same FROM faq_embeddings WHERE faq_id = ?",
+                SEED_FAQ_ID);
+
+        assertThat(row.get("qa")).isEqualTo(true);
+        assertThat(row.get("qo")).isEqualTo(true);
+        assertThat(row.get("same")).isEqualTo(false); // 질문만 구성이라 본문 벡터와 달라야 한다
+    }
+
+    @Test
+    @DisplayName("청크마다 본문, 질문으로 embedBatch를 두 번 부른다")
+    void 청크당_두_번_부른다() {
+        long chunks = (faqRepository.count() + 49) / 50;
+
+        reembedder.reembedAll(50);
+
+        verify(embeddingClient, times((int) chunks * 2)).embedBatch(anyList());
     }
 }

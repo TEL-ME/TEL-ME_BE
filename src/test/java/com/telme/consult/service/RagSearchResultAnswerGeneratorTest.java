@@ -75,7 +75,7 @@ class RagSearchResultAnswerGeneratorTest {
                                 0.91,
                                 2,
                                 LocalDate.of(2026, 9, 1),
-                                1));
+                                1, null));
 
         var actual = generator.generate(input, searchResults);
 

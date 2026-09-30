@@ -20,10 +20,10 @@ public class DummyFaqSearchService implements FaqSearchService {
     public List<FaqSearchResponse> search(FaqSearchRequest request) {
         FaqSearchResponse billing = new FaqSearchResponse(1L, null, "BILLING", "요금제는 언제 변경할 수 있나요?",
                 "요금제는 매월 1회, 영업일 기준 변경 신청일로부터 다음날 자정에 적용됩니다.",
-                0.91, 1, SAMPLE_UPDATED_AT, null);
+                0.91, 1, SAMPLE_UPDATED_AT, null, null);
         FaqSearchResponse usim = new FaqSearchResponse(2L, null, "USIM", "유심 재발급은 어떻게 하나요?",
                 "가까운 매장을 방문해 신분증을 지참하시면 즉시 재발급이 가능합니다.",
-                0.85, 1, SAMPLE_UPDATED_AT, null);
+                0.85, 1, SAMPLE_UPDATED_AT, null, null);
 
         // FAQ별로 관련 키워드가 실제 포함됐는지 각각 판단 — 관련 없으면 빈 목록 반환
         List<FaqSearchResponse> matched = new ArrayList<>();
@@ -41,7 +41,7 @@ public class DummyFaqSearchService implements FaqSearchService {
         for (int i = 0; i < limited.size(); i++) {
             FaqSearchResponse r = limited.get(i);
             ranked.add(new FaqSearchResponse(r.faqId(), r.slotId(), r.category(), r.question(), r.answer(),
-                    r.score(), r.version(), r.updatedAt(), i + 1));
+                    r.score(), r.version(), r.updatedAt(), i + 1, r.matchedVariant()));
         }
         return ranked;
     }

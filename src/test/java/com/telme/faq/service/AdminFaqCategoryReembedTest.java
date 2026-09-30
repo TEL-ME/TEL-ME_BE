@@ -41,6 +41,6 @@ class AdminFaqCategoryReembedTest {
     }
 
     private AdminFaqSaveRequest request(FaqCategory category) {
-        return new AdminFaqSaveRequest(category, QUESTION, ANSWER, null, null);
+        return new AdminFaqSaveRequest(category, QUESTION, ANSWER, null, null, null);
     }
 }

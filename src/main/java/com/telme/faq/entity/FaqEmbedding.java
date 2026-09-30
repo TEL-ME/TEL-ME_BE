@@ -86,9 +86,10 @@ public class FaqEmbedding implements Persistable<Long> {
     @Builder.Default
     private boolean isNew = true;
 
-    // 재임베딩: 새 벡터와 faqs.version으로 갱신
-    public void refresh(float[] embedding, String modelName, Integer faqVersion) {
+    // 두 벡터와 faqs.version으로 갱신(재임베딩)
+    public void refresh(float[] embedding, float[] embeddingQuestion, String modelName, Integer faqVersion) {
         this.embedding = embedding;
+        this.embeddingQuestion = embeddingQuestion;
         this.modelName = modelName;
         this.faqVersion = faqVersion;
         this.syncStatus = SyncStatus.SYNCED;

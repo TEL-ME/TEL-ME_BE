@@ -3,12 +3,16 @@ package com.telme.faq.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.telme.faq.entity.FaqEmbedding;
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.global.common.exception.GeneralException;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +45,17 @@ class PgvectorFaqEmbeddingSyncServiceTest {
     private static float[] vector(float fill) {
         float[] v = new float[1024];
         java.util.Arrays.fill(v, fill);
+        return v;
+    }
+
+    // 텍스트마다 다른 벡터를 돌려준다.
+    // 전부 같은 값이면 본문 벡터와 질문 벡터가 실제로 다른 텍스트에서 나왔는지를 단언할 수 없다
+    private static float[] vectorOf(String text) {
+        float[] v = new float[1024];
+        int seed = text.hashCode();
+        for (int i = 0; i < v.length; i++) {
+            v[i] = Math.floorMod(seed + i * 31, 97) / 97f;
+        }
         return v;
     }
 
@@ -102,6 +117,46 @@ class PgvectorFaqEmbeddingSyncServiceTest {
     void 임베딩_실패면_기존_행_유지() {
         when(embeddingClient.embed(anyString()))
                 .thenThrow(new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED));
+        FaqEmbedding before = embeddingRepository.findById(SEED_FAQ_ID).orElseThrow();
+        float first = before.getEmbedding()[0];
+
+        assertThatThrownBy(() -> service.upsert(SEED_FAQ_ID)).isInstanceOf(GeneralException.class);
+
+        FaqEmbedding after = embeddingRepository.findById(SEED_FAQ_ID).orElseThrow();
+        assertThat(after.getEmbedding()[0]).isEqualTo(first);
+    }
+
+    @Test
+    @DisplayName("upsert는 본문, 질문 두 벡터를 함께 저장하고 둘은 서로 다르다")
+    void 두_벡터를_함께_저장한다() {
+        when(embeddingClient.embed(anyString())).thenAnswer(inv -> vectorOf(inv.getArgument(0)));
+
+        service.upsert(SEED_FAQ_ID);
+        embeddingRepository.flush();
+
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT (embedding IS NOT NULL) AS qa, (embedding_question IS NOT NULL) AS qo, "
+                        + "(embedding = embedding_question) AS same FROM faq_embeddings WHERE faq_id = ?",
+                SEED_FAQ_ID);
+
+        assertThat(row.get("qa")).isEqualTo(true);
+        assertThat(row.get("qo")).isEqualTo(true);
+        assertThat(row.get("same")).isEqualTo(false); // 질문만 구성이라 본문 벡터와 달라야 한다
+        verify(embeddingClient, times(2)).embed(anyString());
+    }
+
+    @Test
+    @DisplayName("질문 벡터 임베딩만 실패해도 한 트랜잭션으로 되돌아가 기존 행이 남는다")
+    void 질문_임베딩_실패면_기존_행_유지() {
+        // 두 번째 호출 = 질문 벡터.
+        // 여기서 터뜨려 본문 벡터만 갱신되는 일이 없는지 본다
+        AtomicInteger calls = new AtomicInteger();
+        when(embeddingClient.embed(anyString())).thenAnswer(inv -> {
+            if (calls.incrementAndGet() == 2) {
+                throw new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED);
+            }
+            return vectorOf(inv.getArgument(0));
+        });
         FaqEmbedding before = embeddingRepository.findById(SEED_FAQ_ID).orElseThrow();
         float first = before.getEmbedding()[0];
 

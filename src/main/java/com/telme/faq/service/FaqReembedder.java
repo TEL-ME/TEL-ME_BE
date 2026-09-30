@@ -52,11 +52,16 @@ public class FaqReembedder {
         List<Faq> chunk;
         while (!(chunk = readPage(page++, batchSize)).isEmpty()) {
             List<String> texts = chunk.stream().map(textAssembler::assemble).toList();
-            // 임베딩은 트랜잭션 밖에서, DB 쓰기만 안에서
+            List<String> questionTexts = chunk.stream().map(textAssembler::assembleQuestion).toList();
+            // 임베딩은 트랜잭션 밖에서, DB 쓰기만 안에서. 두 호출 모두 트랜잭션 진입 전에 끝낸다
             List<float[]> vectors = embeddingClient.embedBatch(texts);
+            // variant가 이미 QUESTION_ONLY면 같은 텍스트라 한 번 더 부를 이유X
+            List<float[]> questionVectors = variant == FaqEmbeddingTextVariant.QUESTION_ONLY
+                    ? vectors
+                    : embeddingClient.embedBatch(questionTexts);
 
             List<Faq> current = chunk;
-            transactionTemplate.executeWithoutResult(status -> saveChunk(current, vectors, counts));
+            transactionTemplate.executeWithoutResult(status -> saveChunk(current, vectors, questionVectors, counts));
 
             counts[2] += (int) chunk.stream().filter(faq -> isAnswerTruncated(variant, faq)).count();
             processed += chunk.size();
@@ -70,7 +75,13 @@ public class FaqReembedder {
         return faqRepository.findAll(PageRequest.of(page, batchSize, Sort.by("faqId"))).getContent();
     }
 
-    private void saveChunk(List<Faq> chunk, List<float[]> vectors, int[] counts) {
+    private void saveChunk(List<Faq> chunk, List<float[]> vectors, List<float[]> questionVectors, int[] counts) {
+        // 두 호출 사이 정합 확인
+        if (vectors.size() != chunk.size() || questionVectors.size() != chunk.size()) {
+            throw new IllegalStateException("임베딩 결과 개수 불일치: chunk=%d, 본문=%d, 질문=%d"
+                    .formatted(chunk.size(), vectors.size(), questionVectors.size()));
+        }
+
         // 청크 전체를 한 번에 조회
         Map<Long, FaqEmbedding> existingById = faqEmbeddingRepository
                 .findAllById(chunk.stream().map(Faq::getFaqId).toList())
@@ -80,15 +91,17 @@ public class FaqReembedder {
         for (int i = 0; i < chunk.size(); i++) {
             Faq faq = chunk.get(i);
             float[] vector = vectors.get(i);
+            float[] questionVector = questionVectors.get(i);
             FaqEmbedding existing = existingById.get(faq.getFaqId());
             if (existing != null) {
-                existing.refresh(vector, embeddingProperties.model(), faq.getVersion());
+                existing.refresh(vector, questionVector, embeddingProperties.model(), faq.getVersion());
                 counts[0]++;
             } else {
                 faqEmbeddingRepository.save(FaqEmbedding.builder()
                         .faqId(faq.getFaqId())
                         .faq(faqRepository.getReferenceById(faq.getFaqId()))
                         .embedding(vector)
+                        .embeddingQuestion(questionVector)
                         .modelName(embeddingProperties.model())
                         .faqVersion(faq.getVersion())
                         .syncStatus(FaqEmbedding.SyncStatus.SYNCED)
