@@ -94,4 +94,28 @@ class RagSearchResultAnswerGeneratorTest {
         assertThat(actual.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
         assertThat(actual.sources()).containsExactly(source);
     }
+
+    @Test
+    void multipleFaqGenerationDoesNotSendIntermediateTokens() {
+        when(answers.generate(any(), any())).thenAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken("검증 전 토큰");
+            stream.onComplete();
+            return AnswerResult.builder()
+                    .answer("검증된 답변")
+                    .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                    .build();
+        });
+        var generator = new RagSearchResultAnswerGenerator(answers,
+                executionId -> {
+                    throw new AssertionError("복합 FAQ 생성 중에는 SSE 핸들러를 만들지 않습니다.");
+                });
+        var input = new AnswerInput(31L, 7L, 11L, Purpose.GENERAL_FAQ,
+                "요금제 종류", "요금제 종류", Map.of(), false);
+
+        var result = generator.generate(input, List.of());
+
+        assertThat(result.answer().content()).isEqualTo("검증된 답변");
+        verify(handler, never()).onToken(any());
+    }
 }

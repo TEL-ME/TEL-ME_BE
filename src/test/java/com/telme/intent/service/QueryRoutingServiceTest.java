@@ -145,15 +145,15 @@ class QueryRoutingServiceTest {
 
             assertThatThrownBy(() -> service.routeSingleConsult(message, null))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("단일 하위 질문");
+                    .hasMessageContaining("FAQ와 매장 복합 질문");
 
             verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("단일 FAQ 질문이 여러 하위 질의로 나뉘어도 모든 조건을 합쳐 한 건으로 저장한다")
-        void singleConsultCombinesFaqSubQueries() {
+        @DisplayName("상담 연결에서도 여러 FAQ 하위 질문을 각각 유지한다")
+        void singleConsultPreservesFaqSubQueries() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,
                  "refinedQuery":"5G, LTE, 알뜰 요금제 종류를 각각 알려줘",
@@ -169,9 +169,8 @@ class QueryRoutingServiceTest {
                     msg("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요"), null);
 
             assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
-            assertThat(result.subQueries()).hasSize(1);
-            assertThat(result.subQueries().getFirst().queryText())
-                    .isEqualTo("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요");
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("5G 요금제 종류", "LTE 요금제 종류", "알뜰 요금제 종류");
         }
 
         @Test

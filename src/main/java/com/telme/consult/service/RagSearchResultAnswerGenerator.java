@@ -41,10 +41,11 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                 Objects.requireNonNull(
                         answers.generate(
                                 request,
-                                tokenOnlyHandler(
-                                        Objects.requireNonNull(
+                                tokenOnlyHandler(input.streamTokens()
+                                        ? Objects.requireNonNull(
                                                 streamHandlers.create(input.executionId()),
-                                                "streamHandler"))),
+                                                "streamHandler")
+                                        : discardedTokens())),
                         "answerResult");
         return new GeneratedAnswer(
                 new ChatAnswer(
@@ -54,6 +55,19 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         List.of(),
                         null),
                 result.sources());
+    }
+
+    private LlmStreamHandler discardedTokens() {
+        return new LlmStreamHandler() {
+            @Override
+            public void onToken(String token) {}
+
+            @Override
+            public void onComplete() {}
+
+            @Override
+            public void onError(Throwable error) {}
+        };
     }
 
     private LlmStreamHandler tokenOnlyHandler(LlmStreamHandler delegate) {

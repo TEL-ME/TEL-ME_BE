@@ -217,6 +217,30 @@ class QueryRoutingAnalysisProviderTest {
     }
 
     @Test
+    void multipleFaqQuestionsKeepEverySubQuery() {
+        var context = new Context(3L, 7L, "요금제와 로밍 신청 방법 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        var first = new IntentSubQueryResponse(
+                11L, (short) 1, ConsultRequest.Intent.FAQ, "요금제 종류", Map.of());
+        var second = new IntentSubQueryResponse(
+                12L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null)).thenReturn(new IntentRouteResponse(
+                5L, 7L, QueryRouting.Intent.FAQ, "요금제와 로밍", BigDecimal.ONE,
+                QueryRouting.Method.LLM, Map.of(), List.of(first, second)));
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.faqQueries()).containsExactly(first, second);
+        assertThat(result.initialQuery()).isNull();
+    }
+
+    @Test
     void unsupportedCompoundQuestionReturnsSplitGuidance() {
         var context = new Context(3L, 7L, "요금제와 근처 매장 알려줘", List.of());
         var message = ChatMessage.builder()

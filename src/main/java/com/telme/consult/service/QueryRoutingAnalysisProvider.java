@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -82,6 +83,12 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                             ChatMessage.AnswerBasis.OUT_OF_SCOPE,
                             List.of("요금제 알려줘", "가까운 매장 찾아줘"),
                             null));
+        }
+        if (result.intent() == Intent.FAQ && result.subQueries() != null
+                && result.subQueries().size() > 1
+                && result.subQueries().stream().allMatch(
+                        query -> query.intent() == ConsultRequest.Intent.FAQ)) {
+            return AnalysisResult.multipleFaq(result.subQueries());
         }
         if (result.subQueries() == null || result.subQueries().size() != 1) {
             throw new IllegalStateException("단일 상담 라우팅 결과가 필요합니다.");
