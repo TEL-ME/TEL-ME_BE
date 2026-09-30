@@ -40,6 +40,7 @@ public class AdminFeedbackConverter {
                 feedback.isHandled());
     }
 
+    // message는 NOT NULL이라 답변 메시지는 항상 있다. 앞 질문과 answerBasis만 비어 있을 수 있다
     public AdminFeedbackDetailResponse toDetail(MessageFeedback feedback, List<MessageSource> sources) {
         ChatMessage answer = feedback.getMessage();
         return new AdminFeedbackDetailResponse(
@@ -51,11 +52,11 @@ public class AdminFeedbackConverter {
                 feedback.getHandledAt(),
                 feedback.getHandledBy(),
                 feedback.getHandledNote(),
-                answer == null ? null : answer.getMessageId(),
+                answer.getMessageId(),
                 question(feedback),
-                answer == null ? null : answer.getContent(),
-                answer == null || answer.getAnswerBasis() == null ? null : answer.getAnswerBasis().name(),
-                answer == null ? null : answer.getCreatedAt(),
+                answer.getContent(),
+                answer.getAnswerBasis() == null ? null : answer.getAnswerBasis().name(),
+                answer.getCreatedAt(),
                 sources.stream().map(this::toSource).toList());
     }
 
@@ -70,14 +71,16 @@ public class AdminFeedbackConverter {
 
     // 되묻기 없이 시작한 답변은 앞 메시지가 없다. 그때는 질문 칸을 비워 둔다
     private String question(MessageFeedback feedback) {
-        ChatMessage answer = feedback.getMessage();
-        return answer == null || answer.getReplyTo() == null ? null : answer.getReplyTo().getContent();
+        ChatMessage replyTo = feedback.getMessage().getReplyTo();
+        return replyTo == null ? null : replyTo.getContent();
     }
 
     private String preview(String text, int length) {
-        if (text == null) {
-            return null;
+        if (text == null || text.length() <= length) {
+            return text;
         }
-        return text.length() <= length ? text : text.substring(0, length) + "...";
+        // 이모지는 두 칸을 차지해 경계에서 자르면 앞쪽 절반만 남아 글자가 깨진다
+        int end = Character.isHighSurrogate(text.charAt(length - 1)) ? length - 1 : length;
+        return text.substring(0, end) + "...";
     }
 }
