@@ -148,13 +148,13 @@
     "category": "DEVICE",
     "type": "UNRELATED",
     "unrelated_kind": "ADJACENT_HARD",
-    "question": "기기변경할 때 쓰던 폰을 반납하면 중고 보상금이 얼마 나와요?",
+    "question": "기기변경할 때 쓰던 폰의 사진과 연락처를 새 폰으로 옮겨주나요?",
     "expected_slot_id": null,
     "related_slot_id": [
       "DEVICE-0002",
       "DEVICE-0030"
     ],
-    "note": "관련 FAQ는 기기변경 가능 시점과 절차만 설명하며 기존 단말 반납이나 중고 보상가는 다루지 않음"
+    "note": "관련 FAQ는 기기변경 가능 시점과 할부금 처리만 설명하며 기존 단말의 사진·연락처 이전 지원은 다루지 않음"
   },
   {
     "eval_id": "H-015",
@@ -382,13 +382,13 @@
     "category": "NAME_CHANGE",
     "type": "UNRELATED",
     "unrelated_kind": "ADJACENT_HARD",
-    "question": "명의변경을 하면 기존 약정 기간이 처음부터 다시 시작하나요?",
+    "question": "명의변경을 접수했는데 완료 전에 취소할 수 있나요?",
     "expected_slot_id": null,
     "related_slot_id": [
       "NAME_CHANGE-0009",
       "NAME_CHANGE-0051"
     ],
-    "note": "관련 FAQ는 잔여 할부와 양수인의 신용 심사만 설명하며 기존 약정 기간의 유지 여부는 답하지 않음"
+    "note": "관련 FAQ는 양수인 신용 심사와 명의변경 절차만 설명하며 접수 후 완료 전 취소 가능 여부는 답하지 않음"
   },
   {
     "eval_id": "H-038",

@@ -9,6 +9,7 @@
 | `check_policy.py` | 답변 수치를 정책 항목 값과 대조 | - |
 | `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 | 필요 |
 | `check_eval_questions.py` | 평가셋 형식, 정답 매핑 검증 | `--live`만 |
+| `check_eval_overlap.py` | 새 평가셋이 기존 평가셋과 겹치는지 검사 (질문 텍스트 유사도 + 정답 slot 겹침) | - |
 | `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k, MRR 계산 | 서버 경유 |
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
@@ -397,6 +398,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
 | `check_eval_questions.py` | 17종 + 오탐 2건(정상 문항, 정상 평가셋) + 정답 slot 집합 3건(문자열, 배열, null) + slot 미적재 검사 4건(전부 null, smoke, 일부 null, 결과 없음) |
+| `check_eval_overlap.py` | 16건 (토큰 2 + 텍스트 유사도 5: 동일, 무관, 빈 문자열, 실제 제외 쌍 2 + 정답 겹침 4 + 정답 집합 3: 다중 라벨 합산, 문자열, null + 최근접 탐색 1 + 내부 중복 1) |
 | `measure_search_quality.py` | 14건 (Recall/MRR 9 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
