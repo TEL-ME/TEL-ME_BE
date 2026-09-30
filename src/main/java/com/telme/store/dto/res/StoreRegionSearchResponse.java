@@ -4,7 +4,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record StoreRegionSearchResponse(
-        List<Store> stores
+        List<Store> stores,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages
 ) {
 
     public record Store(

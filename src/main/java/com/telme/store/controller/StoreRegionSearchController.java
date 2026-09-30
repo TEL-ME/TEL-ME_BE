@@ -24,7 +24,7 @@ public class StoreRegionSearchController {
 
     @Operation(summary = "지역 코드로 매장 검색",
             description = "위치 권한이 없을 때 법정동코드 앞자리로 영업 중(OPEN) 매장을 찾는다. 폐업 매장은 제외한다.")
-    @GetMapping
+    @GetMapping("/region")
     public CustomResponse<StoreRegionSearchResponse> searchByRegion(
             @Valid @ParameterObject @ModelAttribute StoreRegionSearchRequest request) {
         return CustomResponse.onSuccess(storeRegionSearchService.search(request));
