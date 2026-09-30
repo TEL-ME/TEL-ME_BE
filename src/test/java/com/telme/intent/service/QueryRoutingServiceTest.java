@@ -189,55 +189,19 @@ class QueryRoutingServiceTest {
 
         @ParameterizedTest
         @ValueSource(strings = {
-                "파이썬에서 리스트 정렬하는 방법 알려주세요",
-                "강아지 사료는 하루에 얼마나 줘야 하나요?",
-                "전세 대출 한도는 어떻게 정해지나요?",
-                "영상 편집용 노트북 사양을 추천해 주세요"
+                "노트북 테더링하면 요금 따로 나와요?",
+                "강아지 위치추적기 가입 되나요?",
+                "헬스장 제휴 할인 받을 수 있어요?"
         })
-        @DisplayName("명시적인 외부 질문을 LLM이 FAQ로 분류해도 UNKNOWN으로 보정한다")
-        void correctsClearlyExternalFaq(String question) {
+        @DisplayName("통신과 무관해 보이는 단어가 있어도 LLM의 FAQ 분류를 바꾸지 않는다")
+        void keepsLlmFaqForQuestionWithUnrelatedLookingWord(String question) {
             given(llmClient.generate(any())).willReturn("""
-                {"intent":"FAQ","confidence":0.97,"refinedQuery":"외부 질문",
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"통신 질문",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"외부 질문","conditions":{}}]}
+                   {"order":1,"intent":"FAQ","queryText":"통신 질문","conditions":{}}]}
                 """);
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
-
-            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
-            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
-            assertThat(result.subQueries()).isEmpty();
-        }
-
-        @Test
-        @DisplayName("통신 주제가 명시된 질문의 외부 단어는 FAQ를 차단하지 않는다")
-        void keepsTelecomQuestionContainingExternalWord() {
-            given(llmClient.generate(any())).willReturn("""
-                {"intent":"FAQ","confidence":0.97,"refinedQuery":"U+ 멤버십 헬스장 할인",
-                 "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"U+ 멤버십 헬스장 할인","conditions":{}}]}
-                """);
-
-            IntentRouteResponse result = service.routeSingleConsult(
-                    msg("U+ 멤버십으로 헬스장 할인받을 수 있나요?"), null);
-
-            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
-            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
-        }
-
-        @Test
-        @DisplayName("이전 상담이 있으면 외부 주제 단어만으로 후속 질문을 차단하지 않는다")
-        void keepsContextDependentQuestion() {
-            given(llmClient.generate(any())).willReturn("""
-                {"intent":"FAQ","confidence":0.97,"refinedQuery":"U+ 인터넷 노트북 연결",
-                 "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"U+ 인터넷 노트북 연결","conditions":{}}]}
-                """);
-            String question = "노트북은요?";
-            ChatContext context = new ChatContext(1L, 1L,
-                    "U+ 인터넷을 노트북에 연결하는 방법을 상담 중", java.util.List.of(), question, 20);
-
-            IntentRouteResponse result = service.routeSingleConsult(msg(question), context);
 
             assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
             assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);

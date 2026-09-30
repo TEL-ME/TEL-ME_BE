@@ -41,7 +41,7 @@ class ConsultMultiFaqProcessingTest {
         AnswerSource source = new AnswerSource(null, "요금제 근거", 1, null, (short) 1, null);
         var processor = processor(input -> {
             assertThat(input.streamTokens()).isFalse();
-            if (input.searchQuery().equals("요금제 종류")) {
+            if (input.originalUserQuery().equals("요금제 종류")) {
                 return generated("요금제 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(source));
             }
             return generated(AnswerPromptTemplates.NO_EVIDENCE_ANSWER,
@@ -79,6 +79,41 @@ class ConsultMultiFaqProcessingTest {
     }
 
     @Test
+    void eachQuestionAnswersItselfAndFallsBackToUserQuestionForSearch() {
+        prepareEvents();
+        List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
+        var processor = processor(input -> {
+            inputs.add(input);
+            return generated("답변", ChatMessage.AnswerBasis.GROUNDED, List.of());
+        });
+
+        processor.request(command);
+
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::originalUserQuery)
+                .containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::searchQuery)
+                .containsOnly(command.content());
+    }
+
+    @Test
+    void sameFaqCitedByBothQuestionsIsSavedOnce() {
+        prepareEvents();
+        AnswerSource shared = new AnswerSource(5L, "공통 근거", 1, null, (short) 1, null);
+        AnswerSource roaming = new AnswerSource(6L, "로밍 근거", 1, null, (short) 2, null);
+        var processor = processor(input -> input.originalUserQuery().equals("요금제 종류")
+                ? generated("요금제 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(shared))
+                : generated("로밍 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(shared, roaming)));
+
+        processor.request(command);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<AnswerSource>> sources = ArgumentCaptor.forClass(List.class);
+        verify(persistence).persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(),
+                any(), sources.capture());
+        assertThat(sources.getValue()).containsExactly(shared, roaming);
+    }
+
+    @Test
     void generationFailureDoesNotSavePartialAnswerOrSendTokens() {
         prepareEvents();
         AtomicInteger calls = new AtomicInteger();
@@ -111,7 +146,7 @@ class ConsultMultiFaqProcessingTest {
                 Map.of(), null, null, DialogueDecision.MessageOrigin.NONE);
         var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision);
         return new ConsultChatProcessingService.FaqTurn(
-                new ConsultService.PreparationResult(prepared, null), queryText);
+                new ConsultService.PreparationResult(prepared, null), queryText, command.content());
     }
 
     private ConsultChatProcessingService.GeneratedAnswer generated(

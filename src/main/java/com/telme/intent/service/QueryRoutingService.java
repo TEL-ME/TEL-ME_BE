@@ -198,17 +198,6 @@ public class QueryRoutingService {
         }
 
         if (method == QueryRouting.Method.LLM
-                && payload.intent() == QueryRouting.Intent.FAQ
-                && RoutingIntentCorrection.isClearlyExternal(question, context)) {
-            log.info("[라우팅] 명시적인 외부 주제를 UNKNOWN으로 보정합니다: messageId={}",
-                    userMessage.getMessageId());
-            payload = new LlmRoutingPayload(
-                    QueryRouting.Intent.UNKNOWN, payload.confidence(), question,
-                    Collections.emptyMap(), Collections.emptyList());
-            method = QueryRouting.Method.RULE;
-        }
-
-        if (method == QueryRouting.Method.LLM
                 && payload.intent() == QueryRouting.Intent.STORE
                 && RoutingIntentCorrection.isGeneralStorePolicy(question, context,
                         payload.extractedConditions().get(FollowUpRouteResponse.LOCATION_KEY))) {

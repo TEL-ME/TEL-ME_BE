@@ -551,8 +551,8 @@ class ConsultChatPersistenceIntegrationTest {
         });
         var processor = new ConsultChatProcessingService(
                 command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
-                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
-                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류", "요금제와 로밍 신청 방법 알려줘"),
+                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법", "요금제와 로밍 신청 방법 알려줘"))),
                 answers, persistence, new ConfirmedConditionConverter(), events);
 
         processor.request(processingCommand());

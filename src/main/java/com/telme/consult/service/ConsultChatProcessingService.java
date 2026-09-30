@@ -14,9 +14,11 @@ import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerPromptTemplates;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -149,13 +151,16 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
         List<String> sections = new ArrayList<>();
         List<AnswerSource> sources = new ArrayList<>();
+        Set<Long> sourceFaqIds = new HashSet<>();
         boolean hasGroundedAnswer = false;
         for (int i = 0; i < faqTurns.size(); i++) {
             FaqTurn faq = faqTurns.get(i);
             ConsultService.PreparedTurn prepared = preparedTurns.get(i);
+            // 답변은 하위 질문에 맞추고, 짧은 하위 질문이 검색 기준을 못 넘으면 사용자 원문으로 다시 찾는다.
+            // 분해 과정에서 "해외 로밍"처럼 앞 질문의 대상이 빠져도 원문 검색이 이를 보완한다.
             GeneratedAnswer generated = answers.generate(new AnswerInput(
                     command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
-                    Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
+                    Purpose.GENERAL_FAQ, faq.queryText(), faq.userQuestion(),
                     conditionConverter.convert(prepared.decision().conditions()), false));
             if (generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
                 throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
@@ -165,7 +170,10 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             sections.add("%d. %s\n%s".formatted(i + 1, faq.queryText(), content));
             if (grounded) {
                 hasGroundedAnswer = true;
-                sources.addAll(generated.sources());
+                // 같은 FAQ가 두 하위 질문의 근거가 되면 인용 횟수가 두 번 쌓이므로 한 번만 남긴다
+                generated.sources().stream()
+                        .filter(source -> source.faqId() == null || sourceFaqIds.add(source.faqId()))
+                        .forEach(sources::add);
             }
         }
 
@@ -309,14 +317,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
     }
 
-    public record FaqTurn(ConsultService.PreparationResult preparation, String queryText) {
+    public record FaqTurn(
+            ConsultService.PreparationResult preparation, String queryText, String userQuestion) {
         public FaqTurn {
             if (preparation == null || preparation.waitingForReply()
                     || preparation.prepared() == null
-                    || queryText == null || queryText.isBlank()) {
+                    || queryText == null || queryText.isBlank()
+                    || userQuestion == null || userQuestion.isBlank()) {
                 throw new IllegalArgumentException("진행 가능한 FAQ 하위 질문이 필요합니다.");
             }
             queryText = queryText.strip();
+            userQuestion = userQuestion.strip();
         }
     }
 
