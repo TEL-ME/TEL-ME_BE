@@ -217,7 +217,7 @@ class AdminFaqControllerTest {
 
     private AdminFaqDetailResponse detail() {
         return new AdminFaqDetailResponse(
-                1L, "SERVICE", "질문입니다.", "답변입니다.", null, 1, "hash", "ACTIVE",
+                1L, "SERVICE", "질문입니다.", "답변입니다.", null, 1, 0, "hash", "ACTIVE",
                 0L, 2L, 2L, Instant.now(), Instant.now());
     }
 }

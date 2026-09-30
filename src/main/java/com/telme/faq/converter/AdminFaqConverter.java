@@ -40,6 +40,7 @@ public class AdminFaqConverter {
                 faq.getAnswer(),
                 faq.getPolicyRef(),
                 faq.getVersion(),
+                faq.getLockVersion(),
                 faq.getContentHash(),
                 faq.getStatus().name(),
                 citationCount,

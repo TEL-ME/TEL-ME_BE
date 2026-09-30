@@ -97,7 +97,7 @@ class AdminFaqConcurrentCreateTest {
         List<Future<Object>> results = runTogether(
                 () -> service.update(faqId, request(QUESTION, ANSWER + " 고침"), ADMIN_ID),
                 () -> {
-                    service.delete(faqId, ADMIN_ID);
+                    service.delete(faqId, ADMIN_ID, null);
                     return null;
                 });
 
@@ -112,11 +112,11 @@ class AdminFaqConcurrentCreateTest {
 
         List<Future<Object>> results = runTogether(
                 () -> {
-                    service.delete(faqId, ADMIN_ID);
+                    service.delete(faqId, ADMIN_ID, null);
                     return null;
                 },
                 () -> {
-                    service.delete(faqId, ADMIN_ID);
+                    service.delete(faqId, ADMIN_ID, null);
                     return null;
                 });
 
@@ -136,7 +136,7 @@ class AdminFaqConcurrentCreateTest {
     @DisplayName("삭제한 뒤에는 같은 내용을 다시 넣을 수 있다")
     void 삭제_후에는_다시_넣을_수_있다() {
         Long faqId = service.create(request(), ADMIN_ID).faqId();
-        service.delete(faqId, ADMIN_ID);
+        service.delete(faqId, ADMIN_ID, null);
 
         service.create(request(), ADMIN_ID);
 
@@ -187,6 +187,6 @@ class AdminFaqConcurrentCreateTest {
     }
 
     private AdminFaqSaveRequest request(String question, String answer) {
-        return new AdminFaqSaveRequest(FaqCategory.SERVICE, question, answer, null, null);
+        return new AdminFaqSaveRequest(FaqCategory.SERVICE, question, answer, null, null, null);
     }
 }
