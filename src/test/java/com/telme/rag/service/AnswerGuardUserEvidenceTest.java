@@ -7,6 +7,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.telme.rag.exception.AnswerGuardException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AnswerGuardUserEvidenceTest {
 
@@ -495,6 +498,57 @@ class AnswerGuardUserEvidenceTest {
 
         assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 변경과 해지가 가능한가요?"))
                 .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("해지 미지원 근거를 변경 미지원 주장에 재사용하지 않는다")
+    void 해지_미지원_근거를_변경_미지원_주장에_재사용하지_않는다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String evidence = "로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("변경 가능과 해지 미지원 극성이 각각 일치하면 유지한다")
+    void 변경_가능과_해지_미지원_극성이_각각_일치하면_유지한다() {
+        String answer = "로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, answer, "로밍 변경과 해지가 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'현지에서 로밍 요금제 변경이 가능합니다.','귀국 후 로밍 요금제 변경이 가능합니다.'",
+            "'귀국 후 로밍 요금제 변경이 가능합니다.','현지에서 로밍 요금제 변경이 가능합니다.'"
+    })
+    @DisplayName("다른 장소와 시점의 변경 근거를 재사용하지 않는다")
+    void 다른_장소와_시점의_변경_근거를_재사용하지_않는다(String answer, String evidence) {
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "로밍 요금제 변경은 언제 가능한가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "현지에서 로밍 요금제 변경이 가능합니다.",
+            "귀국 후 로밍 요금제 변경이 가능합니다."
+    })
+    @DisplayName("같은 장소와 시점의 변경 근거는 유지한다")
+    void 같은_장소와_시점의_변경_근거는_유지한다(String answer) {
+        assertThat(guard.applyEvidencePolicy(answer, answer, "로밍 요금제 변경은 언제 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 동작의 장소와 시점을 변경 근거로 재사용하지 않는다")
+    void 다른_동작의_장소와_시점을_변경_근거로_재사용하지_않는다() {
+        String answer = "현지에서 로밍 요금제 변경이 가능합니다.";
+        String evidence = "귀국 후 로밍 요금제 변경이 가능합니다. 현지에서 로밍 해지가 가능합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "현지에서 로밍 요금제 변경이 가능한가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test

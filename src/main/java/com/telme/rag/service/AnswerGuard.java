@@ -519,6 +519,8 @@ public class AnswerGuard {
         Set<FeatureAction> answerActions = featureActions(answerSentence);
         if (claim == PolicyClaim.FEATURE_UNAVAILABLE) {
             answerActions.removeIf(action -> actionPolarity(answerSentence, action) != ClaimPolarity.ABSENT);
+        } else if (claim == PolicyClaim.ACTION_LOCATION_OR_TIMING) {
+            answerActions.removeIf(action -> actionContexts(answerSentence, action).isEmpty());
         }
         if (answerActions.isEmpty()) {
             return false;
@@ -531,8 +533,11 @@ public class AnswerGuard {
                         || !sharesPolicyTopic(answerSentence, evidenceSentence)) {
                     continue;
                 }
+                if (!hasMatchingActionPolarity(answerSentence, evidenceSentence, action)) {
+                    continue;
+                }
                 if (claim == PolicyClaim.ACTION_LOCATION_OR_TIMING
-                        && !hasMatchingActionPolarity(answerSentence, evidenceSentence, action)) {
+                        && !hasMatchingActionContexts(answerSentence, evidenceSentence, action)) {
                     continue;
                 }
                 supported = true;
@@ -589,9 +594,57 @@ public class AnswerGuard {
             String answerSentence, String evidenceSentence, FeatureAction action) {
         ClaimPolarity answerPolarity = actionPolarity(answerSentence, action);
         ClaimPolarity evidencePolarity = actionPolarity(evidenceSentence, action);
-        return answerPolarity == ClaimPolarity.UNKNOWN
-                || evidencePolarity == ClaimPolarity.UNKNOWN
-                || answerPolarity == evidencePolarity;
+        return answerPolarity != ClaimPolarity.UNKNOWN
+                && evidencePolarity != ClaimPolarity.UNKNOWN
+                && answerPolarity == evidencePolarity;
+    }
+
+    private boolean hasMatchingActionContexts(
+            String answerSentence, String evidenceSentence, FeatureAction action) {
+        Set<ActionContext> answerContexts = actionContexts(answerSentence, action);
+        Set<ActionContext> evidenceContexts = actionContexts(evidenceSentence, action);
+        return !answerContexts.isEmpty() && evidenceContexts.containsAll(answerContexts);
+    }
+
+    private Set<ActionContext> actionContexts(String sentence, FeatureAction action) {
+        Set<ActionContext> contexts = new LinkedHashSet<>();
+        Matcher actionMatcher = FEATURE_ACTION_PATTERNS.get(action).matcher(sentence);
+        while (actionMatcher.find()) {
+            ActionContext preceding = nearestPrecedingActionContext(sentence, actionMatcher.start());
+            if (preceding != null) {
+                contexts.add(preceding);
+            }
+        }
+        // "변경은 귀국 후 가능합니다"처럼 조건이 동작 뒤에 오는 단일 동작 문장도 지원한다.
+        if (contexts.isEmpty() && featureActions(sentence).size() == 1) {
+            contexts.addAll(actionContextsIn(sentence));
+        }
+        return contexts;
+    }
+
+    private ActionContext nearestPrecedingActionContext(String sentence, int actionStart) {
+        ActionContext nearest = null;
+        int nearestStart = -1;
+        for (ActionContext context : ActionContext.values()) {
+            Matcher matcher = context.pattern.matcher(sentence);
+            while (matcher.find() && matcher.end() <= actionStart) {
+                if (matcher.start() > nearestStart) {
+                    nearest = context;
+                    nearestStart = matcher.start();
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private Set<ActionContext> actionContextsIn(String sentence) {
+        Set<ActionContext> contexts = new LinkedHashSet<>();
+        for (ActionContext context : ActionContext.values()) {
+            if (context.pattern.matcher(sentence).find()) {
+                contexts.add(context);
+            }
+        }
+        return contexts;
     }
 
     private ClaimPolarity actionPolarity(String sentence, FeatureAction action) {
@@ -871,6 +924,17 @@ public class AnswerGuard {
         PAYMENT,
         USE,
         LOOKUP
+    }
+
+    private enum ActionContext {
+        LOCAL(Pattern.compile("현지에서")),
+        AFTER_RETURN(Pattern.compile("귀국\\s*후"));
+
+        private final Pattern pattern;
+
+        ActionContext(Pattern pattern) {
+            this.pattern = pattern;
+        }
     }
 
     private enum ClaimPolarity {
