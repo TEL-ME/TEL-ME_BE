@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.faq.dto.req.AdminFaqSaveRequest;
+import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.entity.FaqCategory;
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.code.BaseErrorCode;
@@ -129,6 +130,23 @@ class AdminFaqConcurrentCreateTest {
 
         assertThat(results.stream().filter(this::threw).count()).isEqualTo(1);
         assertThat(lastErrorCode).isEqualTo(FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("질문과 답변을 나눈 위치만 다르면 서로 다른 FAQ로 본다")
+    void 자른_위치가_다르면_다른_FAQ다() {
+        // 인덱스가 질문·답변을 이어 붙여 해시하면 이 둘이 같은 키가 되어 뒤엣것이 막힌다.
+        // 구분자를 넣어도 그 문자가 본문에 들어가면 마찬가지라 열을 나눠 둔다
+        String separator = String.valueOf((char) 31);
+
+        // 이어 붙이면 둘 다 "앞·구분자·뒤·구분자·답변"이 되어 같은 키가 된다
+        service.create(request(MARK + "앞" + separator + "뒤", MARK + "답변"), ADMIN_ID);
+
+        AdminFaqDetailResponse second =
+                service.create(request(MARK + "앞", "뒤" + separator + MARK + "답변"), ADMIN_ID);
+
+        assertThat(second.faqId()).isNotNull();
+        assertThat(countSaved()).isEqualTo(2);
     }
 
     @Test
