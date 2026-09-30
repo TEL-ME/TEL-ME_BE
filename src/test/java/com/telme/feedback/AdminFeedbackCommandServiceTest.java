@@ -1,0 +1,116 @@
+package com.telme.feedback;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.telme.feedback.dto.req.AdminFeedbackHandleRequest;
+import com.telme.feedback.dto.res.AdminFeedbackDetailResponse;
+import com.telme.feedback.service.AdminFeedbackCommandService;
+import com.telme.global.common.exception.GeneralException;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+// 시드의 답변 메시지에 싫어요를 붙여 확인한다. 트랜잭션 롤백으로 시드에 영향 없음
+@SpringBootTest
+@Transactional
+class AdminFeedbackCommandServiceTest {
+
+    private static final long ANSWER_MESSAGE_ID = 2L;
+    private static final long ADMIN_ID = 2L;
+
+    @Autowired
+    private AdminFeedbackCommandService service;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    private Long feedbackId;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update(
+                "INSERT INTO message_feedback (message_id, user_id, rating, reason_code, comment) "
+                        + "VALUES (?, ?, 'DISLIKE', 'WRONG_INFO', '답이 틀렸습니다.')",
+                ANSWER_MESSAGE_ID, ADMIN_ID);
+        feedbackId = jdbcTemplate.queryForObject(
+                "SELECT feedback_id FROM message_feedback WHERE message_id = ? AND user_id = ?",
+                Long.class, ANSWER_MESSAGE_ID, ADMIN_ID);
+    }
+
+    @Test
+    @DisplayName("처리 표시를 하면 시각·처리자·메모가 DB에 남는다")
+    void 처리하면_DB에_남는다() {
+        AdminFeedbackDetailResponse detail =
+                service.changeHandled(feedbackId, request(true, "FAQ 수정 완료"), ADMIN_ID);
+
+        assertThat(detail.handled()).isTrue();
+        assertThat(detail.handledBy()).isEqualTo(ADMIN_ID);
+        assertThat(detail.handledNote()).isEqualTo("FAQ 수정 완료");
+        assertThat(saved()).containsExactly(true, ADMIN_ID, "FAQ 수정 완료");
+    }
+
+    @Test
+    @DisplayName("되돌리면 처리 정보가 모두 비워진다")
+    void 되돌리면_비워진다() {
+        service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID);
+
+        AdminFeedbackDetailResponse detail = service.changeHandled(feedbackId, request(false, null), ADMIN_ID);
+
+        assertThat(detail.handled()).isFalse();
+        assertThat(detail.handledAt()).isNull();
+        assertThat(saved()).containsExactly(false, null, null);
+    }
+
+    @Test
+    @DisplayName("이미 처리한 건을 다시 보내면 메모만 바뀐다")
+    void 다시_보내면_메모가_바뀐다() {
+        service.changeHandled(feedbackId, request(true, "처음 메모"), ADMIN_ID);
+
+        AdminFeedbackDetailResponse detail =
+                service.changeHandled(feedbackId, request(true, "고친 메모"), ADMIN_ID);
+
+        assertThat(detail.handledNote()).isEqualTo("고친 메모");
+    }
+
+    @Test
+    @DisplayName("좋아요 id로 처리 표시를 하면 FEEDBACK404-1을 던진다")
+    void 좋아요는_막는다() {
+        Long likeId = jdbcTemplate.queryForObject(
+                "SELECT feedback_id FROM message_feedback WHERE rating = 'LIKE' LIMIT 1", Long.class);
+
+        assertThatThrownBy(() -> service.changeHandled(likeId, request(true, null), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("없는 id로 처리 표시를 하면 FEEDBACK404-1을 던진다")
+    void 없는_id는_막는다() {
+        assertThatThrownBy(() -> service.changeHandled(-1L, request(true, null), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    // 영속성 컨텍스트가 아니라 DB에 실제로 나갔는지 본다
+    private java.util.List<Object> saved() {
+        entityManager.flush();
+        return jdbcTemplate.queryForObject(
+                "SELECT handled_at, handled_by, handled_note FROM message_feedback WHERE feedback_id = ?",
+                (rs, row) -> java.util.Arrays.asList(
+                        rs.getTimestamp("handled_at") != null,
+                        (Long) rs.getObject("handled_by"),
+                        rs.getString("handled_note")),
+                feedbackId);
+    }
+
+    private AdminFeedbackHandleRequest request(boolean handled, String note) {
+        return new AdminFeedbackHandleRequest(handled, note);
+    }
+}

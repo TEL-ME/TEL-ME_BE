@@ -98,4 +98,11 @@ public class MessageFeedback {
         this.handledBy = adminId;
         this.handledNote = note;
     }
+
+    // 잘못 눌렀을 때 되돌린다. ck_feedback_handled_pair가 시각과 처리자를 함께 보므로 셋을 같이 비운다
+    public void markUnhandled() {
+        this.handledAt = null;
+        this.handledBy = null;
+        this.handledNote = null;
+    }
 }

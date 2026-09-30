@@ -1,8 +1,10 @@
 package com.telme.feedback.controller;
 
 import com.telme.feedback.dto.req.AdminFeedbackSearchRequest;
+import com.telme.feedback.dto.req.AdminFeedbackHandleRequest;
 import com.telme.feedback.dto.res.AdminFeedbackDetailResponse;
 import com.telme.feedback.dto.res.AdminFeedbackListResponse;
+import com.telme.feedback.service.AdminFeedbackCommandService;
 import com.telme.feedback.service.AdminFeedbackQueryService;
 import com.telme.global.common.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +18,10 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminFeedbackController {
 
     private final AdminFeedbackQueryService adminFeedbackQueryService;
+    private final AdminFeedbackCommandService adminFeedbackCommandService;
 
     @Operation(
             summary = "싫어요 목록 조회",
@@ -63,5 +69,25 @@ public class AdminFeedbackController {
     public CustomResponse<AdminFeedbackDetailResponse> getDislike(
             @Parameter(description = "조회할 피드백 ID") @PathVariable long feedbackId) {
         return CustomResponse.onSuccess(adminFeedbackQueryService.getDislike(feedbackId));
+    }
+
+    @Operation(
+            summary = "싫어요 처리 표시",
+            description = "처리 시각과 처리자를 남겨 목록에서 빠지게 합니다. handled를 false로 주면 되돌립니다. "
+                    + "같은 건을 다시 보내도 막지 않으며 메모만 고칠 수 있습니다. 처리 후 상세를 그대로 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "표시 성공"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-1: handled 누락 또는 메모 길이 초과"),
+            @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
+            @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음")
+    })
+    @PutMapping("/{feedbackId}/handled")
+    public CustomResponse<AdminFeedbackDetailResponse> changeHandled(
+            @Parameter(description = "표시할 피드백 ID") @PathVariable long feedbackId,
+            @Valid @RequestBody AdminFeedbackHandleRequest request,
+            @AuthenticationPrincipal Long adminId) {
+        return CustomResponse.onSuccess(
+                adminFeedbackCommandService.changeHandled(feedbackId, request, adminId));
     }
 }
