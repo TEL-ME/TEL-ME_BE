@@ -9,6 +9,8 @@ public record AdminFaqDetailResponse(
         String answer,
         String policyRef,
         Integer version,
+        // 수정·삭제 요청에 그대로 돌려주면 화면을 연 뒤의 덮어쓰기를 막는다
+        Integer lockVersion,
         String contentHash,
         String status,
         long citationCount,

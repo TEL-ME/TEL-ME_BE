@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,12 @@ public class Faq {
     @Builder.Default
     private Integer version = 1;
 
+    // 저장할 때마다 오른다. version은 질문·답변이 바뀔 때만 오르는 내용 버전이라 겸용할 수 없다
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    @Builder.Default
+    private Integer lockVersion = 0;
+
     @Column(name = "content_hash", length = 64)
     private String contentHash;
 
@@ -72,8 +79,10 @@ public class Faq {
     @Generated(event = EventType.INSERT)
     private Instant createdAt;
 
+    // UPDATE까지 @Generated로 두면 Hibernate가 RETURNING으로 읽는데, @Version 충돌로 0행이 되면
+    // 잠금 예외 대신 "no natively generated values"가 나 구분할 수 없다. 수정 후 값은 호출부가 다시 읽는다
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
-    @Generated(event = {EventType.INSERT, EventType.UPDATE})
+    @Generated(event = EventType.INSERT)
     private Instant updatedAt;
 
     // 검색이 e.faqVersion = f.version으로 걸러, 버전만 오르고 재임베딩이 빠지면 그 FAQ가 통째로 사라진다.

@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -93,14 +94,16 @@ public class AdminFaqController {
             summary = "FAQ 수정",
             description = "질문이나 답변이 바뀐 경우에만 content_hash와 version이 올라갑니다. "
                     + "카테고리만 바꾸면 버전은 그대로이고, 임베딩에 카테고리를 넣는 구성에서만 다시 만듭니다. "
-                    + "status를 생략하면 기존 상태를 그대로 둡니다.")
+                    + "status를 생략하면 기존 상태를 그대로 둡니다. "
+                    + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "수정 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: 필수값 또는 길이 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "FAQ409-0: 질문과 답변이 같은 FAQ가 이미 있음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-0: 질문과 답변이 같은 FAQ가 이미 있음. "
+                    + "FAQ409-1: 다른 관리자가 먼저 저장함"),
             @ApiResponse(responseCode = "503", description = "FAQ503-0: 임베딩 서버 호출 실패")
     })
     @PutMapping("/{faqId}")
@@ -113,18 +116,22 @@ public class AdminFaqController {
 
     @Operation(
             summary = "FAQ 삭제",
-            description = "실제로 지우지 않고 상태를 DELETED로 바꿉니다. 검색에서는 바로 빠지고 상태 필터로 다시 볼 수 있습니다.")
+            description = "실제로 지우지 않고 상태를 DELETED로 바꿉니다. 검색에서는 바로 빠지고 상태 필터로 다시 볼 수 있습니다. "
+                    + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "삭제 성공"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
-            @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음")
+            @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-1: 다른 관리자가 먼저 저장함")
     })
     @DeleteMapping("/{faqId}")
     public CustomResponse<Void> deleteFaq(
             @Parameter(description = "삭제할 FAQ ID") @PathVariable long faqId,
+            @Parameter(description = "조회에서 받은 lockVersion. 생략하면 검사하지 않음")
+            @RequestParam(required = false) Integer lockVersion,
             @AuthenticationPrincipal Long adminId) {
-        adminFaqCommandService.delete(faqId, adminId);
+        adminFaqCommandService.delete(faqId, adminId, lockVersion);
         return CustomResponse.onSuccess(null);
     }
 }
