@@ -14,7 +14,9 @@ public enum FeedbackErrorCode implements BaseErrorCode {
     TARGET_UNAVAILABLE(HttpStatus.NOT_FOUND, "FEEDBACK404-0", "평가할 수 있는 메시지를 찾을 수 없습니다."),
     TARGET_NOT_READY(HttpStatus.CONFLICT, "FEEDBACK409-0", "완료된 상담 답변과 매장 추천만 평가할 수 있습니다."),
     // 관리자 화면은 싫어요만 다루므로 좋아요 id로 조회해도 없는 것으로 본다
-    FEEDBACK_NOT_FOUND(HttpStatus.NOT_FOUND, "FEEDBACK404-1", "싫어요 피드백을 찾을 수 없습니다.");
+    FEEDBACK_NOT_FOUND(HttpStatus.NOT_FOUND, "FEEDBACK404-1", "싫어요 피드백을 찾을 수 없습니다."),
+    // 처리 표시는 싫어요에만 남길 수 있어, 그 사이 좋아요로 바뀌면 저장할 수 없다
+    RATING_CHANGED(HttpStatus.CONFLICT, "FEEDBACK409-1", "그 사이 사용자가 평가를 바꿨습니다. 목록을 다시 불러와주세요.");
 
     private final HttpStatus status;
     private final String code;

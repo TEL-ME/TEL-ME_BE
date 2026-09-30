@@ -23,6 +23,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 /**
  * userId/guestId는 member 도메인 엔티티를 직접 참조하지 않고 id만 보관한다.
  * DB의 ck_feedback_actor CHECK와 부분 유니크 인덱스(uk_feedback_user/uk_feedback_guest)는
@@ -31,6 +33,9 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "message_feedback")
+// 관리자는 처리 표시만 바꾸는데 행 전체를 다시 쓰면,
+// 읽어둔 사이 사용자가 고친 평가·사유·의견을 옛 값으로 덮어쓴다
+@DynamicUpdate
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

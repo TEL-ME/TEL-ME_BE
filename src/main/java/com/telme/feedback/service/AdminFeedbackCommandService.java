@@ -11,6 +11,7 @@ import com.telme.rag.repository.MessageSourceRepository;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class AdminFeedbackCommandService {
         } else {
             feedback.markUnhandled();
         }
+        flushOrRejectRatingChange();
         log.info("[AdminFeedback] 처리 표시 feedbackId={} handled={} adminId={}",
                 feedbackId, request.handled(), adminId);
 
@@ -42,6 +44,16 @@ public class AdminFeedbackCommandService {
                 feedback,
                 messageSourceRepository.findByMessage_MessageIdOrderBySearchRankAscSourceIdAsc(
                         feedback.getMessage().getMessageId()));
+    }
+
+    // 읽은 뒤 사용자가 좋아요로 바꿨으면 ck_feedback_handled_dislike_only에 걸린다.
+    // 커밋까지 미루면 여기서 안 잡혀 500으로 나가므로 지금 확정한다
+    private void flushOrRejectRatingChange() {
+        try {
+            feedbackRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new GeneralException(FeedbackErrorCode.RATING_CHANGED);
+        }
     }
 
     // 좋아요는 관리자 화면이 다루지 않아 조회와 같은 응답으로 막는다

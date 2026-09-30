@@ -80,7 +80,8 @@ public class AdminFeedbackController {
             @ApiResponse(responseCode = "400", description = "COMMON400-1: handled 누락 또는 메모 길이 초과"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
-            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음")
+            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "FEEDBACK409-1: 그 사이 사용자가 평가를 바꿈")
     })
     @PutMapping("/{feedbackId}/handled")
     public CustomResponse<AdminFeedbackDetailResponse> changeHandled(

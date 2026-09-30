@@ -98,6 +98,38 @@ class AdminFeedbackCommandServiceTest {
                 .isInstanceOf(GeneralException.class);
     }
 
+    @Test
+    @DisplayName("읽은 뒤 사용자가 좋아요로 바꿨으면 FEEDBACK409-1을 던진다")
+    void 그_사이_좋아요가_되면_막는다() {
+        entityManager.flush();
+        entityManager.find(com.telme.feedback.entity.MessageFeedback.class, feedbackId);
+        userChanges("UPDATE message_feedback SET rating='LIKE', reason_code=NULL, comment=NULL WHERE feedback_id=?");
+
+        assertThatThrownBy(() -> service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("읽은 뒤 사용자가 고친 의견을 처리 표시가 덮어쓰지 않는다")
+    void 그_사이_고친_의견을_지키다() {
+        entityManager.flush();
+        entityManager.find(com.telme.feedback.entity.MessageFeedback.class, feedbackId);
+        userChanges("UPDATE message_feedback SET comment='사용자가 고친 의견' WHERE feedback_id=?");
+
+        service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID);
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT comment FROM message_feedback WHERE feedback_id = ?", String.class, feedbackId))
+                .isEqualTo("사용자가 고친 의견");
+    }
+
+    // 관리자가 읽어둔 뒤 사용자가 DB를 바꾼 상황을 만든다.
+    // JPA를 거치지 않고 바꿔야 관리자 쪽 엔티티가 옛 값을 들고 있게 된다
+    private void userChanges(String sql) {
+        jdbcTemplate.update(sql, feedbackId);
+    }
+
     // 영속성 컨텍스트가 아니라 DB에 실제로 나갔는지 본다
     private java.util.List<Object> saved() {
         entityManager.flush();
