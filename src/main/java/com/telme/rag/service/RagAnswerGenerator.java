@@ -9,6 +9,7 @@ import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
+import com.telme.rag.exception.AnswerGuardException;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -61,8 +62,18 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         CollectingHandler collector =
                 new CollectingHandler(handler, answerGuard, answerEvidence, request.userQuery());
-        llmClient.stream(llmRequest, collector);
-        collector.rethrowIfFailed();
+        try {
+            llmClient.stream(llmRequest, collector);
+            collector.rethrowIfFailed();
+        } catch (AnswerGuardException rejection) {
+            if (collector.rejection != rejection) {
+                throw rejection;
+            }
+            // 검사 예외는 기록 클라이언트까지 전달해 실패로 남긴 뒤 기존 안전 안내로 완료한다.
+            log.warn("[RagAnswerGenerator] Guard 차단으로 안전 안내 반환 executionId={} reason={}",
+                    request.executionId(), rejection.getMessage());
+            collector.deliverSafeAnswer();
+        }
 
         String answer = collector.answer();
 
@@ -110,7 +121,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         }
     }
 
-    // stream()이 값을 반환하지 않아 최종 답변을 모으기 위한 래퍼
+    // 원문 토큰은 보관만 하고 Guard가 검증한 최종 답변만 외부로 전달한다.
     private static final class CollectingHandler implements LlmStreamHandler {
 
         private final LlmStreamHandler delegate;
@@ -120,6 +131,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         private final StringBuilder collected = new StringBuilder();
         private String answer = "";
         private RuntimeException failure;
+        private AnswerGuardException rejection;
+        private boolean terminal;
 
         private CollectingHandler(
                 LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery) {
@@ -131,31 +144,61 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         @Override
         public void onToken(String token) {
+            if (terminal) {
+                return;
+            }
+            delegate.onProgress();
             collected.append(token);
-            delegate.onToken(token);
         }
 
         // 여기서 검사해야 호출 기록이 실패로 남는다. stream()이 끝난 뒤에 막으면 SUCCESS가 이미 들어간다
         @Override
         public void onComplete() {
-            answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+            if (terminal) {
+                return;
+            }
+            try {
+                answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+            } catch (AnswerGuardException exception) {
+                rejection = exception;
+                throw exception;
+            }
+            delegate.onToken(answer);
             delegate.onComplete();
+            terminal = true;
         }
 
         @Override
         public void onError(Throwable error) {
+            if (terminal) {
+                return;
+            }
+            terminal = true;
             // 여기서 바로 던지면 LLM 클라이언트 내부에서 터짐. 보관 후 stream() 종료 뒤 전달
             failure = error instanceof RuntimeException runtime
                     ? runtime
                     : new IllegalStateException(error);
-            delegate.onError(error);
+            if (error != rejection) {
+                delegate.onError(error);
+            }
         }
 
         @Override
         public void onRetry(int attempt, Throwable cause) {
+            if (terminal) {
+                return;
+            }
             // 재시도는 처음부터 다시 생성. 앞서 모은 토큰 폐기
             collected.setLength(0);
             delegate.onRetry(attempt, cause);
+        }
+
+        private void deliverSafeAnswer() {
+            terminal = true;
+            collected.setLength(0);
+            answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+            delegate.onToken(answer);
+            delegate.onComplete();
         }
 
         private String answer() {

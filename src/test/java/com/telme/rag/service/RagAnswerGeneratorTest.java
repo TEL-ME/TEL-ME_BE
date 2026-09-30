@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.rag.config.EvidenceCheckProperties;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
-import com.telme.rag.exception.AnswerGuardException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +50,7 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
-    @DisplayName("토큰을 handler로 보내면서 최종 답변을 모아 반환한다")
+    @DisplayName("모은 토큰을 Guard로 검증한 뒤 최종 답변을 handler에 전달한다")
     void 토큰을_모아_답변을_만든다() {
         RagAnswerGenerator generator = generator(new StubClient(List.of("요금제는 ", "한 달에 한 번 ", "변경됩니다.")));
 
@@ -59,7 +58,7 @@ class RagAnswerGeneratorTest {
 
         assertThat(result.answer()).isEqualTo("요금제는 한 달에 한 번 변경됩니다.");
         assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
-        assertThat(handler.tokens).containsExactly("요금제는 ", "한 달에 한 번 ", "변경됩니다.");
+        assertThat(handler.tokens).containsExactly(result.answer());
         assertThat(handler.completed).isTrue();
     }
 
@@ -185,19 +184,22 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
-    @DisplayName("사용자 질문의 금액을 근거 없이 확정한 답변은 생성 완료로 처리하지 않는다")
-    void 질문의_금액을_사실로_확정하면_생성_완료하지_않는다() {
+    @DisplayName("사용자 질문의 금액을 근거 없이 확정한 답변 대신 안전 안내를 반환한다")
+    void 질문의_금액을_사실로_확정하면_안전_안내를_반환한다() {
         RagAnswerGenerator generator = generator(
                 new StubClient(List.of("네, 5일 로밍 요금은 총 84,700원입니다.")));
         AnswerRequest request = request(
                 "5일 로밍 요금이 84,700원 맞나요?",
                 List.of(faq(1L, "데이터 무제한 로밍은 하루 12,100원입니다.")));
 
-        assertThatThrownBy(() -> generator.generate(request, handler))
-                .isInstanceOf(AnswerGuardException.class)
-                .hasMessageContaining("84700");
+        AnswerResult result = generator.generate(request, handler);
 
-        assertThat(handler.completed).isFalse();
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(result.answer());
+        assertThat(handler.error).isNull();
+
+        assertThat(handler.completed).isTrue();
     }
 
     @Test
@@ -227,9 +229,12 @@ class RagAnswerGeneratorTest {
                         "5일 로밍 요금이 84,700원인가요?",
                         "데이터 무제한 로밍은 하루 12,100원입니다.")));
 
-        assertThatThrownBy(() -> generator.generate(request, handler))
-                .isInstanceOf(AnswerGuardException.class)
-                .hasMessageContaining("84700");
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(result.answer());
+        assertThat(handler.error).isNull();
     }
 
     @Test
@@ -412,9 +417,12 @@ class RagAnswerGeneratorTest {
                 "4년 전 요금납부확인서를 발급할 수 있나요?",
                 List.of(faq(1L, "통화기록은 최근 3년분까지만 조회할 수 있습니다.")));
 
-        assertThatThrownBy(() -> generator.generate(request, handler))
-                .isInstanceOf(AnswerGuardException.class)
-                .hasMessageContaining("4년");
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(result.answer());
+        assertThat(handler.error).isNull();
     }
 
     private RagAnswerGenerator generator(LlmClient client) {
