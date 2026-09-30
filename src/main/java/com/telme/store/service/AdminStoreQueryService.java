@@ -5,9 +5,11 @@ import com.telme.store.converter.AdminStoreConverter;
 import com.telme.store.dto.req.AdminStoreSearchRequest;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
+import com.telme.store.dto.res.AdminStoreServiceResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.repository.StoreRepository;
+import com.telme.store.repository.StoreServiceTypeRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,7 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminStoreQueryService {
 
     private final StoreRepository storeRepository;
+    private final StoreServiceTypeRepository serviceTypeRepository;
     private final AdminStoreConverter converter;
+    
+    public List<AdminStoreServiceResponse> getServiceTypes() {
+        return converter.toServiceTypes(serviceTypeRepository.findAllByOrderByServiceTypeIdAsc());
+    }
     
     public AdminStoreListResponse getStores(AdminStoreSearchRequest request) {
         Page<Long> storeIds = storeRepository.findAdminStoreIds(

@@ -64,6 +64,13 @@ public class AdminStoreConverter {
                 .toList();
     }
     
+    // 체크박스 선택지도 목록·상세의 업무와 같은 {code, name} 모양으로 준다
+    public List<AdminStoreServiceResponse> toServiceTypes(List<StoreServiceType> types) {
+        return types.stream()
+                .map(type -> new AdminStoreServiceResponse(type.getCode().name(), type.getName()))
+                .toList();
+    }
+    
     // 조회할 때마다 업무 표시 순서가 바뀌지 않도록 id 순으로 고정한다
     private List<AdminStoreServiceResponse> toServices(Store store) {
         return store.getServices().stream()

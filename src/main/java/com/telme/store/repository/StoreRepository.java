@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +33,10 @@ public interface StoreRepository extends JpaRepository<Store, Long>{
             where s.storeId in :storeIds
             """)
     List<Store> findAllWithServicesByIdIn(@Param("storeIds") Collection<Long> storeIds);
+    
+    // 영업시간·업무만 바꾸면 stores 행에는 UPDATE가 나가지 않아 updated_at이 그대로다.
+    // 저장했으면 수정 시각을 올린다. 대기 중인 변경을 먼저 반영하고, 끝나면 영속성 컨텍스트를 비운다
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE stores SET updated_at = now() WHERE store_id = :storeId", nativeQuery = true)
+    int touch(@Param("storeId") Long storeId);
 }
