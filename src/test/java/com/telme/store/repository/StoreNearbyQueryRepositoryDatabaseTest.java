@@ -26,8 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 // 필터 없는 KNN과 필터가 있을 때의 반경 검색이 같은 데이터에서 같은 결과를 내는지 확인한다.
-// KNN은 반경 없이 가장 가까운 매장을 찾으므로 멀리 있는 시드 매장이 섞이지 않게 요청 개수를 테스트 매장 수에 맞추고,
-// 반경 규칙은 반경 검색에서만 확인한다
+// 모든 경로가 반경을 적용하므로 반경 규칙은 필터 유무와 관계없이 같다
 // 시드 매장(dev-migration)과 섞이지 않도록 매장이 없는 서해 해상 좌표를 기준점으로 쓰고, 트랜잭션 롤백으로 흔적을 남기지 않는다
 @SpringBootTest
 @Transactional
@@ -94,10 +93,10 @@ class StoreNearbyQueryRepositoryDatabaseTest {
                 .extracting(StoreNearbyQueryRepository.Row::storeId).containsExactly(open);
     }
 
-    @Test
-    @DisplayName("반경 검색: 반경 밖 매장은 방향과 관계없이 제외하고, 대각선 경계 근처 매장은 포함한다")
-    void 반경_경계() {
-        Method method = Method.MATCHING_WITHIN_RADIUS;
+    @ParameterizedTest
+    @EnumSource(value = Method.class, names = {"NEAREST", "MATCHING_WITHIN_RADIUS"})
+    @DisplayName("반경 밖 매장은 방향과 관계없이 제외하고, 대각선 경계 근처 매장은 포함한다")
+    void 반경_경계(Method method) {
         long inside = insertStore(BASE_LATITUDE + 0.008, BASE_LONGITUDE, "OPEN");
         // 북동쪽 약 992m
         long diagonal = insertStore(BASE_LATITUDE + 0.0063, BASE_LONGITUDE + 0.0078, "OPEN");
@@ -109,22 +108,15 @@ class StoreNearbyQueryRepositoryDatabaseTest {
                 .extracting(StoreNearbyQueryRepository.Row::storeId).containsExactly(inside, diagonal);
     }
 
-    @Test
-    @DisplayName("반경 검색: 반경 안에 매장이 없으면 빈 목록을 반환한다")
-    void 반경_안에_없으면_빈_목록() {
+    @ParameterizedTest
+    @EnumSource(value = Method.class, names = {"NEAREST", "MATCHING_WITHIN_RADIUS"})
+    @DisplayName("반경 안에 매장이 없으면 멀리 있는 매장이 있어도 빈 목록을 반환한다")
+    void 반경_안에_없으면_빈_목록(Method method) {
+        // 약 5.5km, 약 50km 떨어진 매장. 반경 1km라 둘 다 빠진다
         insertStore(BASE_LATITUDE + 0.05, BASE_LONGITUDE, "OPEN");
+        insertStore(BASE_LATITUDE + 0.45, BASE_LONGITUDE, "OPEN");
 
-        assertThat(search(Method.MATCHING_WITHIN_RADIUS, 1000, 20, List.of())).isEmpty();
-    }
-
-    @Test
-    @DisplayName("KNN: 반경과 관계없이 가장 가까운 영업 매장을 반환한다")
-    void KNN은_반경을_보지_않는다() {
-        // 약 50km 떨어진 매장
-        long far = insertStore(BASE_LATITUDE + 0.45, BASE_LONGITUDE, "OPEN");
-
-        assertThat(search(Method.NEAREST, 1000, 1, List.of()))
-                .extracting(StoreNearbyQueryRepository.Row::storeId).containsExactly(far);
+        assertThat(search(method, 1000, 20, List.of())).isEmpty();
     }
 
     @ParameterizedTest

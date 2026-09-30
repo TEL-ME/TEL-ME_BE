@@ -63,7 +63,7 @@ public class StoreSearchService {
                 .toList();
     }
 
-    // 필터 없음: 반경 없이 KNN으로 가장 가까운 곳부터 찾는다.
+    // 필터 없음: 영업 매장 인덱스에서 KNN으로 가장 가까운 곳부터 찾고 반경(기본 10km) 밖은 뺀다.
     // 정적 필터(업무 종류 등 매장 태그)만 있음: (geog, tags) 공간 인덱스에서 KNN 후 반경으로 거른다.
     // 동적 필터(영업 중)가 섞임: 인덱스로 만들 수 없어 searchWithDynamicConditions 로 간다
     private List<StoreNearbyQueryRepository.Row> search(StoreNearbyQueryRepository.Query query) {

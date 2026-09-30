@@ -17,8 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 // 시드 매장(dev-migration)과 섞이지 않도록 매장이 없는 서해 해상 좌표를 기준점으로 쓴다.
-// 필터 없는 검색은 반경 없이 가장 가까운 매장을 찾으므로, 멀리 있는 시드 매장이 섞이지 않게 요청 개수를 테스트 매장 수에 맞춘다.
-// 반경 규칙은 필터 있는 검색에만 적용되므로 반경 테스트는 업무 조건을 걸어 확인한다.
+// 반경은 필터 유무와 관계없이 적용된다(반경을 비우면 설정 기본값 10km).
 // 각 테스트는 트랜잭션 롤백으로 DB에 흔적을 남기지 않는다
 @SpringBootTest
 @Transactional
@@ -71,15 +70,15 @@ class StoreSearchServiceDatabaseTest {
     }
 
     @Test
-    @DisplayName("필터 없음: 반경과 관계없이 가장 가까운 매장을 반환한다")
-    void 반경_밖이어도_가장_가까운_매장() {
-        // 약 50km 떨어진 매장. 필터 있는 검색이라면 반경 1km 밖이라 빠진다
-        long far = insertStore("50km 매장", BASE_LATITUDE + 0.45, BASE_LONGITUDE, "OPEN");
+    @DisplayName("필터 없음: 반경 밖 매장은 가장 가까워도 빼고, 반경을 비우면 기본값 10km로 찾는다")
+    void 필터_없어도_반경_밖은_뺀다() {
+        // 약 5.5km 떨어진 매장. 반경 1km면 빠지고, 반경을 비우면(10km) 나온다
+        long near = insertStore("5.5km 매장", BASE_LATITUDE + 0.05, BASE_LONGITUDE, "OPEN");
+        // 약 50km 떨어진 매장. 기본값 10km 밖이라 어떤 경우에도 빠진다
+        insertStore("50km 매장", BASE_LATITUDE + 0.45, BASE_LONGITUDE, "OPEN");
 
-        List<StoreNearbyResponse> result = search(1000, 1, null);
-
-        assertThat(result).extracting(StoreNearbyResponse::storeId).containsExactly(far);
-        assertThat(result.get(0).distanceMeters()).isGreaterThan(49_000);
+        assertThat(search(1000, 5, null)).isEmpty();
+        assertThat(search(null, 5, null)).extracting(StoreNearbyResponse::storeId).containsExactly(near);
     }
 
     @Test

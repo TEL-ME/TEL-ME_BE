@@ -41,12 +41,13 @@ public class StoreNearbyQueryRepository {
         this.jdbc = new NamedParameterJdbcTemplate(template);
     }
 
-    // 필터가 없을 때. 반경 없이 KNN으로 가까운 순서대로 꺼내다 limit개를 채우면 멈춘다.
+    // 필터가 없을 때. KNN으로 가까운 순서대로 꺼내다 limit개를 채우면 멈추고, 반경(기본 10km) 밖은 뺀다.
+    // 반경 안에 매장이 없으면 빈 목록이다
     public List<Row> findNearest(Query query) {
         if (!query.conditions().isEmpty()) {
             throw new IllegalArgumentException("조건이 있는 검색은 findNearest로 처리하지 않습니다.");
         }
-        return jdbc.query(nearestSql("", false), baseParameters(query), this::mapRow);
+        return jdbc.query(nearestSql("", true), baseParameters(query), this::mapRow);
     }
 
     // 정적 조건(매장 태그)만 있을 때.

@@ -6,7 +6,7 @@
 
 | 요청 | 경로 | 인덱스 |
 | --- | --- | --- |
-| 필터 없음 | `StoreNearbyQueryRepository.findNearest` (반경 없는 KNN) | `idx_stores_geog_open` (V15) |
+| 필터 없음 | `StoreNearbyQueryRepository.findNearest` (KNN 후 반경으로 거름) | `idx_stores_geog_open` (V15) |
 | 정적 조건만 (업무 종류 등) | `findNearestMatching` (태그 인덱스 KNN → 반경) | `idx_stores_geog_tags` (V16) |
 | 동적 조건 섞임 (영업 중) | `findNearestCandidatesMatching` → 모자라면 `findMatchingWithinRadius` | 위 두 인덱스 + `store_hours` 기본키 |
 
