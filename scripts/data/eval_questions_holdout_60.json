@@ -616,13 +616,13 @@
     "category": "PORTING",
     "type": "UNRELATED",
     "unrelated_kind": "ADJACENT_HARD",
-    "question": "번호이동이 가능해지는 3개월은 개통일부터 세나요, 첫 청구일부터 세나요?",
+    "question": "번호이동을 처리하는 동안에도 기존 번호로 전화와 문자를 계속 쓸 수 있나요?",
     "expected_slot_id": null,
     "related_slot_id": [
-      "PORTING-0011",
-      "PORTING-0027"
+      "PORTING-0001",
+      "PORTING-0005"
     ],
-    "note": "관련 FAQ는 개통 후 3개월이 지나야 가능하다고만 안내하며 기산 시점의 기준은 다루지 않음"
+    "note": "관련 FAQ는 번호이동 처리 시간과 처리 가능 시간대만 안내하며 처리 중 기존 회선의 통화·문자 사용 가능 여부는 다루지 않음"
   },
   {
     "eval_id": "H-089",
@@ -746,13 +746,13 @@
     "category": "SERVICE",
     "type": "UNRELATED",
     "unrelated_kind": "ADJACENT_HARD",
-    "question": "멤버십 등급은 언제 다시 산정돼요?",
+    "question": "멤버십 포인트를 다른 회원에게 선물할 수 있나요?",
     "expected_slot_id": null,
     "related_slot_id": [
       "SERVICE-0007",
       "SERVICE-0022"
     ],
-    "note": "관련 FAQ는 4개 등급과 직전 1년 납부 금액 기준만 설명하며 등급 재산정 시점이나 주기는 다루지 않음"
+    "note": "관련 FAQ는 멤버십 등급과 산정·갱신 기준만 설명하며 포인트를 다른 회원에게 양도하는 기능은 다루지 않음"
   },
   {
     "eval_id": "H-099",
