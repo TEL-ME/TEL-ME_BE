@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -73,6 +74,28 @@ public class MessageFeedback {
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false, insertable = false)
+    // trg_message_feedback_updated_at이 채우므로 JPA가 낡은 값을 같이 보내지 않게 막는다
+    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
+
+    // 관리자가 조치를 끝낸 시각. 비어 있으면 아직 처리하지 않은 건이다
+    @Column(name = "handled_at")
+    private Instant handledAt;
+
+    @Column(name = "handled_by")
+    private Long handledBy;
+
+    @Column(name = "handled_note", columnDefinition = "TEXT")
+    private String handledNote;
+
+    public boolean isHandled() {
+        return handledAt != null;
+    }
+
+    // 시각 의존 테스트가 가능하도록 Clock을 받는다 (Guest.issue와 같은 이유)
+    public void markHandled(Long adminId, String note, Clock clock) {
+        this.handledAt = clock.instant();
+        this.handledBy = adminId;
+        this.handledNote = note;
+    }
 }
