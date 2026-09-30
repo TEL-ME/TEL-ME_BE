@@ -9,9 +9,11 @@ import com.telme.feedback.repository.AdminFeedbackRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.repository.MessageSourceRepository;
 import java.time.Clock;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,13 +32,14 @@ public class AdminFeedbackCommandService {
     public AdminFeedbackDetailResponse changeHandled(
             Long feedbackId, AdminFeedbackHandleRequest request, Long adminId) {
         MessageFeedback feedback = findDislike(feedbackId);
+        rejectStaleHandle(feedback, request.updatedAt());
 
         if (request.handled()) {
             feedback.markHandled(adminId, request.note(), clock);
         } else {
             feedback.markUnhandled();
         }
-        flushOrRejectRatingChange();
+        flushOrRejectConflict();
         log.info("[AdminFeedback] 처리 표시 feedbackId={} handled={} adminId={}",
                 feedbackId, request.handled(), adminId);
 
@@ -46,13 +49,24 @@ public class AdminFeedbackCommandService {
                         feedback.getMessage().getMessageId()));
     }
 
-    // 읽은 뒤 사용자가 좋아요로 바꿨으면 ck_feedback_handled_dislike_only에 걸린다.
+    // 상세를 본 뒤 사용자가 고쳤으면 읽지 않은 내용이 처리 완료로 사라진다.
+    // 화면이 들고 있던 수정 시각과 맞춰 본다. 값을 안 보내면 검사하지 않는다
+    private void rejectStaleHandle(MessageFeedback feedback, Instant updatedAt) {
+        if (updatedAt != null && !updatedAt.equals(feedback.getUpdatedAt())) {
+            throw new GeneralException(FeedbackErrorCode.FEEDBACK_CHANGED);
+        }
+    }
+
+    // 좋아요로 바뀌면 제약에, 평가가 취소돼 행이 사라졌으면 잠금 실패로 온다.
     // 커밋까지 미루면 여기서 안 잡혀 500으로 나가므로 지금 확정한다
-    private void flushOrRejectRatingChange() {
+    private void flushOrRejectConflict() {
         try {
             feedbackRepository.flush();
         } catch (DataIntegrityViolationException e) {
-            throw new GeneralException(FeedbackErrorCode.RATING_CHANGED);
+            throw new GeneralException(FeedbackErrorCode.FEEDBACK_CHANGED);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // 취소한 평가는 관리자 화면에서 사라져야 해 조회와 같은 응답으로 돌려준다
+            throw new GeneralException(FeedbackErrorCode.FEEDBACK_NOT_FOUND);
         }
     }
 

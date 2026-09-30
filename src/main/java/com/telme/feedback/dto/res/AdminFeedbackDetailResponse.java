@@ -8,6 +8,7 @@ public record AdminFeedbackDetailResponse(
         String reasonCode,
         String comment,
         Instant createdAt,
+        Instant updatedAt,
         boolean handled,
         Instant handledAt,
         Long handledBy,

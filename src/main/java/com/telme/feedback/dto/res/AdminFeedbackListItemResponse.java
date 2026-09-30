@@ -9,6 +9,7 @@ public record AdminFeedbackListItemResponse(
         String questionPreview,
         String commentPreview,
         Instant createdAt,
+        Instant updatedAt,
         boolean handled
 ) {
 }

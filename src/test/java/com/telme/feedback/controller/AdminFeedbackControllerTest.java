@@ -160,13 +160,13 @@ class AdminFeedbackControllerTest {
     private AdminFeedbackListResponse listResponse() {
         return new AdminFeedbackListResponse(
                 List.of(new AdminFeedbackListItemResponse(
-                        1L, "WRONG_INFO", "질문입니다.", "틀렸어요", Instant.now(), false)),
+                        1L, "WRONG_INFO", "질문입니다.", "틀렸어요", Instant.now(), Instant.now(), false)),
                 0, 20, 1, 1);
     }
 
     private AdminFeedbackDetailResponse detail() {
         return new AdminFeedbackDetailResponse(
-                1L, "WRONG_INFO", "틀렸어요", Instant.now(), false, null, null, null,
+                1L, "WRONG_INFO", "틀렸어요", Instant.now(), Instant.now(), false, null, null, null,
                 2L, "질문입니다.", "답변입니다.", "GROUNDED", Instant.now(), List.of());
     }
 }

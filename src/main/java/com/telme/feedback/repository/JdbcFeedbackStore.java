@@ -22,6 +22,10 @@ import java.util.stream.Collectors;
 
 /** PR #7 테이블을 그대로 이용한다. 신규 테이블·엔티티 없음. 인증 통합 전 자동 등록하지 않는다. */
 public final class JdbcFeedbackStore implements FeedbackStore {
+    private static final String CONTENT_CHANGED =
+            "(message_feedback.rating,message_feedback.reason_code,message_feedback.comment)"
+                    + " IS DISTINCT FROM (EXCLUDED.rating,EXCLUDED.reason_code,EXCLUDED.comment)";
+
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
 
@@ -46,9 +50,14 @@ public final class JdbcFeedbackStore implements FeedbackStore {
                                     + column
                                     + " IS NOT NULL DO UPDATE SET"
                                     + " rating=EXCLUDED.rating,reason_code=EXCLUDED.reason_code,comment=EXCLUDED.comment,updated_at=now(),"
-                                    // 관리자가 처리한 뒤 사용자가 평가를 고치면 내용이 달라져 다시 봐야 한다.
-                                    // 좋아요로 바뀌는 경우에는 처리 표시가 남으면 ck_feedback_handled_dislike_only에 걸린다
-                                    + " handled_at=NULL,handled_by=NULL,handled_note=NULL"
+                                    // 내용이 실제로 바뀌면 관리자가 다시 봐야 해 처리 표시를 비운다.
+                                    // comment가 NULL일 수 있어 <>가 아니라 IS DISTINCT FROM으로 비교한다
+                                    + " handled_at=CASE WHEN " + CONTENT_CHANGED + " THEN NULL ELSE"
+                                    + " message_feedback.handled_at END,"
+                                    + " handled_by=CASE WHEN " + CONTENT_CHANGED + " THEN NULL ELSE"
+                                    + " message_feedback.handled_by END,"
+                                    + " handled_note=CASE WHEN " + CONTENT_CHANGED + " THEN NULL ELSE"
+                                    + " message_feedback.handled_note END"
                                     + " RETURNING *";
                     return jdbc.queryForObject(
                             sql,

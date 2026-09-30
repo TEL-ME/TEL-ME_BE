@@ -280,6 +280,17 @@ class FeedbackApiIntegrationTest {
     }
 
     @Test
+    void resendingSameFeedbackKeepsHandledState() throws Exception {
+        String body = "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}";
+        save(owner, answer, body).andExpect(status().isOk());
+        markHandled(answer);
+
+        save(owner, answer, body).andExpect(status().isOk());
+
+        assertEquals(1, handledRows(answer));
+    }
+
+    @Test
     void handledDislikeCanBeChangedToLike() throws Exception {
         save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
                 .andExpect(status().isOk());

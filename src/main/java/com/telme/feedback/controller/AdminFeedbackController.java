@@ -74,14 +74,16 @@ public class AdminFeedbackController {
     @Operation(
             summary = "싫어요 처리 표시",
             description = "처리 시각과 처리자를 남겨 목록에서 빠지게 합니다. handled를 false로 주면 되돌립니다. "
-                    + "같은 건을 다시 보내도 막지 않으며 메모만 고칠 수 있습니다. 처리 후 상세를 그대로 반환합니다.")
+                    + "같은 건을 다시 보내도 막지 않으며 메모만 고칠 수 있습니다. 처리 후 상세를 그대로 반환합니다. "
+                    + "조회에서 받은 updatedAt을 함께 보내면 그 사이 사용자가 고친 경우를 409로 막습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "표시 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON400-1: handled 누락 또는 메모 길이 초과"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
-            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "FEEDBACK409-1: 그 사이 사용자가 평가를 바꿈")
+            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음. "
+                    + "그 사이 사용자가 평가를 취소한 경우를 포함"),
+            @ApiResponse(responseCode = "409", description = "FEEDBACK409-1: 그 사이 사용자가 피드백을 수정함")
     })
     @PutMapping("/{feedbackId}/handled")
     public CustomResponse<AdminFeedbackDetailResponse> changeHandled(

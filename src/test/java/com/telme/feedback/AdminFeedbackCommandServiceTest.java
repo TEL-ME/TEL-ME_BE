@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.feedback.dto.req.AdminFeedbackHandleRequest;
 import com.telme.feedback.dto.res.AdminFeedbackDetailResponse;
+import com.telme.feedback.entity.MessageFeedback;
 import com.telme.feedback.service.AdminFeedbackCommandService;
 import com.telme.global.common.exception.GeneralException;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -102,7 +104,7 @@ class AdminFeedbackCommandServiceTest {
     @DisplayName("읽은 뒤 사용자가 좋아요로 바꿨으면 FEEDBACK409-1을 던진다")
     void 그_사이_좋아요가_되면_막는다() {
         entityManager.flush();
-        entityManager.find(com.telme.feedback.entity.MessageFeedback.class, feedbackId);
+        entityManager.find(MessageFeedback.class, feedbackId);
         userChanges("UPDATE message_feedback SET rating='LIKE', reason_code=NULL, comment=NULL WHERE feedback_id=?");
 
         assertThatThrownBy(() -> service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID))
@@ -113,7 +115,7 @@ class AdminFeedbackCommandServiceTest {
     @DisplayName("읽은 뒤 사용자가 고친 의견을 처리 표시가 덮어쓰지 않는다")
     void 그_사이_고친_의견을_지키다() {
         entityManager.flush();
-        entityManager.find(com.telme.feedback.entity.MessageFeedback.class, feedbackId);
+        entityManager.find(MessageFeedback.class, feedbackId);
         userChanges("UPDATE message_feedback SET comment='사용자가 고친 의견' WHERE feedback_id=?");
 
         service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID);
@@ -122,6 +124,44 @@ class AdminFeedbackCommandServiceTest {
         assertThat(jdbcTemplate.queryForObject(
                         "SELECT comment FROM message_feedback WHERE feedback_id = ?", String.class, feedbackId))
                 .isEqualTo("사용자가 고친 의견");
+    }
+
+    @Test
+    @DisplayName("상세에서 받은 수정 시각을 그대로 보내면 처리된다")
+    void 맞는_수정_시각은_통과한다() {
+        entityManager.flush();
+        Instant updatedAt = service.changeHandled(feedbackId, request(false, null), ADMIN_ID).updatedAt();
+
+        AdminFeedbackDetailResponse detail =
+                service.changeHandled(feedbackId, requestWithUpdatedAt(updatedAt, "처리함"), ADMIN_ID);
+
+        assertThat(detail.handled()).isTrue();
+    }
+
+    @Test
+    @DisplayName("상세를 본 뒤 사용자가 고쳤으면 FEEDBACK409-1을 던진다")
+    void 읽은_뒤_고쳐졌으면_막는다() {
+        entityManager.flush();
+        Instant opened = service.changeHandled(feedbackId, request(false, null), ADMIN_ID).updatedAt();
+
+        // 사용자가 고치면 트리거가 updated_at을 올린다. 테스트는 한 트랜잭션이라
+        // now()가 고정돼 값이 안 변하므로, 화면이 낡은 값을 들고 있는 상태를 직접 만든다
+        Instant beforeUserEdit = opened.minusSeconds(60);
+
+        assertThatThrownBy(() ->
+                        service.changeHandled(feedbackId, requestWithUpdatedAt(beforeUserEdit, "처리함"), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("읽은 뒤 사용자가 평가를 취소했으면 FEEDBACK404-1을 던진다")
+    void 읽은_뒤_취소됐으면_없는_것으로_본다() {
+        entityManager.flush();
+        entityManager.find(MessageFeedback.class, feedbackId);
+        userChanges("DELETE FROM message_feedback WHERE feedback_id = ?");
+
+        assertThatThrownBy(() -> service.changeHandled(feedbackId, request(true, "처리함"), ADMIN_ID))
+                .isInstanceOf(GeneralException.class);
     }
 
     // 관리자가 읽어둔 뒤 사용자가 DB를 바꾼 상황을 만든다.
@@ -142,7 +182,11 @@ class AdminFeedbackCommandServiceTest {
                 feedbackId);
     }
 
+    private AdminFeedbackHandleRequest requestWithUpdatedAt(Instant updatedAt, String note) {
+        return new AdminFeedbackHandleRequest(true, note, updatedAt);
+    }
+
     private AdminFeedbackHandleRequest request(boolean handled, String note) {
-        return new AdminFeedbackHandleRequest(handled, note);
+        return new AdminFeedbackHandleRequest(handled, note, null);
     }
 }

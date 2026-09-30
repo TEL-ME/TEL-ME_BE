@@ -37,6 +37,7 @@ public class AdminFeedbackConverter {
                 preview(question(feedback), QUESTION_PREVIEW_LENGTH),
                 preview(feedback.getComment(), COMMENT_PREVIEW_LENGTH),
                 feedback.getCreatedAt(),
+                feedback.getUpdatedAt(),
                 feedback.isHandled());
     }
 
@@ -48,6 +49,7 @@ public class AdminFeedbackConverter {
                 feedback.getReasonCode() == null ? null : feedback.getReasonCode().name(),
                 feedback.getComment(),
                 feedback.getCreatedAt(),
+                feedback.getUpdatedAt(),
                 feedback.isHandled(),
                 feedback.getHandledAt(),
                 feedback.getHandledBy(),
