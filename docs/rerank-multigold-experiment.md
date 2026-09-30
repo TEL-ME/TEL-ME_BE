@@ -78,4 +78,19 @@
 2. 정답 전달 향상과 지연시간 및 모델 배포 비용을 함께 보고 리랭커 적용 여부를 판단해 주세요.
 3. 비슷한 주제지만 근거가 질문의 세부 조건을 답하지 못하는 사례를 후속 근거 적합성 평가에 포함해 주세요.
 
-위 수치는 develop에 아직 없는 리랭커 검색 구현(`search.rerank.enabled` 기본값 `false`)을 로컬에서 띄운 앱으로 측정했다. develop의 코드와 설정은 바뀌지 않았다.
+위 수치는 리랭커 검색 구현(`search.rerank.enabled`, 기본값 `false`)을 로컬에서 띄운 앱으로 측정했다. 이 구현은 이후 develop에 옵션으로 들어갔고, 기본값이 꺼져 있어 설정을 켜기 전에는 검색 동작이 바뀌지 않는다. 다만 의존성(onnxruntime, tokenizers)은 항상 포함되므로 JAR 크기는 꺼 둬도 커진다.
+
+## 리랭커 켜기
+
+| 설정 | 환경변수 | 기본값 |
+| --- | --- | --- |
+| `search.rerank.enabled` | `SEARCH_RERANK_ENABLED` | `false` |
+| `search.rerank.model-path` | `SEARCH_RERANK_MODEL_PATH` | 없음 (켰는데 비어 있으면 기동 실패) |
+| `search.rerank.tokenizer-path` | `SEARCH_RERANK_TOKENIZER_PATH` | 없음 |
+| `search.rerank.candidate-k` | `SEARCH_RERANK_CANDIDATE_K` | 20 |
+| `search.rerank.vector-floor` | `SEARCH_RERANK_VECTOR_FLOOR` | 0.0 |
+| `search.rerank.threshold` | `SEARCH_RERANK_THRESHOLD` | 0.5 |
+
+- 켜면 `Q_A` 벡터 상위 후보만 리랭커로 판정한다. `search.similarity-threshold`와 이중 벡터(`search.dual-vector`)는 쓰지 않는다. 이 문서의 수치는 모두 이 구성으로 쟀다.
+- `threshold`의 기본값 0.5는 측정한 값이 아니다. 이 문서는 0.76에서 쟀고 기준값별 결과는 2절 표에 있으니, 켤 때 그 표를 보고 정한다.
+- 모델은 `BAAI/bge-reranker-v2-m3`를 INT8 ONNX(`onnx/model_quint8_avx2.onnx`)로 내보낸 파일이고, `tokenizer.json`이 함께 필요하다. 이 파일을 만드는 절차는 아직 문서화되지 않았다. 파일 이름의 `avx2`는 CPU 명령어 집합에 맞춘 양자화 파일이라는 뜻이므로, 배포 환경 CPU에서 동작과 지연을 따로 확인해야 한다. 문서화 전까지는 실험에 쓴 파일을 공유받아야 한다.
