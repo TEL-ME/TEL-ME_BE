@@ -286,6 +286,35 @@ class StoreNearbyQueryRepositoryDatabaseTest {
         }
     }
 
+    @Test
+    @DisplayName("태그 동기화는 매장 수정 시각을 바꾸지 않고, 매장 정보를 직접 고치면 바꾼다")
+    void 태그_동기화는_수정_시각을_바꾸지_않는다() {
+        // 한 트랜잭션 안에서는 now()가 같아서, 과거 시각으로 넣어 두고 바뀌는지 본다
+        long storeId = jdbcTemplate.queryForObject("""
+                INSERT INTO stores (name, address, latitude, longitude, status, updated_at)
+                VALUES ('테스트 매장', '테스트 주소', ?, ?, 'OPEN', '2000-01-01T00:00:00Z')
+                RETURNING store_id
+                """, Long.class, BASE_LATITUDE, BASE_LONGITUDE);
+
+        addServices(storeId, StoreServiceType.Code.USIM_REISSUE);
+        assertThat(tags(storeId)).containsExactly(StoreTag.USIM_REISSUE.id());
+        assertThat(updatedAtYear(storeId)).isEqualTo(2000);
+
+        jdbcTemplate.update("UPDATE stores SET name = '바뀐 매장' WHERE store_id = ?", storeId);
+        assertThat(updatedAtYear(storeId)).isNotEqualTo(2000);
+    }
+
+    @Test
+    @DisplayName("업무가 있는 매장을 지우면 업무도 함께 지워진다(태그 트리거가 삭제를 막지 않는다)")
+    void 업무가_있는_매장을_지울_수_있다() {
+        long storeId = insertUsimStore(BASE_LATITUDE, BASE_LONGITUDE);
+
+        jdbcTemplate.update("DELETE FROM stores WHERE store_id = ?", storeId);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM store_services WHERE store_id = ?", Integer.class, storeId)).isZero();
+    }
+
     @ParameterizedTest
     @EnumSource(value = Method.class, names = {"MATCHING_WITHIN_RADIUS", "NEAREST_MATCHING"})
     @DisplayName("정적 조건이 늘어도(업무 외 태그) 같은 태그 조건과 인덱스로 모두 만족하는 매장만 찾는다")
@@ -513,6 +542,12 @@ class StoreNearbyQueryRepositoryDatabaseTest {
                 INSERT INTO store_hours (store_id, day_of_week, open_time, close_time, is_closed)
                 VALUES (?, ?, ?::time, ?::time, ?)
                 """, storeId, dayOfWeek.getValue(), open, close, closed);
+    }
+
+    private int updatedAtYear(long storeId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT extract(year FROM updated_at AT TIME ZONE 'UTC')::int FROM stores WHERE store_id = ?",
+                Integer.class, storeId);
     }
 
     private List<Integer> tags(long storeId) {

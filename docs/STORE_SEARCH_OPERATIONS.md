@@ -43,7 +43,7 @@ SELECT postgis_full_version();
 | --- | --- | --- |
 | DB 원천 | 새 테이블 (예: `store_attributes(store_id, code)`) | 조건의 원천 데이터를 둔다. `store_id` 컬럼이 있어야 2.2의 트리거를 그대로 쓸 수 있다 |
 | DB 함수 | `store_tags(BIGINT)` (V16) | 새 마이그레이션에서 `CREATE OR REPLACE FUNCTION`으로 원천 테이블을 `UNION ALL`하고 새 태그 번호로 바꾼다 |
-| DB 트리거 | `sync_store_tags()` (V16) | 함수는 그대로 쓰고, 새 원천 테이블에 같은 트리거를 하나 더 건다 |
+| DB 트리거 | `sync_store_tags()` (V16) | 함수는 그대로 쓰고, 새 원천 테이블에 같은 트리거를 하나 더 건다. 함수가 태그를 고치는 동안에는 매장 수정 시각(`updated_at`)을 바꾸지 않는다 |
 | DB 데이터 | `stores.tags` | 새 마이그레이션 끝에서 기존 매장 태그를 다시 계산한다 |
 | Java 태그 | `store/repository/StoreTag.java` | 새 상수와 번호를 더한다(예: `PARKING(101)`). 이미 쓴 번호는 절대 바꾸지 않는다 |
 | Java 요청 | `store/dto/req/StoreNearbySearchRequest.java` | 새 조건을 받을 필드를 더한다(예: `Set<StoreAttribute.Code> attributes`) |

@@ -22,16 +22,30 @@ FROM (SELECT CASE sst.code
 WHERE t.tag IS NOT NULL
 $$;
 
+-- 태그만 고칠 때는 매장 수정 시각(updated_at)을 바꾸지 않는다. 태그는 store_services에서 계산되는 값이라
+-- 관리자가 매장 정보를 고친 시각과 섞이면 안 된다. ALTER TABLE ... DISABLE TRIGGER로 끄면 매장 삭제가 store_services를
+-- CASCADE로 지울 때 "cannot ALTER TABLE stores because it is being used by active queries"로 삭제가 실패하고
+-- 트랜잭션이 끝날 때까지 stores 쓰기 잠금이 남아서, 트랜잭션 안에서만 보이는 설정값을 태그 갱신 동안만 켠다
+DROP TRIGGER trg_stores_updated_at ON stores;
+
+CREATE TRIGGER trg_stores_updated_at
+    BEFORE UPDATE ON stores
+    FOR EACH ROW
+    WHEN (current_setting('telme.skip_stores_updated_at', true) IS DISTINCT FROM 'on')
+EXECUTE FUNCTION set_updated_at();
+
 CREATE FUNCTION sync_store_tags() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $$
 BEGIN
+    PERFORM set_config('telme.skip_stores_updated_at', 'on', true);
     IF TG_OP IN ('INSERT', 'UPDATE') THEN
         UPDATE stores SET tags = store_tags(NEW.store_id) WHERE store_id = NEW.store_id;
     END IF;
     IF TG_OP IN ('DELETE', 'UPDATE') THEN
         UPDATE stores SET tags = store_tags(OLD.store_id) WHERE store_id = OLD.store_id;
     END IF;
+    PERFORM set_config('telme.skip_stores_updated_at', 'off', true);
     RETURN NULL;
 END
 $$;
@@ -41,8 +55,11 @@ CREATE TRIGGER trg_store_services_tags
     FOR EACH ROW
 EXECUTE FUNCTION sync_store_tags();
 
+-- 기존 매장 태그 채우기도 태그만 고치는 갱신이라 수정 시각을 바꾸지 않는다
+SELECT set_config('telme.skip_stores_updated_at', 'on', true);
 UPDATE stores s SET tags = store_tags(s.store_id)
 WHERE EXISTS (SELECT 1 FROM store_services ss WHERE ss.store_id = s.store_id);
+SELECT set_config('telme.skip_stores_updated_at', 'off', true);
 
 -- 영업 중 매장의 위치와 태그. 태그 조건은 인덱스 안에서 걸러진다(KNN)
 CREATE INDEX idx_stores_geog_tags ON stores USING gist (geog, tags gist__int_ops) WHERE status = 'OPEN';
