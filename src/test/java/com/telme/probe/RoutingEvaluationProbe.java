@@ -111,17 +111,24 @@ class RoutingEvaluationProbe {
                 IntentRouteResponse route = service.routeSingleConsult(message, context);
                 row.put("intent", route.intent().name());
                 row.put("intent_matches", route.intent().name().equals(expectedIntent));
+                row.put("compound_guidance", false);
                 row.put("method", route.method().name());
                 row.put("confidence", route.confidence());
                 row.put("search_query", route.subQueries().isEmpty()
                         ? null : route.subQueries().getFirst().queryText());
                 row.put("refined_query", route.refinedQuery());
             } catch (UnsupportedCompoundQuestionException exception) {
-                row.put("intent", "COMPOUND_GUIDANCE");
-                row.put("intent_matches", "BOTH".equals(expectedIntent));
+                // 복합 질문 안내는 BOTH뿐 아니라 하위 질문 intent가 섞인 경우에도 나온다.
+                // 안내 여부와 분류 정확도를 섞지 않도록, 채점은 모델이 실제로 낸 intent로 한다
+                String modelIntent = modelIntent(client.lastResponse);
+                row.put("intent", modelIntent);
+                row.put("intent_matches", modelIntent.equals(expectedIntent));
+                row.put("compound_guidance", true);
+                row.put("sub_intents", modelSubIntents(client.lastResponse));
             } catch (RuntimeException exception) {
                 row.put("intent", "ERROR");
                 row.put("intent_matches", false);
+                row.put("compound_guidance", false);
                 row.put("error", exception.getClass().getSimpleName() + ": " + exception.getMessage());
             }
             row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
@@ -178,6 +185,7 @@ class RoutingEvaluationProbe {
     private void writeResult(List<Map<String, Object>> records) throws Exception {
         Map<String, Map<String, Integer>> byExpectedIntent = new LinkedHashMap<>();
         Map<String, Map<String, Integer>> confusion = new LinkedHashMap<>();
+        Map<String, Integer> compoundGuidance = new LinkedHashMap<>();
         int matches = 0;
         for (Map<String, Object> row : records) {
             String expectedIntent = row.get("expected_intent").toString();
@@ -196,17 +204,43 @@ class RoutingEvaluationProbe {
             }
             confusion.computeIfAbsent(expectedIntent, ignored -> new LinkedHashMap<>())
                     .merge(actualIntent, 1, Integer::sum);
+            if (Boolean.TRUE.equals(row.get("compound_guidance"))) {
+                compoundGuidance.merge(expectedIntent, 1, Integer::sum);
+            }
         }
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("total", records.size());
         summary.put("matches", matches);
         summary.put("by_expected_intent", byExpectedIntent);
         summary.put("confusion", confusion);
+        // 기대 intent별로 복합 질문 안내가 나간 건수. 분류 정확도(matches)와 따로 본다
+        summary.put("compound_guidance_by_expected_intent", compoundGuidance);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summary", summary);
         result.put("records", records);
         Files.createDirectories(OUTPUT.getParent());
         mapper.writerWithDefaultPrettyPrinter().writeValue(OUTPUT.toFile(), result);
+    }
+
+    // 복합 질문 안내로 끝나면 라우팅 결과가 없으므로 모델 원 응답에서 intent를 읽는다
+    private String modelIntent(String response) {
+        try {
+            String intent = mapper.readTree(response).path("intent").asText("");
+            return intent.isBlank() ? "PARSE_ERROR" : intent;
+        } catch (Exception exception) {
+            return "PARSE_ERROR";
+        }
+    }
+
+    private List<String> modelSubIntents(String response) {
+        List<String> intents = new ArrayList<>();
+        try {
+            mapper.readTree(response).path("subQueries")
+                    .forEach(sub -> intents.add(sub.path("intent").asText("")));
+        } catch (Exception ignored) {
+            // 원 응답을 읽지 못하면 빈 목록으로 남긴다. intent는 PARSE_ERROR로 이미 불일치 처리된다
+        }
+        return intents;
     }
 
     private static final class LocalOllamaClient implements LlmClient {
