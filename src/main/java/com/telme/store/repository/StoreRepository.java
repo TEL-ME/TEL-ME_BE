@@ -6,10 +6,11 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface StoreRepository extends JpaRepository<Store, Long>{
+public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecificationExecutor<Store> {
     // 검색어가 없으면 "%", 상태 필터가 ALL이면 모든 상태가 넘어온다. 검색어의 %와 _는 호출부에서 역슬래시로 막아 보낸다
     String ADMIN_FILTER = """
             where (lower(s.name) like :keyword escape '\\'
