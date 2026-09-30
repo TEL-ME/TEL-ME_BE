@@ -7,6 +7,8 @@ import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.consult.exception.FaqAnswerSearchException;
+import com.telme.llm.exception.LlmStreamCancelledException;
 
 import java.util.List;
 import java.util.Objects;
@@ -46,7 +48,14 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     private List<FaqSearchResponse> search(String query) {
-        return List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
+        try {
+            return List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
+        } catch (LlmStreamCancelledException cancelled) {
+            throw cancelled;
+        } catch (RuntimeException failure) {
+            // 빈 목록은 근거 없음이다. 호출·응답 계약 실패는 원인을 보존해 별도로 종료한다.
+            throw new FaqAnswerSearchException(failure);
+        }
     }
 
     /** RAG 구현과의 경계다. 검색 결과가 없어도 답변 불가 처리를 위해 호출한다. */

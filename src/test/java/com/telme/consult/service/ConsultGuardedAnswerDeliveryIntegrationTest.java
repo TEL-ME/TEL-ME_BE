@@ -27,6 +27,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
@@ -47,11 +48,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -200,6 +203,10 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(emitter.tokens()).containsExactly(historyAnswer().content());
         assertThat(historyAnswer().answerBasis()).isEqualTo("NO_EVIDENCE");
         assertThat(emitter.names()).containsExactly("start", "token", "complete");
+        assertThat(historyAnswer().content()).isNotBlank();
+        assertCompletedHistory(historyAnswer().content(), "NO_EVIDENCE");
+        assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
+                String.class, executionId)).allMatch("NO_EVIDENCE"::equals);
     }
 
     @ParameterizedTest
@@ -391,6 +398,134 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(replay).doesNotContain("event:complete", "event:token", SUPPORTED);
         assertThat(emitters.isRegistered(executionId)).isFalse();
         assertFailedHistory("FAILED", LlmErrorCode.TIMEOUT.getCode());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmErrorCode.class, names = {"MODEL_ERROR", "TIMEOUT", "CONNECTION_FAILED"})
+    void exhaustedModelFailureTerminatesOnceWithReadableGuidance(LlmErrorCode code) {
+        var attempts = new AtomicInteger();
+        script = stream -> {
+            attempts.incrementAndGet();
+            stream.onError(new GeneralException(code));
+        };
+        processor.request(command);
+
+        int expectedAttempts = code == LlmErrorCode.MODEL_ERROR ? 1 : 2;
+        assertThat(attempts.get()).isEqualTo(expectedAttempts);
+        assertThat(emitter.tokens()).isEmpty();
+        assertThat(emitter.names()).endsWith("error").doesNotContain("complete");
+        assertThat(emitter.names().stream().filter("error"::equals).count()).isEqualTo(1);
+        assertFailedHistory("FAILED", code.getCode());
+        assertThat(jdbc.queryForList(
+                "SELECT status FROM llm_generations WHERE execution_id=? ORDER BY attempt",
+                String.class, executionId)).hasSize(expectedAttempts)
+                .allMatch(status -> status.equals(code.name()));
+        assertReadableFailureGuidance();
+    }
+
+    @Test
+    void synchronousTimeoutBeforeFirstTokenUsesSameRetryAndRecordingPath() {
+        var attempts = new AtomicInteger();
+        script = stream -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new GeneralException(LlmErrorCode.TIMEOUT);
+            }
+            stream.onToken(SUPPORTED);
+            stream.onComplete();
+        };
+        processor.request(command);
+
+        assertThat(attempts.get()).isEqualTo(2);
+        assertCompleted(SUPPORTED, "GROUNDED", "start", "status", "token", "complete");
+        assertThat(jdbc.queryForList(
+                "SELECT status FROM llm_generations WHERE execution_id=? ORDER BY attempt",
+                String.class, executionId)).containsExactly("TIMEOUT", "SUCCESS");
+    }
+
+    @ParameterizedTest
+    @MethodSource("searchFailures")
+    void searchSystemFailureIsDistinctFromNoEvidenceAndDoesNotCallModel(RuntimeException failure) {
+        when(search.search(any())).thenThrow(failure);
+        processor.request(command);
+
+        verify(model, never()).stream(any(), any());
+        assertThat(emitter.tokens()).isEmpty();
+        assertThat(emitter.names()).containsExactly("start", "error");
+        assertFailedHistory("FAILED", "FAQ_SEARCH_FAILED");
+        assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
+                String.class, executionId)).isEmpty();
+        assertReadableFailureGuidance();
+    }
+
+    static Stream<RuntimeException> searchFailures() {
+        return Stream.of(new DataAccessResourceFailureException("internal-search-detail"),
+                new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED));
+    }
+
+    @Test
+    void refinedSearchFailureAfterEmptyOriginalSearchIsNotReportedAsNoEvidence() {
+        var prepared = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        when(analyzer.analyze(command)).thenReturn(new AnalyzedTurn(prepared, null,
+                Purpose.GENERAL_FAQ, QUERY, "유심 배송비 포함 여부"));
+        when(search.search(any())).thenReturn(List.of())
+                .thenThrow(new IllegalStateException("internal-search-detail"));
+        processor.request(command);
+
+        verify(search, org.mockito.Mockito.times(2)).search(any());
+        verify(model, never()).stream(any(), any());
+        assertFailedHistory("FAILED", "FAQ_SEARCH_FAILED");
+        assertReadableFailureGuidance();
+    }
+
+    @Test
+    void missingSearchResponseIsASystemFailureRatherThanEmptyEvidence() {
+        when(search.search(any())).thenReturn(null);
+        processor.request(command);
+
+        verify(model, never()).stream(any(), any());
+        assertThat(emitter.tokens()).isEmpty();
+        assertFailedHistory("FAILED", "FAQ_SEARCH_FAILED");
+        assertReadableFailureGuidance();
+    }
+
+    @Test
+    void finalRetryFailureDiscardsPartialAnswerAndKeepsOneFailedHistoryRow() {
+        var attempts = new AtomicInteger();
+        script = stream -> {
+            if (attempts.incrementAndGet() == 1) {
+                stream.onError(new GeneralException(LlmErrorCode.TIMEOUT));
+                return;
+            }
+            stream.onToken(SUPPORTED + UNSUPPORTED);
+            stream.onError(new GeneralException(LlmErrorCode.CONNECTION_FAILED));
+        };
+        processor.request(command);
+
+        assertThat(attempts.get()).isEqualTo(2);
+        assertThat(emitter.names()).containsExactly("start", "status", "error");
+        assertThat(emitter.tokens()).isEmpty();
+        assertFailedHistory("FAILED", LlmErrorCode.CONNECTION_FAILED.getCode());
+        assertReadableFailureGuidance();
+        assertThat(jdbc.queryForList(
+                "SELECT status FROM llm_generations WHERE execution_id=? ORDER BY attempt",
+                String.class, executionId)).containsExactly("TIMEOUT", "CONNECTION_FAILED");
+    }
+
+    private void assertReadableFailureGuidance() {
+        JsonNode payload = objectMapper.valueToTree(emitter.events.getLast().data());
+        assertThat(payload.path("message").asText()).isNotBlank();
+        String expectedTopic = switch (payload.path("errorCode").asText()) {
+            case "FAQ_SEARCH_FAILED" -> "검색";
+            case "LLM503-0" -> "연결";
+            case "LLM504-0" -> "시간";
+            default -> "생성";
+        };
+        assertThat(payload.path("message").asText()).contains(expectedTopic);
+        assertThat(payload.toString()).doesNotContain("internal-search-detail");
+        String replay = terminalReplay();
+        assertThat(replay).contains("event:error", "\"message\":");
+        assertThat(replay).doesNotContain("event:complete", "internal-search-detail");
     }
 
     private String terminalReplay() {

@@ -35,12 +35,17 @@ public class RetryingLlmClient implements LlmClient {
     public void stream(LlmRequest request, LlmStreamHandler handler) {
         for (int attempt = 1; attempt <= maxAttempts(); attempt++) {
             RetryAwareHandler wrapper = new RetryAwareHandler(handler);
-            delegate.stream(request, wrapper, attempt);
+            try {
+                delegate.stream(request, wrapper, attempt);
+            } catch (RuntimeException failure) {
+                // 클라이언트가 동기 예외를 던져도 콜백 실패와 동일한 재시도 정책을 적용한다.
+                wrapper.onError(failure);
+            }
 
             if (wrapper.error == null) {
                 return;
             }
-            // 토큰이 이미 나갔으면 다시 호출하지 않는다. 답변이 중복된다
+            // 원문 토큰을 이미 받았으면 기존 정책대로 재시도하지 않는다.
             if (wrapper.tokenSent || !retryable(wrapper.error) || attempt == maxAttempts()) {
                 handler.onError(wrapper.error);
                 return;
