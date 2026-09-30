@@ -619,7 +619,7 @@ python3 scripts/simulate_dual_vector.py \
 ```
 
 측정 환경은 4.1절과 같다. 측정일 2026-09-29, `develop` TELME-76 머지 시점.
-15.3 실측은 `--vector`가 없던 시점이라 임계값 우회로 모은 `raw-1150-Q_A-dual.json`, `raw-1150-QO-dual.json`(+ `raw-supplement50-*`)을 썼다. 위 절차로 다시 모아도 같은 지표가 나온다(top-10 후보가 바뀐 문항 4건은 있으나 지표는 동일, TELME-84 대조 확인).
+15.3 실측은 `--vector`가 없던 시점이라 임계값 우회로 모은 `raw-1150-Q_A-dual.json`, `raw-1150-QO-dual.json`(+ `raw-supplement50-*`)을 썼다. 위 절차로 다시 모아도 같은 지표가 나온다(top-10 하위 후보가 바뀐 문항이 몇 건 있으나 지표는 동일. QA 3건 / QUESTION 2건, TELME-84 리뷰 대조 확인. `DUAL_VECTOR_VS_RERANKER.md` 11절의 4건은 재임베딩 전후 비교라 기준선이 다르다).
 
 ### 15.7 리랭커와 비교
 
