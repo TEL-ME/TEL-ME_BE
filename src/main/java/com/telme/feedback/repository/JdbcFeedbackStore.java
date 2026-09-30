@@ -45,7 +45,10 @@ public final class JdbcFeedbackStore implements FeedbackStore {
                                     + ") WHERE "
                                     + column
                                     + " IS NOT NULL DO UPDATE SET"
-                                    + " rating=EXCLUDED.rating,reason_code=EXCLUDED.reason_code,comment=EXCLUDED.comment,updated_at=now()"
+                                    + " rating=EXCLUDED.rating,reason_code=EXCLUDED.reason_code,comment=EXCLUDED.comment,updated_at=now(),"
+                                    // 관리자가 처리한 뒤 사용자가 평가를 고치면 내용이 달라져 다시 봐야 한다.
+                                    // 좋아요로 바뀌는 경우에는 처리 표시가 남으면 ck_feedback_handled_dislike_only에 걸린다
+                                    + " handled_at=NULL,handled_by=NULL,handled_note=NULL"
                                     + " RETURNING *";
                     return jdbc.queryForObject(
                             sql,

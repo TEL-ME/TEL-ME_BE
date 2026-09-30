@@ -266,6 +266,48 @@ class FeedbackApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("FEEDBACK404-0"));
     }
 
+    @Test
+    void editingHandledDislikeBringsItBackToUnhandled() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
+                .andExpect(status().isOk());
+        markHandled(answer);
+
+        // 관리자가 처리한 뒤 사용자가 의견을 고치면 내용이 달라져 다시 확인해야 한다
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"NOT_RELATED\",\"comment\":\"물어본 것과 달라요\"}")
+                .andExpect(status().isOk());
+
+        assertEquals(0, handledRows(answer));
+    }
+
+    @Test
+    void handledDislikeCanBeChangedToLike() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"WRONG_INFO\",\"comment\":\"요금이 달라요\"}")
+                .andExpect(status().isOk());
+        markHandled(answer);
+
+        // 처리 표시가 남은 채 좋아요가 되면 ck_feedback_handled_dislike_only에 걸린다
+        save(owner, answer, "{\"rating\":\"LIKE\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.rating").value("LIKE"));
+
+        assertEquals(0, handledRows(answer));
+    }
+
+    void markHandled(long messageId) {
+        jdbc.update(
+                "UPDATE message_feedback SET handled_at=now(), handled_by=?, handled_note='처리함'"
+                        + " WHERE message_id=?",
+                ownerId,
+                messageId);
+    }
+
+    int handledRows(long messageId) {
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM message_feedback WHERE message_id=? AND handled_at IS NOT NULL",
+                Integer.class,
+                messageId);
+    }
+
     ResultActions save(MockHttpSession session, long messageId, String body) throws Exception {
         return mvc.perform(put(URL, messageId)
                 .session(session)
