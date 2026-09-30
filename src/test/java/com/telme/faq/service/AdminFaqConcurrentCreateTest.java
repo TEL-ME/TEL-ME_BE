@@ -21,6 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.sql.DataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -39,6 +43,9 @@ class AdminFaqConcurrentCreateTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private DataSource dataSource;
 
     @MockitoBean
     private FaqEmbeddingSyncService embeddingSyncService;
@@ -81,7 +88,7 @@ class AdminFaqConcurrentCreateTest {
     void 동시에_수정하면_나중_저장이_막힌다() throws Exception {
         Long faqId = service.create(request(), ADMIN_ID).faqId();
 
-        List<Future<Object>> results = runTogether(
+        List<Future<Object>> results = runTogetherOnSameFaq(faqId,
                 () -> service.update(faqId, request(QUESTION, ANSWER + " 첫 번째 수정"), ADMIN_ID),
                 () -> service.update(faqId, request(QUESTION, ANSWER + " 두 번째 수정"), ADMIN_ID));
 
@@ -94,7 +101,7 @@ class AdminFaqConcurrentCreateTest {
     void 수정과_삭제가_겹치면_막힌다() throws Exception {
         Long faqId = service.create(request(), ADMIN_ID).faqId();
 
-        List<Future<Object>> results = runTogether(
+        List<Future<Object>> results = runTogetherOnSameFaq(faqId,
                 () -> service.update(faqId, request(QUESTION, ANSWER + " 고침"), ADMIN_ID),
                 () -> {
                     service.delete(faqId, ADMIN_ID, null);
@@ -110,7 +117,7 @@ class AdminFaqConcurrentCreateTest {
     void 동시에_삭제하면_막힌다() throws Exception {
         Long faqId = service.create(request(), ADMIN_ID).faqId();
 
-        List<Future<Object>> results = runTogether(
+        List<Future<Object>> results = runTogetherOnSameFaq(faqId,
                 () -> {
                     service.delete(faqId, ADMIN_ID, null);
                     return null;
@@ -141,6 +148,50 @@ class AdminFaqConcurrentCreateTest {
         service.create(request(), ADMIN_ID);
 
         assertThat(countSaved()).isEqualTo(2);
+    }
+
+    // 두 요청이 모두 FAQ를 읽은 뒤에 저장하도록 순서를 고정한다.
+    // 스레드만 동시에 띄우면 한쪽이 먼저 끝나 충돌 없이 지나가는 경우가 있다.
+    // 테스트가 먼저 그 행을 잠가 두 요청을 저장 직전에 세운 뒤 함께 풀어준다
+    private List<Future<Object>> runTogetherOnSameFaq(Long faqId, Callable<Object> first, Callable<Object> second)
+            throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try (Connection holder = dataSource.getConnection()) {
+            holder.setAutoCommit(false);
+            try (PreparedStatement lock = holder.prepareStatement("SELECT faq_id FROM faqs WHERE faq_id = ? FOR UPDATE")) {
+                lock.setLong(1, faqId);
+                lock.executeQuery();
+            }
+            List<Future<Object>> futures = List.of(pool.submit(first), pool.submit(second));
+            awaitBothWaiting(holder);
+            holder.commit();
+            pool.shutdown();
+            assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+            return futures;
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    // 두 요청이 모두 UPDATE를 내고 잠금을 기다리는 상태가 될 때까지 기다린다.
+    // 테스트 풀이 커넥션 3개뿐이라(build.gradle) 두 요청이 둘을 쓰는 동안
+    // 새로 얻지 않고 잠금을 쥔 커넥션으로 확인한다
+    private void awaitBothWaiting(Connection holder) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+        // 잠금을 기다리는 연결만 센다. query 컬럼은 대기 중에 비어 있어 쓸 수 없고,
+        // 배경 작업은 wait_event_type이 Activity라 걸리지 않는다
+        String sql = "SELECT count(*) FROM pg_stat_activity "
+                + "WHERE wait_event_type = 'Lock' AND datname = current_database()";
+        while (System.nanoTime() < deadline) {
+            try (PreparedStatement waiting = holder.prepareStatement(sql);
+                    ResultSet rs = waiting.executeQuery()) {
+                if (rs.next() && rs.getInt(1) >= 2) {
+                    return;
+                }
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("두 요청이 저장 직전까지 오지 않았습니다");
     }
 
     private List<Future<Object>> runTogether(Callable<Object> first, Callable<Object> second) throws Exception {
