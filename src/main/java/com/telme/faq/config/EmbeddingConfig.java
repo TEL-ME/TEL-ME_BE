@@ -14,7 +14,8 @@ import org.springframework.web.client.RestClient;
         FaqBatchLoadProperties.class,
         FaqEmbeddingTextProperties.class,
         FaqReembedProperties.class,
-        SearchProperties.class
+        SearchProperties.class,
+        SearchRerankProperties.class
 })
 public class EmbeddingConfig {
 

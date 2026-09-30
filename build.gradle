@@ -50,6 +50,10 @@ dependencies {
 	// API 문서
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
+	// 검색 리랭커 (bge-reranker-v2-m3 ONNX, CPU)
+	implementation 'com.microsoft.onnxruntime:onnxruntime:1.20.0'
+	implementation 'ai.djl.huggingface:tokenizers:0.31.1'
+
 	// 모니터링
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 

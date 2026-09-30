@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
+import com.telme.faq.config.SearchRerankProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
@@ -193,6 +194,62 @@ class PgvectorFaqSearchServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).faqId()).isEqualTo(1L);
         assertThat(result.get(0).searchRank()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("리랭커를 켜면 후보를 리랭커 점수순으로 다시 정렬하고 기준 미만은 제외한다")
+    void 리랭커_점수로_재정렬하고_기준_미만은_제외한다() {
+        FaqReranker reranker = (query, documents) -> new double[]{0.2, 0.9, 0.6};
+        PgvectorFaqSearchService rerankService = rerankService(reranker, 0.3, 0.5, true);
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 20, MODEL)).thenReturn(List.of(
+                matchOf(1L, "BILLING", "벡터 1위", 0.1),
+                matchOf(2L, "USIM", "벡터 2위", 0.3),
+                matchOf(3L, "PLAN", "벡터 3위", 0.4),
+                matchOf(4L, "PLAN", "벡터 하한 미만", 0.8)));
+
+        List<FaqSearchResponse> result = rerankService.search(new FaqSearchRequest("질문", 3));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(2L, 3L);
+        assertThat(result).extracting(FaqSearchResponse::searchRank).containsExactly(1, 2);
+        assertThat(result.get(0).score()).isEqualTo(0.9);
+        assertThat(result).extracting(FaqSearchResponse::matchedVariant).containsOnlyNulls();
+    }
+
+    @Test
+    @DisplayName("리랭커를 켜도 벡터 하한을 넘는 후보가 없으면 리랭커를 부르지 않고 빈 리스트를 반환한다")
+    void 벡터_하한을_넘는_후보가_없으면_빈_리스트를_반환한다() {
+        FaqReranker reranker = (query, documents) -> {
+            throw new AssertionError("호출되면 안 된다");
+        };
+        PgvectorFaqSearchService rerankService = rerankService(reranker, 0.9, 0.5, false);
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 20, MODEL))
+                .thenReturn(List.of(matchOf(1L, "BILLING", "먼 후보", 0.5)));
+
+        assertThat(rerankService.search(new FaqSearchRequest("질문", 3))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("리랭커를 켜면 이중 벡터가 켜져 있어도 질문 벡터를 조회하지 않는다")
+    void 리랭커를_켜면_질문_벡터를_조회하지_않는다() {
+        FaqReranker reranker = (query, documents) -> new double[]{0.9};
+        PgvectorFaqSearchService rerankService = rerankService(reranker, 0.0, 0.5, true);
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 20, MODEL))
+                .thenReturn(List.of(matchOf(1L, "BILLING", "후보", 0.1)));
+
+        rerankService.search(new FaqSearchRequest("질문", 3));
+
+        verify(repository, never()).findNearestByQuestionVector(any(), anyInt(), anyString());
+    }
+
+    private PgvectorFaqSearchService rerankService(
+            FaqReranker reranker, double vectorFloor, double threshold, boolean dualVectorEnabled) {
+        return new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
+                new SearchProperties(THRESHOLD, new SearchProperties.DualVector(dualVectorEnabled, QUESTION_THRESHOLD)),
+                new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A),
+                reranker, new SearchRerankProperties(true, "m", "t", 20, vectorFloor, threshold, 512, 8));
     }
 
     private FaqNearestMatch matchOf(long faqId, String category, String question, double distance) {
