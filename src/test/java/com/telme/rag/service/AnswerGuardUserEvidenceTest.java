@@ -447,6 +447,57 @@ class AnswerGuardUserEvidenceTest {
     }
 
     @Test
+    @DisplayName("현지에서 변경 가능하다는 근거를 해지 가능 주장에 재사용하지 않는다")
+    void 로밍_변경_가능_근거로_현지_해지_가능_주장을_통과시키지_않는다() {
+        String answer = "현지에서 로밍 요금제 해지가 가능합니다.";
+        String context = "현지에서 로밍 요금제 변경이 가능합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 로밍을 해지할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("현지에서 변경 불가라는 근거와 반대되는 변경 가능 주장을 차단한다")
+    void 현지_변경_불가_근거와_반대인_변경_가능_주장을_통과시키지_않는다() {
+        String answer = "현지에서 로밍 요금제 변경이 가능합니다.";
+        String context = "현지에서 로밍 요금제 변경은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 변경할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("복수 동작 주장에는 각 동작을 뒷받침하는 근거가 필요하다")
+    void 로밍_변경_미지원_근거만으로_변경과_해지_모두_미지원이라_하지_않는다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String context = "로밍 변경 기능은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("변경과 해지 미지원 근거가 각각 있으면 복수 동작 답변을 유지한다")
+    void 로밍_변경과_해지_근거가_각각_있으면_복수_동작_답변을_유지한다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String context = "현지에서 로밍 변경 기능은 지원하지 않습니다. "
+                + "현지에서 로밍 해지 기능은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("변경 가능과 해지 불가가 한 문장에 있어도 동작별 극성을 구분한다")
+    void 로밍_복수_동작의_서로_다른_극성을_구분한다() {
+        String answer = "현지에서 로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+        String context = "현지에서 로밍 변경이 가능합니다. 현지에서 로밍 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 변경과 해지가 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
     @DisplayName("근거에 있는 정책 단정은 유지한다")
     void 근거에_있는_정책_단정은_유지한다() {
         String answer = "번호이동은 반드시 20시 전에 신청해야 합니다.";
@@ -553,6 +604,26 @@ class AnswerGuardUserEvidenceTest {
 
         assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
                 .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 상품의 총액과 유심 배송비 근거를 섞어 유심 총액을 만들지 않는다")
+    void 다른_상품의_총액으로_유심_재발급_총액을_근거화하지_않는다() {
+        String answer = "유심 재발급 총 비용은 7,700원입니다.";
+        String context = "휴대폰 케이스 총 비용은 7,700원입니다. 유심 재발급 배송비는 별도입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("대상이 생략된 총액 답변은 질문 대상과 근거 대상이 일치해야 한다")
+    void 대상이_생략된_총액도_다른_상품의_근거로_통과시키지_않는다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "휴대폰 케이스 총 비용은 7,700원입니다. 유심 재발급 배송비는 별도입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test

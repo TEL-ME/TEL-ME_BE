@@ -108,6 +108,8 @@ public class AnswerGuard {
             "불가", "서비스", "정보", "기록", "신청", "처리", "사용", "이용", "경우", "고객",
             "내용", "안내", "해당", "완료", "일반적", "기준", "기능", "지원하지", "제공하지",
             "않습니다", "않아요", "미지원");
+    private static final Set<String> COMPLETE_COST_GENERIC_WORDS = Set.of(
+            "총", "비용", "총비용", "전체비용", "총액", "금액", "요금", "가격");
 
     private static final Pattern ATTRIBUTE_NEGATIVE = Pattern.compile(
             "(?:불가|불가능|할\\s*수\\s*없|(?:지원|제공)하지\\s*않|"
@@ -117,6 +119,10 @@ public class AnswerGuard {
             "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요)|"
                     + "(?:결제|발급|포함)(?:가|는|이)?\\s*(?:됩니다|돼요|가능)|"
                     + "포함되어\\s*있)");
+    private static final Pattern ACTION_NEGATIVE = Pattern.compile(
+            "(?:불가|불가능|가능하지\\s*않|할\\s*수\\s*없|(?:지원|제공)하지\\s*않|못합니다|안\\s*됩니다)");
+    private static final Pattern ACTION_POSITIVE = Pattern.compile(
+            "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요))");
 
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
     private static final Set<String> GENERIC_CHARGE_WORDS = Set.of(
@@ -143,7 +149,7 @@ public class AnswerGuard {
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
-        filtered = trimUnsupportedPolicyClaims(filtered, context);
+        filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
         verifyAmounts(filtered, context, userQuery);
         verifyMeasures(filtered, context, userQuery);
@@ -258,6 +264,10 @@ public class AnswerGuard {
     }
 
     public String trimUnsupportedPolicyClaims(String answer, String context) {
+        return trimUnsupportedPolicyClaims(answer, context, null);
+    }
+
+    private String trimUnsupportedPolicyClaims(String answer, String context, String userQuery) {
         if (answer == null || answer.isBlank()) {
             return answer == null ? "" : answer;
         }
@@ -265,7 +275,7 @@ public class AnswerGuard {
         boolean previousRemoved = false;
         for (String sentence : SENTENCE.split(answer.strip())) {
             Set<PolicyClaim> unsupported = policyClaimsIn(sentence);
-            unsupported.removeIf(claim -> isPolicyClaimSupported(claim, sentence, context));
+            unsupported.removeIf(claim -> isPolicyClaimSupported(claim, sentence, context, userQuery));
             if (unsupported.isEmpty()) {
                 if (previousRemoved && DEPENDENT_EXPLANATION.matcher(sentence.strip()).find()) {
                     log.warn("[AnswerGuard] 제거된 정책 단정에 종속된 설명 문장 제거: {}", sentence);
@@ -475,20 +485,90 @@ public class AnswerGuard {
         return claims;
     }
 
-    private boolean isPolicyClaimSupported(PolicyClaim claim, String sentence, String context) {
+    private boolean isPolicyClaimSupported(
+            PolicyClaim claim, String sentence, String context, String userQuery) {
         if (context == null) {
             return false;
         }
         Pattern pattern = POLICY_CLAIM_PATTERNS.get(claim);
+        if (claim == PolicyClaim.FEATURE_UNAVAILABLE
+                || claim == PolicyClaim.ACTION_LOCATION_OR_TIMING) {
+            return areAllPolicyActionsSupported(claim, sentence, context, pattern);
+        }
         for (String evidenceSentence : SENTENCE.split(context)) {
-            if (pattern.matcher(evidenceSentence).find()
-                    && sharesPolicyTopic(sentence, evidenceSentence)
-                    && (claim != PolicyClaim.FEATURE_UNAVAILABLE
-                    || hasMatchingPolicyAction(sentence, evidenceSentence, Set.of()))) {
-                return true;
+            if (!pattern.matcher(evidenceSentence).find()) {
+                continue;
             }
+            if (claim == PolicyClaim.COMPLETE_COST) {
+                if (sharesCompleteCostSubject(sentence, evidenceSentence, userQuery)
+                        && hasSameCompleteCostAmount(sentence, evidenceSentence)) {
+                    return true;
+                }
+                continue;
+            }
+            if (!sharesPolicyTopic(sentence, evidenceSentence)) {
+                continue;
+            }
+            return true;
         }
         return false;
+    }
+
+    private boolean areAllPolicyActionsSupported(
+            PolicyClaim claim, String answerSentence, String context, Pattern claimPattern) {
+        Set<FeatureAction> answerActions = featureActions(answerSentence);
+        if (claim == PolicyClaim.FEATURE_UNAVAILABLE) {
+            answerActions.removeIf(action -> actionPolarity(answerSentence, action) != ClaimPolarity.ABSENT);
+        }
+        if (answerActions.isEmpty()) {
+            return false;
+        }
+        for (FeatureAction action : answerActions) {
+            boolean supported = false;
+            for (String evidenceSentence : SENTENCE.split(context)) {
+                if (!claimPattern.matcher(evidenceSentence).find()
+                        || !featureActions(evidenceSentence).contains(action)
+                        || !sharesPolicyTopic(answerSentence, evidenceSentence)) {
+                    continue;
+                }
+                if (claim == PolicyClaim.ACTION_LOCATION_OR_TIMING
+                        && !hasMatchingActionPolarity(answerSentence, evidenceSentence, action)) {
+                    continue;
+                }
+                supported = true;
+                break;
+            }
+            if (!supported) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean sharesCompleteCostSubject(String answerSentence, String evidenceSentence, String userQuery) {
+        Set<String> answerTopics = completeCostTopics(answerSentence);
+        if (!answerTopics.isEmpty()) {
+            return completeCostTopics(evidenceSentence).containsAll(answerTopics);
+        }
+        return userQuery != null && !completeCostTopics(userQuery).isEmpty()
+                && !intersection(completeCostTopics(userQuery), completeCostTopics(evidenceSentence)).isEmpty();
+    }
+
+    private Set<String> completeCostTopics(String text) {
+        Set<String> topics = topicWords(text);
+        topics.removeIf(topic -> topic.startsWith("원") || COMPLETE_COST_GENERIC_WORDS.contains(topic));
+        return topics;
+    }
+
+    private Set<String> intersection(Set<String> left, Set<String> right) {
+        Set<String> common = new LinkedHashSet<>(left);
+        common.retainAll(right);
+        return common;
+    }
+
+    private boolean hasSameCompleteCostAmount(String answerSentence, String evidenceSentence) {
+        Set<BigInteger> answerAmounts = amountsIn(answerSentence);
+        return !answerAmounts.isEmpty() && amountsIn(evidenceSentence).containsAll(answerAmounts);
     }
 
     private boolean hasMatchingPolicyAction(
@@ -502,8 +582,60 @@ public class AnswerGuard {
         if (answerActions.isEmpty() || evidenceActions.isEmpty()) {
             return false;
         }
-        answerActions.retainAll(evidenceActions);
-        return !answerActions.isEmpty();
+        return !answerActions.isEmpty() && evidenceActions.containsAll(answerActions);
+    }
+
+    private boolean hasMatchingActionPolarity(
+            String answerSentence, String evidenceSentence, FeatureAction action) {
+        ClaimPolarity answerPolarity = actionPolarity(answerSentence, action);
+        ClaimPolarity evidencePolarity = actionPolarity(evidenceSentence, action);
+        return answerPolarity == ClaimPolarity.UNKNOWN
+                || evidencePolarity == ClaimPolarity.UNKNOWN
+                || answerPolarity == evidencePolarity;
+    }
+
+    private ClaimPolarity actionPolarity(String sentence, FeatureAction action) {
+        Pattern actionPattern = FEATURE_ACTION_PATTERNS.get(action);
+        Matcher matcher = actionPattern.matcher(sentence);
+        ClaimPolarity found = ClaimPolarity.UNKNOWN;
+        while (matcher.find()) {
+            int end = nextActionStart(sentence, matcher.end());
+            ClaimPolarity current = actionPolarityIn(sentence.substring(matcher.start(), end));
+            if (current == ClaimPolarity.UNKNOWN) {
+                current = actionPolarityIn(sentence);
+            }
+            if (current == ClaimPolarity.UNKNOWN) {
+                continue;
+            }
+            if (found != ClaimPolarity.UNKNOWN && found != current) {
+                return ClaimPolarity.UNKNOWN;
+            }
+            found = current;
+        }
+        return found;
+    }
+
+    private int nextActionStart(String sentence, int from) {
+        int next = sentence.length();
+        for (Pattern pattern : FEATURE_ACTION_PATTERNS.values()) {
+            Matcher matcher = pattern.matcher(sentence);
+            if (matcher.find(from)) {
+                next = Math.min(next, matcher.start());
+            }
+        }
+        return next;
+    }
+
+    private ClaimPolarity actionPolarityIn(String scope) {
+        boolean negative = ACTION_NEGATIVE.matcher(scope).find();
+        boolean positive = ACTION_POSITIVE.matcher(scope).find();
+        if (negative && (!positive || scope.matches(".*가능하지\\s*않.*"))) {
+            return ClaimPolarity.ABSENT;
+        }
+        if (positive && !negative) {
+            return ClaimPolarity.PRESENT;
+        }
+        return ClaimPolarity.UNKNOWN;
     }
 
     private Set<FeatureAction> featureActions(String text) {
