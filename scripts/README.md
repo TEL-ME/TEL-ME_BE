@@ -260,22 +260,6 @@ python3 scripts/measure_search_quality.py --self-test
 - 정답 `slot_id`가 있는 평가셋인데 검색 결과의 `slotId`가 전부 null이면(로더를 아직 안 돌린 DB) Recall 0.000을 내지 않고 중단. 7, 9절 스크립트도 이런 원시 결과는 거부
 - 정답 `slot_id`가 없는 긍정 질문(`eval_smoke.json`)은 API 호출만 하고 Recall, MRR에서 뺀 뒤 건수만 표시
 
-### 이중 벡터에서 벡터별로 수집하기
-
-검색 API에 벡터를 고르는 파라미터가 없다. **임계값으로 가른다.**
-
-```bash
-# Q_A 벡터만
-SEARCH_DUAL_VECTOR_ENABLED=false SEARCH_SIMILARITY_THRESHOLD=0 ...
-
-# 질문만 벡터만: Q_A 임계값을 1.0으로 올려 전멸시킨다
-SEARCH_DUAL_VECTOR_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=1.0 \
-  SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0 ...
-```
-
-- `--dump-json`에 `matchedVariant`가 없다. **질문만 수집 검증은 API를 직접 호출해 응답의 `matchedVariant`가 전부 `QUESTION_ONLY`인지 본다**
-- 두 dump를 `simulate_dual_vector.py`에 넣는다(7절)
-
 주요 옵션
 
 | 옵션 | 설명 |
@@ -314,10 +298,16 @@ done
 
 python3 scripts/simulate_dual_vector.py \
   --qa .measure/raw-130-Q_A.json .measure/raw-supp50-Q_A.json \
-  --qo .measure/raw-130-QUESTION_ONLY.json .measure/raw-supp50-QUESTION_ONLY.json
+  --qo .measure/raw-130-QUESTION_ONLY.json .measure/raw-supp50-QUESTION_ONLY.json \
+  --qa-threshold 0.72 --qo-thresholds 0.85,0.87,0.88,0.89,0.90,0.92,0.95 \
+  --order qo --top-k 3
 ```
 
-- 원시 결과에 수집 벡터가 기록돼, `--qa`와 `--qo`를 바꿔 넣으면 시뮬레이터가 멈춘다
+- `--qa`와 `--qo`는 **같은 평가셋**이어야 한다(다르면 멈춘다). 원시 결과에 수집 벡터가 기록돼, 둘을 바꿔 넣어도 멈춘다
+- **`--qo-thresholds`는 쉼표 구분이다.** 공백으로 나누면 인자 오류
+- 출력: 임계값별 기존 긍정 / `ANSWER` / 무관 거부 / 경계 무관 거부, 그리고 선택 규칙에 맞는 t
+- 선택 규칙(`docs/DUAL_VECTOR_VS_RERANKER.md` 3.3절): 무관 거부를 평가셋(입력 파일)마다 현행 이상으로 지키고 `ANSWER` 정답 수가 줄지 않는 t 중 정답 합계(기존 긍정 + `ANSWER`) 최대, 같으면 높은 t. 현행에서 맞았는데 놓친 문항은 고르는 조건이 아니라 결과에 따로 출력
+- 파일 이름에 `QUESTION_ONLY`가 없으면 경고가 뜬다. 코퍼스 구성을 `EVAL_SET_SUPPLEMENT.md` 4.1절 지문으로 확인하라는 뜻이다
 - 고른 값은 운영 임계값으로 서버를 다시 띄워 `--vector DUAL`로 실측해 시뮬레이션과 맞는지 확인한다
 
 ## 7. 격자 분석
@@ -331,22 +321,6 @@ python3 scripts/analyze_search_grid.py .measure/raw-1150-*.json
 - 출력: 최적 조합, 구성별 최선, 민감도(거부율 하한 0.90/0.95/1.00), 임계값별 추이
 - 선택 규칙: 무관 거부율 하한 이상에서 Recall@3 최대 (`--min-rejection`으로 조정)
 - 수집 오염 탐지: 임계값 0 수집인데 top-k보다 적게 반환된 문항이 있으면 경고
-
-### 이중 벡터 임계값 격자
-
-```bash
-python3 scripts/simulate_dual_vector.py \
-  --qa .measure/raw-1150-Q_A-dual.json .measure/raw-supplement50-Q_A-dual.json \
-  --qo .measure/raw-1150-QO-dual.json .measure/raw-supplement50-QO-dual.json \
-  --qa-threshold 0.72 --qo-thresholds 0.85,0.87,0.88,0.89,0.90,0.92,0.95 \
-  --order qo --top-k 3
-```
-
-- 입력: 6절의 "벡터별로 수집하기"로 뜬 dump 2쌍. `--qa`와 `--qo`는 **같은 평가셋**이어야 한다(다르면 멈춘다)
-- **`--qo-thresholds`는 쉼표 구분이다.** 공백으로 나누면 인자 오류
-- 출력: 임계값별 기존 긍정 / `ANSWER` / 무관 거부 / 경계 무관 거부, 그리고 선택 규칙에 맞는 t
-- 선택 규칙: 무관 거부를 현행 이하로 떨어뜨리지 않고 `ANSWER` 손실이 없는 t 중 Recall 최대
-- 파일 이름에 `QUESTION_ONLY`가 없으면 경고가 뜬다. 코퍼스 구성을 `EVAL_SET_SUPPLEMENT.md` 4.1절 지문으로 확인하라는 뜻이고, 임계값으로 가른 수집에서는 무시해도 된다
 
 ## 8. 자기검색 평가셋
 
@@ -426,7 +400,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
-| `simulate_dual_vector.py` | 26건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 5: 정상, 기존 긍정 0건, 무관 0건, ANSWER 손실, 잃고 얻은 손실 + 구성 경고 2 + 수집 벡터 확인 4) |
+| `simulate_dual_vector.py` | 29건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 8: 정상, 동점이면 높은 t, 평가셋별 무관 상쇄 제외, ANSWER 포함 합계, 기존 긍정 0건, 무관 0건, ANSWER 수 감소 제외, 잃고 얻으면 수 기준 통과 + 구성 경고 2 + 수집 벡터 확인 4) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
