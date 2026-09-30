@@ -93,4 +93,61 @@
 
 - 켜면 `Q_A` 벡터 상위 후보만 리랭커로 판정한다. `search.similarity-threshold`와 이중 벡터(`search.dual-vector`)는 쓰지 않는다. 이 문서의 수치는 모두 이 구성으로 쟀다.
 - `threshold`의 기본값 0.5는 측정한 값이 아니다. 이 문서는 0.76에서 쟀고 기준값별 결과는 2절 표에 있으니, 켤 때 그 표를 보고 정한다.
-- 모델은 `BAAI/bge-reranker-v2-m3`를 INT8 ONNX(`onnx/model_quint8_avx2.onnx`)로 내보낸 파일이고, `tokenizer.json`이 함께 필요하다. 이 파일을 만드는 절차는 아직 문서화되지 않았다. 파일 이름의 `avx2`는 CPU 명령어 집합에 맞춘 양자화 파일이라는 뜻이므로, 배포 환경 CPU에서 동작과 지연을 따로 확인해야 한다. 문서화 전까지는 실험에 쓴 파일을 공유받아야 한다.
+- 모델 파일은 아래 "모델 파일 만들기"로 직접 만든다. 레포에는 파일이 없다.
+
+### 모델 파일 만들기
+
+`BAAI/bge-reranker-v2-m3`를 CPU용 동적 INT8(AVX2)로 양자화한 ONNX 파일을 쓴다. 실험에 쓴 파일을 만든 절차이다. 모델 변환에만 Python을 쓰고, 검색과 리랭커 수치는 앱으로 잰다.
+
+**실험 환경**
+
+| 항목 | 값 |
+| --- | --- |
+| CPU | AMD Ryzen 7 9800X3D (8코어 / 16스레드). AVX2를 지원하는 CPU다 |
+| 메모리 | 약 31GB |
+| 변환에 쓴 버전 | Python 3.12.14, sentence-transformers 5.7.0, transformers 4.57.6, PyTorch 2.6.0+cpu |
+| 앱 쪽 라이브러리 | onnxruntime 1.20.0, DJL tokenizers 0.31.1 (`build.gradle`) |
+
+**변환** (첫 변환은 원본 모델 다운로드와 FP32 내보내기 때문에 디스크가 수 GB 필요하다. 아래 코드는 변환 뒤 FP32 파일을 지운다)
+
+```bash
+pip install "sentence-transformers[onnx]>=5.0,<6"
+```
+
+```python
+import os
+from sentence_transformers import CrossEncoder, export_dynamic_quantized_onnx_model
+
+out = "bge_reranker_v2_m3_onnx_int8"
+
+model = CrossEncoder("BAAI/bge-reranker-v2-m3", backend="onnx", device="cpu")
+model.save_pretrained(out)
+export_dynamic_quantized_onnx_model(
+    model=model,
+    quantization_config="avx2",
+    model_name_or_path=out,
+)
+for f in ("onnx/model.onnx", "onnx/model.onnx_data"):
+    try:
+        os.remove(os.path.join(out, f))
+    except FileNotFoundError:
+        pass
+```
+
+**결과 확인**
+
+- `onnx/model_quint8_avx2.onnx`: 571,039,928바이트(약 545MB). 실험에 쓴 파일의 SHA-256은 `eb5fdd0995d4323055cfd6736bb53a1a8adbfc995c8ef2309ab7cece00dc001d`다
+- `tokenizer.json`: 17,082,900바이트. SHA-256은 `8bf8afbfd11306bd872018c53bfdf2e160a56f8edbcf49933324404791c148d3`다
+- 다시 만든 파일은 라이브러리 버전이나 CPU에 따라 해시가 다를 수 있다. 해시가 같지 않다면 같은 질문의 점수가 실험과 같은지 앱으로 확인한다
+
+**앱에 연결**
+
+```powershell
+$env:SEARCH_RERANK_ENABLED = "true"
+$env:SEARCH_RERANK_MODEL_PATH = "<폴더>/bge_reranker_v2_m3_onnx_int8/onnx/model_quint8_avx2.onnx"
+$env:SEARCH_RERANK_TOKENIZER_PATH = "<폴더>/bge_reranker_v2_m3_onnx_int8/tokenizer.json"
+$env:SEARCH_RERANK_THRESHOLD = "0.76"
+```
+
+- 기동 로그에 `[OnnxFaqReranker] 리랭커 로드 완료`가 나오면 연결된 것이다
+- 파일 이름의 `avx2`는 이 양자화가 AVX2 명령어를 쓰도록 만들어졌다는 뜻이다. CPU가 다르면 그 CPU에서 동작과 지연을 따로 확인해야 한다
