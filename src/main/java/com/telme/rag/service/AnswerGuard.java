@@ -128,6 +128,9 @@ public class AnswerGuard {
     private static final Pattern CHARGE_PRESENT = Pattern.compile(
             "(?:(?:수수료|위약금).{0,20}(?:면제(?:가)?\\s*(?:되지|안\\s*되)\\s*않|"
                     + "(?:발생|부과)(?:합니다|됩니다|돼요)|있(?:습니다|어요)))");
+    // "수수료가 부과되지 않는 것은 아닙니다"는 이중 부정이므로 비용이 없다는 뜻이 아니다.
+    private static final Pattern CHARGE_DOUBLE_NEGATIVE = Pattern.compile(
+            "(?:부과|발생)(?:하지|되지)\\s*않는 것은 아닙니다");
 
     private static final Map<PolicyClaim, Pattern> POLICY_CLAIM_PATTERNS = policyClaimPatterns();
 
@@ -539,7 +542,10 @@ public class AnswerGuard {
             }
             String claimScope = chargeClaimScope(sentence, topic);
             ClaimPolarity current = ClaimPolarity.UNKNOWN;
-            if (CHARGE_PRESENT.matcher(claimScope).find()) {
+            if (CHARGE_DOUBLE_NEGATIVE.matcher(claimScope).find()
+                    || CHARGE_DOUBLE_NEGATIVE.matcher(sentence).find()) {
+                current = ClaimPolarity.PRESENT;
+            } else if (CHARGE_PRESENT.matcher(claimScope).find()) {
                 current = ClaimPolarity.PRESENT;
             } else if (CHARGE_ABSENT.matcher(claimScope).find()) {
                 current = ClaimPolarity.ABSENT;
@@ -606,8 +612,9 @@ public class AnswerGuard {
         patterns.put(ComparisonClaim.SUPERLATIVE, Pattern.compile("(?:제일|가장)"));
         patterns.put(ComparisonClaim.CHEAPER, Pattern.compile("(?:저렴|(?<!비)(?:싸|싼|쌉))"));
         patterns.put(ComparisonClaim.EXPENSIVE, Pattern.compile("(?:비싸|비싼|비쌉)"));
-        patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리)"));
+        patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리|시간.{0,4}절약)"));
         patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile("(?:편리|간편|편의|편한|편하)"));
+        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:이점|장점)"));
         patterns.put(ComparisonClaim.STABLE, Pattern.compile("안정"));
         patterns.put(ComparisonClaim.SIMPLE, Pattern.compile("(?:간단|수월|복잡하지\\s*않)"));
         patterns.put(ComparisonClaim.BETTER, Pattern.compile("(?:나은|낫(?:다|습|아요|습니다)|더\\s*좋)"));
@@ -619,14 +626,24 @@ public class AnswerGuard {
     private static Map<PolicyClaim, Pattern> policyClaimPatterns() {
         Map<PolicyClaim, Pattern> patterns = new EnumMap<>(PolicyClaim.class);
         patterns.put(PolicyClaim.CALENDAR_DAY_BASIS,
-                Pattern.compile("(?:달력(?:상|일|상의)?(?:\\s*일수)?\\s*기준|"
+                Pattern.compile("(?:달력(?:상|일|상의)?(?:\\s*일수|\\s*날짜(?:를)?)?\\s*기준|"
                         + "(?:날짜|일수)\\s*경과.{0,20}(?:기준|적용))"));
         patterns.put(PolicyClaim.BUSINESS_DAY_BASIS,
                 Pattern.compile("영업일(?:\\s*수)?\\s*기준"));
         patterns.put(PolicyClaim.HARD_DEADLINE,
                 Pattern.compile("(?:최소한|반드시|늦어도).{0,40}(?:까지|전에)"));
         patterns.put(PolicyClaim.FEATURE_UNAVAILABLE,
-                Pattern.compile("(?:기능|서비스).{0,30}(?:제공|지원)하지\\s*않"));
+                Pattern.compile("(?:기능|서비스|변경|해지|취소|결제|신청|가입|발급|조회|이용|사용)"
+                        + ".{0,30}(?:제공|지원)하지\\s*않"));
+        patterns.put(PolicyClaim.ACTION_LOCATION_OR_TIMING,
+                Pattern.compile("(?:(?:현지에서|귀국\\s*후).{0,30}(?:변경|해지|취소|결제|신청|가입|발급|조회|이용|사용|진행)|"
+                        + "(?:변경|해지|취소|결제|신청|가입|발급|조회|이용|사용|진행).{0,30}(?:현지에서|귀국\\s*후))"));
+        patterns.put(PolicyClaim.EXCEPTION_QUALIFIER,
+                Pattern.compile("(?:특별한\\s*경우가\\s*아니라면|특별한\\s*경우(?:를|에는)?\\s*제외|"
+                        + "예외(?:적인)?\\s*경우가\\s*아니라면|예외(?:적인)?\\s*경우(?:를|에는)?\\s*제외)"));
+        // 개별 비용이 안내됐다고 모든 비용을 포함한 총액까지 확인된 것은 아니다.
+        patterns.put(PolicyClaim.COMPLETE_COST,
+                Pattern.compile("(?:총\\s*비용|전체\\s*비용|총액).{0,20}(?:은|이)?\\s*(?:\\d|별도|포함|추가|없|발생|입니다|이에요|예요)"));
         return Map.copyOf(patterns);
     }
 
@@ -696,6 +713,7 @@ public class AnswerGuard {
         EXPENSIVE,
         FASTER,
         CONVENIENT,
+        ADVANTAGE,
         STABLE,
         SIMPLE,
         BETTER,
@@ -707,7 +725,10 @@ public class AnswerGuard {
         CALENDAR_DAY_BASIS,
         BUSINESS_DAY_BASIS,
         HARD_DEADLINE,
-        FEATURE_UNAVAILABLE
+        FEATURE_UNAVAILABLE,
+        ACTION_LOCATION_OR_TIMING,
+        EXCEPTION_QUALIFIER,
+        COMPLETE_COST
     }
 
     private enum FeatureAction {

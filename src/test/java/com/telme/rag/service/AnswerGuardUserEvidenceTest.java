@@ -454,4 +454,125 @@ class AnswerGuardUserEvidenceTest {
 
         assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
     }
+
+    @Test
+    @DisplayName("비용이 없다는 근거와 이중 부정으로 반대하는 수수료 주장은 제거한다")
+    void 수수료_이중_부정은_근거와_반대로_판정한다() {
+        String answer = "모든 명의변경에 대해 수수료가 부과되지 않는 것은 아닙니다.";
+        String context = "가족 여부와 상관없이 명의변경 수수료는 없습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "가족 간에는 명의변경 수수료가 면제되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("달력 날짜 기준이라는 근거 밖 표현을 제거하고 확인 불가 안내는 유지한다")
+    void 달력_날짜_기준_표현을_근거_없이_단정하지_않는다() {
+        String answer = "영업일 여부에 대한 구분은 명시되어 있지 않습니다. "
+                + "정확한 기간 준수를 위해 달력 날짜를 기준으로 확인해 주시기 바랍니다.";
+        String context = "철회는 개통 후 14일 이내로 안내됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "철회 기간 14일은 영업일 기준인가요?"))
+                .isEqualTo("영업일 여부에 대한 구분은 명시되어 있지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("요금 근거만으로 현지 변경·결제와 귀국 후 처리 정책을 만들지 않는다")
+    void 요금_근거만으로_현지_변경_정책을_추가하지_않는다() {
+        String answer = "로밍 요금제는 하루 기준으로 기본 요금제가 9,900원이며, "
+                + "데이터 무제한 요금제는 12,100원입니다. "
+                + "현지에서 요금제 변경이나 결제는 지원하지 않습니다. "
+                + "요금제 변경은 주로 귀국 후에 진행하시는 것이 일반적입니다.";
+        String context = "일 단위 로밍 요금제는 9,900원입니다. 데이터 무제한은 하루 12,100원입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 요금제 얼마고 현지에서 끊을 수 있어요?"))
+                .isEqualTo("로밍 요금제는 하루 기준으로 기본 요금제가 9,900원이며, "
+                        + "데이터 무제한 요금제는 12,100원입니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 현지 변경 제한은 유지한다")
+    void 근거에_있는_현지_변경_제한은_유지한다() {
+        String answer = "현지에서 요금제 변경은 지원하지 않습니다.";
+        String context = "현지에서 요금제 변경은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 요금제 변경이 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("근거 없는 가입 비교 이점만 제거하고 처리 시간 안내는 유지한다")
+    void 근거_없는_가입_비교_이점만_제거한다() {
+        String answer = "번호이동은 보통 2시간 이내에 처리됩니다. "
+                + "새로 가입하는 것보다 번호 유지 측면에서 이점이 있습니다.";
+        String context = "번호이동은 보통 2시간 이내에 처리됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "번호이동은 새로 가입하는 것보다 빠른가요?"))
+                .isEqualTo("번호이동은 보통 2시간 이내에 처리됩니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 없는 시간 절약 주장은 제거하고 근거에 있는 주장은 유지한다")
+    void 근거_없는_시간_절약_주장을_제거한다() {
+        String answer = "전화로 진행하시면 시간을 절약하실 수 있습니다.";
+        String context = "매장과 전화 모두 바로 처리됩니다. 전화가 편하시면 전화로 하세요.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "전화와 매장 중 어느 쪽이 더 빠른가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+
+        String supportedContext = "전화로 신청하면 매장 방문보다 시간을 절약할 수 있습니다.";
+        assertThat(guard.applyEvidencePolicy(answer, supportedContext, "전화 신청 방법을 알려주세요."))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("근거에 있는 비교 이점은 유지한다")
+    void 근거에_있는_가입_비교_이점은_유지한다() {
+        String answer = "번호이동은 번호를 유지할 수 있다는 이점이 있습니다.";
+        String context = "번호이동은 기존 번호를 유지할 수 있다는 이점이 있습니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "번호이동의 이점이 있나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("개별 비용만으로 배송비를 포함한 총액을 단정하지 않는다")
+    void 배송비_포함_근거없이_총액을_단정하지_않는다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "유심 재발급 비용은 7,700원이며 택배로 2~3 영업일이 걸립니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("FAQ가 배송비 포함 총액을 명시하면 총액 답변을 유지한다")
+    void 배송비_포함_총액이_근거에_있으면_유지한다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "유심 재발급 총 비용은 7,700원이며 배송비가 포함됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("명의변경 처리 시간 근거에 없는 예외 조건을 제거한다")
+    void 명의변경_처리시간에_근거없는_예외조건을_추가하지_않는다() {
+        String answer = "명의변경은 매장에서 30분 이내에 처리됩니다. "
+                + "특별한 경우가 아니라면 며칠이 걸리지 않습니다.";
+        String context = "명의변경은 매장에서 30분 이내에 처리됩니다. "
+                + "미납 요금이 있으면 먼저 완납해야 진행됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "명의변경 하는 데 며칠이나 걸려요?"))
+                .isEqualTo("명의변경은 매장에서 30분 이내에 처리됩니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 명시된 예외 조건은 유지한다")
+    void 근거에_있는_예외조건은_유지한다() {
+        String answer = "특별한 경우가 아니라면 명의변경은 매장에서 30분 이내에 처리됩니다.";
+        String context = "특별한 경우가 아니라면 명의변경은 매장에서 30분 이내에 처리됩니다.";
+
+        assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
+    }
 }
