@@ -19,6 +19,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URLEncoder;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -45,10 +49,18 @@ import org.springframework.context.annotation.Import;
  * 채점은 하지 않는다. 검색을 고정해 재생하거나 현재 검색 결과를 새로 수집할 수 있다.
  *
  * 실행
- *   TELME_PROBE=true TELME_PROBE_LLM=ollama TELME_PROBE_OUT=.measure/paired-exaone \
+ *   TELME_PROBE=true TELME_PROBE_LLM=ollama \
+ *     TELME_PROBE_COMPARISON_ID=model-compare-v1 TELME_PROBE_REPEAT_INDEX=1 \
+ *     TELME_PROBE_CODE_REVISION=<git-commit> \
+ *     TELME_PROBE_OUT=.measure/paired-exaone \
  *     ./gradlew test --tests '*AnswerQualityBaselineProbe*'
  *   TELME_PROBE=true TELME_PROBE_ALLOW_PAID=true TELME_PROBE_LLM=bedrock \
  *     TELME_PROBE_REPLAY_FROM=.measure/paired-exaone/<baseline>.json \
+ *     TELME_PROBE_COMPARISON_ID=model-compare-v1 TELME_PROBE_REPEAT_INDEX=1 \
+ *     TELME_PROBE_CODE_REVISION=<git-commit> \
+ *     TELME_PROBE_INPUT_USD_PER_MTOK=<current-rate> \
+ *     TELME_PROBE_OUTPUT_USD_PER_MTOK=<current-rate> \
+ *     TELME_PROBE_PRICE_SOURCE=<pricing-url> TELME_PROBE_PRICE_AS_OF=<yyyy-mm-dd> \
  *     TELME_PROBE_OUT=.measure/paired-bedrock ./gradlew test --tests '*AnswerQualityBaselineProbe*'
  * 두 번째 실행은 첫 실행이 저장한 동일 eval_id·질문·검색 근거를 재사용한다.
  * Bedrock은 유료 호출이다. 실행 전에 TELME_PROBE_ALLOW_PAID=true로 명시 동의해야 한다.
@@ -72,6 +84,10 @@ class AnswerQualityBaselineProbe {
     private static final int MAX_TOKENS = 1024;
     private static final String GENERATOR = System.getenv().getOrDefault("TELME_PROBE_LLM", "ollama");
     private static final String GENERATOR_MODEL = resolveGeneratorModel(GENERATOR, System.getenv());
+    private static final String COMPARISON_ID =
+            System.getenv().getOrDefault("TELME_PROBE_COMPARISON_ID", "unassigned");
+    private static final String REPEAT_INDEX =
+            System.getenv().getOrDefault("TELME_PROBE_REPEAT_INDEX", "unassigned");
     // 기본은 서비스와 같은 0. 이전 운영값(0.2)과 비교할 때만 TELME_PROBE_TEMP로 바꾼다
     private static final double TEMPERATURE =
             Double.parseDouble(System.getenv().getOrDefault("TELME_PROBE_TEMP", "0"));
@@ -88,8 +104,18 @@ class AnswerQualityBaselineProbe {
     void 기준선을_측정한다() throws IOException {
         validatePaidCallOptIn(GENERATOR, Boolean.parseBoolean(
                 System.getenv().getOrDefault("TELME_PROBE_ALLOW_PAID", "false")));
+        validateComparisonMetadata(System.getenv());
+        validatePaidPricingMetadata(GENERATOR, System.getenv());
         List<EvalCase> cases = loadCases();
         String replayPath = System.getenv("TELME_PROBE_REPLAY_FROM");
+        String replaySha256 = replayPath == null || replayPath.isBlank()
+                ? null : sha256(Path.of(replayPath));
+        String codeRevision = System.getenv("TELME_PROBE_CODE_REVISION");
+        String promptSha256 = sha256(Path.of(
+                "src/main/java/com/telme/rag/service/AnswerPromptTemplates.java"));
+        String guardSha256 = sha256(Path.of(
+                "src/main/java/com/telme/rag/service/AnswerGuard.java"));
+        Map<String, String> evaluationSetSha256 = fileHashes(EVAL_FILES);
         Map<String, List<FaqSearchResponse>> replaySources = replayPath == null || replayPath.isBlank()
                 ? null
                 : loadReplaySources(Path.of(replayPath), cases);
@@ -109,7 +135,8 @@ class AnswerQualityBaselineProbe {
             }
             tally.merge(outcome.status, 1, Integer::sum);
             append(out, c, outcome);
-            records.add(toRecord(c, outcome));
+            records.add(toRecord(c, outcome, replaySha256, codeRevision,
+                    promptSha256, guardSha256, evaluationSetSha256));
             if (stopReason != null) {
                 break;
             }
@@ -120,7 +147,20 @@ class AnswerQualityBaselineProbe {
         if ("bedrock".equals(GENERATOR)) {
             usage = bedrockUsageMetadata(
                     GENERATOR, GENERATOR_MODEL, BedrockLlmClient.INPUT_TOKENS.get(),
-                    BedrockLlmClient.OUTPUT_TOKENS.get(), records.size(), failedEvalId, stopReason);
+                    BedrockLlmClient.OUTPUT_TOKENS.get(), records.size(), failedEvalId, stopReason,
+                    System.getenv().getOrDefault("AWS_REGION", "us-east-1"),
+                    System.getenv().getOrDefault("TELME_PROBE_BEDROCK_TIER", "standard"),
+                    new BigDecimal(System.getenv("TELME_PROBE_INPUT_USD_PER_MTOK")),
+                    new BigDecimal(System.getenv("TELME_PROBE_OUTPUT_USD_PER_MTOK")),
+                    System.getenv("TELME_PROBE_PRICE_SOURCE"),
+                    System.getenv("TELME_PROBE_PRICE_AS_OF"));
+            usage.put("comparison_id", COMPARISON_ID);
+            usage.put("repeat_index", Integer.parseInt(REPEAT_INDEX));
+            usage.put("replay_source_sha256", replaySha256);
+            usage.put("code_revision", codeRevision);
+            usage.put("prompt_sha256", promptSha256);
+            usage.put("guard_sha256", guardSha256);
+            usage.put("evaluation_set_sha256", evaluationSetSha256);
         }
         ProbeArtifacts artifacts = persistArtifacts(
                 Path.of(System.getenv().getOrDefault("TELME_PROBE_OUT", ".measure")),
@@ -216,17 +256,44 @@ class AnswerQualityBaselineProbe {
             long outputTokens,
             int recordedCases,
             String failedEvalId,
-            String stopReason) {
+            String stopReason,
+            String region,
+            String tier,
+            BigDecimal inputUsdPerMillionTokens,
+            BigDecimal outputUsdPerMillionTokens,
+            String priceSource,
+            String priceAsOf) {
         Map<String, Object> usage = new LinkedHashMap<>();
         usage.put("generator", generator);
         usage.put("model", model);
+        usage.put("region", region);
+        usage.put("inference_tier", tier);
         usage.put("input_tokens", inputTokens);
         usage.put("output_tokens", outputTokens);
+        usage.put("input_usd_per_million_tokens", inputUsdPerMillionTokens);
+        usage.put("output_usd_per_million_tokens", outputUsdPerMillionTokens);
+        usage.put("estimated_cost_usd", estimateCostUsd(
+                inputTokens, outputTokens, inputUsdPerMillionTokens, outputUsdPerMillionTokens));
+        usage.put("cost_formula", "input_tokens * input_rate / 1,000,000 + "
+                + "output_tokens * output_rate / 1,000,000");
+        usage.put("price_source", priceSource);
+        usage.put("price_as_of", priceAsOf);
         usage.put("recorded_cases", recordedCases);
         usage.put("status", stopReason == null ? "completed" : "aborted");
         usage.put("failed_eval_id", failedEvalId);
         usage.put("stop_reason", stopReason);
         return usage;
+    }
+
+    static BigDecimal estimateCostUsd(
+            long inputTokens,
+            long outputTokens,
+            BigDecimal inputUsdPerMillionTokens,
+            BigDecimal outputUsdPerMillionTokens) {
+        BigDecimal million = BigDecimal.valueOf(1_000_000);
+        return BigDecimal.valueOf(inputTokens).multiply(inputUsdPerMillionTokens)
+                .add(BigDecimal.valueOf(outputTokens).multiply(outputUsdPerMillionTokens))
+                .divide(million, 8, RoundingMode.HALF_UP);
     }
 
     private List<EvalCase> loadCases() throws IOException {
@@ -269,7 +336,14 @@ class AnswerQualityBaselineProbe {
     }
 
     // 채점 스크립트가 쓰는 형태. 근거는 질문과 답변을 합쳐 한 덩어리로 넘긴다
-    private Map<String, Object> toRecord(EvalCase c, Outcome o) {
+    private Map<String, Object> toRecord(
+            EvalCase c,
+            Outcome o,
+            String replaySha256,
+            String codeRevision,
+            String promptSha256,
+            String guardSha256,
+            Map<String, String> evaluationSetSha256) {
         List<Map<String, Object>> sources = new ArrayList<>();
         for (FaqSearchResponse f : o.found) {
             Map<String, Object> source = new LinkedHashMap<>();
@@ -298,8 +372,16 @@ class AnswerQualityBaselineProbe {
         record.put("generator_model", GENERATOR_MODEL);
         record.put("temperature", TEMPERATURE);
         record.put("max_tokens", MAX_TOKENS);
+        record.put("comparison_id", COMPARISON_ID);
+        record.put("repeat_index", Integer.parseInt(REPEAT_INDEX));
+        record.put("evaluation_set", EVAL_FILES);
+        record.put("evaluation_set_sha256", evaluationSetSha256);
+        record.put("code_revision", codeRevision);
+        record.put("prompt_sha256", promptSha256);
+        record.put("guard_sha256", guardSha256);
         String replayFrom = System.getenv("TELME_PROBE_REPLAY_FROM");
         record.put("retrieval_mode", replayFrom == null || replayFrom.isBlank() ? "live" : "replay");
+        record.put("replay_source_sha256", replaySha256);
         record.put("provider_options", "bedrock".equals(GENERATOR)
                 ? Map.of("reasoning_effort", "low")
                 : Map.of());
@@ -392,6 +474,67 @@ class AnswerQualityBaselineProbe {
             throw new IllegalStateException(
                     "Bedrock 유료 호출은 TELME_PROBE_ALLOW_PAID=true를 명시하기 전에는 실행하지 않습니다.");
         }
+    }
+
+    static void validatePaidPricingMetadata(String generator, Map<String, String> environment) {
+        if (!"bedrock".equals(generator)) {
+            return;
+        }
+        List<String> required = List.of(
+                "AWS_REGION",
+                "TELME_PROBE_BEDROCK_TIER",
+                "TELME_PROBE_INPUT_USD_PER_MTOK",
+                "TELME_PROBE_OUTPUT_USD_PER_MTOK",
+                "TELME_PROBE_PRICE_SOURCE",
+                "TELME_PROBE_PRICE_AS_OF");
+        List<String> missing = required.stream()
+                .filter(key -> environment.get(key) == null || environment.get(key).isBlank())
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Bedrock 비용 재현 메타데이터가 필요합니다: " + missing);
+        }
+        try {
+            new BigDecimal(environment.get("TELME_PROBE_INPUT_USD_PER_MTOK"));
+            new BigDecimal(environment.get("TELME_PROBE_OUTPUT_USD_PER_MTOK"));
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Bedrock 토큰 단가는 숫자여야 합니다.", e);
+        }
+    }
+
+    static void validateComparisonMetadata(Map<String, String> environment) {
+        String comparisonId = environment.get("TELME_PROBE_COMPARISON_ID");
+        if (comparisonId == null || comparisonId.isBlank()) {
+            throw new IllegalStateException("TELME_PROBE_COMPARISON_ID가 필요합니다.");
+        }
+        String codeRevision = environment.get("TELME_PROBE_CODE_REVISION");
+        if (codeRevision == null || codeRevision.isBlank()) {
+            throw new IllegalStateException("TELME_PROBE_CODE_REVISION이 필요합니다.");
+        }
+        String repeatIndex = environment.get("TELME_PROBE_REPEAT_INDEX");
+        try {
+            if (repeatIndex == null || Integer.parseInt(repeatIndex) < 1) {
+                throw new IllegalStateException("TELME_PROBE_REPEAT_INDEX는 1 이상이어야 합니다.");
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("TELME_PROBE_REPEAT_INDEX는 1 이상의 정수여야 합니다.", e);
+        }
+    }
+
+    static String sha256(Path path) throws IOException {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", e);
+        }
+    }
+
+    static Map<String, String> fileHashes(List<String> paths) throws IOException {
+        Map<String, String> hashes = new LinkedHashMap<>();
+        for (String path : paths) {
+            hashes.put(path, sha256(Path.of(path)));
+        }
+        return hashes;
     }
 
     static String resolveGeneratorModel(String generator, Map<String, String> environment) {

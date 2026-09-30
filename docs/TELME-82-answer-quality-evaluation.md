@@ -4,6 +4,30 @@
 
 고정한 질문과 검색 근거를 재생하는 평가 도구를 보완하고, 기존 EXAONE 수정 전후 결과와 Bedrock Judge의 `unsupported` 판정을 근거와 대조한다. 평가 프로브·재현성 테스트·중간 결과 문서를 다루며 AnswerGuard 기능 변경은 이 작업에 포함하지 않는다. 사람 최종 판정과 최종 성능 평가 완료를 선언하는 PR이 아니다.
 
+## 지민님 확인 항목과 현재 결론
+
+| 확인 항목 | 이 PR에서 적용한 내용 | 현재 결론 |
+| --- | --- | --- |
+| 무엇을 비교하는가 | Guard 수정 전후와 EXAONE/Bedrock 생성 모델 비교를 분리 | 두 비교의 독립변수가 다르므로 한 결과표로 섞지 않음 |
+| 무엇을 고정하는가 | eval ID·질문·검색 FAQ 전체, temperature, max tokens를 기록하고 replay 입력 해시를 저장 | 검색 근거가 하나라도 누락·변경되면 같은 조건 비교로 인정하지 않음 |
+| 비용 | Bedrock 입력·출력 토큰, 리전·티어·단가·단가 출처·기준일과 예상 USD를 저장 | 과거 실행은 단가·출처가 없어 금액 확정 불가. 이후 유료 실행은 가격 메타데이터 없으면 시작하지 않음 |
+| 어떤 기준으로 판단하는가 | 규칙 위반, 근거 충실성, 답변 거절 적절성, 사람 판정을 분리 | Judge `unsupported`만으로 환각률이나 모델 우열을 확정하지 않음 |
+| 반복성 | `comparison_id`, `repeat_index`, replay SHA-256을 결과에 기록 | 현재 저장 결과는 1회 실행이므로 최종 모델 비교가 아님. 같은 조건 3회가 필요함 |
+
+이 PR이 확정하는 것은 **비교 실행의 입력·비용·식별 정보를 빠뜨리지 않는 계약**이다. 현재 보유한 결과만으로 “Bedrock이 더 좋다”, “Guard 적용 후 환각률이 낮아졌다”는 결론은 내리지 않는다.
+
+### 평가 항목 구현 상태
+
+| 평가 항목 | 현재 상태 | 이번 PR에서 할 수 있는 것 | 아직 필요한 것 |
+| --- | --- | --- | --- |
+| Sentence Groundedness | 부분 구현 | `GROUNDED`이고 근거가 있는 최종 답변을 문장별 `supported / unsupported / irrelevant`로 분류 | Judge 변동·근거 범위 불일치 보정과 사람 표본 검토 |
+| Claim-level Unsupported Claim Rate | 미구현 | 혼합 문장 후보를 CSV에서 사람이 나눠 검토 | 원자 claim 분리, claim ID, 전체 claim 분모와 확정 라벨 |
+| Abstention evaluation | 부분 구현 | `NO_EVIDENCE` 후보에서 적절한 보류와 과도한 보류를 사람 검토 | 답변 가능/불가 정답 라벨 기반 precision·recall 집계 |
+| Guard Precision / Recall | 미구현 | 동일 원시 출력에 Guard 전후를 적용하는 실험 조건 정의 | TP·FP·FN·TN을 계산할 원시 출력과 사람 정답 |
+| Gold Context vs Retrieved Context | 미구현 | Retrieved Context replay와 정답 FAQ 식별자 보존 | 같은 질문을 Gold/Retrieved 각각으로 생성·평가하는 별도 실험 |
+
+`GROUNDED` 상태는 환각 검사를 통과했다는 뜻이 아니다. 현재 생성 파이프라인이 실제 답변을 반환했다는 상태이며, Groundedness는 그 후 Judge와 사람이 별도로 평가한다.
+
 ## 실험 조건
 
 | 항목 | 조건 |
@@ -14,9 +38,106 @@
 | 검색 근거 | 저장된 검색 결과를 재생. 수정 전후 150/150 문항에서 eval ID·질문·검색 FAQ 목록이 일치 |
 | 검색 정보 | 검색 결과에 `Q_A`와 `QUESTION_ONLY` variant가 기록됨. 이번 평가는 검색 방식 자체를 비교하지 않음 |
 | Judge | Bedrock `openai.gpt-oss-120b-1:0`, temperature 0, reasoning effort `low` |
-| 비용 | 이번 테스트 실행은 로컬 단위 테스트뿐이며 Bedrock을 호출하지 않음 |
+| 비용 | 이번 PR 검증은 로컬 단위 테스트뿐이며 Bedrock을 호출하지 않음. 기존 Bedrock 실행은 토큰만 저장되어 금액 확정 불가 |
 
 실험 원본은 별도 개발 작업 폴더 `TEL-ME_BE-local/.measure/`에 보관한다. 현재 TELME-82 작업 폴더에는 `.measure/`가 없다. 아래 수치는 기존 저장 결과의 집계이며 이번 PR 코드로 새로 생성·채점한 결과가 아니다. 이 문서는 결과 수치와 사람이 확인할 후보를 추적한다. API 키·개인 자격 증명은 저장하지 않는다.
+
+## 비교 설계
+
+### 1. Guard 수정 전후 비교
+
+독립변수는 **Guard 구현** 하나다. 같은 원시 LLM 출력·질문·검색 근거를 기존 Guard와 수정 Guard에 각각 적용해야 Guard 효과로 인정한다. 현재 저장된 전후 결과는 질문과 검색 근거는 같지만 HALLU-017/020의 최종 생성 답변이 다르다. 따라서 현재 수치는 목표 사례의 변화 확인에는 사용할 수 있지만 Guard 단독 성능 비교에는 사용할 수 없다.
+
+### 2. EXAONE과 Bedrock 생성 비교
+
+독립변수는 **RAG 답변 생성 모델** 하나다. Routing·FAQ 검색·검색 순위·프롬프트·AnswerGuard·Judge를 고정하며, Bedrock 실행은 EXAONE 실행의 저장된 `sources`를 replay한다. Routing 등 다른 LLM 호출은 기존 클라이언트를 유지하고 `RAG_ANSWER` 호출만 Bedrock으로 전환한다.
+
+모델 비교로 인정하려면 다음 조건을 모두 충족해야 한다.
+
+1. 150개 eval ID와 질문이 동일하다.
+2. 각 문항의 FAQ ID·slot ID·순위·점수·질문·답변이 동일하며 replay 파일 SHA-256이 기록된다.
+3. temperature 0, max tokens 1,024와 동일한 프롬프트·Guard 버전을 사용한다.
+4. 각 모델을 같은 조건으로 최소 3회 실행하고 `comparison_id`와 `repeat_index`를 기록한다.
+5. 같은 Judge 버전으로 후보를 만들고, 불일치·critical 사례 및 통과 표본 10%를 사람이 확인한다.
+
+현재 보유한 EXAONE/Bedrock 결과는 동일 검색 근거를 사용했지만 1회 결과이며 프롬프트·Guard 커밋 해시가 없다. **예비 결과**로만 사용한다.
+
+#### 현재 저장된 모델 비교 예비 결과
+
+두 생성 결과는 150/150 문항에서 eval ID·질문·검색 FAQ가 같다. 85개 `NO_SEARCH` 문항을 포함해 최종 답변 문자열이 같은 문항은 87개이며, 상태가 다른 문항은 12개다.
+
+| 생성 모델 | GROUNDED | NO_EVIDENCE | BLOCKED | NO_SEARCH |
+| --- | ---: | ---: | ---: | ---: |
+| EXAONE 3.5 7.8B | 52 | 8 | 5 | 85 |
+| Bedrock GPT-OSS 120B | 62 | 1 | 2 | 85 |
+
+동일한 Bedrock Judge 저장 결과는 다음과 같다.
+
+| 생성 모델 | Judge 문장 | supported | unsupported | irrelevant | 참고용 unsupported 비율 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| EXAONE 3.5 7.8B | 112 | 97 | 6 | 9 | 5.36% |
+| Bedrock GPT-OSS 120B | 95 | 93 | 0 | 2 | 0.00% |
+
+이 표만으로 Bedrock이 더 좋다고 결론 내리지 않는다. 생성한 문장 수가 112개와 95개로 다르고, 1회 실행이며, Bedrock 답변을 같은 계열의 Bedrock 모델이 평가해 `selfJudge=true`에 해당한다. 또한 `NO_EVIDENCE` 감소가 답변 가능성 개선인지 근거 없는 답변 증가인지 사람 판정 전에는 구분할 수 없다. 현재 사람 검토 후보에는 Bedrock 보류 사례만 일부 포함되어 있어 전체 95문장에 대한 사람 검증도 끝나지 않았다.
+
+### 3. 이번 비교에서 제외하는 것
+
+이중 벡터, Top-K, threshold, reranker는 이번 PR의 독립변수가 아니다. 검색 방식 비교는 별도 실험에서 Recall@1/3, MRR@3, 무관 질문 거부율과 함께 평가한다. 검색 변경과 생성 모델 변경을 같은 실험에서 동시에 적용하지 않는다.
+
+## 비용 기록 기준
+
+Bedrock 예상 비용은 다음 식으로 계산한다.
+
+```text
+estimated_cost_usd
+= input_tokens × input_usd_per_million_tokens / 1,000,000
++ output_tokens × output_usd_per_million_tokens / 1,000,000
+```
+
+기존 frozen Bedrock 실행은 150문항에 입력 42,250토큰, 출력 4,019토큰을 사용했다. 당시 메타데이터에 리전별 단가·티어·가격 기준일이 없으므로 정확한 USD 금액은 소급 확정하지 않는다. 새 실행은 다음 값을 필수로 받으며, 누락되면 유료 호출 전에 실패한다.
+
+- `AWS_REGION`
+- `TELME_PROBE_BEDROCK_TIER`
+- `TELME_PROBE_INPUT_USD_PER_MTOK`
+- `TELME_PROBE_OUTPUT_USD_PER_MTOK`
+- `TELME_PROBE_PRICE_SOURCE`
+- `TELME_PROBE_PRICE_AS_OF`
+
+모든 EXAONE·Bedrock 비교 실행은 `TELME_PROBE_COMPARISON_ID`, `TELME_PROBE_CODE_REVISION`과 1 이상의 `TELME_PROBE_REPEAT_INDEX`도 필수다. 동일 비교 ID 아래 반복번호 1·2·3을 각각 실행한다. 프롬프트·Guard·평가셋 파일 SHA-256은 실행기가 자동으로 기록한다.
+
+단가는 실행 당일 [AWS Bedrock 공식 요금표](https://aws.amazon.com/bedrock/pricing/)에서 리전과 추론 티어가 일치하는 값을 사용한다. Ollama의 외부 API 과금은 0 USD로 구분하되, 로컬 GPU·전력·운영 비용은 이번 측정에 포함하지 않는다. Bedrock 예상 비용과 실제 AWS 청구 금액은 환율·세금·티어·계정 조건으로 달라질 수 있다.
+
+## 판정 기준
+
+### 자동 평가
+
+| 항목 | 계산·판정 방식 | 용도 |
+| --- | --- | --- |
+| Critical 규칙 위반 | 근거 밖 금액·정책, 의미 반전, 근거 없는 업무 절차 건수 | 1건이라도 있으면 품질 통과로 선언하지 않음 |
+| Judge unsupported 비율 | `unsupported 문장 / Judge가 채점한 문장` | 실패 후보 탐색용. 사람 확정 환각률로 사용하지 않음 |
+| 사람 확인 미지원 주장률 | `UNSUPPORTED 세부 주장 / 사람이 검토한 전체 세부 주장` | claim 분리와 전수/표본 범위가 기록된 경우에만 계산 |
+| 적절한 보류 | 근거가 답을 제공하지 못한 문항에서 `NO_EVIDENCE` | 환각 회피 여부 확인 |
+| 과도한 보류 | 근거가 답을 제공하는데 `NO_EVIDENCE` | 안전성 개선으로 답변 가능률이 떨어지는지 확인 |
+| 답변 가능률 | `실제 답변을 낸 문항 / 검색 근거가 있는 문항` | unsupported 감소와 함께 해석 |
+| Guard Precision | `잘못된 원시 주장을 올바르게 차단한 수 / Guard가 차단한 전체 주장` | 정상 주장의 오차단 확인 |
+| Guard Recall | `잘못된 원시 주장을 올바르게 차단한 수 / 원시 출력의 전체 잘못된 주장` | Guard를 통과한 환각 확인 |
+
+### 사람 판정 라벨
+
+`human_label`은 다음 중 하나를 사용한다.
+
+- `SUPPORTED`: 표시된 세부 주장이 검색 근거에 있음
+- `UNSUPPORTED`: 세부 주장이 검색 근거에 없음
+- `PARTIALLY_UNSUPPORTED`: 한 문장에 지원·미지원 주장이 함께 있음
+- `APPROPRIATE_ABSTENTION`: 근거가 질문에 답하지 못해 보류가 적절함
+- `OVER_REFUSAL`: 근거가 답을 제공하지만 보류함
+- `REVIEW_CONTEXT`: 일반 안내·정책 경계로 팀 기준 합의가 필요함
+
+전후 변화 라벨인 `UNSUPPORTED_BEFORE_SUPPORTED_AFTER`, `UNSUPPORTED_BEFORE_CORRECT_ABSTENTION_AFTER`는 비교 요약에만 사용하며, 최종 claim 집계에서는 전·후를 위 기본 라벨로 나눠 센다.
+
+### 최종 비교 통과 조건
+
+비교 입력 검증, 모델별 3회 반복, 가격·지연 기록, 사람 판정이 모두 끝나기 전에는 모델 우열이나 전체 개선을 선언하지 않는다. 최종 채택 시에는 critical 위반 0건을 우선 확인하고, 사람 확인 미지원·과도한 보류·답변 가능률·비용·지연을 함께 제시한다. 팀이 목표 수치를 합의하기 전에는 임의의 평균 점수 하나로 통과선을 만들지 않는다.
 
 150문항 중 65문항은 검색 근거를 받았고 85문항은 검색 결과가 없었다. EXAONE의 파이프라인 상태는 수정 전 `GROUNDED 52 / NO_EVIDENCE 8 / BLOCKED 5 / NO_SEARCH 85`, 수정 후 `GROUNDED 51 / NO_EVIDENCE 9 / BLOCKED 5 / NO_SEARCH 85`였다. 이 상태 변화 역시 특정 가드 수정만의 효과로 단정하지 않는다.
 
@@ -70,8 +191,9 @@
 
 ## 로컬 검증
 
-- `AnswerQualityBaselineProbeTest`: 17건 통과
+- `AnswerQualityBaselineProbeTest`: 21건 통과
 - `AnswerGuardUserEvidenceTest`: 42건 통과
+- 합계 63건 통과, 실패·오류·스킵 0건
 - 테스트 과정에서 Bedrock API를 호출하지 않음
 - 이 브랜치에서 전체 애플리케이션 통합 테스트는 실행하지 않음
 
@@ -85,6 +207,8 @@
 - 문장 수가 112개에서 110개로 달라져 수정 전후 비율을 단순 개선으로 해석할 수 없다.
 - 사람 검토 후보의 최종 라벨은 아직 미확정이다. 후보 CSV의 빈 `human_label`, `human_note`를 사람이 검토해 채운 뒤 결과를 확정한다.
 - Bedrock Judge는 동일한 답변을 다시 채점했을 때도 판정이 바뀐 기록이 있으므로 단일 Judge 실행 결과를 확정치로 쓰지 않는다.
+- Generator는 FAQ 답변을 사실 근거로 사용하지만 현재 Judge 입력은 FAQ 질문과 답변을 함께 문맥으로 사용한다. 질문에만 있는 전제를 Judge가 근거로 인정할 수 있어 두 근거 범위를 맞춰야 한다.
+- Judge는 `GROUNDED` 상태만 채점하므로 `BLOCKED`와 `NO_EVIDENCE`의 과도한 차단·보류는 unsupported 비율에 나타나지 않는다.
 - 다음의 더 엄밀한 Guard 단독 비교는 원시 LLM 출력과 고정 검색 근거를 보존하고, 같은 원시 출력에 기존 Guard·수정 Guard를 각각 적용해 비교한다.
 
 ## 재현 자료 위치와 식별
@@ -93,6 +217,8 @@
 - 수정 전 EXAONE: `.measure/paired-exaone/baseline-ollama-20260930-023825-661.json`
 - 수정 후 EXAONE: `.measure/postfix2-20260930/baseline-ollama-20260930-112816-072.json` (`postfix-20260930/`은 중간 재실행)
 - Bedrock 보류 후보 대조: `.measure/frozen-baseline-20260930/bedrock/baseline-bedrock-20260930-085006-387.json`
+- 모델 비교 Judge: `.measure/frozen-baseline-20260930/judge-bedrock-exaone.json`, `.measure/frozen-baseline-20260930/judge-bedrock-bedrock.json`
+- Bedrock 토큰 사용량: `.measure/frozen-baseline-20260930/bedrock/baseline-bedrock-20260930-085006-389.meta.json`
 - 사람 검토 후보 원본: `.measure/frozen-baseline-20260930/human-review-candidates.csv`
 
 위 경로는 모두 별도 작업 폴더 `TEL-ME_BE-local` 기준이다. 이 PR만 내려받으면 해당 원본이 생기지 않는다. 리뷰 시 정확한 원본 비교가 필요하면 작성자에게 해당 파일을 요청한다. 재실행하면 모델/Judge 변동으로 같은 결과가 보장되지 않으므로 기존 원본은 보존한다.
@@ -104,5 +230,8 @@
 | 수정 전 Judge | `68e1baa20a2259923c2b6ec40bb004b614b28a39b585394a9c5c4b1f036b9409` |
 | 수정 후 Judge | `e5f210064098f1817d2f5585e2e63cb7dad9deccef84993a7a4b15cc80f73863` |
 | Bedrock 보류 후보 원본 | `3329bb48da188aecf7861febdaa0329ed6ae4a5301fc8c3d645f681e3cf5fc1e` |
+| EXAONE 모델 비교 Judge | `59e376294428eaed24476a34d465d0dbc395306366daf234a9d197c93ac752a7` |
+| Bedrock 모델 비교 Judge | `1e0d5312d86431dd156ec8bee574406d81c865609b172025011102abde5f8c27` |
+| Bedrock 토큰 메타데이터 | `27531d059e6422b31b25cc9716d57c50be05974968c74af525131950dc088406` |
 
 과거 실행에는 정확한 실행 커밋과 Guard/프롬프트 해시가 없어 이 파일 해시만으로 코드까지 재현된다고 보장하지 않는다. `.measure/`와 자격 증명은 PR에 포함하지 않는다. 핵심 조건·수치·검토 후보는 이 문서와 동봉 CSV로 공유한다.
