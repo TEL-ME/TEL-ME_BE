@@ -197,6 +197,31 @@ public class QueryRoutingService {
                     Collections.emptyMap(), Collections.emptyList());
         }
 
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.FAQ
+                && RoutingIntentCorrection.isClearlyExternal(question, context)) {
+            log.info("[라우팅] 명시적인 외부 주제를 UNKNOWN으로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.UNKNOWN, payload.confidence(), question,
+                    Collections.emptyMap(), Collections.emptyList());
+            method = QueryRouting.Method.RULE;
+        }
+
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.STORE
+                && RoutingIntentCorrection.isGeneralStorePolicy(question, context,
+                        payload.extractedConditions().get(FollowUpRouteResponse.LOCATION_KEY))) {
+            log.info("[라우팅] 일반 매장 운영 질문을 FAQ로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    Collections.emptyMap(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.RULE;
+        }
+
         payload = combineFaqSubQueriesForSingleConsult(payload, question, context, singleConsultOnly);
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);

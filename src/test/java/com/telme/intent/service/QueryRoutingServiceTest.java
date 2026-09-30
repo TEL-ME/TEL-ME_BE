@@ -187,6 +187,107 @@ class QueryRoutingServiceTest {
             assertThat(r.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
             assertThat(r.subQueries()).isEmpty();
         }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "파이썬에서 리스트 정렬하는 방법 알려주세요",
+                "강아지 사료는 하루에 얼마나 줘야 하나요?",
+                "전세 대출 한도는 어떻게 정해지나요?",
+                "영상 편집용 노트북 사양을 추천해 주세요"
+        })
+        @DisplayName("명시적인 외부 질문을 LLM이 FAQ로 분류해도 UNKNOWN으로 보정한다")
+        void correctsClearlyExternalFaq(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"외부 질문",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"외부 질문","conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("통신 주제가 명시된 질문의 외부 단어는 FAQ를 차단하지 않는다")
+        void keepsTelecomQuestionContainingExternalWord() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"U+ 멤버십 헬스장 할인",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"U+ 멤버십 헬스장 할인","conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg("U+ 멤버십으로 헬스장 할인받을 수 있나요?"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+        }
+
+        @Test
+        @DisplayName("이전 상담이 있으면 외부 주제 단어만으로 후속 질문을 차단하지 않는다")
+        void keepsContextDependentQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"U+ 인터넷 노트북 연결",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"U+ 인터넷 노트북 연결","conditions":{}}]}
+                """);
+            String question = "노트북은요?";
+            ChatContext context = new ChatContext(1L, 1L,
+                    "U+ 인터넷을 노트북에 연결하는 방법을 상담 중", java.util.List.of(), question, 20);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), context);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "매장은 보통 평일 몇 시까지 운영하나요?",
+                "평일 저녁 7시 이후에 매장 방문이 가능한가요?"
+        })
+        @DisplayName("특정 지점이 없는 일반 매장 운영 질문은 FAQ로 보정한다")
+        void correctsGeneralStorePolicy(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.92,"refinedQuery":"매장 운영시간",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"STORE","queryText":"매장 운영시간","conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).singleElement()
+                    .satisfies(sub -> {
+                        assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                        assertThat(sub.queryText()).isEqualTo(question);
+                    });
+        }
+
+        @Test
+        @DisplayName("특정 지점의 영업시간 질문은 STORE로 유지한다")
+        void keepsSpecificStoreHoursLookup() {
+            assertThat(RoutingIntentCorrection.isGeneralStorePolicy(
+                    "신촌 매장은 보통 평일 몇 시까지 운영하나요?", null, null)).isFalse();
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.95,"refinedQuery":"신촌 매장 영업시간",
+                 "extractedConditions":{"location":"신촌"},"subQueries":[
+                   {"order":1,"intent":"STORE","queryText":"신촌 매장 영업시간",
+                    "conditions":{"location":"신촌"}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg("신촌 매장은 보통 평일 몇 시까지 운영하나요?"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                    .isEqualTo(ConsultRequest.Intent.STORE);
+        }
     }
 
     @Nested

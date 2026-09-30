@@ -1,0 +1,47 @@
+{
+  "description": "검색 평가 라벨과 분리한 라우팅 기대 intent. 범위는 양 끝 eval_id를 모두 포함한다.",
+  "groups": [
+    {
+      "from": "EVAL-001",
+      "to": "EVAL-080",
+      "expected_intent": "FAQ",
+      "reason": "FAQ에서 답을 찾도록 설계된 통신 상담 질문"
+    },
+    {
+      "from": "EVAL-081",
+      "to": "EVAL-096",
+      "expected_intent": "UNKNOWN",
+      "reason": "날씨, 요리, 금융 등 통신 상담과 무관한 질문"
+    },
+    {
+      "from": "EVAL-097",
+      "to": "EVAL-106",
+      "expected_intent": "FAQ",
+      "reason": "현재 FAQ에 정답 근거는 없지만 통신 정책이나 서비스에 관한 고객 질문"
+    },
+    {
+      "from": "EVAL-107",
+      "to": "EVAL-108",
+      "expected_intent": "UNKNOWN",
+      "reason": "채용과 대리점 창업은 통신 고객 상담 범위 밖의 회사 관련 질문"
+    },
+    {
+      "from": "EVAL-109",
+      "to": "EVAL-130",
+      "expected_intent": "FAQ",
+      "reason": "현재 FAQ에 정답 근거는 없지만 통신 정책이나 서비스에 관한 고객 질문"
+    },
+    {
+      "from": "EVAL-131",
+      "to": "EVAL-160",
+      "expected_intent": "FAQ",
+      "reason": "FAQ 답변에 있는 사실을 묻는 통신 상담 질문"
+    },
+    {
+      "from": "EVAL-161",
+      "to": "EVAL-180",
+      "expected_intent": "FAQ",
+      "reason": "검색 결과 유무와 관계없이 통신 정책이나 서비스에 관한 고객 질문"
+    }
+  ]
+}
