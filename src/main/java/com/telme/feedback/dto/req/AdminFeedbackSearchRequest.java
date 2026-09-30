@@ -23,6 +23,7 @@ public record AdminFeedbackSearchRequest(
     private static final Instant EVERY_TIME_TO = Instant.parse("9999-12-31T23:59:59Z");
 
     public AdminFeedbackSearchRequest {
+        // 관리자가 들어오자마자 남은 일만 보이게 한다
         handled = handled == null ? AdminFeedbackHandledFilter.UNHANDLED : handled;
         page = page == null ? DEFAULT_PAGE : page;
         size = size == null ? DEFAULT_SIZE : size;

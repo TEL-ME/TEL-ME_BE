@@ -1,5 +1,4 @@
 -- 관리자가 싫어요를 확인하고 조치했는지 표시할 자리가 없어, 같은 건을 매번 다시 보게 된다.
--- 처리 시각과 처리자를 남겨 목록에서 남은 일만 걸러낸다.
 ALTER TABLE message_feedback
     ADD COLUMN handled_at   TIMESTAMPTZ,
     ADD COLUMN handled_by   BIGINT REFERENCES users (user_id),

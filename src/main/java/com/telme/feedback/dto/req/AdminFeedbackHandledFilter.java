@@ -1,6 +1,5 @@
 package com.telme.feedback.dto.req;
 
-// 관리자 화면 기본은 UNHANDLED다. 들어오자마자 남은 일만 보이게 한다
 public enum AdminFeedbackHandledFilter {
     ALL(0),
     HANDLED(1),
