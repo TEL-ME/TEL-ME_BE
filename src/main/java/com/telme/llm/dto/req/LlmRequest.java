@@ -8,6 +8,7 @@ import lombok.Builder;
 public record LlmRequest(
         // null이면 호출 기록을 남기지 않음
         Long executionId,
+        Long consultRequestId,
         TaskType taskType,
         String systemPrompt,
         String userPrompt,
@@ -20,6 +21,12 @@ public record LlmRequest(
         // 호출 기록용. 사용한 프롬프트 버전
         String promptVersion
 ) {
+    public LlmRequest(Long executionId, TaskType taskType, String systemPrompt, String userPrompt,
+            ResponseFormat format, Double temperature, Integer maxTokens, Integer contextCount,
+            String promptVersion) {
+        this(executionId, null, taskType, systemPrompt, userPrompt, format, temperature, maxTokens,
+                contextCount, promptVersion);
+    }
 
     public LlmRequest {
         // 대부분 TEXT라 기본값으로 둠

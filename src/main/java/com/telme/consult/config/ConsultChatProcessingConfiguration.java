@@ -8,6 +8,7 @@ import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.chat.service.ChatEmitterRegistry;
+import com.telme.chat.service.ExecutionTrace;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,8 +31,9 @@ public class ConsultChatProcessingConfiguration {
             AnswerProvider answers,
             ConsultChatPersistenceService persistence,
             ConfirmedConditionConverter conditionConverter,
-            ConsultChatEvents events) {
+            ConsultChatEvents events,
+            ExecutionTrace trace) {
         return new ConsultChatProcessingService(
-                analyzer, answers, persistence, conditionConverter, events);
+                analyzer, answers, persistence, conditionConverter, events, trace);
     }
 }
