@@ -3,19 +3,10 @@ package com.telme.store.dto.req;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.store.entity.StoreServiceType;
-import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class StoreRegionSearchRequestTest {
-
-    @Test
-    @DisplayName("업무 코드 검증 정규식은 enum 값과 정확히 같다")
-    void 정규식과_enum_일치() {
-        assertThat(StoreRegionSearchRequest.SERVICE_TYPE_PATTERN.split("\\|"))
-                .containsExactlyInAnyOrder(
-                        Arrays.stream(StoreServiceType.Code.values()).map(Enum::name).toArray(String[]::new));
-    }
 
     @Test
     @DisplayName("업무 코드 문자열을 enum으로 바꾸고, 비어 있으면 필터 없음")

@@ -1,5 +1,6 @@
 package com.telme.store.dto.req;
 
+import com.telme.global.common.validation.EnumValid;
 import com.telme.store.entity.StoreServiceType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -16,7 +17,7 @@ public record StoreRegionSearchRequest(
         String region,
 
         @Schema(description = "가능 업무. 비우면 전체", implementation = StoreServiceType.Code.class)
-        @Pattern(regexp = StoreRegionSearchRequest.SERVICE_TYPE_PATTERN, message = "허용되지 않는 업무 코드입니다.")
+        @EnumValid(enumClass = StoreServiceType.Code.class, message = "허용되지 않는 업무 코드입니다.")
         String serviceType,
 
         @Schema(description = "페이지 번호 (0부터)", defaultValue = "0")
@@ -28,8 +29,6 @@ public record StoreRegionSearchRequest(
         @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
         Integer size
 ) {
-    public static final String SERVICE_TYPE_PATTERN = "NEW_LINE|PORT_IN|NAME_CHANGE|USIM_REISSUE";
-
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
 
