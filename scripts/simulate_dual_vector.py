@@ -87,8 +87,9 @@ def load_runs(paths: list[Path], expected_vector: str) -> dict[str, dict]:
         for item in dump["items"]:
             if item["eval_id"] in items:
                 raise SystemExit(f"{path}: eval_id 중복 {item['eval_id']} - 같은 평가셋을 두 번 넣었는지 확인하세요")
-            # 무관 통과를 평가셋마다 따로 제한하려고 출처 파일을 남긴다(pick_threshold)
-            items[item["eval_id"]] = {**item, "source": path.name}
+            # 무관 통과를 평가셋마다 따로 제한하려고 출처 평가셋을 남긴다(pick_threshold).
+            # --dump-json이 저장한 평가셋 경로를 쓴다. 경로가 없는 옛 파일은 원시 결과 파일 이름으로 대신한다
+            items[item["eval_id"]] = {**item, "source": Path(dump.get("path") or path.name).stem}
     return items
 
 
@@ -274,13 +275,18 @@ def main() -> int:
           f"ANSWER {b['ANSWER'][0]} → {r['ANSWER'][0]}")
     print(f"  무관 거부(평가셋별): {unrelated}")
     print(f"  살아나는 긍정: {sorted(r['기존 긍정'][2] - b['기존 긍정'][2])}")
+    # 놓친 문항은 고르는 조건이 아니라(개수 기준) 표만 보고 넘어가기 쉬우므로, 있을 때만 눈에 띄게 따로 출력한다
     lost = sorted((b["기존 긍정"][2] | b["ANSWER"][2]) - (r["기존 긍정"][2] | r["ANSWER"][2]))
-    print(f"  현행 성공 중 놓친 문항: {lost}")
+    if not lost:
+        print("  현행 성공 중 놓친 문항: 없음")
     below = [t for t in args.qo_thresholds if t < best]
     if below:
         lower = runs[max(below)]
         newly = sorted(b["무관"][2] - lower["무관"][2])
         print(f"  바로 아래 t = {max(below)}에서 새로 통과하는 무관: {newly}")
+    if lost:
+        print(f"\n주의: 현행에서 맞았는데 t = {best}에서 놓친 문항 {len(lost)}건: {lost}"
+              " - 고르는 조건은 아니지만(정답 수는 줄지 않음) 결과를 쓰기 전에 문항을 확인하세요")
     print("\n주의: t는 이 평가셋에서 고른 값이다. 실제 구현 후 재측정으로 확정한다")
     return 0
 
