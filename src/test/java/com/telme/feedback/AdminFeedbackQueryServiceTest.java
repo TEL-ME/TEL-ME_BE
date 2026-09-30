@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.feedback.dto.req.AdminFeedbackHandledFilter;
 import com.telme.feedback.dto.req.AdminFeedbackSearchRequest;
+import com.telme.feedback.dto.res.AdminFeedbackDetailResponse;
 import com.telme.feedback.dto.res.AdminFeedbackListItemResponse;
 import com.telme.feedback.dto.res.AdminFeedbackListResponse;
 import com.telme.feedback.entity.MessageFeedback;
@@ -111,6 +112,58 @@ class AdminFeedbackQueryServiceTest {
         assertThatThrownBy(() -> service.getDislikes(
                 request(null, null, now, now.minus(1, ChronoUnit.DAYS))))
                 .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("상세에는 질문·답변·근거 FAQ·사용자 의견이 함께 나온다")
+    void 상세를_본다() {
+        AdminFeedbackDetailResponse detail = service.getDislike(unhandledId);
+
+        assertThat(detail.question()).isEqualTo("요금제 변경하고 싶어요");
+        assertThat(detail.answer()).startsWith("요금제는 매월 1회 변경");
+        assertThat(detail.answerBasis()).isEqualTo("GROUNDED");
+        assertThat(detail.comment()).isEqualTo("답이 틀렸습니다.");
+        assertThat(detail.handled()).isFalse();
+        // 시드의 2번 답변은 1번 FAQ를 근거로 쓴다
+        assertThat(detail.sources()).singleElement()
+                .satisfies(source -> {
+                    assertThat(source.faqId()).isEqualTo(1L);
+                    assertThat(source.searchRank()).isEqualTo((short) 1);
+                });
+    }
+
+    @Test
+    @DisplayName("처리한 건은 처리자와 처리 시각이 함께 나온다")
+    void 처리_정보를_본다() {
+        AdminFeedbackDetailResponse detail = service.getDislike(handledId);
+
+        assertThat(detail.handled()).isTrue();
+        assertThat(detail.handledBy()).isEqualTo(ADMIN_ID);
+        assertThat(detail.handledAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("근거로 쓴 FAQ가 없으면 빈 목록으로 나온다")
+    void 근거가_없으면_빈_목록이다() {
+        // 시드의 4번 답변은 매장 추천이라 근거 FAQ가 없다
+        AdminFeedbackDetailResponse detail = service.getDislike(handledId);
+
+        assertThat(detail.sources()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("좋아요 id로 상세를 부르면 FEEDBACK404-1을 던진다")
+    void 좋아요는_상세에서_빠진다() {
+        Long likeId = jdbcTemplate.queryForObject(
+                "SELECT feedback_id FROM message_feedback WHERE rating = 'LIKE' LIMIT 1", Long.class);
+
+        assertThatThrownBy(() -> service.getDislike(likeId)).isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("없는 id로 상세를 부르면 FEEDBACK404-1을 던진다")
+    void 없는_id는_막는다() {
+        assertThatThrownBy(() -> service.getDislike(-1L)).isInstanceOf(GeneralException.class);
     }
 
     private Long insertDislike(long messageId, long userId, String reason, String comment, boolean handled) {

@@ -1,10 +1,12 @@
 package com.telme.feedback.controller;
 
 import com.telme.feedback.dto.req.AdminFeedbackSearchRequest;
+import com.telme.feedback.dto.res.AdminFeedbackDetailResponse;
 import com.telme.feedback.dto.res.AdminFeedbackListResponse;
 import com.telme.feedback.service.AdminFeedbackQueryService;
 import com.telme.global.common.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,5 +46,22 @@ public class AdminFeedbackController {
     public CustomResponse<AdminFeedbackListResponse> getDislikes(
             @Valid @ParameterObject @ModelAttribute AdminFeedbackSearchRequest request) {
         return CustomResponse.onSuccess(adminFeedbackQueryService.getDislikes(request));
+    }
+
+    @Operation(
+            summary = "싫어요 단건 조회",
+            description = "사용자가 물어본 질문, 챗봇 답변, 답변을 만들 때 근거로 쓴 FAQ, 사용자가 남긴 의견을 함께 반환합니다. "
+                    + "근거 FAQ의 제목과 버전은 답변 당시에 저장된 값이라 지금 FAQ와 다를 수 있습니다. "
+                    + "좋아요 id로 조회하면 404입니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
+            @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "FEEDBACK404-1: 싫어요 피드백을 찾을 수 없음")
+    })
+    @GetMapping("/{feedbackId}")
+    public CustomResponse<AdminFeedbackDetailResponse> getDislike(
+            @Parameter(description = "조회할 피드백 ID") @PathVariable long feedbackId) {
+        return CustomResponse.onSuccess(adminFeedbackQueryService.getDislike(feedbackId));
     }
 }
