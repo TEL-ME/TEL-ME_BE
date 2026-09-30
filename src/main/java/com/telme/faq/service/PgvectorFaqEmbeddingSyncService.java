@@ -32,15 +32,21 @@ public class PgvectorFaqEmbeddingSyncService implements FaqEmbeddingSyncService 
                 .orElseThrow(() -> new GeneralException(FaqErrorCode.FAQ_NOT_FOUND));
 
         float[] vector = embeddingClient.embed(textAssembler.assemble(faq));
+        // 이중 벡터: 질문만 구성으로 한 번 더. 배치 경로와 달리 여기는 embed가 트랜잭션 안이라
+        // 호출이 둘이 되면 트랜잭션 유지 시간도 두 배가 된다(관리자 단건 수정이라 빈도는 낮다)
+        float[] questionVector = textAssembler.variant() == FaqEmbeddingTextVariant.QUESTION_ONLY
+                ? vector
+                : embeddingClient.embed(textAssembler.assembleQuestion(faq));
         String model = embeddingProperties.model();
 
         // 있으면 갱신, 없으면 INSERT
         faqEmbeddingRepository.findById(faqId).ifPresentOrElse(
-                existing -> existing.refresh(vector, model, faq.getVersion()),
+                existing -> existing.refresh(vector, questionVector, model, faq.getVersion()),
                 () -> faqEmbeddingRepository.save(FaqEmbedding.builder()
                         .faqId(faq.getFaqId())
                         .faq(faq)
                         .embedding(vector)
+                        .embeddingQuestion(questionVector)
                         .modelName(model)
                         .faqVersion(faq.getVersion())
                         .syncStatus(FaqEmbedding.SyncStatus.SYNCED)

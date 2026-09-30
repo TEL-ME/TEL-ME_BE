@@ -85,10 +85,17 @@ public class FaqBatchLoader {
             List<String> texts = chunk.stream()
                     .map(item -> textAssembler.assemble(item.category(), item.question(), item.answer()))
                     .toList();
-            // 임베딩은 트랜잭션 밖에서, DB 쓰기만 안에서
+            List<String> questionTexts = chunk.stream()
+                    .map(item -> textAssembler.assembleQuestion(item.question()))
+                    .toList();
+            // 임베딩은 트랜잭션 밖에서, DB 쓰기만 안에서. 두 호출 모두 트랜잭션 진입 전에 끝낸다
             List<float[]> vectors = embeddingClient.embedBatch(texts);
+            // variant가 이미 QUESTION_ONLY면 같은 텍스트라 한 번 더 부를 이유X
+            List<float[]> questionVectors = textAssembler.variant() == FaqEmbeddingTextVariant.QUESTION_ONLY
+                    ? vectors
+                    : embeddingClient.embedBatch(questionTexts);
 
-            transactionTemplate.executeWithoutResult(status -> saveChunk(chunk, vectors));
+            transactionTemplate.executeWithoutResult(status -> saveChunk(chunk, vectors, questionVectors));
             inserted += chunk.size();
             log.info("[FaqBatchLoader] {}/{}건 커밋", inserted, pending.size());
         }
@@ -155,7 +162,13 @@ public class FaqBatchLoader {
         return filled;
     }
 
-    private void saveChunk(List<FaqLoadItem> chunk, List<float[]> vectors) {
+    private void saveChunk(List<FaqLoadItem> chunk, List<float[]> vectors, List<float[]> questionVectors) {
+        // 두 호출 사이 정합 확인
+        if (vectors.size() != chunk.size() || questionVectors.size() != chunk.size()) {
+            throw new IllegalStateException("임베딩 결과 개수 불일치: chunk=%d, 본문=%d, 질문=%d"
+                    .formatted(chunk.size(), vectors.size(), questionVectors.size()));
+        }
+
         for (int i = 0; i < chunk.size(); i++) {
             FaqLoadItem item = chunk.get(i);
             Faq faq = faqRepository.save(Faq.builder()
@@ -170,6 +183,7 @@ public class FaqBatchLoader {
                     .faqId(faq.getFaqId())
                     .faq(faq)
                     .embedding(vectors.get(i))
+                    .embeddingQuestion(questionVectors.get(i))
                     .modelName(embeddingProperties.model())
                     .faqVersion(faq.getVersion())
                     .syncStatus(FaqEmbedding.SyncStatus.SYNCED)

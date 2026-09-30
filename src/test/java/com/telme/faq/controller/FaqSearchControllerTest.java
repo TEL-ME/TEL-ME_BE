@@ -1,5 +1,7 @@
 package com.telme.faq.controller;
 
+import com.telme.member.repository.UserRepository;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
@@ -30,12 +32,17 @@ import org.springframework.test.web.servlet.MockMvc;
 
 // SecurityConfig 미Import 시 @WebMvcTest가 기본 보안 설정으로 돌아 permitAll이 검증되지 않음
 @WebMvcTest(FaqSearchController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, MemberStatusChecker.class})
 @TestPropertySource(properties = "faq.search-test-api-enabled=true")
 class FaqSearchControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // MemberStatusFilter가 요청마다 회원을 읽어 SecurityConfig가 이 빈을 요구한다.
+    // 슬라이스 테스트의 principal은 문자열이라 필터는 그대로 통과시킨다
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
@@ -65,13 +72,14 @@ class FaqSearchControllerTest {
     void 정상_요청이면_200을_반환한다() throws Exception {
         when(faqSearchService.search(any())).thenReturn(List.of(
                 new FaqSearchResponse(1L, "USIM-0001", "USIM", "유심 재발급 얼마예요?", "7,700원입니다.",
-                        0.9, 1, LocalDate.of(2026, 9, 21), 1)));
+                        0.9, 1, LocalDate.of(2026, 9, 21), 1, "Q_A")));
 
         mockMvc.perform(get("/api/v1/faq/search").param("query", "유심 재발급 얼마예요?"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result[0].faqId").value(1))
-                .andExpect(jsonPath("$.result[0].slotId").value("USIM-0001"));
+                .andExpect(jsonPath("$.result[0].slotId").value("USIM-0001"))
+                .andExpect(jsonPath("$.result[0].matchedVariant").value("Q_A"));
     }
 
     @Test

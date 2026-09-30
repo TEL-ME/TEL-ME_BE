@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.global.config.SecurityConfig;
+import com.telme.member.repository.UserRepository;
+import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.GuestIdentityService;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 import com.telme.member.service.KakaoLinkRequestStore;
@@ -33,13 +35,18 @@ import org.springframework.test.web.servlet.MockMvc;
 
 // SecurityConfig를 Import하지 않으면 @WebMvcTest가 기본 보안 설정으로 돌아 ADMIN 제한이 검증되지 않는다
 @WebMvcTest(AdminStoreController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, MemberStatusChecker.class})
 class AdminStoreControllerTest {
 
     private static final String URL = "/api/v1/admin/stores";
 
     @Autowired
     private MockMvc mockMvc;
+
+    // MemberStatusFilter가 요청마다 회원을 읽어 SecurityConfig가 이 빈을 요구한다.
+    // 슬라이스 테스트의 principal은 문자열이라 필터는 그대로 통과시킨다
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private AdminStoreQueryService adminStoreQueryService;

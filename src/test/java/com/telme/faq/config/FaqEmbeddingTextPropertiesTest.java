@@ -9,10 +9,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.mock.env.MockEnvironment;
 
 class FaqEmbeddingTextPropertiesTest {
 
-    private final ApplicationContextRunner runner = new ApplicationContextRunner()
+    // 기본 러너는 OS 환경변수를 읽어 FAQ_EMBEDDING_TEXT_VARIANT가 export돼 있으면 기본값 검사가 깨진다
+    // MockEnvironment는 OS 환경변수·시스템 프로퍼티를 읽지 않아 withPropertyValues로 준 값만 본다
+    private final ApplicationContextRunner runner = new ApplicationContextRunner(() -> {
+                AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+                context.setEnvironment(new MockEnvironment());
+                return context;
+            })
             .withConfiguration(org.springframework.boot.autoconfigure.AutoConfigurations.of(
                     ConfigurationPropertiesAutoConfiguration.class))
             .withUserConfiguration(Config.class);

@@ -78,7 +78,7 @@ class AnswerContextConverterTest {
     @DisplayName("점수를 소수점 4자리로 맞춰 담는다")
     void toSources_점수_자릿수를_맞춘다() {
         FaqSearchResponse result = new FaqSearchResponse(
-                1L, null, "BILLING", "질문", "답변", 0.912345, 1, LocalDate.of(2026, 9, 17), 1);
+                1L, null, "BILLING", "질문", "답변", 0.912345, 1, LocalDate.of(2026, 9, 17), 1, null);
 
         AnswerSource source = converter.toSources(List.of(result)).getFirst();
 
@@ -88,6 +88,6 @@ class AnswerContextConverterTest {
 
     private FaqSearchResponse faq(Long faqId, String question, String answer, Integer rank) {
         return new FaqSearchResponse(
-                faqId, null, "BILLING", question, answer, 0.9, 1, LocalDate.of(2026, 9, 17), rank);
+                faqId, null, "BILLING", question, answer, 0.9, 1, LocalDate.of(2026, 9, 17), rank, null);
     }
 }
