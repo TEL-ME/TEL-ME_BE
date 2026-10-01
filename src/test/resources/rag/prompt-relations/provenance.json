@@ -1,0 +1,23 @@
+{
+  "origin_path": "../TEL-ME_BE-local/.measure/frozen-baseline-20260930/exaone/baseline-ollama-20260930-084806-361.json",
+  "origin_sha256": "8216f3673a1a1df78e17584fffa39cecb064a17f2f3abf4b2592613f0defb728",
+  "generator": "ollama",
+  "generator_model": "exaone3.5:7.8b",
+  "temperature": 0.0,
+  "max_tokens": 1024,
+  "retrieval_mode": "replay",
+  "selected_eval_ids": [
+    "EVAL-001",
+    "EVAL-040",
+    "HALLU-009",
+    "HALLU-010",
+    "HALLU-011",
+    "HALLU-018",
+    "HALLU-017",
+    "HALLU-020",
+    "EVAL-027",
+    "EVAL-004"
+  ],
+  "new_gold_labels": false,
+  "raw_answer_available": false
+}
