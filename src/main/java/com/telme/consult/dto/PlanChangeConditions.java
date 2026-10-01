@@ -42,7 +42,7 @@ public final class PlanChangeConditions {
                 .matcher(compact(reply)).find();
     }
 
-    // 기존 설명 생성 기능은 없다. 현재 조건 설명 요청은 새 상담·추출 실패로 소비하지 않는다.
+    // 조건 설명 요청은 새 상담·추출 실패로 소비하지 않는다.
     public static boolean isClarificationRequest(String reply) {
         String text = compact(reply);
         return Pattern.compile("가입한달|가입월|가입여부|변경이력|변경여부").matcher(text).find()

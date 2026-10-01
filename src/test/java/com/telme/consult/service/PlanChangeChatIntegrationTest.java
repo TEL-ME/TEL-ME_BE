@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -63,6 +64,7 @@ class PlanChangeChatIntegrationTest {
     List<LlmRequest> generations = new ArrayList<>();
     Consumer<LlmStreamHandler> failure;
     String currentText;
+    int explanationAnswers;
 
     @BeforeEach
     void setup() {
@@ -516,6 +518,7 @@ class PlanChangeChatIntegrationTest {
         long existing = requestId();
         for (int n=0; n<2; n++) {
             turn("가입한 달이 무슨 뜻이에요?");
+            assertExplanation("달력상의 달");
             assertThat(requestId()).isEqualTo(existing);
             assertThat(condition(JOINED)).isNull();
             assertThat(emitter.names).containsExactly("complete");
@@ -642,6 +645,103 @@ class PlanChangeChatIntegrationTest {
         assertThat(messages.get(messages.size()-1).path("content").asText()).isEqualTo(content());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings={"가입한 달이 무슨 뜻이에요?", "가입월이 뭔가요?", "무슨 뜻이에요?", "이 질문이 무슨 말인가요?", "가입한 달의 의미를 모르겠어요", "질문이 무슨 뜻이에요?"})
+    void telme105MonthExplanationKeepsOriginalPendingConditionThenResumes(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long original = requestId();
+        var before = jdbc.queryForList("SELECT condition_key,status,condition_value,asked_message_id,answered_message_id FROM consult_conditions WHERE consult_request_id=?", original);
+        var version = jdbc.queryForObject("SELECT version FROM consult_requests WHERE consult_request_id=?", Integer.class, original);
+        turn(reply);
+        assertExplanation("달력상의 달");
+        assertThat(jdbc.queryForList("SELECT condition_key,status,condition_value,asked_message_id,answered_message_id FROM consult_conditions WHERE consult_request_id=?", original)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT version FROM consult_requests WHERE consult_request_id=?", Integer.class, original)).isEqualTo(version);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, original)).isEqualTo("WAITING_CONDITION");
+        assertThat(clarificationCount()).isEqualTo(1);
+        assertThat(generations).isEmpty();
+        turn("지난달이요");
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertThat(requestId()).isEqualTo(original);
+        assertFinal();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={"그 질문 뜻이 뭐예요?", "변경 이력이 무슨 뜻이에요?", "무슨 뜻이에요?", "변경 여부 설명해 주세요"})
+    void telme105HistoryExplanationPreservesKnownMonthAndConsumesNoCondition(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달이요");
+        long original = requestId();
+        turn(reply);
+        assertExplanation("이번 달에 이미 요금제를 바꾼 적");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(condition(CHANGED)).isNull();
+        assertThat(clarificationCount()).isEqualTo(2);
+        turn("아니요");
+        assertThat(requestId()).isEqualTo(original);
+        assertFinal();
+    }
+
+    @Test
+    void telme105RepeatedExplanationsDoNotConsumeUnresolvedReplyLimit() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        for (int n=0; n<3; n++) {
+            turn("무슨 뜻이에요?");
+            assertExplanation("달력상의 달");
+        }
+        turn("가입한 것 같기도 해요");
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, requestId())).isEqualTo("WAITING_CONDITION");
+        assertThat(condition(JOINED)).isNull();
+        assertThat(clarificationCount()).isEqualTo(1);
+        turn("지난달이요");
+        turn("아니요");
+        assertFinal();
+    }
+
+    @Test
+    void telme105CorrectionAfterExplanationUsesLatestMonth() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달이요");
+        turn("변경 이력이 무슨 뜻이에요?");
+        assertExplanation("요금제를 바꾼 적");
+        turn("정정할게요. 이번 달에 가입했어요");
+        assertThat(condition(JOINED)).isEqualTo(YES);
+        assertThat(content()).contains("가입한 달에는 요금제를 변경할 수 없습니다");
+        assertFinal();
+    }
+
+    @Test
+    void telme105NewQuestionAfterExplanationCancelsOldConsultWithoutCopyingConditions() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long original = requestId();
+        turn("가입한 달이 무슨 뜻이에요?");
+        assertExplanation("달력상의 달");
+        turn("유심 재발급 비용 알려주세요");
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, original)).isEqualTo("CANCELLED");
+        assertThat(requestId()).isNotEqualTo(original);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_conditions WHERE consult_request_id=? AND condition_key IN ('joinedThisMonth','changedThisMonth')", Integer.class, requestId())).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans={false,true})
+    void telme105StaleOrForeignPendingQuestionRollsBackExplanation(boolean foreign) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long questionId = jdbc.queryForObject("SELECT asked_message_id FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", Long.class, requestId(), JOINED);
+        if (foreign) sessionId = newSession();
+        else { turn("이번 달에 가입했어요"); assertFinal(); }
+        int count = jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?", Integer.class, sessionId);
+        int next = jdbc.queryForObject("SELECT coalesce(max(sequence_no),0)+1 FROM chat_messages WHERE session_id=?", Integer.class, sessionId);
+        long input = jdbc.queryForObject("INSERT INTO chat_messages(session_id,sequence_no,role,message_type,content,status,completed_at) VALUES (?,?,'USER','QUESTION','설명해 주세요','COMPLETED',now()) RETURNING message_id", Long.class, sessionId,next);
+        long execution = jdbc.queryForObject("INSERT INTO chat_executions(session_id,input_message_id,status) VALUES (?,?,'RUNNING') RETURNING execution_id", Long.class, sessionId,input);
+        String oldSessionStatus = jdbc.queryForObject("SELECT status FROM chat_sessions WHERE session_id=?", String.class, sessionId);
+        var answer = new com.telme.chat.service.ChatAnswer(com.telme.chat.entity.ChatMessage.MessageType.ANSWER,"설명",null,List.of(),null);
+        assertThatThrownBy(() -> context.getBean(ConsultChatPersistenceService.class).persistWaiting(execution,sessionId,new ConsultService.PreparationResult(null,questionId),answer)).isInstanceOf(GeneralException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?", Integer.class, sessionId)).isEqualTo(count+1);
+        assertThat(jdbc.queryForObject("SELECT status FROM chat_executions WHERE execution_id=?", String.class, execution)).isEqualTo("RUNNING");
+        assertThat(jdbc.queryForObject("SELECT output_message_id FROM chat_executions WHERE execution_id=?", Long.class, execution)).isNull();
+        assertThat(jdbc.queryForObject("SELECT status FROM chat_sessions WHERE session_id=?", String.class, sessionId)).isEqualTo(oldSessionStatus);
+    }
+
     private long newSession() {
         return jdbc.queryForObject("INSERT INTO chat_sessions(user_id,title) VALUES (?,'되묻기 검증') RETURNING session_id", Long.class, userId);
     }
@@ -680,7 +780,23 @@ class PlanChangeChatIntegrationTest {
         var response = mvc.perform(get("/api/v1/chat/sessions/" + sessionId + "/messages").session(identity)).andExpect(status().isOk()).andReturn().getResponse();
         var messages = mapper.readTree(response.getContentAsByteArray()).path("result").path("messages");
         assertThat(messages.get(messages.size()-1).path("content").asText()).isEqualTo(content());
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=? AND message_type='ANSWER' AND status='COMPLETED'", Integer.class, sessionId)).isEqualTo(generations.isEmpty() ? 1 : generations.size());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=? AND message_type='ANSWER' AND status='COMPLETED'", Integer.class, sessionId)).isEqualTo((generations.isEmpty() ? 1 : generations.size()) + explanationAnswers);
+    }
+
+    private void assertExplanation(String expected) throws Exception {
+        explanationAnswers++;
+        assertThat(outputType()).isEqualTo("ANSWER");
+        assertThat(content()).contains(expected);
+        assertThat(executionStatus()).isEqualTo("COMPLETED");
+        assertThat(emitter.names).containsExactly("complete");
+        assertThat(emitter.tokens).isEmpty();
+        assertThat(emitter.completed.outputMessage().messageId()).isEqualTo(jdbc.queryForObject("SELECT output_message_id FROM chat_executions WHERE execution_id=?", Long.class, executionId));
+        assertThat(jdbc.queryForObject("SELECT status FROM chat_sessions WHERE session_id=?", String.class, sessionId)).isEqualTo("NEED_CLARIFICATION");
+        var identity = new MockHttpSession();
+        identity.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        var response = mvc.perform(get("/api/v1/chat/sessions/" + sessionId + "/messages").session(identity)).andExpect(status().isOk()).andReturn().getResponse();
+        var messages = mapper.readTree(response.getContentAsByteArray()).path("result").path("messages");
+        assertThat(messages.get(messages.size()-1).path("content").asText()).isEqualTo(content());
     }
 
     private final class CaptureEmitter extends SseEmitter {

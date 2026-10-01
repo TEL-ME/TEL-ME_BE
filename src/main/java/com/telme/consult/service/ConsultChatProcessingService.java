@@ -86,7 +86,10 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         trace.stage(command.executionId(), "processing", Map.of(
                 "handler", "ConsultChatProcessingService", "traceVersion", 1));
         AnalyzedTurn turn = analyzer.analyze(command);
-        if (turn.directAnswer() == null && turn.preparation() != null) {
+        if (turn.directAnswer() != null && turn.preparation() != null) {
+            trace.stage(command.executionId(), "analysis", Map.of(
+                    "action", "WAITING_EXPLANATION", "pendingQuestionMessageId", turn.preparation().pendingMessageId()));
+        } else if (turn.directAnswer() == null && turn.preparation() != null) {
             trace.stage(command.executionId(), "analysis", Map.of(
                     "purpose", turn.purpose().name(), "originalQuery", turn.originalUserQuery(),
                     "refinedQuery", turn.searchQuery(), "action",
@@ -98,8 +101,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         if (turn.directAnswer() != null) {
             var completed =
-                    persistence.persistDirectAnswer(
-                            command.executionId(), command.sessionId(), turn.directAnswer());
+                    turn.preparation() == null
+                            ? persistence.persistDirectAnswer(command.executionId(), command.sessionId(), turn.directAnswer())
+                            : persistence.persistWaiting(command.executionId(), command.sessionId(), turn.preparation(), turn.directAnswer());
             events.completed(command.executionId(), completed);
             return;
         }
@@ -281,9 +285,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
 
         public AnalyzedTurn {
-            if (directAnswer != null) {
-                if (preparation != null
-                        || answeredField != null
+            if (directAnswer != null && preparation == null) {
+                if (answeredField != null
                         || purpose != null
                         || originalUserQuery != null
                         || searchQuery != null) {
@@ -291,6 +294,11 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 }
             } else {
                 Objects.requireNonNull(preparation, "preparation");
+                if (directAnswer != null && (!preparation.waitingForReply()
+                        || preparation.prepared() != null || answeredField != null
+                        || directAnswer.messageType() != ChatMessage.MessageType.ANSWER)) {
+                    throw new IllegalArgumentException("설명 답변은 조건 변경 없이 기존 질문을 유지해야 합니다.");
+                }
                 Objects.requireNonNull(purpose, "purpose");
                 if (answeredField != null && answeredField.isBlank()) {
                     throw new IllegalArgumentException("후속 조건 이름은 비어 있을 수 없습니다.");
