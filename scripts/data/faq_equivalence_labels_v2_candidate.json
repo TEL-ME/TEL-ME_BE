@@ -1,0 +1,3457 @@
+{
+  "schemaVersion": 1,
+  "sourceCatalog": "faq_full_1150.json",
+  "sourceCatalogCount": 1150,
+  "sourceCatalogSha256": "ca078af56df2c67a427246f50fcde165978fe8b35cb01e890dab6fe5b95f7505",
+  "multigoldSource": "eval_questions_180_multigold.json",
+  "multigoldRowCount": 180,
+  "multigoldSha256": "0f10cf29d6400ae9a2830d9634ade92682232699c7ee6181a43f0cf57a3144eb",
+  "controlledDataset": "chat_judge_validation_v2.json",
+  "controlledPrimarySourceIdsSha256": "0bb2c5906b08862871f04facdea9bc3e73ef2364ddf857847772538d186a8b1d",
+  "embeddingModel": "bge-m3:latest",
+  "queryCosineThreshold": 0.85,
+  "labelPolicy": "same-category exact answer matches plus query-scoped existing multi-gold labels whose FAQ question similarity meets the threshold",
+  "completeness": "KNOWN_ALTERNATIVES_ONLY; not a proof that every catalog equivalent was found",
+  "byPrimarySourceId": {
+    "BILLING-0002": {
+      "acceptedSourceIds": [
+        "BILLING-0002"
+      ],
+      "evidence": []
+    },
+    "BILLING-0003": {
+      "acceptedSourceIds": [
+        "BILLING-0003",
+        "BILLING-0024",
+        "BILLING-0094",
+        "BILLING-0101"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-002",
+          "query": "요금을 안 내면 언제부터 전화를 못 쓰나요?",
+          "queryCosine": 0.892172,
+          "sourceIds": [
+            "BILLING-0003",
+            "BILLING-0024",
+            "BILLING-0094",
+            "BILLING-0101"
+          ]
+        }
+      ]
+    },
+    "BILLING-0007": {
+      "acceptedSourceIds": [
+        "BILLING-0007"
+      ],
+      "evidence": []
+    },
+    "BILLING-0008": {
+      "acceptedSourceIds": [
+        "BILLING-0008"
+      ],
+      "evidence": []
+    },
+    "BILLING-0011": {
+      "acceptedSourceIds": [
+        "BILLING-0011"
+      ],
+      "evidence": []
+    },
+    "BILLING-0014": {
+      "acceptedSourceIds": [
+        "BILLING-0014"
+      ],
+      "evidence": []
+    },
+    "BILLING-0020": {
+      "acceptedSourceIds": [
+        "BILLING-0020"
+      ],
+      "evidence": []
+    },
+    "BILLING-0021": {
+      "acceptedSourceIds": [
+        "BILLING-0021"
+      ],
+      "evidence": []
+    },
+    "BILLING-0023": {
+      "acceptedSourceIds": [
+        "BILLING-0023"
+      ],
+      "evidence": []
+    },
+    "BILLING-0031": {
+      "acceptedSourceIds": [
+        "BILLING-0031"
+      ],
+      "evidence": []
+    },
+    "BILLING-0032": {
+      "acceptedSourceIds": [
+        "BILLING-0032"
+      ],
+      "evidence": []
+    },
+    "BILLING-0037": {
+      "acceptedSourceIds": [
+        "BILLING-0037"
+      ],
+      "evidence": []
+    },
+    "BILLING-0042": {
+      "acceptedSourceIds": [
+        "BILLING-0042"
+      ],
+      "evidence": []
+    },
+    "BILLING-0052": {
+      "acceptedSourceIds": [
+        "BILLING-0052"
+      ],
+      "evidence": []
+    },
+    "BILLING-0053": {
+      "acceptedSourceIds": [
+        "BILLING-0053"
+      ],
+      "evidence": []
+    },
+    "BILLING-0054": {
+      "acceptedSourceIds": [
+        "BILLING-0054"
+      ],
+      "evidence": []
+    },
+    "BILLING-0055": {
+      "acceptedSourceIds": [
+        "BILLING-0055"
+      ],
+      "evidence": []
+    },
+    "BILLING-0060": {
+      "acceptedSourceIds": [
+        "BILLING-0060"
+      ],
+      "evidence": []
+    },
+    "BILLING-0062": {
+      "acceptedSourceIds": [
+        "BILLING-0062"
+      ],
+      "evidence": []
+    },
+    "BILLING-0065": {
+      "acceptedSourceIds": [
+        "BILLING-0065"
+      ],
+      "evidence": []
+    },
+    "BILLING-0069": {
+      "acceptedSourceIds": [
+        "BILLING-0069"
+      ],
+      "evidence": []
+    },
+    "BILLING-0072": {
+      "acceptedSourceIds": [
+        "BILLING-0072"
+      ],
+      "evidence": []
+    },
+    "BILLING-0074": {
+      "acceptedSourceIds": [
+        "BILLING-0074"
+      ],
+      "evidence": []
+    },
+    "BILLING-0075": {
+      "acceptedSourceIds": [
+        "BILLING-0075"
+      ],
+      "evidence": []
+    },
+    "BILLING-0077": {
+      "acceptedSourceIds": [
+        "BILLING-0077"
+      ],
+      "evidence": []
+    },
+    "BILLING-0080": {
+      "acceptedSourceIds": [
+        "BILLING-0080"
+      ],
+      "evidence": []
+    },
+    "BILLING-0081": {
+      "acceptedSourceIds": [
+        "BILLING-0081"
+      ],
+      "evidence": []
+    },
+    "BILLING-0084": {
+      "acceptedSourceIds": [
+        "BILLING-0084"
+      ],
+      "evidence": []
+    },
+    "BILLING-0087": {
+      "acceptedSourceIds": [
+        "BILLING-0087"
+      ],
+      "evidence": []
+    },
+    "BILLING-0088": {
+      "acceptedSourceIds": [
+        "BILLING-0088"
+      ],
+      "evidence": []
+    },
+    "BILLING-0090": {
+      "acceptedSourceIds": [
+        "BILLING-0090"
+      ],
+      "evidence": []
+    },
+    "BILLING-0092": {
+      "acceptedSourceIds": [
+        "BILLING-0015",
+        "BILLING-0022",
+        "BILLING-0043",
+        "BILLING-0057",
+        "BILLING-0064",
+        "BILLING-0085",
+        "BILLING-0092",
+        "BILLING-0106",
+        "BILLING-0155"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-003",
+          "query": "이번 달에 요금제를 변경할 수 있을까요?",
+          "queryCosine": 0.98088,
+          "sourceIds": [
+            "BILLING-0015",
+            "BILLING-0022",
+            "BILLING-0043",
+            "BILLING-0057",
+            "BILLING-0064",
+            "BILLING-0085",
+            "BILLING-0092",
+            "BILLING-0106",
+            "BILLING-0155"
+          ]
+        }
+      ]
+    },
+    "BILLING-0097": {
+      "acceptedSourceIds": [
+        "BILLING-0097"
+      ],
+      "evidence": []
+    },
+    "BILLING-0098": {
+      "acceptedSourceIds": [
+        "BILLING-0098"
+      ],
+      "evidence": []
+    },
+    "BILLING-0100": {
+      "acceptedSourceIds": [
+        "BILLING-0100"
+      ],
+      "evidence": []
+    },
+    "BILLING-0102": {
+      "acceptedSourceIds": [
+        "BILLING-0102"
+      ],
+      "evidence": []
+    },
+    "BILLING-0107": {
+      "acceptedSourceIds": [
+        "BILLING-0107"
+      ],
+      "evidence": []
+    },
+    "BILLING-0113": {
+      "acceptedSourceIds": [
+        "BILLING-0113"
+      ],
+      "evidence": []
+    },
+    "BILLING-0115": {
+      "acceptedSourceIds": [
+        "BILLING-0115"
+      ],
+      "evidence": []
+    },
+    "BILLING-0117": {
+      "acceptedSourceIds": [
+        "BILLING-0117"
+      ],
+      "evidence": []
+    },
+    "BILLING-0123": {
+      "acceptedSourceIds": [
+        "BILLING-0123"
+      ],
+      "evidence": []
+    },
+    "BILLING-0129": {
+      "acceptedSourceIds": [
+        "BILLING-0129"
+      ],
+      "evidence": []
+    },
+    "BILLING-0135": {
+      "acceptedSourceIds": [
+        "BILLING-0135"
+      ],
+      "evidence": []
+    },
+    "BILLING-0137": {
+      "acceptedSourceIds": [
+        "BILLING-0137"
+      ],
+      "evidence": []
+    },
+    "BILLING-0138": {
+      "acceptedSourceIds": [
+        "BILLING-0138"
+      ],
+      "evidence": []
+    },
+    "BILLING-0146": {
+      "acceptedSourceIds": [
+        "BILLING-0146"
+      ],
+      "evidence": []
+    },
+    "BILLING-0148": {
+      "acceptedSourceIds": [
+        "BILLING-0148"
+      ],
+      "evidence": []
+    },
+    "BILLING-0154": {
+      "acceptedSourceIds": [
+        "BILLING-0154"
+      ],
+      "evidence": []
+    },
+    "BILLING-0155": {
+      "acceptedSourceIds": [
+        "BILLING-0155"
+      ],
+      "evidence": []
+    },
+    "BILLING-0158": {
+      "acceptedSourceIds": [
+        "BILLING-0158"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0004": {
+      "acceptedSourceIds": [
+        "DEVICE-0004"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0008": {
+      "acceptedSourceIds": [
+        "DEVICE-0008"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0010": {
+      "acceptedSourceIds": [
+        "DEVICE-0010"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0012": {
+      "acceptedSourceIds": [
+        "DEVICE-0012"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0015": {
+      "acceptedSourceIds": [
+        "DEVICE-0015"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0016": {
+      "acceptedSourceIds": [
+        "DEVICE-0016"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0017": {
+      "acceptedSourceIds": [
+        "DEVICE-0017"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0024": {
+      "acceptedSourceIds": [
+        "DEVICE-0024"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0025": {
+      "acceptedSourceIds": [
+        "DEVICE-0025"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0026": {
+      "acceptedSourceIds": [
+        "DEVICE-0026"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0028": {
+      "acceptedSourceIds": [
+        "DEVICE-0028"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0033": {
+      "acceptedSourceIds": [
+        "DEVICE-0033"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0034": {
+      "acceptedSourceIds": [
+        "DEVICE-0034"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0035": {
+      "acceptedSourceIds": [
+        "DEVICE-0035"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0037": {
+      "acceptedSourceIds": [
+        "DEVICE-0037"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0040": {
+      "acceptedSourceIds": [
+        "DEVICE-0040"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0042": {
+      "acceptedSourceIds": [
+        "DEVICE-0042"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0045": {
+      "acceptedSourceIds": [
+        "DEVICE-0045"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0047": {
+      "acceptedSourceIds": [
+        "DEVICE-0047"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0048": {
+      "acceptedSourceIds": [
+        "DEVICE-0048"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0054": {
+      "acceptedSourceIds": [
+        "DEVICE-0054"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0056": {
+      "acceptedSourceIds": [
+        "DEVICE-0056"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0061": {
+      "acceptedSourceIds": [
+        "DEVICE-0061"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0062": {
+      "acceptedSourceIds": [
+        "DEVICE-0062"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0063": {
+      "acceptedSourceIds": [
+        "DEVICE-0063"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0064": {
+      "acceptedSourceIds": [
+        "DEVICE-0064"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0069": {
+      "acceptedSourceIds": [
+        "DEVICE-0069"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0070": {
+      "acceptedSourceIds": [
+        "DEVICE-0070"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0071": {
+      "acceptedSourceIds": [
+        "DEVICE-0071"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0072": {
+      "acceptedSourceIds": [
+        "DEVICE-0072"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0073": {
+      "acceptedSourceIds": [
+        "DEVICE-0073"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0076": {
+      "acceptedSourceIds": [
+        "DEVICE-0076"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0077": {
+      "acceptedSourceIds": [
+        "DEVICE-0077"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0080": {
+      "acceptedSourceIds": [
+        "DEVICE-0080"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0084": {
+      "acceptedSourceIds": [
+        "DEVICE-0084"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0089": {
+      "acceptedSourceIds": [
+        "DEVICE-0089"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0095": {
+      "acceptedSourceIds": [
+        "DEVICE-0095"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0096": {
+      "acceptedSourceIds": [
+        "DEVICE-0096"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0098": {
+      "acceptedSourceIds": [
+        "DEVICE-0098"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0099": {
+      "acceptedSourceIds": [
+        "DEVICE-0099"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0102": {
+      "acceptedSourceIds": [
+        "DEVICE-0102"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0105": {
+      "acceptedSourceIds": [
+        "DEVICE-0105"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0109": {
+      "acceptedSourceIds": [
+        "DEVICE-0109"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0110": {
+      "acceptedSourceIds": [
+        "DEVICE-0110"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0111": {
+      "acceptedSourceIds": [
+        "DEVICE-0111"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0116": {
+      "acceptedSourceIds": [
+        "DEVICE-0116"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0117": {
+      "acceptedSourceIds": [
+        "DEVICE-0117"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0119": {
+      "acceptedSourceIds": [
+        "DEVICE-0119"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0129": {
+      "acceptedSourceIds": [
+        "DEVICE-0129"
+      ],
+      "evidence": []
+    },
+    "DEVICE-0130": {
+      "acceptedSourceIds": [
+        "DEVICE-0130"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0002": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0002"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0004": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0004"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0005": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0005"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0006": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0006"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0007": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0007"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0008": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0008"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0009": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0009"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0010": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0010"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0012": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0012"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0014": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0014"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0015": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0015"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0017": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0017"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0020": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0020"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0021": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0021",
+        "NAME_CHANGE-0039"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-010",
+          "query": "신용 심사에서 떨어지면 명의변경이 불가능한가요?",
+          "queryCosine": 0.976273,
+          "sourceIds": [
+            "NAME_CHANGE-0021",
+            "NAME_CHANGE-0039"
+          ]
+        },
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-050",
+          "query": "심사에서 부결됐다는 문자를 받았는데 명의 바꾸는 게 아예 안 되는 건가요",
+          "queryCosine": 0.850724,
+          "sourceIds": [
+            "NAME_CHANGE-0021"
+          ]
+        }
+      ]
+    },
+    "NAME_CHANGE-0023": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0023"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0024": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0024"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0025": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0025"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0027": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0027"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0028": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0028"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0030": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0030"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0032": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0032"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0033": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0033"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0034": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0034"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0036": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0036"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0038": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0038"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0039": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0039"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0040": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0040"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0042": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0042"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0044": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0044"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0046": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0046"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0048": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0048"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0049": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0049"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0051": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0051"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0054": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0054"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0057": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0057"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0058": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0058"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0059": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0059"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0061": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0061"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0063": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0063"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0065": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0065"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0068": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0068"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0070": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0070"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0075": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0075"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0076": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0076"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0079": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0079"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0081": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0045",
+        "NAME_CHANGE-0075",
+        "NAME_CHANGE-0081",
+        "NAME_CHANGE-0087",
+        "NAME_CHANGE-0090"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-012",
+          "query": "할부금이 없으면 신용 심사 없이 명의변경이 되나요?",
+          "queryCosine": 0.903451,
+          "sourceIds": [
+            "NAME_CHANGE-0045",
+            "NAME_CHANGE-0075",
+            "NAME_CHANGE-0081",
+            "NAME_CHANGE-0087",
+            "NAME_CHANGE-0090"
+          ]
+        }
+      ]
+    },
+    "NAME_CHANGE-0083": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0083"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0085": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0085"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0086": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0086"
+      ],
+      "evidence": []
+    },
+    "NAME_CHANGE-0088": {
+      "acceptedSourceIds": [
+        "NAME_CHANGE-0088"
+      ],
+      "evidence": []
+    },
+    "PLAN-0001": {
+      "acceptedSourceIds": [
+        "PLAN-0001"
+      ],
+      "evidence": []
+    },
+    "PLAN-0003": {
+      "acceptedSourceIds": [
+        "PLAN-0003"
+      ],
+      "evidence": []
+    },
+    "PLAN-0004": {
+      "acceptedSourceIds": [
+        "PLAN-0004"
+      ],
+      "evidence": []
+    },
+    "PLAN-0008": {
+      "acceptedSourceIds": [
+        "PLAN-0008",
+        "PLAN-0018"
+      ],
+      "evidence": [
+        {
+          "type": "EXACT_ANSWER_SAME_CATEGORY",
+          "sourceIds": [
+            "PLAN-0018"
+          ]
+        }
+      ]
+    },
+    "PLAN-0011": {
+      "acceptedSourceIds": [
+        "PLAN-0011"
+      ],
+      "evidence": []
+    },
+    "PLAN-0015": {
+      "acceptedSourceIds": [
+        "PLAN-0015"
+      ],
+      "evidence": []
+    },
+    "PLAN-0017": {
+      "acceptedSourceIds": [
+        "PLAN-0017"
+      ],
+      "evidence": []
+    },
+    "PLAN-0019": {
+      "acceptedSourceIds": [
+        "PLAN-0019"
+      ],
+      "evidence": []
+    },
+    "PLAN-0022": {
+      "acceptedSourceIds": [
+        "PLAN-0022"
+      ],
+      "evidence": []
+    },
+    "PLAN-0023": {
+      "acceptedSourceIds": [
+        "PLAN-0023"
+      ],
+      "evidence": []
+    },
+    "PLAN-0026": {
+      "acceptedSourceIds": [
+        "PLAN-0026"
+      ],
+      "evidence": []
+    },
+    "PLAN-0027": {
+      "acceptedSourceIds": [
+        "PLAN-0027"
+      ],
+      "evidence": []
+    },
+    "PLAN-0028": {
+      "acceptedSourceIds": [
+        "PLAN-0028"
+      ],
+      "evidence": []
+    },
+    "PLAN-0031": {
+      "acceptedSourceIds": [
+        "PLAN-0031"
+      ],
+      "evidence": []
+    },
+    "PLAN-0036": {
+      "acceptedSourceIds": [
+        "PLAN-0036"
+      ],
+      "evidence": []
+    },
+    "PLAN-0037": {
+      "acceptedSourceIds": [
+        "PLAN-0037"
+      ],
+      "evidence": []
+    },
+    "PLAN-0038": {
+      "acceptedSourceIds": [
+        "PLAN-0038"
+      ],
+      "evidence": []
+    },
+    "PLAN-0043": {
+      "acceptedSourceIds": [
+        "PLAN-0043"
+      ],
+      "evidence": []
+    },
+    "PLAN-0044": {
+      "acceptedSourceIds": [
+        "PLAN-0044"
+      ],
+      "evidence": []
+    },
+    "PLAN-0047": {
+      "acceptedSourceIds": [
+        "PLAN-0047"
+      ],
+      "evidence": []
+    },
+    "PLAN-0050": {
+      "acceptedSourceIds": [
+        "PLAN-0050"
+      ],
+      "evidence": []
+    },
+    "PLAN-0057": {
+      "acceptedSourceIds": [
+        "PLAN-0057"
+      ],
+      "evidence": []
+    },
+    "PLAN-0058": {
+      "acceptedSourceIds": [
+        "PLAN-0058"
+      ],
+      "evidence": []
+    },
+    "PLAN-0060": {
+      "acceptedSourceIds": [
+        "PLAN-0060"
+      ],
+      "evidence": []
+    },
+    "PLAN-0061": {
+      "acceptedSourceIds": [
+        "PLAN-0061"
+      ],
+      "evidence": []
+    },
+    "PLAN-0066": {
+      "acceptedSourceIds": [
+        "PLAN-0066"
+      ],
+      "evidence": []
+    },
+    "PLAN-0069": {
+      "acceptedSourceIds": [
+        "PLAN-0069"
+      ],
+      "evidence": []
+    },
+    "PLAN-0072": {
+      "acceptedSourceIds": [
+        "PLAN-0072"
+      ],
+      "evidence": []
+    },
+    "PLAN-0075": {
+      "acceptedSourceIds": [
+        "PLAN-0075"
+      ],
+      "evidence": []
+    },
+    "PLAN-0076": {
+      "acceptedSourceIds": [
+        "PLAN-0076"
+      ],
+      "evidence": []
+    },
+    "PLAN-0080": {
+      "acceptedSourceIds": [
+        "PLAN-0080"
+      ],
+      "evidence": []
+    },
+    "PLAN-0081": {
+      "acceptedSourceIds": [
+        "PLAN-0081"
+      ],
+      "evidence": []
+    },
+    "PLAN-0083": {
+      "acceptedSourceIds": [
+        "PLAN-0083"
+      ],
+      "evidence": []
+    },
+    "PLAN-0090": {
+      "acceptedSourceIds": [
+        "PLAN-0090"
+      ],
+      "evidence": []
+    },
+    "PLAN-0091": {
+      "acceptedSourceIds": [
+        "PLAN-0091"
+      ],
+      "evidence": []
+    },
+    "PLAN-0092": {
+      "acceptedSourceIds": [
+        "PLAN-0092"
+      ],
+      "evidence": []
+    },
+    "PLAN-0096": {
+      "acceptedSourceIds": [
+        "PLAN-0096"
+      ],
+      "evidence": []
+    },
+    "PLAN-0103": {
+      "acceptedSourceIds": [
+        "PLAN-0103"
+      ],
+      "evidence": []
+    },
+    "PLAN-0106": {
+      "acceptedSourceIds": [
+        "PLAN-0106"
+      ],
+      "evidence": []
+    },
+    "PLAN-0108": {
+      "acceptedSourceIds": [
+        "PLAN-0108"
+      ],
+      "evidence": []
+    },
+    "PLAN-0115": {
+      "acceptedSourceIds": [
+        "PLAN-0115"
+      ],
+      "evidence": []
+    },
+    "PLAN-0116": {
+      "acceptedSourceIds": [
+        "PLAN-0001",
+        "PLAN-0036",
+        "PLAN-0041",
+        "PLAN-0091",
+        "PLAN-0106",
+        "PLAN-0116"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-014",
+          "query": "5G 요금제 종류를 알려주세요",
+          "queryCosine": 0.884367,
+          "sourceIds": [
+            "PLAN-0001",
+            "PLAN-0036",
+            "PLAN-0041",
+            "PLAN-0091",
+            "PLAN-0106",
+            "PLAN-0116"
+          ]
+        }
+      ]
+    },
+    "PLAN-0121": {
+      "acceptedSourceIds": [
+        "PLAN-0121"
+      ],
+      "evidence": []
+    },
+    "PLAN-0127": {
+      "acceptedSourceIds": [
+        "PLAN-0127"
+      ],
+      "evidence": []
+    },
+    "PLAN-0135": {
+      "acceptedSourceIds": [
+        "PLAN-0135"
+      ],
+      "evidence": []
+    },
+    "PLAN-0136": {
+      "acceptedSourceIds": [
+        "PLAN-0136"
+      ],
+      "evidence": []
+    },
+    "PLAN-0137": {
+      "acceptedSourceIds": [
+        "PLAN-0137"
+      ],
+      "evidence": []
+    },
+    "PLAN-0143": {
+      "acceptedSourceIds": [
+        "PLAN-0143"
+      ],
+      "evidence": []
+    },
+    "PLAN-0145": {
+      "acceptedSourceIds": [
+        "PLAN-0145"
+      ],
+      "evidence": []
+    },
+    "PLAN-0150": {
+      "acceptedSourceIds": [
+        "PLAN-0150"
+      ],
+      "evidence": []
+    },
+    "PORTING-0001": {
+      "acceptedSourceIds": [
+        "PORTING-0001"
+      ],
+      "evidence": []
+    },
+    "PORTING-0002": {
+      "acceptedSourceIds": [
+        "PORTING-0002"
+      ],
+      "evidence": []
+    },
+    "PORTING-0009": {
+      "acceptedSourceIds": [
+        "PORTING-0009"
+      ],
+      "evidence": []
+    },
+    "PORTING-0010": {
+      "acceptedSourceIds": [
+        "PORTING-0010"
+      ],
+      "evidence": []
+    },
+    "PORTING-0012": {
+      "acceptedSourceIds": [
+        "PORTING-0012"
+      ],
+      "evidence": []
+    },
+    "PORTING-0014": {
+      "acceptedSourceIds": [
+        "PORTING-0014",
+        "PORTING-0026",
+        "PORTING-0034",
+        "PORTING-0054",
+        "PORTING-0058",
+        "PORTING-0070",
+        "PORTING-0074",
+        "PORTING-0082"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-017",
+          "query": "미납 요금이 조금 있어도 번호이동이 되나요?",
+          "queryCosine": 0.87795,
+          "sourceIds": [
+            "PORTING-0014",
+            "PORTING-0026",
+            "PORTING-0034",
+            "PORTING-0054",
+            "PORTING-0058",
+            "PORTING-0070",
+            "PORTING-0074",
+            "PORTING-0082"
+          ]
+        }
+      ]
+    },
+    "PORTING-0015": {
+      "acceptedSourceIds": [
+        "PORTING-0015"
+      ],
+      "evidence": []
+    },
+    "PORTING-0016": {
+      "acceptedSourceIds": [
+        "PORTING-0016"
+      ],
+      "evidence": []
+    },
+    "PORTING-0022": {
+      "acceptedSourceIds": [
+        "PORTING-0022"
+      ],
+      "evidence": []
+    },
+    "PORTING-0023": {
+      "acceptedSourceIds": [
+        "PORTING-0023"
+      ],
+      "evidence": []
+    },
+    "PORTING-0024": {
+      "acceptedSourceIds": [
+        "PORTING-0024"
+      ],
+      "evidence": []
+    },
+    "PORTING-0027": {
+      "acceptedSourceIds": [
+        "PORTING-0027"
+      ],
+      "evidence": []
+    },
+    "PORTING-0028": {
+      "acceptedSourceIds": [
+        "PORTING-0028"
+      ],
+      "evidence": []
+    },
+    "PORTING-0029": {
+      "acceptedSourceIds": [
+        "PORTING-0029"
+      ],
+      "evidence": []
+    },
+    "PORTING-0030": {
+      "acceptedSourceIds": [
+        "PORTING-0030"
+      ],
+      "evidence": []
+    },
+    "PORTING-0032": {
+      "acceptedSourceIds": [
+        "PORTING-0032"
+      ],
+      "evidence": []
+    },
+    "PORTING-0033": {
+      "acceptedSourceIds": [
+        "PORTING-0033"
+      ],
+      "evidence": []
+    },
+    "PORTING-0034": {
+      "acceptedSourceIds": [
+        "PORTING-0014",
+        "PORTING-0026",
+        "PORTING-0034",
+        "PORTING-0054",
+        "PORTING-0058",
+        "PORTING-0070",
+        "PORTING-0074",
+        "PORTING-0082"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-017",
+          "query": "미납 요금이 조금 있어도 번호이동이 되나요?",
+          "queryCosine": 0.858719,
+          "sourceIds": [
+            "PORTING-0014",
+            "PORTING-0026",
+            "PORTING-0034",
+            "PORTING-0054",
+            "PORTING-0058",
+            "PORTING-0070",
+            "PORTING-0074",
+            "PORTING-0082"
+          ]
+        }
+      ]
+    },
+    "PORTING-0037": {
+      "acceptedSourceIds": [
+        "PORTING-0037"
+      ],
+      "evidence": []
+    },
+    "PORTING-0038": {
+      "acceptedSourceIds": [
+        "PORTING-0038"
+      ],
+      "evidence": []
+    },
+    "PORTING-0043": {
+      "acceptedSourceIds": [
+        "PORTING-0043"
+      ],
+      "evidence": []
+    },
+    "PORTING-0044": {
+      "acceptedSourceIds": [
+        "PORTING-0044"
+      ],
+      "evidence": []
+    },
+    "PORTING-0045": {
+      "acceptedSourceIds": [
+        "PORTING-0002",
+        "PORTING-0010",
+        "PORTING-0018",
+        "PORTING-0026",
+        "PORTING-0030",
+        "PORTING-0034",
+        "PORTING-0038",
+        "PORTING-0042",
+        "PORTING-0045"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-020",
+          "query": "다른 통신사로 번호를 가져가려면 어떻게 하나요?",
+          "queryCosine": 0.906735,
+          "sourceIds": [
+            "PORTING-0002",
+            "PORTING-0010",
+            "PORTING-0018",
+            "PORTING-0026",
+            "PORTING-0030",
+            "PORTING-0034",
+            "PORTING-0038",
+            "PORTING-0042",
+            "PORTING-0045"
+          ]
+        }
+      ]
+    },
+    "PORTING-0048": {
+      "acceptedSourceIds": [
+        "PORTING-0048"
+      ],
+      "evidence": []
+    },
+    "PORTING-0049": {
+      "acceptedSourceIds": [
+        "PORTING-0049"
+      ],
+      "evidence": []
+    },
+    "PORTING-0052": {
+      "acceptedSourceIds": [
+        "PORTING-0052"
+      ],
+      "evidence": []
+    },
+    "PORTING-0053": {
+      "acceptedSourceIds": [
+        "PORTING-0053"
+      ],
+      "evidence": []
+    },
+    "PORTING-0056": {
+      "acceptedSourceIds": [
+        "PORTING-0056"
+      ],
+      "evidence": []
+    },
+    "PORTING-0058": {
+      "acceptedSourceIds": [
+        "PORTING-0058"
+      ],
+      "evidence": []
+    },
+    "PORTING-0060": {
+      "acceptedSourceIds": [
+        "PORTING-0060"
+      ],
+      "evidence": []
+    },
+    "PORTING-0061": {
+      "acceptedSourceIds": [
+        "PORTING-0061"
+      ],
+      "evidence": []
+    },
+    "PORTING-0065": {
+      "acceptedSourceIds": [
+        "PORTING-0065"
+      ],
+      "evidence": []
+    },
+    "PORTING-0067": {
+      "acceptedSourceIds": [
+        "PORTING-0007",
+        "PORTING-0011",
+        "PORTING-0027",
+        "PORTING-0067",
+        "PORTING-0075",
+        "PORTING-0083",
+        "PORTING-0087",
+        "PORTING-0091",
+        "PORTING-0111"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-018",
+          "query": "개통한 지 두 달인데 번호이동이 가능한가요?",
+          "queryCosine": 0.860891,
+          "sourceIds": [
+            "PORTING-0007",
+            "PORTING-0011",
+            "PORTING-0027",
+            "PORTING-0067",
+            "PORTING-0075",
+            "PORTING-0083",
+            "PORTING-0087",
+            "PORTING-0091",
+            "PORTING-0111"
+          ]
+        }
+      ]
+    },
+    "PORTING-0071": {
+      "acceptedSourceIds": [
+        "PORTING-0071"
+      ],
+      "evidence": []
+    },
+    "PORTING-0073": {
+      "acceptedSourceIds": [
+        "PORTING-0073"
+      ],
+      "evidence": []
+    },
+    "PORTING-0077": {
+      "acceptedSourceIds": [
+        "PORTING-0077"
+      ],
+      "evidence": []
+    },
+    "PORTING-0078": {
+      "acceptedSourceIds": [
+        "PORTING-0078"
+      ],
+      "evidence": []
+    },
+    "PORTING-0081": {
+      "acceptedSourceIds": [
+        "PORTING-0081"
+      ],
+      "evidence": []
+    },
+    "PORTING-0085": {
+      "acceptedSourceIds": [
+        "PORTING-0085"
+      ],
+      "evidence": []
+    },
+    "PORTING-0087": {
+      "acceptedSourceIds": [
+        "PORTING-0087"
+      ],
+      "evidence": []
+    },
+    "PORTING-0091": {
+      "acceptedSourceIds": [
+        "PORTING-0091"
+      ],
+      "evidence": []
+    },
+    "PORTING-0092": {
+      "acceptedSourceIds": [
+        "PORTING-0092"
+      ],
+      "evidence": []
+    },
+    "PORTING-0097": {
+      "acceptedSourceIds": [
+        "PORTING-0097"
+      ],
+      "evidence": []
+    },
+    "PORTING-0098": {
+      "acceptedSourceIds": [
+        "PORTING-0098"
+      ],
+      "evidence": []
+    },
+    "PORTING-0102": {
+      "acceptedSourceIds": [
+        "PORTING-0102"
+      ],
+      "evidence": []
+    },
+    "PORTING-0105": {
+      "acceptedSourceIds": [
+        "PORTING-0105"
+      ],
+      "evidence": []
+    },
+    "PORTING-0107": {
+      "acceptedSourceIds": [
+        "PORTING-0107"
+      ],
+      "evidence": []
+    },
+    "PORTING-0110": {
+      "acceptedSourceIds": [
+        "PORTING-0110"
+      ],
+      "evidence": []
+    },
+    "PORTING-0111": {
+      "acceptedSourceIds": [
+        "PORTING-0111"
+      ],
+      "evidence": []
+    },
+    "PORTING-0113": {
+      "acceptedSourceIds": [
+        "PORTING-0113"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0002": {
+      "acceptedSourceIds": [
+        "ROAMING-0002"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0004": {
+      "acceptedSourceIds": [
+        "ROAMING-0004"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0005": {
+      "acceptedSourceIds": [
+        "ROAMING-0005"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0006": {
+      "acceptedSourceIds": [
+        "ROAMING-0006"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0009": {
+      "acceptedSourceIds": [
+        "ROAMING-0009"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0010": {
+      "acceptedSourceIds": [
+        "ROAMING-0010"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0011": {
+      "acceptedSourceIds": [
+        "ROAMING-0011"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0013": {
+      "acceptedSourceIds": [
+        "ROAMING-0013"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0014": {
+      "acceptedSourceIds": [
+        "ROAMING-0014"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0016": {
+      "acceptedSourceIds": [
+        "ROAMING-0016"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0018": {
+      "acceptedSourceIds": [
+        "ROAMING-0018"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0020": {
+      "acceptedSourceIds": [
+        "ROAMING-0005",
+        "ROAMING-0020",
+        "ROAMING-0025",
+        "ROAMING-0040",
+        "ROAMING-0050",
+        "ROAMING-0080"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-022",
+          "query": "출국 전날에도 로밍 가입 여부를 확인할 수 있나요?",
+          "queryCosine": 0.9509,
+          "sourceIds": [
+            "ROAMING-0005",
+            "ROAMING-0020",
+            "ROAMING-0025",
+            "ROAMING-0040",
+            "ROAMING-0050",
+            "ROAMING-0080"
+          ]
+        }
+      ]
+    },
+    "ROAMING-0021": {
+      "acceptedSourceIds": [
+        "ROAMING-0021"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0022": {
+      "acceptedSourceIds": [
+        "ROAMING-0022"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0024": {
+      "acceptedSourceIds": [
+        "ROAMING-0024"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0025": {
+      "acceptedSourceIds": [
+        "ROAMING-0025"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0027": {
+      "acceptedSourceIds": [
+        "ROAMING-0027",
+        "ROAMING-0032"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-021",
+          "query": "고객센터 전화로 로밍을 신청하는 방법을 알려주세요",
+          "queryCosine": 0.963035,
+          "sourceIds": [
+            "ROAMING-0027",
+            "ROAMING-0032"
+          ]
+        }
+      ]
+    },
+    "ROAMING-0028": {
+      "acceptedSourceIds": [
+        "ROAMING-0028"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0029": {
+      "acceptedSourceIds": [
+        "ROAMING-0029"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0030": {
+      "acceptedSourceIds": [
+        "ROAMING-0030"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0031": {
+      "acceptedSourceIds": [
+        "ROAMING-0031"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0032": {
+      "acceptedSourceIds": [
+        "ROAMING-0027",
+        "ROAMING-0032"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-021",
+          "query": "고객센터 전화로 로밍을 신청하는 방법을 알려주세요",
+          "queryCosine": 0.855459,
+          "sourceIds": [
+            "ROAMING-0027",
+            "ROAMING-0032"
+          ]
+        }
+      ]
+    },
+    "ROAMING-0034": {
+      "acceptedSourceIds": [
+        "ROAMING-0034"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0036": {
+      "acceptedSourceIds": [
+        "ROAMING-0036"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0037": {
+      "acceptedSourceIds": [
+        "ROAMING-0037"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0038": {
+      "acceptedSourceIds": [
+        "ROAMING-0038"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0039": {
+      "acceptedSourceIds": [
+        "ROAMING-0039"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0041": {
+      "acceptedSourceIds": [
+        "ROAMING-0041"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0042": {
+      "acceptedSourceIds": [
+        "ROAMING-0042"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0044": {
+      "acceptedSourceIds": [
+        "ROAMING-0044"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0045": {
+      "acceptedSourceIds": [
+        "ROAMING-0045"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0046": {
+      "acceptedSourceIds": [
+        "ROAMING-0046"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0048": {
+      "acceptedSourceIds": [
+        "ROAMING-0048"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0050": {
+      "acceptedSourceIds": [
+        "ROAMING-0050"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0051": {
+      "acceptedSourceIds": [
+        "ROAMING-0051"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0053": {
+      "acceptedSourceIds": [
+        "ROAMING-0053"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0054": {
+      "acceptedSourceIds": [
+        "ROAMING-0054"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0056": {
+      "acceptedSourceIds": [
+        "ROAMING-0056"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0058": {
+      "acceptedSourceIds": [
+        "ROAMING-0058"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0060": {
+      "acceptedSourceIds": [
+        "ROAMING-0060"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0062": {
+      "acceptedSourceIds": [
+        "ROAMING-0062"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0064": {
+      "acceptedSourceIds": [
+        "ROAMING-0064"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0069": {
+      "acceptedSourceIds": [
+        "ROAMING-0069"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0070": {
+      "acceptedSourceIds": [
+        "ROAMING-0070"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0071": {
+      "acceptedSourceIds": [
+        "ROAMING-0071"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0073": {
+      "acceptedSourceIds": [
+        "ROAMING-0073"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0074": {
+      "acceptedSourceIds": [
+        "ROAMING-0074"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0076": {
+      "acceptedSourceIds": [
+        "ROAMING-0076"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0077": {
+      "acceptedSourceIds": [
+        "ROAMING-0077"
+      ],
+      "evidence": []
+    },
+    "ROAMING-0078": {
+      "acceptedSourceIds": [
+        "ROAMING-0078"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-023",
+          "query": "한도 초과 후 본인 인증을 하는 것과 그냥 두는 것의 차이가 뭔가요?",
+          "queryCosine": 0.854454,
+          "sourceIds": [
+            "ROAMING-0078"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0001": {
+      "acceptedSourceIds": [
+        "SERVICE-0001"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0003": {
+      "acceptedSourceIds": [
+        "SERVICE-0003"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0004": {
+      "acceptedSourceIds": [
+        "SERVICE-0004"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0005": {
+      "acceptedSourceIds": [
+        "SERVICE-0005"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0006": {
+      "acceptedSourceIds": [
+        "SERVICE-0006"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0008": {
+      "acceptedSourceIds": [
+        "SERVICE-0008"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0009": {
+      "acceptedSourceIds": [
+        "SERVICE-0004",
+        "SERVICE-0009",
+        "SERVICE-0014",
+        "SERVICE-0019",
+        "SERVICE-0024",
+        "SERVICE-0029",
+        "SERVICE-0044",
+        "SERVICE-0049",
+        "SERVICE-0059"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-026",
+          "query": "명의도용 조사에는 기간이 얼마나 걸리나요?",
+          "queryCosine": 0.98246,
+          "sourceIds": [
+            "SERVICE-0004",
+            "SERVICE-0009",
+            "SERVICE-0014",
+            "SERVICE-0019",
+            "SERVICE-0024",
+            "SERVICE-0029",
+            "SERVICE-0044",
+            "SERVICE-0049",
+            "SERVICE-0059"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0011": {
+      "acceptedSourceIds": [
+        "SERVICE-0011"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0013": {
+      "acceptedSourceIds": [
+        "SERVICE-0013"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0014": {
+      "acceptedSourceIds": [
+        "SERVICE-0014"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0015": {
+      "acceptedSourceIds": [
+        "SERVICE-0015"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0016": {
+      "acceptedSourceIds": [
+        "SERVICE-0016"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0017": {
+      "acceptedSourceIds": [
+        "SERVICE-0017"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0018": {
+      "acceptedSourceIds": [
+        "SERVICE-0018"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0019": {
+      "acceptedSourceIds": [
+        "SERVICE-0019"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0020": {
+      "acceptedSourceIds": [
+        "SERVICE-0020"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0021": {
+      "acceptedSourceIds": [
+        "SERVICE-0021"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0022": {
+      "acceptedSourceIds": [
+        "SERVICE-0022"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0024": {
+      "acceptedSourceIds": [
+        "SERVICE-0024"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0025": {
+      "acceptedSourceIds": [
+        "SERVICE-0025"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0026": {
+      "acceptedSourceIds": [
+        "SERVICE-0026"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0027": {
+      "acceptedSourceIds": [
+        "SERVICE-0027"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0029": {
+      "acceptedSourceIds": [
+        "SERVICE-0029"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0030": {
+      "acceptedSourceIds": [
+        "SERVICE-0030"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0031": {
+      "acceptedSourceIds": [
+        "SERVICE-0031"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0032": {
+      "acceptedSourceIds": [
+        "SERVICE-0032"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0033": {
+      "acceptedSourceIds": [
+        "SERVICE-0003",
+        "SERVICE-0013",
+        "SERVICE-0018",
+        "SERVICE-0023",
+        "SERVICE-0028",
+        "SERVICE-0033",
+        "SERVICE-0053"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-027",
+          "query": "평일 저녁 7시 이후에 매장 방문이 가능한가요?",
+          "queryCosine": 0.95742,
+          "sourceIds": [
+            "SERVICE-0003",
+            "SERVICE-0013",
+            "SERVICE-0018",
+            "SERVICE-0023",
+            "SERVICE-0028",
+            "SERVICE-0033",
+            "SERVICE-0053"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0034": {
+      "acceptedSourceIds": [
+        "SERVICE-0034"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0035": {
+      "acceptedSourceIds": [
+        "SERVICE-0035"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0036": {
+      "acceptedSourceIds": [
+        "SERVICE-0036"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0037": {
+      "acceptedSourceIds": [
+        "SERVICE-0037"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0038": {
+      "acceptedSourceIds": [
+        "SERVICE-0038"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0041": {
+      "acceptedSourceIds": [
+        "SERVICE-0041"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0042": {
+      "acceptedSourceIds": [
+        "SERVICE-0017",
+        "SERVICE-0042",
+        "SERVICE-0047",
+        "SERVICE-0052"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-025",
+          "query": "멤버십 등급이 갑자기 내려간 이유가 뭔가요?",
+          "queryCosine": 0.945394,
+          "sourceIds": [
+            "SERVICE-0017",
+            "SERVICE-0042",
+            "SERVICE-0047",
+            "SERVICE-0052"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0043": {
+      "acceptedSourceIds": [
+        "SERVICE-0043"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0044": {
+      "acceptedSourceIds": [
+        "SERVICE-0044"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0045": {
+      "acceptedSourceIds": [
+        "SERVICE-0045",
+        "SERVICE-0050",
+        "SERVICE-0060",
+        "SERVICE-0065"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-028",
+          "query": "4년 전 요금 납부 기록을 발급받을 수 있나요?",
+          "queryCosine": 0.864677,
+          "sourceIds": [
+            "SERVICE-0045",
+            "SERVICE-0050",
+            "SERVICE-0060",
+            "SERVICE-0065"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0046": {
+      "acceptedSourceIds": [
+        "SERVICE-0046"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0049": {
+      "acceptedSourceIds": [
+        "SERVICE-0049"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0051": {
+      "acceptedSourceIds": [
+        "SERVICE-0051"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0052": {
+      "acceptedSourceIds": [
+        "SERVICE-0017",
+        "SERVICE-0042",
+        "SERVICE-0047",
+        "SERVICE-0052"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-025",
+          "query": "멤버십 등급이 갑자기 내려간 이유가 뭔가요?",
+          "queryCosine": 0.870656,
+          "sourceIds": [
+            "SERVICE-0017",
+            "SERVICE-0042",
+            "SERVICE-0047",
+            "SERVICE-0052"
+          ]
+        }
+      ]
+    },
+    "SERVICE-0053": {
+      "acceptedSourceIds": [
+        "SERVICE-0053"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0055": {
+      "acceptedSourceIds": [
+        "SERVICE-0055"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0056": {
+      "acceptedSourceIds": [
+        "SERVICE-0056"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0058": {
+      "acceptedSourceIds": [
+        "SERVICE-0058"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0060": {
+      "acceptedSourceIds": [
+        "SERVICE-0060"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0061": {
+      "acceptedSourceIds": [
+        "SERVICE-0061"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0062": {
+      "acceptedSourceIds": [
+        "SERVICE-0062"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0063": {
+      "acceptedSourceIds": [
+        "SERVICE-0063"
+      ],
+      "evidence": []
+    },
+    "SERVICE-0065": {
+      "acceptedSourceIds": [
+        "SERVICE-0065"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0003": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0003"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0004": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0004"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0005": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0005"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0007": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0007"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0010": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0010"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0012": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0012"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0013": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0013"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0014": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0014"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0015": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0015"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0019": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0019"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0022": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0022"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0029": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0029"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0033": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0033"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0034": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0034"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0036": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0036"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0037": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0037"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0039": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0039"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0041": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0041"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0042": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0042"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0049": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0049"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0051": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0051"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0052": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0052"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0056": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0056"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0057": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0057"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0061": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0061"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0062": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0062"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0066": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0066"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0067": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0067"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0068": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0028",
+        "SUBSCRIBE-0068",
+        "SUBSCRIBE-0114"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-029",
+          "query": "외국인이 법인 대표여도 별도 심사를 받나요?",
+          "queryCosine": 0.942918,
+          "sourceIds": [
+            "SUBSCRIBE-0028",
+            "SUBSCRIBE-0068",
+            "SUBSCRIBE-0114"
+          ]
+        }
+      ]
+    },
+    "SUBSCRIBE-0069": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0069"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0071": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0071"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0077": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0077"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0079": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0079"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0081": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0081"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0084": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0084"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0088": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0088"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0094": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0094"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0095": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0095"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0096": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0096"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0099": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0099"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0101": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0101"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0105": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0105"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0109": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0109"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0110": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0110"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0112": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0112"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0117": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0117"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0119": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0119"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0122": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0122"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0123": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0123"
+      ],
+      "evidence": []
+    },
+    "SUBSCRIBE-0127": {
+      "acceptedSourceIds": [
+        "SUBSCRIBE-0127"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0001": {
+      "acceptedSourceIds": [
+        "TERMINATE-0001"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0003": {
+      "acceptedSourceIds": [
+        "TERMINATE-0003"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0004": {
+      "acceptedSourceIds": [
+        "TERMINATE-0004"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0009": {
+      "acceptedSourceIds": [
+        "TERMINATE-0009"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0010": {
+      "acceptedSourceIds": [
+        "TERMINATE-0010"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0012": {
+      "acceptedSourceIds": [
+        "TERMINATE-0012"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0013": {
+      "acceptedSourceIds": [
+        "TERMINATE-0013"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0018": {
+      "acceptedSourceIds": [
+        "TERMINATE-0018"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0020": {
+      "acceptedSourceIds": [
+        "TERMINATE-0020"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0021": {
+      "acceptedSourceIds": [
+        "TERMINATE-0021"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0024": {
+      "acceptedSourceIds": [
+        "TERMINATE-0024"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0027": {
+      "acceptedSourceIds": [
+        "TERMINATE-0027"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0029": {
+      "acceptedSourceIds": [
+        "TERMINATE-0029"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0030": {
+      "acceptedSourceIds": [
+        "TERMINATE-0030"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0031": {
+      "acceptedSourceIds": [
+        "TERMINATE-0031"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0033": {
+      "acceptedSourceIds": [
+        "TERMINATE-0033"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0034": {
+      "acceptedSourceIds": [
+        "TERMINATE-0034"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0037": {
+      "acceptedSourceIds": [
+        "TERMINATE-0037"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0038": {
+      "acceptedSourceIds": [
+        "TERMINATE-0038"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0041": {
+      "acceptedSourceIds": [
+        "TERMINATE-0041"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0043": {
+      "acceptedSourceIds": [
+        "TERMINATE-0043"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0047": {
+      "acceptedSourceIds": [
+        "TERMINATE-0047"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0049": {
+      "acceptedSourceIds": [
+        "TERMINATE-0049"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0053": {
+      "acceptedSourceIds": [
+        "TERMINATE-0053"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0056": {
+      "acceptedSourceIds": [
+        "TERMINATE-0056"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0057": {
+      "acceptedSourceIds": [
+        "TERMINATE-0057"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0058": {
+      "acceptedSourceIds": [
+        "TERMINATE-0058"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0060": {
+      "acceptedSourceIds": [
+        "TERMINATE-0060"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0061": {
+      "acceptedSourceIds": [
+        "TERMINATE-0061"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0064": {
+      "acceptedSourceIds": [
+        "TERMINATE-0064"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0068": {
+      "acceptedSourceIds": [
+        "TERMINATE-0068"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0069": {
+      "acceptedSourceIds": [
+        "TERMINATE-0069"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0071": {
+      "acceptedSourceIds": [
+        "TERMINATE-0071"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0072": {
+      "acceptedSourceIds": [
+        "TERMINATE-0072"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0073": {
+      "acceptedSourceIds": [
+        "TERMINATE-0073"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0075": {
+      "acceptedSourceIds": [
+        "TERMINATE-0075"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0080": {
+      "acceptedSourceIds": [
+        "TERMINATE-0080"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0084": {
+      "acceptedSourceIds": [
+        "TERMINATE-0084"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0085": {
+      "acceptedSourceIds": [
+        "TERMINATE-0085"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0090": {
+      "acceptedSourceIds": [
+        "TERMINATE-0090"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0092": {
+      "acceptedSourceIds": [
+        "TERMINATE-0092"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0093": {
+      "acceptedSourceIds": [
+        "TERMINATE-0093"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0095": {
+      "acceptedSourceIds": [
+        "TERMINATE-0095"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0096": {
+      "acceptedSourceIds": [
+        "TERMINATE-0096"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0104": {
+      "acceptedSourceIds": [
+        "TERMINATE-0104"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0105": {
+      "acceptedSourceIds": [
+        "TERMINATE-0105"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0107": {
+      "acceptedSourceIds": [
+        "TERMINATE-0107"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0112": {
+      "acceptedSourceIds": [
+        "TERMINATE-0112"
+      ],
+      "evidence": []
+    },
+    "TERMINATE-0113": {
+      "acceptedSourceIds": [
+        "TERMINATE-0109",
+        "TERMINATE-0113"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-033",
+          "query": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른가요?",
+          "queryCosine": 0.877388,
+          "sourceIds": [
+            "TERMINATE-0113"
+          ]
+        },
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-073",
+          "query": "폰을 잃어버렸습니다. 지금 전화로 정지하는 게 빠른가요 매장이 빠른가요",
+          "queryCosine": 0.88563,
+          "sourceIds": [
+            "TERMINATE-0109",
+            "TERMINATE-0113"
+          ]
+        }
+      ]
+    },
+    "TERMINATE-0115": {
+      "acceptedSourceIds": [
+        "TERMINATE-0115"
+      ],
+      "evidence": []
+    },
+    "USIM-0005": {
+      "acceptedSourceIds": [
+        "USIM-0005"
+      ],
+      "evidence": []
+    },
+    "USIM-0007": {
+      "acceptedSourceIds": [
+        "USIM-0007"
+      ],
+      "evidence": []
+    },
+    "USIM-0011": {
+      "acceptedSourceIds": [
+        "USIM-0011"
+      ],
+      "evidence": []
+    },
+    "USIM-0012": {
+      "acceptedSourceIds": [
+        "USIM-0012"
+      ],
+      "evidence": []
+    },
+    "USIM-0015": {
+      "acceptedSourceIds": [
+        "USIM-0015"
+      ],
+      "evidence": []
+    },
+    "USIM-0016": {
+      "acceptedSourceIds": [
+        "USIM-0016"
+      ],
+      "evidence": []
+    },
+    "USIM-0018": {
+      "acceptedSourceIds": [
+        "USIM-0018"
+      ],
+      "evidence": []
+    },
+    "USIM-0020": {
+      "acceptedSourceIds": [
+        "USIM-0020"
+      ],
+      "evidence": []
+    },
+    "USIM-0024": {
+      "acceptedSourceIds": [
+        "USIM-0024"
+      ],
+      "evidence": []
+    },
+    "USIM-0027": {
+      "acceptedSourceIds": [
+        "USIM-0027"
+      ],
+      "evidence": []
+    },
+    "USIM-0028": {
+      "acceptedSourceIds": [
+        "USIM-0028"
+      ],
+      "evidence": []
+    },
+    "USIM-0030": {
+      "acceptedSourceIds": [
+        "USIM-0030"
+      ],
+      "evidence": []
+    },
+    "USIM-0031": {
+      "acceptedSourceIds": [
+        "USIM-0031"
+      ],
+      "evidence": []
+    },
+    "USIM-0033": {
+      "acceptedSourceIds": [
+        "USIM-0033"
+      ],
+      "evidence": []
+    },
+    "USIM-0034": {
+      "acceptedSourceIds": [
+        "USIM-0034"
+      ],
+      "evidence": []
+    },
+    "USIM-0035": {
+      "acceptedSourceIds": [
+        "USIM-0035"
+      ],
+      "evidence": []
+    },
+    "USIM-0036": {
+      "acceptedSourceIds": [
+        "USIM-0036"
+      ],
+      "evidence": []
+    },
+    "USIM-0038": {
+      "acceptedSourceIds": [
+        "USIM-0038"
+      ],
+      "evidence": []
+    },
+    "USIM-0039": {
+      "acceptedSourceIds": [
+        "USIM-0039"
+      ],
+      "evidence": []
+    },
+    "USIM-0040": {
+      "acceptedSourceIds": [
+        "USIM-0040"
+      ],
+      "evidence": []
+    },
+    "USIM-0041": {
+      "acceptedSourceIds": [
+        "USIM-0041"
+      ],
+      "evidence": []
+    },
+    "USIM-0044": {
+      "acceptedSourceIds": [
+        "USIM-0044"
+      ],
+      "evidence": []
+    },
+    "USIM-0045": {
+      "acceptedSourceIds": [
+        "USIM-0045"
+      ],
+      "evidence": []
+    },
+    "USIM-0046": {
+      "acceptedSourceIds": [
+        "USIM-0046"
+      ],
+      "evidence": []
+    },
+    "USIM-0049": {
+      "acceptedSourceIds": [
+        "USIM-0049"
+      ],
+      "evidence": []
+    },
+    "USIM-0051": {
+      "acceptedSourceIds": [
+        "USIM-0051"
+      ],
+      "evidence": []
+    },
+    "USIM-0052": {
+      "acceptedSourceIds": [
+        "USIM-0052"
+      ],
+      "evidence": []
+    },
+    "USIM-0054": {
+      "acceptedSourceIds": [
+        "USIM-0054"
+      ],
+      "evidence": []
+    },
+    "USIM-0056": {
+      "acceptedSourceIds": [
+        "USIM-0056"
+      ],
+      "evidence": []
+    },
+    "USIM-0058": {
+      "acceptedSourceIds": [
+        "USIM-0058"
+      ],
+      "evidence": []
+    },
+    "USIM-0060": {
+      "acceptedSourceIds": [
+        "USIM-0060"
+      ],
+      "evidence": []
+    },
+    "USIM-0065": {
+      "acceptedSourceIds": [
+        "USIM-0065"
+      ],
+      "evidence": []
+    },
+    "USIM-0067": {
+      "acceptedSourceIds": [
+        "USIM-0067"
+      ],
+      "evidence": []
+    },
+    "USIM-0072": {
+      "acceptedSourceIds": [
+        "USIM-0072"
+      ],
+      "evidence": []
+    },
+    "USIM-0075": {
+      "acceptedSourceIds": [
+        "USIM-0075"
+      ],
+      "evidence": []
+    },
+    "USIM-0077": {
+      "acceptedSourceIds": [
+        "USIM-0077"
+      ],
+      "evidence": []
+    },
+    "USIM-0083": {
+      "acceptedSourceIds": [
+        "USIM-0083"
+      ],
+      "evidence": []
+    },
+    "USIM-0085": {
+      "acceptedSourceIds": [
+        "USIM-0085"
+      ],
+      "evidence": []
+    },
+    "USIM-0086": {
+      "acceptedSourceIds": [
+        "USIM-0086"
+      ],
+      "evidence": []
+    },
+    "USIM-0089": {
+      "acceptedSourceIds": [
+        "USIM-0029",
+        "USIM-0089",
+        "USIM-0093"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-040",
+          "query": "새 폰에 유심이 맞지 않는데 어떻게 하나요?",
+          "queryCosine": 0.929324,
+          "sourceIds": [
+            "USIM-0029",
+            "USIM-0089",
+            "USIM-0093"
+          ]
+        }
+      ]
+    },
+    "USIM-0092": {
+      "acceptedSourceIds": [
+        "USIM-0008",
+        "USIM-0016",
+        "USIM-0020",
+        "USIM-0024",
+        "USIM-0032",
+        "USIM-0036",
+        "USIM-0044",
+        "USIM-0064",
+        "USIM-0084",
+        "USIM-0088",
+        "USIM-0092",
+        "USIM-0096"
+      ],
+      "evidence": [
+        {
+          "type": "MULTIGOLD_QUERY_MATCH",
+          "evalId": "EVAL-039",
+          "query": "유심을 새로 받으면 예전 유심도 계속 쓸 수 있나요?",
+          "queryCosine": 0.865623,
+          "sourceIds": [
+            "USIM-0008",
+            "USIM-0016",
+            "USIM-0020",
+            "USIM-0024",
+            "USIM-0032",
+            "USIM-0036",
+            "USIM-0044",
+            "USIM-0064",
+            "USIM-0084",
+            "USIM-0088",
+            "USIM-0092",
+            "USIM-0096"
+          ]
+        }
+      ]
+    },
+    "USIM-0094": {
+      "acceptedSourceIds": [
+        "USIM-0094"
+      ],
+      "evidence": []
+    },
+    "USIM-0095": {
+      "acceptedSourceIds": [
+        "USIM-0095"
+      ],
+      "evidence": []
+    },
+    "USIM-0097": {
+      "acceptedSourceIds": [
+        "USIM-0097"
+      ],
+      "evidence": []
+    },
+    "USIM-0099": {
+      "acceptedSourceIds": [
+        "USIM-0099"
+      ],
+      "evidence": []
+    },
+    "USIM-0104": {
+      "acceptedSourceIds": [
+        "USIM-0104"
+      ],
+      "evidence": []
+    },
+    "USIM-0106": {
+      "acceptedSourceIds": [
+        "USIM-0106"
+      ],
+      "evidence": []
+    },
+    "USIM-0108": {
+      "acceptedSourceIds": [
+        "USIM-0108"
+      ],
+      "evidence": []
+    },
+    "USIM-0112": {
+      "acceptedSourceIds": [
+        "USIM-0112"
+      ],
+      "evidence": []
+    },
+    "USIM-0114": {
+      "acceptedSourceIds": [
+        "USIM-0114"
+      ],
+      "evidence": []
+    }
+  }
+}

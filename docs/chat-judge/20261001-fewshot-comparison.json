@@ -1,0 +1,49 @@
+{
+  "captureSha256": "5b29aaae8a1dcb82ae5ae3be580f93ed49ca6e29750dfc382257cff192cb439a",
+  "modelDigest": "bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8",
+  "turns": 9,
+  "matchingHuman": {
+    "baseline": {
+      "grounding": 9,
+      "coverage": 9,
+      "abstention": 6,
+      "finalAbstention": 9
+    },
+    "candidate": {
+      "grounding": 9,
+      "coverage": 9,
+      "abstention": 6,
+      "finalAbstention": 9
+    }
+  },
+  "inputTokens": {
+    "baseline": 12099,
+    "candidate": 25734
+  },
+  "disagreements": [
+    {
+      "caseId": "MIXED",
+      "turnIndex": 0,
+      "axis": "abstention",
+      "human": "SHOULD_ABSTAIN",
+      "baseline": "NOT_APPLICABLE",
+      "candidate": "NOT_APPLICABLE"
+    },
+    {
+      "caseId": "FAQ_COMPOUND",
+      "turnIndex": 0,
+      "axis": "abstention",
+      "human": "APPROPRIATE",
+      "baseline": "NOT_APPLICABLE",
+      "candidate": "NOT_APPLICABLE"
+    },
+    {
+      "caseId": "STORE",
+      "turnIndex": 0,
+      "axis": "abstention",
+      "human": "APPROPRIATE",
+      "baseline": "NOT_APPLICABLE",
+      "candidate": "NOT_APPLICABLE"
+    }
+  ]
+}

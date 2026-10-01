@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "source": "FAQ 원문과 저장된 답변을 사람이 대조한 파일럿 판정",
+  "caveat": "9개 질문의 탐색적 판정이며 독립 검증셋이나 전체 품질 추정치는 아님",
+  "turns": [
+    {"caseId": "FAQ_FACT", "turnIndex": 0, "grounding": "SUPPORTED", "coverage": "COMPLETE", "abstention": "NOT_APPLICABLE"},
+    {"caseId": "FAQ_CONDITION", "turnIndex": 0, "grounding": "SUPPORTED", "coverage": "COMPLETE", "abstention": "NOT_APPLICABLE"},
+    {"caseId": "NO_EVIDENCE", "turnIndex": 0, "grounding": "UNSUPPORTED", "coverage": "PARTIAL", "abstention": "SHOULD_ABSTAIN"},
+    {"caseId": "MIXED", "turnIndex": 0, "grounding": "UNSUPPORTED", "coverage": "PARTIAL", "abstention": "SHOULD_ABSTAIN"},
+    {"caseId": "UNRELATED", "turnIndex": 0, "grounding": "NOT_APPLICABLE", "coverage": "NOT_APPLICABLE", "abstention": "APPROPRIATE"},
+    {"caseId": "MULTI_TURN", "turnIndex": 0, "grounding": "SUPPORTED", "coverage": "COMPLETE", "abstention": "NOT_APPLICABLE"},
+    {"caseId": "MULTI_TURN", "turnIndex": 1, "grounding": "SUPPORTED", "coverage": "COMPLETE", "abstention": "NOT_APPLICABLE"},
+    {"caseId": "FAQ_COMPOUND", "turnIndex": 0, "grounding": "NOT_APPLICABLE", "coverage": "MISSED", "abstention": "APPROPRIATE"},
+    {"caseId": "STORE", "turnIndex": 0, "grounding": "NOT_APPLICABLE", "coverage": "MISSED", "abstention": "APPROPRIATE"}
+  ]
+}
