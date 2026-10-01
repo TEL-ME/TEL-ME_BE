@@ -8,6 +8,7 @@ import com.telme.chat.service.ChatProcessingPort;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
@@ -172,6 +173,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private ChatFailure failure(RuntimeException exception) {
         if (exception instanceof LlmStreamCancelledException) {
             return new ChatFailure(ChatMessage.Status.CANCELLED, "USER_CANCELLED");
+        }
+        if (exception instanceof FaqAnswerSearchException) {
+            return new ChatFailure(ChatMessage.Status.FAILED, FaqAnswerSearchException.ERROR_CODE);
         }
         if (exception instanceof GeneralException general) {
             return new ChatFailure(ChatMessage.Status.FAILED, general.getErrorCode().getCode());

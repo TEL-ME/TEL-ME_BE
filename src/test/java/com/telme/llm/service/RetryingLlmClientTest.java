@@ -2,12 +2,20 @@ package com.telme.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.config.LlmRetryProperties;
@@ -171,6 +179,65 @@ class RetryingLlmClientTest {
         assertThat(handler.retries).isEmpty();
         assertThat(handler.error).isInstanceOf(LlmStreamCancelledException.class);
         assertThat(handler.completeCount).isZero();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmErrorCode.class, names = {"CONNECTION_FAILED", "TIMEOUT"})
+    void synchronousFailureBeforeTokenCanRetryAndCompleteOnce(LlmErrorCode code) {
+        LlmAttemptClient delegate = mock(LlmAttemptClient.class);
+        doAnswer(invocation -> {
+            int attempt = invocation.getArgument(2);
+            if (attempt == 1) throw new GeneralException(code);
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken("검증할 최종 답변");
+            stream.onComplete();
+            return null;
+        }).when(delegate).stream(any(), any(), anyInt());
+        RecordingHandler handler = new RecordingHandler();
+
+        new RetryingLlmClient(delegate, properties).stream(request(), handler);
+
+        verify(delegate, times(2)).stream(any(), any(), anyInt());
+        assertThat(handler.retries).hasSize(1);
+        assertThat(handler.tokens).containsExactly("검증할 최종 답변");
+        assertThat(handler.completeCount).isEqualTo(1);
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    void synchronousRetryExhaustionReportsFinalErrorOnceWithoutCompleting() {
+        LlmAttemptClient delegate = mock(LlmAttemptClient.class);
+        GeneralException failure = new GeneralException(LlmErrorCode.TIMEOUT);
+        doAnswer(invocation -> { throw failure; })
+                .when(delegate).stream(any(), any(), anyInt());
+        RecordingHandler handler = new RecordingHandler();
+
+        new RetryingLlmClient(delegate, properties).stream(request(), handler);
+
+        verify(delegate, times(2)).stream(any(), any(), anyInt());
+        assertThat(handler.retries).hasSize(1);
+        assertThat(handler.tokens).isEmpty();
+        assertThat(handler.completeCount).isZero();
+        assertThat(handler.error).isSameAs(failure);
+    }
+
+    @Test
+    void synchronousFailureAfterRawTokenDoesNotRetry() {
+        LlmAttemptClient delegate = mock(LlmAttemptClient.class);
+        GeneralException failure = new GeneralException(LlmErrorCode.TIMEOUT);
+        doAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken("버릴 부분 답변");
+            throw failure;
+        }).when(delegate).stream(any(), any(), anyInt());
+        RecordingHandler handler = new RecordingHandler();
+
+        new RetryingLlmClient(delegate, properties).stream(request(), handler);
+
+        verify(delegate, times(1)).stream(any(), any(), anyInt());
+        assertThat(handler.retries).isEmpty();
+        assertThat(handler.completeCount).isZero();
+        assertThat(handler.error).isSameAs(failure);
     }
 
     private LlmRequest request() {
