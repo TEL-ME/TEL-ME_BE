@@ -4,7 +4,8 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-// 반경 상한 10km(사람이 매장을 찾아 이동할 만한 최대 거리로 정한 값), 지도 화면(카카오 지도 SDK)은 축척에 맞게 변화
+// 반경 상한 10km(사람이 매장을 찾아 이동할 만한 최대 거리로 정한 값). 지도 화면(카카오 지도 SDK)은 축척에 맞게 변화하고,
+// 상한을 넘는 요청은 상한으로 줄여 검색한다
 // 반경 안에 매장이 없으면 빈 결과를 돌려주고, 0건 처리는 호출자(API·채팅)에서 정한다.
 // 영업 중 필터는 구현만 해 두고 꺼 둔다. 매장 영업시간 데이터(공휴일·임시 휴무 포함)가 갖춰진 뒤 켠다.
 @ConfigurationProperties(prefix = "store.search")

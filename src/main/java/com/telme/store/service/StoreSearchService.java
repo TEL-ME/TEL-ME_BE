@@ -4,7 +4,7 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.StoreSearchProperties;
 import com.telme.store.converter.StoreConverter;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
-import com.telme.store.dto.res.StoreNearbyResponse;
+import com.telme.store.dto.res.StoreNearbySearchResponse;
 import com.telme.store.entity.StoreServiceType;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.repository.OpenNowCondition;
@@ -47,7 +47,7 @@ public class StoreSearchService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public List<StoreNearbyResponse> findNearbyStores(StoreNearbySearchRequest request) {
+    public StoreNearbySearchResponse findNearbyStores(StoreNearbySearchRequest request) {
         StoreNearbyQueryRepository.Query query = new StoreNearbyQueryRepository.Query(
                 validateLatitude(request.latitude()),
                 validateLongitude(request.longitude()),
@@ -55,12 +55,9 @@ public class StoreSearchService {
                 resolveLimit(request.limit()),
                 toConditions(request));
         if (!isInServiceArea(query.latitude(), query.longitude())) {
-            return List.of();
+            return storeConverter.toNearbySearchResponse(List.of(), query.radiusMeters());
         }
-        return search(query)
-                .stream()
-                .map(storeConverter::toNearbyResponse)
-                .toList();
+        return storeConverter.toNearbySearchResponse(search(query), query.radiusMeters());
     }
 
     // 필터 없음: 영업 매장 인덱스에서 KNN으로 가장 가까운 곳부터 찾고 반경(기본 10km) 밖은 뺀다.
@@ -122,14 +119,16 @@ public class StoreSearchService {
         return longitude;
     }
 
+    // 지도 화면은 축척에 맞춘 화면 반경을 그대로 보내므로, 상한을 넘으면 거부하지 않고 상한으로 줄인다.
+    // 줄인 값은 응답의 radiusMeters로 알린다
     private int resolveRadius(Integer radiusMeters) {
         if (radiusMeters == null) {
             return storeSearchProperties.defaultRadiusMeters();
         }
-        if (radiusMeters < 1 || radiusMeters > storeSearchProperties.maxRadiusMeters()) {
+        if (radiusMeters < 1) {
             throw new GeneralException(StoreErrorCode.INVALID_SEARCH_RADIUS);
         }
-        return radiusMeters;
+        return Math.min(radiusMeters, storeSearchProperties.maxRadiusMeters());
     }
 
     private int resolveLimit(Integer limit) {

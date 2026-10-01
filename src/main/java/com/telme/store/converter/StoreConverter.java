@@ -1,11 +1,21 @@
 package com.telme.store.converter;
 
 import com.telme.store.dto.res.StoreNearbyResponse;
+import com.telme.store.dto.res.StoreNearbySearchResponse;
 import com.telme.store.repository.StoreNearbyQueryRepository;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
 public class StoreConverter {
+
+    public StoreNearbySearchResponse toNearbySearchResponse(List<StoreNearbyQueryRepository.Row> rows,
+            int radiusMeters) {
+        return StoreNearbySearchResponse.builder()
+                .stores(rows.stream().map(this::toNearbyResponse).toList())
+                .radiusMeters(radiusMeters)
+                .build();
+    }
 
     public StoreNearbyResponse toNearbyResponse(StoreNearbyQueryRepository.Row row) {
         return StoreNearbyResponse.builder()
