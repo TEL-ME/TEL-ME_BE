@@ -139,6 +139,9 @@ faq:
     exit-after: true
 
 telme:
+  feedback:
+    # 관리자 싫어요 조회 화면이 이 값에 묶여 있어 기본으로 켠다.
+    enabled: ${TELME_FEEDBACK_ENABLED:true}
   consult:
     # 채팅은 ConsultChatProcessingService가 처리하므로 네 설정을 모두 켜 둔다. 하나라도 끄면 채팅 처리 구현이 없어 요청이 실패한다.
     # LLM_PROVIDER 기본값이 fake라 실제 모델(ollama)을 쓰려면 LLM_PROVIDER를 따로 지정한다
