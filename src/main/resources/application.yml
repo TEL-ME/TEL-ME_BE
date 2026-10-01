@@ -98,6 +98,15 @@ search:
     # 거부율을 현행 그대로 지키면서 Recall이 최대인 지점(0.87 이하로 내리면 EVAL-175가 통과한다)
     # 측정 조건: FAQ 1,150건 + bge-m3 + 평가셋 130건, 보강 50건, 2026-09-29
     question-threshold: ${SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD:0.88}
+  rerank:
+    # 켜면 Q_A 벡터 상위 candidate-k를 리랭커(bge-reranker-v2-m3 ONNX)로 다시 채점하고 threshold(0~1) 이상만 쓴다
+    # similarity-threshold 대신 vector-floor가 벡터 단계 하한이 되고, 이중 벡터(search.dual-vector)는 쓰지 않는다
+    enabled: ${SEARCH_RERANK_ENABLED:false}
+    model-path: ${SEARCH_RERANK_MODEL_PATH:}
+    tokenizer-path: ${SEARCH_RERANK_TOKENIZER_PATH:}
+    candidate-k: ${SEARCH_RERANK_CANDIDATE_K:20}
+    vector-floor: ${SEARCH_RERANK_VECTOR_FLOOR:0.0}
+    threshold: ${SEARCH_RERANK_THRESHOLD:0.5}
 
 member:
   guest:
