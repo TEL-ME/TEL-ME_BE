@@ -140,6 +140,17 @@ class ChatJudgeTest(unittest.TestCase):
                            if "UNSUPPORTED" in branch["properties"]["verdict"]["enum"])
         self.assertEqual(0, unsupported["properties"]["sourceIds"]["maxItems"])
 
+    def test_supported_claim_requires_a_source_or_confirmed_condition(self):
+        result = {"claims": [{
+            "claim": "월 1회 변경할 수 있습니다.", "verdict": "SUPPORTED",
+            "sourceIds": [], "reason": "근거가 있다고 판단했습니다.",
+        }], "overall": "SUPPORTED"}
+        with self.assertRaisesRegex(ValueError, "FAQ 근거 또는 확정된 상담 조건"):
+            judge.validate_result("grounding", result, {"BILLING-0001"}, [])
+        self.assertIs(result, judge.validate_result(
+            "grounding", result, set(), [{"name": "지역", "value": "서울"}]
+        ))
+
     @patch.object(judge.urllib.request, "urlopen")
     def test_grounding_prompt_uses_source_id_without_optional_database_id(self, urlopen):
         raw = {"message": {"content": json.dumps({"claims": [], "overall": "NOT_APPLICABLE"})}}
@@ -211,6 +222,42 @@ class ChatJudgeTest(unittest.TestCase):
         self.assertNotIn("requiredFacts", grounding)
         self.assertEqual(["BILLING-0001"], adequacy["goldSourceSlotIds"])
         self.assertEqual("BILLING-0001", grounding["sources"][0]["sourceId"])
+
+    def test_adequacy_request_excludes_expected_labels_and_backend_basis(self):
+        case = json.loads((Path(__file__).resolve().parents[1]
+                           / "scripts/data/chat_judge_validation_v2.json").read_text(encoding="utf-8"))["cases"][0]
+        original = copy.deepcopy(case["adequacyInput"])
+        request = judge.judge_request("qwen3:14b", "adequacy", original)
+        prompt = request["messages"][-1]["content"]
+        for key in ("expectedBehavior", "missingFact", "goldSourceSlotIds",
+                    "goldSourceGroups", "actualSourceSlotIds", "answerBasis", "faqId"):
+            self.assertNotIn(f'"{key}"', prompt)
+        self.assertIn('"requiredFacts"', prompt)
+        self.assertEqual(case["adequacyInput"], original)
+
+        abstention = judge.judge_prompt_input("abstention", original)
+        self.assertEqual({"question", "previousTurns", "answer", "sources"}, set(abstention))
+        self.assertNotIn("requiredFacts", judge.judge_request(
+            "qwen3:14b", "abstention", original)["messages"][-1]["content"])
+
+    def test_abstention_decision_combines_grounding_and_independent_signals(self):
+        signals = {"answerIsRefusal": False, "evidenceAnswerability": "ENOUGH",
+                   "reason": "답변했습니다."}
+        self.assertEqual("SHOULD_ABSTAIN", judge.decide_abstention(
+            {"overall": "UNSUPPORTED"}, signals, "NOT_APPLICABLE")["label"])
+        self.assertEqual("NOT_APPLICABLE", judge.decide_abstention(
+            {"overall": "SUPPORTED"}, signals)["label"])
+        signals["answerIsRefusal"] = True
+        self.assertEqual("OVER_REFUSAL", judge.decide_abstention(
+            {"overall": "NOT_APPLICABLE"}, signals)["label"])
+        signals["evidenceAnswerability"] = "INSUFFICIENT"
+        self.assertEqual("APPROPRIATE", judge.decide_abstention(
+            {"overall": "NOT_APPLICABLE"}, signals)["label"])
+        signals["evidenceAnswerability"] = "UNCERTAIN"
+        decision = judge.decide_abstention({"overall": "NOT_APPLICABLE"}, signals)
+        self.assertEqual("REVIEW", decision["label"])
+        self.assertTrue(decision["requiresReview"])
+        self.assertIs(signals, judge.validate_result("abstention", signals, set()))
 
     @patch.object(judge.urllib.request, "urlopen")
     def test_malformed_model_output_preserves_raw_response(self, urlopen):

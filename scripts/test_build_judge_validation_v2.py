@@ -42,13 +42,54 @@ class JudgeValidationV2Test(unittest.TestCase):
         cases = copy.deepcopy(dataset["cases"][:1])
         case = cases[0]
         case["grounding"] = {"result": {"overall": case["expected"]["grounding"]}}
-        case["adequacy"] = {"result": {
-            "coverage": "MISSED", "abstention": case["expected"]["abstention"]}}
+        case["coverage"] = {"result": {"coverage": "MISSED"}}
+        case["abstentionDecision"] = {"label": case["expected"]["abstention"],
+                                      "requiresReview": False}
         case["judgeStatus"] = "SCORED"
         summary = runner.summarize(cases)
         self.assertEqual(1, summary["scored"])
         self.assertEqual(0 if case["expected"]["coverage"] is None else 1,
                          summary["byAxis"]["coverage"]["labelled"])
+
+    def test_summary_uses_final_abstention_decision(self):
+        case = copy.deepcopy(json.loads(builder.OUTPUT.read_text(encoding="utf-8"))["cases"][0])
+        case["expected"]["abstention"] = "SHOULD_ABSTAIN"
+        case["grounding"] = {"result": {"overall": case["expected"]["grounding"]}}
+        case["coverage"] = {"result": {"coverage": "MISSED"}}
+        case["abstentionDecision"] = {"label": "SHOULD_ABSTAIN", "requiresReview": False}
+        case["judgeStatus"] = "SCORED"
+        self.assertEqual(1, runner.summarize([case])["byAxis"]["abstention"]["correct"])
+        case["abstentionDecision"] = {"label": "REVIEW", "requiresReview": True}
+        summary = runner.summarize([case])
+        self.assertEqual(0, summary["byAxis"]["abstention"]["scored"])
+        self.assertEqual([case["caseId"]], summary["abstentionReviewCaseIds"])
+
+    def test_reused_grounding_is_exact_and_rechecks_unsupported_citation(self):
+        archived = runner.load_result(builder.ROOT / "docs/chat-judge/20261001-validation-v2-contract-raw.json.gz")
+        dataset = json.loads(builder.OUTPUT.read_text(encoding="utf-8"))
+        required = ("datasetSha256", "catalogSha256", "judgeModel", "judgeModelDigest",
+                    "judgeOllamaVersion", "groundingRubricSha256", "groundingSchemaSha256")
+        metadata = {key: archived[key] for key in required}
+        result = {"cases": copy.deepcopy(dataset["cases"])}
+        runner.reuse_grounding(result, archived, metadata)
+        self.assertEqual(["USIM-0072"], result["groundingRecheckCaseIds"])
+        self.assertEqual(499, sum("grounding" in case for case in result["cases"]))
+
+    def test_reused_abstention_signals_require_exact_request(self):
+        case = json.loads(builder.OUTPUT.read_text(encoding="utf-8"))["cases"][0]
+        required = ("datasetSha256", "catalogSha256", "judgeModel", "judgeModelDigest",
+                    "judgeOllamaVersion", "abstentionRubricSha256", "abstentionSchemaSha256")
+        metadata = {key: "same" for key in required}
+        metadata["judgeModel"] = "qwen3:14b"
+        record = {"request": judge.judge_request("qwen3:14b", "abstention", case["adequacyInput"]),
+                  "result": {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH", "reason": "근거가 있음"}}
+        previous = {**metadata, "cases": [{"caseId": case["caseId"], "abstentionSignals": record}]}
+        result = {"cases": [copy.deepcopy(case)]}
+        runner.reuse_abstention_signals(result, previous, metadata)
+        self.assertEqual(record, result["cases"][0]["abstentionSignals"])
+        previous["cases"][0]["abstentionSignals"]["request"]["messages"][0]["content"] = "changed"
+        with self.assertRaises(ValueError):
+            runner.reuse_abstention_signals({"cases": [copy.deepcopy(case)]}, previous, metadata)
 
     def test_saved_dataset_is_reproducible_and_balanced(self):
         catalog, pilot, v1, fewshot, equivalence = inputs()
@@ -69,6 +110,14 @@ class JudgeValidationV2Test(unittest.TestCase):
             self.assertFalse({"expected", "requiredFacts", "goldSourceSlotIds", "expectedBehavior"}
                              & case["groundingInput"].keys())
             self.assertNotIn("expected", case["adequacyInput"])
+            request = judge.judge_prompt_input("adequacy", case["adequacyInput"])
+            self.assertFalse({"expectedBehavior", "missingFact", "goldSourceSlotIds",
+                              "goldSourceGroups", "actualSourceSlotIds", "answerBasis"} & request.keys())
+            self.assertTrue(all("faqId" not in source for source in request["sources"]))
+            coverage = judge.judge_prompt_input("coverage", case["adequacyInput"])
+            self.assertFalse({"sources", "expectedBehavior", "goldSourceSlotIds", "answerBasis"}
+                             & coverage.keys())
+            self.assertIn("requiredFacts", coverage)
 
     def test_modified_source_or_gold_label_fails_validation(self):
         catalog, pilot, v1, fewshot, equivalence = inputs()

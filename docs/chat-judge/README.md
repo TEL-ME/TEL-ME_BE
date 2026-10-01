@@ -118,7 +118,7 @@ python -X utf8 -m unittest discover -s scripts -p 'test_judge*.py'
 
 ## 대규모 평가셋 v2
 
-36개 항목은 고유 질문이 12개뿐이라 판정의 재현성을 판단하기에 부족하다. 이를 보완해 [`chat_judge_validation_v2.json`](../../scripts/data/chat_judge_validation_v2.json)에 **고유 질문 500개, 평가 항목 500개**를 고정했다. 이번 단계에서는 few-shot 실험과 모델 채점을 실행하지 않았다. [`build_judge_validation_v2.py`](../../scripts/build_judge_validation_v2.py)로 같은 파일을 다시 만들고, [`test_build_judge_validation_v2.py`](../../scripts/test_build_judge_validation_v2.py)로 라벨, 근거 원문, 중복 및 분포를 확인할 수 있다.
+36개 항목은 고유 질문이 12개뿐이라 판정의 재현성을 판단하기에 부족하다. 이를 보완해 [`chat_judge_validation_v2.json`](../../scripts/data/chat_judge_validation_v2.json)에 **고유 질문 500개, 평가 항목 500개**를 고정했다. 평가셋을 구성할 때는 모델 채점을 실행하지 않았고, 이후 실행 결과를 아래 결과 문서에 기록했다. [`build_judge_validation_v2.py`](../../scripts/build_judge_validation_v2.py)로 같은 파일을 다시 만들고, [`test_build_judge_validation_v2.py`](../../scripts/test_build_judge_validation_v2.py)로 라벨, 근거 원문, 중복 및 분포를 확인할 수 있다.
 
 - FAQ 단일 질문 400개: 10개 분야에서 각 40개, 5개 질문 유형에서 각 80개를 골랐다. 각 분야마다 근거가 있는 정상 답변, 근거 밖 수수료나 혜택이 추가된 답변, 근거가 있는데 거절한 답변, 검색 근거가 없어 보류한 답변을 각각 10개씩 넣었다. 질문 유형별로도 각 유형에 네 행동을 20개씩 맞췄다. 원본 FAQ의 초보, 숙련, 시니어 페르소나는 분야마다 13개 또는 14개씩 배치했다.
 - FAQ 복합 질문 50개: 서로 다른 분야의 FAQ 두 개를 묻고 첫 번째만 답한다. 두 FAQ 원문을 모두 근거로 제시해, 근거 판정은 `SUPPORTED`, 답변 충실도는 `PARTIAL`인지 검사한다.
@@ -132,12 +132,12 @@ python -X utf8 -m unittest discover -s scripts -p 'test_judge*.py'
 
 근거 밖 정보를 추가한 100건의 충실도는 정답 정보가 포함돼 있어도 잘못된 내용이 섞인 경우라 `COMPLETE`와 `PARTIAL` 중 하나로 기계적으로 고정하지 않았다. 이 축은 `null`로 두고 근거 판정 및 답변 불가 판정에만 사용한다. 기존 파일럿, v1 및 few-shot 예시와 질문 또는 사용한 FAQ ID가 겹치지 않도록 선택했다. 단일 FAQ의 정확한 답변은 원본 문장을 그대로 쓰고, 근거 밖 주장은 분야마다 3가지 문구로 나눠 수수료, 혜택, 기한, 조건을 허구로 추가했다. 답변 보류와 범위 밖 안내도 각각 4가지 문구를 사용했다. 이처럼 **규칙으로 만든 라벨**은 사람의 독립 평가와 다르므로, 모델 채점 전 분야별 표본을 사람이 확인해야 한다.
 
-모델 평가를 재개할 때는 [`run_judge_validation_v2.py`](../../scripts/run_judge_validation_v2.py)가 **기본 프롬프트만** 실행한다. 입력 해시, 모델 digest, 원시 요청과 응답을 기록하고 중단된 실행을 이어갈 수 있으며 완료된 결과와 형식 오류 결과를 덮어쓰지 않는다. 500건에 각 2회, 총 1,000회 호출이므로 이번 평가셋 구성 단계에서는 실행하지 않았다. 이 검증셋은 Judge의 판정 경계를 확인하기 위한 것으로, 실제 EXAONE 답변이나 검색 및 라우팅 성능의 대표 점수로 해석하지 않는다.
+[`run_judge_validation_v2.py`](../../scripts/run_judge_validation_v2.py)는 기본 프롬프트로 근거성, 답변 충실도, 답변 불가 신호를 각각 호출한다. 입력 해시, 모델 digest, 원시 요청과 응답을 기록하고 중단된 실행을 이어갈 수 있으며 완료된 결과와 형식 오류 결과를 덮어쓰지 않는다. 독립적으로 처음부터 실행하면 500건에 각 3회, 총 1,500회 호출한다. 검증된 이전 판정은 재사용할 수 있다. 이 검증셋은 Judge의 판정 경계를 확인하기 위한 것으로, 실제 EXAONE 답변이나 검색 및 라우팅 성능의 대표 점수로 해석하지 않는다.
 
 ```powershell
 python -X utf8 scripts/build_judge_validation_v2.py
 python -X utf8 -m unittest discover -s scripts -p 'test*judge*.py'
-# 추후 기본 Judge 채점 시:
+# 첫 기본 Judge 채점에 사용한 명령:
 python -X utf8 scripts/run_judge_validation_v2.py --out .measure/chat-judge-validation-v2.json
 ```
 
@@ -203,3 +203,5 @@ python -X utf8 scripts/build_judge_validation_v2.py
 - 전체 요청과 원시 응답: [압축 원시 결과](20261001-validation-v2-raw.json.gz)
 - 출력 규칙 보완 후 재채점: [500건 재검증 결과](20261001-validation-v2-contract-recheck.md)
 - 재채점 요청과 원시 응답: [압축 원시 결과](20261001-validation-v2-contract-raw.json.gz)
+- 근거성, 충실도, 답변 불가 분리 판정: [TELME-100 재검증 결과](20261001-split-judge-results.md)
+- 사람이 확인할 우선 사례: [검토표](20261001-human-review.md)
