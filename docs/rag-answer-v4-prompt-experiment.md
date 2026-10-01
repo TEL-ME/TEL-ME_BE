@@ -117,6 +117,8 @@ LLM_CONTEXT_SIZE=8192 RAG_EVIDENCE_CHECK_ENABLED=false \
 
 호환성 사본 기준은 `b19fc03`이며 AnswerPromptTemplatesTest 3, RagAnswerGeneratorTest 26, ConsultChatApiIntegrationTest 4, ConsultChatPersistenceIntegrationTest 21, ChatExecutionTraceServiceTest 1, ChatProcessingFallbackIntegrationTest 1이 통과했다. 모델은 fake/대역, DB는 임시 PostgreSQL+pgvector를 사용했다. DB 연결이나 모델 연결로 막힌 테스트는 없었다. 전체 애플리케이션 테스트를 실행한 수치는 아니다.
 
+게시 전 PR #80 머지 기준 `c3eeee1`로 충돌 없이 변경을 옮긴 뒤, CI와 같은 `./gradlew build` 전체 빌드를 다시 실행했다. 총 1,129건 중 **1,034건 통과, 95건 스킵**, 실패/오류 0건이며 BUILD SUCCESSFUL이다. 스킵은 로컬 DB 옵트인 테스트 92건과 평가 프로브 3건으로, 이 수치를 전부 통과로 표현하지 않는다. 실제 모델 비교 프로브는 일반 빌드에서 실행되지 않는다.
+
 용재님은 같은 모델/근거/Guard 조건으로 10문항 전체와 반복 실행을 진행하고, 위 관찰의 재현 여부 및 보존할 정상 정보를 함께 판정한다. 현재 후보를 배포할지 결정하기 전에 EVAL-001 잔여 인과 오류, HALLU-010 추천 표현, HALLU-020의 모델 포함 관계 오류를 확인해야 한다. EVAL-027은 Guard 별도 보완 후보, 과거 EVAL-004 Bedrock 단계는 기록 부족으로 미확인이다. 부분 답변 정책은 별도 후보 문서에서 합의한다.
 
 ## PR 및 CI
