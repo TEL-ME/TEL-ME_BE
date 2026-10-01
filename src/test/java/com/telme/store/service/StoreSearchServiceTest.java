@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.StoreSearchProperties;
+import com.telme.store.converter.StoreCommonConverter;
 import com.telme.store.converter.StoreConverter;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
 import com.telme.store.dto.res.StoreNearbyResponse;
@@ -55,7 +56,7 @@ class StoreSearchServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(StoreNearbyQueryRepository.class);
-        service = new StoreSearchService(repository, new StoreConverter(), properties(false), WEDNESDAY_3PM_KST);
+        service = new StoreSearchService(repository, converter(), properties(false), WEDNESDAY_3PM_KST);
     }
 
     @Test
@@ -323,7 +324,11 @@ class StoreSearchServiceTest {
     }
 
     private StoreSearchService enabledService(Clock clock) {
-        return new StoreSearchService(repository, new StoreConverter(), properties(true), clock);
+        return new StoreSearchService(repository, converter(), properties(true), clock);
+    }
+
+    private StoreConverter converter() {
+        return new StoreConverter(new StoreCommonConverter());
     }
 
     // 필터가 없으면 저장소의 KNN으로, 있으면 필터 전략으로 간다
