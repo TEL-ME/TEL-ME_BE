@@ -1,11 +1,13 @@
 package com.telme.chat.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
 import com.telme.chat.dto.res.AdminUnansweredListItemResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
 import com.telme.chat.service.AdminUnansweredQueryService;
@@ -103,6 +105,25 @@ class AdminUnansweredControllerTest {
     void 크기_상한을_넘기면_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/unanswered").param("size", "101"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("상세를 조회하면 200과 질문·응답·근거를 반환한다")
+    void 상세를_조회한다() throws Exception {
+        when(adminUnansweredQueryService.getUnanswered(anyLong())).thenReturn(detail());
+
+        mockMvc.perform(get("/api/v1/admin/unanswered/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.question").value("요금제 바꾸고 싶어요"))
+                .andExpect(jsonPath("$.result.type").value("NO_EVIDENCE"))
+                .andExpect(jsonPath("$.result.sources").isArray());
+    }
+
+    private AdminUnansweredDetailResponse detail() {
+        return new AdminUnansweredDetailResponse(
+                1L, 10L, "NO_EVIDENCE", "요금제 바꾸고 싶어요", "안내드릴 수 있는 정보가 없습니다.",
+                Instant.now(), List.of());
     }
 
     private AdminUnansweredListResponse listResponse() {

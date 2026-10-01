@@ -2,6 +2,7 @@ package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
 import java.time.Instant;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,15 +13,16 @@ import org.springframework.data.repository.query.Param;
 public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Long> {
 
     // ix_chat_messages_unanswered와 같은 조건이라 이 줄을 바꾸면 인덱스도 함께 봐야 한다
-    String UNANSWERED_WHERE = """
-            where m.role = com.telme.chat.entity.ChatMessage$Role.ASSISTANT
+    String UNANSWERED = """
+            m.role = com.telme.chat.entity.ChatMessage$Role.ASSISTANT
               and (m.answerBasis in (com.telme.chat.entity.ChatMessage$AnswerBasis.NO_EVIDENCE,
                                      com.telme.chat.entity.ChatMessage$AnswerBasis.OUT_OF_SCOPE)
                    or m.status in (com.telme.chat.entity.ChatMessage$Status.FAILED,
                                    com.telme.chat.entity.ChatMessage$Status.TIMEOUT))
-              and m.createdAt >= :from
-              and m.createdAt < :to
             """;
+
+    String UNANSWERED_WHERE = " where " + UNANSWERED
+            + " and m.createdAt >= :from and m.createdAt < :to ";
 
     String ORDER = " order by m.createdAt desc, m.messageId desc";
 
@@ -46,4 +48,8 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
     Page<ChatMessage> findUnansweredByStatus(
             @Param("status") ChatMessage.Status status,
             @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
+    // 답 못 한 질문이 아닌 메시지는 관리자 화면이 다루지 않아 여기서 걸러진다
+    @Query(SELECT + " where m.messageId = :messageId and " + UNANSWERED)
+    Optional<ChatMessage> findUnansweredById(@Param("messageId") Long messageId);
 }

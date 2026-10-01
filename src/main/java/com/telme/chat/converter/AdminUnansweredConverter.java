@@ -1,9 +1,12 @@
 package com.telme.chat.converter;
 
 import com.telme.chat.dto.req.AdminUnansweredType;
+import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
 import com.telme.chat.dto.res.AdminUnansweredListItemResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
+import com.telme.chat.dto.res.AdminUnansweredSourceResponse;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.rag.entity.MessageSource;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
@@ -33,6 +36,26 @@ public class AdminUnansweredConverter {
                 typeOf(message).name(),
                 preview(question(message)),
                 message.getCreatedAt());
+    }
+
+    public AdminUnansweredDetailResponse toDetail(ChatMessage message, List<MessageSource> sources) {
+        return new AdminUnansweredDetailResponse(
+                message.getMessageId(),
+                message.getSession().getSessionId(),
+                typeOf(message).name(),
+                question(message),
+                message.getContent(),
+                message.getCreatedAt(),
+                sources.stream().map(this::toSource).toList());
+    }
+
+    public AdminUnansweredSourceResponse toSource(MessageSource source) {
+        return new AdminUnansweredSourceResponse(
+                source.getFaqId(),
+                source.getTitleSnapshot(),
+                source.getFaqVersion(),
+                source.getSearchRank(),
+                source.getScore());
     }
 
     // 답변을 끝내지 못한 경우는 answer_basis가 비어 있어 status로 판단한다.

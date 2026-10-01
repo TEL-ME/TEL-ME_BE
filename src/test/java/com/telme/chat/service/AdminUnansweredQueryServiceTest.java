@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.dto.req.AdminUnansweredSearchRequest;
 import com.telme.chat.dto.req.AdminUnansweredType;
+import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
 import com.telme.chat.dto.res.AdminUnansweredListItemResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
 import com.telme.global.common.exception.GeneralException;
@@ -99,6 +100,50 @@ class AdminUnansweredQueryServiceTest {
         assertThatThrownBy(() -> service.getUnanswered(
                 request(null, now, now.minus(1, ChronoUnit.DAYS))))
                 .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("상세에는 질문·응답과 답을 만들 때 뽑힌 FAQ가 함께 나온다")
+    void 상세를_본다() {
+        // 뽑힌 FAQ는 있었지만 근거로 답하지 못한 경우
+        jdbcTemplate.update(
+                "INSERT INTO message_sources(message_id, faq_id, title_snapshot, faq_version, search_rank, score)"
+                        + " VALUES (?, 1, '요금제는 언제 변경할 수 있나요?', 1, 1, 0.5123)",
+                noEvidenceId);
+
+        AdminUnansweredDetailResponse detail = service.getUnanswered(noEvidenceId);
+
+        assertThat(detail.type()).isEqualTo("NO_EVIDENCE");
+        assertThat(detail.question()).isEqualTo("요금제 바꾸고 싶어요");
+        assertThat(detail.answer()).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
+        assertThat(detail.sessionId()).isEqualTo(sessionId);
+        assertThat(detail.sources()).singleElement()
+                .satisfies(source -> {
+                    assertThat(source.faqId()).isEqualTo(1L);
+                    assertThat(source.searchRank()).isEqualTo((short) 1);
+                });
+    }
+
+    @Test
+    @DisplayName("뽑힌 FAQ가 없으면 빈 목록으로 나온다")
+    void 근거가_없으면_빈_목록이다() {
+        AdminUnansweredDetailResponse detail = service.getUnanswered(timeoutId);
+
+        assertThat(detail.type()).isEqualTo("TIMEOUT");
+        assertThat(detail.sources()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("답한 메시지를 상세로 부르면 CHAT404-2를 던진다")
+    void 답한_메시지는_상세에서_빠진다() {
+        assertThatThrownBy(() -> service.getUnanswered(groundedId))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("없는 메시지를 상세로 부르면 CHAT404-2를 던진다")
+    void 없는_메시지는_막는다() {
+        assertThatThrownBy(() -> service.getUnanswered(-1L)).isInstanceOf(GeneralException.class);
     }
 
     private long message(
