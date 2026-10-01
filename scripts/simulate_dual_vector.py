@@ -12,7 +12,7 @@ from check_eval_questions import expected_slots, require_slot_dump
 
 DEFAULT_QA_THRESHOLD = 0.72
 DEFAULT_QO_THRESHOLDS = [0.85, 0.87, 0.88, 0.89, 0.90, 0.92, 0.95]
-# ChatPipelineProcessor·FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
+# FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
 DEFAULT_SERVICE_TOP_K = 3
 POSITIVE_TYPES = ("SIMILAR", "VARIANT", "ANSWER")
 GROUPS = (

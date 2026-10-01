@@ -10,12 +10,12 @@ import com.telme.consult.service.ConsultChatEvents;
 import com.telme.chat.service.ChatEmitterRegistry;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "telme.consult.chat-integration-enabled", havingValue = "true")
+@Conditional(ConsultChatEnabledCondition.class)
 public class ConsultChatProcessingConfiguration {
     @Bean
     @ConditionalOnMissingBean(ConsultChatEvents.class)

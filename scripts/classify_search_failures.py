@@ -13,7 +13,7 @@ from check_duplicates import DEFAULT_BATCH, cosine, embed_all
 from check_eval_questions import expected_slots, require_slot_dump
 
 DEFAULT_THRESHOLD = 0.72
-# ChatPipelineProcessor·FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
+# FaqSearchAnswerProvider가 LLM에 넘기는 검색 결과 수
 DEFAULT_SERVICE_TOP_K = 3
 DEFAULT_FAQ = Path(__file__).parent / "data" / "faq_full_1150.json"
 GROUPS = ("A", "B", "C", "D")
