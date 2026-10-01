@@ -9,18 +9,44 @@ import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.llm.service.LlmStreamHandler;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 /** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "telme.consult.rag-integration-enabled", havingValue = "true")
+@Conditional(ConsultChatEnabledCondition.class)
 public class ConsultRagAnswerConfiguration {
     @Bean
     StreamHandlerFactory consultAnswerStreamHandlerFactory(ConsultChatEvents events) {
-        return events::stream;
+        return executionId -> {
+            LlmStreamHandler delegate = events.stream(executionId);
+            return new LlmStreamHandler() {
+                @Override
+                public void onToken(String token) {
+                    // 검증된 내용도 저장 전에는 전송하지 않는다. 최종 저장 후 처리기가 보낸다.
+                    delegate.onProgress();
+                }
+
+                @Override
+                public void onProgress() {
+                    delegate.onProgress();
+                }
+
+                @Override
+                public void onRetry(int attempt, Throwable cause) {
+                    delegate.onRetry(attempt, cause);
+                }
+
+                @Override
+                public void onComplete() {}
+
+                @Override
+                public void onError(Throwable error) {}
+            };
+        };
     }
 
     @Bean

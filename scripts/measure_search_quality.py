@@ -22,6 +22,8 @@ from check_eval_questions import content_hash as _content_hash
 
 DEFAULT_API_URL = "http://localhost:8080/api/v1/faq/search"
 DEFAULT_TOP_K = 3
+# 검색 테스트 API의 vector 파라미터 값 (FaqSearchVector)
+VECTORS = ("QA", "QUESTION", "DUAL")
 # 서버의 embedding.search-read-timeout(15s)보다 길어야, 서버가 정상 처리 중인 요청을
 # 스크립트가 먼저 실패로 판단하는 일이 없다
 DEFAULT_TIMEOUT_SEC = 20
@@ -267,9 +269,13 @@ def slot_id(result: dict) -> str | None:
     return result["slotId"]
 
 
-def search(question: str, top_k: int, api_url: str, timeout: int) -> tuple[list[dict], float]:
+def search(question: str, top_k: int, api_url: str, timeout: int,
+           vector: str | None = None) -> tuple[list[dict], float]:
     """(결과, 응답 시간(초))를 반환. 응답 시간은 요청 전송~응답 수신까지만 잰다(JSON 파싱 등은 제외)."""
-    query = urllib.parse.urlencode({"query": question, "topK": top_k})
+    params = {"query": question, "topK": top_k}
+    if vector is not None:
+        params["vector"] = vector
+    query = urllib.parse.urlencode(params)
     req = urllib.request.Request(f"{api_url}?{query}")
     start = time.perf_counter()
     try:
@@ -304,12 +310,13 @@ def evaluate(
     api_url: str,
     timeout: int,
     raw_sink: list | None = None,
+    vector: str | None = None,
 ) -> tuple[list[SearchOutcome], list[float]]:
     outcomes = []
     latencies = []
     returned_slots = []
     for item in eval_items:
-        results, elapsed = search(item["question"], top_k, api_url, timeout)
+        results, elapsed = search(item["question"], top_k, api_url, timeout, vector)
         latencies.append(elapsed)
         returned_slots.extend(slot_id(r) for r in results)
         eval_id = item.get("eval_id")
@@ -433,6 +440,9 @@ def main() -> int:
     ap.add_argument("--dump-json", type=Path,
                     help="질문별 top-k 원시 결과(rank·score·slot_id·content_hash)를 JSON으로 저장. "
                          "임계값·top-k 스윕을 다시 호출하지 않고 오프라인에서 계산할 때 쓴다")
+    ap.add_argument("--vector", choices=VECTORS,
+                    help="검색에 쓸 벡터(TELME-84). 생략하면 서버 설정(search.dual-vector.enabled)을 따른다. "
+                         "이중 벡터 임계값 재탐색에는 QA와 QUESTION을 따로 수집한다")
     ap.add_argument("--by-category", action="store_true",
                     help="expected_slot_id 접두사로 묶어 카테고리별 Recall/MRR도 출력")
     ap.add_argument("--experiment", help="실험 기록표용 실험 이름(예: 기준선, E3). 주면 표 형식 한 줄도 같이 출력")
@@ -452,18 +462,21 @@ def main() -> int:
     eval_items = load_eval_set(args.path)
 
     raw_sink: list | None = [] if args.dump_json else None
-    outcomes, latencies = evaluate(eval_items, args.top_k, args.api_url, args.timeout, raw_sink)
+    outcomes, latencies = evaluate(eval_items, args.top_k, args.api_url, args.timeout, raw_sink, args.vector)
     if raw_sink is not None:
         args.dump_json.parent.mkdir(parents=True, exist_ok=True)
+        # vector는 어느 벡터로 수집했는지. simulate_dual_vector.py가 --qa·--qo를 바꿔 넣었는지 확인할 때 쓴다
         args.dump_json.write_text(json.dumps(
-            {"api_url": args.api_url, "top_k": args.top_k, "path": str(args.path), "items": raw_sink},
+            {"api_url": args.api_url, "top_k": args.top_k, "vector": args.vector, "path": str(args.path),
+             "items": raw_sink},
             ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         print(f"  원시 결과 저장: {args.dump_json} ({len(raw_sink)}건)")
     # 요청한 topK를 넘는 순위는 애초에 API가 안 돌려주므로, 그 이상의 recall@k는 측정한 게 아니라 표시하지 않는다
     k_values = tuple(k for k in (1, 3, 5) if k <= args.top_k)
     metrics = compute_metrics(outcomes, k_values=k_values)
 
-    print(f"{args.path} — {len(eval_items)}건 평가 (topK={args.top_k})")
+    vector_text = f", vector={args.vector}" if args.vector else ""
+    print(f"{args.path} — {len(eval_items)}건 평가 (topK={args.top_k}{vector_text})")
     for key, value in metrics.items():
         print(f"  {key}: {value:.3f}")
     unscored = [o.eval_id for o in outcomes if not o.scored]

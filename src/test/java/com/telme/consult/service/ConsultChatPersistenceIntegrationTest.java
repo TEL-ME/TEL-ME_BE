@@ -462,9 +462,7 @@ class ConsultChatPersistenceIntegrationTest {
                                                             + " execution_id=?)",
                                                     executionId))
                                     .isEqualTo("GENERATING");
-                            var stream = events.stream(input.executionId());
-                            stream.onToken("매장");
-                            stream.onComplete();
+                            assertThat(events.sequence).containsExactly("start");
                             return new ConsultChatProcessingService.GeneratedAnswer(
                                     new ChatAnswer(
                                             ChatMessage.MessageType.ANSWER,
@@ -498,7 +496,7 @@ class ConsultChatPersistenceIntegrationTest {
                                         .isEqualTo(1));
         assertThat(events.sequence)
                 .containsExactly(
-                        "start", "token:매장", "stream-complete", "complete:COMPLETED");
+                        "start", "token:매장 안내", "complete:COMPLETED");
     }
 
     @Test

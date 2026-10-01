@@ -64,6 +64,11 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
             }
 
             @Override
+            public void onProgress() {
+                delegate.onProgress();
+            }
+
+            @Override
             public void onComplete() {
                 // 답변·상담 상태 저장 뒤 ConsultChatProcessingService가 완료 이벤트를 보낸다.
             }

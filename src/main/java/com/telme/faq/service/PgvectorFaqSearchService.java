@@ -4,6 +4,7 @@ import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.req.FaqSearchVector;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.repository.FaqEmbeddingRepository;
@@ -39,22 +40,34 @@ public class PgvectorFaqSearchService implements FaqSearchService {
     @Override
     public List<FaqSearchResponse> search(FaqSearchRequest request) {
         float[] queryVector = embeddingClient.embed(request.query());
-        List<FaqNearestMatch> candidates =
-                repository.findNearest(queryVector, request.topK(), embeddingProperties.model());
-        // faq_embeddings.embedding은 faq.embedding-text.variant 구성으로 만든 벡터다
-        List<FaqSearchResponse> results =
-                toResponses(candidates, searchProperties.similarityThreshold(), embeddingTextProperties.variant());
+        int topK = request.topK();
+        // 같은 질의 벡터로 두 벡터를 조회한다. 이중 벡터여도 임베딩 호출은 그대로이고 DB 조회만 한 번 늘어난다
+        return switch (vectorOf(request)) {
+            case QA -> searchQa(queryVector, topK);
+            case QUESTION -> searchQuestion(queryVector, topK);
+            case DUAL -> DualVectorMerger.merge(searchQuestion(queryVector, topK), searchQa(queryVector, topK), topK);
+        };
+    }
 
-        SearchProperties.DualVector dualVector = searchProperties.dualVector();
-        if (!dualVector.enabled()) {
-            return results;
+    // 요청이 벡터를 고르지 않으면(채팅·상담 경로) 설정을 따른다. 측정용 테스트 API만 벡터를 고른다
+    private FaqSearchVector vectorOf(FaqSearchRequest request) {
+        if (request.vector() != null) {
+            return request.vector();
         }
-        // 같은 질의 벡터로 질문만 벡터를 한 번 더 조회한다. 임베딩 호출은 그대로이고 DB 조회만 한 번 늘어난다
-        List<FaqNearestMatch> questionCandidates =
-                repository.findNearestByQuestionVector(queryVector, request.topK(), embeddingProperties.model());
-        List<FaqSearchResponse> questionResults = toResponses(
-                questionCandidates, dualVector.questionThreshold(), FaqEmbeddingTextVariant.QUESTION_ONLY);
-        return DualVectorMerger.merge(questionResults, results, request.topK());
+        return searchProperties.dualVector().enabled() ? FaqSearchVector.DUAL : FaqSearchVector.QA;
+    }
+
+    // faq_embeddings.embedding은 faq.embedding-text.variant 구성으로 만든 벡터다
+    private List<FaqSearchResponse> searchQa(float[] queryVector, int topK) {
+        List<FaqNearestMatch> candidates = repository.findNearest(queryVector, topK, embeddingProperties.model());
+        return toResponses(candidates, searchProperties.similarityThreshold(), embeddingTextProperties.variant());
+    }
+
+    private List<FaqSearchResponse> searchQuestion(float[] queryVector, int topK) {
+        List<FaqNearestMatch> candidates =
+                repository.findNearestByQuestionVector(queryVector, topK, embeddingProperties.model());
+        return toResponses(candidates, searchProperties.dualVector().questionThreshold(),
+                FaqEmbeddingTextVariant.QUESTION_ONLY);
     }
 
     // repository가 이미 거리순으로 정렬해 반환하므로, 임계값 미달이 한 번 나오면 그 지점에서 끊는다

@@ -17,6 +17,8 @@ import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.consult.exception.FaqAnswerSearchException;
+import com.telme.llm.exception.LlmStreamCancelledException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +29,34 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 class FaqSearchAnswerProviderTest {
+
+    @Test
+    void failedSearchRetainsCauseAndDoesNotGenerateFromEmptyEvidence() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        RuntimeException failure = new IllegalStateException("검색 시스템 원인");
+        when(searches.search(any())).thenThrow(failure);
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        assertThatThrownBy(() -> provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "질문", "질문", Map.of())))
+                .isInstanceOf(FaqAnswerSearchException.class).hasCause(failure);
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    void searchCancellationRetainsCancellationClassification() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        RuntimeException cancellation = new LlmStreamCancelledException();
+        when(searches.search(any())).thenThrow(cancellation);
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        assertThatThrownBy(() -> provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "질문", "질문", Map.of())))
+                .isSameAs(cancellation);
+        verifyNoInteractions(answers);
+    }
 
     @Test
     void searchesOriginalQueryAndPassesResultsToAnswerGeneration() {

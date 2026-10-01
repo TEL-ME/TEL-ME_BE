@@ -39,10 +39,21 @@ class ConsultTurnRoutingConfigurationTest {
     }
 
     @Test
+    void ragDisabledDoesNotRegisterRoutingAdapters() {
+        // 답변 생성 빈이 없으면 채팅을 처리할 수 없으므로 라우팅 어댑터도 등록하지 않는다
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=false")
+                .run(context -> assertThat(context).doesNotHaveBean(TurnAnalyzer.class));
+    }
+
+    @Test
     void integrationEnabledRegistersRoutingAdapters() {
         runner.withPropertyValues(
                         "telme.consult.chat-integration-enabled=true",
-                        "telme.consult.persistence-enabled=true")
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
                 .run(
                         context -> {
                             assertThat(context).hasSingleBean(AnalysisProvider.class);

@@ -8,6 +8,7 @@ import com.telme.chat.service.ChatProcessingPort;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
@@ -126,7 +127,22 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                         prepared.expectedVersion() + 1,
                         generated.answer(),
                         generated.sources());
-        events.completed(command.executionId(), completed);
+        if (prepared.decision().action() == Action.PROCEED
+                && generated.answer().messageType() == ChatMessage.MessageType.ANSWER) {
+            // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
+            try {
+                events.stream(command.executionId()).onToken(generated.answer().content());
+            } catch (RuntimeException deliveryFailure) {
+                log.warn("최종 답변 토큰 전달 실패: executionId={}",
+                        command.executionId(), deliveryFailure);
+            }
+        }
+        try {
+            events.completed(command.executionId(), completed);
+        } catch (RuntimeException deliveryFailure) {
+            log.warn("최종 답변 완료 이벤트 전달 실패: executionId={}",
+                    command.executionId(), deliveryFailure);
+        }
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {
@@ -157,6 +173,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private ChatFailure failure(RuntimeException exception) {
         if (exception instanceof LlmStreamCancelledException) {
             return new ChatFailure(ChatMessage.Status.CANCELLED, "USER_CANCELLED");
+        }
+        if (exception instanceof FaqAnswerSearchException) {
+            return new ChatFailure(ChatMessage.Status.FAILED, FaqAnswerSearchException.ERROR_CODE);
         }
         if (exception instanceof GeneralException general) {
             return new ChatFailure(ChatMessage.Status.FAILED, general.getErrorCode().getCode());

@@ -28,16 +28,22 @@ public final class ChatEmitterConsultEvents implements ConsultChatEvents {
             private boolean wasRegistered = emitters.isRegistered(executionId);
 
             @Override
-            public void onToken(String token) {
+            public void onProgress() {
                 if (!wasRegistered && emitters.isRegistered(executionId)) {
                     wasRegistered = true;
                 }
+                if (wasRegistered && !emitters.isRegistered(executionId)) {
+                    throw new LlmStreamCancelledException();
+                }
+            }
+
+            @Override
+            public void onToken(String token) {
+                onProgress();
                 if (emitters.isRegistered(executionId)) {
                     if (!emitters.sendEvent(executionId, "token", token)) {
                         throw new LlmStreamCancelledException();
                     }
-                } else if (wasRegistered) {
-                    throw new LlmStreamCancelledException();
                 }
             }
 
