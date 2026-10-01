@@ -509,7 +509,10 @@ H-087 "번호이동 접수를 취소하면 바로 다시 신청할 수 있나요
 #### 측정 조건과 재현 기록
 
 - 모델: Ollama `bge-m3:latest`, 1024차원, F16. 모델 digest: `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab`.
-- FAQ 벡터 1,150건, 질문 벡터 1,150건. 재임베딩 없이 같은 DB를 사용했다.
+- 지문 집계 대상은 `policy_ref NOT LIKE 'POLICY-%'`인 FAQ 벡터 1,150건·질문 벡터 1,150건이다. 재임베딩 없이 같은 DB를 사용했다. 이 집계 조건 자체가 검색 쿼리의 시드 제외 조건은 아니다.
+- 저장된 90건·별도 16건의 Q_A/질문 원시 결과 4개에는 `slot_id=null` 결과가 없으며, 측정·집계 과정에서 별도의 시드 제외 처리는 하지 않았다.
+- 사후 재확인한 현재 DB는 전체 FAQ 1,150건이며 `POLICY-*` 시드와 `slot_id=null` FAQ는 모두 0건이다. 현재 상태만으로 측정 당시 전체 행 수까지 증명하지는 않는다. 시드가 포함된 환경에서는 검색 결과가 달라질 수 있으므로 재현 시 데이터 구성을 맞춰야 한다.
+- 우리 원시 결과의 H-101 질문 벡터 최고점은 `BILLING-0001`의 0.834316이다. 시드가 있는 다른 환경에서 보고된 0.9007과 구분한다.
 - FAQ ID순 벡터 문자열 집계 MD5: Q_A `4c6faa4addd8f37e5e7b5921f0882207`, 질문 `2343d78abdb1daa5b22062a3e574a971`.
 - 로컬 원시 결과: `.measure/holdout90-question-20261001.json`, `.measure/holdout90-qa-20261001.json`. 입력 스냅샷과 요약은 같은 디렉터리의 `holdout90-input-20261001.json`, `holdout90-summary-20261001.json`이다(커밋 제외).
 - 테스트 서버는 포트 18090, `search.similarity-threshold=0`, `search.dual-vector.question-threshold=0`, `faq.search-test-api-enabled=true`로 실행했다. 원시 수집 명령은 다음과 같다. 덤프의 임계값 0 기준 거부율을 운영 거부율로 사용하지 않는다.
