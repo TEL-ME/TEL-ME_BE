@@ -124,7 +124,7 @@
 ## 협업·선행 PR·게시 전 확인
 
 - [PR #82](https://github.com/TEL-ME/TEL-ME_BE/pull/82), [#83](https://github.com/TEL-ME/TEL-ME_BE/pull/83), [#84](https://github.com/TEL-ME/TEL-ME_BE/pull/84), [#85](https://github.com/TEL-ME/TEL-ME_BE/pull/85)의 저장 후 전송·이력·실패·추적 작업을 포함한 기반이다. 별도 기능이 이미 develop에 모두 병합됐다고 표현하지 않는다.
-- 최초 구현 당시 매장 V15/V16과 추적 V15가 충돌해 추적 파일을 V17로 옮겼다. 현재 PR #85 `47cbbe5`에도 V17 조정이 반영되어 준비본에서는 동일 파일을 그대로 사용한다. 기존 매장 V15/V16과 SQL 내용은 수정하지 않았다. 이미 구 V15 추적을 적용한 별도 환경은 단순 파일 교체 대상이 아니므로 Flyway 이력을 따로 확인해야 한다.
+- 최초 구현 당시 매장 V15/V16과 추적 V15가 충돌해 추적 파일을 V17로 옮겼다. 게시 준비 시 develop `893d041`에 관리자 피드백 V17이 병합돼 미병합 추적만 V18로 이동하고 #85와 같은 파일을 사용한다. 추적 SQL 내용과 기존 매장 V15/V16·관리자 피드백 V17은 수정하지 않았다. 구 V15/V17 추적을 이미 적용한 별도 환경은 단순 파일 교체 대상이 아니므로 Flyway 이력을 따로 확인해야 한다. 이번 검증은 새 전용 DB에서 진행하며 기존 이력을 변경하지 않는다.
 - [용재님 PR #75](https://github.com/TEL-ME/TEL-ME_BE/pull/75)는 `ConsultChatProcessingService`, `ConsultTurnAnalysisAdapter`, `QueryRoutingService` 등을 함께 수정한다. 미병합 코드를 임의로 적용하거나 덮어쓰지 않았다. 병합 시 복합 상담의 각 하위 상담에서도 검색 후 되묻기 평가가 수행되고 올바른 대기 상담을 선택하는지 함께 확인해야 한다.
 - [PR #86](https://github.com/TEL-ME/TEL-ME_BE/pull/86)의 답변 시스템 프롬프트 변경은 이 브랜치에 포함하지 않았다. 기존 v3 시스템 지시는 유지하며, 현재 오류 보완에서는 두 조건의 표시 이름과 별도 상담 적용 기준 블록을 사용한다(`rag-answer-v3-plan-v2`). 두 작업을 합칠 때 최종 프롬프트와 조건 전달을 함께 검증해야 한다.
 - 용재님과 확인: 새 두 조건 키의 canonical 값, 후속 발화의 정정·새 질문 분류, 로컬 모델을 통한 전체 대화. 초기 의도 분류 JSON 계약과 의도 enum은 변경하지 않는다.
