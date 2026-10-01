@@ -2,7 +2,6 @@ package com.telme.store.dto.res;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalTime;
 import java.util.List;
 
 public record AdminStoreDetailResponse(
@@ -14,11 +13,9 @@ public record AdminStoreDetailResponse(
         BigDecimal latitude,
         BigDecimal longitude,
         String status,
-        List<Hours> hours,
-        List<AdminStoreServiceResponse> services,
+        List<StoreHoursResponse> hours,
+        List<StoreServiceTypeResponse> services,
         Instant createdAt,
         Instant updatedAt
         ) {
-    public record Hours(String dayOfWeek, LocalTime openTime, LocalTime closeTime, boolean closed) {
-    }
 }
