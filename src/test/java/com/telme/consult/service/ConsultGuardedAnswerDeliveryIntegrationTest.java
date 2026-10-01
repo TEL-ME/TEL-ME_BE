@@ -6,7 +6,13 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.dto.res.ChatMessageHistoryItemResponse;
 import com.telme.chat.service.ChatActor;
 import com.telme.chat.service.ChatEmitterRegistry;
@@ -14,6 +20,7 @@ import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ChatSessionService;
+import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
@@ -42,12 +49,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** 검색·모델만 대체하고 실제 처리기, Guard, 트랜잭션, SSE 및 이력 조회를 연결한다. */
+/** 검색·모델만 대체하고 실제 처리기, Guard, 트랜잭션, SSE 및 이력 조회 API를 연결한다. */
+@AutoConfigureMockMvc
 @SpringBootTest(properties = {
         "telme.consult.persistence-enabled=true",
         "telme.consult.chat-integration-enabled=true",
@@ -70,6 +81,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
     @Autowired ConsultService consult;
     @Autowired ChatSessionService sessions;
     @Autowired ChatEmitterRegistry emitters;
+    @Autowired MockMvc mockMvc;
+    @Autowired ObjectMapper objectMapper;
     @MockitoBean TurnAnalyzer analyzer;
     @MockitoBean FaqSearchService search;
     @MockitoBean(name = "baseLlmClient", enforceOverride = true) LlmClient model;
@@ -203,6 +216,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(emitter.names()).containsExactly("start", "error");
         assertThat(executionStatus()).isEqualTo("FAILED");
         assertThat(outputContent()).isNull();
+        assertFailedHistory("FAILED", code.getCode());
     }
 
     static Stream<LlmErrorCode> failures() {
@@ -249,6 +263,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(outputContent()).isNull();
         assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
                 String.class, executionId)).containsExactly("CANCELLED");
+        assertFailedHistory("CANCELLED", "USER_CANCELLED");
     }
 
     @Test
@@ -265,6 +280,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(emitter.names()).containsExactly("start", "error");
         assertThat(executionStatus()).isEqualTo("FAILED");
         assertThat(outputContent()).isNull();
+        assertFailedHistory("FAILED", "CONSULT409-0");
     }
 
     @Test
@@ -276,6 +292,120 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(emitter.tokens()).isEmpty();
         assertThat(executionStatus()).isEqualTo("COMPLETED");
         assertThat(historyAnswer().content()).isEqualTo(SUPPORTED);
+        assertCompletedHistory(SUPPORTED, "GROUNDED");
+    }
+
+    @Test
+    void historyApiNeverReturnsRawAnswerWhileGenerationAndGuardArePending() {
+        script = stream -> {
+            stream.onToken(SUPPORTED + UNSUPPORTED);
+            JsonNode pending = historyFromApi("?size=20");
+            assertThat(pending.path("runningExecutionId").asLong()).isEqualTo(executionId);
+            JsonNode output = pending.path("messages").get(1);
+            assertThat(output.path("status").asText()).isEqualTo("GENERATING");
+            assertThat(output.path("content").isNull()).isTrue();
+            assertThat(outputContent()).isNull();
+            stream.onComplete();
+            // Guard 검사는 끝났어도 저장 경계에 도달하기 전에는 원문·최종문을 조회할 수 없다.
+            assertThat(historyFromApi("?size=20").path("messages").get(1)
+                    .path("content").isNull()).isTrue();
+        };
+        processor.request(command);
+
+        assertCompleted(SUPPORTED, "GROUNDED");
+    }
+
+    @Test
+    void partialAttemptFailureDoesNotRetryOrStoreAbandonedText() {
+        var attempts = new AtomicInteger();
+        script = stream -> {
+            attempts.incrementAndGet();
+            stream.onToken("재발급 비용은 84,700원입니다.");
+            assertThat(outputContent()).isNull();
+            stream.onError(new GeneralException(LlmErrorCode.TIMEOUT));
+        };
+        processor.request(command);
+
+        // 실제 재시도 체인은 원문 토큰 수신 후 실패를 재시도하지 않는다.
+        assertThat(attempts.get()).isEqualTo(1);
+        assertThat(emitter.tokens()).isEmpty();
+        assertFailedHistory("FAILED", LlmErrorCode.TIMEOUT.getCode());
+        assertThat(historyFromApi("?size=20").toString()).doesNotContain("84,700");
+    }
+
+    @Test
+    void duplicateCompletionCallbackDoesNotAppendOrDuplicateFinalAnswer() {
+        script = stream -> {
+            stream.onToken(SUPPORTED);
+            stream.onComplete();
+            stream.onComplete();
+        };
+        processor.request(command);
+
+        assertCompleted(SUPPORTED, "GROUNDED");
+    }
+
+    @Test
+    void pagedHistoryReturnsSameFinalAnswerAndEarlierQuestionSeparately() {
+        script = success(SUPPORTED + UNSUPPORTED);
+        processor.request(command);
+
+        assertCompleted(SUPPORTED, "GROUNDED");
+        JsonNode latest = historyFromApi("?size=1");
+        assertThat(latest.path("messages").size()).isEqualTo(1);
+        assertThat(latest.path("messages").get(0).path("content").asText()).isEqualTo(SUPPORTED);
+        assertThat(latest.path("hasOlderMessages").asBoolean()).isTrue();
+        JsonNode older = historyFromApi("?size=1&beforeSequenceNo="
+                + latest.path("nextBeforeSequenceNo").asInt());
+        assertThat(older.path("messages").size()).isEqualTo(1);
+        assertThat(older.path("messages").get(0).path("role").asText()).isEqualTo("USER");
+        assertThat(older.path("messages").get(0).path("content").asText()).isEqualTo(QUERY);
+        assertThat(older.path("hasOlderMessages").asBoolean()).isFalse();
+    }
+
+    @Test
+    void reconnectAfterGuardedCompletionReturnsSameStoredMessageIdWithoutNewAnswer() {
+        script = success(SUPPORTED + UNSUPPORTED);
+        processor.request(command);
+        assertCompleted(SUPPORTED, "GROUNDED");
+
+        String replay = terminalReplay();
+        assertThat(replay).contains("event:complete", "\"status\":\"COMPLETED\"",
+                "\"messageId\":" + historyAnswer().messageId());
+        assertThat(replay).doesNotContain("event:token", "event:error", "포함");
+        assertThat(emitters.isRegistered(executionId)).isFalse();
+        assertCompletedHistory(SUPPORTED, "GROUNDED");
+    }
+
+    @Test
+    void reconnectAfterPartialTimeoutReturnsErrorAndHistoryStillHasNoAnswerText() {
+        script = stream -> {
+            stream.onToken(SUPPORTED + UNSUPPORTED);
+            stream.onError(new GeneralException(LlmErrorCode.TIMEOUT));
+        };
+        processor.request(command);
+
+        String replay = terminalReplay();
+        assertThat(replay).contains("event:error", "\"status\":\"FAILED\"",
+                LlmErrorCode.TIMEOUT.getCode());
+        assertThat(replay).doesNotContain("event:complete", "event:token", SUPPORTED);
+        assertThat(emitters.isRegistered(executionId)).isFalse();
+        assertFailedHistory("FAILED", LlmErrorCode.TIMEOUT.getCode());
+    }
+
+    private String terminalReplay() {
+        MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        try {
+            var subscription = mockMvc.perform(get(
+                            "/api/v1/chat/sessions/{sessionId}/executions/{executionId}/subscribe",
+                            sessionId, executionId).session(httpSession))
+                    .andExpect(request().asyncStarted()).andReturn();
+            return mockMvc.perform(asyncDispatch(subscription)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception exception) {
+            throw new AssertionError("종료된 실행의 재구독 검증 실패", exception);
+        }
     }
 
     private Consumer<LlmStreamHandler> success(String answer) {
@@ -299,6 +429,61 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(terminal).isInstanceOf(ChatExecutionState.class);
         assertThat(((ChatExecutionState) terminal).outputMessage().messageId())
                 .isEqualTo(historyAnswer().messageId());
+        assertCompletedHistory(answer, basis);
+    }
+
+    private void assertCompletedHistory(String answer, String basis) {
+        JsonNode firstRead = historyFromApi("?size=20");
+        assertThat(firstRead.path("messages").size()).isEqualTo(2);
+        assertThat(firstRead.path("runningExecutionId").isNull()).isTrue();
+        JsonNode output = firstRead.path("messages").get(1);
+        assertThat(output.path("messageId").asLong()).isEqualTo(historyAnswer().messageId());
+        assertThat(output.path("role").asText()).isEqualTo("ASSISTANT");
+        assertThat(output.path("status").asText()).isEqualTo("COMPLETED");
+        assertThat(output.path("content").asText()).isEqualTo(answer).isEqualTo(outputContent());
+        assertThat(output.path("answerBasis").asText()).isEqualTo(basis);
+        assertThat(output.path("completedAt").isNull()).isFalse();
+        assertOneAssistantMessage();
+        // SSE 종료 후 새 HTTP 요청으로 재조회한다. 브라우저 새로고침을 검증한 것은 아니다.
+        emitter.disconnect();
+        assertThat(historyFromApi("?size=20")).isEqualTo(firstRead);
+    }
+
+    private void assertFailedHistory(String expectedStatus, String errorCode) {
+        JsonNode firstRead = historyFromApi("?size=20");
+        assertThat(firstRead.path("messages").size()).isEqualTo(2);
+        assertThat(firstRead.path("runningExecutionId").isNull()).isTrue();
+        JsonNode output = firstRead.path("messages").get(1);
+        assertThat(output.path("role").asText()).isEqualTo("ASSISTANT");
+        assertThat(output.path("status").asText()).isEqualTo(expectedStatus);
+        assertThat(output.path("content").isNull()).isTrue();
+        assertThat(output.path("answerBasis").isNull()).isTrue();
+        assertThat(output.path("completedAt").isNull()).isFalse();
+        var execution = sessions.getExecution(new ChatActor(userId, null), executionId);
+        assertThat(execution.status().name()).isEqualTo(expectedStatus);
+        assertThat(execution.errorCode()).isEqualTo(errorCode);
+        assertThat(execution.outputMessage().messageId()).isEqualTo(output.path("messageId").asLong());
+        assertOneAssistantMessage();
+        assertThat(historyFromApi("?size=20")).isEqualTo(firstRead);
+    }
+
+    private void assertOneAssistantMessage() {
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM chat_messages WHERE session_id=? AND role='ASSISTANT'",
+                Integer.class, sessionId)).isEqualTo(1);
+    }
+
+    private JsonNode historyFromApi(String query) {
+        MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        try {
+            var response = mockMvc.perform(get("/api/v1/chat/sessions/" + sessionId + "/messages" + query)
+                            .session(httpSession))
+                    .andExpect(status().isOk()).andReturn().getResponse();
+            return objectMapper.readTree(response.getContentAsByteArray()).path("result");
+        } catch (Exception exception) {
+            throw new AssertionError("대화 기록 조회 API 검증 실패", exception);
+        }
     }
 
     private ChatMessageHistoryItemResponse historyAnswer() {

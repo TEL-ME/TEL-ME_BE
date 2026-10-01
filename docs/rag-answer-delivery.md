@@ -49,6 +49,9 @@ Jira: TELME-92 `[Fix] Answer Guard 검증 전 답변 노출 방지`.
 
 ## 백엔드 검증 결과
 
+아래 표는 PR #82 최초 작성 시점의 검증 결과다. 후속 저장·조회 API 검증은
+[`rag-answer-persistence-verification.md`](rag-answer-persistence-verification.md)에 별도로 기록한다.
+
 | 테스트 | 개발 기준 수정본 | PR #74·#75·#80 임시 통합본 |
 | --- | ---: | ---: |
 | AnswerGuardTest | 38 | 38 |
