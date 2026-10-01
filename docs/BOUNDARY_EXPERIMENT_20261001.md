@@ -81,7 +81,11 @@ python3 scripts/measure_search_quality.py scripts/data/eval_questions_boundary_e
 python3 scripts/measure_search_quality.py scripts/data/eval_questions_boundary_experiment_16.json --api-url http://localhost:18090/api/v1/faq/search --vector QA --top-k 3 --timeout 150 --dump-json .measure/boundary16-qa-20261001.json
 ```
 
-겹침 검사는 remote `ac6cf68`의 `scripts/check_eval_overlap.py`를 임시 파일로 읽어 기존 130·보강 50·고정 90건을 `--against`로 지정했다. 현재 로컬 브랜치에는 이 스크립트가 아직 없으므로 remote 변경 통합 후 같은 명령을 사용할 수 있다.
+겹침 검사는 remote `ac6cf68`의 `scripts/check_eval_overlap.py`를 임시 파일로 읽어 기존 130·보강 50·고정 90건을 `--against`로 지정했다. 이후 원격 변경을 통합해 같은 스크립트를 레포에 포함했다. 아래 명령으로 재현할 수 있다.
+
+```bash
+python3 scripts/check_eval_overlap.py scripts/data/eval_questions_boundary_experiment_16.json --against scripts/data/eval_questions_130.json scripts/data/eval_questions_supplement_50.json scripts/data/eval_questions_holdout_90.json
+```
 
 로컬 `.measure`(커밋 제외)에 초안20, 입력 스냅샷, 두 벡터 원시 결과, top-3 FAQ 본문을 포함한 요약 JSON을 보존했다.
 이 문서의 비율은 정답 라벨이 모두 UNRELATED라는 현재 검토를 전제로 한다. 실제 DUAL 순위·지연이나 답변 생성 품질은 이번 범위가 아니다.
