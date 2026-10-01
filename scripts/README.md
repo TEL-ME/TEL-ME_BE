@@ -98,7 +98,8 @@ python3 scripts/check_eval_questions.py --self-test
 | --- | --- | --- |
 | `eval_questions_130.json` | SIMILAR 40 / VARIANT 40 / UNRELATED 50 | 확정값 기준 평가셋. 기존 문서 수치와 비교하려면 수정하지 않는다 |
 | `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/EVAL_SET_SUPPLEMENT.md`). 130건과 함께 측정 |
-| `eval_questions_holdout_60.json` | UNRELATED(`ADJACENT_HARD`) 60, 카테고리당 6 | 검색 확인용 세트 (`docs/DUAL_VECTOR_VS_RERANKER.md` 13.1절). 임계값 확정값을 처음 보는 질문으로 한 번만 확인한다. **임계값 재탐색에 쓰지 않는다** |
+| `eval_questions_holdout_90.json` | UNRELATED(`ADJACENT_HARD`) 90: 1차 60 + 2차 30 | 1차는 거부 성능 확인, 2차는 결과를 보고 보강한 경계 스트레스 분석. 두 구간을 별도 집계하며 90건 합계는 참고값이다 (`docs/DUAL_VECTOR_VS_RERANKER.md` 13.1절). **임계값 재탐색에 쓰지 않는다** |
+| `eval_questions_boundary_experiment_16.json` | UNRELATED(`ADJACENT_HARD`) 16 | 기존 결과와 FAQ를 보고 작성한 경계 탐색용. 고정 90건과 분리하며 독립 검증에 쓰지 않는다. 결과: `docs/BOUNDARY_EXPERIMENT_20261001.md` |
 
 질문 유형
 
@@ -416,7 +417,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `data/faq_sample_30.json` | 샘플 30건. 카테고리 10종 × 3건. `slot_id`는 1,150건 파일의 같은 FAQ와 동일 (TELME-73 전에는 `BILLING-S01` 형식) |
 | `data/eval_questions_30.json` | 평가 질문 30건. 긍정 20 + 무관 10. 샘플 30, 300, 1,150건 어느 코퍼스로도 측정 가능 |
 | `data/eval_questions_130.json` | 평가 질문 130건. 긍정 80 + 무관 50(완전무관 16 / 도메인인접 24 / 경계 10). 정답은 배열 |
-| `data/eval_questions_holdout_60.json` | 검색 확인용 60건. 경계 무관만. 임계값 선택에 쓰지 않은 질문이라 확정값 확인에만 쓴다 |
+| `data/eval_questions_holdout_90.json` | 경계 무관 90건. 1차 60건 확인과 2차 30건 스트레스 분석을 구분하며 임계값 선택에 쓰지 않는다 |
 | `data/eval_selfretrieval_1150.json` | 자기검색 평가셋 1,150건 |
 | `data/eval_smoke.json` | API 통신 확인용 더미 2건. 품질 측정용 아님. 정답이 dev 시드 FAQ(`slot_id` 없음)라 Recall 집계에서 빠짐 |
 

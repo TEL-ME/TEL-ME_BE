@@ -779,5 +779,395 @@
       "SERVICE-0014"
     ],
     "note": "관련 FAQ는 신고 후 3영업일 이내 조사와 도용 확인 시 요금 취소만 설명하며 조사 결과 통보 방법은 다루지 않음"
+  },
+  {
+    "eval_id": "H-101",
+    "category": "BILLING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "요금제 변경 신청을 취소하는 건 언제까지 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "BILLING-0001",
+      "BILLING-0057"
+    ],
+    "note": "관련 FAQ는 월 1회 변경과 다음 날 00:00 적용만 설명하며 신청 취소 가능 시점은 다루지 않음"
+  },
+  {
+    "eval_id": "H-102",
+    "category": "BILLING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "소액결제 한도를 올리면 다음 달에 자동으로 원래대로 돌아가나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "BILLING-0004",
+      "BILLING-0060"
+    ],
+    "note": "관련 FAQ는 기본 한도 30만 원과 본인 인증 시 100만 원 상향만 안내하며 상향된 한도의 유지 기간은 다루지 않음"
+  },
+  {
+    "eval_id": "H-103",
+    "category": "BILLING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "요금 납부 수단을 두 개 등록해 두고 번갈아 쓸 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "BILLING-0012",
+      "BILLING-0068"
+    ],
+    "note": "관련 FAQ는 납부 수단 네 가지만 나열하며 복수 등록이나 번갈아 사용은 다루지 않음"
+  },
+  {
+    "eval_id": "H-104",
+    "category": "PLAN",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "기본 데이터 소진 후 속도 제한 상태에서도 다른 사람에게 데이터를 선물받을 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PLAN-0012",
+      "PLAN-0013"
+    ],
+    "note": "관련 FAQ는 데이터 소진 후 속도 제한과 데이터 선물 한도만 각각 안내하며 제한 상태에서 선물받을 수 있는지는 다루지 않음"
+  },
+  {
+    "eval_id": "H-105",
+    "category": "PLAN",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "다음 달로 넘긴 데이터는 그 달에 다 못 쓰면 또 넘어가나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PLAN-0023",
+      "PLAN-0033"
+    ],
+    "note": "관련 FAQ는 잔여량의 50%까지 다음 달 이월만 설명하며 이월분의 재이월 가능 여부는 답하지 않음"
+  },
+  {
+    "eval_id": "H-106",
+    "category": "PLAN",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "청소년 요금제는 부모 명의 회선에도 걸 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PLAN-0004",
+      "PLAN-0024"
+    ],
+    "note": "관련 FAQ는 청소년·시니어 요금제의 가입 연령만 안내하며 명의자와 사용자가 다른 경우는 다루지 않음"
+  },
+  {
+    "eval_id": "H-107",
+    "category": "DEVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "단말기 할부 개월 수를 중간에 바꿀 수 있어요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "DEVICE-0001",
+      "DEVICE-0029"
+    ],
+    "note": "관련 FAQ는 24·30개월 옵션과 연 5.9% 수수료율만 설명하며 계약 후 기간 변경은 다루지 않음"
+  },
+  {
+    "eval_id": "H-108",
+    "category": "DEVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "기기변경할 때 새 폰 색상이나 용량을 고를 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "DEVICE-0002",
+      "DEVICE-0010"
+    ],
+    "note": "관련 FAQ는 개통 후 6개월 조건과 할부금 완납·승계만 설명하며 단말 색상·용량 선택은 다루지 않음"
+  },
+  {
+    "eval_id": "H-109",
+    "category": "DEVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "단말 반품하면 환불은 며칠 안에 돼요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "DEVICE-0020",
+      "DEVICE-0028"
+    ],
+    "note": "관련 FAQ는 14일 이내 1회 반품·교환 조건만 안내하며 환불 소요 기간은 다루지 않음"
+  },
+  {
+    "eval_id": "H-110",
+    "category": "SUBSCRIBE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "개통할 때 신분증 사본만 가져가도 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SUBSCRIBE-0001",
+      "SUBSCRIBE-0029"
+    ],
+    "note": "관련 FAQ는 지참 가능한 신분증 종류만 나열하며 원본과 사본의 구분은 다루지 않음"
+  },
+  {
+    "eval_id": "H-111",
+    "category": "SUBSCRIBE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "회선 5개를 다 쓰고 있으면 한도를 늘릴 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SUBSCRIBE-0020",
+      "SUBSCRIBE-0028"
+    ],
+    "note": "관련 FAQ는 성인 1인 최대 5회선과 법인 심사만 안내하며 한도 상향 가능 여부는 답하지 않음"
+  },
+  {
+    "eval_id": "H-112",
+    "category": "SUBSCRIBE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "자녀 명의로 가입할 때 법정대리인이 조부모여도 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SUBSCRIBE-0002",
+      "SUBSCRIBE-0010"
+    ],
+    "note": "관련 FAQ는 법정대리인 동의서와 가족관계증명서만 안내하며 법정대리인의 자격 범위는 다루지 않음"
+  },
+  {
+    "eval_id": "H-113",
+    "category": "PORTING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동 처리 중에 진행 상황을 확인할 수 있어요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PORTING-0001",
+      "PORTING-0017"
+    ],
+    "note": "관련 FAQ는 평균 2시간·최대 24시간 처리만 설명하며 진행 상황 조회 방법은 다루지 않음"
+  },
+  {
+    "eval_id": "H-114",
+    "category": "PORTING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PORTING-0010",
+      "PORTING-0026"
+    ],
+    "note": "관련 FAQ는 본인 신분증과 미납 완납 조건만 안내하며 기존 통신사 사전 연락 필요 여부는 답하지 않음"
+  },
+  {
+    "eval_id": "H-115",
+    "category": "PORTING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동을 철회하면 냈던 가입비는 돌려받나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PORTING-0004",
+      "PORTING-0020"
+    ],
+    "note": "관련 FAQ는 14일 이내 철회와 원래 통신사 복원만 설명하며 납부한 비용의 환급은 다루지 않음"
+  },
+  {
+    "eval_id": "H-116",
+    "category": "TERMINATE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "약정 중간에 해지한 위약금은 언제까지 내야 하나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "TERMINATE-0010",
+      "TERMINATE-0026"
+    ],
+    "note": "관련 FAQ는 약정 24개월과 기간별 반환 비율만 설명하며 위약금 납부 기한은 다루지 않음"
+  },
+  {
+    "eval_id": "H-117",
+    "category": "TERMINATE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "해지한 뒤 남은 할부금을 다른 사람에게 넘길 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "TERMINATE-0011",
+      "TERMINATE-0019"
+    ],
+    "note": "관련 FAQ는 일시 납부 원칙과 기존 할부 일정 유지만 안내하며 할부금 명의 이전은 답하지 않음"
+  },
+  {
+    "eval_id": "H-118",
+    "category": "TERMINATE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "일시 정지 중에는 약정 기간도 같이 멈추나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "TERMINATE-0004",
+      "TERMINATE-0020"
+    ],
+    "note": "관련 FAQ는 연간 90일·1회 30일 한도와 기본료 50%만 설명하며 정지 기간의 약정 계산은 다루지 않음"
+  },
+  {
+    "eval_id": "H-119",
+    "category": "USIM",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "유심 재발급을 미성년자 본인이 받을 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "USIM-0010",
+      "USIM-0026"
+    ],
+    "note": "관련 FAQ는 본인 신분증과 대리 수령 서류만 안내하며 미성년자 본인 수령 가능 여부는 다루지 않음"
+  },
+  {
+    "eval_id": "H-120",
+    "category": "USIM",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "eSIM 듀얼심으로 쓰던 회선 하나만 따로 해지할 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "USIM-0011",
+      "USIM-0035"
+    ],
+    "note": "관련 FAQ는 eSIM 발급 비용과 듀얼심 최대 2회선만 설명하며 회선별 개별 해지는 다루지 않음"
+  },
+  {
+    "eval_id": "H-121",
+    "category": "USIM",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "USIM-0004",
+      "USIM-0020"
+    ],
+    "note": "관련 FAQ는 분실 신고 시 즉시 정지와 재발급 시 기존 유심 자동 해지만 설명하며 신고 취소는 다루지 않음"
+  },
+  {
+    "eval_id": "H-122",
+    "category": "NAME_CHANGE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의변경 서류를 미리 보내 두고 나중에 방문해도 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007"
+    ],
+    "note": "관련 FAQ는 양측 신분증과 동행 방문 원칙만 안내하며 서류 사전 제출 가능 여부는 다루지 않음"
+  },
+  {
+    "eval_id": "H-123",
+    "category": "NAME_CHANGE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의변경하면 그달 요금은 누가 내나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "NAME_CHANGE-0002",
+      "NAME_CHANGE-0014"
+    ],
+    "note": "관련 FAQ는 수수료 없음과 미납 완납 조건만 설명하며 변경 월 요금의 부담 주체는 답하지 않음"
+  },
+  {
+    "eval_id": "H-124",
+    "category": "NAME_CHANGE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "양수인 신용 심사는 무엇을 보고 판단하나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "NAME_CHANGE-0009",
+      "NAME_CHANGE-0021"
+    ],
+    "note": "관련 FAQ는 양수인이 신용 심사를 받고 통과하면 진행된다는 것만 설명하며 심사 기준은 다루지 않음"
+  },
+  {
+    "eval_id": "H-125",
+    "category": "ROAMING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "7일 로밍권의 이용 시작 날짜를 신청한 뒤에 바꿀 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "ROAMING-0006",
+      "ROAMING-0007"
+    ],
+    "note": "관련 FAQ는 7일 기간권 가격과 로밍 신청 후 적용 시간만 안내하며 기간권 이용 시작일 변경 여부는 다루지 않음"
+  },
+  {
+    "eval_id": "H-126",
+    "category": "ROAMING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "로밍 신청을 해지하는 건 언제부터 적용되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "ROAMING-0007",
+      "ROAMING-0022"
+    ],
+    "note": "관련 FAQ는 신청 후 1시간 이내 적용만 설명하며 해지 신청의 적용 시점은 답하지 않음"
+  },
+  {
+    "eval_id": "H-127",
+    "category": "ROAMING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "로밍 신청 상태를 문자로도 알려주나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "ROAMING-0005",
+      "ROAMING-0015"
+    ],
+    "note": "관련 FAQ는 앱이나 홈페이지에서 가입 상태를 확인하라고만 안내하며 문자 알림 제공 여부는 다루지 않음"
+  },
+  {
+    "eval_id": "H-128",
+    "category": "SERVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "부가서비스는 한 번에 몇 개까지 가입할 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SERVICE-0006",
+      "SERVICE-0016"
+    ],
+    "note": "관련 FAQ는 부가서비스 가입이 신청 즉시 적용된다는 것만 설명하며 동시 가입 개수 제한은 다루지 않음"
+  },
+  {
+    "eval_id": "H-129",
+    "category": "SERVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "멤버십 등급별로 받는 혜택은 어떻게 나뉘나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SERVICE-0007",
+      "SERVICE-0022"
+    ],
+    "note": "관련 FAQ는 4개 등급과 직전 1년 납부 금액 기준만 설명하며 등급별 혜택 내용은 다루지 않음"
+  },
+  {
+    "eval_id": "H-130",
+    "category": "SERVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의도용 조사가 진행되는 동안 의심되는 회선의 이용도 정지되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SERVICE-0004",
+      "SERVICE-0014"
+    ],
+    "note": "관련 FAQ는 조사 기간과 도용 확인 후 요금 취소만 안내하며 조사 중 의심 회선의 이용 정지 여부는 다루지 않음"
   }
 ]
