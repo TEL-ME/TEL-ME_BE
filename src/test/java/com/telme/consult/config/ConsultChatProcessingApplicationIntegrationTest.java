@@ -16,7 +16,6 @@ import org.springframework.context.ApplicationContext;
             "telme.consult.persistence-enabled=true",
             "telme.consult.chat-integration-enabled=true",
             "telme.consult.rag-integration-enabled=true",
-            "telme.chat.pipeline.enabled=false",
             "spring.datasource.hikari.maximum-pool-size=2"
         })
 class ConsultChatProcessingApplicationIntegrationTest {

@@ -602,21 +602,25 @@ docker exec telme-postgres psql -U telme -d telme -c \
   "select count(*) total, count(*) filter (where embedding_question is null) qo_null,
           count(*) filter (where embedding = embedding_question) same from faq_embeddings;"
 
-# 2) 벡터별 top-10 수집. 검색 API에 vector 파라미터가 없어 임계값으로 가른다
-#    Q_A    : DUAL_VECTOR_ENABLED=false, SIMILARITY_THRESHOLD=0
-#    질문만  : DUAL_VECTOR_ENABLED=true,  SIMILARITY_THRESHOLD=1.0, QUESTION_THRESHOLD=0
-#    (질문만 수집은 응답 matchedVariant가 전부 QUESTION_ONLY인지로 검증)
+# 2) 벡터별 top-10 수집. 두 임계값을 0으로 푼 서버에서 --vector로 고른다(TELME-84)
+#    서버: FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0
+#    130건과 보강 50건 모두 QA, QUESTION 각각 수집 (scripts/README.md 6절 "이중 벡터 임계값 재탐색")
 python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
-  --api-url http://localhost:18120/api/v1/faq/search --top-k 10 \
-  --dump-json .measure/raw-1150-Q_A-dual.json
+  --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+  --vector QA --dump-json .measure/raw-130-Q_A.json
 
 # 3) 임계값 격자. --qo-thresholds는 쉼표 구분
 python3 scripts/simulate_dual_vector.py \
-  --qa .measure/raw-1150-Q_A-dual.json .measure/raw-supplement50-Q_A-dual.json \
-  --qo .measure/raw-1150-QO-dual.json .measure/raw-supplement50-QO-dual.json \
+  --qa .measure/raw-130-Q_A.json .measure/raw-supp50-Q_A.json \
+  --qo .measure/raw-130-QUESTION_ONLY.json .measure/raw-supp50-QUESTION_ONLY.json \
   --qa-threshold 0.72 --qo-thresholds 0.85,0.87,0.88,0.89,0.90,0.92,0.95
 
 # 4) 확정값 실측: 플래그 켠 기본 설정으로 top-3 측정
 ```
 
 측정 환경은 4.1절과 같다. 측정일 2026-09-29, `develop` TELME-76 머지 시점.
+15.3 실측은 `--vector`가 없던 시점이라 임계값 우회로 모은 `raw-1150-Q_A-dual.json`, `raw-1150-QO-dual.json`(+ `raw-supplement50-*`)을 썼다. 위 절차로 다시 모아도 같은 지표가 나온다(top-10 하위 후보가 바뀐 문항이 몇 건 있으나 지표는 동일. QA 3건 / QUESTION 2건, TELME-84 리뷰 대조 확인. `DUAL_VECTOR_VS_RERANKER.md` 11절의 4건은 재임베딩 전후 비교라 기준선이 다르다).
+
+### 15.7 리랭커와 비교
+
+이중 벡터와 리랭커의 효과, 겹치는 문항, 부작용, 지연·배포 비용, 두 방법을 합친 경우의 오프라인 시뮬레이션, 모든 구성에 같이 쓰는 임계값 선택 규칙은 `DUAL_VECTOR_VS_RERANKER.md`(TELME-84)에 있다.

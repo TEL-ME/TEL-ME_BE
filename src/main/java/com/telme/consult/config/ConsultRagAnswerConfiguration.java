@@ -12,13 +12,13 @@ import com.telme.rag.service.AnswerGenerator;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 /** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "telme.consult.rag-integration-enabled", havingValue = "true")
+@Conditional(ConsultChatEnabledCondition.class)
 public class ConsultRagAnswerConfiguration {
     @Bean
     StreamHandlerFactory consultAnswerStreamHandlerFactory(ConsultChatEvents events) {

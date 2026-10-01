@@ -5,12 +5,17 @@ import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.req.FaqSearchVector;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.global.config.SecurityConfig;
@@ -22,6 +27,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -80,6 +86,32 @@ class FaqSearchControllerTest {
                 .andExpect(jsonPath("$.result[0].faqId").value(1))
                 .andExpect(jsonPath("$.result[0].slotId").value("USIM-0001"))
                 .andExpect(jsonPath("$.result[0].matchedVariant").value("Q_A"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("vector를 주면 그 값이 서비스에 전달되고, 주지 않으면 null이다")
+    void vector_파라미터를_서비스에_전달한다() throws Exception {
+        when(faqSearchService.search(any())).thenReturn(List.of());
+        ArgumentCaptor<FaqSearchRequest> captor = ArgumentCaptor.forClass(FaqSearchRequest.class);
+
+        mockMvc.perform(get("/api/v1/faq/search").param("query", "유심").param("vector", "QUESTION"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/faq/search").param("query", "유심"))
+                .andExpect(status().isOk());
+
+        verify(faqSearchService, times(2)).search(captor.capture());
+        assertThat(captor.getAllValues()).extracting(FaqSearchRequest::vector)
+                .containsExactly(FaqSearchVector.QUESTION, null);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("vector가 정해진 값이 아니면 400을 반환한다")
+    void 잘못된_vector는_400을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/v1/faq/search").param("query", "유심").param("vector", "BOTH"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
     }
 
     @Test

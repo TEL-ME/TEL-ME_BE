@@ -755,7 +755,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
             jdbc.execute("INSERT INTO " + schema + ".chat_executions VALUES (1,'FAILED')");
             jdbc.execute("INSERT INTO " + schema + ".llm_generations VALUES (1,'TIMEOUT')");
             try (var resource = getClass().getResourceAsStream(
-                    "/db/migration/V15__add_execution_pipeline_trace.sql")) {
+                    "/db/migration/V17__add_execution_pipeline_trace.sql")) {
                 assertThat(resource).isNotNull();
                 String migration = new String(resource.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
                         .replace("chat_executions", schema + ".chat_executions")
