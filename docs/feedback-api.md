@@ -1,6 +1,6 @@
 # 피드백 API
 
-피드백 기능은 기본 비활성입니다. 애플리케이션 실행 환경에 `TELME_FEEDBACK_ENABLED=true`를 설정하면 `telme.feedback.enabled=true`로 인식되어 API와 대화 이력의 피드백 조회가 활성화됩니다. `bootRun`과 IDE 실행은 `.env` 파일을 자동으로 읽지 않습니다.
+피드백 기능은 기본 활성입니다. 끄려면 실행 환경에 `TELME_FEEDBACK_ENABLED=false`를 설정합니다. 끄면 API와 대화 이력의 피드백 조회가 모두 내려갑니다. `bootRun`과 IDE 실행은 `.env` 파일을 자동으로 읽지 않습니다.
 
 ## 평가 대상과 요청
 

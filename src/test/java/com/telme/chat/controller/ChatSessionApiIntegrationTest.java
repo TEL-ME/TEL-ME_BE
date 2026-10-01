@@ -30,7 +30,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+// 피드백 기본값이 켜짐이라 끈 상태를 확인하려면 여기서 직접 꺼야 한다
+@SpringBootTest(properties = "telme.feedback.enabled=false")
 @AutoConfigureMockMvc
 @Transactional
 class ChatSessionApiIntegrationTest {
