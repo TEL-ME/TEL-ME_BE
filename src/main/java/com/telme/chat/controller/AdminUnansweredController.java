@@ -52,6 +52,7 @@ public class AdminUnansweredController {
                     + "답 못 한 질문이 아닌 메시지는 404입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-1: 메시지 ID 형식 오류"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "404", description = "CHAT404-2: 답 못 한 질문을 찾을 수 없음")

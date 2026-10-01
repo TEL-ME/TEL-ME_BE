@@ -38,7 +38,6 @@ public class AdminUnansweredQueryService {
     public AdminUnansweredDetailResponse getUnanswered(long messageId) {
         ChatMessage message = unansweredRepository.findUnansweredById(messageId)
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.MESSAGE_NOT_FOUND));
-        // 답을 만들 때 뽑힌 FAQ는 순위 순으로 저장돼 있다
         return converter.toDetail(
                 message,
                 messageSourceRepository.findByMessage_MessageIdOrderBySearchRankAscSourceIdAsc(messageId));

@@ -49,7 +49,6 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
             @Param("status") ChatMessage.Status status,
             @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 
-    // 답 못 한 질문이 아닌 메시지는 관리자 화면이 다루지 않아 여기서 걸러진다
     @Query(SELECT + " where m.messageId = :messageId and " + UNANSWERED)
     Optional<ChatMessage> findUnansweredById(@Param("messageId") Long messageId);
 }
