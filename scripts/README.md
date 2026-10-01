@@ -9,6 +9,7 @@
 | `check_policy.py` | 답변 수치를 정책 항목 값과 대조 | - |
 | `check_duplicates.py` | 임베딩 유사도로 중복 쌍 탐지 | 필요 |
 | `check_eval_questions.py` | 평가셋 형식, 정답 매핑 검증 | `--live`만 |
+| `check_eval_overlap.py` | 새 평가셋이 기존 평가셋과 겹치는지 검사 (질문 텍스트 유사도 + 정답 slot 겹침) | - |
 | `measure_search_quality.py` | 평가셋을 검색 API에 돌려 Recall@k, MRR 계산 | 서버 경유 |
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
@@ -98,6 +99,8 @@ python3 scripts/check_eval_questions.py --self-test
 | --- | --- | --- |
 | `eval_questions_130.json` | SIMILAR 40 / VARIANT 40 / UNRELATED 50 | 확정값 기준 평가셋. 기존 문서 수치와 비교하려면 수정하지 않는다 |
 | `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/EVAL_SET_SUPPLEMENT.md`). 130건과 함께 측정 |
+| `eval_questions_holdout_90.json` | UNRELATED(`ADJACENT_HARD`) 90: 1차 60 + 2차 30 | 1차는 거부 성능 확인, 2차는 결과를 보고 보강한 경계 스트레스 분석. 두 구간을 별도 집계하며 90건 합계는 참고값이다 (`docs/DUAL_VECTOR_VS_RERANKER.md` 13.1절). **임계값 재탐색에 쓰지 않는다** |
+| `eval_questions_boundary_experiment_16.json` | UNRELATED(`ADJACENT_HARD`) 16 | 기존 결과와 FAQ를 보고 작성한 경계 탐색용. 고정 90건과 분리하며 독립 검증에 쓰지 않는다. 결과: `docs/BOUNDARY_EXPERIMENT_20261001.md` |
 
 질문 유형
 
@@ -243,8 +246,8 @@ SEARCH_DUAL_VECTOR_ENABLED=false
 ## 6. 검색 품질 측정
 
 ```bash
-# 측정용 서버 (임계값 해제)
-FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 \
+# 측정용 서버 (임계값 해제). 질문 벡터(--vector QUESTION)는 임계값이 따로라 둘 다 0으로 푼다
+FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=0 SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0 \
   java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=18090
 
 python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
@@ -254,26 +257,11 @@ python3 scripts/measure_search_quality.py scripts/data/eval_questions_130.json \
 python3 scripts/measure_search_quality.py --self-test
 ```
 
-- **순위 실험은 `SEARCH_SIMILARITY_THRESHOLD=0`으로 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
+- **순위 실험은 임계값을 0으로 풀고 측정.** 임계값을 켜면 랭킹 품질과 임계값 컷이 한 숫자에 혼재
+  - `SEARCH_SIMILARITY_THRESHOLD`는 질문+답변 벡터(`QA`)에만 적용된다. 질문 벡터(`QUESTION`)는 `SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD`(기본 0.88)로 잘리므로 함께 0으로 푼다
 - 정답은 검색 응답의 `slotId`로 비교. 응답에 `slotId`가 없으면(TELME-73 이전 서버) 바로 중단
 - 정답 `slot_id`가 있는 평가셋인데 검색 결과의 `slotId`가 전부 null이면(로더를 아직 안 돌린 DB) Recall 0.000을 내지 않고 중단. 7, 9절 스크립트도 이런 원시 결과는 거부
 - 정답 `slot_id`가 없는 긍정 질문(`eval_smoke.json`)은 API 호출만 하고 Recall, MRR에서 뺀 뒤 건수만 표시
-
-### 이중 벡터에서 벡터별로 수집하기
-
-검색 API에 벡터를 고르는 파라미터가 없다. **임계값으로 가른다.**
-
-```bash
-# Q_A 벡터만
-SEARCH_DUAL_VECTOR_ENABLED=false SEARCH_SIMILARITY_THRESHOLD=0 ...
-
-# 질문만 벡터만: Q_A 임계값을 1.0으로 올려 전멸시킨다
-SEARCH_DUAL_VECTOR_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=1.0 \
-  SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0 ...
-```
-
-- `--dump-json`에 `matchedVariant`가 없다. **질문만 수집 검증은 API를 직접 호출해 응답의 `matchedVariant`가 전부 `QUESTION_ONLY`인지 본다**
-- 두 dump를 `simulate_dual_vector.py`에 넣는다(7절)
 
 주요 옵션
 
@@ -282,6 +270,7 @@ SEARCH_DUAL_VECTOR_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=1.0 \
 | `--top-k` | 기본 3 |
 | `--api-url` | 기본 `http://localhost:8080/api/v1/faq/search` |
 | `--timeout` | 기본 20초 (서버 `embedding.search-read-timeout` 15초보다 커야 함) |
+| `--vector QA\|QUESTION\|DUAL` | 검색에 쓸 벡터. 생략하면 서버 설정(`search.dual-vector.enabled`)을 따름. 이중 벡터 임계값 재탐색은 `QA`, `QUESTION`을 따로 수집하고, 원시 결과에 수집 벡터가 기록됨 |
 | `--by-category` | `expected_slot_id` 접두사로 묶어 카테고리별 Recall, MRR 출력 |
 | `--dump-json <경로>` | 질문별 top-k 원시 결과(순위, 점수, `slot_id`, `content_hash`) 저장. 임계값, top-k 스윕을 오프라인 계산할 때 필수. TELME-73 이전에 수집한 파일은 `slot_id`가 없어 7, 9절 스크립트가 거부하므로 다시 수집 |
 | `--experiment` / `--change` / `--owner` | 실험 기록표용 한 줄 출력 |
@@ -296,6 +285,34 @@ SEARCH_DUAL_VECTOR_ENABLED=true SEARCH_SIMILARITY_THRESHOLD=1.0 \
 - 요청마다 응답 시간(초)도 재서 평균, p95(ms)를 같이 찍는다(요청 전송~응답 수신 구간만, JSON 파싱
   등은 제외). topK 값을 바꿔가며 Recall 개선폭과 지연시간 증가폭을 같이 비교할 때 쓴다(TELME-59).
 
+### 이중 벡터 임계값 재탐색
+
+위 측정용 서버(두 임계값 0)에서 벡터별 원시 결과를 따로 모은 뒤, 오프라인으로 질문 벡터 임계값을 고른다. 130건과 보강 50건을 **함께** 넣어야 무관 거부와 답변형 손실 조건을 같이 본다.
+
+```bash
+for f in eval_questions_130:130 eval_questions_supplement_50:supp50; do
+  python3 scripts/measure_search_quality.py scripts/data/${f%%:*}.json \
+    --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+    --vector QA --dump-json .measure/raw-${f##*:}-Q_A.json
+  python3 scripts/measure_search_quality.py scripts/data/${f%%:*}.json \
+    --api-url http://localhost:18090/api/v1/faq/search --top-k 10 \
+    --vector QUESTION --dump-json .measure/raw-${f##*:}-QUESTION_ONLY.json
+done
+
+python3 scripts/simulate_dual_vector.py \
+  --qa .measure/raw-130-Q_A.json .measure/raw-supp50-Q_A.json \
+  --qo .measure/raw-130-QUESTION_ONLY.json .measure/raw-supp50-QUESTION_ONLY.json \
+  --qa-threshold 0.72 --qo-thresholds 0.85,0.87,0.88,0.89,0.90,0.92,0.95 \
+  --order qo --top-k 3
+```
+
+- `--qa`와 `--qo`는 **같은 평가셋**이어야 한다(다르면 멈춘다). 원시 결과에 수집 벡터가 기록돼, 둘을 바꿔 넣어도 멈춘다
+- **`--qo-thresholds`는 쉼표 구분이다.** 공백으로 나누면 인자 오류
+- 출력: 임계값별 기존 긍정 / `ANSWER` / 무관 거부 / 경계 무관 거부, 그리고 선택 규칙에 맞는 t
+- 선택 규칙(`docs/DUAL_VECTOR_VS_RERANKER.md` 3.3절): 무관 거부를 평가셋(입력 파일)마다 현행 이상으로 지키고 `ANSWER` 정답 수가 줄지 않는 t 중 정답 합계(기존 긍정 + `ANSWER`) 최대, 같으면 높은 t. 현행에서 맞았는데 놓친 문항은 고르는 조건이 아니라 결과 끝에 "주의"로 따로 출력
+- 파일 이름에 `QUESTION_ONLY`가 없으면 경고가 뜬다. 코퍼스 구성을 `EVAL_SET_SUPPLEMENT.md` 4.1절 지문으로 확인하라는 뜻이다
+- 고른 값은 운영 임계값으로 서버를 다시 띄워 `--vector DUAL`로 실측해 시뮬레이션과 맞는지 확인한다
+
 ## 7. 격자 분석
 
 ```bash
@@ -307,22 +324,6 @@ python3 scripts/analyze_search_grid.py .measure/raw-1150-*.json
 - 출력: 최적 조합, 구성별 최선, 민감도(거부율 하한 0.90/0.95/1.00), 임계값별 추이
 - 선택 규칙: 무관 거부율 하한 이상에서 Recall@3 최대 (`--min-rejection`으로 조정)
 - 수집 오염 탐지: 임계값 0 수집인데 top-k보다 적게 반환된 문항이 있으면 경고
-
-### 이중 벡터 임계값 격자
-
-```bash
-python3 scripts/simulate_dual_vector.py \
-  --qa .measure/raw-1150-Q_A-dual.json .measure/raw-supplement50-Q_A-dual.json \
-  --qo .measure/raw-1150-QO-dual.json .measure/raw-supplement50-QO-dual.json \
-  --qa-threshold 0.72 --qo-thresholds 0.85,0.87,0.88,0.89,0.90,0.92,0.95 \
-  --order qo --top-k 3
-```
-
-- 입력: 6절의 "벡터별로 수집하기"로 뜬 dump 2쌍. `--qa`와 `--qo`는 **같은 평가셋**이어야 한다(다르면 멈춘다)
-- **`--qo-thresholds`는 쉼표 구분이다.** 공백으로 나누면 인자 오류
-- 출력: 임계값별 기존 긍정 / `ANSWER` / 무관 거부 / 경계 무관 거부, 그리고 선택 규칙에 맞는 t
-- 선택 규칙: 무관 거부를 현행 이하로 떨어뜨리지 않고 `ANSWER` 손실이 없는 t 중 Recall 최대
-- 파일 이름에 `QUESTION_ONLY`가 없으면 경고가 뜬다. 코퍼스 구성을 `EVAL_SET_SUPPLEMENT.md` 4.1절 지문으로 확인하라는 뜻이고, 임계값으로 가른 수집에서는 무시해도 된다
 
 ## 8. 자기검색 평가셋
 
@@ -398,11 +399,12 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `check_policy.py` | 20건 |
 | `check_duplicates.py` | 2건 |
 | `check_eval_questions.py` | 17종 + 오탐 2건(정상 문항, 정상 평가셋) + 정답 slot 집합 3건(문자열, 배열, null) + slot 미적재 검사 4건(전부 null, smoke, 일부 null, 결과 없음) |
+| `check_eval_overlap.py` | 16건 (토큰 2 + 텍스트 유사도 5: 동일, 무관, 빈 문자열, 실제 제외 쌍 2 + 정답 겹침 4 + 정답 집합 3: 다중 라벨 합산, 문자열, null + 최근접 탐색 1 + 내부 중복 1) |
 | `measure_search_quality.py` | 14건 (Recall/MRR 9 + 카테고리 2 + 지연시간 3) |
 | `generate_stores.py` | 10건 (영업시간 3 + 좌표 3 + 업무 1 + SQL 이스케이프 2 + 범위 1) |
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
-| `simulate_dual_vector.py` | 22건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 5: 정상, 기존 긍정 0건, 무관 0건, ANSWER 손실, 잃고 얻은 손실 + 구성 경고 2) |
+| `simulate_dual_vector.py` | 29건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 8: 정상, 동점이면 높은 t, 평가셋별 무관 상쇄 제외, ANSWER 포함 합계, 기존 긍정 0건, 무관 0건, ANSWER 수 감소 제외, 잃고 얻으면 수 기준 통과 + 구성 경고 2 + 수집 벡터 확인 4) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생
@@ -417,6 +419,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `data/faq_sample_30.json` | 샘플 30건. 카테고리 10종 × 3건. `slot_id`는 1,150건 파일의 같은 FAQ와 동일 (TELME-73 전에는 `BILLING-S01` 형식) |
 | `data/eval_questions_30.json` | 평가 질문 30건. 긍정 20 + 무관 10. 샘플 30, 300, 1,150건 어느 코퍼스로도 측정 가능 |
 | `data/eval_questions_130.json` | 평가 질문 130건. 긍정 80 + 무관 50(완전무관 16 / 도메인인접 24 / 경계 10). 정답은 배열 |
+| `data/eval_questions_holdout_90.json` | 경계 무관 90건. 1차 60건 확인과 2차 30건 스트레스 분석을 구분하며 임계값 선택에 쓰지 않는다 |
 | `data/eval_selfretrieval_1150.json` | 자기검색 평가셋 1,150건 |
 | `data/eval_smoke.json` | API 통신 확인용 더미 2건. 품질 측정용 아님. 정답이 dev 시드 FAQ(`slot_id` 없음)라 Recall 집계에서 빠짐 |
 

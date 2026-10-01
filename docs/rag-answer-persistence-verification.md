@@ -2,12 +2,8 @@
 
 검증일: 2026-10-01 KST. 브랜치: `test/TELME-93-guard-answer-persistence`.
 Jira: TELME-93 `[Test] Guard 최종 답변 저장·조회 일치 및 새로고침 유지 검증`.
-개발 기준: TELME-92의 PR #82 커밋 `f94bf7b`. 검증 시작 시 작업 트리에 미커밋 변경이 없었다.
+개발 기준: TELME-92의 PR #82 커밋 `f94bf7b`. 문서·테스트 검토 기준: `fbc61fc`.
 이번 변경은 기존 연결 테스트의 보강과 검증 문서뿐이며, 기능 코드는 변경하지 않았다.
-
-PR의 병합 대상은 GitHub CI가 실행되는 `develop`이다.
-PR #82가 병합 전이므로 비교에는 92번 기능 변경도 포함된다. 93번 자체 변경은
-`3f8798a` 커밋의 테스트·문서이며, #82를 먼저 병합한 뒤 남은 diff를 다시 확인한다.
 
 ## 확인한 경로
 
@@ -21,8 +17,22 @@ PR #82가 병합 전이므로 비교에는 92번 기능 변경도 포함된다. 
 
 상담 연결을 활성화한 실제 Spring 설정에서 `ChatProcessingPort`가 하나이며
 `ConsultChatProcessingService`인지 확인했다. 분석·검색·외부 모델만 테스트 대역으로 사용했다.
-현재 코드의 상담 연결 기본값은 false이며, 기본 활성화·구형 처리기 제거를 맡는 PR #80은
-확인 시점에 OPEN(`4b03e7b`)이다. 운영 배포의 활성 경로·환경변수는 이번에 확인하지 않았다.
+검증 당시 `fbc61fc`의 기본값과 테스트에서 명시한 활성화 조건은 다음과 같다.
+현재 develop 설정을 과거 검증에 소급 적용하지 않는다.
+
+| 설정 | 검증 커밋 기본값 | 검증 테스트 설정 | 현재 develop 기본값 |
+| --- | --- | --- | --- |
+| `telme.consult.persistence-enabled` | false | true | true |
+| `telme.consult.llm-enabled` | false | false | true |
+| `telme.consult.chat-integration-enabled` | false | true | true |
+| `telme.consult.rag-integration-enabled` | false | true | true |
+
+기본 활성화·구형 처리기 제거를 맡은 [PR #80](https://github.com/TEL-ME/TEL-ME_BE/pull/80)은
+2026-10-01 KST에 병합됐다(`c3eeee1`). 현재 설정은 같은 날 확인한 develop `bb17e7f` 기준이다.
+근거는 [검증 커밋 설정](https://github.com/TEL-ME/TEL-ME_BE/blob/fbc61fc50ba12a2ab02c5fcccb519eafcdd53c1d/src/main/resources/application.yml#L141-L147),
+[검증 테스트의 명시 설정](https://github.com/TEL-ME/TEL-ME_BE/blob/fbc61fc50ba12a2ab02c5fcccb519eafcdd53c1d/src/test/java/com/telme/consult/service/ConsultGuardedAnswerDeliveryIntegrationTest.java#L61-L66),
+[develop 설정](https://github.com/TEL-ME/TEL-ME_BE/blob/bb17e7f92ed072245456258a5b605a6402240f76/src/main/resources/application.yml#L141-L148)이다.
+환경변수로 기본값이 덮일 수 있으므로 운영 배포의 활성 경로·환경변수는 미확인으로 남긴다.
 
 ## 확인 결과
 
@@ -57,6 +67,8 @@ PR #82가 병합 전이므로 비교에는 92번 기능 변경도 포함된다. 
 ## 실행한 테스트
 
 독립 pgvector PostgreSQL 16 DB에서 선택한 관련 테스트를 실행했다.
+재현 시 DB 이름은 `telme`로 준비하고 `vector` 확장을 활성화해야 한다.
+기록 API 검증에는 인증된 사용자와 해당 사용자의 채팅방을 사용한다.
 
 | 테스트 | 통과 |
 | --- | ---: |
@@ -80,30 +92,19 @@ PR #82가 병합 전이므로 비교에는 92번 기능 변경도 포함된다. 
 기존 연결 테스트 11건에 조회 API 검증을 보강하고, 생성 중 조회·부분 실패·중복 완료·
 페이지 조회·완료 재접속·실패 재접속 6건을 추가했다.
 
-PR 생성 전 전체 `./gradlew build --build-cache`도 성공했다. 전체 1,176건 중 1,082건 통과,
+검증 커밋 기준 전체 `./gradlew build --build-cache`도 성공했다. 전체 1,176건 중 1,082건 통과,
 94건 스킵, 실패·오류 0건이다. 스킵에는 기존 조건부 로컬 DB 테스트와 평가 프로브가 포함되며
 이번 범위에서 실행 조건을 변경하지 않았다. 선택 실행 196건과 중복되므로 합산하지 않는다.
-GitHub CI는 develop/main 대상 PR에만 실행된다. 이 PR은 develop 대상으로 변경하고
-문서 수정 커밋을 푸시해 CI를 실행한다. 아래 로컬 결과와 GitHub CI 결과는 별도로 확인한다.
 
-테스트 DB 초기 기동 직후 준비 확인은 잠시 실패했으나 준비 완료 후 실행했다.
-초기 보강 테스트 한 건은 하위 모델이 재시도 콜백을 직접 발생시키는 잘못된 입력을 사용했다.
-실제 재시도 체인의 기존 정책을 확인해 부분 출력 후 실패를 검증하는 입력으로 고쳤다.
-이 두 건은 환경 준비와 테스트 입력 문제이며 기능 코드 결함으로 판정하지 않았다.
-추가 전체 빌드의 첫 실행에서는 일부 기존 테스트가 DB 이름 `telme`를 고정 사용해 27건이
-연결 실패했다. 독립 컨테이너 안에 CI와 동일한 DB 이름·vector 확장을 준비하고,
-기능 코드 변경 없이 다시 실행해 위 전체 빌드가 성공했다.
 모델·프롬프트·평가 기준·Guard 판정 규칙은 변경하지 않았고 외부 모델 API를 호출하지 않았다.
 
 ## 남은 실제 화면 검증
 
 실제 브라우저에서 새로고침을 수행하지 않았다. MockMvc의 HTTP/SSE 응답 검증과
-서비스 재조회는 실제 화면 검증이 아니다. 로컬에 있는 `outputs/telme-fe-test-ready`는
-데모가 기본이며 SSE가 미연결된 이전 테스트 화면이다. 현재 팀 프런트의 검증 근거로 쓰지 않았다.
-이 예전 화면은 세션 ID·메시지를 메모리 상태로만 보관하므로 브라우저 새로고침 복원도 구현되어 있지 않다.
-이번 범위에서 해당 화면이나 다른 담당자의 코드를 수정하지 않았다.
+서비스 재조회는 실제 화면 검증이 아니다.
 
-현재 프런트와 해당 백엔드를 연결한 환경에서 아래를 확인해야 한다.
+아래 6가지는 SSE 프런트를 해당 백엔드에 연결할 때 필요한 계약 검증이다.
+팀 프런트의 기록 API 폴링·SSE 사용 여부는 이 문서에서 구현 사실로 단정하지 않는다.
 
 1. 정상·부분 수정·안전 안내 답변을 각각 받아 표시된 문구, `token` 내용,
    기록 API의 `content`와 `messageId`를 대조한다. 제거된 원문은 표시되지 않아야 한다.
