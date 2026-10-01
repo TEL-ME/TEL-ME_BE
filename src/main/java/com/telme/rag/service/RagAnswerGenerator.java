@@ -83,7 +83,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         CollectingHandler collector =
                 new CollectingHandler(handler, answerGuard, answerEvidence, request.userQuery(),
-                        trace, request.executionId(), request.consultRequestId());
+                        trace, request.executionId(), request.consultRequestId(),
+                        request.conditions().get(AnswerPromptTemplates.PLAN_CHANGE_POLICY_ANSWER_KEY));
         try {
             llmClient.stream(llmRequest, collector);
             collector.rethrowIfFailed();
@@ -158,10 +159,11 @@ public class RagAnswerGenerator implements AnswerGenerator {
         private final ExecutionTrace trace;
         private final Long executionId;
         private final Long consultRequestId;
+        private final String policyAnswer;
 
         private CollectingHandler(
                 LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery,
-                ExecutionTrace trace, Long executionId, Long consultRequestId) {
+                ExecutionTrace trace, Long executionId, Long consultRequestId, String policyAnswer) {
             this.delegate = delegate;
             this.answerGuard = answerGuard;
             this.context = context;
@@ -169,6 +171,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
             this.trace = trace;
             this.executionId = executionId;
             this.consultRequestId = consultRequestId;
+            this.policyAnswer = policyAnswer;
         }
 
         @Override
@@ -187,12 +190,15 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 return;
             }
             try {
-                answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+                // 확인된 상담 상태와 FAQ 제한으로 구성한 응답도 동일 Guard를 통과한다.
+                // 생성 오류·취소에서는 이 경로에 도달하지 않으므로 정상 완료를 만들지 않는다.
+                String candidate = policyAnswer == null ? collected.toString() : policyAnswer;
+                answer = answerGuard.applyEvidencePolicy(candidate, context, userQuery);
                 recordGuard(
                         answer.equals(collected.toString()) ? "KEPT"
                                 : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
                                         ? "REPLACED" : "MODIFIED",
-                        "EVIDENCE_POLICY_RESULT");
+                        policyAnswer == null ? "EVIDENCE_POLICY_RESULT" : "PLAN_CHANGE_CONDITION_POLICY");
             } catch (AnswerGuardException exception) {
                 recordGuard("REPLACED", "GUARD_EXCEPTION");
                 rejection = exception;

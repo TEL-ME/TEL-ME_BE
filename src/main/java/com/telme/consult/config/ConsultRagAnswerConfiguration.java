@@ -11,6 +11,7 @@ import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.service.DialogueService;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -58,8 +59,8 @@ public class ConsultRagAnswerConfiguration {
 
     @Bean
     AnswerProvider consultAnswerProvider(
-            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace) {
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace, DialogueService dialogue) {
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace));
+                new FaqSearchAnswerProvider(searches, answers, trace, dialogue));
     }
 }

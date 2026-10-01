@@ -51,6 +51,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
+                    .withBean(com.telme.consult.service.DialogueService.class, () -> new com.telme.consult.service.DialogueService(com.telme.consult.service.ClarificationTextGenerator.template()))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new);
 
     @Test

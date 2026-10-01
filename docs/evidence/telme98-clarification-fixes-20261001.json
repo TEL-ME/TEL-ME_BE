@@ -1,0 +1,2846 @@
+{
+  "scope": "21 synthetic local-model dialogues; backend contracts and evidence review, not population hallucination metric",
+  "model": {
+    "tag": "exaone3.5:7.8b",
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 1024
+  },
+  "baseline_base": "52df227 + dirty implementation recorded in original metadata",
+  "current_base": "47cbbe5 + TELME-98 dirty feature changes",
+  "current_develop": "c4f4458",
+  "prompt_version": "rag-answer-v3-plan-v2",
+  "paid_judge_run": false,
+  "faq_snapshot_unchanged": {
+    "snapshot_rows": 1152,
+    "current_rows": 1152,
+    "changed_faq_ids": []
+  },
+  "evaluation_note": "Contract checks and evidence comparison draft; not human labels or a new hallucination-rate result. Current base includes the pre-existing merged #74 Guard; Guard policy files were not changed in this task.",
+  "tests": [
+    {
+      "class": "com.telme.faq.service.EmbeddingClientTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.converter.FollowupConditionConverterTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.AdminFaqLoginIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.CompoundDialoguePlannerTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionTitleFlowIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.ChatFeedbackActorResolverTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.DummyFaqSearchServiceTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatExecutionCommandTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.PgvectorFaqSearchServiceTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.AdminFaqCategoryReembedTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.converter.IntentConverterTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.filter.GuestIdentityFilterIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.service.AnswerGuardUserEvidenceTest",
+      "tests": 67,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.converter.StoreRegionSearchConverterTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatExecutionTraceServiceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.entity.GuestTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionServiceTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.AdminFaqCommandServiceTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.FeedbackControllerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.QueryRoutingAnalysisProviderTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.filter.MemberStatusFilterTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ConsultChatProcessingApplicationIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.AdminFaqControllerTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.service.StoreSearchServiceTest",
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatProcessingDispatchIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.QueryRoutingServiceTest$NullAndDefensiveHandling",
+      "tests": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.config.GuestPropertiesTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.repository.FollowupContextDatabaseTest",
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.FeedbackConfigurationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.MemberAuthServiceIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.FaqSearchApiIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.PgvectorFaqEmbeddingSyncServiceTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.StoreConsultationScenarioTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatTokenEstimatorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ConsultChatPipelineConfigurationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.config.ChatSummaryPropertiesTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.MemberAuthFeedbackSuccessionIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.repository.UserRepositoryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.config.ChatSessionTitlePropertiesTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ClarificationConfigurationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.global.SchemaValidationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.service.AdminStoreQueryServiceTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.RagSearchResultAnswerGeneratorTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.PurposeRoutingAnswerProviderTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.controller.ChatMessageSourceApiIntegrationTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.QueryRoutingServiceTest$EmptySubQueries",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.TelmeApplicationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.LlmClarificationTextGeneratorTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.llm.service.OllamaClientTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.FaqReembedderTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.dto.req.FaqSearchRequestTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatEmitterRegistryTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionTitleStoreIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.FeedbackApiIntegrationTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.repository.GuestRepositoryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultChatPersistenceIntegrationTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.probe.RoutingEvaluationProbe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    {
+      "class": "com.telme.member.controller.MemberAuthControllerTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.repository.ChatSessionRepositoryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.DialogueDecisionValidationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryFlowIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.QueryRoutingIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.service.AnswerGuardTest",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.config.FaqEmbeddingTextPropertiesTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.repository.FaqEmbeddingRepositoryTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatExecutionServiceIntegrationTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.config.ChatContextPropertiesTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.repository.LocalConsultDatabaseTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.QueryRoutingServiceTest$Fallback",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultTurnPreparationServiceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoLoginSuccessHandlerTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.MemberAuthServiceTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.RuleBasedRoutingFallbackTest",
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ConsultGuardedDeliveryConfigurationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.FaqContentHashTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.controller.StoreRegionSearchApiIntegrationTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultServicePreparedTurnTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.IntentRouteApiIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoAccountLinkServiceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.controller.IntentControllerTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.controller.MemberAuthConcurrentSignUpIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.dto.req.StoreRegionSearchRequestTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.controller.EmailLoginMethodConcurrencyIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.FaqEmbeddingTextAssemblerTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.llm.converter.OllamaRequestConverterTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.FeedbackServiceTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.config.KakaoAuthorizationRequestResolverTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.GuestSuccessionServiceIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.GuestIdentityServiceTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultGuardedAnswerDeliveryIntegrationTest",
+      "tests": 35,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.llm.service.RetryingLlmClientTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.FaqSearchControllerDisabledTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.repository.PendingClarificationFinderDatabaseTest",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.QueryRoutingServiceFollowUpTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.llm.service.RecordingLlmClientTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.QueryRoutingFollowupAnalysisProviderTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.AdminFaqQueryServiceTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.converter.AnswerContextConverterTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.global.common.validation.EnumValidatorTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.FaqReembedderTruncationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.CurrentMemberResolverTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.converter.ConsultAnalysisConverterTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.SocialMemberFinderConcurrencyIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionCursorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.FaqSearchAnswerProviderTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.DualVectorMergerTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.repository.StoreTagConditionTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoEmailMatchStoreTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.repository.ChatCommandContextProviderDatabaseTest",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.HttpSessionChatActorProviderTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatBackgroundTaskExecutorTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryNormalizerTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryPromptTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.FaqSearchControllerProdProfileTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.global.ProdFlywayLocationsTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.feedback.FeedbackValidationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.controller.ChatSessionApiIntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.filter.GuestIdentityFilterTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.PlanChangeChatIntegrationTest",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.controller.ChatMessageConcurrencyIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.converter.ChatMessageConverterTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.SocialMemberFinderTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatExecutionTimeoutSchedulerIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultTurnAnalysisAdapterTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.PlanChangeClarificationPolicyTest",
+      "tests": 47,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.controller.ChatExecutionControllerIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.EmailLoginMethodServiceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.service.RagAnswerGeneratorTest",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoLinkStartServiceTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.LoginCompletionServiceTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.repository.StoreNearbyQueryRepositoryDatabaseTest",
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.dto.req.SignUpRequestTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatContextBuilderIntegrationTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionTitleDispatcherTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoOAuth2UserServiceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoLoginFailureHandlerTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.repository.OpenNowConditionTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.service.MessageSourceDispatcherTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryStoreIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.service.KakaoLinkRequestStoreTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.member.dto.req.LoginRequestTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ChatEmitterConsultEventsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ConsultChatSettingsContextTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.DialogueServiceTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.FollowupSelectionValidatorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.controller.FaqSearchControllerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.AdminFaqConcurrentCreateTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.service.RagAnswerDeliveryTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultTurnPreparationIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.service.FaqBatchLoaderTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.probe.AnswerQualityBaselineProbe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    {
+      "class": "com.telme.feedback.LocalFeedbackDatabaseTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.intent.service.QueryRoutingServiceTest$LlmSuccess",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.faq.config.SearchPropertiesTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSessionTitleServiceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatProcessingFallbackIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.service.StoreSearchServiceDatabaseTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryDispatcherTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.llm.service.FakeLlmClientTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatSummaryServiceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.converter.ConfirmedConditionConverterTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.config.ConsultTurnRoutingConfigurationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.OllamaClarificationConnectionTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatExecutionTimeoutSchedulerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.chat.service.ChatProcessingCommandTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.consult.service.ConsultChatApiIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.store.controller.AdminStoreControllerTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.telme.rag.MessageSourceDispatcherIntegrationTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "dialogues": 21,
+  "turns": 50,
+  "cases": [
+    {
+      "case": "PLAN-001",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "지난달에 가입했어요.",
+        "이번 달에는 아직 안 바꿨어요."
+      ],
+      "expected": "allowed_with_scope",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 4.616111791,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "네, 가능합니다. 이번 달에 이미 요금제를 변경하지 않으셨으므로, 한 달에 한 번 요금제 변경이 가능합니다. 변경 신청을 하시면 다음 날 00:00부터 새로운 요금제가 적용됩니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-002",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "이번 달에 가입했어요."
+      ],
+      "expected": "joined_month_blocked",
+      "answer": "이번 달에 가입하셨으므로 가입한 달에는 요금제를 변경할 수 없습니다. 가입월 제한 기준으로는 다음 달부터 변경이 가능합니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 2,
+      "seconds": 2.93885725,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "가입하신 지 한 달이 되셨다면 요금제 변경은 불가능합니다. 현재 조건으로는 이번 달에는 변경할 수 없으니 다음 달에 변경을 고려해 주세요.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-003",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "지난달에 가입했어요.",
+        "이번 달에 이미 변경했어요."
+      ],
+      "expected": "monthly_change_blocked",
+      "answer": "요금제 변경은 한 달에 한 번입니다. 이번 달에 이미 변경하셨으므로 이번 달 추가 변경은 어렵습니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 4.15519375,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 1451,
+          "score": 0.8951310419411523,
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "slotId": "BILLING-0092",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 395,
+          "score": 0.8944880743665683,
+          "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+          "slotId": "BILLING-0057",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제는 어떻게 바꿔요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "QUESTION_ONLY"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "안내드릴 수 있는 정보가 없습니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-004",
+      "question": "지난달에 가입했고 이번 달에는 요금제를 바꾼 적이 없어요. 지금 요금제를 바꿀 수 있나요?",
+      "replies": [],
+      "expected": "allowed_with_scope",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 0,
+      "turns": 1,
+      "seconds": 2.198077165999999,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 1451,
+          "score": 0.7603569710573856,
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "slotId": "BILLING-0092",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7537442808241844,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 399,
+          "score": 0.748217120447836,
+          "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+          "slotId": "BILLING-0078",
+          "version": 1,
+          "category": "BILLING",
+          "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "네, 이번 달에 요금제를 아직 변경하지 않으셨으므로 변경이 가능합니다. 한 달에 한 번 요금제 변경이 가능하니 원하시는 요금제로 변경해 주시기 바랍니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-005",
+      "question": "요금제 변경 기준이 뭐예요?",
+      "replies": [],
+      "expected": "general_policy_without_clarification",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다.",
+      "status": "GROUNDED",
+      "clarifications": 0,
+      "turns": 1,
+      "seconds": 1.9180431250000005,
+      "conditions": [
+        {
+          "key": null,
+          "status": null,
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "요금제 변경은 매월 한 번 가능하며, 변경 신청일 다음 날 자정부터 적용됩니다. 미납 상태이더라도 이 기준은 동일하게 적용됩니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "PLAN-006",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "잘 모르겠어요."
+      ],
+      "expected": "conditional_guidance_no_invented_condition",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 2,
+      "seconds": 2.7780333329999998,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "현재 달에 요금제 변경은 불가능합니다. 변경 가능한 시기는 다음 달부터입니다. 만약 다음 달에 변경을 원하신다면, 그 달 초에 신청하시면 됩니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-007",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "지난달에 가입했어요.",
+        "가입은 이번 달이에요."
+      ],
+      "expected": "correction_joined_month_blocked",
+      "answer": "이번 달에 가입하셨으므로 가입한 달에는 요금제를 변경할 수 없습니다. 가입월 제한 기준으로는 다음 달부터 변경이 가능합니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 3.970111082999999,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "PENDING",
+          "value": null,
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "가입하신 지 한 달이 되셨다면 요금제 변경은 불가능합니다. 현재 조건으로는 이번 달에는 변경할 수 없으니 다음 달에 변경을 고려해 주세요.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-008",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "유심 재발급 비용 알려주세요."
+      ],
+      "expected": "new_topic_no_plan_condition_leak",
+      "answer": "유심 재발급 비용은 7,700원입니다. 매장에서 바로 받으실 수 있습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 2,
+      "seconds": 3.1840132499999996,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "PENDING",
+          "value": null,
+          "consultation_status": "CANCELLED"
+        },
+        {
+          "key": null,
+          "status": null,
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 630,
+          "score": 0.9468851653865903,
+          "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다.",
+          "slotId": "USIM-0001",
+          "version": 1,
+          "category": "USIM",
+          "question": "유심 재발급 비용이 얼마예요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 646,
+          "score": 0.8324847070086888,
+          "answer": "인식 오류가 계속되면 재발급을 받으시는 게 좋습니다. 매장에서는 즉시 발급되고, 비용은 7,700원입니다.",
+          "slotId": "USIM-0073",
+          "version": 1,
+          "category": "USIM",
+          "question": "유심이 안 읽혀서 새로 받아야 할 것 같은데 비용이 얼마나 드나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 858,
+          "score": 0.8268895412687002,
+          "answer": "매장을 방문하시면 즉시 재발급됩니다. 비용은 7,700원입니다.",
+          "slotId": "USIM-0077",
+          "version": 1,
+          "category": "USIM",
+          "question": "유심이 부러졌는데 오늘 급하게 써야 해요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "유심 재발급 비용은 7,700원입니다. 매장에서 바로 받으실 수 있습니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-009",
+      "question": "이번 달에 가입했는데 요금제를 바꿀 수 있나요?",
+      "replies": [],
+      "expected": "joined_month_blocked",
+      "answer": "이번 달에 가입하셨으므로 가입한 달에는 요금제를 변경할 수 없습니다. 가입월 제한 기준으로는 다음 달부터 변경이 가능합니다.",
+      "status": "GROUNDED",
+      "clarifications": 0,
+      "turns": 1,
+      "seconds": 1.7885008330000005,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 1451,
+          "score": 0.9459686343707551,
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "slotId": "BILLING-0092",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 399,
+          "score": 0.932238447470389,
+          "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+          "slotId": "BILLING-0078",
+          "version": 1,
+          "category": "BILLING",
+          "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.8034465898733273,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "가입하신 이번 달에는 요금제를 변경하실 수 없습니다. 다음 달부터 변경이 가능합니다.",
+      "same_original_inputs": true,
+      "same_final_faq_content": true
+    },
+    {
+      "case": "PLAN-010",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "알려주고 싶지 않아요."
+      ],
+      "expected": "conditional_guidance_no_invented_condition",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 2,
+      "seconds": 3.303249333,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": "",
+      "same_original_inputs": true,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-01",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "나중에요",
+        "지난달에 가입했어요.",
+        "이번 달에는 아직 안 바꿨어요."
+      ],
+      "expected": "defer_then_resume",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 4,
+      "seconds": 4.485210875,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-02",
+      "question": "저는 언제 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "지난달에 가입했어요.",
+        "이번 달에는 아직 안 바꿨어요."
+      ],
+      "expected": "personal_when",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 4.302068915999996,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-03",
+      "question": "이번 달에 가입했는데 언제 요금제를 바꿀 수 있나요?",
+      "replies": [],
+      "expected": "known_joined",
+      "answer": "이번 달에 가입하셨으므로 가입한 달에는 요금제를 변경할 수 없습니다. 가입월 제한 기준으로는 다음 달부터 변경이 가능합니다.",
+      "status": "GROUNDED",
+      "clarifications": 0,
+      "turns": 1,
+      "seconds": 1.8586606659999987,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 1,
+          "score": 0.9261934337154785,
+          "answer": "요금제는 매월 1회, 영업일 기준 변경 신청일로부터 다음날 자정에 적용됩니다.",
+          "slotId": null,
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제는 언제 변경할 수 있나요?",
+          "updatedAt": "2026-09-21",
+          "searchRank": 1,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 399,
+          "score": 0.9156379699707291,
+          "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+          "slotId": "BILLING-0078",
+          "version": 1,
+          "category": "BILLING",
+          "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 1451,
+          "score": 0.9050044700490043,
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "slotId": "BILLING-0092",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "QUESTION_ONLY"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-04",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "이번 달 가입했어요. 아니, 지난달이에요.",
+        "이번 달에는 아직 안 바꿨어요."
+      ],
+      "expected": "latest_correction",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 4.374508792,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-05",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "이번 달인지 지난달인지 애매해요.",
+        "애매해서 답하기 어려워요."
+      ],
+      "expected": "ambiguity_ends",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 3,
+      "seconds": 3.250002500000001,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-06",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "이번 달인지 지난달인지 모르겠어요."
+      ],
+      "expected": "unknown_no_inference",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 2,
+      "seconds": 2.611644958999996,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-07",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "친구가 이번 달에 가입했어요.",
+        "저는 지난달에 가입했어요.",
+        "아니요"
+      ],
+      "expected": "third_party_not_own",
+      "answer": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 4,
+      "seconds": 5.052400916000003,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "confirmed_both_no": true,
+        "possibility_scoped_to_two_rules": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-08",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "이번 달에 가입했다면 바꿀 수 있나요?",
+        "잘 모르겠어요."
+      ],
+      "expected": "hypothetical_not_own",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 3,
+      "seconds": 3.1442007079999996,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-09",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "네, 아니요.",
+        "잘 모르겠어요."
+      ],
+      "expected": "contradiction_no_inference",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다. 확인되지 않은 조건이 있어 개인별 변경 가능 여부는 확정할 수 없습니다.",
+      "status": "GROUNDED",
+      "clarifications": 1,
+      "turns": 3,
+      "seconds": 3.500286083000006,
+      "conditions": [
+        {
+          "key": "joinedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true,
+        "unknown_never_false": true,
+        "conditional_guidance_not_personal_judgement": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-10",
+      "question": "제가 지금 요금제를 바꿀 수 있나요?",
+      "replies": [
+        "지난달에 가입했어요.",
+        "요금제 변경 기준이 뭐예요?"
+      ],
+      "expected": "new_general_question",
+      "answer": "가입한 달에는 요금제를 변경할 수 없습니다. 요금제 변경은 월 1회로 제한됩니다.",
+      "status": "GROUNDED",
+      "clarifications": 2,
+      "turns": 3,
+      "seconds": 5.037662041999994,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "PENDING",
+          "value": null,
+          "consultation_status": "CANCELLED"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "아니요",
+          "consultation_status": "CANCELLED"
+        },
+        {
+          "key": null,
+          "status": null,
+          "value": null,
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 357,
+          "score": 0.7973679787236218,
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "slotId": "BILLING-0001",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1387,
+          "score": 0.796982251608517,
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "slotId": "BILLING-0015",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "Q_A"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7791360547219078,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    },
+    {
+      "case": "EXTRA-11",
+      "question": "이번 달 가입했지만 이번 달 변경 여부는 모르겠어요. 지금 요금제를 바꿀 수 있나요?",
+      "replies": [],
+      "expected": "known_block_over_unknown",
+      "answer": "이번 달에 가입하셨으므로 가입한 달에는 요금제를 변경할 수 없습니다. 가입월 제한 기준으로는 다음 달부터 변경이 가능합니다.",
+      "status": "GROUNDED",
+      "clarifications": 0,
+      "turns": 1,
+      "seconds": 2.977080333999993,
+      "conditions": [
+        {
+          "key": "changedThisMonth",
+          "status": "DECLINED",
+          "value": null,
+          "consultation_status": "DONE"
+        },
+        {
+          "key": "joinedThisMonth",
+          "status": "FILLED",
+          "value": "예",
+          "consultation_status": "DONE"
+        }
+      ],
+      "sources": [
+        {
+          "faqId": 1451,
+          "score": 0.9029134549566218,
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "slotId": "BILLING-0092",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 1,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 399,
+          "score": 0.8866397394584611,
+          "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+          "slotId": "BILLING-0078",
+          "version": 1,
+          "category": "BILLING",
+          "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+          "updatedAt": "2026-09-29",
+          "searchRank": 2,
+          "matchedVariant": "QUESTION_ONLY"
+        },
+        {
+          "faqId": 1462,
+          "score": 0.7846136794641483,
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "slotId": "BILLING-0106",
+          "version": 1,
+          "category": "BILLING",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "updatedAt": "2026-09-29",
+          "searchRank": 3,
+          "matchedVariant": "Q_A"
+        }
+      ],
+      "checks": {
+        "database_matches_final_answer": true,
+        "final_answer_completed": true,
+        "sse_once_equal_history_trace": true,
+        "expected_clarification_count": true,
+        "consultation_ends": true,
+        "no_unsupported_elapsed_time": true
+      },
+      "contract_checks_pass": true,
+      "old_answer": null,
+      "same_original_inputs": false,
+      "same_final_faq_content": false
+    }
+  ],
+  "condition_reuse_supplement": {
+    "scope": "TELME-98 기존 조건 재사용·두 조건 동시 입력 추가 확인",
+    "production_changes": false,
+    "new_integration_tests": 2,
+    "total": 99,
+    "passed": 99,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "tests": [
+      {
+        "class": "com.telme.consult.converter.FollowupConditionConverterTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.telme.consult.service.PlanChangeChatIntegrationTest",
+        "tests": 30,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.telme.consult.service.PlanChangeClarificationPolicyTest",
+        "tests": 47,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.telme.intent.service.QueryRoutingServiceFollowUpTest",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "reused_tests": [
+      "missingConditionsResumeSameConsultationAndStoreTransmitQuerySameFinalAnswer",
+      "alreadyProvidedBothConditionsDoNotAsk",
+      "latestCorrectionWinsOverOriginalStatement",
+      "newQuestionCancelsOldPlanWaitingAndDoesNotApplyOldConditions",
+      "sessionsNeverShareConditions"
+    ],
+    "added_tests": [
+      {
+        "name": "twoConditionsInOneFollowupAreRetainedEvenWhenModelOnlyReturnsWaitingCondition",
+        "reply": "지난달에 가입했고 이번 달에는 아직 안 바꿨어요",
+        "model_extraction": "가입월 한 조건만 반환",
+        "expected": "같은 상담에 두 조건 아니요 저장, 되묻기 합계 1회, 생성 1회, DONE; 저장·조회·SSE 일치",
+        "result": "PASS"
+      },
+      {
+        "name": "originalConditionIsReusedAndLaterCorrectionIsNotOverwrittenByOriginalValue",
+        "original": "지난달에 가입했어요. 제가 지금 요금제를 바꿀 수 있나요?",
+        "reply": "정정할게요. 가입은 이번 달이에요. 이번 달에는 아직 안 바꿨어요",
+        "expected": "원문의 가입월 아니요 재사용해 변경 이력만 질문; 최신 가입월 예와 변경 이력 아니요 유지, 되묻기 합계 1회, 생성 1회, DONE; 저장·조회·SSE 일치",
+        "result": "PASS"
+      }
+    ],
+    "environment": "전용 PostgreSQL 53298, 실제 활성 Chat 처리기·라우팅·Guard·DB·SSE·조회 API. 검색과 외부 모델만 대체.",
+    "limitations": "이번 추가 2사례의 실제 모델·브라우저 검증은 미실행. 기존 21개 실제 모델 대화 결과와 기존 전체 빌드 집계는 별도 실행으로 보존.",
+    "initial_test_issue": "추가 테스트의 모델 응답 재설정 때 기존 mock 답변이 null 인자로 호출돼 1건 실패. 테스트 설정만 수정한 뒤 관련 99건 재실행 통과; 기능 코드 오류 아님."
+  }
+}
