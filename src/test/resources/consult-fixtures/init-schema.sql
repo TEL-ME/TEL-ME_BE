@@ -243,10 +243,16 @@ CREATE TABLE message_feedback (
     rating      VARCHAR(10) NOT NULL,               -- LIKE / DISLIKE
     reason_code VARCHAR(30),                        -- WRONG_INFO / NOT_RELATED / HARD_TO_READ
     comment     TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- 관리자 처리 표시 (V17). 사용자 저장 경로가 이 컬럼을 되돌리므로 여기에도 있어야 한다
+    handled_at   TIMESTAMPTZ,
+    handled_by   BIGINT      REFERENCES users (user_id),
+    handled_note TEXT,
     -- 부분 유니크 인덱스(아래)와 함께 JPA로는 표현이 안 되므로 서비스 레이어에서도 검증해야 한다.
-    CONSTRAINT ck_feedback_actor CHECK (user_id IS NOT NULL OR guest_id IS NOT NULL)
+    CONSTRAINT ck_feedback_actor CHECK (user_id IS NOT NULL OR guest_id IS NOT NULL),
+    CONSTRAINT ck_feedback_handled_pair CHECK ((handled_at IS NULL) = (handled_by IS NULL)),
+    CONSTRAINT ck_feedback_handled_dislike_only CHECK (handled_at IS NULL OR rating = 'DISLIKE')
 );
 
 CREATE TRIGGER trg_message_feedback_updated_at
