@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [develop, main, feat/TELME-98-plan-change-clarification, fix/TELME-104-followup-context]
+    branches: [develop, main, feat/TELME-98-plan-change-clarification, fix/TELME-104-followup-context, fix/TELME-105-plan-question-explanation]
   push:
     branches: [develop, main]
 

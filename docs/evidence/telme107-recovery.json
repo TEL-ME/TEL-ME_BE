@@ -1,0 +1,1706 @@
+{
+  "issue": "TELME-107",
+  "jira_url": "https://telme-team.atlassian.net/browse/TELME-107",
+  "synthetic_only": true,
+  "actual_browser": true,
+  "actual_model": true,
+  "frontend": "existing test/ai-chat-ui; polling, team develop has no chat UI",
+  "fe_base": "beb59c82ba7f7c05178e00ab29c6da27d17ae88b",
+  "be_base": "cd7df7cc75f75254844f83f7abf39970b10172fb",
+  "url": "http://127.0.0.1:5177/chat-test",
+  "backend": "http://127.0.0.1:18107",
+  "database": "telme107, local isolated database with 1152 FAQs and 1152 embeddings",
+  "authentication": "existing GuestIdentityFilter and HttpSession cookies through same-origin Vite proxy, no injected identity",
+  "handler": "ConsultChatProcessingService",
+  "consult_flags": {
+    "persistence-enabled": true,
+    "llm-enabled": true,
+    "chat-integration-enabled": true,
+    "rag-integration-enabled": true
+  },
+  "model": "exaone3.5:7.8b",
+  "model_digest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03",
+  "prompt": "rag-answer-v3-plan-v2",
+  "generator_options": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 1024
+  },
+  "paid_calls": 0,
+  "judge_calls": 0,
+  "be_build": {
+    "tests": 1498,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "fe_check": {
+    "tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "lint": "passed",
+    "build": "passed"
+  },
+  "cases": [
+    {
+      "case": "A",
+      "sessionId": 761,
+      "consultRequestId": 565,
+      "executionId": 1252,
+      "questionMessageId": 2608,
+      "result": "actual reload kept pending question; next reply used same consultation"
+    },
+    {
+      "case": "B",
+      "sessionId": 761,
+      "consultRequestId": 565,
+      "executionIds": [
+        1253,
+        1254
+      ],
+      "questionMessageId": 2610,
+      "outputMessageId": 2612,
+      "result": "actual reload kept known month; history reply ended same consultation DONE"
+    },
+    {
+      "case": "C",
+      "sessionId": 762,
+      "consultRequestId": 566,
+      "executionIds": [
+        1255,
+        1256,
+        1257
+      ],
+      "questionMessageId": 2614,
+      "explanationMessageId": 2616,
+      "replyMessageId": 2617,
+      "result": "actual reload restored explanation; next response filled original question 2614, not explanation 2616"
+    },
+    {
+      "case": "D",
+      "sessionId": 761,
+      "outputMessageId": 2612,
+      "faqIds": [
+        357,
+        1387,
+        1462
+      ],
+      "result": "same final answer and sources restored once, no stale loading"
+    },
+    {
+      "case": "E",
+      "sessionId": 763,
+      "consultRequestId": 568,
+      "executionId": 1259,
+      "inputMessageId": 2621,
+      "outputMessageId": 2622,
+      "disconnect": {
+        "disconnectedAt": "2026-10-01T09:14:33.367Z",
+        "method": "navigate away from existing test page to about:blank, abort in-page requests"
+      },
+      "startedAt": "2026-10-01T09:14:33.352401+00:00",
+      "endedAt": "2026-10-01T09:14:36.47899+00:00",
+      "result": "navigated away while RUNNING, re-entered page and restored same result; no automatic third POST; exactly two explicitly submitted timing attempts and two outputs, each displayed once"
+    }
+  ],
+  "environment_issue": "Initial missing faq_embeddings gave NO_SEARCH; restored omitted local vectors then reran scenarios without search tuning",
+  "limits": [
+    "No team production chat UI; existing test page only",
+    "No browser SSE implementation/test; backend SSE regressions reused",
+    "Physical network offline, 3-minute timeout and failed reconnection UI not live tested; automatic recovery tests cover failed states",
+    "Lost cookie/server restart follows existing ownership rules; pointer is not authorization",
+    "No model quality or hallucination improvement claim"
+  ],
+  "source_sha256": {
+    "TEL-ME_BE-TELME-107/src/test/java/com/telme/consult/service/PlanChangeChatIntegrationTest.java": "7589abd9465095b48b1afc5f56fb606c9d7534449eac299e8e343f85ee5c3373",
+    "TEL-ME_FE-TELME-107/src/chat-test/chat-test.css": "71a35800caf6fe489178506d768631595ed236a4924b79a0206a4b10ddb7c64d",
+    "TEL-ME_FE-TELME-107/src/chat-test/ChatTestPage.tsx": "743603bc46a5c8e102d00ae6a061f9fd8eb7751dc799bddeaa26662dc0c2c9ff",
+    "TEL-ME_FE-TELME-107/src/chat-test/api/chat.ts": "f63e550e2e468a74ac06e9c6128eceadb1a15986f7112011f18b82fd92a74910",
+    "TEL-ME_FE-TELME-107/src/chat-test/api/recovery.mjs": "3fcf1bad51877660a62fef90a9ba9a04f8907a8d207a9147cb64bb5c1a4d232b",
+    "TEL-ME_FE-TELME-107/src/chat-test/api/recovery.d.mts": "0418b9b2ea55eada7e7b076b5acf8bcf67bf1b91b872d29dddb74d1f1e544a3d",
+    "TEL-ME_FE-TELME-107/src/chat-test/api/response.mjs": "bc608ab260eb96136fc440bc803ce0858dc7b0a434e7bf89153277fc0a0ecc9e",
+    "TEL-ME_FE-TELME-107/src/chat-test/api/response.d.mts": "b45ad117db93b8ab005688b8306b167b3543d28ce4ab649a7e0b305e7ca3d346"
+  },
+  "server_evidence": {
+    "sessions": [
+      {
+        "session_id": 760,
+        "status": "ACTIVE"
+      },
+      {
+        "session_id": 761,
+        "status": "ACTIVE"
+      },
+      {
+        "session_id": 762,
+        "status": "NEED_CLARIFICATION"
+      },
+      {
+        "session_id": 763,
+        "status": "ACTIVE"
+      }
+    ],
+    "consultations": [
+      {
+        "consult_request_id": 564,
+        "session_id": 760,
+        "status": "DONE",
+        "query_text": "현재 요금제 변경 가능 여부",
+        "version": 2
+      },
+      {
+        "consult_request_id": 565,
+        "session_id": 761,
+        "status": "DONE",
+        "query_text": "현재 요금제 변경 가능 여부",
+        "version": 4
+      },
+      {
+        "consult_request_id": 566,
+        "session_id": 762,
+        "status": "WAITING_CONDITION",
+        "query_text": "현재 요금제 변경 가능 여부",
+        "version": 2
+      },
+      {
+        "consult_request_id": 567,
+        "session_id": 763,
+        "status": "DONE",
+        "query_text": "지난달 가입 후 이번 달 요금제 변경 가능 여부",
+        "version": 2
+      },
+      {
+        "consult_request_id": 568,
+        "session_id": 763,
+        "status": "DONE",
+        "query_text": "지난달 가입 후 이번 달 요금제 변경 가능 여부",
+        "version": 2
+      }
+    ],
+    "conditions": [
+      {
+        "condition_id": 1027,
+        "consult_request_id": 565,
+        "condition_key": "changedThisMonth",
+        "condition_value": "아니요",
+        "source": "ASKED",
+        "status": "FILLED",
+        "asked_message_id": 2610,
+        "answered_message_id": 2611,
+        "created_at": "2026-10-01T09:07:06.936418+00:00",
+        "updated_at": "2026-10-01T09:08:10.054288+00:00"
+      },
+      {
+        "condition_id": 1025,
+        "consult_request_id": 565,
+        "condition_key": "joinedThisMonth",
+        "condition_value": "아니요",
+        "source": "ASKED",
+        "status": "FILLED",
+        "asked_message_id": 2608,
+        "answered_message_id": 2609,
+        "created_at": "2026-10-01T09:04:52.994689+00:00",
+        "updated_at": "2026-10-01T09:08:10.054288+00:00"
+      },
+      {
+        "condition_id": 1032,
+        "consult_request_id": 566,
+        "condition_key": "changedThisMonth",
+        "condition_value": null,
+        "source": "ASKED",
+        "status": "PENDING",
+        "asked_message_id": 2618,
+        "answered_message_id": null,
+        "created_at": "2026-10-01T09:11:37.173806+00:00",
+        "updated_at": "2026-10-01T09:11:37.173806+00:00"
+      },
+      {
+        "condition_id": 1030,
+        "consult_request_id": 566,
+        "condition_key": "joinedThisMonth",
+        "condition_value": "아니요",
+        "source": "ASKED",
+        "status": "FILLED",
+        "asked_message_id": 2614,
+        "answered_message_id": 2617,
+        "created_at": "2026-10-01T09:09:27.302927+00:00",
+        "updated_at": "2026-10-01T09:11:37.173806+00:00"
+      },
+      {
+        "condition_id": 1034,
+        "consult_request_id": 567,
+        "condition_key": "changedThisMonth",
+        "condition_value": "아니요",
+        "source": "EXTRACTED",
+        "status": "FILLED",
+        "asked_message_id": null,
+        "answered_message_id": null,
+        "created_at": "2026-10-01T09:12:28.580296+00:00",
+        "updated_at": "2026-10-01T09:12:28.580296+00:00"
+      },
+      {
+        "condition_id": 1033,
+        "consult_request_id": 567,
+        "condition_key": "joinedThisMonth",
+        "condition_value": "아니요",
+        "source": "EXTRACTED",
+        "status": "FILLED",
+        "asked_message_id": null,
+        "answered_message_id": null,
+        "created_at": "2026-10-01T09:12:28.580296+00:00",
+        "updated_at": "2026-10-01T09:12:28.580296+00:00"
+      },
+      {
+        "condition_id": 1036,
+        "consult_request_id": 568,
+        "condition_key": "changedThisMonth",
+        "condition_value": "아니요",
+        "source": "EXTRACTED",
+        "status": "FILLED",
+        "asked_message_id": null,
+        "answered_message_id": null,
+        "created_at": "2026-10-01T09:14:35.469221+00:00",
+        "updated_at": "2026-10-01T09:14:35.469221+00:00"
+      },
+      {
+        "condition_id": 1035,
+        "consult_request_id": 568,
+        "condition_key": "joinedThisMonth",
+        "condition_value": "아니요",
+        "source": "EXTRACTED",
+        "status": "FILLED",
+        "asked_message_id": null,
+        "answered_message_id": null,
+        "created_at": "2026-10-01T09:14:35.469221+00:00",
+        "updated_at": "2026-10-01T09:14:35.469221+00:00"
+      }
+    ],
+    "executions": [
+      {
+        "execution_id": 1251,
+        "session_id": 760,
+        "input_message_id": 2605,
+        "output_message_id": 2606,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:03:26.409219+00:00",
+        "ended_at": "2026-10-01T09:03:32.026252+00:00",
+        "pipeline_trace": {
+          "guard": {
+            "reason": "NO_SEARCH_RESULTS",
+            "outcome": "NOT_RUN"
+          },
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "EMPTY",
+              "sources": [],
+              "consultRequestId": 564
+            },
+            {
+              "kind": "REFINED",
+              "query": "현재 요금제 변경 가능 여부",
+              "status": "EMPTY",
+              "sources": [],
+              "consultRequestId": 564
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 564
+            },
+            {
+              "kind": "REFINED",
+              "topK": 3,
+              "query": "현재 요금제 변경 가능 여부",
+              "consultRequestId": 564
+            }
+          ],
+          "generationInputs": [
+            {
+              "sources": [],
+              "userQuery": "제가 지금 요금제를 바꿀 수 있나요?",
+              "promptVersion": "rag-answer-v3-plan-v2",
+              "consultRequestId": 564,
+              "guardEvidenceScope": "FAQ_ANSWERS_ONLY"
+            }
+          ],
+          "finalTransmission": {
+            "status": "DISPATCH_RETURNED",
+            "outputMessageId": 2606
+          }
+        }
+      },
+      {
+        "execution_id": 1252,
+        "session_id": 761,
+        "input_message_id": 2607,
+        "output_message_id": 2608,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:04:51.934093+00:00",
+        "ended_at": "2026-10-01T09:04:52.998013+00:00",
+        "pipeline_trace": {
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.8951310419411523,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "QUESTION_ONLY"
+                },
+                {
+                  "faqId": 395,
+                  "score": 0.8944880743665683,
+                  "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+                  "slotId": "BILLING-0057",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제는 어떻게 바꿔요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "QUESTION_ONLY"
+                }
+              ],
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 565
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "topK": 3,
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "consultRequestId": 565
+            }
+          ],
+          "clarificationAssessment": {
+            "action": "ASK",
+            "waitingField": "joinedThisMonth",
+            "consultRequestId": 565
+          }
+        }
+      },
+      {
+        "execution_id": 1253,
+        "session_id": 761,
+        "input_message_id": 2609,
+        "output_message_id": 2610,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:07:05.097998+00:00",
+        "ended_at": "2026-10-01T09:07:06.941222+00:00",
+        "pipeline_trace": {
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.8951310419411523,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "QUESTION_ONLY"
+                },
+                {
+                  "faqId": 395,
+                  "score": 0.8944880743665683,
+                  "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+                  "slotId": "BILLING-0057",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제는 어떻게 바꿔요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "QUESTION_ONLY"
+                }
+              ],
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 565
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "topK": 3,
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "consultRequestId": 565
+            }
+          ],
+          "clarificationAssessment": {
+            "action": "ASK",
+            "waitingField": "changedThisMonth",
+            "consultRequestId": 565
+          }
+        }
+      },
+      {
+        "execution_id": 1254,
+        "session_id": 761,
+        "input_message_id": 2611,
+        "output_message_id": 2612,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:08:08.925178+00:00",
+        "ended_at": "2026-10-01T09:08:11.883145+00:00",
+        "pipeline_trace": {
+          "guard": {
+            "reason": "PLAN_CHANGE_CONDITION_POLICY",
+            "outcome": "MODIFIED",
+            "consultRequestId": 565
+          },
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "guardResults": [
+            {
+              "reason": "PLAN_CHANGE_CONDITION_POLICY",
+              "outcome": "MODIFIED",
+              "consultRequestId": 565
+            }
+          ],
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.8951310419411523,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "QUESTION_ONLY"
+                },
+                {
+                  "faqId": 395,
+                  "score": 0.8944880743665683,
+                  "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+                  "slotId": "BILLING-0057",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제는 어떻게 바꿔요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "QUESTION_ONLY"
+                }
+              ],
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 565
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 565
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "topK": 3,
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "consultRequestId": 565
+            }
+          ],
+          "generationInputs": [
+            {
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "userQuery": "제가 지금 요금제를 바꿀 수 있나요?",
+              "promptVersion": "rag-answer-v3-plan-v2",
+              "consultRequestId": 565,
+              "guardEvidenceScope": "FAQ_ANSWERS_ONLY"
+            }
+          ],
+          "finalTransmission": {
+            "status": "DISPATCH_RETURNED",
+            "outputMessageId": 2612
+          },
+          "clarificationAssessment": {
+            "action": "PROCEED",
+            "waitingField": "",
+            "consultRequestId": 565
+          }
+        }
+      },
+      {
+        "execution_id": 1255,
+        "session_id": 762,
+        "input_message_id": 2613,
+        "output_message_id": 2614,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:09:26.207194+00:00",
+        "ended_at": "2026-10-01T09:09:27.306758+00:00",
+        "pipeline_trace": {
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.8951310419411523,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "QUESTION_ONLY"
+                },
+                {
+                  "faqId": 395,
+                  "score": 0.8944880743665683,
+                  "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+                  "slotId": "BILLING-0057",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제는 어떻게 바꿔요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "QUESTION_ONLY"
+                }
+              ],
+              "consultRequestId": 566
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 566
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 566
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "topK": 3,
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "consultRequestId": 566
+            }
+          ],
+          "clarificationAssessment": {
+            "action": "ASK",
+            "waitingField": "joinedThisMonth",
+            "consultRequestId": 566
+          }
+        }
+      },
+      {
+        "execution_id": 1256,
+        "session_id": 762,
+        "input_message_id": 2615,
+        "output_message_id": 2616,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:10:21.200428+00:00",
+        "ended_at": "2026-10-01T09:10:21.238716+00:00",
+        "pipeline_trace": {
+          "analysis": {
+            "action": "WAITING_EXPLANATION",
+            "pendingQuestionMessageId": 2614
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          }
+        }
+      },
+      {
+        "execution_id": 1257,
+        "session_id": 762,
+        "input_message_id": 2617,
+        "output_message_id": 2618,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:11:36.028225+00:00",
+        "ended_at": "2026-10-01T09:11:37.177648+00:00",
+        "pipeline_trace": {
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "현재 요금제 변경 가능 여부",
+            "originalQuery": "제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.8951310419411523,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "QUESTION_ONLY"
+                },
+                {
+                  "faqId": 395,
+                  "score": 0.8944880743665683,
+                  "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+                  "slotId": "BILLING-0057",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제는 어떻게 바꿔요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "QUESTION_ONLY"
+                }
+              ],
+              "consultRequestId": 566
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 357,
+                  "score": 0.7973679787236218,
+                  "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+                  "slotId": "BILLING-0001",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1387,
+                  "score": 0.796982251608517,
+                  "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+                  "slotId": "BILLING-0015",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7791360547219078,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 566
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 566
+            },
+            {
+              "kind": "CLARIFICATION_POLICY",
+              "topK": 3,
+              "query": "요금제 변경 가입한 달 월 1회 기준",
+              "consultRequestId": 566
+            }
+          ],
+          "clarificationAssessment": {
+            "action": "ASK",
+            "waitingField": "changedThisMonth",
+            "consultRequestId": 566
+          }
+        }
+      },
+      {
+        "execution_id": 1258,
+        "session_id": 763,
+        "input_message_id": 2619,
+        "output_message_id": 2620,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:12:27.402231+00:00",
+        "ended_at": "2026-10-01T09:12:29.909773+00:00",
+        "pipeline_trace": {
+          "guard": {
+            "reason": "PLAN_CHANGE_CONDITION_POLICY",
+            "outcome": "MODIFIED",
+            "consultRequestId": 567
+          },
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "지난달 가입 후 이번 달 요금제 변경 가능 여부",
+            "originalQuery": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "guardResults": [
+            {
+              "reason": "PLAN_CHANGE_CONDITION_POLICY",
+              "outcome": "MODIFIED",
+              "consultRequestId": 567
+            }
+          ],
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.7717190248798756,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7691136690636144,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 399,
+                  "score": 0.767694408848049,
+                  "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+                  "slotId": "BILLING-0078",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 567
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 567
+            }
+          ],
+          "generationInputs": [
+            {
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.7717190248798756,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7691136690636144,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 399,
+                  "score": 0.767694408848049,
+                  "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+                  "slotId": "BILLING-0078",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "userQuery": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "promptVersion": "rag-answer-v3-plan-v2",
+              "consultRequestId": 567,
+              "guardEvidenceScope": "FAQ_ANSWERS_ONLY"
+            }
+          ],
+          "finalTransmission": {
+            "status": "DISPATCH_RETURNED",
+            "outputMessageId": 2620
+          },
+          "clarificationAssessment": {
+            "action": "PROCEED",
+            "waitingField": "",
+            "consultRequestId": 567
+          }
+        }
+      },
+      {
+        "execution_id": 1259,
+        "session_id": 763,
+        "input_message_id": 2621,
+        "output_message_id": 2622,
+        "status": "COMPLETED",
+        "error_code": null,
+        "started_at": "2026-10-01T09:14:33.352401+00:00",
+        "ended_at": "2026-10-01T09:14:36.47899+00:00",
+        "pipeline_trace": {
+          "guard": {
+            "reason": "PLAN_CHANGE_CONDITION_POLICY",
+            "outcome": "MODIFIED",
+            "consultRequestId": 568
+          },
+          "analysis": {
+            "action": "PROCEED",
+            "purpose": "GENERAL_FAQ",
+            "refinedQuery": "지난달 가입 후 이번 달 요금제 변경 가능 여부",
+            "originalQuery": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?"
+          },
+          "processing": {
+            "handler": "ConsultChatProcessingService",
+            "traceVersion": 1
+          },
+          "guardResults": [
+            {
+              "reason": "PLAN_CHANGE_CONDITION_POLICY",
+              "outcome": "MODIFIED",
+              "consultRequestId": 568
+            }
+          ],
+          "searchResults": [
+            {
+              "kind": "ORIGINAL",
+              "query": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "status": "FOUND",
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.7717190248798756,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7691136690636144,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 399,
+                  "score": 0.767694408848049,
+                  "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+                  "slotId": "BILLING-0078",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "consultRequestId": 568
+            }
+          ],
+          "searchRequests": [
+            {
+              "kind": "ORIGINAL",
+              "topK": 3,
+              "query": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "consultRequestId": 568
+            }
+          ],
+          "generationInputs": [
+            {
+              "sources": [
+                {
+                  "faqId": 1451,
+                  "score": 0.7717190248798756,
+                  "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+                  "slotId": "BILLING-0092",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금제 이번 달에 바꿀 수 있나요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 1,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 1462,
+                  "score": 0.7691136690636144,
+                  "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+                  "slotId": "BILLING-0106",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 2,
+                  "matchedVariant": "Q_A"
+                },
+                {
+                  "faqId": 399,
+                  "score": 0.767694408848049,
+                  "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+                  "slotId": "BILLING-0078",
+                  "version": 1,
+                  "category": "BILLING",
+                  "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+                  "updatedAt": "2026-09-29",
+                  "searchRank": 3,
+                  "matchedVariant": "Q_A"
+                }
+              ],
+              "userQuery": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+              "promptVersion": "rag-answer-v3-plan-v2",
+              "consultRequestId": 568,
+              "guardEvidenceScope": "FAQ_ANSWERS_ONLY"
+            }
+          ],
+          "finalTransmission": {
+            "status": "DISPATCH_RETURNED",
+            "outputMessageId": 2622
+          },
+          "clarificationAssessment": {
+            "action": "PROCEED",
+            "waitingField": "",
+            "consultRequestId": 568
+          }
+        }
+      }
+    ],
+    "messages": [
+      {
+        "message_id": 2605,
+        "session_id": 760,
+        "sequence_no": 1,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "제가 지금 요금제를 바꿀 수 있나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2606,
+        "session_id": 760,
+        "sequence_no": 2,
+        "reply_to_id": 2605,
+        "role": "ASSISTANT",
+        "message_type": "ANSWER",
+        "content": "안내드릴 수 있는 정보가 없습니다.",
+        "status": "COMPLETED",
+        "answer_basis": "NO_EVIDENCE"
+      },
+      {
+        "message_id": 2607,
+        "session_id": 761,
+        "sequence_no": 1,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "제가 지금 요금제를 바꿀 수 있나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2608,
+        "session_id": 761,
+        "sequence_no": 2,
+        "reply_to_id": 2607,
+        "role": "ASSISTANT",
+        "message_type": "CLARIFICATION",
+        "content": "이번 달에 가입하셨나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2609,
+        "session_id": 761,
+        "sequence_no": 3,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "지난달이요",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2610,
+        "session_id": 761,
+        "sequence_no": 4,
+        "reply_to_id": 2609,
+        "role": "ASSISTANT",
+        "message_type": "CLARIFICATION",
+        "content": "이번 달에 이미 요금제를 변경하셨나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2611,
+        "session_id": 761,
+        "sequence_no": 5,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "아니요",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2612,
+        "session_id": 761,
+        "sequence_no": 6,
+        "reply_to_id": 2611,
+        "role": "ASSISTANT",
+        "message_type": "ANSWER",
+        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+        "status": "COMPLETED",
+        "answer_basis": "GROUNDED"
+      },
+      {
+        "message_id": 2613,
+        "session_id": 762,
+        "sequence_no": 1,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "제가 지금 요금제를 바꿀 수 있나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2614,
+        "session_id": 762,
+        "sequence_no": 2,
+        "reply_to_id": 2613,
+        "role": "ASSISTANT",
+        "message_type": "CLARIFICATION",
+        "content": "이번 달에 가입하셨나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2615,
+        "session_id": 762,
+        "sequence_no": 3,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "가입한 달이 무슨 뜻이에요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2616,
+        "session_id": 762,
+        "sequence_no": 4,
+        "reply_to_id": 2615,
+        "role": "ASSISTANT",
+        "message_type": "ANSWER",
+        "content": "가입한 달은 가입 날짜가 속한 달력상의 달을 뜻해요. 가입일부터 한 달이 지났는지가 아니라, 이번 달에 가입했는지를 확인하는 질문이에요. 이번 달에 가입하셨나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2617,
+        "session_id": 762,
+        "sequence_no": 5,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "지난달이요",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2618,
+        "session_id": 762,
+        "sequence_no": 6,
+        "reply_to_id": 2617,
+        "role": "ASSISTANT",
+        "message_type": "CLARIFICATION",
+        "content": "이번 달에 이미 요금제를 변경하셨나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2619,
+        "session_id": 763,
+        "sequence_no": 1,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2620,
+        "session_id": 763,
+        "sequence_no": 2,
+        "reply_to_id": 2619,
+        "role": "ASSISTANT",
+        "message_type": "ANSWER",
+        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+        "status": "COMPLETED",
+        "answer_basis": "GROUNDED"
+      },
+      {
+        "message_id": 2621,
+        "session_id": 763,
+        "sequence_no": 3,
+        "reply_to_id": null,
+        "role": "USER",
+        "message_type": "QUESTION",
+        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+        "status": "COMPLETED",
+        "answer_basis": null
+      },
+      {
+        "message_id": 2622,
+        "session_id": 763,
+        "sequence_no": 4,
+        "reply_to_id": 2621,
+        "role": "ASSISTANT",
+        "message_type": "ANSWER",
+        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+        "status": "COMPLETED",
+        "answer_basis": "GROUNDED"
+      }
+    ],
+    "sources": [
+      {
+        "source_id": 370,
+        "message_id": 2612,
+        "faq_id": 357,
+        "title_snapshot": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 1,
+        "score": 0.7974
+      },
+      {
+        "source_id": 371,
+        "message_id": 2612,
+        "faq_id": 1387,
+        "title_snapshot": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 2,
+        "score": 0.797
+      },
+      {
+        "source_id": 372,
+        "message_id": 2612,
+        "faq_id": 1462,
+        "title_snapshot": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 3,
+        "score": 0.7791
+      },
+      {
+        "source_id": 373,
+        "message_id": 2620,
+        "faq_id": 1451,
+        "title_snapshot": "요금제 이번 달에 바꿀 수 있나요",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 1,
+        "score": 0.7717
+      },
+      {
+        "source_id": 374,
+        "message_id": 2620,
+        "faq_id": 1462,
+        "title_snapshot": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 2,
+        "score": 0.7691
+      },
+      {
+        "source_id": 375,
+        "message_id": 2620,
+        "faq_id": 399,
+        "title_snapshot": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 3,
+        "score": 0.7677
+      },
+      {
+        "source_id": 376,
+        "message_id": 2622,
+        "faq_id": 1451,
+        "title_snapshot": "요금제 이번 달에 바꿀 수 있나요",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 1,
+        "score": 0.7717
+      },
+      {
+        "source_id": 377,
+        "message_id": 2622,
+        "faq_id": 1462,
+        "title_snapshot": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 2,
+        "score": 0.7691
+      },
+      {
+        "source_id": 378,
+        "message_id": 2622,
+        "faq_id": 399,
+        "title_snapshot": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+        "faq_version": 1,
+        "faq_updated_at": "2026-09-29",
+        "search_rank": 3,
+        "score": 0.7677
+      }
+    ],
+    "model_calls": [
+      {
+        "generation_id": 375,
+        "execution_id": 1251,
+        "task_type": "RAG_ANSWER",
+        "attempt": 1,
+        "model": null,
+        "status": "NO_EVIDENCE"
+      },
+      {
+        "generation_id": 376,
+        "execution_id": 1251,
+        "task_type": "SESSION_TITLE",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 377,
+        "execution_id": 1252,
+        "task_type": "SESSION_TITLE",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 378,
+        "execution_id": 1254,
+        "task_type": "RAG_ANSWER",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 379,
+        "execution_id": 1255,
+        "task_type": "SESSION_TITLE",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 380,
+        "execution_id": 1258,
+        "task_type": "RAG_ANSWER",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 381,
+        "execution_id": 1258,
+        "task_type": "SESSION_TITLE",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      },
+      {
+        "generation_id": 382,
+        "execution_id": 1259,
+        "task_type": "RAG_ANSWER",
+        "attempt": 1,
+        "model": "exaone3.5:7.8b",
+        "status": "SUCCESS"
+      }
+    ]
+  },
+  "browser_e_after": {
+    "loading": false,
+    "messages": [
+      {
+        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+        "messageId": 2619,
+        "sources": []
+      },
+      {
+        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+        "messageId": 2620,
+        "sources": [
+          "요금제 이번 달에 바꿀 수 있나요 · FAQ 1451",
+          "요금 밀려서 요금제를 낮추려는데 안 돼요 · FAQ 1462",
+          "가입한 달에 바로 요금제를 바꿀 수 있나요? · FAQ 399"
+        ]
+      },
+      {
+        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
+        "messageId": 2621,
+        "sources": []
+      },
+      {
+        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
+        "messageId": 2622,
+        "sources": [
+          "요금제 이번 달에 바꿀 수 있나요 · FAQ 1451",
+          "요금 밀려서 요금제를 낮추려는데 안 돼요 · FAQ 1462",
+          "가입한 달에 바로 요금제를 바꿀 수 있나요? · FAQ 399"
+        ]
+      }
+    ],
+    "sendDisabled": true,
+    "url": "http://127.0.0.1:5177/chat-test"
+  }
+}

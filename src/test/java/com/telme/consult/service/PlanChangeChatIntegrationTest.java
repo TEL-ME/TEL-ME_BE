@@ -742,6 +742,48 @@ class PlanChangeChatIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM chat_sessions WHERE session_id=?", String.class, sessionId)).isEqualTo(oldSessionStatus);
     }
 
+    @Test
+    void telme107IndependentHistoryRequestsKeepConditionsAndExplanationTarget() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long original = requestId();
+        long asked = jdbc.queryForObject("SELECT asked_message_id FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", Long.class, original, JOINED);
+        var waiting = jdbc.queryForList("SELECT * FROM consult_conditions WHERE consult_request_id=? ORDER BY condition_key", original);
+        var first = restoredHistory();
+        assertThat(restoredHistory()).isEqualTo(first);
+        assertThat(jdbc.queryForList("SELECT * FROM consult_conditions WHERE consult_request_id=? ORDER BY condition_key", original)).isEqualTo(waiting);
+        turn("가입한 달이 무슨 뜻이에요?");
+        assertExplanation("달력상의 달");
+        var explanation = restoredHistory();
+        assertThat(restoredHistory()).isEqualTo(explanation);
+        assertThat(jdbc.queryForObject("SELECT asked_message_id FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", Long.class, original, JOINED)).isEqualTo(asked);
+        assertThat(jdbc.queryForList("SELECT * FROM consult_conditions WHERE consult_request_id=? ORDER BY condition_key", original)).isEqualTo(waiting);
+        turn("지난달이요");
+        assertClarification(CHANGED);
+        var second = restoredHistory();
+        assertThat(restoredHistory()).isEqualTo(second);
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        turn("아니요");
+        assertFinal();
+        var done = restoredHistory();
+        assertThat(restoredHistory()).isEqualTo(done);
+        assertThat(done.path("runningExecutionId").isNull()).isTrue();
+        assertThat(requestId()).isEqualTo(original);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, original)).isEqualTo("DONE");
+        // The pointer alone does not grant access; another server identity cannot restore it.
+        var stranger = new MockHttpSession();
+        stranger.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId+1000000);
+        mvc.perform(get("/api/v1/chat/sessions/"+sessionId+"/messages").session(stranger)).andExpect(status().isNotFound());
+        assertThat(restoredHistory()).isEqualTo(done);
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode restoredHistory() throws Exception {
+        var identity = new MockHttpSession();
+        identity.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        var response = mvc.perform(get("/api/v1/chat/sessions/"+sessionId+"/messages").param("size","50").session(identity))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        return mapper.readTree(response.getContentAsByteArray()).path("result");
+    }
+
     private long newSession() {
         return jdbc.queryForObject("INSERT INTO chat_sessions(user_id,title) VALUES (?,'되묻기 검증') RETURNING session_id", Long.class, userId);
     }
