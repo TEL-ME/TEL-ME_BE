@@ -38,7 +38,7 @@ Jira: [TELME-105](https://telme-team.atlassian.net/browse/TELME-105). 실제 Jir
 | 세션 | NEED_CLARIFICATION 유지 |
 | 다음 후속 응답 | 같은 상담·원래 질문의 조건으로 반영 |
 
-설명 메시지는 기존 직접 안내와 동일한 `complete` 이벤트/메타데이터 계약을 사용한다. 설명에 start/token 이벤트를 추가하지 않는다. complete의 outputMessage ID로 기록 API에서 같은 설명을 조회한다. 프런트가 기존 직접 안내·되묻기처럼 기록을 조회해야 한다. 이후 최종 생성 답변은 기존 Guard → 저장 → SSE start/token/complete 흐름을 유지한다.
+설명 메시지는 기존 직접 안내와 동일한 `complete` 이벤트/메타데이터 계약을 사용한다. 설명에 start/token 이벤트를 추가하지 않는다. complete의 outputMessage ID로 기록 API에서 같은 설명을 조회한다. 이후 최종 생성 답변은 기존 Guard → 저장 → SSE start/token/complete 흐름을 유지한다.
 
 실행 trace의 analysis에는 `WAITING_EXPLANATION`과 `pendingQuestionMessageId`를 남겨 원래 질문을 연결한다. Guard 전 원문 로그나 중복 추적 테이블은 추가하지 않는다.
 
@@ -67,7 +67,7 @@ Jira: [TELME-105](https://telme-team.atlassian.net/browse/TELME-105). 실제 Jir
 ## 남은 확인
 
 - 실제 모델로 후속 분류·최종 생성까지 재실행하지 않았다. 자동 테스트의 모델/검색 대체와 실제 모델 품질을 구분한다. 설명 자체는 모델을 호출하지 않는 고정 문구다.
-- 실제 프런트·브라우저 새로고침은 미검증이다. complete의 설명 ID를 조회해 한 번 표시하고, 화면에서 상담을 종료하지 않으며, 다음 짧은 응답과 새로고침 후에도 같은 대기 질문이 유지되는지 확인해야 한다.
+- 팀 실제 화면·브라우저 새로고침은 미검증이며 담당자와 별도로 확인한다. 백엔드 자동 테스트 통과를 실제 화면 검증 완료로 표현하지 않는다.
 - 운영 배포·V18/V19 선행 배포 순서는 이번 범위가 아니다. 105에서 마이그레이션을 수정하거나 추가하지 않았다.
 - CI pull_request 필터에 정확한 104 브랜치를 추가해 105의 선행 비교 기준에서도 기존 build·마이그레이션 검사·테스트 게시가 실행되게 한다. 선행 CI와 105 최신 HEAD CI는 구분한다.
 - 설명 안내문·반복 종료 기준을 별도 정책 문서로 확정할 필요가 생기면 팀과 결정한다. 현재 반복 횟수와 조건 정책은 유지한다.
