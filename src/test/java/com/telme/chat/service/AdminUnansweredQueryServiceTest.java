@@ -37,6 +37,7 @@ class AdminUnansweredQueryServiceTest {
     private Long noEvidenceId;
     private Long outOfScopeId;
     private Long timeoutId;
+    private Long failedId;
     private Long groundedId;
 
     @BeforeEach
@@ -47,7 +48,8 @@ class AdminUnansweredQueryServiceTest {
         noEvidenceId = message(2, "ASSISTANT", "ANSWER", "COMPLETED", "NO_EVIDENCE", question, "안내드릴 수 있는 정보가 없습니다.");
         outOfScopeId = message(3, "ASSISTANT", "ANSWER", "COMPLETED", "OUT_OF_SCOPE", question, "답할 수 없습니다.");
         timeoutId = message(4, "ASSISTANT", "ERROR", "TIMEOUT", null, question, null);
-        groundedId = message(5, "ASSISTANT", "ANSWER", "COMPLETED", "GROUNDED", question, "정상 답변");
+        failedId = message(5, "ASSISTANT", "ERROR", "FAILED", null, question, null);
+        groundedId = message(6, "ASSISTANT", "ANSWER", "COMPLETED", "GROUNDED", question, "정상 답변");
     }
 
     @Test
@@ -55,7 +57,7 @@ class AdminUnansweredQueryServiceTest {
     void 답_못_한_것만_본다() {
         List<Long> ids = ids(service.getUnanswered(request(null, null, null)));
 
-        assertThat(ids).contains(noEvidenceId, outOfScopeId, timeoutId).doesNotContain(groundedId);
+        assertThat(ids).contains(noEvidenceId, outOfScopeId, timeoutId, failedId).doesNotContain(groundedId);
     }
 
     @Test
@@ -66,7 +68,13 @@ class AdminUnansweredQueryServiceTest {
                 .doesNotContain(outOfScopeId, timeoutId);
         assertThat(ids(service.getUnanswered(request(AdminUnansweredType.TIMEOUT, null, null))))
                 .contains(timeoutId)
-                .doesNotContain(noEvidenceId, outOfScopeId);
+                .doesNotContain(noEvidenceId, outOfScopeId, failedId);
+        assertThat(ids(service.getUnanswered(request(AdminUnansweredType.FAILED, null, null))))
+                .contains(failedId)
+                .doesNotContain(noEvidenceId, outOfScopeId, timeoutId);
+        assertThat(ids(service.getUnanswered(request(AdminUnansweredType.OUT_OF_SCOPE, null, null))))
+                .contains(outOfScopeId)
+                .doesNotContain(noEvidenceId, timeoutId, failedId);
     }
 
     @Test

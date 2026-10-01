@@ -31,7 +31,8 @@ public class AdminUnansweredController {
             summary = "답 못 한 질문 목록 조회",
             description = "챗봇이 근거를 못 찾았거나 답변을 끝내지 못한 경우를 최신순으로 반환합니다. "
                     + "유형은 NO_EVIDENCE·OUT_OF_SCOPE·FAILED·TIMEOUT 중 하나이고, 생략하면 네 가지를 모두 봅니다. "
-                    + "from·to는 답변 시각 기준이고 to는 그 시각 직전까지입니다.")
+                    + "from·to와 정렬은 답변 메시지가 만들어진 시각(createdAt) 기준이고 to는 그 시각 직전까지입니다. "
+                    + "FAILED·TIMEOUT은 답변을 시작한 시각이라 실제로 끊긴 시각보다 조금 앞섭니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "400", description = "COMMON400-1: enum 값 또는 범위 오류. "

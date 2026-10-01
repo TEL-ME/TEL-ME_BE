@@ -26,6 +26,7 @@ public record AdminUnansweredSearchRequest(
         return from == null ? EVERY_TIME_FROM : from;
     }
 
+    // 기준은 답변 메시지가 만들어진 시각이다. 완료 시각은 비어 있을 수 있어 쓰면 그 행이 조용히 빠진다.
     // to는 그 시각 직전까지를 뜻한다. 경계를 포함하면 자정으로 끊어 보는 화면에서 하루가 겹쳐 보인다
     public Instant toOrMax() {
         return to == null ? EVERY_TIME_TO : to;
