@@ -65,6 +65,7 @@ class ConsultChatApiIntegrationTest {
     AtomicReference<ConsultChatProcessingService.AnswerInput> answerInput =
             new AtomicReference<>();
     AtomicReference<RuntimeException> answerFailure = new AtomicReference<>();
+    AtomicReference<ConsultChatProcessingService.AnswerProvider> answerOverride = new AtomicReference<>();
 
     @BeforeEach
     void setup() {
@@ -81,6 +82,9 @@ class ConsultChatApiIntegrationTest {
                         input -> {
                             if (answerFailure.get() != null) {
                                 throw answerFailure.get();
+                            }
+                            if (answerOverride.get() != null) {
+                                return answerOverride.get().generate(input);
                             }
                             answerInput.set(input);
                             return ConsultChatProcessingService.GeneratedAnswer.withoutSources(
@@ -115,6 +119,39 @@ class ConsultChatApiIntegrationTest {
                 userId);
         jdbc.update("DELETE FROM chat_sessions WHERE user_id=?", userId);
         jdbc.update("DELETE FROM users WHERE user_id=?", userId);
+    }
+
+    @Test
+    void storeRequestEndsWithUnavailableGuidanceInsteadOfStoreResult() throws Exception {
+        // 매장 검색이 연결되기 전까지 단독 매장 요청은 임시 매장 결과(STORE_RESULT)가 아니라 안내 문구로 끝난다
+        answerOverride.set(new PurposeRoutingAnswerProvider(input -> {
+            throw new AssertionError("매장 요청은 FAQ 검색으로 가지 않는다");
+        }));
+        var created =
+                mvc.perform(
+                                post("/api/v1/chat/sessions")
+                                        .session(identity)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("{\"title\":\"매장 안내\"}"))
+                        .andExpect(status().isCreated())
+                        .andReturn();
+        long sid =
+                mapper.readTree(created.getResponse().getContentAsByteArray())
+                        .path("result")
+                        .path("sessionId")
+                        .asLong();
+        waitCompleted(send(sid, "매장 알려줘"));
+        waitCompleted(send(sid, "강남역이요"));
+
+        var messages = history(sid).path("result").path("messages");
+        assertThat(messages.size()).isEqualTo(4);
+        var last = messages.get(3);
+        assertThat(last.path("messageType").asText()).isEqualTo("ANSWER");
+        assertThat(last.path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
+        assertThat(last.path("content").asText()).contains("매장 정보를 바로 확인하기 어려워요");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM chat_messages WHERE session_id=? AND message_type='STORE_RESULT'",
+                Integer.class, sid)).isZero();
     }
 
     @Test
