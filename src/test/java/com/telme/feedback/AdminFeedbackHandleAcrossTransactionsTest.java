@@ -24,7 +24,6 @@ class AdminFeedbackHandleAcrossTransactionsTest {
     private static final String MARK = "처리시각확인용";
     private static final long ANSWER_MESSAGE_ID = 2L;
     private static final long ADMIN_ID = 2L;
-    private static final long OTHER_USER_ID = 849L;
 
     @Autowired
     private AdminFeedbackCommandService service;
@@ -33,21 +32,23 @@ class AdminFeedbackHandleAcrossTransactionsTest {
     private JdbcTemplate jdbcTemplate;
 
     private Long feedbackId;
+    private Long reviewerId;
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update(
-                "INSERT INTO message_feedback (message_id, user_id, rating, reason_code, comment)"
-                        + " VALUES (?, ?, 'DISLIKE', 'WRONG_INFO', ?)",
-                ANSWER_MESSAGE_ID, OTHER_USER_ID, MARK);
+        // 시드 회원은 2번 메시지에 이미 평가가 있어(메시지당 회원 1건) 평가를 남길 회원을 새로 만든다
+        reviewerId = jdbcTemplate.queryForObject(
+                "INSERT INTO users(name) VALUES (?) RETURNING user_id", Long.class, MARK);
         feedbackId = jdbcTemplate.queryForObject(
-                "SELECT feedback_id FROM message_feedback WHERE message_id = ? AND user_id = ?",
-                Long.class, ANSWER_MESSAGE_ID, OTHER_USER_ID);
+                "INSERT INTO message_feedback (message_id, user_id, rating, reason_code, comment)"
+                        + " VALUES (?, ?, 'DISLIKE', 'WRONG_INFO', ?) RETURNING feedback_id",
+                Long.class, ANSWER_MESSAGE_ID, reviewerId, MARK);
     }
 
     @AfterEach
     void cleanUp() {
         jdbcTemplate.update("DELETE FROM message_feedback WHERE feedback_id = ?", feedbackId);
+        jdbcTemplate.update("DELETE FROM users WHERE user_id = ?", reviewerId);
     }
 
     @Test
