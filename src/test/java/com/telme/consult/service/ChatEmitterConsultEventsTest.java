@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatEmitterRegistry;
@@ -58,5 +62,23 @@ class ChatEmitterConsultEventsTest {
 
         assertThatThrownBy(() -> stream.onToken("답변"))
                 .isInstanceOf(LlmStreamCancelledException.class);
+    }
+
+    @Test
+    void progressChecksConnectionWithoutSendingAnSseEvent() {
+        when(emitters.isRegistered(2L)).thenReturn(true);
+        var stream = events.stream(2L);
+        stream.onProgress();
+
+        verify(emitters, never()).sendEvent(eq(2L), anyString(), any());
+    }
+
+    @Test
+    void progressCancelsWhenSubscriptionDisconnects() {
+        when(emitters.isRegistered(2L)).thenReturn(true, false);
+        var stream = events.stream(2L);
+
+        assertThatThrownBy(stream::onProgress).isInstanceOf(LlmStreamCancelledException.class);
+        verify(emitters, never()).sendEvent(eq(2L), anyString(), any());
     }
 }
