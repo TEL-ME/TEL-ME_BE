@@ -1,11 +1,13 @@
 package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.dto.req.AdminUnansweredSearchRequest;
 import com.telme.chat.dto.req.AdminUnansweredType;
 import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
+import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.dto.res.AdminUnansweredListItemResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
 import com.telme.global.common.exception.GeneralException;
@@ -144,6 +146,21 @@ class AdminUnansweredQueryServiceTest {
     @DisplayName("없는 메시지를 상세로 부르면 CHAT404-2를 던진다")
     void 없는_메시지는_막는다() {
         assertThatThrownBy(() -> service.getUnanswered(-1L)).isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("유형 이름은 엔티티의 answer_basis·status 값과 같다")
+    void 유형_이름이_엔티티와_맞는다() {
+        // 조회가 type.name()으로 엔티티 값을 찾는다. 이름이 어긋나면 그 유형 조회가 500이 된다
+        assertThatCode(() -> {
+            for (AdminUnansweredType type : AdminUnansweredType.values()) {
+                if (type.isBasis()) {
+                    ChatMessage.AnswerBasis.valueOf(type.name());
+                } else {
+                    ChatMessage.Status.valueOf(type.name());
+                }
+            }
+        }).doesNotThrowAnyException();
     }
 
     private long message(
