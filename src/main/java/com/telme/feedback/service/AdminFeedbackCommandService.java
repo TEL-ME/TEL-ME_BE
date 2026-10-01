@@ -8,12 +8,12 @@ import com.telme.feedback.exception.FeedbackErrorCode;
 import com.telme.feedback.repository.AdminFeedbackRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.repository.MessageSourceRepository;
+import jakarta.persistence.EntityManager;
+import org.springframework.dao.DataIntegrityViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +26,7 @@ public class AdminFeedbackCommandService {
     private final AdminFeedbackRepository feedbackRepository;
     private final MessageSourceRepository messageSourceRepository;
     private final AdminFeedbackConverter converter;
+    private final EntityManager entityManager;
     private final Clock clock;
 
     // 같은 건을 다시 눌러도 막지 않는다. 메모만 고치는 경우가 있고, 결과가 달라지지 않는다
@@ -39,7 +40,9 @@ public class AdminFeedbackCommandService {
         } else {
             feedback.markUnhandled();
         }
-        flushOrRejectConflict();
+        flushOrRejectRatingChange();
+        // 트리거가 채운 updated_at을 다시 읽는다. 안 하면 응답이 저장 전 값이라 그대로 되보내면 409가 된다
+        entityManager.refresh(feedback);
         log.info("[AdminFeedback] 처리 표시 feedbackId={} handled={} adminId={}",
                 feedbackId, request.handled(), adminId);
 
@@ -57,22 +60,18 @@ public class AdminFeedbackCommandService {
         }
     }
 
-    // 좋아요로 바뀌면 제약에, 평가가 취소돼 행이 사라졌으면 잠금 실패로 온다.
-    // 커밋까지 미루면 여기서 안 잡혀 500으로 나가므로 지금 확정한다
-    private void flushOrRejectConflict() {
+    // 좋아요가 된 행에 처리 표시를 남기면 제약에 걸린다. 커밋까지 미루면 여기서 안 잡혀 500으로 나간다
+    private void flushOrRejectRatingChange() {
         try {
             feedbackRepository.flush();
         } catch (DataIntegrityViolationException e) {
             throw new GeneralException(FeedbackErrorCode.FEEDBACK_CHANGED);
-        } catch (ObjectOptimisticLockingFailureException e) {
-            // 취소한 평가는 관리자 화면에서 사라져야 해 조회와 같은 응답으로 돌려준다
-            throw new GeneralException(FeedbackErrorCode.FEEDBACK_NOT_FOUND);
         }
     }
 
-    // 좋아요는 관리자 화면이 다루지 않아 조회와 같은 응답으로 막는다
+    // 취소돼 사라진 행과 좋아요는 여기서 없는 것으로 걸러진다
     private MessageFeedback findDislike(Long feedbackId) {
-        return feedbackRepository.findById(feedbackId)
+        return feedbackRepository.findForHandling(feedbackId)
                 .filter(found -> found.getRating() == MessageFeedback.Rating.DISLIKE)
                 .orElseThrow(() -> new GeneralException(FeedbackErrorCode.FEEDBACK_NOT_FOUND));
     }

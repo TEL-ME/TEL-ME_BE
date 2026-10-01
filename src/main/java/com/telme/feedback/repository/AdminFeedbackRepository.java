@@ -1,16 +1,24 @@
 package com.telme.feedback.repository;
 
 import com.telme.feedback.entity.MessageFeedback;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 // 사용자 피드백 저장은 JdbcFeedbackStore가 맡는다. 여기는 관리자 조회 전용이다
 public interface AdminFeedbackRepository extends JpaRepository<MessageFeedback, Long> {
+
+    // 읽은 값을 확인하고 저장하기까지 사이에 사용자가 고치지 못하도록 잠그고 읽는다
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select f from MessageFeedback f where f.feedbackId = :feedbackId")
+    Optional<MessageFeedback> findForHandling(@Param("feedbackId") Long feedbackId);
 
     // 조건을 안 준 항목은 호출부가 전체 범위로 넓혀 넘긴다.
     // handledMode는 AdminFeedbackHandledFilter가 준다 (0 전체, 1 처리됨, 2 미처리)
