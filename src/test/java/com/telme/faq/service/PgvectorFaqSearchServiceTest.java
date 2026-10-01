@@ -14,6 +14,7 @@ import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.req.FaqSearchVector;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
@@ -44,6 +45,49 @@ class PgvectorFaqSearchServiceTest {
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
                     new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD)),
                     new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
+
+    @Test
+    @DisplayName("vector=QA면 이중 벡터가 켜져 있어도 질문+답변 벡터만 조회한다")
+    void QA를_고르면_질문_벡터를_조회하지_않는다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.2)));
+
+        List<FaqSearchResponse> result = dualVectorService.search(new FaqSearchRequest("질문", 3, FaqSearchVector.QA));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L);
+        assertThat(result.getFirst().matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.Q_A.name());
+        verify(repository, never()).findNearestByQuestionVector(any(), anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("vector=QUESTION이면 이중 벡터가 꺼져 있어도 질문 벡터만 질문 벡터 임계값으로 조회한다")
+    void QUESTION을_고르면_질문_벡터만_조회한다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(3L, "PLAN", "요금제 종류 질문", 0.05),  // score 0.95
+                matchOf(4L, "USIM", "유심 질문", 0.2)));        // score 0.8, 질문 벡터 임계값(0.88) 미만
+
+        List<FaqSearchResponse> result = service.search(new FaqSearchRequest("질문", 3, FaqSearchVector.QUESTION));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(3L);
+        assertThat(result.getFirst().matchedVariant()).isEqualTo(FaqEmbeddingTextVariant.QUESTION_ONLY.name());
+        assertThat(result.getFirst().searchRank()).isEqualTo(1);
+        verify(repository, never()).findNearest(any(), anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("vector=DUAL이면 이중 벡터가 꺼져 있어도 두 결과를 합친다")
+    void DUAL을_고르면_설정과_상관없이_합친다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.2)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL))
+                .thenReturn(List.of(matchOf(3L, "PLAN", "요금제 종류 질문", 0.05)));
+
+        List<FaqSearchResponse> result = service.search(new FaqSearchRequest("질문", 3, FaqSearchVector.DUAL));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(3L, 1L);
+        verify(embeddingClient, times(1)).embed("질문");
+    }
 
     @Test
     @DisplayName("이중 벡터가 꺼져 있으면 질문 벡터를 조회하지 않는다")

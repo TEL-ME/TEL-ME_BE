@@ -19,7 +19,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
+// 채팅 처리 구현이 없는 상태를 만들려고 상담 연결 설정을 모두 끈다. 기본값은 켜져 있어 구현이 항상 등록된다
+@SpringBootTest(properties = {
+        "telme.consult.persistence-enabled=false",
+        "telme.consult.llm-enabled=false",
+        "telme.consult.chat-integration-enabled=false",
+        "telme.consult.rag-integration-enabled=false"
+})
 class ChatProcessingFallbackIntegrationTest {
 
     @Autowired

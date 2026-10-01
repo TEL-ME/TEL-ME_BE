@@ -108,6 +108,8 @@ public class AnswerGuard {
             "불가", "서비스", "정보", "기록", "신청", "처리", "사용", "이용", "경우", "고객",
             "내용", "안내", "해당", "완료", "일반적", "기준", "기능", "지원하지", "제공하지",
             "않습니다", "않아요", "미지원");
+    private static final Set<String> COMPLETE_COST_GENERIC_WORDS = Set.of(
+            "총", "비용", "총비용", "전체비용", "총액", "금액", "요금", "가격");
 
     private static final Pattern ATTRIBUTE_NEGATIVE = Pattern.compile(
             "(?:불가|불가능|할\\s*수\\s*없|(?:지원|제공)하지\\s*않|"
@@ -117,6 +119,10 @@ public class AnswerGuard {
             "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요)|"
                     + "(?:결제|발급|포함)(?:가|는|이)?\\s*(?:됩니다|돼요|가능)|"
                     + "포함되어\\s*있)");
+    private static final Pattern ACTION_NEGATIVE = Pattern.compile(
+            "(?:불가|불가능|가능하지\\s*않|할\\s*수\\s*없|(?:지원|제공)하지\\s*않|못합니다|안\\s*됩니다)");
+    private static final Pattern ACTION_POSITIVE = Pattern.compile(
+            "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요))");
 
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
     private static final Set<String> GENERIC_CHARGE_WORDS = Set.of(
@@ -128,6 +134,9 @@ public class AnswerGuard {
     private static final Pattern CHARGE_PRESENT = Pattern.compile(
             "(?:(?:수수료|위약금).{0,20}(?:면제(?:가)?\\s*(?:되지|안\\s*되)\\s*않|"
                     + "(?:발생|부과)(?:합니다|됩니다|돼요)|있(?:습니다|어요)))");
+    // "수수료가 부과되지 않는 것은 아닙니다"는 이중 부정이므로 비용이 없다는 뜻이 아니다.
+    private static final Pattern CHARGE_DOUBLE_NEGATIVE = Pattern.compile(
+            "(?:부과|발생)(?:하지|되지)\\s*않는 것은 아닙니다");
 
     private static final Map<PolicyClaim, Pattern> POLICY_CLAIM_PATTERNS = policyClaimPatterns();
 
@@ -140,7 +149,7 @@ public class AnswerGuard {
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
-        filtered = trimUnsupportedPolicyClaims(filtered, context);
+        filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
         verifyAmounts(filtered, context, userQuery);
         verifyMeasures(filtered, context, userQuery);
@@ -255,6 +264,10 @@ public class AnswerGuard {
     }
 
     public String trimUnsupportedPolicyClaims(String answer, String context) {
+        return trimUnsupportedPolicyClaims(answer, context, null);
+    }
+
+    private String trimUnsupportedPolicyClaims(String answer, String context, String userQuery) {
         if (answer == null || answer.isBlank()) {
             return answer == null ? "" : answer;
         }
@@ -262,7 +275,7 @@ public class AnswerGuard {
         boolean previousRemoved = false;
         for (String sentence : SENTENCE.split(answer.strip())) {
             Set<PolicyClaim> unsupported = policyClaimsIn(sentence);
-            unsupported.removeIf(claim -> isPolicyClaimSupported(claim, sentence, context));
+            unsupported.removeIf(claim -> isPolicyClaimSupported(claim, sentence, context, userQuery));
             if (unsupported.isEmpty()) {
                 if (previousRemoved && DEPENDENT_EXPLANATION.matcher(sentence.strip()).find()) {
                     log.warn("[AnswerGuard] 제거된 정책 단정에 종속된 설명 문장 제거: {}", sentence);
@@ -472,20 +485,95 @@ public class AnswerGuard {
         return claims;
     }
 
-    private boolean isPolicyClaimSupported(PolicyClaim claim, String sentence, String context) {
+    private boolean isPolicyClaimSupported(
+            PolicyClaim claim, String sentence, String context, String userQuery) {
         if (context == null) {
             return false;
         }
         Pattern pattern = POLICY_CLAIM_PATTERNS.get(claim);
+        if (claim == PolicyClaim.FEATURE_UNAVAILABLE
+                || claim == PolicyClaim.ACTION_LOCATION_OR_TIMING) {
+            return areAllPolicyActionsSupported(claim, sentence, context, pattern);
+        }
         for (String evidenceSentence : SENTENCE.split(context)) {
-            if (pattern.matcher(evidenceSentence).find()
-                    && sharesPolicyTopic(sentence, evidenceSentence)
-                    && (claim != PolicyClaim.FEATURE_UNAVAILABLE
-                    || hasMatchingPolicyAction(sentence, evidenceSentence, Set.of()))) {
-                return true;
+            if (!pattern.matcher(evidenceSentence).find()) {
+                continue;
             }
+            if (claim == PolicyClaim.COMPLETE_COST) {
+                if (sharesCompleteCostSubject(sentence, evidenceSentence, userQuery)
+                        && hasSameCompleteCostAmount(sentence, evidenceSentence)) {
+                    return true;
+                }
+                continue;
+            }
+            if (!sharesPolicyTopic(sentence, evidenceSentence)) {
+                continue;
+            }
+            return true;
         }
         return false;
+    }
+
+    private boolean areAllPolicyActionsSupported(
+            PolicyClaim claim, String answerSentence, String context, Pattern claimPattern) {
+        Set<FeatureAction> answerActions = featureActions(answerSentence);
+        if (claim == PolicyClaim.FEATURE_UNAVAILABLE) {
+            answerActions.removeIf(action -> actionPolarity(answerSentence, action) != ClaimPolarity.ABSENT);
+        } else if (claim == PolicyClaim.ACTION_LOCATION_OR_TIMING) {
+            answerActions.removeIf(action -> actionContexts(answerSentence, action).isEmpty());
+        }
+        if (answerActions.isEmpty()) {
+            return false;
+        }
+        for (FeatureAction action : answerActions) {
+            boolean supported = false;
+            for (String evidenceSentence : SENTENCE.split(context)) {
+                if (!claimPattern.matcher(evidenceSentence).find()
+                        || !featureActions(evidenceSentence).contains(action)
+                        || !sharesPolicyTopic(answerSentence, evidenceSentence)) {
+                    continue;
+                }
+                if (!hasMatchingActionPolarity(answerSentence, evidenceSentence, action)) {
+                    continue;
+                }
+                if (claim == PolicyClaim.ACTION_LOCATION_OR_TIMING
+                        && !hasMatchingActionContexts(answerSentence, evidenceSentence, action)) {
+                    continue;
+                }
+                supported = true;
+                break;
+            }
+            if (!supported) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean sharesCompleteCostSubject(String answerSentence, String evidenceSentence, String userQuery) {
+        Set<String> answerTopics = completeCostTopics(answerSentence);
+        if (!answerTopics.isEmpty()) {
+            return completeCostTopics(evidenceSentence).containsAll(answerTopics);
+        }
+        return userQuery != null && !completeCostTopics(userQuery).isEmpty()
+                && !intersection(completeCostTopics(userQuery), completeCostTopics(evidenceSentence)).isEmpty();
+    }
+
+    private Set<String> completeCostTopics(String text) {
+        Set<String> topics = topicWords(text);
+        topics.removeIf(topic -> topic.startsWith("원") || COMPLETE_COST_GENERIC_WORDS.contains(topic));
+        return topics;
+    }
+
+    private Set<String> intersection(Set<String> left, Set<String> right) {
+        Set<String> common = new LinkedHashSet<>(left);
+        common.retainAll(right);
+        return common;
+    }
+
+    private boolean hasSameCompleteCostAmount(String answerSentence, String evidenceSentence) {
+        Set<BigInteger> answerAmounts = amountsIn(answerSentence);
+        return !answerAmounts.isEmpty() && amountsIn(evidenceSentence).containsAll(answerAmounts);
     }
 
     private boolean hasMatchingPolicyAction(
@@ -499,8 +587,108 @@ public class AnswerGuard {
         if (answerActions.isEmpty() || evidenceActions.isEmpty()) {
             return false;
         }
-        answerActions.retainAll(evidenceActions);
-        return !answerActions.isEmpty();
+        return !answerActions.isEmpty() && evidenceActions.containsAll(answerActions);
+    }
+
+    private boolean hasMatchingActionPolarity(
+            String answerSentence, String evidenceSentence, FeatureAction action) {
+        ClaimPolarity answerPolarity = actionPolarity(answerSentence, action);
+        ClaimPolarity evidencePolarity = actionPolarity(evidenceSentence, action);
+        return answerPolarity != ClaimPolarity.UNKNOWN
+                && evidencePolarity != ClaimPolarity.UNKNOWN
+                && answerPolarity == evidencePolarity;
+    }
+
+    private boolean hasMatchingActionContexts(
+            String answerSentence, String evidenceSentence, FeatureAction action) {
+        Set<ActionContext> answerContexts = actionContexts(answerSentence, action);
+        Set<ActionContext> evidenceContexts = actionContexts(evidenceSentence, action);
+        return !answerContexts.isEmpty() && evidenceContexts.containsAll(answerContexts);
+    }
+
+    private Set<ActionContext> actionContexts(String sentence, FeatureAction action) {
+        Set<ActionContext> contexts = new LinkedHashSet<>();
+        Matcher actionMatcher = FEATURE_ACTION_PATTERNS.get(action).matcher(sentence);
+        while (actionMatcher.find()) {
+            ActionContext preceding = nearestPrecedingActionContext(sentence, actionMatcher.start());
+            if (preceding != null) {
+                contexts.add(preceding);
+            }
+        }
+        // "변경은 귀국 후 가능합니다"처럼 조건이 동작 뒤에 오는 단일 동작 문장도 지원한다.
+        if (contexts.isEmpty() && featureActions(sentence).size() == 1) {
+            contexts.addAll(actionContextsIn(sentence));
+        }
+        return contexts;
+    }
+
+    private ActionContext nearestPrecedingActionContext(String sentence, int actionStart) {
+        ActionContext nearest = null;
+        int nearestStart = -1;
+        for (ActionContext context : ActionContext.values()) {
+            Matcher matcher = context.pattern.matcher(sentence);
+            while (matcher.find() && matcher.end() <= actionStart) {
+                if (matcher.start() > nearestStart) {
+                    nearest = context;
+                    nearestStart = matcher.start();
+                }
+            }
+        }
+        return nearest;
+    }
+
+    private Set<ActionContext> actionContextsIn(String sentence) {
+        Set<ActionContext> contexts = new LinkedHashSet<>();
+        for (ActionContext context : ActionContext.values()) {
+            if (context.pattern.matcher(sentence).find()) {
+                contexts.add(context);
+            }
+        }
+        return contexts;
+    }
+
+    private ClaimPolarity actionPolarity(String sentence, FeatureAction action) {
+        Pattern actionPattern = FEATURE_ACTION_PATTERNS.get(action);
+        Matcher matcher = actionPattern.matcher(sentence);
+        ClaimPolarity found = ClaimPolarity.UNKNOWN;
+        while (matcher.find()) {
+            int end = nextActionStart(sentence, matcher.end());
+            ClaimPolarity current = actionPolarityIn(sentence.substring(matcher.start(), end));
+            if (current == ClaimPolarity.UNKNOWN) {
+                current = actionPolarityIn(sentence);
+            }
+            if (current == ClaimPolarity.UNKNOWN) {
+                continue;
+            }
+            if (found != ClaimPolarity.UNKNOWN && found != current) {
+                return ClaimPolarity.UNKNOWN;
+            }
+            found = current;
+        }
+        return found;
+    }
+
+    private int nextActionStart(String sentence, int from) {
+        int next = sentence.length();
+        for (Pattern pattern : FEATURE_ACTION_PATTERNS.values()) {
+            Matcher matcher = pattern.matcher(sentence);
+            if (matcher.find(from)) {
+                next = Math.min(next, matcher.start());
+            }
+        }
+        return next;
+    }
+
+    private ClaimPolarity actionPolarityIn(String scope) {
+        boolean negative = ACTION_NEGATIVE.matcher(scope).find();
+        boolean positive = ACTION_POSITIVE.matcher(scope).find();
+        if (negative && (!positive || scope.matches(".*가능하지\\s*않.*"))) {
+            return ClaimPolarity.ABSENT;
+        }
+        if (positive && !negative) {
+            return ClaimPolarity.PRESENT;
+        }
+        return ClaimPolarity.UNKNOWN;
     }
 
     private Set<FeatureAction> featureActions(String text) {
@@ -539,7 +727,10 @@ public class AnswerGuard {
             }
             String claimScope = chargeClaimScope(sentence, topic);
             ClaimPolarity current = ClaimPolarity.UNKNOWN;
-            if (CHARGE_PRESENT.matcher(claimScope).find()) {
+            if (CHARGE_DOUBLE_NEGATIVE.matcher(claimScope).find()
+                    || CHARGE_DOUBLE_NEGATIVE.matcher(sentence).find()) {
+                current = ClaimPolarity.PRESENT;
+            } else if (CHARGE_PRESENT.matcher(claimScope).find()) {
                 current = ClaimPolarity.PRESENT;
             } else if (CHARGE_ABSENT.matcher(claimScope).find()) {
                 current = ClaimPolarity.ABSENT;
@@ -606,8 +797,9 @@ public class AnswerGuard {
         patterns.put(ComparisonClaim.SUPERLATIVE, Pattern.compile("(?:제일|가장)"));
         patterns.put(ComparisonClaim.CHEAPER, Pattern.compile("(?:저렴|(?<!비)(?:싸|싼|쌉))"));
         patterns.put(ComparisonClaim.EXPENSIVE, Pattern.compile("(?:비싸|비싼|비쌉)"));
-        patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리)"));
+        patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리|시간.{0,4}절약)"));
         patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile("(?:편리|간편|편의|편한|편하)"));
+        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:이점|장점)"));
         patterns.put(ComparisonClaim.STABLE, Pattern.compile("안정"));
         patterns.put(ComparisonClaim.SIMPLE, Pattern.compile("(?:간단|수월|복잡하지\\s*않)"));
         patterns.put(ComparisonClaim.BETTER, Pattern.compile("(?:나은|낫(?:다|습|아요|습니다)|더\\s*좋)"));
@@ -619,14 +811,24 @@ public class AnswerGuard {
     private static Map<PolicyClaim, Pattern> policyClaimPatterns() {
         Map<PolicyClaim, Pattern> patterns = new EnumMap<>(PolicyClaim.class);
         patterns.put(PolicyClaim.CALENDAR_DAY_BASIS,
-                Pattern.compile("(?:달력(?:상|일|상의)?(?:\\s*일수)?\\s*기준|"
+                Pattern.compile("(?:달력(?:상|일|상의)?(?:\\s*일수|\\s*날짜(?:를)?)?\\s*기준|"
                         + "(?:날짜|일수)\\s*경과.{0,20}(?:기준|적용))"));
         patterns.put(PolicyClaim.BUSINESS_DAY_BASIS,
                 Pattern.compile("영업일(?:\\s*수)?\\s*기준"));
         patterns.put(PolicyClaim.HARD_DEADLINE,
                 Pattern.compile("(?:최소한|반드시|늦어도).{0,40}(?:까지|전에)"));
         patterns.put(PolicyClaim.FEATURE_UNAVAILABLE,
-                Pattern.compile("(?:기능|서비스).{0,30}(?:제공|지원)하지\\s*않"));
+                Pattern.compile("(?:기능|서비스|변경|해지|취소|결제|신청|가입|발급|조회|이용|사용)"
+                        + ".{0,30}(?:제공|지원)하지\\s*않"));
+        patterns.put(PolicyClaim.ACTION_LOCATION_OR_TIMING,
+                Pattern.compile("(?:(?:현지에서|귀국\\s*후).{0,30}(?:변경|해지|취소|결제|신청|가입|발급|조회|이용|사용|진행)|"
+                        + "(?:변경|해지|취소|결제|신청|가입|발급|조회|이용|사용|진행).{0,30}(?:현지에서|귀국\\s*후))"));
+        patterns.put(PolicyClaim.EXCEPTION_QUALIFIER,
+                Pattern.compile("(?:특별한\\s*경우가\\s*아니라면|특별한\\s*경우(?:를|에는)?\\s*제외|"
+                        + "예외(?:적인)?\\s*경우가\\s*아니라면|예외(?:적인)?\\s*경우(?:를|에는)?\\s*제외)"));
+        // 개별 비용이 안내됐다고 모든 비용을 포함한 총액까지 확인된 것은 아니다.
+        patterns.put(PolicyClaim.COMPLETE_COST,
+                Pattern.compile("(?:총\\s*비용|전체\\s*비용|총액).{0,20}(?:은|이)?\\s*(?:\\d|별도|포함|추가|없|발생|입니다|이에요|예요)"));
         return Map.copyOf(patterns);
     }
 
@@ -696,6 +898,7 @@ public class AnswerGuard {
         EXPENSIVE,
         FASTER,
         CONVENIENT,
+        ADVANTAGE,
         STABLE,
         SIMPLE,
         BETTER,
@@ -707,7 +910,10 @@ public class AnswerGuard {
         CALENDAR_DAY_BASIS,
         BUSINESS_DAY_BASIS,
         HARD_DEADLINE,
-        FEATURE_UNAVAILABLE
+        FEATURE_UNAVAILABLE,
+        ACTION_LOCATION_OR_TIMING,
+        EXCEPTION_QUALIFIER,
+        COMPLETE_COST
     }
 
     private enum FeatureAction {
@@ -718,6 +924,17 @@ public class AnswerGuard {
         PAYMENT,
         USE,
         LOOKUP
+    }
+
+    private enum ActionContext {
+        LOCAL(Pattern.compile("현지에서")),
+        AFTER_RETURN(Pattern.compile("귀국\\s*후"));
+
+        private final Pattern pattern;
+
+        ActionContext(Pattern pattern) {
+            this.pattern = pattern;
+        }
     }
 
     private enum ClaimPolarity {

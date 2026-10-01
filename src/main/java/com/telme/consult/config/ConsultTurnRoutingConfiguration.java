@@ -13,13 +13,13 @@ import com.telme.consult.service.QueryRoutingFollowupAnalysisProvider;
 import com.telme.intent.service.QueryRoutingService;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 /** 라우팅 결과를 상담 판단 입력으로 연결한다. 후속 분석 구현은 라우팅 모듈에서 제공한다. */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "telme.consult.chat-integration-enabled", havingValue = "true")
+@Conditional(ConsultChatEnabledCondition.class)
 public class ConsultTurnRoutingConfiguration {
     @Bean
     @ConditionalOnMissingBean(FollowupAnalysisProvider.class)
