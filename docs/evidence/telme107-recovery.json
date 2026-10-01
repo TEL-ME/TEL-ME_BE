@@ -2,15 +2,11 @@
   "issue": "TELME-107",
   "jira_url": "https://telme-team.atlassian.net/browse/TELME-107",
   "synthetic_only": true,
-  "actual_browser": true,
   "actual_model": true,
-  "frontend": "existing test/ai-chat-ui; polling, team develop has no chat UI",
-  "fe_base": "beb59c82ba7f7c05178e00ab29c6da27d17ae88b",
   "be_base": "cd7df7cc75f75254844f83f7abf39970b10172fb",
-  "url": "http://127.0.0.1:5177/chat-test",
   "backend": "http://127.0.0.1:18107",
   "database": "telme107, local isolated database with 1152 FAQs and 1152 embeddings",
-  "authentication": "existing GuestIdentityFilter and HttpSession cookies through same-origin Vite proxy, no injected identity",
+  "authentication": "existing GuestIdentityFilter and HttpSession cookies, no injected identity",
   "handler": "ConsultChatProcessingService",
   "consult_flags": {
     "persistence-enabled": true,
@@ -34,13 +30,6 @@
     "errors": 0,
     "skipped": 2
   },
-  "fe_check": {
-    "tests": 11,
-    "passed": 11,
-    "failed": 0,
-    "lint": "passed",
-    "build": "passed"
-  },
   "cases": [
     {
       "case": "A",
@@ -48,7 +37,7 @@
       "consultRequestId": 565,
       "executionId": 1252,
       "questionMessageId": 2608,
-      "result": "actual reload kept pending question; next reply used same consultation"
+      "result": "stored pending condition and question retained; subsequent input belongs to consultation 565"
     },
     {
       "case": "B",
@@ -60,7 +49,7 @@
       ],
       "questionMessageId": 2610,
       "outputMessageId": 2612,
-      "result": "actual reload kept known month; history reply ended same consultation DONE"
+      "result": "known month retained; subsequent history answer ended consultation 565 in DONE"
     },
     {
       "case": "C",
@@ -74,7 +63,7 @@
       "questionMessageId": 2614,
       "explanationMessageId": 2616,
       "replyMessageId": 2617,
-      "result": "actual reload restored explanation; next response filled original question 2614, not explanation 2616"
+      "result": "explanation message stored; subsequent condition answer references question 2614 rather than explanation 2616"
     },
     {
       "case": "D",
@@ -85,7 +74,7 @@
         1387,
         1462
       ],
-      "result": "same final answer and sources restored once, no stale loading"
+      "result": "saved answer 2612 and FAQ references match history evidence; one saved answer"
     },
     {
       "case": "E",
@@ -94,32 +83,20 @@
       "executionId": 1259,
       "inputMessageId": 2621,
       "outputMessageId": 2622,
-      "disconnect": {
-        "disconnectedAt": "2026-10-01T09:14:33.367Z",
-        "method": "navigate away from existing test page to about:blank, abort in-page requests"
-      },
       "startedAt": "2026-10-01T09:14:33.352401+00:00",
       "endedAt": "2026-10-01T09:14:36.47899+00:00",
-      "result": "navigated away while RUNNING, re-entered page and restored same result; no automatic third POST; exactly two explicitly submitted timing attempts and two outputs, each displayed once"
+      "result": "execution 1259 progressed from RUNNING to COMPLETED with output 2622; stored records contain two explicitly submitted timing attempts and no third execution"
     }
   ],
   "environment_issue": "Initial missing faq_embeddings gave NO_SEARCH; restored omitted local vectors then reran scenarios without search tuning",
   "limits": [
-    "No team production chat UI; existing test page only",
-    "No browser SSE implementation/test; backend SSE regressions reused",
-    "Physical network offline, 3-minute timeout and failed reconnection UI not live tested; automatic recovery tests cover failed states",
-    "Lost cookie/server restart follows existing ownership rules; pointer is not authorization",
+    "Team screen restoration and browser SSE remain unverified; backend records and automatic tests do not prove screen behavior",
+    "Physical offline recovery, actual failed reconnection screen, lost cookies and server restart are not verified",
+    "Original local evidence is preserved separately; this published subset includes backend records only",
     "No model quality or hallucination improvement claim"
   ],
   "source_sha256": {
-    "TEL-ME_BE-TELME-107/src/test/java/com/telme/consult/service/PlanChangeChatIntegrationTest.java": "7589abd9465095b48b1afc5f56fb606c9d7534449eac299e8e343f85ee5c3373",
-    "TEL-ME_FE-TELME-107/src/chat-test/chat-test.css": "71a35800caf6fe489178506d768631595ed236a4924b79a0206a4b10ddb7c64d",
-    "TEL-ME_FE-TELME-107/src/chat-test/ChatTestPage.tsx": "743603bc46a5c8e102d00ae6a061f9fd8eb7751dc799bddeaa26662dc0c2c9ff",
-    "TEL-ME_FE-TELME-107/src/chat-test/api/chat.ts": "f63e550e2e468a74ac06e9c6128eceadb1a15986f7112011f18b82fd92a74910",
-    "TEL-ME_FE-TELME-107/src/chat-test/api/recovery.mjs": "3fcf1bad51877660a62fef90a9ba9a04f8907a8d207a9147cb64bb5c1a4d232b",
-    "TEL-ME_FE-TELME-107/src/chat-test/api/recovery.d.mts": "0418b9b2ea55eada7e7b076b5acf8bcf67bf1b91b872d29dddb74d1f1e544a3d",
-    "TEL-ME_FE-TELME-107/src/chat-test/api/response.mjs": "bc608ab260eb96136fc440bc803ce0858dc7b0a434e7bf89153277fc0a0ecc9e",
-    "TEL-ME_FE-TELME-107/src/chat-test/api/response.d.mts": "b45ad117db93b8ab005688b8306b167b3543d28ce4ab649a7e0b305e7ca3d346"
+    "TEL-ME_BE-TELME-107/src/test/java/com/telme/consult/service/PlanChangeChatIntegrationTest.java": "7589abd9465095b48b1afc5f56fb606c9d7534449eac299e8e343f85ee5c3373"
   },
   "server_evidence": {
     "sessions": [
@@ -1668,39 +1645,5 @@
       }
     ]
   },
-  "browser_e_after": {
-    "loading": false,
-    "messages": [
-      {
-        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
-        "messageId": 2619,
-        "sources": []
-      },
-      {
-        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
-        "messageId": 2620,
-        "sources": [
-          "요금제 이번 달에 바꿀 수 있나요 · FAQ 1451",
-          "요금 밀려서 요금제를 낮추려는데 안 돼요 · FAQ 1462",
-          "가입한 달에 바로 요금제를 바꿀 수 있나요? · FAQ 399"
-        ]
-      },
-      {
-        "content": "지난달에 가입했고 이번 달에는 아직 요금제를 안 바꿨어요. 제가 지금 요금제를 바꿀 수 있나요?",
-        "messageId": 2621,
-        "sources": []
-      },
-      {
-        "content": "가입한 달이 아니며 이번 달에 아직 변경하지 않으셨으므로, 가입월과 월 1회 기준에 한정하면 요금제 변경이 가능합니다. 이는 두 기준에 한정한 안내입니다.",
-        "messageId": 2622,
-        "sources": [
-          "요금제 이번 달에 바꿀 수 있나요 · FAQ 1451",
-          "요금 밀려서 요금제를 낮추려는데 안 돼요 · FAQ 1462",
-          "가입한 달에 바로 요금제를 바꿀 수 있나요? · FAQ 399"
-        ]
-      }
-    ],
-    "sendDisabled": true,
-    "url": "http://127.0.0.1:5177/chat-test"
-  }
+  "verification_scope": "Backend consultation state, saved messages, execution status and evidence only; team screen and browser SSE restoration remain unverified"
 }
