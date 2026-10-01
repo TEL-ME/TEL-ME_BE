@@ -408,6 +408,240 @@ class PlanChangeChatIntegrationTest {
         assertFinal();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"네", "네, 고마워요", "네 고마워요"})
+    void telme104AcknowledgementAppliesOnlyToTheAskedCondition(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long existing = requestId();
+        turn(reply);
+        assertThat(requestId()).isEqualTo(existing);
+        assertThat(condition(JOINED)).isEqualTo(YES);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", Integer.class, existing, CHANGED)).isZero();
+        assertThat(clarificationCount()).isEqualTo(1);
+        assertFinal();
+    }
+
+    @Test
+    void telme104BarePastMonthUsesAskedQuestionAndThenBareNoUsesChangeHistory() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long existing = requestId();
+        turn("지난달이요");
+        assertThat(requestId()).isEqualTo(existing);
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(condition(CHANGED)).isEqualTo(NO);
+        assertFinal();
+    }
+
+    @Test
+    void telme104CommaSeparatedTwoConditionsDoNotDiscardUnaskedCondition() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달에 가입했고, 이번 달에는 아직 요금제를 안 바꿨어요.");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(condition(CHANGED)).isEqualTo(NO);
+        assertThat(clarificationCount()).isEqualTo(1);
+        assertFinal();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"이번 달에 가입했어요. 지난달에 가입했어요", "이번 달에 가입했어요, 지난달에 가입했어요", "이번 달에 가입한 것 같아요"})
+    void telme104UnclearContradictionNeverFillsEitherFlagAndAllowsClearReply(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn(reply);
+        assertThat(condition(JOINED)).isNull();
+        assertThat(executionStatus()).isEqualTo("COMPLETED");
+        assertThat(clarificationCount()).isEqualTo(1);
+        assertThat(emitter.tokens).isEmpty();
+        turn("지난달이요");
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertFinal();
+    }
+
+    @Test
+    void telme104ExplicitCorrectionOfOtherConditionCompletesWithoutRepeatedQuestion() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달에 가입했어요");
+        assertClarification(CHANGED);
+        turn("아니, 이번 달에 가입했어요");
+        assertThat(condition(JOINED)).isEqualTo(YES);
+        assertThat(clarificationCount()).isEqualTo(2);
+        assertThat(content()).contains("가입한 달에는 요금제를 변경할 수 없습니다");
+        assertFinal();
+    }
+
+    @Test
+    void telme104UncertainConflictDoesNotOverwriteKnownOtherCondition() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달에 가입했어요");
+        long existing = requestId();
+        turn("이번 달에 가입한 것 같아요");
+        assertThat(requestId()).isEqualTo(existing);
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(condition(CHANGED)).isNull();
+        assertThat(clarificationCount()).isEqualTo(2);
+        assertThat(emitter.names).containsExactly("complete");
+        turn("아니요");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(condition(CHANGED)).isEqualTo(NO);
+        assertFinal();
+    }
+
+    @Test
+    void telme104UnknownCorrectionAndKnownOtherFlagAreBothSaved() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("지난달에 가입했어요");
+        turn("가입한 달은 모르겠어요. 이번 달에는 아직 안 바꿨어요");
+        assertThat(condition(JOINED)).isNull();
+        assertThat(condition(CHANGED)).isEqualTo(NO);
+        assertThat(content()).contains("개인별 변경 가능 여부는 확정할 수 없습니다");
+        assertFinal();
+    }
+
+    @Test
+    void telme104MixedOwnAndFriendStatementKeepsOnlyOwnMonth() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("저는 지난달에 가입했고 친구는 이번 달이에요");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertFinal();
+    }
+
+    @Test
+    void telme104ExplanationRequestsKeepSameQuestionWithoutConsumingFailureLimit() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long existing = requestId();
+        for (int n=0; n<2; n++) {
+            turn("가입한 달이 무슨 뜻이에요?");
+            assertThat(requestId()).isEqualTo(existing);
+            assertThat(condition(JOINED)).isNull();
+            assertThat(emitter.names).containsExactly("complete");
+        }
+        assertThat(clarificationCount()).isEqualTo(1);
+        turn("지난달이요");
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertFinal();
+    }
+
+    @Test
+    void telme104MixedNewRequestCancelsOldPlanWithoutConsumingAcknowledgement() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long old = requestId();
+        turn("네, 유심 비용도 알려주세요");
+        long replacement = requestId();
+        assertThat(replacement).isNotEqualTo(old);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, old)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT condition_value FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", String.class, old, JOINED)).isNull();
+        assertFinal();
+        turn("네");
+        assertThat(requestId()).isEqualTo(replacement);
+        assertThat(jdbc.queryForObject("SELECT condition_value FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", String.class, old, JOINED)).isNull();
+        assertMetadataCompletionMatchesHistory();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"네", "아니요"})
+    void telme104NoWaitingQuestionDoesNotResumeCompletedConsultation(String reply) throws Exception {
+        turn("이번 달에 가입했는데 제가 요금제를 바꿀 수 있나요?");
+        long old = requestId();
+        turn(reply);
+        assertThat(requestId()).isEqualTo(old);
+        assertThat(condition(JOINED)).isEqualTo(YES);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, old)).isEqualTo("DONE");
+        assertMetadataCompletionMatchesHistory();
+    }
+
+    @Test
+    void telme104AmbiguousPendingCandidatesFailWithoutAnyConditionUpdate() {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long old = requestId();
+        long another = jdbc.queryForObject("INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status) SELECT session_id,origin_message_id,subquery_order+1,intent,query_text,status FROM consult_requests WHERE consult_request_id=? RETURNING consult_request_id", Long.class, old);
+        jdbc.update("INSERT INTO consult_conditions(consult_request_id,condition_key,status,asked_message_id) SELECT ?,condition_key,status,asked_message_id FROM consult_conditions WHERE consult_request_id=?", another, old);
+        turn("네");
+        assertThat(executionStatus()).isEqualTo("FAILED");
+        assertThat(emitter.tokens).isEmpty();
+        assertThat(emitter.names).containsExactly("error");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_conditions WHERE consult_request_id IN (?,?) AND condition_value IS NOT NULL", Integer.class, old, another)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE consult_request_id IN (?,?) AND status='WAITING_CONDITION'", Integer.class, old, another)).isEqualTo(2);
+    }
+
+    @Test
+    void telme104StoreModelCannotInventLocationAndExistingLocationFlowResumes() {
+        turn("가까운 매장 찾아줘");
+        long old = requestId();
+        org.mockito.Mockito.doReturn("{\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}").when(model).generate(any());
+        turn("네");
+        assertThat(condition("location")).isNull();
+        assertThat(emitter.tokens).isEmpty();
+        turn("강남역이요");
+        assertThat(requestId()).isEqualTo(old);
+        assertThat(condition("location")).isEqualTo("강남역");
+        assertThat(outputType()).isEqualTo("ANSWER");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"친구는 가입한 달을 모르겠어요", "만약 가입한 달을 모르면 어떻게 돼요?"})
+    void telme104OtherPersonsUnknownDoesNotEndOwnConsultation(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long existing = requestId();
+        turn(reply);
+        assertThat(requestId()).isEqualTo(existing);
+        assertThat(condition(JOINED)).isNull();
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", String.class, existing, JOINED)).isEqualTo("PENDING");
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?", String.class, existing)).isEqualTo("WAITING_CONDITION");
+        assertThat(clarificationCount()).isEqualTo(1);
+        assertThat(generations).isEmpty();
+        assertThat(emitter.tokens).isEmpty();
+        turn("지난달이요");
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertFinal();
+    }
+
+    @Test
+    void telme104OwnMonthAndFriendsUnknownHistoryAskOnlyOwnMissingHistory() throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        turn("저는 지난달에 가입했고 친구는 이번 달 변경 이력을 모르겠어요");
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", String.class, requestId(), CHANGED)).isEqualTo("PENDING");
+        assertClarification(CHANGED);
+        assertThat(generations).isEmpty();
+        turn("아니요");
+        assertThat(condition(CHANGED)).isEqualTo(NO);
+        assertFinal();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가입한 달은 모르겠어요. 아니, 지난달에 가입했어요", "가입한 달은 모르겠어요. 아니, 지난달이에요"})
+    void telme104LatestKnownCorrectionAfterUnknownResumesSameConsultation(String reply) throws Exception {
+        turn(PlanChangeClarificationPolicyTest.PERSONAL);
+        long existing = requestId();
+        turn(reply);
+        assertThat(requestId()).isEqualTo(existing);
+        assertThat(condition(JOINED)).isEqualTo(NO);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_conditions WHERE consult_request_id=? AND condition_key=?", String.class, existing, JOINED)).isEqualTo("FILLED");
+        assertClarification(CHANGED);
+        turn("아니요");
+        assertFinal();
+    }
+
+    private void assertMetadataCompletionMatchesHistory() throws Exception {
+        assertThat(emitter.tokens).isEmpty();
+        assertThat(emitter.names).containsExactly("complete");
+        long storedId = jdbc.queryForObject("SELECT output_message_id FROM chat_executions WHERE execution_id=?", Long.class, executionId);
+        assertThat(emitter.completed.outputMessage().messageId()).isEqualTo(storedId);
+        var identity = new MockHttpSession();
+        identity.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        var response = mvc.perform(get("/api/v1/chat/sessions/" + sessionId + "/messages").session(identity)).andExpect(status().isOk()).andReturn().getResponse();
+        var messages = mapper.readTree(response.getContentAsByteArray()).path("result").path("messages");
+        assertThat(messages.get(messages.size()-1).path("messageId").asLong()).isEqualTo(storedId);
+        assertThat(messages.get(messages.size()-1).path("content").asText()).isEqualTo(content());
+    }
+
     private long newSession() {
         return jdbc.queryForObject("INSERT INTO chat_sessions(user_id,title) VALUES (?,'되묻기 검증') RETURNING session_id", Long.class, userId);
     }
@@ -452,6 +686,7 @@ class PlanChangeChatIntegrationTest {
     private final class CaptureEmitter extends SseEmitter {
         List<String> names = new ArrayList<>();
         List<String> tokens = new ArrayList<>();
+        com.telme.chat.service.ChatExecutionState completed;
         @Override public void send(SseEventBuilder builder) throws IOException {
             String name = null;
             Object payload = null;
@@ -461,6 +696,7 @@ class PlanChangeChatIntegrationTest {
                 else if (!(data instanceof String text && text.isBlank())) payload = data;
             }
             names.add(name);
+            if ("complete".equals(name)) completed = (com.telme.chat.service.ChatExecutionState) payload;
             if ("token".equals(name)) { assertThat(executionStatus()).isEqualTo("COMPLETED"); assertThat(payload).isEqualTo(content()); tokens.add((String) payload); }
         }
     }

@@ -83,6 +83,15 @@ class QueryRoutingFollowupAnalysisProviderTest {
         assertThat(result.reroute()).isTrue();
     }
 
+    @Test
+    void ambiguousWaitingCandidatesFailBeforeChoosingOrCallingModel() {
+        var one = context("네").candidates().getFirst();
+        var another = new Candidate(12L, "location", 7L, "어느 지역인가요?", "매장 찾아줘", "매장", "STORE");
+        var ambiguous = new Context(3L, 8L, "네", List.of(one, another));
+        assertThatThrownBy(() -> provider.analyze(ambiguous)).isInstanceOf(GeneralException.class);
+        org.mockito.Mockito.verifyNoInteractions(routing);
+    }
+
     private Context context(String message) {
         return new Context(
                 3L,

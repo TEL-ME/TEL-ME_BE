@@ -226,6 +226,23 @@ class QueryRoutingServiceFollowUpTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void storeFollowupCannotStoreLocationInventedByModel() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "네");
+        assertThat(result.conditions()).isEmpty();
+    }
+
+    @Test
+    void storeFollowupCannotStoreInventedServiceOrDecline() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"serviceType\",\"status\":\"FILLED\",\"value\":\"USIM_REISSUE\"},{\"key\":\"location\",\"status\":\"DECLINED\",\"value\":null}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "강남역이요");
+        assertThat(result.conditions()).containsExactly(entry("location", "강남역"));
+        assertThat(result.declinedKeys()).isEmpty();
+    }
+
     private void givenWaitingPlan(String key) {
         var waiting = ConsultRequest.builder().consultRequestId(WAITING_CONSULT_REQUEST_ID)
                 .subqueryOrder((short) 1).intent(ConsultRequest.Intent.FAQ)

@@ -464,14 +464,11 @@ public class QueryRoutingService {
         // 요금제 조건은 실제 사용자 발화로 검증된 값·거절·보류만 받아 모델의 오분류를 보완한다.
         if (waiting.pendingKeys().stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
             var literal = ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            if (literal.responseType() == ResponseType.NEW_QUESTION || !literal.conditions().isEmpty()
-                    || PlanChangeConditions.isDeferred(reply) || PlanChangeConditions.isAmbiguous(reply)) {
-                if (payload.responseType() != literal.responseType()
-                        || !toExtractedConditions(payload, reply, waiting.pendingKeys())
-                                .equals(toExtractedConditions(literal, reply, waiting.pendingKeys()))) {
-                    payload = literal;
-                    method = QueryRouting.Method.RULE;
-                }
+            if (payload.responseType() != literal.responseType()
+                    || !toExtractedConditions(payload, reply, waiting.pendingKeys())
+                            .equals(toExtractedConditions(literal, reply, waiting.pendingKeys()))) {
+                payload = literal;
+                method = QueryRouting.Method.RULE;
             }
         }
 
@@ -591,6 +588,7 @@ public class QueryRoutingService {
 
         Map<String, String> values = new LinkedHashMap<>();
         Set<String> declinedKeys = new LinkedHashSet<>();
+        var grounded = ruleBasedFallback.classifyFollowUp(reply, pendingKeys);
 
         for (ConditionPayload condition : payload.conditions()) {
             if (condition == null || condition.key() == null || condition.status() == null) {
@@ -607,7 +605,7 @@ public class QueryRoutingService {
             if (planConsult != PlanChangeConditions.KEYS.contains(key)) continue;
 
             if (condition.status() == LlmFollowUpPayload.Status.DECLINED) {
-                if (PlanChangeConditions.KEYS.contains(key) && ruleBasedFallback.classifyFollowUp(reply, pendingKeys).conditions().stream()
+                if (grounded.conditions().stream()
                         .noneMatch(item -> key.equals(item.key()) && item.status() == LlmFollowUpPayload.Status.DECLINED)) continue;
                 declinedKeys.add(key);
                 continue;
@@ -620,6 +618,12 @@ public class QueryRoutingService {
             if (PlanChangeConditions.KEYS.contains(key)
                     && (!PlanChangeConditions.valid(key, value)
                         || !value.equals(PlanChangeConditions.extract(reply, pendingKeys).get(key)))) continue;
+            if (FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
+                    && (!SERVICE_TYPES.contains(value) || !ruleBasedFallback.matchesServiceType(value, reply))) continue;
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
+                    && (!reply.replaceAll("\\s+", "").contains(value.replaceAll("\\s+", ""))
+                        || grounded.conditions().stream().noneMatch(item -> key.equals(item.key())
+                            && item.status() == LlmFollowUpPayload.Status.FILLED))) continue;
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);

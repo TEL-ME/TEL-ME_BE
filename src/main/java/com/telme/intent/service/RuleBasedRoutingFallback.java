@@ -154,19 +154,23 @@ public class RuleBasedRoutingFallback {
         String reply = text.trim();
 
         if (pendingKeys != null && pendingKeys.stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
+            if (PlanChangeConditions.isClarificationRequest(reply)) {
+                return new LlmFollowUpPayload(ResponseType.DEFERRED, List.of());
+            }
             if (Pattern.compile("유심|명의변경|번호이동|로밍|청구서|매장|가상계좌|소액결제|변경\\s*(?:기준|방법|횟수)").matcher(reply).find()
                     && NEW_QUESTION_PATTERN.matcher(reply).find()) {
                 return new LlmFollowUpPayload(ResponseType.NEW_QUESTION, List.of());
             }
             var values = PlanChangeConditions.extract(reply, pendingKeys);
-            if (!values.isEmpty()) {
-                return new LlmFollowUpPayload(ResponseType.CONDITION_RESPONSE,
-                        values.entrySet().stream().map(entry -> new ConditionPayload(entry.getKey(), Status.FILLED, entry.getValue())).toList());
-            }
-            if (PlanChangeConditions.isUnavailable(reply)) {
-                return new LlmFollowUpPayload(ResponseType.CONDITION_RESPONSE,
-                        PlanChangeConditions.unavailableKeys(reply, pendingKeys).stream().filter(PlanChangeConditions.KEYS::contains)
-                                .map(key -> new ConditionPayload(key, Status.DECLINED, null)).toList());
+            var unavailable = PlanChangeConditions.unavailableKeys(reply, pendingKeys);
+            if (!values.isEmpty() || !unavailable.isEmpty()) {
+                List<ConditionPayload> updates = new ArrayList<>();
+                values.forEach((key, value) -> {
+                    if (!unavailable.contains(key)) updates.add(new ConditionPayload(key, Status.FILLED, value));
+                });
+                unavailable.stream().filter(PlanChangeConditions.KEYS::contains)
+                        .forEach(key -> updates.add(new ConditionPayload(key, Status.DECLINED, null)));
+                return new LlmFollowUpPayload(ResponseType.CONDITION_RESPONSE, List.copyOf(updates));
             }
             if (PlanChangeConditions.isAmbiguous(reply)
                     || ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {

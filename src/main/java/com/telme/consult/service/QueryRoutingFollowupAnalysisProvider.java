@@ -23,11 +23,15 @@ public final class QueryRoutingFollowupAnalysisProvider implements FollowupAnaly
     @Override
     public AnalysisResult analyze(Context context) {
         Objects.requireNonNull(context, "context");
+        // 현재 단일 상담 계약에서 복수 대기 질문의 대상을 임의로 고르지 않는다.
+        if (context.candidates().size() != 1) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
         FollowUpRouteResponse result =
                 Objects.requireNonNull(
                         routing.analyzeFollowUp(context.sessionId(), context.message()),
                         "followUpRouteResponse");
-        if (!result.hasTarget()) {
+        if (!result.hasTarget() || result.consultRequestId() != context.candidates().getFirst().consultRequestId()) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
         if (result.disposition() == FollowUpRouteResponse.Disposition.NEW_QUESTION) {
