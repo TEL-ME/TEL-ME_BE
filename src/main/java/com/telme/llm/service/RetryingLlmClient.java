@@ -38,7 +38,11 @@ public class RetryingLlmClient implements LlmClient {
             try {
                 delegate.stream(request, wrapper, attempt);
             } catch (RuntimeException failure) {
-                // 클라이언트가 동기 예외를 던져도 콜백 실패와 동일한 재시도 정책을 적용한다.
+                // 모델의 동기 예외뿐 아니라 delegate.stream 호출 중 하위 onToken/onComplete에서
+                // 전파된 RuntimeException도 보관한다. 기존 정책으로 재시도 여부를 판단한 뒤
+                // 최종 실패는 아래 handler.onError로 전달한다. 현재 RagAnswerGenerator는
+                // onError로 보관한 오류를 stream 종료 후 다시 던진다. 최종 오류·재시도 콜백이나
+                // 재시도 대기에서 발생한 예외까지 모두 이 catch에서 처리하는 계약은 아니다.
                 wrapper.onError(failure);
             }
 
