@@ -36,7 +36,7 @@ public class StoreController {
     @Operation(
             summary = "가까운 매장 검색",
             description = "좌표에서 가까운 순으로 영업 중(폐점 제외) 매장을 반환합니다. 반경 기본값은 10km이고 10km를 넘으면 "
-                    + "10km로 줄여 검색하며, 실제 검색한 반경을 radiusMeters로 돌려줍니다. 개수는 기본 5, 최대 20입니다. "
+                    + "10km로 줄여 검색하며, 실제 검색한 반경을 radiusMeters로 돌려줍니다. 개수는 기본 5개이며, 최대 개수(20개)를 초과하면 400 에러를 반환합니다. "
                     + "serviceTypes를 반복해 여러 업무를 보내면 모두 가능한 매장만 반환합니다. 거리는 직선거리(m)입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공. 결과가 없으면 stores가 빈 배열"),
