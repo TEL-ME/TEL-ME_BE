@@ -10,11 +10,13 @@ import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// 다섯 번의 count가 저마다 다른 시점을 보면 실패한 답변 수가 답 못 한 질문 수보다 커질 수 있다
+@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class AdminDashboardQueryService {
 
     // 답 못 한 질문 중 FAQ로 해결되지 않는 것만 따로 센다
