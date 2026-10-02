@@ -155,10 +155,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (prepared.decision().action() == Action.PROCEED
                 && generated.answer().messageType() == ChatMessage.MessageType.ANSWER) {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
+            // 추적 기록은 전송 뒤에 남긴다. 기록용 DB 쓰기가 최종 답변 전송을 늦추지 않게 한다.
             try {
-                trace.stage(command.executionId(), "finalTransmission", Map.of(
-                        "outputMessageId", completed.outputMessage().messageId(),
-                        "status", "DISPATCH_ATTEMPTED"));
                 events.stream(command.executionId()).onToken(generated.answer().content());
                 trace.stage(command.executionId(), "finalTransmission", Map.of(
                         "outputMessageId", completed.outputMessage().messageId(),

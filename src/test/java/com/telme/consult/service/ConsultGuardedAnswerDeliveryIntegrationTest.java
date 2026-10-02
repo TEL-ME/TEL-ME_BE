@@ -316,6 +316,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(executionStatus()).isEqualTo("COMPLETED");
         assertThat(historyAnswer().content()).isEqualTo(SUPPORTED);
         assertCompletedHistory(SUPPORTED, "GROUNDED");
+        assertThat(traceFromApi().at("/steps/finalTransmission/status").asText()).isEqualTo("DISPATCH_ERROR");
     }
 
     @Test
@@ -820,6 +821,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(((ChatExecutionState) terminal).outputMessage().messageId())
                 .isEqualTo(historyAnswer().messageId());
         assertCompletedHistory(answer, basis);
+        assertThat(traceFromApi().at("/steps/finalTransmission/status").asText()).isEqualTo("DISPATCH_RETURNED");
     }
 
     private void assertCompletedHistory(String answer, String basis) {
@@ -830,6 +832,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(trace.path("answerBasis").asText()).isEqualTo(basis);
         assertThat(trace.at("/steps/finalTransmission/outputMessageId").asLong())
                 .isEqualTo(trace.path("outputMessageId").asLong());
+        assertThat(trace.at("/steps/finalTransmission/status").asText())
+                .isIn("DISPATCH_RETURNED", "DISPATCH_ERROR");
         JsonNode firstRead = historyFromApi("?size=20");
         assertThat(firstRead.path("messages").size()).isEqualTo(2);
         assertThat(firstRead.path("runningExecutionId").isNull()).isTrue();
