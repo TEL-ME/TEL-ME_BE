@@ -26,9 +26,12 @@ public record StoreNearbySearchRequest(
                 @Min(value = 1, message = "검색 반경은 1m 이상이어야 합니다.")
                 Integer radiusMeters, // 검색반경(미터)
                 @Min(value = 1, message = "매장 개수는 1 이상이어야 합니다.")
-                @Max(value = 20, message = "매장 개수는 20 이하여야 합니다.")
+                @Max(value = MAX_LIMIT, message = "매장 개수는 {value} 이하여야 합니다.")
                 Integer limit, // 표시할 매장갯수
                 Set<StoreServiceType.Code> serviceTypes, // 업무종류 필터
                 @Nullable Boolean openNow // 영업중 필터(설정으로 켜기전에는 무시됨)
 ) {
+    // 매장 개수 상한. 반경(설정값)과 달리 API 계약(초과 시 400)이라 환경별로 바꾸지 않도록 상수로 둔다.
+    // 요청 검증(@Max)과 기본 개수 설정 검증이 모두 이 값을 쓴다
+    public static final int MAX_LIMIT = 20;
 }

@@ -288,18 +288,18 @@ class StoreSearchServiceTest {
     @Test
     @DisplayName("기본값이 최대값을 넘는 설정은 기동 시점에 막는다")
     void 잘못된_설정은_막는다() {
-        assertThatThrownBy(() -> new StoreSearchProperties(20000, 10000, 5, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(20000, 10000, 5, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 30, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 30, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 0, 5, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 0, 5, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 5, 20, Duration.ofMillis(500), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 5, Duration.ofMillis(500), false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     private StoreSearchProperties properties(boolean openNowFilterEnabled) {
-        return new StoreSearchProperties(10000, 10000, 5, 20, Duration.ofSeconds(2), openNowFilterEnabled);
+        return new StoreSearchProperties(10000, 10000, 5, Duration.ofSeconds(2), openNowFilterEnabled);
     }
 
     private StoreSearchService enabledService(Clock clock) {

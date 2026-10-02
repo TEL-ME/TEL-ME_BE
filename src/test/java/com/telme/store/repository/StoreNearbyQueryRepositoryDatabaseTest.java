@@ -344,7 +344,7 @@ class StoreNearbyQueryRepositoryDatabaseTest {
     @DisplayName("쿼리 타임아웃을 넘기면 PostgreSQL이 쿼리를 취소한다")
     void 쿼리_타임아웃() {
         StoreNearbyQueryRepository oneSecond = new StoreNearbyQueryRepository(dataSource,
-                new StoreSearchProperties(10000, 10000, 5, 20, Duration.ofSeconds(1), false));
+                new StoreSearchProperties(10000, 10000, 5, Duration.ofSeconds(1), false));
         // 1.5초 걸리는 조건. 극단 조건에서 쿼리가 오래 걸리는 상황을 흉내 낸다
         StoreSearchCondition slow = new StoreSearchCondition() {
             @Override
