@@ -36,6 +36,23 @@ class ConsultTurnAnalysisAdapterTest {
             mock(ConsultTurnPreparationService.class);
 
     @Test
+    void planQuestionExplanationKeepsOriginalQuestionWithoutAnalysisOrAbandoningConsultation() {
+        var candidate = new Candidate(101, "joinedThisMonth", 9, "이번 달에 가입하셨나요?",
+                "제가 지금 요금제를 바꿀 수 있나요?", "요금제 변경", "FAQ");
+        var context = new Context(1, 10, "무슨 뜻이에요?", List.of(candidate));
+        var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, analysis, preparation,
+                new FollowupConditionConverter());
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "무슨 뜻이에요?"));
+        assertThat(turn.preparation().pendingMessageId()).isEqualTo(9);
+        assertThat(turn.preparation().prepared()).isNull();
+        assertThat(turn.answeredField()).isNull();
+        assertThat(turn.directAnswer().content()).contains("달력상의 달", candidate.questionText());
+        assertThat(turn.originalUserQuery()).isEqualTo(candidate.originalUserQuery());
+        verifyNoInteractions(analysis, preparation);
+    }
+
+    @Test
     void mismatchedMessageCannotReachAnalysis() {
         var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
         var adapter =

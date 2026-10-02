@@ -225,4 +225,80 @@ class QueryRoutingServiceFollowUpTest {
         assertThatThrownBy(() -> service.analyzeFollowUp(null, "강남역"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void storeFollowupCannotStoreLocationInventedByModel() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "네");
+        assertThat(result.conditions()).isEmpty();
+    }
+
+    @Test
+    void storeFollowupCannotStoreInventedServiceOrDecline() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"serviceType\",\"status\":\"FILLED\",\"value\":\"USIM_REISSUE\"},{\"key\":\"location\",\"status\":\"DECLINED\",\"value\":null}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "강남역이요");
+        assertThat(result.conditions()).containsExactly(entry("location", "강남역"));
+        assertThat(result.declinedKeys()).isEmpty();
+    }
+
+    private void givenWaitingPlan(String key) {
+        var waiting = ConsultRequest.builder().consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1).intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(java.util.List.of(com.telme.consult.entity.ConsultCondition.builder()
+                        .conditionKey(key).status(com.telme.consult.entity.ConsultCondition.Status.PENDING).build())).build();
+        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+    }
+
+    @Test
+    void planFollowupRejectsModelInventedConditionAndLocation() {
+        givenWaitingPlan("joinedThisMonth");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"joinedThisMonth\",\"status\":\"FILLED\",\"value\":\"예\"},{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "나중에요");
+        assertThat(result.conditions()).isEmpty();
+        assertThat(result.declinedKeys()).isEmpty();
+        assertThat(result.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.DEFERRED);
+    }
+
+    @Test
+    void planFollowupRejectsModelInventedRefusalAndKeepsLiteralNegativeValue() {
+        givenWaitingPlan("joinedThisMonth");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"joinedThisMonth\",\"status\":\"DECLINED\",\"value\":null}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "지난달에 가입했어요");
+        assertThat(result.conditions()).containsExactly(entry("joinedThisMonth", "아니요"));
+        assertThat(result.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    void planFollowupAcceptsOnlyExplicitCanonicalCondition() {
+        givenWaitingPlan("changedThisMonth");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[{\"key\":\"changedThisMonth\",\"status\":\"FILLED\",\"value\":\"아니요\"},{\"key\":\"joinedThisMonth\",\"status\":\"FILLED\",\"value\":\"아니요\"}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "이번 달에는 아직 안 바꿨어요");
+        assertThat(result.conditions()).containsExactly(entry("changedThisMonth", "아니요"));
+        assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+    }
+
+    @Test
+    void explicitNewQuestionNeverUpdatesOldPlanEvenWithConditionsInPayload() {
+        givenWaitingPlan("joinedThisMonth");
+        given(llmClient.generate(any())).willReturn("{\"responseType\":\"NEW_QUESTION\",\"conditions\":[{\"key\":\"joinedThisMonth\",\"status\":\"FILLED\",\"value\":\"아니요\"}]}");
+        var result = service.analyzeFollowUp(SESSION_ID, "지난달에 가입했는데 유심 재발급 비용을 알려주세요");
+        assertThat(result.conditions()).isEmpty();
+        assertThat(result.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
+    }
+
+    @Test
+    void missingFaqPendingKeyIsStateErrorRatherThanLocationQuestion() {
+        givenWaitingPlan("joinedThisMonth");
+        var request = ConsultRequest.builder().consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1).intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION).build();
+        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(request));
+        assertThatThrownBy(() -> service.analyzeFollowUp(SESSION_ID, "네")).isInstanceOf(IllegalStateException.class);
+        verify(llmClient, never()).generate(any());
+    }
 }

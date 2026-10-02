@@ -39,6 +39,15 @@ public class ChatExecutionService {
     }
 
     public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
+        return completeAnswer(executionId, answer, false);
+    }
+
+    /** 대기 질문은 유지하고 설명 메시지만 완료한다. 상담 대기 검증은 호출자의 저장 경계에서 한다. */
+    public ChatExecutionState completeAnswerWhileWaiting(Long executionId, ChatAnswer answer) {
+        return completeAnswer(executionId, answer, true);
+    }
+
+    private ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer, boolean keepWaiting) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         Instant completedAt = Instant.now();
@@ -53,7 +62,8 @@ public class ChatExecutionService {
                 completedAt
         );
         execution.complete(message, completedAt);
-        session.resume();
+        if (keepWaiting) session.waitForClarification();
+        else session.resume();
         session.touch(completedAt);
         ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());

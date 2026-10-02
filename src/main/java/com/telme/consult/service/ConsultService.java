@@ -28,6 +28,14 @@ public class ConsultService {
     private final JdbcConsultStateStore stateStore;
     private final DialogueService dialogueService;
 
+    public long unresolvedPlanReplyCount(long sessionId, long requestId, String field) {
+        return stateStore.unresolvedPlanReplyCount(sessionId, requestId, field);
+    }
+
+    public void abandonWaiting(long sessionId, long requestId) {
+        stateStore.abandonWaiting(sessionId, requestId);
+    }
+
     @Builder
     public record PreparedTurn(long sessionId, int expectedVersion, DialogueDecision decision) {
         public PreparedTurn {

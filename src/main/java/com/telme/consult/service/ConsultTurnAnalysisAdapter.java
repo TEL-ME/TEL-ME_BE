@@ -44,11 +44,20 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 || context.userMessageId() != command.inputMessageId()) {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
         }
+        var explanation = PlanChangeQuestionExplanation.answer(context);
+        if (explanation.isPresent()) {
+            var candidate = context.candidates().getFirst();
+            return new AnalyzedTurn(
+                    new ConsultService.PreparationResult(null, candidate.questionMessageId()),
+                    null, Purpose.GENERAL_FAQ, candidate.originalUserQuery(), candidate.queryText(),
+                    explanation.get());
+        }
         AnalysisResult result = Objects.requireNonNull(analysis.analyze(context), "analysisResult");
         if (result.reroute()) {
             throw new IllegalStateException("새 질문 재라우팅 결과가 처리되지 않았습니다.");
         }
         if (result.directAnswer() != null) {
+            if (!context.candidates().isEmpty()) preparation.abandonPlanWaiting(context);
             return AnalyzedTurn.direct(result.directAnswer());
         }
         if (result.followup() != null) {
@@ -80,6 +89,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                     followup.originalUserQuery(),
                     followup.searchQuery());
         }
+        if (!context.candidates().isEmpty()) preparation.abandonPlanWaiting(context);
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
                         context.sessionId(), result.initialQuery(), result.locationStatus()),

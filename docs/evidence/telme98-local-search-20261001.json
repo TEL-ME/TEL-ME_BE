@@ -1,0 +1,235 @@
+{
+  "model": "bge-m3",
+  "topK": 3,
+  "qaThreshold": 0.72,
+  "questionThreshold": 0.88,
+  "results": [
+    {
+      "query": "요금제 변경 기준이 뭐예요?",
+      "sources": [
+        {
+          "faq_id": 1,
+          "slot_id": null,
+          "question": "요금제는 언제 변경할 수 있나요?",
+          "answer": "요금제는 매월 1회, 영업일 기준 변경 신청일로부터 다음날 자정에 적용됩니다.",
+          "version": 1,
+          "score": 0.8925786018371836,
+          "matchedVariant": "QUESTION_ONLY",
+          "searchRank": 1
+        },
+        {
+          "faq_id": 1417,
+          "slot_id": "BILLING-0050",
+          "question": "미납이 있을 때 요금제 변경 절차가 달라지나요?",
+          "answer": "요금제 변경은 월 1회, 신청일 다음 날 00:00 적용이라는 기준이 그대로 적용됩니다.",
+          "version": 1,
+          "score": 0.7281602189970607,
+          "matchedVariant": "Q_A",
+          "searchRank": 2
+        }
+      ],
+      "variants": {
+        "QUESTION_ONLY": [
+          {
+            "faq_id": 1,
+            "slot_id": null,
+            "question": "요금제는 언제 변경할 수 있나요?",
+            "answer": "요금제는 매월 1회, 영업일 기준 변경 신청일로부터 다음날 자정에 적용됩니다.",
+            "version": 1,
+            "score": 0.8925786018371836,
+            "matchedVariant": "QUESTION_ONLY"
+          }
+        ],
+        "Q_A": [
+          {
+            "faq_id": 1417,
+            "slot_id": "BILLING-0050",
+            "question": "미납이 있을 때 요금제 변경 절차가 달라지나요?",
+            "answer": "요금제 변경은 월 1회, 신청일 다음 날 00:00 적용이라는 기준이 그대로 적용됩니다.",
+            "version": 1,
+            "score": 0.7281602189970607,
+            "matchedVariant": "Q_A"
+          }
+        ]
+      }
+    },
+    {
+      "query": "제가 지금 요금제를 바꿀 수 있나요?",
+      "sources": [
+        {
+          "faq_id": 1451,
+          "slot_id": "BILLING-0092",
+          "question": "요금제 이번 달에 바꿀 수 있나요",
+          "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+          "version": 1,
+          "score": 0.8951310419411523,
+          "matchedVariant": "QUESTION_ONLY",
+          "searchRank": 1
+        },
+        {
+          "faq_id": 395,
+          "slot_id": "BILLING-0057",
+          "question": "요금제는 어떻게 바꿔요",
+          "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+          "version": 1,
+          "score": 0.8944880743665683,
+          "matchedVariant": "QUESTION_ONLY",
+          "searchRank": 2
+        }
+      ],
+      "variants": {
+        "QUESTION_ONLY": [
+          {
+            "faq_id": 1451,
+            "slot_id": "BILLING-0092",
+            "question": "요금제 이번 달에 바꿀 수 있나요",
+            "answer": "이번 달에 아직 안 바꾸셨으면 됩니다. 한 달에 한 번입니다.",
+            "version": 1,
+            "score": 0.8951310419411523,
+            "matchedVariant": "QUESTION_ONLY"
+          },
+          {
+            "faq_id": 395,
+            "slot_id": "BILLING-0057",
+            "question": "요금제는 어떻게 바꿔요",
+            "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+            "version": 1,
+            "score": 0.8944880743665683,
+            "matchedVariant": "QUESTION_ONLY"
+          }
+        ],
+        "Q_A": [
+          {
+            "faq_id": 395,
+            "slot_id": "BILLING-0057",
+            "question": "요금제는 어떻게 바꿔요",
+            "answer": "신청하시면 다음 날 00:00부터 새 요금제로 바뀝니다. 한 달에 한 번만 바꾸실 수 있습니다.",
+            "version": 1,
+            "score": 0.720852975286084,
+            "matchedVariant": "Q_A"
+          }
+        ]
+      }
+    },
+    {
+      "query": "이번 달에 가입했는데 변경할 수 있나요?",
+      "sources": [
+        {
+          "faq_id": 1462,
+          "slot_id": "BILLING-0106",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "version": 1,
+          "score": 0.7442462000701716,
+          "matchedVariant": "Q_A",
+          "searchRank": 1
+        },
+        {
+          "faq_id": 399,
+          "slot_id": "BILLING-0078",
+          "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+          "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+          "version": 1,
+          "score": 0.7371094102389476,
+          "matchedVariant": "Q_A",
+          "searchRank": 2
+        }
+      ],
+      "variants": {
+        "QUESTION_ONLY": [],
+        "Q_A": [
+          {
+            "faq_id": 1462,
+            "slot_id": "BILLING-0106",
+            "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+            "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+            "version": 1,
+            "score": 0.7442462000701716,
+            "matchedVariant": "Q_A"
+          },
+          {
+            "faq_id": 399,
+            "slot_id": "BILLING-0078",
+            "question": "가입한 달에 바로 요금제를 바꿀 수 있나요?",
+            "answer": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다.",
+            "version": 1,
+            "score": 0.7371094102389476,
+            "matchedVariant": "Q_A"
+          }
+        ]
+      }
+    },
+    {
+      "query": "요금제 변경 가입한 달 월 1회 기준",
+      "sources": [
+        {
+          "faq_id": 357,
+          "slot_id": "BILLING-0001",
+          "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+          "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+          "version": 1,
+          "score": 0.7973679787236218,
+          "matchedVariant": "Q_A",
+          "searchRank": 1
+        },
+        {
+          "faq_id": 1387,
+          "slot_id": "BILLING-0015",
+          "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+          "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+          "version": 1,
+          "score": 0.796982251608517,
+          "matchedVariant": "Q_A",
+          "searchRank": 2
+        },
+        {
+          "faq_id": 1462,
+          "slot_id": "BILLING-0106",
+          "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+          "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+          "version": 1,
+          "score": 0.7791360547219078,
+          "matchedVariant": "Q_A",
+          "searchRank": 3
+        }
+      ],
+      "variants": {
+        "QUESTION_ONLY": [],
+        "Q_A": [
+          {
+            "faq_id": 357,
+            "slot_id": "BILLING-0001",
+            "question": "요금제 바꾸는 거 한 달에 몇 번까지 되나요?",
+            "answer": "요금제 변경은 한 달에 1회만 가능합니다. 변경을 신청하시면 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다. 가입한 달에는 변경할 수 없고 다음 달부터 가능합니다.",
+            "version": 1,
+            "score": 0.7973679787236218,
+            "matchedVariant": "Q_A"
+          },
+          {
+            "faq_id": 1387,
+            "slot_id": "BILLING-0015",
+            "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요.",
+            "answer": "월 1회 변경할 수 있고, 신청일 다음 날 00:00부터 적용됩니다. 가입한 달에는 변경할 수 없습니다.",
+            "version": 1,
+            "score": 0.796982251608517,
+            "matchedVariant": "Q_A"
+          },
+          {
+            "faq_id": 1462,
+            "slot_id": "BILLING-0106",
+            "question": "요금 밀려서 요금제를 낮추려는데 안 돼요",
+            "answer": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다.",
+            "version": 1,
+            "score": 0.7791360547219078,
+            "matchedVariant": "Q_A"
+          }
+        ]
+      }
+    }
+  ],
+  "checkedAt": "2026-10-01 Asia/Seoul",
+  "searchCodeRevision": "e553066",
+  "embeddingModelDigest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab",
+  "activeFaqCount": 1152,
+  "verificationScope": "Local Ollama /api/embed + read-only PostgreSQL queries reproducing FaqEmbeddingRepository filters and DualVectorMerger order. Not a deployed Chat API or production-data check."
+}

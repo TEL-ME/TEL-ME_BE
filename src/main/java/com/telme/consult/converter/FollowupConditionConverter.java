@@ -1,6 +1,7 @@
 package com.telme.consult.converter;
 
 import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.PendingClarificationFinder.Candidate;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -62,6 +63,7 @@ public class FollowupConditionConverter {
                         throw new IllegalArgumentException("조건 이름이 필요합니다.");
                     }
                     if (value != null && !value.isBlank()) {
+                        if (!PlanChangeConditions.valid(key, value.strip())) throw new IllegalArgumentException("요금제 조건 값이 올바르지 않습니다.");
                         updates.put(key, Condition.filled(value));
                     }
                 });

@@ -130,10 +130,21 @@ public class ConsultChatPersistenceService {
     @Transactional
     public ChatExecutionState persistWaiting(
             long executionId, long sessionId, ConsultService.PreparationResult result) {
+        return persistWaiting(executionId, sessionId, result, null);
+    }
+
+    /** 설명은 ANSWER로 저장하되 원래 대기 질문·조건·상담을 완료하거나 교체하지 않는다. */
+    @Transactional
+    public ChatExecutionState persistWaiting(
+            long executionId, long sessionId, ConsultService.PreparationResult result, ChatAnswer explanation) {
         if (result == null
                 || !result.waitingForReply()
                 || result.prepared() != null && result.prepared().sessionId() != sessionId) {
             throw new IllegalArgumentException("기존 질문 대기 결과가 필요합니다.");
+        }
+        if (explanation != null && (result.prepared() != null
+                || explanation.messageType() != com.telme.chat.entity.ChatMessage.MessageType.ANSWER)) {
+            throw new IllegalArgumentException("조건 변경 없는 설명 답변만 저장할 수 있습니다.");
         }
         var sessions =
                 jdbc.queryForList(
@@ -143,7 +154,9 @@ public class ConsultChatPersistenceService {
         if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
-        ChatExecutionState execution = chatExecutionService.completeWithoutOutput(executionId);
+        ChatExecutionState execution = explanation == null
+                ? chatExecutionService.completeWithoutOutput(executionId)
+                : chatExecutionService.completeAnswerWhileWaiting(executionId, explanation);
         Integer count =
                 jdbc.queryForObject(
                         """
