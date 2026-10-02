@@ -164,14 +164,15 @@ public class AdminFaqController {
             summary = "FAQ 영구 삭제",
             description = "행을 실제로 지웁니다. 되돌릴 수 없어 이미 삭제 처리된(DELETED) FAQ만 받습니다. "
                     + "답변 근거로 쓰인 적이 있으면 과거 답변의 근거가 끊겨 409로 막습니다. "
+                    + "그 사이 다른 관리자가 저장했을 때도 409로 막습니다. "
                     + "임베딩은 외래키 설정에 따라 함께 사라집니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "영구 삭제 성공"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
             @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
-            @ApiResponse(responseCode = "409", description = "FAQ409-2: 삭제 처리된 FAQ가 아님. "
-                    + "FAQ409-3: 답변 근거로 사용된 적이 있음")
+            @ApiResponse(responseCode = "409", description = "FAQ409-1: 다른 관리자가 먼저 저장함. "
+                    + "FAQ409-2: 삭제 처리된 FAQ가 아님. FAQ409-3: 답변 근거로 사용된 적이 있음")
     })
     @DeleteMapping("/{faqId}/permanent")
     public CustomResponse<Void> purgeFaq(
