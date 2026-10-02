@@ -2,6 +2,7 @@ package com.telme.faq.service;
 
 import com.telme.faq.converter.AdminFaqConverter;
 import com.telme.faq.dto.req.AdminFaqSaveRequest;
+import com.telme.faq.dto.req.AdminFaqStatusRequest;
 import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.exception.FaqErrorCode;
@@ -86,6 +87,17 @@ public class AdminFaqCommandService {
         return converter.toDetail(faq, citationCount(faqId));
     }
 
+    // 본문이 그대로라 재임베딩하지 않는다. 지운 FAQ도 벡터가 남아 있어 되살리면 바로 검색된다
+    public AdminFaqDetailResponse changeStatus(Long faqId, AdminFaqStatusRequest request, Long adminId) {
+        Faq faq = findFaq(faqId);
+        rejectStaleWrite(faq, request.lockVersion());
+        faq.changeStatus(request.status(), adminId);
+        flushOrRejectConflict();
+        entityManager.refresh(faq);
+        log.info("[AdminFaq] 상태 변경 faqId={} status={} adminId={}", faqId, request.status(), adminId);
+        return converter.toDetail(faq, citationCount(faqId));
+    }
+
     // 실제로 지우지 않고 상태만 바꾼다. 임베딩은 남겨도 검색이 f.status = 'ACTIVE'로 거른다
     public void delete(Long faqId, Long adminId, Integer lockVersion) {
         Faq faq = findFaq(faqId);
@@ -94,6 +106,29 @@ public class AdminFaqCommandService {
         // 상태 변경도 UPDATE라 잠금에 걸린다. 커밋까지 미루면 충돌이 여기서 안 잡혀 500으로 나간다
         flushOrRejectConflict();
         log.info("[AdminFaq] 삭제 faqId={} adminId={}", faqId, adminId);
+    }
+
+    // 되돌릴 수 없어 지운 상태인 것만 받는다. 근거로 쓰인 적 있으면 지울 때 과거 답변의 근거가 끊긴다
+    public void purge(Long faqId, Long adminId) {
+        Faq faq = findFaq(faqId);
+        if (faq.getStatus() != Faq.Status.DELETED) {
+            throw new GeneralException(FaqErrorCode.PURGE_NOT_DELETED);
+        }
+        if (citationCount(faqId) > 0) {
+            throw new GeneralException(FaqErrorCode.PURGE_CITED);
+        }
+        deleteOrRejectCited(faq);
+        log.info("[AdminFaq] 영구 삭제 faqId={} adminId={}", faqId, adminId);
+    }
+
+    // 검사한 뒤 누가 되살려 근거로 쓰면 외래키가 막는다. 커밋까지 미루면 여기서 안 잡혀 500으로 나간다
+    private void deleteOrRejectCited(Faq faq) {
+        try {
+            faqRepository.delete(faq);
+            faqRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new GeneralException(FaqErrorCode.PURGE_CITED);
+        }
     }
 
     // @Version은 같은 시점에 겹친 요청만 잡는다. 화면을 연 뒤 남이 먼저 저장하면

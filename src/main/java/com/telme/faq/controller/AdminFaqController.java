@@ -2,6 +2,7 @@ package com.telme.faq.controller;
 
 import com.telme.faq.dto.req.AdminFaqSaveRequest;
 import com.telme.faq.dto.req.AdminFaqSearchRequest;
+import com.telme.faq.dto.req.AdminFaqStatusRequest;
 import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.dto.res.AdminFaqListResponse;
 import com.telme.faq.service.AdminFaqCommandService;
@@ -115,6 +116,30 @@ public class AdminFaqController {
     }
 
     @Operation(
+            summary = "FAQ 상태 변경",
+            description = "질문·답변을 보내지 않고 공개(ACTIVE)·숨김(HIDDEN)·삭제(DELETED) 상태만 바꿉니다. "
+                    + "DELETED를 ACTIVE로 되돌리면 복구가 됩니다. 본문이 그대로라 임베딩을 다시 만들지 않아 "
+                    + "복구 직후부터 검색에 다시 잡힙니다. "
+                    + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "변경 성공"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-0: enum 값 오류. COMMON400-1: status 누락"),
+            @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
+            @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-0: 지운 사이 같은 내용이 등록돼 되살릴 수 없음. "
+                    + "FAQ409-1: 다른 관리자가 먼저 저장함")
+    })
+    @PutMapping("/{faqId}/status")
+    public CustomResponse<AdminFaqDetailResponse> changeFaqStatus(
+            @Parameter(description = "상태를 바꿀 FAQ ID") @PathVariable long faqId,
+            @Valid @RequestBody AdminFaqStatusRequest request,
+            @AuthenticationPrincipal Long adminId) {
+        return CustomResponse.onSuccess(
+                adminFaqCommandService.changeStatus(faqId, request, adminId));
+    }
+
+    @Operation(
             summary = "FAQ 삭제",
             description = "실제로 지우지 않고 상태를 DELETED로 바꿉니다. 검색에서는 바로 빠지고 상태 필터로 다시 볼 수 있습니다. "
                     + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다.")
@@ -132,6 +157,27 @@ public class AdminFaqController {
             @RequestParam(required = false) Integer lockVersion,
             @AuthenticationPrincipal Long adminId) {
         adminFaqCommandService.delete(faqId, adminId, lockVersion);
+        return CustomResponse.onSuccess(null);
+    }
+
+    @Operation(
+            summary = "FAQ 영구 삭제",
+            description = "행을 실제로 지웁니다. 되돌릴 수 없어 이미 삭제 처리된(DELETED) FAQ만 받습니다. "
+                    + "답변 근거로 쓰인 적이 있으면 과거 답변의 근거가 끊겨 409로 막습니다. "
+                    + "임베딩은 외래키 설정에 따라 함께 사라집니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "영구 삭제 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
+            @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "FAQ404-0: FAQ를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "FAQ409-2: 삭제 처리된 FAQ가 아님. "
+                    + "FAQ409-3: 답변 근거로 사용된 적이 있음")
+    })
+    @DeleteMapping("/{faqId}/permanent")
+    public CustomResponse<Void> purgeFaq(
+            @Parameter(description = "영구 삭제할 FAQ ID") @PathVariable long faqId,
+            @AuthenticationPrincipal Long adminId) {
+        adminFaqCommandService.purge(faqId, adminId);
         return CustomResponse.onSuccess(null);
     }
 }
