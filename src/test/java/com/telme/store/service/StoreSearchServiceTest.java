@@ -12,9 +12,11 @@ import static org.mockito.Mockito.when;
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.StoreSearchProperties;
+import com.telme.store.converter.StoreCommonConverter;
 import com.telme.store.converter.StoreConverter;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
 import com.telme.store.dto.res.StoreNearbyResponse;
+import com.telme.store.dto.res.StoreNearbySearchResponse;
 import com.telme.store.entity.StoreServiceType;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.repository.OpenNowCondition;
@@ -54,7 +56,7 @@ class StoreSearchServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(StoreNearbyQueryRepository.class);
-        service = new StoreSearchService(repository, new StoreConverter(), properties(false), WEDNESDAY_3PM_KST);
+        service = new StoreSearchService(repository, converter(), properties(false), WEDNESDAY_3PM_KST);
     }
 
     @Test
@@ -101,13 +103,27 @@ class StoreSearchServiceTest {
     }
 
     @Test
-    @DisplayName("업무 종류에 null이 섞이면 거부한다")
-    void 업무_종류_null은_거부한다() {
+    @DisplayName("업무 종류의 null 원소는 선택 안 함으로 보고 걸러낸다")
+    void 업무_종류_null은_걸러낸다() {
         Set<StoreServiceType.Code> serviceTypes = new HashSet<>();
-        serviceTypes.add(StoreServiceType.Code.NEW_LINE);
+        serviceTypes.add(StoreServiceType.Code.PORT_IN);
         serviceTypes.add(null);
 
-        assertErrorCode(request(LATITUDE, LONGITUDE, null, null, serviceTypes), StoreErrorCode.INVALID_SERVICE_TYPE);
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null, serviceTypes));
+
+        assertThat(capturedFilteredQuery().conditions())
+                .containsExactly(StoreTagCondition.of(List.of(StoreTag.PORT_IN)));
+    }
+
+    @Test
+    @DisplayName("업무 종류가 null 원소뿐이면 필터 없음으로 보고 KNN으로 찾는다")
+    void 업무_종류가_null뿐이면_조건_없음() {
+        Set<StoreServiceType.Code> serviceTypes = new HashSet<>();
+        serviceTypes.add(null);
+
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null, serviceTypes));
+
+        assertThat(capturedQuery().conditions()).isEmpty();
     }
 
     @Test
@@ -151,7 +167,8 @@ class StoreSearchServiceTest {
         when(repository.findNearestCandidatesMatching(any(), anyInt()))
                 .thenReturn(List.of(row(1L, 10), row(2L, 20)));
 
-        List<StoreNearbyResponse> result = enabledService(WEDNESDAY_3PM_KST).findNearbyStores(openNowRequest(null, 2));
+        List<StoreNearbyResponse> result =
+                enabledService(WEDNESDAY_3PM_KST).findNearbyStores(openNowRequest(null, 2)).stores();
 
         assertThat(result).extracting(StoreNearbyResponse::storeId).containsExactly(1L, 2L);
         verify(repository).findNearestCandidatesMatching(any(), eq(20));
@@ -164,7 +181,8 @@ class StoreSearchServiceTest {
         when(repository.findNearestCandidatesMatching(any(), anyInt())).thenReturn(List.of(row(1L, 10)));
         when(repository.findMatchingWithinRadius(any())).thenReturn(List.of(row(1L, 10), row(3L, 900)));
 
-        List<StoreNearbyResponse> result = enabledService(WEDNESDAY_3PM_KST).findNearbyStores(openNowRequest(null, 2));
+        List<StoreNearbyResponse> result =
+                enabledService(WEDNESDAY_3PM_KST).findNearbyStores(openNowRequest(null, 2)).stores();
 
         assertThat(result).extracting(StoreNearbyResponse::storeId).containsExactly(1L, 3L);
     }
@@ -186,7 +204,7 @@ class StoreSearchServiceTest {
     void 거리를_반올림한다() {
         when(repository.findNearest(any())).thenReturn(List.of(row(1L, 1234.5), row(2L, 1234.4)));
 
-        List<StoreNearbyResponse> result = service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null));
+        List<StoreNearbyResponse> result = service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null)).stores();
 
         assertThat(result).extracting(StoreNearbyResponse::storeId).containsExactly(1L, 2L);
         assertThat(result).extracting(StoreNearbyResponse::distanceMeters).containsExactly(1235, 1234);
@@ -218,23 +236,9 @@ class StoreSearchServiceTest {
                 .isSameAs(failure);
     }
 
-    @ParameterizedTest(name = "위도 {0}, 경도 {1}")
-    @CsvSource({
-            "90.000001, 127.0",
-            "-90.000001, 127.0",
-            "37.5, 180.000001",
-            "37.5, -180.000001",
-            "NaN, 127.0",
-            "37.5, Infinity"
-    })
-    @DisplayName("좌표가 범위를 벗어나면 검색하지 않고 거부한다")
-    void 잘못된_좌표는_거부한다(double latitude, double longitude) {
-        assertErrorCode(request(latitude, longitude, null, null), StoreErrorCode.INVALID_COORDINATE);
-    }
-
     @Test
-    @DisplayName("좌표가 없으면 거부한다")
-    void 좌표가_없으면_거부한다() {
+    @DisplayName("내부 호출에서 좌표가 없으면 STORE400-0으로 거부한다 (HTTP 요청은 DTO 검증에서 먼저 400)")
+    void 내부_호출에서_좌표가_없으면_거부한다() {
         assertErrorCode(request(null, LONGITUDE, null, null), StoreErrorCode.INVALID_COORDINATE);
         assertErrorCode(request(LATITUDE, null, null, null), StoreErrorCode.INVALID_COORDINATE);
     }
@@ -242,17 +246,20 @@ class StoreSearchServiceTest {
     @Test
     @DisplayName("지구 좌표 범위의 경계값은 오류가 아니다")
     void 좌표_경계값은_허용한다() {
-        assertThat(service.findNearbyStores(request(90.0, 180.0, null, null))).isEmpty();
-        assertThat(service.findNearbyStores(request(-90.0, -180.0, null, null))).isEmpty();
+        assertThat(service.findNearbyStores(request(90.0, 180.0, null, null)).stores()).isEmpty();
+        assertThat(service.findNearbyStores(request(-90.0, -180.0, null, null)).stores()).isEmpty();
     }
 
     @ParameterizedTest(name = "위도 {0}, 경도 {1}")
     @CsvSource({"40.7128, -74.0060", "32.99, 126.5", "38.71, 127.0", "37.5, 124.49", "37.5, 132.01"})
     @DisplayName("국내 서비스 지역 밖이면 DB를 조회하지 않고 빈 목록을 반환한다")
     void 서비스_지역_밖은_빈_목록(double latitude, double longitude) {
-        assertThat(service.findNearbyStores(request(latitude, longitude, null, null))).isEmpty();
+        StoreNearbySearchResponse result = service.findNearbyStores(request(latitude, longitude, 3000, null));
+        assertThat(result.stores()).isEmpty();
+        assertThat(result.radiusMeters()).isEqualTo(3000);
         assertThat(service.findNearbyStores(
-                request(latitude, longitude, null, null, Set.of(StoreServiceType.Code.USIM_REISSUE)))).isEmpty();
+                request(latitude, longitude, null, null, Set.of(StoreServiceType.Code.USIM_REISSUE))).stores())
+                .isEmpty();
         verify(repository, never()).findNearest(any());
         verify(repository, never()).findNearestMatching(any());
         verify(repository, never()).findMatchingWithinRadius(any());
@@ -269,46 +276,60 @@ class StoreSearchServiceTest {
     }
 
     @ParameterizedTest(name = "반경 {0}m")
-    @CsvSource({"0", "-1", "10001"})
-    @DisplayName("반경이 허용 범위(최대 10km)를 벗어나면 거부한다")
-    void 잘못된_반경은_거부한다(int radiusMeters) {
-        assertErrorCode(request(LATITUDE, LONGITUDE, radiusMeters, null), StoreErrorCode.INVALID_SEARCH_RADIUS);
+    @CsvSource({"1, 1", "3000, 3000", "10000, 10000", "10001, 10000", "2147483647, 10000"})
+    @DisplayName("반경이 상한(10km)을 넘으면 상한으로 줄여 검색하고, 실제 검색한 반경을 응답에 담는다")
+    void 상한을_넘는_반경은_줄인다(int requested, int applied) {
+        StoreNearbySearchResponse result = service.findNearbyStores(request(LATITUDE, LONGITUDE, requested, null));
+
+        assertThat(capturedQuery().radiusMeters()).isEqualTo(applied);
+        assertThat(result.radiusMeters()).isEqualTo(applied);
     }
 
     @Test
-    @DisplayName("반경 상한값 10km는 허용한다")
-    void 반경_상한값은_허용한다() {
-        service.findNearbyStores(request(LATITUDE, LONGITUDE, 10000, null));
+    @DisplayName("반경을 비우면 기본값으로 검색했다고 응답에 담는다")
+    void 기본_반경을_응답에_담는다() {
+        assertThat(service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null)).radiusMeters())
+                .isEqualTo(10000);
+    }
 
-        assertThat(capturedQuery().radiusMeters()).isEqualTo(10000);
+    @Test
+    @DisplayName("내부 호출에서 개수가 20을 넘으면 20으로 줄여 검색한다 (HTTP 요청은 DTO 검증에서 400)")
+    void 내부_호출에서_개수가_20을_넘으면_줄인다() {
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, 100));
+        assertThat(capturedQuery().limit()).isEqualTo(20);
     }
 
     @ParameterizedTest(name = "개수 {0}")
-    @CsvSource({"0", "-1", "21"})
-    @DisplayName("개수가 허용 범위를 벗어나면 거부한다")
-    void 잘못된_개수는_거부한다(int limit) {
-        assertErrorCode(request(LATITUDE, LONGITUDE, null, limit), StoreErrorCode.INVALID_SEARCH_LIMIT);
+    @CsvSource({"0", "-1", "-2147483648"})
+    @DisplayName("내부 호출에서 개수가 1보다 작으면 1로 맞춰 검색한다 (HTTP 요청은 DTO 검증에서 400)")
+    void 내부_호출에서_개수가_1보다_작으면_1로_맞춘다(int limit) {
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, limit));
+        assertThat(capturedQuery().limit()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("기본값이 최대값을 넘는 설정은 기동 시점에 막는다")
     void 잘못된_설정은_막는다() {
-        assertThatThrownBy(() -> new StoreSearchProperties(20000, 10000, 5, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(20000, 10000, 5, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 30, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 30, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 0, 5, 20, Duration.ofSeconds(2), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 0, 5, Duration.ofSeconds(2), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 5, 20, Duration.ofMillis(500), false))
+        assertThatThrownBy(() -> new StoreSearchProperties(10000, 10000, 5, Duration.ofMillis(500), false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     private StoreSearchProperties properties(boolean openNowFilterEnabled) {
-        return new StoreSearchProperties(10000, 10000, 5, 20, Duration.ofSeconds(2), openNowFilterEnabled);
+        return new StoreSearchProperties(10000, 10000, 5, Duration.ofSeconds(2), openNowFilterEnabled);
     }
 
     private StoreSearchService enabledService(Clock clock) {
-        return new StoreSearchService(repository, new StoreConverter(), properties(true), clock);
+        return new StoreSearchService(repository, converter(), properties(true), clock);
+    }
+
+    private StoreConverter converter() {
+        return new StoreConverter(new StoreCommonConverter());
     }
 
     // 필터가 없으면 저장소의 KNN으로, 있으면 필터 전략으로 간다
