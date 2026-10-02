@@ -26,7 +26,7 @@ public record StoreNearbySearchRequest(
                 Double longitude,
                 @Min(value = 1, message = "검색 반경은 1m 이상이어야 합니다.")
                 Integer radiusMeters, // 검색반경(미터)
-                @Min(value = 1, message = "매장 개수는 1 이상이어야 합니다.")
+                @Min(value = StoreSearchProperties.MIN_LIMIT, message = "매장 개수는 {value} 이상이어야 합니다.")
                 @Max(value = StoreSearchProperties.MAX_LIMIT, message = "매장 개수는 {value} 이하여야 합니다.")
                 Integer limit, // 표시할 매장갯수
                 Set<StoreServiceType.Code> serviceTypes, // 업무종류 필터

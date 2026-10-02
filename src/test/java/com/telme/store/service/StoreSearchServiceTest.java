@@ -299,6 +299,14 @@ class StoreSearchServiceTest {
         assertThat(capturedQuery().limit()).isEqualTo(20);
     }
 
+    @ParameterizedTest(name = "개수 {0}")
+    @CsvSource({"0", "-1", "-2147483648"})
+    @DisplayName("내부 호출에서 개수가 1보다 작으면 1로 맞춰 검색한다 (HTTP 요청은 DTO 검증에서 400)")
+    void 내부_호출에서_개수가_1보다_작으면_1로_맞춘다(int limit) {
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, limit));
+        assertThat(capturedQuery().limit()).isEqualTo(1);
+    }
+
     @Test
     @DisplayName("기본값이 최대값을 넘는 설정은 기동 시점에 막는다")
     void 잘못된_설정은_막는다() {

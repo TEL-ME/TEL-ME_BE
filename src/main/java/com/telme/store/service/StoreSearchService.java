@@ -127,11 +127,13 @@ public class StoreSearchService {
         return Math.min(radiusMeters, storeSearchProperties.maxRadiusMeters());
     }
 
+    // HTTP 요청은 DTO 검증이 범위 밖을 400으로 막는다. 검증을 거치지 않는 내부 호출은 MIN_LIMIT~MAX_LIMIT 안으로 맞춘다
+    // (음수 limit은 SQL LIMIT 오류로 500이 된다)
     private int resolveLimit(Integer limit) {
         if (limit == null) {
             return storeSearchProperties.defaultLimit();
         }
-        return Math.min(limit, StoreSearchProperties.MAX_LIMIT);
+        return Math.max(StoreSearchProperties.MIN_LIMIT, Math.min(limit, StoreSearchProperties.MAX_LIMIT));
     }
 
     // 정적 조건은 모두 StoreTag로 바꿔 StoreTagCondition 하나로 묶는다. 새 정적 조건은 요청 필드를 StoreTag로
