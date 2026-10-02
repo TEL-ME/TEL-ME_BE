@@ -103,13 +103,27 @@ class StoreSearchServiceTest {
     }
 
     @Test
-    @DisplayName("업무 종류에 null이 섞이면 거부한다")
-    void 업무_종류_null은_거부한다() {
+    @DisplayName("업무 종류의 null 원소는 선택 안 함으로 보고 걸러낸다")
+    void 업무_종류_null은_걸러낸다() {
         Set<StoreServiceType.Code> serviceTypes = new HashSet<>();
-        serviceTypes.add(StoreServiceType.Code.NEW_LINE);
+        serviceTypes.add(StoreServiceType.Code.PORT_IN);
         serviceTypes.add(null);
 
-        assertErrorCode(request(LATITUDE, LONGITUDE, null, null, serviceTypes), StoreErrorCode.INVALID_SERVICE_TYPE);
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null, serviceTypes));
+
+        assertThat(capturedFilteredQuery().conditions())
+                .containsExactly(StoreTagCondition.of(List.of(StoreTag.PORT_IN)));
+    }
+
+    @Test
+    @DisplayName("업무 종류가 null 원소뿐이면 필터 없음으로 보고 KNN으로 찾는다")
+    void 업무_종류가_null뿐이면_조건_없음() {
+        Set<StoreServiceType.Code> serviceTypes = new HashSet<>();
+        serviceTypes.add(null);
+
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null, serviceTypes));
+
+        assertThat(capturedQuery().conditions()).isEmpty();
     }
 
     @Test

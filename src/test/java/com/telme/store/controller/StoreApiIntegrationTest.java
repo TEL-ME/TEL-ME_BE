@@ -81,6 +81,13 @@ class StoreApiIntegrationTest {
     }
 
     @Test
+    void 업무_종류에_빈_값이_섞여도_선택_안_함으로_보고_검색한다() throws Exception {
+        assertThat(storeIds(nearby().param("serviceTypes", "", "PORT_IN").param("limit", "20")))
+                .isNotEmpty()
+                .isEqualTo(nearestOpenStoreIds(20, List.of("PORT_IN")));
+    }
+
+    @Test
     void 검색_조건이_잘못되면_매장_에러_코드로_거부한다() throws Exception {
         mvc.perform(get(NEARBY_URL).param("longitude", LONGITUDE))
                 .andExpect(status().isBadRequest())

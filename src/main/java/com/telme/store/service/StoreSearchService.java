@@ -148,12 +148,13 @@ public class StoreSearchService {
         List<StoreSearchCondition> conditions = new ArrayList<>();
         Set<StoreServiceType.Code> serviceTypes = request.serviceTypes();
         if (serviceTypes != null && !serviceTypes.isEmpty()) {
-            // JSON 배열의 null 원소는 Jackson이 막지 않아 여기서 거른다.
-            // Set.of()로 만든 불변 Set은 contains(null)에서 예외를 던지므로 스트림으로 검사한다
-            if (serviceTypes.stream().anyMatch(Objects::isNull)) {
-                throw new GeneralException(StoreErrorCode.INVALID_SERVICE_TYPE);
+            List<StoreTag> tags = serviceTypes.stream()
+                    .filter(Objects::nonNull)
+                    .map(StoreTag::of)
+                    .toList();
+            if (!tags.isEmpty()) {
+                conditions.add(StoreTagCondition.of(tags));
             }
-            conditions.add(StoreTagCondition.of(serviceTypes.stream().map(StoreTag::of).toList()));
         }
         if (Boolean.TRUE.equals(request.openNow())) {
             conditions.add(openNowCondition());
