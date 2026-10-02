@@ -49,6 +49,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             throw new IllegalStateException("새 질문 재라우팅 결과가 처리되지 않았습니다.");
         }
         if (result.directAnswer() != null) {
+            if (!context.candidates().isEmpty()) preparation.abandonPlanWaiting(context);
             return AnalyzedTurn.direct(result.directAnswer());
         }
         if (result.followup() != null) {
@@ -80,6 +81,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                     followup.originalUserQuery(),
                     followup.searchQuery());
         }
+        if (!context.candidates().isEmpty()) preparation.abandonPlanWaiting(context);
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
                         context.sessionId(), result.initialQuery(), result.locationStatus()),

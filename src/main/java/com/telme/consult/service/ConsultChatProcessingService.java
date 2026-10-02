@@ -5,8 +5,11 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueDecision;
+import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.global.common.exception.GeneralException;
@@ -16,6 +19,7 @@ import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,6 +33,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private final ConsultChatPersistenceService persistence;
     private final ConfirmedConditionConverter conditionConverter;
     private final ConsultChatEvents events;
+    private final ExecutionTrace trace;
 
     public ConsultChatProcessingService(
             TurnAnalyzer analyzer,
@@ -49,11 +54,22 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ConsultChatPersistenceService persistence,
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events) {
+        this(analyzer, answers, persistence, conditionConverter, events, ExecutionTrace.noop());
+    }
+
+    public ConsultChatProcessingService(
+            TurnAnalyzer analyzer,
+            AnswerProvider answers,
+            ConsultChatPersistenceService persistence,
+            ConfirmedConditionConverter conditionConverter,
+            ConsultChatEvents events,
+            ExecutionTrace trace) {
         this.analyzer = Objects.requireNonNull(analyzer);
         this.answers = Objects.requireNonNull(answers);
         this.persistence = Objects.requireNonNull(persistence);
         this.conditionConverter = Objects.requireNonNull(conditionConverter);
         this.events = Objects.requireNonNull(events);
+        this.trace = Objects.requireNonNull(trace);
     }
 
     @Override
@@ -67,7 +83,19 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private void process(ChatProcessingCommand command) {
+        trace.stage(command.executionId(), "processing", Map.of(
+                "handler", "ConsultChatProcessingService", "traceVersion", 1));
         AnalyzedTurn turn = analyzer.analyze(command);
+        if (turn.directAnswer() == null && turn.preparation() != null) {
+            trace.stage(command.executionId(), "analysis", Map.of(
+                    "purpose", turn.purpose().name(), "originalQuery", turn.originalUserQuery(),
+                    "refinedQuery", turn.searchQuery(), "action",
+                    turn.preparation().waitingForReply() ? "WAITING"
+                            : turn.preparation().prepared().decision().action().name()));
+        } else {
+            trace.stage(command.executionId(), "analysis", Map.of("action",
+                    turn.directAnswer() != null ? "DIRECT" : "ADAPTER_BRANCH"));
+        }
         if (turn.directAnswer() != null) {
             var completed =
                     persistence.persistDirectAnswer(
@@ -93,6 +121,25 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             events.completed(command.executionId(), clarification);
             return;
         }
+        PreparedAnswer answerPreparation = null;
+        if (prepared.decision().action() == Action.PROCEED) {
+            answerPreparation = answers.prepare(new AnswerInput(command.executionId(), command.sessionId(),
+                    prepared.decision().consultRequestId(), turn.purpose(), turn.originalUserQuery(),
+                    turn.searchQuery(), conditionConverter.convert(prepared.decision().conditions())),
+                    prepared.decision().conditions());
+            if (answerPreparation.decision() != null) {
+                prepared = new ConsultService.PreparedTurn(prepared.sessionId(), prepared.expectedVersion(),
+                        answerPreparation.decision());
+                trace.stage(command.executionId(), "clarificationAssessment", Map.of(
+                        "action", prepared.decision().action().name(), "consultRequestId", prepared.decision().consultRequestId(),
+                        "waitingField", prepared.decision().waitingField() == null ? "" : prepared.decision().waitingField()));
+                if (prepared.decision().action() == Action.ASK) {
+                    var clarification = persistence.persistClarification(command.executionId(), prepared, turn.answeredField());
+                    events.completed(command.executionId(), clarification);
+                    return;
+                }
+            }
+        }
         persistence.persistReadyTurn(command.executionId(), prepared, turn.answeredField());
         GeneratedAnswer generated;
         if (prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE) {
@@ -107,17 +154,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         } else {
             var started = persistence.startAnswer(command.executionId(), command.sessionId());
             events.started(started);
-            generated =
-                    answers.generate(
-                            new AnswerInput(
-                                    command.executionId(),
-                                    command.sessionId(),
-                                    prepared.decision().consultRequestId(),
-                                    turn.purpose(),
-                                    turn.originalUserQuery(),
-                                    turn.searchQuery(),
-                                    conditionConverter.convert(
-                                            prepared.decision().conditions())));
+            generated = answerPreparation.generation().get();
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -131,8 +168,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 && generated.answer().messageType() == ChatMessage.MessageType.ANSWER) {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
             try {
+                trace.stage(command.executionId(), "finalTransmission", Map.of(
+                        "outputMessageId", completed.outputMessage().messageId(),
+                        "status", "DISPATCH_ATTEMPTED"));
                 events.stream(command.executionId()).onToken(generated.answer().content());
+                trace.stage(command.executionId(), "finalTransmission", Map.of(
+                        "outputMessageId", completed.outputMessage().messageId(),
+                        "status", "DISPATCH_RETURNED"));
             } catch (RuntimeException deliveryFailure) {
+                trace.stage(command.executionId(), "finalTransmission", Map.of(
+                        "outputMessageId", completed.outputMessage().messageId(),
+                        "status", "DISPATCH_ERROR"));
                 log.warn("최종 답변 토큰 전달 실패: executionId={}",
                         command.executionId(), deliveryFailure);
             }
@@ -189,6 +235,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     public interface AnswerProvider {
         GeneratedAnswer generate(AnswerInput input);
+
+        /** 검색 후 되묻기와 실제 생성을 나눈다. 기존 목적별 제공자는 그대로 재사용한다. */
+        default PreparedAnswer prepare(AnswerInput input, Map<String, Condition> conditions) {
+            return new PreparedAnswer(null, () -> generate(input));
+        }
+    }
+
+    public record PreparedAnswer(DialogueDecision decision, Supplier<GeneratedAnswer> generation) {
+        public PreparedAnswer {
+            Objects.requireNonNull(generation, "generation");
+        }
     }
 
     public record GeneratedAnswer(ChatAnswer answer, List<AnswerSource> sources) {

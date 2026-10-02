@@ -9,6 +9,9 @@ import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.service.ConsultChatProcessingService.PreparedAnswer;
 
 /** 상담 목적에 맞는 답변 경로를 선택한다. */
 public final class PurposeRoutingAnswerProvider implements AnswerProvider {
@@ -34,5 +37,11 @@ public final class PurposeRoutingAnswerProvider implements AnswerProvider {
                         ChatMessage.AnswerBasis.NO_EVIDENCE,
                         List.of("고객센터 연결"),
                         null));
+    }
+
+    @Override
+    public PreparedAnswer prepare(AnswerInput input, Map<String, Condition> conditions) {
+        return input.purpose() == Purpose.GENERAL_FAQ
+                ? faqAnswers.prepare(input, conditions) : AnswerProvider.super.prepare(input, conditions);
     }
 }

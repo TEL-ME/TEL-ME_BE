@@ -108,6 +108,12 @@ public final class RoutingPromptTemplates {
         [조건 정의]
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+        - joinedThisMonth: 이번 달 가입 여부. 명시된 경우에만 "예" 또는 "아니요".
+        - changedThisMonth: 이번 달 이미 요금제를 변경했는지. 명시된 경우에만 "예" 또는 "아니요".
+        - 요금제 조건을 되물을 때 단독 "네/아니요"는 지금 묻는 조건 하나에만 적용한다.
+          지난달 가입은 joinedThisMonth="아니요", 이번 달 아직 안 바꿈은 changedThisMonth="아니요".
+          정정은 명시된 해당 조건을 갱신하며, 다른 조건이나 지역을 추측하지 않는다.
+          "모르겠어요"는 지금 묻는 조건의 DECLINED, "나중에요"는 DEFERRED로 처리한다.
 
         [상태 판정 기준]
         - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
@@ -119,6 +125,10 @@ public final class RoutingPromptTemplates {
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
 
         [예시]
+        되묻는 중인 조건: changedThisMonth
+        고객 답변: "이번 달에는 아직 안 바꿨어요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"changedThisMonth","status":"FILLED","value":"아니요"}]}
+
         되묻는 중인 조건: location
         고객 답변: "강남역이요"
         응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"location","status":"FILLED","value":"강남역"}]}
@@ -143,7 +153,7 @@ public final class RoutingPromptTemplates {
         {
           "responseType": "CONDITION_RESPONSE" | "DEFERRED" | "NEW_QUESTION",
           "conditions": [
-            { "key": "location" | "serviceType", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
+            { "key": "location" | "serviceType" | "joinedThisMonth" | "changedThisMonth", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
           ]
         }
         """;
