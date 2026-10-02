@@ -711,7 +711,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
             var second = CompletableFuture.runAsync(() -> processor.request(secondCommand));
             CompletableFuture.allOf(first, second).get(15, TimeUnit.SECONDS);
             var firstTrace = traceFromApi();
-            var secondTrace = traces.get(new ChatActor(userId, null), secondSession, secondExecution);
+            JsonNode secondTrace = objectMapper.valueToTree(
+                    traces.get(new ChatActor(userId, null), secondSession, secondExecution));
             assertThat(firstTrace.path("originalUserMessage").asText()).isEqualTo(QUERY);
             assertThat(secondTrace.path("originalUserMessage").asText()).isEqualTo("별도 질문");
             assertThat(firstTrace.at("/steps/generationInput/sources/0/question").asText()).isEqualTo("FIRST_FAQ");
