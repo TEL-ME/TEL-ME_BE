@@ -5,7 +5,7 @@ import com.telme.store.converter.AdminStoreConverter;
 import com.telme.store.dto.req.AdminStoreSearchRequest;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
-import com.telme.store.dto.res.AdminStoreServiceResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.repository.StoreRepository;
@@ -30,7 +30,7 @@ public class AdminStoreQueryService {
     private final StoreServiceTypeRepository serviceTypeRepository;
     private final AdminStoreConverter converter;
     
-    public List<AdminStoreServiceResponse> getServiceTypes() {
+    public List<StoreServiceTypeResponse> getServiceTypes() {
         return converter.toServiceTypes(serviceTypeRepository.findAllByOrderByServiceTypeIdAsc());
     }
     

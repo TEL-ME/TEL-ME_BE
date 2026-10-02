@@ -5,7 +5,7 @@ import com.telme.store.dto.req.AdminStoreSaveRequest;
 import com.telme.store.dto.req.AdminStoreSearchRequest;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
-import com.telme.store.dto.res.AdminStoreServiceResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.service.AdminStoreCommandService;
 import com.telme.store.service.AdminStoreQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -83,7 +83,7 @@ public class AdminStoreController {
         @ApiResponse(responseCode = "403", description = "Admin 권한 없음")
     })
     @GetMapping("/service-types")
-    public CustomResponse<List<AdminStoreServiceResponse>> getServiceTypes() {
+    public CustomResponse<List<StoreServiceTypeResponse>> getServiceTypes() {
         return CustomResponse.onSuccess(adminStoreQueryService.getServiceTypes());
     }
     

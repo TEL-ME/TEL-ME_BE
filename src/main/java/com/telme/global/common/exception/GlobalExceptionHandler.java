@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final String INVALID_FORMAT_MESSAGE = "요청 값의 형식이 올바르지 않습니다.";
+
 	// 커스텀 예외 처리
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<CustomResponse<Void>> handleCustomException(GeneralException ex) {
@@ -51,12 +53,13 @@ public class GlobalExceptionHandler {
 
         Map<String, String> errors = new HashMap<>();
 
+        // 타입 변환 실패(숫자 자리에 글자, 없는 enum 값)의 기본 메시지에는 내부 클래스 이름이 들어 있어 응답에 싣지 않는다
         ex.getBindingResult()
         		.getFieldErrors()
         		.forEach(error ->
         			errors.putIfAbsent(
         					error.getField(),
-        					error.getDefaultMessage()
+        					error.isBindingFailure() ? INVALID_FORMAT_MESSAGE : error.getDefaultMessage()
         			)
         );
 
@@ -95,7 +98,7 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException ex
     ) {
         Map<String, String> errors = new HashMap<>();
-        errors.put(ex.getName(), "요청 값의 형식이 올바르지 않습니다.");
+        errors.put(ex.getName(), INVALID_FORMAT_MESSAGE);
 
         return invalidRequestResponse(errors);
     }

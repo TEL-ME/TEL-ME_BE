@@ -1,8 +1,10 @@
 package com.telme.store.repository;
 
 import com.telme.store.entity.Store;
+import com.telme.store.entity.StoreHours;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -51,4 +53,19 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     @Query(value = "UPDATE stores SET status = 'CLOSED_DOWN', updated_at = now(), lock_version = lock_version + 1 "
             + "WHERE store_id = :storeId AND status <> 'CLOSED_DOWN'", nativeQuery = true)
     int close(@Param("storeId") Long storeId);
+
+    // 사용자 상세는 폐점 매장을 없는 매장처럼 다룬다. 업무와 영업시간은 둘 다 List라 한 번에 fetch join하면
+    // MultipleBagFetchException이 나므로 업무만 여기서 함께 읽고 영업시간은 findHoursByStoreId로 따로 읽는다
+    @Query("""
+            select distinct s from Store s
+            left join fetch s.services ss
+            left join fetch ss.serviceType
+            where s.storeId = :storeId and s.status = :status
+            """)
+    Optional<Store> findWithServicesByStoreIdAndStatus(
+            @Param("storeId") Long storeId,
+            @Param("status") Store.Status status);
+
+    @Query("select h from StoreHours h where h.id.storeId = :storeId")
+    List<StoreHours> findHoursByStoreId(@Param("storeId") Long storeId);
 }

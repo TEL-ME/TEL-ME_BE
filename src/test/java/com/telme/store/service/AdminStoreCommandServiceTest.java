@@ -6,7 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.dto.req.AdminStoreSaveRequest;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
-import com.telme.store.dto.res.AdminStoreServiceResponse;
+import com.telme.store.dto.res.StoreHoursResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.entity.StoreServiceType;
 import com.telme.store.exception.StoreErrorCode;
@@ -47,9 +48,9 @@ class AdminStoreCommandServiceTest {
         assertThat(created.regionCode()).isEqualTo("1168010100");
         assertThat(created.createdAt()).isNotNull();
         assertThat(created.updatedAt()).isNotNull();
-        assertThat(created.hours()).extracting(AdminStoreDetailResponse.Hours::dayOfWeek)
+        assertThat(created.hours()).extracting(StoreHoursResponse::dayOfWeek)
                                    .containsExactly("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY");
-        assertThat(created.services()).extracting(AdminStoreServiceResponse::code).containsExactly("NEW_LINE", "USIM_REISSUE");
+        assertThat(created.services()).extracting(StoreServiceTypeResponse::code).containsExactly("NEW_LINE", "USIM_REISSUE");
     }
     
     @Test
@@ -74,7 +75,7 @@ class AdminStoreCommandServiceTest {
         
         assertThat(updated.name()).isEqualTo("관리자쓰기 수정됨");
         assertThat(updated.hours().getFirst().openTime()).isEqualTo(LocalTime.of(9, 0));
-        assertThat(updated.services()).extracting(AdminStoreServiceResponse::code).containsExactly("PORT_IN", "USIM_REISSUE");
+        assertThat(updated.services()).extracting(StoreServiceTypeResponse::code).containsExactly("PORT_IN", "USIM_REISSUE");
         assertThat(dayOfWeekRows(storeId)).hasSize(7);
         assertThat(count("SELECT count(*) FROM store_services WHERE store_id = :id", storeId)).isEqualTo(2);
     }

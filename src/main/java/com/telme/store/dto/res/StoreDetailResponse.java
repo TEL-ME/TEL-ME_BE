@@ -1,22 +1,19 @@
 package com.telme.store.dto.res;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
+import lombok.Builder;
 
-public record AdminStoreDetailResponse(
+// 영업 상태(영업 중·영업 종료·오늘 휴무)는 영업 상태 판정 작업(TELME-101)에서 필드로 더한다
+@Builder
+public record StoreDetailResponse(
         Long storeId,
         String name,
         String address,
         String phone,
-        String regionCode,
         BigDecimal latitude,
         BigDecimal longitude,
-        String status,
         List<StoreHoursResponse> hours,
-        List<StoreServiceTypeResponse> services,
-        Instant createdAt,
-        Instant updatedAt,
-        Integer lockVersion
-        ) {
+        List<StoreServiceTypeResponse> services
+) {
 }

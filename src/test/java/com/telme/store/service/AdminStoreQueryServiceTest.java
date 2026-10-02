@@ -9,7 +9,8 @@ import com.telme.store.dto.req.AdminStoreStatusFilter;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListItemResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
-import com.telme.store.dto.res.AdminStoreServiceResponse;
+import com.telme.store.dto.res.StoreHoursResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.entity.StoreHours;
 import com.telme.store.entity.StoreService;
@@ -95,7 +96,7 @@ class AdminStoreQueryServiceTest {
         AdminStoreListResponse response = search(MARK + " 강남점", null);
 
         AdminStoreListItemResponse item = response.stores().getFirst();
-        assertThat(item.services()).extracting(AdminStoreServiceResponse::name)
+        assertThat(item.services()).extracting(StoreServiceTypeResponse::name)
                 .containsExactly("신규가입", "유심재발급");
         assertThat(item.status()).isEqualTo("OPEN");
         assertThat(item.updatedAt()).isNotNull();
@@ -127,7 +128,7 @@ class AdminStoreQueryServiceTest {
         AdminStoreDetailResponse detail = service.getStore(gangnam);
 
         assertThat(detail.regionCode()).isEqualTo("1168010100");
-        assertThat(detail.hours()).extracting(AdminStoreDetailResponse.Hours::dayOfWeek)
+        assertThat(detail.hours()).extracting(StoreHoursResponse::dayOfWeek)
                 .containsExactly("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY");
         assertThat(detail.hours().getLast().closed()).isTrue();
         assertThat(detail.hours().getLast().openTime()).isNull();
@@ -146,7 +147,7 @@ class AdminStoreQueryServiceTest {
         AdminStoreDetailResponse detail = service.getStore(gangnam);
 
         assertThat(detail.hours()).hasSize(6);
-        assertThat(detail.hours()).extracting(AdminStoreDetailResponse.Hours::dayOfWeek)
+        assertThat(detail.hours()).extracting(StoreHoursResponse::dayOfWeek)
                 .doesNotContain("SUNDAY");
     }
 

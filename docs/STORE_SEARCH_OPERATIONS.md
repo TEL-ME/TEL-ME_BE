@@ -131,7 +131,7 @@ SELECT count(*) FROM store_hours WHERE NOT is_closed AND (open_time IS NULL OR c
 | Java 조건 | `store/repository/OpenNowCondition.java` | 레코드에 날짜(`LocalDate date`)를 더한다(`at(LocalDateTime)`이 이미 날짜를 갖고 있다). `toSql()`은 "오늘 날짜 예외 행이 있으면 그 행으로, 없으면 요일 행으로" 판단하도록 바꾼다. 자정을 넘기는 영업은 전날 날짜 예외 행도 본다. `parameters()`에 `openNowDate`, `openNowPreviousDate`를 더한다 |
 | Java 서비스 | `store/service/StoreSearchService.openNowCondition()` | 바꿀 것 없음. 이미 한국 시각(`STORE_ZONE`)으로 `LocalDateTime`을 넘긴다 |
 | 설정 | `application.yml`(환경별) `store.search.open-now-filter-enabled: true` | 켜는 스위치. 기본값은 `StoreSearchProperties.openNowFilterEnabled`(`false`) |
-| API | 사용자 매장 검색 API(컨트롤러 미구현) | 요청의 `openNow` 필드(`StoreNearbySearchRequest`)를 노출한다. 꺼져 있을 때는 `STORE400-4`로 거부한다 |
+| API | `store/controller/StoreController.searchNearby`(`GET /api/v1/stores/nearby`) | 이미 `openNow` 파라미터(`StoreNearbySearchRequest`)를 받는다. 꺼져 있을 때는 `STORE400-4`로 거부하므로, 켤 때 해당 API의 Swagger `openNow` 설명과 오류 표를 고친다 |
 | 테스트 | `OpenNowConditionTest`, `StoreNearbyQueryRepositoryDatabaseTest`의 `영업_중_*` 테스트 | 예외 행 우선, 예외 휴무, 예외 날짜 자정 넘김, 예외 없는 날은 요일 행 그대로 |
 
 ### 3.3 켠 뒤 확인

@@ -3,6 +3,7 @@ package com.telme.store.converter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.store.dto.res.StoreRegionSearchResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.entity.StoreService;
 import com.telme.store.entity.StoreServiceType;
@@ -16,7 +17,7 @@ import org.springframework.data.domain.PageRequest;
 
 class StoreRegionSearchConverterTest {
 
-    private final StoreRegionSearchConverter converter = new StoreRegionSearchConverter();
+    private final StoreRegionSearchConverter converter = new StoreRegionSearchConverter(new StoreCommonConverter());
 
     @Test
     @DisplayName("가능 업무를 업무 ID 순으로 정렬하고 매장 필드를 그대로 옮긴다")
@@ -41,7 +42,7 @@ class StoreRegionSearchConverterTest {
         assertThat(card.regionCode()).isEqualTo("1168010700");
         assertThat(card.latitude()).isEqualByComparingTo("37.521450");
         assertThat(card.phone()).isNull();
-        assertThat(card.services()).extracting(StoreRegionSearchResponse.ServiceType::code)
+        assertThat(card.services()).extracting(StoreServiceTypeResponse::code)
                 .containsExactly("NEW_LINE", "USIM_REISSUE");
         assertThat(card.services().get(0).name()).isEqualTo("신규가입");
     }
@@ -57,7 +58,7 @@ class StoreRegionSearchConverterTest {
         StoreRegionSearchResponse response = converter.toResponse(
                 new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1), List.of(store));
 
-        assertThat(response.stores().get(0).services()).extracting(StoreRegionSearchResponse.ServiceType::code)
+        assertThat(response.stores().get(0).services()).extracting(StoreServiceTypeResponse::code)
                 .containsExactly("USIM_REISSUE", "NEW_LINE");
     }
 

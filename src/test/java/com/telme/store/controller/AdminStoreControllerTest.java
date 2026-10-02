@@ -23,7 +23,7 @@ import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListItemResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
-import com.telme.store.dto.res.AdminStoreServiceResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.service.AdminStoreCommandService;
 import com.telme.store.service.AdminStoreQueryService;
@@ -99,7 +99,7 @@ class AdminStoreControllerTest {
     void 관리자는_200을_반환한다() throws Exception {
         when(adminStoreQueryService.getStores(any())).thenReturn(new AdminStoreListResponse(
                 List.of(new AdminStoreListItemResponse(1L, "텔미 강남점", "서울특별시 강남구 테헤란로 123", null,
-                        List.of(new AdminStoreServiceResponse("NEW_LINE", "신규가입")), "OPEN", Instant.now())),
+                        List.of(new StoreServiceTypeResponse("NEW_LINE", "신규가입")), "OPEN", Instant.now())),
                 0, 20, 1, 1));
 
         mockMvc.perform(get(URL))
@@ -159,7 +159,7 @@ class AdminStoreControllerTest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("ADMIN이면 삭제와 업무 선택지 조회에 200을 반환한다")
     void 관리자는_삭제와_선택지_조회를_할_수_있다() throws Exception {
-        when(adminStoreQueryService.getServiceTypes()).thenReturn(List.of(new AdminStoreServiceResponse("NEW_LINE", "신규가입")));
+        when(adminStoreQueryService.getServiceTypes()).thenReturn(List.of(new StoreServiceTypeResponse("NEW_LINE", "신규가입")));
         
         mockMvc.perform(delete(URL + "/{storeId}", 1)).andExpect(status().isOk());
         mockMvc.perform(get(URL + "/service-types")).andExpect(status().isOk()).andExpect(jsonPath("$.result[0].code").value("NEW_LINE"));
