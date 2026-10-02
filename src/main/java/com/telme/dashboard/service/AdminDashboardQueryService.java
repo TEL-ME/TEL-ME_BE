@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AdminDashboardQueryService {
 
-    // 답 못 한 질문 중 시스템 문제인 것만 따로 센다. 관리자가 할 일이 FAQ 보강이 아니라 확인 요청이다
+    // 답 못 한 질문 중 FAQ로 해결되지 않는 것만 따로 센다
     private static final List<ChatMessage.Status> FAILED_STATUSES =
             List.of(ChatMessage.Status.FAILED, ChatMessage.Status.TIMEOUT);
 
