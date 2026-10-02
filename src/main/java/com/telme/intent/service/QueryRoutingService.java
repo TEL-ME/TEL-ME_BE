@@ -105,7 +105,7 @@ public class QueryRoutingService {
         return route(userMessage, context, false);
     }
 
-    /** 단일 상담 연결용 진입점. 다중 FAQ 질의는 합치고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
+    /** 상담 연결용 진입점. 여러 FAQ 질의는 유지하고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
     public IntentRouteResponse routeSingleConsult(ChatMessage userMessage, ChatContext context) {
         return route(userMessage, context, true);
     }
@@ -197,37 +197,24 @@ public class QueryRoutingService {
                     Collections.emptyMap(), Collections.emptyList());
         }
 
-        payload = combineFaqSubQueriesForSingleConsult(payload, question, context, singleConsultOnly);
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.STORE
+                && RoutingIntentCorrection.isGeneralStorePolicy(question, context,
+                        payload.extractedConditions().get(FollowUpRouteResponse.LOCATION_KEY))) {
+            log.info("[라우팅] 일반 매장 운영 질문을 FAQ로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    Collections.emptyMap(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.RULE;
+        }
+
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly);
         return result;
-    }
-
-    private LlmRoutingPayload combineFaqSubQueriesForSingleConsult(
-            LlmRoutingPayload payload, String question, ChatContext context, boolean singleConsultOnly) {
-        if (!singleConsultOnly
-                || payload.intent() != QueryRouting.Intent.FAQ
-                || payload.subQueries().size() <= 1
-                || payload.subQueries().stream().anyMatch(
-                        subQuery -> subQuery == null || subQuery.intent() != ConsultRequest.Intent.FAQ)) {
-            return payload;
-        }
-
-        String queryText = payload.refinedQuery() != null && !payload.refinedQuery().isBlank()
-                ? payload.refinedQuery().strip()
-                : question;
-        // 분해된 질문을 다시 요약하면 일부 대상이 빠질 수 있으므로 원문을 검색에 사용한다.
-        if (context == null
-                || (context.summary() == null && context.history().isEmpty())
-                || !CONTEXT_REFERENCE.matcher(question).find()) {
-            queryText = question;
-        }
-        return new LlmRoutingPayload(
-                payload.intent(), payload.confidence(), payload.refinedQuery(),
-                payload.extractedConditions(),
-                List.of(new LlmRoutingPayload.SubQueryPayload(
-                        (short) 1, ConsultRequest.Intent.FAQ, queryText, Collections.emptyMap())));
     }
 
     private LlmRoutingPayload normalizeLlmPayload(
@@ -497,7 +484,11 @@ public class QueryRoutingService {
             return;
         }
         int subQueryCount = payload.subQueries() == null ? 0 : payload.subQueries().size();
-        if (payload.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+        if (payload.intent() == QueryRouting.Intent.BOTH
+                || subQueryCount > 1
+                && (payload.intent() != QueryRouting.Intent.FAQ
+                || payload.subQueries().stream().anyMatch(
+                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
         }
     }
@@ -508,7 +499,11 @@ public class QueryRoutingService {
             return;
         }
         int subQueryCount = response.subQueries() == null ? 0 : response.subQueries().size();
-        if (response.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+        if (response.intent() == QueryRouting.Intent.BOTH
+                || subQueryCount > 1
+                && (response.intent() != QueryRouting.Intent.FAQ
+                || response.subQueries().stream().anyMatch(
+                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
         }
     }

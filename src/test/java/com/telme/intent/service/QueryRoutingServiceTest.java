@@ -145,15 +145,15 @@ class QueryRoutingServiceTest {
 
             assertThatThrownBy(() -> service.routeSingleConsult(message, null))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("단일 하위 질문");
+                    .hasMessageContaining("FAQ와 매장 복합 질문");
 
             verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("단일 FAQ 질문이 여러 하위 질의로 나뉘어도 모든 조건을 합쳐 한 건으로 저장한다")
-        void singleConsultCombinesFaqSubQueries() {
+        @DisplayName("상담 연결에서도 여러 FAQ 하위 질문을 각각 유지한다")
+        void singleConsultPreservesFaqSubQueries() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,
                  "refinedQuery":"5G, LTE, 알뜰 요금제 종류를 각각 알려줘",
@@ -169,9 +169,8 @@ class QueryRoutingServiceTest {
                     msg("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요"), null);
 
             assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
-            assertThat(result.subQueries()).hasSize(1);
-            assertThat(result.subQueries().getFirst().queryText())
-                    .isEqualTo("5G, LTE, 알뜰 요금제 종류를 각각 알려주세요");
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("5G 요금제 종류", "LTE 요금제 종류", "알뜰 요금제 종류");
         }
 
         @Test
@@ -186,6 +185,71 @@ class QueryRoutingServiceTest {
 
             assertThat(r.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
             assertThat(r.subQueries()).isEmpty();
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "노트북 테더링하면 요금 따로 나와요?",
+                "강아지 위치추적기 가입 되나요?",
+                "헬스장 제휴 할인 받을 수 있어요?"
+        })
+        @DisplayName("통신과 무관해 보이는 단어가 있어도 LLM의 FAQ 분류를 바꾸지 않는다")
+        void keepsLlmFaqForQuestionWithUnrelatedLookingWord(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"통신 질문",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"통신 질문","conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "매장은 보통 평일 몇 시까지 운영하나요?",
+                "평일 저녁 7시 이후에 매장 방문이 가능한가요?"
+        })
+        @DisplayName("특정 지점이 없는 일반 매장 운영 질문은 FAQ로 보정한다")
+        void correctsGeneralStorePolicy(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.92,"refinedQuery":"매장 운영시간",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"STORE","queryText":"매장 운영시간","conditions":{}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).singleElement()
+                    .satisfies(sub -> {
+                        assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                        assertThat(sub.queryText()).isEqualTo(question);
+                    });
+        }
+
+        @Test
+        @DisplayName("특정 지점의 영업시간 질문은 STORE로 유지한다")
+        void keepsSpecificStoreHoursLookup() {
+            assertThat(RoutingIntentCorrection.isGeneralStorePolicy(
+                    "신촌 매장은 보통 평일 몇 시까지 운영하나요?", null, null)).isFalse();
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.95,"refinedQuery":"신촌 매장 영업시간",
+                 "extractedConditions":{"location":"신촌"},"subQueries":[
+                   {"order":1,"intent":"STORE","queryText":"신촌 매장 영업시간",
+                    "conditions":{"location":"신촌"}}]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(
+                    msg("신촌 매장은 보통 평일 몇 시까지 운영하나요?"), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                    .isEqualTo(ConsultRequest.Intent.STORE);
         }
     }
 
