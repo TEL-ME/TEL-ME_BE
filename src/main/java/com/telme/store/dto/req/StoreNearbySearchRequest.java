@@ -32,6 +32,6 @@ public record StoreNearbySearchRequest(
                 @Nullable Boolean openNow // 영업중 필터(설정으로 켜기전에는 무시됨)
 ) {
     // 매장 개수 상한. 반경(설정값)과 달리 API 계약(초과 시 400)이라 환경별로 바꾸지 않도록 상수로 둔다.
-    // 요청 검증(@Max)과 기본 개수 설정 검증이 모두 이 값을 쓴다
+    // 요청 검증(@Max), 기본 개수 설정 검증, 서비스의 내부 호출 상한이 모두 이 값을 쓴다
     public static final int MAX_LIMIT = 20;
 }

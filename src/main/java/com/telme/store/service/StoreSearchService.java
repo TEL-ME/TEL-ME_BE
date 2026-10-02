@@ -49,8 +49,8 @@ public class StoreSearchService {
     @Transactional(readOnly = true)
     public StoreNearbySearchResponse findNearbyStores(StoreNearbySearchRequest request) {
         StoreNearbyQueryRepository.Query query = new StoreNearbyQueryRepository.Query(
-                request.latitude(),
-                request.longitude(),
+                validateLatitude(request.latitude()),
+                validateLongitude(request.longitude()),
                 resolveRadius(request.radiusMeters()),
                 resolveLimit(request.limit()),
                 toConditions(request));
@@ -58,6 +58,20 @@ public class StoreSearchService {
             return storeConverter.toNearbySearchResponse(List.of(), query.radiusMeters());
         }
         return storeConverter.toNearbySearchResponse(search(query), query.radiusMeters());
+    }
+
+    private double validateLatitude(Double latitude) {
+        if (latitude == null) {
+            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
+        }
+        return latitude;
+    }
+
+    private double validateLongitude(Double longitude) {
+        if (longitude == null) {
+            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
+        }
+        return longitude;
     }
 
     // 필터 없음: 영업 매장 인덱스에서 KNN으로 가장 가까운 곳부터 찾고 반경(기본 10km) 밖은 뺀다.
@@ -117,7 +131,7 @@ public class StoreSearchService {
         if (limit == null) {
             return storeSearchProperties.defaultLimit();
         }
-        return limit;
+        return Math.min(limit, StoreNearbySearchRequest.MAX_LIMIT);
     }
 
     // 정적 조건은 모두 StoreTag로 바꿔 StoreTagCondition 하나로 묶는다. 새 정적 조건은 요청 필드를 StoreTag로

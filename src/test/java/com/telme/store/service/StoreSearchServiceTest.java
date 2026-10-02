@@ -237,6 +237,13 @@ class StoreSearchServiceTest {
     }
 
     @Test
+    @DisplayName("내부 호출에서 좌표가 없으면 STORE400-0으로 거부한다 (HTTP 요청은 DTO 검증에서 먼저 400)")
+    void 내부_호출에서_좌표가_없으면_거부한다() {
+        assertErrorCode(request(null, LONGITUDE, null, null), StoreErrorCode.INVALID_COORDINATE);
+        assertErrorCode(request(LATITUDE, null, null, null), StoreErrorCode.INVALID_COORDINATE);
+    }
+
+    @Test
     @DisplayName("지구 좌표 범위의 경계값은 오류가 아니다")
     void 좌표_경계값은_허용한다() {
         assertThat(service.findNearbyStores(request(90.0, 180.0, null, null)).stores()).isEmpty();
@@ -283,6 +290,13 @@ class StoreSearchServiceTest {
     void 기본_반경을_응답에_담는다() {
         assertThat(service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null)).radiusMeters())
                 .isEqualTo(10000);
+    }
+
+    @Test
+    @DisplayName("내부 호출에서 개수가 20을 넘으면 20으로 줄여 검색한다 (HTTP 요청은 DTO 검증에서 400)")
+    void 내부_호출에서_개수가_20을_넘으면_줄인다() {
+        service.findNearbyStores(request(LATITUDE, LONGITUDE, null, 100));
+        assertThat(capturedQuery().limit()).isEqualTo(20);
     }
 
     @Test
