@@ -10,6 +10,8 @@ import lombok.Builder;
 public record AnswerRequest(
         // null이면 호출 기록을 남기지 않음
         Long executionId,
+        // Existing consultation reference, used only to correlate execution subqueries.
+        Long consultRequestId,
         // 정제된 질의가 아니라 사용자 원문
         String userQuery,
         // 되묻기로 확정된 조건
@@ -17,6 +19,10 @@ public record AnswerRequest(
         // 비어 있으면 근거 없음으로 처리
         List<FaqSearchResponse> searchResults
 ) {
+    public AnswerRequest(Long executionId, String userQuery, Map<String, String> conditions,
+            List<FaqSearchResponse> searchResults) {
+        this(executionId, null, userQuery, conditions, searchResults);
+    }
 
     public AnswerRequest {
         if (userQuery == null || userQuery.isBlank()) {

@@ -4,6 +4,7 @@ import static com.telme.intent.dto.res.FollowUpRouteResponse.LOCATION_KEY;
 import static com.telme.intent.dto.res.FollowUpRouteResponse.SERVICE_TYPE_KEY;
 
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
@@ -151,6 +152,33 @@ public class RuleBasedRoutingFallback {
         }
 
         String reply = text.trim();
+
+        if (pendingKeys != null && pendingKeys.stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
+            if (PlanChangeConditions.isClarificationRequest(reply)) {
+                return new LlmFollowUpPayload(ResponseType.DEFERRED, List.of());
+            }
+            if (Pattern.compile("유심|명의변경|번호이동|로밍|청구서|매장|가상계좌|소액결제|변경\\s*(?:기준|방법|횟수)").matcher(reply).find()
+                    && NEW_QUESTION_PATTERN.matcher(reply).find()) {
+                return new LlmFollowUpPayload(ResponseType.NEW_QUESTION, List.of());
+            }
+            var values = PlanChangeConditions.extract(reply, pendingKeys);
+            var unavailable = PlanChangeConditions.unavailableKeys(reply, pendingKeys);
+            if (!values.isEmpty() || !unavailable.isEmpty()) {
+                List<ConditionPayload> updates = new ArrayList<>();
+                values.forEach((key, value) -> {
+                    if (!unavailable.contains(key)) updates.add(new ConditionPayload(key, Status.FILLED, value));
+                });
+                unavailable.stream().filter(PlanChangeConditions.KEYS::contains)
+                        .forEach(key -> updates.add(new ConditionPayload(key, Status.DECLINED, null)));
+                return new LlmFollowUpPayload(ResponseType.CONDITION_RESPONSE, List.copyOf(updates));
+            }
+            if (PlanChangeConditions.isAmbiguous(reply)
+                    || ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
+                return new LlmFollowUpPayload(ResponseType.DEFERRED, List.of());
+            }
+            return new LlmFollowUpPayload(NEW_QUESTION_PATTERN.matcher(reply).find()
+                    ? ResponseType.NEW_QUESTION : ResponseType.DEFERRED, List.of());
+        }
 
         if (DECLINE_PATTERN.matcher(reply).find()) {
             Set<String> declinedKeys = (pendingKeys == null || pendingKeys.isEmpty())

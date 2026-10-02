@@ -16,6 +16,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Objects;
+import com.telme.consult.dto.PlanChangeConditions;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.faq.dto.res.FaqSearchResponse;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,12 @@ public class DialogueService {
         return decide(input, true);
     }
 
+    /** FAQ 개인 판단은 검색된 정책 근거를 확인한 뒤 생성 전에 평가한다. */
+    public DialogueDecision assessFaq(long requestId, String query,
+            Map<String, Condition> conditions, List<FaqSearchResponse> sources) {
+        return PlanChangeClarificationPolicy.assess(requestId, query, conditions, sources);
+    }
+
     private DialogueDecision decide(DialogueInput input, boolean generateText) {
         Objects.requireNonNull(input, "input");
         var conditions = new HashMap<>(input.previousConditions());
@@ -40,6 +51,17 @@ public class DialogueService {
         conditions.putAll(input.updates());
         var region = conditions.get(LOCATION);
         boolean hasRegion = region != null && region.status() == ConditionStatus.FILLED;
+
+        if (input.purpose() == Purpose.GENERAL_FAQ && !PlanChangeClarificationPolicy.blocks(conditions)
+                && conditions.values().stream().noneMatch(value -> value.status() == ConditionStatus.DECLINED)) {
+            for (String key : List.of(PlanChangeConditions.JOINED, PlanChangeConditions.CHANGED)) {
+                var pending = input.previousConditions().get(key);
+                if (pending != null && pending.status() == ConditionStatus.PENDING && !input.updates().containsKey(key)) {
+                    return new DialogueDecision(input.consultRequestId(), Action.ASK, conditions,
+                            key, PlanChangeConditions.question(key), MessageOrigin.TEMPLATE);
+                }
+            }
+        }
 
         // 위치 권한만으로는 검색 지역을 알 수 없다.
         if (input.purpose() == Purpose.GENERAL_FAQ || hasRegion) {

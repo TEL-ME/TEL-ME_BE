@@ -6,6 +6,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.converter.IntentConverter;
@@ -52,7 +53,8 @@ public class QueryRoutingService {
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
-        FollowUpRouteResponse.LOCATION_KEY, FollowUpRouteResponse.SERVICE_TYPE_KEY);
+        FollowUpRouteResponse.LOCATION_KEY, FollowUpRouteResponse.SERVICE_TYPE_KEY,
+        PlanChangeConditions.JOINED, PlanChangeConditions.CHANGED);
 
     // 상담 모듈의 DialogueInput.Condition이 255자를 넘기면 예외를 던진다
     private static final int MAX_CONDITION_VALUE_LENGTH = 255;
@@ -391,7 +393,7 @@ public class QueryRoutingService {
         for (Map.Entry<String, String> entry : conditions.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue() == null ? "" : entry.getValue().strip();
-            if (!KNOWN_CONDITION_KEYS.contains(key)
+            if (!Set.of(FollowUpRouteResponse.LOCATION_KEY, FollowUpRouteResponse.SERVICE_TYPE_KEY).contains(key)
                     || value.isBlank()
                     || value.length() > MAX_CONDITION_VALUE_LENGTH) {
                 continue;
@@ -422,6 +424,9 @@ public class QueryRoutingService {
         if (waiting == null) {
             log.info("[후속분석] 되묻기 대기 중인 상담 요청이 없습니다: sessionId={}", sessionId);
             return FollowUpRouteResponse.noTarget();
+        }
+        if (waiting.pendingKeys().isEmpty()) {
+            throw new IllegalStateException("후속 분석에 필요한 대기 조건이 없습니다.");
         }
 
         String reply = followUpText != null ? followUpText.trim() : "";
@@ -456,7 +461,22 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
-        ExtractedConditions extracted = toExtractedConditions(payload);
+        // 요금제 조건은 실제 사용자 발화로 검증된 값·거절·보류만 받아 모델의 오분류를 보완한다.
+        if (waiting.pendingKeys().stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
+            var literal = ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
+            if (payload.responseType() != literal.responseType()
+                    || !toExtractedConditions(payload, reply, waiting.pendingKeys())
+                            .equals(toExtractedConditions(literal, reply, waiting.pendingKeys()))) {
+                payload = literal;
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
+        if (payload.responseType() == ResponseType.NEW_QUESTION
+                && waiting.pendingKeys().stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
+            return new FollowUpRouteResponse(waiting.consultRequestId(), Map.of(), Set.of(), method, Disposition.NEW_QUESTION);
+        }
+        ExtractedConditions extracted = toExtractedConditions(payload, reply, waiting.pendingKeys());
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -465,7 +485,7 @@ public class QueryRoutingService {
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload);
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, reply, waiting.pendingKeys());
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -547,28 +567,28 @@ public class QueryRoutingService {
             .orElse(null);
     }
 
-    // 되묻는 조건을 알 수 없으면 지역으로 본다(현재 DialogueService는 지역만 묻는다)
-    // 거절 판정이 이 집합 전체에 적용되므로 KNOWN_CONDITION_KEYS처럼 넓게 잡으면 안 된다
+    // 거절은 현재 대기 조건에만 적용한다. 지역 fallback은 기존 STORE 상담 호환용이다.
     private Set<String> pendingKeysOf(ConsultRequest request) {
         List<ConsultCondition> conditions = request.getConditions();
         if (conditions == null) {
-            return Set.of(FollowUpRouteResponse.LOCATION_KEY);
+            return request.getIntent() == ConsultRequest.Intent.STORE ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : Set.of();
         }
         Set<String> pending = conditions.stream()
             .filter(condition -> condition.getStatus() == ConsultCondition.Status.PENDING)
             .map(ConsultCondition::getConditionKey)
             .filter(key -> key != null && !key.isBlank())
             .collect(Collectors.toCollection(LinkedHashSet::new));
-        return pending.isEmpty() ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
+        return pending.isEmpty() && request.getIntent() == ConsultRequest.Intent.STORE ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload) {
+    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, String reply, Set<String> pendingKeys) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
 
         Map<String, String> values = new LinkedHashMap<>();
         Set<String> declinedKeys = new LinkedHashSet<>();
+        var grounded = ruleBasedFallback.classifyFollowUp(reply, pendingKeys);
 
         for (ConditionPayload condition : payload.conditions()) {
             if (condition == null || condition.key() == null || condition.status() == null) {
@@ -581,7 +601,12 @@ public class QueryRoutingService {
                 continue;
             }
 
+            boolean planConsult = pendingKeys.stream().anyMatch(PlanChangeConditions.KEYS::contains);
+            if (planConsult != PlanChangeConditions.KEYS.contains(key)) continue;
+
             if (condition.status() == LlmFollowUpPayload.Status.DECLINED) {
+                if (grounded.conditions().stream()
+                        .noneMatch(item -> key.equals(item.key()) && item.status() == LlmFollowUpPayload.Status.DECLINED)) continue;
                 declinedKeys.add(key);
                 continue;
             }
@@ -590,6 +615,15 @@ public class QueryRoutingService {
             if (value.isBlank() || value.length() > MAX_CONDITION_VALUE_LENGTH) {
                 continue;
             }
+            if (PlanChangeConditions.KEYS.contains(key)
+                    && (!PlanChangeConditions.valid(key, value)
+                        || !value.equals(PlanChangeConditions.extract(reply, pendingKeys).get(key)))) continue;
+            if (FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
+                    && (!SERVICE_TYPES.contains(value) || !ruleBasedFallback.matchesServiceType(value, reply))) continue;
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
+                    && (!reply.replaceAll("\\s+", "").contains(value.replaceAll("\\s+", ""))
+                        || grounded.conditions().stream().noneMatch(item -> key.equals(item.key())
+                            && item.status() == LlmFollowUpPayload.Status.FILLED))) continue;
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);

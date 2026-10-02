@@ -12,6 +12,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.telme.chat.entity.ChatExecution;
 
@@ -59,6 +61,10 @@ public class LlmGeneration {
 
     @Column(name = "prompt_version", length = 30)
     private String promptVersion;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "request_options", columnDefinition = "jsonb")
+    private String requestOptions;
 
     @Column(name = "context_count")
     private Integer contextCount;

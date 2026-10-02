@@ -33,6 +33,7 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
         AnswerRequest request =
                 AnswerRequest.builder()
                         .executionId(input.executionId())
+                        .consultRequestId(input.consultRequestId())
                         .userQuery(input.originalUserQuery())
                         .conditions(input.confirmedConditions())
                         .searchResults(results)

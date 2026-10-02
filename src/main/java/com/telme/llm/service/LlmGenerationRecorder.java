@@ -8,6 +8,12 @@ import com.telme.llm.entity.LlmGeneration.Status;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.repository.LlmGenerationRepository;
+import com.telme.llm.converter.OllamaRequestConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +29,14 @@ public class LlmGenerationRecorder {
 
     private final LlmGenerationRepository llmGenerationRepository;
     private final ChatExecutionRepository chatExecutionRepository;
+    private OllamaRequestConverter requestConverter;
+    private ObjectMapper mapper;
+
+    @Autowired
+    public void setTraceMetadata(OllamaRequestConverter requestConverter, ObjectMapper mapper) {
+        this.requestConverter = requestConverter;
+        this.mapper = mapper;
+    }
 
     // 기록 실패가 LLM 응답을 막지 않도록 별도 트랜잭션으로 저장하고 예외를 삼킨다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -31,6 +45,14 @@ public class LlmGenerationRecorder {
             return;
         }
         try {
+            String options = null;
+            if (model != null && requestConverter != null) {
+                var metadata = new LinkedHashMap<String, Object>(Map.of("provider", "ollama",
+                        "options", requestConverter.toChatRequest(request, false).options(),
+                        "format", request.format().name()));
+                metadata.put("consultRequestId", request.consultRequestId());
+                options = mapper.writeValueAsString(metadata);
+            }
             llmGenerationRepository.save(LlmGeneration.builder()
                     .execution(chatExecutionRepository.getReferenceById(request.executionId()))
                     .taskType(request.taskType())
@@ -38,12 +60,13 @@ public class LlmGenerationRecorder {
                     .model(model)
                     .contextCount(request.contextCount())
                     .promptVersion(request.promptVersion())
+                    .requestOptions(options)
                     .firstTokenMs(result.firstTokenMs())
                     .totalMs(result.totalMs())
                     .status(result.status())
                     .errorMessage(result.errorMessage())
                     .build());
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | JsonProcessingException e) {
             log.warn("[LlmGenerationRecorder] 호출 기록 저장 실패 executionId={}", request.executionId(), e);
         }
     }
