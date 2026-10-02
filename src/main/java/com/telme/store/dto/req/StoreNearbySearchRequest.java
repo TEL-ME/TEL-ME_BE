@@ -16,12 +16,12 @@ import lombok.Builder;
 @Builder
 public record StoreNearbySearchRequest(
                 @NotNull(message = "위도를 입력해 주세요.")
-                @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 합니다.")
-                @DecimalMax(value = "90", message = "위도는 90 이하여야 합니다.")
+                @DecimalMin(value = "-90", message = "위도는 -90에서 90 사이의 올바른 숫자여야 합니다.")
+                @DecimalMax(value = "90", message = "위도는 -90에서 90 사이의 올바른 숫자여야 합니다.")
                 Double latitude,
                 @NotNull(message = "경도를 입력해 주세요.")
-                @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 합니다.")
-                @DecimalMax(value = "180", message = "경도는 180 이하여야 합니다.")
+                @DecimalMin(value = "-180", message = "경도는 -180에서 180 사이의 올바른 숫자여야 합니다.")
+                @DecimalMax(value = "180", message = "경도는 -180에서 180 사이의 올바른 숫자여야 합니다.")
                 Double longitude,
                 @Min(value = 1, message = "검색 반경은 1m 이상이어야 합니다.")
                 Integer radiusMeters, // 검색반경(미터)

@@ -88,7 +88,7 @@ class StoreApiIntegrationTest {
                 .andExpect(jsonPath("$.result.latitude").value("위도를 입력해 주세요."));
         mvc.perform(get(NEARBY_URL).param("latitude", "90.000001").param("longitude", LONGITUDE))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.result.latitude").value("위도는 90 이하여야 합니다."));
+                .andExpect(jsonPath("$.result.latitude").value("위도는 -90에서 90 사이의 올바른 숫자여야 합니다."));
         mvc.perform(get(NEARBY_URL).param("latitude", "NaN").param("longitude", LONGITUDE))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON400-1"));
