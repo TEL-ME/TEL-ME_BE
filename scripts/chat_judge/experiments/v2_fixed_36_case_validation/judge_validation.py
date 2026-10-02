@@ -6,12 +6,12 @@ import json
 from collections import Counter
 from pathlib import Path
 
-import judge_chat_flow as judge
+from scripts.chat_judge import judge_chat_flow as judge
 
 
-ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "scripts/data/chat_judge_validation_v1.json"
-PILOT = ROOT / "scripts/data/chat_judge_pilot.json"
+ROOT = Path(__file__).resolve().parents[4]
+FIXTURE = ROOT / "scripts/chat_judge/data/chat_judge_validation_v1.json"
+PILOT = ROOT / "scripts/chat_judge/data/chat_judge_pilot.json"
 FEWSHOT = judge.DEFAULT_FEWSHOT
 REFUSAL = "현재 확인할 수 없어 안내드리기 어렵습니다."
 OUT_OF_SCOPE_ANSWER = "통신 서비스 관련 질문을 해주세요."

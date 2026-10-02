@@ -5,8 +5,8 @@
 Bedrock 모델에게 "이 문장이 근거에 있는가"를 물어 채점한다.
 
 사용법
-  python3 scripts/judge_answers.py .measure/baseline-20260925-0000.json
-  python3 scripts/judge_answers.py <입력> --model openai.gpt-oss-20b-1:0 --out .measure/judge.json
+  python3 -m scripts.chat_judge.judge_answers .measure/baseline-20260925-0000.json
+  python3 -m scripts.chat_judge.judge_answers <입력> --model openai.gpt-oss-20b-1:0 --out .measure/judge.json
 
 환경변수 (.env)
   BEDROCK_API_KEY   Bedrock API 키

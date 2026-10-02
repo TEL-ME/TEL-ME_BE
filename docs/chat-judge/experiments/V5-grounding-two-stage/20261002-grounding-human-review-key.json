@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "source": "20261001-validation-v2-telme100-improved-raw.json.gz",
+  "sourceSha256": "3ebf2c2eba165140160538313a05e6b3c1fcabc650b6066243675d3805755341",
+  "samplingSeed": 20261002,
+  "strata": {
+    "SUPPORTED": {
+      "eligible": 88,
+      "sampled": 10
+    },
+    "UNSUPPORTED_EXTRA": {
+      "eligible": 96,
+      "sampled": 10
+    },
+    "NO_EVIDENCE": {
+      "eligible": 100,
+      "sampled": 5
+    },
+    "OVER_REFUSAL": {
+      "eligible": 97,
+      "sampled": 5
+    },
+    "COMPOUND_PARTIAL": {
+      "eligible": 16,
+      "sampled": 10
+    }
+  },
+  "unscoredExcluded": 35,
+  "eligibleScoredPool": 447,
+  "cases": [
+    {
+      "reviewId": "H-001",
+      "caseId": "BILLING-0037",
+      "samplingStratum": "OVER_REFUSAL"
+    },
+    {
+      "reviewId": "H-002",
+      "caseId": "SERVICE-0041",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-003",
+      "caseId": "COMPOUND-044",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-004",
+      "caseId": "SUBSCRIBE-0122",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-005",
+      "caseId": "DEVICE-0099",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-006",
+      "caseId": "PORTING-0105",
+      "samplingStratum": "NO_EVIDENCE"
+    },
+    {
+      "reviewId": "H-007",
+      "caseId": "BILLING-0007",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-008",
+      "caseId": "ROAMING-0045",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-009",
+      "caseId": "SERVICE-0038",
+      "samplingStratum": "NO_EVIDENCE"
+    },
+    {
+      "reviewId": "H-010",
+      "caseId": "PLAN-0091",
+      "samplingStratum": "NO_EVIDENCE"
+    },
+    {
+      "reviewId": "H-011",
+      "caseId": "COMPOUND-007",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-012",
+      "caseId": "BILLING-0113",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-013",
+      "caseId": "ROAMING-0073",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-014",
+      "caseId": "SERVICE-0026",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-015",
+      "caseId": "USIM-0007",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-016",
+      "caseId": "DEVICE-0109",
+      "samplingStratum": "OVER_REFUSAL"
+    },
+    {
+      "reviewId": "H-017",
+      "caseId": "SERVICE-0043",
+      "samplingStratum": "OVER_REFUSAL"
+    },
+    {
+      "reviewId": "H-018",
+      "caseId": "COMPOUND-050",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-019",
+      "caseId": "ROAMING-0005",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-020",
+      "caseId": "DEVICE-0008",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-021",
+      "caseId": "NAME_CHANGE-0009",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-022",
+      "caseId": "COMPOUND-014",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-023",
+      "caseId": "COMPOUND-025",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-024",
+      "caseId": "PORTING-0113",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-025",
+      "caseId": "TERMINATE-0107",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-026",
+      "caseId": "COMPOUND-039",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-027",
+      "caseId": "USIM-0054",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-028",
+      "caseId": "USIM-0067",
+      "samplingStratum": "SUPPORTED"
+    },
+    {
+      "reviewId": "H-029",
+      "caseId": "NAME_CHANGE-0068",
+      "samplingStratum": "NO_EVIDENCE"
+    },
+    {
+      "reviewId": "H-030",
+      "caseId": "COMPOUND-030",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-031",
+      "caseId": "PLAN-0096",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-032",
+      "caseId": "PORTING-0032",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-033",
+      "caseId": "COMPOUND-035",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-034",
+      "caseId": "DEVICE-0025",
+      "samplingStratum": "OVER_REFUSAL"
+    },
+    {
+      "reviewId": "H-035",
+      "caseId": "COMPOUND-015",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-036",
+      "caseId": "USIM-0075",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-037",
+      "caseId": "COMPOUND-027",
+      "samplingStratum": "COMPOUND_PARTIAL"
+    },
+    {
+      "reviewId": "H-038",
+      "caseId": "USIM-0035",
+      "samplingStratum": "NO_EVIDENCE"
+    },
+    {
+      "reviewId": "H-039",
+      "caseId": "TERMINATE-0001",
+      "samplingStratum": "UNSUPPORTED_EXTRA"
+    },
+    {
+      "reviewId": "H-040",
+      "caseId": "TERMINATE-0037",
+      "samplingStratum": "OVER_REFUSAL"
+    }
+  ],
+  "additionalExcluded": [
+    "COMPOUND-001",
+    "COMPOUND-002",
+    "COMPOUND-003",
+    "COMPOUND-005",
+    "COMPOUND-006",
+    "COMPOUND-008",
+    "COMPOUND-009",
+    "COMPOUND-010",
+    "COMPOUND-011",
+    "COMPOUND-013",
+    "COMPOUND-016",
+    "COMPOUND-017",
+    "COMPOUND-018",
+    "COMPOUND-019",
+    "COMPOUND-020",
+    "COMPOUND-024",
+    "COMPOUND-028",
+    "COMPOUND-029",
+    "COMPOUND-034",
+    "COMPOUND-036",
+    "COMPOUND-037",
+    "COMPOUND-038",
+    "COMPOUND-040",
+    "COMPOUND-043",
+    "COMPOUND-045",
+    "COMPOUND-046",
+    "COMPOUND-049",
+    "NAME_CHANGE-0038",
+    "PORTING-0023",
+    "SERVICE-0056",
+    "SERVICE-0063",
+    "SUBSCRIBE-0051",
+    "SUBSCRIBE-0056",
+    "USIM-0011",
+    "USIM-0095"
+  ]
+}

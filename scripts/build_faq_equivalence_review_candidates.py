@@ -13,7 +13,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
-DATASET = ROOT / "scripts/data/chat_judge_validation_v2.json"
+DATASET = ROOT / "scripts/chat_judge/data/chat_judge_validation_v2.json"
 MULTIGOLD_LABELS = ROOT / "scripts/data/faq_equivalence_labels_v2_candidate.json"
 OUTPUT = ROOT / "scripts/data/faq_equivalence_review_candidates_v1.json"
 MODEL = "bge-m3:latest"

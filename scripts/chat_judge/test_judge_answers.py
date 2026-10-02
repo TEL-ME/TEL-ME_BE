@@ -1,6 +1,6 @@
 import unittest
 
-from judge_answers import parse_verdict
+from scripts.chat_judge.judge_answers import parse_verdict
 
 
 class ParseVerdictTest(unittest.TestCase):

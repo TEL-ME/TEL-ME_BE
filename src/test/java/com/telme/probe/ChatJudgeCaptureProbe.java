@@ -14,6 +14,9 @@ import com.telme.faq.service.PgvectorFaqSearchService;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.chat.service.ChatProcessingPort;
+import com.telme.rag.dto.req.AnswerRequest;
+import com.telme.rag.service.RagAnswerGenerator;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -59,7 +63,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "TELME_CHAT_JUDGE_PROBE", matches = "true")
 class ChatJudgeCaptureProbe {
-    private static final Path FIXTURE = Path.of("scripts/data/chat_judge_pilot.json");
     private static final Duration EXECUTION_TIMEOUT = Duration.ofMinutes(4);
     private static final DateTimeFormatter FILE_TIME =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
@@ -69,11 +72,14 @@ class ChatJudgeCaptureProbe {
     @Autowired private JdbcTemplate jdbc;
     @MockitoSpyBean private PgvectorFaqSearchService faqSearch;
     @MockitoSpyBean(name = "baseLlmClient") private LlmClient baseLlmClient;
+    @MockitoSpyBean private RagAnswerGenerator ragAnswerGenerator;
+    @Autowired private List<ChatProcessingPort> processingPorts;
     @Value("${ollama.url}") private String ollamaUrl;
     @Value("${llm.model}") private String generatorModel;
 
     private final List<SearchTrace> searchTraces = new ArrayList<>();
     private final List<LlmRequest> llmRequests = new ArrayList<>();
+    private final List<AnswerRequest> ragInputs = new ArrayList<>();
 
     @Test
     void capturesActualChatAnswers() throws Exception {
@@ -104,10 +110,20 @@ class ChatJudgeCaptureProbe {
             }
             return invocation.callRealMethod();
         }).when(baseLlmClient).stream(any(LlmRequest.class), any(LlmStreamHandler.class));
+        doAnswer(invocation -> {
+            AnswerRequest request = invocation.getArgument(0);
+            synchronized (ragInputs) {
+                ragInputs.add(request);
+            }
+            return invocation.callRealMethod();
+        }).when(ragAnswerGenerator).generate(any(AnswerRequest.class), any(LlmStreamHandler.class));
 
-        JsonNode fixtures = mapper.readTree(FIXTURE.toFile());
-        if (!fixtures.isArray() || fixtures.size() != 8) {
-            throw new IllegalArgumentException("평가 시나리오는 정확히 8개여야 합니다.");
+        String configuredFixture = System.getenv("TELME_CHAT_JUDGE_FIXTURE");
+        Path fixturePath = configuredFixture == null || configuredFixture.isBlank()
+                ? Path.of("scripts/chat_judge/data/chat_judge_pilot.json") : Path.of(configuredFixture);
+        JsonNode fixtures = mapper.readTree(fixturePath.toFile());
+        if (!fixtures.isArray() || fixtures.isEmpty()) {
+            throw new IllegalArgumentException("평가 시나리오는 비어 있지 않은 배열이어야 합니다.");
         }
         Path output = outputPath();
         Map<String, Object> run = new LinkedHashMap<>();
@@ -128,8 +144,25 @@ class ChatJudgeCaptureProbe {
         run.put("generatorOllamaVersion", ollamaGet("/api/version").path("version").asText());
         run.put("gitHead", gitHead());
         run.put("mainSourceSha256", mainSourceHash());
-        run.put("fixtureSha256", sha256(Files.readAllBytes(FIXTURE)));
+        run.put("fixtureSha256", sha256(Files.readAllBytes(fixturePath)));
+        run.put("fixturePath", fixturePath.toString());
+        run.put("captureKind", "SPRING_CHAT_API_ACTUAL_ANSWERS");
+        run.put("plannedCaseCount", fixtures.size());
+        int plannedTurns = 0;
+        for (JsonNode fixture : fixtures) {
+            plannedTurns += fixture.path("turns").size();
+        }
+        run.put("plannedTurnCount", plannedTurns);
+        run.put("captureComplete", false);
+        run.put("processingPorts", processingPorts.stream()
+                .map(port -> AopUtils.getTargetClass(port).getName()).toList());
+        run.put("faqCount", jdbc.queryForObject("SELECT count(*) FROM faqs", Long.class));
+        run.put("embeddingCount", jdbc.queryForObject("SELECT count(*) FROM faq_embeddings", Long.class));
+        run.put("faqSnapshotHash", jdbc.queryForObject(
+                "SELECT md5(string_agg(faq_id::text || ':' || question || ':' || answer, '' ORDER BY faq_id)) "
+                        + "FROM faqs", String.class));
         run.put("cases", new ArrayList<>());
+        write(output, run);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cases = (List<Map<String, Object>>) run.get("cases");
@@ -140,6 +173,8 @@ class ChatJudgeCaptureProbe {
             Map<String, Object> caseResult = new LinkedHashMap<>();
             caseResult.put("caseId", fixture.path("caseId").asText());
             caseResult.put("category", fixture.path("category").asText());
+            caseResult.put("suite", fixture.path("suite").asText("flow_regression"));
+            caseResult.put("questionType", fixture.path("questionType").asText());
             caseResult.put("sessionId", sessionId);
             caseResult.put("turns", turns);
             cases.add(caseResult);
@@ -151,6 +186,9 @@ class ChatJudgeCaptureProbe {
                 synchronized (llmRequests) {
                     llmRequests.clear();
                 }
+                synchronized (ragInputs) {
+                    ragInputs.clear();
+                }
                 Map<String, Object> result = captureTurn(session, sessionId, turn);
                 turns.add(result);
                 write(output, run);
@@ -159,6 +197,9 @@ class ChatJudgeCaptureProbe {
                         result.get("executionStatus"), ((List<?>) result.get("searches")).size());
             }
         }
+        run.put("captureComplete", true);
+        run.put("completedAt", Instant.now().toString());
+        write(output, run);
         System.out.println("[Chat Judge] 생성 결과: " + output.toAbsolutePath());
     }
 
@@ -236,6 +277,9 @@ class ChatJudgeCaptureProbe {
         result.put("confirmedConditions", confirmedConditions);
         result.put("searches", snapshots);
         result.put("generatorRequests", promptSnapshots);
+        synchronized (ragInputs) {
+            result.put("ragInputs", List.copyOf(ragInputs));
+        }
         result.put("generatorCallRecords", generations);
         result.put("outputMessage", outputMessage);
         result.put("savedSources", savedSources);
@@ -285,6 +329,9 @@ class ChatJudgeCaptureProbe {
                 ? Path.of(".measure", "chat-judge-capture-" + FILE_TIME.format(Instant.now()) + ".json")
                 : Path.of(configured);
         Files.createDirectories(path.toAbsolutePath().getParent());
+        if (Files.exists(path)) {
+            throw new IOException("기존 생성 결과를 덮어쓰지 않습니다: " + path);
+        }
         return path;
     }
 

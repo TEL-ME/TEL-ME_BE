@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import judge_chat_flow as judge
-import compare_chat_judge as comparison
+from scripts.chat_judge import judge_chat_flow as judge
+from scripts.chat_judge.experiments.v1_pilot_fewshot import compare_chat_judge as comparison
 
 
 def sample_capture():
@@ -47,7 +47,7 @@ CATALOG = [{
 
 class ChatJudgeTest(unittest.TestCase):
     def test_fewshot_comparison_uses_same_capture_and_manual_labels(self):
-        root = Path(__file__).resolve().parents[1] / "docs/chat-judge"
+        root = Path(__file__).resolve().parents[2] / "docs/chat-judge/experiments/V1-pilot-fewshot"
         manual, baseline, fewshot = [
             json.loads((root / name).read_text(encoding="utf-8"))
             for name in ("20261001-manual-labels.json", "20261001-reconciled.json",
@@ -63,9 +63,9 @@ class ChatJudgeTest(unittest.TestCase):
             comparison.compare(manual, baseline, changed)
 
     def test_fewshot_examples_are_valid_and_separate_from_pilot(self):
-        root = Path(__file__).resolve().parents[1]
-        capture = json.loads((root / "docs/chat-judge/20261001-capture.json").read_text(encoding="utf-8"))
-        fewshot = json.loads((root / "scripts/data/chat_judge_fewshot.json").read_text(encoding="utf-8"))
+        root = Path(__file__).resolve().parents[2]
+        capture = json.loads((root / "docs/chat-judge/experiments/V1-pilot-fewshot/20261001-capture.json").read_text(encoding="utf-8"))
+        fewshot = json.loads((root / "scripts/chat_judge/data/chat_judge_fewshot.json").read_text(encoding="utf-8"))
         self.assertIs(fewshot, judge.validate_fewshot(fewshot, capture))
         leaked = copy.deepcopy(fewshot)
         leaked["adequacy"][0]["input"]["question"] = capture["cases"][0]["turns"][0]["fixture"]["question"]
@@ -78,10 +78,13 @@ class ChatJudgeTest(unittest.TestCase):
 
     @patch.object(judge.urllib.request, "urlopen")
     def test_fewshot_messages_alternate_and_zero_shot_is_unchanged(self, urlopen):
-        raw = {"message": {"content": json.dumps({"claims": [], "overall": "NOT_APPLICABLE"})}}
-        urlopen.return_value.__enter__.side_effect = lambda: io.BytesIO(json.dumps(raw).encode("utf-8"))
-        root = Path(__file__).resolve().parents[1]
-        example = json.loads((root / "scripts/data/chat_judge_fewshot.json").read_text(encoding="utf-8"))["grounding"][0]
+        outputs = [
+            {"message": {"content": json.dumps({"claims": []})}},
+            {"message": {"content": json.dumps({"claims": [], "overall": "NOT_APPLICABLE"})}},
+        ] * 2
+        urlopen.side_effect = [io.BytesIO(json.dumps(raw).encode("utf-8")) for raw in outputs]
+        root = Path(__file__).resolve().parents[2]
+        example = json.loads((root / "scripts/chat_judge/data/chat_judge_fewshot.json").read_text(encoding="utf-8"))["grounding"][0]
         plain = judge.ollama_chat("http://unused", "qwen3:14b", "grounding", {"sources": []})
         self.assertEqual(["system", "user"], [item["role"] for item in plain["request"]["messages"]])
         guided = judge.ollama_chat("http://unused", "qwen3:14b", "grounding", {"sources": []},
@@ -151,10 +154,126 @@ class ChatJudgeTest(unittest.TestCase):
             "grounding", result, set(), [{"name": "지역", "value": "서울"}]
         ))
 
+    def test_grounding_rejects_claim_copied_from_unanswered_faq(self):
+        result = {"claims": [{
+            "claim": "12개월 미만이면 할인 반환금 100%가 적용됩니다.",
+            "verdict": "UNSUPPORTED", "sourceIds": [], "reason": "두 번째 FAQ 내용",
+        }], "overall": "UNSUPPORTED"}
+        with self.assertRaisesRegex(ValueError, "실제 답변의 원문"):
+            judge.validate_result("grounding", result, {"FAQ-2"},
+                                  answer="최대 월 100만 원까지만 가능합니다.")
+
+    def test_claim_extraction_accepts_only_exact_ordered_answer_spans(self):
+        answer = "월 1회 변경할 수 있고, 위약금은 없습니다."
+        self.assertEqual(
+            ["월 1회 변경할 수 있고", "위약금은 없습니다."],
+            judge.validate_claim_extraction(
+                {"claims": [{"quote": "월 1회 변경할 수 있고"}, {"quote": "위약금은 없습니다."}]},
+                answer,
+            ),
+        )
+        with self.assertRaises(judge.ClaimTextMismatch):
+            judge.validate_claim_extraction(
+                {"claims": [{"quote": "월 1회 변경 가능합니다."}]}, answer
+            )
+        with self.assertRaises(judge.ClaimTextMismatch):
+            judge.validate_claim_extraction(
+                {"claims": [{"quote": "질문에 있던 내용입니다."}]}, answer
+            )
+
+    def test_claim_extraction_keeps_conditions_negation_and_amounts_verbatim(self):
+        answer = "미납 요금이 있으면 완납 후 명의 변경이 가능합니다. 배송비는 무료가 아닙니다."
+        claims = ["미납 요금이 있으면 완납 후 명의 변경이 가능합니다.", "배송비는 무료가 아닙니다."]
+        self.assertEqual(
+            claims,
+            judge.validate_claim_extraction({"claims": [{"quote": item} for item in claims]}, answer),
+        )
+        with self.assertRaises(judge.ClaimTextMismatch):
+            judge.validate_claim_extraction(
+                {"claims": [{"quote": "미납 요금이 있으면 명의 변경이 가능합니다."}]}, answer
+            )
+
+    @patch.object(judge.urllib.request, "urlopen")
+    def test_grounding_extracts_from_answer_then_judges_meaning_without_question_leakage(self, urlopen):
+        answer = "월 1회 변경할 수 있습니다."
+        extraction = {"claims": [{"quote": answer}]}
+        semantic = {"claims": [{
+            "claim": answer, "verdict": "SUPPORTED",
+            "sourceIds": ["FAQ-1"], "reason": "표현은 다르지만 의미가 같습니다.",
+        }], "overall": "SUPPORTED"}
+        responses = [
+            {"message": {"content": json.dumps(extraction, ensure_ascii=False)},
+             "prompt_eval_count": 10, "eval_count": 4},
+            {"message": {"content": json.dumps(semantic, ensure_ascii=False)},
+             "prompt_eval_count": 20, "eval_count": 5},
+        ]
+        urlopen.side_effect = [io.BytesIO(json.dumps(raw).encode("utf-8")) for raw in responses]
+        data = {
+            "question": "요금제 변경을 몇 번 할 수 있나요?",
+            "answer": answer,
+            "sources": [{"sourceId": "FAQ-1", "question": "변경 주기", "answer": "한 달에 한 번 변경 가능합니다."}],
+        }
+
+        record = judge.ollama_chat("http://unused", "qwen3:14b", "grounding", data)
+
+        self.assertEqual(2, urlopen.call_count)
+        self.assertEqual(2, len(record["attempts"]))
+        self.assertEqual(30, record["promptTokens"])
+        extraction_input = json.loads(record["claimExtraction"]["request"]["messages"][-1]["content"])
+        self.assertEqual({"assistantAnswer": answer}, extraction_input)
+        semantic_input = json.loads(record["request"]["messages"][-1]["content"].split("\n", 1)[1])
+        self.assertEqual([{"claim": answer}], semantic_input["claims"])
+        self.assertEqual("FAQ-1", semantic_input["faqSources"][0]["sourceId"])
+        self.assertNotIn("question", semantic_input)
+        self.assertNotIn("assistantAnswer", semantic_input)
+        self.assertNotIn("question", semantic_input["faqSources"][0])
+        self.assertEqual(semantic, record["result"])
+
+    @patch.object(judge.urllib.request, "urlopen")
+    def test_grounding_rejects_changed_claims_without_repair_or_reusing_verdict(self, urlopen):
+        extracted = {"claims": [{"quote": "월 1회 변경할 수 있습니다."}]}
+        changed = {"claims": [{
+            "claim": "매월 변경 횟수는 제한이 없습니다.", "verdict": "SUPPORTED",
+            "sourceIds": ["FAQ-1"], "reason": "변경 가능하다고 판단",
+        }], "overall": "SUPPORTED"}
+        responses = [
+            {"message": {"content": json.dumps(extracted, ensure_ascii=False)}},
+            {"message": {"content": json.dumps(changed, ensure_ascii=False)}},
+        ]
+        urlopen.side_effect = [io.BytesIO(json.dumps(raw).encode("utf-8")) for raw in responses]
+        data = {"answer": "월 1회 변경할 수 있습니다.",
+                "sources": [{"sourceId": "FAQ-1", "answer": "한 달에 한 번 변경 가능합니다."}]}
+
+        with self.assertRaises(judge.JudgeCallError) as context:
+            judge.ollama_chat("http://unused", "qwen3:14b", "grounding", data)
+
+        self.assertEqual(2, urlopen.call_count)
+        self.assertNotIn("repairRequest", context.exception.record)
+        self.assertIn("ClaimTextMismatch", context.exception.record["error"])
+
+    @patch.object(judge.urllib.request, "urlopen")
+    def test_grounding_does_not_retry_invalid_extraction(self, urlopen):
+        invalid = {"claims": [{"quote": "질문에서 가져온 누출 문장"}]}
+        urlopen.return_value.__enter__.return_value = io.BytesIO(json.dumps({
+            "message": {"content": json.dumps(invalid, ensure_ascii=False)}
+        }).encode("utf-8"))
+        data = {"question": "질문에서 가져온 누출 문장", "answer": "답변 문장입니다.",
+                "sources": [{"sourceId": "FAQ-1", "answer": "질문에서 가져온 누출 문장"}]}
+
+        with self.assertRaises(judge.JudgeCallError) as context:
+            judge.ollama_chat("http://unused", "qwen3:14b", "grounding", data)
+
+        self.assertEqual(1, urlopen.call_count)
+        self.assertIn("not an exact ordered span", context.exception.record["error"])
+        self.assertNotIn("repairRequest", context.exception.record)
+
     @patch.object(judge.urllib.request, "urlopen")
     def test_grounding_prompt_uses_source_id_without_optional_database_id(self, urlopen):
-        raw = {"message": {"content": json.dumps({"claims": [], "overall": "NOT_APPLICABLE"})}}
-        urlopen.return_value.__enter__.side_effect = lambda: io.BytesIO(json.dumps(raw).encode("utf-8"))
+        outputs = [
+            {"message": {"content": json.dumps({"claims": []})}},
+            {"message": {"content": json.dumps({"claims": [], "overall": "NOT_APPLICABLE"})}},
+        ]
+        urlopen.side_effect = [io.BytesIO(json.dumps(raw).encode("utf-8")) for raw in outputs]
         data = {
             "question": "요금제 변경 방법은?", "answer": "안내가 어렵습니다.",
             "sources": [{"sourceId": "BILLING-0001", "faqId": None, "answer": "앱에서 변경합니다."}],
@@ -162,8 +281,9 @@ class ChatJudgeTest(unittest.TestCase):
         result = judge.ollama_chat("http://unused", "qwen3:14b", "grounding", data)
         prompt = result["request"]["messages"][-1]["content"]
         self.assertIn('"sourceId":"BILLING-0001"', prompt)
-        self.assertIn('"assistantAnswer":"안내가 어렵습니다."', prompt)
+        self.assertIn('"claims":[]', prompt)
         self.assertIn('"faqSources":', prompt)
+        self.assertNotIn("안내가 어렵습니다.", prompt)
         self.assertNotIn("faqId", prompt)
         self.assertIsNone(data["sources"][0]["faqId"])
 
@@ -224,8 +344,8 @@ class ChatJudgeTest(unittest.TestCase):
         self.assertEqual("BILLING-0001", grounding["sources"][0]["sourceId"])
 
     def test_adequacy_request_excludes_expected_labels_and_backend_basis(self):
-        case = json.loads((Path(__file__).resolve().parents[1]
-                           / "scripts/data/chat_judge_validation_v2.json").read_text(encoding="utf-8"))["cases"][0]
+        case = json.loads((Path(__file__).resolve().parents[2]
+                           / "scripts/chat_judge/data/chat_judge_validation_v2.json").read_text(encoding="utf-8"))["cases"][0]
         original = copy.deepcopy(case["adequacyInput"])
         request = judge.judge_request("qwen3:14b", "adequacy", original)
         prompt = request["messages"][-1]["content"]
@@ -242,6 +362,7 @@ class ChatJudgeTest(unittest.TestCase):
 
     def test_abstention_decision_combines_grounding_and_independent_signals(self):
         signals = {"answerIsRefusal": False, "evidenceAnswerability": "ENOUGH",
+                   "evidenceQuotes": [{"sourceId": "BILLING-0001", "quote": "월 1회"}],
                    "reason": "답변했습니다."}
         self.assertEqual("SHOULD_ABSTAIN", judge.decide_abstention(
             {"overall": "UNSUPPORTED"}, signals, "NOT_APPLICABLE")["label"])
@@ -257,7 +378,36 @@ class ChatJudgeTest(unittest.TestCase):
         decision = judge.decide_abstention({"overall": "NOT_APPLICABLE"}, signals)
         self.assertEqual("REVIEW", decision["label"])
         self.assertTrue(decision["requiresReview"])
-        self.assertIs(signals, judge.validate_result("abstention", signals, set()))
+        self.assertIs(signals, judge.validate_result(
+            "abstention", signals, {"BILLING-0001"},
+            sources=[{"sourceId": "BILLING-0001", "answer": "월 1회 바꿀 수 있습니다."}],
+        ))
+
+    def test_abstention_requires_a_real_faq_quote(self):
+        source = {"sourceId": "USIM-0001", "answer": "7,700원이며 택배로 2~3일 걸립니다."}
+        result = {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH",
+                  "evidenceQuotes": [], "reason": "근거가 있다고 판단"}
+        with self.assertRaisesRegex(ValueError, "FAQ 인용문이 없습니다"):
+            judge.validate_result("abstention", result, {"USIM-0001"}, sources=[source])
+        result["evidenceQuotes"] = [{"sourceId": "USIM-0001", "quote": "택배비가 포함됩니다"}]
+        with self.assertRaisesRegex(ValueError, "실제 검색 근거"):
+            judge.validate_result("abstention", result, {"USIM-0001"}, sources=[source])
+
+    def test_coverage_uses_each_required_fact_and_answer_quote(self):
+        result = {"coverage": "COMPLETE", "factChecks": [
+            {"requiredFact": "데이터 8GB", "answered": True, "answerQuote": "데이터 8GB"},
+            {"requiredFact": "통화 100분", "answered": False, "answerQuote": ""},
+        ], "missingFacts": [], "reason": "첫 항목만 답함"}
+        self.assertIs(result, judge.validate_result(
+            "coverage", result, set(), answer="매월 데이터 8GB를 제공합니다.",
+            required_facts=["데이터 8GB", "통화 100분"],
+        ))
+        self.assertEqual("PARTIAL", result["coverage"])
+        self.assertEqual(["통화 100분"], result["missingFacts"])
+        result["factChecks"][0]["answerQuote"] = "통화 100분"
+        with self.assertRaisesRegex(ValueError, "실제 답변"):
+            judge.validate_result("coverage", result, set(), answer="매월 데이터 8GB를 제공합니다.",
+                                  required_facts=["데이터 8GB", "통화 100분"])
 
     @patch.object(judge.urllib.request, "urlopen")
     def test_malformed_model_output_preserves_raw_response(self, urlopen):
@@ -300,9 +450,9 @@ class ChatJudgeTest(unittest.TestCase):
         self.assertIn("model missing", evaluation["cases"][0]["turns"][0]["error"])
 
     def test_archived_pilot_reclassifies_three_judge_mistakes_without_model_calls(self):
-        root = Path(__file__).resolve().parents[1]
-        capture = json.loads((root / "docs/chat-judge/20261001-capture.json").read_text(encoding="utf-8"))
-        previous = json.loads((root / "docs/chat-judge/20261001-judged.json").read_text(encoding="utf-8"))
+        root = Path(__file__).resolve().parents[2]
+        capture = json.loads((root / "docs/chat-judge/experiments/V1-pilot-fewshot/20261001-capture.json").read_text(encoding="utf-8"))
+        previous = json.loads((root / "docs/chat-judge/experiments/V1-pilot-fewshot/20261001-judged.json").read_text(encoding="utf-8"))
         catalog = json.loads((root / "scripts/data/faq_full_1150.json").read_text(encoding="utf-8"))
         updated = judge.reconcile_evaluation(capture, previous, catalog)
         decisions = {case["caseId"]: [turn.get("abstentionDecision") for turn in case["turns"]]

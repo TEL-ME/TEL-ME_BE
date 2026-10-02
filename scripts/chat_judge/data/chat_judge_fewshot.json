@@ -12,7 +12,7 @@
         "confirmedConditions": []
       },
       "output": {
-        "claims": [{"claim": "매월 데이터 8GB를 제공한다", "verdict": "SUPPORTED", "sourceIds": ["DEMO-G-01"], "reason": "FAQ에 매월 8GB 제공이 명시되어 있다."}],
+        "claims": [{"claim": "매월 데이터 8GB를 제공합니다.", "verdict": "SUPPORTED", "sourceIds": ["DEMO-G-01"], "reason": "FAQ에 매월 8GB 제공이 명시되어 있다."}],
         "overall": "SUPPORTED"
       }
     },
@@ -28,8 +28,8 @@
       },
       "output": {
         "claims": [
-          {"claim": "3일 이용권 가격은 9,000원이다", "verdict": "SUPPORTED", "sourceIds": ["DEMO-G-02"], "reason": "FAQ에 가격이 명시되어 있다."},
-          {"claim": "첫날은 무료이다", "verdict": "UNSUPPORTED", "sourceIds": [], "reason": "FAQ에는 무료 제공 조건이 없다."}
+          {"claim": "3일 이용권은 9,000원이며", "verdict": "SUPPORTED", "sourceIds": ["DEMO-G-02"], "reason": "FAQ에 가격이 명시되어 있다."},
+          {"claim": "첫날은 무료입니다.", "verdict": "UNSUPPORTED", "sourceIds": [], "reason": "FAQ에는 무료 제공 조건이 없다."}
         ],
         "overall": "UNSUPPORTED"
       }

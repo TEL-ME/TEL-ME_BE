@@ -1,0 +1,159 @@
+{
+  "createdAt": "2026-10-02T14:52:21.679104",
+  "capturePath": "D:\\finalproject\\TEL-ME_BE\\.measure\\chat-pipeline-20261002-full-service\\capture.json",
+  "datasetScope": "fixed_challenge_set_not_live_user_distribution",
+  "judgeBackend": "vllm",
+  "judgeModel": "qwen3-14b-awq",
+  "workers": 8,
+  "fixtureSha256": "38bfc87b6e402b67260e84b967a7b6fcc06fb8c0227a0939145f1f161496c28f",
+  "plannedConversations": 508,
+  "plannedTurns": 509,
+  "databaseCounts": "1152|1152",
+  "vllmContainer": {
+    "imageId": "sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1",
+    "cmd": [
+      "Qwen/Qwen3-14B-AWQ",
+      "--served-model-name",
+      "qwen3-14b-awq",
+      "--quantization",
+      "awq",
+      "--dtype",
+      "half",
+      "--max-model-len",
+      "4096",
+      "--gpu-memory-utilization",
+      "0.90",
+      "--kv-cache-memory-bytes",
+      "2147483648",
+      "--max-num-seqs",
+      "8",
+      "--trust-remote-code"
+    ],
+    "mounts": [
+      {
+        "Type": "volume",
+        "Name": "test_hfdata",
+        "Source": "/var/lib/docker/volumes/test_hfdata/_data",
+        "Destination": "/root/.cache/huggingface",
+        "Driver": "local",
+        "Mode": "z",
+        "RW": true,
+        "Propagation": ""
+      },
+      {
+        "Type": "bind",
+        "Source": "/run/desktop/mnt/host/d/finalproject/test/vllm_patch/buffer_utils.py",
+        "Destination": "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/buffer_utils.py",
+        "Mode": "ro",
+        "RW": false,
+        "Propagation": "rprivate"
+      }
+    ]
+  },
+  "vllmRuntimeVersion": "0.29.0",
+  "initialRuntimeContainer": {
+    "image": "vllm/vllm-openai:latest",
+    "imageId": "sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1",
+    "cmd": [
+      "Qwen/Qwen3-14B-AWQ",
+      "--served-model-name",
+      "qwen3-14b-awq",
+      "--quantization",
+      "awq",
+      "--dtype",
+      "half",
+      "--max-model-len",
+      "4096",
+      "--gpu-memory-utilization",
+      "0.90",
+      "--max-num-seqs",
+      "8",
+      "--trust-remote-code"
+    ],
+    "patchMounts": [
+      {
+        "Type": "volume",
+        "Name": "test_hfdata",
+        "Source": "/var/lib/docker/volumes/test_hfdata/_data",
+        "Destination": "/root/.cache/huggingface",
+        "Driver": "local",
+        "Mode": "z",
+        "RW": true,
+        "Propagation": ""
+      },
+      {
+        "Type": "bind",
+        "Source": "D:/finalproject/test/vllm_patch/buffer_utils.py",
+        "Destination": "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/buffer_utils.py",
+        "Mode": "",
+        "RW": false,
+        "Propagation": "rprivate"
+      }
+    ]
+  },
+  "generatorCaptureMetadata": {
+    "schemaVersion": 1,
+    "createdAt": "2026-10-02T05:52:38.971495800Z",
+    "database": "telme_judge_eval",
+    "generatorModel": "exaone3.5:7.8b",
+    "generatorModelDigest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03",
+    "generatorOllamaVersion": "0.34.0",
+    "gitHead": "7ffece3b79cfbedf863257fa74a9a55a8d4d45cf",
+    "mainSourceSha256": "56eed33b4fad9839a53864d083d18a57e8c39889c4a6f2bb200eab0ededf4867",
+    "fixtureSha256": "f9ab3f0aab5ad75fbfb959469e5ad0baa2249a9928364ce0cbdf653750955da0",
+    "fixturePath": "D:\\finalproject\\TEL-ME_BE\\.measure\\chat-pipeline-20261002-full-service\\questions.json",
+    "captureKind": "SPRING_CHAT_API_ACTUAL_ANSWERS",
+    "plannedCaseCount": 508,
+    "plannedTurnCount": 509,
+    "captureComplete": true,
+    "processingPorts": [
+      "com.telme.consult.service.ConsultChatProcessingService"
+    ],
+    "faqCount": 1152,
+    "embeddingCount": 1152,
+    "faqSnapshotHash": "c6a85002ddd842b01e8a4322ea19d514",
+    "completedAt": "2026-10-02T06:04:27.488639400Z"
+  },
+  "storageRecovery": {
+    "reason": "Windows reader lock interrupted checkpoint rename. Only storage retry/compression and non-prompt summary fixes changed. Rubrics, schemas, model and captured inputs verified identical.",
+    "previousEvaluatorSha256": "bab1dcf4fbfb883e200705a795c7bc20b72753d3c9c77dfa5a44cf8bdf689266",
+    "newEvaluatorSha256": "65be042e9422c6d4370a31846f7c30abcf91819976b340b9e4c91e5bcf719e82",
+    "originalPartialFile": ".measure\\chat-pipeline-20261002-full-service\\judged-raw.json.gz.tmp",
+    "retainedAxisResults": 238
+  },
+  "vramRecovery": {
+    "reason": "WSL vmwp shared GPU allocation observed (332 MiB), 15.5 GiB dedicated usage, low throughput. The 0.80 automatic profiling attempt failed startup. Final runtime uses explicit 2147483648-byte FP16 KV cache instead of automatic reservation; IPC host; no weight or sampling change. Same image, model weights, dtype, AWQ, max length, concurrency, prompts and sampling.",
+    "previousPartialFile": "D:\\finalproject\\TEL-ME_BE\\.measure\\chat-pipeline-20261002-full-recovered\\judged-raw.json.gz",
+    "retainedAxisResults": 557,
+    "priorResumeWallSeconds": 727.375
+  },
+  "worktreeRecovery": {
+    "reason": "Main worktree changed to develop and GitHub Desktop stashed the evaluation files during execution. Restored the stash without dropping it in a separate worktree at the frozen commit. Production source hash verified equal to capture.",
+    "worktree": "D:/finalproject/TEL-ME_BE_llm_judge_service_eval",
+    "branch": "feat/TELME-100-chat-pipeline-quality-eval",
+    "finalWorktree": "D:\\finalproject\\TEL-ME_BE",
+    "finalBranch": "feat/TELME-100-llm-judge-evaluation-system"
+  },
+  "judgeIdentity": {
+    "captureSha256": "4998cca5b228f0d658a773aa882770e97ab5e3153b0199e0875c4d137310554a",
+    "catalogSha256": "ca078af56df2c67a427246f50fcde165978fe8b35cb01e890dab6fe5b95f7505",
+    "judgeScriptSha256": "072b6030f4b7fe5442bcfdeea3d7af888a5e080d58efa4574e6430f2f59b575c",
+    "evaluatorSha256": "65be042e9422c6d4370a31846f7c30abcf91819976b340b9e4c91e5bcf719e82",
+    "qualityRubricSha256": "06af8cd34f196e6a05a7f7f9b9d74fad3a6625560e43344d606199e41863ef8e",
+    "qualitySchemaSha256": "343c2f82c75a3e0ab84a1be5c86961d96632f0bd25d5ca42577543b62ffd961f",
+    "model": "qwen3-14b-awq",
+    "url": "http://localhost:8001",
+    "workers": 8
+  },
+  "sourceArchiveSha256": "7558c01baa2e1edf06271a9d5eb50d3d706a2a7ca7401b0e5d5c995fe67ea4ae",
+  "finalResumeWallSeconds": 764.781,
+  "runCreatedAt": "2026-10-02T06:05:33.291270+00:00",
+  "runCompletedAt": "2026-10-02T06:57:45.800182+00:00",
+  "warning": "Recovered run with two KV cache configurations; final resume wall time is not complete independent benchmark time.",
+  "artifactSha256": {
+    "20261002-service-pipeline-capture.json.gz": "ff13a1d4a4c184fb845be8e17646c85a0d623a8b3921ec48046db57c9ede5940",
+    "20261002-service-pipeline-judged-raw.json.gz": "67b66976c4d530fea6fc01e028b22fd3669b9212aa32014bad42004fab4713be",
+    "20261002-service-pipeline-scores.json": "e41cde138b20016d5fff336ee477991bb3cceebf6547ce9d819bb2ad9d55e9a3",
+    "20261002-service-pipeline-category-scores.json": "0cc5fd33ffcb17ef2132628a610c9a79dbc535d9fcf5d4b14112177ca9cbc46f"
+  }
+}

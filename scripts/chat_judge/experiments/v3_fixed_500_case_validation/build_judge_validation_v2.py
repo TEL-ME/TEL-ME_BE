@@ -7,14 +7,14 @@ import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import judge_chat_flow as judge
+from scripts.chat_judge import judge_chat_flow as judge
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[4]
 CATALOG = judge.DEFAULT_CATALOG
-OUTPUT = ROOT / "scripts/data/chat_judge_validation_v2.json"
-PILOT = ROOT / "scripts/data/chat_judge_pilot.json"
-V1 = ROOT / "scripts/data/chat_judge_validation_v1.json"
+OUTPUT = ROOT / "scripts/chat_judge/data/chat_judge_validation_v2.json"
+PILOT = ROOT / "scripts/chat_judge/data/chat_judge_pilot.json"
+V1 = ROOT / "scripts/chat_judge/data/chat_judge_validation_v1.json"
 FEWSHOT = judge.DEFAULT_FEWSHOT
 EQUIVALENCE_LABELS = ROOT / "scripts/data/faq_equivalence_labels_v2.json"
 CATEGORIES = ("BILLING", "PLAN", "DEVICE", "SUBSCRIBE", "PORTING",

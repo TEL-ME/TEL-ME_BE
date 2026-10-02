@@ -5,9 +5,9 @@ import json
 import unittest
 from collections import Counter
 
-import build_judge_validation_v2 as builder
-import judge_chat_flow as judge
-import run_judge_validation_v2 as runner
+from scripts.chat_judge.experiments.v3_fixed_500_case_validation import build_judge_validation_v2 as builder
+from scripts.chat_judge import judge_chat_flow as judge
+from scripts.chat_judge.experiments.v3_fixed_500_case_validation import run_judge_validation_v2 as runner
 
 
 def inputs():
@@ -64,16 +64,15 @@ class JudgeValidationV2Test(unittest.TestCase):
         self.assertEqual(0, summary["byAxis"]["abstention"]["scored"])
         self.assertEqual([case["caseId"]], summary["abstentionReviewCaseIds"])
 
-    def test_reused_grounding_is_exact_and_rechecks_unsupported_citation(self):
-        archived = runner.load_result(builder.ROOT / "docs/chat-judge/20261001-validation-v2-contract-raw.json.gz")
+    def test_reuse_rejects_grounding_from_previous_rubric(self):
+        archived = runner.load_result(builder.ROOT / "docs/chat-judge/experiments/V3-fixed-500-case-validation/20261001-validation-v2-contract-raw.json.gz")
         dataset = json.loads(builder.OUTPUT.read_text(encoding="utf-8"))
         required = ("datasetSha256", "catalogSha256", "judgeModel", "judgeModelDigest",
                     "judgeOllamaVersion", "groundingRubricSha256", "groundingSchemaSha256")
         metadata = {key: archived[key] for key in required}
         result = {"cases": copy.deepcopy(dataset["cases"])}
-        runner.reuse_grounding(result, archived, metadata)
-        self.assertEqual(["USIM-0072"], result["groundingRecheckCaseIds"])
-        self.assertEqual(499, sum("grounding" in case for case in result["cases"]))
+        with self.assertRaises(ValueError):
+            runner.reuse_grounding(result, archived, metadata)
 
     def test_reused_abstention_signals_require_exact_request(self):
         case = json.loads(builder.OUTPUT.read_text(encoding="utf-8"))["cases"][0]
@@ -81,8 +80,11 @@ class JudgeValidationV2Test(unittest.TestCase):
                     "judgeOllamaVersion", "abstentionRubricSha256", "abstentionSchemaSha256")
         metadata = {key: "same" for key in required}
         metadata["judgeModel"] = "qwen3:14b"
+        source = case["adequacyInput"]["sources"][0]
         record = {"request": judge.judge_request("qwen3:14b", "abstention", case["adequacyInput"]),
-                  "result": {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH", "reason": "근거가 있음"}}
+                  "result": {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH",
+                             "evidenceQuotes": [{"sourceId": source["sourceId"], "quote": source["answer"]}],
+                             "reason": "근거가 있음"}}
         previous = {**metadata, "cases": [{"caseId": case["caseId"], "abstentionSignals": record}]}
         result = {"cases": [copy.deepcopy(case)]}
         runner.reuse_abstention_signals(result, previous, metadata)

@@ -1,0 +1,90 @@
+{
+  "executedTurns": 509,
+  "plannedTurns": 509,
+  "completedTurns": 494,
+  "executionCompletionRate": {
+    "numerator": 494,
+    "denominator": 509,
+    "percent": 97.05
+  },
+  "fullyScoredTurns": 478,
+  "unscoredTurns": 31,
+  "reviewTurns": 7,
+  "qualitySuccess": {
+    "numerator": 273,
+    "denominator": 486,
+    "percent": 56.17
+  },
+  "qualitySuccessBoundsPercent": [
+    53.63,
+    58.15
+  ],
+  "unresolvedQualityTurns": 23,
+  "hallucinatedAnswerRate": {
+    "numerator": 113,
+    "denominator": 350,
+    "percent": 32.29
+  },
+  "unsupportedClaimRate": {
+    "numerator": 142,
+    "denominator": 760,
+    "percent": 18.68
+  },
+  "groundingCoverage": {
+    "numerator": 478,
+    "denominator": 509,
+    "percent": 93.91
+  },
+  "unsupportedAnswersPerAllTurns": {
+    "numerator": 113,
+    "denominator": 509,
+    "percent": 22.2
+  },
+  "axisScored": {
+    "grounding": 479,
+    "quality": 493,
+    "abstention": 494
+  },
+  "completeAnswerRate": {
+    "numerator": 331,
+    "denominator": 440,
+    "percent": 75.23
+  },
+  "overRefusalRate": {
+    "numerator": 12,
+    "denominator": 425,
+    "percent": 2.82
+  },
+  "candidateRetrievalHitRate": {
+    "numerator": 384,
+    "denominator": 507,
+    "percent": 75.74
+  },
+  "ragInputHitRate": {
+    "numerator": 384,
+    "denominator": 507,
+    "percent": 75.74
+  },
+  "savedSourceHitRate": {
+    "numerator": 369,
+    "denominator": 507,
+    "percent": 72.78
+  },
+  "unsupportedAnswerRateBoundsPerAllTurnsPercent": [
+    22.2,
+    28.29
+  ],
+  "findings": {
+    "HUMAN_REVIEW": 7,
+    "INCOMPLETE_ANSWER": 111,
+    "OVER_REFUSAL": 12,
+    "PROCESSING_FAILURE": 15,
+    "RETRIEVAL_MISS": 99,
+    "ROUTING_MISMATCH": 39,
+    "SHOULD_ABSTAIN": 113,
+    "STORE_NOT_CONNECTED": 1,
+    "UNSUPPORTED_CLAIM": 113
+  },
+  "pipelineP50Ms": 1315,
+  "pipelineP95Ms": 2328
+}

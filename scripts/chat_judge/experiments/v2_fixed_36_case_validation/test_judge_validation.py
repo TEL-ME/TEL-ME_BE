@@ -4,8 +4,8 @@ import copy
 import json
 import unittest
 
-import judge_chat_flow as judge
-import judge_validation as validation
+from scripts.chat_judge import judge_chat_flow as judge
+from scripts.chat_judge.experiments.v2_fixed_36_case_validation import judge_validation as validation
 
 
 def inputs():
@@ -15,7 +15,7 @@ def inputs():
 
 class JudgeValidationTest(unittest.TestCase):
     def test_archived_comparison_preserves_every_raw_judge_call(self):
-        path = validation.ROOT / "docs/chat-judge/20261001-validation-v1-results.json"
+        path = validation.ROOT / "docs/chat-judge/experiments/V2-fixed-36-case-validation/20261001-validation-v1-results.json"
         result = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(36, len(result["cases"]))
         self.assertEqual(validation.summarize(result["cases"]), result["summary"])

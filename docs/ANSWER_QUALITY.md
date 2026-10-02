@@ -92,7 +92,7 @@ Authorization: Bearer <BEDROCK_API_KEY>
 ### 3.4 Judge 실행 방법
 
 ```bash
-python3 scripts/judge_answers.py .measure/baseline-<시각>.json
+python3 -m scripts.chat_judge.judge_answers .measure/baseline-<시각>.json
 ```
 
 `temperature=0`, `reasoning_effort=low`로 고정한다. 기본값은 판정 전에 생각을 길게 해 토큰을 다 쓰고 답을 못 내는 경우가 있었다.
@@ -349,7 +349,7 @@ java -jar build/libs/telme-0.0.1-SNAPSHOT.jar --server.port=0 --faq.reembed.enab
 TELME_PROBE=true ./gradlew test --tests '*AnswerQualityBaselineProbe*' --rerun-tasks
 
 # 3. 채점 (약 5분, 약 25원)
-python3 scripts/judge_answers.py .measure/baseline-<시각>.json
+python3 -m scripts.chat_judge.judge_answers .measure/baseline-<시각>.json
 ```
 
 ### 환경변수

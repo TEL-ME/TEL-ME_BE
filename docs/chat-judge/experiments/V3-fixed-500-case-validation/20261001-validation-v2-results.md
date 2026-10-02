@@ -106,11 +106,11 @@ UNSUPPORTED 판정은 채점된 항목에서 모두 맞았지만, 미채점 43�
 
 실행 명령:
 
-    python -u -X utf8 scripts/run_judge_validation_v2.py --ollama-url http://localhost:11435 --model qwen3:14b --out .measure/chat-judge-validation-v2.json
+    python -u -X utf8 -m scripts.chat_judge.experiments.v3_fixed_500_case_validation.run_judge_validation_v2 --ollama-url http://localhost:11435 --model qwen3:14b --out .measure/chat-judge-validation-v2.json
 
 전체 요청, 구조화 스키마, 원시 응답, 입력 해시, 토큰 수, 지연 시간, 최종 검증 결과는 [압축 원시 결과](20261001-validation-v2-raw.json.gz)에 보존했다. 재실행 때는 기존 결과 파일을 이어 쓰며 이미 채점된 사례를 건너뛴다. 전체 재실험은 새로운 --out 경로를 지정해야 한다. 최초 실행 결과는 로컬의 .measure/chat-judge-validation-v2-initial.json에 별도로 보존돼 있다.
 
-관련 자료는 [검증 실행기](../../scripts/run_judge_validation_v2.py), [Judge 및 출력 검증](../../scripts/judge_chat_flow.py), [검증셋](../../scripts/data/chat_judge_validation_v2.json), [FAQ 카탈로그](../../scripts/data/faq_full_1150.json)에서 확인할 수 있다.
+관련 자료는 [검증 실행기](../../../../scripts/chat_judge/experiments/v3_fixed_500_case_validation/run_judge_validation_v2.py), [Judge 및 출력 검증](../../../../scripts/chat_judge/judge_chat_flow.py), [검증셋](../../../../scripts/chat_judge/data/chat_judge_validation_v2.json), [FAQ 카탈로그](../../../../scripts/data/faq_full_1150.json)에서 확인할 수 있다.
 
 ## 해석과 후속 작업
 

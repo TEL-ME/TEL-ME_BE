@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
 MULTIGOLD = ROOT / "scripts/data/eval_questions_180_multigold.json"
-JUDGE_SET = ROOT / "scripts/data/chat_judge_validation_v2.json"
+JUDGE_SET = ROOT / "scripts/chat_judge/data/chat_judge_validation_v2.json"
 OUTPUT = ROOT / "scripts/data/faq_equivalence_labels_v1.json"
 MODEL = "bge-m3:latest"
 QUERY_SIMILARITY_THRESHOLD = 0.90

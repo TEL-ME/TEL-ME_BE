@@ -13,7 +13,7 @@ Judge가 UNSUPPORTED 주장에 근거 ID를 붙여 43건이 미채점된 원인�
 - JSON 출력 스키마에서 UNSUPPORTED와 IRRELEVANT 주장의 sourceIds를 빈 배열로 제한했다. 결과 검증기의 기존 금지 규칙도 유지했다.
 - 재채점 결과에는 Judge 코드와 두 출력 스키마의 해시를 기록한다. 충실도 요청이 기존 실행과 정확히 같은지 검사한 뒤 그 원시 판정만 재사용할 수 있게 했다.
 
-변경 위치는 [Judge 코드](../../scripts/judge_chat_flow.py), [500건 실행기](../../scripts/run_judge_validation_v2.py), [회귀 테스트](../../scripts/test_judge_chat_flow.py)와 [평가셋 테스트](../../scripts/test_build_judge_validation_v2.py)다. TEL-ME 채팅 API나 답변 생성 경로는 변경하지 않았다.
+변경 위치는 [Judge 코드](../../../../scripts/chat_judge/judge_chat_flow.py), [500건 실행기](../../../../scripts/chat_judge/experiments/v3_fixed_500_case_validation/run_judge_validation_v2.py), [회귀 테스트](../../../../scripts/chat_judge/test_judge_chat_flow.py)와 [평가셋 테스트](../../../../scripts/chat_judge/experiments/v3_fixed_500_case_validation/test_build_judge_validation_v2.py)다. TEL-ME 채팅 API나 답변 생성 경로는 변경하지 않았다.
 
 ## 재채점 결과
 
@@ -46,7 +46,7 @@ Judge가 UNSUPPORTED 주장에 근거 ID를 붙여 43건이 미채점된 원인�
 
 기존 결과는 덮어쓰지 않았다. 이번 근거성 판정 500회를 다시 호출했고, 충실도 및 답변 불가 판정 500회는 모델 digest, 기준 프롬프트, 요청 스키마, 입력이 정확히 같은 기존 결과에서 복사했다.
 
-    python -u -X utf8 scripts/run_judge_validation_v2.py --ollama-url http://localhost:11435 --model qwen3:14b --reuse-adequacy-from .measure/chat-judge-validation-v2.json --out .measure/chat-judge-validation-v2-contract.json
+    python -u -X utf8 -m scripts.chat_judge.experiments.v3_fixed_500_case_validation.run_judge_validation_v2 --ollama-url http://localhost:11435 --model qwen3:14b --reuse-adequacy-from .measure/chat-judge-validation-v2.json --out .measure/chat-judge-validation-v2-contract.json
 
 - 전체 결과: [압축 원시 기록](20261001-validation-v2-contract-raw.json.gz)
 - 검증셋 SHA-256: bf8e3c3e4ed48e784122b7184f67d3200ecdceb89cb9273a4a713825843a2ee3

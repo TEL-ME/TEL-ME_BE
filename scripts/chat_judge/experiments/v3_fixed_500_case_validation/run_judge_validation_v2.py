@@ -8,8 +8,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
-import build_judge_validation_v2 as builder
-import judge_chat_flow as judge
+from scripts.chat_judge.experiments.v3_fixed_500_case_validation import build_judge_validation_v2 as builder
+from scripts.chat_judge import judge_chat_flow as judge
 
 
 def summarize(cases):
@@ -120,7 +120,8 @@ def reuse_abstention_signals(result, previous, metadata):
         if signals.get("request") != request:
             raise ValueError(f"{case['caseId']}의 답변 불가 신호 요청이 현재 기준과 다릅니다.")
         judge.validate_result("abstention", signals["result"],
-                              {source["sourceId"] for source in case["adequacyInput"]["sources"]})
+                              {source["sourceId"] for source in case["adequacyInput"]["sources"]},
+                              sources=case["adequacyInput"]["sources"])
         case["abstentionSignals"] = copy.deepcopy(signals)
     result["reusedAbstentionResultSha256"] = judge.sha256(previous)
 
