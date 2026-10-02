@@ -42,9 +42,18 @@ public class AdminStoreCommandService {
     
     public AdminStoreDetailResponse update(Long storeId, AdminStoreSaveRequest request, Long adminId) {
         Store store = findStore(storeId);
+        // 폐점을 되돌리는 API가 없어 고쳐도 쓰일 곳이 없다. 상세 조회는 폐점 매장도 보여주므로 404가 아니라 409다
+        if (store.getStatus() == Store.Status.CLOSED_DOWN) {
+            throw new GeneralException(StoreErrorCode.STORE_CLOSED);
+        }
+        // 화면이 보낸 번호로 비교한다. 안 보내면 지금 읽은 번호로 비교해 동시에 저장한 경우만 막는다
+        int expected = request.lockVersion() != null ? request.lockVersion() : store.getLockVersion();
         store.update(request.name(), request.address(), request.phone(), request.regionCode(), request.latitude(), request.longitude());
         applyHoursAndServices(store, request);
-        storeRepository.touch(storeId);
+        // 0행이면 예외로 트랜잭션이 롤백돼 앞에서 반영한 매장·영업시간·업무 변경도 함께 취소된다
+        if (storeRepository.touch(storeId, expected) == 0) {
+            throw new GeneralException(StoreErrorCode.CONCURRENT_UPDATE);
+        }
         log.info("[AdminStore] 수정 storeId={} adminId={}", storeId, adminId);
         // touch가 영속성 컨텍스트를 비워서, 다시 읽어야 DB가 채운 수정 시각이 담긴다
         return converter.toDetail(findStore(storeId));

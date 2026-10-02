@@ -28,7 +28,8 @@ public record AdminStoreSaveRequest(
         @NotNull @DecimalMin("33.0") @DecimalMax("38.7") @Digits(integer = 2, fraction = 6) BigDecimal latitude,
         @NotNull @DecimalMin("124.6") @DecimalMax("132.0") @Digits(integer = 3, fraction = 6) BigDecimal longitude,
         @NotNull @Valid List<Hours> hours,
-        @NotEmpty List<StoreServiceType.Code> serviceCodes
+        @NotEmpty List<StoreServiceType.Code> serviceCodes,
+        Integer lockVersion
         ) {
     public AdminStoreSaveRequest {
         name = name == null ? null : name.strip();

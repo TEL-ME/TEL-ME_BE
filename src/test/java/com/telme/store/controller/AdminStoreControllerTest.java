@@ -229,6 +229,6 @@ class AdminStoreControllerTest {
     private static AdminStoreDetailResponse detail() {
         return new AdminStoreDetailResponse(1L, "텔미 강남점", "서울특별시 강남구 테헤란로 123", null, "1168010100", 
                     new BigDecimal("37.498095"), new BigDecimal("127.027610"), "OPEN", List.of(), List.of(), 
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), 0);
     }
 }

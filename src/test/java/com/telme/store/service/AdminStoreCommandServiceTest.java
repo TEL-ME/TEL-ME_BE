@@ -87,12 +87,15 @@ class AdminStoreCommandServiceTest {
         AdminStoreSaveRequest sameBasicInfo = new AdminStoreSaveRequest(
                 seed.getName(), seed.getAddress(), seed.getPhone(),
                 seed.getRegionCode(), seed.getLatitude(), seed.getLongitude(), week(LocalTime.of(8, 0)),
-                seed.getServices().stream().map(s -> s.getServiceType().getCode()).toList());
+                seed.getServices().stream().map(s -> s.getServiceType().getCode()).toList(), seed.getLockVersion());
+        int lockVersionBefore = seed.getLockVersion();
         entityManager.clear();
-        
+
         AdminStoreDetailResponse updated = commandService.update(SEED_STORE_ID, sameBasicInfo, ADMIN_ID);
-        
+
         assertThat(updated.updatedAt()).isAfter(before);
+        // stores 행이 안 바뀌어도 잠금 번호가 올라야 다른 관리자의 낡은 저장을 막을 수 있다
+        assertThat(updated.lockVersion()).isEqualTo(lockVersionBefore + 1);
     }
     
     @Test
@@ -132,9 +135,57 @@ class AdminStoreCommandServiceTest {
         assertThatThrownBy(() -> commandService.delete(999_999L, ADMIN_ID)).isInstanceOf(GeneralException.class);
     }
     
+    @Test
+    @DisplayName("조회에서 받은 잠금 번호로 수정하면 성공하고 번호가 1 오른다")
+    void 맞는_잠금_번호로_수정한다() {
+        AdminStoreDetailResponse created = commandService.create(request("관리자쓰기 잠금", LocalTime.of(10, 0), StoreServiceType.Code.NEW_LINE), ADMIN_ID);
+        entityManager.flush();
+        entityManager.clear();
+
+        AdminStoreDetailResponse updated = commandService.update(created.storeId(),
+                withLockVersion(request("관리자쓰기 잠금 수정", LocalTime.of(9, 0), StoreServiceType.Code.NEW_LINE), created.lockVersion()), ADMIN_ID);
+
+        assertThat(created.lockVersion()).isZero();
+        assertThat(updated.lockVersion()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("다른 관리자가 먼저 저장해 잠금 번호가 다르면 STORE409-1을 던진다")
+    void 낡은_잠금_번호는_막는다() {
+        Long storeId = commandService.create(request("관리자쓰기 낡은화면", LocalTime.of(10, 0), StoreServiceType.Code.NEW_LINE), ADMIN_ID).storeId();
+        entityManager.flush();
+        entityManager.clear();
+        commandService.update(storeId, request("다른 관리자가 먼저 저장", LocalTime.of(9, 0), StoreServiceType.Code.NEW_LINE), ADMIN_ID);
+
+        assertThatThrownBy(() -> commandService.update(storeId,
+                        withLockVersion(request("낡은 화면에서 저장", LocalTime.of(8, 0), StoreServiceType.Code.NEW_LINE), 0), ADMIN_ID))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(StoreErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("폐점 매장을 수정하면 STORE409-0을 던진다")
+    void 폐점_매장은_수정할_수_없다() {
+        Long storeId = commandService.create(request("관리자쓰기 폐점수정", LocalTime.of(10, 0), StoreServiceType.Code.NEW_LINE), ADMIN_ID).storeId();
+        commandService.delete(storeId, ADMIN_ID);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThatThrownBy(() -> commandService.update(storeId, request("폐점 후 수정", LocalTime.of(10, 0), StoreServiceType.Code.NEW_LINE), ADMIN_ID))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(StoreErrorCode.STORE_CLOSED);
+    }
+
+    private AdminStoreSaveRequest withLockVersion(AdminStoreSaveRequest r, Integer lockVersion) {
+        return new AdminStoreSaveRequest(r.name(), r.address(), r.phone(), r.regionCode(), r.latitude(), r.longitude(),
+                r.hours(), r.serviceCodes(), lockVersion);
+    }
+    
     private AdminStoreSaveRequest request(String name, LocalTime weekdayOpen, StoreServiceType.Code...codes) {
         return new AdminStoreSaveRequest(name, "서울특별시 강남구 테헤란로 123", null, "1168010100",  new BigDecimal("37.498095"), 
-                                            new BigDecimal("127.027610"), week(weekdayOpen), Arrays.asList(codes));
+                                            new BigDecimal("127.027610"), week(weekdayOpen), Arrays.asList(codes), null);
     }
     
     // 월~토는 weekdayOpen~19:00, 일요일은 휴무

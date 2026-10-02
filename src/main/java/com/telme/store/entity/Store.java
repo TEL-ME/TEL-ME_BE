@@ -73,6 +73,11 @@ public class Store {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     @Generated(event = {EventType.INSERT, EventType.UPDATE})
     private Instant updatedAt;
+    
+    // 영업시간·업무만 바뀌면 stores 행이 그대로라 @Version은 오르지 않는다.
+    @Column(name = "lock_version", nullable = false, insertable = false, updatable = false)
+    @Generated(event = EventType.INSERT)
+    private Integer lockVersion;
 
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

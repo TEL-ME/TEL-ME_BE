@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Store", description = "관리자 매장 조회")
+@Tag(name = "Admin Store", description = "관리자 매장 조회·등록·수정·삭제")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/stores")
@@ -105,13 +105,16 @@ public class AdminStoreController {
     
     @Operation(
             summary = "매장 수정",
-            description =  "등록과 같은 항목을 받아 전체를 바꿉니다. 영업시간·업무만 바꿔도 수정 시각이 올라갑니다. 상태는 바꾸지 않습니다.")
+            description =  "등록과 같은 항목을 받아 전체를 바꿉니다. 영업시간·업무만 바꿔도 수정 시각이 올라갑니다. 상태는 바꾸지 않습니다. "
+                    + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다. "
+                    + "폐점 매장은 수정할 수 없습니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "수정 성공"),
         @ApiResponse(responseCode = "400", description = "COMMON400-1: 등록과 같은 입력 오류"),
         @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
         @ApiResponse(responseCode = "403", description = "Admin 권한 없음"),
-        @ApiResponse(responseCode = "404", description = "STORE404-0: 매장을 찾을 수 없음")
+        @ApiResponse(responseCode = "404", description = "STORE404-0: 매장을 찾을 수 없음"),
+        @ApiResponse(responseCode = "409", description = "STORE409-0: 폐점한 매장. STORE409-1: 다른 관리자가 먼저 저장함")
     })
     @PutMapping("/{storeId}")
     public CustomResponse<AdminStoreDetailResponse> updateStore(

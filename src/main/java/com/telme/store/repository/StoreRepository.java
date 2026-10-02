@@ -37,7 +37,9 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     
     // 영업시간·업무만 바꾸면 stores 행에는 UPDATE가 나가지 않아 updated_at이 그대로다.
     // 저장했으면 수정 시각을 올린다. 대기 중인 변경을 먼저 반영하고, 끝나면 영속성 컨텍스트를 비운다
+    // 그 사이 다른 관리자가 저장해 번호가 달라졌으면 0을 반환한다
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE stores SET updated_at = now() WHERE store_id = :storeId", nativeQuery = true)
-    int touch(@Param("storeId") Long storeId);
+    @Query(value = "UPDATE stores SET updated_at = now(), lock_version = lock_version + 1 "
+            + "WHERE store_id = :storeId AND lock_version = :lockVersion", nativeQuery = true)
+    int touch(@Param("storeId") Long storeId, @Param("lockVersion") int lockVersion);
 }

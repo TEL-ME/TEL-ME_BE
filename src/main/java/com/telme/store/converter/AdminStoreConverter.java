@@ -37,7 +37,8 @@ public class AdminStoreConverter {
                 toHours(store),
                 toServices(store),
                 store.getCreatedAt(),
-                store.getUpdatedAt());
+                store.getUpdatedAt(),
+                store.getLockVersion());
     }
     
     private AdminStoreListItemResponse toListItem(Store store) {

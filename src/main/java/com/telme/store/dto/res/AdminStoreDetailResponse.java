@@ -17,7 +17,8 @@ public record AdminStoreDetailResponse(
         List<Hours> hours,
         List<AdminStoreServiceResponse> services,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Integer lockVersion
         ) {
     public record Hours(String dayOfWeek, LocalTime openTime, LocalTime closeTime, boolean closed) {
     }
