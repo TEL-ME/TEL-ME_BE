@@ -44,9 +44,11 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     int touch(@Param("storeId") Long storeId, @Param("lockVersion") int lockVersion);
     
     // 폐점도 잠금 번호를 올려야, 그 전에 매장을 읽은 수정 요청의 touch가 0행이 된다.
-    // 엔티티로 바꾸면 읽어 둔 다른 칸까지 옛 값으로 다시 쓰므로 상태만 바꾼다. 없는 매장이면 0을 반환한다
+    // 엔티티로 바꾸면 읽어 둔 다른 칸까지 옛 값으로 다시 쓰므로 상태만 바꾼다.
+    // 이미 폐점이면 바꾸지 않는다. UPDATE가 나가면 트리거가 수정 시각을 올려 목록 맨 위로 올라온다.
+    // 없는 매장과 이미 폐점한 매장 모두 0을 반환한다
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE stores SET status = 'CLOSED_DOWN', updated_at = now(), lock_version = lock_version + 1 "
-            + "WHERE store_id = :storeId", nativeQuery = true)
+            + "WHERE store_id = :storeId AND status <> 'CLOSED_DOWN'", nativeQuery = true)
     int close(@Param("storeId") Long storeId);
 }

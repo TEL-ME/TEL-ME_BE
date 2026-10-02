@@ -122,6 +122,7 @@ class AdminStoreCommandServiceTest {
         entityManager.clear();
         
         assertThat(queryService.getStore(storeId).status()).isEqualTo("CLOSED_DOWN");
+        assertThat(queryService.getStore(storeId).lockVersion()).isEqualTo(1);
     }
     
     @Test
@@ -162,6 +163,19 @@ class AdminStoreCommandServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(StoreErrorCode.CONCURRENT_UPDATE);
+    }
+    
+    @Test
+    @DisplayName("잠금 번호 없이 서비스를 호출해도 500이 아니라 STORE409-1이다")
+    void 잠금_번호가_없으면_409다() {
+        Long storeId = commandService.create(request("관리자쓰기 번호없음", LocalTime.of(10, 0), 
+                StoreServiceType.Code.NEW_LINE), ADMIN_ID).storeId();
+        
+        assertThatThrownBy(() -> commandService.update(storeId, 
+                            withLockVersion(request("번호 없이 저장", LocalTime.of(9, 0), StoreServiceType.Code.NEW_LINE), null), ADMIN_ID))
+                    .isInstanceOf(GeneralException.class)
+                    .extracting(e -> ((GeneralException) e).getErrorCode())
+                    .isEqualTo(StoreErrorCode.CONCURRENT_UPDATE);
     }
 
     @Test
