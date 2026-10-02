@@ -239,6 +239,17 @@ class AdminFaqControllerTest {
                 .andExpect(jsonPath("$.code").value("COMMON400-0"));
     }
 
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("상태 변경으로는 삭제할 수 없어 DELETED는 400을 반환한다")
+    void 상태_변경으로는_삭제할_수_없다() throws Exception {
+        mockMvc.perform(putStatus("""
+                {"status":"DELETED"}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-0"));
+    }
+
     private static final String VALID_BODY = """
             {"category":"SERVICE","question":"질문입니다.","answer":"답변입니다."}
             """;

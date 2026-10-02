@@ -117,7 +117,7 @@ public class AdminFaqController {
 
     @Operation(
             summary = "FAQ 상태 변경",
-            description = "질문·답변을 보내지 않고 공개(ACTIVE)·숨김(HIDDEN)·삭제(DELETED) 상태만 바꿉니다. "
+            description = "질문·답변을 보내지 않고 공개(ACTIVE)·숨김(HIDDEN)만 전환합니다. 삭제는 DELETE가 맡습니다. "
                     + "DELETED를 ACTIVE로 되돌리면 복구가 됩니다. 본문이 그대로라 임베딩을 다시 만들지 않아 "
                     + "복구 직후부터 검색에 다시 잡힙니다. "
                     + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다.")

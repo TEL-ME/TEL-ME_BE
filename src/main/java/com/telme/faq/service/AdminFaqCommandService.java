@@ -91,7 +91,7 @@ public class AdminFaqCommandService {
     public AdminFaqDetailResponse changeStatus(Long faqId, AdminFaqStatusRequest request, Long adminId) {
         Faq faq = findFaq(faqId);
         rejectStaleWrite(faq, request.lockVersion());
-        faq.changeStatus(request.status(), adminId);
+        faq.changeStatus(request.status().toStatus(), adminId);
         flushOrRejectConflict();
         entityManager.refresh(faq);
         log.info("[AdminFaq] 상태 변경 faqId={} status={} adminId={}", faqId, request.status(), adminId);
@@ -117,17 +117,20 @@ public class AdminFaqCommandService {
         if (citationCount(faqId) > 0) {
             throw new GeneralException(FaqErrorCode.PURGE_CITED);
         }
-        deleteOrRejectCited(faq);
+        deleteOrRejectConflict(faq);
         log.info("[AdminFaq] 영구 삭제 faqId={} adminId={}", faqId, adminId);
     }
 
-    // 검사한 뒤 누가 되살려 근거로 쓰면 외래키가 막는다. 커밋까지 미루면 여기서 안 잡혀 500으로 나간다
-    private void deleteOrRejectCited(Faq faq) {
+    // 검사한 뒤 누가 되살려 근거로 쓰면 외래키가, 그냥 저장만 해도 @Version이 막는다.
+    // 커밋까지 미루면 여기서 안 잡혀 둘 다 500으로 나간다
+    private void deleteOrRejectConflict(Faq faq) {
         try {
             faqRepository.delete(faq);
             faqRepository.flush();
         } catch (DataIntegrityViolationException exception) {
             throw new GeneralException(FaqErrorCode.PURGE_CITED);
+        } catch (ObjectOptimisticLockingFailureException exception) {
+            throw new GeneralException(FaqErrorCode.CONCURRENT_UPDATE);
         }
     }
 

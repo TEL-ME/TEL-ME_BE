@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.telme.faq.dto.req.AdminFaqSaveRequest;
+import com.telme.faq.dto.req.AdminFaqStatusChange;
 import com.telme.faq.dto.req.AdminFaqStatusRequest;
 import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.entity.Faq;
@@ -50,7 +51,7 @@ class AdminFaqRestoreAndPurgeTest {
     void 복구하면_공개되고_재임베딩하지_않는다() {
         Long faqId = deleted();
 
-        AdminFaqDetailResponse restored = service.changeStatus(faqId, status(Faq.Status.ACTIVE, null), ADMIN_ID);
+        AdminFaqDetailResponse restored = service.changeStatus(faqId, status(AdminFaqStatusChange.ACTIVE, null), ADMIN_ID);
 
         assertThat(restored.status()).isEqualTo(Faq.Status.ACTIVE.name());
         assertThat(restored.updatedBy()).isEqualTo(ADMIN_ID);
@@ -62,7 +63,7 @@ class AdminFaqRestoreAndPurgeTest {
     void 상태_변경은_버전을_올리지_않는다() {
         Long faqId = created();
 
-        AdminFaqDetailResponse hidden = service.changeStatus(faqId, status(Faq.Status.HIDDEN, null), ADMIN_ID);
+        AdminFaqDetailResponse hidden = service.changeStatus(faqId, status(AdminFaqStatusChange.HIDDEN, null), ADMIN_ID);
 
         assertThat(hidden.status()).isEqualTo(Faq.Status.HIDDEN.name());
         assertThat(hidden.version()).isEqualTo(1);
@@ -73,9 +74,9 @@ class AdminFaqRestoreAndPurgeTest {
     void 낡은_lockVersion은_막힌다() {
         Long faqId = created();
         Integer opened = faqRepository.findById(faqId).orElseThrow().getLockVersion();
-        service.changeStatus(faqId, status(Faq.Status.HIDDEN, null), OTHER_ADMIN_ID);
+        service.changeStatus(faqId, status(AdminFaqStatusChange.HIDDEN, null), OTHER_ADMIN_ID);
 
-        assertThatThrownBy(() -> service.changeStatus(faqId, status(Faq.Status.ACTIVE, opened), ADMIN_ID))
+        assertThatThrownBy(() -> service.changeStatus(faqId, status(AdminFaqStatusChange.ACTIVE, opened), ADMIN_ID))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.CONCURRENT_UPDATE);
     }
@@ -84,9 +85,9 @@ class AdminFaqRestoreAndPurgeTest {
     @DisplayName("lockVersion을 생략하면 검사하지 않는다")
     void lockVersion을_생략하면_검사하지_않는다() {
         Long faqId = created();
-        service.changeStatus(faqId, status(Faq.Status.HIDDEN, null), OTHER_ADMIN_ID);
+        service.changeStatus(faqId, status(AdminFaqStatusChange.HIDDEN, null), OTHER_ADMIN_ID);
 
-        AdminFaqDetailResponse restored = service.changeStatus(faqId, status(Faq.Status.ACTIVE, null), ADMIN_ID);
+        AdminFaqDetailResponse restored = service.changeStatus(faqId, status(AdminFaqStatusChange.ACTIVE, null), ADMIN_ID);
 
         assertThat(restored.status()).isEqualTo(Faq.Status.ACTIVE.name());
     }
@@ -97,7 +98,7 @@ class AdminFaqRestoreAndPurgeTest {
         Long faqId = deleted();
         service.create(request(QUESTION, ANSWER), ADMIN_ID);
 
-        assertThatThrownBy(() -> service.changeStatus(faqId, status(Faq.Status.ACTIVE, null), ADMIN_ID))
+        assertThatThrownBy(() -> service.changeStatus(faqId, status(AdminFaqStatusChange.ACTIVE, null), ADMIN_ID))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.DUPLICATE_CONTENT);
     }
@@ -149,9 +150,21 @@ class AdminFaqRestoreAndPurgeTest {
     }
 
     @Test
+    @DisplayName("영구 삭제 직전에 다른 관리자가 저장했으면 FAQ409-1로 막는다")
+    void 저장이_겹치면_영구_삭제가_막힌다() {
+        Long faqId = deleted();
+        // 읽어 둔 lock_version이 낡은 상태를 만든다. 삭제가 0행이 되어 @Version이 잡는다
+        bumpLockVersion(faqId);
+
+        assertThatThrownBy(() -> service.purge(faqId, ADMIN_ID))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
     @DisplayName("없는 FAQ는 상태 변경도 영구 삭제도 FAQ404-0을 던진다")
     void 없는_FAQ는_예외를_던진다() {
-        assertThatThrownBy(() -> service.changeStatus(-1L, status(Faq.Status.ACTIVE, null), ADMIN_ID))
+        assertThatThrownBy(() -> service.changeStatus(-1L, status(AdminFaqStatusChange.ACTIVE, null), ADMIN_ID))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.FAQ_NOT_FOUND);
         assertThatThrownBy(() -> service.purge(-1L, ADMIN_ID))
@@ -170,6 +183,15 @@ class AdminFaqRestoreAndPurgeTest {
         Long faqId = created();
         service.delete(faqId, ADMIN_ID, null);
         return faqId;
+    }
+
+    // 영속성 컨텍스트를 거치지 않고 올려, 읽어 둔 엔티티의 번호만 낡게 만든다
+    private void bumpLockVersion(Long faqId) {
+        entityManager.flush();
+        entityManager.createNativeQuery(
+                        "update faqs set lock_version = lock_version + 1 where faq_id = :faqId")
+                .setParameter("faqId", faqId)
+                .executeUpdate();
     }
 
     // 임베딩 생성은 목이라 CASCADE를 보려면 행을 직접 넣어야 한다
@@ -213,7 +235,7 @@ class AdminFaqRestoreAndPurgeTest {
         return new AdminFaqSaveRequest(FaqCategory.SERVICE, question, answer, null, null, null);
     }
 
-    private AdminFaqStatusRequest status(Faq.Status status, Integer lockVersion) {
+    private AdminFaqStatusRequest status(AdminFaqStatusChange status, Integer lockVersion) {
         return new AdminFaqStatusRequest(status, lockVersion);
     }
 }
