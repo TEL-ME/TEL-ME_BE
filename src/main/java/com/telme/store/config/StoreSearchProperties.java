@@ -1,6 +1,5 @@
 package com.telme.store.config;
 
-import com.telme.store.dto.req.StoreNearbySearchRequest;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -17,6 +16,10 @@ public record StoreSearchProperties(
         @DefaultValue("2s") Duration queryTimeout,
         @DefaultValue("false") boolean openNowFilterEnabled) {
 
+    // 매장 개수 상한. 반경(maxRadiusMeters 설정값)과 달리 API 계약(초과 시 400)이라 환경별로 바꾸지 않도록 상수로 둔다.
+    // 요청 검증(@Max), 기본 개수 설정 검증, 서비스의 내부 호출 상한이 모두 이 값을 쓴다
+    public static final int MAX_LIMIT = 20;
+
     public StoreSearchProperties {
         if (maxRadiusMeters < 1) {
             throw new IllegalArgumentException("매장 검색 최대 반경은 1m 이상이어야 합니다.");
@@ -24,8 +27,8 @@ public record StoreSearchProperties(
         if (defaultRadiusMeters < 1 || defaultRadiusMeters > maxRadiusMeters) {
             throw new IllegalArgumentException("매장 검색 기본 반경은 1m 이상, 최대 반경 이하여야 합니다.");
         }
-        if (defaultLimit < 1 || defaultLimit > StoreNearbySearchRequest.MAX_LIMIT) {
-            throw new IllegalArgumentException("매장 검색 기본 개수는 1 이상 20 이하여야 합니다.");
+        if (defaultLimit < 1 || defaultLimit > MAX_LIMIT) {
+            throw new IllegalArgumentException("매장 검색 기본 개수는 1 이상 " + MAX_LIMIT + " 이하여야 합니다.");
         }
         // JDBC 쿼리 타임아웃은 초 단위라 1초 미만은 받지 않는다
         if (queryTimeout == null || queryTimeout.toSeconds() < 1) {

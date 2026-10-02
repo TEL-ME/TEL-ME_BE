@@ -131,7 +131,7 @@ public class StoreSearchService {
         if (limit == null) {
             return storeSearchProperties.defaultLimit();
         }
-        return Math.min(limit, StoreNearbySearchRequest.MAX_LIMIT);
+        return Math.min(limit, StoreSearchProperties.MAX_LIMIT);
     }
 
     // 정적 조건은 모두 StoreTag로 바꿔 StoreTagCondition 하나로 묶는다. 새 정적 조건은 요청 필드를 StoreTag로
