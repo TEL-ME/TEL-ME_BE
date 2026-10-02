@@ -8,7 +8,7 @@ public record AdminStoreListItemResponse(
         String name,
         String address,
         String phone,
-        List<AdminStoreServiceResponse> services,
+        List<StoreServiceTypeResponse> services,
         String status,
         Instant updatedAt
         ) {

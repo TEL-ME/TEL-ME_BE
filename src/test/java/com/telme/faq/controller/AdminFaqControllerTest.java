@@ -151,6 +151,8 @@ class AdminFaqControllerTest {
         mockMvc.perform(postFaq(VALID_BODY)).andExpect(status().isForbidden());
         mockMvc.perform(putFaq(VALID_BODY)).andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/v1/admin/faqs/1")).andExpect(status().isForbidden());
+        mockMvc.perform(putStatus(STATUS_BODY)).andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/admin/faqs/1/permanent")).andExpect(status().isForbidden());
     }
 
     @Test
@@ -159,6 +161,8 @@ class AdminFaqControllerTest {
         mockMvc.perform(postFaq(VALID_BODY)).andExpect(status().isUnauthorized());
         mockMvc.perform(putFaq(VALID_BODY)).andExpect(status().isUnauthorized());
         mockMvc.perform(delete("/api/v1/admin/faqs/1")).andExpect(status().isUnauthorized());
+        mockMvc.perform(putStatus(STATUS_BODY)).andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/v1/admin/faqs/1/permanent")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -201,9 +205,63 @@ class AdminFaqControllerTest {
                 .andExpect(jsonPath("$.code").value("COMMON400-1"));
     }
 
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 상태 변경에 200과 바뀐 FAQ를 반환한다")
+    void 관리자는_상태를_바꿀_수_있다() throws Exception {
+        when(adminFaqCommandService.changeStatus(any(Long.class), any(), any())).thenReturn(detail());
+
+        mockMvc.perform(putStatus(STATUS_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.faqId").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 영구 삭제에 200을 반환한다")
+    void 관리자는_영구_삭제할_수_있다() throws Exception {
+        mockMvc.perform(delete("/api/v1/admin/faqs/1/permanent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("상태를 주지 않거나 3종에 없으면 400을 반환한다")
+    void 잘못된_상태는_400을_반환한다() throws Exception {
+        mockMvc.perform(putStatus("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+        mockMvc.perform(putStatus("""
+                {"status":"active"}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-0"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("상태 변경으로는 삭제할 수 없어 DELETED는 400을 반환한다")
+    void 상태_변경으로는_삭제할_수_없다() throws Exception {
+        mockMvc.perform(putStatus("""
+                {"status":"DELETED"}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-0"));
+    }
+
     private static final String VALID_BODY = """
             {"category":"SERVICE","question":"질문입니다.","answer":"답변입니다."}
             """;
+
+    private static final String STATUS_BODY = """
+            {"status":"ACTIVE"}
+            """;
+
+    private MockHttpServletRequestBuilder putStatus(String body) {
+        return put("/api/v1/admin/faqs/1/status")
+                .contentType(MediaType.APPLICATION_JSON).content(body);
+    }
 
     private MockHttpServletRequestBuilder postFaq(String body) {
         return post("/api/v1/admin/faqs")
