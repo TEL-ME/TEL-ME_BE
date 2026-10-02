@@ -4,6 +4,7 @@ import com.telme.consult.converter.ConsultAnalysisConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.consult.service.FollowupContextService.Context;
 import com.telme.consult.service.FollowupSelectionValidator.ResolvedFollowup;
 import com.telme.consult.service.FollowupSelectionValidator.Selection;
@@ -22,9 +23,18 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "telme.consult.persistence-enabled", havingValue = "true")
 public class ConsultTurnPreparationService {
+    // 기존 정책은 재질문 메시지 중복만 방지하고 미해결 응답 상한은 없었다.
+    // 동일 대기 조건에 해석 불가 응답 2회면 값 없이 일반 기준 안내로 종료한다.
+    static final int MAX_UNRESOLVED_PLAN_REPLIES = 2;
     private final ConsultAnalysisConverter analysisConverter;
     private final FollowupSelectionValidator selectionValidator;
     private final ConsultService consultService;
+
+    public void abandonPlanWaiting(Context context) {
+        context.candidates().stream().filter(candidate -> PlanChangeConditions.KEYS.contains(candidate.field()))
+                .map(candidate -> candidate.consultRequestId()).distinct()
+                .forEach(requestId -> consultService.abandonWaiting(context.sessionId(), requestId));
+    }
 
     // 분석에서 이미 저장한 상담 ID를 사용한다. 여기서 새 상담을 만들지 않는다.
     public ConsultService.PreparationResult prepareAnalysis(
@@ -88,13 +98,16 @@ public class ConsultTurnPreparationService {
             throw new IllegalArgumentException("대기 중인 다른 조건의 정정 결과가 필요합니다.");
         }
         Purpose purpose = purpose(candidate.intent());
-        var result =
-                consultService.prepareTurn(
-                        context.sessionId(),
-                        candidate.consultRequestId(),
-                        purpose,
-                        resolution.updates(),
-                        locationStatus);
+        var updates = resolution.updates();
+        if (PlanChangeConditions.KEYS.contains(candidate.field()) && updates.isEmpty()
+                && !PlanChangeConditions.isDeferred(context.message())
+                && consultService.unresolvedPlanReplyCount(context.sessionId(), candidate.consultRequestId(), candidate.field()) + 1
+                        >= MAX_UNRESOLVED_PLAN_REPLIES) {
+            // 미확인을 아니요로 채우지 않는다. 기존 DECLINED는 값 없는 조건을 표현한다.
+            updates = Map.of(candidate.field(), com.telme.consult.dto.DialogueInput.Condition.declined());
+        }
+        var result = consultService.prepareTurn(context.sessionId(), candidate.consultRequestId(),
+                purpose, updates, locationStatus);
         return new PreparedWaitingUpdate(
                 result, purpose, candidate.originalUserQuery(), candidate.queryText());
     }
@@ -138,8 +151,7 @@ public class ConsultTurnPreparationService {
             String searchQuery) {
         public PreparedWaitingUpdate {
             Objects.requireNonNull(preparation, "preparation");
-            if (!preparation.waitingForReply()
-                    || purpose == null
+            if (purpose == null
                     || originalUserQuery == null
                     || originalUserQuery.isBlank()
                     || searchQuery == null

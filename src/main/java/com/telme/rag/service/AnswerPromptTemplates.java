@@ -12,7 +12,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = "안내드릴 수 있는 정보가 없습니다.";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v3";
+    public static final String PROMPT_VERSION = "rag-answer-v3-plan-v2";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
@@ -35,13 +35,19 @@ public final class AnswerPromptTemplates {
             답변(A)에 직접 근거가 없으면 "안내드릴 수 있는 정보가 없습니다"라고 답하십시오.
         """;
 
+    public static final String PLAN_CHANGE_GUIDANCE_KEY = "planChangeGuidance";
+    public static final String PLAN_CHANGE_POLICY_ANSWER_KEY = "planChangePolicyAnswer";
+
     // 조건 키를 읽기 쉬운 말로 변환
     private static final Map<String, String> CONDITION_LABELS = Map.of(
             "location", "지역",
-            "serviceType", "업무 유형"
+            "serviceType", "업무 유형",
+            "joinedThisMonth", "이번 달 가입 여부",
+            "changedThisMonth", "이번 달 요금제 변경 이력"
     );
 
     public static String buildUserPrompt(AnswerRequest request, String context) {
+        String guidance = request.conditions().getOrDefault(PLAN_CHANGE_GUIDANCE_KEY, "");
         return """
             [FAQ 근거]
             %s
@@ -49,12 +55,15 @@ public final class AnswerPromptTemplates {
             [고객 조건]
             %s
 
-            [고객 질문]
-            %s""".formatted(context, formatConditions(request.conditions()), request.userQuery());
+            %s[고객 질문]
+            %s""".formatted(context, formatConditions(request.conditions()),
+                guidance.isBlank() ? "" : "[요금제 상담 적용 기준]\n" + guidance + "\n\n", request.userQuery());
     }
 
     private static String formatConditions(Map<String, String> conditions) {
         String formatted = conditions.entrySet().stream()
+                .filter(entry -> !PLAN_CHANGE_GUIDANCE_KEY.equals(entry.getKey())
+                        && !PLAN_CHANGE_POLICY_ANSWER_KEY.equals(entry.getKey()))
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
                 .map(entry -> "- %s: %s".formatted(
                         CONDITION_LABELS.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue()))

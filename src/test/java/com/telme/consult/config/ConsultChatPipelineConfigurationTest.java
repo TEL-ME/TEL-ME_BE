@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
@@ -35,6 +36,7 @@ class ConsultChatPipelineConfigurationTest {
                             ConsultChatProcessingConfiguration.class)
                     .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
                     .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
+                    .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
                     .withBean(
                             FollowupAnalysisProvider.class,
@@ -49,6 +51,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
+                    .withBean(com.telme.consult.service.DialogueService.class, () -> new com.telme.consult.service.DialogueService(com.telme.consult.service.ClarificationTextGenerator.template()))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new);
 
     @Test

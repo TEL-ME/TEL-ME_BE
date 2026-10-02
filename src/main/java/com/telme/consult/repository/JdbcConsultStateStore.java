@@ -4,6 +4,7 @@ import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.ConditionStatus;
+import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.global.common.exception.GeneralException;
 
@@ -72,6 +73,32 @@ public final class JdbcConsultStateStore {
 
     public Snapshot load(long sessionId, long requestId) {
         return tx.execute(status -> read(sessionId, requestId));
+    }
+
+    public long unresolvedPlanReplyCount(long sessionId, long requestId, String field) {
+        if (!com.telme.consult.dto.PlanChangeConditions.KEYS.contains(field)) return 0;
+        return jdbc.queryForList("""
+                SELECT m.content FROM consult_conditions c
+                JOIN consult_requests r ON r.consult_request_id=c.consult_request_id
+                JOIN chat_messages q ON q.message_id=c.asked_message_id
+                JOIN chat_messages m ON m.session_id=r.session_id AND m.sequence_no>q.sequence_no
+                JOIN chat_executions e ON e.input_message_id=m.message_id
+                WHERE r.session_id=? AND r.consult_request_id=? AND c.condition_key=?
+                  AND r.status='WAITING_CONDITION' AND c.status='PENDING'
+                  AND e.status='COMPLETED' AND e.output_message_id IS NULL AND m.role='USER'
+                """, String.class, sessionId, requestId, field).stream()
+                .filter(text -> !com.telme.consult.dto.PlanChangeConditions.isDeferred(text))
+                .filter(text -> com.telme.consult.dto.PlanChangeConditions.extract(text, java.util.Set.of(field)).isEmpty())
+                .count();
+    }
+
+    public void abandonWaiting(long sessionId, long requestId) {
+        tx.executeWithoutResult(status -> {
+            var old = read(sessionId, requestId);
+            if ("WAITING_CONDITION".equals(old.status())) {
+                jdbc.update("UPDATE consult_requests SET status='CANCELLED',version=version+1,updated_at=now() WHERE consult_request_id=?", requestId);
+            }
+        });
     }
 
     private Snapshot read(long sessionId, long requestId) {
@@ -333,9 +360,16 @@ public final class JdbcConsultStateStore {
                 status -> {
                     var old = read(sessionId, requestId);
                     requireOpenVersion(old, expectedVersion);
-                    if ("WAITING_CONDITION".equals(old.status())
-                            || old.conditions().values().stream()
-                                    .anyMatch(c -> c.status() == ConditionStatus.PENDING)) {
+                    var pendingKeys = old.conditions().entrySet().stream()
+                            .filter(entry -> entry.getValue().status() == ConditionStatus.PENDING)
+                            .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet());
+                    // 다른 확정 조건만으로 변경 불가가 결정되면 남은 질문은 필요 없다.
+                    // 미제공 값을 거절/아니요로 꾸미지 않고, 미답변 기록은 그대로 보존한다.
+                    boolean notNeeded = (PlanChangeConditions.blocks(old.conditions())
+                            || old.conditions().entrySet().stream().anyMatch(entry -> PlanChangeConditions.KEYS.contains(entry.getKey())
+                                    && entry.getValue().status() == ConditionStatus.DECLINED))
+                            && PlanChangeConditions.KEYS.containsAll(pendingKeys);
+                    if ("WAITING_CONDITION".equals(old.status()) || !pendingKeys.isEmpty() && !notNeeded) {
                         throw new IllegalStateException(
                                 "Cannot complete while awaiting conditions");
                     }
