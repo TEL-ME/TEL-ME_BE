@@ -88,16 +88,30 @@ class StoreApiIntegrationTest {
     }
 
     @Test
-    void 검색_조건이_잘못되면_매장_에러_코드로_거부한다() throws Exception {
+    void 검색_조건이_범위를_벗어나면_COMMON400_1로_거부한다() throws Exception {
         mvc.perform(get(NEARBY_URL).param("longitude", LONGITUDE))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("STORE400-0"));
+                .andExpect(jsonPath("$.code").value("COMMON400-1"))
+                .andExpect(jsonPath("$.result.latitude").value("위도를 입력해 주세요."));
+        mvc.perform(get(NEARBY_URL).param("latitude", "90.000001").param("longitude", LONGITUDE))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.latitude").value("위도는 90 이하여야 합니다."));
+        mvc.perform(get(NEARBY_URL).param("latitude", "NaN").param("longitude", LONGITUDE))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+        mvc.perform(get(NEARBY_URL).param("latitude", LATITUDE).param("longitude", "Infinity"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
         mvc.perform(nearby().param("radiusMeters", "0"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("STORE400-1"));
+                .andExpect(jsonPath("$.result.radiusMeters").value("검색 반경은 1m 이상이어야 합니다."));
         mvc.perform(nearby().param("limit", "21"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("STORE400-2"));
+                .andExpect(jsonPath("$.result.limit").value("매장 개수는 20 이하여야 합니다."));
+    }
+
+    @Test
+    void 영업_중_조건은_STORE400_4로_거부한다() throws Exception {
         mvc.perform(nearby().param("openNow", "true"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("STORE400-4"));

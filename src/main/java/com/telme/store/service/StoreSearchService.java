@@ -49,8 +49,8 @@ public class StoreSearchService {
     @Transactional(readOnly = true)
     public StoreNearbySearchResponse findNearbyStores(StoreNearbySearchRequest request) {
         StoreNearbyQueryRepository.Query query = new StoreNearbyQueryRepository.Query(
-                validateLatitude(request.latitude()),
-                validateLongitude(request.longitude()),
+                request.latitude(),
+                request.longitude(),
                 resolveRadius(request.radiusMeters()),
                 resolveLimit(request.limit()),
                 toConditions(request));
@@ -104,29 +104,11 @@ public class StoreSearchService {
                 && longitude >= SERVICE_AREA_MIN_LONGITUDE && longitude <= SERVICE_AREA_MAX_LONGITUDE;
     }
 
-    // 해외지역은 Exception대신 빈 list 반환
-    private double validateLatitude(Double latitude) {
-        if (latitude == null || !Double.isFinite(latitude) || latitude < -90 || latitude > 90) {
-            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
-        }
-        return latitude;
-    }
-
-    private double validateLongitude(Double longitude) {
-        if (longitude == null || !Double.isFinite(longitude) || longitude < -180 || longitude > 180) {
-            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
-        }
-        return longitude;
-    }
-
     // 지도 화면은 축척에 맞춘 화면 반경을 그대로 보내므로, 상한을 넘으면 거부하지 않고 상한으로 줄인다.
     // 줄인 값은 응답의 radiusMeters로 알린다
     private int resolveRadius(Integer radiusMeters) {
         if (radiusMeters == null) {
             return storeSearchProperties.defaultRadiusMeters();
-        }
-        if (radiusMeters < 1) {
-            throw new GeneralException(StoreErrorCode.INVALID_SEARCH_RADIUS);
         }
         return Math.min(radiusMeters, storeSearchProperties.maxRadiusMeters());
     }
@@ -134,9 +116,6 @@ public class StoreSearchService {
     private int resolveLimit(Integer limit) {
         if (limit == null) {
             return storeSearchProperties.defaultLimit();
-        }
-        if (limit < 1 || limit > storeSearchProperties.maxLimit()) {
-            throw new GeneralException(StoreErrorCode.INVALID_SEARCH_LIMIT);
         }
         return limit;
     }

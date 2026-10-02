@@ -236,27 +236,6 @@ class StoreSearchServiceTest {
                 .isSameAs(failure);
     }
 
-    @ParameterizedTest(name = "위도 {0}, 경도 {1}")
-    @CsvSource({
-            "90.000001, 127.0",
-            "-90.000001, 127.0",
-            "37.5, 180.000001",
-            "37.5, -180.000001",
-            "NaN, 127.0",
-            "37.5, Infinity"
-    })
-    @DisplayName("좌표가 범위를 벗어나면 검색하지 않고 거부한다")
-    void 잘못된_좌표는_거부한다(double latitude, double longitude) {
-        assertErrorCode(request(latitude, longitude, null, null), StoreErrorCode.INVALID_COORDINATE);
-    }
-
-    @Test
-    @DisplayName("좌표가 없으면 거부한다")
-    void 좌표가_없으면_거부한다() {
-        assertErrorCode(request(null, LONGITUDE, null, null), StoreErrorCode.INVALID_COORDINATE);
-        assertErrorCode(request(LATITUDE, null, null, null), StoreErrorCode.INVALID_COORDINATE);
-    }
-
     @Test
     @DisplayName("지구 좌표 범위의 경계값은 오류가 아니다")
     void 좌표_경계값은_허용한다() {
@@ -290,13 +269,6 @@ class StoreSearchServiceTest {
     }
 
     @ParameterizedTest(name = "반경 {0}m")
-    @CsvSource({"0", "-1"})
-    @DisplayName("반경이 1m보다 작으면 거부한다")
-    void 잘못된_반경은_거부한다(int radiusMeters) {
-        assertErrorCode(request(LATITUDE, LONGITUDE, radiusMeters, null), StoreErrorCode.INVALID_SEARCH_RADIUS);
-    }
-
-    @ParameterizedTest(name = "반경 {0}m")
     @CsvSource({"1, 1", "3000, 3000", "10000, 10000", "10001, 10000", "2147483647, 10000"})
     @DisplayName("반경이 상한(10km)을 넘으면 상한으로 줄여 검색하고, 실제 검색한 반경을 응답에 담는다")
     void 상한을_넘는_반경은_줄인다(int requested, int applied) {
@@ -311,13 +283,6 @@ class StoreSearchServiceTest {
     void 기본_반경을_응답에_담는다() {
         assertThat(service.findNearbyStores(request(LATITUDE, LONGITUDE, null, null)).radiusMeters())
                 .isEqualTo(10000);
-    }
-
-    @ParameterizedTest(name = "개수 {0}")
-    @CsvSource({"0", "-1", "21"})
-    @DisplayName("개수가 허용 범위를 벗어나면 거부한다")
-    void 잘못된_개수는_거부한다(int limit) {
-        assertErrorCode(request(LATITUDE, LONGITUDE, null, limit), StoreErrorCode.INVALID_SEARCH_LIMIT);
     }
 
     @Test

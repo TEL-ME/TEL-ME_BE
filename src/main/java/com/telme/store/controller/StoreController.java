@@ -37,8 +37,7 @@ public class StoreController {
                     + "serviceTypes를 반복해 여러 업무를 보내면 모두 가능한 매장만 반환합니다. 거리는 직선거리(m)입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공. 결과가 없으면 stores가 빈 배열"),
-        @ApiResponse(responseCode = "400", description = "STORE400-0: 좌표 없음·범위 밖, STORE400-1: 반경 1m 미만, "
-                + "STORE400-2: 개수 범위 밖, STORE400-4: 영업 중 필터 미지원, COMMON400-1: 값 형식 오류"),
+        @ApiResponse(responseCode = "400", description = "STORE400-4: 영업 중 필터 미지원, COMMON400-1: 값 형식 오류 (좌표 없음·범위 밖, 반경 1m 미만, 개수 20 초과 등)"),
         @ApiResponse(responseCode = "503", description = "STORE503-0: 검색 지연")
     })
     @GetMapping("/nearby")
