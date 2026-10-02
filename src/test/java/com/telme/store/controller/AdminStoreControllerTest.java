@@ -150,7 +150,7 @@ class AdminStoreControllerTest {
     void 관리자는_수정할_수_있다() throws Exception {
         when(adminStoreCommandService.update(anyLong(), any(), any())).thenReturn(detail());
         
-        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(validBody()))
+        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(updateBody()))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.result.storeId").value(1));
     }
@@ -170,7 +170,7 @@ class AdminStoreControllerTest {
     @DisplayName("ADMIN이 아니면 등록·수정·삭제가 모두 403이다")
     void 일반_회원은_쓰기가_막힌다() throws Exception {
         mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isForbidden());
-        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isForbidden());
+        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(updateBody())).andExpect(status().isForbidden());
         mockMvc.perform(delete(URL + "/{storeId}", 1)).andExpect(status().isForbidden());
     }
     
@@ -178,7 +178,7 @@ class AdminStoreControllerTest {
     @DisplayName("로그인하지 않으면 등록·수정·삭제가 모두 401이다")
     void 비인증_요청은_쓰기가_막힌다() throws Exception {
         mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isUnauthorized());
-        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isUnauthorized());
+        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(updateBody())).andExpect(status().isUnauthorized());
         mockMvc.perform(delete(URL + "/{storeId}", 1)).andExpect(status().isUnauthorized());
     }
     
@@ -196,12 +196,30 @@ class AdminStoreControllerTest {
                 {"\"openTime\": null, \"closeTime\": null, \"closed\": true",
                     "\"openTime\": \"10:00\", \"closeTime\": null, \"closed\": true", "hours[6].timeValid"},
                 {"[\"NEW_LINE\", \"USIM_REISSUE\"]", "[]", "serviceCodes"},
-                {"[\"NEW_LINE\", \"USIM_REISSUE\"]", "[\"NEW_LINE\", \"NEW_LINE\"]", "serviceCodesUnique"}};
+                {"[\"NEW_LINE\", \"USIM_REISSUE\"]", "[\"NEW_LINE\", \"NEW_LINE\"]", "serviceCodesUnique"},
+                // 리스트 원소가 null이면 500이 아니라 400이어야 한다
+                {"{\"dayOfWeek\": \"SUNDAY\", \"openTime\": null, \"closeTime\": null, \"closed\": true}", "null", "hours[6]"},
+                {"[\"NEW_LINE\", \"USIM_REISSUE\"]", "[\"NEW_LINE\", null]", "serviceCodes[1]"}};
         for (String[] c : cases) {
             mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(validBody().replace(c[0], c[1]))).andExpect(status().isBadRequest())
                    .andExpect(jsonPath("$.code").value("COMMON400-1"))
                    .andExpect(jsonPath("$.result['" + c[2] + "']").exists());
         }
+    }
+    
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("수정 요청에 lockVersion이 없으면 400과 lockVersion 항목을 반환한다")
+    void 수정은_잠금_번호가_필수다() throws Exception {
+        mockMvc.perform(put(URL + "/{storeId}", 1).contentType(MediaType.APPLICATION_JSON).content(validBody()))
+               .andExpect(status().isBadRequest())
+               .andExpect(jsonPath("$.code").value("COMMON400-1"))
+               .andExpect(jsonPath("$.result.lockVersion").exists());
+    }
+    
+    // 수정은 조회에서 받은 잠금 번호를 함께 보낸다
+    private static String updateBody() {
+        return validBody().replace("\"serviceCodes\"", "\"lockVersion\": 0, \"serviceCodes\"");
     }
     
     // 월~토 10:00~19:00, 일요일 휴무인 올바른 요청

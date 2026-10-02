@@ -14,11 +14,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -106,11 +108,11 @@ public class AdminStoreController {
     @Operation(
             summary = "매장 수정",
             description =  "등록과 같은 항목을 받아 전체를 바꿉니다. 영업시간·업무만 바꿔도 수정 시각이 올라갑니다. 상태는 바꾸지 않습니다. "
-                    + "조회에서 받은 lockVersion을 함께 보내면 그 사이 다른 관리자가 저장한 경우를 409로 막습니다. "
+                    + "조회에서 받은 lockVersion을 반드시 함께 보내야 하며, 그 사이 다른 관리자가 저장하거나 삭제했으면 409로 막습니다. "
                     + "폐점 매장은 수정할 수 없습니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "수정 성공"),
-        @ApiResponse(responseCode = "400", description = "COMMON400-1: 등록과 같은 입력 오류"),
+        @ApiResponse(responseCode = "400", description = "COMMON400-1: 등록과 같은 입력 오류, lockVersion 누락"),
         @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
         @ApiResponse(responseCode = "403", description = "Admin 권한 없음"),
         @ApiResponse(responseCode = "404", description = "STORE404-0: 매장을 찾을 수 없음"),
@@ -119,7 +121,7 @@ public class AdminStoreController {
     @PutMapping("/{storeId}")
     public CustomResponse<AdminStoreDetailResponse> updateStore(
             @Parameter(description = "수정할 매장 ID") @PathVariable long storeId,
-            @Valid @RequestBody AdminStoreSaveRequest request,
+            @Validated({Default.class, AdminStoreSaveRequest.OnUpdate.class}) @RequestBody AdminStoreSaveRequest request,
             @AuthenticationPrincipal Long adminId) {
         return CustomResponse.onSuccess(adminStoreCommandService.update(storeId, request, adminId));
     }

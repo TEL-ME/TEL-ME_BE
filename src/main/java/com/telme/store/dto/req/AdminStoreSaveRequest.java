@@ -27,9 +27,9 @@ public record AdminStoreSaveRequest(
         @NotNull @Pattern(regexp = "\\d{10}", message = "법정동코드는 숫자 10자리입니다.") String regionCode,
         @NotNull @DecimalMin("33.0") @DecimalMax("38.7") @Digits(integer = 2, fraction = 6) BigDecimal latitude,
         @NotNull @DecimalMin("124.6") @DecimalMax("132.0") @Digits(integer = 3, fraction = 6) BigDecimal longitude,
-        @NotNull @Valid List<Hours> hours,
-        @NotEmpty List<StoreServiceType.Code> serviceCodes,
-        Integer lockVersion
+        @NotNull List<@NotNull @Valid Hours> hours,
+        @NotEmpty List<StoreServiceType.@NotNull Code> serviceCodes,
+        @NotNull(groups = OnUpdate.class) Integer lockVersion
         ) {
     public AdminStoreSaveRequest {
         name = name == null ? null : name.strip();
@@ -44,13 +44,18 @@ public record AdminStoreSaveRequest(
     @AssertTrue(message = "영업시간은 월요일부터 일요일까지 7일을 한 번씩 입력해야 합니다.")
     public boolean isWeekComplete() {
         return hours == null || (hours.size() == 7
-                                    && hours.stream().map(Hours::dayOfWeek).filter(Objects::nonNull).distinct().count() == 7);
+                                    && hours.stream().filter(Objects::nonNull)
+                                    .map(Hours::dayOfWeek).filter(Objects::nonNull).distinct().count() == 7);
     }
     
     @JsonIgnore
     @AssertTrue(message = "취급업무가 중복되었습니다.")
     public boolean isServiceCodesUnique() {
         return serviceCodes == null || serviceCodes.size() == new HashSet<>(serviceCodes).size();
+    }
+    
+    // 수정에서만 검사하는 규칙. 등록과 수정이 같은 항목을 받아 DTO를 나누지 않고 검증 그룹으로 구분한다
+    public interface OnUpdate {
     }
     
     public record Hours(

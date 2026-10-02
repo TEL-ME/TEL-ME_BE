@@ -46,8 +46,8 @@ public class AdminStoreCommandService {
         if (store.getStatus() == Store.Status.CLOSED_DOWN) {
             throw new GeneralException(StoreErrorCode.STORE_CLOSED);
         }
-        // 화면이 보낸 번호로 비교한다. 안 보내면 지금 읽은 번호로 비교해 동시에 저장한 경우만 막는다
-        int expected = request.lockVersion() != null ? request.lockVersion() : store.getLockVersion();
+        // 화면이 조회 때 받은 번호로 비교한다. 수정 요청은 컨트롤러에서 lockVersion을 필수로 검증한다
+        int expected = request.lockVersion();
         store.update(request.name(), request.address(), request.phone(), request.regionCode(), request.latitude(), request.longitude());
         applyHoursAndServices(store, request);
         // 0행이면 예외로 트랜잭션이 롤백돼 앞에서 반영한 매장·영업시간·업무 변경도 함께 취소된다
@@ -61,7 +61,9 @@ public class AdminStoreCommandService {
     
     // 실제로 지우지 않고 폐점으로 바꾼다. 이미 폐점이면 바뀌는 값이 없어 그대로 성공한다
     public void delete(Long storeId, Long adminId) {
-        findStore(storeId).close();
+        if (storeRepository.close(storeId) == 0) {
+            throw new GeneralException(StoreErrorCode.STORE_NOT_FOUND);
+        }
         log.info("[AdminStore] 삭제(폐점) storeId={} adminId={}", storeId, adminId);
     }
     

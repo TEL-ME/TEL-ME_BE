@@ -185,7 +185,7 @@ class AdminStoreCommandServiceTest {
     
     private AdminStoreSaveRequest request(String name, LocalTime weekdayOpen, StoreServiceType.Code...codes) {
         return new AdminStoreSaveRequest(name, "서울특별시 강남구 테헤란로 123", null, "1168010100",  new BigDecimal("37.498095"), 
-                                            new BigDecimal("127.027610"), week(weekdayOpen), Arrays.asList(codes), null);
+                                            new BigDecimal("127.027610"), week(weekdayOpen), Arrays.asList(codes), 0);
     }
     
     // 월~토는 weekdayOpen~19:00, 일요일은 휴무

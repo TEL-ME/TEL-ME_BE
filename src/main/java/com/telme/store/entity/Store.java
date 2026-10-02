@@ -96,11 +96,6 @@ public class Store {
         this.longitude = longitude;
     }
     
-    // 삭제는 실제로 지우지 않고 폐점으로 바꾼다. 과거 상담의 매장 추천 기록을 추적할 수 있어야 한다
-    public void close() {
-        this.status = Status.CLOSED_DOWN;
-    }
-    
     // 같은 (store_id, day_of_week) 키로 지우고 다시 넣으면 Hibernate 식별자 충돌이 나서 기존 행의 값만 바꾼다.
     // 빠진 요일이 있으면 그 요일만 새로 만든다
     public void changeHours(short dayOfWeek, LocalTime openTime, LocalTime closeTime, boolean closed) {
