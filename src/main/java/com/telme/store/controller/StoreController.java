@@ -13,8 +13,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Store", description = "매장 검색 API")
 @RestController
+@Validated
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/stores")
 public class StoreController {
@@ -51,12 +54,12 @@ public class StoreController {
             description = "기본 정보·좌표, 월요일부터의 요일별 영업시간, 가능 업무를 반환합니다. 폐점 매장은 404입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
-        @ApiResponse(responseCode = "400", description = "COMMON400-1: 매장 ID 형식 오류"),
+        @ApiResponse(responseCode = "400", description = "COMMON400-1: 매장 ID 형식 오류 또는 1 미만"),
         @ApiResponse(responseCode = "404", description = "STORE404-0: 매장이 없거나 폐점함")
     })
     @GetMapping("/{storeId}")
     public CustomResponse<StoreDetailResponse> getStore(
-            @Parameter(description = "조회할 매장 ID") @PathVariable long storeId) {
+            @Parameter(description = "조회할 매장 ID") @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId) {
         return CustomResponse.onSuccess(storeQueryService.getStore(storeId));
     }
 

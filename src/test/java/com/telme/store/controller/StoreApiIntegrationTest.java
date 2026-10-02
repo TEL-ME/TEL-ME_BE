@@ -81,13 +81,6 @@ class StoreApiIntegrationTest {
     }
 
     @Test
-    void 업무_종류에_빈_값이_섞여도_선택_안_함으로_보고_검색한다() throws Exception {
-        assertThat(storeIds(nearby().param("serviceTypes", "", "PORT_IN").param("limit", "20")))
-                .isNotEmpty()
-                .isEqualTo(nearestOpenStoreIds(20, List.of("PORT_IN")));
-    }
-
-    @Test
     void 검색_조건이_범위를_벗어나면_COMMON400_1로_거부한다() throws Exception {
         mvc.perform(get(NEARBY_URL).param("longitude", LONGITUDE))
                 .andExpect(status().isBadRequest())
@@ -108,6 +101,13 @@ class StoreApiIntegrationTest {
         mvc.perform(nearby().param("limit", "21"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.result.limit").value("매장 개수는 20 이하여야 합니다."));
+    }
+
+    @Test
+    void 업무_종류에_빈_값이_섞여도_선택_안_함으로_보고_검색한다() throws Exception {
+        assertThat(storeIds(nearby().param("serviceTypes", "", "PORT_IN").param("limit", "20")))
+                .isNotEmpty()
+                .isEqualTo(nearestOpenStoreIds(20, List.of("PORT_IN")));
     }
 
     @Test
@@ -166,6 +166,13 @@ class StoreApiIntegrationTest {
     @Test
     void 매장_ID_형식이_잘못되면_400() throws Exception {
         mvc.perform(get("/api/v1/stores/{storeId}", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+        mvc.perform(get("/api/v1/stores/{storeId}", -1))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"))
+                .andExpect(jsonPath("$.result.storeId").value("매장 ID는 1 이상이어야 합니다."));
+        mvc.perform(get("/api/v1/stores/{storeId}", 0))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON400-1"));
     }
