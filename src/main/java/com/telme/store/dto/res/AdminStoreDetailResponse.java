@@ -16,6 +16,7 @@ public record AdminStoreDetailResponse(
         List<StoreHoursResponse> hours,
         List<StoreServiceTypeResponse> services,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Integer lockVersion
         ) {
 }

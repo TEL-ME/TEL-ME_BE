@@ -53,4 +53,10 @@ public class StoreHours {
     @Column(name = "is_closed", nullable = false)
     @Builder.Default
     private boolean closed = false;
+    
+    public void change(LocalTime openTime, LocalTime closeTime, boolean closed) {
+        this.openTime = openTime;
+        this.closeTime = closeTime;
+        this.closed = closed;
+    }
 }

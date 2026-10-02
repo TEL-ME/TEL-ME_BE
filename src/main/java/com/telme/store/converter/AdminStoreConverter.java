@@ -3,7 +3,9 @@ package com.telme.store.converter;
 import com.telme.store.dto.res.AdminStoreDetailResponse;
 import com.telme.store.dto.res.AdminStoreListItemResponse;
 import com.telme.store.dto.res.AdminStoreListResponse;
+import com.telme.store.dto.res.StoreServiceTypeResponse;
 import com.telme.store.entity.Store;
+import com.telme.store.entity.StoreServiceType;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,7 +37,8 @@ public class AdminStoreConverter {
                 storeCommonConverter.toHours(store.getHours()),
                 storeCommonConverter.toServiceTypes(store.getServices()),
                 store.getCreatedAt(),
-                store.getUpdatedAt());
+                store.getUpdatedAt(),
+                store.getLockVersion());
     }
     
     private AdminStoreListItemResponse toListItem(Store store) {
@@ -47,5 +50,10 @@ public class AdminStoreConverter {
                 storeCommonConverter.toServiceTypes(store.getServices()),
                 store.getStatus().name(),
                 store.getUpdatedAt());
+    }
+    
+    // 체크박스 선택지도 목록·상세의 업무와 같은 {code, name} 모양으로 준다
+    public List<StoreServiceTypeResponse> toServiceTypes(List<StoreServiceType> types) {
+        return types.stream().map(storeCommonConverter::toServiceType).toList();
     }
 }
