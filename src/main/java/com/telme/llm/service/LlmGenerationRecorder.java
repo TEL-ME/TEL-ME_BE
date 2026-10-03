@@ -8,6 +8,12 @@ import com.telme.llm.entity.LlmGeneration.Status;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.repository.LlmGenerationRepository;
+import com.telme.llm.converter.OllamaRequestConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +29,14 @@ public class LlmGenerationRecorder {
 
     private final LlmGenerationRepository llmGenerationRepository;
     private final ChatExecutionRepository chatExecutionRepository;
+    private OllamaRequestConverter requestConverter;
+    private ObjectMapper mapper;
+
+    @Autowired
+    public void setTraceMetadata(OllamaRequestConverter requestConverter, ObjectMapper mapper) {
+        this.requestConverter = requestConverter;
+        this.mapper = mapper;
+    }
 
     // 기록 실패가 LLM 응답을 막지 않도록 별도 트랜잭션으로 저장하고 예외를 삼킨다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -30,6 +44,7 @@ public class LlmGenerationRecorder {
         if (request.executionId() == null) {
             return;
         }
+        String options = requestOptions(request, model);
         try {
             llmGenerationRepository.save(LlmGeneration.builder()
                     .execution(chatExecutionRepository.getReferenceById(request.executionId()))
@@ -38,6 +53,7 @@ public class LlmGenerationRecorder {
                     .model(model)
                     .contextCount(request.contextCount())
                     .promptVersion(request.promptVersion())
+                    .requestOptions(options)
                     .firstTokenMs(result.firstTokenMs())
                     .totalMs(result.totalMs())
                     .status(result.status())
@@ -45,6 +61,24 @@ public class LlmGenerationRecorder {
                     .build());
         } catch (RuntimeException e) {
             log.warn("[LlmGenerationRecorder] 호출 기록 저장 실패 executionId={}", request.executionId(), e);
+        }
+    }
+
+    // 요청 옵션은 부가 정보다. 만들지 못해도 호출 기록 행은 옵션 없이(null) 남긴다
+    private String requestOptions(LlmRequest request, String model) {
+        if (model == null || requestConverter == null) {
+            return null;
+        }
+        try {
+            var metadata = new LinkedHashMap<String, Object>(Map.of("provider", "ollama",
+                    "options", requestConverter.toChatRequest(request, false).options(),
+                    "format", request.format().name()));
+            metadata.put("consultRequestId", request.consultRequestId());
+            return mapper.writeValueAsString(metadata);
+        } catch (RuntimeException | JsonProcessingException e) {
+            log.warn("[LlmGenerationRecorder] 요청 옵션 기록 생략 executionId={} type={}",
+                    request.executionId(), e.getClass().getSimpleName());
+            return null;
         }
     }
 
