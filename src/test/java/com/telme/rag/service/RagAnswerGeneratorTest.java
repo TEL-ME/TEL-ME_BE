@@ -50,6 +50,26 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
+    @DisplayName("검색 결과 없음의 guard 기록은 호출 전 단계가 남기므로 생성기는 다시 기록하지 않는다")
+    void 근거가_없어도_guard_단계를_중복_기록하지_않는다() {
+        List<String> stages = new ArrayList<>();
+        RagAnswerGenerator generator = generator(new StubClient(List.of("쓰이지 않음")));
+        generator.setExecutionTrace(new com.telme.chat.service.ExecutionTrace() {
+            @Override
+            public void stage(Long executionId, String stage, Object value) {
+                stages.add(stage);
+            }
+
+            @Override
+            public void append(Long executionId, String stage, Object value) {}
+        });
+
+        generator.generate(request(List.of()), handler);
+
+        assertThat(stages).doesNotContain("guard");
+    }
+
+    @Test
     @DisplayName("모은 토큰을 Guard로 검증한 뒤 최종 답변을 handler에 전달한다")
     void 토큰을_모아_답변을_만든다() {
         RagAnswerGenerator generator = generator(new StubClient(List.of("요금제는 ", "한 달에 한 번 ", "변경됩니다.")));

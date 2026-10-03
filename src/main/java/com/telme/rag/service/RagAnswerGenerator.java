@@ -49,10 +49,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         generationInput.put("consultRequestId", request.consultRequestId());
         trace.append(request.executionId(), "generationInputs", generationInput);
 
-        // 근거 없이 호출하면 모델이 지어냄
+        // 근거 없이 호출하면 모델이 지어냄. 검색 결과 없음의 guard 기록은 호출 전에 FaqSearchAnswerProvider가 남긴다
         if (request.searchResults().isEmpty()) {
-            trace.stage(request.executionId(), "guard", Map.of("outcome", "NOT_RUN",
-                    "reason", "NO_SEARCH_RESULTS"));
             return answerWithoutEvidence(request, handler);
         }
 
@@ -188,6 +186,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
             }
             try {
                 answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+                // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
+                // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(
                         answer.equals(collected.toString()) ? "KEPT"
                                 : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
