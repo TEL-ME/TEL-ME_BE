@@ -271,4 +271,5 @@ python -X utf8 -m scripts.chat_judge.experiments.v3_fixed_500_case_validation.bu
 - 요청, 응답, 검증 기록: [vLLM 원시 JSON](experiments/V5-grounding-two-stage/20261002-grounding-two-stage-vllm-retry-35-raw.json.gz)
 - 독립 40건 사람 검토 방법과 표본 구성: [검토 절차](experiments/V5-grounding-two-stage/20261002-grounding-human-review-method.md)
 - 검토자에게 전달할 자료: [블라인드 표본](experiments/V5-grounding-two-stage/20261002-grounding-human-review-blind.json)
+- 사람이 직접 판정한 40건과 Qwen Judge 비교: [판정 문서](experiments/V5-grounding-two-stage/20261002-grounding-human-review.md), [교차 검증 결과](experiments/V5-grounding-two-stage/20261005-grounding-human-judge-comparison.md)
 - 기존 vLLM 재시도 기록과 미채점 사례 분석: [재시도 측정](experiments/V5-grounding-two-stage/20261002-grounding-retry-vllm.md), [미채점 원인 점검](experiments/V5-grounding-two-stage/20261002-grounding-retry-unscored-audit.md)

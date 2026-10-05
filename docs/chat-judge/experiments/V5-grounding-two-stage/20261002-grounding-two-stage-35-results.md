@@ -34,6 +34,6 @@
 
 ## 해석과 기록
 
-34건은 모델의 의미 판정이 맞았다는 증명이 아니다. 이번 결과는 파싱, 출력 계약, 원문 인용 검사를 통과한 비율이며, 사람 평가 결과는 아직 없다. 40건 눈가림 사람 검토는 별도 자료에서 진행한다: [검토용 자료](20261002-grounding-human-review-blind.json), [검토 방법](20261002-grounding-human-review-method.md).
+34건은 모델의 의미 판정이 맞았다는 증명이 아니다. 이번 결과는 파싱, 출력 계약, 원문 인용 검사를 통과한 비율이다. 별도 40건 사람 검토와 Judge 비교를 완료했다: [사람 판정](20261002-grounding-human-review.md), [비교 결과](20261005-grounding-human-judge-comparison.md). 이는 층화 표본의 결과로 500건 전체 정확도를 뜻하지 않는다.
 
 이전 실행 파일은 혼동 방지를 위해 보존했다. `20261002-grounding-two-stage-ollama-retry-35-raw.json.gz`는 잘못 Ollama로 실행한 결과이며 최종 근거로 사용하지 않는다. 첫 vLLM 실행 및 스키마 보정 중간 결과도 별도 `*-initial-35-raw.json.gz` 파일로 남겨뒀다. 최종 결과는 [vLLM 원시 기록](20261002-grounding-two-stage-vllm-retry-35-raw.json.gz)이다.
