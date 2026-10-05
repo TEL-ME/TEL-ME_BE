@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.entity.ChatMessage.AnswerBasis;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
@@ -53,8 +54,7 @@ class RagAnswerGeneratorTest {
     @DisplayName("검색 결과 없음의 guard 기록은 호출 전 단계가 남기므로 생성기는 다시 기록하지 않는다")
     void 근거가_없어도_guard_단계를_중복_기록하지_않는다() {
         List<String> stages = new ArrayList<>();
-        RagAnswerGenerator generator = generator(new StubClient(List.of("쓰이지 않음")));
-        generator.setExecutionTrace(new com.telme.chat.service.ExecutionTrace() {
+        RagAnswerGenerator generator = generator(new StubClient(List.of("쓰이지 않음")), new ExecutionTrace() {
             @Override
             public void stage(Long executionId, String stage, Object value) {
                 stages.add(stage);
@@ -446,11 +446,15 @@ class RagAnswerGeneratorTest {
     }
 
     private RagAnswerGenerator generator(LlmClient client) {
+        return generator(client, ExecutionTrace.noop());
+    }
+
+    private RagAnswerGenerator generator(LlmClient client, ExecutionTrace trace) {
         // 판정은 꺼진 상태가 기본이라 항상 통과한다
         EvidenceRelevanceChecker checker = new EvidenceRelevanceChecker(
                 client, new ObjectMapper(), new EvidenceCheckProperties(false, 300));
         return new RagAnswerGenerator(
-                client, new AnswerContextConverter(), new AnswerGuard(), checker, recorder);
+                client, new AnswerContextConverter(), new AnswerGuard(), checker, recorder, trace);
     }
 
     private AnswerRequest request(List<FaqSearchResponse> searchResults) {
@@ -537,7 +541,7 @@ class RagAnswerGeneratorTest {
         private final List<Status> statuses = new ArrayList<>();
 
         private SpyRecorder() {
-            super((LlmGenerationRepository) null, null);
+            super((LlmGenerationRepository) null, null, null, null);
         }
 
         @Override

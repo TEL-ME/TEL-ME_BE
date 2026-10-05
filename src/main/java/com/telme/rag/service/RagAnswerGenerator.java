@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
-import org.springframework.beans.factory.annotation.Autowired;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -31,12 +30,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final AnswerGuard answerGuard;
     private final EvidenceRelevanceChecker relevanceChecker;
     private final LlmGenerationRecorder recorder;
-    private ExecutionTrace trace = ExecutionTrace.noop();
-
-    @Autowired
-    public void setExecutionTrace(ExecutionTrace trace) {
-        this.trace = trace;
-    }
+    private final ExecutionTrace trace;
 
     @Override
     public AnswerResult generate(AnswerRequest request, LlmStreamHandler handler) {

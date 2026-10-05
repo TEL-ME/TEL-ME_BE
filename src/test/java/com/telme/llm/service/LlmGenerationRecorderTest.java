@@ -23,14 +23,13 @@ class LlmGenerationRecorderTest {
 
     private final LlmGenerationRepository generations = mock(LlmGenerationRepository.class);
     private final OllamaRequestConverter converter = mock(OllamaRequestConverter.class);
-    private final LlmGenerationRecorder recorder =
-            new LlmGenerationRecorder(generations, mock(ChatExecutionRepository.class));
+    private final LlmGenerationRecorder recorder = new LlmGenerationRecorder(
+            generations, mock(ChatExecutionRepository.class), converter, new ObjectMapper());
 
     @Test
     @DisplayName("요청 옵션을 만들지 못해도 호출 기록은 옵션 없이 저장한다")
     void 요청_옵션_생성이_실패해도_호출_기록을_남긴다() {
         when(converter.toChatRequest(any(), anyBoolean())).thenThrow(new IllegalStateException("options"));
-        recorder.setTraceMetadata(converter, new ObjectMapper());
 
         recorder.record(request(), "exaone3.5:7.8b", new LlmGenerationRecorder.Result(1, Status.TIMEOUT, null, 10, null));
 
