@@ -2,15 +2,16 @@ package com.telme.store.converter;
 
 import com.telme.store.dto.res.StoreRegionSearchResponse;
 import com.telme.store.entity.Store;
-import com.telme.store.entity.StoreService;
-import com.telme.store.entity.StoreServiceType;
-import java.util.Comparator;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class StoreRegionSearchConverter {
+
+    private final StoreCommonConverter storeCommonConverter;
 
     public StoreRegionSearchResponse toResponse(Page<?> page, List<Store> stores) {
         return new StoreRegionSearchResponse(
@@ -31,15 +32,7 @@ public class StoreRegionSearchConverter {
                 store.getRegionCode(),
                 store.getLatitude(),
                 store.getLongitude(),
-                toServices(store.getServices())
+                storeCommonConverter.toServiceTypes(store.getServices())
         );
-    }
-
-    private List<StoreRegionSearchResponse.ServiceType> toServices(List<StoreService> services) {
-        return services.stream()
-                .map(StoreService::getServiceType)
-                .sorted(Comparator.comparing(StoreServiceType::getServiceTypeId))
-                .map(type -> new StoreRegionSearchResponse.ServiceType(type.getCode().name(), type.getName()))
-                .toList();
     }
 }

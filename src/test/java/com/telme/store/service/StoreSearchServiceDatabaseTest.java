@@ -79,6 +79,8 @@ class StoreSearchServiceDatabaseTest {
 
         assertThat(search(1000, 5, null)).isEmpty();
         assertThat(search(null, 5, null)).extracting(StoreNearbyResponse::storeId).containsExactly(near);
+        // 반경 상한(10km)을 넘겨 요청해도 상한으로 줄여 찾으므로 50km 매장은 빠진다
+        assertThat(search(100000, 5, null)).extracting(StoreNearbyResponse::storeId).containsExactly(near);
     }
 
     @Test
@@ -164,7 +166,7 @@ class StoreSearchServiceDatabaseTest {
                 .radiusMeters(radiusMeters)
                 .limit(limit)
                 .serviceTypes(serviceTypes)
-                .build());
+                .build()).stores();
     }
 
     private long insertUsimStore(String name, double latitude, double longitude) {

@@ -19,13 +19,7 @@ public record StoreRegionSearchResponse(
             String regionCode,
             BigDecimal latitude,
             BigDecimal longitude,
-            List<ServiceType> services
-    ) {
-    }
-
-    public record ServiceType(
-            String code,
-            String name
+            List<StoreServiceTypeResponse> services
     ) {
     }
 }
