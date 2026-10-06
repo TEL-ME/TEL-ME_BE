@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
+    private static final int MAX_MEMBER_NAME_LENGTH = 50;
+
     private final DefaultOAuth2UserService delegate;
 
     @Override
@@ -23,7 +25,8 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
         Map<String, Object> attributes = delegate.loadUser(userRequest).getAttributes();
         String providerUserId = extractProviderUserId(attributes);
         String email = extractEmail(attributes);
-        return new KakaoOAuth2User(providerUserId, email, attributes);
+        String nickname = extractNickname(attributes);
+        return new KakaoOAuth2User(providerUserId, email, nickname, attributes);
     }
 
     private String extractProviderUserId(Map<String, Object> attributes) {
@@ -47,5 +50,28 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
         Object email = account.get("email");
         // 일반 가입·로그인 DTO와 같은 규칙으로 정규화 — 아니면 대소문자만 다른 카카오 이메일이 기존 계정을 못 찾는다
         return email == null ? null : String.valueOf(email).toLowerCase(Locale.ROOT);
+    }
+
+    private String extractNickname(Map<String, Object> attributes) {
+        if (!(attributes.get("kakao_account") instanceof Map<?, ?> account)
+                || !(account.get("profile") instanceof Map<?, ?> profile)) {
+            return null;
+        }
+        Object nickname = profile.get("nickname");
+        if (nickname == null) {
+            return null;
+        }
+        String normalized = String.valueOf(nickname).trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.length() <= MAX_MEMBER_NAME_LENGTH) {
+            return normalized;
+        }
+        int endIndex = MAX_MEMBER_NAME_LENGTH;
+        if (Character.isHighSurrogate(normalized.charAt(endIndex - 1))) {
+            endIndex--;
+        }
+        return normalized.substring(0, endIndex);
     }
 }

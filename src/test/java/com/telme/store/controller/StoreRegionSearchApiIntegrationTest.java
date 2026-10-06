@@ -141,7 +141,7 @@ class StoreRegionSearchApiIntegrationTest {
 
     @Test
     void 법정동코드_단위가_아닌_자릿수는_400() throws Exception {
-        for (String region : List.of("116", "1168", "116801", "1168010", "116801070", "11680107000")) {
+        for (String region : List.of("116", "116801", "1168010", "116801070", "11680107000")) {
             mvc.perform(get(URL).param("region", region))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.result.region").exists());
@@ -150,11 +150,21 @@ class StoreRegionSearchApiIntegrationTest {
 
     @Test
     void 법정동코드_단위_자릿수는_모두_허용한다() throws Exception {
-        for (String region : List.of("11", "11680", "11680107", "1168010700")) {
+        for (String region : List.of("11", "1168", "11680", "11680107", "1168010700")) {
             mvc.perform(get(URL).param("region", region))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.result.stores[*].regionCode", everyItem(startsWith(region))));
         }
+    }
+
+    @Test
+    void 일반구가_있는_시_코드로_찾으면_일반구_매장도_나온다() throws Exception {
+        List<Long> expected = jdbc.queryForList(
+                "SELECT store_id FROM stores WHERE status = 'OPEN' AND region_code LIKE '4711%' ORDER BY store_id",
+                Long.class);
+
+        assertThat(expected).isNotEmpty();
+        assertThat(storeIds(get(URL).param("region", "47110"))).isEqualTo(expected);
     }
 
     @Test
