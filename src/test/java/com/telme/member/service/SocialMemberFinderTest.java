@@ -48,7 +48,7 @@ class SocialMemberFinderTest {
         when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-1"))
                 .thenReturn(Optional.of(account));
 
-        User result = finder.findOrCreate(KAKAO, "kakao-1", "a@example.com");
+        User result = finder.findOrCreate(KAKAO, "kakao-1", "a@example.com", null);
 
         assertThat(result).isEqualTo(user);
         verify(userRepository, never()).save(any());
@@ -62,7 +62,7 @@ class SocialMemberFinderTest {
         when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-2"))
                 .thenReturn(Optional.of(account));
 
-        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-2", "a@example.com"))
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-2", "a@example.com", null))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
@@ -75,10 +75,53 @@ class SocialMemberFinderTest {
         User saved = User.builder().userId(2L).build();
         when(userRepository.save(any(User.class))).thenReturn(saved);
 
-        User result = finder.findOrCreate(KAKAO, "kakao-3", "b@example.com");
+        User result = finder.findOrCreate(KAKAO, "kakao-3", "b@example.com", null);
 
         assertThat(result).isEqualTo(saved);
         verify(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+    }
+
+    @Test
+    @DisplayName("신규 카카오 회원은 카카오 닉네임을 이름으로 저장한다")
+    void 신규_생성시_닉네임을_이름으로_저장() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-name")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-name", null, "카카오닉네임");
+
+        assertThat(result.getName()).isEqualTo("카카오닉네임");
+        verify(userRepository).save(argThat(user -> "카카오닉네임".equals(user.getName())));
+    }
+
+    @Test
+    @DisplayName("기존 카카오 회원의 이름이 비어 있으면 다음 로그인에서 닉네임으로 한 번 보완한다")
+    void 기존_회원의_빈_이름을_닉네임으로_보완() {
+        User user = User.builder().userId(21L).build();
+        SocialAccount account = SocialAccount.builder()
+                .user(user).provider(KAKAO).providerUserId("kakao-fill-name").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-fill-name"))
+                .thenReturn(Optional.of(account));
+        when(userRepository.setNameIfMissing(21L, "새닉네임")).thenReturn(1);
+
+        User result = finder.findOrCreate(KAKAO, "kakao-fill-name", null, "새닉네임");
+
+        assertThat(result.getName()).isEqualTo("새닉네임");
+        verify(userRepository).setNameIfMissing(21L, "새닉네임");
+    }
+
+    @Test
+    @DisplayName("기존 회원에게 저장된 이름은 카카오 닉네임으로 덮어쓰지 않는다")
+    void 기존_이름은_닉네임으로_덮어쓰지_않음() {
+        User user = User.builder().userId(22L).name("기존이름").build();
+        SocialAccount account = SocialAccount.builder()
+                .user(user).provider(KAKAO).providerUserId("kakao-keep-name").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-keep-name"))
+                .thenReturn(Optional.of(account));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-keep-name", null, "바뀐닉네임");
+
+        assertThat(result.getName()).isEqualTo("기존이름");
+        verify(userRepository, never()).setNameIfMissing(any(), any());
     }
 
     @Test
@@ -96,7 +139,7 @@ class SocialMemberFinderTest {
         doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
                 .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
 
-        User result = finder.findOrCreate(KAKAO, "kakao-4", null);
+        User result = finder.findOrCreate(KAKAO, "kakao-4", null, null);
 
         assertThat(result).isEqualTo(winnerUser);
     }
@@ -109,7 +152,7 @@ class SocialMemberFinderTest {
         doThrow(new DataIntegrityViolationException("value too long"))
                 .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
 
-        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-5", null))
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-5", null, null))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(GeneralException.class);
     }
@@ -121,7 +164,7 @@ class SocialMemberFinderTest {
         User existing = User.builder().userId(7L).email("match@example.com").build();
         when(userRepository.findByEmail("match@example.com")).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-6", "match@example.com"))
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-6", "match@example.com", null))
                 .isInstanceOf(SocialEmailAlreadyLinkedException.class)
                 .extracting(e -> ((SocialEmailAlreadyLinkedException) e).getMatchedUserId())
                 .isEqualTo(7L);
@@ -132,11 +175,13 @@ class SocialMemberFinderTest {
     @Test
     @DisplayName("linkExisting은 기존 회원에 새 소셜 계정을 연결한다")
     void linkExisting_정상_연결() {
-        User existing = User.builder().userId(8L).email("link@example.com").build();
+        User existing = User.builder().userId(8L).email("link@example.com").name("이메일가입이름").build();
 
         User result = finder.linkExisting(KAKAO, "kakao-7", "provider@example.com", existing);
 
         assertThat(result).isEqualTo(existing);
+        assertThat(result.getName()).isEqualTo("이메일가입이름");
+        verify(userRepository, never()).setNameIfMissing(any(), any());
         verify(socialAccountRepository).saveAndFlush(argThat(account ->
                 account.getUser().equals(existing)
                         && account.getProvider() == KAKAO

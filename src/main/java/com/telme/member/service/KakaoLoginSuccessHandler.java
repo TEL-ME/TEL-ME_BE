@@ -60,7 +60,8 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             throws IOException {
         try {
             KakaoOAuth2User kakaoPrincipal = (KakaoOAuth2User) authentication.getPrincipal();
-            User user = resolveUser(request, response, kakaoPrincipal.getProviderUserId(), kakaoPrincipal.getEmail());
+            User user = resolveUser(
+                    request, response, kakaoPrincipal.getProviderUserId(), kakaoPrincipal.getEmail(), kakaoPrincipal.getNickname());
             if (user == null) {
                 return;
             }
@@ -72,7 +73,8 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         }
     }
 
-    private User resolveUser(HttpServletRequest request, HttpServletResponse response, String providerUserId, String email)
+    private User resolveUser(
+            HttpServletRequest request, HttpServletResponse response, String providerUserId, String email, String nickname)
             throws IOException {
         kakaoEmailMatchStore.clear(request);
 
@@ -86,7 +88,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         if (pending != null) {
             return resolveLinkMode(request, response, pending, providerUserId, email);
         }
-        return resolveLoginMode(request, response, providerUserId, email);
+        return resolveLoginMode(request, response, providerUserId, email, nickname);
     }
 
     private User resolveLinkMode(
@@ -110,10 +112,11 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
         }
     }
 
-    private User resolveLoginMode(HttpServletRequest request, HttpServletResponse response, String providerUserId, String email)
+    private User resolveLoginMode(
+            HttpServletRequest request, HttpServletResponse response, String providerUserId, String email, String nickname)
             throws IOException {
         try {
-            return socialMemberFinder.findOrCreate(SocialAccount.Provider.KAKAO, providerUserId, email);
+            return socialMemberFinder.findOrCreate(SocialAccount.Provider.KAKAO, providerUserId, email, nickname);
         } catch (SocialEmailAlreadyLinkedException exception) {
             kakaoEmailMatchStore.issue(request, providerUserId, exception.getMatchedUserId(), exception.getMatchedEmail());
             redirectFailure(request, response, MemberErrorCode.EMAIL_LINK_REQUIRED.getCode());

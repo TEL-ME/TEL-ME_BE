@@ -7,6 +7,7 @@ import com.telme.member.exception.MemberErrorCode;
 import com.telme.member.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,8 +24,13 @@ public class CurrentMemberResolver {
     // SecurityConfig가 .authenticated()로 미인증 요청은 이미 막지만, 실제 신원은 USER_ID_ATTRIBUTE로만 읽는다(로그인 방식마다
     // principal 타입이 달라서) — 두 상태가 어긋나면(인증은 됐는데 세션에 userId가 없음) 방어적으로 401 처리한다
     public User resolve(HttpServletRequest request) {
+        return resolveOptional(request)
+                .orElseThrow(() -> new GeneralException(MemberErrorCode.UNAUTHENTICATED));
+    }
+
+    public Optional<User> resolveOptional(HttpServletRequest request) {
         if (!isAuthenticated()) {
-            throw new GeneralException(MemberErrorCode.UNAUTHENTICATED);
+            return Optional.empty();
         }
         Long userId = readUserId(request);
         if (userId == null) {
@@ -34,7 +40,7 @@ public class CurrentMemberResolver {
                 .orElseThrow(() -> new GeneralException(MemberErrorCode.UNAUTHENTICATED));
         // 세션이 살아있는 동안 상태가 정지·탈퇴로 바뀔 수 있다 — "내 계정" 류 API는 매번 다시 확인한다
         memberStatusChecker.checkActive(user);
-        return user;
+        return Optional.of(user);
     }
 
     private boolean isAuthenticated() {

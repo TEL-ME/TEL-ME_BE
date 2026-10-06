@@ -57,6 +57,14 @@ class CurrentMemberResolverTest {
     }
 
     @Test
+    @DisplayName("선택 조회는 미인증 상태를 빈 값으로 반환한다")
+    void 선택_조회는_미인증이면_빈_값() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        assertThat(resolver.resolveOptional(request)).isEmpty();
+    }
+
+    @Test
     @DisplayName("익명 Authentication이면 401")
     void 익명_인증이면_401() {
         SecurityContext context = SecurityContextHolder.createEmptyContext();

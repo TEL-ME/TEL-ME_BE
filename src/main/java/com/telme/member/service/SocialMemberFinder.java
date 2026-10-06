@@ -27,12 +27,12 @@ public class SocialMemberFinder {
     private final MemberStatusChecker memberStatusChecker;
     private final TransactionTemplate transactionTemplate;
 
-    public User findOrCreate(SocialAccount.Provider provider, String providerUserId, String email) {
+    public User findOrCreate(SocialAccount.Provider provider, String providerUserId, String email, String nickname) {
         User user = socialAccountRepository.findByProviderAndProviderUserId(provider, providerUserId)
                 .map(SocialAccount::getUser)
-                .orElseGet(() -> createNew(provider, providerUserId, email));
+                .orElseGet(() -> createNew(provider, providerUserId, email, nickname));
         memberStatusChecker.checkActive(user);
-        return user;
+        return fillNameIfMissing(user, nickname);
     }
 
     // 이미 있는 회원(existingUser)에 새 소셜 계정을 붙인다 — 호출자가 그 회원 본인임을 먼저 확인한 뒤에만 불러야 한다.
@@ -67,7 +67,7 @@ public class SocialMemberFinder {
                 .orElseThrow(() -> new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
     }
 
-    private User createNew(SocialAccount.Provider provider, String providerUserId, String email) {
+    private User createNew(SocialAccount.Provider provider, String providerUserId, String email, String nickname) {
         if (email != null) {
             Optional<User> matched = userRepository.findByEmail(email);
             if (matched.isPresent()) {
@@ -77,7 +77,7 @@ public class SocialMemberFinder {
         }
         try {
             return transactionTemplate.execute(status -> {
-                User user = userRepository.save(User.builder().build());
+                User user = userRepository.save(User.builder().name(nickname).build());
                 socialAccountRepository.saveAndFlush(SocialAccount.builder()
                         .user(user)
                         .provider(provider)
@@ -93,6 +93,17 @@ public class SocialMemberFinder {
             // 동시 최초 로그인 레이스의 패자 — 승자의 커밋을 기다렸다가(짧게 재시도) 그 계정으로 로그인
             return awaitWinner(provider, providerUserId);
         }
+    }
+
+    private User fillNameIfMissing(User user, String nickname) {
+        if (user.getName() != null || nickname == null) {
+            return user;
+        }
+        Integer updated = transactionTemplate.execute(status -> userRepository.setNameIfMissing(user.getUserId(), nickname));
+        if (updated != null && updated > 0) {
+            user.fillNameIfMissing(nickname);
+        }
+        return user;
     }
 
     private User awaitWinner(SocialAccount.Provider provider, String providerUserId) {
