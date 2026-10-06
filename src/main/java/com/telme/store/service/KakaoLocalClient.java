@@ -42,13 +42,17 @@ public class KakaoLocalClient {
         return response == null || response.documents() == null ? List.of() : response.documents();
     }
 
-    // 키 오류(401)·호출 한도(429)·카카오 장애·타임아웃 모두 사용자가 고칠 수 없는 실패라 하나의 503으로 알린다.
+    // 키·권한 오류(401/403)·호출 한도(429)·카카오 장애·타임아웃 모두 사용자가 고칠 수 없는 실패라 하나의 503으로 알린다.
     // 원인은 로그로 구분한다. 검색어는 사용자 입력이라 로그에 남기지 않는다
     private <T> T call(Supplier<T> request) {
         try {
             return request.get();
         } catch (RestClientResponseException e) {
-            log.warn("[KakaoLocal] 응답 오류 status={}", e.getStatusCode().value());
+            if (e.getStatusCode().is4xxClientError()) {
+                log.error("[KakaoLocal] 클라이언트 연동 오류 (401/429 등) status={}, body={}", e.getStatusCode().value(), e.getResponseBodyAsString());
+            } else {
+                log.warn("[KakaoLocal] 카카오 서버 오류 status={}, body={}", e.getStatusCode().value(), e.getResponseBodyAsString());
+            }
             throw new GeneralException(StoreErrorCode.LOCATION_LOOKUP_UNAVAILABLE);
         } catch (RestClientException e) {
             log.warn("[KakaoLocal] 호출 실패 {}", e.getClass().getSimpleName());
