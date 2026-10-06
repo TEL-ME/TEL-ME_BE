@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "seed": "V7-blind-40",
+  "v6CaptureSha256": "ff13a1d4a4c184fb845be8e17646c85a0d623a8b3921ec48046db57c9ede5940",
+  "v7CaptureSha256": "4321a47225065ea068b9ae87717da1c946a25e62b23d56220e009267fc5279b2",
+  "excludedPriorKeys": [
+    "20261005-service-pipeline-human-review-key.json",
+    "20261005-heldout40-human-review-key.json"
+  ],
+  "cases": [
+    {
+      "reviewId": "V7H-001",
+      "caseId": "PIPE-USIM-0046",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-002",
+      "caseId": "PIPE-USIM-0016",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-003",
+      "caseId": "PIPE-DEVICE-0048",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-004",
+      "caseId": "PIPE-SUBSCRIBE-0033",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-005",
+      "caseId": "PIPE-BILLING-0092",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-006",
+      "caseId": "PIPE-SERVICE-0025",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-007",
+      "caseId": "PIPE-USIM-0036",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-008",
+      "caseId": "PIPE-BILLING-0072",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-009",
+      "caseId": "PIPE-NAME_CHANGE-0075",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-010",
+      "caseId": "PIPE-SUBSCRIBE-0022",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-011",
+      "caseId": "PIPE-SERVICE-0065",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-012",
+      "caseId": "PIPE-SERVICE-0008",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-013",
+      "caseId": "PIPE-BILLING-0023",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-014",
+      "caseId": "PIPE-NAME_CHANGE-0025",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-015",
+      "caseId": "PIPE-USIM-0041",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-016",
+      "caseId": "PIPE-SERVICE-0063",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-017",
+      "caseId": "PIPE-ROAMING-0064",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-018",
+      "caseId": "PIPE-PORTING-0078",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-019",
+      "caseId": "PIPE-ROAMING-0021",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-020",
+      "caseId": "PIPE-BILLING-0113",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-021",
+      "caseId": "PIPE-SUBSCRIBE-0119",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-022",
+      "caseId": "PIPE-NAME_CHANGE-0038",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-023",
+      "caseId": "PIPE-PORTING-0032",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-024",
+      "caseId": "PIPE-SUBSCRIBE-0077",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-025",
+      "caseId": "PIPE-USIM-0086",
+      "turnIndex": 0,
+      "stratum": "FAQ_SINGLE"
+    },
+    {
+      "reviewId": "V7H-026",
+      "caseId": "PIPE-COMPOUND-016",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-027",
+      "caseId": "PIPE-COMPOUND-024",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-028",
+      "caseId": "PIPE-COMPOUND-037",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-029",
+      "caseId": "PIPE-COMPOUND-017",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-030",
+      "caseId": "PIPE-COMPOUND-011",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-031",
+      "caseId": "PIPE-COMPOUND-041",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-032",
+      "caseId": "PIPE-COMPOUND-046",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-033",
+      "caseId": "PIPE-COMPOUND-023",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-034",
+      "caseId": "PIPE-COMPOUND-009",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-035",
+      "caseId": "PIPE-COMPOUND-019",
+      "turnIndex": 0,
+      "stratum": "FAQ_COMPOUND"
+    },
+    {
+      "reviewId": "V7H-036",
+      "caseId": "PIPE-OUT-013",
+      "turnIndex": 0,
+      "stratum": "OUT_OF_SCOPE"
+    },
+    {
+      "reviewId": "V7H-037",
+      "caseId": "PIPE-OUT-029",
+      "turnIndex": 0,
+      "stratum": "OUT_OF_SCOPE"
+    },
+    {
+      "reviewId": "V7H-038",
+      "caseId": "PIPE-OUT-034",
+      "turnIndex": 0,
+      "stratum": "OUT_OF_SCOPE"
+    },
+    {
+      "reviewId": "V7H-039",
+      "caseId": "PIPE-OUT-015",
+      "turnIndex": 0,
+      "stratum": "OUT_OF_SCOPE"
+    },
+    {
+      "reviewId": "V7H-040",
+      "caseId": "PIPE-OUT-014",
+      "turnIndex": 0,
+      "stratum": "OUT_OF_SCOPE"
+    }
+  ]
+}

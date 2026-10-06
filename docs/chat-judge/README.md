@@ -13,6 +13,7 @@ docs/chat-judge/
   experiments/V4-split-judge-telme100/ split scoring and TELME-100 rerun
   experiments/V5-grounding-two-stage/ 35-case grounding retry and human review
   experiments/V6-live-chat-pipeline/  actual Spring pipeline quality evaluation
+  experiments/V7-bedrock-cross-judge/ frozen V6 answers with three-model cross-judgment
 
 scripts/chat_judge/
   *.py                              judge runners, utilities, and tests
@@ -20,7 +21,45 @@ scripts/chat_judge/
 ```
 
 
+V6의 [블라인드 검토표](experiments/V6-live-chat-pipeline/20261005-service-pipeline-human-review.md)에서 작성한 [사람 판정 39건](experiments/V6-live-chat-pipeline/20261005-service-pipeline-human-review-lyj.md)과 Judge의 비교는 [대조 결과](experiments/V6-live-chat-pipeline/20261005-judge-human-calibration.md)에 정리했다. Judge 판정과 표본 유형은 [사람이 읽는 비교 키](experiments/V6-live-chat-pipeline/20261005-service-pipeline-human-review-key.md)와 [기계 판독용 원본 키](experiments/V6-live-chat-pipeline/20261005-service-pipeline-human-review-key.json)에 분리되어 있다. 표본 생성은 [`prepare_human_review.py`](../../scripts/chat_judge/experiments/v6_live_chat_pipeline/prepare_human_review.py)로 재현할 수 있다.
+
+다음 독립 점검용 40건은 [사람 판정표](experiments/V6-live-chat-pipeline/20261005-heldout40-human-review.md)에 정리했다. Judge 판정을 보지 않고 사람 판정을 먼저 기록한다. 목록과 본문은 [`prepare_heldout_review.py`](../../scripts/chat_judge/experiments/v6_live_chat_pipeline/prepare_heldout_review.py)로 재생성할 수 있다.
+
+작성된 [사람 판정 40건](experiments/V6-live-chat-pipeline/20261005-heldout40-human-review-lyj.md)은 [수정 Judge와 대조한 결과](experiments/V6-live-chat-pipeline/20261005-heldout40-human-judge-comparison.md)에 기록했다. 무관한 되묻기로 이어진 오분류는 별도 `MISROUTED_CLARIFICATION`으로 집계한다. 판정 기준과 충돌했던 두 사례의 확인 결과도 [재확인 기록](experiments/V6-live-chat-pipeline/20261005-heldout40-label-review.md)에 남겼다.
+
+남은 불일치 17턴의 원인과 수정 순서는 [불일치 분석](experiments/V6-live-chat-pipeline/20261005-heldout40-disagreement-triage.md)에 정리했다. FAQ 질문 문구를 정책 근거로 보지 않는 기준을 적용해 V6H-012 사람 판정도 갱신했다.
+
+사람 검토 기준을 실제 Judge 입력에도 적용해 40건을 vLLM으로 다시 채점했다. FAQ 질문 문구를 빼고 답변 본문만으로 근거를 판단하며, 근거가 확인되지 않는 인용은 미채점 처리한다. [수정 내용, 원시 결과와 사람 판정 비교](experiments/V6-live-chat-pipeline/rubric-v2/README.md)를 참고한다.
+
 현재 서비스 답변 평가는 [실행 방법과 점수 기준](SERVICE_EVALUATION.md), [509개 실제 질문 결과](experiments/V6-live-chat-pipeline/20261002-service-pipeline-results.md)를 먼저 참고한다. 아래의 초기 파일럿과 합성 답변 검증 결과는 과거 기록이다.
+
+## 현재 답변 판정 기준
+
+실제 파이프라인 답변은 서로 다른 질문에 답했는지, 답변이 근거를 벗어났는지, 근거가 부족할 때 답변을 보류했는지를 나누어 평가한다. 세 기준은 서로 대체하지 않으며, 한 답변에 여러 기준의 결과가 함께 붙을 수 있다. 예를 들어 안전하게 거절했더라도 검색에 실패해 사용자의 질문을 해결하지 못했다면 `APPROPRIATE`와 `MISSED`가 동시에 가능하다.
+
+| 평가 축 | 판정 | 의미 |
+|---|---|---|
+| 근거성 | `SUPPORTED` | 사실 주장이 제공된 FAQ 답변 본문으로 뒷받침된다. |
+| 근거성 | `UNSUPPORTED` | FAQ 답변 본문에 없는 사실을 단정하거나, 조건·대상·범위를 바꾸어 말한다. |
+| 근거성 | `NOT_APPLICABLE` | 사실 주장이 없는 답변이라 근거성 판정 대상이 아니다. |
+| 근거성 | `REVIEW` | 제공된 자료만으로 주장의 근거 여부를 확정하기 어렵다. |
+| 질문 충족도 | `COMPLETE` | 요청한 핵심 내용을 빠짐없이 답했다. |
+| 질문 충족도 | `PARTIAL` | 일부는 답했지만 필요한 내용이나 하위 질문이 빠졌다. |
+| 질문 충족도 | `MISSED` | 핵심 질문에 답하지 못했거나 엉뚱한 답을 했다. 거절도 질문 해결 여부에 따라 여기에 해당할 수 있다. |
+| 질문 충족도 | `NOT_APPLICABLE` | 서비스 범위 밖 요청 등 질문 충족도를 평가할 대상이 아니다. |
+| 보류 판단 | `SHOULD_ABSTAIN` | 근거가 없는 사실 주장을 답변에 포함했으므로 보류했어야 한다. 일부 답변이 맞더라도 근거 없는 주장이 있으면 적용한다. |
+| 보류 판단 | `OVER_REFUSAL` | 충분한 근거가 있는데도 불필요하게 답변을 거절했다. |
+| 보류 판단 | `APPROPRIATE` | 근거가 부족하거나 서비스 범위 밖이어서 답변을 보류한 것이 적절하다. |
+| 보류 판단 | `NOT_APPLICABLE` | 답변을 보류하지 않았고, 보류 적절성을 따질 상황도 아니다. |
+| 모든 축 | `REVIEW` | 자료나 답변이 모호해 자동 판정을 확정하지 않고 검토 대상으로 둔다. |
+
+근거성은 **검색된 FAQ의 답변 본문만** 정책 근거로 인정한다. FAQ 질문 제목이나 사용자가 말한 조건은 정책 사실의 증거로 보지 않는다. 복합 질문은 하위 질문별로 충족 여부를 살핀 뒤 전체 답변의 `COMPLETE`·`PARTIAL`·`MISSED`를 정한다. `APPROPRIATE`는 안전한 보류였다는 뜻이지 질문이 해결됐다는 뜻은 아니다.
+
+출력 잘림은 위 세 점수 축과 별도의 **출력 무결성 표시**로 기록한다. `OUTPUT_TRUNCATED`는 모델 종료 사유나 스트림 기록에서 출력이 중간에 끊긴 사실이 확인된 경우에 사용한다. 답변이 `반면에`처럼 앞 문맥을 전제하는 말로 시작하는 등 정황만 있으면 `OUTPUT_TRUNCATED_SUSPECTED`로 남기고 확정과 구분한다. 잘림이 의심돼도 실제 전달된 문장의 근거성은 그 문장만으로 판정하고, 빠진 문장은 추정해 채점하지 않는다.
+
+V6 캡처에는 최종 저장 답변과 생성 호출의 성공 여부가 있지만, 원본 LLM 출력, 모델 종료 사유(`finish_reason`), AnswerGuard의 입력·출력 비교나 제거 기록은 포함되지 않는다. 그러므로 저장 답변이 짧거나 문맥 연결어로 시작한다는 이유만으로 Guard가 문장을 지웠다고 단정하지 않는다.
+
+V7의 [302건 사람 판정표](experiments/V7-bedrock-cross-judge/v7-three-model-full-302-human-review-lyj.md)는 세 모델의 판단과 비교한 사람 판정이다. 세 모델의 다수결을 정답으로 간주하지 않으며, 판정표도 검증이 끝난 정답 집합으로 취급하지 않는다. `REVIEW` 및 모델 간 불일치는 사람 확인 대상으로 남긴다. [V7 원래 검토 목록](experiments/V7-bedrock-cross-judge/v7-sonnet-4-6-human-review.md)과 함께 참고한다.
 
 ## 초기 파일럿
 

@@ -1,0 +1,2554 @@
+{
+  "scope": {
+    "humanFile": "v7-three-model-full-302-human-review-lyj.md",
+    "humanSha256": "f647dbabd94fa722599e4a92340d19864216c8571bb877252f5b0d2da064b394",
+    "humanReviewed": 302,
+    "singleQuestion": 256,
+    "multipleQuestion": 46,
+    "humanCounts": {
+      "grounding": {
+        "UNSUPPORTED": 54,
+        "SUPPORTED": 131,
+        "NOT_APPLICABLE": 117
+      },
+      "quality": {
+        "COMPLETE": 116,
+        "PARTIAL": 63,
+        "MISSED": 77,
+        "NOT_APPLICABLE": 46
+      },
+      "abstention": {
+        "SHOULD_ABSTAIN": 54,
+        "NOT_APPLICABLE": 135,
+        "OVER_REFUSAL": 7,
+        "APPROPRIATE": 106
+      }
+    }
+  },
+  "inputs": {
+    "qwen": {
+      "file": "v7-qwen-final-raw.json.gz",
+      "sha256": "1767b26f98e46d44c637b109723dbeee2e2b821a5094c8a9a776970511bf44b4",
+      "recordedHashes": {
+        "captureSha256": "b3fe8a1cadcec1096707a2b3648e6e6d3b4778129debdeb8d2210b729d966217",
+        "catalogSha256": "ca078af56df2c67a427246f50fcde165978fe8b35cb01e890dab6fe5b95f7505",
+        "judgeCodeSha256": "6f4e9427e83cb85a2364dbe6d62eb6c6364edbd7b2df2755c75ca221553a0b83"
+      }
+    },
+    "gpt-oss-120b": {
+      "file": "v7-gpt-oss-120b-raw.json.gz",
+      "sha256": "70abf3db39a06d289c7e3e4b2d18c6c5d0817be9ccb7c6d4e70dadf4d49b19bb",
+      "recordedHashes": {
+        "captureSha256": "b3fe8a1cadcec1096707a2b3648e6e6d3b4778129debdeb8d2210b729d966217",
+        "catalogSha256": "ca078af56df2c67a427246f50fcde165978fe8b35cb01e890dab6fe5b95f7505",
+        "judgeCodeSha256": "6f4e9427e83cb85a2364dbe6d62eb6c6364edbd7b2df2755c75ca221553a0b83"
+      }
+    },
+    "sonnet-4-6": {
+      "file": "v7-sonnet-4-6-raw.json.gz",
+      "sha256": "f4bfe47af01699d464cf4804a3299c46fc28e5fef695dfa3b66fffaa2d224c2f",
+      "recordedHashes": {
+        "captureSha256": "b3fe8a1cadcec1096707a2b3648e6e6d3b4778129debdeb8d2210b729d966217",
+        "catalogSha256": "ca078af56df2c67a427246f50fcde165978fe8b35cb01e890dab6fe5b95f7505",
+        "judgeCodeSha256": "6f4e9427e83cb85a2364dbe6d62eb6c6364edbd7b2df2755c75ca221553a0b83"
+      }
+    }
+  },
+  "grounding": {
+    "population": 302,
+    "models": {
+      "qwen": {
+        "counts": {
+          "resolved": 290,
+          "match": 242,
+          "unresolved": 12,
+          "review": 8,
+          "mismatch": 48,
+          "unscored": 4
+        },
+        "confusion": {
+          "UNSUPPORTED": {
+            "UNSUPPORTED": 42,
+            "SUPPORTED": 9,
+            "NOT_APPLICABLE": 1
+          },
+          "SUPPORTED": {
+            "SUPPORTED": 84,
+            "UNSUPPORTED": 30,
+            "NOT_APPLICABLE": 7
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 116,
+            "UNSUPPORTED": 1
+          }
+        },
+        "errors": {
+          "SUPPORTED -> UNSUPPORTED": [
+            "PIPE-BILLING-0054",
+            "PIPE-BILLING-0129",
+            "PIPE-BILLING-0138",
+            "PIPE-COMPOUND-013",
+            "PIPE-COMPOUND-031",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-036",
+            "PIPE-COMPOUND-041",
+            "PIPE-DEVICE-0102",
+            "PIPE-DEVICE-0117",
+            "PIPE-NAME_CHANGE-0044",
+            "PIPE-NAME_CHANGE-0049",
+            "PIPE-NAME_CHANGE-0075",
+            "PIPE-NAME_CHANGE-0083",
+            "PIPE-PLAN-0036",
+            "PIPE-PLAN-0108",
+            "PIPE-PORTING-0081",
+            "PIPE-PORTING-0107",
+            "PIPE-ROAMING-0034",
+            "PIPE-ROAMING-0071",
+            "PIPE-ROAMING-0074",
+            "PIPE-SERVICE-0019",
+            "PIPE-SERVICE-0056",
+            "PIPE-SUBSCRIBE-0036",
+            "PIPE-SUBSCRIBE-0056",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0004",
+            "PIPE-TERMINATE-0069",
+            "PIPE-USIM-0041",
+            "PIPE-USIM-0075"
+          ],
+          "UNSUPPORTED -> SUPPORTED": [
+            "PIPE-BILLING-0065",
+            "PIPE-BILLING-0146",
+            "PIPE-COMPOUND-048",
+            "PIPE-DEVICE-0048",
+            "PIPE-PORTING-0087",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-TERMINATE-0096",
+            "REG-NO_EVIDENCE"
+          ],
+          "SUPPORTED -> NOT_APPLICABLE": [
+            "PIPE-BILLING-0117",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-NAME_CHANGE-0070",
+            "PIPE-PLAN-0081",
+            "PIPE-PORTING-0078",
+            "PIPE-TERMINATE-0095",
+            "PIPE-TERMINATE-0113"
+          ],
+          "NOT_APPLICABLE -> UNSUPPORTED": [
+            "PIPE-COMPOUND-037"
+          ],
+          "UNSUPPORTED -> NOT_APPLICABLE": [
+            "PIPE-TERMINATE-0092"
+          ]
+        }
+      },
+      "gpt-oss-120b": {
+        "counts": {
+          "resolved": 287,
+          "mismatch": 49,
+          "match": 238,
+          "unresolved": 15,
+          "unscored": 15
+        },
+        "confusion": {
+          "UNSUPPORTED": {
+            "SUPPORTED": 15,
+            "UNSUPPORTED": 35
+          },
+          "SUPPORTED": {
+            "SUPPORTED": 91,
+            "UNSUPPORTED": 29
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 112,
+            "SUPPORTED": 2,
+            "UNSUPPORTED": 3
+          }
+        },
+        "errors": {
+          "UNSUPPORTED -> SUPPORTED": [
+            "PIPE-BILLING-0020",
+            "PIPE-BILLING-0135",
+            "PIPE-BILLING-0146",
+            "PIPE-COMPOUND-027",
+            "PIPE-DEVICE-0048",
+            "PIPE-DEVICE-0062",
+            "PIPE-DEVICE-0084",
+            "PIPE-NAME_CHANGE-0024",
+            "PIPE-PLAN-0066",
+            "PIPE-PORTING-0049",
+            "PIPE-PORTING-0060",
+            "PIPE-PORTING-0087",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-USIM-0104"
+          ],
+          "SUPPORTED -> UNSUPPORTED": [
+            "PIPE-BILLING-0087",
+            "PIPE-BILLING-0092",
+            "PIPE-BILLING-0138",
+            "PIPE-COMPOUND-013",
+            "PIPE-COMPOUND-021",
+            "PIPE-COMPOUND-031",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-036",
+            "PIPE-DEVICE-0024",
+            "PIPE-DEVICE-0070",
+            "PIPE-DEVICE-0102",
+            "PIPE-DEVICE-0117",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-PLAN-0069",
+            "PIPE-PLAN-0081",
+            "PIPE-PLAN-0108",
+            "PIPE-PORTING-0015",
+            "PIPE-PORTING-0065",
+            "PIPE-PORTING-0081",
+            "PIPE-ROAMING-0074",
+            "PIPE-SERVICE-0046",
+            "PIPE-SUBSCRIBE-0005",
+            "PIPE-SUBSCRIBE-0012",
+            "PIPE-SUBSCRIBE-0036",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0004",
+            "PIPE-TERMINATE-0069",
+            "PIPE-TERMINATE-0095",
+            "PIPE-USIM-0075"
+          ],
+          "NOT_APPLICABLE -> SUPPORTED": [
+            "PIPE-COMPOUND-037",
+            "PIPE-PLAN-0050"
+          ],
+          "NOT_APPLICABLE -> UNSUPPORTED": [
+            "PIPE-COMPOUND-047",
+            "PIPE-SERVICE-0008",
+            "REG-STORE"
+          ]
+        }
+      },
+      "sonnet-4-6": {
+        "counts": {
+          "resolved": 282,
+          "match": 250,
+          "mismatch": 32,
+          "unresolved": 20,
+          "unscored": 8,
+          "review": 12
+        },
+        "confusion": {
+          "UNSUPPORTED": {
+            "UNSUPPORTED": 33,
+            "SUPPORTED": 14,
+            "NOT_APPLICABLE": 1
+          },
+          "SUPPORTED": {
+            "SUPPORTED": 101,
+            "NOT_APPLICABLE": 5,
+            "UNSUPPORTED": 11
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 116,
+            "SUPPORTED": 1
+          }
+        },
+        "errors": {
+          "SUPPORTED -> NOT_APPLICABLE": [
+            "PIPE-BILLING-0117",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-NAME_CHANGE-0076",
+            "PIPE-PLAN-0081",
+            "PIPE-TERMINATE-0113"
+          ],
+          "UNSUPPORTED -> SUPPORTED": [
+            "PIPE-BILLING-0123",
+            "PIPE-COMPOUND-016",
+            "PIPE-COMPOUND-018",
+            "PIPE-COMPOUND-048",
+            "PIPE-COMPOUND-049",
+            "PIPE-DEVICE-0084",
+            "PIPE-DEVICE-0116",
+            "PIPE-NAME_CHANGE-0024",
+            "PIPE-PLAN-0143",
+            "PIPE-PORTING-0029",
+            "PIPE-PORTING-0087",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-SUBSCRIBE-0077",
+            "PIPE-SUBSCRIBE-0105"
+          ],
+          "SUPPORTED -> UNSUPPORTED": [
+            "PIPE-BILLING-0138",
+            "PIPE-BILLING-0148",
+            "PIPE-BILLING-0155",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-041",
+            "PIPE-DEVICE-0117",
+            "PIPE-PORTING-0015",
+            "PIPE-ROAMING-0071",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0069",
+            "PIPE-TERMINATE-0095"
+          ],
+          "NOT_APPLICABLE -> SUPPORTED": [
+            "PIPE-COMPOUND-037"
+          ],
+          "UNSUPPORTED -> NOT_APPLICABLE": [
+            "PIPE-TERMINATE-0092"
+          ]
+        }
+      }
+    },
+    "consensus": {
+      "majority_correct": 46,
+      "unanimous_correct": 187,
+      "incomplete": 40,
+      "majority_wrong": 22,
+      "unanimous_wrong": 7
+    },
+    "disagreements": {},
+    "unanimousWrongCases": [
+      {
+        "id": "PIPE-BILLING-0138",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-035",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0117",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0087",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "SUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0066",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "SUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0088",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0069",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      }
+    ],
+    "majorityWrongCases": [
+      {
+        "id": "PIPE-BILLING-0117",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0146",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "SUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-013",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-031",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-036",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-037",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-048",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "SUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0084",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0102",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0015",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0024",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0081",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0108",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0081",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0071",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0074",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0044",
+        "human": "UNSUPPORTED",
+        "models": {
+          "qwen": "SUPPORTED",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0036",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0004",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0095",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "UNSUPPORTED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0113",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "SUPPORTED",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-USIM-0075",
+        "human": "SUPPORTED",
+        "models": {
+          "qwen": "UNSUPPORTED",
+          "gpt-oss-120b": "UNSUPPORTED",
+          "sonnet-4-6": "SUPPORTED"
+        }
+      }
+    ],
+    "threeWayCases": [],
+    "minorityOutcomes": {
+      "gpt-oss-120b_wrong": 20,
+      "qwen_wrong": 16,
+      "gpt-oss-120b_right": 4,
+      "sonnet-4-6_wrong": 10,
+      "sonnet-4-6_right": 12,
+      "qwen_also_wrong": 2,
+      "qwen_right": 2,
+      "gpt-oss-120b_also_wrong": 2
+    }
+  },
+  "qualitySingleQuestion": {
+    "population": 256,
+    "models": {
+      "qwen": {
+        "counts": {
+          "resolved": 254,
+          "match": 204,
+          "mismatch": 50,
+          "unresolved": 2,
+          "unscored": 1,
+          "review": 1
+        },
+        "confusion": {
+          "COMPLETE": {
+            "COMPLETE": 103,
+            "PARTIAL": 6,
+            "MISSED": 1
+          },
+          "PARTIAL": {
+            "COMPLETE": 22,
+            "PARTIAL": 10,
+            "MISSED": 11
+          },
+          "MISSED": {
+            "MISSED": 45,
+            "COMPLETE": 7,
+            "PARTIAL": 2,
+            "NOT_APPLICABLE": 1
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 46
+          }
+        },
+        "errors": {
+          "COMPLETE -> PARTIAL": [
+            "PIPE-BILLING-0021",
+            "PIPE-NAME_CHANGE-0076",
+            "PIPE-NAME_CHANGE-0088",
+            "PIPE-PLAN-0003",
+            "PIPE-SERVICE-0049",
+            "PIPE-SUBSCRIBE-0049"
+          ],
+          "PARTIAL -> COMPLETE": [
+            "PIPE-BILLING-0054",
+            "PIPE-BILLING-0115",
+            "PIPE-BILLING-0117",
+            "PIPE-BILLING-0123",
+            "PIPE-BILLING-0129",
+            "PIPE-BILLING-0135",
+            "PIPE-DEVICE-0062",
+            "PIPE-DEVICE-0129",
+            "PIPE-PLAN-0136",
+            "PIPE-PORTING-0092",
+            "PIPE-ROAMING-0022",
+            "PIPE-ROAMING-0025",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0077",
+            "PIPE-SUBSCRIBE-0094",
+            "PIPE-TERMINATE-0013",
+            "PIPE-TERMINATE-0029",
+            "PIPE-TERMINATE-0049",
+            "PIPE-TERMINATE-0053",
+            "PIPE-TERMINATE-0085",
+            "PIPE-TERMINATE-0090",
+            "PIPE-USIM-0036"
+          ],
+          "PARTIAL -> MISSED": [
+            "PIPE-BILLING-0146",
+            "PIPE-PLAN-0036",
+            "PIPE-SERVICE-0003",
+            "PIPE-SERVICE-0013",
+            "PIPE-SERVICE-0033",
+            "PIPE-SERVICE-0063",
+            "PIPE-SERVICE-0065",
+            "PIPE-SUBSCRIBE-0015",
+            "PIPE-SUBSCRIBE-0051",
+            "PIPE-SUBSCRIBE-0127",
+            "PIPE-TERMINATE-0092"
+          ],
+          "MISSED -> COMPLETE": [
+            "PIPE-DEVICE-0070",
+            "PIPE-NAME_CHANGE-0024",
+            "PIPE-PLAN-0066",
+            "PIPE-PORTING-0060",
+            "PIPE-PORTING-0085",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-TERMINATE-0034"
+          ],
+          "MISSED -> PARTIAL": [
+            "PIPE-PLAN-0050",
+            "PIPE-USIM-0012"
+          ],
+          "COMPLETE -> MISSED": [
+            "PIPE-SUBSCRIBE-0012"
+          ],
+          "MISSED -> NOT_APPLICABLE": [
+            "REG-NO_EVIDENCE"
+          ]
+        }
+      },
+      "gpt-oss-120b": {
+        "counts": {
+          "resolved": 250,
+          "match": 167,
+          "mismatch": 83,
+          "unresolved": 6,
+          "unscored": 5,
+          "review": 1
+        },
+        "confusion": {
+          "COMPLETE": {
+            "COMPLETE": 110,
+            "PARTIAL": 1,
+            "MISSED": 1
+          },
+          "PARTIAL": {
+            "COMPLETE": 25,
+            "PARTIAL": 2,
+            "MISSED": 16
+          },
+          "MISSED": {
+            "COMPLETE": 19,
+            "MISSED": 30
+          },
+          "NOT_APPLICABLE": {
+            "MISSED": 19,
+            "NOT_APPLICABLE": 25,
+            "COMPLETE": 2
+          }
+        },
+        "errors": {
+          "PARTIAL -> COMPLETE": [
+            "PIPE-BILLING-0054",
+            "PIPE-BILLING-0115",
+            "PIPE-BILLING-0117",
+            "PIPE-BILLING-0123",
+            "PIPE-BILLING-0129",
+            "PIPE-BILLING-0135",
+            "PIPE-DEVICE-0062",
+            "PIPE-PLAN-0143",
+            "PIPE-PORTING-0087",
+            "PIPE-PORTING-0092",
+            "PIPE-ROAMING-0022",
+            "PIPE-ROAMING-0025",
+            "PIPE-SERVICE-0044",
+            "PIPE-SERVICE-0063",
+            "PIPE-SUBSCRIBE-0015",
+            "PIPE-SUBSCRIBE-0077",
+            "PIPE-SUBSCRIBE-0094",
+            "PIPE-TERMINATE-0013",
+            "PIPE-TERMINATE-0049",
+            "PIPE-TERMINATE-0053",
+            "PIPE-TERMINATE-0085",
+            "PIPE-TERMINATE-0090",
+            "PIPE-TERMINATE-0104",
+            "PIPE-USIM-0036",
+            "PIPE-USIM-0097"
+          ],
+          "MISSED -> COMPLETE": [
+            "PIPE-BILLING-0069",
+            "PIPE-DEVICE-0063",
+            "PIPE-DEVICE-0070",
+            "PIPE-NAME_CHANGE-0024",
+            "PIPE-PLAN-0022",
+            "PIPE-PLAN-0060",
+            "PIPE-PLAN-0066",
+            "PIPE-PORTING-0049",
+            "PIPE-PORTING-0060",
+            "PIPE-PORTING-0071",
+            "PIPE-PORTING-0077",
+            "PIPE-PORTING-0085",
+            "PIPE-PORTING-0113",
+            "PIPE-ROAMING-0064",
+            "PIPE-SERVICE-0014",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-SUBSCRIBE-0099",
+            "PIPE-TERMINATE-0010",
+            "PIPE-TERMINATE-0034"
+          ],
+          "PARTIAL -> MISSED": [
+            "PIPE-BILLING-0146",
+            "PIPE-DEVICE-0129",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-NAME_CHANGE-0030",
+            "PIPE-PLAN-0036",
+            "PIPE-PLAN-0136",
+            "PIPE-SERVICE-0003",
+            "PIPE-SERVICE-0013",
+            "PIPE-SERVICE-0033",
+            "PIPE-SERVICE-0065",
+            "PIPE-SUBSCRIBE-0051",
+            "PIPE-SUBSCRIBE-0127",
+            "PIPE-TERMINATE-0029",
+            "PIPE-TERMINATE-0092",
+            "PIPE-TERMINATE-0095",
+            "REG-MIXED"
+          ],
+          "NOT_APPLICABLE -> MISSED": [
+            "PIPE-OUT-001",
+            "PIPE-OUT-002",
+            "PIPE-OUT-003",
+            "PIPE-OUT-009",
+            "PIPE-OUT-013",
+            "PIPE-OUT-014",
+            "PIPE-OUT-018",
+            "PIPE-OUT-019",
+            "PIPE-OUT-021",
+            "PIPE-OUT-025",
+            "PIPE-OUT-028",
+            "PIPE-OUT-030",
+            "PIPE-OUT-037",
+            "PIPE-OUT-038",
+            "PIPE-OUT-039",
+            "PIPE-OUT-042",
+            "PIPE-OUT-043",
+            "PIPE-OUT-046",
+            "PIPE-OUT-047"
+          ],
+          "NOT_APPLICABLE -> COMPLETE": [
+            "PIPE-OUT-023",
+            "PIPE-OUT-044"
+          ],
+          "COMPLETE -> PARTIAL": [
+            "PIPE-PORTING-0033"
+          ],
+          "COMPLETE -> MISSED": [
+            "PIPE-SUBSCRIBE-0081"
+          ]
+        }
+      },
+      "sonnet-4-6": {
+        "counts": {
+          "resolved": 255,
+          "match": 220,
+          "mismatch": 35,
+          "unresolved": 1,
+          "review": 1
+        },
+        "confusion": {
+          "COMPLETE": {
+            "COMPLETE": 109,
+            "PARTIAL": 3
+          },
+          "PARTIAL": {
+            "PARTIAL": 23,
+            "COMPLETE": 12,
+            "MISSED": 8
+          },
+          "MISSED": {
+            "MISSED": 42,
+            "COMPLETE": 7,
+            "PARTIAL": 5
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 46
+          }
+        },
+        "errors": {
+          "PARTIAL -> COMPLETE": [
+            "PIPE-BILLING-0115",
+            "PIPE-BILLING-0123",
+            "PIPE-BILLING-0129",
+            "PIPE-BILLING-0135",
+            "PIPE-DEVICE-0062",
+            "PIPE-PORTING-0092",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0077",
+            "PIPE-SUBSCRIBE-0094",
+            "PIPE-TERMINATE-0013",
+            "PIPE-TERMINATE-0085",
+            "PIPE-TERMINATE-0090"
+          ],
+          "MISSED -> COMPLETE": [
+            "PIPE-DEVICE-0070",
+            "PIPE-NAME_CHANGE-0024",
+            "PIPE-PLAN-0066",
+            "PIPE-PORTING-0049",
+            "PIPE-PORTING-0060",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-TERMINATE-0034"
+          ],
+          "COMPLETE -> PARTIAL": [
+            "PIPE-DEVICE-0084",
+            "PIPE-PLAN-0121",
+            "PIPE-ROAMING-0077"
+          ],
+          "MISSED -> PARTIAL": [
+            "PIPE-NAME_CHANGE-0020",
+            "PIPE-PLAN-0050",
+            "PIPE-PORTING-0085",
+            "PIPE-SERVICE-0051",
+            "PIPE-USIM-0012"
+          ],
+          "PARTIAL -> MISSED": [
+            "PIPE-PLAN-0036",
+            "PIPE-SERVICE-0013",
+            "PIPE-SERVICE-0033",
+            "PIPE-SERVICE-0063",
+            "PIPE-SUBSCRIBE-0015",
+            "PIPE-SUBSCRIBE-0051",
+            "PIPE-SUBSCRIBE-0127",
+            "PIPE-TERMINATE-0092"
+          ]
+        }
+      }
+    },
+    "consensus": {
+      "unanimous_correct": 150,
+      "majority_correct": 54,
+      "majority_wrong": 16,
+      "unanimous_wrong": 24,
+      "three_way": 3,
+      "incomplete": 9
+    },
+    "disagreements": {},
+    "unanimousWrongCases": [
+      {
+        "id": "PIPE-BILLING-0115",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0123",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0129",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0135",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0062",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0070",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0024",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0036",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0066",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0060",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0092",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0013",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0033",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0044",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0051",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0066",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0077",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0094",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0127",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0013",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0034",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0085",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0090",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0092",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "MISSED"
+        }
+      }
+    ],
+    "majorityWrongCases": [
+      {
+        "id": "PIPE-BILLING-0054",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0117",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-BILLING-0146",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0050",
+        "human": "MISSED",
+        "models": {
+          "qwen": "PARTIAL",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0049",
+        "human": "MISSED",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "COMPLETE"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0085",
+        "human": "MISSED",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0022",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0025",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0003",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0063",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0065",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0015",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "MISSED",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "MISSED"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0049",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0053",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-USIM-0012",
+        "human": "MISSED",
+        "models": {
+          "qwen": "PARTIAL",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-USIM-0036",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "COMPLETE",
+          "sonnet-4-6": "PARTIAL"
+        }
+      }
+    ],
+    "threeWayCases": [
+      {
+        "id": "PIPE-DEVICE-0129",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0136",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0029",
+        "human": "PARTIAL",
+        "models": {
+          "qwen": "COMPLETE",
+          "gpt-oss-120b": "MISSED",
+          "sonnet-4-6": "PARTIAL"
+        }
+      }
+    ],
+    "minorityOutcomes": {
+      "qwen_wrong": 7,
+      "sonnet-4-6_right": 10,
+      "gpt-oss-120b_wrong": 42,
+      "sonnet-4-6_wrong": 5,
+      "gpt-oss-120b_right": 2,
+      "qwen_right": 1,
+      "sonnet-4-6_also_wrong": 1,
+      "gpt-oss-120b_also_wrong": 2
+    }
+  },
+  "abstention": {
+    "population": 302,
+    "models": {
+      "qwen": {
+        "counts": {
+          "resolved": 289,
+          "match": 235,
+          "unresolved": 13,
+          "review": 8,
+          "mismatch": 54,
+          "unscored": 5
+        },
+        "confusion": {
+          "SHOULD_ABSTAIN": {
+            "SHOULD_ABSTAIN": 42,
+            "OVER_REFUSAL": 1,
+            "NOT_APPLICABLE": 8,
+            "APPROPRIATE": 1
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 83,
+            "SHOULD_ABSTAIN": 29,
+            "OVER_REFUSAL": 1,
+            "APPROPRIATE": 11
+          },
+          "OVER_REFUSAL": {
+            "OVER_REFUSAL": 7
+          },
+          "APPROPRIATE": {
+            "APPROPRIATE": 103,
+            "SHOULD_ABSTAIN": 2,
+            "OVER_REFUSAL": 1
+          }
+        },
+        "errors": {
+          "NOT_APPLICABLE -> SHOULD_ABSTAIN": [
+            "PIPE-BILLING-0054",
+            "PIPE-BILLING-0129",
+            "PIPE-BILLING-0138",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-036",
+            "PIPE-COMPOUND-037",
+            "PIPE-COMPOUND-041",
+            "PIPE-DEVICE-0102",
+            "PIPE-DEVICE-0117",
+            "PIPE-NAME_CHANGE-0044",
+            "PIPE-NAME_CHANGE-0049",
+            "PIPE-NAME_CHANGE-0075",
+            "PIPE-NAME_CHANGE-0083",
+            "PIPE-PLAN-0036",
+            "PIPE-PLAN-0108",
+            "PIPE-PORTING-0081",
+            "PIPE-PORTING-0107",
+            "PIPE-ROAMING-0034",
+            "PIPE-ROAMING-0071",
+            "PIPE-ROAMING-0074",
+            "PIPE-SERVICE-0019",
+            "PIPE-SERVICE-0056",
+            "PIPE-SUBSCRIBE-0036",
+            "PIPE-SUBSCRIBE-0056",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0004",
+            "PIPE-TERMINATE-0069",
+            "PIPE-USIM-0041",
+            "PIPE-USIM-0075"
+          ],
+          "SHOULD_ABSTAIN -> OVER_REFUSAL": [
+            "PIPE-BILLING-0065"
+          ],
+          "NOT_APPLICABLE -> OVER_REFUSAL": [
+            "PIPE-BILLING-0097"
+          ],
+          "SHOULD_ABSTAIN -> NOT_APPLICABLE": [
+            "PIPE-BILLING-0146",
+            "PIPE-DEVICE-0048",
+            "PIPE-PORTING-0087",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-TERMINATE-0092",
+            "PIPE-TERMINATE-0096",
+            "REG-NO_EVIDENCE"
+          ],
+          "APPROPRIATE -> SHOULD_ABSTAIN": [
+            "PIPE-COMPOUND-013",
+            "PIPE-COMPOUND-031"
+          ],
+          "SHOULD_ABSTAIN -> APPROPRIATE": [
+            "PIPE-COMPOUND-048"
+          ],
+          "APPROPRIATE -> OVER_REFUSAL": [
+            "PIPE-PORTING-0077"
+          ],
+          "NOT_APPLICABLE -> APPROPRIATE": [
+            "PIPE-ROAMING-0032",
+            "PIPE-SERVICE-0003",
+            "PIPE-SERVICE-0013",
+            "PIPE-SERVICE-0033",
+            "PIPE-SERVICE-0038",
+            "PIPE-SERVICE-0063",
+            "PIPE-SUBSCRIBE-0004",
+            "PIPE-SUBSCRIBE-0015",
+            "PIPE-SUBSCRIBE-0051",
+            "PIPE-SUBSCRIBE-0127",
+            "PIPE-USIM-0083"
+          ]
+        }
+      },
+      "gpt-oss-120b": {
+        "counts": {
+          "resolved": 190,
+          "mismatch": 49,
+          "match": 141,
+          "unresolved": 112,
+          "review": 92,
+          "unscored": 20
+        },
+        "confusion": {
+          "SHOULD_ABSTAIN": {
+            "NOT_APPLICABLE": 14,
+            "SHOULD_ABSTAIN": 34,
+            "APPROPRIATE": 1
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 91,
+            "SHOULD_ABSTAIN": 25,
+            "OVER_REFUSAL": 1
+          },
+          "OVER_REFUSAL": {
+            "OVER_REFUSAL": 7
+          },
+          "APPROPRIATE": {
+            "SHOULD_ABSTAIN": 7,
+            "APPROPRIATE": 9,
+            "OVER_REFUSAL": 1
+          }
+        },
+        "errors": {
+          "SHOULD_ABSTAIN -> NOT_APPLICABLE": [
+            "PIPE-BILLING-0020",
+            "PIPE-BILLING-0135",
+            "PIPE-BILLING-0146",
+            "PIPE-COMPOUND-027",
+            "PIPE-DEVICE-0048",
+            "PIPE-DEVICE-0062",
+            "PIPE-DEVICE-0084",
+            "PIPE-PLAN-0066",
+            "PIPE-PORTING-0049",
+            "PIPE-PORTING-0060",
+            "PIPE-PORTING-0087",
+            "PIPE-SERVICE-0044",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-USIM-0104"
+          ],
+          "NOT_APPLICABLE -> SHOULD_ABSTAIN": [
+            "PIPE-BILLING-0087",
+            "PIPE-BILLING-0092",
+            "PIPE-BILLING-0138",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-036",
+            "PIPE-DEVICE-0024",
+            "PIPE-DEVICE-0070",
+            "PIPE-DEVICE-0102",
+            "PIPE-DEVICE-0117",
+            "PIPE-PLAN-0069",
+            "PIPE-PLAN-0081",
+            "PIPE-PLAN-0108",
+            "PIPE-PORTING-0015",
+            "PIPE-PORTING-0065",
+            "PIPE-PORTING-0081",
+            "PIPE-ROAMING-0074",
+            "PIPE-SERVICE-0046",
+            "PIPE-SUBSCRIBE-0005",
+            "PIPE-SUBSCRIBE-0012",
+            "PIPE-SUBSCRIBE-0036",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0004",
+            "PIPE-TERMINATE-0069",
+            "PIPE-TERMINATE-0095",
+            "PIPE-USIM-0075"
+          ],
+          "APPROPRIATE -> SHOULD_ABSTAIN": [
+            "PIPE-COMPOUND-013",
+            "PIPE-COMPOUND-021",
+            "PIPE-COMPOUND-031",
+            "PIPE-COMPOUND-047",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-SERVICE-0008",
+            "REG-STORE"
+          ],
+          "NOT_APPLICABLE -> OVER_REFUSAL": [
+            "PIPE-NAME_CHANGE-0020"
+          ],
+          "SHOULD_ABSTAIN -> APPROPRIATE": [
+            "PIPE-NAME_CHANGE-0024"
+          ],
+          "APPROPRIATE -> OVER_REFUSAL": [
+            "PIPE-PORTING-0077"
+          ]
+        }
+      },
+      "sonnet-4-6": {
+        "counts": {
+          "resolved": 282,
+          "match": 246,
+          "mismatch": 36,
+          "unresolved": 20,
+          "unscored": 8,
+          "review": 12
+        },
+        "confusion": {
+          "SHOULD_ABSTAIN": {
+            "SHOULD_ABSTAIN": 33,
+            "NOT_APPLICABLE": 14,
+            "APPROPRIATE": 1
+          },
+          "NOT_APPLICABLE": {
+            "NOT_APPLICABLE": 107,
+            "SHOULD_ABSTAIN": 11,
+            "OVER_REFUSAL": 2,
+            "APPROPRIATE": 1
+          },
+          "OVER_REFUSAL": {
+            "OVER_REFUSAL": 6,
+            "NOT_APPLICABLE": 1
+          },
+          "APPROPRIATE": {
+            "APPROPRIATE": 100,
+            "NOT_APPLICABLE": 5,
+            "OVER_REFUSAL": 1
+          }
+        },
+        "errors": {
+          "SHOULD_ABSTAIN -> NOT_APPLICABLE": [
+            "PIPE-BILLING-0123",
+            "PIPE-COMPOUND-016",
+            "PIPE-COMPOUND-018",
+            "PIPE-COMPOUND-048",
+            "PIPE-COMPOUND-049",
+            "PIPE-DEVICE-0084",
+            "PIPE-DEVICE-0116",
+            "PIPE-PLAN-0143",
+            "PIPE-PORTING-0029",
+            "PIPE-PORTING-0087",
+            "PIPE-SUBSCRIBE-0066",
+            "PIPE-SUBSCRIBE-0077",
+            "PIPE-SUBSCRIBE-0105",
+            "PIPE-TERMINATE-0092"
+          ],
+          "NOT_APPLICABLE -> SHOULD_ABSTAIN": [
+            "PIPE-BILLING-0138",
+            "PIPE-BILLING-0148",
+            "PIPE-BILLING-0155",
+            "PIPE-COMPOUND-035",
+            "PIPE-COMPOUND-041",
+            "PIPE-DEVICE-0117",
+            "PIPE-PORTING-0015",
+            "PIPE-ROAMING-0071",
+            "PIPE-SUBSCRIBE-0088",
+            "PIPE-TERMINATE-0069",
+            "PIPE-TERMINATE-0095"
+          ],
+          "APPROPRIATE -> NOT_APPLICABLE": [
+            "PIPE-COMPOUND-013",
+            "PIPE-COMPOUND-021",
+            "PIPE-COMPOUND-031",
+            "PIPE-NAME_CHANGE-0015",
+            "PIPE-PLAN-0136"
+          ],
+          "SHOULD_ABSTAIN -> APPROPRIATE": [
+            "PIPE-NAME_CHANGE-0024"
+          ],
+          "NOT_APPLICABLE -> OVER_REFUSAL": [
+            "PIPE-NAME_CHANGE-0027",
+            "PIPE-NAME_CHANGE-0070"
+          ],
+          "APPROPRIATE -> OVER_REFUSAL": [
+            "PIPE-PORTING-0077"
+          ],
+          "NOT_APPLICABLE -> APPROPRIATE": [
+            "PIPE-SUBSCRIBE-0015"
+          ],
+          "OVER_REFUSAL -> NOT_APPLICABLE": [
+            "PIPE-SUBSCRIBE-0022"
+          ]
+        }
+      }
+    },
+    "consensus": {
+      "majority_correct": 55,
+      "unanimous_correct": 82,
+      "incomplete": 138,
+      "unanimous_wrong": 8,
+      "majority_wrong": 16,
+      "three_way": 3
+    },
+    "disagreements": {},
+    "unanimousWrongCases": [
+      {
+        "id": "PIPE-BILLING-0138",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-035",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0117",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0077",
+        "human": "APPROPRIATE",
+        "models": {
+          "qwen": "OVER_REFUSAL",
+          "gpt-oss-120b": "OVER_REFUSAL",
+          "sonnet-4-6": "OVER_REFUSAL"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0087",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0066",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0088",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0069",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      }
+    ],
+    "majorityWrongCases": [
+      {
+        "id": "PIPE-BILLING-0146",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-013",
+        "human": "APPROPRIATE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-031",
+        "human": "APPROPRIATE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-036",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0084",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-DEVICE-0102",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0024",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "APPROPRIATE",
+          "sonnet-4-6": "APPROPRIATE"
+        }
+      },
+      {
+        "id": "PIPE-PLAN-0108",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-PORTING-0081",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0071",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-ROAMING-0074",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-SERVICE-0044",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "NOT_APPLICABLE",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0036",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0004",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-TERMINATE-0095",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "NOT_APPLICABLE",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "SHOULD_ABSTAIN"
+        }
+      },
+      {
+        "id": "PIPE-USIM-0075",
+        "human": "NOT_APPLICABLE",
+        "models": {
+          "qwen": "SHOULD_ABSTAIN",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      }
+    ],
+    "threeWayCases": [
+      {
+        "id": "PIPE-COMPOUND-021",
+        "human": "APPROPRIATE",
+        "models": {
+          "qwen": "APPROPRIATE",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-COMPOUND-048",
+        "human": "SHOULD_ABSTAIN",
+        "models": {
+          "qwen": "APPROPRIATE",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0015",
+        "human": "APPROPRIATE",
+        "models": {
+          "qwen": "APPROPRIATE",
+          "gpt-oss-120b": "SHOULD_ABSTAIN",
+          "sonnet-4-6": "NOT_APPLICABLE"
+        }
+      }
+    ],
+    "minorityOutcomes": {
+      "gpt-oss-120b_wrong": 19,
+      "qwen_wrong": 23,
+      "sonnet-4-6_wrong": 13,
+      "sonnet-4-6_right": 10,
+      "sonnet-4-6_also_wrong": 2,
+      "qwen_right": 3,
+      "gpt-oss-120b_right": 1
+    }
+  },
+  "multipleQuestion": {
+    "ids": [
+      "PIPE-COMPOUND-001",
+      "PIPE-COMPOUND-002",
+      "PIPE-COMPOUND-004",
+      "PIPE-COMPOUND-005",
+      "PIPE-COMPOUND-006",
+      "PIPE-COMPOUND-007",
+      "PIPE-COMPOUND-008",
+      "PIPE-COMPOUND-009",
+      "PIPE-COMPOUND-010",
+      "PIPE-COMPOUND-012",
+      "PIPE-COMPOUND-013",
+      "PIPE-COMPOUND-014",
+      "PIPE-COMPOUND-015",
+      "PIPE-COMPOUND-016",
+      "PIPE-COMPOUND-017",
+      "PIPE-COMPOUND-018",
+      "PIPE-COMPOUND-019",
+      "PIPE-COMPOUND-020",
+      "PIPE-COMPOUND-021",
+      "PIPE-COMPOUND-022",
+      "PIPE-COMPOUND-023",
+      "PIPE-COMPOUND-024",
+      "PIPE-COMPOUND-025",
+      "PIPE-COMPOUND-026",
+      "PIPE-COMPOUND-027",
+      "PIPE-COMPOUND-029",
+      "PIPE-COMPOUND-030",
+      "PIPE-COMPOUND-031",
+      "PIPE-COMPOUND-032",
+      "PIPE-COMPOUND-033",
+      "PIPE-COMPOUND-034",
+      "PIPE-COMPOUND-035",
+      "PIPE-COMPOUND-036",
+      "PIPE-COMPOUND-037",
+      "PIPE-COMPOUND-038",
+      "PIPE-COMPOUND-039",
+      "PIPE-COMPOUND-040",
+      "PIPE-COMPOUND-041",
+      "PIPE-COMPOUND-042",
+      "PIPE-COMPOUND-043",
+      "PIPE-COMPOUND-045",
+      "PIPE-COMPOUND-047",
+      "PIPE-COMPOUND-048",
+      "PIPE-COMPOUND-049",
+      "PIPE-COMPOUND-050",
+      "REG-FAQ_COMPOUND"
+    ],
+    "humanCounts": {
+      "MISSED": 22,
+      "COMPLETE": 4,
+      "PARTIAL": 20
+    }
+  },
+  "strictConsensus": {
+    "completedAnswerTurns": 494,
+    "acceptedTotal": 98,
+    "acceptedInHuman302": 2,
+    "acceptedOutsideHuman302": 96,
+    "acceptedHumanSingleQuestion": 2,
+    "humanSingleQuestionWrong": [
+      {
+        "id": "PIPE-SUBSCRIBE-0066",
+        "axes": [
+          "grounding",
+          "quality",
+          "abstention"
+        ]
+      }
+    ],
+    "rejectedOutsideHuman302": [
+      {
+        "id": "PIPE-BILLING-0023",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0042",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0053",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0060",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0107",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0137",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-BILLING-0158",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-COMPOUND-046",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0025",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0028",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0037",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0042",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0110",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0111",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-DEVICE-0130",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0002",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0005",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0007",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0008",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0014",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0021",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0032",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0039",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0042",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0051",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0054",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0059",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0063",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0065",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0079",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0081",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-NAME_CHANGE-0085",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PLAN-0015",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PLAN-0023",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PLAN-0080",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PLAN-0083",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PLAN-0137",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0002",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0010",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0014",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0034",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0043",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0061",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0073",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0098",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0102",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0105",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0110",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-PORTING-0111",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0010",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0021",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0037",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0048",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0054",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0069",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0073",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-ROAMING-0078",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0021",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0025",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0029",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0031",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0032",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0042",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0052",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SERVICE-0060",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0067",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0095",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0096",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0109",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0117",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0119",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-SUBSCRIBE-0122",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0001",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0003",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0020",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0031",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0033",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0037",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0041",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0047",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0056",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0061",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0068",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0107",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-TERMINATE-0112",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0018",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0020",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0033",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0035",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0046",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0052",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0089",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0092",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "PIPE-USIM-0106",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "REG-FAQ_CONDITION",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      },
+      {
+        "id": "REG-FAQ_FACT",
+        "reasons": [
+          "grounding_disagree"
+        ]
+      }
+    ]
+  },
+  "historicalHumanReview": {
+    "oldFile": "20261005-heldout40-human-review-lyj.md",
+    "oldSha256": "59ff8d49f1ba2c1aefee1c13a88ed132a457616629c1781a90a5dba1f7ce4699",
+    "overlap": 26,
+    "changedCases": [
+      {
+        "reviewId": "V6H-007",
+        "caseId": "PIPE-DEVICE-0008",
+        "changes": {
+          "grounding": {
+            "old": "UNSUPPORTED",
+            "human302": "SUPPORTED"
+          },
+          "abstention": {
+            "old": "SHOULD_ABSTAIN",
+            "human302": "NOT_APPLICABLE"
+          }
+        }
+      },
+      {
+        "reviewId": "V6H-012",
+        "caseId": "PIPE-SUBSCRIBE-0088",
+        "changes": {
+          "grounding": {
+            "old": "UNSUPPORTED",
+            "human302": "SUPPORTED"
+          },
+          "abstention": {
+            "old": "SHOULD_ABSTAIN",
+            "human302": "NOT_APPLICABLE"
+          }
+        }
+      },
+      {
+        "reviewId": "V6H-027",
+        "caseId": "PIPE-ROAMING-0022",
+        "changes": {
+          "quality": {
+            "old": "COMPLETE",
+            "human302": "PARTIAL"
+          }
+        }
+      }
+    ]
+  }
+}
