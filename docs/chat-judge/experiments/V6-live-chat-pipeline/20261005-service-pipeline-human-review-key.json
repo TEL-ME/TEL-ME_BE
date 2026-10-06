@@ -1,0 +1,2310 @@
+{
+  "schemaVersion": 1,
+  "source": "20261002-service-pipeline-judged-raw.json.gz",
+  "sourceSha256": "67b66976c4d530fea6fc01e028b22fd3669b9212aa32014bad42004fab4713be",
+  "capture": "20261002-service-pipeline-capture.json.gz",
+  "samplingSeed": "20261005",
+  "counts": {
+    "completedJudgeUnscored": 16,
+    "requiresHumanReview": 7,
+    "normallyScoredByType": 16,
+    "total": 39
+  },
+  "warning": "사람 판정을 고정하기 전에는 검토자에게 이 파일을 공유하지 마세요. Judge 판정과 샘플 유형이 포함되어 있습니다.",
+  "cases": [
+    {
+      "reviewId": "H-001",
+      "caseId": "PIPE-TERMINATE-0092",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "HUMAN_REVIEW",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "정지 중에 청구서가 도착하셨다니 다행입니다. 청구서를 확인하시고 요금을 정산하시면 서비스 정지 해제에 필요한 시간 내에 정상화될 수 있습니다. 추가 도움이 필요하시면 언제든지 연락 주세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The answer mentions that the service can be restored once the bill is settled, which is accurate. However, it does not explicitly state that 50% of the basic fee is charged during the suspension period, as indicated in the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0059",
+              "quote": "청구서를 못 받으셨어도 기한이 지나고 15일이면 전화가 안 걸리니, 기한 안에 내시면 됩니다. 이미 끊겼으면 다 내시면 2시간 안에 됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 청구서 도착 상황에 따라 서비스 정지 해제 절차를 안내하고 있으며, sources 중 BILLING-0059는 청구서 미수령 시 정지 해제 방법을 명시하고 있어 관련 정보가 충분합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-002",
+      "caseId": "PIPE-PLAN-0137",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ValueError: 전체 근거 판정과 개별 주장이 모순됩니다.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "네, 차이가 큽니다. 400kbps 제한 상태에서는 대용량 파일 다운로드나 스트리밍 등 데이터를 많이 사용하는 활동이 느려질 수 있습니다. 반면에 언리미티드 플랜은 데이터 사용에 속도 제한이 없어 원활한 사용이 가능합니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately conveys the difference between 400kbps limitation and unlimited plans, including the impact on data-heavy activities and the absence of speed restrictions in unlimited plans, aligning with the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PLAN-0137",
+              "quote": "400kbps는 속도 제한 상태라 대용량 이용이 어렵고, 언리미티드는 제한 없이 이용됩니다."
+            },
+            {
+              "sourceId": "PLAN-0142",
+              "quote": "다 쓰면 400kbps로 느려지는데, 언리미티드는 안 느려집니다."
+            },
+            {
+              "sourceId": "PLAN-0127",
+              "quote": "언리미티드는 속도 제한이 없고, 나머지는 기본 데이터 소진 후 400kbps로 제한됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 핵심 내용을 충분히 다루고 있으며, sources에는 질문에 직접적으로 답할 수 있는 정보가 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-003",
+      "caseId": "PIPE-USIM-0012",
+      "turnIndex": 0,
+      "sampleType": "SINGLE_QUESTION_PARTIAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "신고 후 즉시 이용이 정지됩니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "USIM-0012",
+                "USIM-0036"
+              ],
+              "reason": "Both FAQ sources explicitly state that reporting results in immediate service suspension."
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "신고 후 즉시 이용이 정지됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The answer conveys the fact that service is immediately suspended after reporting, but it does not explicitly state where to report the lost SIM card (e.g., customer service or website)."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "USIM-0012",
+              "quote": "고객센터나 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+            },
+            {
+              "sourceId": "USIM-0036",
+              "quote": "고객센터나 홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다. 이후 새 유심을 재발급받으시면 기존 유심은 자동으로 해지됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '신고 후 즉시 이용이 정지됩니다.'로, 이는 sources에서 제공된 정보와 일치합니다. sources에는 '즉시 이용 정지'에 대한 명시적인 설명이 포함되어 있으므로, 이는 충분한 근거로 간주됩니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-004",
+      "caseId": "PIPE-BILLING-0069",
+      "turnIndex": 0,
+      "sampleType": "OVER_REFUSAL_WITH_SUFFICIENT_EVIDENCE",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "OVER_REFUSAL"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "OVER_REFUSAL",
+        "rule": "REFUSAL_ENOUGH",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The reference explicitly states that refunds can only be made to the account of the policyholder themselves, but the assistant's answer does not convey this information and instead states that there is no information to provide."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0069",
+              "quote": "환불은 가입자 본인 명의 계좌로만 가능합니다."
+            },
+            {
+              "sourceId": "BILLING-0048",
+              "quote": "환불은 가입자 본인 명의 계좌로만 가능하며, 접수 시 계좌를 알려주시면 3영업일 이내 확인 후 5영업일 이내에 입금됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '안내드릴 수 있는 정보가 없습니다.'로, 핵심 질문에 대한 명시적인 거절이 발생했습니다. 그러나 sources에는 질문에 대한 명확한 답변이 포함되어 있으며, 이는 질문에 대한 답변 가능성을 충분히 제공합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-005",
+      "caseId": "PIPE-COMPOUND-040",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "HUMAN_REVIEW",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The first subquestion about whether a company representative can act as a proxy for the transfer is partially answered in the reference (it is possible with a power of attorney). However, the assistant's answer does not address this and instead states that there is no information to provide, which is incomplete. The second subquestion about including battery replacement costs in installments is not addressed in the reference, and the assistant's answer also does not address it."
+            },
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "MISSED",
+              "reason": "The second subquestion about including battery replacement costs in installments is not addressed in the reference, and the assistant's answer does not provide any information on this matter."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변이 핵심 질문에 답하지 않고 '안내드릴 수 있는 정보가 없습니다'라는 일반적인 거절 문구만 제공되었으며, sources가 비어 있어 관련 근거가 없습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-006",
+      "caseId": "PIPE-PLAN-0106",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "HUMAN_REVIEW",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "데이터 사용량을 기준으로 요금제를 선택하시면 도움이 될 것입니다. 데이터 사용량에 맞는 요금제를 찾아보세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The answer provides general advice on selecting a plan based on data usage but does not fully address the user's confusion about the specific plan lineup. The reference group provides the specific plan categories (5G, LTE, 알뜰), which were not mentioned in the assistant's answer."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PLAN-0046",
+              "quote": "5G 4종, LTE 3종, 알뜰 2종의 구성을 먼저 파악하고, 데이터 사용량에 맞는 등급을 고르면 됩니다."
+            }
+          ],
+          "reason": "answer는 질문에 대한 직접적인 답변을 제공하고 있으며, sources의 내용과 일치합니다. sources는 질문에 대한 충분한 정보를 제공하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-007",
+      "caseId": "PIPE-COMPOUND-029",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "네, 전화나 홈페이지를 통해 해지 신청이 가능합니다. 요금 납부 방법은 주로 다음 네 가지로 이루어집니다: 1. **일시불 결제**: 한 번에 요금을 납부합니다. 2. 3. **자동이체**: 지정된 계좌에서 자동으로 요금이 이체됩니다. 4. 해지 신청 시 요금은 사용한 일수만큼 청구됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The answer correctly states that termination can be done via phone or website, but the four billing methods are not fully listed. The reference specifies '계좌이체, 신용카드, 가상계좌, 간편결제' (account transfer, credit card, virtual account, easy payment), but the answer only mentions '일시불 결제' (one-time payment) and '자동이체' (automatic transfer), missing the other two methods."
+            },
+            {
+              "answerQuotes": [
+                "네, 전화나 홈페이지를 통해 해지 신청이 가능합니다. 요금 납부 방법은 주로 다음 네 가지로 이루어집니다: 1. **일시불 결제**: 한 번에 요금을 납부합니다. 2. 3. **자동이체**: 지정된 계좌에서 자동으로 요금이 이체됩니다. 4. 해지 신청 시 요금은 사용한 일수만큼 청구됩니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "PARTIAL",
+              "reason": "The answer partially addresses the billing methods by mentioning '일시불 결제' and '자동이체' but does not fully list the four methods specified in the reference ('계좌이체, 신용카드, 가상계좌, 간편결제')."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0045",
+              "quote": "매장이나 고객센터, 홈페이지에서 신청하시면 바로 됩니다. 그 달 요금은 쓴 날짜만큼 나옵니다."
+            },
+            {
+              "sourceId": "TERMINATE-0001",
+              "quote": "매장 방문, 고객센터 전화, 홈페이지 신청 중 편하신 방법으로 하시면 됩니다. 신청 즉시 해지되고 요금은 일할 계산됩니다."
+            },
+            {
+              "sourceId": "TERMINATE-0081",
+              "quote": "고객센터 전화나 홈페이지로도 해지 신청이 가능합니다. 신청하시면 즉시 해지되고 해당 월 요금은 일할 계산됩니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 정보(해지 신청 방법, 요금 납부 방법)가 sources에 충분히 제공되어 있습니다. answer는 질문에 대한 직접적인 답변을 포함하고 있으며, sources의 내용을 바탕으로 답변 가능성이 확인됩니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-008",
+      "caseId": "PIPE-COMPOUND-035",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "새 단말을 eSIM으로 전환하려면 먼저 새 단말이 eSIM을 지원하는지 확인해 주세요. 그 후 매장이나 온라인을 통해 eSIM 발급을 신청하시면 됩니다. 발급 비용은 2,750원이며, 이 과정을 통해 기존 데이터는 다음 달에 계속 사용 가능합니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the procedure for converting to eSIM, including checking device compatibility, applying for eSIM issuance through a store or online, the cost of 2,750 won, and the fact that remaining data can be used next month. All required facts from the reference group are accurately conveyed."
+            },
+            {
+              "answerQuotes": [
+                "새 단말을 eSIM으로 전환하려면 먼저 새 단말이 eSIM을 지원하는지 확인해 주세요. 그 후 매장이나 온라인을 통해 eSIM 발급을 신청하시면 됩니다. 발급 비용은 2,750원이며, 이 과정을 통해 기존 데이터는 다음 달에 계속 사용 가능합니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "PARTIAL",
+              "reason": "The answer mentions that remaining data can be used next month, which partially addresses the subquestion. However, it does not specify that only 50% of the remaining data can be carried over, as indicated in the reference. This detail is missing, making the answer partial."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "USIM-0039",
+              "quote": "새 단말이 eSIM을 지원하는지 확인한 뒤 매장이나 온라인에서 eSIM 발급을 신청하시면 됩니다. 발급 비용은 2,750원입니다."
+            },
+            {
+              "sourceId": "USIM-0099",
+              "quote": "eSIM은 2,750원에 새로 발급받고 지원 단말이어야 합니다. 듀얼심으로 최대 2개 회선을 함께 쓸 수 있는 점이 다릅니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 정보(절차, 발급 비용, 기존 데이터 사용 가능 여부)가 sources에 충분히 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-009",
+      "caseId": "PIPE-PLAN-0017",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "네, 소진 후 속도 제한 값은 요금제에 따라 다릅니다. 일반 요금제의 경우 소진 후 속도가 400kbps로 제한되지만, 언리미티드 요금제에서는 데이터 소진 후에도 속도 제한이 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer accurately conveys that the speed limit after data exhaustion varies by plan, specifying that general plans have a 400kbps limit while unlimited plans have no limit. This matches the reference group's answer."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PLAN-0017",
+              "quote": "일반 요금제는 모두 400kbps로 같습니다. 언리미티드만 제한이 없습니다."
+            },
+            {
+              "sourceId": "PLAN-0042",
+              "quote": "언리미티드 요금제로 변경하시면 소진 후에도 속도 제한 없이 이용하실 수 있습니다. 일반 요금제는 소진 후 400kbps로 제한됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 소진 후 속도 제한이 요금제에 따라 다르다고 명시하고 있으며, 이는 sources에서 제공된 정보와 일치합니다. sources는 일반 요금제와 언리미티드 요금제의 속도 제한 차이를 명확히 설명하고 있어 질문에 대한 답변 가능성을 충분히 지원합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-010",
+      "caseId": "PIPE-OUT-011",
+      "turnIndex": 0,
+      "sampleType": "OUT_OF_SCOPE_REFUSAL",
+      "expectedBehavior": "OUT_OF_SCOPE",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "NOT_APPLICABLE",
+              "reason": "The user asked for a translation of a Korean greeting into French, which is outside the scope of the provided reference groups and the expected behavior. The assistant's response correctly indicates that it cannot assist with this request."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변은 질문에 대한 직접적인 답변이 아니라 관련 서비스 문의를 요청하는 안내 문구로, 질문의 핵심(프랑스어로 '안녕하세요'를 번역해달라는 요청)에 대한 답변이 아닙니다. sources가 비어 있어 관련 근거가 없습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-011",
+      "caseId": "PIPE-COMPOUND-008",
+      "turnIndex": 0,
+      "sampleType": "COMPOUND_QUESTION_PARTIAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The assistant's answer does not address the specific facts requested in the reference groups. The answer provided is a general refusal to provide information, rather than addressing the specific questions about data rollover and eSIM usage."
+            },
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "MISSED",
+              "reason": "The assistant's answer does not address the specific facts requested in the reference groups. The answer provided is a general refusal to provide information, rather than addressing the specific questions about data rollover and eSIM usage."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "answer는 질문에 대한 정보를 제공하지 않고 '안내드릴 수 있는 정보가 없습니다.'라고 명시적으로 답변을 거절하고 있습니다. sources는 비어 있어 질문에 대한 직접적인 근거가 없습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-012",
+      "caseId": "PIPE-TERMINATE-0104",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "장기 미사용 시 번호를 계속 유지하고 싶으시다면 일시 정지를 추천드립니다. 일시 정지 시 기본료가 50% 감면되며, 1회에 30일, 연 최대 90일까지 가능합니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer accurately conveys the key facts from the reference: that temporary suspension is recommended for long-term non-use if the user wants to keep the number, it reduces the basic fee by 50%, and it allows for up to 30 days per session with a maximum of 90 days per year. This fully addresses the user's question about which option is more favorable between temporary suspension and cancellation."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0104",
+              "quote": "번호를 유지하려면 일시 정지(기본료 50%, 1회 30일, 연 90일)가 낫고, 다시 쓸 계획이 없으면 해지가 낫습니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 sources의 FAQ 원문과 일치하거나 그에 기반한 것이며, 핵심 정보가 충분히 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-013",
+      "caseId": "PIPE-NAME_CHANGE-0061",
+      "turnIndex": 0,
+      "sampleType": "RETRIEVAL_MISS_WITH_SAFE_REFUSAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The assistant's answer states that there is no information to provide, but the reference explicitly explains that both the transferor and transferee's ID cards are required and that both parties must be present. The assistant's answer does not convey this information and instead refuses to provide any information, which is incorrect."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변이 핵심 질문에 답하지 않고 '확인 불가'를 안내했으며, sources가 비어 있어 관련 정보가 없음."
+        }
+      }
+    },
+    {
+      "reviewId": "H-014",
+      "caseId": "PIPE-NAME_CHANGE-0068",
+      "turnIndex": 0,
+      "sampleType": "RETRIEVAL_MISS_WITH_SAFE_REFUSAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The reference group provides information that contradicts the assistant's answer. The reference states that there is no fee for name changes, but the assistant's answer indicates that there is no information to provide, which is incorrect."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변이 핵심 질문에 답하지 않고 '확인 불가'를 안내했으며, sources가 비어 있어 관련 정보가 충분하지 않습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-015",
+      "caseId": "PIPE-COMPOUND-036",
+      "turnIndex": 0,
+      "sampleType": "COMPOUND_QUESTION_PARTIAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "UNSUPPORTED_CLAIM",
+        "INCOMPLETE_ANSWER",
+        "SHOULD_ABSTAIN",
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "SHOULD_ABSTAIN",
+        "rule": "UNSUPPORTED_FACTUAL_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "법인 회선을 개인 명의로 전환할 때 필요한 구비 서류는 양도인과 양수인의 신분증입니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "NAME_CHANGE-0010"
+              ],
+              "reason": "The claim is directly supported by the FAQ source, which states that '양도인과 양수인의 신분증이 각각 필요하며' (the identity documents of both the transferor and the transferee are required)."
+            },
+            {
+              "claim": "원칙적으로는 두 분이 함께 방문하시는 것이 좋으나, 한 분이 방문이 어려우시다면 위임장을 준비하셔야 합니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "NAME_CHANGE-0010"
+              ],
+              "reason": "The claim is directly supported by the FAQ source, which states that '원칙적으로 양측이 함께 방문해야 합니다. 한쪽이 방문할 수 없으면 위임장을 준비합니다.' (principally, both parties should visit together. If one cannot visit, a power of attorney must be prepared)."
+            },
+            {
+              "claim": "교환 가능 여부에 대해서는 현재 제공 중인 서비스 정책에 따라 다를 수 있습니다.",
+              "verdict": "UNSUPPORTED",
+              "sourceIds": [],
+              "reason": "The claim is not mentioned or supported by the provided FAQ source. The FAQ source does not discuss the exchange possibility or service policies."
+            }
+          ],
+          "overall": "UNSUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "법인 회선을 개인 명의로 전환할 때 필요한 구비 서류는 양도인과 양수인의 신분증입니다. 원칙적으로는 두 분이 함께 방문하시는 것이 좋으나, 한 분이 방문이 어려우시다면 위임장을 준비하셔야 합니다. 교환 가능 여부에 대해서는 현재 제공 중인 서비스 정책에 따라 다를 수 있습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the required facts about the necessary documents for transferring a corporate line to an individual's name, including the need for both parties' ID and the option of a power of attorney if one cannot attend. It also mentions the exchange policy, which is covered in the reference."
+            },
+            {
+              "answerQuotes": [
+                "법인 회선을 개인 명의로 전환할 때 필요한 구비 서류는 양도인과 양수인의 신분증입니다. 원칙적으로는 두 분이 함께 방문하시는 것이 좋으나, 한 분이 방문이 어려우시다면 위임장을 준비하셔야 합니다. 교환 가능 여부에 대해서는 현재 제공 중인 서비스 정책에 따라 다를 수 있습니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "PARTIAL",
+              "reason": "The answer mentions that exchange is possible depending on the service policy, which is partially addressed. However, it does not provide specific details about the exchange conditions, such as the 14-day period and the one-time exchange limit mentioned in the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "NAME_CHANGE-0010",
+              "quote": "양도인과 양수인의 신분증이 각각 필요하며, 원칙적으로 양측이 함께 방문해야 합니다. 한쪽이 방문할 수 없으면 위임장을 준비합니다."
+            }
+          ],
+          "reason": "질문의 첫 번째 부분(구비 서류)에 대해 sources에 있는 NAME_CHANGE-0010이 명시적으로 답변하고 있습니다. 두 번째 질문(교환 가능 여부)은 답변에 포함되었지만 sources에는 해당 내용이 없으므로 전체적으로는 ENOUGH로 판단합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-016",
+      "caseId": "PIPE-DEVICE-0111",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "분실과 파손의 처리 방법이 다릅니다. 분실의 경우 즉시 이용 정지를 신청해야 하며, 파손의 경우에는 제조사의 서비스센터를 통해 수리를 진행하시면 됩니다. 만약 파손 시 보험에 가입되어 있다면 수리비의 30%만 부담하시면 됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the differences in handling between loss and damage, including the steps for each scenario and the insurance-related cost reduction for damage. All required facts from the reference are accurately conveyed."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "DEVICE-0111",
+              "quote": "분실은 즉시 이용 정지를 신청하고, 파손은 제조사 서비스센터에서 수리합니다. 보험이 있으면 수리비의 30%만 냅니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 sources의 내용을 기반으로 제공되었으며, 핵심 정보가 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-017",
+      "caseId": "PIPE-TERMINATE-0113",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "HUMAN_REVIEW"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "둘 다 즉시 처리가 가능하니 편하신 방법으로 선택하시면 됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately conveys that both options (going to the store or calling) can be handled immediately, which matches the reference group's answer that both methods are equally quick and allows the user to choose their preferred method."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0113",
+              "quote": "똑같이 바로 됩니다. 전화가 편하시면 전화로 하세요."
+            },
+            {
+              "sourceId": "TERMINATE-0109",
+              "quote": "셋 다(매장·전화·홈페이지) 신청 즉시 해지되어 처리 속도는 같습니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '둘 다 즉시 처리가 가능하니 편하신 방법으로 선택하시면 됩니다.'로, sources에 있는 정보와 일치합니다. sources는 '똑같이 바로 됩니다'와 '처리 속도는 같습니다'라는 명확한 근거를 제공하고 있어 질문에 대한 답변 가능성을 충분히 뒷받침합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-018",
+      "caseId": "PIPE-SUBSCRIBE-0095",
+      "turnIndex": 0,
+      "sampleType": "UNSUPPORTED_CLAIM_WITH_COMPLETE_ANSWER",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "UNSUPPORTED_CLAIM",
+        "SHOULD_ABSTAIN"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "SHOULD_ABSTAIN",
+        "rule": "UNSUPPORTED_FACTUAL_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "세컨드폰 신청은 오후 8시 이후에는 처리되지 않고, 다음 날 처리 시간에 진행됩니다.",
+              "verdict": "UNSUPPORTED",
+              "sourceIds": [],
+              "reason": "The claim states that '세컨드폰 신청' (second phone application) is not processed after 8 PM and is handled during the next day's processing time. However, the provided FAQ source (SUBSCRIBE-0095) mentions that '개통 처리' (activation processing) is only conducted from 09:00 to 20:00 and that it is handled during the next day's processing time. The term '개통 처리' (activation processing) is not explicitly equivalent to '세컨드폰 신청' (second phone application), and the claim introduces a specific time restriction (after 8 PM) that is not explicitly mentioned in the FAQ. Therefore, the claim is not directly supported by the evidence."
+            }
+          ],
+          "overall": "UNSUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "세컨드폰 신청은 오후 8시 이후에는 처리되지 않고, 다음 날 처리 시간에 진행됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately conveys the requested fact that second phone applications made after 8 PM are processed the next day during business hours, as stated in the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "SUBSCRIBE-0095",
+              "quote": "개통 처리는 09:00부터 20:00까지만 진행됩니다. 다음 날 처리 시간에 진행됩니다."
+            }
+          ],
+          "reason": "answer는 질문에 대한 명확한 답변을 제공하고 있으며, sources의 내용은 answer의 근거가 될 수 있는 정보를 포함하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-019",
+      "caseId": "REG-MULTI_TURN",
+      "turnIndex": 1,
+      "sampleType": "MULTI_TURN",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "가입한 달에는 요금제 변경이 불가능합니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "BILLING-0078",
+                "BILLING-0022",
+                "BILLING-0106"
+              ],
+              "reason": "All three FAQ sources explicitly state that 요금제 변경 is not possible in the month of joining."
+            },
+            {
+              "claim": "변경 가능한 시기는 다음 달부터입니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "BILLING-0078",
+                "BILLING-0022",
+                "BILLING-0106"
+              ],
+              "reason": "All three FAQ sources explicitly state that changes can be made starting from the following month."
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "가입한 달에는 요금제 변경이 불가능합니다. 변경 가능한 시기는 다음 달부터입니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately conveys that the user cannot change their plan in the month they joined and that changes are possible starting the following month, which aligns with the required facts."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0078",
+              "quote": "가입한 달에는 변경할 수 없습니다. 다음 달부터 변경하실 수 있습니다."
+            },
+            {
+              "sourceId": "BILLING-0022",
+              "quote": "가입한 달에는 요금제 변경이 제한되며 다음 달부터 월 1회 변경할 수 있습니다."
+            },
+            {
+              "sourceId": "BILLING-0106",
+              "quote": "요금제 변경은 월 1회이며, 이번 달에 이미 변경했다면 다음 달에 가능합니다. 가입한 달에도 변경할 수 없습니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '가입한 달에는 요금제 변경이 불가능합니다. 변경 가능한 시기는 다음 달부터입니다.'로, 이는 sources에 있는 BILLING-0078, BILLING-0022, BILLING-0106의 내용과 일치합니다. 따라서 answerIsRefusal는 false이며, evidenceAnswerability는 ENOUGH입니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-020",
+      "caseId": "PIPE-COMPOUND-025",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "UNSCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {
+        "quality": {
+          "error": "ValueError: Answered subquestion has no answer citation",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "번호이동 가능 여부를 확인하려면 개통일로부터 3개월이 경과했는지 먼저 확인해 주세요.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "PORTING-0027"
+              ],
+              "reason": "The claim directly matches the statement in sourceId PORTING-0027: '개통일로부터 3개월이 지났는지 확인하시면 됩니다.'"
+            },
+            {
+              "claim": "명의변경 경험이 있다면, 그 변경일로부터도 1개월이 경과했는지 함께 확인해 보시는 것이 좋습니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "PORTING-0027"
+              ],
+              "reason": "The claim directly matches the statement in sourceId PORTING-0027: '명의변경을 하신 적이 있다면 변경일로부터 1개월이 지났는지도 함께 확인하셔야 합니다.'"
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {},
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PORTING-0027",
+              "quote": "개통일로부터 3개월이 지났는지 확인하시면 됩니다. 명의변경을 하신 적이 있다면 변경일로부터 1개월이 지났는지도 함께 확인하셔야 합니다."
+            }
+          ],
+          "reason": "질문의 핵심인 '번호이동 조건 확인 방법'에 대해 sources에서 명시적으로 답변이 제공되었으며, answer은 이를 기반으로 구체적인 확인 절차를 설명하고 있습니다. 따라서 evidenceAnswerability는 ENOUGH입니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-021",
+      "caseId": "PIPE-USIM-0099",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ValueError: 전체 근거 판정과 개별 주장이 모순됩니다.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "물리 유심을 그대로 사용하는 경우 기존 유심을 새 기기에 삽입하여 사용할 수 있습니다. 반면에 eSIM을 새로 받는 경우, 2,750원의 비용이 발생하며, 지원하는 단말에서만 활성화 가능합니다. eSIM의 장점은 듀얼심 기능을 통해 최대 2개의 회선을 동시에 사용할 수 있다는 점입니다. 어떤 방식이 더 적합한지는 사용 패턴과 기기 호환성을 고려해 결정하시면 됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the differences between using a physical SIM and getting a new eSIM, including the cost, device compatibility, and the dual SIM functionality of eSIM. All required facts are accurately conveyed."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "USIM-0099",
+              "quote": "eSIM은 2,750원에 새로 발급받고 지원 단말이어야 합니다. 듀얼심으로 최대 2개 회선을 함께 쓸 수 있는 점이 다릅니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 정보(비용, 지원 단말, 듀얼심 기능)가 sources에 명시되어 있으며, answer는 이를 포함한 추가 설명을 제공하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-022",
+      "caseId": "PIPE-TERMINATE-0001",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "번호 해지는 매장을 방문하시거나, 고객센터에 전화를 주시거나, 저희 홈페이지에서 신청하실 수 있습니다. 편하신 방법을 선택하시면 됩니다. 신청이 접수되면 즉시 해지 처리되며, 요금은 일할 계산됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the user's question by providing all the required methods for terminating the service (visiting a store, calling the customer center, or applying via the website) and explains that the fee will be calculated on a daily basis once the application is received. This matches the reference group's answer exactly."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0001",
+              "quote": "매장 방문, 고객센터 전화, 홈페이지 신청 중 편하신 방법으로 하시면 됩니다. 신청 즉시 해지되고 요금은 일할 계산됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변이 제공되었으며, sources에 포함된 FAQ 원문이 질문에 직접적으로 답할 수 있는 정보를 포함하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-023",
+      "caseId": "PIPE-SUBSCRIBE-0122",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "부모 명의로 개통하는 것이 서류가 더 간단합니다. 부모 본인 명의로 진행할 경우 신분증 하나만으로 가능하지만, 자녀 명의로 개통할 경우 법정대리인 동의서, 가족관계증명서, 그리고 법정대리인의 신분증이 필요합니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the user's question by clearly stating that opening under a parent's name is simpler in terms of required documents. It specifies that only one ID is needed for a parent's name, while a child's name requires additional documents such as a legal guardian consent form, family relationship certificate, and the legal guardian's ID. This matches the reference group's answer, which also states that a parent's name is simpler with just one ID, while a child's name requires additional documents."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "SUBSCRIBE-0122",
+              "quote": "부모 본인 명의가 신분증 하나로 끝나 간단합니다. 자녀 명의는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다."
+            }
+          ],
+          "reason": "answer는 sources의 내용을 정확히 반영하고 있으며, 질문에 대한 명확한 답변을 제공하고 있습니다. sources의 내용은 질문에 대한 직접적인 답변을 제공할 수 있을 정도로 충분합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-024",
+      "caseId": "PIPE-BILLING-0148",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "HUMAN_REVIEW"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "REVIEW",
+        "rule": "UNCERTAIN_GROUNDING",
+        "disagreesWithJudge": false,
+        "requiresReview": true
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "요금제 변경은 신청하신 날 다음 날 자정(00:00)부터 적용됩니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "BILLING-0148",
+                "BILLING-0141",
+                "BILLING-0050"
+              ],
+              "reason": "모든 FAQ 소스에서 '신청일 다음 날 00:00'에 적용된다고 명시되어 있으며, 이는 해당 클레임과 정확히 일치합니다."
+            },
+            {
+              "claim": "청구 기준일은 변경된 요금제 기준으로 그 달 사용량에 따라 일할 계산되어 청구됩니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "BILLING-0148"
+              ],
+              "reason": "FAQ 소스 BILLING-0148에서 '그 달 요금은 일할 계산됩니다'라고 명시되어 있으며, 이는 해당 클레임과 의미상 일치합니다."
+            },
+            {
+              "claim": "변경된 요금제의 혜택은 변경 적용일 이후 사용량부터 반영됩니다.",
+              "verdict": "REVIEW",
+              "sourceIds": [],
+              "reason": "이 클레임은 '변경 적용일 이후 사용량'에 대한 명시적인 언급이 FAQ 소스에 없어 확인이 불가능합니다."
+            }
+          ],
+          "overall": "REVIEW"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "요금제 변경은 신청하신 날 다음 날 자정(00:00)부터 적용됩니다. 반면에 청구 기준일은 변경된 요금제 기준으로 그 달 사용량에 따라 일할 계산되어 청구됩니다. 즉, 변경된 요금제의 혜택은 변경 적용일 이후 사용량부터 반영됩니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the difference between the application date of the plan change and the billing calculation date, as specified in the reference. It accurately conveys that the plan change takes effect the next day at midnight and that billing is calculated based on usage from the application date onward."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0148",
+              "quote": "변경은 신청일 다음 날 00:00부터 적용되고, 그 달 요금은 일할 계산됩니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 정보가 sources에 명시되어 있으며, answer은 sources의 내용을 정확히 반영하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-025",
+      "caseId": "PIPE-SERVICE-0026",
+      "turnIndex": 0,
+      "sampleType": "SUPPORTED_COMPLETE",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "부가서비스를 없애려면 신청 절차를 진행하시면 됩니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "SERVICE-0026"
+              ],
+              "reason": "The claim '부가서비스를 없애려면 신청 절차를 진행하시면 됩니다.' is directly supported by the FAQ source 'SERVICE-0026' which states '신청만 하시면 됩니다.'"
+            },
+            {
+              "claim": "변경 신청 후 그 달 말까지는 기존 부가서비스를 계속 이용하실 수 있으며,",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "SERVICE-0026"
+              ],
+              "reason": "The claim '변경 신청 후 그 달 말까지는 기존 부가서비스를 계속 이용하실 수 있으며,' is directly supported by the FAQ source 'SERVICE-0026' which states '그 달 말일까지는 계속 쓰실 수 있고'"
+            },
+            {
+              "claim": "요금에도 변화가 없습니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "SERVICE-0026"
+              ],
+              "reason": "The claim '요금에도 변화가 없습니다.' is directly supported by the FAQ source 'SERVICE-0026' which states '요금도 그대로 나갑니다.'"
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "부가서비스를 없애려면 신청 절차를 진행하시면 됩니다. 변경 신청 후 그 달 말까지는 기존 부가서비스를 계속 이용하실 수 있으며, 요금에도 변화가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the user's question by explaining the process to remove the additional service (submitting an application) and clarifies that the existing service can still be used until the end of the month with no change in fees. This matches the reference group's answer."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "SERVICE-0026",
+              "quote": "신청만 하시면 됩니다. 그 달 말일까지는 계속 쓰실 수 있고, 요금도 그대로 나갑니다."
+            }
+          ],
+          "reason": "질문에 대한 답변이 제공되었으며, sources에 해당 질문에 대한 명시적인 답변이 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-026",
+      "caseId": "PIPE-COMPOUND-047",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "HUMAN_REVIEW",
+        "RETRIEVAL_MISS",
+        "ROUTING_MISMATCH"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The assistant provided a response that acknowledges the user's request but does not fully address the specific subquestions about store hours and the process for porting. The answer quotes indicate a refusal to handle multiple questions at once, but the reference groups contain the necessary information to answer both subquestions."
+            },
+            {
+              "answerQuotes": [
+                "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요."
+              ],
+              "groupIndex": 1,
+              "outcome": "PARTIAL",
+              "reason": "The assistant's response does not directly address the specific subquestion about the process for porting and cancellation. The reference group provides the necessary information, but the assistant's answer does not convey it."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변은 질문에 대한 직접적인 답변이 아닌 '질문을 하나씩 나누어 보내주세요'라는 요청으로 이루어졌으며, sources가 비어 있어 질문에 대한 정보가 제공되지 않았습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-027",
+      "caseId": "PIPE-USIM-0028",
+      "turnIndex": 0,
+      "sampleType": "OVER_REFUSAL_WITH_SUFFICIENT_EVIDENCE",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "OVER_REFUSAL"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "OVER_REFUSAL",
+        "rule": "REFUSAL_ENOUGH",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The reference group provides a clear answer about how to stop using a SIM card when it is lost (reporting the loss via customer service or the website to immediately stop usage). However, the assistant's answer states that there is no information to provide, which contradicts the reference group's information. This results in a missed opportunity to convey the correct information."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "USIM-0028",
+              "quote": "고객센터나 홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다."
+            }
+          ],
+          "reason": "answer는 '안내드릴 수 있는 정보가 없습니다.'로 질문에 대한 답변을 거절하고 있으며, sources에는 질문에 대한 명시적인 답변이 포함되어 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-028",
+      "caseId": "PIPE-BILLING-0020",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "네, 이중 납부 금액을 다음 달 요금에서 차감하는 방식으로 선택하실 수 있습니다. 차감 후 환불은 본인 명의 계좌로 5영업일 이내에 이루어집니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the user's question by confirming that the option to deduct the double payment from the next month's bill is available and provides the refund timeline of 5 business days to the user's account."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0020",
+              "quote": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다. 환불은 본인 명의 계좌로 5영업일 이내입니다."
+            },
+            {
+              "sourceId": "BILLING-0076",
+              "quote": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다."
+            },
+            {
+              "sourceId": "BILLING-0055",
+              "quote": "고객센터 접수 시 다음 달 차감 방식을 선택하면 됩니다. 접수 후 3영업일 이내에 확인되고, 환불을 택하면 5영업일 이내에 본인 명의 계좌로 입금됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '네, 이중 납부 금액을 다음 달 요금에서 차감하는 방식으로 선택하실 수 있습니다.'로, 이는 sources에서 제공된 정보와 일치합니다. sources에는 '다음 달 요금에서 차감하는 방식도 선택할 수 있습니다.'와 같은 명확한 답변이 포함되어 있어 질문에 대한 답변 가능성을 충분히 뒷받침합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-029",
+      "caseId": "PIPE-PLAN-0136",
+      "turnIndex": 0,
+      "sampleType": "SINGLE_QUESTION_PARTIAL",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "OVER_REFUSAL"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "OVER_REFUSAL",
+        "rule": "REFUSAL_ENOUGH",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "일반 라인업의 경우 5G 4종, LTE 3종, 알뜰폰 2종으로 구성되어 있습니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "PLAN-0136"
+              ],
+              "reason": "The claim is directly supported by the FAQ source, which states '일반 라인업은 5G 4종, LTE 3종, 알뜰 2종입니다.' The wording differs slightly (알뜰фон vs 알뜰), but the meaning is the same."
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "연령 제한 요금제는 별도의 정책으로 운영되고 있어 정확한 종류 수가 일반 라인업과 비교해 명시되어 있지 않습니다. 일반 라인업의 경우 5G 4종, LTE 3종, 알뜰폰 2종으로 구성되어 있습니다. 연령 제한 요금제의 구체적인 종류 수에 대해서는 안내드릴 수 있는 정보가 없습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The answer correctly states that the general lineup consists of 5G 4 types, LTE 3 types, and budget-friendly 2 types. However, it does not provide the exact number of age-restricted plans, only stating that it is a separate policy and the specific number is not available."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PLAN-0136",
+              "quote": "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종입니다. 연령 제한 요금제는 별도 정책으로 운영됩니다."
+            }
+          ],
+          "reason": "answer는 질문에 대한 명시적인 거절을 포함하고 있으며, sources는 질문에 대한 직접적인 답변을 제공합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-030",
+      "caseId": "PIPE-BILLING-0102",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "휴대폰 결제가 갑자기 안 되시는군요. 기본 한도가 월 30만 원을 초과했을 가능성이 있습니다. 본인 인증을 통해 한도를 월 100만 원까지 즉시 올릴 수 있으니 이 방법을 시도해 보세요. 도움이 필요하시면 언제든지 다시 문의해 주세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the user's question by explaining the possible reason (exceeding the monthly limit) and providing a clear solution (raising the limit through personal authentication). This matches the reference group's content accurately."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "BILLING-0102",
+              "quote": "기본 한도 월 30만 원을 넘겼을 수 있습니다. 본인 인증으로 월 100만 원까지 즉시 올릴 수 있습니다."
+            }
+          ],
+          "reason": "answer는 sources의 내용을 기반으로 한 답변을 제공하고 있으며, 핵심 질문에 대한 답을 포함하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-031",
+      "caseId": "PIPE-COMPOUND-002",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [
+        "RETRIEVAL_MISS"
+      ],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "일시 정지 중에도 요금은 부과되며, 정지 기간에는 기본료의 50%가 청구됩니다. 전액 면제는 아닙니다. 일부만 내셔도 정지 상태가 자동으로 해제되는 것은 아니며, 정지 해제를 위해서는 전체 요금을 정산해야 합니다. 요금 부담을 줄이기 위해서는 다른 요금제나 할인 프로그램을 확인해 보시는 것도 좋은 방법입니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately addresses both subquestions: it states that fees are charged during the temporary suspension (50% of the base fee) and clarifies that partial payment does not automatically lift the suspension, requiring full payment for resolution."
+            },
+            {
+              "answerQuotes": [
+                "일시 정지 중에도 요금은 부과되며, 정지 기간에는 기본료의 50%가 청구됩니다. 전액 면제는 아닙니다. 일부만 내셔도 정지 상태가 자동으로 해제되는 것은 아니며, 정지 해제를 위해서는 전체 요금을 정산해야 합니다. 요금 부담을 줄이기 위해서는 다른 요금제나 할인 프로그램을 확인해 보시는 것도 좋은 방법입니다."
+              ],
+              "groupIndex": 1,
+              "outcome": "COMPLETE",
+              "reason": "The answer correctly states that fees are charged during the temporary suspension (50% of the base fee), aligning with the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0060",
+              "quote": "네, 정지 기간에는 기본료의 50%가 부과됩니다."
+            },
+            {
+              "sourceId": "TERMINATE-0080",
+              "quote": "정지 중에는 기본료의 50%가 부과됩니다. 전액 면제는 아닙니다."
+            },
+            {
+              "sourceId": "TERMINATE-0088",
+              "quote": "일시 정지 기간에도 기본료의 50%는 부과됩니다. 전액 면제가 아니라는 점 참고해 주세요."
+            }
+          ],
+          "reason": "질문에 대한 답변은 sources에 있는 정보를 바탕으로 충분히 제공되었습니다. 일시 정지 중 요금이 부과되는지와 일부만 내도 정지가 풀리는지에 대한 내용이 sources에 명시되어 있으며, 답변은 이를 정확히 반영하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-032",
+      "caseId": "PIPE-DEVICE-0102",
+      "turnIndex": 0,
+      "sampleType": "UNSUPPORTED_CLAIM_WITH_COMPLETE_ANSWER",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "UNSUPPORTED_CLAIM",
+        "SHOULD_ABSTAIN"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "SHOULD_ABSTAIN",
+        "rule": "UNSUPPORTED_FACTUAL_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "개통 후 6개월이 지나지 않아 교체가 어렵습니다.",
+              "verdict": "UNSUPPORTED",
+              "sourceIds": [],
+              "reason": "The claim states that replacement is difficult within 6 months of activation, but the FAQ sources do not mention anything about replacement difficulty. The sources only mention repair requirements and the 6-month period for activation."
+            },
+            {
+              "claim": "현재는 수리를 받으셔야 합니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "DEVICE-0102"
+              ],
+              "reason": "The source 'DEVICE-0102' directly states that repair is required before 6 months of activation, which aligns with the claim."
+            },
+            {
+              "claim": "자세한 수리 절차는 가까운 서비스 센터를 방문하시거나 연락주시면 안내해 드리겠습니다.",
+              "verdict": "UNSUPPORTED",
+              "sourceIds": [],
+              "reason": "The claim provides specific instructions about contacting a service center for repair procedures, but none of the FAQ sources mention this information."
+            }
+          ],
+          "overall": "UNSUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "개통 후 6개월이 지나지 않아 교체가 어렵습니다. 현재는 수리를 받으셔야 합니다. 자세한 수리 절차는 가까운 서비스 센터를 방문하시거나 연락주시면 안내해 드리겠습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer accurately conveys that the phone cannot be replaced within 6 months of activation and that repair is necessary. It also provides the correct procedure for seeking repair assistance, which aligns with the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "DEVICE-0102",
+              "quote": "개통하고 6개월이 안 돼서 그렇습니다. 그 전엔 수리를 받으셔야 합니다."
+            },
+            {
+              "sourceId": "DEVICE-0022",
+              "quote": "개통하고 6개월 지나야 됩니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 정보가 sources에 명시되어 있으며, answer는 sources의 내용을 반영하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-033",
+      "caseId": "PIPE-TERMINATE-0107",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "해지 신청 시 할부 유지와 일시 납부는 선택 방법이 다릅니다. 할부 유지를 선택하면 기존 할부 계획이 그대로 유지되며, 일시 납부를 선택하면 해지 시 요금을 한 번에 정산하게 됩니다. 따라서 절차의 본질적인 차이는 선택에 따른 요금 정산 방식에 있습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer fully addresses the user's question by explaining the difference in procedures between '할부 유지' and '일시 납부' during the termination of a long-term unused line. It clearly states that the difference lies in the payment settlement method based on the user's choice, which aligns with the reference provided."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "TERMINATE-0107",
+              "quote": "해지 신청 시 선택만 다르고, 유지를 고르면 기존 일정이 이어지고 일시 납부를 고르면 한 번에 정산됩니다."
+            },
+            {
+              "sourceId": "TERMINATE-0039",
+              "quote": "해지 신청 시 할부 유지를 선택하시면 기존 할부 일정이 그대로 이어집니다. 선택하지 않으면 일시 납부가 원칙입니다."
+            }
+          ],
+          "reason": "질문에 대한 핵심 내용인 '할부 유지'와 '일시 납부'의 절차 차이에 대해 sources에서 충분한 정보가 제공되었습니다. answer는 sources의 내용을 요약하여 정확히 반영하고 있습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-034",
+      "caseId": "REG-UNRELATED",
+      "turnIndex": 0,
+      "sampleType": "OUT_OF_SCOPE_REFUSAL",
+      "expectedBehavior": "OUT_OF_SCOPE",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "NOT_APPLICABLE",
+              "reason": "The question is out of scope as it asks about the weather in Seoul, which is not related to communication services."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변은 질문에 대한 직접적인 답변이 아닌, 관련 없는 안내 문구로, 핵심 질문에 대한 답변이 불가능함을 나타냅니다. sources가 비어 있어 관련 정보가 없음."
+        }
+      }
+    },
+    {
+      "reviewId": "H-035",
+      "caseId": "PIPE-PLAN-0121",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ValueError: 전체 근거 판정과 개별 주장이 모순됩니다.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "5G와 LTE는 속도와 기술적 차이가 있습니다. - **지연 시간**: 5G는 저지연 특성을 갖추고 있어 실시간 응용 프로그램에 더 적합합니다. - **연결 밀도**: 5G는 더 많은 기기를 동시에 연결할 수 있는 능력이 있습니다. 요금제 구성도 다릅니다: 5G는 라이트, 스탠다드, 프리미엄, 언리미티드 등 4가지 종류가 있으며, LTE는 베이직, 플러스, 맥스 등 3가지 종류로 나뉩니다. 추가로 알뜰 요금제도 선택 가능합니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the differences between 5G and LTE, including technical aspects like latency and connection density, as well as the variety of plans available for each (4 for 5G and 3 for LTE, with additional budget plans). This matches the reference group's information."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PLAN-0121",
+              "quote": "5G는 라이트·스탠다드·프리미엄·언리미티드 4종, LTE는 베이직·플러스·맥스 3종으로 구성이 다릅니다. 알뜰 요금제 2종도 별도로 있습니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 제공된 sources의 내용을 기반으로 작성되었으며, 요금제 구성 차이에 대한 정보가 포함되어 있습니다. 이는 질문의 핵심에 해당하는 정보로, 충분한 근거가 제공되었습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-036",
+      "caseId": "PIPE-SERVICE-0036",
+      "turnIndex": 0,
+      "sampleType": "SUPPORTED_COMPLETE",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [
+            {
+              "claim": "가입 당일에 부가서비스를 해지해도 그 달의 전체 요금이 청구됩니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "SERVICE-0036",
+                "SERVICE-0031",
+                "SERVICE-0016"
+              ],
+              "reason": "All three FAQ sources explicitly state that the monthly fee is not prorated and the full amount is charged for the month, even if canceled on the day of joining."
+            },
+            {
+              "claim": "일할 계산이 적용되지 않기 때문입니다.",
+              "verdict": "SUPPORTED",
+              "sourceIds": [
+                "SERVICE-0036",
+                "SERVICE-0031",
+                "SERVICE-0016"
+              ],
+              "reason": "All three FAQ sources explicitly mention that the monthly fee is not prorated ('일할 계산되지 않아'), which directly supports this claim."
+            }
+          ],
+          "overall": "SUPPORTED"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "네, 가입 당일에 부가서비스를 해지해도 그 달의 전체 요금이 청구됩니다. 일할 계산이 적용되지 않기 때문입니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The assistant's answer accurately conveys that the full monthly fee is charged even if the add-on service is canceled on the day of enrollment, as partial calculation is not applied. This matches the reference group's answer."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "SERVICE-0036",
+              "quote": "네, 월 이용료는 일할 계산되지 않아 가입 당일 해지하셔도 그 달 요금은 전액 청구됩니다."
+            },
+            {
+              "sourceId": "SERVICE-0031",
+              "quote": "해지를 신청하셔도 해당 월 말일까지는 이용하실 수 있고, 월 이용료는 일할 계산되지 않아 그 달 요금은 그대로 청구됩니다. 가입은 신청 즉시 적용됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 '네, 가입 당일에 부가서비스를 해지해도 그 달의 전체 요금이 청구됩니다. 일할 계산이 적용되지 않기 때문입니다.'로, 이는 sources에서 제공된 정보와 일치합니다. sources에는 월 이용료가 일할 계산되지 않고, 해지 후에도 해당 달 요금이 전액 청구된다는 명확한 내용이 포함되어 있습니다. 따라서 evidenceAnswerability는 ENOUGH로 판단됩니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-037",
+      "caseId": "PIPE-PORTING-0049",
+      "turnIndex": 0,
+      "sampleType": "COMPLETED_BUT_UNSCORED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "UNSCORED",
+      "requiresReview": false,
+      "findings": [],
+      "axisStatus": {
+        "grounding": "UNSCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": null,
+      "validationErrors": {
+        "grounding": {
+          "error": "ClaimTextMismatch: Extracted claim is not an exact ordered span of assistantAnswer.",
+          "attemptErrors": []
+        }
+      },
+      "judge": {
+        "grounding": {},
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "저녁 늦게 신청하시더라도 번호 이동 처리 시간은 매일 오후 9시부터 저녁 8시까지 운영됩니다. 신청하신 경우 평균 2시간 이내에 완료되며, 늦어도 하루 이내에 처리될 예정입니다. 다만, 처리 시간을 고려하시어 가능한 한 저녁 시간대 이전에 신청하시는 것을 권장드립니다."
+              ],
+              "groupIndex": 0,
+              "outcome": "COMPLETE",
+              "reason": "The answer fully addresses the user's question about whether the number porting can be done the same day if applied late in the evening. It confirms that processing is available until 8 PM, provides the average completion time of 2 hours, and mentions that it will be completed within a day at the latest. It also includes the recommendation to apply earlier if possible, which aligns with the reference."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "ENOUGH",
+          "evidenceQuotes": [
+            {
+              "sourceId": "PORTING-0049",
+              "quote": "번호이동 처리는 매일 09:00부터 20:00까지만 진행됩니다. 처리 시간 안에 신청하시면 평균 2시간 이내에 완료되고, 늦어도 24시간 이내에 처리됩니다."
+            }
+          ],
+          "reason": "질문에 대한 답변은 sources에 있는 PORTING-0049의 내용을 바탕으로 충분히 답변 가능합니다. 처리 시간과 완료 시간에 대한 정보가 명시되어 있으며, 답변 내용과도 일치합니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-038",
+      "caseId": "REG-STORE",
+      "turnIndex": 0,
+      "sampleType": "STORE_LOOKUP",
+      "expectedBehavior": "STORE_LOOKUP",
+      "judgeStatus": "SCORED",
+      "requiresReview": false,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "STORE_NOT_CONNECTED"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "APPROPRIATE",
+        "rule": "REFUSAL_INSUFFICIENT",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "현재 가까운 매장 정보를 바로 확인하기 어려워요. 잠시 후 다시 시도하거나 고객센터를 이용해 주세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "MISSED",
+              "reason": "The answer does not provide the requested information about the U+ store near Gangnam Station. It simply states that the information cannot be retrieved immediately and suggests trying again later or contacting customer service."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": true,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변은 질문에 대한 직접적인 정보 제공이 아닌 '확인이 어렵다'는 답변으로, 핵심 질문(강남역 근처 유플러스 매장 위치)에 대한 답이 아닙니다. sources가 비어 있어 관련 정보를 확인할 수 없습니다."
+        }
+      }
+    },
+    {
+      "reviewId": "H-039",
+      "caseId": "PIPE-SUBSCRIBE-0051",
+      "turnIndex": 0,
+      "sampleType": "JUDGE_REVIEW_REQUIRED",
+      "expectedBehavior": "ANSWER",
+      "judgeStatus": "SCORED",
+      "requiresReview": true,
+      "findings": [
+        "INCOMPLETE_ANSWER",
+        "HUMAN_REVIEW",
+        "RETRIEVAL_MISS",
+        "ROUTING_MISMATCH"
+      ],
+      "axisStatus": {
+        "grounding": "SCORED",
+        "quality": "SCORED",
+        "abstention": "SCORED"
+      },
+      "abstentionDecision": {
+        "judgeLabel": null,
+        "label": "NOT_APPLICABLE",
+        "rule": "NO_REFUSAL_OR_UNSUPPORTED_CLAIM",
+        "disagreesWithJudge": false,
+        "requiresReview": false
+      },
+      "validationErrors": {},
+      "judge": {
+        "grounding": {
+          "claims": [],
+          "overall": "NOT_APPLICABLE"
+        },
+        "quality": {
+          "groups": [
+            {
+              "answerQuotes": [
+                "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."
+              ],
+              "groupIndex": 0,
+              "outcome": "PARTIAL",
+              "reason": "The assistant's answer does not fully resolve the user's question. While it asks for the location, it does not provide the information that the user is seeking, which is the time required to complete the process. The reference group provides the answer that it takes 30 minutes, but the assistant's response does not include this information."
+            }
+          ]
+        },
+        "abstention": {
+          "answerIsRefusal": false,
+          "evidenceAnswerability": "INSUFFICIENT",
+          "evidenceQuotes": [],
+          "reason": "답변은 사용자가 어느 지역의 통신사 매장을 찾는지 묻고 있으며, 질문에 대한 직접적인 답변이 아닙니다. sources가 비어 있어 관련 정보가 없으므로, 답변 가능성은 INSUFFICIENT입니다."
+        }
+      }
+    }
+  ]
+}

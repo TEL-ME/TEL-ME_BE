@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "capture": "20261005-heldout40-capture.json.gz",
+  "captureSha256": "4ddc1b352a27619a9971f798c538890f2965f185c4f23f81083aa4cded2fb666",
+  "judge": "20261005-heldout40-judge-updated-raw.json.gz",
+  "judgeSha256": "b7905c1d84ba41d3dd3bc2a51bfe98695ac0311752f31b25b177916b8925628c",
+  "cases": [
+    {
+      "reviewId": "V6H-001",
+      "caseId": "PIPE-BILLING-0087",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-002",
+      "caseId": "PIPE-BILLING-0084",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-003",
+      "caseId": "PIPE-BILLING-0155",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-004",
+      "caseId": "PIPE-PLAN-0060",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-005",
+      "caseId": "PIPE-PLAN-0081",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-006",
+      "caseId": "PIPE-PLAN-0116",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-007",
+      "caseId": "PIPE-DEVICE-0008",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-008",
+      "caseId": "PIPE-DEVICE-0130",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-009",
+      "caseId": "PIPE-DEVICE-0117",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-010",
+      "caseId": "PIPE-SUBSCRIBE-0067",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-011",
+      "caseId": "PIPE-SUBSCRIBE-0066",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-012",
+      "caseId": "PIPE-SUBSCRIBE-0088",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-013",
+      "caseId": "PIPE-PORTING-0081",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-014",
+      "caseId": "PIPE-PORTING-0077",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-015",
+      "caseId": "PIPE-PORTING-0111",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-016",
+      "caseId": "PIPE-TERMINATE-0010",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-017",
+      "caseId": "PIPE-TERMINATE-0043",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-018",
+      "caseId": "PIPE-TERMINATE-0033",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-019",
+      "caseId": "PIPE-USIM-0035",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-020",
+      "caseId": "PIPE-USIM-0054",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-021",
+      "caseId": "PIPE-USIM-0065",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-022",
+      "caseId": "PIPE-NAME_CHANGE-0014",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-023",
+      "caseId": "PIPE-NAME_CHANGE-0017",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-024",
+      "caseId": "PIPE-NAME_CHANGE-0042",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-025",
+      "caseId": "PIPE-ROAMING-0002",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-026",
+      "caseId": "PIPE-ROAMING-0032",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-027",
+      "caseId": "PIPE-ROAMING-0022",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-028",
+      "caseId": "PIPE-SERVICE-0034",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-029",
+      "caseId": "PIPE-SERVICE-0044",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-030",
+      "caseId": "PIPE-SERVICE-0049",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-031",
+      "caseId": "PIPE-COMPOUND-010",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-032",
+      "caseId": "PIPE-COMPOUND-013",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-033",
+      "caseId": "PIPE-COMPOUND-031",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-034",
+      "caseId": "PIPE-OUT-020",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-035",
+      "caseId": "PIPE-OUT-036",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-036",
+      "caseId": "PIPE-OUT-049",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-037",
+      "caseId": "REG-FAQ_FACT",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-038",
+      "caseId": "REG-NO_EVIDENCE",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-039",
+      "caseId": "REG-MIXED",
+      "turnIndex": 0
+    },
+    {
+      "reviewId": "V6H-040",
+      "caseId": "REG-FAQ_COMPOUND",
+      "turnIndex": 0
+    }
+  ]
+}

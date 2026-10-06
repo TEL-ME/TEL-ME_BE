@@ -1,0 +1,58 @@
+{
+  "createdAt": "2026-10-05T17:15:51.119334",
+  "capturePath": "D:\\finalproject\\TEL-ME_BE\\docs\\chat-judge\\experiments\\V6-live-chat-pipeline\\20261005-heldout40-capture.json.gz",
+  "datasetScope": "fixed_challenge_set_not_live_user_distribution",
+  "judgeBackend": "vllm",
+  "judgeModel": "qwen3-14b-awq",
+  "workers": 8,
+  "evaluationSourceFiles": {
+    "scripts/chat_judge/experiments/v6_live_chat_pipeline/run_chat_pipeline_eval.py": "cc208ceaf625f17ff61c733534e8fd85999504de21dcf270727cef69cfcaa846",
+    "scripts/chat_judge/experiments/v6_live_chat_pipeline/evaluate_chat_pipeline.py": "dd0b4ae1b8081ba59fbad97ef0d0f896eab72006208b049bee9c56d904830088",
+    "scripts/chat_judge/judge_chat_flow.py": "c970875c7601ec3f4f21dfcacc2d4beda82a49de66abc9fcf796f9559be3b5c3",
+    "scripts/chat_judge/experiments/v6_live_chat_pipeline/build_chat_pipeline_eval.py": "e52911fffb98d7ed2b207105563841992f2103f3f8672c6de87f30f192675780",
+    "src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java": "5a91edd8f613533a4361d19f11c496b9d5b09b7da2cbda682c5347570ea68ee0"
+  },
+  "vllmContainer": {
+    "image": "sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1",
+    "imageId": "sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1",
+    "cmd": [
+      "Qwen/Qwen3-14B-AWQ",
+      "--served-model-name",
+      "qwen3-14b-awq",
+      "--quantization",
+      "awq",
+      "--dtype",
+      "half",
+      "--max-model-len",
+      "4096",
+      "--gpu-memory-utilization",
+      "0.90",
+      "--kv-cache-memory-bytes",
+      "2147483648",
+      "--max-num-seqs",
+      "8",
+      "--trust-remote-code"
+    ],
+    "patchMounts": [
+      {
+        "Type": "volume",
+        "Name": "test_hfdata",
+        "Source": "/var/lib/docker/volumes/test_hfdata/_data",
+        "Destination": "/root/.cache/huggingface",
+        "Driver": "local",
+        "Mode": "z",
+        "RW": true,
+        "Propagation": ""
+      },
+      {
+        "Type": "bind",
+        "Source": "/run/desktop/mnt/host/d/finalproject/test/vllm_patch/buffer_utils.py",
+        "Destination": "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu/buffer_utils.py",
+        "Mode": "ro",
+        "RW": false,
+        "Propagation": "rprivate"
+      }
+    ]
+  },
+  "vllmRuntimeVersion": "0.29.0"
+}

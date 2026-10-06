@@ -1,0 +1,162 @@
+[
+  {
+    "caseId": "PIPE-BILLING-0087",
+    "category": "BILLING"
+  },
+  {
+    "caseId": "PIPE-BILLING-0084",
+    "category": "BILLING"
+  },
+  {
+    "caseId": "PIPE-BILLING-0155",
+    "category": "BILLING"
+  },
+  {
+    "caseId": "PIPE-PLAN-0060",
+    "category": "PLAN"
+  },
+  {
+    "caseId": "PIPE-PLAN-0081",
+    "category": "PLAN"
+  },
+  {
+    "caseId": "PIPE-PLAN-0116",
+    "category": "PLAN"
+  },
+  {
+    "caseId": "PIPE-DEVICE-0008",
+    "category": "DEVICE"
+  },
+  {
+    "caseId": "PIPE-DEVICE-0130",
+    "category": "DEVICE"
+  },
+  {
+    "caseId": "PIPE-DEVICE-0117",
+    "category": "DEVICE"
+  },
+  {
+    "caseId": "PIPE-SUBSCRIBE-0067",
+    "category": "SUBSCRIBE"
+  },
+  {
+    "caseId": "PIPE-SUBSCRIBE-0066",
+    "category": "SUBSCRIBE"
+  },
+  {
+    "caseId": "PIPE-SUBSCRIBE-0088",
+    "category": "SUBSCRIBE"
+  },
+  {
+    "caseId": "PIPE-PORTING-0081",
+    "category": "PORTING"
+  },
+  {
+    "caseId": "PIPE-PORTING-0077",
+    "category": "PORTING"
+  },
+  {
+    "caseId": "PIPE-PORTING-0111",
+    "category": "PORTING"
+  },
+  {
+    "caseId": "PIPE-TERMINATE-0010",
+    "category": "TERMINATE"
+  },
+  {
+    "caseId": "PIPE-TERMINATE-0043",
+    "category": "TERMINATE"
+  },
+  {
+    "caseId": "PIPE-TERMINATE-0033",
+    "category": "TERMINATE"
+  },
+  {
+    "caseId": "PIPE-USIM-0035",
+    "category": "USIM"
+  },
+  {
+    "caseId": "PIPE-USIM-0054",
+    "category": "USIM"
+  },
+  {
+    "caseId": "PIPE-USIM-0065",
+    "category": "USIM"
+  },
+  {
+    "caseId": "PIPE-NAME_CHANGE-0014",
+    "category": "NAME_CHANGE"
+  },
+  {
+    "caseId": "PIPE-NAME_CHANGE-0017",
+    "category": "NAME_CHANGE"
+  },
+  {
+    "caseId": "PIPE-NAME_CHANGE-0042",
+    "category": "NAME_CHANGE"
+  },
+  {
+    "caseId": "PIPE-ROAMING-0002",
+    "category": "ROAMING"
+  },
+  {
+    "caseId": "PIPE-ROAMING-0032",
+    "category": "ROAMING"
+  },
+  {
+    "caseId": "PIPE-ROAMING-0022",
+    "category": "ROAMING"
+  },
+  {
+    "caseId": "PIPE-SERVICE-0034",
+    "category": "SERVICE"
+  },
+  {
+    "caseId": "PIPE-SERVICE-0044",
+    "category": "SERVICE"
+  },
+  {
+    "caseId": "PIPE-SERVICE-0049",
+    "category": "SERVICE"
+  },
+  {
+    "caseId": "PIPE-COMPOUND-010",
+    "category": "COMPOUND"
+  },
+  {
+    "caseId": "PIPE-COMPOUND-013",
+    "category": "COMPOUND"
+  },
+  {
+    "caseId": "PIPE-COMPOUND-031",
+    "category": "COMPOUND"
+  },
+  {
+    "caseId": "PIPE-OUT-020",
+    "category": "OUT_OF_SCOPE"
+  },
+  {
+    "caseId": "PIPE-OUT-036",
+    "category": "OUT_OF_SCOPE"
+  },
+  {
+    "caseId": "PIPE-OUT-049",
+    "category": "OUT_OF_SCOPE"
+  },
+  {
+    "caseId": "REG-FAQ_FACT",
+    "category": "일반 FAQ"
+  },
+  {
+    "caseId": "REG-NO_EVIDENCE",
+    "category": "근거 부족"
+  },
+  {
+    "caseId": "REG-MIXED",
+    "category": "답할 수 있는 내용과 없는 내용"
+  },
+  {
+    "caseId": "REG-FAQ_COMPOUND",
+    "category": "FAQ 두 질문"
+  }
+]
