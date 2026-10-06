@@ -70,6 +70,6 @@ class SocialMemberFinderConcurrencyIntegrationTest {
     private User findOrCreate(CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
-        return socialMemberFinder.findOrCreate(KAKAO, providerUserId, null);
+        return socialMemberFinder.findOrCreate(KAKAO, providerUserId, null, null);
     }
 }

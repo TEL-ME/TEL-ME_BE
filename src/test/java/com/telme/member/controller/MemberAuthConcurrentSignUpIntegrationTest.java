@@ -77,7 +77,7 @@ class MemberAuthConcurrentSignUpIntegrationTest {
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
         return mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new SignUpRequest(email, "password123"))))
+                        .content(objectMapper.writeValueAsString(new SignUpRequest("홍길동", email, "password123"))))
                 .andReturn();
     }
 }

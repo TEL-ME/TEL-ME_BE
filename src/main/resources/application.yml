@@ -66,6 +66,12 @@ springdoc:
 ollama:
   url: ${OLLAMA_URL:http://localhost:11434}
 
+kakao:
+  local:
+    # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
+    # 더미 키로도 앱은 뜨고, 호출만 STORE503-1로 실패한다
+    rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
+
 llm:
   # fake: Ollama 없이 고정 응답 / ollama: 로컬 EXAONE 호출
   provider: ${LLM_PROVIDER:fake}

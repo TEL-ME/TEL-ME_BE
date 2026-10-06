@@ -23,11 +23,15 @@ class KakaoOAuth2UserServiceTest {
     private final OAuth2UserRequest request = mock(OAuth2UserRequest.class);
 
     @Test
-    @DisplayName("카카오 id·인증된 kakao_account.email을 추출한다")
+    @DisplayName("카카오 id·인증된 email·profile nickname을 추출한다")
     void 정상_흐름이면_원본_클레임을_추출한다() {
         Map<String, Object> attributes = Map.of(
                 "id", 12345L,
-                "kakao_account", Map.of("email", "user@kakao.com", "is_email_verified", true, "is_email_valid", true));
+                "kakao_account", Map.of(
+                        "email", "user@kakao.com",
+                        "is_email_verified", true,
+                        "is_email_valid", true,
+                        "profile", Map.of("nickname", "  카카오 회원  ")));
         when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
 
         OAuth2User result = service.loadUser(request);
@@ -36,6 +40,7 @@ class KakaoOAuth2UserServiceTest {
         KakaoOAuth2User kakaoUser = (KakaoOAuth2User) result;
         assertThat(kakaoUser.getProviderUserId()).isEqualTo("12345");
         assertThat(kakaoUser.getEmail()).isEqualTo("user@kakao.com");
+        assertThat(kakaoUser.getNickname()).isEqualTo("카카오 회원");
     }
 
     @Test
@@ -61,6 +66,7 @@ class KakaoOAuth2UserServiceTest {
 
         assertThat(result.getProviderUserId()).isEqualTo("999");
         assertThat(result.getEmail()).isNull();
+        assertThat(result.getNickname()).isNull();
     }
 
     @Test
@@ -87,6 +93,48 @@ class KakaoOAuth2UserServiceTest {
         KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
 
         assertThat(result.getEmail()).isNull();
+    }
+
+    @Test
+    @DisplayName("profile이 없으면 nickname 없이 추출한다")
+    void profile이_없으면_nickname_null() {
+        Map<String, Object> attributes = Map.of(
+                "id", 996L,
+                "kakao_account", Map.of(
+                        "email", "user@kakao.com", "is_email_verified", true, "is_email_valid", true));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getNickname()).isNull();
+    }
+
+    @Test
+    @DisplayName("nickname 앞뒤 공백은 제거하고 공백뿐이면 null로 처리한다")
+    void nickname을_정규화한다() {
+        Map<String, Object> attributes = Map.of(
+                "id", 995L,
+                "kakao_account", Map.of("profile", Map.of("nickname", "   ")));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getNickname()).isNull();
+    }
+
+    @Test
+    @DisplayName("nickname은 users.name 컬럼 길이를 넘지 않게 자르고 서로게이트 쌍을 분리하지 않는다")
+    void nickname_길이를_제한한다() {
+        String longNickname = "가".repeat(49) + "😀" + "뒤쪽";
+        Map<String, Object> attributes = Map.of(
+                "id", 994L,
+                "kakao_account", Map.of("profile", Map.of("nickname", longNickname)));
+        when(delegate.loadUser(request)).thenReturn(rawUser(attributes));
+
+        KakaoOAuth2User result = (KakaoOAuth2User) service.loadUser(request);
+
+        assertThat(result.getNickname()).isEqualTo("가".repeat(49));
+        assertThat(result.getNickname().length()).isLessThanOrEqualTo(50);
     }
 
     @Test

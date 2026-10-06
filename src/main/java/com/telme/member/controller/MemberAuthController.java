@@ -6,11 +6,13 @@ import com.telme.member.dto.req.KakaoLinkConfirmRequest;
 import com.telme.member.dto.req.LoginRequest;
 import com.telme.member.dto.req.SignUpRequest;
 import com.telme.member.dto.res.LoginResponse;
+import com.telme.member.dto.res.MemberMeResponse;
 import com.telme.member.dto.res.SignUpResponse;
 import com.telme.member.service.EmailLoginMethodService;
 import com.telme.member.service.KakaoAccountLinkService;
 import com.telme.member.service.KakaoLinkStartService;
 import com.telme.member.service.MemberAuthService;
+import com.telme.member.service.MemberProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,6 +36,13 @@ public class MemberAuthController {
     private final KakaoAccountLinkService kakaoAccountLinkService;
     private final EmailLoginMethodService emailLoginMethodService;
     private final KakaoLinkStartService kakaoLinkStartService;
+    private final MemberProfileService memberProfileService;
+
+    @Operation(summary = "현재 회원 및 로그인 수단 조회", description = "미인증 상태에서는 GUEST 정보를 반환한다.")
+    @GetMapping("/me")
+    public CustomResponse<MemberMeResponse> getMe(HttpServletRequest httpRequest) {
+        return CustomResponse.onSuccess(memberProfileService.getMe(httpRequest));
+    }
 
     @Operation(summary = "이메일 회원가입", description = "가입 성공 시 자동으로 로그인 처리된다.")
     @PostMapping("/signup")

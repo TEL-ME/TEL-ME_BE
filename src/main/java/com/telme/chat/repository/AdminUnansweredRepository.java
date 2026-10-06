@@ -2,6 +2,7 @@ package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,8 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
     String UNANSWERED_WHERE = " where " + UNANSWERED
             + " and m.createdAt >= :from and m.createdAt < :to ";
 
+    String EITHER = " and (m.answerBasis in :bases or m.status in :statuses)";
+
     String ORDER = " order by m.createdAt desc, m.messageId desc";
 
     // 질문은 앞 메시지에 있다. 한 줄씩 다시 읽지 않도록 함께 가져온다.
@@ -31,24 +34,37 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
     String SELECT = "select m from ChatMessage m left join fetch m.replyTo ";
     String COUNT = "select count(m) from ChatMessage m ";
 
-    // 유형을 준 경우와 아닌 경우를 나눈다. 한 메서드로 묶으려면 조건을 null로 넘겨야 하는데
-    // Postgres가 "? is null" 한 줄만 보고는 파라미터 타입을 정하지 못한다
+    // 고른 유형이 어느 컬럼에 걸리느냐로 나눈다. 빈 목록을 in에 넘기면 쿼리가 깨져 비어 있는 쪽은 부르지 않는다
     @Query(value = SELECT + UNANSWERED_WHERE + ORDER, countQuery = COUNT + UNANSWERED_WHERE)
     Page<ChatMessage> findUnanswered(
             @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 
-    @Query(value = SELECT + UNANSWERED_WHERE + " and m.answerBasis = :basis" + ORDER,
-            countQuery = COUNT + UNANSWERED_WHERE + " and m.answerBasis = :basis")
-    Page<ChatMessage> findUnansweredByBasis(
-            @Param("basis") ChatMessage.AnswerBasis basis,
+    @Query(value = SELECT + UNANSWERED_WHERE + " and m.answerBasis in :bases" + ORDER,
+            countQuery = COUNT + UNANSWERED_WHERE + " and m.answerBasis in :bases")
+    Page<ChatMessage> findUnansweredByBases(
+            @Param("bases") Collection<ChatMessage.AnswerBasis> bases,
             @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 
-    @Query(value = SELECT + UNANSWERED_WHERE + " and m.status = :status" + ORDER,
-            countQuery = COUNT + UNANSWERED_WHERE + " and m.status = :status")
-    Page<ChatMessage> findUnansweredByStatus(
-            @Param("status") ChatMessage.Status status,
+    @Query(value = SELECT + UNANSWERED_WHERE + " and m.status in :statuses" + ORDER,
+            countQuery = COUNT + UNANSWERED_WHERE + " and m.status in :statuses")
+    Page<ChatMessage> findUnansweredByStatuses(
+            @Param("statuses") Collection<ChatMessage.Status> statuses,
+            @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
+    @Query(value = SELECT + UNANSWERED_WHERE + EITHER + ORDER,
+            countQuery = COUNT + UNANSWERED_WHERE + EITHER)
+    Page<ChatMessage> findUnansweredByBasesOrStatuses(
+            @Param("bases") Collection<ChatMessage.AnswerBasis> bases,
+            @Param("statuses") Collection<ChatMessage.Status> statuses,
             @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 
     @Query(SELECT + " where m.messageId = :messageId and " + UNANSWERED)
     Optional<ChatMessage> findUnansweredById(@Param("messageId") Long messageId);
+
+    @Query(COUNT + UNANSWERED_WHERE)
+    long countUnanswered(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(COUNT + UNANSWERED_WHERE + " and m.status in :statuses")
+    long countUnansweredByStatuses(@Param("statuses") Collection<ChatMessage.Status> statuses,
+            @Param("from") Instant from, @Param("to") Instant to);
 }
