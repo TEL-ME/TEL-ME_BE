@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from scripts.chat_judge.experiments.v6_live_chat_pipeline import build_chat_pipeline_eval as builder
 from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge.experiments.v6_live_chat_pipeline import compare_human_review as human_compare
 from scripts.chat_judge import judge_chat_flow as judge
 from scripts.chat_judge.test_judge_chat_flow import sample_capture, CATALOG
 
@@ -27,10 +28,45 @@ def scored_item(turn, overall="SUPPORTED", quality="COMPLETE", refusal=False, en
 
 
 class PipelineEvaluationTest(unittest.TestCase):
+    def test_human_pipeline_failure_is_reported_separately_from_routing_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "human.md"
+            path.write_text("""## V6H-026
+- 별도 파이프라인 실패 유형: `MISROUTED_CLARIFICATION`
+- 근거성 전체 판정: `NOT_APPLICABLE`
+  - 기준 1: `MISSED`
+- 답변 불가 판정: `NOT_APPLICABLE`
+- 실제 전달 근거 충분성: `INSUFFICIENT`
+""", encoding="utf-8")
+            human, _ = human_compare.load_human_review(path, {"cases": [
+                {"reviewId": "V6H-026", "caseId": "ROAMING", "turnIndex": 0}]})
+        evaluation = {"turns": [{"caseId": "ROAMING", "turnIndex": 0,
+                                  "findings": ["ROUTING_MISMATCH"]}]}
+        result = human_compare.compare_pipeline_failures(human, evaluation)
+        self.assertEqual(1, result["humanCounts"]["MISROUTED_CLARIFICATION"])
+        self.assertEqual(1, result["routingMismatchCount"])
+        self.assertEqual({"reviewId": "V6H-026", "humanLabel": "MISROUTED_CLARIFICATION",
+                          "routingMismatch": True}, result["rows"][0])
+
+    def test_unscored_abstention_is_not_counted_as_not_applicable(self):
+        human = {"H-001": {"caseId": "CASE", "turnIndex": 0, "grounding": "SUPPORTED",
+                           "quality": ["COMPLETE"], "abstention": "NOT_APPLICABLE",
+                           "answerability": "ENOUGH"}}
+        evaluation = {"turns": [{"caseId": "CASE", "turnIndex": 0,
+                                  "grounding": {"result": {"overall": "SUPPORTED"}},
+                                  "quality": {"result": {"groups": [{"outcome": "COMPLETE"}]}},
+                                  "abstention": {"result": {"evidenceAnswerability": "ENOUGH"}},
+                                  "abstentionDecision": None}]}
+        counts, _ = human_compare.compare(human, evaluation)
+        self.assertEqual(1, counts["abstention"]["unresolved"])
+        self.assertEqual(0, counts["abstention"]["match"])
+
     @patch.object(pipeline.urllib.request, "urlopen")
+    @patch.object(pipeline, "abstention_chat")
     @patch.object(pipeline.judge, "vllm_chat")
     @patch.object(pipeline, "quality_chat")
-    def test_resume_preserves_failed_axes_and_rejects_changed_input(self, quality_chat, vllm_chat, urlopen):
+    def test_resume_preserves_failed_axes_and_rejects_changed_input(self, quality_chat, vllm_chat,
+                                                                    abstention_chat, urlopen):
         def models(*args, **kwargs):
             return io.BytesIO(json.dumps({"data": [{"id": "qwen3-14b-awq"}]}).encode())
         urlopen.side_effect = models
@@ -38,12 +74,15 @@ class PipelineEvaluationTest(unittest.TestCase):
         templates = scored_item(turn)
         quality_chat.return_value = {"error": "invalid citation", "rawResponse": "unchanged"}
         vllm_chat.side_effect = lambda url, model, axis, data, **kwargs: templates[axis]
+        abstention_chat.return_value = templates["abstention"]
         prior = pipeline.evaluate(sample_capture(), CATALOG, "http://unused", "qwen3-14b-awq", retries=0)
         quality_chat.reset_mock()
         vllm_chat.reset_mock()
+        abstention_chat.reset_mock()
         resumed = pipeline.evaluate(sample_capture(), CATALOG, "http://unused", "qwen3-14b-awq", prior=prior)
         quality_chat.assert_not_called()
         vllm_chat.assert_not_called()
+        abstention_chat.assert_not_called()
         self.assertEqual("unchanged", resumed["turns"][0]["quality"]["rawResponse"])
         changed = sample_capture()
         changed["cases"][0]["turns"][0]["fixture"]["question"] += " 변경"
@@ -131,6 +170,18 @@ class PipelineEvaluationTest(unittest.TestCase):
         self.assertEqual(["월 1회 변경 가능합니다.", "가입한 달에는 불가능합니다."], allowed)
         self.assertNotIn("월 1회까지만 가능하다", allowed)
 
+    def test_quality_reference_uses_faq_answer_without_faq_question(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"]["qualityReferenceGroups"] = [{
+            "sourceId": "BILLING-0001", "question": "faq question is metadata",
+            "answer": "policy text lives here",
+        }]
+        request = pipeline.quality_request("qwen", turn, [])
+        data = json.loads(request["messages"][1]["content"])
+        self.assertEqual([{"sourceId": "BILLING-0001", "answer": "policy text lives here"}],
+                         data["referenceGroups"])
+        self.assertNotIn("question", data["referenceGroups"][0])
+
     def test_abstention_schema_binds_each_quote_to_its_actual_source(self):
         data = {"sources": [{"sourceId": "A", "answer": "월 1회 가능합니다."},
                             {"sourceId": "B", "answer": "다음 달부터 가능합니다."}]}
@@ -139,6 +190,33 @@ class PipelineEvaluationTest(unittest.TestCase):
         self.assertEqual("A", branches[0]["properties"]["sourceId"]["const"])
         self.assertEqual(["월 1회 가능합니다."], branches[0]["properties"]["quote"]["enum"])
         self.assertEqual("B", branches[1]["properties"]["sourceId"]["const"])
+
+    @patch.object(pipeline, "abstention_stage")
+    def test_answerability_receives_question_and_sources_without_generated_answer(self, stage):
+        seen = []
+        def respond(url, model, name, rubric, schema, data, timeout):
+            seen.append((name, copy.deepcopy(data)))
+            if name == "answer_refusal":
+                return {"request": {"name": name}, "result": {"answerIsRefusal": False,
+                    "reason": "A substantive answer was given."}}
+            return {"request": {"name": name}, "result": {
+                "parts": [
+                    {"partIndex": 0, "evidenceAnswerability": "ENOUGH",
+                     "evidenceQuotes": [{"sourceId": "A", "quote": "A는 가능합니다."}], "reason": "A is answered."},
+                    {"partIndex": 1, "evidenceAnswerability": "INSUFFICIENT",
+                     "evidenceQuotes": [], "reason": "No evidence for B."}],
+                "reason": "The second question has no source."}}
+        stage.side_effect = respond
+        data = {"question": "A와 B는 가능한가요?", "questionParts": ["A는 가능한가요?", "B는 가능한가요?"],
+                "previousTurns": [],
+                "answer": "A도 B도 가능합니다.", "confirmedConditions": [],
+                "sources": [{"sourceId": "A", "question": "A는 가능한가요?", "answer": "A는 가능합니다."}]}
+        record = pipeline.abstention_chat("http://unused", "qwen", data, 5)
+        self.assertEqual("INSUFFICIENT", record["result"]["evidenceAnswerability"])
+        self.assertEqual(["answer_refusal", "faq_answerability"], [name for name, _ in seen])
+        self.assertNotIn("answer", seen[1][1])
+        self.assertNotIn("sources", seen[0][1])
+        self.assertEqual(data["question"], seen[1][1]["question"])
 
     def test_supported_but_partial_is_not_quality_success(self):
         turn = sample_capture()["cases"][0]["turns"][0]
@@ -166,6 +244,16 @@ class PipelineEvaluationTest(unittest.TestCase):
         item = scored_item(turn, overall="NOT_APPLICABLE")
         self.assertTrue(item["requiresReview"])
         self.assertIsNone(item["answerQualityPass"])
+
+    def test_sentence_fallback_is_reviewed_and_excluded_from_automatic_grounding_rate(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        item = scored_item(turn, overall="SUPPORTED")
+        item["grounding"]["claimExtractionFallback"] = "EXACT_ANSWER_SENTENCES"
+        pipeline.finalize_turn(turn, item)
+        metrics = pipeline.summarize([item])
+        self.assertTrue(item["requiresReview"])
+        self.assertIsNone(item["answerQualityPass"])
+        self.assertEqual(0, metrics["groundingCoverage"]["numerator"])
 
     def test_valid_axis_survives_another_axis_failure(self):
         turn = sample_capture()["cases"][0]["turns"][0]
@@ -223,9 +311,11 @@ class PipelineEvaluationTest(unittest.TestCase):
         self.assertEqual({"numerator": 1, "denominator": 1, "percent": 100.0}, metrics["overRefusalRate"])
 
     @patch.object(pipeline.urllib.request, "urlopen")
+    @patch.object(pipeline, "abstention_chat")
     @patch.object(pipeline.judge, "vllm_chat")
     @patch.object(pipeline, "quality_chat")
-    def test_parallel_requests_retry_failures_and_preserve_every_attempt(self, quality_chat, vllm_chat, urlopen):
+    def test_parallel_requests_retry_failures_and_preserve_every_attempt(self, quality_chat, vllm_chat,
+                                                                           abstention_chat, urlopen):
         urlopen.return_value = io.BytesIO(json.dumps({"data": [{"id": "qwen3-14b-awq"}]}).encode())
         lock = threading.Lock()
         active, peak, calls = 0, 0, {}
@@ -246,6 +336,8 @@ class PipelineEvaluationTest(unittest.TestCase):
             return templates[axis]
         vllm_chat.side_effect = remote
         quality_chat.return_value = templates["quality"]
+        abstention_chat.side_effect = lambda url, model, data, timeout: remote(
+            url, model, "abstention", data)
         checkpoints = []
         evaluation = pipeline.evaluate(sample_capture(), CATALOG, "http://unused", "qwen3-14b-awq",
                                        on_checkpoint=lambda value: checkpoints.append(copy.deepcopy(value)))

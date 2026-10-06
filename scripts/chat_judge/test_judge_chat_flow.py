@@ -143,16 +143,15 @@ class ChatJudgeTest(unittest.TestCase):
                            if "UNSUPPORTED" in branch["properties"]["verdict"]["enum"])
         self.assertEqual(0, unsupported["properties"]["sourceIds"]["maxItems"])
 
-    def test_supported_claim_requires_a_source_or_confirmed_condition(self):
+    def test_supported_policy_claim_requires_faq_even_with_confirmed_condition(self):
         result = {"claims": [{
             "claim": "월 1회 변경할 수 있습니다.", "verdict": "SUPPORTED",
             "sourceIds": [], "reason": "근거가 있다고 판단했습니다.",
         }], "overall": "SUPPORTED"}
-        with self.assertRaisesRegex(ValueError, "FAQ 근거 또는 확정된 상담 조건"):
+        with self.assertRaisesRegex(ValueError, "FAQ 근거 ID"):
             judge.validate_result("grounding", result, {"BILLING-0001"}, [])
-        self.assertIs(result, judge.validate_result(
-            "grounding", result, set(), [{"name": "지역", "value": "서울"}]
-        ))
+        with self.assertRaisesRegex(ValueError, "FAQ 근거 ID"):
+            judge.validate_result("grounding", result, set(), [{"name": "지역", "value": "서울"}])
 
     def test_grounding_rejects_claim_copied_from_unanswered_faq(self):
         result = {"claims": [{
@@ -192,6 +191,20 @@ class ChatJudgeTest(unittest.TestCase):
             judge.validate_claim_extraction(
                 {"claims": [{"quote": "미납 요금이 있으면 명의 변경이 가능합니다."}]}, answer
             )
+
+    def test_grounding_fallback_uses_exact_sentences_and_normalizes_only_aggregate(self):
+        answer = "미납 요금이 있으면 완납 후 변경할 수 있습니다. 배송비는 무료가 아닙니다."
+        spans = judge.sentence_spans(answer)
+        self.assertEqual(["미납 요금이 있으면 완납 후 변경할 수 있습니다.",
+                          "배송비는 무료가 아닙니다."], spans)
+        result = {"claims": [
+            {"claim": spans[0], "verdict": "SUPPORTED", "sourceIds": ["FAQ-1"], "reason": "근거 있음"},
+            {"claim": spans[1], "verdict": "UNSUPPORTED", "sourceIds": [], "reason": "근거 없음"}],
+            "overall": "SUPPORTED"}
+        self.assertEqual("SUPPORTED", judge.normalize_grounding_overall(result))
+        self.assertEqual("UNSUPPORTED", result["overall"])
+        self.assertIsNone(judge.normalize_grounding_overall(result))
+        judge.validate_result("grounding", result, {"FAQ-1"}, answer=answer, expected_claims=spans)
 
     @patch.object(judge.urllib.request, "urlopen")
     def test_grounding_extracts_from_answer_then_judges_meaning_without_question_leakage(self, urlopen):
