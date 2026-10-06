@@ -34,6 +34,9 @@ public class MemberProfileService {
         if (socialAccountRepository.existsByUser_UserIdAndProvider(user.getUserId(), SocialAccount.Provider.KAKAO)) {
             loginMethods.add(MemberMeResponse.LoginMethod.KAKAO);
         }
+        if (socialAccountRepository.existsByUser_UserIdAndProvider(user.getUserId(), SocialAccount.Provider.GOOGLE)) {
+            loginMethods.add(MemberMeResponse.LoginMethod.GOOGLE);
+        }
         return MemberMeResponse.member(user, loginMethods);
     }
 }

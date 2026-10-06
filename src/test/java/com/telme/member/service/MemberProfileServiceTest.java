@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
 import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -70,5 +71,23 @@ class MemberProfileServiceTest {
 
         assertThat(response.email()).isNull();
         assertThat(response.loginMethods()).containsExactly(LoginMethod.KAKAO);
+    }
+
+    @Test
+    @DisplayName("구글이 연결된 회원은 로그인 수단에 GOOGLE이 포함된다")
+    void 구글_로그인_수단_조회() {
+        User user = User.builder()
+                .userId(3L)
+                .email("google@example.com")
+                .passwordHash("HASHED")
+                .name("구글회원")
+                .build();
+        when(currentMemberResolver.resolveOptional(request)).thenReturn(Optional.of(user));
+        when(socialAccountRepository.existsByUser_UserIdAndProvider(3L, KAKAO)).thenReturn(true);
+        when(socialAccountRepository.existsByUser_UserIdAndProvider(3L, GOOGLE)).thenReturn(true);
+
+        MemberMeResponse response = service.getMe(request);
+
+        assertThat(response.loginMethods()).containsExactly(LoginMethod.EMAIL, LoginMethod.KAKAO, LoginMethod.GOOGLE);
     }
 }

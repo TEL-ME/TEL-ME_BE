@@ -3,7 +3,6 @@ package com.telme.member.service;
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.config.Oauth2Properties;
-import com.telme.member.entity.SocialAccount;
 import com.telme.member.entity.User;
 import com.telme.member.exception.MemberErrorCode;
 import com.telme.member.repository.UserRepository;
@@ -29,13 +28,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 // 어떤 회원으로 귀결되는지는 세션에 접근 가능한 여기서 전부 판단한다
 //
 // 소셜 로그인 흐름 3가지 : 
-// A-1(로그인 회원이 카카오 연결 시작 — resolveLinkMode)
-// B(카카오 로그인 중 이메일 일치 회원 발견 — resolveLoginMode에서 시작해 SocialAccountLinkService.confirmLink로 이어짐)
-// A-2(소셜 전용 회원이 이메일 로그인을 추가 — 카카오 인증 자체가 없어 이 클래스를 거치지 않고 EmailLoginMethodService가 처리)
+// A-1(로그인 회원이 카카오·구글 연결 시작 — resolveLinkMode)
+// B(소셜 로그인 중 이메일 일치 회원 발견 — resolveLoginMode에서 시작해 SocialAccountLinkService.confirmLink로 이어짐)
+// A-2(소셜 전용 회원이 이메일 로그인을 추가 — 소셜 인증 자체가 없어 이 클래스를 거치지 않고 EmailLoginMethodService가 처리)
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
+public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private static final String DEFAULT_FAILURE_REASON = "OAUTH2_LOGIN_FAILED";
 
@@ -43,7 +42,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository userRepository;
     private final MemberStatusChecker memberStatusChecker;
     private final SocialLoginService socialLoginService;
-    private final KakaoLinkRequestStore kakaoLinkRequestStore;
+    private final SocialLinkRequestStore socialLinkRequestStore;
     private final SocialEmailMatchStore socialEmailMatchStore;
     private final SecurityContextRepository securityContextRepository;
     private final Oauth2Properties oauth2Properties;
@@ -72,27 +71,32 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             throws IOException {
         socialEmailMatchStore.clear(request);
 
-        KakaoLinkRequest pending;
+        SocialLinkRequest pending;
         try {
-            pending = kakaoLinkRequestStore.consume(request);
+            pending = socialLinkRequestStore.consume(request);
         } catch (GeneralException exception) {
             redirectFailure(request, response, exception.getErrorCode().getCode());
             return null;
         }
         if (pending != null) {
-            return resolveLinkMode(
-                    request, response, pending, principal.getProviderUserId(), principal.getEmail());
+            return resolveLinkMode(request, response, pending, principal);
         }
         return resolveLoginMode(request, response, principal);
     }
 
     private User resolveLinkMode(
-            HttpServletRequest request, HttpServletResponse response, KakaoLinkRequest pending,
-            String providerUserId, String providerEmail)
+            HttpServletRequest request, HttpServletResponse response, SocialLinkRequest pending,
+            SocialOAuth2Principal principal)
             throws IOException {
         // pending만 믿지 않고 세션의 현재 로그인 상태와 대조 — 다른 탭에서 로그인 상태가 바뀌었을 수 있다
+        // 프론트 호환을 위해 공급자와 관계없이 기존 사유값을 유지한다
         if (!pending.targetUserId().equals(readSessionUserId(request))) {
             redirectFailure(request, response, "KAKAO_LINK_SESSION_MISMATCH");
+            return null;
+        }
+        // 인가 시작 시 registrationId를 대조했지만, 콜백에서 실제로 인증된 공급자도 한 번 더 확인한다
+        if (pending.provider() != principal.getProvider()) {
+            redirectFailure(request, response, MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED.getCode());
             return null;
         }
         try {
@@ -100,7 +104,7 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
                     .orElseThrow(() -> new GeneralException(MemberErrorCode.UNAUTHENTICATED));
             memberStatusChecker.checkActive(targetUser);
             return socialMemberFinder.linkExisting(
-                    SocialAccount.Provider.KAKAO, providerUserId, providerEmail, targetUser);
+                    pending.provider(), principal.getProviderUserId(), principal.getEmail(), targetUser);
         } catch (GeneralException exception) {
             redirectFailure(request, response, exception.getErrorCode().getCode());
             return null;

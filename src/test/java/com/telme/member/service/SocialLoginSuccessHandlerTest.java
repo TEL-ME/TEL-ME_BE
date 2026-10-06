@@ -41,7 +41,7 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-class KakaoLoginSuccessHandlerTest {
+class SocialLoginSuccessHandlerTest {
 
     private final SocialMemberFinder socialMemberFinder = mock(SocialMemberFinder.class);
     private final UserRepository userRepository = mock(UserRepository.class);
@@ -49,7 +49,7 @@ class KakaoLoginSuccessHandlerTest {
     private final GuestSuccessionService guestSuccessionService = mock(GuestSuccessionService.class);
     private final GuestIdResolver guestIdResolver = new GuestIdResolver();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-24T00:00:00Z"), ZoneOffset.UTC);
-    private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
+    private final SocialLinkRequestStore socialLinkRequestStore = new SocialLinkRequestStore(clock);
     private final SocialEmailMatchStore socialEmailMatchStore = new SocialEmailMatchStore(clock);
     private final SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
     private final LoginCompletionService loginCompletionService = new LoginCompletionService(securityContextRepository);
@@ -62,9 +62,9 @@ class KakaoLoginSuccessHandlerTest {
     };
     private final SocialLoginService socialLoginService = new SocialLoginService(
             socialMemberFinder, guestSuccessionService, guestIdResolver, loginCompletionService, transactionTemplate);
-    private final KakaoLoginSuccessHandler handler = new KakaoLoginSuccessHandler(
+    private final SocialLoginSuccessHandler handler = new SocialLoginSuccessHandler(
             socialMemberFinder, userRepository, memberStatusChecker, socialLoginService,
-            kakaoLinkRequestStore, socialEmailMatchStore, securityContextRepository, oauth2Properties);
+            socialLinkRequestStore, socialEmailMatchStore, securityContextRepository, oauth2Properties);
 
     @AfterEach
     void clearSecurityContext() {
@@ -234,7 +234,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_정상_연결() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
@@ -250,11 +250,48 @@ class KakaoLoginSuccessHandlerTest {
     }
 
     @Test
+    @DisplayName("연결 모드 - 구글 연결을 시작한 회원은 구글 계정이 GOOGLE 공급자로 연결된다")
+    void 연결_모드_구글_정상_연결() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, GOOGLE), "link-state", "google");
+        request.setParameter("state", "link-state");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User targetUser = User.builder().userId(30L).build();
+        when(userRepository.findById(30L)).thenReturn(Optional.of(targetUser));
+        when(socialMemberFinder.linkExisting(GOOGLE, "google-sub-1", "google@example.com", targetUser))
+                .thenReturn(targetUser);
+
+        handler.onAuthenticationSuccess(request, response, googleAuthenticationOf("google-sub-1", "google@example.com"));
+
+        verify(socialMemberFinder).linkExisting(GOOGLE, "google-sub-1", "google@example.com", targetUser);
+        assertThat(request.getSession().getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(30L);
+        assertThat(response.getRedirectedUrl()).isEqualTo("http://localhost:3000/oauth/callback?success=true");
+    }
+
+    @Test
+    @DisplayName("연결 모드 - 시작한 공급자와 콜백의 공급자가 다르면 연결하지 않는다")
+    void 연결_모드_공급자_불일치시_거부() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, GOOGLE), "link-state", "google");
+        request.setParameter("state", "link-state");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-15", null));
+
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
+        verify(socialMemberFinder, never()).findOrCreate(any(), any(), any(), any());
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER400-0");
+    }
+
+    @Test
     @DisplayName("연결 모드 - pending의 targetUserId와 세션 userId가 다르면 연결하지 않는다")
     void 연결_모드_세션_불일치시_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 99L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -271,7 +308,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_비활성_회원은_인증을_제거한다(User.Status status) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).status(status).build();
@@ -297,7 +334,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_이미_연결된_계정이면_거부() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
@@ -316,7 +353,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_실패시_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).role(User.Role.ADMIN).build();
@@ -340,7 +377,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_예상밖_오류도_원래_회원_인증으로_복원() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
@@ -361,7 +398,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원용_재조회도_실패하면_로그아웃_상태로_정리() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
@@ -384,7 +421,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_모드_복원_대상_회원이_없으면_세션_userId도_지운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(USER_ID_ATTRIBUTE, 30L);
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "link-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "link-state", "kakao");
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User targetUser = User.builder().userId(30L).build();
@@ -434,7 +471,7 @@ class KakaoLoginSuccessHandlerTest {
     void 연결_pending_만료시_일반_로그인으로_새지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         Instant longAgo = clock.instant().minusSeconds(600);
-        request.getSession().setAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE, new KakaoLinkRequest(30L, longAgo, null, "link-state"));
+        request.getSession().setAttribute(SocialLinkRequestStore.SESSION_ATTRIBUTE, new SocialLinkRequest(30L, KAKAO, longAgo, null, "link-state"));
         request.setParameter("state", "link-state");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -448,6 +485,14 @@ class KakaoLoginSuccessHandlerTest {
 
     private Authentication authenticationOf(String providerUserId, String email) {
         return authenticationOf(providerUserId, email, null);
+    }
+
+    private Authentication googleAuthenticationOf(String providerUserId, String email) {
+        SocialOAuth2Principal principal = mock(SocialOAuth2Principal.class);
+        when(principal.getProvider()).thenReturn(GOOGLE);
+        when(principal.getProviderUserId()).thenReturn(providerUserId);
+        when(principal.getEmail()).thenReturn(email);
+        return new OAuth2AuthenticationToken(principal, List.of(), "google");
     }
 
     private Authentication authenticationOf(String providerUserId, String email, String nickname) {

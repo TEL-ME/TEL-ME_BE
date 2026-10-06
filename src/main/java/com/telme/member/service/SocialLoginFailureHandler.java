@@ -13,18 +13,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 @RequiredArgsConstructor
-public class KakaoLoginFailureHandler implements AuthenticationFailureHandler {
+public class SocialLoginFailureHandler implements AuthenticationFailureHandler {
 
     private static final String DEFAULT_REASON = "OAUTH2_LOGIN_FAILED";
 
     private final Oauth2Properties oauth2Properties;
-    private final KakaoLinkRequestStore kakaoLinkRequestStore;
+    private final SocialLinkRequestStore socialLinkRequestStore;
 
     @Override
     public void onAuthenticationFailure(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
             throws IOException {
-        kakaoLinkRequestStore.clearIfStateMatches(request);
+        socialLinkRequestStore.clearIfStateMatches(request);
 
         String reason = exception instanceof OAuth2AuthenticationException oauth2Exception
                 ? oauth2Exception.getError().getErrorCode()

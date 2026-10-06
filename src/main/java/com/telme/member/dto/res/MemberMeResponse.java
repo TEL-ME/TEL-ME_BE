@@ -12,7 +12,7 @@ public record MemberMeResponse(
         List<LoginMethod> loginMethods
 ) {
     public enum Role { GUEST, USER, ADMIN }
-    public enum LoginMethod { EMAIL, KAKAO }
+    public enum LoginMethod { EMAIL, KAKAO, GOOGLE }
 
     public static MemberMeResponse guest() {
         return new MemberMeResponse(false, null, null, null, Role.GUEST, List.of());

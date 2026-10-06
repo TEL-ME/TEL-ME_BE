@@ -2,11 +2,12 @@ package com.telme.member.controller;
 
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.MemberStatusChecker;
-import com.telme.member.service.KakaoLinkRequestStore;
-import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import com.telme.member.service.SocialLinkRequestStore;
+import com.telme.member.service.SocialAuthorizationFailureHandler;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,9 +28,10 @@ import com.telme.member.service.EmailLoginMethodService;
 import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.GuestIdentityService;
 import com.telme.member.service.SocialAccountLinkService;
-import com.telme.member.service.KakaoLinkStartService;
-import com.telme.member.service.KakaoLoginFailureHandler;
-import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.entity.SocialAccount;
+import com.telme.member.service.SocialLinkStartService;
+import com.telme.member.service.SocialLoginFailureHandler;
+import com.telme.member.service.SocialLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberAuthService;
 import com.telme.member.service.MemberProfileService;
@@ -59,10 +61,10 @@ class MemberAuthControllerTest {
     private UserRepository userRepository;
 
     @MockitoBean
-    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+    private SocialAuthorizationFailureHandler socialAuthorizationFailureHandler;
 
     @MockitoBean
-    private KakaoLinkRequestStore kakaoLinkRequestStore;
+    private SocialLinkRequestStore socialLinkRequestStore;
 
     @MockitoBean
     private MemberAuthService memberAuthService;
@@ -77,7 +79,7 @@ class MemberAuthControllerTest {
     private EmailLoginMethodService emailLoginMethodService;
 
     @MockitoBean
-    private KakaoLinkStartService kakaoLinkStartService;
+    private SocialLinkStartService socialLinkStartService;
 
     @MockitoBean
     private GuestIdentityService guestIdentityService;
@@ -90,10 +92,10 @@ class MemberAuthControllerTest {
     private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
-    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+    private SocialLoginSuccessHandler socialLoginSuccessHandler;
 
     @MockitoBean
-    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+    private SocialLoginFailureHandler socialLoginFailureHandler;
 
     @Test
     @DisplayName("미인증 상태의 현재 회원 조회는 GUEST 정보를 반환한다")
@@ -129,11 +131,11 @@ class MemberAuthControllerTest {
     @Test
     void 인가_시작_실패는_전용_핸들러로_전달한다() throws Exception {
         org.mockito.Mockito.doThrow(new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED))
-                .when(kakaoLinkRequestStore).bind(any(), any(), any());
+                .when(socialLinkRequestStore).bind(any(), any(), any(), any());
 
         mockMvc.perform(get("/oauth2/authorization/kakao").param("link_token", "invalid-token"));
 
-        org.mockito.Mockito.verify(kakaoAuthorizationFailureHandler).onAuthenticationFailure(any(), any(), any());
+        org.mockito.Mockito.verify(socialAuthorizationFailureHandler).onAuthenticationFailure(any(), any(), any());
     }
 
     @Test
@@ -469,11 +471,32 @@ class MemberAuthControllerTest {
     @WithMockUser
     @DisplayName("카카오 연결 시작은 인증된 상태면 카카오 인증 화면으로 리다이렉트한다")
     void 카카오_연결_시작은_인증되면_리다이렉트된다() throws Exception {
-        when(kakaoLinkStartService.start(any())).thenReturn("/oauth2/authorization/kakao");
+        when(socialLinkStartService.start(any(), eq(SocialAccount.Provider.KAKAO))).thenReturn("/oauth2/authorization/kakao");
 
         mockMvc.perform(get("/api/v1/auth/kakao/link-start"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/oauth2/authorization/kakao"));
+    }
+
+    @Test
+    @DisplayName("구글 연결 시작은 인증 없이 호출하면 401을 반환한다")
+    void 구글_연결_시작은_미인증이면_401() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/google/link-start"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.code").value(MemberErrorCode.UNAUTHENTICATED.getCode()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("구글 연결 시작은 인증된 상태면 구글 인증 화면으로 리다이렉트한다")
+    void 구글_연결_시작은_인증되면_리다이렉트된다() throws Exception {
+        when(socialLinkStartService.start(any(), eq(SocialAccount.Provider.GOOGLE)))
+                .thenReturn("/oauth2/authorization/google");
+
+        mockMvc.perform(get("/api/v1/auth/google/link-start"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/google"));
     }
 
     private record SignUpRequestJson(String name, String email, String password) {

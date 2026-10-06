@@ -1,19 +1,20 @@
 package com.telme.member.config;
 
 import com.telme.global.common.exception.GeneralException;
-import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.service.SocialLinkRequestStore;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
 @RequiredArgsConstructor
-public class KakaoAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
+public class SocialAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
     private final OAuth2AuthorizationRequestResolver delegate;
-    private final KakaoLinkRequestStore linkRequestStore;
+    private final SocialLinkRequestStore linkRequestStore;
 
     @Override
     public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
@@ -35,7 +36,8 @@ public class KakaoAuthorizationRequestResolver implements OAuth2AuthorizationReq
             linkRequestStore.clear(request);
         } else {
             try {
-                linkRequestStore.bind(request, token, authorizationRequest.getState());
+                linkRequestStore.bind(request, token, authorizationRequest.getState(),
+                        authorizationRequest.getAttribute(OAuth2ParameterNames.REGISTRATION_ID));
             } catch (GeneralException exception) {
                 throw new OAuth2AuthenticationException(
                         new OAuth2Error(exception.getErrorCode().getCode()), exception);

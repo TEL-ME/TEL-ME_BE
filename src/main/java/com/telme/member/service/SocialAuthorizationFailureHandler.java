@@ -16,7 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class KakaoAuthorizationFailureHandler implements AuthenticationFailureHandler {
+public class SocialAuthorizationFailureHandler implements AuthenticationFailureHandler {
 
     private final Oauth2Properties oauth2Properties;
 
@@ -33,7 +33,7 @@ public class KakaoAuthorizationFailureHandler implements AuthenticationFailureHa
             }
         }
         if ("OAUTH2_LOGIN_FAILED".equals(reason)) {
-            log.error("카카오 인가 요청 시작 실패", exception);
+            log.error("소셜 인가 요청 시작 실패", exception);
         }
         response.sendRedirect(UriComponentsBuilder.fromUriString(oauth2Properties.frontendUri() + "/oauth/callback")
                 .queryParam("success", false)

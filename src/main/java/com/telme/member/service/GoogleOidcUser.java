@@ -9,7 +9,7 @@ import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
-/** Google OIDC 원본 principal과 내부 회원 처리에 필요한 공통 값을 함께 보관한다. */
+// Google OIDC 원본 principal과 내부 회원 처리에 필요한 공통 값을 함께 보관한다.
 @Getter
 public class GoogleOidcUser implements OidcUser, SocialOAuth2Principal {
 

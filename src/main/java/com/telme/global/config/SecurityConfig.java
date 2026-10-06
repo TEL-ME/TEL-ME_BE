@@ -3,16 +3,16 @@ package com.telme.global.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.member.filter.GuestIdentityFilter;
 import com.telme.member.filter.MemberStatusFilter;
-import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import com.telme.member.service.SocialAuthorizationFailureHandler;
 import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
-import com.telme.member.config.KakaoAuthorizationRequestResolver;
-import com.telme.member.service.KakaoLinkRequestStore;
+import com.telme.member.config.SocialAuthorizationRequestResolver;
+import com.telme.member.service.SocialLinkRequestStore;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import com.telme.member.service.GoogleOidcUserService;
-import com.telme.member.service.KakaoLoginFailureHandler;
-import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.SocialLoginFailureHandler;
+import com.telme.member.service.SocialLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -57,7 +57,9 @@ public class SecurityConfig {
             "/api/auth/login-methods/**",
             "/api/v1/auth/login-methods/**",
             "/api/auth/kakao/link-start",
-            "/api/v1/auth/kakao/link-start"
+            "/api/v1/auth/kakao/link-start",
+            "/api/auth/google/link-start",
+            "/api/v1/auth/google/link-start"
     };
 
     @Bean
@@ -68,12 +70,12 @@ public class SecurityConfig {
             SecurityContextRepository securityContextRepository,
             KakaoOAuth2UserService kakaoOAuth2UserService,
             GoogleOidcUserService googleOidcUserService,
-            KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
-            KakaoLoginFailureHandler kakaoLoginFailureHandler,
-            KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler,
+            SocialLoginSuccessHandler socialLoginSuccessHandler,
+            SocialLoginFailureHandler socialLoginFailureHandler,
+            SocialAuthorizationFailureHandler socialAuthorizationFailureHandler,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             ClientRegistrationRepository clientRegistrationRepository,
-            KakaoLinkRequestStore kakaoLinkRequestStore
+            SocialLinkRequestStore socialLinkRequestStore
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -90,22 +92,22 @@ public class SecurityConfig {
                         .withObjectPostProcessor(new ObjectPostProcessor<OAuth2AuthorizationRequestRedirectFilter>() {
                             @Override
                             public <O extends OAuth2AuthorizationRequestRedirectFilter> O postProcess(O filter) {
-                                filter.setAuthenticationFailureHandler(kakaoAuthorizationFailureHandler);
+                                filter.setAuthenticationFailureHandler(socialAuthorizationFailureHandler);
                                 return filter;
                             }
                         })
                         .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(
-                                new KakaoAuthorizationRequestResolver(
+                                new SocialAuthorizationRequestResolver(
                                         new DefaultOAuth2AuthorizationRequestResolver(
                                                 clientRegistrationRepository, "/oauth2/authorization"),
-                                        kakaoLinkRequestStore)))
+                                        socialLinkRequestStore)))
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(kakaoOAuth2UserService)
                                 .oidcUserService(googleOidcUserService))
-                        .successHandler(kakaoLoginSuccessHandler)
-                        .failureHandler(kakaoLoginFailureHandler)
+                        .successHandler(socialLoginSuccessHandler)
+                        .failureHandler(socialLoginFailureHandler)
                 )
-                // oauth2Login 기본값(카카오 리다이렉트) 대신 /api/**는 다른 API 오류와 같은 형식(401 JSON)으로 응답한다
+                // oauth2Login 기본값(소셜 로그인 페이지 리다이렉트) 대신 /api/**는 다른 API 오류와 같은 형식(401 JSON)으로 응답한다
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
                         restAuthenticationEntryPoint,
                         PathPatternRequestMatcher.withDefaults().matcher("/api/**")))
