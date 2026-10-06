@@ -13,12 +13,12 @@ public class KakaoLinkStartService {
 
     private final CurrentMemberResolver currentMemberResolver;
     private final KakaoLinkRequestStore kakaoLinkRequestStore;
-    private final KakaoEmailMatchStore kakaoEmailMatchStore;
+    private final SocialEmailMatchStore socialEmailMatchStore;
 
     // 클라이언트가 연결 대상 회원을 지정할 수 없다 — 현재 세션의 로그인 회원으로만 고정
     public String start(HttpServletRequest httpRequest) {
         User currentUser = currentMemberResolver.resolve(httpRequest);
-        kakaoEmailMatchStore.clear(httpRequest);
+        socialEmailMatchStore.clear(httpRequest);
         String token = kakaoLinkRequestStore.issue(httpRequest, currentUser.getUserId());
         return KAKAO_AUTHORIZE_PATH + "?link_token=" + token;
     }

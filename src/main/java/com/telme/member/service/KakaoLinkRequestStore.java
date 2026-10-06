@@ -33,7 +33,7 @@ public class KakaoLinkRequestStore {
         if (pending == null || pending.isExpired(clock.instant(), TTL)
                 || pending.startToken() == null || !pending.startToken().equals(startToken)
                 || state == null) {
-            throw new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+            throw new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
         }
         session.setAttribute(SESSION_ATTRIBUTE,
                 new KakaoLinkRequest(pending.targetUserId(), pending.issuedAt(), null, state));
@@ -51,7 +51,7 @@ public class KakaoLinkRequestStore {
         }
         if (pending.isExpired(clock.instant(), TTL)
                 || pending.state() == null || !pending.state().equals(request.getParameter("state"))) {
-            throw new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+            throw new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
         }
         return pending;
     }

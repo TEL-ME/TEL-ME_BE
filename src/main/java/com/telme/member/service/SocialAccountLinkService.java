@@ -2,9 +2,8 @@ package com.telme.member.service;
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.converter.MemberConverter;
-import com.telme.member.dto.req.KakaoLinkConfirmRequest;
+import com.telme.member.dto.req.SocialLinkConfirmRequest;
 import com.telme.member.dto.res.LoginResponse;
-import com.telme.member.entity.SocialAccount;
 import com.telme.member.entity.User;
 import com.telme.member.exception.MemberErrorCode;
 import com.telme.member.repository.UserRepository;
@@ -18,9 +17,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
-public class KakaoAccountLinkService {
+public class SocialAccountLinkService {
 
-    private final KakaoEmailMatchStore kakaoEmailMatchStore;
+    private final SocialEmailMatchStore socialEmailMatchStore;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MemberStatusChecker memberStatusChecker;
@@ -32,15 +31,15 @@ public class KakaoAccountLinkService {
     private final TransactionTemplate transactionTemplate;
 
     public LoginResponse confirmLink(
-            KakaoLinkConfirmRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        KakaoEmailMatch pending = kakaoEmailMatchStore.require(httpRequest);
+            SocialLinkConfirmRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        SocialEmailMatch pending = socialEmailMatchStore.require(httpRequest);
 
         // pending 발급 시점에 이미 존재를 확인한 회원이라 등록 시점과 달리 존재 여부를 시간차로 감출 필요가 없다
         User matchedUser = userRepository.findById(pending.matchedUserId())
-                .orElseThrow(() -> new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED));
+                .orElseThrow(() -> new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED));
 
         if (!passwordEncoder.matches(request.password(), matchedUser.getPasswordHash())) {
-            kakaoEmailMatchStore.registerFailedAttempt(httpRequest, pending);
+            socialEmailMatchStore.registerFailedAttempt(httpRequest, pending);
             throw new GeneralException(MemberErrorCode.INVALID_CREDENTIALS);
         }
 
@@ -51,12 +50,12 @@ public class KakaoAccountLinkService {
         // login()과 동일하게 각각 독립된 트랜잭션으로 순차 처리하고, 둘 다 끝난 뒤에만 세션에 반영한다
         UUID guestId = guestIdResolver.resolve(httpRequest);
         User linkedUser = socialMemberFinder.linkExisting(
-                SocialAccount.Provider.KAKAO, pending.providerUserId(), pending.matchedEmail(), matchedUser);
+                pending.provider(), pending.providerUserId(), pending.matchedEmail(), matchedUser);
         if (guestId != null) {
             transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, linkedUser));
         }
 
-        kakaoEmailMatchStore.clear(httpRequest);
+        socialEmailMatchStore.clear(httpRequest);
         loginCompletionService.completeLogin(linkedUser, guestId, httpRequest, httpResponse);
         return memberConverter.toLoginResponse(linkedUser);
     }

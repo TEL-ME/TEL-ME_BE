@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,15 +23,14 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-// KakaoOAuth2UserService는 원본 카카오 클레임만 넘긴다 — 로그인인지 계정연결인지,
+// OAuth2UserService는 공급자 원본 클레임과 공통 소셜 principal을 넘긴다 — 로그인인지 계정연결인지,
 // 어떤 회원으로 귀결되는지는 세션에 접근 가능한 여기서 전부 판단한다
 //
 // 소셜 로그인 흐름 3가지 : 
 // A-1(로그인 회원이 카카오 연결 시작 — resolveLinkMode)
-// B(카카오 로그인 중 이메일 일치 회원 발견 — resolveLoginMode에서 시작해 KakaoAccountLinkService.confirmLink로 이어짐)
+// B(카카오 로그인 중 이메일 일치 회원 발견 — resolveLoginMode에서 시작해 SocialAccountLinkService.confirmLink로 이어짐)
 // A-2(소셜 전용 회원이 이메일 로그인을 추가 — 카카오 인증 자체가 없어 이 클래스를 거치지 않고 EmailLoginMethodService가 처리)
 @Slf4j
 @Component
@@ -44,14 +42,11 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final SocialMemberFinder socialMemberFinder;
     private final UserRepository userRepository;
     private final MemberStatusChecker memberStatusChecker;
-    private final GuestSuccessionService guestSuccessionService;
-    private final GuestIdResolver guestIdResolver;
-    private final LoginCompletionService loginCompletionService;
+    private final SocialLoginService socialLoginService;
     private final KakaoLinkRequestStore kakaoLinkRequestStore;
-    private final KakaoEmailMatchStore kakaoEmailMatchStore;
+    private final SocialEmailMatchStore socialEmailMatchStore;
     private final SecurityContextRepository securityContextRepository;
     private final Oauth2Properties oauth2Properties;
-    private final TransactionTemplate transactionTemplate;
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
     @Override
@@ -59,24 +54,23 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException {
         try {
-            KakaoOAuth2User kakaoPrincipal = (KakaoOAuth2User) authentication.getPrincipal();
-            User user = resolveUser(
-                    request, response, kakaoPrincipal.getProviderUserId(), kakaoPrincipal.getEmail(), kakaoPrincipal.getNickname());
+            SocialOAuth2Principal principal = (SocialOAuth2Principal) authentication.getPrincipal();
+            User user = resolveUser(request, response, principal);
             if (user == null) {
                 return;
             }
             finalizeSession(user, request, response);
         } catch (RuntimeException exception) {
             // 예상 밖 오류(DB 연결 오류, 동시 생성 재조회 실패 등)까지 여기서 막는다 — 원인은 내부 로그에만 남기고 프론트에는 고정 사유만 보낸다
-            log.error("카카오 로그인 처리 중 예상하지 못한 오류", exception);
+            log.error("소셜 로그인 처리 중 예상하지 못한 오류", exception);
             redirectFailure(request, response, DEFAULT_FAILURE_REASON);
         }
     }
 
     private User resolveUser(
-            HttpServletRequest request, HttpServletResponse response, String providerUserId, String email, String nickname)
+            HttpServletRequest request, HttpServletResponse response, SocialOAuth2Principal principal)
             throws IOException {
-        kakaoEmailMatchStore.clear(request);
+        socialEmailMatchStore.clear(request);
 
         KakaoLinkRequest pending;
         try {
@@ -86,9 +80,10 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
             return null;
         }
         if (pending != null) {
-            return resolveLinkMode(request, response, pending, providerUserId, email);
+            return resolveLinkMode(
+                    request, response, pending, principal.getProviderUserId(), principal.getEmail());
         }
-        return resolveLoginMode(request, response, providerUserId, email, nickname);
+        return resolveLoginMode(request, response, principal);
     }
 
     private User resolveLinkMode(
@@ -113,12 +108,14 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private User resolveLoginMode(
-            HttpServletRequest request, HttpServletResponse response, String providerUserId, String email, String nickname)
+            HttpServletRequest request, HttpServletResponse response, SocialOAuth2Principal principal)
             throws IOException {
         try {
-            return socialMemberFinder.findOrCreate(SocialAccount.Provider.KAKAO, providerUserId, email, nickname);
+            return socialLoginService.findOrCreate(principal);
         } catch (SocialEmailAlreadyLinkedException exception) {
-            kakaoEmailMatchStore.issue(request, providerUserId, exception.getMatchedUserId(), exception.getMatchedEmail());
+            socialEmailMatchStore.issue(
+                    request, principal.getProvider(), principal.getProviderUserId(),
+                    exception.getMatchedUserId(), exception.getMatchedEmail());
             redirectFailure(request, response, MemberErrorCode.EMAIL_LINK_REQUIRED.getCode());
             return null;
         } catch (GeneralException exception) {
@@ -128,20 +125,11 @@ public class KakaoLoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private void finalizeSession(User user, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        UUID guestId = guestIdResolver.resolve(request);
-        if (guestId != null) {
-            try {
-                transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, user));
-            } catch (RuntimeException exception) {
-                logoutHandler.logout(request, response, SecurityContextHolder.getContext().getAuthentication());
-                redirectFailure(request, response, "GUEST_SUCCESSION_FAILED");
-                return;
-            }
+        if (!socialLoginService.completeLogin(user, request, response)) {
+            logoutHandler.logout(request, response, SecurityContextHolder.getContext().getAuthentication());
+            redirectFailure(request, response, "GUEST_SUCCESSION_FAILED");
+            return;
         }
-
-        // 지금까지 SecurityContext엔 원본 카카오 클레임(KakaoOAuth2User)이 담겨 있다 — 이메일 로그인과 같은
-        // completeLogin()에 맡겨 실제로 해석된 회원 기준으로 교체(세션ID 재발급 포함)한다
-        loginCompletionService.completeLogin(user, guestId, request, response);
 
         response.sendRedirect(redirectUri(true, null));
     }

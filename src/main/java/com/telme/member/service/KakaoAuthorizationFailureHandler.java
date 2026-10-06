@@ -26,9 +26,9 @@ public class KakaoAuthorizationFailureHandler implements AuthenticationFailureHa
         String reason = "OAUTH2_LOGIN_FAILED";
         for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
             if (cause instanceof OAuth2AuthenticationException oauth2Exception
-                    && MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED.getCode()
+                    && MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED.getCode()
                             .equals(oauth2Exception.getError().getErrorCode())) {
-                reason = MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED.getCode();
+                reason = MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED.getCode();
                 break;
             }
         }

@@ -10,6 +10,7 @@ import com.telme.member.config.KakaoAuthorizationRequestResolver;
 import com.telme.member.service.KakaoLinkRequestStore;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
@@ -66,6 +67,7 @@ public class SecurityConfig {
             MemberStatusFilter memberStatusFilter,
             SecurityContextRepository securityContextRepository,
             KakaoOAuth2UserService kakaoOAuth2UserService,
+            GoogleOidcUserService googleOidcUserService,
             KakaoLoginSuccessHandler kakaoLoginSuccessHandler,
             KakaoLoginFailureHandler kakaoLoginFailureHandler,
             KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler,
@@ -97,7 +99,9 @@ public class SecurityConfig {
                                         new DefaultOAuth2AuthorizationRequestResolver(
                                                 clientRegistrationRepository, "/oauth2/authorization"),
                                         kakaoLinkRequestStore)))
-                        .userInfoEndpoint(userInfo -> userInfo.userService(kakaoOAuth2UserService))
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(kakaoOAuth2UserService)
+                                .oidcUserService(googleOidcUserService))
                         .successHandler(kakaoLoginSuccessHandler)
                         .failureHandler(kakaoLoginFailureHandler)
                 )
