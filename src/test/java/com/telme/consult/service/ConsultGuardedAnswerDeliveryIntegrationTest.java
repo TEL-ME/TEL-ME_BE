@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.dto.res.ChatMessageHistoryItemResponse;
 import com.telme.chat.service.ChatActor;
+import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatProcessingCommand;
@@ -41,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -86,6 +89,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
     @Autowired ChatEmitterRegistry emitters;
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
+    @Autowired ChatExecutionTraceService traces;
+    @Autowired com.telme.rag.service.AnswerGenerator answerGenerator;
     @MockitoBean TurnAnalyzer analyzer;
     @MockitoBean FaqSearchService search;
     @MockitoBean(name = "baseLlmClient", enforceOverride = true) LlmClient model;
@@ -173,6 +178,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
 
         assertCompleted(SUPPORTED, "GROUNDED");
         assertThat(emitter.tokens()).noneMatch(token -> token.contains("포함"));
+        assertThat(traceFromApi().at("/steps/guard/outcome").asText()).isEqualTo("MODIFIED");
     }
 
     @Test
@@ -181,6 +187,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         processor.request(command);
 
         assertCompleted(AnswerPromptTemplates.NO_EVIDENCE_ANSWER, "NO_EVIDENCE");
+        assertThat(traceFromApi().at("/steps/guard/outcome").asText()).isEqualTo("REPLACED");
     }
 
     @Test
@@ -192,6 +199,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
                 String.class, executionId)).containsExactly("MODEL_ERROR");
         assertThat(emitter.tokens()).noneMatch(token -> token.contains("84,700"));
+        assertThat(traceFromApi().at("/steps/guard/reason").asText()).isEqualTo("GUARD_EXCEPTION");
+        assertThat(traceFromApi().path("steps").toString()).doesNotContain("84,700");
     }
 
     @Test
@@ -207,6 +216,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertCompletedHistory(historyAnswer().content(), "NO_EVIDENCE");
         assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
                 String.class, executionId)).allMatch("NO_EVIDENCE"::equals);
+        assertThat(traceFromApi().at("/steps/searchResults/0/status").asText()).isEqualTo("EMPTY");
+        assertThat(traceFromApi().at("/steps/guard/outcome").asText()).isEqualTo("NOT_RUN");
     }
 
     @ParameterizedTest
@@ -249,6 +260,11 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(jdbc.queryForList(
                 "SELECT status FROM llm_generations WHERE execution_id=? ORDER BY attempt",
                 String.class, executionId)).containsExactly("TIMEOUT", "SUCCESS");
+        var trace = traceFromApi();
+        assertThat(trace.path("modelAttempts")).hasSize(2);
+        assertThat(trace.at("/modelAttempts/1/configuration/options/temperature").asDouble()).isZero();
+        assertThat(trace.at("/modelAttempts/1/configuration/options/num_predict").asInt()).isEqualTo(1024);
+        assertThat(trace.at("/modelAttempts/1/configuration/options/num_ctx").asInt()).isEqualTo(8192);
     }
 
     @Test
@@ -300,6 +316,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(executionStatus()).isEqualTo("COMPLETED");
         assertThat(historyAnswer().content()).isEqualTo(SUPPORTED);
         assertCompletedHistory(SUPPORTED, "GROUNDED");
+        assertThat(traceFromApi().at("/steps/finalTransmission/status").asText()).isEqualTo("DISPATCH_ERROR");
     }
 
     @Test
@@ -421,6 +438,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
                 String.class, executionId)).hasSize(expectedAttempts)
                 .allMatch(status -> status.equals(code.name()));
         assertReadableFailureGuidance();
+        assertThat(traceFromApi().at("/steps/searchResults/0/status").asText()).isEqualTo("FOUND");
+        assertThat(traceFromApi().at("/steps/guard/reason").asText()).isEqualTo("GENERATION_FAILED");
     }
 
     @Test
@@ -455,6 +474,9 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(jdbc.queryForList("SELECT status FROM llm_generations WHERE execution_id=?",
                 String.class, executionId)).isEmpty();
         assertReadableFailureGuidance();
+        assertThat(traceFromApi().at("/steps/searchResults/0/status").asText()).isEqualTo("ERROR");
+        assertThat(traceFromApi().path("steps").has("generationInput")).isFalse();
+        assertThat(traceFromApi().path("steps").toString()).doesNotContain("internal-search-detail");
     }
 
     static Stream<RuntimeException> searchFailures() {
@@ -552,6 +574,240 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         };
     }
 
+    @Test
+    void rewrittenSearchKeepsBothRequestsAndExactFaqSnapshotAfterFaqEdit() {
+        String refined = "유심 재발급 요금";
+        var prepared = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        when(analyzer.analyze(command)).thenReturn(new AnalyzedTurn(prepared, null,
+                Purpose.GENERAL_FAQ, QUERY, refined));
+        long faqId = jdbc.queryForObject(
+                "INSERT INTO faqs(category,question,answer) VALUES ('USIM',?,?) RETURNING faq_id",
+                Long.class, "재발급 비용 질문", "재발급 비용은 7,700원입니다.");
+        try {
+            when(search.search(any())).thenAnswer(invocation -> {
+                var request = (com.telme.faq.dto.req.FaqSearchRequest) invocation.getArgument(0);
+                return request.query().equals(QUERY) ? List.of() : List.of(new FaqSearchResponse(
+                        faqId, "TRACE-FAQ", "USIM", "재발급 비용 질문",
+                        "재발급 비용은 7,700원입니다.", 0.876543, 1,
+                        LocalDate.of(2026, 10, 1), 1, "QUESTION_ONLY"));
+            });
+            script = success(SUPPORTED);
+            processor.request(command);
+            jdbc.update("UPDATE faqs SET answer='이후 변경된 답변', version=2 WHERE faq_id=?", faqId);
+
+            var trace = traceFromApi();
+            assertThat(trace.at("/steps/analysis/refinedQuery").asText()).isEqualTo(refined);
+            assertThat(trace.at("/steps/searchRequests")).hasSize(2);
+            assertThat(trace.at("/steps/searchRequests/0/query").asText()).isEqualTo(QUERY);
+            assertThat(trace.at("/steps/searchRequests/1/query").asText()).isEqualTo(refined);
+            assertThat(trace.at("/steps/searchResults/0/status").asText()).isEqualTo("EMPTY");
+            assertThat(trace.at("/steps/searchResults/1/status").asText()).isEqualTo("FOUND");
+            assertThat(trace.at("/steps/generationInput/sources/0/faqId").asLong()).isEqualTo(faqId);
+            assertThat(trace.at("/steps/generationInput/sources/0/answer").asText()).isEqualTo(SUPPORTED);
+            assertThat(trace.at("/steps/generationInput/sources/0/score").asDouble()).isEqualTo(0.876543);
+            assertThat(trace.at("/steps/generationInput/sources/0/searchRank").asInt()).isEqualTo(1);
+            assertThat(trace.at("/steps/generationInput/sources/0/version").asInt()).isEqualTo(1);
+            assertThat(trace.at("/steps/generationInput/userQuery").asText()).isEqualTo(QUERY);
+            assertThat(trace.at("/steps/guard/outcome").asText()).isEqualTo("KEPT");
+            assertCompleted(SUPPORTED, "GROUNDED");
+        } finally {
+            jdbc.update("DELETE FROM message_sources WHERE faq_id=?", faqId);
+            jdbc.update("DELETE FROM faqs WHERE faq_id=?", faqId);
+        }
+    }
+
+    @Test
+    void existingRoutingIsJoinedUsingInputMessageAndOldExecutionIsNotInvented() {
+        jdbc.update("INSERT INTO query_routings(message_id,intent,refined_query,confidence,method)"
+                        + " VALUES (?,'FAQ','기존 정제 질문',0.875,'LLM')", command.inputMessageId());
+        var trace = traceFromApi();
+        assertThat(trace.path("traceRecorded").asBoolean()).isFalse();
+        assertThat(trace.path("steps").isNull()).isTrue();
+        assertThat(trace.at("/routing/0/intent").asText()).isEqualTo("FAQ");
+        assertThat(trace.at("/routing/0/refinedQuery").asText()).isEqualTo("기존 정제 질문");
+        assertThat(trace.at("/routing/0/confidence").asDouble()).isEqualTo(0.875);
+        assertThat(trace.path("finalAnswer").isNull()).isTrue();
+    }
+
+    @Test
+    void modelAlreadyReturningSafeGuidanceIsNotAttributedToGuardReplacement() {
+        script = success(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        processor.request(command);
+        assertCompleted(AnswerPromptTemplates.NO_EVIDENCE_ANSWER, "NO_EVIDENCE");
+        assertThat(traceFromApi().at("/steps/guard/outcome").asText()).isEqualTo("KEPT");
+    }
+
+    @Test
+    void traceApiRejectsOtherMemberWrongSessionAndUnauthenticatedAccess() throws Exception {
+        script = success(SUPPORTED);
+        processor.request(command);
+        String path = "/api/v1/chat/sessions/" + sessionId + "/executions/" + executionId + "/trace";
+        var other = new MockHttpSession();
+        other.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId + 999999);
+        mockMvc.perform(get(path).session(other)).andExpect(status().isNotFound());
+        // Existing guest filter issues an anonymous guest identity; it still cannot own this execution.
+        mockMvc.perform(get(path)).andExpect(status().isNotFound());
+        var owner = new MockHttpSession();
+        owner.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        mockMvc.perform(get("/api/v1/chat/sessions/" + (sessionId + 999999)
+                        + "/executions/" + executionId + "/trace").session(owner))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void guestTraceUsesSameOwnershipBoundaryAsHistory() throws Exception {
+        UUID guest = UUID.randomUUID();
+        jdbc.update("INSERT INTO guests(guest_id,expires_at) VALUES (?,now()+interval '1 day')", guest);
+        try {
+            jdbc.update("UPDATE chat_sessions SET user_id=NULL,guest_id=? WHERE session_id=?", guest, sessionId);
+            var owner = new MockHttpSession();
+            owner.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, guest);
+            var other = new MockHttpSession();
+            other.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, UUID.randomUUID());
+            String path = "/api/v1/chat/sessions/" + sessionId + "/executions/" + executionId + "/trace";
+            mockMvc.perform(get(path).session(owner)).andExpect(status().isOk());
+            mockMvc.perform(get(path).session(other)).andExpect(status().isNotFound());
+        } finally {
+            jdbc.update("UPDATE chat_sessions SET user_id=?,guest_id=NULL WHERE session_id=?", userId, sessionId);
+            jdbc.update("DELETE FROM guests WHERE guest_id=?", guest);
+        }
+    }
+
+    @Test
+    void concurrentRequestsKeepQuestionsSourcesAttemptsAndAnswersInTheirOwnExecution() throws Exception {
+        long secondSession = jdbc.queryForObject(
+                "INSERT INTO chat_sessions(user_id,title) VALUES (?,'동시 추적') RETURNING session_id",
+                Long.class, userId);
+        long secondInput = jdbc.queryForObject(
+                "INSERT INTO chat_messages(session_id,sequence_no,role,message_type,content,status)"
+                        + " VALUES (?,1,'USER','QUESTION','별도 질문','COMPLETED') RETURNING message_id",
+                Long.class, secondSession);
+        long secondExecution = jdbc.queryForObject(
+                "INSERT INTO chat_executions(session_id,input_message_id,status) VALUES (?,?,'RUNNING')"
+                        + " RETURNING execution_id", Long.class, secondSession, secondInput);
+        long secondRequest = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,1,'FAQ','별도 질문') RETURNING consult_request_id",
+                Long.class, secondSession, secondInput);
+        var secondCommand = new ChatProcessingCommand(secondExecution, secondSession, secondInput, "별도 질문");
+        var secondPrepared = consult.prepareTurn(secondSession, secondRequest, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        when(analyzer.analyze(secondCommand)).thenReturn(new AnalyzedTurn(secondPrepared, null,
+                Purpose.GENERAL_FAQ, "별도 질문", "별도 질문"));
+        when(search.search(any())).thenAnswer(invocation -> {
+            var request = (com.telme.faq.dto.req.FaqSearchRequest) invocation.getArgument(0);
+            boolean second = request.query().equals("별도 질문");
+            return List.of(new FaqSearchResponse(second ? 222L : 111L, null, "USIM",
+                    second ? "SECOND_FAQ" : "FIRST_FAQ", SUPPORTED, 0.9, 1,
+                    LocalDate.of(2026, 10, 1), 1, null));
+        });
+        emitters.register(secondExecution, new SseEmitter() {
+            @Override public void send(SseEventBuilder builder) {}
+            @Override public void complete() {}
+        });
+        script = stream -> { stream.onToken(SUPPORTED); stream.onComplete(); };
+        try {
+            var first = CompletableFuture.runAsync(() -> processor.request(command));
+            var second = CompletableFuture.runAsync(() -> processor.request(secondCommand));
+            CompletableFuture.allOf(first, second).get(15, TimeUnit.SECONDS);
+            var firstTrace = traceFromApi();
+            JsonNode secondTrace = objectMapper.valueToTree(
+                    traces.get(new ChatActor(userId, null), secondSession, secondExecution));
+            assertThat(firstTrace.path("originalUserMessage").asText()).isEqualTo(QUERY);
+            assertThat(secondTrace.path("originalUserMessage").asText()).isEqualTo("별도 질문");
+            assertThat(firstTrace.at("/steps/generationInput/sources/0/question").asText()).isEqualTo("FIRST_FAQ");
+            assertThat(secondTrace.at("/steps/generationInput/sources/0/question").asText()).isEqualTo("SECOND_FAQ");
+            assertThat(firstTrace.path("modelAttempts")).hasSize(1);
+            assertThat(secondTrace.path("modelAttempts")).hasSize(1);
+            assertThat(firstTrace.at("/modelAttempts/0/generationId").asLong())
+                    .isNotEqualTo(secondTrace.at("/modelAttempts/0/generationId").asLong());
+            assertThat(secondTrace.path("finalAnswer").asText()).isEqualTo(SUPPORTED);
+            assertCompleted(SUPPORTED, "GROUNDED");
+        } finally {
+            jdbc.update("DELETE FROM consult_conditions WHERE consult_request_id=?", secondRequest);
+            jdbc.update("DELETE FROM consult_requests WHERE consult_request_id=?", secondRequest);
+            jdbc.update("DELETE FROM chat_sessions WHERE session_id=?", secondSession);
+        }
+    }
+
+    @Test
+    void atomicStageWritesKeepParallelMetadataWithoutOverwritingOtherSteps() throws Exception {
+        var first = CompletableFuture.runAsync(() -> {
+            for (int i = 0; i < 8; i++) traces.append(executionId, "parallel", Map.of("attempt", i));
+        });
+        var second = CompletableFuture.runAsync(() -> {
+            for (int i = 0; i < 8; i++) traces.append(executionId, "parallel", Map.of("attempt", i + 8));
+            traces.stage(executionId, "anotherStage", Map.of("status", "PRESENT"));
+        });
+        CompletableFuture.allOf(first, second).get(10, TimeUnit.SECONDS);
+        assertThat(traceFromApi().at("/steps/parallel")).hasSize(16);
+        assertThat(traceFromApi().at("/steps/anotherStage/status").asText()).isEqualTo("PRESENT");
+    }
+
+    @Test
+    void additiveMigrationPreservesExistingExecutionsAndModelAttempts() throws Exception {
+        String schema = "trace_compat_" + UUID.randomUUID().toString().replace("-", "");
+        jdbc.execute("CREATE SCHEMA " + schema);
+        try {
+            jdbc.execute("CREATE TABLE " + schema
+                    + ".chat_executions(execution_id bigint PRIMARY KEY, status varchar(20))");
+            jdbc.execute("CREATE TABLE " + schema
+                    + ".llm_generations(generation_id bigint PRIMARY KEY, status varchar(30))");
+            jdbc.execute("INSERT INTO " + schema + ".chat_executions VALUES (1,'FAILED')");
+            jdbc.execute("INSERT INTO " + schema + ".llm_generations VALUES (1,'TIMEOUT')");
+            try (var resource = getClass().getResourceAsStream(
+                    "/db/migration/V19__add_execution_pipeline_trace.sql")) {
+                assertThat(resource).isNotNull();
+                String migration = new String(resource.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                        .replace("chat_executions", schema + ".chat_executions")
+                        .replace("llm_generations", schema + ".llm_generations");
+                jdbc.execute(migration);
+            }
+            assertThat(jdbc.queryForObject("SELECT status FROM " + schema
+                    + ".chat_executions WHERE execution_id=1", String.class)).isEqualTo("FAILED");
+            assertThat(jdbc.queryForObject("SELECT pipeline_trace::text FROM " + schema
+                    + ".chat_executions WHERE execution_id=1", String.class)).isNull();
+            assertThat(jdbc.queryForObject("SELECT status FROM " + schema
+                    + ".llm_generations WHERE generation_id=1", String.class)).isEqualTo("TIMEOUT");
+            assertThat(jdbc.queryForObject("SELECT request_options::text FROM " + schema
+                    + ".llm_generations WHERE generation_id=1", String.class)).isNull();
+        } finally {
+            jdbc.execute("DROP SCHEMA " + schema + " CASCADE");
+        }
+    }
+
+    @Test
+    void multipleGenerationsInOneExecutionKeepConsultationReferencesAndGuardResults() {
+        long secondRequest = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ','하위 질문') RETURNING consult_request_id",
+                Long.class, sessionId, command.inputMessageId());
+        script = success(SUPPORTED);
+        var sink = new LlmStreamHandler() {
+            @Override public void onToken(String token) {}
+            @Override public void onComplete() {}
+            @Override public void onError(Throwable error) {}
+        };
+        for (long consultation : new long[] {requestId, secondRequest}) {
+            answerGenerator.generate(com.telme.rag.dto.req.AnswerRequest.builder()
+                    .executionId(executionId).consultRequestId(consultation).userQuery(QUERY)
+                    .searchResults(List.of(new FaqSearchResponse(consultation, null, "USIM",
+                            "하위 질문 근거", SUPPORTED, 0.9, 1, LocalDate.of(2026, 10, 1), 1, null)))
+                    .build(), sink);
+        }
+        var trace = traceFromApi();
+        assertThat(trace.at("/steps/generationInputs")).hasSize(2);
+        assertThat(trace.at("/steps/guardResults")).hasSize(2);
+        assertThat(trace.path("steps").has("generationInput")).isFalse();
+        assertThat(trace.at("/steps/generationInputs/0/consultRequestId").asLong()).isEqualTo(requestId);
+        assertThat(trace.at("/steps/generationInputs/1/consultRequestId").asLong()).isEqualTo(secondRequest);
+        assertThat(trace.at("/steps/guardResults/0/consultRequestId").asLong()).isEqualTo(requestId);
+        assertThat(trace.at("/steps/guardResults/1/consultRequestId").asLong()).isEqualTo(secondRequest);
+        assertThat(trace.at("/modelAttempts/0/configuration/consultRequestId").asLong()).isEqualTo(requestId);
+        assertThat(trace.at("/modelAttempts/1/configuration/consultRequestId").asLong()).isEqualTo(secondRequest);
+    }
+
     private void assertCompleted(String answer, String basis, String... names) {
         assertThat(executionStatus()).isEqualTo("COMPLETED");
         assertThat(outputContent()).isEqualTo(answer);
@@ -565,9 +821,19 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         assertThat(((ChatExecutionState) terminal).outputMessage().messageId())
                 .isEqualTo(historyAnswer().messageId());
         assertCompletedHistory(answer, basis);
+        assertThat(traceFromApi().at("/steps/finalTransmission/status").asText()).isEqualTo("DISPATCH_RETURNED");
     }
 
     private void assertCompletedHistory(String answer, String basis) {
+        var trace = traceFromApi();
+        assertThat(trace.path("executionId").asLong()).isEqualTo(executionId);
+        assertThat(trace.path("originalUserMessage").asText()).isEqualTo(QUERY);
+        assertThat(trace.path("finalAnswer").asText()).isEqualTo(answer);
+        assertThat(trace.path("answerBasis").asText()).isEqualTo(basis);
+        assertThat(trace.at("/steps/finalTransmission/outputMessageId").asLong())
+                .isEqualTo(trace.path("outputMessageId").asLong());
+        assertThat(trace.at("/steps/finalTransmission/status").asText())
+                .isIn("DISPATCH_RETURNED", "DISPATCH_ERROR");
         JsonNode firstRead = historyFromApi("?size=20");
         assertThat(firstRead.path("messages").size()).isEqualTo(2);
         assertThat(firstRead.path("runningExecutionId").isNull()).isTrue();
@@ -585,6 +851,13 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
     }
 
     private void assertFailedHistory(String expectedStatus, String errorCode) {
+        var trace = traceFromApi();
+        assertThat(trace.path("executionId").asLong()).isEqualTo(executionId);
+        assertThat(trace.path("originalUserMessage").asText()).isEqualTo(QUERY);
+        assertThat(trace.path("status").asText()).isEqualTo(expectedStatus);
+        assertThat(trace.path("errorCode").asText()).isEqualTo(errorCode);
+        assertThat(trace.path("finalAnswer").isNull()).isTrue();
+        assertThat(trace.path("steps").has("finalTransmission")).isFalse();
         JsonNode firstRead = historyFromApi("?size=20");
         assertThat(firstRead.path("messages").size()).isEqualTo(2);
         assertThat(firstRead.path("runningExecutionId").isNull()).isTrue();
@@ -618,6 +891,19 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
             return objectMapper.readTree(response.getContentAsByteArray()).path("result");
         } catch (Exception exception) {
             throw new AssertionError("대화 기록 조회 API 검증 실패", exception);
+        }
+    }
+
+    private JsonNode traceFromApi() {
+        MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+        try {
+            var response = mockMvc.perform(get("/api/v1/chat/sessions/" + sessionId
+                            + "/executions/" + executionId + "/trace").session(httpSession))
+                    .andExpect(status().isOk()).andReturn().getResponse();
+            return objectMapper.readTree(response.getContentAsByteArray()).path("result");
+        } catch (Exception exception) {
+            throw new AssertionError("Execution trace API verification failed", exception);
         }
     }
 
