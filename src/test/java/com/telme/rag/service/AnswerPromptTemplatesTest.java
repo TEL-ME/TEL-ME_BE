@@ -1,11 +1,16 @@
 package com.telme.rag.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
@@ -14,43 +19,81 @@ import com.telme.rag.dto.req.AnswerRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class AnswerPromptTemplatesTest {
-    @Test void v4AddsOnlyRelationshipConstraintToVersionedV3() throws Exception {
+
+    @Test
+    @DisplayName("일반 관계 제한 두 줄 외에는 v3 전문의 역할·거절·출력 계약을 유지한다")
+    void 일반_관계_제한_외_v3_전문을_유지한다() throws Exception {
         String baseline;
-        try(var input=getClass().getResourceAsStream("/rag/prompt-relations/rag-answer-v3.txt")) {
-            baseline=new String(input.readAllBytes(),StandardCharsets.UTF_8);
+        try (var input = getClass().getResourceAsStream("/rag/prompt-relations/rag-answer-v3.txt")) {
+            assertThat(input).isNotNull();
+            baseline = new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
-        String addition="   FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.\n"
-            +"   해당 관계가 답변(A)에 명시된 경우에만 설명하십시오.\n"
-            +"   관계 근거가 없으면 수령 방법을 중복 발송의 원인으로, 이메일 무료를 즉시 확인이라는 장점으로,\n"
-            +"   재발급 비용과 배송 기간을 배송비 포함 여부로 연결하지 마십시오.\n";
-        // Protects role, refusal, length, output conventions and all other rules as one baseline contract.
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT.replace(addition,"")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.1");
+        String addition = "   FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.\n"
+                + "   해당 관계가 답변(A)에 명시된 경우에만 설명하십시오.\n";
+
+        // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(addition);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT.replace(addition, "")).isEqualTo(baseline);
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.2");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
     }
-    @Test void runtimeGenerationUsesNewSystemVersionWithoutChangingUserEvidenceOrOptions() {
-        var source=new FaqSearchResponse(1L,"slot","cat","FAQ question", "7,700원입니다.",.9,null,null,1,null);
-        LlmClient client=mock(LlmClient.class);
-        doAnswer(i->{LlmStreamHandler h=i.getArgument(1);h.onToken("7,700원입니다.");h.onComplete();return null;}).when(client).stream(any(),any());
-        EvidenceRelevanceChecker relevance=mock(EvidenceRelevanceChecker.class);when(relevance.canAnswer(any(),any(),any())).thenReturn(true);
-        var generator=new RagAnswerGenerator(client,new AnswerContextConverter(),new AnswerGuard(),relevance,mock(LlmGenerationRecorder.class),ExecutionTrace.noop());
-        var request=AnswerRequest.builder().userQuery("cost?").conditions(Map.of("location","국내")).searchResults(List.of(source)).build();
-        LlmStreamHandler handler=mock(LlmStreamHandler.class);var result=generator.generate(request,handler);
-        var capture=org.mockito.ArgumentCaptor.forClass(LlmRequest.class);verify(client).stream(capture.capture(),any());
-        LlmRequest sent=capture.getValue();
+
+    @Test
+    @DisplayName("실제 생성 요청에 새 전문과 버전을 전달하고 근거·조건·모델 옵션을 유지한다")
+    void 생성_요청에_새_전문과_버전을_전달한다() {
+        var source = new FaqSearchResponse(
+                1L, "slot", "cat", "FAQ question", "7,700원입니다.", 0.9, null, null, 1, null);
+        LlmClient client = mock(LlmClient.class);
+        doAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken("7,700원입니다.");
+            stream.onComplete();
+            return null;
+        }).when(client).stream(any(), any());
+        EvidenceRelevanceChecker relevance = mock(EvidenceRelevanceChecker.class);
+        when(relevance.canAnswer(any(), any(), any())).thenReturn(true);
+        var generator = new RagAnswerGenerator(
+                client, new AnswerContextConverter(), new AnswerGuard(), relevance,
+                mock(LlmGenerationRecorder.class), ExecutionTrace.noop());
+        var request = AnswerRequest.builder()
+                .userQuery("cost?")
+                .conditions(Map.of("location", "국내"))
+                .searchResults(List.of(source))
+                .build();
+        LlmStreamHandler handler = mock(LlmStreamHandler.class);
+
+        var result = generator.generate(request, handler);
+
+        var capture = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(client).stream(capture.capture(), any());
+        LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.1");
-        assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(request,new AnswerContextConverter().toContext(List.of(source))));
-        assertThat(sent.temperature()).isNull();assertThat(sent.maxTokens()).isNull();
-        assertThat(result.answer()).isEqualTo("7,700원입니다.");verify(handler).onToken("7,700원입니다.");verify(handler).onComplete();
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.2");
+        assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
+                request, new AnswerContextConverter().toContext(List.of(source))));
+        assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");
+        assertThat(sent.contextCount()).isEqualTo(1);
+        assertThat(sent.taskType()).isEqualTo(TaskType.RAG_ANSWER);
+        assertThat(sent.temperature()).isNull();
+        assertThat(sent.maxTokens()).isNull();
+        assertThat(result.answer()).isEqualTo("7,700원입니다.");
+        verify(handler).onToken("7,700원입니다.");
+        verify(handler).onComplete();
     }
-    @Test void supportedExistingCostAndIssuanceStatementsStillPassUnmodifiedGuard() {
-        var guard=new AnswerGuard();
-        String evidence="매장을 방문하시면 즉시 재발급됩니다. 비용은 7,700원입니다.";
-        String answer="매장 재발급 비용은 7,700원이며 즉시 발급됩니다.";
-        assertThat(guard.applyEvidencePolicy(answer,evidence,"매장 재발급 비용과 발급 시점은?" )).isEqualTo(answer);
+
+    @Test
+    @DisplayName("기존 근거에 있는 비용과 즉시 발급 문장은 동일한 Guard를 통과한다")
+    void 근거에_있는_비용과_발급_안내를_보존한다() {
+        var guard = new AnswerGuard();
+        String evidence = "매장을 방문하시면 즉시 재발급됩니다. 비용은 7,700원입니다.";
+        String answer = "매장 재발급 비용은 7,700원이며 즉시 발급됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "매장 재발급 비용과 발급 시점은?"))
+                .isEqualTo(answer);
     }
 }

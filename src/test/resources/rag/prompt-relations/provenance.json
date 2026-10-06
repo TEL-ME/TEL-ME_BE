@@ -1,5 +1,5 @@
 {
-  "origin_path": "../TEL-ME_BE-local/.measure/frozen-baseline-20260930/exaone/baseline-ollama-20260930-084806-361.json",
+  "origin_description": "2026-09-30 고정 기준 실행의 EXAONE 결과에서 추출",
   "origin_sha256": "8216f3673a1a1df78e17584fffa39cecb064a17f2f3abf4b2592613f0defb728",
   "generator": "ollama",
   "generator_model": "exaone3.5:7.8b",
