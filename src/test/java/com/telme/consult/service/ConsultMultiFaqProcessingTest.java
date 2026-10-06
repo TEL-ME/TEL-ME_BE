@@ -79,7 +79,7 @@ class ConsultMultiFaqProcessingTest {
     }
 
     @Test
-    void eachQuestionAnswersItselfAndFallsBackToUserQuestionForSearch() {
+    void eachQuestionUsesOnlyItsOwnTextForSearchAndAnswer() {
         prepareEvents();
         List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
         var processor = processor(input -> {
@@ -92,7 +92,7 @@ class ConsultMultiFaqProcessingTest {
         assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::originalUserQuery)
                 .containsExactly("요금제 종류", "로밍 신청 방법");
         assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::searchQuery)
-                .containsOnly(command.content());
+                .containsExactly("요금제 종류", "로밍 신청 방법");
     }
 
     @Test
@@ -146,7 +146,7 @@ class ConsultMultiFaqProcessingTest {
                 Map.of(), null, null, DialogueDecision.MessageOrigin.NONE);
         var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision);
         return new ConsultChatProcessingService.FaqTurn(
-                new ConsultService.PreparationResult(prepared, null), queryText, command.content());
+                new ConsultService.PreparationResult(prepared, null), queryText);
     }
 
     private ConsultChatProcessingService.GeneratedAnswer generated(

@@ -57,7 +57,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             List<ConsultChatProcessingService.FaqTurn> faqTurns = result.faqQueries().stream()
                     .map(query -> new ConsultChatProcessingService.FaqTurn(
                             preparation.prepareAnalysis(context.sessionId(), query, LocationStatus.MISSING),
-                            query.queryText(), context.message()))
+                            query.queryText()))
                     .toList();
             return AnalyzedTurn.multipleFaq(faqTurns);
         }

@@ -174,6 +174,44 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        void singleConsultRejectsMoreThanThreeFaqQuestionsBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제, 로밍, 명의변경, 유심",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 요금","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"명의변경 방법","conditions":{}},
+                   {"order":4,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}}
+                 ]}
+                """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(
+                    msg("요금제, 로밍, 명의변경, 유심 알려줘"), null))
+                    .isInstanceOf(TooManyFaqQuestionsException.class)
+                    .hasMessageContaining("최대 3개");
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void unsafeFaqSubQueryDoesNotFallBackToWholeCompoundQuestion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제와 로밍 방법",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}
+                 ]}
+                """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(
+                    msg("요금제 종류와 로밍 신청 방법 알려줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class)
+                    .hasMessageContaining("안전하게 검색");
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("UNKNOWN → 서브질의 0건")
         void unknown() {
             given(llmClient.generate(any())).willReturn("""

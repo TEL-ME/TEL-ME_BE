@@ -156,11 +156,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         for (int i = 0; i < faqTurns.size(); i++) {
             FaqTurn faq = faqTurns.get(i);
             ConsultService.PreparedTurn prepared = preparedTurns.get(i);
-            // 답변은 하위 질문에 맞추고, 짧은 하위 질문이 검색 기준을 못 넘으면 사용자 원문으로 다시 찾는다.
-            // 분해 과정에서 "해외 로밍"처럼 앞 질문의 대상이 빠져도 원문 검색이 이를 보완한다.
             GeneratedAnswer generated = answers.generate(new AnswerInput(
                     command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
-                    Purpose.GENERAL_FAQ, faq.queryText(), faq.userQuestion(),
+                    Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
                     conditionConverter.convert(prepared.decision().conditions()), false));
             if (generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
                 throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
@@ -317,17 +315,14 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
     }
 
-    public record FaqTurn(
-            ConsultService.PreparationResult preparation, String queryText, String userQuestion) {
+    public record FaqTurn(ConsultService.PreparationResult preparation, String queryText) {
         public FaqTurn {
             if (preparation == null || preparation.waitingForReply()
                     || preparation.prepared() == null
-                    || queryText == null || queryText.isBlank()
-                    || userQuestion == null || userQuestion.isBlank()) {
+                    || queryText == null || queryText.isBlank()) {
                 throw new IllegalArgumentException("진행 가능한 FAQ 하위 질문이 필요합니다.");
             }
             queryText = queryText.strip();
-            userQuestion = userQuestion.strip();
         }
     }
 

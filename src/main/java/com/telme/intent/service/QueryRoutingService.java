@@ -49,6 +49,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 @Slf4j
 public class QueryRoutingService {
+    private static final int MAX_FAQ_SUB_QUERIES = 3;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -122,7 +123,7 @@ public class QueryRoutingService {
                 log.info("[라우팅] 이미 라우팅된 메시지입니다. 기존 결과를 반환합니다: messageId={}", userMessage.getMessageId());
                 IntentRouteResponse result =
                     runInTransaction(() -> buildExistingResponse(existing.get(), userMessage.getMessageId()));
-                ensureSingleConsultSupported(result, singleConsultOnly);
+                ensureSingleConsultSupported(result, singleConsultOnly, userMessage.getContent());
                 return result;
             }
         }
@@ -213,7 +214,7 @@ public class QueryRoutingService {
 
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
-        ensureSingleConsultSupported(result, singleConsultOnly);
+        ensureSingleConsultSupported(result, singleConsultOnly, question);
         return result;
     }
 
@@ -273,6 +274,12 @@ public class QueryRoutingService {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
                     payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1);
+            if (payload.intent() == QueryRouting.Intent.FAQ && normalized.size() > 1
+                    && (queryText == null || queryText.isBlank()
+                    || queryText.equals(question))) {
+                throw new UnsupportedCompoundQuestionException(
+                        "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
+            }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
@@ -491,10 +498,13 @@ public class QueryRoutingService {
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
         }
+        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
+        }
     }
 
     private void ensureSingleConsultSupported(
-            IntentRouteResponse response, boolean singleConsultOnly) {
+            IntentRouteResponse response, boolean singleConsultOnly, String originalQuestion) {
         if (!singleConsultOnly || response == null) {
             return;
         }
@@ -505,6 +515,16 @@ public class QueryRoutingService {
                 || response.subQueries().stream().anyMatch(
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
+        }
+        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
+        }
+        if (subQueryCount > 1 && response.intent() == QueryRouting.Intent.FAQ
+                && response.subQueries().stream().anyMatch(sub -> sub.queryText() == null
+                || sub.queryText().isBlank()
+                || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
+            throw new UnsupportedCompoundQuestionException(
+                    "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
         }
     }
 

@@ -5,4 +5,8 @@ public final class UnsupportedCompoundQuestionException extends IllegalStateExce
     public UnsupportedCompoundQuestionException() {
         super("현재 Chat 상담 연결은 FAQ와 매장 복합 질문을 지원하지 않습니다.");
     }
+
+    public UnsupportedCompoundQuestionException(String reason) {
+        super(reason);
+    }
 }

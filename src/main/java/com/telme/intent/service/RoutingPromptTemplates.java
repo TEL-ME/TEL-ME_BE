@@ -42,7 +42,9 @@ public final class RoutingPromptTemplates {
         [검색 질문 보존]
         - 현재 질문이나 이전 대화에 없는 지역, 상품, 기간, 조건을 추측해 추가하지 않는다.
         - 질문이 여러 대상이나 조건을 함께 묻는다면 FAQ 하위 질문에 모두 남긴다. 5G, LTE, 알뜰 요금제를 묻는 질문을 5G만으로 줄이지 않는다.
-        - FAQ만 묻는 질문은 조건이 여러 개여도 subQueries에 FAQ 한 건만 넣고, queryText에 전체 질문의 조건을 담는다.
+        - 하나의 FAQ 질문에 대상이나 조건이 여러 개 붙은 경우에는 FAQ 하위 질문 한 건에 모든 조건을 남긴다. 특히 두 대상을 비교해 달라는 질문은 각각의 설명으로 쪼개지 않고 비교 요청 한 건으로 둔다.
+        - 서로 독립적으로 답해야 할 FAQ 질문이 2~3개면 질문별 FAQ 하위 질문을 순서대로 만든다. 3개를 넘으면 임의로 합치거나 생략하지 않는다.
+        - 각 FAQ queryText는 그 문장만 검색해도 대상을 알 수 있게 만든다. 원문이나 이전 대화에 있는 공통 대상은 필요한 하위 질문마다 반복하되, 없는 조건은 만들지 않는다.
         - 서로 다른 업무인 FAQ와 지점 검색을 함께 요청한 경우에만 FAQ와 STORE 하위 질문을 각각 한 건씩 넣는다.
         - 의미가 같은 검색 질문으로 바꾸기 어렵다면 사용자 원문을 refinedQuery와 FAQ queryText에 그대로 사용한다.
         - 질문에 없는 다른 업무나 행동을 검색 질문에 추가하지 않는다. 해지를 물으면 번호이동을 추가하지 않는다.
@@ -50,6 +52,12 @@ public final class RoutingPromptTemplates {
         [Few-Shot 예시]
         질문: "너겟 요금제 5G 무제한 결합할인 조건이 어떻게 되나요?"
         응답: {"intent":"FAQ","confidence":0.98,"refinedQuery":"너겟 요금제 5G 무제한 결합할인 조건","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"너겟 요금제 5G 무제한 결합할인 조건","conditions":{}}]}
+
+        질문: "해외 로밍 요금과 해외 로밍 데이터 차단 방법을 알려줘"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"해외 로밍 요금과 해외 로밍 데이터 차단 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"해외 로밍 요금","conditions":{}},{"order":2,"intent":"FAQ","queryText":"해외 로밍 데이터 차단 방법","conditions":{}}]}
+
+        질문: "5G와 LTE 요금제 종류를 비교해줘"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
 
         질문: "부모님 명의 휴대폰을 제 명의로 바꾸려면 무엇이 필요한가요?"
         응답: {

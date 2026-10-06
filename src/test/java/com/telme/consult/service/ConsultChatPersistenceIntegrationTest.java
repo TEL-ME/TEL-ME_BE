@@ -30,6 +30,7 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
+import com.telme.rag.service.AnswerPromptTemplates;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -551,8 +552,8 @@ class ConsultChatPersistenceIntegrationTest {
         });
         var processor = new ConsultChatProcessingService(
                 command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
-                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류", "요금제와 로밍 신청 방법 알려줘"),
-                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법", "요금제와 로밍 신청 방법 알려줘"))),
+                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
                 answers, persistence, new ConfirmedConditionConverter(), events);
 
         processor.request(processingCommand());
@@ -576,6 +577,60 @@ class ConsultChatPersistenceIntegrationTest {
                 .isEqualTo(2));
         assertThat(events.sequence).containsExactly("start", "token:" + content,
                 "complete:COMPLETED");
+    }
+
+    @Test
+    void missingSubQuestionDoesNotBorrowSiblingEvidenceFromWholeQuestion() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                Long.class, executionId);
+        jdbc.update("UPDATE consult_requests SET intent='FAQ',query_text='요금제 종류' WHERE consult_request_id=?",
+                requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ','로밍 신청 방법') RETURNING consult_request_id",
+                Long.class, sessionId, inputId);
+        var first = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var searches = mock(FaqSearchService.class);
+        List<String> searched = new ArrayList<>();
+        var siblingEvidence = new FaqSearchResponse(91L, null, "PLAN", "요금제 종류",
+                "요금제 종류 근거", 0.9, 1, null, 1, null);
+        when(searches.search(any(FaqSearchRequest.class))).thenAnswer(invocation -> {
+            String query = ((FaqSearchRequest) invocation.getArgument(0)).query();
+            searched.add(query);
+            return query.equals("로밍 신청 방법") ? List.of() : List.of(siblingEvidence);
+        });
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) ->
+                results.isEmpty()
+                        ? ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
+                                ChatMessage.MessageType.ANSWER,
+                                AnswerPromptTemplates.NO_EVIDENCE_ANSWER,
+                                ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null))
+                        : new ConsultChatProcessingService.GeneratedAnswer(new ChatAnswer(
+                                ChatMessage.MessageType.ANSWER, "요금제 답변",
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                                List.of(new AnswerSource(91L, "요금제 종류 근거", 1, null, (short) 1, null))));
+        var processor = new ConsultChatProcessingService(
+                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                answers, persistence, new ConfirmedConditionConverter(), new RecordingEvents());
+
+        processor.request(processingCommand());
+
+        assertThat(searched).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
+        String content = jdbc.queryForObject(
+                "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)", String.class, executionId);
+        assertThat(content).contains("1. 요금제 종류\n요금제 답변",
+                "2. 로밍 신청 방법\n" + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
 
     @Test

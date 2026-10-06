@@ -21,6 +21,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.TooManyFaqQuestionsException;
 import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
 import org.junit.jupiter.api.Test;
@@ -257,6 +258,25 @@ class QueryRoutingAnalysisProviderTest {
 
         assertThat(result.directAnswer()).isNotNull();
         assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.initialQuery()).isNull();
+    }
+
+    @Test
+    void tooManyFaqQuestionsReturnsLimitGuidance() {
+        var context = new Context(3L, 7L, "요금제, 로밍, 명의변경, 유심 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null))
+                .thenThrow(new TooManyFaqQuestionsException(3));
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.directAnswer().content()).contains("최대 3개", "나누어 보내");
         assertThat(result.initialQuery()).isNull();
     }
 

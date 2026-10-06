@@ -12,6 +12,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting.Intent;
 import com.telme.intent.entity.QueryRouting.Method;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.TooManyFaqQuestionsException;
 import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
 import java.math.BigDecimal;
@@ -26,6 +27,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
             "질문을 정확히 분류하기 어렵습니다. 궁금한 통신 서비스나 매장 정보를 조금 더 구체적으로 알려주세요.";
     private static final String COMPOUND_GUIDANCE =
             "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요.";
+    private static final String TOO_MANY_FAQ_GUIDANCE =
+            "FAQ 질문은 한 번에 최대 3개까지 답변할 수 있습니다. 질문을 나누어 보내주세요.";
     private final ChatMessageRepository messages;
     private final QueryRoutingService routing;
     private final FollowupAnalysisProvider followups;
@@ -70,6 +73,13 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                     COMPOUND_GUIDANCE,
                     null,
                     List.of("요금제 알려줘", "가까운 매장 찾아줘"),
+                    null));
+        } catch (TooManyFaqQuestionsException exception) {
+            return AnalysisResult.direct(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER,
+                    TOO_MANY_FAQ_GUIDANCE,
+                    null,
+                    List.of(),
                     null));
         }
         if (result.intent() == Intent.UNKNOWN) {
