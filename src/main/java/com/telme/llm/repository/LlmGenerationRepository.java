@@ -13,7 +13,10 @@ public interface LlmGenerationRepository extends JpaRepository<LlmGeneration, Lo
     // 같은 시각의 기록이 여러 건일 수 있어 id를 보조 정렬로 둔다.
     @Query("""
             select g from LlmGeneration g
-            where g.status in :statuses
+            where g.status in (com.telme.llm.entity.LlmGeneration$Status.TIMEOUT,
+                               com.telme.llm.entity.LlmGeneration$Status.CONNECTION_FAILED,
+                               com.telme.llm.entity.LlmGeneration$Status.MODEL_ERROR)
+              and g.status in :statuses
               and g.taskType in :taskTypes
             order by g.createdAt desc, g.generationId desc
             """)

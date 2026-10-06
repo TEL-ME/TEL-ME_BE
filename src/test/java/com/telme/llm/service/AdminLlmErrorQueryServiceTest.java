@@ -75,6 +75,20 @@ class AdminLlmErrorQueryServiceTest {
         assertThat(first.totalElements()).isGreaterThanOrEqualTo(3);
     }
     
+    @Test
+    @DisplayName("같은 시각에 기록된 오류는 나중에 들어온 기록이 먼저 나온다")
+    void 같은_시각이면_id_역순이다() {
+        // setUp의 어떤 행보다 늦은 같은 시각에 두 건을 넣는다
+        insert("ROUTING", 1, "MODEL_ERROR", "모델 오류", 100);
+        insert("ROUTING", 2, "MODEL_ERROR", "모델 오류", 100);
+
+        AdminLlmErrorListResponse response = service.getErrors(request(null, null));
+
+        assertThat(response.errors().get(0).createdAt()).isEqualTo(response.errors().get(1).createdAt());
+        assertThat(response.errors().get(0).generationId()).isGreaterThan(response.errors().get(1).generationId());
+        assertThat(response.errors().get(0).attempt()).isEqualTo(2);
+    }
+    
     private AdminLlmErrorSearchRequest request(AdminLlmErrorType errorType, TaskType taskType) {
         return new AdminLlmErrorSearchRequest(errorType, taskType, null, null);
     }
