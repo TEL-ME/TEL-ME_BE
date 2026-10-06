@@ -59,7 +59,8 @@ public class ConsultRagAnswerConfiguration {
 
     @Bean
     AnswerProvider consultAnswerProvider(
-            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace, DialogueService dialogue) {
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            DialogueService dialogue) {
         return new PurposeRoutingAnswerProvider(
                 new FaqSearchAnswerProvider(searches, answers, trace, dialogue));
     }

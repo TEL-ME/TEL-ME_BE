@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
-import org.springframework.beans.factory.annotation.Autowired;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -31,12 +30,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final AnswerGuard answerGuard;
     private final EvidenceRelevanceChecker relevanceChecker;
     private final LlmGenerationRecorder recorder;
-    private ExecutionTrace trace = ExecutionTrace.noop();
-
-    @Autowired
-    public void setExecutionTrace(ExecutionTrace trace) {
-        this.trace = trace;
-    }
+    private final ExecutionTrace trace;
 
     @Override
     public AnswerResult generate(AnswerRequest request, LlmStreamHandler handler) {
@@ -49,10 +43,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         generationInput.put("consultRequestId", request.consultRequestId());
         trace.append(request.executionId(), "generationInputs", generationInput);
 
-        // 근거 없이 호출하면 모델이 지어냄
+        // 근거 없이 호출하면 모델이 지어냄. 검색 결과 없음의 guard 기록은 호출 전에 FaqSearchAnswerProvider가 남긴다
         if (request.searchResults().isEmpty()) {
-            trace.stage(request.executionId(), "guard", Map.of("outcome", "NOT_RUN",
-                    "reason", "NO_SEARCH_RESULTS"));
             return answerWithoutEvidence(request, handler);
         }
 
@@ -190,10 +182,12 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 return;
             }
             try {
-                // 확인된 상담 상태와 FAQ 제한으로 구성한 응답도 동일 Guard를 통과한다.
-                // 생성 오류·취소에서는 이 경로에 도달하지 않으므로 정상 완료를 만들지 않는다.
+                // 확인된 상담 조건과 FAQ 정책으로 구성한 답변도 동일한 Guard를 거친다.
+                // 생성 실패·취소는 정상 완료 문장을 구성하지 않는다.
                 String candidate = policyAnswer == null ? collected.toString() : policyAnswer;
                 answer = answerGuard.applyEvidencePolicy(candidate, context, userQuery);
+                // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
+                // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(
                         answer.equals(collected.toString()) ? "KEPT"
                                 : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)

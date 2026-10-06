@@ -15,6 +15,8 @@ public enum FaqErrorCode implements BaseErrorCode {
     FAQ_NOT_FOUND(HttpStatus.NOT_FOUND, "FAQ404-0", "FAQ를 찾을 수 없습니다."),
     DUPLICATE_CONTENT(HttpStatus.CONFLICT, "FAQ409-0", "질문과 답변이 같은 FAQ가 이미 있습니다."),
     CONCURRENT_UPDATE(HttpStatus.CONFLICT, "FAQ409-1", "다른 관리자가 먼저 수정했습니다. 다시 불러온 뒤 저장해주세요."),
+    PURGE_NOT_DELETED(HttpStatus.CONFLICT, "FAQ409-2", "삭제 처리된 FAQ만 영구 삭제할 수 있습니다."),
+    PURGE_CITED(HttpStatus.CONFLICT, "FAQ409-3", "답변 근거로 사용된 적이 있어 영구 삭제할 수 없습니다."),
     EMBEDDING_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "FAQ500-0", "임베딩 응답이 올바르지 않습니다."),
     EMBEDDING_REQUEST_REJECTED(HttpStatus.INTERNAL_SERVER_ERROR, "FAQ500-1", "임베딩 요청이 Ollama에서 거부되었습니다."),
     EMBEDDING_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "FAQ503-0", "임베딩 서버 호출에 실패했습니다.");

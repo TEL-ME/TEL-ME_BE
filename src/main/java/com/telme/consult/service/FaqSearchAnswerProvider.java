@@ -12,7 +12,6 @@ import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.service.ConsultChatProcessingService.PreparedAnswer;
 import com.telme.consult.dto.DialogueInput.Condition;
-import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.dto.PlanChangeConditions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import java.util.HashMap;
@@ -40,8 +39,9 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         this(searches, answers, trace, null);
     }
 
-    public FaqSearchAnswerProvider(FaqSearchService searches, SearchResultAnswerGenerator answers,
-            ExecutionTrace trace, DialogueService dialogue) {
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            DialogueService dialogue) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
@@ -98,7 +98,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         }
         List<FaqSearchResponse> results = searchWithOriginalAndRefinedQuery(input);
         if (results.isEmpty()) {
-            // Some answer adapters return their existing no-evidence guidance before entering RAG.
+            // 검색 결과가 없으면 RAG 진입 전에 근거 부족 안내를 직접 반환하는 어댑터도 있어 여기서 한 번만 기록한다.
             trace.stage(input.executionId(), "guard",
                     Map.of("outcome", "NOT_RUN", "reason", "NO_SEARCH_RESULTS"));
         }

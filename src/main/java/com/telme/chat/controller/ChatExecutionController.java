@@ -1,6 +1,7 @@
 package com.telme.chat.controller;
 
 import com.telme.chat.config.ChatExecutionProperties;
+import com.telme.chat.dto.res.ChatExecutionTraceResponse;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.service.ChatActor;
@@ -11,7 +12,6 @@ import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatSessionService;
 import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.global.common.CustomResponse;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
 
@@ -52,7 +52,7 @@ public class ChatExecutionController {
 
     @Operation(summary = "실행 처리 흐름 조회", description = "본인 대화의 검색 근거와 처리 결과를 실행 ID로 조회합니다.")
     @GetMapping("/{executionId}/trace")
-    public CustomResponse<JsonNode> trace(
+    public CustomResponse<ChatExecutionTraceResponse> trace(
             HttpServletRequest request,
             @PathVariable Long sessionId,
             @PathVariable Long executionId) {

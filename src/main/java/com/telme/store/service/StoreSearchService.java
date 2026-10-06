@@ -4,7 +4,7 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.StoreSearchProperties;
 import com.telme.store.converter.StoreConverter;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
-import com.telme.store.dto.res.StoreNearbyResponse;
+import com.telme.store.dto.res.StoreNearbySearchResponse;
 import com.telme.store.entity.StoreServiceType;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.repository.OpenNowCondition;
@@ -47,7 +47,7 @@ public class StoreSearchService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public List<StoreNearbyResponse> findNearbyStores(StoreNearbySearchRequest request) {
+    public StoreNearbySearchResponse findNearbyStores(StoreNearbySearchRequest request) {
         StoreNearbyQueryRepository.Query query = new StoreNearbyQueryRepository.Query(
                 validateLatitude(request.latitude()),
                 validateLongitude(request.longitude()),
@@ -55,12 +55,23 @@ public class StoreSearchService {
                 resolveLimit(request.limit()),
                 toConditions(request));
         if (!isInServiceArea(query.latitude(), query.longitude())) {
-            return List.of();
+            return storeConverter.toNearbySearchResponse(List.of(), query.radiusMeters());
         }
-        return search(query)
-                .stream()
-                .map(storeConverter::toNearbyResponse)
-                .toList();
+        return storeConverter.toNearbySearchResponse(search(query), query.radiusMeters());
+    }
+
+    private double validateLatitude(Double latitude) {
+        if (latitude == null) {
+            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
+        }
+        return latitude;
+    }
+
+    private double validateLongitude(Double longitude) {
+        if (longitude == null) {
+            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
+        }
+        return longitude;
     }
 
     // 필터 없음: 영업 매장 인덱스에서 KNN으로 가장 가까운 곳부터 찾고 반경(기본 10km) 밖은 뺀다.
@@ -107,39 +118,22 @@ public class StoreSearchService {
                 && longitude >= SERVICE_AREA_MIN_LONGITUDE && longitude <= SERVICE_AREA_MAX_LONGITUDE;
     }
 
-    // 해외지역은 Exception대신 빈 list 반환
-    private double validateLatitude(Double latitude) {
-        if (latitude == null || !Double.isFinite(latitude) || latitude < -90 || latitude > 90) {
-            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
-        }
-        return latitude;
-    }
-
-    private double validateLongitude(Double longitude) {
-        if (longitude == null || !Double.isFinite(longitude) || longitude < -180 || longitude > 180) {
-            throw new GeneralException(StoreErrorCode.INVALID_COORDINATE);
-        }
-        return longitude;
-    }
-
+    // 지도 화면은 축척에 맞춘 화면 반경을 그대로 보내므로, 상한을 넘으면 거부하지 않고 상한으로 줄인다.
+    // 줄인 값은 응답의 radiusMeters로 알린다
     private int resolveRadius(Integer radiusMeters) {
         if (radiusMeters == null) {
             return storeSearchProperties.defaultRadiusMeters();
         }
-        if (radiusMeters < 1 || radiusMeters > storeSearchProperties.maxRadiusMeters()) {
-            throw new GeneralException(StoreErrorCode.INVALID_SEARCH_RADIUS);
-        }
-        return radiusMeters;
+        return Math.min(radiusMeters, storeSearchProperties.maxRadiusMeters());
     }
 
+    // HTTP 요청은 DTO 검증이 범위 밖을 400으로 막는다. 검증을 거치지 않는 내부 호출은 MIN_LIMIT~MAX_LIMIT 안으로 맞춘다
+    // (음수 limit은 SQL LIMIT 오류로 500이 된다)
     private int resolveLimit(Integer limit) {
         if (limit == null) {
             return storeSearchProperties.defaultLimit();
         }
-        if (limit < 1 || limit > storeSearchProperties.maxLimit()) {
-            throw new GeneralException(StoreErrorCode.INVALID_SEARCH_LIMIT);
-        }
-        return limit;
+        return Math.max(StoreSearchProperties.MIN_LIMIT, Math.min(limit, StoreSearchProperties.MAX_LIMIT));
     }
 
     // 정적 조건은 모두 StoreTag로 바꿔 StoreTagCondition 하나로 묶는다. 새 정적 조건은 요청 필드를 StoreTag로
@@ -149,12 +143,13 @@ public class StoreSearchService {
         List<StoreSearchCondition> conditions = new ArrayList<>();
         Set<StoreServiceType.Code> serviceTypes = request.serviceTypes();
         if (serviceTypes != null && !serviceTypes.isEmpty()) {
-            // JSON 배열의 null 원소는 Jackson이 막지 않아 여기서 거른다.
-            // Set.of()로 만든 불변 Set은 contains(null)에서 예외를 던지므로 스트림으로 검사한다
-            if (serviceTypes.stream().anyMatch(Objects::isNull)) {
-                throw new GeneralException(StoreErrorCode.INVALID_SERVICE_TYPE);
+            List<StoreTag> tags = serviceTypes.stream()
+                    .filter(Objects::nonNull)
+                    .map(StoreTag::of)
+                    .toList();
+            if (!tags.isEmpty()) {
+                conditions.add(StoreTagCondition.of(tags));
             }
-            conditions.add(StoreTagCondition.of(serviceTypes.stream().map(StoreTag::of).toList()));
         }
         if (Boolean.TRUE.equals(request.openNow())) {
             conditions.add(openNowCondition());
