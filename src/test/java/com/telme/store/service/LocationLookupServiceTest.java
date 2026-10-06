@@ -40,7 +40,7 @@ class LocationLookupServiceTest {
                 address("서울 강남구", "REGION", "127.047377", "37.517331", "1168000000")));
 
         assertThat(service.lookup("서울 강남구")).contains(new LocationLookupResult(
-                "서울 강남구", LocationLookupResult.Type.REGION, 37.517331, 127.047377, "11680"));
+                "서울 강남구", LocationLookupResult.Type.REGION, 37.517331, 127.047377, "1168"));
         verify(client, never()).searchKeyword(anyString());
     }
 
@@ -110,14 +110,15 @@ class LocationLookupServiceTest {
     @ParameterizedTest(name = "{0} → {1}")
     @CsvSource(value = {
             "1100000000, 11",
-            "1168000000, 11680",
+            "4111000000, 4111",
+            "1168000000, 1168",
             "1168010700, 11680107",
             "4111112121, 4111112121",
             "116800000, null",
             "abcdefghij, null",
             "null, null"
     }, nullValues = "null")
-    @DisplayName("법정동코드에서 0으로 채운 하위 단위를 떼어 지역 검색 단위(2·5·8·10자리)로 바꾼다")
+    @DisplayName("법정동코드에서 0으로 채운 하위 단위를 떼어 지역 검색 단위(2·4·5·8·10자리)로 바꾼다")
     void 지역코드_앞자리(String legalDongCode, String expected) {
         assertThat(LocationLookupService.toRegionCode(legalDongCode)).isEqualTo(expected);
     }

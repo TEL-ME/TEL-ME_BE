@@ -58,6 +58,9 @@ public class LocationLookupService {
             return legalDongCode.substring(0, 2);
         }
         if (legalDongCode.endsWith("00000")) {
+            if (legalDongCode.charAt(4) == '0') {
+                return legalDongCode.substring(0, 4);
+            }
             return legalDongCode.substring(0, 5);
         }
         if (legalDongCode.endsWith("00")) {
