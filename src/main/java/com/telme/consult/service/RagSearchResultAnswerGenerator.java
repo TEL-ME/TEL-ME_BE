@@ -16,10 +16,8 @@ import java.util.Objects;
 
 /** FAQ 검색 결과와 확정된 상담 조건을 RAG 답변 요청으로 변환한다. */
 public final class RagSearchResultAnswerGenerator implements SearchResultAnswerGenerator {
-    /**
-     * FAQ 검색 결과가 하나도 없을 때 보내는 안내다. 통신 질문인데 FAQ에 없는 경우와 통신과 무관한
-     * 질문이 FAQ로 분류된 경우를 구분하지 않고, 어느 쪽이든 다음 질문 방법을 알려준다.
-     */
+    // FAQ 검색 결과가 하나도 없을 때 보내는 안내다. 통신 질문인데 FAQ에 없는 경우와 통신과 무관한
+    // 질문이 FAQ로 분류된 경우를 구분하지 않고, 어느 쪽이든 다음 질문 방법을 알려준다.
     public static final String NO_SEARCH_RESULT_ANSWER =
             "관련 안내 정보를 찾지 못했습니다. 통신 서비스나 매장 관련 질문이라면 조금 더 구체적으로 알려주세요.";
 

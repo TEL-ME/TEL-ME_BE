@@ -3,7 +3,7 @@ package com.telme.intent.service;
 import com.telme.chat.service.ChatContext;
 import java.util.regex.Pattern;
 
-/** 명확한 단독 비교 요청만 한 상담 질문으로 유지한다. */
+// 명확한 단독 비교 요청만 한 상담 질문으로 유지한다.
 final class ComparisonQuestionPolicy {
     private static final Pattern COMPARISON_REQUEST_END = Pattern.compile(
             "(?:비교\\s*(?:해\\s*(?:줘|주세요)|해서\\s*알려\\s*(?:줘|주세요))"

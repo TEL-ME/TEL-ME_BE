@@ -3,7 +3,7 @@ package com.telme.intent.service;
 import com.telme.chat.service.ChatContext;
 import java.util.regex.Pattern;
 
-/** 명확한 단독 질문에 한해 LLM의 의도 오분류를 보정한다. */
+// 명확한 단독 질문에 한해 LLM의 의도 오분류를 보정한다.
 final class RoutingIntentCorrection {
 
     private static final Pattern GENERAL_STORE_HOURS = Pattern.compile(

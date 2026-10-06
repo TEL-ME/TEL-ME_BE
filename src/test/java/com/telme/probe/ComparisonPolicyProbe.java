@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.consult.service.LlmComparisonEvidenceResolver;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
@@ -26,7 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
         "rag.evidence-check.enabled=false"
 })
 @EnabledIfEnvironmentVariable(named = "TELME_COMPARISON_PROBE", matches = "true")
-class ComparisonEvidenceProbe {
+class ComparisonPolicyProbe {
 
     private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final List<Case> CASES = List.of(
@@ -48,29 +49,30 @@ class ComparisonEvidenceProbe {
 
     @Autowired private FaqSearchService search;
     @Autowired private AnswerGenerator answerGenerator;
+    @Autowired private LlmComparisonEvidenceResolver comparisonEvidence;
 
     @Test
     void runComparisonProbe() throws Exception {
         List<Map<String, Object>> results = new ArrayList<>();
         for (Case c : CASES) {
             List<FaqSearchResponse> raw = search.search(new FaqSearchRequest(c.question, 3));
-            List<FaqSearchResponse> left = search.search(new FaqSearchRequest(c.leftQuery, 3));
-            List<FaqSearchResponse> right = search.search(new FaqSearchRequest(c.rightQuery, 3));
-            List<FaqSearchResponse> merged = merge(left, right);
-            List<FaqSearchResponse> expanded = merge(raw, left, right);
+            List<Map<String, Object>> targetedSearches = new ArrayList<>();
+            var resolution = comparisonEvidence.resolveDetailed(null, c.question, raw,
+                    (query, kind) -> {
+                        List<FaqSearchResponse> found = search.searchCandidates(new FaqSearchRequest(query, 10));
+                        targetedSearches.add(Map.of("kind", kind, "query", query,
+                                "sources", serialize(found)));
+                        return found;
+                    });
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("eval_id", c.id);
             row.put("question", c.question);
-            row.put("left_query", c.leftQuery);
-            row.put("right_query", c.rightQuery);
             row.put("raw_sources", serialize(raw));
-            row.put("left_sources", serialize(left));
-            row.put("right_sources", serialize(right));
-            row.put("merged_sources", serialize(merged));
-            row.put("expanded_sources", serialize(expanded));
-            row.put("raw_answer", generate(c.question, raw));
-            row.put("merged_answer", generate(c.question, merged));
-            row.put("expanded_answer", generate(c.question, expanded));
+            row.put("selected_sources", serialize(resolution.sources()));
+            row.put("targeted_searches", targetedSearches);
+            row.put("answer_method", resolution.answer() == null ? "NO_EVIDENCE" : "VERIFIED_FAQ_QUOTE");
+            row.put("answer", resolution.answer() == null
+                    ? generate(c.question, List.of()) : resolution.answer());
             results.add(row);
             persist(results);
         }
@@ -87,15 +89,6 @@ class ComparisonEvidenceProbe {
         }
     }
 
-    @SafeVarargs
-    private final List<FaqSearchResponse> merge(List<FaqSearchResponse>... groups) {
-        Map<Long, FaqSearchResponse> unique = new LinkedHashMap<>();
-        for (List<FaqSearchResponse> group : groups) {
-            group.forEach(f -> unique.putIfAbsent(f.faqId(), f));
-        }
-        return List.copyOf(unique.values());
-    }
-
     private List<Map<String, Object>> serialize(List<FaqSearchResponse> sources) {
         List<Map<String, Object>> rows = new ArrayList<>();
         for (FaqSearchResponse f : sources) {
@@ -105,7 +98,8 @@ class ComparisonEvidenceProbe {
     }
 
     private void persist(List<Map<String, Object>> results) throws Exception {
-        Path output = Path.of(System.getenv().getOrDefault("TELME_COMPARISON_OUT", ".measure/comparison-evidence.json"));
+        Path output = Path.of(System.getenv().getOrDefault("TELME_COMPARISON_OUT",
+                "scripts/compound-faq-evaluation/runs/comparison-policy-current.json"));
         Files.createDirectories(output.getParent());
         Files.writeString(output, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(results));
     }

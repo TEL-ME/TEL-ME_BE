@@ -1,6 +1,8 @@
 package com.telme.consult.config;
 
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
@@ -9,6 +11,7 @@ import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
 
@@ -58,8 +61,11 @@ public class ConsultRagAnswerConfiguration {
 
     @Bean
     AnswerProvider consultAnswerProvider(
-            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace) {
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter) {
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace));
+                new FaqSearchAnswerProvider(searches, answers, trace,
+                        comparisonEvidence, candidateEvidence, sourceConverter));
     }
 }
