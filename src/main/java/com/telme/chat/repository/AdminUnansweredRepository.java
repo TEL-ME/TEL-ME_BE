@@ -2,6 +2,7 @@ package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,4 +52,11 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
 
     @Query(SELECT + " where m.messageId = :messageId and " + UNANSWERED)
     Optional<ChatMessage> findUnansweredById(@Param("messageId") Long messageId);
+
+    @Query(COUNT + UNANSWERED_WHERE)
+    long countUnanswered(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(COUNT + UNANSWERED_WHERE + " and m.status in :statuses")
+    long countUnansweredByStatuses(@Param("statuses") Collection<ChatMessage.Status> statuses,
+            @Param("from") Instant from, @Param("to") Instant to);
 }
