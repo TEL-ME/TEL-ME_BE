@@ -70,6 +70,9 @@ public class QueryRoutingService {
     private static final Pattern LOCATION_PARTICLE_AFTER = Pattern.compile("^(?:에서|에|으로|로)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
+    private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
+    private static final Set<String> SECTION_FILLERS = Set.of(
+            "비교", "차이", "차이점", "안내", "설명", "및", "그리고", "또", "와", "과", "하고", "랑");
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
@@ -226,10 +229,70 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
+        if (method == QueryRouting.Method.LLM && payload.intent() == QueryRouting.Intent.FAQ) {
+            var comparison = ComparisonQuestionPolicy.trailingComparison(question, context);
+            if (comparison != null) {
+                payload = preserveTrailingComparison(payload, comparison);
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
         return result;
+    }
+
+    private LlmRoutingPayload preserveTrailingComparison(
+            LlmRoutingPayload payload, ComparisonQuestionPolicy.TrailingComparison comparison) {
+        List<LlmRoutingPayload.SubQueryPayload> independent = new ArrayList<>(
+                Collections.nCopies(comparison.precedingRequests().size(), null));
+        int comparisonParts = 0;
+        for (var sub : payload.subQueries()) {
+            if (sub.queryText() == null || sub.queryText().isBlank()) {
+                throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청의 내용이 필요합니다.");
+            }
+            int precedingIndex = -1;
+            for (int index = 0; index < comparison.precedingRequests().size(); index++) {
+                if (matchesSection(sub.queryText(), comparison.precedingRequests().get(index))) {
+                    if (precedingIndex >= 0) {
+                        throw new UnsupportedCompoundQuestionException("독립 질문의 소속을 안전하게 구분할 수 없습니다.");
+                    }
+                    precedingIndex = index;
+                }
+            }
+            boolean comparing = matchesSection(sub.queryText(), comparison.comparison());
+            // 양쪽에 걸치거나 어느 쪽에도 속하지 않으면 질문을 임의로 소비하지 않는다.
+            if ((precedingIndex >= 0) == comparing) {
+                throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청을 안전하게 구분할 수 없습니다.");
+            }
+            if (comparing) {
+                comparisonParts++;
+            } else {
+                if (independent.get(precedingIndex) != null) {
+                    throw new UnsupportedCompoundQuestionException("독립 질문이 중복으로 분해됐습니다.");
+                }
+                independent.set(precedingIndex, new LlmRoutingPayload.SubQueryPayload((short) (precedingIndex + 1),
+                        sub.intent(), sub.queryText(), sub.conditions()));
+            }
+        }
+        if (comparisonParts == 0 || independent.contains(null)) {
+            throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청이 모두 필요합니다.");
+        }
+        independent.add(new LlmRoutingPayload.SubQueryPayload((short) (independent.size() + 1),
+                ConsultRequest.Intent.FAQ, comparison.comparison(), Collections.emptyMap()));
+        return new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
+                payload.extractedConditions(), independent);
+    }
+
+    private boolean matchesSection(String query, String section) {
+        String normalized = section.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        List<String> words = SECTION_WORD.matcher(query).results()
+                .map(match -> match.group().toLowerCase(Locale.ROOT))
+                .map(word -> word.length() > 2 ? word.replaceFirst("[은는이가을를의도]$", "") : word)
+                .filter(word -> !SECTION_FILLERS.contains(word))
+                .toList();
+        return !words.isEmpty() && words.stream().allMatch(normalized::contains);
     }
 
     private LlmRoutingPayload normalizeLlmPayload(

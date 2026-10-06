@@ -17,6 +17,9 @@ import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class LlmFaqCandidateEvidenceResolverTest {
@@ -26,6 +29,28 @@ class LlmFaqCandidateEvidenceResolverTest {
     private final FaqSearchResponse source = new FaqSearchResponse(65L, null, "test",
             "명의변경 시 필요한 서류", "양도인과 양수인의 신분증이 각각 필요합니다.",
             0.68, 1, null, 3, null);
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\n\t"})
+    void emptyInitialOutputDoesNotRestoreCandidate(String output) {
+        when(llm.generate(any())).thenReturn(output);
+
+        assertThat(resolver.resolve(null, "명의 변경 서류는?", List.of(source))).isNull();
+        verify(llm).generate(any());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\n\t"})
+    void emptyRetryOutputDoesNotRestoreCandidate(String output) {
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":true,"faqId":65,"quote":"양도와 양수인의 신분증이 각각 필요합니다."}
+                """, output);
+
+        assertThat(resolver.resolve(null, "명의 변경 서류는?", List.of(source))).isNull();
+        verify(llm, times(2)).generate(any());
+    }
 
     @Test
     void returnsOnlySourceWithExactAnswerQuote() {

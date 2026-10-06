@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,7 +15,9 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatExecutionState;
+import com.telme.chat.service.ChatOutputMessage;
 import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.llm.service.LlmStreamHandler;
@@ -32,6 +35,7 @@ class ConsultMultiFaqProcessingTest {
     private final ConsultChatPersistenceService persistence = mock(ConsultChatPersistenceService.class);
     private final ConsultChatEvents events = mock(ConsultChatEvents.class);
     private final LlmStreamHandler stream = mock(LlmStreamHandler.class);
+    private final ExecutionTrace trace = mock(ExecutionTrace.class);
     private final ChatProcessingCommand command = new ChatProcessingCommand(
             EXECUTION_ID, SESSION_ID, 9L, "요금제와 로밍 신청 방법 알려줘");
 
@@ -61,6 +65,24 @@ class ConsultMultiFaqProcessingTest {
         assertThat(answer.getValue().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
         assertThat(sources.getValue()).containsExactly(source);
         verify(stream).onToken(answer.getValue().content());
+        verify(trace).stage(EXECUTION_ID, "finalTransmission", Map.of(
+                "outputMessageId", 99L, "status", "DISPATCH_RETURNED"));
+    }
+
+    @Test
+    void recordsFailedTransmissionWithoutRevertingCompletedAnswer() {
+        prepareEvents();
+        doThrow(new IllegalStateException("연결 종료")).when(stream).onToken(any());
+        var processor = processor(input -> generated("답변", ChatMessage.AnswerBasis.GROUNDED, List.of()));
+
+        processor.request(command);
+
+        verify(trace).stage(EXECUTION_ID, "finalTransmission", Map.of(
+                "outputMessageId", 99L, "status", "DISPATCH_ERROR"));
+        verify(persistence).persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(), any(), anyList());
+        verify(events).completed(eq(EXECUTION_ID), any());
+        verify(persistence, never()).failAnswer(anyLong(), anyLong(), any());
+        verify(events, never()).failed(anyLong(), any());
     }
 
     @Test
@@ -138,7 +160,7 @@ class ConsultMultiFaqProcessingTest {
         return new ConsultChatProcessingService(
                 ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
                         faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법"))),
-                answers, persistence, new ConfirmedConditionConverter(), events);
+                answers, persistence, new ConfirmedConditionConverter(), events, trace);
     }
 
     private ConsultChatProcessingService.FaqTurn faqTurn(long requestId, String queryText) {
@@ -160,7 +182,9 @@ class ConsultMultiFaqProcessingTest {
                 SESSION_ID, EXECUTION_ID, ChatExecution.Status.RUNNING, null, null));
         when(persistence.persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(),
                 any(), anyList())).thenReturn(new ChatExecutionState(
-                SESSION_ID, EXECUTION_ID, ChatExecution.Status.COMPLETED, null, null));
+                SESSION_ID, EXECUTION_ID, ChatExecution.Status.COMPLETED, null,
+                new ChatOutputMessage(SESSION_ID, EXECUTION_ID, 99L, 3,
+                        ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED)));
         when(events.stream(EXECUTION_ID)).thenReturn(stream);
     }
 }

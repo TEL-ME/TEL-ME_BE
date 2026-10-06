@@ -64,7 +64,11 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                 .contextCount(candidates.size()).promptVersion("faq-candidate-evidence-v2")
                 .build();
         try {
-            JsonNode response = objectMapper.readTree(llmClient.generate(request));
+            String output = llmClient.generate(request);
+            if (output == null || output.isBlank()) {
+                return null;
+            }
+            JsonNode response = objectMapper.readTree(output);
             if (response == null || !response.isObject()
                     || !response.path("answerable").isBoolean()
                     || !response.path("answerable").booleanValue()) {
@@ -99,7 +103,11 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                     .format(ResponseFormat.JSON).temperature(0.0).maxTokens(250)
                     .contextCount(1).promptVersion("faq-candidate-quote-retry-v2")
                     .build();
-            JsonNode repaired = objectMapper.readTree(llmClient.generate(retry));
+            String retryOutput = llmClient.generate(retry);
+            if (retryOutput == null || retryOutput.isBlank()) {
+                return null;
+            }
+            JsonNode repaired = objectMapper.readTree(retryOutput);
             if (repaired == null || !repaired.isObject() || !repaired.path("answerable").isBoolean()) {
                 return null;
             }

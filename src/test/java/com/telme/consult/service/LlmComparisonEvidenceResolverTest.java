@@ -16,6 +16,9 @@ import com.telme.llm.exception.LlmErrorCode;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class LlmComparisonEvidenceResolverTest {
@@ -25,6 +28,92 @@ class LlmComparisonEvidenceResolverTest {
     private final String question = "에이와 비요금제의 가입 조건 차이를 비교해줘";
     private final FaqSearchResponse left = source(1, "에이 가입은 만 19세부터 가능합니다.");
     private final FaqSearchResponse right = source(2, "비요금제 가입은 만 65세부터 가능합니다.");
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "청소년 요금제하고 시니어 요금제 차이가 뭐야",
+            "청소년 요금제와 시니어 요금제 차이가 뭐야",
+            "청소년 요금제랑 시니어 요금제 차이가 뭐야",
+            "명의 변경과 번호 이동의 필요 서류를 비교해줘"
+    })
+    void comparisonRequestsUseTheSamePolicyRegardlessOfConnector(String question) {
+        assertThat(resolver.applies(question)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "가입 성과금 지급 조건을 알려줘",
+            "로밍 신청 방법 알려주고 청소년 요금제와 시니어 요금제를 비교해줘"
+    })
+    void ordinaryAndMixedRequestsAreNotTreatedAsStandaloneComparisons(String question) {
+        assertThat(resolver.applies(question)).isFalse();
+    }
+
+    @Test
+    void rejectsCriterionInventedForTheQuestionBeforeAdditionalSearch() {
+        var youth = source(3, "청소년 요금제는 데이터 8GB를 제공합니다.");
+        var senior = source(4, "시니어 요금제는 데이터 5GB를 제공합니다.");
+        when(llm.generate(any())).thenReturn(result(true, "청소년 요금제", "시니어 요금제", "데이터 제공량",
+                3, youth.answer(), 4, senior.answer()));
+
+        var resolution = resolver.resolveDetailed(null, "청소년 요금제하고 시니어 요금제의 가격 차이가 뭐야",
+                List.of(youth, senior), (query, kind) -> {
+                    throw new AssertionError("질문에 없는 기준으로 검색하지 않는다");
+                });
+
+        assertThat(resolution.sources()).isEmpty();
+        assertThat(resolution.answer()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가입 조건 비교", "가입 조건 및 비교", "가입 조건 차이점"})
+    void acceptsCriterionWordsSeparatedByParticlesInTheOriginalQuestion(String criterion) {
+        when(llm.generate(any())).thenReturn(result(true, "에이", "비요금제", criterion, 1,
+                left.answer(), 2, right.answer()));
+
+        assertThat(resolver.resolveDetailed(null, question, List.of(left, right), (query, kind) -> {
+            throw new AssertionError("검증된 근거가 있어 추가 검색하지 않는다");
+        }).sources()).containsExactly(left, right);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가입 조건 데이터", "가입 조건 및 데이터", "및", "수"})
+    void rejectsCriterionWhenOnlySomeOfItsWordsAreInTheQuestion(String criterion) {
+        when(llm.generate(any())).thenReturn(result(true, "에이", "비요금제", criterion, 1,
+                left.answer(), 2, right.answer()));
+
+        assertThat(resolver.resolveDetailed(null, question, List.of(left, right), (query, kind) -> {
+            throw new AssertionError("질문에 없는 속성으로 검색하지 않는다");
+        }).sources()).isEmpty();
+    }
+
+    @Test
+    void comparisonOfPlanTypesAllowsTypeCountWithoutIntroducingAnotherAttribute() {
+        var both = new FaqSearchResponse(117L, null, "test", "5G와 LTE 요금제 종류",
+                "5G는 4종, LTE는 3종으로 구성이 다릅니다.", 0.9, 1, null, 1, null);
+        when(llm.generate(any())).thenReturn(result(true, "5G 요금제", "LTE 요금제", "요금제 종류 수",
+                117, both.answer(), 117, both.answer()));
+
+        var resolution = resolver.resolveDetailed(null, "5G와 LTE 요금제 종류를 비교해줘",
+                List.of(both), (query, kind) -> List.of());
+
+        assertThat(resolution.sources()).containsExactly(both);
+        assertThat(resolution.answer()).isEqualTo(both.answer());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\n\t"})
+    void emptyModelOutputCannotCreateComparisonAnswer(String output) {
+        when(llm.generate(any())).thenReturn(output);
+
+        var resolution = resolver.resolveDetailed(null, question, List.of(left, right), (query, kind) -> {
+            throw new AssertionError("빈 판정으로 추가 검색하지 않는다");
+        });
+
+        assertThat(resolution.sources()).isEmpty();
+        assertThat(resolution.answer()).isNull();
+    }
 
     @Test
     void passesOnlyVerifiedSourcesForBothSides() {

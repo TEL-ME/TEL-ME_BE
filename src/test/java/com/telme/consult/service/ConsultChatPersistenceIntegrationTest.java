@@ -11,6 +11,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatExecutionState;
+import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.converter.ConfirmedConditionConverter;
@@ -58,6 +59,7 @@ class ConsultChatPersistenceIntegrationTest {
     @Autowired ConsultTurnPreparationService preparation;
     @Autowired ChatMessageRepository messages;
     @Autowired QueryRoutingService routing;
+    @Autowired ChatExecutionTraceService trace;
     @MockitoBean LlmClient llmClient;
     long userId;
     long sessionId;
@@ -552,11 +554,16 @@ class ConsultChatPersistenceIntegrationTest {
                 command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
                         new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
                         new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
-                answers, persistence, new ConfirmedConditionConverter(), events);
+                answers, persistence, new ConfirmedConditionConverter(), events, trace);
 
         processor.request(processingCommand());
 
         assertThat(searched).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(text("SELECT pipeline_trace->'finalTransmission'->>'status'"
+                + " FROM chat_executions WHERE execution_id=?", executionId)).isEqualTo("DISPATCH_RETURNED");
+        assertThat(jdbc.queryForObject("SELECT (pipeline_trace->'finalTransmission'->>'outputMessageId')::bigint"
+                + " = output_message_id FROM chat_executions WHERE execution_id=?", Boolean.class, executionId))
+                .isTrue();
         assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
         assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
         assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))

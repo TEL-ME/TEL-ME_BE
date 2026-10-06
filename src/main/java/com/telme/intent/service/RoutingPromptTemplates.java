@@ -44,6 +44,11 @@ public final class RoutingPromptTemplates {
         - 질문이 여러 대상이나 조건을 함께 묻는다면 FAQ 하위 질문에 모두 남긴다. 5G, LTE, 알뜰 요금제를 묻는 질문을 5G만으로 줄이지 않는다.
         - 하나의 FAQ 질문에 대상이나 조건이 여러 개 붙은 경우에는 FAQ 하위 질문 한 건에 모든 조건을 남긴다. 특히 두 대상을 비교해 달라는 질문은 각각의 설명으로 쪼개지 않고 비교 요청 한 건으로 둔다.
         - 서로 독립적으로 답해야 할 FAQ 질문이 2~3개면 질문별 FAQ 하위 질문을 순서대로 만든다. 3개를 넘으면 임의로 합치거나 생략하지 않는다.
+        - 마침표, 물음표, 줄바꿈으로 구분된 문장이 각각 답변을 요구하면 독립 질문이다. 뒤 문장에 '도', '또', '그리고'가 붙어도 하나로 합치거나 앞 질문을 생략하지 않는다.
+        - 독립 질문 뒤에 비교 요청이 붙으면 독립 질문 한 건과 비교 요청 한 건을 각각 유지한다. 비교 요청의 두 대상을 각각의 설명으로 분해하지 않는다.
+        - 하위 질문 수는 비교 대상 수가 아니라 독립적인 답변 요구 수이다. '변경 방법 안내'와 '5G/LTE 비교'는 총 2건이다. '변경 방법', '5G 안내', 'LTE 안내'의 3건으로 바꾸면 잘못된 분해이다.
+        - 비교 요청의 queryText에는 두 대상과 '비교' 또는 '차이'를 함께 남긴다. 비교 요청을 각 대상의 단독 안내로 바꾸지 않는다.
+        - 문장 구분만으로 분해하지 않는다. 앞 문장이 상황이나 조건을 설명하고 뒤 문장만 답변을 요구하면 한 질문으로 유지한다.
         - 각 FAQ queryText는 그 문장만 검색해도 대상을 알 수 있게 만든다. 원문이나 이전 대화에 있는 공통 대상은 필요한 하위 질문마다 반복하되, 없는 조건은 만들지 않는다.
         - 서로 다른 업무인 FAQ와 지점 검색을 함께 요청한 경우에만 FAQ와 STORE 하위 질문을 각각 한 건씩 넣는다.
         - 의미가 같은 검색 질문으로 바꾸기 어렵다면 사용자 원문을 refinedQuery와 FAQ queryText에 그대로 사용한다.
@@ -58,6 +63,15 @@ public final class RoutingPromptTemplates {
 
         질문: "5G와 LTE 요금제 종류를 비교해줘"
         응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+
+        질문: "요금제 변경 방법 알려줘. 유심 재발급 방법도 알려줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 유심 재발급 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}}]}
+
+        질문: "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+
+        질문: "지금 5G 요금제를 쓰고 있어. LTE 요금제와 데이터 제공량을 비교해줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 데이터 제공량 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 데이터 제공량 비교","conditions":{}}]}
 
         질문: "부모님 명의 휴대폰을 제 명의로 바꾸려면 무엇이 필요한가요?"
         응답: {

@@ -237,7 +237,13 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         // 여러 모델 호출의 중간 토큰은 저장된 최종 답변과 다를 수 있어 완료 후 한 번만 전송한다.
         try {
             events.stream(command.executionId()).onToken(combined.content());
+            trace.stage(command.executionId(), "finalTransmission", Map.of(
+                    "outputMessageId", completed.outputMessage().messageId(),
+                    "status", "DISPATCH_RETURNED"));
         } catch (RuntimeException deliveryFailure) {
+            trace.stage(command.executionId(), "finalTransmission", Map.of(
+                    "outputMessageId", completed.outputMessage().messageId(),
+                    "status", "DISPATCH_ERROR"));
             log.warn("복합 FAQ 최종 토큰 전달 실패: executionId={}",
                     command.executionId(), deliveryFailure);
         }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.intent.service.ComparisonQuestionPolicy;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +27,9 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver {
-    private static final Pattern COMPARISON = Pattern.compile("(?:비교|차이)");
-    private static final Pattern TWO_TARGETS = Pattern.compile(".{2,}(?:와|과|랑).{2,}");
     private static final Pattern FAQ_ID = Pattern.compile("(?:ID\\s*)?(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Set<String> CRITERION_FILLERS = Set.of("및", "와", "과", "하고", "랑", "수");
+    private static final Set<String> COMPARISON_WORDS = Set.of("비교", "차이", "차이점");
     private static final String PROMPT = """
             당신은 통신 FAQ 근거 검증기입니다. 고객의 비교 질문에 답하려면 두 대상 각각에 대해
             질문한 속성의 사실이 FAQ 답변(A)에 명시되어야 합니다. FAQ 질문(Q)은 검색 제목이고
@@ -46,8 +48,7 @@ public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver
 
     @Override
     public boolean applies(String question) {
-        return question != null && COMPARISON.matcher(question).find()
-                && TWO_TARGETS.matcher(question).find();
+        return ComparisonQuestionPolicy.isStandaloneComparison(question, null);
     }
 
     @Override
@@ -125,10 +126,14 @@ public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver
                 .temperature(0.0)
                 .maxTokens(400)
                 .contextCount(sources.size())
-                .promptVersion("comparison-evidence-v2")
+                .promptVersion("comparison-evidence-v3")
                 .build();
         try {
-            JsonNode response = objectMapper.readTree(llmClient.generate(request));
+            String output = llmClient.generate(request);
+            if (output == null || output.isBlank()) {
+                return Assessment.invalid();
+            }
+            JsonNode response = objectMapper.readTree(output);
             if (response == null || !response.isObject() || !response.path("answerable").isBoolean()) {
                 return Assessment.invalid();
             }
@@ -209,6 +214,18 @@ public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver
         return !anchors.isEmpty() && anchors.stream().allMatch(normalized::contains);
     }
 
+    private static boolean hasCriterionAnchor(String question, String criterion) {
+        String normalized = compact(question);
+        // 연결어, '종류 수'의 보조 표현, 비교 표현은 허용하되 질문에 없는 속성은 허용하지 않는다.
+        List<String> words = List.of(criterion.strip().split("\\s+")).stream()
+                .map(LlmComparisonEvidenceResolver::compact)
+                .filter(word -> !CRITERION_FILLERS.contains(word))
+                .toList();
+        return !words.isEmpty() && words.stream().allMatch(word -> normalized.contains(word)
+                || (COMPARISON_WORDS.contains(word)
+                    && (normalized.contains("비교") || normalized.contains("차이"))));
+    }
+
     private record Assessment(
             String leftTarget, String rightTarget, String criterion,
             VerifiedQuote left, VerifiedQuote right, boolean answerable) {
@@ -221,7 +238,8 @@ public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver
                     && !compact(leftTarget).equals(compact(rightTarget))
                     && hasTargetAnchor(question, leftTarget)
                     && hasTargetAnchor(question, rightTarget)
-                    && !criterion.isBlank() && criterion.length() <= 80;
+                    && !criterion.isBlank() && criterion.length() <= 80
+                    && hasCriterionAnchor(question, criterion);
         }
 
         boolean supported() {

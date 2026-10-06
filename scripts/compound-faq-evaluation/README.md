@@ -15,5 +15,7 @@
 | `experiments/` | `comparison-policy-forced-evidence-results.json` | 비교 정답 근거를 직접 주입한 진단 결과 |
 | `experiments/` | `compound-faq-forced-evidence.json` | 복합 FAQ 정답 근거 주입 초기 결과 |
 | `experiments/` | `compound-faq-forced-verified.json` | 복합 FAQ 정답 근거 주입 재검증 결과 |
+| `runs/` | `comparison-evidence-v3.json` | 비교 기준 검증 보완 후 14건 재실행과 연결 표현 4건의 모델 출력 |
+| `runs/` | `sentence-boundaries.json` | 문장 경계의 변경 전 결과, 이전 24회와 최종 26회 실제 라우팅, 비교 14건 및 실제 채팅 API 4사례. 최종 라우팅은 `routing_after_three_request`에서 확인 |
 
 재실행 결과는 `runs/`에 생성된다. 보관된 원시 결과를 덮어쓰지 않도록 프로브와 `run_live_api.py`의 기본 출력 경로를 이 폴더로 지정했다. 분석과 실행 방법은 [FAQ 복합 질문과 비교 질문 처리](../../docs/COMPOUND_COMPARISON_QUALITY.md)를 참고한다.

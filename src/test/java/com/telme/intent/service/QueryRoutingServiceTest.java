@@ -184,7 +184,9 @@ class QueryRoutingServiceTest {
                 "해외 로밍 패스와 데이터 로밍 종량제의 요금 및 제공량을 비교해줘",
                 "일반 요금제와 청소년 요금제의 가입 조건을 비교해줘",
                 "인터넷 결합 할인과 가족 결합 할인 차이를 비교해서 알려줘",
-                "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘"
+                "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘",
+                "청소년 요금제하고 시니어 요금제 차이가 뭐야",
+                "청소년 요금제랑 시니어 요금제 차이가 뭐야"
         })
         @DisplayName("명확한 비교 요청은 LLM이 나누더라도 원문 한 건으로 보정한다")
         void keepsStandaloneComparisonAsOneFaqQuestion(String question) {
@@ -212,19 +214,156 @@ class QueryRoutingServiceTest {
         })
         @DisplayName("비교와 독립 요청이 섞이면 전체를 한 질문으로 합치지 않는다")
         void keepsIndependentRequestSeparateFromComparison(String question) {
+            boolean comparisonLast = question.startsWith("로밍");
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 비교와 로밍 신청",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}},
-                   {"order":3,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"%s","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"%s","conditions":{}}
                  ]}
-                """);
+                """.formatted(comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제 종류 비교",
+                    comparisonLast ? "5G와 LTE 요금제 종류 비교" : "로밍 신청 방법"));
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
-            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
-            assertThat(result.subQueries()).hasSize(3);
+            assertThat(result.subQueries()).hasSize(2);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly(comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제 종류 비교",
+                            comparisonLast ? "5G와 LTE 요금제 종류를 비교해줘" : "로밍 신청 방법");
+        }
+
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘 | 5G와 LTE 요금제 종류를 비교해줘",
+                "요금제 변경 방법 알려주세요. 5G와 LTE 요금제 종류를 비교해주세요 | 5G와 LTE 요금제 종류를 비교해주세요",
+                "요금제 변경 방법은 뭐야? 5G와 LTE 요금제 종류를 비교해줘 | 5G와 LTE 요금제 종류를 비교해줘"
+        })
+        void preservesIndependentRequestAndComparisonAsTwoFaqQueries(String question, String comparison) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 종류 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}
+                 ]}
+                """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("요금제 변경 방법", comparison);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘",
+                "요금제 변경 방법 알려줘\n5G와 LTE 요금제 종류를 비교해줘"
+        })
+        void restoresOnlyComparisonPartsWithoutConsumingIndependentRequest(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"변경 방법과 요금제 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                 ]}
+                """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("요금제 변경 방법", "5G와 LTE 요금제 종류를 비교해줘");
+        }
+
+        @Test
+        void ambiguousComparisonPartsDoNotConsumeAnIndependentRequest() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 종류와 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                 ]}
+                """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg(
+                    "5G 요금제 종류 알려줘. 5G와 LTE 요금제 종류를 비교해줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "요금제 변경 방법",
+                "5G와 LTE 요금제 종류 비교",
+                "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘"
+        })
+        void doesNotCompleteMixedRequestWhenModelReturnsOnlyOneFaqQuery(String queryText) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"%s",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"%s","conditions":{}}
+                 ]}
+                """.formatted(queryText, queryText));
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg(
+                    "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void keepsAllIndependentRequestsBeforeTrailingComparisonInOriginalOrder() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍, 유심, 요금제 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}},
+                   {"order":4,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                 ]}
+                """);
+
+            var result = service.routeSingleConsult(msg(
+                    "로밍 신청 방법 알려줘. 유심 재발급 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘"), null);
+
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("로밍 신청 방법", "유심 재발급 방법", "5G와 LTE 요금제 종류를 비교해줘");
+        }
+
+        @Test
+        void missingIndependentRequestBeforeTrailingComparisonGetsGuidanceBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍과 요금제 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}
+                 ]}
+                """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg(
+                    "로밍 신청 방법 알려줘. 유심 재발급 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void blankModelSubQueryInMixedRequestGetsGuidanceBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":null,"conditions":{}}
+                 ]}
+                """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg(
+                    "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
         }
 
         @Test
