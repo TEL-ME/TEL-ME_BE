@@ -3,9 +3,12 @@ package com.telme.dashboard.service;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.AdminChatStatsRepository;
 import com.telme.chat.repository.AdminUnansweredRepository;
+import com.telme.dashboard.dto.req.AdminDashboardSearchRequest;
 import com.telme.dashboard.dto.res.AdminDashboardResponse;
 import com.telme.feedback.entity.MessageFeedback;
+import com.telme.dashboard.exception.DashboardErrorCode;
 import com.telme.feedback.repository.AdminFeedbackRepository;
+import com.telme.global.common.exception.GeneralException;
 import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +31,17 @@ public class AdminDashboardQueryService {
     private final AdminFeedbackRepository feedbackRepository;
     private final Clock clock;
 
-    public AdminDashboardResponse getSummary() {
+    public AdminDashboardResponse getSummary(AdminDashboardSearchRequest request) {
+        // 시작이 끝보다 뒤면 결과가 늘 0이라 조건을 잘못 넣은 것을 알아채기 어렵다
+        if (request.periodReversed()) {
+            throw new GeneralException(DashboardErrorCode.INVALID_PERIOD);
+        }
         DashboardDays days = DashboardDays.of(clock);
         return new AdminDashboardResponse(
-                unansweredRepository.countUnanswered(),
+                unansweredRepository.countUnanswered(request.fromOrMin(), request.toOrMax()),
                 feedbackRepository.countUnhandledDislikes(MessageFeedback.Rating.DISLIKE),
-                unansweredRepository.countUnansweredByStatuses(FAILED_STATUSES),
+                unansweredRepository.countUnansweredByStatuses(
+                        FAILED_STATUSES, request.fromOrMin(), request.toOrMax()),
                 chatStatsRepository.countQuestions(days.todayStart(), days.tomorrowStart()),
                 chatStatsRepository.countQuestions(days.yesterdayStart(), days.todayStart()));
     }

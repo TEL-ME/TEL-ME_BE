@@ -53,10 +53,11 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
     @Query(SELECT + " where m.messageId = :messageId and " + UNANSWERED)
     Optional<ChatMessage> findUnansweredById(@Param("messageId") Long messageId);
 
-    // 대시보드 카드. 목록과 같은 조건을 써야 숫자를 눌렀을 때 그만큼의 줄이 나온다
-    @Query(COUNT + " where " + UNANSWERED)
-    long countUnanswered();
+    // 대시보드 카드. 목록과 같은 조건·기간을 써야 숫자를 눌렀을 때 그만큼의 줄이 나온다
+    @Query(COUNT + UNANSWERED_WHERE)
+    long countUnanswered(@Param("from") Instant from, @Param("to") Instant to);
 
-    @Query(COUNT + " where " + UNANSWERED + " and m.status in :statuses")
-    long countUnansweredByStatuses(@Param("statuses") Collection<ChatMessage.Status> statuses);
+    @Query(COUNT + UNANSWERED_WHERE + " and m.status in :statuses")
+    long countUnansweredByStatuses(@Param("statuses") Collection<ChatMessage.Status> statuses,
+            @Param("from") Instant from, @Param("to") Instant to);
 }

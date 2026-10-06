@@ -1,11 +1,14 @@
 package com.telme.dashboard.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.telme.dashboard.dto.res.AdminDashboardResponse;
+import com.telme.dashboard.exception.DashboardErrorCode;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.dashboard.service.AdminDashboardQueryService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.repository.UserRepository;
@@ -74,9 +77,22 @@ class AdminDashboardControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    @DisplayName("기간의 시작이 끝보다 늦으면 400을 반환한다")
+    void 거꾸로_된_기간은_400이다() throws Exception {
+        when(adminDashboardQueryService.getSummary(any()))
+                .thenThrow(new GeneralException(DashboardErrorCode.INVALID_PERIOD));
+
+        mockMvc.perform(get("/api/v1/admin/dashboard")
+                        .param("from", "2026-10-02T00:00:00Z").param("to", "2026-10-01T00:00:00Z"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DASHBOARD400-0"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("ADMIN이면 200과 숫자 다섯 개를 반환한다")
     void 관리자는_요약을_볼_수_있다() throws Exception {
-        when(adminDashboardQueryService.getSummary())
+        when(adminDashboardQueryService.getSummary(any()))
                 .thenReturn(new AdminDashboardResponse(23L, 7L, 4L, 142L, 127L));
 
         mockMvc.perform(get("/api/v1/admin/dashboard"))
