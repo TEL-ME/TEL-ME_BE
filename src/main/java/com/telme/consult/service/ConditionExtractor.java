@@ -37,9 +37,10 @@ public class ConditionExtractor {
         if (payload == null) {
             return List.of();
         }
+        String sourceText = ConditionGrounding.sourceText(sources);
         List<MissingCondition> conditions = new ArrayList<>();
         for (var candidate : payload.conditions()) {
-            toCondition(candidate).ifPresent(conditions::add);
+            toCondition(candidate, sourceText).ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
             }
@@ -74,10 +75,16 @@ public class ConditionExtractor {
         }
     }
 
-    private java.util.Optional<MissingCondition> toCondition(LlmConditionPayload.ConditionPayload candidate) {
+    private java.util.Optional<MissingCondition> toCondition(
+            LlmConditionPayload.ConditionPayload candidate, String sourceText) {
+        if (!ConditionGrounding.grounded(candidate.evidence(), sourceText)) {
+            log.info("[조건 뽑기] 근거에 없는 조건을 버립니다. key={}", candidate.key());
+            return java.util.Optional.empty();
+        }
         try {
             return java.util.Optional.of(new MissingCondition(
-                    candidate.key(), candidate.question(), candidate.options(), candidate.evidence()));
+                    candidate.key(), candidate.question(),
+                    ConditionGrounding.groundedOptions(candidate.options(), sourceText), candidate.evidence()));
         } catch (IllegalArgumentException exception) {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();
