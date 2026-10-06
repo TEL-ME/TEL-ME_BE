@@ -39,6 +39,15 @@ class DialogueServiceTest {
     }
 
     @Test
+    void actualCoordinatesProceedAndResolvePendingLocationWithoutInventingRegion() {
+        var result = noModel().assess(input(
+                Map.of("location", Condition.pending()), Map.of(), LocationStatus.COORDINATES_AVAILABLE));
+        assertEquals(Action.PROCEED, result.action());
+        assertEquals(ConditionStatus.COORDINATES, result.conditions().get("location").status());
+        assertEquals(null, result.conditions().get("location").value());
+    }
+
+    @Test
     void clarificationFollowupAndCorrectionResumeSameConsultation() {
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         var flow =

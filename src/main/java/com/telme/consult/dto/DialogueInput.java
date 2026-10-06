@@ -21,12 +21,14 @@ public record DialogueInput(
 
     public enum LocationStatus {
         AVAILABLE,
+        COORDINATES_AVAILABLE,
         MISSING,
         DECLINED
     }
 
     public enum ConditionStatus {
         FILLED,
+        COORDINATES,
         DECLINED,
         PENDING
     }
@@ -53,6 +55,10 @@ public record DialogueInput(
 
         public static Condition declined() {
             return new Condition(ConditionStatus.DECLINED, null);
+        }
+
+        public static Condition coordinates() {
+            return new Condition(ConditionStatus.COORDINATES, null);
         }
 
         public static Condition pending() {
