@@ -1,12 +1,16 @@
 package com.telme.chat.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.chat.dto.req.AdminUnansweredSearchRequest;
+import com.telme.chat.dto.req.AdminUnansweredType;
 import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
 import com.telme.chat.dto.res.AdminUnansweredListItemResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
@@ -24,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -89,6 +94,37 @@ class AdminUnansweredControllerTest {
                 .andExpect(jsonPath("$.result.messages[0].messageId").value(1))
                 .andExpect(jsonPath("$.result.messages[0].type").value("NO_EVIDENCE"))
                 .andExpect(jsonPath("$.result.totalElements").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("유형을 두 개 주면 둘 다 조건으로 넘어간다")
+    void 유형을_두_개_받는다() throws Exception {
+        when(adminUnansweredQueryService.getUnanswered(any())).thenReturn(listResponse());
+        ArgumentCaptor<AdminUnansweredSearchRequest> captor =
+                ArgumentCaptor.forClass(AdminUnansweredSearchRequest.class);
+
+        mockMvc.perform(get("/api/v1/admin/unanswered").param("type", "FAILED").param("type", "TIMEOUT"))
+                .andExpect(status().isOk());
+
+        verify(adminUnansweredQueryService).getUnanswered(captor.capture());
+        assertThat(captor.getValue().type())
+                .containsExactly(AdminUnansweredType.FAILED, AdminUnansweredType.TIMEOUT);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("유형에 빈 값이 섞여도 나머지만 조건으로 넘어간다")
+    void 빈_유형_값을_걸러낸다() throws Exception {
+        when(adminUnansweredQueryService.getUnanswered(any())).thenReturn(listResponse());
+        ArgumentCaptor<AdminUnansweredSearchRequest> captor =
+                ArgumentCaptor.forClass(AdminUnansweredSearchRequest.class);
+
+        mockMvc.perform(get("/api/v1/admin/unanswered").param("type", "FAILED").param("type", ""))
+                .andExpect(status().isOk());
+
+        verify(adminUnansweredQueryService).getUnanswered(captor.capture());
+        assertThat(captor.getValue().type()).containsExactly(AdminUnansweredType.FAILED);
     }
 
     @Test

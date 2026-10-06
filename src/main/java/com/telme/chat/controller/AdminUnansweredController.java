@@ -30,7 +30,8 @@ public class AdminUnansweredController {
     @Operation(
             summary = "답 못 한 질문 목록 조회",
             description = "챗봇이 근거를 못 찾았거나 답변을 끝내지 못한 경우를 최신순으로 반환합니다. "
-                    + "유형은 NO_EVIDENCE·OUT_OF_SCOPE·FAILED·TIMEOUT 중 하나이고, 생략하면 네 가지를 모두 봅니다. "
+                    + "유형은 NO_EVIDENCE·OUT_OF_SCOPE·FAILED·TIMEOUT 중에서 여러 개 고를 수 있고(type=FAILED&type=TIMEOUT), "
+                    + "생략하면 네 가지를 모두 봅니다. "
                     + "from·to와 정렬은 답변 메시지가 만들어진 시각(createdAt) 기준이고 to는 그 시각 직전까지입니다. "
                     + "FAILED·TIMEOUT은 답변을 시작한 시각이라 실제로 끊긴 시각보다 조금 앞섭니다. "
                     + "질문은 그 답변을 요청한 사용자 메시지라, 되묻기 뒤에는 조건 답변이 들어갑니다.")

@@ -78,6 +78,30 @@ class AdminUnansweredQueryServiceTest {
     }
 
     @Test
+    @DisplayName("같은 컬럼의 유형을 여러 개 주면 그 유형만 남는다")
+    void 같은_컬럼_유형을_여러_개_거른다() {
+        assertThat(ids(service.getUnanswered(request(AdminUnansweredType.FAILED, AdminUnansweredType.TIMEOUT))))
+                .contains(failedId, timeoutId)
+                .doesNotContain(noEvidenceId, outOfScopeId, groundedId);
+    }
+
+    @Test
+    @DisplayName("컬럼이 다른 유형을 섞어 주면 양쪽이 함께 나온다")
+    void 다른_컬럼_유형을_섞어_거른다() {
+        assertThat(ids(service.getUnanswered(request(AdminUnansweredType.NO_EVIDENCE, AdminUnansweredType.FAILED))))
+                .contains(noEvidenceId, failedId)
+                .doesNotContain(outOfScopeId, timeoutId, groundedId);
+    }
+
+    @Test
+    @DisplayName("유형을 빈 목록으로 주면 전체를 본다")
+    void 빈_목록은_전체다() {
+        assertThat(ids(service.getUnanswered(request())))
+                .contains(noEvidenceId, outOfScopeId, timeoutId, failedId)
+                .doesNotContain(groundedId);
+    }
+
+    @Test
     @DisplayName("기간을 주면 그 밖의 답변은 빠진다")
     void 기간으로_거른다() {
         Instant now = Instant.now();
@@ -185,6 +209,10 @@ class AdminUnansweredQueryServiceTest {
     }
 
     private AdminUnansweredSearchRequest request(AdminUnansweredType type, Instant from, Instant to) {
-        return new AdminUnansweredSearchRequest(type, from, to, null, 100);
+        return new AdminUnansweredSearchRequest(type == null ? null : List.of(type), from, to, null, 100);
+    }
+
+    private AdminUnansweredSearchRequest request(AdminUnansweredType... types) {
+        return new AdminUnansweredSearchRequest(List.of(types), null, null, null, 100);
     }
 }
