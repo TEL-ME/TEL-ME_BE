@@ -12,6 +12,7 @@ import com.telme.member.dto.res.MemberMeResponse.LoginMethod;
 import com.telme.member.entity.User;
 import com.telme.member.repository.SocialAccountRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class MemberProfileServiceTest {
                 .role(User.Role.ADMIN)
                 .build();
         when(currentMemberResolver.resolveOptional(request)).thenReturn(Optional.of(user));
-        when(socialAccountRepository.existsByUser_UserIdAndProvider(1L, KAKAO)).thenReturn(true);
+        when(socialAccountRepository.findProvidersByUserId(1L)).thenReturn(List.of(KAKAO));
 
         MemberMeResponse response = service.getMe(request);
 
@@ -57,7 +58,7 @@ class MemberProfileServiceTest {
         assertThat(response.name()).isEqualTo("관리자");
         assertThat(response.role()).isEqualTo(MemberMeResponse.Role.ADMIN);
         assertThat(response.loginMethods()).containsExactly(LoginMethod.EMAIL, LoginMethod.KAKAO);
-        verify(socialAccountRepository).existsByUser_UserIdAndProvider(1L, KAKAO);
+        verify(socialAccountRepository).findProvidersByUserId(1L);
     }
 
     @Test
@@ -65,7 +66,7 @@ class MemberProfileServiceTest {
     void 소셜_전용_회원_조회() {
         User user = User.builder().userId(2L).name("카카오회원").build();
         when(currentMemberResolver.resolveOptional(request)).thenReturn(Optional.of(user));
-        when(socialAccountRepository.existsByUser_UserIdAndProvider(2L, KAKAO)).thenReturn(true);
+        when(socialAccountRepository.findProvidersByUserId(2L)).thenReturn(List.of(KAKAO));
 
         MemberMeResponse response = service.getMe(request);
 
@@ -83,8 +84,8 @@ class MemberProfileServiceTest {
                 .name("구글회원")
                 .build();
         when(currentMemberResolver.resolveOptional(request)).thenReturn(Optional.of(user));
-        when(socialAccountRepository.existsByUser_UserIdAndProvider(3L, KAKAO)).thenReturn(true);
-        when(socialAccountRepository.existsByUser_UserIdAndProvider(3L, GOOGLE)).thenReturn(true);
+        // DB가 돌려주는 순서와 관계없이 EMAIL, KAKAO, GOOGLE 순서로 응답한다
+        when(socialAccountRepository.findProvidersByUserId(3L)).thenReturn(List.of(GOOGLE, KAKAO));
 
         MemberMeResponse response = service.getMe(request);
 

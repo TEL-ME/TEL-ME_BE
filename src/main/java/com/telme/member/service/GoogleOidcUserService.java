@@ -15,8 +15,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GoogleOidcUserService implements OAuth2UserService<OidcUserRequest, OidcUser> {
 
-    private static final int MAX_MEMBER_NAME_LENGTH = 50;
-
     private final OidcUserService delegate;
 
     @Override
@@ -24,7 +22,7 @@ public class GoogleOidcUserService implements OAuth2UserService<OidcUserRequest,
         OidcUser oidcUser = delegate.loadUser(userRequest);
         String providerUserId = extractProviderUserId(oidcUser);
         String email = extractEmail(oidcUser);
-        String displayName = extractDisplayName(oidcUser);
+        String displayName = SocialDisplayNameNormalizer.normalize(oidcUser.getFullName());
         return new GoogleOidcUser(providerUserId, email, displayName, oidcUser);
     }
 
@@ -47,24 +45,5 @@ public class GoogleOidcUserService implements OAuth2UserService<OidcUserRequest,
             return null;
         }
         return email.strip().toLowerCase(Locale.ROOT);
-    }
-
-    private String extractDisplayName(OidcUser oidcUser) {
-        String name = oidcUser.getFullName();
-        if (name == null) {
-            return null;
-        }
-        String normalized = name.strip();
-        if (normalized.isEmpty()) {
-            return null;
-        }
-        if (normalized.length() <= MAX_MEMBER_NAME_LENGTH) {
-            return normalized;
-        }
-        int endIndex = MAX_MEMBER_NAME_LENGTH;
-        if (Character.isHighSurrogate(normalized.charAt(endIndex - 1))) {
-            endIndex--;
-        }
-        return normalized.substring(0, endIndex);
     }
 }

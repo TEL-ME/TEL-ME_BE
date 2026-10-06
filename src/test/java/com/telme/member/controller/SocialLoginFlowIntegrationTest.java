@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -325,14 +326,14 @@ class SocialLoginFlowIntegrationTest {
     private MockHttpServletResponse callback(MockHttpSession session, SocialOAuth2Principal principal, String state)
             throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/login/oauth2/code/" + principal.getProvider().name().toLowerCase());
+                "GET", "/login/oauth2/code/" + principal.getProvider().name().toLowerCase(Locale.ROOT));
         request.setSession(session);
         if (state != null) {
             request.setParameter("state", state);
         }
         MockHttpServletResponse response = new MockHttpServletResponse();
         socialLoginSuccessHandler.onAuthenticationSuccess(request, response,
-                new OAuth2AuthenticationToken(principal, List.of(), principal.getProvider().name().toLowerCase()));
+                new OAuth2AuthenticationToken(principal, List.of(), principal.getProvider().name().toLowerCase(Locale.ROOT)));
         return response;
     }
 

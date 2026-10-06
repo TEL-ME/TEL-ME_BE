@@ -5,10 +5,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 // 공급자와 무관한 소셜 회원 조회·생성, 게스트 승계, 로그인 세션 확정을 담당한다.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SocialLoginService {
@@ -36,6 +38,8 @@ public class SocialLoginService {
                 transactionTemplate.executeWithoutResult(
                         status -> guestSuccessionService.succeedGuest(guestId, user));
             } catch (RuntimeException exception) {
+                // 프론트에는 GUEST_SUCCESSION_FAILED만 전달되므로 원인은 여기서 남긴다
+                log.error("소셜 로그인 게스트 승계 실패 userId={}, guestId={}", user.getUserId(), guestId, exception);
                 return false;
             }
         }
