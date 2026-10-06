@@ -114,6 +114,21 @@ class AdminUnansweredControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    @DisplayName("유형에 빈 값이 섞여도 나머지만 조건으로 넘어간다")
+    void 빈_유형_값을_걸러낸다() throws Exception {
+        when(adminUnansweredQueryService.getUnanswered(any())).thenReturn(listResponse());
+        ArgumentCaptor<AdminUnansweredSearchRequest> captor =
+                ArgumentCaptor.forClass(AdminUnansweredSearchRequest.class);
+
+        mockMvc.perform(get("/api/v1/admin/unanswered").param("type", "FAILED").param("type", ""))
+                .andExpect(status().isOk());
+
+        verify(adminUnansweredQueryService).getUnanswered(captor.capture());
+        assertThat(captor.getValue().type()).containsExactly(AdminUnansweredType.FAILED);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("유형 값이 enum에 없으면 400을 반환한다")
     void 없는_유형은_400을_반환한다() throws Exception {
         mockMvc.perform(get("/api/v1/admin/unanswered").param("type", "NOPE"))
