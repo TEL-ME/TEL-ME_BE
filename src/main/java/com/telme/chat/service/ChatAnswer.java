@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -10,8 +11,14 @@ public record ChatAnswer(
         String content,
         ChatMessage.AnswerBasis answerBasis,
         List<String> followUps,
-        List<Map<String, Object>> storeResults
+        List<Map<String, Object>> storeResults,
+        ChatStoreSearchContextResponse storeSearchContext
 ) {
+
+    public ChatAnswer(ChatMessage.MessageType messageType, String content,
+            ChatMessage.AnswerBasis answerBasis, List<String> followUps, List<Map<String, Object>> storeResults) {
+        this(messageType, content, answerBasis, followUps, storeResults, null);
+    }
 
     public ChatAnswer {
         Objects.requireNonNull(messageType, "messageType");
