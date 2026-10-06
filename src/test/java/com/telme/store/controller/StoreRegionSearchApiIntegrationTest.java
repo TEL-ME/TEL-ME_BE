@@ -158,6 +158,16 @@ class StoreRegionSearchApiIntegrationTest {
     }
 
     @Test
+    void 일반구가_있는_시_코드로_찾으면_일반구_매장도_나온다() throws Exception {
+        List<Long> expected = jdbc.queryForList(
+                "SELECT store_id FROM stores WHERE status = 'OPEN' AND region_code LIKE '4711%' ORDER BY store_id",
+                Long.class);
+
+        assertThat(expected).isNotEmpty();
+        assertThat(storeIds(get(URL).param("region", "47110"))).isEqualTo(expected);
+    }
+
+    @Test
     void 잘못된_요청값은_400() throws Exception {
         mvc.perform(get(URL)).andExpect(status().isBadRequest());
         mvc.perform(get(URL).param("region", "gangnam")).andExpect(status().isBadRequest());
