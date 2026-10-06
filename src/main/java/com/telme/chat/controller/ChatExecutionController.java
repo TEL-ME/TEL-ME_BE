@@ -1,6 +1,7 @@
 package com.telme.chat.controller;
 
 import com.telme.chat.config.ChatExecutionProperties;
+import com.telme.chat.dto.res.ChatExecutionTraceResponse;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.service.ChatActor;
@@ -9,6 +10,8 @@ import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatSessionService;
+import com.telme.chat.service.ChatExecutionTraceService;
+import com.telme.global.common.CustomResponse;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
 
@@ -45,6 +48,17 @@ public class ChatExecutionController {
     private final ChatSessionService chatSessionService;
     private final ChatEmitterRegistry emitterRegistry;
     private final ChatExecutionProperties chatExecutionProperties;
+    private final ChatExecutionTraceService traces;
+
+    @Operation(summary = "실행 처리 흐름 조회", description = "본인 대화의 검색 근거와 처리 결과를 실행 ID로 조회합니다.")
+    @GetMapping("/{executionId}/trace")
+    public CustomResponse<ChatExecutionTraceResponse> trace(
+            HttpServletRequest request,
+            @PathVariable Long sessionId,
+            @PathVariable Long executionId) {
+        return CustomResponse.onSuccess(
+                traces.get(chatActorProvider.getCurrentActor(request), sessionId, executionId));
+    }
 
     // front작업시 이벤트 별로 emitterRegistry를 확인해서 어떤식으로 token단위로 오는지 확인하기
     @Operation(summary = "AI 답변 실행 구독", description = "실행 중인 답변 생성 과정을 SSE로 실시간 구독합니다.")

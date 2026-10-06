@@ -1,5 +1,6 @@
 package com.telme.rag.service;
 
+import com.telme.chat.service.ExecutionTrace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -39,7 +40,7 @@ class RagAnswerDeliveryTest {
     private static final String UNSUPPORTED = " 택배비는 이 금액에 포함됩니다.";
     private final DeliveryHandler delivery = new DeliveryHandler();
     private final List<Status> statuses = new ArrayList<>();
-    private final LlmGenerationRecorder recorder = new LlmGenerationRecorder(null, null) {
+    private final LlmGenerationRecorder recorder = new LlmGenerationRecorder(null, null, null, null) {
         @Override
         public void record(LlmRequest request, String model, Result result) {
             statuses.add(result.status());
@@ -301,7 +302,7 @@ class RagAnswerDeliveryTest {
         var checker = new EvidenceRelevanceChecker(client, new ObjectMapper(),
                 new EvidenceCheckProperties(false, 300));
         return new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(),
-                checker, recorder);
+                checker, recorder, ExecutionTrace.noop());
     }
 
     private AnswerRequest request() {
