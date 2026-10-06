@@ -152,7 +152,7 @@ class MemberAuthControllerTest {
                         .content(objectMapper.writeValueAsString(
                                 new SignUpRequestJson("   ", "new@example.com", "password123"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.result.name").exists());
+                .andExpect(jsonPath("$.result.name").value("이름을 입력해 주세요."));
     }
 
     @Test
@@ -163,7 +163,7 @@ class MemberAuthControllerTest {
                         .content(objectMapper.writeValueAsString(
                                 new SignUpRequestJson("가".repeat(51), "new@example.com", "password123"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.result.name").exists());
+                .andExpect(jsonPath("$.result.name").value("이름은 50자 이하여야 합니다."));
     }
 
     @Test
@@ -172,7 +172,8 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new SignUpRequestJson("테스트", "not-an-email", "password123"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("올바른 이메일 형식으로 입력해 주세요."));
     }
 
     @Test
@@ -186,7 +187,8 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new SignUpRequestJson("테스트", tooLongEmail, "password123"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("이메일은 255자 이하여야 합니다."));
     }
 
     @Test
@@ -195,7 +197,20 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new SignUpRequestJson("테스트", "new@example.com", "short"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.password").value("비밀번호는 8자 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("가입 필수값이 없으면 필드별 한글 메시지를 반환한다")
+    void 가입_필수값이_없으면_한글_메시지를_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/signup")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new SignUpRequestJson(null, null, null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.name").value("이름을 입력해 주세요."))
+                .andExpect(jsonPath("$.result.email").value("이메일을 입력해 주세요."))
+                .andExpect(jsonPath("$.result.password").value("비밀번호를 입력해 주세요."));
     }
 
     @Test
@@ -219,7 +234,8 @@ class MemberAuthControllerTest {
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new SignUpRequestJson("테스트", "new@example.com", password73Bytes))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.result.password").exists());
+                .andExpect(jsonPath("$.result.password")
+                        .value("비밀번호는 UTF-8 기준 72바이트를 넘을 수 없습니다."));
     }
 
     @Test
@@ -278,7 +294,8 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new LoginRequestJson("not-an-email", "password123"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("올바른 이메일 형식으로 입력해 주세요."));
     }
 
     @Test
@@ -290,7 +307,8 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new LoginRequestJson(tooLongEmail, "password123"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("이메일은 255자 이하여야 합니다."));
     }
 
     @Test
@@ -301,7 +319,20 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(new LoginRequestJson("login@example.com", password73Bytes))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.password")
+                        .value("비밀번호는 UTF-8 기준 72바이트를 넘을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("로그인 필수값이 없으면 필드별 한글 메시지를 반환한다")
+    void 로그인_필수값이_없으면_한글_메시지를_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new LoginRequestJson(null, null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("이메일을 입력해 주세요."))
+                .andExpect(jsonPath("$.result.password").value("비밀번호를 입력해 주세요."));
     }
 
     @Test
@@ -386,6 +417,28 @@ class MemberAuthControllerTest {
                                 new EmailLoginMethodRequestJson("kakao@example.com", "password123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.email").value("kakao@example.com"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("이메일 로그인 방법 추가의 필수값이 없으면 필드별 한글 메시지를 반환한다")
+    void 이메일_로그인_방법_추가_필수값이_없으면_한글_메시지를_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login-methods/email")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new EmailLoginMethodRequestJson(null, null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.email").value("이메일을 입력해 주세요."))
+                .andExpect(jsonPath("$.result.password").value("비밀번호를 입력해 주세요."));
+    }
+
+    @Test
+    @DisplayName("카카오 계정 연결 비밀번호가 없으면 한글 메시지를 반환한다")
+    void 카카오_계정_연결_비밀번호가_없으면_한글_메시지를_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/kakao/link")
+                        .contentType("application/json")
+                        .content("{\"password\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result.password").value("비밀번호를 입력해 주세요."));
     }
 
     @Test

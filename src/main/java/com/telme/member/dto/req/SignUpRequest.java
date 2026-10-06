@@ -7,10 +7,15 @@ import jakarta.validation.constraints.Size;
 import java.util.Locale;
 
 public record SignUpRequest(
-        @NotBlank @Size(max = 50) String name,
-        @NotBlank @Email @Size(max = 255) String email,
+        @NotBlank(message = "이름을 입력해 주세요.")
+        @Size(max = 50, message = "이름은 50자 이하여야 합니다.") String name,
+        @NotBlank(message = "이메일을 입력해 주세요.")
+        @Email(message = "올바른 이메일 형식으로 입력해 주세요.")
+        @Size(max = 255, message = "이메일은 255자 이하여야 합니다.") String email,
         // BCrypt가 72바이트 초과 시 예외를 던지는데 문자 수(@Size)로는 못 잡아 바이트 기준으로 따로 제한
-        @NotBlank @Size(min = 8) @MaxUtf8Bytes(value = 72, message = "비밀번호는 UTF-8 기준 72바이트를 넘을 수 없습니다.") String password
+        @NotBlank(message = "비밀번호를 입력해 주세요.")
+        @Size(min = 8, message = "비밀번호는 8자 이상이어야 합니다.")
+        @MaxUtf8Bytes(value = 72, message = "비밀번호는 UTF-8 기준 72바이트를 넘을 수 없습니다.") String password
 ) {
     // 대소문자만 다른 이메일이 별개 계정이 되지 않도록 진입 시점에 한 번만 정규화. Locale.ROOT 고정 -> 서버 기본 Locale에 따라 대소문자 변환 결과가 달라지는 것 방지
     public SignUpRequest {
