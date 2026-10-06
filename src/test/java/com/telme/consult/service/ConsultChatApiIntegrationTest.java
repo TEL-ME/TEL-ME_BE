@@ -122,6 +122,63 @@ class ConsultChatApiIntegrationTest {
     }
 
     @Test
+    void gpsSearchPersistsCardsAndContextWithoutClarification() throws Exception {
+        var nearby = org.mockito.Mockito.mock(com.telme.store.service.StoreSearchService.class);
+        org.mockito.Mockito.when(nearby.findNearbyStores(any())).thenReturn(
+                new com.telme.store.dto.res.StoreNearbySearchResponse(List.of(
+                        new com.telme.store.dto.res.StoreNearbyResponse(2L, "실제 검색 매장", "주소", "전화",
+                                java.math.BigDecimal.valueOf(37.5), java.math.BigDecimal.valueOf(127), 300)), 10000));
+        var provider = new ChatStoreAnswerProvider(nearby,
+                org.mockito.Mockito.mock(NamedLocationStoreSearchPort.class),
+                new com.telme.chat.converter.ChatStoreConverter());
+        answerOverride.set(provider::generate);
+        long sid = createSession();
+        long eid = sendCoordinates(sid);
+        waitCompleted(eid);
+        var messages = history(sid).path("result").path("messages");
+        assertThat(messages.size()).isEqualTo(2);
+        var answer = messages.get(1);
+        assertThat(answer.path("messageType").asText()).isEqualTo("STORE_RESULT");
+        assertThat(answer.path("storeResults").get(0).path("distanceMeters").asInt()).isEqualTo(300);
+        assertThat(answer.path("storeSearchContext").path("type").asText()).isEqualTo("CURRENT_LOCATION");
+        assertThat(answer.path("storeSearchContext").path("radiusMeters").asInt()).isEqualTo(10000);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?",
+                String.class, requestId.get())).isEqualTo("DONE");
+    }
+
+    @Test
+    void gpsCanResolvePreviouslyAskedLocationAndCompleteConsultation() throws Exception {
+        long sid = createSession();
+        waitCompleted(send(sid, "매장 알려줘"));
+        long eid = sendCoordinates(sid);
+        waitCompleted(eid);
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?",
+                String.class, requestId.get())).isEqualTo("DONE");
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM consult_conditions WHERE consult_request_id=? AND condition_key='location'",
+                String.class, requestId.get())).isEqualTo("COORDINATES");
+    }
+
+    @Test
+    void rejectsPartialCoordinatesBeforeCreatingQuestionOrExecution() throws Exception {
+        long sid = createSession();
+        mvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sid).session(identity)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"매장\",\"latitude\":37.5}"))
+                .andExpect(status().isBadRequest());
+        assertThat(history(sid).path("result").path("messages").size()).isZero();
+    }
+
+    private long sendCoordinates(long sid) throws Exception {
+        var result = mvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sid).session(identity)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"내 주변 매장\",\"latitude\":37.5,\"longitude\":127.0}"))
+                .andExpect(status().isCreated()).andReturn();
+        return mapper.readTree(result.getResponse().getContentAsByteArray()).path("result")
+                .path("executionId").asLong();
+    }
+
+    @Test
     void storeRequestEndsWithUnavailableGuidanceInsteadOfStoreResult() throws Exception {
         // 매장 검색이 연결되기 전까지 단독 매장 요청은 임시 매장 결과(STORE_RESULT)가 아니라 안내 문구로 끝난다
         answerOverride.set(new PurposeRoutingAnswerProvider(input -> {
@@ -326,7 +383,8 @@ class ConsultChatApiIntegrationTest {
                                     ConsultRequest.Intent.STORE,
                                     "매장",
                                     Map.of()),
-                            LocationStatus.MISSING),
+                            command.coordinates() == null ? LocationStatus.MISSING
+                                    : LocationStatus.COORDINATES_AVAILABLE),
                     null,
                     Purpose.NEARBY_STORE,
                     command.content(),
@@ -359,8 +417,9 @@ class ConsultChatApiIntegrationTest {
                                 candidate.consultRequestId(),
                                 candidate.questionMessageId(),
                                 "location",
-                                Map.of("location", Condition.filled("강남역"))),
-                        LocationStatus.MISSING);
+                                Map.of("location", command.coordinates() == null
+                                        ? Condition.filled("강남역") : Condition.coordinates())),
+                        command.coordinates() == null ? LocationStatus.MISSING : LocationStatus.COORDINATES_AVAILABLE);
         return new ConsultChatProcessingService.AnalyzedTurn(
                 followup.preparation(),
                 followup.followup().answeredField(),

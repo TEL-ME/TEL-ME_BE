@@ -1,6 +1,7 @@
 package com.telme.consult.config;
 
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ChatStoreAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
@@ -58,8 +59,9 @@ public class ConsultRagAnswerConfiguration {
 
     @Bean
     AnswerProvider consultAnswerProvider(
-            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace) {
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ChatStoreAnswerProvider storeAnswers) {
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace));
+                new FaqSearchAnswerProvider(searches, answers, trace), storeAnswers::generate);
     }
 }
