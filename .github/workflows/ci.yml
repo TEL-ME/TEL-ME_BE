@@ -78,6 +78,13 @@ jobs:
           PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
         run: psql -h localhost -p 5432 -U telme -d telme -f docker/postgres/init/01-extensions.sql
 
+      # services 는 이미지 빌드를 지원하지 않아, docker/postgres/Dockerfile 과 같은 패키지를 실행 중인 컨테이너에 설치한다.
+      # 확장 생성(CREATE EXTENSION postgis)은 V15 마이그레이션이 한다
+      - name: Install PostGIS
+        run: >-
+          docker exec ${{ job.services.postgres.id }} bash -c
+          "apt-get update && apt-get install -y --no-install-recommends postgresql-16-postgis-3"
+
       - name: Build
         run: ./gradlew build --build-cache
 

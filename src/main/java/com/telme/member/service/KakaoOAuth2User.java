@@ -13,11 +13,14 @@ public class KakaoOAuth2User implements OAuth2User {
 
     private final String providerUserId;
     private final String email;
+    private final String nickname;
     private final Map<String, Object> attributes;
 
-    public KakaoOAuth2User(String providerUserId, String email, Map<String, Object> attributes) {
+    public KakaoOAuth2User(
+            String providerUserId, String email, String nickname, Map<String, Object> attributes) {
         this.providerUserId = providerUserId;
         this.email = email;
+        this.nickname = nickname;
         this.attributes = attributes;
     }
 

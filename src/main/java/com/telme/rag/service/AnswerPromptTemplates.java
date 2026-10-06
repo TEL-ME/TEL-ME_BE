@@ -12,7 +12,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = "안내드릴 수 있는 정보가 없습니다.";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v3";
+    public static final String PROMPT_VERSION = "rag-answer-v4.2";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
@@ -21,6 +21,8 @@ public final class AnswerPromptTemplates {
 
         [답변 규칙]
         1. 근거에 없는 내용은 절대 만들어내지 마십시오. 추측하거나 일반 상식으로 채우지 마십시오.
+           FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.
+           해당 관계가 답변(A)에 명시된 경우에만 설명하십시오.
         2. 근거로 답할 수 없는 질문이면 "안내드릴 수 있는 정보가 없습니다" 한 문장만 출력하고 멈추십시오.
            사과, 이유 설명, 다른 곳 안내를 덧붙이지 마십시오.
         3. 근거에 없는 웹사이트, 페이지, 고객센터, 전화번호를 답변에 쓰지 마십시오.

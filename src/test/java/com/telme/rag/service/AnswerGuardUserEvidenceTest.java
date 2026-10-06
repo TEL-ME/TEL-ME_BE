@@ -7,6 +7,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.telme.rag.exception.AnswerGuardException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AnswerGuardUserEvidenceTest {
 
@@ -447,10 +450,253 @@ class AnswerGuardUserEvidenceTest {
     }
 
     @Test
+    @DisplayName("현지에서 변경 가능하다는 근거를 해지 가능 주장에 재사용하지 않는다")
+    void 로밍_변경_가능_근거로_현지_해지_가능_주장을_통과시키지_않는다() {
+        String answer = "현지에서 로밍 요금제 해지가 가능합니다.";
+        String context = "현지에서 로밍 요금제 변경이 가능합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 로밍을 해지할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("현지에서 변경 불가라는 근거와 반대되는 변경 가능 주장을 차단한다")
+    void 현지_변경_불가_근거와_반대인_변경_가능_주장을_통과시키지_않는다() {
+        String answer = "현지에서 로밍 요금제 변경이 가능합니다.";
+        String context = "현지에서 로밍 요금제 변경은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 변경할 수 있나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("복수 동작 주장에는 각 동작을 뒷받침하는 근거가 필요하다")
+    void 로밍_변경_미지원_근거만으로_변경과_해지_모두_미지원이라_하지_않는다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String context = "로밍 변경 기능은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("변경과 해지 미지원 근거가 각각 있으면 복수 동작 답변을 유지한다")
+    void 로밍_변경과_해지_근거가_각각_있으면_복수_동작_답변을_유지한다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String context = "현지에서 로밍 변경 기능은 지원하지 않습니다. "
+                + "현지에서 로밍 해지 기능은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("변경 가능과 해지 불가가 한 문장에 있어도 동작별 극성을 구분한다")
+    void 로밍_복수_동작의_서로_다른_극성을_구분한다() {
+        String answer = "현지에서 로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+        String context = "현지에서 로밍 변경이 가능합니다. 현지에서 로밍 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 변경과 해지가 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("해지 미지원 근거를 변경 미지원 주장에 재사용하지 않는다")
+    void 해지_미지원_근거를_변경_미지원_주장에_재사용하지_않는다() {
+        String answer = "로밍 변경과 해지는 모두 지원하지 않습니다.";
+        String evidence = "로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "로밍 변경과 해지가 안 되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("변경 가능과 해지 미지원 극성이 각각 일치하면 유지한다")
+    void 변경_가능과_해지_미지원_극성이_각각_일치하면_유지한다() {
+        String answer = "로밍 변경은 가능하지만 해지는 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, answer, "로밍 변경과 해지가 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'현지에서 로밍 요금제 변경이 가능합니다.','귀국 후 로밍 요금제 변경이 가능합니다.'",
+            "'귀국 후 로밍 요금제 변경이 가능합니다.','현지에서 로밍 요금제 변경이 가능합니다.'"
+    })
+    @DisplayName("다른 장소와 시점의 변경 근거를 재사용하지 않는다")
+    void 다른_장소와_시점의_변경_근거를_재사용하지_않는다(String answer, String evidence) {
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "로밍 요금제 변경은 언제 가능한가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "현지에서 로밍 요금제 변경이 가능합니다.",
+            "귀국 후 로밍 요금제 변경이 가능합니다."
+    })
+    @DisplayName("같은 장소와 시점의 변경 근거는 유지한다")
+    void 같은_장소와_시점의_변경_근거는_유지한다(String answer) {
+        assertThat(guard.applyEvidencePolicy(answer, answer, "로밍 요금제 변경은 언제 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 동작의 장소와 시점을 변경 근거로 재사용하지 않는다")
+    void 다른_동작의_장소와_시점을_변경_근거로_재사용하지_않는다() {
+        String answer = "현지에서 로밍 요금제 변경이 가능합니다.";
+        String evidence = "귀국 후 로밍 요금제 변경이 가능합니다. 현지에서 로밍 해지가 가능합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, "현지에서 로밍 요금제 변경이 가능한가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
     @DisplayName("근거에 있는 정책 단정은 유지한다")
     void 근거에_있는_정책_단정은_유지한다() {
         String answer = "번호이동은 반드시 20시 전에 신청해야 합니다.";
         String context = "번호이동은 반드시 20시 전에 신청해야 합니다.";
+
+        assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("비용이 없다는 근거와 이중 부정으로 반대하는 수수료 주장은 제거한다")
+    void 수수료_이중_부정은_근거와_반대로_판정한다() {
+        String answer = "모든 명의변경에 대해 수수료가 부과되지 않는 것은 아닙니다.";
+        String context = "가족 여부와 상관없이 명의변경 수수료는 없습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "가족 간에는 명의변경 수수료가 면제되나요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("달력 날짜 기준이라는 근거 밖 표현을 제거하고 확인 불가 안내는 유지한다")
+    void 달력_날짜_기준_표현을_근거_없이_단정하지_않는다() {
+        String answer = "영업일 여부에 대한 구분은 명시되어 있지 않습니다. "
+                + "정확한 기간 준수를 위해 달력 날짜를 기준으로 확인해 주시기 바랍니다.";
+        String context = "철회는 개통 후 14일 이내로 안내됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "철회 기간 14일은 영업일 기준인가요?"))
+                .isEqualTo("영업일 여부에 대한 구분은 명시되어 있지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("요금 근거만으로 현지 변경·결제와 귀국 후 처리 정책을 만들지 않는다")
+    void 요금_근거만으로_현지_변경_정책을_추가하지_않는다() {
+        String answer = "로밍 요금제는 하루 기준으로 기본 요금제가 9,900원이며, "
+                + "데이터 무제한 요금제는 12,100원입니다. "
+                + "현지에서 요금제 변경이나 결제는 지원하지 않습니다. "
+                + "요금제 변경은 주로 귀국 후에 진행하시는 것이 일반적입니다.";
+        String context = "일 단위 로밍 요금제는 9,900원입니다. 데이터 무제한은 하루 12,100원입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "로밍 요금제 얼마고 현지에서 끊을 수 있어요?"))
+                .isEqualTo("로밍 요금제는 하루 기준으로 기본 요금제가 9,900원이며, "
+                        + "데이터 무제한 요금제는 12,100원입니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 있는 현지 변경 제한은 유지한다")
+    void 근거에_있는_현지_변경_제한은_유지한다() {
+        String answer = "현지에서 요금제 변경은 지원하지 않습니다.";
+        String context = "현지에서 요금제 변경은 지원하지 않습니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "현지에서 요금제 변경이 가능한가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("근거 없는 가입 비교 이점만 제거하고 처리 시간 안내는 유지한다")
+    void 근거_없는_가입_비교_이점만_제거한다() {
+        String answer = "번호이동은 보통 2시간 이내에 처리됩니다. "
+                + "새로 가입하는 것보다 번호 유지 측면에서 이점이 있습니다.";
+        String context = "번호이동은 보통 2시간 이내에 처리됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "번호이동은 새로 가입하는 것보다 빠른가요?"))
+                .isEqualTo("번호이동은 보통 2시간 이내에 처리됩니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 없는 시간 절약 주장은 제거하고 근거에 있는 주장은 유지한다")
+    void 근거_없는_시간_절약_주장을_제거한다() {
+        String answer = "전화로 진행하시면 시간을 절약하실 수 있습니다.";
+        String context = "매장과 전화 모두 바로 처리됩니다. 전화가 편하시면 전화로 하세요.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "전화와 매장 중 어느 쪽이 더 빠른가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+
+        String supportedContext = "전화로 신청하면 매장 방문보다 시간을 절약할 수 있습니다.";
+        assertThat(guard.applyEvidencePolicy(answer, supportedContext, "전화 신청 방법을 알려주세요."))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("근거에 있는 비교 이점은 유지한다")
+    void 근거에_있는_가입_비교_이점은_유지한다() {
+        String answer = "번호이동은 번호를 유지할 수 있다는 이점이 있습니다.";
+        String context = "번호이동은 기존 번호를 유지할 수 있다는 이점이 있습니다.";
+
+        assertThat(guard.trimUngroundedComparisons(answer, context, "번호이동의 이점이 있나요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("개별 비용만으로 배송비를 포함한 총액을 단정하지 않는다")
+    void 배송비_포함_근거없이_총액을_단정하지_않는다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "유심 재발급 비용은 7,700원이며 택배로 2~3 영업일이 걸립니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("FAQ가 배송비 포함 총액을 명시하면 총액 답변을 유지한다")
+    void 배송비_포함_총액이_근거에_있으면_유지한다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "유심 재발급 총 비용은 7,700원이며 배송비가 포함됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("다른 상품의 총액과 유심 배송비 근거를 섞어 유심 총액을 만들지 않는다")
+    void 다른_상품의_총액으로_유심_재발급_총액을_근거화하지_않는다() {
+        String answer = "유심 재발급 총 비용은 7,700원입니다.";
+        String context = "휴대폰 케이스 총 비용은 7,700원입니다. 유심 재발급 배송비는 별도입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("대상이 생략된 총액 답변은 질문 대상과 근거 대상이 일치해야 한다")
+    void 대상이_생략된_총액도_다른_상품의_근거로_통과시키지_않는다() {
+        String answer = "총 비용은 7,700원입니다.";
+        String context = "휴대폰 케이스 총 비용은 7,700원입니다. 유심 재발급 배송비는 별도입니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "유심 재발급 총 비용이 얼마인가요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("명의변경 처리 시간 근거에 없는 예외 조건을 제거한다")
+    void 명의변경_처리시간에_근거없는_예외조건을_추가하지_않는다() {
+        String answer = "명의변경은 매장에서 30분 이내에 처리됩니다. "
+                + "특별한 경우가 아니라면 며칠이 걸리지 않습니다.";
+        String context = "명의변경은 매장에서 30분 이내에 처리됩니다. "
+                + "미납 요금이 있으면 먼저 완납해야 진행됩니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, context, "명의변경 하는 데 며칠이나 걸려요?"))
+                .isEqualTo("명의변경은 매장에서 30분 이내에 처리됩니다.");
+    }
+
+    @Test
+    @DisplayName("근거에 명시된 예외 조건은 유지한다")
+    void 근거에_있는_예외조건은_유지한다() {
+        String answer = "특별한 경우가 아니라면 명의변경은 매장에서 30분 이내에 처리됩니다.";
+        String context = "특별한 경우가 아니라면 명의변경은 매장에서 30분 이내에 처리됩니다.";
 
         assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
     }

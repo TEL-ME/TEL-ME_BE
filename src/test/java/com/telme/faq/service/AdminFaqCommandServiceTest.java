@@ -10,6 +10,7 @@ import com.telme.faq.dto.req.AdminFaqSaveRequest;
 import com.telme.faq.dto.res.AdminFaqDetailResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqCategory;
+import com.telme.faq.exception.FaqErrorCode;
 import com.telme.faq.repository.FaqRepository;
 import com.telme.global.common.exception.GeneralException;
 import org.junit.jupiter.api.DisplayName;
@@ -107,7 +108,7 @@ class AdminFaqCommandServiceTest {
     void 상태를_생략한_수정은_기존_상태를_유지한다() {
         Long faqId = created();
         service.update(faqId, new AdminFaqSaveRequest(
-                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN), ADMIN_ID);
+                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN, null), ADMIN_ID);
 
         service.update(faqId, request(FaqCategory.SERVICE, QUESTION, "답변만 고칩니다."), ADMIN_ID);
 
@@ -120,7 +121,7 @@ class AdminFaqCommandServiceTest {
         Long faqId = created();
 
         service.update(faqId, new AdminFaqSaveRequest(
-                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN), ADMIN_ID);
+                FaqCategory.SERVICE, QUESTION, ANSWER, null, Faq.Status.HIDDEN, null), ADMIN_ID);
 
         assertThat(faqRepository.findById(faqId).orElseThrow().getStatus()).isEqualTo(Faq.Status.HIDDEN);
     }
@@ -130,7 +131,7 @@ class AdminFaqCommandServiceTest {
     void 삭제는_상태만_바꾼다() {
         Long faqId = created();
 
-        service.delete(faqId, OTHER_ADMIN_ID);
+        service.delete(faqId, OTHER_ADMIN_ID, null);
 
         Faq faq = faqRepository.findById(faqId).orElseThrow();
         assertThat(faq.getStatus()).isEqualTo(Faq.Status.DELETED);
@@ -198,7 +199,7 @@ class AdminFaqCommandServiceTest {
     @DisplayName("삭제한 FAQ와 같은 내용은 다시 등록할 수 있다")
     void 삭제한_내용은_다시_등록할_수_있다() {
         Long faqId = created();
-        service.delete(faqId, ADMIN_ID);
+        service.delete(faqId, ADMIN_ID, null);
 
         AdminFaqDetailResponse again = service.create(request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID);
 
@@ -211,7 +212,56 @@ class AdminFaqCommandServiceTest {
     void 없는_FAQ는_예외를_던진다() {
         assertThatThrownBy(() -> service.update(-1L, request(FaqCategory.SERVICE, QUESTION, ANSWER), ADMIN_ID))
                 .isInstanceOf(GeneralException.class);
-        assertThatThrownBy(() -> service.delete(-1L, ADMIN_ID)).isInstanceOf(GeneralException.class);
+        assertThatThrownBy(() -> service.delete(-1L, ADMIN_ID, null)).isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("조회에서 받은 lockVersion을 그대로 보내면 수정된다")
+    void 맞는_lockVersion은_통과한다() {
+        Long faqId = created();
+        Integer lockVersion = faqRepository.findById(faqId).orElseThrow().getLockVersion();
+
+        AdminFaqDetailResponse updated = service.update(
+                faqId, requestWithLock(lockVersion, "답변을 고칩니다."), ADMIN_ID);
+
+        assertThat(updated.answer()).isEqualTo("답변을 고칩니다.");
+    }
+
+    @Test
+    @DisplayName("화면을 연 뒤 다른 관리자가 저장했으면 FAQ409-1로 막는다")
+    void 낡은_lockVersion은_막힌다() {
+        Long faqId = created();
+        Integer opened = faqRepository.findById(faqId).orElseThrow().getLockVersion();
+        // 다른 관리자가 먼저 저장해 lock_version이 올라간 상태를 만든다
+        service.update(faqId, request(FaqCategory.SERVICE, QUESTION, "먼저 저장한 답변."), OTHER_ADMIN_ID);
+
+        assertThatThrownBy(() -> service.update(faqId, requestWithLock(opened, "나중에 저장한 답변."), ADMIN_ID))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("낡은 lockVersion으로 삭제하면 FAQ409-1로 막는다")
+    void 낡은_lockVersion_삭제는_막힌다() {
+        Long faqId = created();
+        Integer opened = faqRepository.findById(faqId).orElseThrow().getLockVersion();
+        service.update(faqId, request(FaqCategory.SERVICE, QUESTION, "먼저 저장한 답변."), OTHER_ADMIN_ID);
+
+        assertThatThrownBy(() -> service.delete(faqId, ADMIN_ID, opened))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.CONCURRENT_UPDATE);
+    }
+
+    @Test
+    @DisplayName("lockVersion을 생략하면 검사하지 않는다")
+    void lockVersion을_생략하면_검사하지_않는다() {
+        Long faqId = created();
+        service.update(faqId, request(FaqCategory.SERVICE, QUESTION, "먼저 저장한 답변."), OTHER_ADMIN_ID);
+
+        AdminFaqDetailResponse updated = service.update(
+                faqId, request(FaqCategory.SERVICE, QUESTION, "나중에 저장한 답변."), ADMIN_ID);
+
+        assertThat(updated.answer()).isEqualTo("나중에 저장한 답변.");
     }
 
     // 등록도 upsert를 부르므로, 수정·삭제가 부른 것만 세도록 호출 기록을 비우고 돌려준다
@@ -222,6 +272,10 @@ class AdminFaqCommandServiceTest {
     }
 
     private AdminFaqSaveRequest request(FaqCategory category, String question, String answer) {
-        return new AdminFaqSaveRequest(category, question, answer, null, null);
+        return new AdminFaqSaveRequest(category, question, answer, null, null, null);
+    }
+
+    private AdminFaqSaveRequest requestWithLock(Integer lockVersion, String answer) {
+        return new AdminFaqSaveRequest(FaqCategory.SERVICE, QUESTION, answer, null, null, lockVersion);
     }
 }

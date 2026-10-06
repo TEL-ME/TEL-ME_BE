@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface SocialAccountRepository extends JpaRepository<SocialAccount, Long> {
 
+    boolean existsByUser_UserIdAndProvider(Long userId, SocialAccount.Provider provider);
+
     @Query("select sa from SocialAccount sa join fetch sa.user where sa.provider = :provider and sa.providerUserId = :providerUserId")
     Optional<SocialAccount> findByProviderAndProviderUserId(
             @Param("provider") SocialAccount.Provider provider, @Param("providerUserId") String providerUserId);

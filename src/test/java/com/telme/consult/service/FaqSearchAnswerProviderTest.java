@@ -11,12 +11,15 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.consult.exception.FaqAnswerSearchException;
+import com.telme.llm.exception.LlmStreamCancelledException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +30,34 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 class FaqSearchAnswerProviderTest {
+
+    @Test
+    void failedSearchRetainsCauseAndDoesNotGenerateFromEmptyEvidence() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        RuntimeException failure = new IllegalStateException("검색 시스템 원인");
+        when(searches.search(any())).thenThrow(failure);
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        assertThatThrownBy(() -> provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "질문", "질문", Map.of())))
+                .isInstanceOf(FaqAnswerSearchException.class).hasCause(failure);
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    void searchCancellationRetainsCancellationClassification() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        RuntimeException cancellation = new LlmStreamCancelledException();
+        when(searches.search(any())).thenThrow(cancellation);
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        assertThatThrownBy(() -> provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "질문", "질문", Map.of())))
+                .isSameAs(cancellation);
+        verifyNoInteractions(answers);
+    }
 
     @Test
     void searchesOriginalQueryAndPassesResultsToAnswerGeneration() {
@@ -113,6 +144,37 @@ class FaqSearchAnswerProviderTest {
 
         assertThat(received.get()).isEmpty();
         assertThat(answer.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.NO_EVIDENCE);
+    }
+
+    @Test
+    void recordsNoSearchResultsGuardOnceOnlyWhenSearchIsEmpty() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var found = new FaqSearchResponse(
+                7L, null, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
+                0.80, 1, LocalDate.of(2026, 9, 21), 1, null);
+        List<String> stages = new java.util.ArrayList<>();
+        ExecutionTrace trace = new ExecutionTrace() {
+            @Override
+            public void stage(Long executionId, String stage, Object value) {
+                stages.add(stage + ":" + value);
+            }
+
+            @Override
+            public void append(Long executionId, String stage, Object value) {}
+        };
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "답변", null, List.of(), null)), trace);
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "질문", "질문", Map.of());
+
+        when(searches.search(any())).thenReturn(List.of(found));
+        provider.generate(input);
+        assertThat(stages).isEmpty();
+
+        when(searches.search(any())).thenReturn(List.of());
+        provider.generate(input);
+        assertThat(stages).hasSize(1);
+        assertThat(stages.getFirst()).startsWith("guard:").contains("NO_SEARCH_RESULTS");
     }
 
     @Test

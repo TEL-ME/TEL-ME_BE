@@ -40,6 +40,7 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
         AnswerRequest request =
                 AnswerRequest.builder()
                         .executionId(input.executionId())
+                        .consultRequestId(input.consultRequestId())
                         .userQuery(input.originalUserQuery())
                         .conditions(input.confirmedConditions())
                         .searchResults(results)
@@ -91,6 +92,11 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
             @Override
             public void onToken(String token) {
                 delegate.onToken(token);
+            }
+
+            @Override
+            public void onProgress() {
+                delegate.onProgress();
             }
 
             @Override
