@@ -32,7 +32,8 @@ public class AdminDashboardController {
                     + "증감은 오늘·어제 두 숫자로 화면에서 계산합니다. 미리보기 목록은 각 목록 API에 size를 주면 됩니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "400", description = "DASHBOARD400-0: 기간의 시작이 끝보다 늦음"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-1: 시각 형식 오류. "
+                    + "DASHBOARD400-0: 기간의 시작이 끝보다 늦음"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음")
     })

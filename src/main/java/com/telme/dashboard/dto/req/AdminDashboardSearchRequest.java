@@ -13,7 +13,6 @@ public record AdminDashboardSearchRequest(Instant from, Instant to) {
         return from == null ? EVERY_TIME_FROM : from;
     }
 
-    // to는 그 시각 직전까지를 뜻한다. 답 못 한 질문 목록과 같은 기준이어야 건수가 어긋나지 않는다
     public Instant toOrMax() {
         return to == null ? EVERY_TIME_TO : to;
     }

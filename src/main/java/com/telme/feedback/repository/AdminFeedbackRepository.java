@@ -46,7 +46,7 @@ public interface AdminFeedbackRepository extends JpaRepository<MessageFeedback, 
             @Param("to") Instant to,
             Pageable pageable);
 
-    // 대시보드 카드. 목록 기본값(미처리 싫어요)과 같은 조건이라 건수가 어긋나지 않는다
+    // 목록은 사유·기간 조건이 더 있지만 기본값이 전체라 건수가 같다. 합치면 부분 인덱스를 못 쓴다
     @Query("select count(f) from MessageFeedback f where f.rating = :dislike and f.handledAt is null")
     long countUnhandledDislikes(@Param("dislike") MessageFeedback.Rating dislike);
 }

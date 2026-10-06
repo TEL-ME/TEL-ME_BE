@@ -6,15 +6,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-// 관리자 대시보드 집계 전용. 목록·상세는 AdminUnansweredRepository가 맡는다
 public interface AdminChatStatsRepository extends JpaRepository<ChatMessage, Long> {
 
-    // 지금은 USER 메시지가 모두 QUESTION이지만, 다른 유형이 생겨도 질문 수가 부풀지 않게 함께 건다
+    // 이틀을 한 번에 읽고 todayStart로 갈라, 하루씩 두 번 훑지 않는다
     @Query("""
-            select count(m) from ChatMessage m
+            select new com.telme.chat.repository.QuestionCounts(
+                       coalesce(sum(case when m.createdAt >= :todayStart then 1L else 0L end), 0L),
+                       coalesce(sum(case when m.createdAt < :todayStart then 1L else 0L end), 0L))
+            from ChatMessage m
             where m.role = com.telme.chat.entity.ChatMessage$Role.USER
               and m.messageType = com.telme.chat.entity.ChatMessage$MessageType.QUESTION
-              and m.createdAt >= :from and m.createdAt < :to
+              and m.createdAt >= :yesterdayStart and m.createdAt < :tomorrowStart
             """)
-    long countQuestions(@Param("from") Instant from, @Param("to") Instant to);
+    QuestionCounts countQuestions(@Param("yesterdayStart") Instant yesterdayStart,
+            @Param("todayStart") Instant todayStart, @Param("tomorrowStart") Instant tomorrowStart);
 }
