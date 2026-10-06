@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -17,9 +18,9 @@ class KakaoLinkStartServiceTest {
     private final CurrentMemberResolver currentMemberResolver = mock(CurrentMemberResolver.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-24T00:00:00Z"), ZoneOffset.UTC);
     private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
-    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
+    private final SocialEmailMatchStore socialEmailMatchStore = new SocialEmailMatchStore(clock);
     private final KakaoLinkStartService service =
-            new KakaoLinkStartService(currentMemberResolver, kakaoLinkRequestStore, kakaoEmailMatchStore);
+            new KakaoLinkStartService(currentMemberResolver, kakaoLinkRequestStore, socialEmailMatchStore);
 
     @Test
     @DisplayName("현재 회원을 pending으로 저장하고 카카오 인가 URL을 반환한다")
@@ -40,11 +41,11 @@ class KakaoLinkStartServiceTest {
     @DisplayName("이전에 남아있던 B(이메일 계정 발견) pending을 지운다")
     void 이전_B_pending을_지운다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        kakaoEmailMatchStore.issue(request, "old-kakao-id", 99L, "old@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 99L, "old@example.com");
         when(currentMemberResolver.resolve(request)).thenReturn(User.builder().userId(30L).build());
 
         service.start(request);
 
-        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(SocialEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 }

@@ -53,7 +53,7 @@ class KakaoLinkRequestStoreTest {
         assertThatThrownBy(() -> store.consume(request))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
-                .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+                .isEqualTo(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
         assertThat(request.getSession(false).getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
     }
 

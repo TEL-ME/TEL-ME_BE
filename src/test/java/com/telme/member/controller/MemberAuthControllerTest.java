@@ -5,12 +5,14 @@ import com.telme.member.service.MemberStatusChecker;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoAuthorizationFailureHandler;
 
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,8 +24,9 @@ import com.telme.member.dto.res.MemberMeResponse.LoginMethod;
 import com.telme.member.dto.res.SignUpResponse;
 import com.telme.member.exception.MemberErrorCode;
 import com.telme.member.service.EmailLoginMethodService;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.GuestIdentityService;
-import com.telme.member.service.KakaoAccountLinkService;
+import com.telme.member.service.SocialAccountLinkService;
 import com.telme.member.service.KakaoLinkStartService;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
@@ -68,7 +71,7 @@ class MemberAuthControllerTest {
     private MemberProfileService memberProfileService;
 
     @MockitoBean
-    private KakaoAccountLinkService kakaoAccountLinkService;
+    private SocialAccountLinkService socialAccountLinkService;
 
     @MockitoBean
     private EmailLoginMethodService emailLoginMethodService;
@@ -82,6 +85,9 @@ class MemberAuthControllerTest {
     // SecurityConfig가 securityFilterChain 빈에서 요구하는 OAuth2 로그인 의존성 — 웹 슬라이스에는 없어 목으로 채운다
     @MockitoBean
     private KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    @MockitoBean
+    private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
     private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
@@ -122,12 +128,21 @@ class MemberAuthControllerTest {
 
     @Test
     void 인가_시작_실패는_전용_핸들러로_전달한다() throws Exception {
-        org.mockito.Mockito.doThrow(new GeneralException(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED))
+        org.mockito.Mockito.doThrow(new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED))
                 .when(kakaoLinkRequestStore).bind(any(), any(), any());
 
         mockMvc.perform(get("/oauth2/authorization/kakao").param("link_token", "invalid-token"));
 
         org.mockito.Mockito.verify(kakaoAuthorizationFailureHandler).onAuthenticationFailure(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Google 로그인 시작 경로는 Google 인가 화면으로 리다이렉트한다")
+    void 구글_로그인_시작() throws Exception {
+        mockMvc.perform(get("/oauth2/authorization/google"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string(
+                        "Location", startsWith("https://accounts.google.com/o/oauth2/v2/auth?")));
     }
 
     @Test
@@ -432,9 +447,9 @@ class MemberAuthControllerTest {
     }
 
     @Test
-    @DisplayName("카카오 계정 연결 비밀번호가 없으면 한글 메시지를 반환한다")
-    void 카카오_계정_연결_비밀번호가_없으면_한글_메시지를_반환한다() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/kakao/link")
+    @DisplayName("소셜 계정 연결 비밀번호가 없으면 한글 메시지를 반환한다")
+    void 소셜_계정_연결_비밀번호가_없으면_한글_메시지를_반환한다() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/social/link")
                         .contentType("application/json")
                         .content("{\"password\":null}"))
                 .andExpect(status().isBadRequest())

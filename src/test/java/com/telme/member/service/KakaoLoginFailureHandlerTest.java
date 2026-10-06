@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.member.config.Oauth2Properties;
@@ -18,7 +19,7 @@ class KakaoLoginFailureHandlerTest {
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
     private final Clock clock = Clock.systemDefaultZone().withZone(ZoneOffset.UTC);
     private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
-    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
+    private final SocialEmailMatchStore socialEmailMatchStore = new SocialEmailMatchStore(clock);
     private final KakaoLoginFailureHandler handler =
             new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkRequestStore);
 
@@ -69,13 +70,13 @@ class KakaoLoginFailureHandlerTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "current-state");
         request.setParameter("state", "current-state");
-        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new BadCredentialsException("카카오 인증 취소"));
 
         assertThat(request.getSession().getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
-        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+        assertThat(socialEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
     }
 
     @Test
@@ -84,14 +85,14 @@ class KakaoLoginFailureHandlerTest {
         kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "old-state");
         kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "new-state");
         request.setParameter("state", "old-state");
-        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));
 
         request.setParameter("state", "new-state");
         assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
-        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+        assertThat(socialEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
     }
 
     @Test

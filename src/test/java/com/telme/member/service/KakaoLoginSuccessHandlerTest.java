@@ -1,8 +1,9 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static com.telme.chat.service.HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE;
 import static com.telme.chat.service.HttpSessionChatActorProvider.USER_ID_ATTRIBUTE;
-import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -49,7 +50,7 @@ class KakaoLoginSuccessHandlerTest {
     private final GuestIdResolver guestIdResolver = new GuestIdResolver();
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-24T00:00:00Z"), ZoneOffset.UTC);
     private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
-    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
+    private final SocialEmailMatchStore socialEmailMatchStore = new SocialEmailMatchStore(clock);
     private final SecurityContextRepository securityContextRepository = mock(SecurityContextRepository.class);
     private final LoginCompletionService loginCompletionService = new LoginCompletionService(securityContextRepository);
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
@@ -59,10 +60,11 @@ class KakaoLoginSuccessHandlerTest {
             return action.doInTransaction(null);
         }
     };
+    private final SocialLoginService socialLoginService = new SocialLoginService(
+            socialMemberFinder, guestSuccessionService, guestIdResolver, loginCompletionService, transactionTemplate);
     private final KakaoLoginSuccessHandler handler = new KakaoLoginSuccessHandler(
-            socialMemberFinder, userRepository, memberStatusChecker, guestSuccessionService, guestIdResolver,
-            loginCompletionService, kakaoLinkRequestStore, kakaoEmailMatchStore, securityContextRepository,
-            oauth2Properties, transactionTemplate);
+            socialMemberFinder, userRepository, memberStatusChecker, socialLoginService,
+            kakaoLinkRequestStore, socialEmailMatchStore, securityContextRepository, oauth2Properties);
 
     @AfterEach
     void clearSecurityContext() {
@@ -167,10 +169,35 @@ class KakaoLoginSuccessHandlerTest {
 
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-1");
-        // KakaoEmailMatchStore(5-2)에 저장됐는지 require()로 확인
-        KakaoEmailMatch pending = kakaoEmailMatchStore.require(request);
+        // SocialEmailMatchStore(5-2)에 저장됐는지 require()로 확인
+        SocialEmailMatch pending = socialEmailMatchStore.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-4");
         assertThat(pending.matchedUserId()).isEqualTo(20L);
+    }
+
+    @Test
+    @DisplayName("Google 이메일이 기존 회원과 겹치면 공급자를 포함한 pending 정보를 저장한다")
+    void 구글_이메일_충돌시_공급자를_포함해_pending_저장() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        SocialOAuth2Principal principal = mock(SocialOAuth2Principal.class);
+        when(principal.getProvider()).thenReturn(GOOGLE);
+        when(principal.getProviderUserId()).thenReturn("google-sub-1");
+        when(principal.getEmail()).thenReturn("match@example.com");
+        when(principal.getDisplayName()).thenReturn("구글 사용자");
+        when(socialMemberFinder.findOrCreate(
+                GOOGLE, "google-sub-1", "match@example.com", "구글 사용자"))
+                .thenThrow(new SocialEmailAlreadyLinkedException(20L, "match@example.com"));
+        Authentication authentication = new OAuth2AuthenticationToken(principal, List.of(), "google");
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        SocialEmailMatch pending = socialEmailMatchStore.require(request);
+        assertThat(pending.provider()).isEqualTo(GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("google-sub-1");
+        assertThat(pending.matchedUserId()).isEqualTo(20L);
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-1");
     }
 
     @Test
@@ -392,14 +419,14 @@ class KakaoLoginSuccessHandlerTest {
     @DisplayName("이전에 남아있던 B pending은 이번 로그인 결과와 섞이지 않고 지워진다")
     void 이전_B_pending은_섞이지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        kakaoEmailMatchStore.issue(request, "old-kakao-id", 999L, "old@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 999L, "old@example.com");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
         when(socialMemberFinder.findOrCreate(KAKAO, "kakao-12", null, null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-12", null));
 
-        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession(false).getAttribute(SocialEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test

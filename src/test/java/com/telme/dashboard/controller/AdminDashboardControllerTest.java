@@ -17,6 +17,7 @@ import com.telme.member.service.KakaoAuthorizationFailureHandler;
 import com.telme.member.service.KakaoLinkRequestStore;
 import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberStatusChecker;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +50,9 @@ class AdminDashboardControllerTest {
     // SecurityConfig가 요구하는 OAuth2 로그인 의존성 — 웹 슬라이스에는 없어 목으로 채운다
     @MockitoBean
     private KakaoOAuth2UserService kakaoOAuth2UserService;
+
+    @MockitoBean
+    private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
     private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
