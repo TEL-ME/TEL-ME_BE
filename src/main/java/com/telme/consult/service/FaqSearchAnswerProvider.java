@@ -7,6 +7,10 @@ import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.consult.exception.FaqAnswerSearchException;
+import com.telme.llm.exception.LlmStreamCancelledException;
+import com.telme.chat.service.ExecutionTrace;
+import java.util.Map;
 
 import java.util.List;
 import java.util.Objects;
@@ -17,11 +21,18 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     private final FaqSearchService searches;
     private final SearchResultAnswerGenerator answers;
+    private final ExecutionTrace trace;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
+        this(searches, answers, ExecutionTrace.noop());
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
+        this.trace = Objects.requireNonNull(trace);
     }
 
     @Override
@@ -31,22 +42,48 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
         }
         List<FaqSearchResponse> results = searchWithOriginalAndRefinedQuery(input);
+        if (results.isEmpty()) {
+            // 검색 결과가 없으면 RAG 진입 전에 근거 부족 안내를 직접 반환하는 어댑터도 있어 여기서 한 번만 기록한다.
+            trace.stage(input.executionId(), "guard",
+                    Map.of("outcome", "NOT_RUN", "reason", "NO_SEARCH_RESULTS"));
+        }
         return Objects.requireNonNull(
                 answers.generate(input, results), "generatedAnswer");
     }
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
-        List<FaqSearchResponse> originalResults = search(input.originalUserQuery());
+        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), "ORIGINAL");
         // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
         if (!originalResults.isEmpty()
                 || input.originalUserQuery().equals(input.searchQuery())) {
             return originalResults;
         }
-        return search(input.searchQuery());
+        return search(input, input.searchQuery(), "REFINED");
     }
 
-    private List<FaqSearchResponse> search(String query) {
-        return List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
+    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind) {
+        Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", SEARCH_TOP_K,
+                "consultRequestId", input.consultRequestId());
+        trace.append(input.executionId(), "searchRequests", request);
+        try {
+            var results = List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
+            trace.append(input.executionId(), "searchResults", Map.of(
+                    "query", query, "kind", kind, "status", results.isEmpty() ? "EMPTY" : "FOUND",
+                    "sources", results, "consultRequestId", input.consultRequestId()));
+            return results;
+        } catch (LlmStreamCancelledException cancelled) {
+            trace.append(input.executionId(), "searchResults",
+                    Map.of("query", query, "kind", kind, "status", "CANCELLED",
+                            "consultRequestId", input.consultRequestId()));
+            throw cancelled;
+        } catch (RuntimeException failure) {
+            trace.append(input.executionId(), "searchResults", Map.of(
+                    "query", query, "kind", kind, "status", "ERROR",
+                    "errorCode", FaqAnswerSearchException.ERROR_CODE,
+                    "consultRequestId", input.consultRequestId()));
+            // 빈 목록은 근거 없음이다. 호출·응답 계약 실패는 원인을 보존해 별도로 종료한다.
+            throw new FaqAnswerSearchException(failure);
+        }
     }
 
     /** RAG 구현과의 경계다. 검색 결과가 없어도 답변 불가 처리를 위해 호출한다. */

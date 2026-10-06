@@ -3,6 +3,7 @@ package com.telme.rag.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
@@ -35,7 +36,7 @@ class AnswerPromptTemplatesTest {
         LlmClient client=mock(LlmClient.class);
         doAnswer(i->{LlmStreamHandler h=i.getArgument(1);h.onToken("7,700원입니다.");h.onComplete();return null;}).when(client).stream(any(),any());
         EvidenceRelevanceChecker relevance=mock(EvidenceRelevanceChecker.class);when(relevance.canAnswer(any(),any(),any())).thenReturn(true);
-        var generator=new RagAnswerGenerator(client,new AnswerContextConverter(),new AnswerGuard(),relevance,mock(LlmGenerationRecorder.class));
+        var generator=new RagAnswerGenerator(client,new AnswerContextConverter(),new AnswerGuard(),relevance,mock(LlmGenerationRecorder.class),ExecutionTrace.noop());
         var request=AnswerRequest.builder().userQuery("cost?").conditions(Map.of("location","국내")).searchResults(List.of(source)).build();
         LlmStreamHandler handler=mock(LlmStreamHandler.class);var result=generator.generate(request,handler);
         var capture=org.mockito.ArgumentCaptor.forClass(LlmRequest.class);verify(client).stream(capture.capture(),any());

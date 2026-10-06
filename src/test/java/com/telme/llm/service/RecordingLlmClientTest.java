@@ -126,7 +126,7 @@ class RecordingLlmClientTest {
     @Test
     @DisplayName("기록 저장이 실패해도 generate 결과와 stream 흐름은 그대로 유지된다")
     void 기록_저장_실패가_응답을_막지_않는다() {
-        LlmGenerationRecorder failing = new LlmGenerationRecorder(null, null) {
+        LlmGenerationRecorder failing = new LlmGenerationRecorder(null, null, null, null) {
 
             @Override
             public void record(LlmRequest request, String model, Result result) {
@@ -173,7 +173,7 @@ class RecordingLlmClientTest {
         private int skipped;
 
         private RecordingRecorder() {
-            super(null, null);
+            super(null, null, null, null);
         }
 
         @Override

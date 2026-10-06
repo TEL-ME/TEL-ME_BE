@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.config.LlmConfig;
@@ -134,7 +135,7 @@ class PromptRelationComparisonProbe {
         };
         RagAnswerGenerator generator=new RagAnswerGenerator(observed,new AnswerContextConverter(),guard,
                 new EvidenceRelevanceChecker(observed,MAPPER,new EvidenceCheckProperties(evidenceCheck,300)),
-                mock(LlmGenerationRecorder.class));
+                mock(LlmGenerationRecorder.class),ExecutionTrace.noop());
         Map<String,Object> row=pending(c,true);
         row.put("prompt_version",version); row.put("prompt_sha256",hash(prompt.getBytes(StandardCharsets.UTF_8)));
         long start=System.nanoTime();
