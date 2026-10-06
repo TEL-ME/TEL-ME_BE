@@ -59,4 +59,10 @@ public class User {
 
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
+
+    public void fillNameIfMissing(String name) {
+        if (this.name == null) {
+            this.name = name;
+        }
+    }
 }

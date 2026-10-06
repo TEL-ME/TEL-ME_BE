@@ -7,8 +7,8 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
-import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueDecision;
+import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.FaqAnswerSearchException;
@@ -16,12 +16,12 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
-
-import lombok.extern.slf4j.Slf4j;
 
 /** 분석·검색 어댑터를 받은 뒤 Chat 처리 지점에 등록한다. 모델 호출 중에는 DB 잠금을 잡지 않는다. */
 @Slf4j
@@ -40,12 +40,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             AnswerProvider answers,
             ConsultChatPersistenceService persistence,
             ConfirmedConditionConverter conditionConverter) {
-        this(
-                analyzer,
-                answers,
-                persistence,
-                conditionConverter,
-                ConsultChatEvents.noop());
+        this(analyzer, answers, persistence, conditionConverter, ConsultChatEvents.noop());
     }
 
     public ConsultChatProcessingService(
@@ -83,27 +78,51 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private void process(ChatProcessingCommand command) {
-        trace.stage(command.executionId(), "processing", Map.of(
-                "handler", "ConsultChatProcessingService", "traceVersion", 1));
+        trace.stage(
+                command.executionId(),
+                "processing",
+                Map.of("handler", "ConsultChatProcessingService", "traceVersion", 1));
         AnalyzedTurn turn = analyzer.analyze(command);
         if (turn.directAnswer() != null && turn.preparation() != null) {
-            trace.stage(command.executionId(), "analysis", Map.of(
-                    "action", "WAITING_EXPLANATION", "pendingQuestionMessageId", turn.preparation().pendingMessageId()));
+            trace.stage(
+                    command.executionId(),
+                    "analysis",
+                    Map.of(
+                            "action",
+                            "WAITING_EXPLANATION",
+                            "pendingQuestionMessageId",
+                            turn.preparation().pendingMessageId()));
         } else if (turn.directAnswer() == null && turn.preparation() != null) {
-            trace.stage(command.executionId(), "analysis", Map.of(
-                    "purpose", turn.purpose().name(), "originalQuery", turn.originalUserQuery(),
-                    "refinedQuery", turn.searchQuery(), "action",
-                    turn.preparation().waitingForReply() ? "WAITING"
-                            : turn.preparation().prepared().decision().action().name()));
+            trace.stage(
+                    command.executionId(),
+                    "analysis",
+                    Map.of(
+                            "purpose",
+                            turn.purpose().name(),
+                            "originalQuery",
+                            turn.originalUserQuery(),
+                            "refinedQuery",
+                            turn.searchQuery(),
+                            "action",
+                            turn.preparation().waitingForReply()
+                                    ? "WAITING"
+                                    : turn.preparation().prepared().decision().action().name()));
         } else {
-            trace.stage(command.executionId(), "analysis", Map.of("action",
-                    turn.directAnswer() != null ? "DIRECT" : "ADAPTER_BRANCH"));
+            trace.stage(
+                    command.executionId(),
+                    "analysis",
+                    Map.of("action", turn.directAnswer() != null ? "DIRECT" : "ADAPTER_BRANCH"));
         }
         if (turn.directAnswer() != null) {
             var completed =
                     turn.preparation() == null
-                            ? persistence.persistDirectAnswer(command.executionId(), command.sessionId(), turn.directAnswer())
-                            : persistence.persistWaiting(command.executionId(), command.sessionId(), turn.preparation(), turn.directAnswer());
+                            ? persistence.persistDirectAnswer(
+                                    command.executionId(), command.sessionId(), turn.directAnswer())
+                            : persistence.persistWaiting(
+                                    command.executionId(),
+                                    command.sessionId(),
+                                    turn.preparation(),
+                                    turn.directAnswer());
             events.completed(command.executionId(), completed);
             return;
         }
@@ -127,18 +146,39 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         PreparedAnswer answerPreparation = null;
         if (prepared.decision().action() == Action.PROCEED) {
-            answerPreparation = answers.prepare(new AnswerInput(command.executionId(), command.sessionId(),
-                    prepared.decision().consultRequestId(), turn.purpose(), turn.originalUserQuery(),
-                    turn.searchQuery(), conditionConverter.convert(prepared.decision().conditions())),
-                    prepared.decision().conditions());
+            answerPreparation =
+                    answers.prepare(
+                            new AnswerInput(
+                                    command.executionId(),
+                                    command.sessionId(),
+                                    prepared.decision().consultRequestId(),
+                                    turn.purpose(),
+                                    turn.originalUserQuery(),
+                                    turn.searchQuery(),
+                                    conditionConverter.convert(prepared.decision().conditions())),
+                            prepared.decision().conditions());
             if (answerPreparation.decision() != null) {
-                prepared = new ConsultService.PreparedTurn(prepared.sessionId(), prepared.expectedVersion(),
-                        answerPreparation.decision());
-                trace.stage(command.executionId(), "clarificationAssessment", Map.of(
-                        "action", prepared.decision().action().name(), "consultRequestId", prepared.decision().consultRequestId(),
-                        "waitingField", prepared.decision().waitingField() == null ? "" : prepared.decision().waitingField()));
+                prepared =
+                        new ConsultService.PreparedTurn(
+                                prepared.sessionId(),
+                                prepared.expectedVersion(),
+                                answerPreparation.decision());
+                trace.stage(
+                        command.executionId(),
+                        "clarificationAssessment",
+                        Map.of(
+                                "action",
+                                prepared.decision().action().name(),
+                                "consultRequestId",
+                                prepared.decision().consultRequestId(),
+                                "waitingField",
+                                prepared.decision().waitingField() == null
+                                        ? ""
+                                        : prepared.decision().waitingField()));
                 if (prepared.decision().action() == Action.ASK) {
-                    var clarification = persistence.persistClarification(command.executionId(), prepared, turn.answeredField());
+                    var clarification =
+                            persistence.persistClarification(
+                                    command.executionId(), prepared, turn.answeredField());
                     events.completed(command.executionId(), clarification);
                     return;
                 }
@@ -171,38 +211,46 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (prepared.decision().action() == Action.PROCEED
                 && generated.answer().messageType() == ChatMessage.MessageType.ANSWER) {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
+            // 추적 기록은 전송 뒤에 남긴다. 기록용 DB 쓰기가 최종 답변 전송을 늦추지 않게 한다.
             try {
-                trace.stage(command.executionId(), "finalTransmission", Map.of(
-                        "outputMessageId", completed.outputMessage().messageId(),
-                        "status", "DISPATCH_ATTEMPTED"));
                 events.stream(command.executionId()).onToken(generated.answer().content());
-                trace.stage(command.executionId(), "finalTransmission", Map.of(
-                        "outputMessageId", completed.outputMessage().messageId(),
-                        "status", "DISPATCH_RETURNED"));
+                trace.stage(
+                        command.executionId(),
+                        "finalTransmission",
+                        Map.of(
+                                "outputMessageId",
+                                completed.outputMessage().messageId(),
+                                "status",
+                                "DISPATCH_RETURNED"));
             } catch (RuntimeException deliveryFailure) {
-                trace.stage(command.executionId(), "finalTransmission", Map.of(
-                        "outputMessageId", completed.outputMessage().messageId(),
-                        "status", "DISPATCH_ERROR"));
-                log.warn("최종 답변 토큰 전달 실패: executionId={}",
-                        command.executionId(), deliveryFailure);
+                trace.stage(
+                        command.executionId(),
+                        "finalTransmission",
+                        Map.of(
+                                "outputMessageId",
+                                completed.outputMessage().messageId(),
+                                "status",
+                                "DISPATCH_ERROR"));
+                log.warn("최종 답변 토큰 전달 실패: executionId={}", command.executionId(), deliveryFailure);
             }
         }
         try {
             events.completed(command.executionId(), completed);
         } catch (RuntimeException deliveryFailure) {
-            log.warn("최종 답변 완료 이벤트 전달 실패: executionId={}",
-                    command.executionId(), deliveryFailure);
+            log.warn("최종 답변 완료 이벤트 전달 실패: executionId={}", command.executionId(), deliveryFailure);
         }
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {
-        log.error("상담 AI 처리 실패: executionId={}, sessionId={}",
-                command.executionId(), command.sessionId(), exception);
+        log.error(
+                "상담 AI 처리 실패: executionId={}, sessionId={}",
+                command.executionId(),
+                command.sessionId(),
+                exception);
         ChatFailure failure = failure(exception);
         RuntimeException persistenceFailure = null;
         try {
-            persistence.failAnswer(
-                    command.executionId(), command.sessionId(), failure);
+            persistence.failAnswer(command.executionId(), command.sessionId(), failure);
         } catch (RuntimeException failureException) {
             failureException.addSuppressed(exception);
             persistenceFailure = failureException;
@@ -294,9 +342,11 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 }
             } else {
                 Objects.requireNonNull(preparation, "preparation");
-                if (directAnswer != null && (!preparation.waitingForReply()
-                        || preparation.prepared() != null || answeredField != null
-                        || directAnswer.messageType() != ChatMessage.MessageType.ANSWER)) {
+                if (directAnswer != null
+                        && (!preparation.waitingForReply()
+                                || preparation.prepared() != null
+                                || answeredField != null
+                                || directAnswer.messageType() != ChatMessage.MessageType.ANSWER)) {
                     throw new IllegalArgumentException("설명 답변은 조건 변경 없이 기존 질문을 유지해야 합니다.");
                 }
                 Objects.requireNonNull(purpose, "purpose");
@@ -338,9 +388,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             originalUserQuery = originalUserQuery.strip();
             searchQuery = searchQuery.strip();
             confirmedConditions =
-                    Map.copyOf(
-                            Objects.requireNonNull(
-                                    confirmedConditions, "confirmedConditions"));
+                    Map.copyOf(Objects.requireNonNull(confirmedConditions, "confirmedConditions"));
         }
     }
 }

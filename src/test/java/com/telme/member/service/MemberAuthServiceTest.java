@@ -3,6 +3,7 @@ package com.telme.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -87,10 +88,10 @@ class MemberAuthServiceTest {
     @Test
     @DisplayName("신규 이메일이면 비밀번호를 해싱해 저장하고 자동 로그인 처리된다")
     void 정상_가입() {
-        SignUpRequest request = new SignUpRequest("new@example.com", "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", "new@example.com", "password123");
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("HASHED");
-        User saved = User.builder().userId(1L).email("new@example.com").passwordHash("HASHED").build();
+        User saved = User.builder().userId(1L).name("홍길동").email("new@example.com").passwordHash("HASHED").build();
         when(userRepository.save(any(User.class))).thenReturn(saved);
         SignUpResponse expected = new SignUpResponse(1L, "new@example.com");
         when(memberConverter.toSignUpResponse(saved)).thenReturn(expected);
@@ -101,6 +102,7 @@ class MemberAuthServiceTest {
         SignUpResponse response = memberAuthService.signUp(request, httpRequest, httpResponse);
 
         assertThat(response).isEqualTo(expected);
+        verify(userRepository).save(argThat(user -> "홍길동".equals(user.getName())));
         assertThat(httpRequest.getSession(false).getAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE))
                 .isEqualTo(1L);
         verify(securityContextRepository).saveContext(any(), any(), any());
@@ -110,7 +112,7 @@ class MemberAuthServiceTest {
     @Test
     @DisplayName("이미 존재하는 이메일이면 예외를 던지고 로그인 처리를 하지 않는다")
     void 이메일_중복이면_예외() {
-        SignUpRequest request = new SignUpRequest("dup@example.com", "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", "dup@example.com", "password123");
         when(userRepository.findByEmail("dup@example.com"))
                 .thenReturn(Optional.of(User.builder().userId(1L).email("dup@example.com").build()));
         MockHttpServletRequest httpRequest = new MockHttpServletRequest();
@@ -128,7 +130,7 @@ class MemberAuthServiceTest {
     @Test
     @DisplayName("동시 가입으로 findByEmail 통과 후 DB UNIQUE 제약에 걸려도 동일한 예외로 처리한다")
     void 동시_가입은_UNIQUE_제약으로_처리된다() {
-        SignUpRequest request = new SignUpRequest("race@example.com", "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", "race@example.com", "password123");
         when(userRepository.findByEmail("race@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("HASHED");
         // Spring Data JPA는 UNIQUE 위반을 DuplicateKeyException이 아니라 DataIntegrityViolationException으로 번역하고,
@@ -148,7 +150,7 @@ class MemberAuthServiceTest {
     @Test
     @DisplayName("UNIQUE 위반이 아닌 데이터 무결성 오류는 이메일 중복으로 바뀌지 않는다")
     void UNIQUE_위반이_아니면_그대로_전파된다() {
-        SignUpRequest request = new SignUpRequest("toolong@example.com", "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", "toolong@example.com", "password123");
         when(userRepository.findByEmail("toolong@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("HASHED");
         when(userRepository.save(any(User.class)))
@@ -163,7 +165,7 @@ class MemberAuthServiceTest {
     @Test
     @DisplayName("이메일이 아닌 다른 UNIQUE 제약 위반은 이메일 중복으로 바뀌지 않는다")
     void 다른_UNIQUE_제약_위반은_이메일_중복으로_바뀌지_않는다() {
-        SignUpRequest request = new SignUpRequest("other-constraint@example.com", "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", "other-constraint@example.com", "password123");
         when(userRepository.findByEmail("other-constraint@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("HASHED");
         ConstraintViolationException otherConstraint = new ConstraintViolationException(

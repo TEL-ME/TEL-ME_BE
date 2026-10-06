@@ -77,7 +77,7 @@ class KakaoLoginSuccessHandlerTest {
         request.getSession().setAttribute(GUEST_ID_ATTRIBUTE, guestId);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-1", null)).thenReturn(user);
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-1", null, null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-1", null));
 
@@ -93,12 +93,26 @@ class KakaoLoginSuccessHandlerTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(9L).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-2", null)).thenReturn(user);
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-2", null, null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-2", null));
 
         verify(guestSuccessionService, never()).succeedGuest(any(), any());
         assertThat(request.getSession().getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(9L);
+    }
+
+    @Test
+    @DisplayName("일반 로그인 - 카카오 닉네임을 회원 조회·생성 서비스에 전달한다")
+    void 일반_로그인_닉네임_전달() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        User user = User.builder().userId(19L).name("카카오닉네임").build();
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-19", null, "카카오닉네임")).thenReturn(user);
+
+        handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-19", null, "카카오닉네임"));
+
+        verify(socialMemberFinder).findOrCreate(KAKAO, "kakao-19", null, "카카오닉네임");
+        assertThat(request.getSession().getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(19L);
     }
 
     @Test
@@ -108,7 +122,7 @@ class KakaoLoginSuccessHandlerTest {
         String originalSessionId = request.getSession().getId();
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(18L).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-18", null)).thenReturn(user);
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-18", null, null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-18", null));
 
@@ -124,7 +138,7 @@ class KakaoLoginSuccessHandlerTest {
         request.getSession().setAttribute(GUEST_ID_ATTRIBUTE, guestId);
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-3", null)).thenReturn(user);
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-3", null, null)).thenReturn(user);
         doThrow(new RuntimeException("강제 실패")).when(guestSuccessionService).succeedGuest(any(), any());
         Authentication authentication = authenticationOf("kakao-3", null);
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -146,7 +160,7 @@ class KakaoLoginSuccessHandlerTest {
     void 이메일_충돌시_pending_저장_후_리다이렉트() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-4", "match@example.com"))
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-4", "match@example.com", null))
                 .thenThrow(new SocialEmailAlreadyLinkedException(20L, "match@example.com"));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-4", "match@example.com"));
@@ -164,7 +178,7 @@ class KakaoLoginSuccessHandlerTest {
     void 회원_상태_오류면_리다이렉트() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-5", null))
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-5", null, null))
                 .thenThrow(new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-5", null));
@@ -178,7 +192,7 @@ class KakaoLoginSuccessHandlerTest {
     void 예상밖_오류는_고정_사유로_리다이렉트() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-14", null))
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-14", null, null))
                 .thenThrow(new IllegalStateException("동시 생성 재조회 실패 시뮬레이션"));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-14", null));
@@ -366,7 +380,7 @@ class KakaoLoginSuccessHandlerTest {
     void 일반_로그인_실패시_SecurityContext를_비운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-11", null))
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-11", null, null))
                 .thenThrow(new GeneralException(MemberErrorCode.ACCOUNT_SUSPENDED));
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-11", null));
@@ -381,7 +395,7 @@ class KakaoLoginSuccessHandlerTest {
         kakaoEmailMatchStore.issue(request, "old-kakao-id", 999L, "old@example.com");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
-        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-12", null)).thenReturn(user);
+        when(socialMemberFinder.findOrCreate(KAKAO, "kakao-12", null, null)).thenReturn(user);
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-12", null));
 
@@ -399,14 +413,18 @@ class KakaoLoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(request, response, authenticationOf("kakao-13", null));
 
-        verify(socialMemberFinder, never()).findOrCreate(any(), any(), any());
+        verify(socialMemberFinder, never()).findOrCreate(any(), any(), any(), any());
         verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER400-0");
     }
 
     private Authentication authenticationOf(String providerUserId, String email) {
-        OAuth2User principal = new KakaoOAuth2User(providerUserId, email, Map.of("id", providerUserId));
+        return authenticationOf(providerUserId, email, null);
+    }
+
+    private Authentication authenticationOf(String providerUserId, String email, String nickname) {
+        OAuth2User principal = new KakaoOAuth2User(providerUserId, email, nickname, Map.of("id", providerUserId));
         return new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "kakao");
     }
 }

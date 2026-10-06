@@ -1,0 +1,346 @@
+[
+  {
+    "eval_id": "EVAL-001",
+    "type": "SIMILAR",
+    "question": "청구서가 두 번 온 것 같은데 어떻게 하나요?",
+    "sources": [
+      {
+        "faqId": 1461,
+        "slotId": "BILLING-0105",
+        "category": "BILLING",
+        "score": 0.9378590321105367,
+        "question": "청구서가 두 번 왔어요",
+        "answer": "수령 방법은 이메일, 모바일, 우편 중 하나입니다. 중복 발송이면 고객센터에 확인해 주세요.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      }
+    ],
+    "risk": null
+  },
+  {
+    "eval_id": "EVAL-040",
+    "type": "SIMILAR",
+    "question": "새 폰에 유심이 맞지 않는데 어떻게 하나요?",
+    "sources": [
+      {
+        "faqId": 867,
+        "slotId": "USIM-0089",
+        "category": "USIM",
+        "score": 0.9294797736096264,
+        "question": "새 폰인데 유심이 안 맞아요",
+        "answer": "매장에 오시면 새 유심을 바로 드립니다. 7,700원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      }
+    ],
+    "risk": null
+  },
+  {
+    "eval_id": "HALLU-009",
+    "type": "COMPARISON",
+    "question": "5G 요금제랑 LTE 요금제 중에 어떤 게 더 싸요?",
+    "sources": [
+      {
+        "faqId": 1372,
+        "slotId": "PLAN-0146",
+        "category": "PLAN",
+        "score": 0.9490018486976624,
+        "question": "LTE랑 5G 중에 뭐가 싸요",
+        "answer": "LTE 3가지가 5G 4가지보다 대체로 쌉니다. 알뜰 2가지가 제일 쌉니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      }
+    ],
+    "risk": "근거에 종류만 있고 가격이 없음. 가격을 만들어내 비교할 위험"
+  },
+  {
+    "eval_id": "HALLU-010",
+    "type": "COMPARISON",
+    "question": "청구서 우편이랑 이메일 중에 뭐가 더 나아요?",
+    "sources": [
+      {
+        "faqId": 1490,
+        "slotId": "BILLING-0140",
+        "category": "BILLING",
+        "score": 0.9179477496026756,
+        "question": "이메일이랑 모바일 청구서 중에 뭐가 나아요?",
+        "answer": "둘 다 무료라 편한 쪽을 고르시면 됩니다. 우편만 월 500원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 1439,
+        "slotId": "BILLING-0077",
+        "category": "BILLING",
+        "score": 0.9057597798825755,
+        "question": "청구서를 이메일이랑 우편 둘 다 받을 수 있어요?",
+        "answer": "이메일, 모바일, 우편 중 한 가지를 선택하는 방식입니다. 우편은 월 500원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 1495,
+        "slotId": "BILLING-0147",
+        "category": "BILLING",
+        "score": 0.7209114307693111,
+        "question": "우편 청구서와 이메일 청구서의 비용 차이를 알려주세요.",
+        "answer": "우편은 월 500원, 이메일은 무료입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "Q_A"
+      }
+    ],
+    "risk": "근거에 비용 차이만 있고 우열 판단은 없음. 근거 밖 장단점을 덧붙일 위험"
+  },
+  {
+    "eval_id": "HALLU-011",
+    "type": "COMPARISON",
+    "question": "유심 재발급 비용이 매장이랑 온라인이랑 달라요?",
+    "sources": [
+      {
+        "faqId": 630,
+        "slotId": "USIM-0001",
+        "category": "USIM",
+        "score": 0.7789174381146203,
+        "question": "유심 재발급 비용이 얼마예요?",
+        "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 858,
+        "slotId": "USIM-0077",
+        "category": "USIM",
+        "score": 0.7368350562262855,
+        "question": "유심이 부러졌는데 오늘 급하게 써야 해요",
+        "answer": "매장을 방문하시면 즉시 재발급됩니다. 비용은 7,700원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 646,
+        "slotId": "USIM-0073",
+        "category": "USIM",
+        "score": 0.7345946175504504,
+        "question": "유심이 안 읽혀서 새로 받아야 할 것 같은데 비용이 얼마나 드나요?",
+        "answer": "인식 오류가 계속되면 재발급을 받으시는 게 좋습니다. 매장에서는 즉시 발급되고, 비용은 7,700원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "Q_A"
+      }
+    ],
+    "risk": "근거는 둘 다 7,700원으로 동일. 한쪽이 더 싸거나 비싸다고 답할 위험"
+  },
+  {
+    "eval_id": "HALLU-018",
+    "type": "MISSING_INFO",
+    "question": "소액결제 한도 올리는 건 어디서 신청해요?",
+    "sources": [
+      {
+        "faqId": 1407,
+        "slotId": "BILLING-0039",
+        "category": "BILLING",
+        "score": 0.894012552803438,
+        "question": "소액결제 한도 올리는 방법 알려주세요.",
+        "answer": "본인 인증을 하시면 월 100만 원까지 상향되고 즉시 적용됩니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 1436,
+        "slotId": "BILLING-0074",
+        "category": "BILLING",
+        "score": 0.7518590097092076,
+        "question": "미납이 있어도 소액결제 한도를 올릴 수 있어요?",
+        "answer": "한도 상향은 본인 인증으로 진행되며 최대 월 100만 원입니다. 미납 여부와 관련된 제한은 고객센터에서 확인해 주세요.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 1390,
+        "slotId": "BILLING-0018",
+        "category": "BILLING",
+        "score": 0.7417038659344243,
+        "question": "소액결제 한도 상향 시 적용 시점을 알려주세요.",
+        "answer": "본인 인증 후 변경은 즉시 적용됩니다. 최대 월 100만 원까지 가능합니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "Q_A"
+      }
+    ],
+    "risk": "근거는 본인 인증만 언급하고 신청 채널은 없음. 앱·고객센터 등을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-017",
+    "type": "MISSING_INFO",
+    "question": "명의변경 하는 데 며칠이나 걸려요?",
+    "sources": [
+      {
+        "faqId": 445,
+        "slotId": "NAME_CHANGE-0014",
+        "category": "NAME_CHANGE",
+        "score": 0.9491250545308383,
+        "question": "명의 바꾸는 데 오래 걸려요?",
+        "answer": "매장에서 30분 이내에 처리됩니다. 수수료는 없습니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 756,
+        "slotId": "NAME_CHANGE-0023",
+        "category": "NAME_CHANGE",
+        "score": 0.9214864875658205,
+        "question": "명의변경 신청하고 나서 얼마나 기다리면 돼요?",
+        "answer": "매장에서 접수하면 30분 이내에 완료됩니다. 미납 요금이 있으면 먼저 완납해야 진행됩니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 466,
+        "slotId": "NAME_CHANGE-0086",
+        "category": "NAME_CHANGE",
+        "score": 0.904792785644557,
+        "question": "명의변경 빨리 되나요 오래 걸리나요",
+        "answer": "30분이면 됩니다. 수수료도 없습니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "QUESTION_ONLY"
+      }
+    ],
+    "risk": "근거에 소요 기간이 없음. 당일 처리, 3영업일 등을 지어낼 위험"
+  },
+  {
+    "eval_id": "HALLU-020",
+    "type": "MISSING_INFO",
+    "question": "유심 재발급하면 택배비는 따로 내나요?",
+    "sources": [
+      {
+        "faqId": 630,
+        "slotId": "USIM-0001",
+        "category": "USIM",
+        "score": 0.7912429623348252,
+        "question": "유심 재발급 비용이 얼마예요?",
+        "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 808,
+        "slotId": "USIM-0009",
+        "category": "USIM",
+        "score": 0.7779915530711874,
+        "question": "기기변경 시 유심 재발급 택배 소요 기간을 알려주세요.",
+        "answer": "온라인 신청 시 택배로 2~3 영업일이 걸립니다. 매장 방문은 즉시 발급이며 비용은 7,700원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 822,
+        "slotId": "USIM-0029",
+        "category": "USIM",
+        "score": 0.7697241212253211,
+        "question": "새 폰에 쓸 유심을 택배로 받는 방법 알려주세요.",
+        "answer": "온라인으로 재발급을 신청하시면 택배로 2~3 영업일 안에 받으실 수 있습니다. 비용은 7,700원입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "Q_A"
+      }
+    ],
+    "risk": "근거에 7,700원과 배송 소요일만 있고 택배비 별도 여부는 없음"
+  },
+  {
+    "eval_id": "EVAL-027",
+    "type": "SIMILAR",
+    "question": "평일 저녁 7시 이후에 매장 방문이 가능한가요?",
+    "sources": [
+      {
+        "faqId": 675,
+        "slotId": "SERVICE-0033",
+        "category": "SERVICE",
+        "score": 0.95745600284201,
+        "question": "평일 저녁 7시 넘어서 매장에 갈 수 있을까요?",
+        "answer": "평일 운영은 19:00까지라 그 이후에는 방문이 어렵습니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      },
+      {
+        "faqId": 558,
+        "slotId": "SERVICE-0023",
+        "category": "SERVICE",
+        "score": 0.774179250967149,
+        "question": "매장 방문은 언제 가능한가요?",
+        "answer": "평일은 10:00부터 19:00까지, 토요일은 10:00부터 17:00까지 방문하실 수 있습니다. 일요일과 공휴일은 휴무입니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 2,
+        "matchedVariant": "Q_A"
+      },
+      {
+        "faqId": 667,
+        "slotId": "SERVICE-0018",
+        "category": "SERVICE",
+        "score": 0.7682488422543772,
+        "question": "매장에 갈 건데 시간을 어떻게 맞추면 돼요?",
+        "answer": "평일은 10:00부터 19:00, 토요일은 10:00부터 17:00 사이에 방문하시면 됩니다. 일요일과 공휴일은 휴무이니 피해 주세요.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 3,
+        "matchedVariant": "Q_A"
+      }
+    ],
+    "risk": null
+  },
+  {
+    "eval_id": "EVAL-004",
+    "type": "SIMILAR",
+    "question": "가상계좌가 무엇인가요?",
+    "sources": [
+      {
+        "faqId": 1397,
+        "slotId": "BILLING-0026",
+        "category": "BILLING",
+        "score": 0.9879056775289093,
+        "question": "가상계좌가 뭐예요",
+        "answer": "요금 낼 때 쓰는 입금 전용 계좌입니다. 계좌이체, 신용카드, 간편결제로도 낼 수 있습니다.",
+        "version": 1,
+        "updatedAt": "2026-09-29",
+        "searchRank": 1,
+        "matchedVariant": "QUESTION_ONLY"
+      }
+    ],
+    "risk": null
+  }
+]

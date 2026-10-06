@@ -53,6 +53,7 @@ public class MemberAuthService {
             }
 
             User user = User.builder()
+                    .name(request.name())
                     .email(request.email())
                     .passwordHash(passwordHash)
                     .build();

@@ -29,7 +29,7 @@ public class StoreRegionSearchService {
 
     public StoreRegionSearchResponse search(StoreRegionSearchRequest request) {
         Specification<Store> condition = StoreSpecifications.hasStatus(Store.Status.OPEN)
-                .and(StoreSpecifications.regionCodeStartsWith(request.region()))
+                .and(StoreSpecifications.regionCodeStartsWith(RegionCodes.searchPrefix(request.region())))
                 .and(StoreSpecifications.providesService(request.serviceTypeCode()));
 
         Page<Store> page = storeRepository.findAll(

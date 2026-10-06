@@ -7,9 +7,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.telme.chat.service.ChatProcessingCommand;
-import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -26,6 +26,7 @@ import com.telme.consult.service.FollowupSelectionValidator.ResolvedFollowup;
 import com.telme.consult.service.FollowupSelectionValidator.Selection;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -36,13 +37,25 @@ class ConsultTurnAnalysisAdapterTest {
             mock(ConsultTurnPreparationService.class);
 
     @Test
-    void planQuestionExplanationKeepsOriginalQuestionWithoutAnalysisOrAbandoningConsultation() {
-        var candidate = new Candidate(101, "joinedThisMonth", 9, "이번 달에 가입하셨나요?",
-                "제가 지금 요금제를 바꿀 수 있나요?", "요금제 변경", "FAQ");
+    @DisplayName("질문 설명은 후속 분류를 호출하지 않고 원래 상담 대기를 유지한다")
+    void 질문_설명은_후속_분류를_호출하지_않고_원래_상담_대기를_유지한다() {
+        var candidate =
+                new Candidate(
+                        101,
+                        "joinedThisMonth",
+                        9,
+                        "이번 달에 가입하셨나요?",
+                        "제가 지금 요금제를 바꿀 수 있나요?",
+                        "요금제 변경",
+                        "FAQ");
         var context = new Context(1, 10, "무슨 뜻이에요?", List.of(candidate));
         var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
-        var adapter = new ConsultTurnAnalysisAdapter(command -> context, analysis, preparation,
-                new FollowupConditionConverter());
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        analysis,
+                        preparation,
+                        new FollowupConditionConverter());
         var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "무슨 뜻이에요?"));
         assertThat(turn.preparation().pendingMessageId()).isEqualTo(9);
         assertThat(turn.preparation().prepared()).isNull();
@@ -99,8 +112,7 @@ class ConsultTurnAnalysisAdapterTest {
                         value ->
                                 new AnalysisResult(
                                         null,
-                                        new FollowupAnalysis(
-                                                101L, Map.of("location", "강남역")),
+                                        new FollowupAnalysis(101L, Map.of("location", "강남역")),
                                         LocationStatus.MISSING),
                         preparation,
                         new FollowupConditionConverter());
@@ -188,7 +200,7 @@ class ConsultTurnAnalysisAdapterTest {
                                                         "location",
                                                         "어느 지역인가요?",
                                                         MessageOrigin.TEMPLATE)),
-                                                9L),
+                                        9L),
                                 Purpose.NEARBY_STORE,
                                 "유심 재발급할 매장을 알려줘",
                                 "유심 매장"));
@@ -199,15 +211,12 @@ class ConsultTurnAnalysisAdapterTest {
                                 new AnalysisResult(
                                         null,
                                         new FollowupAnalysis(
-                                                101L,
-                                                Map.of("serviceType", "USIM_REISSUE")),
+                                                101L, Map.of("serviceType", "USIM_REISSUE")),
                                         LocationStatus.MISSING),
                         preparation,
                         new FollowupConditionConverter());
 
-        var turn =
-                adapter.analyze(
-                        new ChatProcessingCommand(3L, 1L, 10L, "유심 재발급으로 바꿀게요"));
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "유심 재발급으로 바꿀게요"));
 
         assertThat(turn.preparation().waitingForReply()).isTrue();
         assertThat(turn.answeredField()).isNull();
