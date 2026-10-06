@@ -10,8 +10,10 @@ import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /** 검색된 FAQ만 보고 되물을 조건을 뽑는다. 뽑지 못하면 되묻지 않고 답변으로 넘어간다. */
@@ -29,7 +31,7 @@ public class ConditionExtractor {
         this.objectMapper = Objects.requireNonNull(objectMapper);
     }
 
-    public List<MissingCondition> extract(long executionId, String userQuery, List<FaqSearchResponse> sources) {
+    public List<MissingCondition> extract(Long executionId, String userQuery, List<FaqSearchResponse> sources) {
         if (userQuery == null || userQuery.isBlank() || sources == null || sources.isEmpty()) {
             return List.of();
         }
@@ -39,8 +41,12 @@ public class ConditionExtractor {
         }
         String sourceText = ConditionGrounding.sourceText(sources);
         List<MissingCondition> conditions = new ArrayList<>();
+        Set<String> keys = new HashSet<>();
         for (var candidate : payload.conditions()) {
-            toCondition(candidate, sourceText).ifPresent(conditions::add);
+            // 같은 조건을 두 번 물으면 안 되고, 중복이 개수 제한을 먼저 채우면 다른 조건이 밀려난다
+            toCondition(candidate, sources, sourceText)
+                    .filter(condition -> keys.add(condition.key()))
+                    .ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
             }
@@ -48,7 +54,7 @@ public class ConditionExtractor {
         return List.copyOf(conditions);
     }
 
-    private LlmConditionPayload generate(long executionId, String userQuery, List<FaqSearchResponse> sources) {
+    private LlmConditionPayload generate(Long executionId, String userQuery, List<FaqSearchResponse> sources) {
         LlmRequest request = LlmRequest.builder()
                 .executionId(executionId)
                 .taskType(TaskType.CONDITION_EXTRACT)
@@ -75,16 +81,17 @@ public class ConditionExtractor {
         }
     }
 
-    private java.util.Optional<MissingCondition> toCondition(
-            LlmConditionPayload.ConditionPayload candidate, String sourceText) {
-        if (!ConditionGrounding.grounded(candidate.evidence(), sourceText)) {
+    private java.util.Optional<MissingCondition> toCondition(LlmConditionPayload.ConditionPayload candidate,
+            List<FaqSearchResponse> sources, String sourceText) {
+        String evidence = ConditionGrounding.groundedSentence(candidate.evidence(), sources);
+        if (evidence == null) {
             log.info("[조건 뽑기] 근거에 없는 조건을 버립니다. key={}", candidate.key());
             return java.util.Optional.empty();
         }
         try {
             return java.util.Optional.of(new MissingCondition(
                     candidate.key(), candidate.question(),
-                    ConditionGrounding.groundedOptions(candidate.options(), sourceText), candidate.evidence()));
+                    ConditionGrounding.groundedOptions(candidate.options(), sourceText), evidence));
         } catch (IllegalArgumentException exception) {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();

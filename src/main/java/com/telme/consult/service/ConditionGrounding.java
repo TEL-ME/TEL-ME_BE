@@ -1,8 +1,10 @@
 package com.telme.consult.service;
 
 import com.telme.faq.dto.res.FaqSearchResponse;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /** 뽑은 조건이 FAQ 답변에 실제로 있는지 본다. 답변(A)만 근거로 치고 질문(Q)은 보지 않는다. */
 final class ConditionGrounding {
@@ -12,6 +14,8 @@ final class ConditionGrounding {
 
     // 모델이 근거를 조금씩 바꿔 쓴다. 이어지는 글자가 이만큼 겹치면 그 문장을 보고 쓴 것으로 친다
     private static final int MIN_OVERLAP = 8;
+
+    private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
     private ConditionGrounding() {}
 
@@ -23,15 +27,42 @@ final class ConditionGrounding {
                 .reduce("", String::concat);
     }
 
-    static boolean grounded(String evidence, String sourceText) {
+    /** 모델이 가리킨 FAQ 답변 문장. 찾지 못하면 null이고, 찾으면 모델 문장 대신 이 원문을 쓴다. */
+    static String groundedSentence(String evidence, List<FaqSearchResponse> sources) {
         if (evidence == null || evidence.isBlank()) {
-            return false;
+            return null;
         }
         String compacted = compact(evidence);
-        if (compacted.length() <= MIN_OVERLAP) {
-            return sourceText.contains(compacted);
+        if (compacted.isEmpty()) {
+            return null;
         }
-        return longestOverlap(compacted, sourceText) >= MIN_OVERLAP;
+        int required = Math.min(MIN_OVERLAP, compacted.length());
+        boolean negated = negated(compacted);
+        String found = null;
+        int best = 0;
+        for (String sentence : sentences(sources)) {
+            int overlap = longestOverlap(compacted, compact(sentence));
+            // 여러 문장에 걸쳐 옮겨 쓰면 겹침이 가장 긴 문장이 뜻이 다른 쪽일 수 있어 뜻이 같은 문장만 고른다
+            if (overlap >= required && overlap > best && negated(compact(sentence)) == negated) {
+                best = overlap;
+                found = sentence;
+            }
+        }
+        return found;
+    }
+
+    private static List<String> sentences(List<FaqSearchResponse> sources) {
+        return sources.stream()
+                .map(FaqSearchResponse::answer)
+                .filter(answer -> answer != null && !answer.isBlank())
+                .flatMap(answer -> Arrays.stream(answer.split("(?<=[.!?])\\s+|\\n")))
+                .map(String::strip)
+                .filter(sentence -> !sentence.isEmpty())
+                .toList();
+    }
+
+    private static boolean negated(String compacted) {
+        return NEGATION.matcher(compacted).find();
     }
 
     static List<String> groundedOptions(List<String> options, String sourceText) {
@@ -39,9 +70,23 @@ final class ConditionGrounding {
             return options;
         }
         // 선택지는 근거에 적힌 값 그대로여야 한다. 바꿔 쓰면 고객이 고른 값이 검색에 안 걸린다
-        return options.stream()
-                .filter(option -> !option.isBlank() && sourceText.contains(compact(option)))
-                .toList();
+        return options.stream().filter(option -> containsValue(sourceText, compact(option))).toList();
+    }
+
+    // 11500원 안의 1500원처럼 숫자 중간에 걸린 값은 다른 값이다
+    private static boolean containsValue(String sourceText, String value) {
+        if (value.isEmpty()) {
+            return false;
+        }
+        for (int from = sourceText.indexOf(value); from >= 0; from = sourceText.indexOf(value, from + 1)) {
+            int end = from + value.length();
+            boolean leftOk = from == 0 || !Character.isDigit(sourceText.charAt(from - 1));
+            boolean rightOk = end == sourceText.length() || !Character.isDigit(sourceText.charAt(end));
+            if (leftOk && rightOk) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int longestOverlap(String text, String sourceText) {

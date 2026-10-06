@@ -44,6 +44,7 @@ class ConditionExtractionEval {
         int hit = 0;
         int missed = 0;
         int invented = 0;
+        int noSource = 0;
         long elapsed = 0;
         System.out.println("EVAL|" + ConditionPromptTemplates.PROMPT_VERSION);
 
@@ -51,9 +52,16 @@ class ConditionExtractionEval {
             String question = each.get("question").asText();
             int expected = each.get("expect").asInt();
             var sources = searches.search(new FaqSearchRequest(question, 3));
+            if (sources.isEmpty()) {
+                // 검색이 비면 뽑기를 돌리지 않아 조건이 없다. 뽑기 성능과 섞으면 점수가 부풀어 오른다
+                noSource++;
+                System.out.printf("EVAL|검색없음|%s|기대 %d|나온 것 0|%n", question, each.get("expect").asInt());
+                continue;
+            }
 
             long startedAt = System.currentTimeMillis();
-            List<MissingCondition> conditions = extractor.extract(1L, question, sources);
+            // 평가 호출은 실제 채팅 실행이 아니라 llm_generations에 남기지 않는다
+            List<MissingCondition> conditions = extractor.extract(null, question, sources);
             elapsed += System.currentTimeMillis() - startedAt;
 
             String verdict;
@@ -67,13 +75,16 @@ class ConditionExtractionEval {
                 verdict = "맞음";
                 hit++;
             }
-            System.out.printf("EVAL|%s|%s|기대 %d|나온 것 %d|%s%n",
-                    verdict, question, expected, conditions.size(),
+            System.out.printf("EVAL|%s|%s|기대 %d(%s)|나온 것 %d|%s%n",
+                    verdict, question, expected, each.get("about").asText(), conditions.size(),
                     conditions.stream().map(MissingCondition::question).reduce((a, b) -> a + " / " + b).orElse(""));
         }
 
-        System.out.printf("EVAL_SUM|맞음 %d|놓침 %d|헛짚음 %d|정확도 %.0f%%|평균 %dms%n",
-                hit, missed, invented, hit * 100.0 / cases.size(), elapsed / cases.size());
-        assertThat(hit + missed + invented).isEqualTo(cases.size());
+        int scored = hit + missed + invented;
+        // 조건 유무만 센다. 뽑은 조건이 기대한 조건과 같은지는 about과 나온 질문을 눈으로 비교한다
+        System.out.printf("EVAL_SUM|맞음 %d|놓침 %d|헛짚음 %d|검색없음 %d|정확도 %.0f%%|평균 %dms%n",
+                hit, missed, invented, noSource,
+                scored == 0 ? 0 : hit * 100.0 / scored, scored == 0 ? 0 : elapsed / scored);
+        assertThat(scored + noSource).isEqualTo(cases.size());
     }
 }
