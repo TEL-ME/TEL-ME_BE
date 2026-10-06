@@ -87,7 +87,7 @@ class AdminLatencyControllerTest {
         mockMvc.perform(get(URL)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.overall.p95Ms").value(8100))
                 .andExpect(jsonPath("$.result.firstToken.avgMs").value(800))
-                .andExpect(jsonPath("$.result.tasks[].taskType").value("ROUTING"));
+                .andExpect(jsonPath("$.result.tasks[0].taskType").value("ROUTING"));
     }
     
     @Test

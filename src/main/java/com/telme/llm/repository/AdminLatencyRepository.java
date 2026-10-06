@@ -34,9 +34,9 @@ public interface AdminLatencyRepository extends JpaRepository<LlmGeneration, Lon
     
     @Query(value = """
             select count(*) as count,
-                   avg(ms) as avgMs,
-                   percentile_cont(0.5) within group (order by ms) as p50Ms,
-                   percentile_cont(0.95) within group (order by ms) as p95Ms
+                   avg(first_token_ms) as avgMs,
+                   percentile_cont(0.5) within group (order by first_token_ms) as p50Ms,
+                   percentile_cont(0.95) within group (order by first_token_ms) as p95Ms
             from llm_generations
             where status = 'SUCCESS' and first_token_ms is not null
                 and created_at >= :from and created_at < :to
