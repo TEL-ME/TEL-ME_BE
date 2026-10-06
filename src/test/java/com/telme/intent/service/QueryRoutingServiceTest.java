@@ -173,6 +173,60 @@ class QueryRoutingServiceTest {
                     .containsExactly("5G 요금제 종류", "LTE 요금제 종류", "알뜰 요금제 종류");
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "5G와 LTE 요금제 종류를 비교해줘",
+                "너겟 5G 요금제와 LTE 요금제의 데이터 제공량 차이를 비교해줘",
+                "월 5만 원대 요금제에서 데이터와 속도 제한 조건을 비교해줘",
+                "eSIM과 유심의 개통 절차를 비교해줘",
+                "명의 변경과 번호 이동의 필요 서류를 비교해줘",
+                "선택약정과 공시지원금 할인 차이를 비교해줘",
+                "해외 로밍 패스와 데이터 로밍 종량제의 요금 및 제공량을 비교해줘",
+                "일반 요금제와 청소년 요금제의 가입 조건을 비교해줘",
+                "인터넷 결합 할인과 가족 결합 할인 차이를 비교해서 알려줘",
+                "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘"
+        })
+        @DisplayName("명확한 비교 요청은 LLM이 나누더라도 원문 한 건으로 보정한다")
+        void keepsStandaloneComparisonAsOneFaqQuestion(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"두 항목 비교",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"첫 항목 안내","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"둘째 항목 안내","conditions":{}}
+                 ]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly(question);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "5G와 LTE 요금제 비교해주고 로밍 신청 방법도 알려줘",
+                "로밍 신청 방법 알려주고 5G와 LTE 요금제 종류를 비교해줘"
+        })
+        @DisplayName("비교와 독립 요청이 섞이면 전체를 한 질문으로 합치지 않는다")
+        void keepsIndependentRequestSeparateFromComparison(String question) {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 비교와 로밍 신청",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}
+                 ]}
+                """);
+
+            IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.subQueries()).hasSize(3);
+        }
+
         @Test
         void singleConsultRejectsMoreThanThreeFaqQuestionsBeforeSaving() {
             given(llmClient.generate(any())).willReturn("""

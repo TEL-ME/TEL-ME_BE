@@ -212,6 +212,20 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.FAQ
+                && payload.subQueries().size() > 1
+                && ComparisonQuestionPolicy.isStandaloneComparison(question, context)) {
+            log.info("[라우팅] 단독 비교 질문의 FAQ 하위 질문을 한 건으로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    payload.extractedConditions(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.RULE;
+        }
+
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
