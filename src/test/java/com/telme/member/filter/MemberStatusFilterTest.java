@@ -142,7 +142,8 @@ class MemberStatusFilterTest {
         mockMvc.perform(post("/api/v1/auth/signup")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"filtertest1234\"}"))
+                        .content("{\"name\":\"필터 테스트\",\"email\":\"" + email
+                                + "\",\"password\":\"filtertest1234\"}"))
                 .andExpect(status().isOk());
         return session;
     }

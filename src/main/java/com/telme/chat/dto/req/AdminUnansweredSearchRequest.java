@@ -3,9 +3,11 @@ package com.telme.chat.dto.req;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 
 public record AdminUnansweredSearchRequest(
-        AdminUnansweredType type,
+        List<AdminUnansweredType> type,
         Instant from,
         Instant to,
         @Min(0) Integer page,
@@ -18,8 +20,17 @@ public record AdminUnansweredSearchRequest(
     private static final Instant EVERY_TIME_TO = Instant.parse("9999-12-31T23:59:59Z");
 
     public AdminUnansweredSearchRequest {
+        type = type == null ? List.of() : type.stream().filter(Objects::nonNull).toList();
         page = page == null ? DEFAULT_PAGE : page;
         size = size == null ? DEFAULT_SIZE : size;
+    }
+
+    public List<AdminUnansweredType> basisTypes() {
+        return type.stream().filter(AdminUnansweredType::isBasis).distinct().toList();
+    }
+
+    public List<AdminUnansweredType> statusTypes() {
+        return type.stream().filter(t -> !t.isBasis()).distinct().toList();
     }
 
     public Instant fromOrMin() {

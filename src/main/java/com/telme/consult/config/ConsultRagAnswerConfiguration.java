@@ -1,17 +1,18 @@
 package com.telme.consult.config;
 
+import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
+import com.telme.consult.service.DialogueService;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
+import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFactory;
-import com.telme.consult.service.PurposeRoutingAnswerProvider;
-import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.service.FaqSearchService;
-import com.telme.rag.service.AnswerGenerator;
 import com.telme.llm.service.LlmStreamHandler;
-import com.telme.chat.service.ExecutionTrace;
-import com.telme.consult.service.DialogueService;
+import com.telme.rag.service.AnswerGenerator;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -59,9 +60,13 @@ public class ConsultRagAnswerConfiguration {
 
     @Bean
     AnswerProvider consultAnswerProvider(
-            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
-            DialogueService dialogue) {
+            FaqSearchService searches,
+            SearchResultAnswerGenerator answers,
+            ExecutionTrace trace,
+            DialogueService dialogue,
+            ConfirmedConditionConverter conditionConverter) {
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace, dialogue));
+                new FaqSearchAnswerProvider(
+                        searches, answers, trace, dialogue, conditionConverter));
     }
 }

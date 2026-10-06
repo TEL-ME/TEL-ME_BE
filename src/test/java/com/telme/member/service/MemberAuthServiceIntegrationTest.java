@@ -63,15 +63,16 @@ class MemberAuthServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("가입한 이메일·해싱된 비밀번호가 DB에 그대로 저장된다")
+    @DisplayName("가입한 이름·이메일·해싱된 비밀번호가 DB에 그대로 저장된다")
     void 회원가입은_DB에_저장된다() {
         String email = "member-" + UUID.randomUUID() + "@example.com";
-        SignUpRequest request = new SignUpRequest(email, "password123");
+        SignUpRequest request = new SignUpRequest("홍길동", email, "password123");
 
         SignUpResponse response = memberAuthService.signUp(
                 request, new MockHttpServletRequest(), new MockHttpServletResponse());
 
         User saved = userRepository.findById(response.userId()).orElseThrow();
+        assertThat(saved.getName()).isEqualTo("홍길동");
         assertThat(saved.getEmail()).isEqualTo(email);
         assertThat(saved.getPasswordHash()).isNotEqualTo("password123");
         assertThat(passwordEncoder.matches("password123", saved.getPasswordHash())).isTrue();
@@ -82,7 +83,7 @@ class MemberAuthServiceIntegrationTest {
     void 비밀번호가_72바이트면_실제_해싱까지_성공한다() {
         String email = "bcrypt-boundary-" + UUID.randomUUID() + "@example.com";
         String password72Bytes = "a".repeat(72);
-        SignUpRequest request = new SignUpRequest(email, password72Bytes);
+        SignUpRequest request = new SignUpRequest("홍길동", email, password72Bytes);
 
         SignUpResponse response = memberAuthService.signUp(
                 request, new MockHttpServletRequest(), new MockHttpServletResponse());
@@ -96,10 +97,10 @@ class MemberAuthServiceIntegrationTest {
     void 중복_이메일_가입은_거절된다() {
         String email = "dup-" + UUID.randomUUID() + "@example.com";
         memberAuthService.signUp(
-                new SignUpRequest(email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
+                new SignUpRequest("홍길동", email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
 
         assertThatThrownBy(() -> memberAuthService.signUp(
-                new SignUpRequest(email, "different-password"),
+                new SignUpRequest("홍길동", email, "different-password"),
                 new MockHttpServletRequest(), new MockHttpServletResponse()))
                 .isInstanceOf(GeneralException.class)
                 .extracting(exception -> ((GeneralException) exception).getErrorCode())
@@ -113,7 +114,7 @@ class MemberAuthServiceIntegrationTest {
     void 정상_로그인() {
         String email = "login-" + UUID.randomUUID() + "@example.com";
         memberAuthService.signUp(
-                new SignUpRequest(email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
+                new SignUpRequest("홍길동", email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
 
         MockHttpServletRequest httpRequest = new MockHttpServletRequest();
         LoginResponse response = memberAuthService.login(
@@ -129,7 +130,7 @@ class MemberAuthServiceIntegrationTest {
     void 로그인_실패는_원인을_구분하지_않는다() {
         String email = "exists-" + UUID.randomUUID() + "@example.com";
         memberAuthService.signUp(
-                new SignUpRequest(email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
+                new SignUpRequest("홍길동", email, "password123"), new MockHttpServletRequest(), new MockHttpServletResponse());
 
         assertThatThrownBy(() -> memberAuthService.login(
                 new LoginRequest("nobody-" + UUID.randomUUID() + "@example.com", "password123"),
@@ -192,7 +193,7 @@ class MemberAuthServiceIntegrationTest {
 
         String email = "signup-succeed-" + UUID.randomUUID() + "@example.com";
         SignUpResponse response = memberAuthService.signUp(
-                new SignUpRequest(email, "password123"), httpRequest, new MockHttpServletResponse());
+                new SignUpRequest("홍길동", email, "password123"), httpRequest, new MockHttpServletResponse());
 
         entityManager.clear();
         ChatSession succeeded = entityManager.find(ChatSession.class, guestSession.getSessionId());

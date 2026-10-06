@@ -431,7 +431,9 @@ public class QueryRoutingService {
 
         String reply = followUpText != null ? followUpText.trim() : "";
         if (reply.isBlank()) {
-            log.info("[후속분석] 후속 답변이 비어 있어 조건 없이 반환합니다: consultRequestId={}", waiting.consultRequestId());
+            log.info(
+                    "[후속분석] 후속 답변이 비어 있어 조건 없이 반환합니다: consultRequestId={}",
+                    waiting.consultRequestId());
             return new FollowUpRouteResponse(
                 waiting.consultRequestId(), Collections.emptyMap(), Collections.emptySet(),
                 QueryRouting.Method.RULE);
@@ -464,11 +466,15 @@ public class QueryRoutingService {
         // 요금제 조건은 실제 사용자 발화로 검증된 값·거절·보류만 받아 모델의 오분류를 보완한다.
         if (waiting.pendingKeys().stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
             var literal = ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            if (literal.responseType() == ResponseType.NEW_QUESTION || !literal.conditions().isEmpty()
-                    || PlanChangeConditions.isDeferred(reply) || PlanChangeConditions.isAmbiguous(reply)) {
+            if (literal.responseType() == ResponseType.NEW_QUESTION
+                    || !literal.conditions().isEmpty()
+                    || PlanChangeConditions.isDeferred(reply)
+                    || PlanChangeConditions.isAmbiguous(reply)) {
                 if (payload.responseType() != literal.responseType()
                         || !toExtractedConditions(payload, reply, waiting.pendingKeys())
-                                .equals(toExtractedConditions(literal, reply, waiting.pendingKeys()))) {
+                                .equals(
+                                        toExtractedConditions(
+                                                literal, reply, waiting.pendingKeys()))) {
                     payload = literal;
                     method = QueryRouting.Method.RULE;
                 }
@@ -477,9 +483,15 @@ public class QueryRoutingService {
 
         if (payload.responseType() == ResponseType.NEW_QUESTION
                 && waiting.pendingKeys().stream().anyMatch(PlanChangeConditions.KEYS::contains)) {
-            return new FollowUpRouteResponse(waiting.consultRequestId(), Map.of(), Set.of(), method, Disposition.NEW_QUESTION);
+            return new FollowUpRouteResponse(
+                    waiting.consultRequestId(),
+                    Map.of(),
+                    Set.of(),
+                    method,
+                    Disposition.NEW_QUESTION);
         }
-        ExtractedConditions extracted = toExtractedConditions(payload, reply, waiting.pendingKeys());
+        ExtractedConditions extracted =
+                toExtractedConditions(payload, reply, waiting.pendingKeys());
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -487,8 +499,9 @@ public class QueryRoutingService {
                 && method == QueryRouting.Method.LLM
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
-                ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, reply, waiting.pendingKeys());
+                    ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
+            ExtractedConditions ruleConditions =
+                    toExtractedConditions(rulePayload, reply, waiting.pendingKeys());
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -574,23 +587,32 @@ public class QueryRoutingService {
     private Set<String> pendingKeysOf(ConsultRequest request) {
         List<ConsultCondition> conditions = request.getConditions();
         if (conditions == null) {
-            return request.getIntent() == ConsultRequest.Intent.STORE ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : Set.of();
+            return request.getIntent() == ConsultRequest.Intent.STORE
+                    ? Set.of(FollowUpRouteResponse.LOCATION_KEY)
+                    : Set.of();
         }
-        Set<String> pending = conditions.stream()
-            .filter(condition -> condition.getStatus() == ConsultCondition.Status.PENDING)
-            .map(ConsultCondition::getConditionKey)
-            .filter(key -> key != null && !key.isBlank())
-            .collect(Collectors.toCollection(LinkedHashSet::new));
-        return pending.isEmpty() && request.getIntent() == ConsultRequest.Intent.STORE ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
+        Set<String> pending =
+                conditions.stream()
+                        .filter(
+                                condition ->
+                                        condition.getStatus() == ConsultCondition.Status.PENDING)
+                        .map(ConsultCondition::getConditionKey)
+                        .filter(key -> key != null && !key.isBlank())
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+        return pending.isEmpty() && request.getIntent() == ConsultRequest.Intent.STORE
+                ? Set.of(FollowUpRouteResponse.LOCATION_KEY)
+                : pending;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, String reply, Set<String> pendingKeys) {
+    private ExtractedConditions toExtractedConditions(
+            LlmFollowUpPayload payload, String reply, Set<String> pendingKeys) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
 
         Map<String, String> values = new LinkedHashMap<>();
         Set<String> declinedKeys = new LinkedHashSet<>();
+        Map<String, String> literalValues = PlanChangeConditions.extract(reply, pendingKeys);
 
         for (ConditionPayload condition : payload.conditions()) {
             if (condition == null || condition.key() == null || condition.status() == null) {
@@ -603,12 +625,26 @@ public class QueryRoutingService {
                 continue;
             }
 
-            boolean planConsult = pendingKeys.stream().anyMatch(PlanChangeConditions.KEYS::contains);
-            if (planConsult != PlanChangeConditions.KEYS.contains(key)) continue;
+            boolean planConsult =
+                    pendingKeys.stream().anyMatch(PlanChangeConditions.KEYS::contains);
+            if (planConsult != PlanChangeConditions.KEYS.contains(key)) {
+                continue;
+            }
 
             if (condition.status() == LlmFollowUpPayload.Status.DECLINED) {
-                if (PlanChangeConditions.KEYS.contains(key) && ruleBasedFallback.classifyFollowUp(reply, pendingKeys).conditions().stream()
-                        .noneMatch(item -> key.equals(item.key()) && item.status() == LlmFollowUpPayload.Status.DECLINED)) continue;
+                if (PlanChangeConditions.KEYS.contains(key)
+                        && ruleBasedFallback
+                                .classifyFollowUp(reply, pendingKeys)
+                                .conditions()
+                                .stream()
+                                .noneMatch(
+                                        item ->
+                                                key.equals(item.key())
+                                                        && item.status()
+                                                                == LlmFollowUpPayload.Status
+                                                                        .DECLINED)) {
+                    continue;
+                }
                 declinedKeys.add(key);
                 continue;
             }
@@ -617,9 +653,17 @@ public class QueryRoutingService {
             if (value.isBlank() || value.length() > MAX_CONDITION_VALUE_LENGTH) {
                 continue;
             }
-            if (PlanChangeConditions.KEYS.contains(key)
-                    && (!PlanChangeConditions.valid(key, value)
-                        || !value.equals(PlanChangeConditions.extract(reply, pendingKeys).get(key)))) continue;
+            if (PlanChangeConditions.KEYS.contains(key)) {
+                if (!PlanChangeConditions.valid(key, value)) {
+                    continue;
+                }
+                String literal = literalValues.get(key);
+                if (literal != null) {
+                    value = literal;
+                } else if (!PlanChangeConditions.supportsLlmValue(reply, pendingKeys, key, value)) {
+                    continue;
+                }
+            }
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);

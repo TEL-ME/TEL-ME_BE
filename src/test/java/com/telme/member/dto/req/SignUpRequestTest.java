@@ -25,7 +25,7 @@ class SignUpRequestTest {
     @Test
     @DisplayName("이메일 대문자는 소문자로 정규화된다")
     void 이메일이_소문자로_정규화된다() {
-        var request = new SignUpRequest("User@Example.COM", "password123");
+        var request = new SignUpRequest("홍길동", "User@Example.COM", "password123");
 
         assertThat(request.email()).isEqualTo("user@example.com");
     }
@@ -33,7 +33,7 @@ class SignUpRequestTest {
     @Test
     @DisplayName("이메일이 null이면 정규화 없이 그대로 null이다")
     void 이메일이_null이면_그대로_null이다() {
-        var request = new SignUpRequest(null, "password123");
+        var request = new SignUpRequest("홍길동", null, "password123");
 
         assertThat(request.email()).isNull();
     }
@@ -43,8 +43,16 @@ class SignUpRequestTest {
     void 터키어_Locale에서도_정규화_결과가_같다() {
         Locale.setDefault(Locale.of("tr", "TR"));
 
-        var request = new SignUpRequest("ISTANBUL@Example.com", "password123");
+        var request = new SignUpRequest("홍길동", "ISTANBUL@Example.com", "password123");
 
         assertThat(request.email()).isEqualTo("istanbul@example.com");
+    }
+
+    @Test
+    @DisplayName("이름 앞뒤 공백은 제거된다")
+    void 이름의_앞뒤_공백이_제거된다() {
+        var request = new SignUpRequest("  홍길동  ", "user@example.com", "password123");
+
+        assertThat(request.name()).isEqualTo("홍길동");
     }
 }

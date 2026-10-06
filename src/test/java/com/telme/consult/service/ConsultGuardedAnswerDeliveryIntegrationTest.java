@@ -954,6 +954,10 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
                 // 외부 전송 시점에 별도 DB 조회로 커밋된 최종 문자열과 일치하는지 확인한다.
                 assertThat(executionStatus()).isEqualTo("COMPLETED");
                 assertThat(payload).isEqualTo(outputContent());
+                assertThat(jdbc.queryForObject(
+                        "SELECT COALESCE(jsonb_exists(pipeline_trace, 'finalTransmission'), false)"
+                                + " FROM chat_executions WHERE execution_id=?",
+                        Boolean.class, executionId)).isFalse();
                 if (failTokenDelivery) throw new IOException("연결 이탈");
             }
             events.add(new Event(name, payload));

@@ -2,7 +2,6 @@ package com.telme.chat.service;
 
 import com.telme.chat.converter.AdminUnansweredConverter;
 import com.telme.chat.dto.req.AdminUnansweredSearchRequest;
-import com.telme.chat.dto.req.AdminUnansweredType;
 import com.telme.chat.dto.res.AdminUnansweredDetailResponse;
 import com.telme.chat.dto.res.AdminUnansweredListResponse;
 import com.telme.chat.entity.ChatMessage;
@@ -11,6 +10,7 @@ import com.telme.chat.repository.AdminUnansweredRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.repository.MessageSourceRepository;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,18 +44,23 @@ public class AdminUnansweredQueryService {
     }
 
     private Page<ChatMessage> find(AdminUnansweredSearchRequest request) {
-        AdminUnansweredType type = request.type();
+        List<ChatMessage.AnswerBasis> bases = request.basisTypes().stream()
+                .map(type -> ChatMessage.AnswerBasis.valueOf(type.name())).toList();
+        List<ChatMessage.Status> statuses = request.statusTypes().stream()
+                .map(type -> ChatMessage.Status.valueOf(type.name())).toList();
         Instant from = request.fromOrMin();
         Instant to = request.toOrMax();
         Pageable page = PageRequest.of(request.page(), request.size());
 
-        if (type == null) {
+        if (bases.isEmpty() && statuses.isEmpty()) {
             return unansweredRepository.findUnanswered(from, to, page);
         }
-        return type.isBasis()
-                ? unansweredRepository.findUnansweredByBasis(
-                        ChatMessage.AnswerBasis.valueOf(type.name()), from, to, page)
-                : unansweredRepository.findUnansweredByStatus(
-                        ChatMessage.Status.valueOf(type.name()), from, to, page);
+        if (statuses.isEmpty()) {
+            return unansweredRepository.findUnansweredByBases(bases, from, to, page);
+        }
+        if (bases.isEmpty()) {
+            return unansweredRepository.findUnansweredByStatuses(statuses, from, to, page);
+        }
+        return unansweredRepository.findUnansweredByBasesOrStatuses(bases, statuses, from, to, page);
     }
 }
