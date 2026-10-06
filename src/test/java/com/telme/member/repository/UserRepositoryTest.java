@@ -45,4 +45,14 @@ class UserRepositoryTest {
 
         assertThat(userRepository.findByEmail(email)).contains(saved);
     }
+
+    @Test
+    void 이름이_비어_있을_때만_이름을_원자적으로_채운다() {
+        User user = userRepository.saveAndFlush(User.builder().build());
+
+        assertThat(userRepository.setNameIfMissing(user.getUserId(), "첫이름")).isEqualTo(1);
+        assertThat(userRepository.setNameIfMissing(user.getUserId(), "둘째이름")).isZero();
+
+        assertThat(userRepository.findById(user.getUserId())).get().extracting(User::getName).isEqualTo("첫이름");
+    }
 }
