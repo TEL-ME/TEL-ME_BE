@@ -1,0 +1,46 @@
+{
+  "artifact_kind": "consultation-review-input",
+  "source_sha256": "1b7d6b69f5353d8c08a11daf224f0aed84e9ee7a7b751b750d3dded506280f83",
+  "full_execution_dump_included": false,
+  "source_run_metadata": {
+    "base": "d7842ee726851df4064f2a2d979cc3cf2eb6b83d",
+    "db_opt_in": true,
+    "model_and_search": "test doubles",
+    "paid_calls": 0,
+    "live_model_rerun": false,
+    "frontend_verified": false,
+    "changed_source_sha256": {
+      "src/main/java/com/telme/chat/service/ChatExecutionService.java": "e14682ea378f3dd0ca853333f7e7c8a1a7b191fe16fd852dcd1f3f6641ee4617",
+      "src/main/java/com/telme/consult/dto/PlanChangeConditions.java": "0a0c66df792c3afbba37aeface42e5676fc336f6fd6a3d1ce67acf96f5b01c73",
+      "src/main/java/com/telme/consult/service/ConsultChatPersistenceService.java": "d4788b35a4cfe25b8b8e7f5dee2106738651e073025b7faa87ef91774e5ef8b8",
+      "src/main/java/com/telme/consult/service/ConsultChatProcessingService.java": "73e87a1641ce43daf7b91849105029989205e45dfa8a0383144bd7dcb5e7a359",
+      "src/main/java/com/telme/consult/service/ConsultTurnAnalysisAdapter.java": "4f296c595c3aa9b88c3004a6a32d69f775c9fe0bd26518c5444cae9fd86d8458",
+      "src/main/java/com/telme/consult/service/PlanChangeQuestionExplanation.java": "6e5136b87b74f3a3dae8421a4097d2cdf12ab8a35c92812a7a219f30e66e04d9"
+    }
+  },
+  "cases": [
+    {
+      "case": "JOINED_MEANING",
+      "pending_key": "joinedThisMonth",
+      "input": "가입한 달이 무슨 뜻이에요?",
+      "expected_behavior": "고정 설명과 원래 질문 안내, 조건·상담 대기 유지"
+    },
+    {
+      "case": "CHANGED_MEANING",
+      "pending_key": "changedThisMonth",
+      "input": "변경 이력이 뭐예요?",
+      "expected_behavior": "고정 설명과 원래 질문 안내, 조건·상담 대기 유지"
+    },
+    {
+      "case": "RESUME_AFTER_EXPLANATION",
+      "pending_key": "joinedThisMonth",
+      "inputs": [
+        "가입한 달이 무슨 뜻이에요?",
+        "지난달이요"
+      ],
+      "expected_behavior": "설명 메시지가 아닌 원래 조건 질문에 응답 연결"
+    }
+  ],
+  "interpretation": "고정 합성 입력·원본 기대 라벨과 과거 근거의 검토 자료. 최신 실행 결과·사람 최종 판정·환각률이 아님.",
+  "scenario_origin": "기존 설명 처리 코드·단위 테스트와 통합 문서의 재현 절차; 과거 파일에 없던 실행 결과를 생성하지 않음"
+}
