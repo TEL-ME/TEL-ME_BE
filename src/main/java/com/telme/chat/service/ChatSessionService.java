@@ -163,6 +163,7 @@ public class ChatSessionService {
             Long sessionId,
             ChatMessageSendRequest request
     ) {
+        ChatCoordinates coordinates = ChatCoordinates.optional(request.latitude(), request.longitude());
         ChatSession session = getOwnedSessionForUpdate(actor, sessionId);
         if (session.getStatus() == ChatSession.Status.CLOSED) {
             throw new GeneralException(ChatErrorCode.SESSION_CLOSED);
@@ -187,7 +188,7 @@ public class ChatSessionService {
 
         session.touch(completedAt);
         eventPublisher.publishEvent(new ChatProcessingCommand(
-                execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent()));
+                execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent(), coordinates));
         return chatMessageConverter.toSendResponse(message, execution);
     }
 
