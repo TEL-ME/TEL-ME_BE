@@ -38,6 +38,8 @@ public class ChatStoreAnswerProvider {
         SearchResult result;
         // 예외 처리는 조회 경계에만 둔다. 답변 변환·DB 저장 실패를 검색 안내로 숨기지 않는다.
         try {
+            // location은 구체적인 지역·장소를 전제로 한다. "내 근처" 등 현재 위치 표현은 라우터에서 구분해야 한다.
+            // 현재 문자열 계약으로는 이전 지역 유지와 현재 위치로 변경하는 의도를 구분할 수 없어 AI 파트와 협의가 필요하다.
             if (location != null && !location.isBlank()) {
                 result = namedSearch.search(location, serviceTypes);
             } else if (input.coordinates() != null) {

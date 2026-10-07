@@ -160,6 +160,33 @@ class ConsultChatApiIntegrationTest {
     }
 
     @Test
+    void declinedRegionWithGpsCompletesGuidanceWithoutSearchOrAnotherQuestion() throws Exception {
+        long sid = createSession();
+        waitCompleted(send(sid, "매장 알려줘"));
+        answerOverride.set(input -> {
+            throw new AssertionError("지역 제공 거절 시 검색 답변 처리기를 호출하면 안 됩니다.");
+        });
+        var result = mvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sid)
+                        .session(identity).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"알려주기 싫어요\",\"latitude\":37.5,\"longitude\":127.0}"))
+                .andExpect(status().isCreated()).andReturn();
+        long eid = mapper.readTree(result.getResponse().getContentAsByteArray()).path("result")
+                .path("executionId").asLong();
+        waitCompleted(eid);
+        var messages = history(sid).path("result").path("messages");
+        assertThat(messages.size()).isEqualTo(4);
+        var answer = messages.get(3);
+        assertThat(answer.path("messageType").asText()).isEqualTo("ANSWER");
+        assertThat(answer.path("content").asText()).contains("지역을 알려주실 수 있을 때");
+        assertThat(answer.path("storeResults").isNull()).isTrue();
+        assertThat(jdbc.queryForObject(
+                "SELECT status FROM consult_conditions WHERE consult_request_id=? AND condition_key='location'",
+                String.class, requestId.get())).isEqualTo("DECLINED");
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?",
+                String.class, requestId.get())).isEqualTo("DONE");
+    }
+
+    @Test
     void rejectsPartialCoordinatesBeforeCreatingQuestionOrExecution() throws Exception {
         long sid = createSession();
         mvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sid).session(identity)
@@ -410,6 +437,9 @@ class ConsultChatApiIntegrationTest {
         }
         var context = contexts.loadVerified(command);
         var candidate = context.candidates().getFirst();
+        Condition location = "알려주기 싫어요".equals(command.content())
+                ? Condition.declined()
+                : command.coordinates() == null ? Condition.filled("강남역") : Condition.coordinates();
         var followup =
                 turns.prepareFollowup(
                         context,
@@ -417,8 +447,7 @@ class ConsultChatApiIntegrationTest {
                                 candidate.consultRequestId(),
                                 candidate.questionMessageId(),
                                 "location",
-                                Map.of("location", command.coordinates() == null
-                                        ? Condition.filled("강남역") : Condition.coordinates())),
+                                Map.of("location", location)),
                         command.coordinates() == null ? LocationStatus.MISSING : LocationStatus.COORDINATES_AVAILABLE);
         return new ConsultChatProcessingService.AnalyzedTurn(
                 followup.preparation(),

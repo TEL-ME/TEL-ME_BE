@@ -203,6 +203,41 @@ class DialogueServiceTest {
     }
 
     @Test
+    void declinedRegionWithCoordinatesReturnsGuidanceWithoutClarification() {
+        var rejected = input(
+                Map.of("location", Condition.filled("강남역")),
+                Map.of("location", Condition.declined()),
+                LocationStatus.COORDINATES_AVAILABLE);
+        for (var result : java.util.List.of(noModel().assess(rejected), noModel().decide(rejected))) {
+            assertEquals(Action.ALTERNATIVE_GUIDANCE, result.action());
+            assertEquals(ConditionStatus.DECLINED, result.conditions().get("location").status());
+            assertNull(result.conditions().get("location").value());
+            assertNull(result.waitingField());
+            assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
+            assertTrue(result.message().contains("지역을 알려주실 수 있을 때"));
+        }
+    }
+
+    @Test
+    void previousRegionDeclineStillBlocksCoordinatesButNewRegionCanReplaceIt() {
+        var previous = Map.of("location", Condition.declined());
+        assertEquals(Action.ALTERNATIVE_GUIDANCE,
+                noModel().assess(input(previous, Map.of(), LocationStatus.COORDINATES_AVAILABLE)).action());
+        var updated = noModel().decide(input(
+                previous, Map.of("location", Condition.filled("강남역")), LocationStatus.COORDINATES_AVAILABLE));
+        assertEquals(Action.PROCEED, updated.action());
+        assertEquals("강남역", updated.conditions().get("location").value());
+    }
+
+    @Test
+    void regionDeclineDoesNotBlockGeneralFaq() {
+        var faq = new DialogueInput(11L, Purpose.GENERAL_FAQ,
+                Map.of("location", Condition.declined()), Map.of(), LocationStatus.COORDINATES_AVAILABLE);
+        assertEquals(Action.PROCEED, noModel().assess(faq).action());
+        assertEquals(Action.PROCEED, noModel().decide(faq).action());
+    }
+
+    @Test
     void generalFaqDoesNotRequireLocation() {
         var input =
                 new DialogueInput(
