@@ -84,6 +84,12 @@ public class ConditionExtractor {
 
     private java.util.Optional<MissingCondition> toCondition(
             LlmConditionPayload.ConditionPayload candidate, List<FaqSearchResponse> sources) {
+        if (candidate.key() == null
+                || candidate.question() == null
+                || candidate.question().isBlank()) {
+            log.info("[조건 뽑기] 이름이나 질문이 없는 조건을 건너뜁니다.");
+            return java.util.Optional.empty();
+        }
         ConditionGrounding.Grounded grounded =
                 ConditionGrounding.groundedEvidence(candidate.evidence(), sources);
         if (grounded == null) {

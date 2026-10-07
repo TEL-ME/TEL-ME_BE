@@ -1,5 +1,8 @@
 package com.telme.consult.repository;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Condition;
@@ -23,9 +26,22 @@ public final class JdbcConsultStateStore {
             long sessionId,
             int version,
             String status,
-            Map<String, Condition> conditions) {
+            Map<String, Condition> conditions,
+            ClarificationPlan clarificationPlan) {
+        public Snapshot(
+                long requestId,
+                long sessionId,
+                int version,
+                String status,
+                Map<String, Condition> conditions) {
+            this(requestId, sessionId, version, status, conditions, ClarificationPlan.none());
+        }
+
         public Snapshot {
             conditions = Map.copyOf(conditions);
+            clarificationPlan = clarificationPlan == null
+                    ? ClarificationPlan.none()
+                    : clarificationPlan;
         }
     }
 
@@ -64,10 +80,17 @@ public final class JdbcConsultStateStore {
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
+    private final ObjectMapper mapper;
 
     public JdbcConsultStateStore(JdbcTemplate jdbc, TransactionTemplate tx) {
+        this(jdbc, tx, new ObjectMapper());
+    }
+
+    public JdbcConsultStateStore(
+            JdbcTemplate jdbc, TransactionTemplate tx, ObjectMapper mapper) {
         this.jdbc = Objects.requireNonNull(jdbc);
         this.tx = Objects.requireNonNull(tx);
+        this.mapper = Objects.requireNonNull(mapper);
     }
 
     public Snapshot load(long sessionId, long requestId) {
@@ -77,7 +100,8 @@ public final class JdbcConsultStateStore {
     private Snapshot read(long sessionId, long requestId) {
         var requests =
                 jdbc.query(
-                        "SELECT version,status FROM consult_requests WHERE consult_request_id=? AND"
+                        "SELECT version,status,clarification_plan FROM consult_requests"
+                                + " WHERE consult_request_id=? AND"
                                 + " session_id=? FOR UPDATE",
                         (rs, n) ->
                                 new Snapshot(
@@ -85,7 +109,8 @@ public final class JdbcConsultStateStore {
                                         sessionId,
                                         rs.getInt("version"),
                                         rs.getString("status"),
-                                        Map.of()),
+                                        Map.of(),
+                                        planOf(rs.getString("clarification_plan"))),
                         requestId,
                         sessionId);
         if (requests.isEmpty()) {
@@ -104,7 +129,24 @@ public final class JdbcConsultStateStore {
                                     rs.getString("condition_value")));
                 },
                 requestId);
-        return new Snapshot(requestId, sessionId, r.version(), r.status(), conditions);
+        return new Snapshot(
+                requestId,
+                sessionId,
+                r.version(),
+                r.status(),
+                conditions,
+                r.clarificationPlan());
+    }
+
+    private ClarificationPlan planOf(String json) {
+        if (json == null || json.isBlank()) {
+            return ClarificationPlan.none();
+        }
+        try {
+            return mapper.readValue(json, ClarificationPlan.class);
+        } catch (JsonProcessingException malformed) {
+            throw new IllegalStateException("저장된 FAQ 되묻기 계획을 읽을 수 없습니다.", malformed);
+        }
     }
 
     public Optional<Long> findPendingClarificationMessageId(
@@ -125,22 +167,49 @@ public final class JdbcConsultStateStore {
 
     public Snapshot save(
             long sessionId, int expectedVersion, DialogueDecision decision, MessageLinks links) {
-        return saveInternal(sessionId, expectedVersion, decision, links, null);
+        return save(
+                sessionId,
+                expectedVersion,
+                decision,
+                ClarificationPlan.none(),
+                links);
+    }
+
+    public Snapshot save(
+            long sessionId,
+            int expectedVersion,
+            DialogueDecision decision,
+            ClarificationPlan clarificationPlan,
+            MessageLinks links) {
+        return saveInternal(
+                sessionId,
+                expectedVersion,
+                decision,
+                clarificationPlan,
+                links,
+                null);
     }
 
     public Snapshot saveWhileWaiting(
             long sessionId, int expectedVersion, DialogueDecision decision, long pendingMessageId) {
         return saveInternal(
-                sessionId, expectedVersion, decision, MessageLinks.none(), pendingMessageId);
+                sessionId,
+                expectedVersion,
+                decision,
+                ClarificationPlan.none(),
+                MessageLinks.none(),
+                pendingMessageId);
     }
 
     private Snapshot saveInternal(
             long sessionId,
             int expectedVersion,
             DialogueDecision decision,
+            ClarificationPlan clarificationPlan,
             MessageLinks links,
             Long pendingMessageId) {
         Objects.requireNonNull(decision);
+        Objects.requireNonNull(clarificationPlan);
         Objects.requireNonNull(links);
         return tx.execute(
                 txStatus -> {
@@ -164,6 +233,7 @@ public final class JdbcConsultStateStore {
                         validateAnswer(old, links, conditions, sessionId);
                     }
                     saveConditions(old, decision, links, conditions, asks);
+                    saveClarificationPlan(old.requestId(), clarificationPlan);
                     // 최종 답변이 저장되기 전에는 상담을 완료하지 않는다.
                     jdbc.update(
                             "UPDATE consult_requests SET"
@@ -173,6 +243,21 @@ public final class JdbcConsultStateStore {
                             old.requestId());
                     return read(sessionId, old.requestId());
                 });
+    }
+
+    private void saveClarificationPlan(long requestId, ClarificationPlan plan) {
+        if (!plan.needsClarification()) {
+            return;
+        }
+        try {
+            jdbc.update(
+                    "UPDATE consult_requests SET clarification_plan=CAST(? AS jsonb)"
+                            + " WHERE consult_request_id=?",
+                    mapper.writeValueAsString(plan),
+                    requestId);
+        } catch (JsonProcessingException failure) {
+            throw new IllegalStateException("FAQ 되묻기 계획을 저장할 수 없습니다.", failure);
+        }
     }
 
     private void validatePreservedConditions(Snapshot old, DialogueDecision decision) {

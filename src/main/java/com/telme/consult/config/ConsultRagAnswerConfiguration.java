@@ -1,6 +1,5 @@
 package com.telme.consult.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.repository.SuggestedQuestionFaqFinder;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ComparisonEvidenceResolver;
@@ -11,8 +10,6 @@ import com.telme.consult.service.ConditionExtractor;
 import com.telme.consult.service.FaqClarificationPlanner;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.llm.service.LlmClient;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFactory;
@@ -34,7 +31,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
-
 
 /** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
 @Configuration(proxyBeanMethods = false)

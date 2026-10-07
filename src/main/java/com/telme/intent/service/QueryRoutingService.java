@@ -651,6 +651,9 @@ public class QueryRoutingService {
         }
         Set<String> pending = conditions.stream()
             .filter(condition -> condition.getStatus() == ConsultCondition.Status.PENDING)
+            // 한 번에 하나만 묻는다. 아직 질문하지 않은 다음 조건은 이 답의 대상이 아니다.
+            .filter(condition -> condition.getAskedMessage() != null)
+            .filter(condition -> condition.getAnsweredMessage() == null)
             .map(ConsultCondition::getConditionKey)
             .filter(key -> key != null && !key.isBlank())
             .collect(Collectors.toCollection(LinkedHashSet::new));

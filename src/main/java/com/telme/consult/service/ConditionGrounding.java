@@ -78,6 +78,9 @@ final class ConditionGrounding {
     }
 
     static List<String> groundedOptions(List<String> options, String question, FaqSearchResponse source) {
+        if (question == null || question.isBlank()) {
+            return List.of();
+        }
         if (options.stream().allMatch(option -> YES_NO.contains(option.strip()))) {
             return options;
         }

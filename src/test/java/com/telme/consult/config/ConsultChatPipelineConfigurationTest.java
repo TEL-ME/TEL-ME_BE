@@ -28,6 +28,7 @@ import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestio
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmClient;
 import com.telme.rag.service.AnswerGenerator;
 
 import org.junit.jupiter.api.Test;
@@ -108,6 +109,19 @@ class ConsultChatPipelineConfigurationTest {
                                     .isInstanceOf(
                                             com.telme.consult.service.ChatEmitterConsultEvents.class);
                         });
+    }
+
+    @Test
+    void faqClarificationIsEnabledByDefaultWhenLlmClientExists() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(LlmClient.class, () -> mock(LlmClient.class))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(AnswerProvider.class).clarifies()).isTrue();
+                });
     }
 
     @Test

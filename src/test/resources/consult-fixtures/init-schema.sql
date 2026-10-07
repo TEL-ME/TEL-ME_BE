@@ -172,6 +172,7 @@ CREATE TABLE consult_requests (
     subquery_order     SMALLINT    NOT NULL,        -- 분해 순서
     intent             VARCHAR(20) NOT NULL,        -- FAQ / STORE
     query_text         TEXT        NOT NULL,        -- 분해된 개별 질문
+    clarification_plan JSONB,                       -- FAQ 되묻기 질문·선택지·근거와 순서
     status             VARCHAR(20) NOT NULL DEFAULT 'PENDING',
                                                     -- PENDING / WAITING_CONDITION / DONE / CANCELLED
     version            INT         NOT NULL DEFAULT 1, -- 상태 갱신 충돌 확인 (@Version)
