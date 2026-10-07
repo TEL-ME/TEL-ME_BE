@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -64,7 +66,7 @@ class MultiturnChatIntegrationTest {
                 "유심 재발급 비용은 얼마인가요?", "재발급 비용은 7,700원입니다.", 0.95, null, null, 1, null)));
         when(model.generate(any())).thenAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if ("multiturn-resolution-v4".equals(request.promptVersion())) {
+            if ("multiturn-resolution-v5".equals(request.promptVersion())) {
                 JsonNode inputs = mapper.readTree(request.userPrompt());
                 long source = inputs.path("sourceMessages").get(0).path("messageId").asLong();
                 return "{\"needsClarification\":false,\"sourceMessageIds\":[" + source + "]}";
@@ -100,9 +102,10 @@ class MultiturnChatIntegrationTest {
         assertThat(history.path("messages").get(3).path("answerBasis").asText()).isEqualTo("GROUNDED");
         var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(search).search(query.capture());
-        assertThat(query.getValue().query()).contains("유심 재발급", "현재 후속 질문", "그건 비용이 얼마야?");
-        assertThat(answerRequest.get().userPrompt()).contains("그건 비용이 얼마야?", "대상을 확인할 이전 고객 발언",
-                "상담사(정책 근거 아님)", "7,700원");
+        assertThat(query.getValue().query()).isEqualTo("유심 재발급 비용");
+        assertThat(answerRequest.get().userPrompt()).contains("그건 비용이 얼마야?", "유심 재발급 방법을 알아보고 있어요.",
+                "7,700원");
+        assertThat(answerRequest.get().userPrompt()).doesNotContain("상담사(정책 근거 아님)");
         assertThat(answerRequest.get().userPrompt()).doesNotContain("99,999원");
         assertThat(answerRequest.get().systemPrompt()).contains("이전 상담사의 답변은 정책 근거가 아닙니다");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_executions WHERE execution_id=? AND status='COMPLETED'",
@@ -119,9 +122,11 @@ class MultiturnChatIntegrationTest {
         assertThat(output.path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
     }
 
-    @Test
-    void unresolvedReferenceReturnsClarificationInsteadOfInventingATopic() throws Exception {
-        send("그건 얼마야?");
+    @ParameterizedTest
+    @ValueSource(strings = {"그건 얼마야?", "그때 요금은 얼마야?", "앞서 말한 건 얼마야?",
+            "이전에 물어본 거 얼마야?", "아까 얼마랬죠?"})
+    void unresolvedReferenceReturnsClarificationInsteadOfInventingATopic(String question) throws Exception {
+        send(question);
         JsonNode output = history().path("messages").get(1);
         assertThat(output.path("content").asText()).contains("어떤 내용에 대한 질문인지 확인");
         assertThat(answerRequest.get()).isNull();
@@ -129,10 +134,26 @@ class MultiturnChatIntegrationTest {
                 .isZero();
     }
 
+    @Test
+    void independentEnrollmentQuestionDoesNotInheritRoamingTopicInRagPrompt() throws Exception {
+        previousConversation("로밍 요금제는 어떻게 골라요?");
+        answer.set("만 14세 미만은 가입할 수 없습니다.");
+        when(search.search(any())).thenReturn(List.of(new FaqSearchResponse(1L, null, "SUBSCRIBE",
+                "미성년자도 가입할 수 있나요?", answer.get(), 0.95, null, null, 1, null)));
+        send("미성년자도 가입 되나요");
+        assertThat(answerRequest.get().userPrompt()).contains("미성년자도 가입 되나요");
+        assertThat(answerRequest.get().userPrompt()).doesNotContain("로밍", "99,999원", "conversation_data");
+        assertThat(history().path("messages").get(3).path("content").asText()).isEqualTo(answer.get());
+    }
+
     private void previousConversation() {
+        previousConversation("유심 재발급 방법을 알아보고 있어요.");
+    }
+
+    private void previousConversation(String content) {
         long question = jdbc.queryForObject("INSERT INTO chat_messages(session_id,sequence_no,role,message_type,content,status)"
-                + " VALUES (?,1,'USER','QUESTION','유심 재발급 방법을 알아보고 있어요.','COMPLETED') RETURNING message_id",
-                Long.class, sessionId);
+                + " VALUES (?,1,'USER','QUESTION',?,'COMPLETED') RETURNING message_id",
+                Long.class, sessionId, content);
         jdbc.update("INSERT INTO chat_messages(session_id,sequence_no,role,message_type,content,status,reply_to_id)"
                 + " VALUES (?,2,'ASSISTANT','ANSWER','재발급 비용은 99,999원입니다.','COMPLETED',?)", sessionId, question);
     }

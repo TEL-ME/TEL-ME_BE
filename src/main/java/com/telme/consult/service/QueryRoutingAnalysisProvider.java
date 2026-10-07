@@ -49,9 +49,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
         if (!context.candidates().isEmpty()) {
             AnalysisResult followup =
                     Objects.requireNonNull(followups.analyze(context), "followupAnalysis");
-            if (!followup.reroute()) {
-                return followup;
-            }
+            // 새 질문 판정은 호출자에게 돌려 문맥 복원 후 한 번만 재라우팅한다.
+            return followup;
         }
 
         return routeInitial(context);

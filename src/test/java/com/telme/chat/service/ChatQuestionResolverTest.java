@@ -15,6 +15,8 @@ import com.telme.llm.dto.req.LlmRequest;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class ChatQuestionResolverTest {
@@ -47,6 +49,47 @@ class ChatQuestionResolverTest {
                 .needsClarification()).isTrue();
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, "비용은 얼마야?"), null)
                 .needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"그때 요금은 얼마야?", "앞서 말한 건 얼마야?", "이전에 물어본 거 얼마야?",
+            "아까 얼마랬죠?", "그럼 신청 방법은?", "필요한 서류는?"})
+    void everyDetectedReferenceWithoutASourceRequiresClarification(String question) throws Exception {
+        assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, question), null)
+                .needsClarification()).isTrue();
+        assertThat(resolver.validate(question, "{\"needsClarification\":false,\"sourceMessageIds\":[]}",
+                Map.of(1L, source)).needsClarification()).isTrue();
+        verifyNoInteractions(model);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"그럼 신청 방법은?", "필요한 서류는?", "기간은 얼마나 걸려?"})
+    void implicitFollowupSelectsTheOriginalCustomerTopic(String question) {
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[1]}");
+        var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context);
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.question()).contains(source.content(), question);
+        assertThat(result.sourceMessageIds()).containsExactly(1L);
+    }
+
+    @Test
+    void downstreamContextContainsOnlySelectedCustomerSourcesAndRecalculatesTokens() {
+        var unrelated = new ChatContextMessage(3L, 3, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "유심 재발급", null);
+        var answer = new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT,
+                ChatMessage.MessageType.ANSWER, "로밍은 무료", null);
+        var context = new ChatContext(1L, 5L, "강남역이라는 미검증 요약", List.of(answer, unrelated),
+                "그건 얼마야?", 100, List.of(source));
+        var scoped = resolver.contextFor(new ChatQuestionResolver.Resolution("복원 질문", false, List.of(1L)), context);
+        assertThat(scoped.history()).containsExactly(source);
+        assertThat(scoped.summary()).isNull();
+        assertThat(scoped.summarySources()).isEmpty();
+        var estimator = new ChatTokenEstimator();
+        assertThat(scoped.estimatedContextTokens()).isEqualTo(
+                estimator.estimatePromptPart(context.currentQuestion()) + estimator.estimate(source));
+        assertThat(resolver.contextFor(new ChatQuestionResolver.Resolution("독립 질문", false, List.of()), context))
+                .isNull();
     }
 
     @Test

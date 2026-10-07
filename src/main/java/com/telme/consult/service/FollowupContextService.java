@@ -58,6 +58,11 @@ public final class FollowupContextService {
         public Context withResolvedQuestion(String value) {
             return new Context(sessionId, userMessageId, message, candidates, routingContext, value);
         }
+
+        // 새 질문으로 판정된 이번 분석에서만 대기 후보를 제외한다. 저장된 상담 상태는 유지한다.
+        public Context forNewQuestion() {
+            return new Context(sessionId, userMessageId, message, List.of(), routingContext, resolvedQuestion);
+        }
     }
 
     public Context prepare(ChatActor actor, long sessionId, long userMessageId) {

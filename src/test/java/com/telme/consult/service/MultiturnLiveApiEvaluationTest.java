@@ -47,6 +47,104 @@ class MultiturnLiveApiEvaluationTest {
     @Autowired ChatSummaryService summaries;
     private static final Path DIRECTORY = Path.of(".measure", "telme121", "live-api");
     private static final String RUN = Long.toString(System.currentTimeMillis());
+    private static final Map<Long, List<LlmRequest>> REQUESTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Test
+    void recordsReviewRegressionsThroughActualApi() throws Exception {
+        var fixtures = List.of(
+                new ReviewFixture("IMPLICIT_APPLICATION", "로밍 요금제는 어떻게 골라요?", "그럼 신청 방법은?",
+                        true, false, false, 3),
+                new ReviewFixture("IMPLICIT_DOCUMENTS", "명의 변경 방법을 알려주세요", "필요한 서류는?",
+                        true, false, false, 1),
+                new ReviewFixture("IMPLICIT_PERIOD", "유심 재발급 방법을 알려주세요", "기간은 얼마나 걸려?",
+                        true, false, false, 1),
+                new ReviewFixture("INDEPENDENT_ENROLLMENT", "로밍 요금제는 어떻게 골라요?", "미성년자도 가입 되나요",
+                        false, false, false, 2),
+                new ReviewFixture("INDEPENDENT_TERMINATION", "유심 재발급 방법을 알려주세요", "해지는 어떻게 하나요?",
+                        false, false, false, 1),
+                new ReviewFixture("PENDING_NEW_QUESTION", "로밍 요금제는 어떻게 골라요?", "그럼 신청 방법은?",
+                        true, true, false, 1),
+                new ReviewFixture("LEGACY_SUMMARY", "유심 재발급 방법을 알려주세요", "그건 비용이 얼마야?",
+                        true, false, true, 1));
+        var failures = new java.util.ArrayList<String>();
+        for (var fixture : fixtures) {
+            for (int repeat = 1; repeat <= fixture.repeats(); repeat++) {
+                long user = jdbc.queryForObject("INSERT INTO users(email,name) VALUES (?,'리뷰 회귀 실측') RETURNING user_id",
+                        Long.class, UUID.randomUUID() + "@example.com");
+                long session = jdbc.queryForObject("INSERT INTO chat_sessions(user_id,title) VALUES (?,'리뷰 회귀 실측')"
+                        + " RETURNING session_id", Long.class, user);
+                var identity = new MockHttpSession();
+                identity.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, user);
+                var row = new LinkedHashMap<String, Object>();
+                row.put("fixture", fixture);
+                row.put("repeat", repeat);
+                row.put("sessionId", session);
+                row.put("startedAt", Instant.now().toString());
+                try {
+                    if (fixture.pending()) {
+                        long waiting = send(session, identity, "가까운 매장 찾아줘");
+                        row.put("waitingExecution", execution(waiting));
+                        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=?"
+                                + " AND status='WAITING_CONDITION'", Integer.class, session)).isPositive();
+                    }
+                    long first = send(session, identity, fixture.initial());
+                    row.put("firstExecution", execution(first));
+                    row.put("firstHistory", history(session, identity));
+                    long sourceId = jdbc.queryForObject("SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                            Long.class, first);
+                    if (fixture.legacy()) {
+                        jdbc.update("UPDATE chat_sessions SET summary='강남역에서 39000원 요금제를 사용한다.',"
+                                + " summary_through_sequence_no=(SELECT max(sequence_no) FROM chat_messages WHERE session_id=?)"
+                                + " WHERE session_id=?", session, session);
+                    }
+                    long next = send(session, identity, fixture.followup());
+                    row.put("followupExecution", execution(next));
+                    row.put("finalHistory", history(session, identity));
+                    row.put("requests", REQUESTS.getOrDefault(next, List.of()));
+                    assertThat(jdbc.queryForObject("SELECT status FROM chat_executions WHERE execution_id=?",
+                            String.class, next)).isEqualTo("COMPLETED");
+                    String trace = jdbc.queryForObject("SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?",
+                            String.class, next);
+                    var parsed = mapper.readTree(trace);
+                    if (fixture.referenced()) {
+                        assertThat(parsed.path("questionResolution").path("needsClarification").asBoolean()).isFalse();
+                        assertThat(parsed.path("questionResolution").path("sourceMessageIds").toString())
+                                .contains(Long.toString(sourceId));
+                        assertThat(parsed.path("questionResolution").path("resolvedQuery").asText())
+                                .contains(fixture.initial(), fixture.followup());
+                        assertThat(parsed.path("analysis").path("action").asText()).isNotEqualTo("DIRECT");
+                        if (fixture.id().equals("IMPLICIT_APPLICATION") || fixture.pending()) {
+                            assertThat(parsed.path("searchRequests").size()).isEqualTo(1);
+                            assertThat(parsed.path("searchRequests").get(0).path("query").asText())
+                                    .contains("로밍", "신청").doesNotContain("선택");
+                        }
+                    } else {
+                        assertThat(REQUESTS.getOrDefault(next, List.of())).allSatisfy(request ->
+                                assertThat(request.userPrompt()).doesNotContain(fixture.initial(), "conversation_data"));
+                    }
+                    if (fixture.legacy()) {
+                        assertThat(REQUESTS.getOrDefault(next, List.of())).allSatisfy(request ->
+                                assertThat(request.userPrompt()).doesNotContain("강남역", "39000"));
+                    }
+                    if (fixture.pending()) {
+                        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=?"
+                                + " AND status='WAITING_CONDITION'", Integer.class, session)).isPositive();
+                    }
+                    row.put("status", "VERIFIED");
+                } catch (Exception | AssertionError failure) {
+                    row.put("status", "FAILED");
+                    row.put("error", failure.toString());
+                    failures.add(fixture.id() + "#" + repeat + ": " + failure.getMessage());
+                } finally {
+                    append(DIRECTORY.resolve("review-regressions-" + RUN + ".jsonl"), mapper, row);
+                }
+            }
+        }
+        assertThat(failures).isEmpty();
+    }
+
+    private record ReviewFixture(String id, String initial, String followup, boolean referenced,
+            boolean pending, boolean legacy, int repeats) {}
 
     @Test
     void recordsActualSearchesAndAnswersBeforeAndAfterSummary() throws Exception {
@@ -172,6 +270,7 @@ class MultiturnLiveApiEvaluationTest {
                     return new LlmClient() {
                         final ObjectMapper mapper = new ObjectMapper();
                         public String generate(LlmRequest request) {
+                            capture(request);
                             long started = System.nanoTime();
                             var row = new LinkedHashMap<String, Object>();
                             row.put("request", request);
@@ -188,6 +287,7 @@ class MultiturnLiveApiEvaluationTest {
                             }
                         }
                         public void stream(LlmRequest request, LlmStreamHandler handler) {
+                            capture(request);
                             StringBuilder text = new StringBuilder();
                             long started = System.nanoTime();
                             try {
@@ -202,6 +302,12 @@ class MultiturnLiveApiEvaluationTest {
                                 append(DIRECTORY.resolve("model-" + RUN + ".jsonl"), mapper,
                                         Map.of("request", request, "rawStream", text.toString(),
                                                 "elapsedMillis", (System.nanoTime() - started) / 1_000_000));
+                            }
+                        }
+                        private void capture(LlmRequest request) {
+                            if (request.executionId() != null) {
+                                REQUESTS.computeIfAbsent(request.executionId(), ignored ->
+                                        new java.util.concurrent.CopyOnWriteArrayList<>()).add(request);
                             }
                         }
                     };

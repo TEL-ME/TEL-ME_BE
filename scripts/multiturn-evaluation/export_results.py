@@ -30,15 +30,68 @@ def archive(source, target):
             "uncompressedSha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
 
 
+def check_build(path):
+    data = path.read_bytes()
+    encoding = "utf-16" if data.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"
+    text = data.decode(encoding)
+    if "BUILD SUCCESSFUL" not in text or "BUILD FAILED" in text:
+        raise ValueError("완료된 빌드 성공 로그가 필요합니다.")
+    import xml.etree.ElementTree as ET
+    totals = collections.Counter()
+    for report_path in (ROOT / "build" / "test-results" / "test").glob("TEST-*.xml"):
+        report = ET.parse(report_path).getroot()
+        for key in ("tests", "failures", "errors", "skipped"):
+            totals[key] += int(report.get(key, 0))
+    if not totals["tests"] or totals["failures"] or totals["errors"]:
+        raise ValueError("실패 없이 완료된 테스트 결과가 필요합니다.")
+    return dict(totals)
+
+
+def export_review(cases_path, checks_path):
+    rows = read_rows(cases_path)
+    if not rows or any(row.get("status") != "VERIFIED" for row in rows):
+        raise ValueError("리뷰 회귀 검증이 모두 완료된 원시 자료가 필요합니다.")
+    totals = check_build(checks_path)
+    model_path = cases_path.with_name(cases_path.name.replace("review-regressions-", "model-", 1))
+    if not model_path.is_file():
+        raise FileNotFoundError(model_path)
+    target = HERE / "results" / "V3-review-regressions"
+    archives = [archive(cases_path, target / "raw" / "final-cases.jsonl.gz"),
+                archive(model_path, target / "raw" / "final-model.jsonl.gz")]
+    changed = subprocess.check_output(["git", "diff", "--name-only"], cwd=ROOT, encoding="utf-8").splitlines()
+    tags = json.load(urllib.request.urlopen("http://localhost:11434/api/tags", timeout=10))
+    groups = collections.Counter(row["fixture"]["id"] for row in rows)
+    write_json(target / "metrics.json", {
+        "baseCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, encoding="utf-8").strip(),
+        "changesNotCommitted": True,
+        "codeFileSha256": {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+                           for name in changed if name.endswith(".java")},
+        "models": [{"name": model["name"], "digest": model["digest"]} for model in tags["models"]],
+        "archives": archives, "cases": len(rows), "verified": len(rows), "fixtures": dict(groups),
+        "distinctFixtures": len(groups), "modelCalls": len(read_rows(model_path)), "automatedTests": totals,
+        "buildCommand": "gradlew.bat clean test build --build-cache",
+        "notes": ["Spring 채팅 API와 실제 EXAONE 및 FAQ 검색을 사용한 문맥 연결 회귀 검증",
+                  "VERIFIED는 대상 복원, 문맥 격리, 검색 및 실행 상태 검증이며 최종 답변 정확도 점수가 아님",
+                  "반복 10건은 서로 독립적인 사용자 질문 10건이 아님", "V1과 V2 결과는 변경하지 않음"],
+    })
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--summary", required=True, type=Path)
-    parser.add_argument("--api", required=True, type=Path)
-    parser.add_argument("--boundaries", required=True, type=Path)
+    parser.add_argument("--summary", type=Path)
+    parser.add_argument("--api", type=Path)
+    parser.add_argument("--boundaries", type=Path)
+    parser.add_argument("--review", type=Path, help="V3 리뷰 회귀 결과만 별도 보존")
     parser.add_argument("--checks", required=True, type=Path)
     args = parser.parse_args()
     for key, value in vars(args).items():
-        setattr(args, key, value.resolve())
+        if value is not None:
+            setattr(args, key, value.resolve())
+    if args.review is not None:
+        export_review(args.review, args.checks)
+        return
+    if any(value is None for value in (args.summary, args.api, args.boundaries)):
+        parser.error("기존 평가 내보내기에는 --summary, --api, --boundaries가 필요합니다.")
     results = HERE / "results"
     summaries = read_rows(args.summary)
     aggregates = {}
@@ -73,17 +126,7 @@ def main():
         entry = archive(source, results / experiment / "raw" / name)
         entry["isFinal"] = True
         archives.append(entry)
-    checks = args.checks.read_text(encoding="utf-8-sig", errors="strict")
-    if "BUILD SUCCESSFUL" not in checks or "BUILD FAILED" in checks:
-        raise ValueError("완료된 빌드 성공 로그가 필요합니다.")
-    import xml.etree.ElementTree as ET
-    totals = collections.Counter()
-    for path in (ROOT / "build" / "test-results" / "test").glob("TEST-*.xml"):
-        report = ET.parse(path).getroot()
-        for key in ("tests", "failures", "errors", "skipped"):
-            totals[key] += int(report.get(key, 0))
-    if totals["failures"] or totals["errors"]:
-        raise ValueError("실패한 테스트 결과는 최종 검증으로 내보낼 수 없습니다.")
+    totals = check_build(args.checks)
     write_json(results / "verification.json", dict(totals))
     tags = json.load(urllib.request.urlopen("http://localhost:11434/api/tags", timeout=10))
     changed = subprocess.check_output(["git", "diff", "--name-only"], cwd=ROOT, encoding="utf-8").splitlines()
@@ -101,7 +144,7 @@ def main():
             + len(list((ROOT / ".measure" / "telme121" / "live-api").glob("*.jsonl")))
             - len(selected_runs)
         ),
-        "selectedInputs": {key: str(value) for key, value in vars(args).items()},
+        "selectedInputs": {key: str(value) for key, value in vars(args).items() if value is not None},
         "faqSnapshot": json.loads((ROOT / ".measure" / "telme121" / "faq-snapshot" / "manifest.json")
                                    .read_text(encoding="utf-8")),
         "liveApiRows": len(read_rows(args.api)), "boundaryRows": len(read_rows(args.boundaries)),

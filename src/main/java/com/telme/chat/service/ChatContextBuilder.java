@@ -57,7 +57,6 @@ public class ChatContextBuilder {
         String summary;
         List<ChatContextMessage> summarySources;
         try {
-            summary = summaryConverter.render(storedSummary);
             summarySources = summaryConverter.sources(storedSummary);
             if (!summarySources.isEmpty()) {
                 var originals = chatMessageRepository.findAllById(
@@ -72,6 +71,11 @@ public class ChatContextBuilder {
                     throw new IllegalArgumentException("요약의 출처가 현재 세션 원문과 일치하지 않습니다.");
                 }
             }
+            // 자유문장 요약과 구조화 요약의 legacy 문구는 원문 출처가 없어 전달하지 않는다.
+            summary = summarySources.stream().filter(message -> message.role() == ChatMessage.Role.USER)
+                    .map(ChatContextMessage::content).filter(Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            summary = normalizeSummary(summary);
         } catch (IllegalArgumentException invalidSummary) {
             log.warn("상담 요약 형식 오류로 원문 조회 사용: sessionId={}", command.sessionId());
             summary = null;

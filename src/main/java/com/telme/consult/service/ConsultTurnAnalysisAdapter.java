@@ -58,18 +58,25 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 || context.userMessageId() != command.inputMessageId()) {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
         }
-        if (resolver != null && context.candidates().isEmpty()) {
-            var resolution = resolver.resolve(command, context.routingContext());
-            if (resolution.needsClarification()) {
-                return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.",
-                        null, java.util.List.of(), null));
+        if (context.candidates().isEmpty()) {
+            context = resolveQuestion(command, context);
+            if (context == null) {
+                return clarification();
             }
-            context = context.withResolvedQuestion(resolution.question());
         }
         AnalysisResult result = Objects.requireNonNull(analysis.analyze(context), "analysisResult");
         if (result.reroute()) {
-            throw new IllegalStateException("새 질문 재라우팅 결과가 처리되지 않았습니다.");
+            if (context.candidates().isEmpty()) {
+                throw new IllegalStateException("대기 중 상담이 없는 질문은 재라우팅할 수 없습니다.");
+            }
+            context = resolveQuestion(command, context.forNewQuestion());
+            if (context == null) {
+                return clarification();
+            }
+            result = Objects.requireNonNull(analysis.analyze(context), "reroutedAnalysisResult");
+            if (result.reroute()) {
+                throw new IllegalStateException("새 질문을 반복해서 재라우팅할 수 없습니다.");
+            }
         }
         if (result.directAnswer() != null) {
             return AnalyzedTurn.direct(result.directAnswer());
@@ -108,7 +115,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                         null,
                         correction.purpose(),
                         correction.originalUserQuery(),
-                        correction.searchQuery()).withContext(context.routingContext(), correction.originalUserQuery());
+                        correction.searchQuery()).withContext(null, correction.originalUserQuery());
             }
             Selection selection = resolution.toSelection();
             var followup =
@@ -119,7 +126,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                     followup.followup().answeredField(),
                     followup.purpose(),
                     followup.originalUserQuery(),
-                    followup.searchQuery()).withContext(context.routingContext(), followup.originalUserQuery());
+                    followup.searchQuery()).withContext(null, followup.originalUserQuery());
         }
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
@@ -127,7 +134,27 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 null,
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
-                result.initialQuery().queryText()).withContext(context.routingContext(), context.resolvedQuestion());
+                result.initialQuery().queryText()).withContext(context.routingContext(),
+                        context.message().equals(context.resolvedQuestion())
+                                ? context.message() : result.initialQuery().queryText());
+    }
+
+    private Context resolveQuestion(ChatProcessingCommand command, Context context) {
+        if (resolver == null) {
+            return context;
+        }
+        var resolution = resolver.resolve(command, context.routingContext());
+        if (resolution.needsClarification()) {
+            return null;
+        }
+        return context.withResolvedQuestion(resolution.question())
+                .withRoutingContext(resolver.contextFor(resolution, context.routingContext()));
+    }
+
+    private AnalyzedTurn clarification() {
+        return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.",
+                null, List.of(), null));
     }
 
     private Purpose purpose(String intent) {
