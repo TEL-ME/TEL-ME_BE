@@ -1,0 +1,665 @@
+{
+  "representativeQuestions": {
+    "BILLING-01": {
+      "slotId": "BILLING-0015",
+      "question": "요금제 변경 가능 횟수와 적용 시점을 알려주세요."
+    },
+    "BILLING-02": {
+      "slotId": "BILLING-0016",
+      "question": "청구서 발송일을 알려주세요."
+    },
+    "BILLING-03": {
+      "slotId": "BILLING-0045",
+      "question": "미납 시 정지 단계가 어떻게 진행되나요?"
+    },
+    "BILLING-05": {
+      "slotId": "BILLING-0012",
+      "question": "요금 납부 방법에는 어떤 게 있나요?"
+    },
+    "BILLING-07": {
+      "slotId": "BILLING-0021",
+      "question": "청구서 수령 방법 종류를 알려주세요."
+    },
+    "DEVICE-01": {
+      "slotId": "DEVICE-0037",
+      "question": "단말 할부 기간과 수수료율을 어떻게 확인하고 선택하나요?"
+    },
+    "DEVICE-02": {
+      "slotId": "DEVICE-0010",
+      "question": "기기변경 신청 가능 시점과 할부금 처리 기준을 알려주세요."
+    },
+    "DEVICE-03": {
+      "slotId": "DEVICE-0015",
+      "question": "기기변경 전 파손 수리 시 자기부담금 비율을 알려주세요."
+    },
+    "DEVICE-04": {
+      "slotId": "DEVICE-0040",
+      "question": "기기변경 직후 새 단말 교환 절차를 알려주세요."
+    },
+    "NAME_CHANGE-01": {
+      "slotId": "NAME_CHANGE-0007",
+      "question": "명의변경 시 필요한 서류를 정리해서 알려주세요."
+    },
+    "NAME_CHANGE-02": {
+      "slotId": "NAME_CHANGE-0014",
+      "question": "명의 바꾸는 데 오래 걸려요?"
+    },
+    "NAME_CHANGE-03": {
+      "slotId": "NAME_CHANGE-0009",
+      "question": "할부금이 남아 있으면 신용 심사는 누가 받나요?"
+    },
+    "PLAN-01": {
+      "slotId": "PLAN-0041",
+      "question": "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요."
+    },
+    "PLAN-02": {
+      "slotId": "PLAN-0012",
+      "question": "기본 데이터 소진 후 속도 제한 기준을 알려주세요."
+    },
+    "PLAN-05": {
+      "slotId": "PLAN-0045",
+      "question": "데이터 사용량 기준으로 요금제 고르는 절차를 알려주세요."
+    },
+    "PORTING-01": {
+      "slotId": "PORTING-0033",
+      "question": "번호이동 처리 절차와 소요 시간을 알려주세요."
+    },
+    "PORTING-02": {
+      "slotId": "PORTING-0010",
+      "question": "번호이동 신청 시 필요한 서류를 알려주세요."
+    },
+    "PORTING-03": {
+      "slotId": "PORTING-0011",
+      "question": "개통 후 얼마나 지나야 번호이동할 수 있나요?"
+    },
+    "PORTING-04": {
+      "slotId": "PORTING-0036",
+      "question": "번호이동 철회는 어떻게 신청하나요?"
+    },
+    "ROAMING-01": {
+      "slotId": "ROAMING-0026",
+      "question": "로밍 요금제별 가격을 정리해서 알려주세요."
+    },
+    "ROAMING-02": {
+      "slotId": "ROAMING-0022",
+      "question": "로밍은 어떻게 신청해요?"
+    },
+    "ROAMING-03": {
+      "slotId": "ROAMING-0008",
+      "question": "로밍 요금 자동 차단 기준이 어떻게 되나요?"
+    },
+    "ROAMING-05": {
+      "slotId": "ROAMING-0025",
+      "question": "현지 도착 후 로밍 설정 절차를 알려주세요."
+    },
+    "SERVICE-03": {
+      "slotId": "SERVICE-0058",
+      "question": "평일이랑 토요일 운영시간이 어떻게 다른가요?"
+    },
+    "SUBSCRIBE-01": {
+      "slotId": "SUBSCRIBE-0037",
+      "question": "개통 시 지참해야 하는 신분증 종류를 정리해서 알려주세요."
+    },
+    "SUBSCRIBE-03": {
+      "slotId": "SUBSCRIBE-0011",
+      "question": "신규 개통은 매장이랑 온라인 중 어디가 더 빠른가요?"
+    },
+    "TERMINATE-01": {
+      "slotId": "TERMINATE-0057",
+      "question": "전화나 홈페이지로도 해지 신청이 가능한가요?"
+    },
+    "TERMINATE-02": {
+      "slotId": "TERMINATE-0034",
+      "question": "약정 반환금 계산 절차를 알려주세요."
+    },
+    "TERMINATE-03": {
+      "slotId": "TERMINATE-0011",
+      "question": "해지할 때 남은 할부금 처리 기준이 어떻게 되나요?"
+    },
+    "TERMINATE-04": {
+      "slotId": "TERMINATE-0036",
+      "question": "일시 정지는 어떻게 신청하나요?"
+    },
+    "USIM-01": {
+      "slotId": "USIM-0017",
+      "question": "유심 새로 받는 데 얼마 들어요"
+    },
+    "USIM-02": {
+      "slotId": "USIM-0010",
+      "question": "유심 재발급 시 필요한 서류를 알려주세요."
+    }
+  },
+  "policies": {
+    "BILLING-01": {
+      "title": "요금제 변경 주기와 적용 시점",
+      "links": [
+        {
+          "to": "PLAN-05",
+          "kind": "ALTERNATIVE"
+        },
+        {
+          "to": "PLAN-01",
+          "kind": "ALTERNATIVE"
+        }
+      ]
+    },
+    "BILLING-02": {
+      "title": "청구서 발송과 납부 기한",
+      "links": [
+        {
+          "to": "BILLING-05",
+          "kind": "NEXT"
+        },
+        {
+          "to": "BILLING-03",
+          "kind": "INFO"
+        },
+        {
+          "to": "BILLING-07",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "BILLING-03": {
+      "title": "미납 시 이용 제한",
+      "links": [
+        {
+          "to": "BILLING-05",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "BILLING-04": {
+      "title": "소액결제 한도",
+      "links": []
+    },
+    "BILLING-05": {
+      "title": "납부 수단",
+      "links": [
+        {
+          "to": "BILLING-02",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "BILLING-06": {
+      "title": "이중 납부 환불",
+      "links": []
+    },
+    "BILLING-07": {
+      "title": "청구서 수령 방법",
+      "links": [
+        {
+          "to": "BILLING-02",
+          "kind": "INFO"
+        },
+        {
+          "to": "BILLING-05",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "PLAN-01": {
+      "title": "요금제 구성",
+      "links": [
+        {
+          "to": "PLAN-05",
+          "kind": "ALTERNATIVE"
+        },
+        {
+          "to": "PLAN-02",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "PLAN-02": {
+      "title": "데이터 제공량과 속도 제한",
+      "links": [
+        {
+          "to": "PLAN-05",
+          "kind": "ALTERNATIVE"
+        },
+        {
+          "to": "BILLING-01",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "PLAN-03": {
+      "title": "데이터 이월과 선물하기",
+      "links": [
+        {
+          "to": "PLAN-02",
+          "kind": "INFO"
+        },
+        {
+          "to": "PLAN-05",
+          "kind": "ALTERNATIVE"
+        }
+      ]
+    },
+    "PLAN-04": {
+      "title": "청소년·시니어 요금제 자격",
+      "links": [
+        {
+          "to": "PLAN-05",
+          "kind": "ALTERNATIVE"
+        },
+        {
+          "to": "BILLING-01",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "PLAN-05": {
+      "title": "요금제별 월정액과 기본 데이터",
+      "links": [
+        {
+          "to": "BILLING-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "PLAN-02",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "USIM-01": {
+      "title": "유심 재발급 비용과 소요 시간",
+      "links": [
+        {
+          "to": "USIM-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "SERVICE-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "USIM-02": {
+      "title": "유심 재발급 구비 서류",
+      "links": [
+        {
+          "to": "USIM-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "SERVICE-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "USIM-03": {
+      "title": "eSIM 지원",
+      "links": [
+        {
+          "to": "USIM-01",
+          "kind": "ALTERNATIVE"
+        }
+      ]
+    },
+    "USIM-04": {
+      "title": "유심 분실 시 처리",
+      "links": [
+        {
+          "to": "USIM-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "USIM-02",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "SUBSCRIBE-01": {
+      "title": "신규 가입 구비 서류",
+      "links": [
+        {
+          "to": "SUBSCRIBE-03",
+          "kind": "NEXT"
+        },
+        {
+          "to": "SERVICE-03",
+          "kind": "INFO",
+          "condition": {
+            "questionContains": "매장"
+          }
+        }
+      ]
+    },
+    "SUBSCRIBE-02": {
+      "title": "미성년자 가입 요건",
+      "links": [
+        {
+          "to": "SUBSCRIBE-03",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "SUBSCRIBE-03": {
+      "title": "개통 소요 시간",
+      "links": [
+        {
+          "to": "SUBSCRIBE-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "SERVICE-03",
+          "kind": "INFO",
+          "condition": {
+            "questionContains": "매장"
+          }
+        }
+      ]
+    },
+    "SUBSCRIBE-04": {
+      "title": "회선 보유 한도",
+      "links": [
+        {
+          "to": "SUBSCRIBE-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "SUBSCRIBE-03",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "PORTING-01": {
+      "title": "번호이동 소요 시간",
+      "links": [
+        {
+          "to": "PORTING-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "PORTING-04",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "PORTING-02": {
+      "title": "번호이동 구비 서류",
+      "links": [
+        {
+          "to": "PORTING-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "PORTING-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "PORTING-03": {
+      "title": "번호이동 제한 조건",
+      "links": [
+        {
+          "to": "PORTING-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "PORTING-01",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "PORTING-04": {
+      "title": "번호이동 철회",
+      "links": []
+    },
+    "NAME_CHANGE-01": {
+      "title": "명의변경 구비 서류",
+      "links": [
+        {
+          "to": "NAME_CHANGE-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "NAME_CHANGE-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "NAME_CHANGE-02": {
+      "title": "명의변경 처리 시간과 비용",
+      "links": [
+        {
+          "to": "NAME_CHANGE-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "NAME_CHANGE-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "NAME_CHANGE-03": {
+      "title": "명의변경 제한 조건",
+      "links": [
+        {
+          "to": "NAME_CHANGE-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "NAME_CHANGE-02",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "TERMINATE-01": {
+      "title": "해지 방법과 처리 시점",
+      "links": [
+        {
+          "to": "TERMINATE-02",
+          "kind": "INFO"
+        },
+        {
+          "to": "TERMINATE-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "TERMINATE-02": {
+      "title": "약정 위약금",
+      "links": [
+        {
+          "to": "TERMINATE-03",
+          "kind": "INFO"
+        },
+        {
+          "to": "TERMINATE-04",
+          "kind": "ALTERNATIVE"
+        }
+      ]
+    },
+    "TERMINATE-03": {
+      "title": "단말 할부금 정산",
+      "links": [
+        {
+          "to": "TERMINATE-02",
+          "kind": "INFO"
+        },
+        {
+          "to": "TERMINATE-01",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "TERMINATE-04": {
+      "title": "일시 정지",
+      "links": [
+        {
+          "to": "TERMINATE-01",
+          "kind": "ALTERNATIVE"
+        },
+        {
+          "to": "TERMINATE-02",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "DEVICE-01": {
+      "title": "단말 할부 기간과 이자",
+      "links": [
+        {
+          "to": "DEVICE-02",
+          "kind": "NEXT"
+        }
+      ]
+    },
+    "DEVICE-02": {
+      "title": "기기 변경 조건",
+      "links": [
+        {
+          "to": "DEVICE-01",
+          "kind": "NEXT"
+        },
+        {
+          "to": "DEVICE-03",
+          "kind": "ALTERNATIVE",
+          "condition": {
+            "triggerIn": [
+              "침수",
+              "액정 파손"
+            ]
+          }
+        },
+        {
+          "to": "DEVICE-04",
+          "kind": "INFO",
+          "condition": {
+            "triggerIn": [
+              "기기변경 희망"
+            ]
+          }
+        }
+      ]
+    },
+    "DEVICE-03": {
+      "title": "단말 분실·파손 처리",
+      "links": [
+        {
+          "to": "DEVICE-02",
+          "kind": "ALTERNATIVE",
+          "condition": {
+            "triggerNotIn": [
+              "분실"
+            ]
+          }
+        },
+        {
+          "to": "DEVICE-02",
+          "kind": "ALTERNATIVE",
+          "condition": {
+            "triggerIn": [
+              "분실"
+            ]
+          }
+        },
+        {
+          "to": "USIM-01",
+          "kind": "ALTERNATIVE",
+          "condition": {
+            "triggerIn": [
+              "분실"
+            ]
+          }
+        }
+      ]
+    },
+    "DEVICE-04": {
+      "title": "단말 반품·교환",
+      "links": [
+        {
+          "to": "DEVICE-03",
+          "kind": "ALTERNATIVE",
+          "condition": {
+            "triggerIn": [
+              "침수",
+              "액정 파손"
+            ]
+          }
+        }
+      ]
+    },
+    "ROAMING-01": {
+      "title": "로밍 요금제",
+      "links": [
+        {
+          "to": "ROAMING-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "ROAMING-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "ROAMING-02": {
+      "title": "로밍 신청 방법과 적용 시점",
+      "links": [
+        {
+          "to": "ROAMING-05",
+          "kind": "NEXT"
+        },
+        {
+          "to": "ROAMING-01",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "ROAMING-03": {
+      "title": "로밍 요금 자동 차단",
+      "links": [
+        {
+          "to": "ROAMING-01",
+          "kind": "ALTERNATIVE"
+        }
+      ]
+    },
+    "ROAMING-04": {
+      "title": "로밍 부가 기능",
+      "links": [
+        {
+          "to": "ROAMING-02",
+          "kind": "NEXT"
+        },
+        {
+          "to": "ROAMING-05",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "ROAMING-05": {
+      "title": "로밍 이용 확인과 현지 설정",
+      "links": [
+        {
+          "to": "ROAMING-03",
+          "kind": "INFO"
+        }
+      ]
+    },
+    "SERVICE-01": {
+      "title": "부가서비스 가입·해지",
+      "links": []
+    },
+    "SERVICE-02": {
+      "title": "멤버십 등급과 혜택",
+      "links": []
+    },
+    "SERVICE-03": {
+      "title": "매장 운영 시간",
+      "links": []
+    },
+    "SERVICE-04": {
+      "title": "명의도용 신고",
+      "links": []
+    },
+    "SERVICE-05": {
+      "title": "증명서 발급",
+      "links": []
+    }
+  }
+}
