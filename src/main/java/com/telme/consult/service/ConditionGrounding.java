@@ -35,14 +35,10 @@ final class ConditionGrounding {
         // 근거를 여러 문장에 걸쳐 옮겨 쓰기도 해서 양쪽 다 문장 단위로 맞춘다
         for (String quoted : split(evidence)) {
             String compacted = compact(quoted);
-            if (compacted.isEmpty()) {
-                continue;
-            }
-            int required = Math.min(MIN_OVERLAP, compacted.length());
             for (FaqSearchResponse source : sources) {
                 for (String sentence : sentences(source)) {
                     int overlap = longestOverlap(compacted, compact(sentence));
-                    if (overlap >= required && overlap > best && sameMeaning(compacted, compact(sentence))) {
+                    if (overlap >= MIN_OVERLAP && overlap > best && sameMeaning(compacted, compact(sentence))) {
                         best = overlap;
                         found = new Grounded(sentence, source);
                     }

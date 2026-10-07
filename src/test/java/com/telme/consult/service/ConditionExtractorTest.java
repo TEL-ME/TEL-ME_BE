@@ -157,6 +157,16 @@ class ConditionExtractorTest {
     }
 
     @Test
+    @DisplayName("근거가 짧으면 흔한 말이라 버린다")
+    void 짧은_근거를_버린다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[{"key":"plan_type","question":"어떤 요금제를 쓰고 계신가요?","options":[],
+                 "evidence":"따라"}]}""");
+
+        assertThat(extract()).isEmpty();
+    }
+
+    @Test
     @DisplayName("근거가 문장부호뿐이면 버린다")
     void 문장부호만_있는_근거를_버린다() {
         when(client.generate(any())).thenReturn("""
