@@ -2,6 +2,8 @@ package com.telme.consult.service;
 
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.service.ChatQuestionResolver;
+import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
@@ -22,16 +24,24 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
     private final AnalysisProvider analysis;
     private final ConsultTurnPreparationService preparation;
     private final FollowupConditionConverter followupConverter;
+    private final ChatQuestionResolver resolver;
 
     public ConsultTurnAnalysisAdapter(
             ContextProvider contexts,
             AnalysisProvider analysis,
             ConsultTurnPreparationService preparation,
             FollowupConditionConverter followupConverter) {
+        this(contexts, analysis, preparation, followupConverter, null);
+    }
+
+    public ConsultTurnAnalysisAdapter(ContextProvider contexts, AnalysisProvider analysis,
+            ConsultTurnPreparationService preparation, FollowupConditionConverter followupConverter,
+            ChatQuestionResolver resolver) {
         this.contexts = Objects.requireNonNull(contexts);
         this.analysis = Objects.requireNonNull(analysis);
         this.preparation = Objects.requireNonNull(preparation);
         this.followupConverter = Objects.requireNonNull(followupConverter);
+        this.resolver = resolver;
     }
 
     @Override
@@ -43,6 +53,15 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 || context.sessionId() != command.sessionId()
                 || context.userMessageId() != command.inputMessageId()) {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
+        }
+        if (resolver != null && context.candidates().isEmpty()) {
+            var resolution = resolver.resolve(command, context.routingContext());
+            if (resolution.needsClarification()) {
+                return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.",
+                        null, java.util.List.of(), null));
+            }
+            context = context.withResolvedQuestion(resolution.question());
         }
         AnalysisResult result = Objects.requireNonNull(analysis.analyze(context), "analysisResult");
         if (result.reroute()) {
@@ -67,7 +86,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                         null,
                         correction.purpose(),
                         correction.originalUserQuery(),
-                        correction.searchQuery());
+                        correction.searchQuery()).withContext(context.routingContext(), correction.originalUserQuery());
             }
             Selection selection = resolution.toSelection();
             var followup =
@@ -78,7 +97,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                     followup.followup().answeredField(),
                     followup.purpose(),
                     followup.originalUserQuery(),
-                    followup.searchQuery());
+                    followup.searchQuery()).withContext(context.routingContext(), followup.originalUserQuery());
         }
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
@@ -86,7 +105,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 null,
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
-                result.initialQuery().queryText());
+                result.initialQuery().queryText()).withContext(context.routingContext(), context.resolvedQuestion());
     }
 
     private Purpose purpose(String intent) {

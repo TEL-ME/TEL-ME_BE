@@ -140,4 +140,63 @@ class ChatSummaryServiceTest {
 
         assertThat(service.summarizeIfNeeded(request)).isFalse();
     }
+
+    @Test
+    void invalidGroundedSelectionCannotMoveTheCursor() {
+        var grounded = new ChatSummaryService(store, llmClient,
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+        when(store.prepare(request)).thenReturn(Optional.of(snapshot));
+        when(llmClient.generate(any())).thenReturn("{\"messageIds\":[999]}");
+        assertThatThrownBy(() -> grounded.summarizeIfNeeded(request)).isInstanceOf(IllegalArgumentException.class);
+        verify(store, never()).saveIfCurrent(any(), any());
+    }
+
+    @Test
+    void socialOnlyGroundedBatchAdvancesAtomicallyWithoutModelCall() {
+        var socialSnapshot = new ChatSummarySnapshot(10L, 20L, null, 0, 2, List.of(
+                new ChatContextMessage(1L, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                        "감사합니다", null),
+                new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                        "천만에요", null)));
+        var grounded = new ChatSummaryService(store, llmClient,
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+        when(store.prepare(request)).thenReturn(Optional.of(socialSnapshot));
+        when(store.saveIfCurrent(any(), any())).thenReturn(true);
+        assertThat(grounded.summarizeIfNeeded(request)).isTrue();
+        verify(llmClient, never()).generate(any());
+        verify(store).saveIfCurrent(org.mockito.ArgumentMatchers.eq(socialSnapshot), any());
+    }
+
+    @Test
+    void excessiveValidSelectionSavesBudgetedOriginalsWithoutAnotherModelCall() {
+        var old = new ChatContextMessage(1L, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                "부모님 명의예요.".repeat(20), null);
+        var corrected = new ChatContextMessage(3L, 3, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                "제 명의이고 아직 변경하지 않았어요.", null);
+        var prepared = new ChatSummarySnapshot(10L, 20L, null, 0, 4, List.of(old, corrected));
+        var grounded = new ChatSummaryService(store, llmClient,
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 80, true));
+        when(store.prepare(request)).thenReturn(Optional.of(prepared));
+        when(llmClient.generate(any())).thenReturn("{\"messageIds\":[1,3]}");
+        when(store.saveIfCurrent(any(), any())).thenReturn(true);
+        assertThat(grounded.summarizeIfNeeded(request)).isTrue();
+        var saved = ArgumentCaptor.forClass(String.class);
+        verify(store).saveIfCurrent(org.mockito.ArgumentMatchers.eq(prepared), saved.capture());
+        var converter = new com.telme.chat.converter.ChatSummaryConverter(
+                new com.fasterxml.jackson.databind.ObjectMapper());
+        assertThat(converter.sources(saved.getValue())).containsExactly(corrected);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
+    void aBatchWhoseOversizedOriginalsWereExcludedCanAdvanceWithoutInventingFacts() {
+        var prepared = new ChatSummarySnapshot(10L, 20L, null, 0, 2, List.of());
+        var grounded = new ChatSummaryService(store, llmClient,
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+        when(store.prepare(request)).thenReturn(Optional.of(prepared));
+        when(store.saveIfCurrent(any(), any())).thenReturn(true);
+        assertThat(grounded.summarizeIfNeeded(request)).isTrue();
+        verify(llmClient, never()).generate(any());
+        verify(store).saveIfCurrent(org.mockito.ArgumentMatchers.eq(prepared), any());
+    }
 }

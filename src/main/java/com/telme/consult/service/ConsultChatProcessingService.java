@@ -5,6 +5,7 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -86,6 +87,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (turn.directAnswer() == null && turn.preparation() != null) {
             trace.stage(command.executionId(), "analysis", Map.of(
                     "purpose", turn.purpose().name(), "originalQuery", turn.originalUserQuery(),
+                    "resolvedQuery", turn.resolvedUserQuery(),
                     "refinedQuery", turn.searchQuery(), "action",
                     turn.preparation().waitingForReply() ? "WAITING"
                             : turn.preparation().prepared().decision().action().name()));
@@ -142,7 +144,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                                     turn.originalUserQuery(),
                                     turn.searchQuery(),
                                     conditionConverter.convert(
-                                            prepared.decision().conditions())));
+                                            prepared.decision().conditions()),
+                                    turn.resolvedUserQuery(), turn.context()));
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -241,7 +244,14 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             Purpose purpose,
             String originalUserQuery,
             String searchQuery,
-            ChatAnswer directAnswer) {
+            ChatAnswer directAnswer,
+            ChatContext context,
+            String resolvedUserQuery) {
+        public AnalyzedTurn(ConsultService.PreparationResult preparation, String answeredField, Purpose purpose,
+                String originalUserQuery, String searchQuery, ChatAnswer directAnswer) {
+            this(preparation, answeredField, purpose, originalUserQuery, searchQuery, directAnswer,
+                    null, directAnswer == null ? originalUserQuery : null);
+        }
         public AnalyzedTurn(
                 ConsultService.PreparationResult preparation,
                 String answeredField,
@@ -255,13 +265,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             return new AnalyzedTurn(null, null, null, null, null, Objects.requireNonNull(answer));
         }
 
+        public AnalyzedTurn withContext(ChatContext value, String resolved) {
+            return new AnalyzedTurn(preparation, answeredField, purpose, originalUserQuery, searchQuery,
+                    directAnswer, value, resolved);
+        }
+
         public AnalyzedTurn {
             if (directAnswer != null) {
                 if (preparation != null
                         || answeredField != null
                         || purpose != null
                         || originalUserQuery != null
-                        || searchQuery != null) {
+                        || searchQuery != null || context != null || resolvedUserQuery != null) {
                     throw new IllegalArgumentException("직접 답변에는 상담 분석 결과를 함께 넣을 수 없습니다.");
                 }
             } else {
@@ -278,6 +293,10 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 }
                 originalUserQuery = originalUserQuery.strip();
                 searchQuery = searchQuery.strip();
+                if (resolvedUserQuery == null || resolvedUserQuery.isBlank()) {
+                    throw new IllegalArgumentException("문맥을 반영한 상담 질문이 필요합니다.");
+                }
+                resolvedUserQuery = resolvedUserQuery.strip();
             }
         }
     }
@@ -290,7 +309,14 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             Purpose purpose,
             String originalUserQuery,
             String searchQuery,
-            Map<String, String> confirmedConditions) {
+            Map<String, String> confirmedConditions,
+            String resolvedUserQuery,
+            ChatContext context) {
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, originalUserQuery, null);
+        }
         public AnswerInput {
             if (executionId <= 0 || sessionId <= 0 || consultRequestId <= 0) {
                 throw new IllegalArgumentException("답변 생성에 필요한 상담 참조가 없습니다.");
@@ -304,6 +330,13 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             }
             originalUserQuery = originalUserQuery.strip();
             searchQuery = searchQuery.strip();
+            if (resolvedUserQuery == null || resolvedUserQuery.isBlank()) {
+                throw new IllegalArgumentException("문맥을 반영한 답변 질문이 필요합니다.");
+            }
+            if (context != null && context.sessionId() != sessionId) {
+                throw new IllegalArgumentException("답변 문맥의 세션이 일치하지 않습니다.");
+            }
+            resolvedUserQuery = resolvedUserQuery.strip();
             confirmedConditions =
                     Map.copyOf(
                             Objects.requireNonNull(

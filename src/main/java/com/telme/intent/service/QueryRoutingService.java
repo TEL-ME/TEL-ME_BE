@@ -112,6 +112,17 @@ public class QueryRoutingService {
 
     private IntentRouteResponse route(
             ChatMessage userMessage, ChatContext context, boolean singleConsultOnly) {
+        return route(userMessage, context, singleConsultOnly, null);
+    }
+
+    // 원본 메시지는 그대로 저장하고, 고객 원문을 연결한 문맥 질문으로 분류한다.
+    public IntentRouteResponse routeSingleConsult(
+            ChatMessage userMessage, ChatContext context, String resolvedQuestion) {
+        return route(userMessage, context, true, resolvedQuestion);
+    }
+
+    private IntentRouteResponse route(
+            ChatMessage userMessage, ChatContext context, boolean singleConsultOnly, String resolvedQuestion) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
         }
@@ -127,7 +138,8 @@ public class QueryRoutingService {
             }
         }
 
-        String question = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+        String question = resolvedQuestion != null ? resolvedQuestion.strip()
+                : userMessage.getContent() != null ? userMessage.getContent().trim() : "";
 
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");

@@ -39,7 +39,7 @@ class AnswerPromptTemplatesTest {
         // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(addition);
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT.replace(addition, "")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.2");
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.3-multiturn");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
     }
 
@@ -73,7 +73,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.2");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.3-multiturn");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");

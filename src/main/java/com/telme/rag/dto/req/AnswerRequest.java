@@ -1,6 +1,7 @@
 package com.telme.rag.dto.req;
 
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.chat.service.ChatContext;
 import java.util.List;
 import java.util.Map;
 
@@ -17,8 +18,14 @@ public record AnswerRequest(
         // 되묻기로 확정된 조건
         Map<String, String> conditions,
         // 비어 있으면 근거 없음으로 처리
-        List<FaqSearchResponse> searchResults
+        List<FaqSearchResponse> searchResults,
+        String resolvedQuery,
+        ChatContext chatContext
 ) {
+    public AnswerRequest(Long executionId, Long consultRequestId, String userQuery,
+            Map<String, String> conditions, List<FaqSearchResponse> searchResults) {
+        this(executionId, consultRequestId, userQuery, conditions, searchResults, userQuery, null);
+    }
     public AnswerRequest(Long executionId, String userQuery, Map<String, String> conditions,
             List<FaqSearchResponse> searchResults) {
         this(executionId, null, userQuery, conditions, searchResults);
@@ -34,5 +41,6 @@ public record AnswerRequest(
         if (searchResults == null) {
             searchResults = List.of();
         }
+        resolvedQuery = resolvedQuery == null || resolvedQuery.isBlank() ? userQuery : resolvedQuery.strip();
     }
 }

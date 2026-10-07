@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
@@ -38,6 +39,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
                     .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
                     .withBean(
                             FollowupAnalysisProvider.class,
                             () -> mock(FollowupAnalysisProvider.class))

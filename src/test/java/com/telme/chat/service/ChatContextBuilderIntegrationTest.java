@@ -26,6 +26,26 @@ import org.springframework.transaction.annotation.Transactional;
 @ExtendWith(OutputCaptureExtension.class)
 class ChatContextBuilderIntegrationTest {
 
+    @Test
+    void restoresSummarizedOriginalsWhenSummaryCannotFitCallerBudget() {
+        ChatSession session = createSession("아주 긴 이전 요약입니다. ".repeat(80));
+        ChatMessage user = message(session, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "해외 로밍 신청", null);
+        ChatMessage answer = message(session, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "로밍 안내", null, user);
+        ChatMessage current = message(session, 3, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "그건?", null);
+        ChatExecution run = execution(session, current, ChatExecution.Status.RUNNING);
+        entityManager.createNativeQuery("update chat_sessions set summary_through_sequence_no=2 where session_id=?")
+                .setParameter(1, session.getSessionId()).executeUpdate();
+        entityManager.clear();
+        ChatContext context = chatContextBuilder.build(new ChatProcessingCommand(
+                run.getExecutionId(), session.getSessionId(), current.getMessageId(), "그건?"), 100);
+        assertThat(context.summary()).isNull();
+        assertThat(context.history()).extracting(ChatContextMessage::messageId)
+                .containsExactly(user.getMessageId(), answer.getMessageId());
+    }
+
     @Autowired
     private ChatContextBuilder chatContextBuilder;
 

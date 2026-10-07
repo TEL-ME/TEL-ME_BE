@@ -32,13 +32,18 @@ public final class FollowupContextService {
             long userMessageId,
             String message,
             List<Candidate> candidates,
-            ChatContext routingContext) {
+            ChatContext routingContext,
+            String resolvedQuestion) {
+        public Context(long sessionId, long userMessageId, String message, List<Candidate> candidates,
+                ChatContext routingContext) {
+            this(sessionId, userMessageId, message, candidates, routingContext, message);
+        }
         public Context(
                 long sessionId,
                 long userMessageId,
                 String message,
                 List<Candidate> candidates) {
-            this(sessionId, userMessageId, message, candidates, null);
+            this(sessionId, userMessageId, message, candidates, null, message);
         }
 
         public Context {
@@ -47,7 +52,11 @@ public final class FollowupContextService {
         }
 
         public Context withRoutingContext(ChatContext value) {
-            return new Context(sessionId, userMessageId, message, candidates, value);
+            return new Context(sessionId, userMessageId, message, candidates, value, resolvedQuestion);
+        }
+
+        public Context withResolvedQuestion(String value) {
+            return new Context(sessionId, userMessageId, message, candidates, routingContext, value);
         }
     }
 

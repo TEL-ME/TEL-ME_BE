@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.config.ChatSummaryProperties;
+import com.telme.chat.converter.ChatSummaryConverter;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
@@ -22,13 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class ChatSummaryStore {
 
-    private static final int PROMPT_OVERHEAD_TOKENS = 128;
-
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatExecutionRepository chatExecutionRepository;
     private final ChatSummaryProperties properties;
     private final ChatTokenEstimator tokenEstimator;
+    private final ChatSummaryConverter converter;
 
     @Transactional(readOnly = true)
     public Optional<ChatSummarySnapshot> prepare(ChatSummaryRequested request) {
@@ -66,22 +66,22 @@ class ChatSummaryStore {
                 PageRequest.of(0, queryLimit)
         );
 
-        List<ChatContextMessage> selected = selectMessages(
+        SummarySelection selected = selectMessages(
                 candidates,
                 Math.min(allowedMessages, candidates.size()),
                 normalize(session.getSummary())
         );
-        if (selected.isEmpty()) {
+        if (selected.throughSequenceNo() <= summaryCursor) {
             return Optional.empty();
         }
 
         return Optional.of(new ChatSummarySnapshot(
                 request.executionId(),
                 request.sessionId(),
-                normalize(session.getSummary()),
+                selected.previousSummary(),
                 summaryCursor,
-                selected.getLast().sequenceNo(),
-                selected
+                selected.throughSequenceNo(),
+                selected.messages()
         ));
     }
 
@@ -95,20 +95,22 @@ class ChatSummaryStore {
         ) == 1;
     }
 
-    private List<ChatContextMessage> selectMessages(
+    private SummarySelection selectMessages(
             List<ChatMessage> candidates,
             int allowedMessages,
             String previousSummary
     ) {
-        int remainingTokens = properties.maxInputTokens()
-                - PROMPT_OVERHEAD_TOKENS
-                - tokenEstimator.estimatePromptPart(previousSummary);
-        if (remainingTokens < 1) {
-            log.warn("상담 요약 입력 예산이 기존 요약만으로 소진됨");
-            return List.of();
+        if (inputTokens(previousSummary, List.of()) > properties.maxInputTokens()) {
+            // 예산 변경이나 오래된 대형 요약 때문에 새 대화 처리가 계속 막히지 않게 한다.
+            log.warn("상담 요약 입력 예산으로 기존 요약 제외: budget={}", properties.maxInputTokens());
+            previousSummary = null;
+        }
+        if (inputTokens(null, List.of()) > properties.maxInputTokens()) {
+            throw new IllegalArgumentException("상담 요약 입력 예산이 시스템 프롬프트보다 작습니다.");
         }
 
         List<ChatContextMessage> selected = new ArrayList<>();
+        int throughSequenceNo = 0;
         for (int index = 0; index < allowedMessages;) {
             List<ChatMessage> exchange = nextExchange(candidates, index, allowedMessages);
             if (exchange.isEmpty()) {
@@ -116,25 +118,75 @@ class ChatSummaryStore {
             }
 
             List<ChatContextMessage> converted = new ArrayList<>(exchange.size());
-            int exchangeTokens = 0;
             for (ChatMessage message : exchange) {
                 try {
                     ChatContextMessage contextMessage = ChatContextMessage.from(message);
                     converted.add(contextMessage);
-                    exchangeTokens += tokenEstimator.estimate(contextMessage);
                 } catch (IllegalArgumentException exception) {
                     log.warn("상담 요약에서 유효하지 않은 메시지 제외: messageId={}, sequenceNo={}, reason={}",
                             message.getMessageId(), message.getSequenceNo(), exception.getMessage());
+                    // 읽지 못한 메시지를 건너뛴 뒤 커서를 옮기면 다음 요약에서도 영원히 빠진다.
+                    return new SummarySelection(previousSummary, throughSequenceNo, selected);
                 }
             }
-            if (exchangeTokens > remainingTokens) {
-                break;
+            List<ChatContextMessage> proposed = new ArrayList<>(selected);
+            proposed.addAll(converted);
+            if (inputTokens(previousSummary, proposed) > properties.maxInputTokens()) {
+                if (inputTokens(null, converted) <= properties.maxInputTokens()) {
+                    if (!selected.isEmpty()) {
+                        break;
+                    }
+                    // 이전 기억과 함께만 넘치는 경우 새 원문을 우선해 한 번 진행한다.
+                    previousSummary = null;
+                    log.warn("상담 요약 새 원문 입력을 위해 기존 요약 제외: sequenceNo={}",
+                            converted.getFirst().sequenceNo());
+                } else {
+                    List<ChatContextMessage> questions = converted.stream()
+                            .filter(message -> message.role() == ChatMessage.Role.USER).toList();
+                    // 긴 상담사 안내 때문에 짧은 고객 원문까지 버리지 않는다.
+                    boolean keepQuestion = !questions.isEmpty()
+                            && inputTokens(null, questions) <= properties.maxInputTokens();
+                    log.warn("상담 요약 입력 예산 초과 구간 처리: sessionId={}, fromSequenceNo={}, "
+                                    + "throughSequenceNo={}, keepQuestion={}, budget={}",
+                            exchange.getFirst().getSession().getSessionId(), converted.getFirst().sequenceNo(),
+                            converted.getLast().sequenceNo(), keepQuestion, properties.maxInputTokens());
+                    if (keepQuestion) {
+                        List<ChatContextMessage> withQuestions = new ArrayList<>(selected);
+                        withQuestions.addAll(questions);
+                        if (inputTokens(previousSummary, withQuestions) > properties.maxInputTokens()) {
+                            if (!selected.isEmpty()) {
+                                break;
+                            }
+                            previousSummary = null;
+                            log.warn("상담 요약 고객 원문 입력을 위해 기존 요약 제외: sequenceNo={}",
+                                    questions.getFirst().sequenceNo());
+                        }
+                        selected.addAll(questions);
+                    } else {
+                        // 생략한 장문이 정정일 수 있어 그보다 오래된 조건을 계속 사용하지 않는다.
+                        previousSummary = null;
+                        selected.clear();
+                    }
+                    throughSequenceNo = converted.getLast().sequenceNo();
+                    index += exchange.size();
+                    continue;
+                }
             }
             selected.addAll(converted);
-            remainingTokens -= exchangeTokens;
+            throughSequenceNo = converted.getLast().sequenceNo();
             index += exchange.size();
         }
-        return selected;
+        return new SummarySelection(previousSummary, throughSequenceNo, selected);
+    }
+
+    private int inputTokens(String previousSummary, List<ChatContextMessage> messages) {
+        String system = properties.groundedOutput()
+                ? ChatSummaryPrompt.SELECTION_SYSTEM_PROMPT : ChatSummaryPrompt.SYSTEM_PROMPT;
+        String input = properties.groundedOutput()
+                ? ChatSummaryPrompt.buildSelectionPrompt(previousSummary, messages,
+                        properties.maxOutputTokens(), converter)
+                : ChatSummaryPrompt.buildUserPrompt(converter.render(previousSummary), messages);
+        return tokenEstimator.estimatePromptPart(system) + tokenEstimator.estimatePromptPart(input);
     }
 
     private Integer findSummarizeThrough(List<ChatMessage> candidates) {
@@ -258,5 +310,8 @@ class ChatSummaryStore {
     }
 
     private record ContextExchange(List<ChatContextMessage> messages, int consumedCandidates) {
+    }
+
+    private record SummarySelection(String previousSummary, int throughSequenceNo, List<ChatContextMessage> messages) {
     }
 }
