@@ -216,14 +216,23 @@ public class RuleBasedRoutingFallback {
         return conditions;
     }
 
-    // 문장에 업무 표현이 있으면 그 업무 코드, 없으면 null. 여러 업무가 있으면 규칙 순서상 앞의 것
+    // 문장에 업무 표현이 하나만 있으면 그 업무 코드, 없거나 여럿이면 null.
+    // "번호이동 말고 신규 개통"처럼 여럿이면 어느 쪽인지 규칙으로 알 수 없어 임의로 고르지 않는다(필터 없이 검색)
     String serviceTypeOf(String text) {
-        return text == null ? null : extractConditions(text).get(SERVICE_TYPE_KEY);
+        if (text == null) {
+            return null;
+        }
+        List<String> codes = SERVICE_TYPE_RULES.stream()
+                .filter(rule -> rule.pattern().matcher(text).find())
+                .map(ServiceTypeRule::code)
+                .toList();
+        return codes.size() == 1 ? codes.getFirst() : null;
     }
 
+    // LLM이 준 업무가 문장의 유일한 업무 표현과 같을 때만 인정한다.
+    // "번호이동 말고 신규 개통"처럼 업무 표현이 여럿이면 LLM이 어떤 값을 줘도 필터 없이 검색한다
     boolean matchesServiceType(String code, String text) {
-        return SERVICE_TYPE_RULES.stream()
-                .anyMatch(rule -> rule.code().equals(code) && rule.pattern().matcher(text).find());
+        return code != null && code.equals(serviceTypeOf(text));
     }
 
     boolean hasServiceTypeMention(String text) {
