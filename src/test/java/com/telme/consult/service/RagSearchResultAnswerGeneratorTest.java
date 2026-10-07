@@ -16,6 +16,7 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.service.AnswerPromptTemplates;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -125,5 +126,77 @@ class RagSearchResultAnswerGeneratorTest {
 
         assertThat(actual.answer().followUps()).containsExactly("유심 재발급 시 필요한 서류를 알려주세요.");
         assertThat(seen).containsExactly(ChatMessage.AnswerBasis.GROUNDED, searchResults);
+    }
+
+    @Test
+    void singleQuestionWithoutSearchResultSendsGuidanceInsteadOfNoEvidenceSentence() {
+        when(answers.generate(any(), any())).thenAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+            stream.onComplete();
+            return AnswerResult.builder()
+                    .answer(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                    .answerBasis(ChatMessage.AnswerBasis.NO_EVIDENCE)
+                    .build();
+        });
+        var generator = new RagSearchResultAnswerGenerator(answers, executionId -> handler);
+        var input = new AnswerInput(31L, 7L, 11L, Purpose.GENERAL_FAQ,
+                "파이썬 리스트 정렬 알려줘", "파이썬 리스트 정렬", Map.of());
+
+        var result = generator.generate(input, List.of());
+
+        verify(answers).generate(any(), any());
+        verify(handler).onToken(RagSearchResultAnswerGenerator.NO_SEARCH_RESULT_ANSWER);
+        verify(handler, never()).onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answer().content())
+                .isEqualTo(RagSearchResultAnswerGenerator.NO_SEARCH_RESULT_ANSWER);
+        assertThat(result.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.NO_EVIDENCE);
+    }
+
+    @Test
+    void singleQuestionWithSearchResultKeepsNoEvidenceSentenceWhenModelDeclines() {
+        when(answers.generate(any(), any())).thenAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+            return AnswerResult.builder()
+                    .answer(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                    .answerBasis(ChatMessage.AnswerBasis.NO_EVIDENCE)
+                    .build();
+        });
+        var generator = new RagSearchResultAnswerGenerator(answers, executionId -> handler);
+        var input = new AnswerInput(31L, 7L, 11L, Purpose.GENERAL_FAQ,
+                "위약금 알려줘", "위약금", Map.of());
+        var searchResults = List.of(new FaqSearchResponse(
+                9L, null, "요금", "요금제 변경", "다음 날 자정부터 적용됩니다.", 0.75, 1,
+                LocalDate.of(2026, 9, 1), 1, null));
+
+        var result = generator.generate(input, searchResults);
+
+        verify(handler).onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answer().content()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    void multipleFaqGenerationDoesNotSendIntermediateTokens() {
+        when(answers.generate(any(), any())).thenAnswer(invocation -> {
+            LlmStreamHandler stream = invocation.getArgument(1);
+            stream.onToken("검증 전 토큰");
+            stream.onComplete();
+            return AnswerResult.builder()
+                    .answer("검증된 답변")
+                    .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                    .build();
+        });
+        var generator = new RagSearchResultAnswerGenerator(answers,
+                executionId -> {
+                    throw new AssertionError("복합 FAQ 생성 중에는 SSE 핸들러를 만들지 않습니다.");
+                });
+        var input = new AnswerInput(31L, 7L, 11L, Purpose.GENERAL_FAQ,
+                "요금제 종류", "요금제 종류", Map.of(), false);
+
+        var result = generator.generate(input, List.of());
+
+        assertThat(result.answer().content()).isEqualTo("검증된 답변");
+        verify(handler, never()).onToken(any());
     }
 }

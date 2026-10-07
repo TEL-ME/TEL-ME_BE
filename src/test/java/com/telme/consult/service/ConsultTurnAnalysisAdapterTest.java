@@ -138,6 +138,34 @@ class ConsultTurnAnalysisAdapterTest {
     }
 
     @Test
+    void multipleFaqQuestionsArePreparedSeparately() {
+        var context = new Context(1, 10, "요금제와 로밍 알려줘", List.of());
+        var first = new IntentSubQueryResponse(
+                101L, (short) 1, ConsultRequest.Intent.FAQ, "요금제 종류", Map.of());
+        var second = new IntentSubQueryResponse(
+                102L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
+        for (var query : List.of(first, second)) {
+            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING))
+                    .thenReturn(new ConsultService.PreparationResult(
+                            new ConsultService.PreparedTurn(1, 1,
+                                    new DialogueDecision(query.consultRequestId(), Action.PROCEED,
+                                            Map.of(), null, null, MessageOrigin.NONE)), null));
+        }
+        var adapter = new ConsultTurnAnalysisAdapter(
+                command -> context,
+                value -> AnalysisResult.multipleFaq(List.of(first, second)),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "요금제와 로밍 알려줘"));
+
+        assertThat(turn.faqTurns()).extracting(ConsultChatProcessingService.FaqTurn::queryText)
+                .containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(turn.faqTurns()).extracting(
+                faq -> faq.preparation().prepared().decision().consultRequestId())
+                .containsExactly(101L, 102L);
+    }
+
+    @Test
     void directGuidanceDoesNotPrepareConsultation() {
         var context = new Context(1, 10, "오늘 날씨 어때?", List.of());
         var answer =

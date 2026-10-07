@@ -33,6 +33,14 @@ public class ConsultChatPersistenceService {
     private final JdbcConsultStateStore stateStore;
     private final ApplicationEventPublisher eventPublisher;
 
+    public record ConsultCompletion(long consultRequestId, int expectedVersion) {
+        public ConsultCompletion {
+            if (consultRequestId <= 0 || expectedVersion < 0) {
+                throw new IllegalArgumentException("완료할 상담 참조가 올바르지 않습니다.");
+            }
+        }
+    }
+
     // 실제 답변 생성을 시작하기 전에 GENERATING 메시지를 먼저 만든다.
     // 이후 completeAnswer/fail은 같은 메시지를 완료 또는 실패 상태로 갱신한다.
     @Transactional
@@ -100,7 +108,23 @@ public class ConsultChatPersistenceService {
             int expectedVersion,
             ChatAnswer answer,
             List<AnswerSource> sources) {
+        return persistFinalAnswers(executionId, sessionId,
+                List.of(new ConsultCompletion(consultRequestId, expectedVersion)), answer, sources);
+    }
+
+    @Transactional
+    public ChatExecutionState persistFinalAnswers(
+            long executionId,
+            long sessionId,
+            List<ConsultCompletion> completions,
+            ChatAnswer answer,
+            List<AnswerSource> sources) {
         Objects.requireNonNull(answer, "answer");
+        completions = List.copyOf(Objects.requireNonNull(completions, "completions"));
+        if (completions.isEmpty() || completions.stream()
+                .map(ConsultCompletion::consultRequestId).distinct().count() != completions.size()) {
+            throw new IllegalArgumentException("완료할 상담 요청이 중복되었거나 비어 있습니다.");
+        }
         sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
         var sessions =
                 jdbc.queryForList(
@@ -114,11 +138,10 @@ public class ConsultChatPersistenceService {
         if (state.outputMessage() == null) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
-        stateStore.complete(
-                sessionId,
-                consultRequestId,
-                expectedVersion,
-                state.outputMessage().messageId());
+        for (ConsultCompletion completion : completions) {
+            stateStore.complete(sessionId, completion.consultRequestId(),
+                    completion.expectedVersion(), state.outputMessage().messageId());
+        }
         if (!sources.isEmpty()) {
             eventPublisher.publishEvent(
                     new AnswerSourcesReady(state.outputMessage().messageId(), sources));
@@ -259,5 +282,20 @@ public class ConsultChatPersistenceService {
                 prepared,
                 new MessageLinks(
                         null, answeredField == null ? null : inputs.getFirst(), answeredField));
+    }
+
+    @Transactional
+    public void persistReadyTurns(long executionId, long sessionId,
+            List<ConsultService.PreparedTurn> preparedTurns) {
+        preparedTurns = List.copyOf(Objects.requireNonNull(preparedTurns, "preparedTurns"));
+        if (preparedTurns.size() < 2 || preparedTurns.stream()
+                .anyMatch(prepared -> prepared.sessionId() != sessionId)
+                || preparedTurns.stream().map(prepared -> prepared.decision().consultRequestId())
+                .distinct().count() != preparedTurns.size()) {
+            throw new IllegalArgumentException("서로 다른 FAQ 상담 요청이 필요합니다.");
+        }
+        for (ConsultService.PreparedTurn prepared : preparedTurns) {
+            persistReadyTurn(executionId, prepared, null);
+        }
     }
 }

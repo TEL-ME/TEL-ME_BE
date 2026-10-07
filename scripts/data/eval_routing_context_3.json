@@ -1,0 +1,20 @@
+[
+  {
+    "eval_id": "CONTEXT-001",
+    "expected_intent": "FAQ",
+    "summary": "직전 상담에서 데이터 선물하기의 잔여 데이터 이전 조건을 설명했다.",
+    "question": "남은 데이터 50%만 넘어간다는 게 무슨 뜻이에요?"
+  },
+  {
+    "eval_id": "CONTEXT-002",
+    "expected_intent": "FAQ",
+    "summary": "U+ 인터넷을 노트북에 연결하는 방법을 상담 중이다.",
+    "question": "노트북은요?"
+  },
+  {
+    "eval_id": "CONTEXT-003",
+    "expected_intent": "STORE",
+    "summary": "강남역 근처 U+ 매장의 위치를 안내했다.",
+    "question": "거기 영업시간은요?"
+  }
+]
