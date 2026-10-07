@@ -1,5 +1,8 @@
 package com.telme.consult.repository;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -7,10 +10,18 @@ import java.util.Objects;
 
 /** 후속 답변 분석에 사용할 대기 질문 후보. 소유권은 호출자가 먼저 확인한다. */
 public final class PendingClarificationFinder {
+    private static final TypeReference<List<String>> OPTIONS = new TypeReference<>() {};
+
     private final JdbcTemplate jdbc;
+    private final ObjectMapper mapper;
 
     public PendingClarificationFinder(JdbcTemplate jdbc) {
+        this(jdbc, new ObjectMapper());
+    }
+
+    public PendingClarificationFinder(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = Objects.requireNonNull(jdbc);
+        this.mapper = Objects.requireNonNull(mapper);
     }
 
     public record Candidate(
@@ -20,7 +31,26 @@ public final class PendingClarificationFinder {
             String questionText,
             String originalUserQuery,
             String queryText,
-            String intent) {}
+            String intent,
+            List<String> options) {
+
+        // 선택지는 FAQ 되묻기에만 붙는다. 매장 되묻기 후보는 선택지가 없다
+        public Candidate(
+                long consultRequestId,
+                String field,
+                long questionMessageId,
+                String questionText,
+                String originalUserQuery,
+                String queryText,
+                String intent) {
+            this(consultRequestId, field, questionMessageId, questionText, originalUserQuery,
+                    queryText, intent, List.of());
+        }
+
+        public Candidate {
+            options = options == null ? List.of() : List.copyOf(options);
+        }
+    }
 
     // 후보가 하나여도 새 질문일 수 있다. 답변 연결 여부는 분석 결과로 결정한다.
     public List<Candidate> findBefore(long sessionId, long userMessageId) {
@@ -31,7 +61,7 @@ public final class PendingClarificationFinder {
                 jdbc.query(
                         """
                         SELECT r.consult_request_id,c.condition_key,q.message_id,q.content,
-                               origin.content,r.query_text,r.intent
+                               origin.content,r.query_text,r.intent,q.follow_ups
                         FROM consult_requests r
                         JOIN consult_conditions c ON c.consult_request_id=r.consult_request_id
                         JOIN chat_messages q ON q.message_id=c.asked_message_id
@@ -52,8 +82,21 @@ public final class PendingClarificationFinder {
                                         rs.getString(4),
                                         rs.getString(5),
                                         rs.getString(6),
-                                        rs.getString(7)),
+                                        rs.getString(7),
+                                        optionsOf(rs.getString(8))),
                         userMessageId,
                         sessionId));
+    }
+
+    // 되묻기 메시지에 실어 보낸 선택지. 형식이 깨졌으면 선택지가 없는 것으로 본다
+    private List<String> optionsOf(String followUps) {
+        if (followUps == null || followUps.isBlank()) {
+            return List.of();
+        }
+        try {
+            return mapper.readValue(followUps, OPTIONS);
+        } catch (Exception malformed) {
+            return List.of();
+        }
     }
 }

@@ -134,13 +134,14 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
                 ? answers.prepare(answerInput)
                 : Prepared.none();
-        if (searched.plan().needsClarification()) {
+        var plan = searched.plan().remaining(prepared.decision().conditions());
+        if (plan.needsClarification()) {
             var asking = new ConsultService.PreparedTurn(
                     prepared.sessionId(),
                     prepared.expectedVersion(),
                     FaqClarificationDecisions.ask(
                             prepared.decision().consultRequestId(),
-                            searched.plan(),
+                            plan,
                             prepared.decision().conditions()));
             var clarification = persistence.persistClarification(
                     command.executionId(), asking, turn.answeredField());
