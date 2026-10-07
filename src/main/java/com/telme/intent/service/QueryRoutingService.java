@@ -401,6 +401,9 @@ public class QueryRoutingService {
                         || !ruleBasedFallback.matchesServiceType(value, serviceTypeEvidence))) {
                 continue;
             }
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
+                continue;
+            }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
                     && (!locationEvidence.contains(value)
                         || (!tokens(PLACE, value).isEmpty()
@@ -588,6 +591,10 @@ public class QueryRoutingService {
 
             String value = condition.value() != null ? condition.value().trim() : "";
             if (value.isBlank() || value.length() > MAX_CONDITION_VALUE_LENGTH) {
+                continue;
+            }
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
+                log.debug("[후속분석] 기준점만 가리키는 위치 표현은 지역명으로 받지 않습니다");
                 continue;
             }
             values.put(key, value);
