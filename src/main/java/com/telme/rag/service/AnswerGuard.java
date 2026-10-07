@@ -56,6 +56,11 @@ public class AnswerGuard {
     );
 
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
+    // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
+    private static final Map<String, Set<String>> ATTRIBUTE_SYNONYMS = Map.of(
+            "위약금", Set.of("위약금", "할인 반환금", "반환금")
+    );
+
     private static final Set<String> POLICY_ATTRIBUTES = Set.of(
             "부가세", "현금영수증", "택배비", "카드", "현금", "문자", "위약금",
             "할부", "재심사", "추가 서류", "관련 절차"
@@ -216,11 +221,12 @@ public class AnswerGuard {
         if (context == null) {
             return false;
         }
+        Set<String> evidenceWords = ATTRIBUTE_SYNONYMS.getOrDefault(attribute, Set.of(attribute));
 
         ClaimPolarity answerPolarity = attributePolarity(answerSentence, attribute);
         boolean mentioned = false;
         for (String evidenceSentence : SENTENCE.split(context)) {
-            if (!evidenceSentence.contains(attribute)) {
+            if (evidenceWords.stream().noneMatch(evidenceSentence::contains)) {
                 continue;
             }
             mentioned = true;
