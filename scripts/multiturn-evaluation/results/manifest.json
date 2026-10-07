@@ -74,134 +74,29 @@
   ],
   "archives": [
     {
-      "source": ".measure\\telme121\\summary-comparison\\raw-1791335570872.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-01-raw.jsonl.gz",
-      "uncompressedSha256": "c793c4f9fd9e45b42fec8c300c78648e33db66c7cb966f4319baf9058bd00a89",
-      "bytes": 19091,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\summary-comparison\\raw-1791335698092.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-02-raw.jsonl.gz",
-      "uncompressedSha256": "f0020d03db56503a21f8b404b240a398f936ed6b63da6c39d87d5ab38cfd7185",
-      "bytes": 37009,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\summary-comparison\\raw-1791335835148.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-03-raw.jsonl.gz",
-      "uncompressedSha256": "902a41f0bf52357633768ee24330e2de50c948f44d778e36d815b3b44bcdecc7",
-      "bytes": 1082210,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\summary-comparison\\raw-1791336056740.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-04-raw.jsonl.gz",
-      "uncompressedSha256": "8f61210587556653d1c3d5261371925ad7c28a0cfe455fdece5fc5e0043b4dbf",
-      "bytes": 1115284,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\summary-comparison\\raw-1791336261000.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-05-raw.jsonl.gz",
-      "uncompressedSha256": "1dda9243c8af42461378f30620c0a5b04101a37b9cf7d754de6c5d0d0186017f",
-      "bytes": 1134436,
-      "isFinal": false
-    },
-    {
       "source": ".measure\\telme121\\summary-comparison\\raw-1791337476782.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V1-summary-comparison\\raw\\trial-06-raw.jsonl.gz",
+      "archive": "scripts/multiturn-evaluation/results/V1-summary-comparison/raw/final-summary.jsonl.gz",
       "uncompressedSha256": "82c1fdd87f9f4cb62c9b6311652ff26d287b2b62719e5cf791723632fbf4c005",
       "bytes": 1135561,
       "isFinal": true
     },
     {
-      "source": ".measure\\telme121\\live-api\\boundaries-1791337719733.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-01-boundaries.jsonl.gz",
-      "uncompressedSha256": "39536a7f45d55c38bab42bd9a206dbbbd99db96b995a92275d925ad1f8e9d7a8",
-      "bytes": 31215,
-      "isFinal": false
-    },
-    {
       "source": ".measure\\telme121\\live-api\\boundaries-1791337823504.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-02-boundaries.jsonl.gz",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-boundaries.jsonl.gz",
       "uncompressedSha256": "0cca6a2eb2fbb1837a95325deb4d2e3d2fd3a2fb3374fd50dc1d93853636c684",
       "bytes": 26962,
       "isFinal": true
     },
     {
-      "source": ".measure\\telme121\\live-api\\cases-1791336516777.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-03-cases.jsonl.gz",
-      "uncompressedSha256": "6dc717d5e55493aa05f781c3f94e88e5cff03c40e7f323f8a7adecd88c5ac74d",
-      "bytes": 75197,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\cases-1791336770222.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-04-cases.jsonl.gz",
-      "uncompressedSha256": "33c0c2c4fc23f22cb129d90eb661fd4c7bd797b9a5bbec190ee0a283a27e028c",
-      "bytes": 98685,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\cases-1791336973577.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-05-cases.jsonl.gz",
-      "uncompressedSha256": "53278eae7278da5ef164145ce9a886b5c27d44ce273b19bba28f343ca8455f26",
-      "bytes": 93343,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\cases-1791337365012.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-06-cases.jsonl.gz",
-      "uncompressedSha256": "cb0bdbfabbd0382096e1a5bbdc5880d829f7f62ec291cceba4f80d3be96ecc4a",
-      "bytes": 110975,
-      "isFinal": false
-    },
-    {
       "source": ".measure\\telme121\\live-api\\cases-1791337823504.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-07-cases.jsonl.gz",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-cases.jsonl.gz",
       "uncompressedSha256": "57372aa51d0358f28e8ad210d34fc092b23b0bdb2771a31272bb5e411764e2fa",
       "bytes": 111319,
       "isFinal": true
     },
     {
-      "source": ".measure\\telme121\\live-api\\model-1791336516777.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-08-model.jsonl.gz",
-      "uncompressedSha256": "506c9c5c6734c84671f8ed7f34d485b529143bd84114eb6d2d99a2fb44d79dc6",
-      "bytes": 137309,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\model-1791336770222.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-09-model.jsonl.gz",
-      "uncompressedSha256": "791ba573a75b7597936f7112c258d84a8b5fe02b2f5292bc7a7f873e54553688",
-      "bytes": 193153,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\model-1791336973577.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-10-model.jsonl.gz",
-      "uncompressedSha256": "f58b9927735b61710a95286bd1d4de49a59506ad56188e84db33f5cfbadc028e",
-      "bytes": 178582,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\model-1791337365012.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-11-model.jsonl.gz",
-      "uncompressedSha256": "24ba9f5da63318ea473a14f1053f8e31b68671ec71c2abe122c0619380902198",
-      "bytes": 225318,
-      "isFinal": false
-    },
-    {
-      "source": ".measure\\telme121\\live-api\\model-1791337719733.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-12-model.jsonl.gz",
-      "uncompressedSha256": "98218320fc00fd568bc3491850217f889c40ffdaa8441b95197af2c33ad1e74a",
-      "bytes": 70894,
-      "isFinal": false
-    },
-    {
       "source": ".measure\\telme121\\live-api\\model-1791337823504.jsonl",
-      "archive": "scripts\\multiturn-evaluation\\results\\V2-live-api\\raw\\trial-13-model.jsonl.gz",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-model.jsonl.gz",
       "uncompressedSha256": "6674c2b5b8d596d0ee9df406a7897afe4e729395f90fcce8f53a554dae71fb91",
       "bytes": 287981,
       "isFinal": true
@@ -228,5 +123,6 @@
   },
   "liveApiRows": 8,
   "boundaryRows": 3,
-  "buildCommand": "gradlew.bat clean test build --build-cache"
+  "buildCommand": "gradlew.bat clean test build --build-cache",
+  "intermediateRunsOmitted": 15
 }

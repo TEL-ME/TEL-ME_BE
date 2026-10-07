@@ -59,14 +59,20 @@ def main():
     aggregates["distinctInputDialogues"] = len({json.dumps(row["case"]["messages"], sort_keys=True,
                                                          ensure_ascii=False) for row in summaries})
     write_json(results / "V1-summary-comparison" / "metrics.json", aggregates)
+    final_model = args.api.parent / args.api.name.replace("cases-", "model-", 1)
+    selected_runs = (
+        (args.summary, "V1-summary-comparison", "final-summary.jsonl.gz"),
+        (args.boundaries, "V2-live-api", "final-boundaries.jsonl.gz"),
+        (args.api, "V2-live-api", "final-cases.jsonl.gz"),
+        (final_model, "V2-live-api", "final-model.jsonl.gz"),
+    )
     archives = []
-    for directory, pattern, experiment in (("summary-comparison", "raw-*.jsonl", "V1-summary-comparison"),
-                                          ("live-api", "*.jsonl", "V2-live-api")):
-        for index, path in enumerate(sorted((ROOT / ".measure" / "telme121" / directory).glob(pattern)), 1):
-            entry = archive(path, results / experiment / "raw" / f"trial-{index:02d}-{path.stem.split('-')[0]}.jsonl.gz")
-            final_model = args.api.parent / args.api.name.replace("cases-", "model-", 1)
-            entry["isFinal"] = path in (args.summary, args.api, args.boundaries, final_model)
-            archives.append(entry)
+    for source, experiment, name in selected_runs:
+        if not source.is_file():
+            raise FileNotFoundError(source)
+        entry = archive(source, results / experiment / "raw" / name)
+        entry["isFinal"] = True
+        archives.append(entry)
     checks = args.checks.read_text(encoding="utf-8-sig", errors="strict")
     if "BUILD SUCCESSFUL" not in checks or "BUILD FAILED" in checks:
         raise ValueError("완료된 빌드 성공 로그가 필요합니다.")
@@ -90,6 +96,11 @@ def main():
         "changesNotCommitted": True, "codeFileSha256": hashes,
         "models": [{"name": model["name"], "digest": model["digest"], "details": model.get("details")}
                    for model in tags["models"]], "archives": archives,
+        "intermediateRunsOmitted": (
+            len(list((ROOT / ".measure" / "telme121" / "summary-comparison").glob("raw-*.jsonl")))
+            + len(list((ROOT / ".measure" / "telme121" / "live-api").glob("*.jsonl")))
+            - len(selected_runs)
+        ),
         "selectedInputs": {key: str(value) for key, value in vars(args).items()},
         "faqSnapshot": json.loads((ROOT / ".measure" / "telme121" / "faq-snapshot" / "manifest.json")
                                    .read_text(encoding="utf-8")),

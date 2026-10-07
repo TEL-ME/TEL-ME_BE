@@ -158,7 +158,7 @@ TELME-121은 이전 대화의 **원문, 화자, 순서**를 보존해 후속 질
 | `scripts/multiturn-evaluation/export_results.py` | 원시 자료 압축 보존과 문구 보존 지표 집계 |
 | [V1 요약 비교 결과](../scripts/multiturn-evaluation/results/V1-summary-comparison/metrics.json) | 최종 요약 비교 수치 |
 | [실험 manifest](../scripts/multiturn-evaluation/results/manifest.json) | 최종 파일 지정, 원시 자료 SHA256, 모델 digest, 입력 DB snapshot hash |
-| `results/V1-summary-comparison/raw/` 및 `results/V2-live-api/raw/` | 이전 실행을 포함한 입력, 모델 요청과 원본 출력, 검색 근거, 저장 답변 |
+| [최종 평가 자료 안내](../scripts/multiturn-evaluation/results/README.md) | V1과 V2의 최종 원시 자료 4개, 집계와 해시 검증 방법 |
 
 개발 DB를 대상으로 아래 명령을 실행하지 않는다. `telme_121_verification`은 실측용, `telme_121_fullchecks`는 자동 테스트용 독립 DB다. FAQ 복사 전에 대상 DB에 해당 코드의 Flyway 마이그레이션을 적용해야 하며, 복사 스크립트는 대상에 FAQ가 이미 적재돼 있으면 중단한다.
 
