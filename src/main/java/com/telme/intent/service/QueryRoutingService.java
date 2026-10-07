@@ -459,7 +459,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
-        ExtractedConditions extracted = toExtractedConditions(payload);
+        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys());
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -468,7 +468,7 @@ public class QueryRoutingService {
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload);
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys());
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -565,7 +565,7 @@ public class QueryRoutingService {
         return pending.isEmpty() ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload) {
+    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
@@ -579,8 +579,9 @@ public class QueryRoutingService {
             }
 
             String key = condition.key().trim();
-            if (!KNOWN_CONDITION_KEYS.contains(key)) {
-                log.debug("[후속분석] 정의되지 않은 조건 키를 무시합니다: {}", key);
+            // 되묻는 중인 조건은 상담 모듈이 정한다. 매장 밖 조건도 그 목록에 있으면 받는다
+            if (!KNOWN_CONDITION_KEYS.contains(key) && !pendingKeys.contains(key)) {
+                log.debug("[후속분석] 되묻지 않은 조건 키를 무시합니다: {}", key);
                 continue;
             }
 

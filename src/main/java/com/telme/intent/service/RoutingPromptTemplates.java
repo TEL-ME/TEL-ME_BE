@@ -110,6 +110,7 @@ public final class RoutingPromptTemplates {
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
           "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+        - 그 밖의 키는 "되묻는 중인 조건"에 적힌 이름을 그대로 쓰고, 값은 고객 답변의 표현을 그대로 담는다.
 
         [상태 판정 기준]
         - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
@@ -141,11 +142,16 @@ public final class RoutingPromptTemplates {
         고객 답변: "5G 요금제는 얼마예요?"
         응답: {"responseType":"NEW_QUESTION","conditions":[]}
 
+        되묻는 중인 조건: unpaid_bill
+        고객 답변: "없어요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"unpaid_bill","status":"FILLED","value":"없어요"}]}
+
         [응답 형식 - 반드시 아래 JSON만 출력]
         {
           "responseType": "CONDITION_RESPONSE" | "DEFERRED" | "NEW_QUESTION",
           "conditions": [
-            { "key": "location" | "serviceType", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
+            { "key": "location" | "serviceType" | 되묻는 중인 조건 이름,
+              "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
           ]
         }
         """;
