@@ -34,10 +34,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 
 /** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
-@Configuration
-@EnableConfigurationProperties(FaqClarificationProperties.class)
+@Configuration(proxyBeanMethods = false)
 @Conditional(ConsultChatEnabledCondition.class)
-@EnableConfigurationProperties(SuggestedQuestionProperties.class)
+@EnableConfigurationProperties({FaqClarificationProperties.class, SuggestedQuestionProperties.class})
 public class ConsultRagAnswerConfiguration {
     @Bean
     StreamHandlerFactory consultAnswerStreamHandlerFactory(ConsultChatEvents events) {
