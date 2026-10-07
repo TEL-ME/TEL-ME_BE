@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -386,7 +387,9 @@ class FaqSearchAnswerProviderTest {
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
         var planner = mock(FaqClarificationPlanner.class);
         when(searches.search(any())).thenReturn(List.of());
-        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), planner);
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), planner);
 
         var prepared = provider.prepare(input());
 
