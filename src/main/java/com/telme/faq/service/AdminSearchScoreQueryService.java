@@ -28,8 +28,9 @@ public class AdminSearchScoreQueryService {
         Instant from = request.fromOrMin();
         Instant to = request.toOrMax();
         double threshold = searchProperties.similarityThreshold();
-        Summary summary = repository.findSummary(from, to, threshold);
-        return new AdminSearchScoreResponse(threshold, summary.total(), summary.passed(), summary.aboveThreshold(), 
+        Summary summary = repository.findSummary(from, to);
+        return new AdminSearchScoreResponse(threshold, summary.total(), summary.scored(), summary.passed(), 
+                summary.refinedPassed(), summary.aboveThreshold(), 
                 toBuckets(repository.findBuckets(from, to)));
     }
     

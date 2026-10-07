@@ -80,7 +80,7 @@ class AdminSearchScoreControllerTest {
     @DisplayName("ADMIN이면 200과 임계값·분포를 반환한다")
     void 관리자는_200을_반환한다() throws Exception {
         when(adminSearchScoreQueryService.getScores(any())).thenReturn(new AdminSearchScoreResponse(
-                0.72, 10, 7, 6, List.of(new AdminSearchScoreResponse.Bucket(0.7, 0.75, 3))));
+                0.72, 10, 9, 7, 1, 6, List.of(new AdminSearchScoreResponse.Bucket(0.7, 0.75, 3))));
 
         mockMvc.perform(get(URL).param("from", "2026-10-01T00:00:00Z"))
                 .andExpect(status().isOk())

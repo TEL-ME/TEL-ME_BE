@@ -7,7 +7,9 @@ import java.util.List;
 public record AdminSearchScoreResponse(
         double threshold,
         long total,
+        long scored,
         long passed,
+        long refinedPassed,
         long aboveThreshold,
         List<Bucket> buckets
         ) {

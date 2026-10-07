@@ -3,6 +3,7 @@ package com.telme.faq.service;
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.config.FaqEmbeddingTextProperties;
 import com.telme.faq.config.SearchProperties;
+import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.req.FaqSearchVector;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -55,15 +56,19 @@ public class PgvectorFaqSearchService implements FaqSearchService {
             case QUESTION -> searchQuestion(queryVector, topK);
             case DUAL -> DualVectorMerger.merge(searchQuestion(queryVector, topK), qa.results(), topK);
         };
-        recordScore(qa, results);
+        recordScore(request.kind(), qa, results);
         return results;
     }
     
     // 임계값 미달 후보는 결과에서 잘려 남지 않아, 자르기 전 1위 점수를 관리자 분포용으로 남긴다.
     // 기록 실패가 검색을 막지 않도록 여기서 삼킨다
-    private void recordScore(Searched qa, List<FaqSearchResponse> results) {
+    private void recordScore(FaqSearchKind kind, Searched qa, List<FaqSearchResponse> results) {
+        if (kind == null || !searchProperties.scoreRecording().enabled()) {
+            return;
+        }
         try {
-            scoreRepository.save(qa == null ? null : qa.topScore(), !results.isEmpty());
+            scoreRepository.save(kind, qa == null ? null : qa.topScore(), !results.isEmpty(), 
+                    searchProperties.similarityThreshold());
         } catch (RuntimeException e) {
             log.warn("[PgvectorFaqSearchService] 검색 점수 기록 실패", e);
         }

@@ -1,18 +1,18 @@
 package com.telme.consult.service;
 
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
-import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
-import com.telme.chat.service.ExecutionTrace;
-import java.util.Map;
-
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** 사용자 원문을 우선 검색하고 근거가 없을 때 정제 질문으로 보완한다. */
@@ -52,21 +52,22 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
-        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), "ORIGINAL");
+        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
         // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
         if (!originalResults.isEmpty()
                 || input.originalUserQuery().equals(input.searchQuery())) {
             return originalResults;
         }
-        return search(input, input.searchQuery(), "REFINED");
+        return search(input, input.searchQuery(), FaqSearchKind.REFINED);
     }
 
-    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind) {
+    private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind searchKind) {
+        String kind = searchKind.name();
         Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", SEARCH_TOP_K,
                 "consultRequestId", input.consultRequestId());
         trace.append(input.executionId(), "searchRequests", request);
         try {
-            var results = List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K)));
+            var results = List.copyOf(searches.search(new FaqSearchRequest(query, SEARCH_TOP_K, searchKind)));
             trace.append(input.executionId(), "searchResults", Map.of(
                     "query", query, "kind", kind, "status", results.isEmpty() ? "EMPTY" : "FOUND",
                     "sources", results, "consultRequestId", input.consultRequestId()));
