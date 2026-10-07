@@ -53,13 +53,62 @@ class ChatQuestionResolverTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"그때 요금은 얼마야?", "앞서 말한 건 얼마야?", "이전에 물어본 거 얼마야?",
-            "아까 얼마랬죠?", "그럼 신청 방법은?", "필요한 서류는?"})
+            "아까 얼마랬죠?", "이전에 문의한 건?", "그럼 신청 방법은?", "필요한 서류는?"})
     void everyDetectedReferenceWithoutASourceRequiresClarification(String question) throws Exception {
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, question), null)
                 .needsClarification()).isTrue();
         assertThat(resolver.validate(question, "{\"needsClarification\":false,\"sourceMessageIds\":[]}",
                 Map.of(1L, source)).needsClarification()).isTrue();
         verifyNoInteractions(model);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"이전에 신청한 로밍 요금제를 해지하려면?", "아까 신청한 로밍 요금제를 해지하려면?",
+            "그때 가입한 LTE 요금제 변경 방법은?", "앞서 신청한 유심 재발급을 취소할 수 있나요?",
+            "이전에 로밍 요금제를 신청한 것이 맞는지 확인하려면?"})
+    void temporalExpressionDoesNotRequireHistoryForASelfContainedQuestion(String question) throws Exception {
+        var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), null);
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.question()).isEqualTo(question);
+        assertThat(result.sourceMessageIds()).isEmpty();
+        verifyNoInteractions(model);
+    }
+
+    @Test
+    void selfContainedTemporalQuestionDoesNotCarryAnUnrelatedHistoryTopic() {
+        String question = "이전에 신청한 유심 재발급을 취소할 수 있나요?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context);
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.question()).isEqualTo(question);
+        assertThat(resolver.contextFor(result, context)).isNull();
+        verifyNoInteractions(model);
+    }
+
+    @Test
+    void missingTemporalTargetStillRequiresClarificationAfterModelAnalysis() {
+        when(model.generate(any())).thenReturn("{\"needsClarification\":true,\"sourceMessageIds\":[]}");
+        assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, "이전에 신청한 건?"), null)
+                .needsClarification()).isTrue();
+        verify(model).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"invalid", "{\"needsClarification\":false,\"sourceMessageIds\":[99]}"})
+    void failedTemporalAnalysisCannotInventASource(String output) {
+        when(model.generate(any())).thenReturn(output);
+        assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L,
+                "이전에 신청한 상품을 변경하려면?"), null).needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"아까 로밍과 유심 중 그건 얼마야?", "이전에 물어본 로밍 요금은 얼마야?"})
+    void mentioningATopicDoesNotBypassAnActualHistoryReference(String question) {
+        when(model.generate(any())).thenReturn("{\"needsClarification\":true,\"sourceMessageIds\":[]}");
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context)
+                .needsClarification()).isTrue();
+        verify(model).generate(any());
     }
 
     @ParameterizedTest

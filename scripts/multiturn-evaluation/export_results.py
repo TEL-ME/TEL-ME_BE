@@ -47,17 +47,29 @@ def check_build(path):
     return dict(totals)
 
 
-def export_review(cases_path, checks_path):
+def export_review(cases_path, checks_path, temporal=False):
     rows = read_rows(cases_path)
     if not rows or any(row.get("status") != "VERIFIED" for row in rows):
-        raise ValueError("리뷰 회귀 검증이 모두 완료된 원시 자료가 필요합니다.")
+        raise ValueError("문맥 연결 검증이 모두 완료된 원시 자료가 필요합니다.")
     totals = check_build(checks_path)
-    model_path = cases_path.with_name(cases_path.name.replace("review-regressions-", "model-", 1))
+    prefix = "temporal-questions-" if temporal else "review-regressions-"
+    if not cases_path.name.startswith(prefix):
+        raise ValueError(f"{prefix}로 시작하는 실행 자료가 필요합니다.")
+    model_path = cases_path.with_name(cases_path.name.replace(prefix, "model-", 1))
     if not model_path.is_file():
         raise FileNotFoundError(model_path)
-    target = HERE / "results" / "V3-review-regressions"
+    temporal_count = len(rows) if temporal else 0
+    if temporal:
+        regression_path = cases_path.with_name(cases_path.name.replace(prefix, "review-regressions-", 1))
+        regressions = read_rows(regression_path)
+        if not regressions or any(row.get("status") != "VERIFIED" for row in regressions):
+            raise ValueError("같은 실행의 기존 문맥 연결 회귀 검증이 모두 통과해야 합니다.")
+        rows += regressions
+    target = HERE / "results" / ("V4-temporal-questions" if temporal else "V3-review-regressions")
     archives = [archive(cases_path, target / "raw" / "final-cases.jsonl.gz"),
                 archive(model_path, target / "raw" / "final-model.jsonl.gz")]
+    if temporal:
+        archives.append(archive(regression_path, target / "raw" / "final-regressions.jsonl.gz"))
     changed = subprocess.check_output(["git", "diff", "--name-only"], cwd=ROOT, encoding="utf-8").splitlines()
     tags = json.load(urllib.request.urlopen("http://localhost:11434/api/tags", timeout=10))
     groups = collections.Counter(row["fixture"]["id"] for row in rows)
@@ -69,10 +81,11 @@ def export_review(cases_path, checks_path):
         "models": [{"name": model["name"], "digest": model["digest"]} for model in tags["models"]],
         "archives": archives, "cases": len(rows), "verified": len(rows), "fixtures": dict(groups),
         "distinctFixtures": len(groups), "modelCalls": len(read_rows(model_path)), "automatedTests": totals,
+        "temporalQuestionCases": temporal_count,
         "buildCommand": "gradlew.bat clean test build --build-cache",
         "notes": ["Spring 채팅 API와 실제 EXAONE 및 FAQ 검색을 사용한 문맥 연결 회귀 검증",
                   "VERIFIED는 대상 복원, 문맥 격리, 검색 및 실행 상태 검증이며 최종 답변 정확도 점수가 아님",
-                  "반복 10건은 서로 독립적인 사용자 질문 10건이 아님", "V1과 V2 결과는 변경하지 않음"],
+                  "회귀 사례에는 동일 유형의 반복 실행이 포함됨"],
     })
 
 
@@ -81,7 +94,9 @@ def main():
     parser.add_argument("--summary", type=Path)
     parser.add_argument("--api", type=Path)
     parser.add_argument("--boundaries", type=Path)
-    parser.add_argument("--review", type=Path, help="V3 리뷰 회귀 결과만 별도 보존")
+    live_group = parser.add_mutually_exclusive_group()
+    live_group.add_argument("--review", type=Path, help="V3 문맥 연결 회귀 결과 보존")
+    live_group.add_argument("--temporal", type=Path, help="V4 시간 표현 질문과 같은 실행의 회귀 결과 보존")
     parser.add_argument("--checks", required=True, type=Path)
     args = parser.parse_args()
     for key, value in vars(args).items():
@@ -89,6 +104,9 @@ def main():
             setattr(args, key, value.resolve())
     if args.review is not None:
         export_review(args.review, args.checks)
+        return
+    if args.temporal is not None:
+        export_review(args.temporal, args.checks, temporal=True)
         return
     if any(value is None for value in (args.summary, args.api, args.boundaries)):
         parser.error("기존 평가 내보내기에는 --summary, --api, --boundaries가 필요합니다.")

@@ -12,11 +12,13 @@
 | V3 생략형과 주제 경계 | [metrics.json](V3-review-regressions/metrics.json) | 7개 유형의 실제 API 실행 10회, 검증 결과와 전체 빌드 집계 |
 | V3 실제 API 사례 | [final-cases.jsonl.gz](V3-review-regressions/raw/final-cases.jsonl.gz) | 문맥 복원, 독립 질문, 되묻기 대기와 기존 요약의 회귀 사례 10행 |
 | V3 모델 호출 | [final-model.jsonl.gz](V3-review-regressions/raw/final-model.jsonl.gz) | 실제 모델 요청과 원시 응답 51행 |
+| V4 시간 표현과 참조 구분 | [metrics.json](V4-temporal-questions/metrics.json) | 시간 표현 질문 7건과 같은 실행의 문맥 연결 회귀 10건 |
+| V4 원시 자료 | [raw](V4-temporal-questions/raw/) | 시간 표현 사례, 기존 회귀 사례와 실제 모델 요청 및 응답 |
 | 실행 정보 | [manifest.json](manifest.json) | 원시 파일의 압축 해제 후 SHA256, 코드와 모델 정보, 선택한 입력 |
 
 압축을 풀어도 원시 파일의 내용은 바뀌지 않는다. 각 원시 파일의 압축 해제 후 SHA256은 `manifest.json`의 `archives[].uncompressedSha256`으로 확인할 수 있다. `summary-cases.json`은 평가 입력이므로 상위 폴더에 그대로 둔다.
 
-V3의 파일 해시와 코드 및 모델 정보는 V3의 `metrics.json`에 기록한다. `VERIFIED`는 문맥 연결과 검색 경로 검증이며 답변 정확도 점수가 아니다.
+V3와 V4의 파일 해시와 코드 및 모델 정보는 각 `metrics.json`에 기록한다. `VERIFIED`는 문맥 연결과 검색 경로 검증이며 답변 정확도 점수가 아니다.
 
 V1의 60개 사례는 독립된 고객 대화 60개가 아니다. 6개 변화 유형을 반복해 만든 입력이며, `metrics.json`의 `distinctInputDialogues`는 24다. 이 결과를 실제 서비스의 전체 답변 정확도로 해석하지 않는다. V2의 8개 API 사례도 같은 한계를 가진다.
 
@@ -38,3 +40,5 @@ python -X utf8 scripts/multiturn-evaluation/export_results.py --review $cases.Fu
 ```
 
 V1과 V2 내보내기는 `export_results.py --summary <요약> --api <API 사례> --boundaries <경계 사례> --checks <빌드 로그>`를 사용한다. 선택한 원시 자료 4개를 압축하고 `manifest.json`에 해시와 실행 정보를 기록한다.
+
+V4는 `recordsTemporalQuestionsThroughActualApi`와 `recordsReviewRegressionsThroughActualApi`를 같은 Gradle 실행에 지정한다. 전체 빌드 후 `export_results.py --temporal <temporal-questions 원시 파일> --checks <빌드 로그>`로 내보낸다.

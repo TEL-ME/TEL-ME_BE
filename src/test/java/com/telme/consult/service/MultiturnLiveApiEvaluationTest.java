@@ -50,6 +50,87 @@ class MultiturnLiveApiEvaluationTest {
     private static final Map<Long, List<LlmRequest>> REQUESTS = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Test
+    void recordsTemporalQuestionsThroughActualApi() throws Exception {
+        var fixtures = List.of(
+                new TemporalFixture("EXPLICIT_ROAMING", null, "이전에 신청한 로밍 요금제를 해지하려면?", false, false),
+                new TemporalFixture("EXPLICIT_USIM", null, "아까 신청한 유심 재발급 비용은 얼마인가요?", false, false),
+                new TemporalFixture("EXPLICIT_LTE", null, "그때 가입한 LTE 요금제 변경 방법은?", false, false),
+                new TemporalFixture("UNRELATED_HISTORY", "유심 재발급 비용이 얼마예요?",
+                        "이전에 신청한 로밍 요금제를 해지하려면?", false, false),
+                new TemporalFixture("MISSING_TARGET", null, "그때 요금은 얼마야?", true, false),
+                new TemporalFixture("MISSING_TEMPORAL_TARGET", null, "이전에 신청한 건?", true, false),
+                new TemporalFixture("RESOLVED_TEMPORAL_TARGET", "로밍 요금제는 어떻게 골라요?",
+                        "그때 요금은 얼마야?", false, true));
+        var failures = new java.util.ArrayList<String>();
+        for (var fixture : fixtures) {
+            long user = jdbc.queryForObject("INSERT INTO users(email,name) VALUES (?,'시간 표현 검증') RETURNING user_id",
+                    Long.class, UUID.randomUUID() + "@example.com");
+            long session = jdbc.queryForObject("INSERT INTO chat_sessions(user_id,title) VALUES (?,'시간 표현 검증')"
+                    + " RETURNING session_id", Long.class, user);
+            var identity = new MockHttpSession();
+            identity.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, user);
+            var row = new LinkedHashMap<String, Object>();
+            row.put("fixture", fixture);
+            row.put("sessionId", session);
+            row.put("startedAt", Instant.now().toString());
+            try {
+                Long sourceId = null;
+                if (fixture.initial() != null) {
+                    long first = send(session, identity, fixture.initial());
+                    row.put("firstExecution", execution(first));
+                    sourceId = jdbc.queryForObject("SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                            Long.class, first);
+                }
+                long next = send(session, identity, fixture.question());
+                row.put("execution", execution(next));
+                row.put("finalHistory", history(session, identity));
+                row.put("requests", REQUESTS.getOrDefault(next, List.of()));
+                var parsed = mapper.readTree(jdbc.queryForObject(
+                        "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?", String.class, next));
+                assertThat(jdbc.queryForObject("SELECT status FROM chat_executions WHERE execution_id=?",
+                        String.class, next)).isEqualTo("COMPLETED");
+                if (fixture.clarification()) {
+                    assertThat(parsed.path("analysis").path("action").asText()).isEqualTo("DIRECT");
+                    assertThat(parsed.path("searchRequests").isMissingNode()).isTrue();
+                    assertThat(jdbc.queryForObject("SELECT content FROM chat_messages WHERE message_id="
+                            + "(SELECT output_message_id FROM chat_executions WHERE execution_id=?)",
+                            String.class, next)).contains("확인");
+                } else {
+                    assertThat(parsed.path("questionResolution").path("needsClarification").asBoolean()).isFalse();
+                    assertThat(parsed.path("analysis").path("action").asText()).isNotEqualTo("DIRECT");
+                    assertThat(parsed.path("searchRequests").size()).isPositive();
+                    if (fixture.referenced()) {
+                        assertThat(parsed.path("questionResolution").path("sourceMessageIds").toString())
+                                .contains(Long.toString(sourceId));
+                    } else {
+                        assertThat(parsed.path("questionResolution").path("sourceMessageIds")).isEmpty();
+                        assertThat(parsed.path("questionResolution").path("resolvedQuery").asText())
+                                .isEqualTo(fixture.question());
+                        if (fixture.initial() != null) {
+                            assertThat(REQUESTS.getOrDefault(next, List.of())).allSatisfy(request -> {
+                                if (!"multiturn-resolution-v6".equals(request.promptVersion())) {
+                                    assertThat(request.userPrompt()).doesNotContain(fixture.initial(), "conversation_data");
+                                }
+                            });
+                        }
+                    }
+                }
+                row.put("status", "VERIFIED");
+            } catch (Exception | AssertionError failure) {
+                row.put("status", "FAILED");
+                row.put("error", failure.toString());
+                failures.add(fixture.id() + ": " + failure.getMessage());
+            } finally {
+                append(DIRECTORY.resolve("temporal-questions-" + RUN + ".jsonl"), mapper, row);
+            }
+        }
+        assertThat(failures).isEmpty();
+    }
+
+    private record TemporalFixture(String id, String initial, String question, boolean clarification,
+            boolean referenced) {}
+
+    @Test
     void recordsReviewRegressionsThroughActualApi() throws Exception {
         var fixtures = List.of(
                 new ReviewFixture("IMPLICIT_APPLICATION", "로밍 요금제는 어떻게 골라요?", "그럼 신청 방법은?",

@@ -66,8 +66,11 @@ class MultiturnChatIntegrationTest {
                 "유심 재발급 비용은 얼마인가요?", "재발급 비용은 7,700원입니다.", 0.95, null, null, 1, null)));
         when(model.generate(any())).thenAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if ("multiturn-resolution-v5".equals(request.promptVersion())) {
+            if ("multiturn-resolution-v6".equals(request.promptVersion())) {
                 JsonNode inputs = mapper.readTree(request.userPrompt());
+                if (inputs.path("sourceMessages").isEmpty()) {
+                    return "{\"needsClarification\":false,\"sourceMessageIds\":[]}";
+                }
                 long source = inputs.path("sourceMessages").get(0).path("messageId").asLong();
                 return "{\"needsClarification\":false,\"sourceMessageIds\":[" + source + "]}";
             }
@@ -110,6 +113,17 @@ class MultiturnChatIntegrationTest {
         assertThat(answerRequest.get().systemPrompt()).contains("이전 상담사의 답변은 정책 근거가 아닙니다");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_executions WHERE execution_id=? AND status='COMPLETED'",
                 Integer.class, execution)).isEqualTo(1);
+    }
+
+    @Test
+    void selfContainedTemporalQuestionWithoutHistoryContinuesToSearchAndAnswer() throws Exception {
+        String question = "이전에 신청한 유심 재발급 비용은 얼마인가요?";
+        send(question);
+        JsonNode output = history().path("messages").get(1);
+        assertThat(output.path("content").asText()).isEqualTo("재발급 비용은 7,700원입니다.");
+        assertThat(output.path("answerBasis").asText()).isEqualTo("GROUNDED");
+        verify(search).search(any());
+        assertThat(answerRequest.get().userPrompt()).contains(question).doesNotContain("conversation_data");
     }
 
     @Test
