@@ -2,6 +2,7 @@ package com.telme.llm.converter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 import com.telme.llm.config.LlmProperties;
@@ -31,12 +32,36 @@ public class OllamaRequestConverter {
                 .model(llmProperties.model())
                 .messages(messages)
                 .stream(stream)
-                .format(request.format() == ResponseFormat.JSON ? "json" : null)
+                .format(format(request))
+                .think("multiturn-resolution-v8".equals(request.promptVersion())
+                        && supportsThinking(llmProperties.model()) ? false : null)
                 .options(new OllamaChatRequest.Options(
                         request.temperature() != null ? request.temperature() : defaults.temperature(),
                         request.maxTokens() != null ? request.maxTokens() : defaults.maxTokens(),
                         llmProperties.contextSize()))
                 .build();
+    }
+
+    private boolean supportsThinking(String model) {
+        return model.startsWith("qwen3:") || model.contains("EXAONE-4.0");
+    }
+
+    private Object format(LlmRequest request) {
+        if (request.format() != ResponseFormat.JSON) {
+            return null;
+        }
+        if (!"multiturn-resolution-v8".equals(request.promptVersion())) {
+            return "json";
+        }
+        return Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "relation", Map.of("type", "string", "enum",
+                                List.of("SELF_CONTAINED", "HISTORY_DEPENDENT", "CLARIFICATION_REQUIRED")),
+                        "selectedMessageIds", Map.of("type", "array", "items", Map.of("type", "integer"),
+                                "uniqueItems", true)),
+                "required", List.of("relation", "selectedMessageIds"),
+                "additionalProperties", false);
     }
 
     private Defaults defaultsOf(TaskType taskType) {

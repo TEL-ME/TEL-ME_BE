@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.config.ChatQuestionResolutionProperties.Mode;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
@@ -186,5 +187,52 @@ class ChatQuestionResolverTest {
                 .needsClarification()).isTrue();
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 2L, 5L, context.currentQuestion()), context)
                 .needsClarification()).isTrue();
+    }
+
+    @Test
+    void llmAllAnalyzesQuestionsThatRegexGateWouldSkip() {
+        var llmAll = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(), Mode.LLM_ALL);
+        String question = "유심 재발급 비용 알려줘";
+        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
+
+        var result = llmAll.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), null);
+
+        assertThat(result.question()).isEqualTo(question);
+        assertThat(result.needsClarification()).isFalse();
+        var sent = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(sent.capture());
+        assertThat(sent.getValue().promptVersion()).isEqualTo("multiturn-resolution-v8");
+    }
+
+    @Test
+    void llmAllKeepsOriginalTopicAndCorrectedConditionInOrder() {
+        var llmAll = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(), Mode.LLM_ALL);
+        var correction = new ChatContextMessage(2L, 2, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "일본이 아니라 미국으로 갑니다.", null);
+        String question = "그럼 신청 방법은?";
+        var context = new ChatContext(1L, 5L, null, List.of(source, correction), question, 100);
+        when(model.generate(any())).thenReturn(
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[2,1]}");
+
+        var result = llmAll.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(1L, 2L);
+        assertThat(result.question()).contains(source.content(), correction.content(), question);
+        assertThat(llmAll.contextFor(result, context).history()).containsExactly(source, correction);
+    }
+
+    @Test
+    void llmAllRejectsUnknownSourcesAndInconsistentRelation() {
+        var llmAll = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(), Mode.LLM_ALL);
+        String question = "그럼 신청 방법은?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        for (String response : List.of(
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[99]}",
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[]}",
+                "{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[1]}")) {
+            when(model.generate(any())).thenReturn(response);
+            assertThat(llmAll.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context)
+                    .needsClarification()).isTrue();
+        }
     }
 }

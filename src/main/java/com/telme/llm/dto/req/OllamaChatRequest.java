@@ -1,5 +1,6 @@
 package com.telme.llm.dto.req;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
@@ -10,7 +11,8 @@ public record OllamaChatRequest(
         String model,
         List<Message> messages,
         boolean stream,
-        String format,
+        Object format,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean think,
         Options options
 ) {
 

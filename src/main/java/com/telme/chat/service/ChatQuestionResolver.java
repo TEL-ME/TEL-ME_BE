@@ -3,6 +3,8 @@ package com.telme.chat.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.config.ChatQuestionResolutionProperties;
+import com.telme.chat.config.ChatQuestionResolutionProperties.Mode;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
@@ -14,13 +16,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 // 모델은 참고할 발언 ID만 선택한다. 검색과 답변에는 고객 원문을 그대로 연결한다.
 @Service
-@RequiredArgsConstructor
 public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그\\s*(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
@@ -77,11 +79,58 @@ public class ChatQuestionResolver {
             출력은 위 두 필드만 있는 JSON 객체 하나입니다.
             """;
 
+    static final String LLM_ALL_SYSTEM_PROMPT = """
+            현재 질문이 이전 고객 발언 없이 이해되는지 판정합니다. 답변이나 정책 판단은 하지 않습니다.
+            sourceMessages는 이전 고객 발언이고 currentQuestion은 현재 질문입니다.
+
+            SELF_CONTAINED: 현재 문장에 질문 대상과 요구가 명확하고 이전 조건이 필요하지 않습니다.
+            HISTORY_DEPENDENT: 현재 질문의 대상이 생략됐거나 이전 조건과 정정을 함께 봐야 합니다.
+            CLARIFICATION_REQUIRED: 현재 질문과 이력을 함께 봐도 대상을 하나로 결정할 수 없습니다.
+
+            HISTORY_DEPENDENT이면 현재 질문을 이해하는 데 필요한 messageId를 모두 선택합니다.
+            조건을 정정한 대화는 원래 업무를 나타내는 발언과 최신 정정 발언을 모두 선택합니다.
+            예를 들어 '일본 로밍을 알아봅니다', '일본이 아니라 미국입니다', '그럼 신청 방법은?'에서는
+            앞의 두 messageId가 모두 필요합니다.
+            현재 문장에 유심 재발급, LTE 요금제처럼 대상이 명시되어 있으면 '아까'나 '그때'가 있어도
+            이전 발언이 없어 이해 가능하므로 SELF_CONTAINED입니다.
+            이전의 여러 대상 중 무엇인지 알 수 없는 '그건 얼마예요?'는 CLARIFICATION_REQUIRED입니다.
+
+            출력에는 relation과 selectedMessageIds만 사용합니다.
+            SELF_CONTAINED와 CLARIFICATION_REQUIRED에서는 selectedMessageIds를 빈 배열로 반환합니다.
+            제공된 messageId만 선택하고 새 문장이나 설명을 만들지 않습니다.
+            """;
+
     private final LlmClient client;
     private final ObjectMapper mapper;
     private final ExecutionTrace trace;
+    private final Mode mode;
+
+    public ChatQuestionResolver(LlmClient client, ObjectMapper mapper, ExecutionTrace trace) {
+        this(client, mapper, trace, Mode.REGEX_GATED);
+    }
+
+    @Autowired
+    public ChatQuestionResolver(LlmClient client, ObjectMapper mapper, ExecutionTrace trace,
+            ChatQuestionResolutionProperties properties) {
+        this(client, mapper, trace, properties.mode());
+    }
+
+    public ChatQuestionResolver(LlmClient client, ObjectMapper mapper, ExecutionTrace trace, Mode mode) {
+        this.client = Objects.requireNonNull(client);
+        this.mapper = Objects.requireNonNull(mapper);
+        this.trace = Objects.requireNonNull(trace);
+        this.mode = Objects.requireNonNull(mode);
+    }
 
     public Resolution resolve(ChatProcessingCommand command, ChatContext context) {
+        trace.stage(command.executionId(), "questionResolutionMode", mode.name());
+        if (mode == Mode.LLM_ALL) {
+            return resolveWithLlm(command, context);
+        }
+        return resolveWithRegexGate(command, context);
+    }
+
+    private Resolution resolveWithRegexGate(ChatProcessingCommand command, ChatContext context) {
         String question = command.content().strip();
         // 명확한 업무 대상이 있고 과거 발언을 지칭하지 않으면 시간 표현 때문에 문맥 복원을 추가하지 않는다.
         if (TEMPORAL_REFERENCE.matcher(question).find() && EXPLICIT_TOPIC.matcher(question).find()
@@ -132,6 +181,92 @@ public class ChatQuestionResolver {
                     "originalQuery", question, "status", "INVALID_RESOLUTION"));
             return new Resolution(question, true, List.of());
         }
+    }
+
+    private Resolution resolveWithLlm(ChatProcessingCommand command, ChatContext context) {
+        String question = command.content().strip();
+        if (context != null && (!Objects.equals(context.sessionId(), command.sessionId())
+                || !Objects.equals(context.inputMessageId(), command.inputMessageId())
+                || !Objects.equals(context.currentQuestion(), command.content()))) {
+            return new Resolution(question, true, List.of());
+        }
+        try {
+            Map<Long, ChatContextMessage> sources = new LinkedHashMap<>();
+            if (context != null) {
+                var messages = new ArrayList<>(context.summarySources());
+                messages.addAll(context.history());
+                for (ChatContextMessage message : messages) {
+                    if (message.role() != ChatMessage.Role.USER || ChatContextFormatter.isSocial(message.content())) {
+                        continue;
+                    }
+                    ChatContextMessage previous = sources.putIfAbsent(message.messageId(), message);
+                    if (previous != null && !previous.equals(message)) {
+                        throw new IllegalArgumentException("같은 발언 ID의 문맥 원문이 일치하지 않습니다.");
+                    }
+                }
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("sourceMessages", sources.values().stream()
+                    .sorted(Comparator.comparingInt(ChatContextMessage::sequenceNo))
+                    .map(message -> new Source(message.messageId(), message.content())).toList());
+            data.put("currentQuestion", question);
+            String raw = client.generate(LlmRequest.builder().executionId(command.executionId())
+                    .taskType(TaskType.ROUTING).systemPrompt(LLM_ALL_SYSTEM_PROMPT)
+                    .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON)
+                    .temperature(0.0).maxTokens(256).promptVersion("multiturn-resolution-v8").build());
+            Resolution result = validateLlmAll(question, raw, sources);
+            trace.stage(command.executionId(), "questionResolution", Map.of(
+                    "originalQuery", question, "resolvedQuery", result.question(),
+                    "sourceMessageIds", result.sourceMessageIds(),
+                    "needsClarification", result.needsClarification()));
+            return result;
+        } catch (RuntimeException | JsonProcessingException invalid) {
+            trace.stage(command.executionId(), "questionResolution", Map.of(
+                    "originalQuery", question, "status", "INVALID_RESOLUTION"));
+            return new Resolution(question, true, List.of());
+        }
+    }
+
+    Resolution validateLlmAll(String question, String raw, Map<Long, ChatContextMessage> sources)
+            throws JsonProcessingException {
+        JsonNode root = mapper.readTree(raw);
+        if (root == null || !root.isObject() || root.size() != 2 || !root.path("relation").isTextual()
+                || !root.path("selectedMessageIds").isArray()
+                || root.path("selectedMessageIds").size() > sources.size()) {
+            throw new IllegalArgumentException("문맥 판정 형식이 올바르지 않습니다.");
+        }
+        Relation relation = Relation.valueOf(root.path("relation").textValue());
+        if (relation != Relation.HISTORY_DEPENDENT) {
+            if (!root.path("selectedMessageIds").isEmpty()) {
+                throw new IllegalArgumentException("독립 질문과 확인 질문에는 이전 출처를 사용할 수 없습니다.");
+            }
+            return new Resolution(question, relation == Relation.CLARIFICATION_REQUIRED, List.of());
+        }
+        List<Long> ids = new ArrayList<>();
+        for (JsonNode item : root.path("selectedMessageIds")) {
+            if (!item.isIntegralNumber() || !item.canConvertToLong() || item.longValue() <= 0
+                    || ids.contains(item.longValue())) {
+                throw new IllegalArgumentException("문맥 출처 형식이 올바르지 않습니다.");
+            }
+            ChatContextMessage source = sources.get(item.longValue());
+            if (source == null || source.role() != ChatMessage.Role.USER || source.content() == null
+                    || ChatContextFormatter.isSocial(source.content())) {
+                throw new IllegalArgumentException("제공되지 않은 고객 발언을 문맥 출처로 사용할 수 없습니다.");
+            }
+            ids.add(item.longValue());
+        }
+        if (ids.isEmpty()) {
+            throw new IllegalArgumentException("문맥 의존 질문에는 검증된 출처가 필요합니다.");
+        }
+        ids.sort(Comparator.comparingInt(id -> sources.get(id).sequenceNo()));
+        String antecedents = ids.stream().map(id -> sources.get(id).content())
+                .collect(java.util.stream.Collectors.joining("\n"));
+        return new Resolution("[대상을 확인할 이전 고객 발언]\n" + antecedents
+                + "\n[현재 후속 질문]\n" + question, false, List.copyOf(ids));
+    }
+
+    private enum Relation {
+        SELF_CONTAINED, HISTORY_DEPENDENT, CLARIFICATION_REQUIRED
     }
 
     Resolution validate(String question, String raw, Map<Long, ChatContextMessage> sources)
