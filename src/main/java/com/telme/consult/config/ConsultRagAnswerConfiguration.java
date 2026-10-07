@@ -3,6 +3,8 @@ package com.telme.consult.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.repository.SuggestedQuestionFaqFinder;
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.consult.service.ChatStoreAnswerProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.service.ConditionExtractor;
@@ -22,6 +24,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
 
@@ -94,13 +97,17 @@ public class ConsultRagAnswerConfiguration {
     AnswerProvider consultAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
             ChatStoreAnswerProvider storeAnswers, ObjectProvider<LlmClient> llmClient,
-            FaqClarificationProperties clarification) {
+            FaqClarificationProperties clarification,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
                 ? null
                 : new FaqClarificationPlanner(new ConditionExtractor(client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace, planner), storeAnswers::generate);
+                new FaqSearchAnswerProvider(searches, answers, trace,
+                        comparisonEvidence, candidateEvidence, sourceConverter, planner),
+                storeAnswers::generate);
     }
 }
