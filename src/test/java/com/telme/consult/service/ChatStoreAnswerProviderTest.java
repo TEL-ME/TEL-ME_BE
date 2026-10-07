@@ -38,12 +38,12 @@ class ChatStoreAnswerProviderTest {
     }
 
     @Test
-    void explicitLocationWinsOverGpsAndRegionalDistanceRemainsNull() {
+    void explicitLocationWithoutGpsKeepsRegionalDistanceNull() {
         var context = new ChatStoreSearchContextResponse(Type.REGION, "서울 강남구", null);
         when(named.search("서울 강남구", Set.of())).thenReturn(new SearchResult(Status.SUCCESS,
                 List.of(new ChatStoreResponse(1L, "매장", "주소", "전화",
                         BigDecimal.valueOf(37.5), BigDecimal.valueOf(127), null)), context));
-        var answer = provider.generate(input(Map.of("location", "서울 강남구"), new ChatCoordinates(35, 129))).answer();
+        var answer = provider.generate(input(Map.of("location", "서울 강남구"), null)).answer();
         verifyNoInteractions(nearby);
         assertThat(answer.messageType()).isEqualTo(ChatMessage.MessageType.STORE_RESULT);
         assertThat(answer.storeSearchContext()).isEqualTo(context);
@@ -52,14 +52,16 @@ class ChatStoreAnswerProviderTest {
     }
 
     @Test
-    void gpsSearchUsesDefaultsAndConvertsServiceType() {
+    void gpsWinsOverLocationAndUsesDefaultsAndConvertsServiceType() {
         when(nearby.findNearbyStores(any())).thenReturn(new StoreNearbySearchResponse(
                 List.of(new StoreNearbyResponse(2L, "매장", "주소", "전화",
                         BigDecimal.valueOf(37.5), BigDecimal.valueOf(127), 300)), 10000));
-        var answer = provider.generate(input(Map.of("serviceType", "USIM_REISSUE"),
+        var answer = provider.generate(input(Map.of("location", "서울 강남구", "serviceType", "USIM_REISSUE"),
                 new ChatCoordinates(37.4, 127.1))).answer();
         var captor = ArgumentCaptor.forClass(StoreNearbySearchRequest.class);
         verify(nearby).findNearbyStores(captor.capture());
+        assertThat(captor.getValue().latitude()).isEqualTo(37.4);
+        assertThat(captor.getValue().longitude()).isEqualTo(127.1);
         assertThat(captor.getValue().serviceTypes()).containsExactly(StoreServiceType.Code.USIM_REISSUE);
         assertThat(captor.getValue().radiusMeters()).isNull();
         assertThat(captor.getValue().limit()).isNull();
@@ -115,10 +117,10 @@ class ChatStoreAnswerProviderTest {
     }
 
     @Test
-    void unconnectedNamedSearchDoesNotFallbackToGps() {
+    void unconnectedNamedSearchWithoutGpsReturnsGuidance() {
         when(named.search(eq("강남역"), any())).thenReturn(SearchResult.failed());
         assertThat(provider.generate(input(Map.of("location", "강남역"),
-                new ChatCoordinates(35, 129))).answer().content()).contains("잠시 후");
+                null)).answer().content()).contains("잠시 후");
         verifyNoInteractions(nearby);
     }
 }
