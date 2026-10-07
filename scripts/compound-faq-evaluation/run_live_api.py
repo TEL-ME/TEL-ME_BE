@@ -58,7 +58,7 @@ def subscribe(opener, url, events, errors):
         errors.append(f"{type(error).__name__}: {error}")
 
 
-def database_snapshot(database, session_id):
+def database_snapshot(database, session_id, container):
     query = f"""
         SELECT jsonb_build_object(
           'consultations', COALESCE((SELECT jsonb_agg(jsonb_build_object(
@@ -68,7 +68,7 @@ def database_snapshot(database, session_id):
           'assistantCount', (SELECT count(*) FROM chat_messages
               WHERE session_id={int(session_id)} AND role='ASSISTANT'));
     """
-    command = ["docker", "exec", "-i", "telme-postgres", "psql", "-U", "telme",
+    command = ["docker", "exec", "-i", container, "psql", "-U", "telme",
                "-d", database, "-At", "--no-psqlrc", "-v", "ON_ERROR_STOP=1"]
     result = subprocess.run(command, input=query, encoding="utf-8", capture_output=True,
                             check=True, timeout=15)
@@ -101,7 +101,7 @@ def run_case(args, case):
     assistant = [item for item in history["messages"] if item["role"] == "ASSISTANT"]
     row = {"id": case_id, "question": question, "sessionId": sid, "executionId": execution_id,
            "trace": trace, "history": history, "sseEvents": events, "sseErrors": stream_errors,
-           "database": database_snapshot(args.database, sid), "issues": []}
+           "database": database_snapshot(args.database, sid, args.postgres_container), "issues": []}
     issues = row["issues"]
     if trace["status"] != "COMPLETED" or len(assistant) != 1:
         issues.append("execution must complete with one assistant message")
@@ -117,7 +117,7 @@ def run_case(args, case):
         if any(fact.replace(" ", "") not in normalized for fact in facts):
             issues.append("required answer fact missing")
         tokens = "".join(event["data"] for event in events if event["event"] == "token")
-        if tokens and tokens != answer:
+        if (args.scenario == "general-comparison" or tokens) and tokens != answer:
             issues.append("SSE tokens differ from saved answer")
         complete = [json.loads(event["data"]) for event in events if event["event"] == "complete"]
         if not complete or complete[-1]["outputMessage"]["messageId"] != assistant[0]["messageId"]:
@@ -143,11 +143,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://localhost:18089")
     parser.add_argument("--database", required=True)
+    parser.add_argument("--postgres-container", default="telme-postgres")
+    parser.add_argument("--scenario", choices=["standard", "general-comparison"], default="standard")
+    parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument("--out", type=Path,
                         default=Path("scripts/compound-faq-evaluation/runs/live-api-current.json"))
     args = parser.parse_args()
     if not args.database.startswith("telme_compound_pr_review"):
         parser.error("use an isolated telme_compound_pr_review database")
+    if not 1 <= args.repetitions <= 10:
+        parser.error("repetitions must be between 1 and 10")
     started = time.monotonic()
     repo = Path(__file__).resolve().parents[2]
     digest = hashlib.sha256()
@@ -158,7 +163,16 @@ def main():
               "sourceTreeSha256": digest.hexdigest(), "model": "exaone3.5:7.8b",
               "database": args.database, "cases": []}
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    for case in CASES:
+    cases = CASES if args.scenario == "standard" else [
+        ("API-GENERAL-COMPARE", "청소년 요금제와 시니어 요금제 차이점",
+         1, "GROUNDED", ["18세", "65세"]),
+        ("API-MIXED-GENERAL", "로밍 신청 방법 알려줘. 청소년 요금제와 시니어 요금제 차이점도 알려줘",
+         2, "GROUNDED", ["18세", "65세"]),
+        ("API-EXPLICIT-PRICE", "청소년 요금제와 시니어 요금제의 가격 차이가 뭐야",
+         1, "NO_EVIDENCE", []),
+    ]
+    for case in [(f"{case[0]}-{repeat:02d}", *case[1:])
+                 for repeat in range(1, args.repetitions + 1) for case in cases]:
         case_started = time.monotonic()
         try:
             row = run_case(args, case)

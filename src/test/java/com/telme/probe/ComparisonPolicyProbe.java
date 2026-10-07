@@ -9,6 +9,8 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.service.LlmClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -19,6 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 // 별도로 실행할 때 실제 검색 근거와 비교 답변을 확인하는 프로브다.
 @SpringBootTest(properties = {
@@ -50,11 +55,29 @@ class ComparisonPolicyProbe {
     @Autowired private FaqSearchService search;
     @Autowired private AnswerGenerator answerGenerator;
     @Autowired private LlmComparisonEvidenceResolver comparisonEvidence;
+    @MockitoSpyBean(name = "baseLlmClient") private LlmClient model;
 
     @Test
     void runComparisonProbe() throws Exception {
         List<Map<String, Object>> results = new ArrayList<>();
+        List<Map<String, Object>> modelCalls = new ArrayList<>();
+        doAnswer(invocation -> {
+            LlmRequest request = invocation.getArgument(0);
+            Map<String, Object> call = new LinkedHashMap<>();
+            call.put("request", request);
+            try {
+                Object response = invocation.callRealMethod();
+                call.put("rawOutput", response);
+                return response;
+            } catch (Throwable failure) {
+                call.put("error", failure.getClass().getSimpleName() + ": " + failure.getMessage());
+                throw failure;
+            } finally {
+                modelCalls.add(call);
+            }
+        }).when(model).generate(any());
         for (Case c : CASES) {
+            modelCalls.clear();
             List<FaqSearchResponse> raw = search.search(new FaqSearchRequest(c.question, 3));
             List<Map<String, Object>> targetedSearches = new ArrayList<>();
             var resolution = comparisonEvidence.resolveDetailed(null, c.question, raw,
@@ -73,6 +96,7 @@ class ComparisonPolicyProbe {
             row.put("answer_method", resolution.answer() == null ? "NO_EVIDENCE" : "VERIFIED_FAQ_QUOTE");
             row.put("answer", resolution.answer() == null
                     ? generate(c.question, List.of()) : resolution.answer());
+            row.put("model_calls", List.copyOf(modelCalls));
             results.add(row);
             persist(results);
         }

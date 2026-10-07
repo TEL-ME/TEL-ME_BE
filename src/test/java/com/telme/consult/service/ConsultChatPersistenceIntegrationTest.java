@@ -32,6 +32,7 @@ import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerPromptTemplates;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +66,7 @@ class ConsultChatPersistenceIntegrationTest {
     long sessionId;
     long executionId;
     long requestId;
+    final List<Long> comparisonFaqIds = new ArrayList<>();
 
     @BeforeEach
     void setup() {
@@ -115,6 +117,8 @@ class ConsultChatPersistenceIntegrationTest {
                         + " chat_sessions WHERE user_id=?)",
                 userId);
         jdbc.update("DELETE FROM chat_sessions WHERE user_id=?", userId);
+        comparisonFaqIds.forEach(id -> jdbc.update("DELETE FROM faqs WHERE faq_id=?", id));
+        comparisonFaqIds.clear();
         jdbc.update("DELETE FROM users WHERE user_id=?", userId);
     }
 
@@ -515,6 +519,74 @@ class ConsultChatPersistenceIntegrationTest {
         assertThat(events.sequence)
                 .containsExactly(
                         "start", "token:매장 안내", "complete:COMPLETED");
+    }
+
+    @Test
+    void independentFaqAndGeneralComparisonSaveOneAnswerWithBothSidesAndMatchingTokens() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?", Long.class, executionId);
+        String firstQuery = "유심 재발급 비용";
+        String comparison = "청소년 요금제와 시니어 요금제 차이점";
+        jdbc.update("UPDATE consult_requests SET intent='FAQ',query_text=? WHERE consult_request_id=?",
+                firstQuery, requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ',?) RETURNING consult_request_id",
+                Long.class, sessionId, inputId, comparison);
+        var first = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
+        var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
+        var fee = comparisonFaq(firstQuery, "유심 재발급 비용은 7,700원입니다.");
+        var youth = comparisonFaq("청소년 요금제 가입 조건", "청소년 요금제는 만 18세 이하가 가입할 수 있습니다.");
+        var senior = comparisonFaq("시니어 요금제 가입 조건", "시니어 요금제는 만 65세 이상이 가입할 수 있습니다.");
+        when(llmClient.generate(any())).thenReturn("""
+                {"answerable":true,"leftTarget":"청소년 요금제","rightTarget":"시니어 요금제",
+                 "criterion":"가입 나이 기준","leftFaqId":%d,"leftQuote":"%s",
+                 "rightFaqId":%d,"rightQuote":"%s"}
+                """.formatted(youth.faqId(), youth.answer(), senior.faqId(), senior.answer()));
+        var searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenAnswer(invocation -> {
+            String query = ((FaqSearchRequest) invocation.getArgument(0)).query();
+            return query.equals(firstQuery) ? List.of(fee) : List.of(youth, senior);
+        });
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) -> {
+            assertThat(input.originalUserQuery()).isEqualTo(firstQuery);
+            return new ConsultChatProcessingService.GeneratedAnswer(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER, fee.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                    List.of(new AnswerSource(fee.faqId(), fee.answer(), 1, null, (short) 1, null)));
+        }, trace, new LlmComparisonEvidenceResolver(llmClient, new ObjectMapper()));
+        var events = new RecordingEvents();
+        var processor = new ConsultChatProcessingService(
+                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        new ConsultChatProcessingService.FaqTurn(first, firstQuery),
+                        new ConsultChatProcessingService.FaqTurn(second, comparison))),
+                answers, persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(processingCommand());
+
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        String content = text("SELECT content FROM chat_messages WHERE message_id="
+                + "(SELECT output_message_id FROM chat_executions WHERE execution_id=?)", executionId);
+        assertThat(content).contains(fee.answer(), youth.answer(), senior.answer())
+                .doesNotContain(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(content.indexOf(fee.answer())).isLessThan(content.indexOf(youth.answer()));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=? AND role='ASSISTANT'",
+                Integer.class, sessionId)).isEqualTo(1);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForList(
+                "SELECT faq_id FROM message_sources WHERE message_id="
+                        + "(SELECT output_message_id FROM chat_executions WHERE execution_id=?)",
+                Long.class, executionId)).containsExactlyInAnyOrder(fee.faqId(), youth.faqId(), senior.faqId()));
+        assertThat(events.sequence).containsExactly("start", "token:" + content, "complete:COMPLETED");
+    }
+
+    private FaqSearchResponse comparisonFaq(String question, String answer) {
+        long id = jdbc.queryForObject("INSERT INTO faqs(category,question,answer,slot_id)"
+                + " VALUES ('SERVICE',?,?,?) RETURNING faq_id", Long.class,
+                question + " " + UUID.randomUUID(), answer, "comparison-" + UUID.randomUUID());
+        comparisonFaqIds.add(id);
+        return new FaqSearchResponse(id, null, "SERVICE", question, answer, 0.9, 1, null, 1, null);
     }
 
     @Test
