@@ -276,6 +276,19 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
+    @DisplayName("비교 답변의 사실이 둘째 문장에 있어도 자르지 않는다")
+    void 비교_답변의_뒷문장을_보존한다() {
+        String answer = "비교 내용을 안내드립니다. 5G는 4종이고 LTE는 3종입니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request("5G와 LTE 요금제 종류를 비교해줘",
+                List.of(faq(117L, "5G는 4종이고 LTE는 3종입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
+    }
+
+    @Test
     @DisplayName("FAQ 근거와 의미가 같은 비교 표현은 단어가 달라도 생성 완료한다")
     void FAQ_근거와_같은_비교_표현은_단어가_달라도_생성_완료한다() {
         String answer = "제일 싼 알뜰 요금제는 월 15,000원이며 데이터는 1.5GB 제공됩니다.";

@@ -3,6 +3,8 @@ package com.telme.consult.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.repository.SuggestedQuestionFaqFinder;
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.consult.service.ChatStoreAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
@@ -16,6 +18,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
 
@@ -88,8 +91,11 @@ public class ConsultRagAnswerConfiguration {
     @Bean
     AnswerProvider consultAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
-            ChatStoreAnswerProvider storeAnswers) {
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, ChatStoreAnswerProvider storeAnswers) {
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace), storeAnswers::generate);
+                new FaqSearchAnswerProvider(searches, answers, trace,
+                        comparisonEvidence, candidateEvidence, sourceConverter),
+                storeAnswers::generate);
     }
 }

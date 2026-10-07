@@ -11,6 +11,9 @@ import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatPersistenceService;
 import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
@@ -63,6 +66,11 @@ class ConsultChatPipelineConfigurationTest {
                             () -> mock(ConsultTurnPreparationService.class))
                     .withBean(FollowupConditionConverter.class, FollowupConditionConverter::new)
                     .withBean(FaqSearchService.class, () -> mock(FaqSearchService.class))
+                    .withBean(ComparisonEvidenceResolver.class,
+                            () -> mock(ComparisonEvidenceResolver.class))
+                    .withBean(FaqCandidateEvidenceResolver.class,
+                            () -> mock(FaqCandidateEvidenceResolver.class))
+                    .withBean(AnswerContextConverter.class, AnswerContextConverter::new)
                     .withBean(AnswerGenerator.class, () -> mock(AnswerGenerator.class))
                     .withBean(
                             ConsultChatPersistenceService.class,
