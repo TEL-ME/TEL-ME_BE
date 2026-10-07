@@ -53,6 +53,7 @@ class EvidenceCheckProbe {
             Integer.parseInt(System.getenv().getOrDefault("TELME_PROBE_REPEAT", "3"));
     // BASELINE: 채팅과 같은 근거(Q+A) / A: FAQ 질문을 빼고 답변 본문만
     // B: 근거는 Q+A, 묻는 항목부터 적게 하는 프롬프트 / AB: 답변 본문만 + B 프롬프트
+    // B2: B + 단위 환산·계산 규칙 보강
     private static final String VARIANT = System.getenv().getOrDefault("TELME_PROBE_VARIANT", "BASELINE");
     // 판정기(EvidenceCheckProperties)와 같은 기본값
     // B는 출력이 길어져 잘리는지 rawResponse로 확인
@@ -76,6 +77,17 @@ class EvidenceCheckProbe {
         JSON만 출력하십시오.
         {"asked": ["..."], "found": [true 또는 false], "answerable": true 또는 false}
         """;
+
+    // 개선안 B2
+    // B가 단위만 다른 질문(계산하면 답이 나오는 질문)을 막아 계산 규칙만 보강
+    // 예시는 넣지 않는다
+    static final String B2_PROMPT_VERSION = "evidence-check-b2";
+    static final String B2_SYSTEM_PROMPT = B_SYSTEM_PROMPT.replace(
+            "   - FAQ에 적힌 값으로 바로 계산하거나 읽어 낼 수 있으면 있는 것입니다.\n",
+            """
+               - 묻는 값의 단위나 표현이 FAQ와 달라도, FAQ에 적힌 값을 환산하거나 계산해 답을 만들 수 있으면
+                 있는 것입니다. 이것은 정보의 종류가 다른 경우가 아닙니다.
+            """);
 
     @Autowired
     private LlmClient llmClient;
@@ -141,7 +153,7 @@ class EvidenceCheckProbe {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("measuredAt", LocalDateTime.now().toString());
-        out.put("promptVersion", usesBPrompt() ? B_PROMPT_VERSION : EvidenceRelevancePromptTemplates.PROMPT_VERSION);
+        out.put("promptVersion", promptVersion());
         out.put("variant", VARIANT);
         out.put("labelVersion", mapper.readTree(CASES.toFile()).path("label_version").asText("v1"));
         out.put("topK", TOP_K);
@@ -158,7 +170,7 @@ class EvidenceCheckProbe {
 
     private String toContext(List<FaqSearchResponse> results) {
         return switch (VARIANT) {
-            case "BASELINE", "B" -> contextConverter.toContext(results);
+            case "BASELINE", "B", "B2" -> contextConverter.toContext(results);
             // AnswerGuard처럼 답변 본문만 근거로 본다
             case "A", "AB" -> IntStream.range(0, results.size())
                     .mapToObj(i -> "[%d] %s".formatted(i + 1, results.get(i).answer()))
@@ -168,7 +180,21 @@ class EvidenceCheckProbe {
     }
 
     private static boolean usesBPrompt() {
-        return VARIANT.equals("B") || VARIANT.equals("AB");
+        return VARIANT.equals("B") || VARIANT.equals("AB") || VARIANT.equals("B2");
+    }
+
+    private static String systemPrompt() {
+        if (B2_SYSTEM_PROMPT.equals(B_SYSTEM_PROMPT)) {
+            throw new IllegalStateException("B2 프롬프트가 B와 같다. 치환 대상 문구를 확인할 것");
+        }
+        return VARIANT.equals("B2") ? B2_SYSTEM_PROMPT : B_SYSTEM_PROMPT;
+    }
+
+    private static String promptVersion() {
+        if (!usesBPrompt()) {
+            return EvidenceRelevancePromptTemplates.PROMPT_VERSION;
+        }
+        return VARIANT.equals("B2") ? B2_PROMPT_VERSION : B_PROMPT_VERSION;
     }
 
     // BASELINE·A는 실제 판정기를, B·AB는 같은 요청 설정에 프롬프트만 바꿔 부른다
@@ -178,12 +204,12 @@ class EvidenceCheckProbe {
         }
         LlmRequest request = LlmRequest.builder()
                 .taskType(TaskType.ROUTING)
-                .systemPrompt(B_SYSTEM_PROMPT)
+                .systemPrompt(systemPrompt())
                 .userPrompt(EvidenceRelevancePromptTemplates.userPrompt(context, question))
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(MAX_TOKENS)
-                .promptVersion(B_PROMPT_VERSION)
+                .promptVersion(promptVersion())
                 .build();
         try {
             return parseLikeChecker(llmClient.generate(request));
