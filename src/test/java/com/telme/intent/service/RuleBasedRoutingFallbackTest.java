@@ -190,12 +190,20 @@ class RuleBasedRoutingFallbackTest {
         assertThat(result.conditions()).noneMatch(condition -> "location".equals(condition.key()));
     }
 
-    @Test
-    @DisplayName("기준점 표현이 있어도 지명이 함께 있으면 지명을 뽑는다")
-    void 지명과_함께면_지명을_뽑는다() {
-        LlmFollowUpPayload result = fallback.classifyFollowUp("강남역 근처요", Set.of("location"));
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "강남역 근처요, 강남역",
+            "판교 근처요, 판교",
+            "신촌 주변요, 신촌",
+            "신촌에서 가까운 곳, 신촌"})
+    @DisplayName("기준점 표현이 있어도 지명이 함께 있으면 지명을 뽑는다(접미사 없는 지명 포함)")
+    void 지명과_함께면_지명을_뽑는다(String reply, String place) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
 
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.CONDITION_RESPONSE);
         assertThat(result.conditions())
-                .anyMatch(condition -> "location".equals(condition.key()) && "강남역".equals(condition.value()));
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.FILLED
+                        && place.equals(condition.value()));
     }
 }

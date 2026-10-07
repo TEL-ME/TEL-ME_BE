@@ -162,6 +162,19 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("LLM 오류로 규칙 기반에 넘어가도 '신촌 근처요'의 신촌을 지역으로 받는다")
+    void analyzeFollowUp_keepsPlaceBeforeRelativeWordOnRuleFallback() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any()))
+                .willThrow(new GeneralException(IntentErrorCode.LLM_CONNECTION_FAILED));
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "신촌 근처요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsEntry("location", "신촌");
+    }
+
+    @Test
     @DisplayName("LLM이 빈 응답(fake 프로바이더)을 주면 규칙 기반으로 한 번 더 시도한다")
     void analyzeFollowUp_retriesWithRuleWhenLlmExtractsNothing() {
         givenWaitingConsultExists();
