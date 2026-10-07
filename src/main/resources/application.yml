@@ -155,3 +155,6 @@ telme:
     llm-enabled: ${CONSULT_LLM_ENABLED:true}
     chat-integration-enabled: ${CONSULT_CHAT_INTEGRATION_ENABLED:true}
     rag-integration-enabled: ${CONSULT_RAG_INTEGRATION_ENABLED:true}
+    # FAQ 되묻기. 켜는 결정 전까지 기본으로 끈다
+    faq-clarification:
+      enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:false}

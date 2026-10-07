@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
+import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
@@ -8,6 +9,7 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.FaqAnswerSearchException;
@@ -119,6 +121,32 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             events.completed(command.executionId(), clarification);
             return;
         }
+        AnswerInput answerInput = new AnswerInput(
+                command.executionId(),
+                command.sessionId(),
+                prepared.decision().consultRequestId(),
+                turn.purpose(),
+                turn.originalUserQuery(),
+                turn.searchQuery(),
+                conditionConverter.convert(prepared.decision().conditions()),
+                command.coordinates());
+        // 되묻기는 답변 메시지를 열기 전에 정해야 한다. 열고 나서 되물으면 빈 답변이 남는다
+        Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
+                ? answers.prepare(answerInput)
+                : Prepared.none();
+        if (searched.plan().needsClarification()) {
+            var asking = new ConsultService.PreparedTurn(
+                    prepared.sessionId(),
+                    prepared.expectedVersion(),
+                    FaqClarificationDecisions.ask(
+                            prepared.decision().consultRequestId(),
+                            searched.plan(),
+                            prepared.decision().conditions()));
+            var clarification = persistence.persistClarification(
+                    command.executionId(), asking, turn.answeredField());
+            events.completed(command.executionId(), clarification);
+            return;
+        }
         persistence.persistReadyTurn(command.executionId(), prepared, turn.answeredField());
         GeneratedAnswer generated;
         if (prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE) {
@@ -133,18 +161,10 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         } else {
             var started = persistence.startAnswer(command.executionId(), command.sessionId());
             events.started(started);
-            generated =
-                    answers.generate(
-                            new AnswerInput(
-                                    command.executionId(),
-                                    command.sessionId(),
-                                    prepared.decision().consultRequestId(),
-                                    turn.purpose(),
-                                    turn.originalUserQuery(),
-                                    turn.searchQuery(),
-                                    conditionConverter.convert(
-                                            prepared.decision().conditions()),
-                                    command.coordinates()));
+            // 되묻기를 쓰지 않는 경로는 아직 검색을 안 했다. 그때는 예전처럼 한 번에 처리한다
+            generated = answers.clarifies()
+                    ? answers.generate(answerInput, searched)
+                    : answers.generate(answerInput);
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -223,6 +243,34 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     public interface AnswerProvider {
         GeneratedAnswer generate(AnswerInput input);
+
+        /** 되묻기를 판단하는 경로인지. 아니면 검색 시점을 앞당기지 않는다. */
+        default boolean clarifies() {
+            return false;
+        }
+
+        /** 검색과 되묻기 판단만 한다. 되묻는 경로가 아니면 기본값을 쓴다. */
+        default Prepared prepare(AnswerInput input) {
+            return Prepared.none();
+        }
+
+        default GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
+            return generate(input);
+        }
+    }
+
+    /** 검색 결과와 되묻기 계획. 답변을 만들 때 검색을 다시 하지 않으려고 함께 들고 다닌다. */
+    public record Prepared(List<FaqSearchResponse> searchResults, ClarificationPlan plan) {
+        private static final Prepared NONE = new Prepared(List.of(), ClarificationPlan.none());
+
+        public Prepared {
+            searchResults = List.copyOf(searchResults);
+            Objects.requireNonNull(plan, "plan");
+        }
+
+        public static Prepared none() {
+            return NONE;
+        }
     }
 
     public record GeneratedAnswer(ChatAnswer answer, List<AnswerSource> sources) {

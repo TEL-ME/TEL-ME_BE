@@ -6,6 +6,7 @@ import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +26,27 @@ public final class PurposeRoutingAnswerProvider implements AnswerProvider {
     public PurposeRoutingAnswerProvider(AnswerProvider faqAnswers, AnswerProvider storeAnswers) {
         this.faqAnswers = Objects.requireNonNull(faqAnswers);
         this.storeAnswers = storeAnswers;
+    }
+
+    @Override
+    public boolean clarifies() {
+        return faqAnswers.clarifies();
+    }
+
+    @Override
+    public Prepared prepare(AnswerInput input) {
+        Objects.requireNonNull(input, "input");
+        // 매장 경로는 되묻기를 지역 조건으로 이미 끝낸 뒤라 여기서 다시 판단하지 않는다
+        return input.purpose() == Purpose.GENERAL_FAQ ? faqAnswers.prepare(input) : Prepared.none();
+    }
+
+    @Override
+    public GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
+        Objects.requireNonNull(input, "input");
+        if (input.purpose() == Purpose.GENERAL_FAQ) {
+            return faqAnswers.generate(input, prepared);
+        }
+        return generate(input);
     }
 
     @Override

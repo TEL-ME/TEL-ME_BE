@@ -24,6 +24,8 @@ import com.telme.llm.exception.LlmStreamCancelledException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import org.junit.jupiter.api.DisplayName;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -255,4 +257,60 @@ class FaqSearchAnswerProviderTest {
         verifyNoInteractions(searches);
     }
 
+
+    @Test
+    @DisplayName("되묻기 계획 담당이 없으면 되묻지 않는다")
+    void 계획_담당이_없으면_되묻지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        var prepared = provider.prepare(input());
+
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        assertThat(prepared.searchResults()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("검색 결과가 없으면 되묻기 판단을 하지 않는다")
+    void 근거가_없으면_판단하지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var planner = mock(FaqClarificationPlanner.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), planner);
+
+        var prepared = provider.prepare(input());
+
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        verifyNoInteractions(planner);
+    }
+
+    @Test
+    @DisplayName("답변을 만들 때 검색을 다시 하지 않는다")
+    void 검색을_두_번_하지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        when(answers.generate(any(), any())).thenReturn(
+                GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED,
+                        List.of(), null)));
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        var prepared = provider.prepare(input());
+        provider.generate(input(), prepared);
+
+        verify(searches, times(1)).search(any());
+    }
+
+    private AnswerInput input() {
+        return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "로밍 신청하고 싶어요", "로밍 신청", Map.of());
+    }
+
+    private FaqSearchResponse source() {
+        return new FaqSearchResponse(1L, null, "로밍", "로밍 신청", "요금제에 따라 다릅니다.",
+                0.9, 1, null, 1, null);
+    }
 }

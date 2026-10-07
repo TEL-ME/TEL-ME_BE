@@ -1,9 +1,11 @@
 package com.telme.consult.service;
 
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
@@ -22,21 +24,42 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final FaqSearchService searches;
     private final SearchResultAnswerGenerator answers;
     private final ExecutionTrace trace;
+    private final FaqClarificationPlanner planner;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
-        this(searches, answers, ExecutionTrace.noop());
+        this(searches, answers, ExecutionTrace.noop(), null);
     }
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace) {
+        this(searches, answers, trace, null);
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches,
+            SearchResultAnswerGenerator answers,
+            ExecutionTrace trace,
+            FaqClarificationPlanner planner) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
+        this.planner = planner;
     }
 
     @Override
     public GeneratedAnswer generate(AnswerInput input) {
+        return answer(input, prepare(input));
+    }
+
+    /** 검색과 되묻기 판단만 한다. 답변은 만들지 않아 되묻는 경우 답변 메시지를 먼저 열지 않는다. */
+    @Override
+    public boolean clarifies() {
+        return planner != null;
+    }
+
+    @Override
+    public Prepared prepare(AnswerInput input) {
         Objects.requireNonNull(input, "input");
         if (input.purpose() != Purpose.GENERAL_FAQ) {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
@@ -46,10 +69,24 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             // 검색 결과가 없으면 RAG 진입 전에 근거 부족 안내를 직접 반환하는 어댑터도 있어 여기서 한 번만 기록한다.
             trace.stage(input.executionId(), "guard",
                     Map.of("outcome", "NOT_RUN", "reason", "NO_SEARCH_RESULTS"));
+            return new Prepared(results, ClarificationPlan.none());
         }
-        return Objects.requireNonNull(
-                answers.generate(input, results), "generatedAnswer");
+        ClarificationPlan plan = planner == null
+                ? ClarificationPlan.none()
+                : planner.plan(input.executionId(), input.originalUserQuery(), results);
+        return new Prepared(results, plan);
     }
+
+    /** 검색 결과를 다시 쓰므로 답변을 만들 때 검색을 또 하지 않는다. */
+    @Override
+    public GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
+        return answer(input, Objects.requireNonNull(prepared, "prepared"));
+    }
+
+    private GeneratedAnswer answer(AnswerInput input, Prepared prepared) {
+        return Objects.requireNonNull(answers.generate(input, prepared.searchResults()), "generatedAnswer");
+    }
+
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
         List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), "ORIGINAL");
