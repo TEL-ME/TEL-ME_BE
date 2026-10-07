@@ -38,4 +38,8 @@ public record AdminLlmErrorSearchRequest(
     public Instant toOrMax() {
         return to == null ? EVERY_TIME_TO : to;
     }
+    
+    public boolean periodReversed() {
+        return from != null && to != null && from.isAfter(to);
+    }
 }

@@ -1,12 +1,15 @@
 package com.telme.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.AdminLlmErrorSearchRequest;
 import com.telme.llm.dto.req.AdminLlmErrorType;
 import com.telme.llm.dto.res.AdminLlmErrorListItemResponse;
 import com.telme.llm.dto.res.AdminLlmErrorListResponse;
 import com.telme.llm.entity.LlmGeneration.TaskType;
+import com.telme.llm.exception.LlmErrorCode;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -98,6 +101,16 @@ class AdminLlmErrorQueryServiceTest {
 
         assertThat(response.errors()).extracting(AdminLlmErrorListItemResponse::attempt).containsExactly(1);
         assertThat(response.totalElements()).isEqualTo(1);
+    }
+    
+    @Test
+    @DisplayName("기간의 시작이 끝보다 늦으면 LLM400-0을 던진다")
+    void 거꾸로_된_기간은_막힌다() {
+        AdminLlmErrorSearchRequest reversed = new AdminLlmErrorSearchRequest(null, null,
+                Instant.parse("2100-01-02T00:00:00Z"), Instant.parse("2100-01-01T00:00:00Z"), null, null);
+        
+        assertThatThrownBy(() -> service.getErrors(reversed)).isInstanceOf(GeneralException.class)
+                            .hasFieldOrPropertyWithValue("errorCode", LlmErrorCode.INVALID_PERIOD);
     }
     
     private AdminLlmErrorSearchRequest request(AdminLlmErrorType errorType, TaskType taskType) {

@@ -27,10 +27,12 @@ public class AdminLlmErrorController {
     @Operation(
             summary = "LLM 오류 목록 조회",
             description = "LLM 호출 중 실패한 기록을 최신순으로 반환합니다. 재시도한 호출은 시도마다 한 건씩 나옵니다. "
-            + "errorType을 비우면 TIMEOUT·CONNECTION_FAILED·MODEL_ERROR 전체, taskType을 비우면 모든 작업입니다.")
+                    + "from·to로 기간을 거르며 to는 그 시각 직전까지입니다. "
+                    + "errorType을 비우면 TIMEOUT·CONNECTION_FAILED·MODEL_ERROR 전체, taskType을 비우면 모든 작업입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "400", description = "COMMON400-1: 잘못된 오류 종류·작업 종류·페이지 값"),
+            @ApiResponse(responseCode = "400", description = "COMMON400-1: 잘못된 오류 종류·작업 종류·페이지 값 " 
+                                                                        +  "LLM400-0: 기간의 시작이 끝보다 늦음"),
             @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
             @ApiResponse(responseCode = "403", description = "Admin 권한 없음")
             })

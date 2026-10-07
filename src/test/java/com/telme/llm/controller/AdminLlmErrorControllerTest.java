@@ -6,9 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.global.config.SecurityConfig;
 import com.telme.llm.dto.res.AdminLlmErrorListItemResponse;
 import com.telme.llm.dto.res.AdminLlmErrorListResponse;
+import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.AdminLlmErrorQueryService;
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestIdentityService;
@@ -102,5 +104,16 @@ class AdminLlmErrorControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("COMMON400-1"));
         }
+    }
+    
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("기간의 시작이 끝보다 늦으면 400과 LLM400-0을 반환한다")
+    void 거꾸로_된_기간은_400이다() throws Exception {
+        when(adminLlmErrorQueryService.getErrors(any())).thenThrow(new GeneralException(LlmErrorCode.INVALID_PERIOD));
+        
+        mockMvc.perform(get(URL).param("from", "2026-10-02T00:00:00Z").param("to", "2026-10-01T00:00:00Z"))
+               .andExpect(status().isBadRequest())
+               .andExpect(jsonPath("$.code").value("LLM400-0"));
     }
 }
