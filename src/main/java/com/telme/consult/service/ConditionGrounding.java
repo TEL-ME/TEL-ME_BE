@@ -14,8 +14,8 @@ final class ConditionGrounding {
 
     // 모델이 근거를 조금씩 바꿔 쓴다. 이어지는 글자가 이만큼 겹치면 그 문장을 보고 쓴 것으로 친다
     private static final int MIN_OVERLAP = 8;
-    // 되묻는 질문은 근거 문장보다 짧아 기준도 더 낮다
-    private static final int MIN_QUESTION_OVERLAP = 6;
+    // 조건을 가르는 말은 질문 앞쪽에 온다. 뒤는 어미라 겹쳐도 다른 조건일 수 있다
+    private static final int MIN_QUESTION_PREFIX = 5;
     // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
     private static final int MIN_SAID_OVERLAP = 5;
 
@@ -114,12 +114,16 @@ final class ConditionGrounding {
     static boolean asksTheSame(String question, String other) {
         String left = compact(question);
         String right = compact(other);
-        if (left.isEmpty() || right.isEmpty()) {
-            return false;
+        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX;
+    }
+
+    private static int commonPrefix(String left, String right) {
+        int limit = Math.min(left.length(), right.length());
+        int same = 0;
+        while (same < limit && left.charAt(same) == right.charAt(same)) {
+            same++;
         }
-        int overlap = longestOverlap(left, right);
-        return overlap >= MIN_QUESTION_OVERLAP
-                && overlap * 2 >= Math.min(left.length(), right.length());
+        return same;
     }
 
     private static int longestOverlap(String text, String sourceText) {

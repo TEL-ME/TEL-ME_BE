@@ -16,11 +16,22 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
-    @DisplayName("뒤집어 묻는 질문도 같은 것으로 본다")
-    void 뒤집어_묻는_질문도_중복이다() {
+    @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
+    void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(
                 "본인이 직접 방문하시나요?",
                 "본인이 직접 방문하시는 건가요?")).isTrue();
+    }
+
+    @Test
+    @DisplayName("어미만 같고 묻는 대상이 다르면 남긴다")
+    void 어미가_같아도_대상이_다르면_남긴다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "현재 미납 요금이 있으신가요?", "할부금이 있으신가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "첫 번째 질문인가요?", "두 번째 질문인가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 직접 방문하시나요?", "대리인이 방문하시는 건가요?")).isFalse();
     }
 
     @Test

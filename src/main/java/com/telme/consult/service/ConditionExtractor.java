@@ -43,7 +43,6 @@ public class ConditionExtractor {
         Set<String> keys = new HashSet<>();
         for (var candidate : payload.conditions()) {
             // 같은 조건을 두 번 물으면 안 되고, 중복이 개수 제한을 먼저 채우면 다른 조건이 밀려난다
-            // 키가 달라도 묻는 내용이 같으면 중복이다. age와 age_range로 나뉘어 나오는 경우가 있다
             toCondition(candidate, sources)
                     .filter(condition -> keys.add(condition.key()))
                     .filter(condition -> notSaidByUser(userQuery, condition))

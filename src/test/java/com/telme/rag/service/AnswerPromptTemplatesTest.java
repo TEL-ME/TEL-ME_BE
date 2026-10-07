@@ -33,13 +33,21 @@ class AnswerPromptTemplatesTest {
             assertThat(input).isNotNull();
             baseline = new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
-        String addition = "   FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.\n"
+        String relationAddition =
+                "   FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.\n"
                 + "   해당 관계가 답변(A)에 명시된 경우에만 설명하십시오.\n";
+        String channelAddition =
+                "   신청하거나 처리하는 곳은 근거에 적힌 단어를 그대로 쓰고, 브랜드나 페이지 이름을 덧붙이지 마십시오.\n"
+                + "   - 근거가 \"홈페이지로 신청하시면 됩니다\"이면 \"홈페이지\"라고만 쓰십시오.\n"
+                + "     \"LG U+샵\", \"이벤트 페이지\", \"공식 사이트\"처럼 바꿔 쓰면 안 됩니다.\n";
 
         // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(addition);
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT.replace(addition, "")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.2");
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(relationAddition);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(channelAddition);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
+                .replace(relationAddition, "")
+                .replace(channelAddition, "")).isEqualTo(baseline);
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.3");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
     }
 
@@ -73,7 +81,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.2");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.3");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");
