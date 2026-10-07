@@ -40,7 +40,7 @@ public class ConsultCondition {
     }
 
     public enum Status {
-        PENDING, FILLED, DECLINED
+        PENDING, FILLED, DECLINED, COORDINATES
     }
 
     @Id

@@ -50,6 +50,7 @@ public class ChatExecutionService {
                 answer.answerBasis(),
                 chatMessageConverter.toJson(answer.followUps()),
                 chatMessageConverter.toJson(answer.storeResults()),
+                chatMessageConverter.toContextJson(answer.storeSearchContext()),
                 completedAt
         );
         execution.complete(message, completedAt);
