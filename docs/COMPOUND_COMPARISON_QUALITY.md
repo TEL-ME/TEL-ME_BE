@@ -92,7 +92,7 @@ PR 75의 `fa3e348`을 기준으로 일반 비교 요청을 수정했다. 개발 
 
 14문항에서 답변에서 보류로 바뀐 ID는 `CMP-004` 한 건이다. 기존 답변은 FAQ 482의 **유심 파손 후 eSIM으로 전환하는 안내**를 물리 유심 개통 절차로 붙였다. 따라서 이 한 건을 올바른 기존 답변의 손실로 세지 않는다. FAQ 원문 대조는 Codex가 수행했으며 사람이 라벨링한 평가 결과로 표시하지 않는다. 의미 적합성은 여전히 모델 판정에 의존하므로 이번 보류가 다른 실행에서도 항상 재현된다고 보장하지 않는다.
 
-기존 14문항의 6건 유지와 일반 비교 20회 성공은 이번 수정의 회귀 검증 결과다. 서비스 전체 정확도나 환각률, 통계적인 품질 개선율로 확대하지 않는다. 모델 판정 입력, 원문 출력, 검색 후보, 하위 상담, 저장 답변 및 SSE 이벤트는 [비교 근거 검증 v4 원시 자료](../scripts/compound-faq-evaluation/runs/comparison-evidence-v4.json)에 묶었다. 수정 전 재현과 중간 진단 결과도 보존했다. 수정 전 가격 검증의 안내 문구 단언은 지나치게 구체적이었으므로, 그 문구 불일치를 가격을 지어낸 실패로 해석하지 않는다.
+기존 14문항의 6건 유지와 일반 비교 20회 성공은 이번 수정의 회귀 검증 결과다. 서비스 전체 정확도나 환각률, 통계적인 품질 개선율로 확대하지 않는다. 모델 판정 입력, 원문 출력, 검색 후보, 하위 상담, 저장 답변 및 SSE 이벤트는 [비교 근거 검증 v4 압축 원시 자료](../scripts/compound-faq-evaluation/runs/comparison-evidence-v4.json.gz)에 묶었다. 수정 전 재현과 중간 진단 결과도 보존했다. 수정 전 가격 검증의 안내 문구 단언은 지나치게 구체적이었으므로, 그 문구 불일치를 가격을 지어낸 실패로 해석하지 않는다.
 
 앞선 코드의 24회 실행에서는 모두 정상 분해됐지만, 새로 확인한 세 질문 누락 가능성을 막기 위해 각 독립 요청의 보존을 검사하도록 보완했다. 최종 코드의 26회 중 안내 3회는 성공적인 질문 분해로 집계하지 않는다. 이 경우 사용자는 질문을 나눠 다시 입력해야 한다. 단위 테스트에서는 모델이 독립 질문을 누락하거나 중복하거나 빈 하위 질문을 반환해도 일부 상담만 저장하지 않는지 확인했다.
 
@@ -100,17 +100,17 @@ PR 75의 `fa3e348`을 기준으로 일반 비교 요청을 수정했다. 개발 
 
 ## 원시 자료와 재현 코드
 
-JSON 원시는 [평가 자료 안내](../scripts/compound-faq-evaluation/README.md)에 파일별 역할을 적고 `baseline`, `experiments`, `final`로 나눴다. 기존 파일 내용은 변경하지 않았다.
+리뷰에 필요한 최신 결과와 기준 자료는 [평가 자료 안내](../scripts/compound-faq-evaluation/README.md)에 파일별 역할을 적었다. 큰 실행 기록은 gzip으로 압축했고, 중복된 중간 결과는 PR 자료에서 정리했다. 최종 비교 14문항은 모델 호출 로그를 제외해 JSON으로 따로 제공한다.
 
-일반 비교 기준 수정의 최신 결과는 [비교 근거 검증 v4](../scripts/compound-faq-evaluation/runs/comparison-evidence-v4.json)의 `summary`와 `final`에서 확인한다. 아래 `final/`의 세 자료는 그 이전 검증 원본이다.
+일반 비교 기준 수정의 최신 결과는 [비교 질문 14건](../scripts/compound-faq-evaluation/final/comparison-14-latest.json)에서 바로 확인한다. 전체 실행 맥락과 30회 HTTP 검증은 [비교 근거 검증 v4](../scripts/compound-faq-evaluation/runs/comparison-evidence-v4.json.gz)의 `summary`와 `final`에 있다. 아래 채팅 API 7사례와 복합 FAQ 4사례는 별도 검증 결과다.
 
-비교 기준 검증 보완 후의 14건 재실행과 연결 표현 4건의 모델 출력은 [비교 근거 검증 v3](../scripts/compound-faq-evaluation/runs/comparison-evidence-v3.json)에 별도로 보관했다. 기존 `final/` 자료는 이전 실측 원본이다.
+비교 기준 검증 보완 후의 14건 재실행과 연결 표현 4건의 모델 출력은 [비교 근거 검증 v3](../scripts/compound-faq-evaluation/runs/comparison-evidence-v3.json.gz)에 보관했다.
 
-문장 경계 보완의 변경 전 결과, 이전 24회 라우팅, 최종 코드의 26회 라우팅, 비교 14건 및 실제 API 4사례의 원시는 [문장 경계 검증](../scripts/compound-faq-evaluation/runs/sentence-boundaries.json)에 구분해 담았다. 기존 측정값은 유지했다.
+문장 경계 보완의 변경 전 결과, 이전 24회 라우팅, 최종 코드의 26회 라우팅, 비교 14건 및 실제 API 4사례의 원시는 [문장 경계 검증](../scripts/compound-faq-evaluation/runs/sentence-boundaries.json.gz)에 구분해 담았다. 기존 측정값은 유지했다.
 
 | 자료 | 확인할 내용 |
 | --- | --- |
-| [비교 질문 14건](../scripts/compound-faq-evaluation/final/comparison-14.json) | 최종 코드의 검색 후보, 선택 FAQ, 답변 및 보류 사유 |
+| [비교 질문 14건](../scripts/compound-faq-evaluation/final/comparison-14-latest.json) | v4 최종 코드의 검색 후보, 선택 FAQ, 답변 및 보류 사유 |
 | [복합 FAQ 4사례](../scripts/compound-faq-evaluation/final/compound-faq-4.json) | 하위 질문별 근거, 부분 답변 불가 및 답변 결합 |
 | [실제 채팅 API 7사례](../scripts/compound-faq-evaluation/final/chat-api-7.json) | 실행 추적, 저장 답변, 상담 상태, 근거 조회 및 SSE 수신 내용 |
 
