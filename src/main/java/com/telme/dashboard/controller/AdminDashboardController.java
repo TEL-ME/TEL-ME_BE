@@ -1,6 +1,7 @@
 package com.telme.dashboard.controller;
 
 import com.telme.dashboard.dto.req.AdminDashboardSearchRequest;
+import com.telme.dashboard.dto.res.AdminDashboardDailyResponse;
 import com.telme.dashboard.dto.res.AdminDashboardResponse;
 import com.telme.dashboard.service.AdminDashboardQueryService;
 import com.telme.global.common.CustomResponse;
@@ -41,5 +42,20 @@ public class AdminDashboardController {
     public CustomResponse<AdminDashboardResponse> getSummary(
             @Valid @ParameterObject @ModelAttribute AdminDashboardSearchRequest request) {
         return CustomResponse.onSuccess(adminDashboardQueryService.getSummary(request));
+    }
+    
+    @Operation(
+            summary = "최근 7일 날짜별 질문·오류 수",
+            description = "오늘을 포함한 최근 7일의 하루 질문 수와 LLM 호출 오류 수를 오래된 날부터 반환합니다. "
+                    + "날짜는 한국 시간 자정으로 끊고, 기록이 없는 날도 0으로 들어 있습니다. "
+                    + "오류 수는 운영 상태의 오류 목록과 같은 기준이라 재시도한 시도도 각각 셉니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
+            @ApiResponse(responseCode = "403", description = "ADMIN 권한 없음")
+    })
+    @GetMapping("/daily")
+    public CustomResponse<AdminDashboardDailyResponse> getDaily() {
+        return CustomResponse.onSuccess(adminDashboardQueryService.getDaily());
     }
 }
