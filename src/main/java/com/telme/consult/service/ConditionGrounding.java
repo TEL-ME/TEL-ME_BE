@@ -77,13 +77,17 @@ final class ConditionGrounding {
         return NEGATION.matcher(compacted).find();
     }
 
-    static List<String> groundedOptions(List<String> options, FaqSearchResponse source) {
+    static List<String> groundedOptions(List<String> options, String question, FaqSearchResponse source) {
         if (options.stream().allMatch(option -> YES_NO.contains(option.strip()))) {
             return options;
         }
         String sourceText = source.answer() == null ? "" : compact(source.answer());
         // 선택지는 근거에 적힌 값 그대로여야 한다. 바꿔 쓰면 고객이 고른 값이 검색에 안 걸린다
-        return options.stream().filter(option -> containsValue(sourceText, compact(option))).toList();
+        return options.stream()
+                .filter(option -> containsValue(sourceText, compact(option))
+                        // 한쪽만 근거에 적히기도 한다. "법인인 경우"만 있어도 질문이 개인·법인을 둘 다 물으면 짝이다
+                        || containsValue(compact(question), compact(option)))
+                .toList();
     }
 
     // 11500원 안의 1500원처럼 숫자 중간에 걸린 값은 다른 값이다

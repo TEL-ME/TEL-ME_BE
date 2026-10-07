@@ -94,7 +94,7 @@ public class ConditionExtractor {
             // 선택지는 근거로 인정된 FAQ 안에서만 찾는다. 다른 FAQ에 있는 값은 이 질문의 선택지가 아니다
             return java.util.Optional.of(new MissingCondition(
                     candidate.key(), candidate.question(),
-                    ConditionGrounding.groundedOptions(candidate.options(), grounded.source()),
+                    ConditionGrounding.groundedOptions(candidate.options(), candidate.question(), grounded.source()),
                     grounded.sentence()));
         } catch (IllegalArgumentException exception) {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
