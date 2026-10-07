@@ -2,8 +2,10 @@ package com.telme.faq.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,6 +22,7 @@ import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.faq.repository.FaqNearestMatch;
+import com.telme.faq.repository.FaqSearchScoreRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -35,16 +38,41 @@ class PgvectorFaqSearchServiceTest {
 
     private final EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
     private final FaqEmbeddingRepository repository = mock(FaqEmbeddingRepository.class);
+    private final FaqSearchScoreRepository scoreRepository = mock(FaqSearchScoreRepository.class);
     private final EmbeddingProperties embeddingProperties =
             new EmbeddingProperties(MODEL, 3, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120));
     private final PgvectorFaqSearchService service =
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
                     new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88)),
-                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
+                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
     private final PgvectorFaqSearchService dualVectorService =
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
                     new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD)),
-                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A));
+                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
+    
+    @Test
+    @DisplayName("임계값 미달로 결과가 비어도 Q_A 1위 점수와 통과 여부를 남긴다")
+    void 임계값_미달이어도_1위_점수를_남긴다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.75)));
+
+        List<FaqSearchResponse> result = service.search(new FaqSearchRequest("질문", 3, FaqSearchVector.QA));
+
+        assertThat(result).isEmpty();
+        verify(scoreRepository).save(0.25, false);
+    }
+
+    @Test
+    @DisplayName("점수 기록이 실패해도 검색 결과는 그대로 돌려준다")
+    void 점수_기록_실패가_검색을_막지_않는다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.2)));
+        doThrow(new IllegalStateException("db down")).when(scoreRepository).save(any(), anyBoolean());
+
+        List<FaqSearchResponse> result = service.search(new FaqSearchRequest("질문", 3, FaqSearchVector.QA));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L);
+    }
 
     @Test
     @DisplayName("vector=QA면 이중 벡터가 켜져 있어도 질문+답변 벡터만 조회한다")
