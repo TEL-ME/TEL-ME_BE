@@ -6,7 +6,7 @@
 연결표·대표 질문·규칙의 원본은 이 파일 하나이고, 생성된 JSON은 손으로 고치지 않는다.
 
 출력
-  - src/main/resources/suggested-question/policy-links.json: 정책별 연결(순서 = 우선순위)과 대표 질문
+  - src/main/resources/suggested-question/policy-links.json: 정책별 연결(순서 = 우선순위), 대표 질문, 매장 버튼 문장
   - src/main/resources/suggested-question/faq-rules.json: 문제 상황(TROUBLE) FAQ, 자격 조건 불가 FAQ, 단말 정책 FAQ의 상황
   - src/test/resources/suggested-question/expected-recommendations.json: FAQ 1,150개별 기대 추천(코드 결과 비교용)
 """
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +24,29 @@ MAIN_OUT = ROOT / "src/main/resources/suggested-question"
 TEST_OUT = ROOT / "src/test/resources/suggested-question"
 
 MAX_RECOMMENDATIONS = 2
+
+# 매장 버튼: 기준 FAQ 답변에 이 단어가 있으면 매장 찾기 버튼을 첫 자리에 붙인다(연결표 추천 최대 2개와 별도)
+STORE_MENTION = "매장"
+# 매장에 갈 필요가 없다는 표현("매장 방문 없이", "매장에 가지 않아도", "매장이 아니라", "매장을 방문하지 않아도",
+# "매장에 갈 필요가 없습니다", "매장 방문은 필요하지 않습니다")은 매장 언급으로 보지 않는다. 관리자 FAQ에도 적용되므로
+# 데이터에 없는 표현까지 넓게 잡되, "매장에서 확인하지 않으면"처럼 매장과 무관한 부정은 걸리지 않도록 매장 바로 뒤의
+# 동사는 방문/가/갈로 시작할 때만 허용한다. "않", "안 가"는 "~해도 된다"는 허용 뜻일 때만 잡는다.
+# "매장에 가지 않으면 처리할 수 없습니다"는 방문이 필요하다는 뜻이라 칩을 붙여야 한다.
+# 앱(SuggestedQuestionRecommender)이 이 정규식을 JSON에서 그대로 읽어 쓴다
+STORE_NEGATION = (r"매장(?:\s*방문)?\s*(?:을|에|이|은|는)?\s*(?:(?:방문|가|갈)[가-힣]{0,3}\s*)?"
+                  r"(?:없이|아니라|아니고|않(?:아도|으셔도|고도)|안\s*가(?:도|셔도)"
+                  r"|필요\s*(?:가\s*)?없|필요하지\s*않(?:습니다|아요|다)|불필요)")
+# 카테고리별 버튼 문장. 누르면 라우터가 매장 찾기 + 업무(serviceType)로 분류해야 한다.
+# "근처"를 넣으면 라우터가 지역 이름으로 받아 되묻기 대신 지역 검색을 하므로 넣지 않는다.
+# 업무 표현은 RuleBasedRoutingFallback의 업무 규칙(유심.*재발급, 신규.*개통, 번호.*이동, 명의.*변경)에 맞춘다
+# 다른 추천 버튼(실제 FAQ 질문)과 같은 존댓말로 쓴다
+STORE_QUESTIONS = {
+    "USIM": "유심 재발급 가능한 매장을 알려주세요.",
+    "SUBSCRIBE": "신규 개통 가능한 매장을 알려주세요.",
+    "PORTING": "번호이동 가능한 매장을 알려주세요.",
+    "NAME_CHANGE": "명의변경 가능한 매장을 알려주세요.",
+}
+DEFAULT_STORE_QUESTION = "가까운 매장을 알려주세요."
 
 POLICY_TITLE = {
     "BILLING-01": "요금제 변경 주기와 적용 시점", "BILLING-02": "청구서 발송과 납부 기한", "BILLING-03": "미납 시 이용 제한",
@@ -183,6 +207,16 @@ def matches(condition: dict | None, faq: dict) -> bool:
     raise SystemExit(f"알 수 없는 조건: {condition}")
 
 
+def mentions_store(answer: str) -> bool:
+    return STORE_MENTION in re.sub(STORE_NEGATION, "", answer)
+
+
+def store_question(faq: dict) -> str | None:
+    if not mentions_store(faq["answer"]):
+        return None
+    return STORE_QUESTIONS.get(faq["category"], DEFAULT_STORE_QUESTION)
+
+
 # 앱 구현이 따라야 하는 기준 동작. 기대 추천 파일은 이 함수의 결과다
 def recommend(faq: dict, items: dict[str, dict]) -> list[str]:
     blocked = faq["slot_id"] in ELIGIBILITY_BLOCKED
@@ -218,6 +252,12 @@ def build(items: dict[str, dict]) -> tuple[dict, dict, dict]:
         "policies": {
             pol: {"title": POLICY_TITLE[pol], "links": links} for pol, links in LINKS.items()
         },
+        "storeQuestions": {
+            "mention": STORE_MENTION,
+            "negation": STORE_NEGATION,
+            "byCategory": STORE_QUESTIONS,
+            "default": DEFAULT_STORE_QUESTION,
+        },
     }
     tp = trigger_policies()
     faq_rules = {
@@ -226,8 +266,10 @@ def build(items: dict[str, dict]) -> tuple[dict, dict, dict]:
         # 상황 조건이 있는 연결을 가진 정책의 FAQ만 담는다
         "triggers": {s: x["trigger"] for s, x in sorted(items.items()) if x["policy_ref"] in tp},
     }
-    # 테스트가 원본 JSON 없이 돌도록 기준 FAQ의 정책·질문을 함께 담는다
-    expected = {s: {"policyRef": x["policy_ref"], "question": x["question"], "suggestions": recommend(x, items)}
+    # 테스트가 원본 JSON 없이 돌도록 기준 FAQ의 정책·카테고리·질문과 답변의 매장 언급 여부(부정 표현 제외)를 함께 담는다
+    expected = {s: {"policyRef": x["policy_ref"], "category": x["category"], "question": x["question"],
+                    "mentionsStore": mentions_store(x["answer"]),
+                    "suggestions": recommend(x, items), "storeQuestion": store_question(x)}
                 for s, x in sorted(items.items())}
     return policy_links, faq_rules, expected
 
@@ -235,6 +277,13 @@ def build(items: dict[str, dict]) -> tuple[dict, dict, dict]:
 def write(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+# FAQ 1,150개짜리 기대값은 FAQ 하나를 한 줄로 써서 파일 크기와 변경 줄 수를 줄인다
+def write_one_per_line(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"  {json.dumps(k, ensure_ascii=False)}: {json.dumps(v, ensure_ascii=False)}" for k, v in data.items()]
+    path.write_text("{\n" + ",\n".join(lines) + "\n}\n", encoding="utf-8")
 
 
 def main() -> None:
@@ -260,12 +309,18 @@ def main() -> None:
         return
 
     for path, data in outputs.items():
-        write(path, data)
+        (write_one_per_line if path.name == "expected-recommendations.json" else write)(path, data)
     counts = [len(v["suggestions"]) for v in expected.values()]
     n_links = sum(len(v) for v in LINKS.values())
     print(f"연결 {n_links}개, 쓰인 대표 질문 {len(policy_links['representativeQuestions'])}개, "
           f"자격 조건 불가 {len(ELIGIBILITY_BLOCKED)}건, TROUBLE {len(faq_rules['troubleSlotIds'])}건")
     print(f"FAQ별 추천 수: 2개 {counts.count(2)}, 1개 {counts.count(1)}, 없음 {counts.count(0)}")
+    store = [v for v in expected.values() if v["storeQuestion"]]
+    by_question = {}
+    for v in store:
+        by_question[v["storeQuestion"]] = by_question.get(v["storeQuestion"], 0) + 1
+    print(f"매장 버튼: {len(store)}건 (연결표 추천이 없던 FAQ {sum(1 for v in store if not v['suggestions'])}건) "
+          + ", ".join(f"{q} {n}" for q, n in by_question.items()))
 
 
 if __name__ == "__main__":
