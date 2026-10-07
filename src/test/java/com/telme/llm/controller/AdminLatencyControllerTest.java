@@ -6,8 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.global.config.SecurityConfig;
 import com.telme.llm.dto.res.AdminLatencyResponse;
+import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.AdminLatencyQueryService;
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestIdentityService;
@@ -92,12 +94,20 @@ class AdminLatencyControllerTest {
     
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("시작 시각이 끝 시각보다 늦거나 형식이 틀리면 400과 COMMON400-1을 반환한다")
-    void  잘못된_기간은_400을_반환한다() throws Exception {
+    @DisplayName("시작 시각이 끝 시각보다 늦으면 400과 LLM400-0을 반환한다")
+    void 거꾸로_된_기간은_400이다() throws Exception {
+        when(adminLatencyQueryService.getLatency(any()))
+                .thenThrow(new GeneralException(LlmErrorCode.INVALID_PERIOD));
+
         mockMvc.perform(get(URL).param("from", "2026-10-04T00:00:00Z").param("to", "2026-10-03T00:00:00Z"))
                .andExpect(status().isBadRequest())
-               .andExpect(jsonPath("$.code").value("COMMON400-1"))
-               .andExpect(jsonPath("$.result.periodValid").exists());
+               .andExpect(jsonPath("$.code").value("LLM400-0"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("시각 형식이 틀리면 400과 COMMON400-1을 반환한다")
+    void 잘못된_시각_형식은_400이다() throws Exception {
         mockMvc.perform(get(URL).param("from", "어제"))
                .andExpect(status().isBadRequest())
                .andExpect(jsonPath("$.code").value("COMMON400-1"));

@@ -1,10 +1,13 @@
 package com.telme.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.AdminLatencySearchRequest;
 import com.telme.llm.dto.res.AdminLatencyResponse;
+import com.telme.llm.exception.LlmErrorCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -100,6 +103,24 @@ class AdminLatencyQueryServiceTest {
         assertThat(response.from()).isEqualTo(FROM);
         assertThat(response.to()).isEqualTo(TO);
         assertThat(response.overall().count()).isEqualTo(2);
+    }
+    
+    @Test
+    @DisplayName("기간의 시작이 끝보다 늦으면 LLM400-0을 던진다")
+    void 거꾸로_된_기간은_막힌다() {
+        assertThatThrownBy(() -> service.getLatency(new AdminLatencySearchRequest(TO, FROM)))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", LlmErrorCode.INVALID_PERIOD);
+    }
+
+    @Test
+    @DisplayName("끝을 비우고 지금보다 늦은 시작만 주면 LLM400-0을 던진다")
+    void 미래의_시작만_주면_막힌다() {
+        when(clock.instant()).thenReturn(FROM);
+
+        assertThatThrownBy(() -> service.getLatency(new AdminLatencySearchRequest(TO, null)))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", LlmErrorCode.INVALID_PERIOD);
     }
 
     @Test

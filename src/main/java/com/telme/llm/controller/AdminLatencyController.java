@@ -32,7 +32,7 @@ public class AdminLatencyController {
                     + "- tasks: 작업 종류별 LLM 호출 시간(성공한 시도만). 호출이 없던 작업은 0건")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
-        @ApiResponse(responseCode = "400", description = "COMMON400-1: 시각 형식 오류, 시작 시각이 끝 시각보다 늦음(periodValid)"),
+        @ApiResponse(responseCode = "400", description = "COMMON400-1: 시각 형식 오류. LLM400-0: 기간의 시작이 끝보다 늦거나 같음 (비운 쪽을 채운 뒤 기준)"),
         @ApiResponse(responseCode = "401", description = "로그인하지 않음"),
         @ApiResponse(responseCode = "403", description = "Admin 권한 없음")
     })
