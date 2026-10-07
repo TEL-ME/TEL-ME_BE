@@ -157,5 +157,5 @@ telme:
     rag-integration-enabled: ${CONSULT_RAG_INTEGRATION_ENABLED:true}
     suggested-questions:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
-      # 실제 채팅 경로 표본 15 ~ 20건을 확인하기 전까지 끈다
+      # 기본은 끈다. 실제 채팅 경로 확인 결과는 문서 7.2절
       enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:false}

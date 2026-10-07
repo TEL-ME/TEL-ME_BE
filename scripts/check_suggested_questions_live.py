@@ -2,7 +2,7 @@
 
 """추천 질문 실제 채팅 경로 확인: 실행 중인 앱에 질문을 보내 답변·근거·추천 질문을 모아 검토표로 쓴다
 
-추천 질문 플래그를 켜고 실제 LLM(ollama)으로 띄운 로컬 앱이 필요하다. docs/FOLLOWUP_RECOMMENDATION.md 7.1절
+추천 질문 플래그를 켜고 실제 LLM(ollama)으로 띄운 로컬 앱이 필요하다. docs/FOLLOWUP_RECOMMENDATION.md 7.2절
   - sample: 실제 말투 질문 20개. 생성 답변과 추천의 중복·적합성을 사람이 검토표에서 판정한다
   - representatives: 대표 질문 32개를 보내 그 FAQ가 검색 1위로 나오는지 본다(버튼을 누르면 답이 나오는지)
 
