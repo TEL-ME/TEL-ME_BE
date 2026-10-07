@@ -63,7 +63,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         Objects.requireNonNull(handler, "handler");
         var generationInput = new LinkedHashMap<String, Object>(Map.of(
                 "userQuery", request.userQuery(), "sources", request.searchResults(),
-                "promptVersion", AnswerPromptTemplates.PROMPT_VERSION,
+                "promptVersion", AnswerPromptTemplates.promptVersionFor(request.userQuery()),
                 "guardEvidenceScope", "FAQ_ANSWERS_ONLY"));
         generationInput.put("consultRequestId", request.consultRequestId());
         generationInput.put("resolvedQuery", request.resolvedQuery());
@@ -94,7 +94,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
             return answerWithoutEvidence(request, handler);
         }
 
-        String system = AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
+        String system = AnswerPromptTemplates.systemPromptFor(request.userQuery())
                 + (request.chatContext() == null ? "" : AnswerPromptTemplates.MULTITURN_RULES);
         ChatTokenEstimator estimator = new ChatTokenEstimator();
         int historyBudget = Math.max(0, contextSize - 1024 - 256
@@ -111,7 +111,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .systemPrompt(system)
                 .userPrompt(prompt)
                 .contextCount(request.searchResults().size())
-                .promptVersion(AnswerPromptTemplates.PROMPT_VERSION)
+                .promptVersion(AnswerPromptTemplates.promptVersionFor(request.userQuery()))
                 .build();
 
         CollectingHandler collector =
@@ -220,7 +220,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 return;
             }
             try {
-                answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+                answer = answerGuard.applyEvidencePolicy(
+                        collected.toString().strip(),
+                        context, userQuery);
                 // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(

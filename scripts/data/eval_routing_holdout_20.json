@@ -1,0 +1,22 @@
+[
+  {"eval_id":"HOLDOUT-001","expected_intent":"FAQ","question":"U+ 멤버십으로 헬스장 결제 할인을 받을 수 있나요?"},
+  {"eval_id":"HOLDOUT-002","expected_intent":"FAQ","question":"매장은 보통 주말 몇 시까지 운영하나요?"},
+  {"eval_id":"HOLDOUT-003","expected_intent":"FAQ","question":"USIM을 잃어버렸다면 재발급할 때 어떤 서류가 필요해요?"},
+  {"eval_id":"HOLDOUT-004","expected_intent":"FAQ","question":"통신요금 자동이체 계좌를 바꾸려면 어떻게 하나요?"},
+  {"eval_id":"HOLDOUT-005","expected_intent":"FAQ","question":"집 인터넷이 끊기면 어디에 장애 신고하나요?"},
+  {"eval_id":"HOLDOUT-006","expected_intent":"STORE","question":"광화문역 근처 U+ 매장 위치 찾아줘"},
+  {"eval_id":"HOLDOUT-007","expected_intent":"STORE","question":"판교역점은 토요일에도 문 여나요?"},
+  {"eval_id":"HOLDOUT-008","expected_intent":"STORE","question":"대전역 주변 번호이동 가능한 대리점 알려줘"},
+  {"eval_id":"HOLDOUT-009","expected_intent":"STORE","question":"홍대입구역 직영점 전화번호가 뭐예요?"},
+  {"eval_id":"HOLDOUT-010","expected_intent":"STORE","question":"잠실나루역 근처 주차되는 매장 있어요?"},
+  {"eval_id":"HOLDOUT-011","expected_intent":"BOTH","question":"eSIM 재발급 절차와 서울역 근처 처리 매장을 함께 알려주세요"},
+  {"eval_id":"HOLDOUT-012","expected_intent":"BOTH","question":"번호이동 준비 서류 알려주고 신촌 매장도 찾아줘"},
+  {"eval_id":"HOLDOUT-013","expected_intent":"BOTH","question":"로밍 신청 방법과 인천공항 매장 위치 같이 알려줘"},
+  {"eval_id":"HOLDOUT-014","expected_intent":"BOTH","question":"인터넷 가입 혜택을 설명하고 판교역 근처 상담 매장 찾아줘"},
+  {"eval_id":"HOLDOUT-015","expected_intent":"BOTH","question":"위약금 계산법과 강남역 주변 해지 처리 매장 알려줘"},
+  {"eval_id":"HOLDOUT-016","expected_intent":"UNKNOWN","question":"자전거 체인이 자꾸 빠지는데 어떻게 고쳐요?"},
+  {"eval_id":"HOLDOUT-017","expected_intent":"UNKNOWN","question":"재테크를 시작하려면 어떤 적금이 좋나요?"},
+  {"eval_id":"HOLDOUT-018","expected_intent":"UNKNOWN","question":"김치볶음밥 만드는 법 알려줘"},
+  {"eval_id":"HOLDOUT-019","expected_intent":"UNKNOWN","question":"영어 면접에서 자기소개는 어떻게 하나요?"},
+  {"eval_id":"HOLDOUT-020","expected_intent":"UNKNOWN","question":"화분 잎이 노랗게 변하는 이유가 뭔가요?"}
+]

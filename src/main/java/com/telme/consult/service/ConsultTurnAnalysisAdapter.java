@@ -9,12 +9,14 @@ import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.FollowupContextService.Context;
 import com.telme.consult.service.FollowupSelectionValidator.Selection;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -71,6 +73,16 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         }
         if (result.directAnswer() != null) {
             return AnalyzedTurn.direct(result.directAnswer());
+        }
+        if (result.faqQueries() != null) {
+            long sessionId = context.sessionId();
+            List<ConsultChatProcessingService.FaqTurn> faqTurns = result.faqQueries().stream()
+                    .map(query -> new ConsultChatProcessingService.FaqTurn(
+                            preparation.prepareAnalysis(sessionId, query, LocationStatus.MISSING),
+                            query.queryText()))
+                    .toList();
+            return AnalyzedTurn.multipleFaq(faqTurns)
+                    .withContext(context.routingContext(), context.resolvedQuestion());
         }
         LocationStatus locationStatus = command.coordinates() == null
                 ? result.locationStatus() : LocationStatus.COORDINATES_AVAILABLE;
@@ -141,32 +153,45 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             FollowupAnalysis followup,
             LocationStatus locationStatus,
             ChatAnswer directAnswer,
-            boolean reroute) {
+            boolean reroute,
+            List<IntentSubQueryResponse> faqQueries) {
         public AnalysisResult(
                 IntentSubQueryResponse initialQuery,
                 FollowupAnalysis followup,
                 LocationStatus locationStatus) {
-            this(initialQuery, followup, locationStatus, null, false);
+            this(initialQuery, followup, locationStatus, null, false, null);
         }
 
         public static AnalysisResult direct(ChatAnswer answer) {
-            return new AnalysisResult(null, null, null, Objects.requireNonNull(answer), false);
+            return new AnalysisResult(null, null, null, Objects.requireNonNull(answer), false, null);
         }
 
         public static AnalysisResult rerouteRequest() {
-            return new AnalysisResult(null, null, null, null, true);
+            return new AnalysisResult(null, null, null, null, true, null);
+        }
+
+        public static AnalysisResult multipleFaq(List<IntentSubQueryResponse> queries) {
+            return new AnalysisResult(null, null, null, null, false, queries);
         }
 
         public AnalysisResult {
             int selected = (initialQuery != null ? 1 : 0)
                     + (followup != null ? 1 : 0)
                     + (directAnswer != null ? 1 : 0)
+                    + (faqQueries != null ? 1 : 0)
                     + (reroute ? 1 : 0);
             if (selected != 1) {
                 throw new IllegalArgumentException("분석 결과 하나가 필요합니다.");
             }
             if (initialQuery != null || followup != null) {
                 Objects.requireNonNull(locationStatus, "locationStatus");
+            }
+            if (faqQueries != null) {
+                faqQueries = List.copyOf(faqQueries);
+                if (faqQueries.size() < 2 || faqQueries.stream().anyMatch(
+                        query -> query.intent() != ConsultRequest.Intent.FAQ)) {
+                    throw new IllegalArgumentException("여러 FAQ 하위 질문이 필요합니다.");
+                }
             }
         }
     }

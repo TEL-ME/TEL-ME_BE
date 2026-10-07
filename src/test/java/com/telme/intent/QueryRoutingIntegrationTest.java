@@ -123,6 +123,44 @@ class QueryRoutingIntegrationTest {
     }
 
     @Test
+    @DisplayName("비교 질문은 모델이 양쪽 설명으로 나누어도 상담 요청 한 건으로 저장한다")
+    void comparisonPersistsOneConsultRequest() {
+        User user = persistUser("comparison");
+        ChatSession session = ChatSession.builder()
+                .userId(user.getUserId())
+                .title("비교 질문 테스트")
+                .status(ChatSession.Status.ACTIVE)
+                .build();
+        entityManager.persist(session);
+        ChatMessage message = ChatMessage.builder()
+                .session(session)
+                .sequenceNo(1)
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .content("5G와 LTE 요금제 종류를 비교해줘")
+                .status(ChatMessage.Status.COMPLETED)
+                .build();
+        entityManager.persist(message);
+        entityManager.flush();
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교",
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류"},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류"}]}
+                """);
+
+        IntentRouteResponse result = queryRoutingService.routeSingleConsult(message, null);
+
+        assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(result.subQueries()).hasSize(1);
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo(message.getContent());
+        assertThat(consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(
+                message.getMessageId()))
+                .singleElement()
+                .satisfies(request -> assertThat(request.getQueryText()).isEqualTo(message.getContent()));
+    }
+
+    @Test
     @DisplayName("통합 테스트: 동일 메시지에 대한 중복 라우팅 요청 시 멱등하게 기존 결과 반환")
     void routeDuplicate_returnsExistingIdempotently() {
         User user = persistUser("idempotent");

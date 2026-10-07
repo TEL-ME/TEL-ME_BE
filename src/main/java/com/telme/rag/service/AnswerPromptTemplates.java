@@ -83,6 +83,27 @@ public final class AnswerPromptTemplates {
             %s""".formatted(context, formatConditions(request.conditions()), request.userQuery());
     }
 
+    public static String systemPromptFor(String question) {
+        if (question != null && (question.contains("비교") || question.contains("차이"))) {
+            return ANSWER_SYSTEM_PROMPT + """
+
+                [비교 답변 추가 규칙]
+                인사, "비교해 드리겠습니다", "차이가 있습니다" 같은 사실 없는 첫 문장을 쓰지 마세요.
+                첫 문장에는 첫 대상의 질문받은 속성과 FAQ 답변(A)의 사실을, 둘째 문장에는 둘째 대상의
+                같은 속성과 FAQ 답변(A)의 사실을 적으세요. 한 FAQ에 두 대상이 모두 있어도 양쪽 사실을
+                빠뜨리지 마세요. 근거가 한쪽에만 있으면 답변 불가 문장만 출력하세요.
+                고객이 요청한 비교 기준 밖의 속성, 일반적인 요약, 추측, 선택 권고, 추가 안내를 쓰지 마세요.
+                두 대상의 차이를 말하려면 양쪽 근거에 그 차이를 뒷받침하는 사실이 있어야 합니다.
+                """;
+        }
+        return ANSWER_SYSTEM_PROMPT;
+    }
+
+    public static String promptVersionFor(String question) {
+        return question != null && (question.contains("비교") || question.contains("차이"))
+                ? PROMPT_VERSION + "-comparison-v2" : PROMPT_VERSION;
+    }
+
     private static String formatConditions(Map<String, String> conditions) {
         String formatted = conditions.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
