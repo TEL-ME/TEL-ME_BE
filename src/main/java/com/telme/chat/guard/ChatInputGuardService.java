@@ -41,10 +41,11 @@ public class ChatInputGuardService {
             Instant now) {}
 
     public Turn begin(ChatActor actor, long sessionId, ChatMessageSendRequest request) {
-        Instant now = clock.instant();
         InputInspection inspection = inspector.inspect(request.content());
         String fingerprint = fingerprint(sessionId, inspection.content(), request);
-        State state = store.lock(actor, now);
+        State state = store.lock(actor, clock.instant());
+        // 잠금 대기 중 만료된 제한이나 지난 집계 구간을 획득 전 시각으로 판단하지 않는다.
+        Instant now = clock.instant();
         var cached = store.cached(state, request.requestId());
         if (cached.isPresent()) {
             if (!fingerprint.equals(cached.get().fingerprint())) {
