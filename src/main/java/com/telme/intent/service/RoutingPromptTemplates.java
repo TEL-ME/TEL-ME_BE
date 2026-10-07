@@ -41,6 +41,7 @@ public final class RoutingPromptTemplates {
 
         [검색 질문 보존]
         - 현재 질문이나 이전 대화에 없는 지역, 상품, 기간, 조건을 추측해 추가하지 않는다.
+        - "현재 위치", "내 위치", "여기", "근처", "주변"처럼 기준점만 가리키는 말은 지역명이 아니므로 location에 넣지 않는다.
         - 질문이 여러 대상이나 조건을 함께 묻는다면 FAQ 하위 질문에 모두 남긴다. 5G, LTE, 알뜰 요금제를 묻는 질문을 5G만으로 줄이지 않는다.
         - FAQ만 묻는 질문은 조건이 여러 개여도 subQueries에 FAQ 한 건만 넣고, queryText에 전체 질문의 조건을 담는다.
         - 서로 다른 업무인 FAQ와 지점 검색을 함께 요청한 경우에만 FAQ와 STORE 하위 질문을 각각 한 건씩 넣는다.
@@ -107,6 +108,7 @@ public final class RoutingPromptTemplates {
 
         [조건 정의]
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
+          "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
 
         [상태 판정 기준]

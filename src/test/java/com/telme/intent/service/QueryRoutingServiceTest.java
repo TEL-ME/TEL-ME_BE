@@ -449,6 +449,22 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        void relativeLocationIsNotTreatedAsRegion() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.95,"refinedQuery":"현재 위치 가까운 매장",
+                 "extractedConditions":{"location":"현재 위치"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"현재 위치 가까운 매장",
+                  "conditions":{"location":"현재 위치"}}]}
+                """);
+
+            IntentRouteResponse result = service.route(msg("현재 위치에서 가까운 매장을 찾아줘"));
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(result.extractedConditions()).isEmpty();
+            assertThat(result.subQueries().getFirst().conditions()).isEmpty();
+        }
+
+        @Test
         void topLevelStoreConditionsReachSingleStoreConsultRequest() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 유심 매장",

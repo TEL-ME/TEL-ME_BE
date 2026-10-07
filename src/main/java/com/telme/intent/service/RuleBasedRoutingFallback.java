@@ -198,6 +198,10 @@ public class RuleBasedRoutingFallback {
         if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
             return null;
         }
+        // 기준점 표현이 있으면 그 앞의 실제 지명만 받는다("판교 근처요" -> 판교, "현재 위치에서 찾아줘" -> 없음)
+        if (RelativeLocation.mentions(reply)) {
+            return RelativeLocation.placeBefore(reply);
+        }
         // 짧다고 모두 지역으로 보면 "네", "잠깐만요"까지 FILLED가 되어 되묻기가 끊긴다
         if (ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
             return null;
