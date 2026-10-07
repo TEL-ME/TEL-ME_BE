@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
@@ -150,7 +151,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                                     turn.originalUserQuery(),
                                     turn.searchQuery(),
                                     conditionConverter.convert(
-                                            prepared.decision().conditions())));
+                                            prepared.decision().conditions()),
+                                    command.coordinates()));
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -392,12 +394,33 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             String originalUserQuery,
             String searchQuery,
             Map<String, String> confirmedConditions,
-            boolean streamTokens) {
+            boolean streamTokens,
+            ChatCoordinates coordinates) {
         public AnswerInput(long executionId, long sessionId, long consultRequestId,
                 Purpose purpose, String originalUserQuery, String searchQuery,
                 Map<String, String> confirmedConditions) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery,
-                    searchQuery, confirmedConditions, true);
+                    searchQuery, confirmedConditions, true, null);
+        }
+
+        public AnswerInput(long executionId, long sessionId, long consultRequestId,
+                Purpose purpose, String originalUserQuery, String searchQuery,
+                Map<String, String> confirmedConditions, boolean streamTokens) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery,
+                    searchQuery, confirmedConditions, streamTokens, null);
+        }
+
+        public AnswerInput(long executionId, long sessionId, long consultRequestId,
+                Purpose purpose, String originalUserQuery, String searchQuery,
+                Map<String, String> confirmedConditions, ChatCoordinates coordinates) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery,
+                    searchQuery, confirmedConditions, true, coordinates);
+        }
+
+        @Override
+        public String toString() {
+            return "AnswerInput[executionId=%d, sessionId=%d, consultRequestId=%d]"
+                    .formatted(executionId, sessionId, consultRequestId);
         }
 
         public AnswerInput {

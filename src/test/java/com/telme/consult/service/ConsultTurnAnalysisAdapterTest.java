@@ -36,6 +36,28 @@ class ConsultTurnAnalysisAdapterTest {
             mock(ConsultTurnPreparationService.class);
 
     @Test
+    void gpsResolvesWaitingLocationAndIsPassedAsVerifiedCoordinateStatus() {
+        var context = new Context(1, 10, "내 주변에서 찾아줘", List.of(new Candidate(
+                101L, "location", 9L, "어느 지역인가요?", "매장 찾아줘", "매장", "STORE")));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareFollowup(any(), any(), any())).thenAnswer(invocation -> {
+            Selection selection = invocation.getArgument(1);
+            assertThat(selection.updates().get("location").status())
+                    .isEqualTo(com.telme.consult.dto.DialogueInput.ConditionStatus.COORDINATES);
+            assertThat((LocationStatus) invocation.getArgument(2)).isEqualTo(LocationStatus.COORDINATES_AVAILABLE);
+            return new ConsultTurnPreparationService.PreparedFollowup(
+                    new ConsultService.PreparationResult(null, 9L),
+                    new ResolvedFollowup(101, 10, "location", selection.updates()),
+                    Purpose.NEARBY_STORE, "매장 찾아줘", "매장");
+        });
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+        adapter.analyze(new ChatProcessingCommand(100L, 1L, 10L, "내 주변에서 찾아줘",
+                new com.telme.chat.service.ChatCoordinates(37.5, 127)));
+    }
+
+    @Test
     void mismatchedMessageCannotReachAnalysis() {
         var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
         var adapter =

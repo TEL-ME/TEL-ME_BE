@@ -36,7 +36,12 @@ class ConsultChatPipelineConfigurationTest {
                     .withUserConfiguration(
                             ConsultTurnRoutingConfiguration.class,
                             ConsultRagAnswerConfiguration.class,
+                            ConsultStoreSearchConfiguration.class,
                             ConsultChatProcessingConfiguration.class)
+                    .withBean(com.telme.store.service.StoreSearchService.class,
+                            () -> mock(com.telme.store.service.StoreSearchService.class))
+                    .withBean(com.telme.chat.converter.ChatStoreConverter.class,
+                            com.telme.chat.converter.ChatStoreConverter::new)
                     .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
                     .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
                     .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
@@ -60,6 +65,22 @@ class ConsultChatPipelineConfigurationTest {
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new);
+
+    @Test
+    void namedLocationImplementationReplacesUnavailableAdapter() {
+        var named = mock(com.telme.consult.service.NamedLocationStoreSearchPort.class);
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(com.telme.consult.service.NamedLocationStoreSearchPort.class, () -> named)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(com.telme.consult.service.NamedLocationStoreSearchPort.class);
+                    assertThat(context.getBean(com.telme.consult.service.NamedLocationStoreSearchPort.class))
+                            .isSameAs(named);
+                });
+    }
 
     @Test
     void enabledPipelineRegistersOneChatProcessingPortAndRealFaqRagAdapters() {

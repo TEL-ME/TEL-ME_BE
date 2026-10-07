@@ -3,6 +3,7 @@ package com.telme.consult.config;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ComparisonEvidenceResolver;
 import com.telme.consult.service.FaqCandidateEvidenceResolver;
+import com.telme.consult.service.ChatStoreAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
@@ -63,9 +64,10 @@ public class ConsultRagAnswerConfiguration {
     AnswerProvider consultAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
-            AnswerContextConverter sourceConverter) {
+            AnswerContextConverter sourceConverter, ChatStoreAnswerProvider storeAnswers) {
         return new PurposeRoutingAnswerProvider(
                 new FaqSearchAnswerProvider(searches, answers, trace,
-                        comparisonEvidence, candidateEvidence, sourceConverter));
+                        comparisonEvidence, candidateEvidence, sourceConverter),
+                storeAnswers::generate);
     }
 }

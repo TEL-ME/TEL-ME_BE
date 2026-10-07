@@ -83,6 +83,10 @@ public class ChatMessage {
     @Column(name = "store_results", columnDefinition = "jsonb")
     private String storeResults;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "store_search_context", columnDefinition = "jsonb")
+    private String storeSearchContext;
+
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     @Generated(event = EventType.INSERT)
     private Instant createdAt;
@@ -98,11 +102,19 @@ public class ChatMessage {
             String storeResults,
             Instant completedAt
     ) {
+        complete(messageType, content, answerBasis, followUps, storeResults, null, completedAt);
+    }
+
+    public void complete(
+            MessageType messageType, String content, AnswerBasis answerBasis, String followUps,
+            String storeResults, String storeSearchContext, Instant completedAt
+    ) {
         this.messageType = messageType;
         this.content = content;
         this.answerBasis = answerBasis;
         this.followUps = followUps;
         this.storeResults = storeResults;
+        this.storeSearchContext = storeSearchContext;
         this.status = Status.COMPLETED;
         this.completedAt = completedAt;
     }
