@@ -7,6 +7,7 @@ import com.telme.llm.dto.req.AdminLlmErrorType;
 import com.telme.llm.dto.res.AdminLlmErrorListItemResponse;
 import com.telme.llm.dto.res.AdminLlmErrorListResponse;
 import com.telme.llm.entity.LlmGeneration.TaskType;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,8 +68,8 @@ class AdminLlmErrorQueryServiceTest {
     @Test
     @DisplayName("페이지를 나눠도 같은 기록이 두 번 나오지 않는다")
     void 페이지를_나눈다() {
-        AdminLlmErrorListResponse first = service.getErrors(new AdminLlmErrorSearchRequest(null, null, 0, 2));
-        AdminLlmErrorListResponse second = service.getErrors(new AdminLlmErrorSearchRequest(null, null, 1, 2));
+        AdminLlmErrorListResponse first = service.getErrors(new AdminLlmErrorSearchRequest(null, null, null, null, 0, 2));
+        AdminLlmErrorListResponse second = service.getErrors(new AdminLlmErrorSearchRequest(null, null, null, null, 1, 2));
 
         assertThat(first.errors()).hasSize(2);
         assertThat(second.errors().get(0).errorType()).isEqualTo("CONNECTION_FAILED");
@@ -89,8 +90,18 @@ class AdminLlmErrorQueryServiceTest {
         assertThat(response.errors().get(0).attempt()).isEqualTo(2);
     }
     
+    @Test
+    @DisplayName("기간을 주면 from 이상, to 미만에 생긴 오류만 반환한다")
+    void 기간으로_거른다() {
+        AdminLlmErrorListResponse response = service.getErrors(new AdminLlmErrorSearchRequest(null, null,
+                Instant.parse("2100-01-01T00:00:15Z"), Instant.parse("2100-01-01T00:00:50Z"), null, null));
+
+        assertThat(response.errors()).extracting(AdminLlmErrorListItemResponse::attempt).containsExactly(1);
+        assertThat(response.totalElements()).isEqualTo(1);
+    }
+    
     private AdminLlmErrorSearchRequest request(AdminLlmErrorType errorType, TaskType taskType) {
-        return new AdminLlmErrorSearchRequest(errorType, taskType, null, null);
+        return new AdminLlmErrorSearchRequest(errorType, taskType, null, null, null, null);
     }
 
     private void insert(String taskType, int attempt, String status, String errorMessage, int secondsAfterBase) {

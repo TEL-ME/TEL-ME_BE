@@ -1,6 +1,7 @@
 package com.telme.llm.repository;
 
 import com.telme.llm.entity.LlmGeneration;
+import java.time.Instant;
 import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,10 +19,13 @@ public interface LlmGenerationRepository extends JpaRepository<LlmGeneration, Lo
                                com.telme.llm.entity.LlmGeneration$Status.MODEL_ERROR)
               and g.status in :statuses
               and g.taskType in :taskTypes
+              and g.createdAt >= :from and g.createdAt < :to
             order by g.createdAt desc, g.generationId desc
             """)
     Page<LlmGeneration> findAdminErrors(
             @Param("statuses") Collection<LlmGeneration.Status> statuses,
             @Param("taskTypes") Collection<LlmGeneration.TaskType> taskTypes,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
             Pageable pageable);
 }

@@ -21,6 +21,8 @@ public class AdminLlmErrorQueryService {
         return converter.toListResponse(llmGenerationRepository.findAdminErrors(
                 request.errorType().toStatuses(), 
                 request.taskTypes(), 
+                request.fromOrMin(),
+                request.toOrMax(),
                 PageRequest.of(request.page(), request.size())));
     }
 }
