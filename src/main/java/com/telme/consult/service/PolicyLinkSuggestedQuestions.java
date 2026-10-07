@@ -7,6 +7,7 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,10 +20,17 @@ import java.util.Objects;
 public final class PolicyLinkSuggestedQuestions implements SuggestedQuestions {
     private final SuggestedQuestionRecommender recommender;
     private final FaqLookup faqs;
+    private final boolean storeQuestionEnabled;
 
     public PolicyLinkSuggestedQuestions(SuggestedQuestionRecommender recommender, FaqLookup faqs) {
+        this(recommender, faqs, false);
+    }
+
+    public PolicyLinkSuggestedQuestions(
+            SuggestedQuestionRecommender recommender, FaqLookup faqs, boolean storeQuestionEnabled) {
         this.recommender = Objects.requireNonNull(recommender);
         this.faqs = Objects.requireNonNull(faqs);
+        this.storeQuestionEnabled = storeQuestionEnabled;
     }
 
     @Override
@@ -33,25 +41,38 @@ public final class PolicyLinkSuggestedQuestions implements SuggestedQuestions {
         // 추천은 부가 정보라 실패해도 답변은 그대로 저장한다
         try {
             FaqSearchResponse top = searchResults.getFirst();
-            // 검색 결과에는 정책 ID가 없다. 관리자가 바꿀 수 있는 값이라 DB의 현재 값을 쓴다
-            String policyRef = top.faqId() == null ? null : faqs.policyRef(top.faqId());
-            List<String> candidates = recommender.candidateSlotIds(new BaseFaq(top.slotId(), policyRef, top.question()));
-            if (candidates.isEmpty()) {
-                return List.of();
+            List<String> out = new ArrayList<>();
+            // 매장 방문이 필요한 답변 뒤에는 매장 찾기를 첫 자리에 둔다. 연결표 추천 자리를 차지하지 않아 최대 3개다
+            if (storeQuestionEnabled) {
+                String store = recommender.storeQuestion(top.category(), top.answer());
+                if (store != null) {
+                    out.add(store);
+                }
             }
-            // 버튼은 질문 문장으로 다시 검색된다. 관리자가 숨기거나 고친 대표 FAQ가 있으므로
-            // 검색에 나올 수 있는 FAQ의 현재 질문만 쓰고, 빠진 자리는 다음 후보로 채운다
-            Map<String, String> searchable = faqs.searchableQuestions(candidates);
-            return candidates.stream()
-                    .map(searchable::get)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .limit(SuggestedQuestionRecommender.MAX_QUESTIONS)
-                    .toList();
+            out.addAll(policyLinkQuestions(top));
+            return out.stream().distinct().toList();
         } catch (RuntimeException e) {
             log.warn("추천 질문 생성 실패", e);
             return List.of();
         }
+    }
+
+    private List<String> policyLinkQuestions(FaqSearchResponse top) {
+        // 검색 결과에는 정책 ID가 없다. 관리자가 바꿀 수 있는 값이라 DB의 현재 값을 쓴다
+        String policyRef = top.faqId() == null ? null : faqs.policyRef(top.faqId());
+        List<String> candidates = recommender.candidateSlotIds(new BaseFaq(top.slotId(), policyRef, top.question()));
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        // 버튼은 질문 문장으로 다시 검색된다. 관리자가 숨기거나 고친 대표 FAQ가 있으므로
+        // 검색에 나올 수 있는 FAQ의 현재 질문만 쓰고, 빠진 자리는 다음 후보로 채운다
+        Map<String, String> searchable = faqs.searchableQuestions(candidates);
+        return candidates.stream()
+                .map(searchable::get)
+                .filter(Objects::nonNull)
+                .distinct()
+                .limit(SuggestedQuestionRecommender.MAX_QUESTIONS)
+                .toList();
     }
 
     /** 추천에 필요한 FAQ 조회. */

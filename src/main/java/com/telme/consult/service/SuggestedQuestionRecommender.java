@@ -1,5 +1,6 @@
 package com.telme.consult.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.core.io.ClassPathResource;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -29,6 +31,8 @@ public final class SuggestedQuestionRecommender {
     private final Map<String, List<Link>> linksByPolicy;
     private final Map<String, RepresentativeQuestion> representativeByPolicy;
     private final Map<String, String> questionBySlotId;
+    private final StoreQuestions storeQuestions;
+    private final Pattern storeNegation;
     private final FaqRules rules;
 
     SuggestedQuestionRecommender(PolicyLinks policyLinks, FaqRules rules) {
@@ -55,6 +59,10 @@ public final class SuggestedQuestionRecommender {
         this.representativeByPolicy = representatives;
         this.questionBySlotId = Map.copyOf(questions);
         this.linksByPolicy = Map.copyOf(links);
+        this.storeQuestions = policyLinks.storeQuestions();
+        // 잘못된 정규식이면 기동할 때 바로 실패한다
+        this.storeNegation = storeQuestions == null || storeQuestions.negation() == null
+                ? null : Pattern.compile(storeQuestions.negation());
     }
 
     public static SuggestedQuestionRecommender load(ObjectMapper mapper) {
@@ -68,6 +76,21 @@ public final class SuggestedQuestionRecommender {
         } catch (IOException e) {
             throw new UncheckedIOException("추천 질문 데이터를 읽을 수 없습니다: " + path, e);
         }
+    }
+
+    /**
+     * 기준 FAQ 답변이 매장을 언급하면 카테고리별 매장 찾기 문장, 아니면 null이다.
+     * "매장 방문 없이", "매장이 아니라"처럼 매장에 갈 필요가 없다는 표현은 언급으로 보지 않는다.
+     */
+    public String storeQuestion(String category, String answer) {
+        if (storeQuestions == null || answer == null) {
+            return null;
+        }
+        String text = storeNegation == null ? answer : storeNegation.matcher(answer).replaceAll("");
+        if (!text.contains(storeQuestions.mention())) {
+            return null;
+        }
+        return storeQuestions.byCategory().getOrDefault(category, storeQuestions.fallback());
     }
 
     /** 연결표 JSON의 대표 질문 문장으로 최대 2개. 검증한 기대 추천과 비교할 때 쓴다. */
@@ -161,10 +184,31 @@ public final class SuggestedQuestionRecommender {
     }
 
     record PolicyLinks(
-            Map<String, RepresentativeQuestion> representativeQuestions, Map<String, PolicyEntry> policies) {
+            Map<String, RepresentativeQuestion> representativeQuestions,
+            Map<String, PolicyEntry> policies,
+            StoreQuestions storeQuestions) {
         PolicyLinks {
             representativeQuestions = Objects.requireNonNull(representativeQuestions, "representativeQuestions");
             policies = Objects.requireNonNull(policies, "policies");
+        }
+
+        PolicyLinks(Map<String, RepresentativeQuestion> representativeQuestions, Map<String, PolicyEntry> policies) {
+            this(representativeQuestions, policies, null);
+        }
+    }
+
+    // 기준 FAQ 답변에 mention이 있으면 붙이는 매장 찾기 버튼 문장. 카테고리에 없으면 fallback.
+    // negation(정규식)에 맞는 부분은 매장에 갈 필요가 없다는 표현이라 언급에서 뺀다
+    record StoreQuestions(
+            String mention,
+            String negation,
+            Map<String, String> byCategory,
+            @JsonProperty("default") String fallback) {
+        StoreQuestions {
+            if (mention == null || mention.isBlank() || fallback == null || fallback.isBlank()) {
+                throw new IllegalStateException("매장 버튼에는 mention, default가 필요합니다");
+            }
+            byCategory = byCategory == null ? Map.of() : Map.copyOf(byCategory);
         }
     }
 

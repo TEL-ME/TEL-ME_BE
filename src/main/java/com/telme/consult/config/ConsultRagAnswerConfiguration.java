@@ -76,7 +76,8 @@ public class ConsultRagAnswerConfiguration {
         }
         return new PolicyLinkSuggestedQuestions(
                 SuggestedQuestionRecommender.load(new ObjectMapper()),
-                new SuggestedQuestionFaqFinder(jdbc.getObject(), embedding.getObject().model()));
+                new SuggestedQuestionFaqFinder(jdbc.getObject(), embedding.getObject().model()),
+                properties.storeChipEnabled());
     }
 
     @Bean
