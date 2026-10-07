@@ -1,0 +1,22 @@
+{
+  "version": "chat-input-guard-v1",
+  "allowWords": ["시발점", "시발역", "시발열차"],
+  "rules": [
+    {"id": "SIBAL", "term": "씨발", "reason": "PROFANITY"},
+    {"id": "SIPAL", "term": "씨팔", "reason": "PROFANITY"},
+    {"id": "SIBEOL", "term": "씨벌", "reason": "PROFANITY"},
+    {"id": "SIBAL_VARIANT", "term": "시발", "reason": "PROFANITY"},
+    {"id": "GAESAEKKI", "term": "개새끼", "reason": "PROFANITY"},
+    {"id": "GAESAEGI", "term": "개새기", "reason": "PROFANITY"},
+    {"id": "GAESAEKI", "term": "개새키", "reason": "PROFANITY"},
+    {"id": "BYEONGSIN", "term": "병신", "reason": "PROFANITY"},
+    {"id": "BYUNGSIN", "term": "븅신", "reason": "PROFANITY"},
+    {"id": "BYEONGSWIN", "term": "병쉰", "reason": "PROFANITY"},
+    {"id": "INITIAL_SB", "term": "ㅅㅂ", "reason": "INITIAL_PROFANITY"},
+    {"id": "INITIAL_SSB", "term": "ㅆㅂ", "reason": "INITIAL_PROFANITY"},
+    {"id": "INITIAL_BS", "term": "ㅂㅅ", "reason": "INITIAL_PROFANITY"},
+    {"id": "INITIAL_BS_COMPOUND", "term": "ㅄ", "reason": "INITIAL_PROFANITY"},
+    {"id": "JIRAL", "term": "지랄", "reason": "PROFANITY"},
+    {"id": "INITIAL_JR", "term": "ㅈㄹ", "reason": "INITIAL_PROFANITY"}
+  ]
+}

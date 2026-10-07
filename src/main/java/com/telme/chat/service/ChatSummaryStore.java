@@ -10,6 +10,7 @@ import com.telme.chat.repository.ChatSessionRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,7 @@ class ChatSummaryStore {
                 summaryCursor,
                 nextSequenceNo(request.completedThroughSequenceNo()),
                 ChatMessage.Status.COMPLETED,
-                ChatMessage.MessageType.ERROR,
+                Set.of(ChatMessage.MessageType.ERROR, ChatMessage.MessageType.BLOCKED),
                 PageRequest.of(0, triggerQueryLimit())
         );
         Integer summarizeThrough = findSummarizeThrough(recentCandidates);
@@ -62,7 +63,7 @@ class ChatSummaryStore {
                 summaryCursor,
                 summarizeThrough,
                 ChatMessage.Status.COMPLETED,
-                ChatMessage.MessageType.ERROR,
+                Set.of(ChatMessage.MessageType.ERROR, ChatMessage.MessageType.BLOCKED),
                 PageRequest.of(0, queryLimit)
         );
 

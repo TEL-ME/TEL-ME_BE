@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -59,7 +60,7 @@ public class ChatContextBuilder {
                 execution.getSession().getSummaryThroughSequenceNo(),
                 inputMessage.getSequenceNo(),
                 ChatMessage.Status.COMPLETED,
-                ChatMessage.MessageType.ERROR,
+                Set.of(ChatMessage.MessageType.ERROR, ChatMessage.MessageType.BLOCKED),
                 PageRequest.of(0, historyQueryLimit())
         );
 

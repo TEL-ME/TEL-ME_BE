@@ -34,7 +34,7 @@ public class ChatMessage {
 
     public enum Role { USER, ASSISTANT }
 
-    public enum MessageType { QUESTION, ANSWER, CLARIFICATION, STORE_RESULT, ERROR }
+    public enum MessageType { QUESTION, ANSWER, CLARIFICATION, STORE_RESULT, ERROR, BLOCKED }
 
     public enum Status { GENERATING, COMPLETED, FAILED, TIMEOUT, CANCELLED }
 

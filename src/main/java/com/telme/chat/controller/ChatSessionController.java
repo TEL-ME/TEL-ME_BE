@@ -22,6 +22,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -120,14 +121,18 @@ public class ChatSessionController {
 
     @Operation(summary = "사용자 메시지 전송")
     @PostMapping("/{sessionId}/messages")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CustomResponse<ChatMessageSendResponse> sendMessage(
+    public ResponseEntity<CustomResponse<ChatMessageSendResponse>> sendMessage(
             HttpServletRequest servletRequest,
             @PathVariable Long sessionId,
             @Valid @RequestBody ChatMessageSendRequest request
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
         ChatMessageSendResponse response = chatSessionService.sendMessage(actor, sessionId, request);
-        return CustomResponse.onSuccess(HttpStatus.CREATED, response);
+        HttpStatus status = response.accepted() ? HttpStatus.CREATED : HttpStatus.OK;
+        var result = ResponseEntity.status(status);
+        if (response.inputGuard() != null && response.inputGuard().retryAfterSeconds() > 0) {
+            result.header("Retry-After", Long.toString(response.inputGuard().retryAfterSeconds()));
+        }
+        return result.body(CustomResponse.onSuccess(status, response));
     }
 }
