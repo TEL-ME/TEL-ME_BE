@@ -77,7 +77,8 @@ class ConditionExtractionEval {
             }
             System.out.printf("EVAL|%s|%s|기대 %d(%s)|나온 것 %d|%s%n",
                     verdict, question, expected, each.get("about").asText(), conditions.size(),
-                    conditions.stream().map(MissingCondition::question).reduce((a, b) -> a + " / " + b).orElse(""));
+                    conditions.stream().map(ConditionExtractionEval::asked)
+                            .reduce((a, b) -> a + " / " + b).orElse(""));
         }
 
         int scored = hit + missed + invented;
@@ -86,5 +87,11 @@ class ConditionExtractionEval {
                 hit, missed, invented, noSource,
                 scored == 0 ? 0 : hit * 100.0 / scored, scored == 0 ? 0 : elapsed / scored);
         assertThat(scored + noSource).isEqualTo(cases.size());
+    }
+
+    // 질문과 선택지가 맞는지 보려면 둘을 같이 찍어야 한다
+    private static String asked(MissingCondition condition) {
+        return condition.question()
+                + (condition.options().isEmpty() ? " [직접입력]" : " " + condition.options());
     }
 }

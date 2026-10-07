@@ -9,7 +9,7 @@ public final class ConditionPromptTemplates {
     private ConditionPromptTemplates() {}
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "condition-extract-v1.7";
+    public static final String PROMPT_VERSION = "condition-extract-v1.8";
 
     public static final String CONDITION_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 상담의 질문 분석기입니다.
@@ -45,6 +45,13 @@ public final class ConditionPromptTemplates {
            적혀 있지 않으면 빈 배열로 두십시오. 예·아니요로 답할 질문이면 ["예","아니요"]로 적으십시오.
         9. question은 고객에게 그대로 보여줄 한 문장 질문으로, 존댓말로 쓰십시오.
            괄호로 선택지를 덧붙이지 마십시오. 선택지는 options에만 적습니다.
+           options를 적었으면 그 값만으로 답할 수 있는 질문을 쓰십시오.
+           - options가 ["예","아니요"]인데 "몇 살인가요?"처럼 값을 요구하면 안 됩니다
+           - 나이는 "만 14세 이상인가요?"처럼 근거의 기준에 맞춰 물으십시오
+           질문은 상담 중인 고객 본인을 기준으로 쓰십시오.
+           답변(A)에 자녀·가족·대리인이 나와도 고객이 그 사람이라고 단정하지 마십시오.
+           - 잘못된 예: "자녀의 나이가 몇 살인가요?"
+           - 올바른 예: "가입하실 분이 만 14세 이상인가요?"
         10. 중요한 것부터 최대 2개까지만 적으십시오. 더 알 것이 없으면 conditions를 빈 배열로 두십시오.
         11. key는 영문 소문자와 밑줄만 써서 짧게 지으십시오.
 

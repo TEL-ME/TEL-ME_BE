@@ -14,6 +14,10 @@ final class ConditionGrounding {
 
     // 모델이 근거를 조금씩 바꿔 쓴다. 이어지는 글자가 이만큼 겹치면 그 문장을 보고 쓴 것으로 친다
     private static final int MIN_OVERLAP = 8;
+    // 되묻는 질문은 근거 문장보다 짧아 기준도 더 낮다
+    private static final int MIN_QUESTION_OVERLAP = 6;
+    // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
+    private static final int MIN_SAID_OVERLAP = 5;
 
     private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
@@ -96,6 +100,26 @@ final class ConditionGrounding {
             }
         }
         return false;
+    }
+
+    // 고객이 질문에 쓴 말을 그대로 되묻는 것을 막는다. "로밍 무제한 할까요?"에 무제한을 원하는지 묻는 경우다
+    static boolean alreadySaid(String userQuery, String question) {
+        String asked = compact(question);
+        String said = compact(userQuery == null ? "" : userQuery);
+        return !asked.isEmpty() && !said.isEmpty()
+                && longestOverlap(said, asked) >= MIN_SAID_OVERLAP;
+    }
+
+    // 같은 사실을 범위만 바꿔 두 번 묻는 것을 막는다. "만 14세 이상"과 "만 14세 이상 18세 이하"가 그 경우다
+    static boolean asksTheSame(String question, String other) {
+        String left = compact(question);
+        String right = compact(other);
+        if (left.isEmpty() || right.isEmpty()) {
+            return false;
+        }
+        int overlap = longestOverlap(left, right);
+        return overlap >= MIN_QUESTION_OVERLAP
+                && overlap * 2 >= Math.min(left.length(), right.length());
     }
 
     private static int longestOverlap(String text, String sourceText) {

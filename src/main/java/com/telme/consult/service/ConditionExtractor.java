@@ -43,8 +43,11 @@ public class ConditionExtractor {
         Set<String> keys = new HashSet<>();
         for (var candidate : payload.conditions()) {
             // 같은 조건을 두 번 물으면 안 되고, 중복이 개수 제한을 먼저 채우면 다른 조건이 밀려난다
+            // 키가 달라도 묻는 내용이 같으면 중복이다. age와 age_range로 나뉘어 나오는 경우가 있다
             toCondition(candidate, sources)
                     .filter(condition -> keys.add(condition.key()))
+                    .filter(condition -> notSaidByUser(userQuery, condition))
+                    .filter(condition -> notAskedAlready(conditions, condition))
                     .ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
@@ -98,5 +101,22 @@ public class ConditionExtractor {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();
         }
+    }
+
+    private boolean notAskedAlready(List<MissingCondition> kept, MissingCondition condition) {
+        boolean duplicate = kept.stream()
+                .anyMatch(each -> ConditionGrounding.asksTheSame(each.question(), condition.question()));
+        if (duplicate) {
+            log.info("[조건 뽑기] 같은 내용을 다시 묻는 조건을 버립니다. key={}", condition.key());
+        }
+        return !duplicate;
+    }
+
+    private boolean notSaidByUser(String userQuery, MissingCondition condition) {
+        boolean said = ConditionGrounding.alreadySaid(userQuery, condition.question());
+        if (said) {
+            log.info("[조건 뽑기] 고객이 이미 말한 조건을 버립니다. key={}", condition.key());
+        }
+        return !said;
     }
 }
