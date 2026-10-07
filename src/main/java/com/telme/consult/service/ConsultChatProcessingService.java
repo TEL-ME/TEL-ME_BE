@@ -8,6 +8,7 @@ import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -34,6 +35,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private final ConfirmedConditionConverter conditionConverter;
     private final ConsultChatEvents events;
     private final ExecutionTrace trace;
+    private final AskedQuestions askedQuestions;
 
     public ConsultChatProcessingService(
             TurnAnalyzer analyzer,
@@ -64,6 +66,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
             ExecutionTrace trace) {
+        this(analyzer, answers, persistence, conditionConverter, events, trace, AskedQuestions.none());
+    }
+
+    public ConsultChatProcessingService(
+            TurnAnalyzer analyzer,
+            AnswerProvider answers,
+            ConsultChatPersistenceService persistence,
+            ConfirmedConditionConverter conditionConverter,
+            ConsultChatEvents events,
+            ExecutionTrace trace,
+            AskedQuestions askedQuestions) {
+        this.askedQuestions = Objects.requireNonNull(askedQuestions);
         this.analyzer = Objects.requireNonNull(analyzer);
         this.answers = Objects.requireNonNull(answers);
         this.persistence = Objects.requireNonNull(persistence);
@@ -129,7 +143,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 turn.originalUserQuery(),
                 turn.searchQuery(),
                 conditionConverter.convert(prepared.decision().conditions()),
-                command.coordinates());
+                command.coordinates(),
+                askedQuestions.of(prepared.decision().consultRequestId()));
         // 되묻기는 답변 메시지를 열기 전에 정해야 한다. 열고 나서 되물으면 빈 답변이 남는다
         Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
                 ? answers.prepare(answerInput)
@@ -342,12 +357,21 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             String originalUserQuery,
             String searchQuery,
             Map<String, String> confirmedConditions,
-            ChatCoordinates coordinates) {
+            ChatCoordinates coordinates,
+            Map<String, String> askedQuestions) {
         public AnswerInput(
                 long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
-                    confirmedConditions, null);
+                    confirmedConditions, null, Map.of());
+        }
+
+        public AnswerInput(
+                long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                ChatCoordinates coordinates) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, coordinates, Map.of());
         }
 
         @Override
@@ -372,6 +396,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                     Map.copyOf(
                             Objects.requireNonNull(
                                     confirmedConditions, "confirmedConditions"));
+            askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
         }
     }
 }

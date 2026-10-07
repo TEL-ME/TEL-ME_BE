@@ -52,15 +52,23 @@ public final class AnswerPromptTemplates {
             %s
 
             [고객 질문]
-            %s""".formatted(context, formatConditions(request.conditions()), request.userQuery());
+            %s""".formatted(context, formatConditions(request.conditions(), request.conditionLabels()), request.userQuery());
     }
 
-    private static String formatConditions(Map<String, String> conditions) {
+    private static String formatConditions(
+            Map<String, String> conditions, Map<String, String> askedQuestions) {
         String formatted = conditions.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-                .map(entry -> "- %s: %s".formatted(
-                        CONDITION_LABELS.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue()))
+                .map(entry -> "- %s: %s".formatted(label(entry.getKey(), askedQuestions), entry.getValue()))
                 .collect(Collectors.joining("\n"));
         return formatted.isEmpty() ? "없음" : formatted;
+    }
+
+    // 되물은 질문이 있으면 그 문구를 쓴다. "age: 예"로는 무엇에 대한 답인지 알 수 없다
+    private static String label(String key, Map<String, String> askedQuestions) {
+        String asked = askedQuestions.get(key);
+        return asked != null && !asked.isBlank()
+                ? asked
+                : CONDITION_LABELS.getOrDefault(key, key);
     }
 }

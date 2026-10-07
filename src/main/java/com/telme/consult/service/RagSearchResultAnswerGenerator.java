@@ -45,6 +45,7 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         .consultRequestId(input.consultRequestId())
                         .userQuery(input.originalUserQuery())
                         .conditions(input.confirmedConditions())
+                        .conditionLabels(input.askedQuestions())
                         .searchResults(results)
                         .build();
         AnswerResult result =
