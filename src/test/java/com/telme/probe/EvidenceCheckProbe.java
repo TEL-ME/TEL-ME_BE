@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.BeansException;
@@ -47,6 +49,8 @@ class EvidenceCheckProbe {
     private static final int TOP_K = 3;
     private static final int REPEAT =
             Integer.parseInt(System.getenv().getOrDefault("TELME_PROBE_REPEAT", "3"));
+    // BASELINE: 채팅과 같은 근거(Q+A) / A: FAQ 질문을 빼고 답변 본문만
+    private static final String VARIANT = System.getenv().getOrDefault("TELME_PROBE_VARIANT", "BASELINE");
 
     @Autowired
     private FaqSearchService faqSearchService;
@@ -79,7 +83,7 @@ class EvidenceCheckProbe {
 
             List<Map<String, Object>> runs = new ArrayList<>();
             if (!results.isEmpty()) {
-                String context = contextConverter.toContext(results);
+                String context = toContext(results);
                 for (int i = 1; i <= REPEAT; i++) {
                     CapturingLlmClient.reset();
                     long start = System.nanoTime();
@@ -110,6 +114,8 @@ class EvidenceCheckProbe {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("measuredAt", LocalDateTime.now().toString());
         out.put("promptVersion", EvidenceRelevancePromptTemplates.PROMPT_VERSION);
+        out.put("variant", VARIANT);
+        out.put("labelVersion", mapper.readTree(CASES.toFile()).path("label_version").asText("v1"));
         out.put("topK", TOP_K);
         out.put("repeat", REPEAT);
         out.put("cases", records);
@@ -117,9 +123,20 @@ class EvidenceCheckProbe {
         Path dir = Path.of(System.getenv().getOrDefault("TELME_PROBE_OUT", ".measure"));
         Files.createDirectories(dir);
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        Path file = dir.resolve("evidence-check-baseline-" + stamp + ".json");
+        Path file = dir.resolve("evidence-check-" + VARIANT.toLowerCase() + "-" + stamp + ".json");
         mapper.writeValue(file.toFile(), out);
         System.out.println(">>> EVIDENCE-PROBE saved " + file.toAbsolutePath());
+    }
+
+    private String toContext(List<FaqSearchResponse> results) {
+        return switch (VARIANT) {
+            case "BASELINE" -> contextConverter.toContext(results);
+            // AnswerGuard처럼 답변 본문만 근거로 본다
+            case "A" -> IntStream.range(0, results.size())
+                    .mapToObj(i -> "[%d] %s".formatted(i + 1, results.get(i).answer()))
+                    .collect(Collectors.joining("\n\n"));
+            default -> throw new IllegalArgumentException("알 수 없는 TELME_PROBE_VARIANT: " + VARIANT);
+        };
     }
 
     // 판정기가 실패를 true를 돌려주므로, 실제 응답, 예외를 따로 잡아 두려고 감쌈
