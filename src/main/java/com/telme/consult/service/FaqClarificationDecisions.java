@@ -13,6 +13,8 @@ import java.util.Map;
 /** 되묻기 계획을 기존 상담 판단으로 옮긴다. 저장과 대기 상태는 매장 되묻기와 같은 경로를 쓴다. */
 public final class FaqClarificationDecisions {
 
+    private static final int MAX_OPTIONS = 3;
+
     private FaqClarificationDecisions() {}
 
     public static DialogueDecision ask(
@@ -29,6 +31,8 @@ public final class FaqClarificationDecisions {
                 conditions,
                 asked.key(),
                 asked.question(),
-                MessageOrigin.TEMPLATE);
+                MessageOrigin.TEMPLATE,
+                // 화면이 버튼을 세 개까지 그린다. 넘는 선택지는 눌러서 답할 수 없어 버린다
+                asked.options().stream().limit(MAX_OPTIONS).toList());
     }
 }

@@ -58,6 +58,39 @@ class FaqClarificationDecisionsTest {
     }
 
     @Test
+    @DisplayName("먼저 물을 조건의 선택지를 함께 넘긴다")
+    void 선택지를_넘긴다() {
+        DialogueDecision decision = FaqClarificationDecisions.ask(
+                1L, new ClarificationPlan(List.of(PLAN_TYPE, UNPAID)), Map.of());
+
+        assertThat(decision.options()).containsExactly("5G", "LTE");
+    }
+
+    @Test
+    @DisplayName("선택지가 없는 조건은 빈 목록으로 넘긴다")
+    void 선택지가_없으면_빈_목록이다() {
+        MissingCondition typed = new MissingCondition(
+                "join_date", "언제 가입하셨나요?", List.of(), "가입일 기준");
+
+        DialogueDecision decision = FaqClarificationDecisions.ask(
+                1L, new ClarificationPlan(List.of(typed)), Map.of());
+
+        assertThat(decision.options()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("화면이 그리는 수를 넘는 선택지는 버린다")
+    void 선택지는_세_개까지다() {
+        MissingCondition many = new MissingCondition(
+                "plan_type", "어떤 요금제를 쓰고 계신가요?", List.of("5G", "LTE", "알뜰", "3G"), "요금제는");
+
+        DialogueDecision decision = FaqClarificationDecisions.ask(
+                1L, new ClarificationPlan(List.of(many)), Map.of());
+
+        assertThat(decision.options()).containsExactly("5G", "LTE", "알뜰");
+    }
+
+    @Test
     @DisplayName("이미 받은 조건을 먼저 물으려 하면 막는다")
     void 받은_조건은_다시_못_묻는다() {
         Map<String, Condition> previous =

@@ -194,7 +194,8 @@ public class ConsultChatPersistenceService {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
         ChatExecutionState state =
-                chatExecutionService.askClarification(executionId, prepared.decision().message());
+                chatExecutionService.askClarification(
+                        executionId, prepared.decision().message(), prepared.decision().options());
         if (state.outputMessage() == null) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
