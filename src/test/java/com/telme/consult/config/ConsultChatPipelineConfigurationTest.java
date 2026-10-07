@@ -19,13 +19,16 @@ import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
 import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
+import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.rag.service.AnswerGenerator;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class ConsultChatPipelineConfigurationTest {
     private final ApplicationContextRunner runner =
@@ -74,6 +77,37 @@ class ConsultChatPipelineConfigurationTest {
                             assertThat(context.getBean(ConsultChatEvents.class))
                                     .isInstanceOf(
                                             com.telme.consult.service.ChatEmitterConsultEvents.class);
+                        });
+    }
+
+    @Test
+    void suggestedQuestionsAreOffByDefault() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(SuggestedQuestions.class))
+                                    .isNotInstanceOf(PolicyLinkSuggestedQuestions.class);
+                        });
+    }
+
+    // 켜면 기동할 때 연결표를 읽는다. 형식 오류면 여기서 기동이 실패한다
+    @Test
+    void enabledSuggestedQuestionsLoadPolicyLinks() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true")
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(SuggestedQuestions.class))
+                                    .isInstanceOf(PolicyLinkSuggestedQuestions.class);
                         });
     }
 
