@@ -216,6 +216,11 @@ public class RuleBasedRoutingFallback {
         return conditions;
     }
 
+    // 문장에 업무 표현이 있으면 그 업무 코드, 없으면 null. 여러 업무가 있으면 규칙 순서상 앞의 것
+    String serviceTypeOf(String text) {
+        return text == null ? null : extractConditions(text).get(SERVICE_TYPE_KEY);
+    }
+
     boolean matchesServiceType(String code, String text) {
         return SERVICE_TYPE_RULES.stream()
                 .anyMatch(rule -> rule.code().equals(code) && rule.pattern().matcher(text).find());
