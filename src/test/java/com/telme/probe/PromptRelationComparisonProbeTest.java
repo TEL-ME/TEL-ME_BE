@@ -101,7 +101,7 @@ class PromptRelationComparisonProbeTest {
         assertThat(before.systemPrompt()).isEqualTo(baseline);
         assertThat(before.promptVersion()).isEqualTo("rag-answer-v3");
         assertThat(after.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(after.promptVersion()).isEqualTo("rag-answer-v4.3");
+        assertThat(after.promptVersion()).isEqualTo("rag-answer-v4.4");
         assertThat(converter.toChatRequest(before, true).options())
                 .isEqualTo(converter.toChatRequest(after, true).options());
         assertThat(converter.toChatRequest(before, true).model())

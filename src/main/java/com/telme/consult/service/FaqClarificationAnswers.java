@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.intent.dto.res.FollowUpRouteResponse;
 
 import java.util.HashMap;
@@ -19,13 +20,18 @@ public final class FaqClarificationAnswers {
     private FaqClarificationAnswers() {}
 
     public static Resolution fill(Resolution resolution, String reply) {
-        if (resolution == null || resolution.answersWaitingField()) {
+        if (resolution == null) {
             return resolution;
         }
         var candidate = resolution.candidate();
         String answer = reply == null ? "" : reply.strip();
         if (ROUTED_KEYS.contains(candidate.field())
                 || candidate.options().stream().noneMatch(answer::equals)) {
+            return resolution;
+        }
+        // 선택지와 같은 답은 값이다. 라우팅은 "아니요"를 값 제공 거부로 읽어 DECLINED로 넘긴다
+        var current = resolution.updates().get(candidate.field());
+        if (current != null && current.status() != ConditionStatus.DECLINED) {
             return resolution;
         }
         var updates = new HashMap<>(resolution.updates());

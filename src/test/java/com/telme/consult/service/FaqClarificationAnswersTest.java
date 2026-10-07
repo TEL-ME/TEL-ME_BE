@@ -76,4 +76,31 @@ class FaqClarificationAnswersTest {
 
         assertThat(filled.updates().get("existing_bill_status").value()).isEqualTo("예");
     }
+
+    @Test
+    @DisplayName("라우팅이 거절로 읽은 선택지 답은 값으로 되돌린다")
+    void 거절로_읽힌_선택지_답을_되돌린다() {
+        var resolution = new Resolution(
+                waiting("self_presentation", List.of("예", "아니요")),
+                Map.of("self_presentation", Condition.declined()));
+
+        Resolution filled = FaqClarificationAnswers.fill(resolution, "아니요");
+
+        assertThat(filled.updates().get("self_presentation").status())
+                .isEqualTo(ConditionStatus.FILLED);
+        assertThat(filled.updates().get("self_presentation").value()).isEqualTo("아니요");
+    }
+
+    @Test
+    @DisplayName("선택지에 없는 말로 거절하면 거절 그대로 둔다")
+    void 선택지_밖의_거절은_그대로_둔다() {
+        var resolution = new Resolution(
+                waiting("self_presentation", List.of("예", "아니요")),
+                Map.of("self_presentation", Condition.declined()));
+
+        Resolution filled = FaqClarificationAnswers.fill(resolution, "말하기 싫어요");
+
+        assertThat(filled.updates().get("self_presentation").status())
+                .isEqualTo(ConditionStatus.DECLINED);
+    }
 }

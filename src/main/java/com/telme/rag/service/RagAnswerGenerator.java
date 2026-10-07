@@ -75,6 +75,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         CollectingHandler collector =
                 new CollectingHandler(handler, answerGuard, answerEvidence, request.userQuery(),
+                        String.join(" ", request.conditions().values()),
                         trace, request.executionId(), request.consultRequestId());
         try {
             llmClient.stream(llmRequest, collector);
@@ -142,6 +143,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         private final AnswerGuard answerGuard;
         private final String context;
         private final String userQuery;
+        private final String confirmedValues;
         private final StringBuilder collected = new StringBuilder();
         private String answer = "";
         private RuntimeException failure;
@@ -153,11 +155,12 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         private CollectingHandler(
                 LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery,
-                ExecutionTrace trace, Long executionId, Long consultRequestId) {
+                String confirmedValues, ExecutionTrace trace, Long executionId, Long consultRequestId) {
             this.delegate = delegate;
             this.answerGuard = answerGuard;
             this.context = context;
             this.userQuery = userQuery;
+            this.confirmedValues = confirmedValues;
             this.trace = trace;
             this.executionId = executionId;
             this.consultRequestId = consultRequestId;
@@ -179,7 +182,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 return;
             }
             try {
-                answer = answerGuard.applyEvidencePolicy(collected.toString(), context, userQuery);
+                answer = answerGuard.applyEvidencePolicy(
+                        collected.toString(), context, userQuery, confirmedValues);
                 // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(

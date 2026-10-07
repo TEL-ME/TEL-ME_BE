@@ -580,7 +580,8 @@ public class QueryRoutingService {
 
             String key = condition.key().trim();
             // 되묻는 중인 조건은 상담 모듈이 정한다. 매장 밖 조건도 그 목록에 있으면 받는다
-            if (!KNOWN_CONDITION_KEYS.contains(key) && !pendingKeys.contains(key)) {
+            if (!pendingKeys.contains(key)
+                    && (!KNOWN_CONDITION_KEYS.contains(key) || askedOnlyOtherConditions(pendingKeys))) {
                 log.debug("[후속분석] 되묻지 않은 조건 키를 무시합니다: {}", key);
                 continue;
             }
@@ -601,6 +602,11 @@ public class QueryRoutingService {
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);
+    }
+
+    // "미납 요금이 있으신가요?"의 답이 지역일 수는 없는데 "아니요"가 지역으로 들어갔다
+    private boolean askedOnlyOtherConditions(Set<String> pendingKeys) {
+        return !pendingKeys.isEmpty() && pendingKeys.stream().noneMatch(KNOWN_CONDITION_KEYS::contains);
     }
 
     private record ExtractedConditions(Map<String, String> values, Set<String> declinedKeys) {

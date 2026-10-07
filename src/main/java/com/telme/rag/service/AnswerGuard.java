@@ -150,14 +150,22 @@ public class AnswerGuard {
      * 문장 제거가 먼저 실행되어야 남은 답변의 수치만 검증할 수 있으므로 순서를 이곳에서 관리한다.
      */
     public String applyEvidencePolicy(String answer, String context, String userQuery) {
+        return applyEvidencePolicy(answer, context, userQuery, "");
+    }
+
+    /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
+    public String applyEvidencePolicy(
+            String answer, String context, String userQuery, String confirmedValues) {
         String filtered = trimAfterNoEvidence(answer);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
-        verifyAmounts(filtered, context, userQuery);
-        verifyMeasures(filtered, context, userQuery);
+        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
+                ? context : context + "\n" + confirmedValues;
+        verifyAmounts(filtered, numericEvidence, userQuery);
+        verifyMeasures(filtered, numericEvidence, userQuery);
         return filtered;
     }
 
