@@ -22,6 +22,7 @@ import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisPr
 import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
+import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.rag.service.AnswerGenerator;
@@ -124,6 +125,8 @@ class ConsultChatPipelineConfigurationTest {
                         "telme.consult.rag-integration-enabled=true",
                         "telme.consult.suggested-questions.enabled=true")
                 .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
                 .run(
                         context -> {
                             assertThat(context).hasNotFailed();

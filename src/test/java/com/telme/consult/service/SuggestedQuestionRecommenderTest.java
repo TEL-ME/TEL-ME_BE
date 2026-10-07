@@ -67,6 +67,13 @@ class SuggestedQuestionRecommenderTest {
         assertThat(recommend("S-1", "A-01", "질문")).containsExactly("B 질문", "C 질문");
     }
 
+    // 숨겨진 대표 FAQ를 다음 후보로 채울 수 있게 후보는 개수를 자르지 않는다
+    @Test
+    void candidateSlotIdsKeepEveryLinkInOrder() {
+        assertThat(sample.candidateSlotIds(new BaseFaq("S-1", "A-01", "질문")))
+                .containsExactly("B-0001", "C-0001", "D-0001");
+    }
+
     @Test
     void eligibilityBlockedFaqSkipsNextStep() {
         assertThat(recommend("BLOCKED-1", "A-01", "질문")).containsExactly("C 질문", "D 질문");

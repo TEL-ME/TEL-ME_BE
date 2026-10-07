@@ -279,7 +279,7 @@ A′ 후보 50쌍(5.2절 라벨)을 로컬 EXAONE에 판정시켰다.
 - 4차는 두 검증셋의 라벨을 재사용하면 110/117 = 94%다. **검증셋을 보고 정한 규칙이라 낙관치이며 보고에 쓰지 않는다.** 보고용 수치는 7절의 독립 검증 수치(4차 92.5%)다
 - **4차 독립 검증 통과**: 이전 라운드와 겹치지 않는 새 기준 FAQ 50개에서 62/67 = 92.5%, 중복 1건으로 통과 기준(새정보 비율 약 83% 이상, 중복 1건 이하)을 넘었다(7절 3라운드)
 - 애매한 연결을 빼서 정확도를 얻고 커버리지를 내줬다. 매장 칩(후속)을 추가하면 칩이 없는 답변 일부를 메울 수 있다
-- 실행 비용: 답변당 `policy_ref` DB 조회 1회와 메모리 연결표 조회다. 유사도 쿼리는 쓰지 않는다. 현재 구현 기준 지연은 별도로 측정하지 않았다
+- 실행 비용: 답변당 DB 조회 2회(`policy_ref`, 대표 FAQ의 현재 질문)와 메모리 연결표 조회다. 유사도 쿼리는 쓰지 않는다. 현재 구현 기준 지연은 별도로 측정하지 않았다
 
 ## 9. LLM 사용 검토
 
@@ -371,7 +371,8 @@ FAQ와 검색 결과를 보지 않은 별도 작성자가 쓴 넓은 질문 30�
 | 구성 | 위치 | 내용 |
 | --- | --- | --- |
 | 추천 계산 | `consult/service/SuggestedQuestionRecommender` | 정책 연결표·규칙으로 최대 2개. 연결표 형식이 잘못되면 기동 시 실패 |
-| 실행 조건 | `consult/service/PolicyLinkSuggestedQuestions` | `GROUNDED`일 때 LLM에 넘긴 검색 결과 1순위 FAQ 기준. `policy_ref`는 `faqId`로 DB의 현재 값을 조회. 실패하면 빈 목록(답변은 그대로 저장) |
+| 실행 조건 | `consult/service/PolicyLinkSuggestedQuestions` | `GROUNDED`일 때 LLM에 넘긴 검색 결과 1순위 FAQ 기준. `policy_ref`는 `faqId`로 DB의 현재 값을 조회. 대표 FAQ는 검색에 나올 수 있는 것(ACTIVE, 임베딩 SYNCED, 버전 일치, 현재 임베딩 모델)만 현재 질문으로 쓰고, 빠진 자리는 다음 연결로 채운다. 실패하면 빈 목록(답변은 그대로 저장) |
+| FAQ 조회 | `consult/repository/SuggestedQuestionFaqFinder` | 위 두 조회. 대표 FAQ 조건은 검색(`FaqEmbeddingRepository`)과 같다 |
 | 연결 | `RagSearchResultAnswerGenerator.SuggestedQuestions`, `ConsultRagAnswerConfiguration` | 기존 빈 `followUps` 자리에 넣음 |
 | 기능 플래그 | `telme.consult.suggested-questions.enabled` (`CONSULT_SUGGESTED_QUESTIONS_ENABLED`) | 기본 `false`. 꺼져 있으면 DB 조회·연결표 읽기 없이 빈 목록 |
 | 데이터 | `src/main/resources/suggested-question/policy-links.json`, `faq-rules.json` | `scripts/build_suggested_question_data.py`가 생성. 손으로 고치지 않음 |
@@ -397,7 +398,7 @@ FAQ와 검색 결과를 보지 않은 별도 작성자가 쓴 넓은 질문 30�
 - **기능 플래그**: 기본값이 꺼져 있다. 4차 독립 검증과 실제 채팅 경로 표본 확인(7.2절)은 완료했으며, 독립 재검토 여부를 정한 뒤 활성화한다
 - **테스트**: 연결표 조회, 불가 FAQ 규칙, TROUBLE 규칙, 상황 조건, 검색 결과 1순위 선택, 정책 ID 없는 FAQ, `GROUNDED`가 아닌 답변, 최대 2개와 중복 제거를 단위 테스트로 둔다(매장 칩 포함 최대 3개는 매장 칩 추가 때 후속 테스트). 검증한 연결표의 FAQ별 추천 목록을 기대값으로 삼아 코드 결과와 비교하는 테스트도 둔다
 - **검색 단계 재측정**: 검색 임계값·검색 구성(리랭커, 판정기 등)·연결표를 바꾸면 7.1절 측정(검색 통과율, 1위 정책 정답률, 무관 통과)을 다시 돌린다
-- **대표 질문 회귀 테스트**: 버튼은 FAQ ID가 아니라 질문 문자열로 다시 전송되어 라우팅과 검색을 거친다. 임계값 변경, 재임베딩, FAQ 추가·수정·비활성화, 라우팅 변경에 결과가 바뀔 수 있으므로, 대표 질문 32개를 실제 채팅 경로로 보내 기대 FAQ가 근거로 나오는지 확인한다 → `check_suggested_questions_live.py representatives`(7.2절, 32/32)
+- **대표 질문 회귀 테스트**: 버튼은 FAQ ID가 아니라 질문 문자열로 다시 전송되어 라우팅과 검색을 거친다. 임계값 변경, 재임베딩, FAQ 추가·수정·비활성화, 라우팅 변경에 결과가 바뀔 수 있으므로, 대표 질문 32개를 실제 채팅 경로로 보내 기대 FAQ가 근거로 나오는지 확인한다 → `check_suggested_questions_live.py representatives`(7.2절, 32/32). 실행 중에는 대표 FAQ가 숨겨지거나 수정되면 검색과 같은 조건으로 걸러 현재 질문을 쓴다(12.1절)
 
 ## 13. 재현
 

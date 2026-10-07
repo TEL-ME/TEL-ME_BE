@@ -27,25 +27,33 @@ public final class SuggestedQuestionRecommender {
     static final String FAQ_RULES_PATH = "suggested-question/faq-rules.json";
 
     private final Map<String, List<Link>> linksByPolicy;
-    private final Map<String, String> questionByPolicy;
+    private final Map<String, RepresentativeQuestion> representativeByPolicy;
+    private final Map<String, String> questionBySlotId;
     private final FaqRules rules;
 
     SuggestedQuestionRecommender(PolicyLinks policyLinks, FaqRules rules) {
         Objects.requireNonNull(policyLinks, "policyLinks");
         this.rules = Objects.requireNonNull(rules, "rules");
+        Map<String, RepresentativeQuestion> representatives = Map.copyOf(policyLinks.representativeQuestions());
         Map<String, String> questions = new HashMap<>();
-        policyLinks.representativeQuestions().forEach((policy, rep) -> questions.put(policy, rep.question()));
+        representatives.forEach((policy, rep) -> {
+            if (rep == null || rep.slotId() == null || rep.question() == null) {
+                throw new IllegalStateException(policy + ": 대표 질문에 slotId, question이 필요합니다");
+            }
+            questions.put(rep.slotId(), rep.question());
+        });
         Map<String, List<Link>> links = new HashMap<>();
         policyLinks.policies().forEach((policy, entry) -> {
             for (Link link : entry.links()) {
                 link.validate(policy);
-                if (!questions.containsKey(link.to())) {
+                if (!representatives.containsKey(link.to())) {
                     throw new IllegalStateException(policy + " → " + link.to() + ": 대표 질문이 없습니다");
                 }
             }
             links.put(policy, List.copyOf(entry.links()));
         });
-        this.questionByPolicy = Map.copyOf(questions);
+        this.representativeByPolicy = representatives;
+        this.questionBySlotId = Map.copyOf(questions);
         this.linksByPolicy = Map.copyOf(links);
     }
 
@@ -62,8 +70,19 @@ public final class SuggestedQuestionRecommender {
         }
     }
 
-    /** 정책 ID가 없거나 연결표에 없는 정책이면 빈 목록이다. */
+    /** 연결표 JSON의 대표 질문 문장으로 최대 2개. 검증한 기대 추천과 비교할 때 쓴다. */
     public List<String> recommend(BaseFaq faq) {
+        return candidateSlotIds(faq).stream()
+                .limit(MAX_QUESTIONS)
+                .map(questionBySlotId::get)
+                .toList();
+    }
+
+    /**
+     * 규칙을 통과한 대표 FAQ의 slotId를 연결표 순서대로 모두 돌려준다. 정책 ID가 없거나 연결표에 없는 정책이면 빈 목록이다.
+     * 대표 FAQ가 숨겨졌을 때 다음 후보로 채울 수 있게 개수를 자르지 않는다.
+     */
+    public List<String> candidateSlotIds(BaseFaq faq) {
         Objects.requireNonNull(faq, "faq");
         List<Link> links = faq.policyRef() == null ? null : linksByPolicy.get(faq.policyRef());
         if (links == null) {
@@ -87,10 +106,7 @@ public final class SuggestedQuestionRecommender {
             if (trouble && link.kind() != Kind.NEXT) {
                 continue;
             }
-            out.add(questionByPolicy.get(link.to()));
-            if (out.size() == MAX_QUESTIONS) {
-                break;
-            }
+            out.add(representativeByPolicy.get(link.to()).slotId());
         }
         return List.copyOf(out);
     }
