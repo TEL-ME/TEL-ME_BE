@@ -69,11 +69,16 @@
     },
     {
       "case_id": "HALLU-009",
-      "group": "BASE_BLOCK",
-      "expected_answerable": false,
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
       "question": "5G 요금제랑 LTE 요금제 중에 어떤 게 더 싸요?",
       "source": "eval_answer_quality_20.json",
-      "note": "근거에 종류만 있고 가격이 없음. 가격을 만들어내 비교할 위험"
+      "note": "근거에 종류만 있고 가격이 없음. 가격을 만들어내 비교할 위험",
+      "label_change": {
+        "v1": false,
+        "v2": true,
+        "reason": "PLAN-0146 \"LTE 3가지가 5G 4가지보다 대체로 쌉니다\"가 질문에 답한다"
+      }
     },
     {
       "case_id": "HALLU-010",
@@ -133,11 +138,16 @@
     },
     {
       "case_id": "HALLU-017",
-      "group": "BASE_BLOCK",
-      "expected_answerable": false,
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
       "question": "명의변경 하는 데 며칠이나 걸려요?",
       "source": "eval_answer_quality_20.json",
-      "note": "근거에 소요 기간이 없음. 당일 처리, 3영업일 등을 지어낼 위험"
+      "note": "근거에 소요 기간이 없음. 당일 처리, 3영업일 등을 지어낼 위험",
+      "label_change": {
+        "v1": false,
+        "v2": true,
+        "reason": "NAME_CHANGE-0014/0023/0086 \"30분 이내\"가 소요 기간에 답한다"
+      }
     },
     {
       "case_id": "HALLU-018",
@@ -202,6 +212,18 @@
       "question": "요금이 두 번 나갔는데 환불 접수는 언제까지 되나요?",
       "source": "eval_questions_boundary_experiment_16.json",
       "note": "통과 FAQ는 접수 후 처리 기간. 접수 마감 아님"
+    }
+  ],
+  "label_version": "v2",
+  "label_changes": [
+    {
+      "version": "v2",
+      "date": "2026-10-07",
+      "cases": [
+        "HALLU-009",
+        "HALLU-017"
+      ],
+      "reason": "HALLU 세트는 FAQ 300건 시절 기준. 현행 1,150건에서 답하는 FAQ가 생겼다. 판정 결과가 아니라 FAQ 답변 본문을 읽고 고쳤다. v1(1단계 공식 결과)은 .study/TELME-122/01 참고"
     }
   ]
 }
