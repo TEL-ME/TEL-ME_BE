@@ -18,11 +18,20 @@ import java.util.Objects;
 public final class RagSearchResultAnswerGenerator implements SearchResultAnswerGenerator {
     private final AnswerGenerator answers;
     private final StreamHandlerFactory streamHandlers;
+    private final SuggestedQuestions suggestedQuestions;
 
     public RagSearchResultAnswerGenerator(
             AnswerGenerator answers, StreamHandlerFactory streamHandlers) {
+        this(answers, streamHandlers, SuggestedQuestions.none());
+    }
+
+    public RagSearchResultAnswerGenerator(
+            AnswerGenerator answers,
+            StreamHandlerFactory streamHandlers,
+            SuggestedQuestions suggestedQuestions) {
         this.answers = Objects.requireNonNull(answers);
         this.streamHandlers = Objects.requireNonNull(streamHandlers);
+        this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
     }
 
     @Override
@@ -52,7 +61,9 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         ChatMessage.MessageType.ANSWER,
                         result.answer(),
                         result.answerBasis(),
-                        List.of(),
+                        Objects.requireNonNull(
+                                suggestedQuestions.suggest(result.answerBasis(), results),
+                                "suggestedQuestions"),
                         null),
                 result.sources());
     }
@@ -89,5 +100,14 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
     /** SSE 구현과의 경계다. 최종 완료 이벤트는 답변과 상담 상태 저장 이후에 전송한다. */
     public interface StreamHandlerFactory {
         LlmStreamHandler create(long executionId);
+    }
+
+    /** 답변 아래 추천 질문(followUps)과의 경계다. searchResults는 LLM에 넘긴 순서 그대로다. */
+    public interface SuggestedQuestions {
+        List<String> suggest(ChatMessage.AnswerBasis answerBasis, List<FaqSearchResponse> searchResults);
+
+        static SuggestedQuestions none() {
+            return (answerBasis, searchResults) -> List.of();
+        }
     }
 }

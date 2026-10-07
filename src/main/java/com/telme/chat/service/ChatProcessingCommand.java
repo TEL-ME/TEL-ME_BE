@@ -4,8 +4,13 @@ public record ChatProcessingCommand(
         Long executionId,
         Long sessionId,
         Long inputMessageId,
-        String content
+        String content,
+        ChatCoordinates coordinates
 ) {
+
+    public ChatProcessingCommand(Long executionId, Long sessionId, Long inputMessageId, String content) {
+        this(executionId, sessionId, inputMessageId, content, null);
+    }
 
     @Override
     public String toString() {

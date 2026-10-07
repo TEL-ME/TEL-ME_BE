@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
@@ -142,7 +143,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                                     turn.originalUserQuery(),
                                     turn.searchQuery(),
                                     conditionConverter.convert(
-                                            prepared.decision().conditions())));
+                                            prepared.decision().conditions()),
+                                    command.coordinates()));
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -290,7 +292,20 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             Purpose purpose,
             String originalUserQuery,
             String searchQuery,
-            Map<String, String> confirmedConditions) {
+            Map<String, String> confirmedConditions,
+            ChatCoordinates coordinates) {
+        public AnswerInput(
+                long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, null);
+        }
+
+        @Override
+        public String toString() {
+            return "AnswerInput[executionId=%d, sessionId=%d, consultRequestId=%d]"
+                    .formatted(executionId, sessionId, consultRequestId);
+        }
         public AnswerInput {
             if (executionId <= 0 || sessionId <= 0 || consultRequestId <= 0) {
                 throw new IllegalArgumentException("답변 생성에 필요한 상담 참조가 없습니다.");
