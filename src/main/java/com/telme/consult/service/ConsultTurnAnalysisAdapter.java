@@ -7,6 +7,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
@@ -14,6 +15,7 @@ import com.telme.consult.service.FollowupContextService.Context;
 import com.telme.consult.service.FollowupSelectionValidator.Selection;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -70,6 +72,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         if (result.directAnswer() != null) {
             return AnalyzedTurn.direct(result.directAnswer());
         }
+        LocationStatus locationStatus = command.coordinates() == null
+                ? result.locationStatus() : LocationStatus.COORDINATES_AVAILABLE;
         if (result.followup() != null) {
             Resolution resolution =
                     followupConverter.resolve(
@@ -77,10 +81,16 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                             result.followup().consultRequestId(),
                             result.followup().extractedConditions(),
                             result.followup().declinedKeys());
+            if (command.coordinates() != null && "location".equals(resolution.candidate().field())
+                    && !resolution.answersWaitingField()) {
+                var updates = new HashMap<>(resolution.updates());
+                updates.put("location", Condition.coordinates());
+                resolution = new Resolution(resolution.candidate(), updates);
+            }
             if (!resolution.answersWaitingField()) {
                 var correction =
                         preparation.prepareWaitingUpdate(
-                                context, resolution, result.locationStatus());
+                                context, resolution, locationStatus);
                 return new AnalyzedTurn(
                         correction.preparation(),
                         null,
@@ -91,7 +101,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             Selection selection = resolution.toSelection();
             var followup =
                     preparation.prepareFollowup(
-                            context, selection, result.locationStatus());
+                            context, selection, locationStatus);
             return new AnalyzedTurn(
                     followup.preparation(),
                     followup.followup().answeredField(),
@@ -101,7 +111,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         }
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
-                        context.sessionId(), result.initialQuery(), result.locationStatus()),
+                        context.sessionId(), result.initialQuery(), locationStatus),
                 null,
                 purpose(result.initialQuery().intent().name()),
                 context.message(),

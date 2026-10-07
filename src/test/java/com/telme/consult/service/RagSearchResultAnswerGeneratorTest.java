@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -93,5 +94,36 @@ class RagSearchResultAnswerGeneratorTest {
         assertThat(actual.answer().content()).isEqualTo("강남역 인근 매장을 안내해 드릴게요.");
         assertThat(actual.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
         assertThat(actual.sources()).containsExactly(source);
+        assertThat(actual.answer().followUps()).isEmpty();
+    }
+
+    @Test
+    void storesSuggestedQuestionsForAnswerBasisAndSearchResultsPassedToRag() {
+        when(answers.generate(any(), any()))
+                .thenReturn(AnswerResult.builder()
+                        .answer("유심 재발급 비용은 7,700원입니다.")
+                        .answerBasis(ChatMessage.AnswerBasis.GROUNDED)
+                        .sources(List.of())
+                        .build());
+        var searchResults =
+                List.of(new FaqSearchResponse(
+                        9L, "USIM-0001", "USIM", "유심 재발급 비용이 얼마예요?", "7,700원입니다.",
+                        0.91, 1, LocalDate.of(2026, 9, 1), 1, "Q_A"));
+        var seen = new ArrayList<Object>();
+        var generator = new RagSearchResultAnswerGenerator(
+                answers,
+                executionId -> handler,
+                (answerBasis, results) -> {
+                    seen.add(answerBasis);
+                    seen.add(results);
+                    return List.of("유심 재발급 시 필요한 서류를 알려주세요.");
+                });
+
+        var actual = generator.generate(
+                new AnswerInput(31L, 7L, 11L, Purpose.GENERAL_FAQ, "유심 얼마예요", "유심 재발급 비용", Map.of()),
+                searchResults);
+
+        assertThat(actual.answer().followUps()).containsExactly("유심 재발급 시 필요한 서류를 알려주세요.");
+        assertThat(seen).containsExactly(ChatMessage.AnswerBasis.GROUNDED, searchResults);
     }
 }

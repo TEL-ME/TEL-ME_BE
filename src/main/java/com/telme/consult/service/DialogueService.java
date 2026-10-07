@@ -41,17 +41,10 @@ public class DialogueService {
         var region = conditions.get(LOCATION);
         boolean hasRegion = region != null && region.status() == ConditionStatus.FILLED;
 
-        // 위치 권한만으로는 검색 지역을 알 수 없다.
-        if (input.purpose() == Purpose.GENERAL_FAQ || hasRegion) {
-            return new DialogueDecision(
-                    input.consultRequestId(),
-                    Action.PROCEED,
-                    conditions,
-                    null,
-                    null,
-                    MessageOrigin.NONE);
-        }
-        if (region != null && region.status() == ConditionStatus.DECLINED) {
+        // DECLINED는 채팅에서 지역 제공을 거절한 상태이며 브라우저 GPS 권한과는 다르다.
+        // 매장 검색에서만 거절을 GPS보다 우선해, 지역이 필요 없는 FAQ 답변은 막지 않는다.
+        if (input.purpose() == Purpose.NEARBY_STORE
+                && region != null && region.status() == ConditionStatus.DECLINED) {
             return new DialogueDecision(
                     input.consultRequestId(),
                     Action.ALTERNATIVE_GUIDANCE,
@@ -59,6 +52,26 @@ public class DialogueService {
                     null,
                     "검색 지역 없이는 가까운 매장을 안내하기 어려워요. 지역을 알려주실 수 있을 때 매장 찾기를 이어갈 수 있어요.",
                     MessageOrigin.TEMPLATE);
+        }
+
+        boolean hasCoordinates = input.locationStatus() == LocationStatus.COORDINATES_AVAILABLE;
+        // 좌표로 해결한 대기 조건을 문자열 지역명으로 만들지 않는다.
+        if (input.purpose() == Purpose.NEARBY_STORE && hasCoordinates
+                && region != null && region.status() == ConditionStatus.PENDING) {
+            conditions.put(LOCATION, DialogueInput.Condition.coordinates());
+        }
+        if (!hasCoordinates && region != null && region.status() == ConditionStatus.COORDINATES) {
+            conditions.put(LOCATION, DialogueInput.Condition.pending());
+        }
+        // 위치 권한 허용과 실제 좌표 제공은 구분한다.
+        if (input.purpose() == Purpose.GENERAL_FAQ || hasRegion || hasCoordinates) {
+            return new DialogueDecision(
+                    input.consultRequestId(),
+                    Action.PROCEED,
+                    conditions,
+                    null,
+                    null,
+                    MessageOrigin.NONE);
         }
 
         if (!generateText) {

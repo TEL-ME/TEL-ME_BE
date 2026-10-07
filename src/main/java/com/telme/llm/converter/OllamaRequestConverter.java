@@ -48,6 +48,7 @@ public class OllamaRequestConverter {
             // FAQ 상담은 표현을 바꿀 이유가 없다. 0.2에서 환각이 1.7배였다
             case RAG_ANSWER -> new Defaults(0.0, 1024);
             case CLARIFICATION, FOLLOW_UP -> new Defaults(0.3, 512);
+            case CONDITION_EXTRACT -> new Defaults(0.0, 500);
             case SUMMARY -> new Defaults(0.3, 512);
             case SESSION_TITLE -> new Defaults(0.2, 32);
         };
