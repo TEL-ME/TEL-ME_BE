@@ -17,45 +17,57 @@ final class ConditionGrounding {
 
     private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
+    // 범위를 가르는 말과 숫자가 바뀌면 뜻이 달라진다. "14세 미만"과 "14세 이상"은 반대다
+    private static final Pattern BOUNDARY = Pattern.compile("미만|이상|이하|초과|\\d+");
+
+    /** 근거로 인정된 FAQ 문장과 그 문장이 나온 FAQ. */
+    record Grounded(String sentence, FaqSearchResponse source) {}
+
     private ConditionGrounding() {}
 
-    static String sourceText(List<FaqSearchResponse> sources) {
-        return sources.stream()
-                .map(FaqSearchResponse::answer)
-                .filter(answer -> answer != null && !answer.isBlank())
-                .map(ConditionGrounding::compact)
-                .reduce("", String::concat);
-    }
-
     /** 모델이 가리킨 FAQ 답변 문장. 찾지 못하면 null이고, 찾으면 모델 문장 대신 이 원문을 쓴다. */
-    static String groundedSentence(String evidence, List<FaqSearchResponse> sources) {
+    static Grounded groundedEvidence(String evidence, List<FaqSearchResponse> sources) {
         if (evidence == null || evidence.isBlank()) {
             return null;
         }
-        String compacted = compact(evidence);
-        if (compacted.isEmpty()) {
-            return null;
-        }
-        int required = Math.min(MIN_OVERLAP, compacted.length());
-        boolean negated = negated(compacted);
-        String found = null;
+        Grounded found = null;
         int best = 0;
-        for (String sentence : sentences(sources)) {
-            int overlap = longestOverlap(compacted, compact(sentence));
-            // 여러 문장에 걸쳐 옮겨 쓰면 겹침이 가장 긴 문장이 뜻이 다른 쪽일 수 있어 뜻이 같은 문장만 고른다
-            if (overlap >= required && overlap > best && negated(compact(sentence)) == negated) {
-                best = overlap;
-                found = sentence;
+        // 근거를 여러 문장에 걸쳐 옮겨 쓰기도 해서 양쪽 다 문장 단위로 맞춘다
+        for (String quoted : split(evidence)) {
+            String compacted = compact(quoted);
+            if (compacted.isEmpty()) {
+                continue;
+            }
+            int required = Math.min(MIN_OVERLAP, compacted.length());
+            for (FaqSearchResponse source : sources) {
+                for (String sentence : sentences(source)) {
+                    int overlap = longestOverlap(compacted, compact(sentence));
+                    if (overlap >= required && overlap > best && sameMeaning(compacted, compact(sentence))) {
+                        best = overlap;
+                        found = new Grounded(sentence, source);
+                    }
+                }
             }
         }
         return found;
     }
 
-    private static List<String> sentences(List<FaqSearchResponse> sources) {
-        return sources.stream()
-                .map(FaqSearchResponse::answer)
-                .filter(answer -> answer != null && !answer.isBlank())
-                .flatMap(answer -> Arrays.stream(answer.split("(?<=[.!?])\\s+|\\n")))
+    // 부정과 범위가 다르면 뜻이 뒤집힌 것이라 근거로 쓰지 않는다
+    private static boolean sameMeaning(String compacted, String sentence) {
+        if (negated(compacted) != negated(sentence)) {
+            return false;
+        }
+        return BOUNDARY.matcher(compacted).results()
+                .map(java.util.regex.MatchResult::group)
+                .allMatch(sentence::contains);
+    }
+
+    private static List<String> sentences(FaqSearchResponse source) {
+        return source.answer() == null ? List.of() : split(source.answer());
+    }
+
+    private static List<String> split(String text) {
+        return Arrays.stream(text.split("(?<=[.!?])\\s+|\\n"))
                 .map(String::strip)
                 .filter(sentence -> !sentence.isEmpty())
                 .toList();
@@ -65,10 +77,11 @@ final class ConditionGrounding {
         return NEGATION.matcher(compacted).find();
     }
 
-    static List<String> groundedOptions(List<String> options, String sourceText) {
+    static List<String> groundedOptions(List<String> options, FaqSearchResponse source) {
         if (options.stream().allMatch(option -> YES_NO.contains(option.strip()))) {
             return options;
         }
+        String sourceText = source.answer() == null ? "" : compact(source.answer());
         // 선택지는 근거에 적힌 값 그대로여야 한다. 바꿔 쓰면 고객이 고른 값이 검색에 안 걸린다
         return options.stream().filter(option -> containsValue(sourceText, compact(option))).toList();
     }

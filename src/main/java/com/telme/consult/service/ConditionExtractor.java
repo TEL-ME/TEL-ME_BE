@@ -39,12 +39,11 @@ public class ConditionExtractor {
         if (payload == null) {
             return List.of();
         }
-        String sourceText = ConditionGrounding.sourceText(sources);
         List<MissingCondition> conditions = new ArrayList<>();
         Set<String> keys = new HashSet<>();
         for (var candidate : payload.conditions()) {
             // 같은 조건을 두 번 물으면 안 되고, 중복이 개수 제한을 먼저 채우면 다른 조건이 밀려난다
-            toCondition(candidate, sources, sourceText)
+            toCondition(candidate, sources)
                     .filter(condition -> keys.add(condition.key()))
                     .ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
@@ -81,17 +80,20 @@ public class ConditionExtractor {
         }
     }
 
-    private java.util.Optional<MissingCondition> toCondition(LlmConditionPayload.ConditionPayload candidate,
-            List<FaqSearchResponse> sources, String sourceText) {
-        String evidence = ConditionGrounding.groundedSentence(candidate.evidence(), sources);
-        if (evidence == null) {
+    private java.util.Optional<MissingCondition> toCondition(
+            LlmConditionPayload.ConditionPayload candidate, List<FaqSearchResponse> sources) {
+        ConditionGrounding.Grounded grounded =
+                ConditionGrounding.groundedEvidence(candidate.evidence(), sources);
+        if (grounded == null) {
             log.info("[조건 뽑기] 근거에 없는 조건을 버립니다. key={}", candidate.key());
             return java.util.Optional.empty();
         }
         try {
+            // 선택지는 근거로 인정된 FAQ 안에서만 찾는다. 다른 FAQ에 있는 값은 이 질문의 선택지가 아니다
             return java.util.Optional.of(new MissingCondition(
                     candidate.key(), candidate.question(),
-                    ConditionGrounding.groundedOptions(candidate.options(), sourceText), evidence));
+                    ConditionGrounding.groundedOptions(candidate.options(), grounded.source()),
+                    grounded.sentence()));
         } catch (IllegalArgumentException exception) {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();

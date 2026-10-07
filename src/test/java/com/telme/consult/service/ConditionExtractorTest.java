@@ -134,6 +134,29 @@ class ConditionExtractorTest {
     }
 
     @Test
+    @DisplayName("범위를 뒤집어 옮긴 근거는 버린다")
+    void 범위가_뒤집힌_근거를_버린다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[{"key":"age","question":"나이가 어떻게 되시나요?","options":[],
+                 "evidence":"만 14세 이상은 가입할 수 없습니다"}]}""");
+
+        assertThat(extractor.extract(1L, "미성년자 가입", List.of(ageSource()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("선택지는 근거로 인정된 FAQ 안에서만 찾는다")
+    void 다른_FAQ의_선택지를_뺀다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[{"key":"plan_type","question":"어떤 요금제를 쓰고 계신가요?",
+                 "options":["5G","11500원"],"evidence":"5G 요금제는 앱에서"}]}""");
+
+        assertThat(extractor.extract(1L, "로밍 신청", List.of(source(), feeSource())))
+                .singleElement()
+                .extracting(MissingCondition::options)
+                .isEqualTo(List.of("5G"));
+    }
+
+    @Test
     @DisplayName("근거가 문장부호뿐이면 버린다")
     void 문장부호만_있는_근거를_버린다() {
         when(client.generate(any())).thenReturn("""
