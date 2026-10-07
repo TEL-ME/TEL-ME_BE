@@ -148,6 +148,20 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("LLM이 '현재 위치'를 지역으로 뽑아도 조건으로 받지 않고, 규칙 기반 재시도도 문장을 지역으로 받지 않는다")
+    void analyzeFollowUp_ignoresRelativeLocation() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"CONDITION_RESPONSE\","
+                        + "\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"현재 위치\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "현재 위치에서 가까운 매장을 찾아줘");
+
+        assertThat(response.conditions()).doesNotContainKey("location");
+        assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
     @DisplayName("LLM이 빈 응답(fake 프로바이더)을 주면 규칙 기반으로 한 번 더 시도한다")
     void analyzeFollowUp_retriesWithRuleWhenLlmExtractsNothing() {
         givenWaitingConsultExists();

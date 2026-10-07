@@ -198,6 +198,10 @@ public class RuleBasedRoutingFallback {
         if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
             return null;
         }
+        // "현재 위치에서 찾아줘"처럼 지명 없이 기준점만 말한 답을 통째로 지역명으로 받지 않는다
+        if (RelativeLocation.mentions(reply)) {
+            return null;
+        }
         // 짧다고 모두 지역으로 보면 "네", "잠깐만요"까지 FILLED가 되어 되묻기가 끊긴다
         if (ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
             return null;

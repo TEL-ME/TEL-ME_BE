@@ -180,4 +180,22 @@ class RuleBasedRoutingFallbackTest {
                 .anyMatch(condition -> "location".equals(condition.key())
                         && condition.status() == LlmFollowUpPayload.Status.DECLINED);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"현재 위치에서 가까운 매장을 찾아줘", "근처 매장", "여기서 찾아줘"})
+    @DisplayName("지명 없이 기준점만 말한 답은 문장째 지역명으로 받지 않는다")
+    void 기준점만_말한_답은_지역이_아니다(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.conditions()).noneMatch(condition -> "location".equals(condition.key()));
+    }
+
+    @Test
+    @DisplayName("기준점 표현이 있어도 지명이 함께 있으면 지명을 뽑는다")
+    void 지명과_함께면_지명을_뽑는다() {
+        LlmFollowUpPayload result = fallback.classifyFollowUp("강남역 근처요", Set.of("location"));
+
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key()) && "강남역".equals(condition.value()));
+    }
 }
