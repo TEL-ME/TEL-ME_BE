@@ -16,9 +16,15 @@ public final class PurposeRoutingAnswerProvider implements AnswerProvider {
             "현재 가까운 매장 정보를 바로 확인하기 어려워요. 잠시 후 다시 시도하거나 고객센터를 이용해 주세요.";
 
     private final AnswerProvider faqAnswers;
+    private final AnswerProvider storeAnswers;
 
     public PurposeRoutingAnswerProvider(AnswerProvider faqAnswers) {
+        this(faqAnswers, null);
+    }
+
+    public PurposeRoutingAnswerProvider(AnswerProvider faqAnswers, AnswerProvider storeAnswers) {
         this.faqAnswers = Objects.requireNonNull(faqAnswers);
+        this.storeAnswers = storeAnswers;
     }
 
     @Override
@@ -26,6 +32,9 @@ public final class PurposeRoutingAnswerProvider implements AnswerProvider {
         Objects.requireNonNull(input, "input");
         if (input.purpose() == Purpose.GENERAL_FAQ) {
             return faqAnswers.generate(input);
+        }
+        if (storeAnswers != null) {
+            return storeAnswers.generate(input);
         }
         return GeneratedAnswer.withoutSources(
                 new ChatAnswer(

@@ -26,7 +26,9 @@ public record ChatMessageHistoryItemResponse(
         @Schema(description = "피드백 기능이 켜져 있고, 완료된 ASSISTANT ANSWER 또는 STORE_RESULT이면 true")
         boolean ratable,
         @Schema(description = "현재 사용자가 남긴 평가. 미작성 또는 피드백 기능 비활성화 시 null")
-        MyFeedback myFeedback
+        MyFeedback myFeedback,
+        @Schema(description = "매장 검색 기준. 지역 검색에는 거리 기준이 없으며 radiusMeters는 null")
+        ChatStoreSearchContextResponse storeSearchContext
 ) {
     public record MyFeedback(
             String rating,
