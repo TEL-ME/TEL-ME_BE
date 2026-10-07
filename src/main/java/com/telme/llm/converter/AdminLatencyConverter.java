@@ -1,10 +1,10 @@
 package com.telme.llm.converter;
 
-import com.telme.llm.dto.req.AdminLatencySearchRequest;
 import com.telme.llm.dto.res.AdminLatencyResponse;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.repository.AdminLatencyRepository.StatsView;
 import com.telme.llm.repository.AdminLatencyRepository.TaskStatsView;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 public class AdminLatencyConverter {
 
     public AdminLatencyResponse toResponse(
-            AdminLatencySearchRequest request, StatsView overall, StatsView firstToken, List<TaskStatsView> tasks) {
-        return new AdminLatencyResponse(request.from(), request.to(), 
+            Instant from, Instant to, StatsView overall, StatsView firstToken, List<TaskStatsView> tasks) {
+        return new AdminLatencyResponse(from, to, 
                 toStats(overall), toStats(firstToken), toTaskStats(tasks));
     }
     

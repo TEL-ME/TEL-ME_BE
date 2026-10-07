@@ -9,14 +9,17 @@ public record AdminLatencySearchRequest(Instant from, Instant to) {
 
     private static final Duration DEFAULT_PERIOD = Duration.ofHours(24);
     
-    public AdminLatencySearchRequest {
-        to = to == null ? Instant.now() : to;
-        from = from == null ? to.minus(DEFAULT_PERIOD) : from;
+    public Instant toOr(Instant now) {
+        return to == null ? now : to;
+    }
+    
+    public Instant fromOr(Instant now) {
+        return from == null ? toOr(now).minus(DEFAULT_PERIOD) : from;
     }
     
     @JsonIgnore
     @AssertTrue(message = "시작 시각은 끝 시각보다 빨라야 합니다.")
     public boolean isPeriodValid() {
-        return from.isBefore(to);
+        return from == null || to == null || from.isBefore(to);
     }
 }

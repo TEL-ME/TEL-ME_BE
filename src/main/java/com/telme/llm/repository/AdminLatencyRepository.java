@@ -27,7 +27,7 @@ public interface AdminLatencyRepository extends JpaRepository<LlmGeneration, Lon
                    percentile_cont(0.5) within group (order by ms) as p50Ms,
                    percentile_cont(0.95) within group (order by ms) as p95Ms
             from (select extract(epoch from (ended_at - started_at)) * 1000 as ms  from chat_executions
-            where status = 'COMPLETED' and ended_at is not null
+            where status = 'COMPLETED' and ended_at is not null and output_message_id is not null
                     and started_at >= :from and started_at < :to) e
             """, nativeQuery = true)
     StatsView findExecutionStats(@Param("from") Instant from, @Param("to") Instant to);
