@@ -41,7 +41,8 @@ class AdminSearchScoreQueryServiceTest {
         // 원문이 빈 질문의 정제 검색: 질문 수·분포에는 들어가지 않고 정제로 근거를 찾은 수에만 들어간다
         insertRefined(0.74, true);
         insertRefined(0.30, false);
-        jdbcTemplate.update("INSERT INTO faq_search_scores (qa_top_score, passed, created_at) VALUES (0.99, true, ?)",
+        jdbcTemplate.update("INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, "
+                + "passed, created_at) VALUES ('ORIGINAL', 0.99, 0.72, true, ?)",
                 Timestamp.from(TO)); // 기간 밖(끝 시각과 같음)
     }
 

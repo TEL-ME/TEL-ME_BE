@@ -57,7 +57,7 @@ public class FaqSearchScoreRepository {
         return jdbcTemplate.query("""
                 SELECT least(greatest(floor(qa_top_score * ?)::int, 0), ? - 1) AS bucket, count(*) AS count
                 FROM faq_search_scores
-                WHERE kind = 'ORIGINAL' qa_top_score IS NOT NULL AND created_at >= ? AND created_at < ?
+                WHERE kind = 'ORIGINAL' AND qa_top_score IS NOT NULL AND created_at >= ? AND created_at < ?
                 GROUP BY bucket
                 """, (rs, i) -> new BucketCount(rs.getInt("bucket"), rs.getLong("count")),
                      BUCKET_COUNT, BUCKET_COUNT, Timestamp.from(from), Timestamp.from(to));
