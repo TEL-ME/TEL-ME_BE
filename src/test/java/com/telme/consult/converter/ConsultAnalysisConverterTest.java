@@ -35,7 +35,7 @@ class ConsultAnalysisConverterTest {
         var input =
                 converter.toDialogueInput(
                         query(Intent.STORE, Map.of("location", " 강남역 ")),
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         assertEquals(Condition.filled("강남역"), input.updates().get("location"));
         assertEquals(Action.PROCEED, dialogue.decide(input).action());
@@ -46,7 +46,8 @@ class ConsultAnalysisConverterTest {
         var input =
                 converter.toDialogueInput(
                         query(Intent.STORE, Map.of("location", " ")),
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"),
+                                "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         assertTrue(input.updates().isEmpty());
         assertEquals(Action.PROCEED, dialogue.decide(input).action());
