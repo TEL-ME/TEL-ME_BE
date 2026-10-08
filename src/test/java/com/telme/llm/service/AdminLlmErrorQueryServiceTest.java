@@ -43,6 +43,20 @@ class AdminLlmErrorQueryServiceTest {
     }
     
     @Test
+    void contextResolutionErrorsCanBeQueriedSeparatelyFromRouting() {
+        insert("CONTEXT_RESOLUTION", 1, "MODEL_ERROR", "context failure", 60);
+        assertThat(service.getErrors(request(null, TaskType.CONTEXT_RESOLUTION)).errors())
+                .extracting(AdminLlmErrorListItemResponse::taskType)
+                .containsOnly("CONTEXT_RESOLUTION");
+        assertThat(service.getErrors(request(null, TaskType.ROUTING)).errors())
+                .extracting(AdminLlmErrorListItemResponse::taskType)
+                .containsOnly("ROUTING");
+        assertThat(service.getErrors(request(null, null)).errors())
+                .extracting(AdminLlmErrorListItemResponse::taskType)
+                .contains("CONTEXT_RESOLUTION", "ROUTING");
+    }
+
+    @Test
     @DisplayName("성공·취소는 빼고 오류만 최신순으로, 시각·종류·시도 횟수·메시지를 담아 반환한다")
     void 오류만_최신순으로_반환한다() {
         AdminLlmErrorListResponse response = service.getErrors(request(null, null));

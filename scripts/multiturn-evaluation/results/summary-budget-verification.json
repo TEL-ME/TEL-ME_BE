@@ -1,0 +1,82 @@
+{
+  "recordedAtUtc": "2026-10-07T02:45:54.2770970Z",
+  "command": "./gradlew.bat clean test build --build-cache",
+  "buildSuccessful": true,
+  "database": "telme_121_fullchecks",
+  "postgresPort": 5440,
+  "totals": {
+    "tests": 1592,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 98
+  },
+  "passed": 1494,
+  "summaryModel": "Mock LlmClient in budget regression tests; no new live model evaluation",
+  "suiteReports": [
+    {
+      "name": "com.telme.chat.converter.ChatSummaryConverterTest",
+      "tests": 13,
+      "failures": 0,
+      "cases": [
+        "budgetFallbackDoesNotStoreAnEllipticalUtteranceWithoutItsSubject()",
+        "selectingAnswerAlsoKeepsItsQuestionWithoutTreatingItAsPolicyEvidence()",
+        "keepsLegacySummaryExplicitlyUnverifiedDuringFormatTransition()",
+        "mergesFromOriginalMessagesAcrossRepeatedSummaries()",
+        "nullAndDuplicateStoredSourcesAreRejected()",
+        "boundsTooManySelectedOriginalsByKeepingMostRecentCompleteMessages()",
+        "omitsAnUnfittableOriginalWithoutCuttingNegationOrKeepingOlderConditions()",
+        "rejectsUnknownIdsDuplicateIdsNonNumericIdsAndUnrequestedModelContent()",
+        "socialOnlyBatchCanAdvanceCoverageWithoutInventingAnEmptyFact()",
+        "budgetFallbackKeepsTheCompleteLatestCorrectionInsteadOfTheEarlierCondition()",
+        "selectingAnEllipticalCorrectionRetainsTheOriginalConsultationSubject()",
+        "storeSnapshotMustAlsoFitTheMemoryBudget()",
+        "preservesExactSpeakerNegationAndStatusInsteadOfModelParaphrases()"
+      ],
+      "reportSha256": "8ef54914b5ae7473b840ea33fba1bbc37f0430f5b5591459a534c6ec294796a6"
+    },
+    {
+      "name": "com.telme.chat.service.ChatSummaryServiceTest",
+      "tests": 10,
+      "failures": 0,
+      "cases": [
+        "rejectsBlankLlmResponseWithoutMovingCursor()",
+        "doesNotOverwriteNewerSummary()",
+        "invalidGroundedSelectionCannotMoveTheCursor()",
+        "rejectsResponseContainingOnlyFormattingWithoutMovingCursor()",
+        "aBatchWhoseOversizedOriginalsWereExcludedCanAdvanceWithoutInventingFacts()",
+        "normalizesLlmOutputBeforeSaving()",
+        "skipsLlmWhenSummaryIsNotNeeded()",
+        "excessiveValidSelectionSavesBudgetedOriginalsWithoutAnotherModelCall()",
+        "socialOnlyGroundedBatchAdvancesAtomicallyWithoutModelCall()",
+        "generatesAndSavesSummary()"
+      ],
+      "reportSha256": "017378a818e2043b77a99019b3518bd9af6f77149dafc903f614a0e14137ae8d"
+    },
+    {
+      "name": "com.telme.chat.service.ChatSummaryStoreIntegrationTest",
+      "tests": 9,
+      "failures": 0,
+      "cases": [
+        "oversizedAssistantAnswerStillPreservesTheCompleteCustomerQuestion()",
+        "processesFittableExchangesInSeparateBatchesWithoutSkippingThem()",
+        "preparesOldestCompleteExchangeAndUpdatesCursorAtomically()",
+        "startsAtExactMessageThresholdAndKeepsConfiguredRecentMessages()",
+        "advancesPastAnOversizedExchangeWithoutReusingOlderConditionsOrDeletingOriginals()",
+        "doesNotStartBelowMessageAndTokenThresholds()",
+        "keepsEarlierSubjectWhenOnlyAnAssistantAnswerIsTooLarge()",
+        "anEntireOversizedBatchAdvancesWithoutCallingTheModelOnEmptyConversation()",
+        "summarizesOldMessagesWhenTokenBudgetOverflowsBeforeMessageLimit()"
+      ],
+      "reportSha256": "f026ba53e9ffe5ee3efdd0ba6a567fce7823c8235028dff5ff46954ad1fc12f7"
+    }
+  ],
+  "sourceSha256": {
+    "src/main/java/com/telme/chat/converter/ChatSummaryConverter.java": "7f35a3eb8d8c3fef9cc1ff7e390aba4c994ea3ba48e0534e7a2e1cb2a8c399dd",
+    "src/main/java/com/telme/chat/service/ChatSummaryStore.java": "c989c6dc8950bd15e558e55e617f1000370c6995fec1ad96e0b065376b381ecf",
+    "src/main/java/com/telme/chat/service/ChatSummaryPrompt.java": "6cfe0bf7b0f5769bb69a8da5cd3731f1e559d17b64ae99d00aff909e81847b41",
+    "src/main/java/com/telme/chat/service/ChatSummaryService.java": "15b4fdf035cea94dfa2facc7444eaf75bfe44dd52dce5dd40fb9bc148f39c8dd",
+    "src/test/java/com/telme/chat/converter/ChatSummaryConverterTest.java": "5e7e4964842342f13f367c0123a64493436a9504eed363f6d60c9b949fe0aa6e",
+    "src/test/java/com/telme/chat/service/ChatSummaryServiceTest.java": "1f69799c760087b09c7c40253961bd58a702f1a6980dbab1764c15e2b607d041",
+    "src/test/java/com/telme/chat/service/ChatSummaryStoreIntegrationTest.java": "95f0348028a476edd6abb3e9949cdeda0c30ff15db848fedb4c49840cb9372b6"
+  }
+}

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,18 @@ class OllamaRequestConverterTest {
 
     private final OllamaRequestConverter converter = new OllamaRequestConverter(
             new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
+
+    @Test
+    void contextResolutionKeepsRoutingDefaultsAndExplicitLimits() {
+        var defaults = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question").build(), false);
+        assertThat(defaults.options().temperature()).isEqualTo(0.0);
+        assertThat(defaults.options().numPredict()).isEqualTo(512);
+        var explicit = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question")
+                .temperature(0.0).maxTokens(256).build(), false);
+        assertThat(explicit.options().numPredict()).isEqualTo(256);
+    }
 
     @Test
     @DisplayName("규칙과 질문을 system, user 순서로 담는다")
@@ -111,5 +124,31 @@ class OllamaRequestConverterTest {
 
         assertThat(result.model()).isEqualTo("exaone3.5:7.8b");
         assertThat(result.stream()).isTrue();
+    }
+
+    @Test
+    void 멀티턴_LLM_전면_판정에만_JSON_Schema를_적용한다() {
+        OllamaChatRequest llmAll = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v8").build(), false);
+        OllamaChatRequest regexGated = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v6").build(), false);
+
+        assertThat(llmAll.format()).isInstanceOf(Map.class);
+        assertThat(((Map<?, ?>) llmAll.format()).get("additionalProperties")).isEqualTo(false);
+        assertThat(regexGated.format()).isEqualTo("json");
+        assertThat(regexGated.think()).isNull();
+    }
+
+    @Test
+    void qwen3_멀티턴_전면_판정은_사고_모드를_끈다() {
+        OllamaRequestConverter qwen = new OllamaRequestConverter(
+                new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
+        OllamaChatRequest request = qwen.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v8").build(), false);
+
+        assertThat(request.think()).isFalse();
     }
 }

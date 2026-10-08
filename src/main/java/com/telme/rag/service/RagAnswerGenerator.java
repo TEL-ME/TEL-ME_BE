@@ -14,15 +14,16 @@ import java.util.Objects;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.chat.service.ChatTokenEstimator;
+import com.telme.llm.config.LlmProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class RagAnswerGenerator implements AnswerGenerator {
 
     private final LlmClient llmClient;
@@ -31,6 +32,30 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final EvidenceRelevanceChecker relevanceChecker;
     private final LlmGenerationRecorder recorder;
     private final ExecutionTrace trace;
+    private final int contextSize;
+
+    @Autowired
+    public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
+            LlmProperties properties) {
+        this(client, converter, guard, checker, recorder, trace, properties.contextSize());
+    }
+
+    public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace) {
+        this(client, converter, guard, checker, recorder, trace, 8192);
+    }
+
+    private RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace, int size) {
+        this.llmClient = client;
+        this.contextConverter = converter;
+        this.answerGuard = guard;
+        this.relevanceChecker = checker;
+        this.recorder = recorder;
+        this.trace = trace;
+        this.contextSize = size;
+    }
 
     @Override
     public AnswerResult generate(AnswerRequest request, LlmStreamHandler handler) {
@@ -41,6 +66,13 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 "promptVersion", AnswerPromptTemplates.promptVersionFor(request.userQuery()),
                 "guardEvidenceScope", "FAQ_ANSWERS_ONLY"));
         generationInput.put("consultRequestId", request.consultRequestId());
+        generationInput.put("resolvedQuery", request.resolvedQuery());
+        if (request.chatContext() != null) {
+            generationInput.put("historyMessageIds", request.chatContext().history().stream()
+                    .map(com.telme.chat.service.ChatContextMessage::messageId).toList());
+            generationInput.put("summaryMessageIds", request.chatContext().summarySources().stream()
+                    .map(com.telme.chat.service.ChatContextMessage::messageId).toList());
+        }
         trace.append(request.executionId(), "generationInputs", generationInput);
 
         // 근거 없이 호출하면 모델이 지어냄. 검색 결과 없음의 guard 기록은 호출 전에 FaqSearchAnswerProvider가 남긴다
@@ -54,7 +86,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .collect(Collectors.joining("\n"));
 
         // 검색은 문장 유사도로만 걸러 묻는 항목이 근거에 없는 질문도 통과시킨다
-        if (!relevanceChecker.canAnswer(request.executionId(), request.userQuery(), context)) {
+        if (!relevanceChecker.canAnswer(request.executionId(), request.resolvedQuery(), context)) {
             trace.stage(request.executionId(), "guard", Map.of("outcome", "NOT_RUN",
                     "reason", "EVIDENCE_NOT_RELEVANT"));
             log.info("[RagAnswerGenerator] 근거가 질문에 답하지 않아 생성을 건너뛴다 executionId={}",
@@ -62,19 +94,28 @@ public class RagAnswerGenerator implements AnswerGenerator {
             return answerWithoutEvidence(request, handler);
         }
 
-        // temperature, maxTokens는 TaskType별 기본값 사용
+        String system = AnswerPromptTemplates.systemPromptFor(request.userQuery())
+                + (request.chatContext() == null ? "" : AnswerPromptTemplates.MULTITURN_RULES);
+        ChatTokenEstimator estimator = new ChatTokenEstimator();
+        int historyBudget = Math.max(0, contextSize - 1024 - 256
+                - estimator.estimatePromptPart(system)
+                - estimator.estimatePromptPart(AnswerPromptTemplates.buildUserPrompt(request, context, 0)));
+        String prompt = AnswerPromptTemplates.buildUserPrompt(request, context, historyBudget);
+        if (estimator.estimatePromptPart(system) + estimator.estimatePromptPart(prompt) + 1024 + 256 > contextSize) {
+            throw new IllegalArgumentException("FAQ 근거와 현재 질문이 모델의 입력 예산을 초과합니다.");
+        }
         LlmRequest llmRequest = LlmRequest.builder()
                 .executionId(request.executionId())
                 .consultRequestId(request.consultRequestId())
                 .taskType(TaskType.RAG_ANSWER)
-                .systemPrompt(AnswerPromptTemplates.systemPromptFor(request.userQuery()))
-                .userPrompt(AnswerPromptTemplates.buildUserPrompt(request, context))
+                .systemPrompt(system)
+                .userPrompt(prompt)
                 .contextCount(request.searchResults().size())
                 .promptVersion(AnswerPromptTemplates.promptVersionFor(request.userQuery()))
                 .build();
 
         CollectingHandler collector =
-                new CollectingHandler(handler, answerGuard, answerEvidence, request.userQuery(),
+                new CollectingHandler(handler, answerGuard, answerEvidence, request.resolvedQuery(),
                         trace, request.executionId(), request.consultRequestId());
         try {
             llmClient.stream(llmRequest, collector);
