@@ -8,6 +8,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -141,6 +142,16 @@ public final class SuggestedQuestionRecommender {
             out.add(representativeByPolicy.get(link.to()).slotId());
         }
         return List.copyOf(out);
+    }
+
+    /** 정책들의 대표 FAQ slotId. 대표 질문이 없는 정책은 건너뛴다. */
+    public List<String> representativeSlotIds(Collection<String> policies) {
+        return policies.stream()
+                .map(representativeByPolicy::get)
+                .filter(Objects::nonNull)
+                .map(RepresentativeQuestion::slotId)
+                .distinct()
+                .toList();
     }
 
     /** 문제 상황(TROUBLE) 질문 FAQ인지. 원본 JSON에 없는 FAQ(slotId null)는 false다. */

@@ -138,6 +138,7 @@ class FaqSearchAnswerProviderTest {
                 .thenReturn(List.of("가까운 매장을 알려주세요.", "명의변경 수수료가 있나요?"));
         when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
                 .thenReturn(List.of("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of());
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
                 FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
 
@@ -147,6 +148,34 @@ class FaqSearchAnswerProviderTest {
         assertThat(result.answer().followUps())
                 .containsExactly("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?");
         verifyNoInteractions(answers);
+    }
+
+    // 비교한 정책 자체를 가리키는 추천(명의변경 쪽에서 번호이동 서류)은 다시 띄우지 않는다
+    @Test
+    void comparisonAnswerSkipsSuggestionsAboutComparedPolicies() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var nameChange = new FaqSearchResponse(65L, null, "test", "명의변경 서류", "신분증", 0.9, 1, null, 1, null);
+        var porting = new FaqSearchResponse(66L, null, "test", "번호이동 서류", "신분증", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(nameChange, porting));
+        when(evidence.applies(any())).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(nameChange, porting), "비교 답변"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(nameChange)))
+                .thenReturn(List.of("번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 수수료가 있나요?"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
+                .thenReturn(List.of("명의변경 시 필요한 서류를 정리해서 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of(
+                "번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 시 필요한 서류를 정리해서 알려주세요."));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
+                FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().followUps()).containsExactly("명의변경 수수료가 있나요?", "번호이동 수수료가 있나요?");
     }
 
     @Test

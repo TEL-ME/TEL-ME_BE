@@ -199,6 +199,41 @@ class ConsultMultiFaqProcessingTest {
         assertThat(savedAnswer().followUps()).isEmpty();
     }
 
+    // 서로 이어진 질문을 함께 물으면 하위 답변끼리 상대 질문을 추천하므로, 답한 정책의 추천은 빼고 다음 추천을 쓴다
+    @Test
+    void followUpAboutAnotherAnsweredQuestionIsSkipped() {
+        prepareEvents();
+        AnswerSource usimCost = new AnswerSource(5L, "유심 비용", 1, null, (short) 1, null);
+        AnswerSource usimDocs = new AnswerSource(6L, "유심 서류", 1, null, (short) 1, null);
+        var suggested = new RagSearchResultAnswerGenerator.SuggestedQuestions() {
+            @Override
+            public List<String> suggest(ChatMessage.AnswerBasis basis, List<com.telme.faq.dto.res.FaqSearchResponse> r) {
+                return List.of();
+            }
+
+            @Override
+            public java.util.Set<String> questionsAbout(java.util.Collection<Long> faqIds) {
+                assertThat(faqIds).containsExactly(5L, 6L);
+                return java.util.Set.of("유심 재발급 시 필요한 서류를 알려주세요.", "유심 새로 받는 데 얼마 들어요");
+            }
+        };
+        var processor = new ConsultChatProcessingService(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법"))),
+                input -> input.originalUserQuery().equals("요금제 종류")
+                        ? generated("비용 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimCost),
+                                List.of("유심 재발급 시 필요한 서류를 알려주세요.", "유심 재발급 가능한 매장을 알려주세요."))
+                        : generated("서류 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimDocs),
+                                List.of("유심 새로 받는 데 얼마 들어요", "평일이랑 토요일 운영시간이 어떻게 다른가요?")),
+                persistence, new ConfirmedConditionConverter(), events, trace,
+                ConsultChatProcessingService.NoAnswerSuggestions.none(), suggested);
+
+        processor.request(command);
+
+        assertThat(savedAnswer().followUps())
+                .containsExactly("유심 재발급 가능한 매장을 알려주세요.", "평일이랑 토요일 운영시간이 어떻게 다른가요?");
+    }
+
     private ChatAnswer savedAnswer() {
         ArgumentCaptor<ChatAnswer> answer = ArgumentCaptor.forClass(ChatAnswer.class);
         verify(persistence).persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(),

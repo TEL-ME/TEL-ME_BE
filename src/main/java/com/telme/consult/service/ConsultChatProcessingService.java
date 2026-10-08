@@ -39,6 +39,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private final ConsultChatEvents events;
     private final ExecutionTrace trace;
     private final NoAnswerSuggestions noAnswerSuggestions;
+    private final SuggestedQuestions suggestedQuestions;
 
     public ConsultChatProcessingService(
             TurnAnalyzer analyzer,
@@ -80,6 +81,19 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ConsultChatEvents events,
             ExecutionTrace trace,
             NoAnswerSuggestions noAnswerSuggestions) {
+        this(analyzer, answers, persistence, conditionConverter, events, trace, noAnswerSuggestions,
+                SuggestedQuestions.none());
+    }
+
+    public ConsultChatProcessingService(
+            TurnAnalyzer analyzer,
+            AnswerProvider answers,
+            ConsultChatPersistenceService persistence,
+            ConfirmedConditionConverter conditionConverter,
+            ConsultChatEvents events,
+            ExecutionTrace trace,
+            NoAnswerSuggestions noAnswerSuggestions,
+            SuggestedQuestions suggestedQuestions) {
         this.analyzer = Objects.requireNonNull(analyzer);
         this.answers = Objects.requireNonNull(answers);
         this.persistence = Objects.requireNonNull(persistence);
@@ -87,6 +101,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         this.events = Objects.requireNonNull(events);
         this.trace = Objects.requireNonNull(trace);
         this.noAnswerSuggestions = Objects.requireNonNull(noAnswerSuggestions);
+        this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
     }
 
     @Override
@@ -222,6 +237,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<AnswerSource> sources = new ArrayList<>();
         Set<Long> sourceFaqIds = new HashSet<>();
         List<List<String>> followUpsPerAnswer = new ArrayList<>();
+        List<Long> answeredFaqIds = new ArrayList<>();
         boolean hasGroundedAnswer = false;
         for (int i = 0; i < faqTurns.size(); i++) {
             FaqTurn faq = faqTurns.get(i);
@@ -245,8 +261,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 // 합친 답변에는 근거가 있는 하위 답변마다 추천 질문을 하나씩 붙인다
                 followUpsPerAnswer.add(generated.answer().followUps() == null
                         ? List.of() : generated.answer().followUps());
+                if (!generated.sources().isEmpty()) {
+                    answeredFaqIds.add(generated.sources().getFirst().faqId());
+                }
             }
         }
+        // 서로 이어진 질문을 함께 물으면 하위 답변끼리 상대 질문을 추천한다(관련된 짝 12개 중 8개).
+        // 하위 답변의 기준 FAQ(1순위) 정책을 가리키는 추천은 빼고 그 답변의 다음 추천을 쓴다
+        Set<String> answered = Objects.requireNonNull(
+                suggestedQuestions.questionsAbout(answeredFaqIds), "answeredQuestions");
+        followUpsPerAnswer = followUpsPerAnswer.stream()
+                .map(followUps -> followUps.stream().filter(question -> !answered.contains(question)).toList())
+                .toList();
 
         ChatAnswer combined = withNoAnswerSuggestion(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,

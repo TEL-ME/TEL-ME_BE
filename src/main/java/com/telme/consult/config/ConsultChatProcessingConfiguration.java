@@ -5,6 +5,7 @@ import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ChatEmitterConsultEvents;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
@@ -35,8 +36,10 @@ public class ConsultChatProcessingConfiguration {
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
             ExecutionTrace trace,
-            ObjectProvider<NoAnswerSuggestions> noAnswerSuggestions) {
+            ObjectProvider<NoAnswerSuggestions> noAnswerSuggestions,
+            ObjectProvider<SuggestedQuestions> suggestedQuestions) {
         return new ConsultChatProcessingService(analyzer, answers, persistence, conditionConverter, events, trace,
-                noAnswerSuggestions.getIfAvailable(NoAnswerSuggestions::none));
+                noAnswerSuggestions.getIfAvailable(NoAnswerSuggestions::none),
+                suggestedQuestions.getIfAvailable(SuggestedQuestions::none));
     }
 }

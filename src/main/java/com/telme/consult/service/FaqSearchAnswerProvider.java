@@ -18,6 +18,7 @@ import java.util.Map;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** 사용자 원문을 우선 검색하고 근거가 없을 때 정제 질문으로 보완한다. */
 public final class FaqSearchAnswerProvider implements AnswerProvider {
@@ -90,10 +91,14 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 trace.stage(input.executionId(), "comparisonAnswer", Map.of(
                         "method", "VERIFIED_FAQ_QUOTE", "faqIds",
                         resolution.sources().stream().map(FaqSearchResponse::faqId).toList()));
-                // 비교한 두 FAQ가 모두 근거라 FAQ마다 추천 질문을 하나씩 붙인다
+                // 비교한 두 FAQ가 모두 근거라 FAQ마다 추천 질문을 하나씩 붙인다. 비교한 정책 자체를 가리키는 추천은 뺀다
+                Set<String> answered = Objects.requireNonNull(suggestedQuestions.questionsAbout(
+                        resolution.sources().stream().map(FaqSearchResponse::faqId).toList()), "answeredQuestions");
                 List<String> followUps = SuggestedQuestions.oneFromEach(resolution.sources().stream()
                         .map(source -> Objects.requireNonNull(suggestedQuestions.suggest(
-                                ChatMessage.AnswerBasis.GROUNDED, List.of(source)), "suggestedQuestions"))
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(source)), "suggestedQuestions").stream()
+                                .filter(question -> !answered.contains(question))
+                                .toList())
                         .toList());
                 return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
                         resolution.answer(), ChatMessage.AnswerBasis.GROUNDED, followUps, null),
