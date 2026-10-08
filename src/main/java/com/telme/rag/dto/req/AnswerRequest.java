@@ -26,11 +26,13 @@ public record AnswerRequest(
 ) {
     public AnswerRequest(Long executionId, Long consultRequestId, String userQuery,
             Map<String, String> conditions, List<FaqSearchResponse> searchResults) {
-        this(executionId, consultRequestId, userQuery, conditions, searchResults, userQuery, null);
+        this(executionId, consultRequestId, userQuery, conditions, Map.of(), searchResults,
+                userQuery, null);
     }
+
     public AnswerRequest(Long executionId, String userQuery, Map<String, String> conditions,
             List<FaqSearchResponse> searchResults) {
-        this(executionId, null, userQuery, conditions, Map.of(), searchResults);
+        this(executionId, null, userQuery, conditions, searchResults);
     }
 
     public AnswerRequest {
