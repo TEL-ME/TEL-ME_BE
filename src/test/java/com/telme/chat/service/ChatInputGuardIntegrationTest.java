@@ -789,7 +789,11 @@ class ChatInputGuardIntegrationTest {
                                 candidate.consultRequestId(),
                                 candidate.questionMessageId(),
                                 "location",
-                                Map.of("location", Condition.filled("강남역"))),
+                                Map.of(
+                                        "location",
+                                        Condition.filled("강남역"),
+                                        "serviceType",
+                                        Condition.declined())),
                         LocationStatus.AVAILABLE);
         return new AnalyzedTurn(
                 followup.preparation(),
