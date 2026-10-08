@@ -16,6 +16,7 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.guard.ChatInputGuardService;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
@@ -46,6 +47,7 @@ public class ChatSessionService {
     private final ChatMessageConverter chatMessageConverter;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<ChatFeedbackReader> chatFeedbackReader;
+    private final ChatInputGuardService inputGuard;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -168,6 +170,27 @@ public class ChatSessionService {
         if (session.getStatus() == ChatSession.Status.CLOSED) {
             throw new GeneralException(ChatErrorCode.SESSION_CLOSED);
         }
+        var guarded = inputGuard.begin(actor, sessionId, request);
+        if (guarded.cached() != null) {
+            return guarded.cached();
+        }
+        if (guarded.rejected()) {
+            if (guarded.alreadyRestricted()) {
+                return new ChatMessageSendResponse(sessionId, null, null, null, null,
+                        guarded.now(), guarded.notice());
+            }
+            ChatMessage blocked = chatMessageAppender.append(session, ChatMessage.builder()
+                    .role(ChatMessage.Role.USER)
+                    .messageType(ChatMessage.MessageType.BLOCKED)
+                    .content(guarded.inspection().content())
+                    .status(ChatMessage.Status.COMPLETED)
+                    .completedAt(guarded.now()));
+            session.touch(guarded.now());
+            var response = new ChatMessageSendResponse(sessionId, blocked.getMessageId(),
+                    blocked.getSequenceNo(), null, null, blocked.getCreatedAt(), guarded.notice());
+            inputGuard.record(guarded, actor, sessionId, request, response);
+            return response;
+        }
         if (findRunningExecution(sessionId).isPresent()) {
             throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
         }
@@ -176,7 +199,7 @@ public class ChatSessionService {
         ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
                 .role(ChatMessage.Role.USER)
                 .messageType(ChatMessage.MessageType.QUESTION)
-                .content(request.content())
+                .content(guarded.inspection().content())
                 .status(ChatMessage.Status.COMPLETED)
                 .completedAt(completedAt));
 
@@ -189,7 +212,12 @@ public class ChatSessionService {
         session.touch(completedAt);
         eventPublisher.publishEvent(new ChatProcessingCommand(
                 execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent(), coordinates));
-        return chatMessageConverter.toSendResponse(message, execution);
+        ChatMessageSendResponse response = chatMessageConverter.toSendResponse(message, execution);
+        if (guarded.notice() != null) {
+            response = response.withInputGuard(guarded.notice());
+        }
+        inputGuard.record(guarded, actor, sessionId, request, response);
+        return response;
     }
 
     private ChatSession getOwnedSessionForUpdate(ChatActor actor, Long sessionId) {

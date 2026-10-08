@@ -1,6 +1,7 @@
 package com.telme.chat.repository;
 
 import com.telme.chat.entity.ChatMessage;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,7 +54,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
               and message.sequenceNo > :afterSequenceNo
               and message.sequenceNo < :beforeSequenceNo
               and message.status = :completedStatus
-              and message.messageType <> :excludedType
+              and message.messageType not in :excludedTypes
             order by message.sequenceNo desc
             """)
     List<ChatMessage> findCompletedContextMessagesBefore(
@@ -61,7 +62,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("afterSequenceNo") Integer afterSequenceNo,
             @Param("beforeSequenceNo") Integer beforeSequenceNo,
             @Param("completedStatus") ChatMessage.Status completedStatus,
-            @Param("excludedType") ChatMessage.MessageType excludedType,
+            @Param("excludedTypes") Collection<ChatMessage.MessageType> excludedTypes,
             Pageable pageable
     );
 
@@ -72,7 +73,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
               and message.sequenceNo > :afterSequenceNo
               and message.sequenceNo <= :throughSequenceNo
               and message.status = :completedStatus
-              and message.messageType <> :excludedType
+              and message.messageType not in :excludedTypes
             order by message.sequenceNo asc
             """)
     List<ChatMessage> findOldestCompletedSummaryMessagesAfter(
@@ -80,7 +81,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("afterSequenceNo") Integer afterSequenceNo,
             @Param("throughSequenceNo") Integer throughSequenceNo,
             @Param("completedStatus") ChatMessage.Status completedStatus,
-            @Param("excludedType") ChatMessage.MessageType excludedType,
+            @Param("excludedTypes") Collection<ChatMessage.MessageType> excludedTypes,
             Pageable pageable
     );
 
