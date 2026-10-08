@@ -687,11 +687,13 @@ public class QueryRoutingService {
             return extracted;
         }
         String serviceType = ruleBasedFallback.serviceTypeOf(question);
-        if (serviceType == null) {
+        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없다. 모른다는 것과 구분해 되묻지 않도록 표시한다
+        if (serviceType == null && !ruleBasedFallback.hasServiceTypeMention(question)) {
             return extracted;
         }
         Map<String, String> filled = new LinkedHashMap<>(extracted);
-        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY,
+                serviceType == null ? FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED : serviceType);
         return filled;
     }
 

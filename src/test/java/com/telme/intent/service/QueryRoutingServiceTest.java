@@ -1242,20 +1242,21 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
 
-            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
-            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions())
+                    .containsEntry("serviceType", "UNDECIDED");
         }
 
-        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없어 임의로 고르지 않는다
+        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없어 임의로 고르지 않는다.
+        // 다만 업무를 아예 말하지 않은 질문과는 구분해, 되묻지 않도록 표시만 남긴다
         @ParameterizedTest
         @ValueSource(strings = {"번호이동 말고 신규 개통 가능한 매장 찾아줘", "명의변경하고 번호이동 되는 매장 찾아줘"})
-        void doesNotFillWhenSeveralServiceWords(String question) {
+        void marksUndecidedWhenSeveralServiceWords(String question) {
             given(llmClient.generate(any())).willReturn(store("{}", "{}"));
 
             IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
 
-            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
-            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions())
+                    .containsEntry("serviceType", "UNDECIDED");
         }
 
         @Test
