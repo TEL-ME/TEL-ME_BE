@@ -774,7 +774,8 @@ class ChatInputGuardIntegrationTest {
                     turns.prepareAnalysis(
                             command.sessionId(),
                             new IntentSubQueryResponse(
-                                    id, (short) 1, ConsultRequest.Intent.STORE, "매장", Map.of()),
+                                    id, (short) 1, ConsultRequest.Intent.STORE, "매장",
+                                    Map.of("serviceType", "UNDECIDED")),
                             LocationStatus.MISSING),
                     null,
                     Purpose.NEARBY_STORE,

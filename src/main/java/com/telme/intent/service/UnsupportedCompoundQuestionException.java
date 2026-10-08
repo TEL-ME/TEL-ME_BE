@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** FAQ와 매장이 섞인 질문을 상담 처리기가 부분 처리하지 않도록 알리는 예외다. */
+// 하위 질문을 안전하게 구분할 수 없을 때 부분 저장과 처리를 막는다.
 public final class UnsupportedCompoundQuestionException extends IllegalStateException {
-    // 라우터가 나눈 하위 질문. 하나씩 보낼 버튼을 만들 때 쓴다. FAQ와 매장이 섞인 경우에만 담고 나머지는 비어 있다
+    // 안전한 분해를 확인하지 못했을 때 하나씩 다시 보낼 버튼을 만드는 데 쓴다.
     private final transient List<Part> parts;
 
     public UnsupportedCompoundQuestionException() {
@@ -16,7 +16,7 @@ public final class UnsupportedCompoundQuestionException extends IllegalStateExce
     }
 
     public UnsupportedCompoundQuestionException(List<Part> parts) {
-        super("현재 Chat 상담 연결은 FAQ와 매장 복합 질문을 지원하지 않습니다.");
+        super("하위 질문을 안전하게 구분해 처리할 수 없습니다.");
         this.parts = parts == null ? List.of() : List.copyOf(parts);
     }
 

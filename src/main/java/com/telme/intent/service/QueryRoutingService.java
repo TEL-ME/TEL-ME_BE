@@ -49,7 +49,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 @Slf4j
 public class QueryRoutingService {
-    private static final int MAX_FAQ_SUB_QUERIES = 3;
+    private static final int MAX_CONSULT_SUB_QUERIES = 3;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -109,7 +109,7 @@ public class QueryRoutingService {
         return route(userMessage, context, false);
     }
 
-    /** 상담 연결용 진입점. 여러 FAQ 질의는 유지하고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
+    // 상담 연결용 진입점. 하위 요청별 검색이 가능한 FAQ와 매장 복합 질문을 유지한다.
     public IntentRouteResponse routeSingleConsult(ChatMessage userMessage, ChatContext context) {
         return route(userMessage, context, true);
     }
@@ -148,7 +148,7 @@ public class QueryRoutingService {
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
             LlmRoutingPayload fallbackPayload = ruleBasedFallback.classify(question);
-            ensureSingleConsultSupported(fallbackPayload, singleConsultOnly);
+            ensureSingleConsultSupported(fallbackPayload, singleConsultOnly, question);
             return executeInTransaction(userMessage, fallbackPayload, QueryRouting.Method.RULE);
         }
 
@@ -251,7 +251,7 @@ public class QueryRoutingService {
             }
         }
 
-        ensureSingleConsultSupported(payload, singleConsultOnly);
+        ensureSingleConsultSupported(payload, singleConsultOnly, question);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
         return result;
@@ -373,10 +373,15 @@ public class QueryRoutingService {
                         "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
             }
             Map<String, String> conditions = sub.conditions();
-            if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
+            if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
+                    && payload.intent() == QueryRouting.Intent.STORE) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
                 merged.putAll(conditions);
                 conditions = merged;
+            }
+            if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
+                // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
+                conditions = validConditions(conditions, sub.queryText(), context);
             }
             safeSubQueries.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, conditions));
@@ -597,24 +602,23 @@ public class QueryRoutingService {
     }
 
     private void ensureSingleConsultSupported(
-            LlmRoutingPayload payload, boolean singleConsultOnly) {
+            LlmRoutingPayload payload, boolean singleConsultOnly, String originalQuestion) {
         if (!singleConsultOnly || payload == null) {
             return;
         }
         int subQueryCount = payload.subQueries() == null ? 0 : payload.subQueries().size();
-        if (payload.intent() == QueryRouting.Intent.BOTH
-                || subQueryCount > 1
-                && (payload.intent() != QueryRouting.Intent.FAQ
-                || payload.subQueries().stream().anyMatch(
-                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
+        if (payload.intent() == QueryRouting.Intent.BOTH && subQueryCount < 2
+                || subQueryCount > 1 && payload.subQueries().stream().anyMatch(sub ->
+                sub.queryText() == null || sub.queryText().isBlank()
+                        || sub.queryText().strip().equals(originalQuestion.strip()))) {
             throw new UnsupportedCompoundQuestionException(payload.subQueries() == null ? List.of()
                     : payload.subQueries().stream()
                             .map(sub -> new UnsupportedCompoundQuestionException.Part(
                                     sub.intent(), sub.queryText(), sub.conditions()))
                             .toList());
         }
-        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
-            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
+        if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
     }
 
@@ -624,26 +628,18 @@ public class QueryRoutingService {
             return;
         }
         int subQueryCount = response.subQueries() == null ? 0 : response.subQueries().size();
-        if (response.intent() == QueryRouting.Intent.BOTH
-                || subQueryCount > 1
-                && (response.intent() != QueryRouting.Intent.FAQ
-                || response.subQueries().stream().anyMatch(
-                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
+        if (response.intent() == QueryRouting.Intent.BOTH && subQueryCount < 2
+                || subQueryCount > 1 && response.subQueries().stream().anyMatch(sub ->
+                sub.queryText() == null || sub.queryText().isBlank()
+                        || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
             throw new UnsupportedCompoundQuestionException(response.subQueries() == null ? List.of()
                     : response.subQueries().stream()
                             .map(sub -> new UnsupportedCompoundQuestionException.Part(
                                     sub.intent(), sub.queryText(), sub.conditions()))
                             .toList());
         }
-        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
-            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
-        }
-        if (subQueryCount > 1 && response.intent() == QueryRouting.Intent.FAQ
-                && response.subQueries().stream().anyMatch(sub -> sub.queryText() == null
-                || sub.queryText().isBlank()
-                || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
-            throw new UnsupportedCompoundQuestionException(
-                    "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
+        if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
     }
 

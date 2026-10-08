@@ -125,7 +125,7 @@ class ConsultMultiFaqProcessingTest {
                 "요금제와 로밍 신청 방법 알려줘", 0);
         List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
         var processor = new ConsultChatProcessingService(
-                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
                         faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법")))
                         .withContext(context, "요금제와 로밍 신청 방법 알려줘"),
                 input -> {
@@ -244,7 +244,7 @@ class ConsultMultiFaqProcessingTest {
             }
         };
         var processor = new ConsultChatProcessingService(
-                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
                         faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법"))),
                 input -> input.originalUserQuery().equals("요금제 종류")
                         ? generated("비용 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimCost),
@@ -270,16 +270,16 @@ class ConsultMultiFaqProcessingTest {
 
     private ConsultChatProcessingService processor(ConsultChatProcessingService.AnswerProvider answers) {
         return new ConsultChatProcessingService(
-                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
                         faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법"))),
                 answers, persistence, new ConfirmedConditionConverter(), events, trace);
     }
 
-    private ConsultChatProcessingService.FaqTurn faqTurn(long requestId, String queryText) {
+    private ConsultChatProcessingService.ConsultTurn faqTurn(long requestId, String queryText) {
         var decision = new DialogueDecision(requestId, DialogueDecision.Action.PROCEED,
                 Map.of(), null, null, DialogueDecision.MessageOrigin.NONE);
         var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision);
-        return new ConsultChatProcessingService.FaqTurn(
+        return new ConsultChatProcessingService.ConsultTurn(
                 new ConsultService.PreparationResult(prepared, null), queryText);
     }
 

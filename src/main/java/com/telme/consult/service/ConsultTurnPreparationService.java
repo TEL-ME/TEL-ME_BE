@@ -39,6 +39,13 @@ public class ConsultTurnPreparationService {
                 input.locationStatus());
     }
 
+    // 같은 원문에서 만든 다른 요청을 기존 조건 그대로 다시 준비한다.
+    public ConsultService.PreparationResult prepareExisting(
+            long sessionId, IntentSubQueryResponse query, LocationStatus locationStatus) {
+        return consultService.prepareTurn(sessionId, query.consultRequestId(),
+                purpose(query.intent().name()), Map.of(), locationStatus);
+    }
+
     // 소유권을 확인해 얻은 문맥과 분석에서 선택한 질문이 일치해야 이어간다.
     public PreparedFollowup prepareFollowup(
             Context context, Selection selection, LocationStatus locationStatus) {

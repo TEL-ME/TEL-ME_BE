@@ -16,6 +16,7 @@ import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.IntentRouteResponse;
+import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.service.LlmClient;
@@ -71,6 +72,44 @@ class QueryRoutingServiceTest {
     @Nested
     @DisplayName("LLM 정상 응답")
     class LlmSuccess {
+
+        @Test
+        void mixedIntentWithoutIndependentQuestionsIsRejectedBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"번호이동과 매장","subQueries":[]}
+                    """);
+            assertThatThrownBy(() -> service.routeSingleConsult(msg("번호이동 방법과 매장 찾아줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void faqServiceTypeDoesNotBecomeConditionOfGenericStoreRequest() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"번호이동 방법과 강남역 매장",
+                     "extractedConditions":{"serviceType":"PORT_IN"},
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"번호이동 방법","conditions":{}},
+                       {"order":2,"intent":"STORE","queryText":"강남역 매장","conditions":{"location":"강남역"}}]}
+                    """);
+            var result = service.routeSingleConsult(msg("번호이동 방법과 강남역 매장 알려줘"), null);
+            assertThat(result.subQueries().get(1).conditions())
+                    .containsEntry("location", "강남역").doesNotContainKey("serviceType");
+        }
+
+        @Test
+        void synonymousUsimSearchTextKeepsTheExplicitStoreServiceType() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"유심 재발급 비용과 강남역 매장",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"유심 재발급 비용","conditions":{}},
+                       {"order":2,"intent":"STORE","queryText":"강남역 USIM 재발급 매장",
+                        "conditions":{"location":"강남역","serviceType":"USIM_REISSUE"}}]}
+                    """);
+            var result = service.routeSingleConsult(msg("유심 재발급 비용과 강남역 유심 재발급 매장 알려줘"), null);
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("serviceType", "USIM_REISSUE");
+        }
 
         @Test
         @DisplayName("FAQ 단독 → intent=FAQ, 서브질의 1건")
@@ -130,8 +169,8 @@ class QueryRoutingServiceTest {
         }
 
         @Test
-        @DisplayName("단일 상담 진입점은 BOTH를 저장 전에 차단한다")
-        void singleConsultBlocksBothBeforeSaving() {
+        @DisplayName("상담 진입점은 FAQ와 매장 하위 요청을 함께 저장한다")
+        void chatConsultationKeepsBothBeforeSaving() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"BOTH","confidence":0.99,
                  "refinedQuery":"5G 요금제와 신촌 매장",
@@ -143,19 +182,11 @@ class QueryRoutingServiceTest {
                 """);
             ChatMessage message = msg("5G 요금제와 신촌 매장 알려줘");
 
-            assertThatThrownBy(() -> service.routeSingleConsult(message, null))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("FAQ와 매장 복합 질문")
-                    // 하나씩 보낼 버튼을 만들 수 있게 나눈 하위 질문을 넘긴다
-                    .extracting(e -> ((UnsupportedCompoundQuestionException) e).parts())
-                    .isEqualTo(java.util.List.of(
-                            new UnsupportedCompoundQuestionException.Part(
-                                    ConsultRequest.Intent.FAQ, "5G 요금제", java.util.Map.of()),
-                            new UnsupportedCompoundQuestionException.Part(
-                                    ConsultRequest.Intent.STORE, "신촌 매장", java.util.Map.of("location", "신촌"))));
-
-            verify(queryRoutingRepository, never()).saveAndFlush(any());
-            verify(consultRequestRepository, never()).save(any());
+            var result = service.routeSingleConsult(message, null);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+            assertThat(result.subQueries().get(0).conditions()).isEmpty();
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("location", "신촌");
         }
 
         @Test

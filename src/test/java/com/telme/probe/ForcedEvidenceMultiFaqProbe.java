@@ -114,7 +114,7 @@ class ForcedEvidenceMultiFaqProbe {
 
             var calls = new ArrayList<Map<String, Object>>();
             var processor = new ConsultChatProcessingService(
-                    ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(
+                    ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(
                             buildTurns(testCase.parts())),
                     input -> {
                         int index = calls.size();
@@ -175,13 +175,13 @@ class ForcedEvidenceMultiFaqProbe {
                         answer.answerBasis(), List.of(), null), answer.sources());
     }
 
-    private List<ConsultChatProcessingService.FaqTurn> buildTurns(List<Part> parts) {
-        List<ConsultChatProcessingService.FaqTurn> turns = new ArrayList<>();
+    private List<ConsultChatProcessingService.ConsultTurn> buildTurns(List<Part> parts) {
+        List<ConsultChatProcessingService.ConsultTurn> turns = new ArrayList<>();
         for (int i = 0; i < parts.size(); i++) {
             var decision = new DialogueDecision(100L + i, DialogueDecision.Action.PROCEED,
                     Map.of(), null, null, DialogueDecision.MessageOrigin.NONE);
             var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision);
-            turns.add(new ConsultChatProcessingService.FaqTurn(
+            turns.add(new ConsultChatProcessingService.ConsultTurn(
                     new ConsultService.PreparationResult(prepared, null), parts.get(i).question()));
         }
         return turns;

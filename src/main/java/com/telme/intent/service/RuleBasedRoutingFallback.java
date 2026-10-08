@@ -105,7 +105,8 @@ public class RuleBasedRoutingFallback {
     }
 
     private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
-        new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
+        new ServiceTypeRule("USIM_REISSUE", Pattern.compile("(?:유심|USIM).*(?:변경|교체|재발급)|eSIM|이심",
+                Pattern.CASE_INSENSITIVE)),
         new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
         new ServiceTypeRule("PORT_IN",      Pattern.compile("번호.*이동|통신사.*변경")),
         new ServiceTypeRule("NEW_LINE",     Pattern.compile("신규.*개통|새.*번호"))

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.repository.CompoundConsultRequestFinder;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
@@ -23,6 +24,7 @@ class ConsultTurnRoutingConfigurationTest {
                     .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
                     .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
+                    .withBean(CompoundConsultRequestFinder.class, () -> mock(CompoundConsultRequestFinder.class))
                     .withBean(ContextProvider.class, () -> mock(ContextProvider.class))
                     .withBean(
                             ConsultTurnPreparationService.class,

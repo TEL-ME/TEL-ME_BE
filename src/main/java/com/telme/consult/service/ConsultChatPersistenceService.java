@@ -8,6 +8,7 @@ import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
+import com.telme.consult.service.ConsultChatProcessingService.ConsultTurn;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerSourcesReady;
@@ -297,6 +298,51 @@ public class ConsultChatPersistenceService {
         }
         for (ConsultService.PreparedTurn prepared : preparedTurns) {
             persistReadyTurn(executionId, prepared, null);
+        }
+    }
+
+    // 조건을 채운 요청과 나머지 요청을 함께 저장한 뒤 답변 생성을 시작한다.
+    @Transactional
+    public void persistCompoundReadyTurns(long executionId, long sessionId, List<ConsultTurn> turns) {
+        validateCompound(sessionId, turns);
+        for (ConsultTurn turn : turns) {
+            persistReadyTurn(executionId, turn.preparation().prepared(), turn.answeredField());
+        }
+    }
+
+    // 한 번에는 한 요청만 되묻는다. 다른 요청의 조건 변경도 같은 트랜잭션에서 보존한다.
+    @Transactional
+    public ChatExecutionState persistCompoundClarification(
+            long executionId, long sessionId, List<ConsultTurn> turns) {
+        validateCompound(sessionId, turns);
+        ConsultTurn asking = turns.stream().filter(turn ->
+                turn.preparation().prepared().decision().action() == Action.ASK).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("되물을 하위 상담이 필요합니다."));
+        for (ConsultTurn turn : turns) {
+            if (turn.preparation().prepared().decision().action() != Action.ASK) {
+                persistReadyTurn(executionId, turn.preparation().prepared(), turn.answeredField());
+            }
+        }
+        return persistClarification(executionId, asking.preparation().prepared(), asking.answeredField());
+    }
+
+    private void validateCompound(long sessionId, List<ConsultTurn> turns) {
+        if (turns == null || turns.size() < 2 || turns.size() > 3 || turns.stream().anyMatch(turn -> turn == null
+                || turn.preparation().waitingForReply() || turn.preparation().prepared() == null
+                || turn.preparation().prepared().sessionId() != sessionId)
+                || turns.stream().map(turn -> turn.preparation().prepared().decision().consultRequestId())
+                        .distinct().count() != turns.size()) {
+            throw new IllegalArgumentException("같은 채팅방의 서로 다른 하위 상담 요청이 필요합니다.");
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(turns.size(), "?"));
+        var parameters = new java.util.ArrayList<Object>();
+        turns.forEach(turn -> parameters.add(turn.preparation().prepared().decision().consultRequestId()));
+        parameters.add(sessionId);
+        var origins = jdbc.queryForList("SELECT origin_message_id FROM consult_requests"
+                + " WHERE consult_request_id IN (" + placeholders + ") AND session_id=?",
+                Long.class, parameters.toArray());
+        if (origins.size() != turns.size() || origins.stream().distinct().count() != 1) {
+            throw new IllegalArgumentException("같은 원문에서 만든 하위 상담 요청이 필요합니다.");
         }
     }
 }

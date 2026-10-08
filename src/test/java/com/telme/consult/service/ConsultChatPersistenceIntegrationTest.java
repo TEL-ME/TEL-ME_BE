@@ -625,9 +625,9 @@ class ConsultChatPersistenceIntegrationTest {
         }, trace, new LlmComparisonEvidenceResolver(llmClient, new ObjectMapper()));
         var events = new RecordingEvents();
         var processor = new ConsultChatProcessingService(
-                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
-                        new ConsultChatProcessingService.FaqTurn(first, firstQuery),
-                        new ConsultChatProcessingService.FaqTurn(second, comparison))),
+                command -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
+                        new ConsultChatProcessingService.ConsultTurn(first, firstQuery),
+                        new ConsultChatProcessingService.ConsultTurn(second, comparison))),
                 answers, persistence, new ConfirmedConditionConverter(), events, trace);
 
         processor.request(processingCommand());
@@ -692,9 +692,9 @@ class ConsultChatPersistenceIntegrationTest {
                     List.of(new AnswerSource(null, query, 1, null, (short) 1, null)));
         });
         var processor = new ConsultChatProcessingService(
-                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
-                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
-                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                command -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
+                        new ConsultChatProcessingService.ConsultTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.ConsultTurn(second, "로밍 신청 방법"))),
                 answers, persistence, new ConfirmedConditionConverter(), events, trace);
 
         processor.request(processingCommand());
@@ -760,9 +760,9 @@ class ConsultChatPersistenceIntegrationTest {
                                 ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
                                 List.of(new AnswerSource(91L, "요금제 종류 근거", 1, null, (short) 1, null))));
         var processor = new ConsultChatProcessingService(
-                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
-                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
-                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                command -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
+                        new ConsultChatProcessingService.ConsultTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.ConsultTurn(second, "로밍 신청 방법"))),
                 answers, persistence, new ConfirmedConditionConverter(), new RecordingEvents());
 
         processor.request(processingCommand());

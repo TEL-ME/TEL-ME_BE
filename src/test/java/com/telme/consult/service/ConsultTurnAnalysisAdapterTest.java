@@ -209,14 +209,14 @@ class ConsultTurnAnalysisAdapterTest {
         }
         var adapter = new ConsultTurnAnalysisAdapter(
                 command -> context,
-                value -> AnalysisResult.multipleFaq(List.of(first, second)),
+                value -> AnalysisResult.compound(List.of(first, second)),
                 preparation, new FollowupConditionConverter());
 
         var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "요금제와 로밍 알려줘"));
 
-        assertThat(turn.faqTurns()).extracting(ConsultChatProcessingService.FaqTurn::queryText)
+        assertThat(turn.consultTurns()).extracting(ConsultChatProcessingService.ConsultTurn::queryText)
                 .containsExactly("요금제 종류", "로밍 신청 방법");
-        assertThat(turn.faqTurns()).extracting(
+        assertThat(turn.consultTurns()).extracting(
                 faq -> faq.preparation().prepared().decision().consultRequestId())
                 .containsExactly(101L, 102L);
     }

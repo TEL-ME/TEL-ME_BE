@@ -28,7 +28,7 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
     private static final String COMPOUND_GUIDANCE =
             "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요.";
     private static final String TOO_MANY_FAQ_GUIDANCE =
-            "FAQ 질문은 한 번에 최대 3개까지 답변할 수 있습니다. 질문을 나누어 보내주세요.";
+            "질문은 한 번에 최대 3개까지 처리할 수 있습니다. 질문을 나누어 보내주세요.";
     private final ChatMessageRepository messages;
     private final QueryRoutingService routing;
     private final FollowupAnalysisProvider followups;
@@ -108,11 +108,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                             List.of("요금제 알려줘", "가까운 매장 찾아줘"),
                             null));
         }
-        if (result.intent() == Intent.FAQ && result.subQueries() != null
-                && result.subQueries().size() > 1
-                && result.subQueries().stream().allMatch(
-                        query -> query.intent() == ConsultRequest.Intent.FAQ)) {
-            return AnalysisResult.multipleFaq(result.subQueries());
+        if (result.subQueries() != null && result.subQueries().size() > 1) {
+            return AnalysisResult.compound(result.subQueries());
         }
         if (result.subQueries() == null || result.subQueries().size() != 1) {
             throw new IllegalStateException("단일 상담 라우팅 결과가 필요합니다.");
