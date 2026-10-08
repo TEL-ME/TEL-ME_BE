@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.feedback.repository.FeedbackStore;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.telme.chat.service.HttpSessionChatActorProvider;
-import com.telme.feedback.repository.FeedbackStore;
 
 /** 피드백 활성화 상태의 실제 컨텍스트로 Security → 컨트롤러 → 서비스 → DB 흐름을 검증한다. 테스트마다 롤백된다. */
 @SpringBootTest(properties = "telme.feedback.enabled=true")
@@ -78,7 +76,7 @@ class FeedbackApiIntegrationTest {
         long firstAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
         long secondAnswer = message(sessionId, "ASSISTANT", "ANSWER", "COMPLETED");
         MockHttpSession guest = guestSession(guestId);
-        save(guest, firstAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        guestFeedback(firstAnswer, guestId);
 
         mvc.perform(get(HISTORY_URL, sessionId).session(guest).param("size", "1"))
                 .andExpect(status().isOk())
@@ -116,7 +114,7 @@ class FeedbackApiIntegrationTest {
         UUID guestId = UUID.randomUUID();
         long guestChat = chatSession(null, guestId);
         long guestAnswer = message(guestChat, "ASSISTANT", "ANSWER", "COMPLETED");
-        save(guestSession(guestId), guestAnswer, "{\"rating\":\"LIKE\"}").andExpect(status().isOk());
+        guestFeedback(guestAnswer, guestId);
         // 로그인 승계: 세션과 피드백이 회원에게 넘어가고, guest_id는 이력용으로 함께 남는다
         jdbc.update("UPDATE chat_sessions SET user_id=? WHERE session_id=?", ownerId, guestChat);
         feedbackStore.succeedGuestFeedback(guestId, ownerId);
@@ -172,11 +170,23 @@ class FeedbackApiIntegrationTest {
     @Test
     void guestRatesOwnStoreRecommendation() throws Exception {
         UUID guestId = UUID.randomUUID();
-        long storeResult = message(chatSession(null, guestId), "ASSISTANT", "STORE_RESULT", "COMPLETED");
+        long guestAnswer = message(chatSession(null, guestId), "ASSISTANT", "ANSWER", "COMPLETED");
+        MockHttpSession guest = guestSession(guestId);
 
-        save(guestSession(guestId), storeResult, "{\"rating\":\"DISLIKE\",\"reason\":\"NOT_RELATED\"}")
+        save(guest, guestAnswer, "{\"rating\":\"LIKE\"}")
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FEEDBACK403-0"));
+        assertFeedbackRows(guestAnswer, 0);
+        
+        // 차단 전에 남긴 평가는 조회·취소할 수 있다
+        guestFeedback(guestAnswer, guestId);
+        mvc.perform(get(URL, guestAnswer).session(guest))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.reason").value("NOT_RELATED"));
+                .andExpect(jsonPath("$.result.rating").value("LIKE"));
+        save(guest, guestAnswer, "{\"rating\":\"DISLIKE\",\"reason\":\"NOT_RELATED\"}")
+                .andExpect(status().isForbidden());
+        mvc.perform(delete(URL, guestAnswer).session(guest)).andExpect(status().isOk());
+        assertFeedbackRows(guestAnswer, 0);
     }
 
     @Test
@@ -257,13 +267,13 @@ class FeedbackApiIntegrationTest {
     @Test
     void requestWithoutIdentityGetsFreshGuestAndSeesNotFound() throws Exception {
         // GuestIdentityFilter가 /api/v1/chat/** 전체에 걸려, 세션이 없어도 새 게스트로 자동 식별된다.
-        // 그 게스트는 이 메시지를 만든 적이 없으므로 401이 아니라 404로 응답한다.
+        // 그 게스트는 이 메시지를 만든 적이 없으므로 조회는 401이 아니라 404로 응답한다.
         mvc.perform(get(URL, answer))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("FEEDBACK404-0"));
         mvc.perform(put(URL, answer).contentType(MediaType.APPLICATION_JSON).content("{\"rating\":\"LIKE\"}"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("FEEDBACK404-0"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FEEDBACK403-0"));
     }
 
     @Test
@@ -324,6 +334,12 @@ class FeedbackApiIntegrationTest {
                 .session(session)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
+    }
+    
+    // 비회원은 API로 평가할 수 없어, 차단 전에 쌓인 비회원 평가를 직접 넣는다
+    void guestFeedback(long messageId, UUID guestId) {
+        jdbc.update("INSERT INTO message_feedback(message_id, guest_id, rating) VALUES (?, ?, 'LIKE')",
+                messageId, guestId);
     }
 
     void expectUnavailable(MockHttpServletRequestBuilder request) throws Exception {
