@@ -25,8 +25,9 @@ public final class UnsupportedCompoundQuestionException extends IllegalStateExce
         this.parts = List.of();
     }
 
+    // transient라 직렬화를 거치면 null이 된다. 호출부가 빈 목록을 기대하므로 null 대신 빈 목록을 준다
     public List<Part> parts() {
-        return parts;
+        return parts == null ? List.of() : parts;
     }
 
     public record Part(ConsultRequest.Intent intent, String queryText, Map<String, String> conditions) {
