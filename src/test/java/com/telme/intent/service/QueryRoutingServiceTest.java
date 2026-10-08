@@ -1356,6 +1356,79 @@ class QueryRoutingServiceTest {
                     RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt()))
                     .singleElement().extracting(LlmRequest::userPrompt)
                     .isEqualTo("그럼신청방법이랑해지방법도알려줘");
+            String faithfulnessInput = requests.getAllValues().stream()
+                    .filter(request -> RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT
+                            .equals(request.systemPrompt()))
+                    .findFirst().orElseThrow().userPrompt();
+            assertThat(faithfulnessInput)
+                    .contains("\"question\":\"그럼신청방법이랑해지방법도알려줘\"")
+                    .contains("\"previousSubject\":\"로밍 요금제는 어떻게 골라요?\"")
+                    .doesNotContain("[대상을 확인할 이전 고객 발언]", "[현재 후속 질문]");
+        }
+
+        @Test
+        void restoredSingleDecisionKeepsGroundedSubjectInSearchQuery() {
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"신청 방법"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}",
+                    "{\"unsafe\":[false]}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo("로밍 요금제 신청 방법");
+            verify(llmClient, times(3)).generate(any());
+        }
+
+        @Test
+        void restoredSingleDecisionRejectsInventedSearchSubject() {
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"부가서비스 해지 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"부가서비스 해지 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"해지 방법"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo(current);
+            verify(llmClient, times(2)).generate(any());
+        }
+
+        @Test
+        void restoredSingleDecisionDoesNotReusePreviousAction() {
+            String current = "그럼 신청은?";
+            String previous = "로밍 해지는 어떻게 해요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 해지",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 해지"},
+                       {"order":2,"intent":"FAQ","queryText":"해지"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}",
+                    "{\"unsafe\":[true]}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo(current);
+            verify(llmClient, times(3)).generate(any());
         }
 
         @ParameterizedTest

@@ -74,6 +74,8 @@ public class QueryRoutingService {
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
     private static final Pattern ACTION_REQUEST = Pattern.compile("싶|하려고|할래");
     private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
+    private static final String PREVIOUS_UTTERANCE_HEADER = "[대상을 확인할 이전 고객 발언]\n";
+    private static final String CURRENT_QUESTION_HEADER = "\n[현재 후속 질문]\n";
     private static final Set<String> SECTION_FILLERS = Set.of(
             "비교", "차이", "차이점", "안내", "설명", "및", "그리고", "또", "와", "과", "하고", "랑");
 
@@ -151,6 +153,7 @@ public class QueryRoutingService {
         String promptQuestion = restored ? userMessage.getContent() : question;
         // 요청 개수·인용 근거는 현재 발화로만 판정한다. 복원된 이전 발언은 검색 대상의 근거로만 쓴다.
         String analysisQuestion = RoutingQuestionNormalizer.normalize(promptQuestion);
+        String previousSubject = restored ? previousSubject(question, promptQuestion) : "";
 
         if (analysisQuestion.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
@@ -241,10 +244,9 @@ public class QueryRoutingService {
         if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
             inventory = requestInventory(analysisQuestion);
             if (inventory.decision() != Decision.MULTIPLE) {
-                // 복원된 질문은 이전 발언 머리말을 포함하므로 검색어로 쓰지 않고 문맥을 반영한 질문을 쓴다.
-                String wholeQuery = restored && payload.refinedQuery() != null
-                        && !payload.refinedQuery().isBlank() && !payload.refinedQuery().equals(question)
-                        ? payload.refinedQuery() : restored ? promptQuestion.strip() : question;
+                String wholeQuery = restored
+                        ? groundedSingleFaqQuery(payload.refinedQuery(), promptQuestion.strip(), previousSubject)
+                        : question;
                 payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, payload.confidence(), wholeQuery,
                         payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
                                 (short) 1, ConsultRequest.Intent.FAQ, wholeQuery, Collections.emptyMap())));
@@ -281,7 +283,7 @@ public class QueryRoutingService {
             IndependentQuestionPolicy.validate(payload, analysisQuestion);
         }
         validateFaqSearchQueries(payload, question, analysisQuestion);
-        payload = preserveFaqQuestionMeaning(payload, analysisQuestion, question, context, restored);
+        payload = preserveFaqQuestionMeaning(payload, analysisQuestion, question, previousSubject, context, restored);
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
@@ -381,9 +383,35 @@ public class QueryRoutingService {
         }
     }
 
-    // current는 현재 발화, question은 복원된 이전 발언까지 포함한 대상 근거다. 복원이 없으면 둘은 같은 발화다.
+    private String previousSubject(String resolved, String current) {
+        int split = resolved.lastIndexOf(CURRENT_QUESTION_HEADER);
+        if (!resolved.startsWith(PREVIOUS_UTTERANCE_HEADER) || split <= PREVIOUS_UTTERANCE_HEADER.length()
+                || !RoutingQuestionNormalizer.quoteKey(resolved.substring(split + CURRENT_QUESTION_HEADER.length()))
+                        .equals(RoutingQuestionNormalizer.quoteKey(current))) {
+            return "";
+        }
+        return resolved.substring(PREVIOUS_UTTERANCE_HEADER.length(), split).strip();
+    }
+
+    private String groundedSingleFaqQuery(String candidate, String current, String previousSubject) {
+        if (candidate == null || candidate.isBlank() || previousSubject.isBlank()
+                || RoutingQuestionNormalizer.quoteKey(candidate)
+                        .equals(RoutingQuestionNormalizer.quoteKey(current))) {
+            return current;
+        }
+        var sub = new LlmRoutingPayload.SubQueryPayload(
+                (short) 1, ConsultRequest.Intent.FAQ, candidate, Collections.emptyMap(), current);
+        var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate,
+                Collections.emptyMap(), List.of(sub));
+        if (!removeUngroundedQueryWords(single, sub, current, previousSubject).equals(candidate)) {
+            return current;
+        }
+        return findUnsafeFaqQueries(single, current, previousSubject).getFirst() ? current : candidate;
+    }
+
+    // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.
     private LlmRoutingPayload preserveFaqQuestionMeaning(LlmRoutingPayload payload, String current,
-            String question, ChatContext context, boolean restored) {
+            String question, String previousSubject, ChatContext context, boolean restored) {
         if (payload.intent() != QueryRouting.Intent.FAQ || payload.subQueries().isEmpty()) {
             return payload;
         }
@@ -393,7 +421,7 @@ public class QueryRoutingService {
                 var original = payload.subQueries().getFirst();
                 String searchQuery = ACTION_REQUEST.matcher(question).find()
                         && original.queryText() != null && !original.queryText().isBlank()
-                        ? removeUngroundedQueryWords(payload, original, current, question) : question;
+                        ? removeUngroundedQueryWords(payload, original, current, previousSubject) : question;
                 return new LlmRoutingPayload(payload.intent(), payload.confidence(), searchQuery,
                         payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
                                 original.order(), original.intent(), searchQuery,
@@ -409,22 +437,22 @@ public class QueryRoutingService {
         payload = new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
                 payload.extractedConditions(), groundedQuotes);
 
-        List<Boolean> unsafe = findUnsafeFaqQueries(payload, question);
+        List<Boolean> unsafe = findUnsafeFaqQueries(payload, current, previousSubject);
         List<LlmRoutingPayload.SubQueryPayload> safe = new ArrayList<>();
         for (int index = 0; index < payload.subQueries().size(); index++) {
             var sub = payload.subQueries().get(index);
             String queryText = sub.queryText();
             if (unsafe.get(index)) {
                 // 공통 대상이 원문과 모든 하위 질문에 확인되면 모델의 과잉 차단을 피한다.
-                String grounded = removeUngroundedQueryWords(payload, sub, current, question);
+                String grounded = removeUngroundedQueryWords(payload, sub, current, previousSubject);
                 queryText = grounded.equals(sub.queryText())
-                        && hasGroundedSharedSubject(payload, sub, question) ? grounded
+                        && hasGroundedSharedSubject(payload, sub, current + " " + previousSubject) ? grounded
                         : RoutingQuestionNormalizer.quoteKey(grounded).equals(
                         RoutingQuestionNormalizer.quoteKey(sub.requestQuote()))
                         ? grounded : sub.requestQuote();
                 log.info("[라우팅] 원문과 다른 FAQ 검색어를 인용구로 대체합니다: order={}", sub.order());
             } else {
-                queryText = removeUngroundedQueryWords(payload, sub, current, question);
+                queryText = removeUngroundedQueryWords(payload, sub, current, previousSubject);
             }
             safe.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, sub.conditions(), sub.requestQuote()));
@@ -450,11 +478,11 @@ public class QueryRoutingService {
     }
 
     private String removeUngroundedQueryWords(LlmRoutingPayload payload,
-            LlmRoutingPayload.SubQueryPayload sub, String current, String question) {
+            LlmRoutingPayload.SubQueryPayload sub, String current, String previousSubject) {
         String quote = payload.subQueries().size() > 1
                 ? RoutingQuestionNormalizer.quoteKey(sub.requestQuote()) : "";
         String original = RoutingQuestionNormalizer.quoteKey(current);
-        String restoredContext = RoutingQuestionNormalizer.quoteKey(question);
+        String restoredContext = RoutingQuestionNormalizer.quoteKey(previousSubject);
         if (!quote.isBlank()
                 && !RoutingQuestionNormalizer.quoteKey(sub.queryText()).contains(quote)) {
             return sub.requestQuote();
@@ -523,11 +551,13 @@ public class QueryRoutingService {
         return unclaimed.toString().contains(word);
     }
 
-    private List<Boolean> findUnsafeFaqQueries(LlmRoutingPayload payload, String question) {
+    private List<Boolean> findUnsafeFaqQueries(
+            LlmRoutingPayload payload, String current, String previousSubject) {
         String prompt;
         try {
             prompt = objectMapper.writeValueAsString(Map.of(
-                    "question", question,
+                    "question", current,
+                    "previousSubject", previousSubject,
                     "subQueries", payload.subQueries().stream().map(sub -> Map.of(
                             "quote", sub.requestQuote() == null ? "" : sub.requestQuote(),
                             "query", sub.queryText() == null ? "" : sub.queryText())).toList()));

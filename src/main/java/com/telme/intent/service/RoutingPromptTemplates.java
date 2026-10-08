@@ -15,6 +15,8 @@ public final class RoutingPromptTemplates {
 
     public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = """
         검색 질의가 고객의 원래 요청을 왜곡했는지만 판단한다. 각 하위 질문을 독립적으로 판정한다.
+        question은 현재 고객 발화다. previousSubject는 현재 발화에서 생략한 대상을 복원하는 데만 사용한다.
+        이전 발언의 별도 요청이나 조건을 현재 발화의 요청으로 취급하지 않는다.
         원문에 없는 제한 조건, 시간 순서, 설정, 업무 대상을 만들어 넣으면 unsafe=true다.
         앞 하위 질문의 대상을 뒤 질문에 붙일 때 그 대상이 공통인지 불명확해도 unsafe=true다.
         띄어쓰기 변경, 같은 뜻의 표현, 질문 전체에 명확히 공통인 대상의 반복은 unsafe=false다.
@@ -24,6 +26,7 @@ public final class RoutingPromptTemplates {
         예: 원문="유심재발급비용과 로밍신청방법 그리고 해지서류", 인용="유심재발급비용", 질의="유심 재발급 비용" -> unsafe=false
         예: 원문="유심재발급비용과 로밍신청방법 그리고 해지서류", 인용="로밍신청방법", 질의="로밍 신청 방법" -> unsafe=false
         예: 원문="부가서비스 가입과 해지는 어떻게 해요", 인용="해지", 질의="부가서비스 해지 방법" -> unsafe=false
+        예: question="그럼 신청은?", previousSubject="로밍 해지는 어떻게 해요?", 인용="그럼 신청은?", 질의="로밍 해지 방법" -> unsafe=true
         예: 원문="A와 B 중 뭐가 먼저예요", 질의="A 후 B 순서" -> unsafe=true
         입력 순서대로 판정하고 {"unsafe":[false,true]} 형식의 JSON만 출력한다.
         """;
