@@ -131,7 +131,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var output = persistence.persistClarification(executionId, prepared);
         assertThat(states.findPendingClarificationMessageId(sessionId, requestId, "location"))
@@ -171,7 +171,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         jdbc.update(
                 "UPDATE consult_requests SET version=version+1 WHERE consult_request_id=?",
@@ -198,7 +198,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         jdbc.update("UPDATE chat_executions SET status='FAILED' WHERE execution_id=?", executionId);
         assertThatThrownBy(() -> persistence.persistClarification(executionId, prepared))
@@ -214,7 +214,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         persistence.persistReadyFollowup(executionId, prepared, "location");
         assertThat(states.load(sessionId, requestId).conditions().get("location"))
@@ -244,7 +244,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         jdbc.update(
                 "UPDATE consult_requests SET version=version+1 WHERE consult_request_id=?",
@@ -266,7 +266,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         jdbc.update("UPDATE chat_sessions SET status='CLOSED' WHERE session_id=?", sessionId);
         assertThatThrownBy(
@@ -343,7 +343,9 @@ class ConsultChatPersistenceIntegrationTest {
                 .isInstanceOf(GeneralException.class);
         assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
                 .isEqualTo("RUNNING");
-        assertThat(states.load(sessionId, requestId).conditions()).doesNotContainKey("serviceType");
+        // 되돌아갔으므로 준비 단계에서 만든 업무 값이 남지 않는다
+        assertThat(states.load(sessionId, requestId).conditions().get("serviceType"))
+                .isEqualTo(Condition.declined());
     }
 
     @Test
@@ -354,7 +356,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         persistence.persistReadyFollowup(executionId, prepared, "location");
         int version = states.load(sessionId, requestId).version();
@@ -447,7 +449,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var processor =
                 new ConsultChatProcessingService(
@@ -520,7 +522,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var events = new RecordingEvents();
         var processor =
@@ -880,7 +882,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var events = new RecordingEvents();
         var processor =
@@ -925,7 +927,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var events = new RecordingEvents();
         var processor =
@@ -980,7 +982,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.declined()),
+                        Map.of("location", Condition.declined(), "serviceType", Condition.declined()),
                         LocationStatus.DECLINED);
         var processor =
                 new ConsultChatProcessingService(
@@ -1054,7 +1056,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         persistence.persistReadyFollowup(executionId, prepared, "location");
         int version = states.load(sessionId, requestId).version();
@@ -1091,7 +1093,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         persistence.persistReadyFollowup(executionId, prepared, "location");
         int version = states.load(sessionId, requestId).version();
@@ -1160,7 +1162,7 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         requestId,
                         Purpose.NEARBY_STORE,
-                        Map.of(),
+                        Map.of("serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         persistence.persistClarification(executionId, question);
         long inputId =
