@@ -43,7 +43,7 @@ public class FaqSearchScoreRepository {
         return jdbcTemplate.queryForObject("""
                 SELECT count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS total,
                        count(qa_top_score) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS scored,
-                       count(*) FILTER (WHEREkind IN ('ORIGINAL', 'RESOLVED') AND passed) AS passed,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND passed) AS passed,
                        count(*) FILTER (WHERE kind = 'REFINED' AND passed) AS refined_passed,
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND qa_top_score >= qa_threshold) AS above_threshold
                 FROM faq_search_scores
