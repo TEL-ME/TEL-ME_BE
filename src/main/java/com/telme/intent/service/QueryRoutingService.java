@@ -116,6 +116,17 @@ public class QueryRoutingService {
 
     private IntentRouteResponse route(
             ChatMessage userMessage, ChatContext context, boolean singleConsultOnly) {
+        return route(userMessage, context, singleConsultOnly, null);
+    }
+
+    // 원본 메시지는 그대로 저장하고, 고객 원문을 연결한 문맥 질문으로 분류한다.
+    public IntentRouteResponse routeSingleConsult(
+            ChatMessage userMessage, ChatContext context, String resolvedQuestion) {
+        return route(userMessage, context, true, resolvedQuestion);
+    }
+
+    private IntentRouteResponse route(
+            ChatMessage userMessage, ChatContext context, boolean singleConsultOnly, String resolvedQuestion) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
         }
@@ -131,7 +142,8 @@ public class QueryRoutingService {
             }
         }
 
-        String question = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+        String question = resolvedQuestion != null ? resolvedQuestion.strip()
+                : userMessage.getContent() != null ? userMessage.getContent().trim() : "";
 
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
@@ -147,7 +159,9 @@ public class QueryRoutingService {
             LlmRequest request = LlmRequest.builder()
                 .taskType(TaskType.ROUTING)
                 .systemPrompt(RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT)
-                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context, question))
+                // 복원 출처는 문맥으로 전달하고, 분해 대상에는 현재 발화만 넣는다.
+                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context,
+                        resolvedQuestion != null && context != null ? userMessage.getContent() : question))
                 .format(ResponseFormat.JSON)
                 .temperature(0.1)
                 .maxTokens(500)
@@ -444,7 +458,10 @@ public class QueryRoutingService {
         if (context == null || !CONTEXT_REFERENCE.matcher(question).find()) {
             return question;
         }
-        return question + " " + (context.summary() == null ? "" : context.summary()) + " "
+        return question + " " + context.summarySources().stream()
+                        .filter(item -> item.role() == ChatMessage.Role.USER)
+                        .map(item -> item.content() == null ? "" : item.content())
+                        .collect(Collectors.joining(" ")) + " "
                 + context.history().stream()
                         .filter(item -> item.role() == ChatMessage.Role.USER)
                         .map(item -> item.content() == null ? "" : item.content())

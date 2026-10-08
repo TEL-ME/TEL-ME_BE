@@ -6,10 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.dashboard.dto.res.AdminDashboardDailyResponse;
 import com.telme.dashboard.dto.res.AdminDashboardResponse;
 import com.telme.dashboard.exception.DashboardErrorCode;
-import com.telme.global.common.exception.GeneralException;
 import com.telme.dashboard.service.AdminDashboardQueryService;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestIdentityService;
@@ -19,6 +20,8 @@ import com.telme.member.service.KakaoLoginFailureHandler;
 import com.telme.member.service.KakaoLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberStatusChecker;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,5 +105,28 @@ class AdminDashboardControllerTest {
                 .andExpect(jsonPath("$.result.failedAnswerCount").value(4))
                 .andExpect(jsonPath("$.result.todayQuestionCount").value(142))
                 .andExpect(jsonPath("$.result.yesterdayQuestionCount").value(127));
+    }
+    
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("ADMIN이면 날짜별 질문·오류 수를 날짜 문자열과 함께 반환한다")
+    void 관리자는_7일_집계를_볼_수_있다() throws Exception {
+        when(adminDashboardQueryService.getDaily()).thenReturn(new AdminDashboardDailyResponse(List.of(
+                new AdminDashboardDailyResponse.Day(LocalDate.of(2026, 10, 1), 120L, 3L),
+                new AdminDashboardDailyResponse.Day(LocalDate.of(2026, 10, 2), 45L, 0L))));
+
+        mockMvc.perform(get("/api/v1/admin/dashboard/daily"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.days[0].date").value("2026-10-01"))
+                .andExpect(jsonPath("$.result.days[0].questionCount").value(120))
+                .andExpect(jsonPath("$.result.days[0].errorCount").value(3))
+                .andExpect(jsonPath("$.result.days[1].errorCount").value(0));
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    @DisplayName("ADMIN이 아니면 7일 집계도 403이다")
+    void 일반_회원은_7일_집계를_볼_수_없다() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/dashboard/daily")).andExpect(status().isForbidden());
     }
 }

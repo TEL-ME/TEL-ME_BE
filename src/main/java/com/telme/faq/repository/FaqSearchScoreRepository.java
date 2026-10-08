@@ -41,11 +41,11 @@ public class FaqSearchScoreRepository {
     // 임계값 이상 여부는 검색 당시 임계값으로 센다. passed도 당시 설정으로 정해져 둘을 비교할 수 있다
     public Summary findSummary(Instant from, Instant to) {
         return jdbcTemplate.queryForObject("""
-                SELECT count(*) FILTER (WHERE kind = 'ORIGINAL') AS total,
-                       count(qa_top_score) FILTER (WHERE kind = 'ORIGINAL') AS scored,
-                       count(*) FILTER (WHERE kind = 'ORIGINAL' AND passed) AS passed,
+                SELECT count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS total,
+                       count(qa_top_score) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS scored,
+                       count(*) FILTER (WHEREkind IN ('ORIGINAL', 'RESOLVED') AND passed) AS passed,
                        count(*) FILTER (WHERE kind = 'REFINED' AND passed) AS refined_passed,
-                       count(*) FILTER (WHERE kind = 'ORIGINAL' AND qa_top_score >= qa_threshold) AS above_threshold
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND qa_top_score >= qa_threshold) AS above_threshold
                 FROM faq_search_scores
                 WHERE created_at >= ? AND created_at < ?
                 """, (rs, i) -> new Summary(rs.getLong("total"), rs.getLong("scored"), rs.getLong("passed"),
@@ -57,7 +57,7 @@ public class FaqSearchScoreRepository {
         return jdbcTemplate.query("""
                 SELECT least(greatest(floor(qa_top_score * ?)::int, 0), ? - 1) AS bucket, count(*) AS count
                 FROM faq_search_scores
-                WHERE kind = 'ORIGINAL' AND qa_top_score IS NOT NULL AND created_at >= ? AND created_at < ?
+                WHERE kind IN ('ORIGINAL', 'RESOLVED') AND qa_top_score IS NOT NULL AND created_at >= ? AND created_at < ?
                 GROUP BY bucket
                 """, (rs, i) -> new BucketCount(rs.getInt("bucket"), rs.getLong("count")),
                      BUCKET_COUNT, BUCKET_COUNT, Timestamp.from(from), Timestamp.from(to));

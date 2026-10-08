@@ -40,6 +40,8 @@ class AdminSearchScoreQueryServiceTest {
         insert(0.75, false, 0.80); // 당시 임계값이 0.80이던 검색: 지금 기준(0.72)으로는 넘지만 당시 기준으로는 미달
         // 원문이 빈 질문의 정제 검색: 질문 수·분포에는 들어가지 않고 정제로 근거를 찾은 수에만 들어간다
         insertRefined(0.74, true);
+        // 이전 대화로 지시어를 풀어 쓴 질문의 첫 검색: 원문 대신 검색하므로 질문 수·분포에 들어간다
+        insert("RESOLVED", 0.86, true, 0.72);
         insertRefined(0.30, false);
         jdbcTemplate.update("INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, "
                 + "passed, created_at) VALUES ('ORIGINAL', 0.99, 0.72, true, ?)",
@@ -52,12 +54,12 @@ class AdminSearchScoreQueryServiceTest {
         AdminSearchScoreResponse response = service.getScores(new AdminSearchScoreRequest(FROM, TO));
 
         assertThat(response.threshold()).isEqualTo(0.72);
-        assertThat(response.total()).isEqualTo(8);
-        assertThat(response.scored()).isEqualTo(7);
-        assertThat(response.passed()).isEqualTo(4);
+        assertThat(response.total()).isEqualTo(9);
+        assertThat(response.scored()).isEqualTo(8);
+        assertThat(response.passed()).isEqualTo(5);
         assertThat(response.refinedPassed()).isEqualTo(1);
         // 0.95, 1.0, 0.73만. 0.75는 당시 임계값(0.80) 미만이라 빠진다
-        assertThat(response.aboveThreshold()).isEqualTo(3);
+        assertThat(response.aboveThreshold()).isEqualTo(4);
         assertThat(response.buckets().stream().mapToLong(AdminSearchScoreResponse.Bucket::count).sum())
                 .isEqualTo(response.scored());
     }
@@ -74,6 +76,7 @@ class AdminSearchScoreQueryServiceTest {
         assertThat(buckets.get(14).min()).isEqualTo(0.7);
         assertThat(buckets.get(19).count()).isEqualTo(2);  // 0.95, 1.0
         assertThat(buckets.get(19).max()).isEqualTo(1.0);
+        assertThat(buckets.get(17).count()).isEqualTo(1);  // 0.86 (RESOLVED)
         assertThat(buckets.get(10).count()).isZero();
     }
 
