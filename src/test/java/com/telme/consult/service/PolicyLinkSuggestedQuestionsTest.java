@@ -37,9 +37,16 @@ class PolicyLinkSuggestedQuestionsTest {
     }
 
     private static FaqSearchResponse faq(Long faqId, String slotId) {
-        return new FaqSearchResponse(faqId, slotId, "BILLING", "질문", "답변", 0.9, 1,
+        return faq(faqId, slotId, "BILLING", "답변");
+    }
+
+    private static FaqSearchResponse faq(Long faqId, String slotId, String category, String answer) {
+        return new FaqSearchResponse(faqId, slotId, category, "질문", answer, 0.9, 1,
                 LocalDate.of(2026, 10, 1), 1, "Q_A");
     }
+
+    private final PolicyLinkSuggestedQuestions withStore =
+            new PolicyLinkSuggestedQuestions(SuggestedQuestionRecommenderTest.sample(), faqs, true);
 
     @Test
     void usesPolicyOfFirstSearchResultOnly() {
@@ -113,6 +120,45 @@ class PolicyLinkSuggestedQuestionsTest {
 
         assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1")))).isEmpty();
         assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(null, "S-1")))).isEmpty();
+    }
+
+    // 매장 방문이 필요한 답변 뒤에는 매장 찾기를 첫 자리에 두고, 연결표 추천 2개는 그대로 둔다
+    @Test
+    void storeQuestionComesFirstWithoutTakingLinkSlots() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        var actual = withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "가까운 매장에서 재발급할 수 있습니다.")));
+
+        assertThat(actual).containsExactly("유심 매장 버튼", "B 질문", "C 질문");
+    }
+
+    @Test
+    void noStoreQuestionWhenDisabledOrAnswerDoesNotMentionStore() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "매장에서 재발급할 수 있습니다."))))
+                .containsExactly("B 질문", "C 질문");
+        assertThat(withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "고객센터로 신청할 수 있습니다."))))
+                .containsExactly("B 질문", "C 질문");
+    }
+
+    // 정책 ID가 없어 연결표 추천이 없어도 매장 버튼은 붙는다
+    @Test
+    void storeQuestionAloneWhenNoPolicyLinks() {
+        when(faqs.policyRef(1L)).thenReturn(null);
+
+        assertThat(withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, null, "DEVICE", "가까운 매장에 방문해 주세요."))))
+                .containsExactly("가까운 매장 버튼");
+    }
+
+    @Test
+    void noStoreQuestionUnlessGrounded() {
+        assertThat(withStore.suggest(AnswerBasis.NO_EVIDENCE,
+                List.of(faq(1L, "S-1", "USIM", "매장에서 재발급할 수 있습니다.")))).isEmpty();
     }
 
     // 추천은 부가 정보라 조회가 실패하거나 검색 결과가 이상해도 답변 저장을 막지 않는다

@@ -306,6 +306,7 @@ public class QueryRoutingService {
         Map<String, String> extracted = payload.intent() == QueryRouting.Intent.UNKNOWN
                 ? Collections.emptyMap()
                 : validConditions(payload.extractedConditions(), question, context);
+        extracted = withRuleServiceType(payload.intent(), extracted, question);
         List<LlmRoutingPayload.SubQueryPayload> normalized = new ArrayList<>();
         boolean hasFaq = false;
         boolean hasStore = false;
@@ -658,6 +659,23 @@ public class QueryRoutingService {
             .filter(key -> key != null && !key.isBlank())
             .collect(Collectors.toCollection(LinkedHashSet::new));
         return pending.isEmpty() ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
+    }
+
+    // 매장 찾기에서 LLM이 업무를 비우는 경우가 있어(로컬 EXAONE 기준 유심 외 업무), 현재 질문에 업무 표현이 있으면 규칙으로 채운다.
+    // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
+    private Map<String, String> withRuleServiceType(
+            QueryRouting.Intent intent, Map<String, String> extracted, String question) {
+        if (intent != QueryRouting.Intent.STORE
+                || extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+            return extracted;
+        }
+        String serviceType = ruleBasedFallback.serviceTypeOf(question);
+        if (serviceType == null) {
+            return extracted;
+        }
+        Map<String, String> filled = new LinkedHashMap<>(extracted);
+        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        return filled;
     }
 
     private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys) {
