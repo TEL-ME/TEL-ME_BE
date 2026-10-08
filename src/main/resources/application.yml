@@ -160,11 +160,11 @@ telme:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
     suggested-questions:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
-      # 기본은 끈다. 실제 채팅 경로 확인 결과는 문서 7.2절
-      enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:false}
+      # 독립 검증(7절)과 실제 채팅 경로 확인(7.2절)을 마쳐 기본으로 켠다. 환경변수에 false를 넣으면 끈다
+      enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:true}
       # 매장 방문이 필요한 답변 뒤 매장 찾기 버튼(문서 10절). 위 추천 질문이 켜져 있을 때만 동작한다.
-      # [현재 위치 사용]이 GPS 검색으로 이어지는지 확인하기 전까지 끈다
-      store-chip-enabled: ${CONSULT_SUGGESTED_QUESTIONS_STORE_CHIP_ENABLED:false}
+      # [현재 위치 사용] → GPS 매장 검색 확인(10.3절)을 마쳐 기본으로 켠다
+      store-chip-enabled: ${CONSULT_SUGGESTED_QUESTIONS_STORE_CHIP_ENABLED:true}
       # 답을 못 할 때 "혹시 이런 내용을 찾으셨나요?" + FAQ 질문 1개(문서 11절). 위 추천 질문이 켜져 있을 때만 동작한다.
       # 통신 주변 무관 질문에 엉뚱한 버튼이 뜨는 제한이 있어 켜는 결정 전까지 끈다
       no-answer-enabled: ${CONSULT_SUGGESTED_QUESTIONS_NO_ANSWER_ENABLED:false}
