@@ -11,8 +11,11 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** FAQ 검색 결과와 확정된 상담 조건을 RAG 답변 요청으로 변환한다. */
 public final class RagSearchResultAnswerGenerator implements SearchResultAnswerGenerator {
@@ -139,6 +142,26 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
 
         static SuggestedQuestions none() {
             return (answerBasis, searchResults) -> List.of();
+        }
+
+        /**
+         * 이 FAQ들의 정책을 가리키는 추천 문장. 근거가 여러 개인 답변에서 방금 답한 내용을 다시 추천하지 않으려고 뺄 때 쓴다.
+         * 추천이 꺼져 있으면 빈 집합이다.
+         */
+        default Set<String> questionsAbout(Collection<Long> answeredFaqIds) {
+            return Set.of();
+        }
+
+        /** 근거마다 첫 추천 질문을 하나씩 고른다. 앞에서 고른 것과 같으면 그 근거의 다음 추천을 쓴다. */
+        static List<String> oneFromEach(List<List<String>> suggestionsPerEvidence) {
+            Set<String> picked = new LinkedHashSet<>();
+            for (List<String> suggestions : suggestionsPerEvidence) {
+                suggestions.stream()
+                        .filter(question -> !picked.contains(question))
+                        .findFirst()
+                        .ifPresent(picked::add);
+            }
+            return List.copyOf(picked);
         }
     }
 }

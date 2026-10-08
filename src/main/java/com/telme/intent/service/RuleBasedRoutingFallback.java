@@ -89,6 +89,21 @@ public class RuleBasedRoutingFallback {
 
     private record ServiceTypeRule(String code, Pattern pattern) {}
 
+    private record ServiceTypeOption(String label, String code) {}
+
+    // 업무를 되물을 때 버튼으로 내보내는 문구. 화면에 이 순서로 그려진다
+    private static final List<ServiceTypeOption> SERVICE_TYPE_OPTIONS = List.of(
+        new ServiceTypeOption("유심 재발급", "USIM_REISSUE"),
+        new ServiceTypeOption("번호이동", "PORT_IN"),
+        new ServiceTypeOption("신규 개통", "NEW_LINE"),
+        new ServiceTypeOption("명의변경", "NAME_CHANGE")
+    );
+
+    /** 업무 되묻기 버튼 문구. */
+    public static List<String> serviceTypeOptions() {
+        return SERVICE_TYPE_OPTIONS.stream().map(ServiceTypeOption::label).toList();
+    }
+
     private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
         new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
         new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
@@ -222,7 +237,7 @@ public class RuleBasedRoutingFallback {
 
     // 문장에 업무 표현이 하나만 있으면 그 업무 코드, 없거나 여럿이면 null.
     // "번호이동 말고 신규 개통"처럼 여럿이면 어느 쪽인지 규칙으로 알 수 없어 임의로 고르지 않는다(필터 없이 검색)
-    String serviceTypeOf(String text) {
+    public String serviceTypeOf(String text) {
         if (text == null) {
             return null;
         }
@@ -237,6 +252,19 @@ public class RuleBasedRoutingFallback {
     // "번호이동 말고 신규 개통"처럼 업무 표현이 여럿이면 LLM이 어떤 값을 줘도 필터 없이 검색한다
     boolean matchesServiceType(String code, String text) {
         return code != null && code.equals(serviceTypeOf(text));
+    }
+
+    /** 버튼 문구를 그대로 누른 답이면 그 업무 코드, 아니면 null. 직접 쓴 문장은 모델이 읽는다. */
+    public String serviceTypeOfOption(String reply) {
+        if (reply == null) {
+            return null;
+        }
+        String trimmed = reply.strip();
+        return SERVICE_TYPE_OPTIONS.stream()
+                .filter(option -> option.label().equals(trimmed))
+                .map(ServiceTypeOption::code)
+                .findFirst()
+                .orElse(null);
     }
 
     boolean hasServiceTypeMention(String text) {

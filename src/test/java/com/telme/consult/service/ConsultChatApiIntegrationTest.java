@@ -292,7 +292,8 @@ class ConsultChatApiIntegrationTest {
         assertThat(answerInput.get().originalUserQuery()).isEqualTo("매장 알려줘");
         assertThat(answerInput.get().searchQuery()).isEqualTo("매장");
         assertThat(answerInput.get().confirmedConditions())
-                .containsExactlyInAnyOrderEntriesOf(Map.of("location", "강남역"));
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("location", "강남역", "serviceType", "USIM_REISSUE"));
     }
 
     @Test
@@ -409,7 +410,8 @@ class ConsultChatApiIntegrationTest {
                                     (short) 1,
                                     ConsultRequest.Intent.STORE,
                                     "매장",
-                                    Map.of()),
+                                    // 업무를 말한 질문으로 보아 지역만 되묻는다
+                                    Map.of("serviceType", "USIM_REISSUE")),
                             command.coordinates() == null ? LocationStatus.MISSING
                                     : LocationStatus.COORDINATES_AVAILABLE),
                     null,

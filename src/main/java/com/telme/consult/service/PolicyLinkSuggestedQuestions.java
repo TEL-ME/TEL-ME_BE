@@ -8,9 +8,12 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 근거가 있는 답변(GROUNDED)에만 LLM에 넘긴 검색 결과 1순위 FAQ의 정책으로 추천 질문을 만든다.
@@ -54,6 +57,33 @@ public final class PolicyLinkSuggestedQuestions implements SuggestedQuestions {
         } catch (RuntimeException e) {
             log.warn("추천 질문 생성 실패", e);
             return List.of();
+        }
+    }
+
+    // 답한 FAQ의 정책 → 그 정책의 대표 질문(현재 질문). 버튼 문장과 같은 기준이라 그대로 비교할 수 있다
+    @Override
+    public Set<String> questionsAbout(Collection<Long> answeredFaqIds) {
+        if (answeredFaqIds == null || answeredFaqIds.isEmpty()) {
+            return Set.of();
+        }
+        try {
+            Set<String> policies = answeredFaqIds.stream()
+                    .filter(Objects::nonNull)
+                    .map(faqs::policyRef)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            List<String> slotIds = recommender.representativeSlotIds(policies);
+            if (slotIds.isEmpty()) {
+                return Set.of();
+            }
+            Map<String, String> searchable = faqs.searchableQuestions(slotIds);
+            return slotIds.stream()
+                    .map(searchable::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toUnmodifiableSet());
+        } catch (RuntimeException e) {
+            log.warn("답한 정책의 추천 질문 조회 실패", e);
+            return Set.of();
         }
     }
 

@@ -199,4 +199,12 @@ class RagSearchResultAnswerGeneratorTest {
         assertThat(result.answer().content()).isEqualTo("검증된 답변");
         verify(handler, never()).onToken(any());
     }
+
+    // 근거가 여럿인 답변(복합 FAQ, 비교)은 근거마다 하나씩 고르고, 이미 고른 것은 다음 추천으로 바꾼다
+    @Test
+    void oneFromEachSkipsEmptyAndTakesNextOnDuplicate() {
+        assertThat(RagSearchResultAnswerGenerator.SuggestedQuestions.oneFromEach(List.of(
+                List.of(), List.of("A", "B"), List.of("A"), List.of("A", "C"))))
+                .containsExactly("A", "C");
+    }
 }

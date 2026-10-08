@@ -114,9 +114,70 @@ class FaqSearchAnswerProviderTest {
                         "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
 
         assertThat(result.answer().content()).contains("양도인과 양수인의 신분증");
+        assertThat(result.answer().followUps()).isEmpty();
         assertThat(result.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
         assertThat(result.sources()).extracting(sourceRecord -> sourceRecord.faqId()).containsExactly(65L);
         verifyNoInteractions(answers);
+    }
+
+    // 비교한 FAQ마다 추천 질문을 하나씩 붙이고, 겹치면 그 FAQ의 다음 추천을 쓴다
+    @Test
+    void comparisonAnswerGetsOneSuggestedQuestionPerComparedFaq() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var nameChange = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.9, 1, null, 1, null);
+        var porting = new FaqSearchResponse(66L, null, "test", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(nameChange, porting));
+        when(evidence.applies(any())).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(nameChange, porting),
+                        "명의 변경: 양도인과 양수인의 신분증이 각각 필요합니다.\n번호 이동: 본인 신분증이 필요합니다."));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(nameChange)))
+                .thenReturn(List.of("가까운 매장을 알려주세요.", "명의변경 수수료가 있나요?"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
+                .thenReturn(List.of("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of());
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
+                FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().followUps())
+                .containsExactly("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?");
+        verifyNoInteractions(answers);
+    }
+
+    // 비교한 정책 자체를 가리키는 추천(명의변경 쪽에서 번호이동 서류)은 다시 띄우지 않는다
+    @Test
+    void comparisonAnswerSkipsSuggestionsAboutComparedPolicies() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var nameChange = new FaqSearchResponse(65L, null, "test", "명의변경 서류", "신분증", 0.9, 1, null, 1, null);
+        var porting = new FaqSearchResponse(66L, null, "test", "번호이동 서류", "신분증", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(nameChange, porting));
+        when(evidence.applies(any())).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(nameChange, porting), "비교 답변"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(nameChange)))
+                .thenReturn(List.of("번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 수수료가 있나요?"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
+                .thenReturn(List.of("명의변경 시 필요한 서류를 정리해서 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of(
+                "번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 시 필요한 서류를 정리해서 알려주세요."));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
+                FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().followUps()).containsExactly("명의변경 수수료가 있나요?", "번호이동 수수료가 있나요?");
     }
 
     @Test
@@ -137,7 +198,37 @@ class FaqSearchAnswerProviderTest {
                 Map.of(), false));
 
         assertThat(result.answer().content()).isEqualTo(source.answer());
+        assertThat(result.answer().followUps()).isEmpty();
         assertThat(result.sources()).extracting(found -> found.faqId()).containsExactly(65L);
+        verifyNoInteractions(answers);
+    }
+
+    // 후보 확인으로 답한 경우도 일반 답변과 같이 근거 FAQ로 추천 질문을 붙인다
+    @Test
+    void verifiedCandidateAnswerGetsSuggestedQuestionsOfThatFaq() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var other = new FaqSearchResponse(64L, null, "test", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.70, 1, null, 2, null);
+        var source = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(other, source));
+        when(candidateEvidence.resolve(any(), any(), any(), any())).thenReturn(source);
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source)))
+                .thenReturn(List.of("명의변경 수수료가 있나요?"));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence, new AnswerContextConverter(),
+                suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경에 필요한 서류는 무엇인가요?", "명의 변경에 필요한 서류는 무엇인가요?",
+                Map.of(), false));
+
+        assertThat(result.answer().followUps()).containsExactly("명의변경 수수료가 있나요?");
+        verify(suggestions).suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source));
         verifyNoInteractions(answers);
     }
 

@@ -4,6 +4,8 @@ import com.telme.consult.service.ConsultChatPersistenceService;
 import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ChatEmitterConsultEvents;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
+import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
@@ -12,7 +14,6 @@ import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.repository.AskedQuestions;
 
 import org.springframework.beans.factory.ObjectProvider;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -36,10 +37,14 @@ public class ConsultChatProcessingConfiguration {
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
             ExecutionTrace trace,
-            ObjectProvider<AskedQuestions> askedQuestions) {
+            ObjectProvider<AskedQuestions> askedQuestions,
+            ObjectProvider<NoAnswerSuggestions> noAnswerSuggestions,
+            ObjectProvider<SuggestedQuestions> suggestedQuestions) {
         // 되묻기를 저장하지 않는 조합에서는 되물은 질문도 없다
         return new ConsultChatProcessingService(
                 analyzer, answers, persistence, conditionConverter, events, trace,
-                askedQuestions.getIfAvailable(AskedQuestions::none));
+                askedQuestions.getIfAvailable(AskedQuestions::none),
+                noAnswerSuggestions.getIfAvailable(NoAnswerSuggestions::none),
+                suggestedQuestions.getIfAvailable(SuggestedQuestions::none));
     }
 }

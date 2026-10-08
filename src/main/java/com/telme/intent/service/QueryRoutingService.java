@@ -524,6 +524,19 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
+        // 버튼을 그대로 누른 업무 답은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
+        String pickedServiceType = ruleBasedFallback.serviceTypeOfOption(reply);
+        if (pickedServiceType != null
+                && waiting.pendingKeys().contains(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+            log.info("[후속분석] 업무 선택지를 코드로 읽었습니다: consultRequestId={}, serviceType={}",
+                    waiting.consultRequestId(), pickedServiceType);
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(),
+                Map.of(FollowUpRouteResponse.SERVICE_TYPE_KEY, pickedServiceType),
+                Collections.emptySet(),
+                QueryRouting.Method.RULE);
+        }
+
         LlmFollowUpPayload payload;
         QueryRouting.Method method;
 
@@ -594,7 +607,11 @@ public class QueryRoutingService {
                 && (payload.intent() != QueryRouting.Intent.FAQ
                 || payload.subQueries().stream().anyMatch(
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
-            throw new UnsupportedCompoundQuestionException();
+            throw new UnsupportedCompoundQuestionException(payload.subQueries() == null ? List.of()
+                    : payload.subQueries().stream()
+                            .map(sub -> new UnsupportedCompoundQuestionException.Part(
+                                    sub.intent(), sub.queryText(), sub.conditions()))
+                            .toList());
         }
         if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
@@ -612,7 +629,11 @@ public class QueryRoutingService {
                 && (response.intent() != QueryRouting.Intent.FAQ
                 || response.subQueries().stream().anyMatch(
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
-            throw new UnsupportedCompoundQuestionException();
+            throw new UnsupportedCompoundQuestionException(response.subQueries() == null ? List.of()
+                    : response.subQueries().stream()
+                            .map(sub -> new UnsupportedCompoundQuestionException.Part(
+                                    sub.intent(), sub.queryText(), sub.conditions()))
+                            .toList());
         }
         if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
@@ -687,11 +708,13 @@ public class QueryRoutingService {
             return extracted;
         }
         String serviceType = ruleBasedFallback.serviceTypeOf(question);
-        if (serviceType == null) {
+        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없다. 모른다는 것과 구분해 되묻지 않도록 표시한다
+        if (serviceType == null && !ruleBasedFallback.hasServiceTypeMention(question)) {
             return extracted;
         }
         Map<String, String> filled = new LinkedHashMap<>(extracted);
-        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY,
+                serviceType == null ? FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED : serviceType);
         return filled;
     }
 
