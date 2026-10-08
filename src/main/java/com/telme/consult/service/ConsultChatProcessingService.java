@@ -170,15 +170,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 conditionConverter.convert(prepared.decision().conditions()),
                 command.coordinates(),
                 askedQuestions.of(prepared.decision().consultRequestId()));
-        // 되묻기는 답변 메시지를 열기 전에 정해야 한다. 열고 나서 되물으면 빈 답변이 남는다
-        Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
-                ? answers.prepare(answerInput)
-                : Prepared.none();
         // 저장된 계획을 모두 처리한 뒤에는 재추출 결과로 새 조건을 추가하지 않는다.
         // 같은 질문에서 모델 결과가 바뀌어 되묻기가 끝없이 늘어나는 것을 막는다.
-        var plan = storedPlan.needsClarification()
-                ? ClarificationPlan.none()
-                : searched.plan().remaining(prepared.decision().conditions());
+        // 버릴 결과라 조건 추출도 부르지 않는다. 마지막 답변이 그만큼 늦어진다
+        boolean plansClarification = !storedPlan.needsClarification();
+        // 되묻기는 답변 메시지를 열기 전에 정해야 한다. 열고 나서 되물으면 빈 답변이 남는다
+        Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
+                ? answers.prepare(answerInput, plansClarification)
+                : Prepared.none();
+        var plan = plansClarification
+                ? searched.plan().remaining(prepared.decision().conditions())
+                : ClarificationPlan.none();
         if (plan.needsClarification()) {
             var asking = new ConsultService.PreparedTurn(
                     prepared.sessionId(),
@@ -365,8 +367,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             return false;
         }
 
-        /** 검색과 되묻기 판단만 한다. 되묻는 경로가 아니면 기본값을 쓴다. */
-        default Prepared prepare(AnswerInput input) {
+        /** 검색과 되묻기 판단만 한다. 되묻는 경로가 아니면 기본값을 쓴다.
+         * plansClarification이 false면 검색만 하고 조건 추출은 부르지 않는다. */
+        default Prepared prepare(AnswerInput input, boolean plansClarification) {
             return Prepared.none();
         }
 

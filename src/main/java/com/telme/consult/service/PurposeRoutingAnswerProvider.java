@@ -34,10 +34,12 @@ public final class PurposeRoutingAnswerProvider implements AnswerProvider {
     }
 
     @Override
-    public Prepared prepare(AnswerInput input) {
+    public Prepared prepare(AnswerInput input, boolean plansClarification) {
         Objects.requireNonNull(input, "input");
         // 매장 경로는 되묻기를 지역 조건으로 이미 끝낸 뒤라 여기서 다시 판단하지 않는다
-        return input.purpose() == Purpose.GENERAL_FAQ ? faqAnswers.prepare(input) : Prepared.none();
+        return input.purpose() == Purpose.GENERAL_FAQ
+                ? faqAnswers.prepare(input, plansClarification)
+                : Prepared.none();
     }
 
     @Override

@@ -77,7 +77,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     @Override
     public GeneratedAnswer generate(AnswerInput input) {
-        return answer(input, prepare(input));
+        // 한 번에 처리하는 경로는 되묻기 계획을 쓰지 않는다
+        return answer(input, prepare(input, false));
     }
 
     /** 검색과 되묻기 판단만 한다. 답변은 만들지 않아 되묻는 경우 답변 메시지를 먼저 열지 않는다. */
@@ -87,7 +88,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     @Override
-    public Prepared prepare(AnswerInput input) {
+    public Prepared prepare(AnswerInput input, boolean plansClarification) {
         Objects.requireNonNull(input, "input");
         if (input.purpose() != Purpose.GENERAL_FAQ) {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
@@ -132,7 +133,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                     Map.of("outcome", "NOT_RUN", "reason", "NO_SEARCH_RESULTS"));
             return new Prepared(results, ClarificationPlan.none());
         }
-        ClarificationPlan plan = planner == null
+        ClarificationPlan plan = planner == null || !plansClarification
                 ? ClarificationPlan.none()
                 : planner.plan(input.executionId(), input.originalUserQuery(), results);
         return new Prepared(results, plan);

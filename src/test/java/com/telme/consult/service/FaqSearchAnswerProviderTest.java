@@ -374,10 +374,28 @@ class FaqSearchAnswerProviderTest {
         when(searches.search(any())).thenReturn(List.of(source()));
         var provider = new FaqSearchAnswerProvider(searches, answers);
 
-        var prepared = provider.prepare(input());
+        var prepared = provider.prepare(input(), true);
 
         assertThat(prepared.plan().needsClarification()).isFalse();
         assertThat(prepared.searchResults()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("되묻기 계획을 안 쓰는 턴에서는 검색만 하고 조건을 뽑지 않는다")
+    void 계획을_안_쓰면_조건을_뽑지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var planner = mock(FaqClarificationPlanner.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), planner);
+
+        var prepared = provider.prepare(input(), false);
+
+        assertThat(prepared.searchResults()).hasSize(1);
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        verifyNoInteractions(planner);
     }
 
     @Test
@@ -391,7 +409,7 @@ class FaqSearchAnswerProviderTest {
                 ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
                 new AnswerContextConverter(), planner);
 
-        var prepared = provider.prepare(input());
+        var prepared = provider.prepare(input(), true);
 
         assertThat(prepared.plan().needsClarification()).isFalse();
         verifyNoInteractions(planner);
@@ -409,7 +427,7 @@ class FaqSearchAnswerProviderTest {
                         List.of(), null)));
         var provider = new FaqSearchAnswerProvider(searches, answers);
 
-        var prepared = provider.prepare(input());
+        var prepared = provider.prepare(input(), true);
         provider.generate(input(), prepared);
 
         verify(searches, times(1)).search(any());
