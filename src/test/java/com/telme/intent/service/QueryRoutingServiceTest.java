@@ -145,7 +145,14 @@ class QueryRoutingServiceTest {
 
             assertThatThrownBy(() -> service.routeSingleConsult(message, null))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("FAQ와 매장 복합 질문");
+                    .hasMessageContaining("FAQ와 매장 복합 질문")
+                    // 하나씩 보낼 버튼을 만들 수 있게 나눈 하위 질문을 넘긴다
+                    .extracting(e -> ((UnsupportedCompoundQuestionException) e).parts())
+                    .isEqualTo(java.util.List.of(
+                            new UnsupportedCompoundQuestionException.Part(
+                                    ConsultRequest.Intent.FAQ, "5G 요금제", java.util.Map.of()),
+                            new UnsupportedCompoundQuestionException.Part(
+                                    ConsultRequest.Intent.STORE, "신촌 매장", java.util.Map.of("location", "신촌"))));
 
             verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());
@@ -1242,20 +1249,21 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
 
-            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
-            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions())
+                    .containsEntry("serviceType", "UNDECIDED");
         }
 
-        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없어 임의로 고르지 않는다
+        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없어 임의로 고르지 않는다.
+        // 다만 업무를 아예 말하지 않은 질문과는 구분해, 되묻지 않도록 표시만 남긴다
         @ParameterizedTest
         @ValueSource(strings = {"번호이동 말고 신규 개통 가능한 매장 찾아줘", "명의변경하고 번호이동 되는 매장 찾아줘"})
-        void doesNotFillWhenSeveralServiceWords(String question) {
+        void marksUndecidedWhenSeveralServiceWords(String question) {
             given(llmClient.generate(any())).willReturn(store("{}", "{}"));
 
             IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
 
-            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
-            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions())
+                    .containsEntry("serviceType", "UNDECIDED");
         }
 
         @Test

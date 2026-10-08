@@ -90,9 +90,9 @@ class ConsultTurnPreparationIntegrationTest {
         jdbc.update(
                 """
                 INSERT INTO consult_conditions(consult_request_id,condition_key,condition_value,status)
-                VALUES (?,'location','강남역','FILLED')
+                VALUES (?,'location','강남역','FILLED'), (?,'serviceType',NULL,'DECLINED')
                 """,
-                requestId);
+                requestId, requestId);
         var result =
                 turns.prepareAnalysis(
                         sessionId, analysis(Map.of("location", " ")), LocationStatus.MISSING);
@@ -113,7 +113,8 @@ class ConsultTurnPreparationIntegrationTest {
                                 requestId,
                                 askedId,
                                 "location",
-                                Map.of("location", Condition.filled("강남역"))),
+                                Map.of("location", Condition.filled("강남역"),
+                                        "serviceType", Condition.declined())),
                         LocationStatus.MISSING);
         assertThat(result.preparation().prepared().decision().action()).isEqualTo(Action.PROCEED);
         consult.persist(

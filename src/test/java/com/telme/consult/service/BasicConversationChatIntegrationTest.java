@@ -275,7 +275,9 @@ class BasicConversationChatIntegrationTest {
         when(routing.analyzeFollowUp(sessionId, "강남역이요, 고마워요"))
                 .thenReturn(
                         new FollowUpRouteResponse(
-                                requestId, Map.of("location", "강남역"), Set.of(), Method.RULE));
+                                requestId,
+                                Map.of("location", "강남역", "serviceType", "USIM_REISSUE"),
+                                Set.of(), Method.RULE));
 
         processor.request(입력을_준비한다("강남역이요, 고마워요"));
 

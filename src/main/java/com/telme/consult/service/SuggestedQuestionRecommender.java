@@ -8,6 +8,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -90,7 +91,16 @@ public final class SuggestedQuestionRecommender {
         if (!text.contains(storeQuestions.mention())) {
             return null;
         }
-        return storeQuestions.byCategory().getOrDefault(category, storeQuestions.fallback());
+        return storeQuestionFor(category);
+    }
+
+    /** 카테고리별 매장 찾기 문장. 카테고리에 없으면 기본 문장, 매장 문장 데이터가 없으면 null이다. */
+    public String storeQuestionFor(String category) {
+        if (storeQuestions == null) {
+            return null;
+        }
+        return category == null
+                ? storeQuestions.fallback() : storeQuestions.byCategory().getOrDefault(category, storeQuestions.fallback());
     }
 
     /** 연결표 JSON의 대표 질문 문장으로 최대 2개. 검증한 기대 추천과 비교할 때 쓴다. */
@@ -132,6 +142,26 @@ public final class SuggestedQuestionRecommender {
             out.add(representativeByPolicy.get(link.to()).slotId());
         }
         return List.copyOf(out);
+    }
+
+    /** 정책들의 대표 FAQ slotId. 대표 질문이 없는 정책은 건너뛴다. */
+    public List<String> representativeSlotIds(Collection<String> policies) {
+        return policies.stream()
+                .map(representativeByPolicy::get)
+                .filter(Objects::nonNull)
+                .map(RepresentativeQuestion::slotId)
+                .distinct()
+                .toList();
+    }
+
+    /** 문제 상황(TROUBLE) 질문 FAQ인지. 원본 JSON에 없는 FAQ(slotId null)는 false다. */
+    public boolean isTrouble(String slotId) {
+        return rules.isTrouble(slotId);
+    }
+
+    /** 질문을 그대로 보내도 답이 안 나오는 FAQ인지. 원본 JSON에 없는 FAQ(slotId null)는 측정하지 않아 false다. */
+    public boolean isUnanswerable(String slotId) {
+        return rules.isUnanswerable(slotId);
     }
 
     /** 추천 기준 FAQ. LLM에 넘긴 검색 결과 중 1순위다. slotId는 원본 JSON에 없는 FAQ면 null이다. */
@@ -212,12 +242,27 @@ public final class SuggestedQuestionRecommender {
         }
     }
 
-    record FaqRules(Set<String> troubleSlotIds, Set<String> eligibilityBlockedSlotIds, Map<String, String> triggers) {
+    // unanswerableSlotIds: 실제 채팅 경로에서 질문을 그대로 보내도 근거 있는 답이 안 나온 FAQ
+    // (scripts/check_faq_answerable_live.py). 답을 못 할 때 보여 줄 FAQ 후보에서 뺀다
+    record FaqRules(
+            Set<String> troubleSlotIds,
+            Set<String> eligibilityBlockedSlotIds,
+            Map<String, String> triggers,
+            Set<String> unanswerableSlotIds) {
         FaqRules {
             troubleSlotIds = troubleSlotIds == null ? Set.of() : Set.copyOf(troubleSlotIds);
             eligibilityBlockedSlotIds =
                     eligibilityBlockedSlotIds == null ? Set.of() : Set.copyOf(eligibilityBlockedSlotIds);
             triggers = triggers == null ? Map.of() : Map.copyOf(triggers);
+            unanswerableSlotIds = unanswerableSlotIds == null ? Set.of() : Set.copyOf(unanswerableSlotIds);
+        }
+
+        FaqRules(Set<String> troubleSlotIds, Set<String> eligibilityBlockedSlotIds, Map<String, String> triggers) {
+            this(troubleSlotIds, eligibilityBlockedSlotIds, triggers, null);
+        }
+
+        boolean isUnanswerable(String slotId) {
+            return slotId != null && unanswerableSlotIds.contains(slotId);
         }
 
         boolean isTrouble(String slotId) {

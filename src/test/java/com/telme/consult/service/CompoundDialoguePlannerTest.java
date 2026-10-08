@@ -90,7 +90,8 @@ class CompoundDialoguePlannerTest {
                         Purpose.NEARBY_STORE,
                         Status.WAITING_CONDITION,
                         99L,
-                        Map.of("location", Condition.filled("강남역")));
+                        Map.of("location", Condition.filled("강남역"),
+                                "serviceType", Condition.declined()));
         var result = planner.plan(List.of(done, replied, store(3)));
         assertEquals(List.of(1L), result.closed());
         assertEquals(2L, result.ready().getFirst().consultRequestId());

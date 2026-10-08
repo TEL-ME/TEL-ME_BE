@@ -8,6 +8,7 @@ import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ClarificationTextGenerator.ClarificationPrompt;
+import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.consult.service.ClarificationTextGenerator.GenerationUnavailableException;
 
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -22,6 +25,10 @@ import java.util.Objects;
 public class DialogueService {
     private static final String LOCATION = "location";
     private static final String FALLBACK = "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.";
+    private static final String SERVICE_TYPE = "serviceType";
+    private static final String SERVICE_TYPE_QUESTION = "어떤 업무로 매장을 찾으시나요?";
+    // 버튼 문구와 업무 코드의 짝은 라우팅 규칙이 들고 있다. 누른 답을 모델 없이 읽는 쪽과 같은 표를 쓴다
+    private static final List<String> SERVICE_TYPE_OPTIONS = RuleBasedRoutingFallback.serviceTypeOptions();
     private final ClarificationTextGenerator generator;
 
     /** 모델 호출 없이 되물을지 판단한다. */
@@ -64,14 +71,27 @@ public class DialogueService {
             conditions.put(LOCATION, DialogueInput.Condition.pending());
         }
         // 위치 권한 허용과 실제 좌표 제공은 구분한다.
-        if (input.purpose() == Purpose.GENERAL_FAQ || hasRegion || hasCoordinates) {
+        if (input.purpose() == Purpose.GENERAL_FAQ) {
+            return proceed(input, conditions);
+        }
+        // 지역과 업무를 한 번에 묻지 않는다. 지역이 없으면 매장을 좁힐 수 없어 지역이 먼저다
+        if (hasRegion || hasCoordinates) {
+            var service = conditions.get(SERVICE_TYPE);
+            // DECLINED는 업무를 고르지 않겠다는 뜻이라 업무 필터 없이 검색한다
+            boolean needsService = service == null || service.status() == ConditionStatus.PENDING;
+            if (!needsService) {
+                return proceed(input, conditions);
+            }
+            conditions.put(SERVICE_TYPE, DialogueInput.Condition.pending());
+            // 업무는 등록된 네 가지뿐이라 모델에게 질문을 맡기지 않는다
             return new DialogueDecision(
                     input.consultRequestId(),
-                    Action.PROCEED,
+                    Action.ASK,
                     conditions,
-                    null,
-                    null,
-                    MessageOrigin.NONE);
+                    SERVICE_TYPE,
+                    SERVICE_TYPE_QUESTION,
+                    MessageOrigin.TEMPLATE,
+                    SERVICE_TYPE_OPTIONS);
         }
 
         if (!generateText) {
@@ -113,5 +133,10 @@ public class DialogueService {
         }
         return new DialogueDecision(
                 input.consultRequestId(), Action.ASK, conditions, LOCATION, text, origin);
+    }
+
+    private DialogueDecision proceed(DialogueInput input, Map<String, DialogueInput.Condition> conditions) {
+        return new DialogueDecision(
+                input.consultRequestId(), Action.PROCEED, conditions, null, null, MessageOrigin.NONE);
     }
 }

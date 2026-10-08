@@ -15,6 +15,7 @@ import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.FaqAnswerSearchException;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
@@ -33,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class ConsultChatProcessingService implements ChatProcessingPort {
     private static final String PROCESSING_ERROR_CODE = "AI_PROCESSING_ERROR";
+    static final String NO_ANSWER_SUGGESTION_GUIDE = "혹시 이런 내용을 찾으셨나요?";
 
     private final TurnAnalyzer analyzer;
     private final AnswerProvider answers;
@@ -41,6 +43,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private final ConsultChatEvents events;
     private final ExecutionTrace trace;
     private final AskedQuestions askedQuestions;
+    private final NoAnswerSuggestions noAnswerSuggestions;
+    private final SuggestedQuestions suggestedQuestions;
 
     public ConsultChatProcessingService(
             TurnAnalyzer analyzer,
@@ -82,6 +86,20 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ConsultChatEvents events,
             ExecutionTrace trace,
             AskedQuestions askedQuestions) {
+        this(analyzer, answers, persistence, conditionConverter, events, trace, askedQuestions,
+                NoAnswerSuggestions.none(), SuggestedQuestions.none());
+    }
+
+    public ConsultChatProcessingService(
+            TurnAnalyzer analyzer,
+            AnswerProvider answers,
+            ConsultChatPersistenceService persistence,
+            ConfirmedConditionConverter conditionConverter,
+            ConsultChatEvents events,
+            ExecutionTrace trace,
+            AskedQuestions askedQuestions,
+            NoAnswerSuggestions noAnswerSuggestions,
+            SuggestedQuestions suggestedQuestions) {
         this.askedQuestions = Objects.requireNonNull(askedQuestions);
         this.analyzer = Objects.requireNonNull(analyzer);
         this.answers = Objects.requireNonNull(answers);
@@ -89,6 +107,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         this.conditionConverter = Objects.requireNonNull(conditionConverter);
         this.events = Objects.requireNonNull(events);
         this.trace = Objects.requireNonNull(trace);
+        this.noAnswerSuggestions = Objects.requireNonNull(noAnswerSuggestions);
+        this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
     }
 
     @Override
@@ -217,6 +237,11 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             generated = answers.clarifies()
                     ? answer(answerInput, searched)
                     : answers.generate(answerInput);
+            // "그건 얼마예요?"처럼 앞 대화를 가리키는 질문은 문맥을 반영한 문장으로 후보를 찾는다
+            if (turn.purpose() == Purpose.GENERAL_FAQ) {
+                generated = new GeneratedAnswer(
+                        withNoAnswerSuggestion(generated.answer(), turn.resolvedUserQuery()), generated.sources());
+            }
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -266,6 +291,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<String> sections = new ArrayList<>();
         List<AnswerSource> sources = new ArrayList<>();
         Set<Long> sourceFaqIds = new HashSet<>();
+        List<List<String>> followUpsPerAnswer = new ArrayList<>();
+        List<Long> answeredFaqIds = new ArrayList<>();
         boolean hasGroundedAnswer = false;
         for (int i = 0; i < faqTurns.size(); i++) {
             FaqTurn faq = faqTurns.get(i);
@@ -287,14 +314,27 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 generated.sources().stream()
                         .filter(source -> source.faqId() == null || sourceFaqIds.add(source.faqId()))
                         .forEach(sources::add);
+                // 합친 답변에는 근거가 있는 하위 답변마다 추천 질문을 하나씩 붙인다
+                followUpsPerAnswer.add(generated.answer().followUps() == null
+                        ? List.of() : generated.answer().followUps());
+                if (!generated.sources().isEmpty()) {
+                    answeredFaqIds.add(generated.sources().getFirst().faqId());
+                }
             }
         }
+        // 서로 이어진 질문을 함께 물으면 하위 답변끼리 상대 질문을 추천한다(관련된 짝 12개 중 8개).
+        // 하위 답변의 기준 FAQ(1순위) 정책을 가리키는 추천은 빼고 그 답변의 다음 추천을 쓴다
+        Set<String> answered = Objects.requireNonNull(
+                suggestedQuestions.questionsAbout(answeredFaqIds), "answeredQuestions");
+        followUpsPerAnswer = followUpsPerAnswer.stream()
+                .map(followUps -> followUps.stream().filter(question -> !answered.contains(question)).toList())
+                .toList();
 
-        ChatAnswer combined = new ChatAnswer(
+        ChatAnswer combined = withNoAnswerSuggestion(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER,
                 String.join("\n\n", sections),
                 hasGroundedAnswer ? ChatMessage.AnswerBasis.GROUNDED : ChatMessage.AnswerBasis.NO_EVIDENCE,
-                List.of(), null);
+                SuggestedQuestions.oneFromEach(followUpsPerAnswer), null), command.content());
         List<ConsultChatPersistenceService.ConsultCompletion> completions = preparedTurns.stream()
                 .map(prepared -> new ConsultChatPersistenceService.ConsultCompletion(
                         prepared.decision().consultRequestId(), prepared.expectedVersion() + 1))
@@ -320,6 +360,24 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             log.warn("복합 FAQ 완료 이벤트 전달 실패: executionId={}",
                     command.executionId(), deliveryFailure);
         }
+    }
+
+    // 근거가 없어 답을 못 했으면 사용자가 쓴 문장과 가까운 FAQ 질문을 버튼으로 붙인다.
+    // 질문을 쪼갠 답변은 하위 질문이 모두 근거 없을 때만 해당하고, 쪼개기 전 원문으로 찾는다
+    private ChatAnswer withNoAnswerSuggestion(ChatAnswer answer, String userQuestion) {
+        if (answer.messageType() != ChatMessage.MessageType.ANSWER
+                || answer.answerBasis() != ChatMessage.AnswerBasis.NO_EVIDENCE
+                || answer.followUps() != null && !answer.followUps().isEmpty()) {
+            return answer;
+        }
+        List<String> suggestions = Objects.requireNonNull(
+                noAnswerSuggestions.suggest(userQuestion), "noAnswerSuggestions");
+        if (suggestions.isEmpty()) {
+            return answer;
+        }
+        return new ChatAnswer(answer.messageType(),
+                answer.content() + "\n\n" + NO_ANSWER_SUGGESTION_GUIDE,
+                answer.answerBasis(), suggestions, answer.storeResults(), answer.storeSearchContext());
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {
@@ -404,6 +462,15 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
         public static Prepared none() {
             return NONE;
+        }
+    }
+
+    /** 근거 없는 답변 아래 "혹시 이런 내용을 찾으셨나요?" 버튼과의 경계다. 없으면 빈 목록이다. */
+    public interface NoAnswerSuggestions {
+        List<String> suggest(String userQuestion);
+
+        static NoAnswerSuggestions none() {
+            return userQuestion -> List.of();
         }
     }
 
