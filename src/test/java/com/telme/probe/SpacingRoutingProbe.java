@@ -44,8 +44,13 @@ class SpacingRoutingProbe {
 
     @Test
     void recordsIndependentRequestsAndSpacingInvariance() throws Exception {
-        var cases = mapper.readTree(Path.of(System.getenv().getOrDefault("TELME_SPACING_CASES",
+        var input = mapper.readTree(Path.of(System.getenv().getOrDefault("TELME_SPACING_CASES",
                 "scripts/spacing-routing-evaluation/cases.json")).toFile());
+        var cases = input.isArray() ? input : input.path(System.getenv().getOrDefault(
+                "TELME_SPACING_GROUP", "base"));
+        if (!cases.isArray()) {
+            throw new IllegalArgumentException("평가 입력 그룹은 배열이어야 합니다.");
+        }
         List<Map<String, Object>> calls = new ArrayList<>();
         doAnswer(call -> {
             LlmRequest request = call.getArgument(0);

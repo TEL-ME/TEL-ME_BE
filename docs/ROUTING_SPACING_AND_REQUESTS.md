@@ -51,17 +51,16 @@
 
 ## 자료와 재실행
 
-입력 사례는 [평가 스크립트 폴더](../scripts/spacing-routing-evaluation)에 있다. `cases.json`은 띄어쓰기와 요청 관계 40회, `additional-cases.json`은 추가 20회, `faq-csv-cases.json`은 FAQ 원문 123건, `request-objective-cases.json`은 비교와 처리 순서 등 12건이다. 입력 JSON은 기준을 직접 검토하고 수정할 수 있도록 일반 파일로 둔다.
+입력 사례는 [cases.json](../scripts/spacing-routing-evaluation/cases.json) 하나에 평가군별로 담았다. `base`는 띄어쓰기와 요청 관계 40회, `additional`은 추가 20회, `faq`는 FAQ 원문 123건, `requestObjective`는 비교와 처리 순서 등 12건이다. `SpacingRoutingProbe`는 기본적으로 `base`를 사용하며 `TELME_SPACING_GROUP`으로 다른 평가군을 선택한다.
 
 | 자료 | 내용 |
 | --- | --- |
 | `runs/request-objective-routing.json.gz` | Spring 라우팅 195회의 모델 요청과 응답 |
 | `runs/request-objective-chat-153.json.gz` | 채팅 153회의 검색 근거, 실행 상태, 최종 답변 |
-| `runs/request-objective-summary.json` | 라우팅 회귀 집계 |
-| `runs/request-objective-manifest.json` | 입력과 코드 해시, 모델 및 설정 정보 |
-| `runs/history.tar.gz` | 이전 단계의 압축 원시 결과, 요약, 11회 채팅 결과 |
+| `runs/request-objective-manifest.json` | 라우팅 회귀 집계, 입력과 코드 해시, 모델 및 설정 정보 |
+| `runs/history.tar.gz` | 이전 단계의 원시 결과와 기존 입력 파일 원본, 집계, 11회 채팅 결과 |
 
-이전 자료의 목록은 `tar -tzf scripts/spacing-routing-evaluation/runs/history.tar.gz`로 확인한다. 새 실험은 `run_full_answer_eval.py`와 `run_request_objective_chat.py`로 별도 평가 DB에서 실행한다. `summarize.py`는 저장된 라우팅 원시 자료만 집계하며 모델을 호출하지 않는다.
+이전 자료의 목록은 `tar -tzf scripts/spacing-routing-evaluation/runs/history.tar.gz`로 확인한다. 실행 당시 입력 해시와 현재 파일의 해시가 다른 평가군은 기존 입력 원본도 보관했다. 새 실험은 `run_full_answer_eval.py`와 `run_request_objective_chat.py`로 별도 평가 DB에서 실행한다. `summarize.py`는 저장된 라우팅 원시 자료만 집계하며 모델을 호출하지 않는다.
 
 ## 설계 근거
 

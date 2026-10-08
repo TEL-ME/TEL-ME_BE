@@ -81,5 +81,30 @@
     "inventoryPromptVersion": "routing-request-inventory-v3",
     "searchSimilarityThreshold": 0.72
   },
-  "scope": "Routing intent/count and chat persistence/SSE checks; not overall answer accuracy"
+  "scope": "Routing intent/count and chat persistence/SSE checks; not overall answer accuracy",
+  "summary": {
+    "records": 195,
+    "scored": 165,
+    "matched": 165,
+    "failures": [],
+    "baseMatched": 60,
+    "faqMatched": 93,
+    "newMatched": 12,
+    "previousCorrectLost": [],
+    "chatPassed": 11,
+    "chatCases": 11,
+    "outcomes": {
+      "FAQ:1": 164,
+      "FAQ:2": 15,
+      "FAQ:3": 5,
+      "STORE:1": 2,
+      "UNKNOWN:0": 9
+    },
+    "scope": "Routing intent/count and chat persistence/SSE checks; not overall answer accuracy"
+  },
+  "inputFiles": {
+    "current": "../cases.json",
+    "recorded": "history.tar.gz/inputs/"
+  },
+  "currentInputSha256": "f01ee7d48d24b93427a3bee777c794a2d407555f7af87248150e3f5c8c890274"
 }

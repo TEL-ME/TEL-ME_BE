@@ -25,8 +25,9 @@ def main():
         "live", folder.parent / "compound-faq-evaluation/run_live_api.py")
     live = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(live)
-    faq = json.loads((folder / "faq-csv-cases.json").read_text(encoding="utf-8"))
-    extra = json.loads((folder / "request-objective-cases.json").read_text(encoding="utf-8"))
+    inputs = json.loads((folder / "cases.json").read_text(encoding="utf-8"))
+    faq = inputs["faq"]
+    extra = inputs["requestObjective"]
     cases = [next(row for row in faq if row["id"] == key)
              for key in ["PLAN-0041", "SERVICE-0016", "BILLING-0051", "TERMINATE-0100"]]
     cases.insert(1, {**cases[0], "id": "PLAN-0041-SPACING",

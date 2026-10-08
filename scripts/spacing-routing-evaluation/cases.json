@@ -1,174 +1,1844 @@
-[
-  {
-    "id": "PORT_IN",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "번호이동 하고싶어요",
-      "번호 이동하고싶어요",
-      "번호 이동 하고 싶어요",
-      "번호이동하고싶어요"
-    ],
-    "repetitions": 2
-  },
-  {
-    "id": "NAME_CHANGE",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "명의변경 하고싶어요",
-      "명의 변경하고 싶어요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "USIM",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "유심재발급 받고싶어요",
-      "유심 재발급받고 싶어요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "PLAN",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "요금제변경 하고싶어요",
-      "요금제 변경하고 싶어요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "SITUATION",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "유심을잃어버렸어. 재발급방법 알려줘",
-      "유심을 잃어버렸어. 재발급 방법 알려줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "COMPARISON",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "5G랑LTE요금제차이 비교해줘",
-      "5G랑 LTE 요금제 차이 비교해줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "COMPOUND",
-    "expectedCount": 2,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "로밍요금과 유심재발급방법 알려줘",
-      "로밍 요금과 유심 재발급 방법 알려줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "EXPLICIT_FACETS",
-    "expectedCount": 3,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "번호이동 비용과 신청방법 그리고 필요서류 알려줘",
-      "번호 이동 비용과 신청 방법 그리고 필요 서류 알려줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "NEGATION",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "번호이동은 안하고 요금제변경만 하고싶어요",
-      "번호 이동은 안 하고 요금제 변경만 하고 싶어요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "CONDITION",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "미납요금이있는데 번호이동하고싶어요",
-      "미납 요금이 있는데 번호 이동 하고 싶어요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "INTERNET",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "인터넷해지하려고요",
-      "인터넷 해지 하려고요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "COMPOUND_SENTENCE",
-    "expectedCount": 2,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "휴대폰해지 방법 알려줘. 인터넷가입 방법도 알려줘",
-      "휴대폰 해지 방법 알려줘. 인터넷 가입 방법도 알려줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "SHARED_PREDICATE",
-    "expectedCount": 2,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "로밍요금과 유심재발급비용 알려줘",
-      "로밍 요금과 유심 재발급 비용 알려줘"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "COMPARISON_PRICE",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "LTE랑5G요금제중 뭐가더저렴해",
-      "LTE랑 5G 요금제 중 뭐가 더 저렴해"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "BACKGROUND",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "해외로출장가는데 로밍신청어떻게해",
-      "해외로 출장 가는데 로밍 신청 어떻게 해"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "NEGATION_INTERNET",
-    "expectedCount": 1,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "인터넷가입은안하고 해지만하려고요",
-      "인터넷 가입은 안 하고 해지만 하려고요"
-    ],
-    "repetitions": 1
-  },
-  {
-    "id": "COMPOUND_COMPARE",
-    "expectedCount": 2,
-    "expectedIntent": "FAQ",
-    "variants": [
-      "로밍신청방법 알려줘. 5G와LTE요금제 비교해줘",
-      "로밍 신청 방법 알려줘. 5G와 LTE 요금제 비교해줘"
-    ],
-    "repetitions": 1
-  }
-]
+{
+  "base": [
+    {
+      "id": "PORT_IN",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "번호이동 하고싶어요",
+        "번호 이동하고싶어요",
+        "번호 이동 하고 싶어요",
+        "번호이동하고싶어요"
+      ],
+      "repetitions": 2
+    },
+    {
+      "id": "NAME_CHANGE",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "명의변경 하고싶어요",
+        "명의 변경하고 싶어요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "USIM",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "유심재발급 받고싶어요",
+        "유심 재발급받고 싶어요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "PLAN",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금제변경 하고싶어요",
+        "요금제 변경하고 싶어요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "SITUATION",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "유심을잃어버렸어. 재발급방법 알려줘",
+        "유심을 잃어버렸어. 재발급 방법 알려줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "COMPARISON",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "5G랑LTE요금제차이 비교해줘",
+        "5G랑 LTE 요금제 차이 비교해줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "COMPOUND",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "로밍요금과 유심재발급방법 알려줘",
+        "로밍 요금과 유심 재발급 방법 알려줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "EXPLICIT_FACETS",
+      "expectedCount": 3,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "번호이동 비용과 신청방법 그리고 필요서류 알려줘",
+        "번호 이동 비용과 신청 방법 그리고 필요 서류 알려줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "NEGATION",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "번호이동은 안하고 요금제변경만 하고싶어요",
+        "번호 이동은 안 하고 요금제 변경만 하고 싶어요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "CONDITION",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "미납요금이있는데 번호이동하고싶어요",
+        "미납 요금이 있는데 번호 이동 하고 싶어요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "INTERNET",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "인터넷해지하려고요",
+        "인터넷 해지 하려고요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "COMPOUND_SENTENCE",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "휴대폰해지 방법 알려줘. 인터넷가입 방법도 알려줘",
+        "휴대폰 해지 방법 알려줘. 인터넷 가입 방법도 알려줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "SHARED_PREDICATE",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "로밍요금과 유심재발급비용 알려줘",
+        "로밍 요금과 유심 재발급 비용 알려줘"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "COMPARISON_PRICE",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "LTE랑5G요금제중 뭐가더저렴해",
+        "LTE랑 5G 요금제 중 뭐가 더 저렴해"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "BACKGROUND",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해외로출장가는데 로밍신청어떻게해",
+        "해외로 출장 가는데 로밍 신청 어떻게 해"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "NEGATION_INTERNET",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "인터넷가입은안하고 해지만하려고요",
+        "인터넷 가입은 안 하고 해지만 하려고요"
+      ],
+      "repetitions": 1
+    },
+    {
+      "id": "COMPOUND_COMPARE",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "로밍신청방법 알려줘. 5G와LTE요금제 비교해줘",
+        "로밍 신청 방법 알려줘. 5G와 LTE 요금제 비교해줘"
+      ],
+      "repetitions": 1
+    }
+  ],
+  "additional": [
+    {
+      "id": "H_ESIM",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "eSIM재발급받고싶어요",
+        "eSIM 재발급 받고 싶어요"
+      ]
+    },
+    {
+      "id": "H_ROAM",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "로밍가입하고싶어요",
+        "로밍 가입 하고 싶어요"
+      ]
+    },
+    {
+      "id": "H_DEVICE",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "휴대폰기기변경하려고요",
+        "휴대폰 기기 변경 하려고요"
+      ]
+    },
+    {
+      "id": "H_PAYMENT_CONDITION",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금이밀렸는데유심재발급받을수있어요",
+        "요금이 밀렸는데 유심 재발급 받을 수 있어요"
+      ]
+    },
+    {
+      "id": "H_SUSPEND_NEGATION",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해지는안하고일시정지만하고싶어요",
+        "해지는 안 하고 일시 정지만 하고 싶어요"
+      ]
+    },
+    {
+      "id": "H_PAYMENT_COMPOUND",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금납부방법과데이터충전비용알려줘",
+        "요금 납부 방법과 데이터 충전 비용 알려줘"
+      ]
+    },
+    {
+      "id": "H_THREE_SERVICES",
+      "expectedCount": 3,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "유심재발급비용과로밍신청방법그리고해지서류알려줘",
+        "유심 재발급 비용과 로밍 신청 방법 그리고 해지 서류 알려줘"
+      ]
+    },
+    {
+      "id": "H_PREFERENCE_COMPARISON",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "eSIM과유심중어느쪽이편해",
+        "eSIM과 유심 중 어느 쪽이 편해"
+      ]
+    },
+    {
+      "id": "H_STORE",
+      "expectedCount": 1,
+      "expectedIntent": "STORE",
+      "variants": [
+        "홍대입구역근처번호이동매장찾아줘",
+        "홍대입구역 근처 번호 이동 매장 찾아줘"
+      ]
+    },
+    {
+      "id": "H_UNKNOWN",
+      "expectedCount": 0,
+      "expectedIntent": "UNKNOWN",
+      "variants": [
+        "파스타만드는방법알려줘",
+        "파스타 만드는 방법 알려줘"
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "id": "BILLING-0051",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "청구서 확인부터 요금 납부까지 순서가 어떻게 되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0101",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "전화가 안 걸려요. 요금 안 내서 그런가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0151",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "한도를 안 올리면 얼마까지 쓸 수 있어요? 올리면요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0099",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "물에 빠뜨렸습니다. 어디로 가야 합니까."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0108",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "환불이랑 교환 중에 뭐가 더 쉬워요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0123",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "보험 들어놓은 거랑 안 들어놓은 거 수리비가 다른가요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0001",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "명의를 아버지한테서 저한테 바꾸려면 뭐가 필요해요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0063",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "명의변경 신청했는데 신용 심사에서 거절됐습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0068",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "수수료를 내라고 하는데 원래 그런가요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0035",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금제를 바꾸고 싶은데 어떤 게 있는지 하나씩 알려주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0041",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0122",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "일반 요금제랑 언리미티드 요금제 중에 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0089",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "신청했는데 왜 안 돼요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0067",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "출국 전에 신청하는 거랑 도착해서 신청하는 거랑 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0079",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "듀얼번호랑 로밍 데이터 나눠쓰기랑 다른 건가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0080",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가입했는지 확인하는 거랑 현지에서 설정하는 거랑 순서가 어떻게 돼요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0004",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "제 명의로 누가 개통한 것 같아요. 신고하면 어떻게 되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0016",
+      "expectedCount": 2,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "부가서비스 가입이랑 해지는 어떻게 해요?"
+      ],
+      "expectedRequestCount": 2,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "MULTIPLE"
+    },
+    {
+      "id": "SERVICE-0061",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가입이랑 해지 중에 어느 쪽이 더 빨리 적용되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0062",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "등급이 몇 단계나 있고 뭘로 정해져요"
+      ],
+      "expectedRequestCount": 2,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "MULTIPLE"
+    },
+    {
+      "id": "SUBSCRIBE-0028",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국인인데 폰을 여러 개 만들고 싶으면 어떻게 해야 해요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0109",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "처음 폰을 만드는 건데 신분증은 뭘 가져가야 하나요? 운전면허증도 되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0123",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "매장이랑 인터넷 중 어디가 빨리 되나요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0074",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "위약금이 너무 많이 나왔어요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0095",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "한 번에 내는 거랑 나눠 내는 거랑 뭐가 더 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0096",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0109",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "매장 가는 거랑 전화하는 거랑 뭐가 더 빨라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0110",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "빨리 해지하는 거랑 좀 더 쓰다 해지하는 거랑 위약금이 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0091",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "유심이 자꾸 인식이 안 됩니다. eSIM으로 바꿀 수 있나요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0102",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "본인이 가는 거랑 대리인이 가는 거 준비물이 어떻게 다른가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0105",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "매장 재발급이랑 온라인 재발급 중에 어떤 게 빨라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0109",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "매장이랑 온라인 중에 뭐가 더 빨라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0110",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "혼자 가는 거랑 다른 사람 시키는 거랑 서류가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0017",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "내 멤버십 등급이 어떻게 정해지는지 순서대로 설명해 주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0064",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "신고 먼저 하는 거랑 요금 먼저 내는 거랑 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SERVICE-0065",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "홈페이지로 받는 거랑 매장에서 받는 거랑 증명서가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0056",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "보름 동안 로밍을 썼는데 요금이 생각보다 많이 나왔습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0061",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "로밍 요금이 너무 많이 나와요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0063",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "데이터가 막혔다고 문자가 왔어요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0075",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "재부팅이랑 데이터 로밍 다시 켜기 중 뭐가 먼저인가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "ROAMING-0077",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "집에서 신청하는 거랑 공항에서 신청하는 거랑 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0025",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족 간 명의변경 시 방문과 서류 절차를 정리해 주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0029",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "배우자 명의로 변경할 때 매장에서 처리되는 흐름을 알려주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0048",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "만 17세 동생에게 제 회선을 넘길 수 있나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0058",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "퇴사했는데 회사 담당자가 매장에 같이 못 온대요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0060",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "중학생 동생이 제 폰을 물려받으려는데 안 된다고 해요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0067",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "돌아가신 분 폰 명의를 바꾸려는데 같이 못 오잖아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0072",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "손주끼리 폰 바꿔 쓰겠다는데 안 된대요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0076",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "엄마가 오는 거랑 위임장 받아오는 거랑 뭐가 더 확실해요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0077",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족끼리 바꾸는 거랑 남한테 넘기는 거랑 비용이 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0078",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "회사폰을 그냥 받는 거랑 할부 정리하고 받는 거랑 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0080",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0082",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "회사 담당자 동행과 위임장 대리는 서류 차이가 어떻게 되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0085",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "딸이랑 같이 가는 거랑 딸 혼자 보내는 거랑 뭐가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "NAME_CHANGE-0088",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "내가 가는 거랑 위임장 주는 거랑 뭐가 빨라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0053",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "유심이 안 읽히는데 오늘 바로 바꿀 수 있을까요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0070",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국에 있는 자식 유심을 제가 받을 수 있나요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0079",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "폰을 바꿨는데 eSIM이 옮겨지지 않아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0080",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해외에서 유심을 잃어버렸는데 전화가 안 돼요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0084",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "기기변경 후 예전 유심이 아직 살아 있는 것 같습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0098",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "본인 신분증만 있으면 되는 거랑 사본까지 필요한 거랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0099",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "폰 바꿀 때 물리 유심 그대로 쓰는 거랑 eSIM 새로 받는 거랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0100",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해외에서 신고하는 거랑 귀국해서 신고하는 거랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0103",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "인식 불량일 때 물리 유심 재발급과 eSIM 전환 중 어느 쪽이 나은가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "USIM-0111",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "폰 잃어버렸는데 eSIM이랑 보통 유심 중 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0098",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "미납 요금 먼저 내고 오는 거랑 그냥 오는 거랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0100",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "원래 회사로 되돌아갈 때 14일 안이랑 밖이랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0107",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "개통 후 3개월과 명의변경 후 1개월 중 어느 조건이 더 자주 걸리나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0110",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "밀린 요금 있는 거랑 없는 거랑 뭐가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0112",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "무르는 거랑 새로 옮기는 거랑 뭐가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PORTING-0115",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "석 달이랑 한 달이랑 뭐가 맞아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0075",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해지하려는데 할부금 한 번에 내라고 해서 부담돼요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0082",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "해외 체류 중 해지했는데 예상보다 반환금이 큽니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0084",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "30일 정지가 끝났는데 자동으로 다시 정지되지 않습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0100",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금 아끼려면 정지가 나아요, 해지가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0103",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "분실 해지 시 일시 납부와 할부 유지는 총 부담이 다른가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0104",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "장기 미사용이면 일시 정지와 해지 중 어느 쪽이 유리한가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0105",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금 부담으로 해지할 때 홈페이지와 고객센터 중 어느 쪽이 빠른가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0108",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0111",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "아들 군대 가는데 할부 한 번에 내는 게 나아요 나눠 내는 게 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0112",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "오래 안 쓰면 정지가 나아요 해지가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "TERMINATE-0113",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "폰 잃어버렸는데 매장 가는 거랑 전화하는 거랑 뭐가 빨라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0032",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "자녀 회선까지 여러 개 만들려면 순서가 어떻게 돼요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0054",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "회사 이름으로 애들 폰 만들 수 있어요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0088",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국인인데 회선을 추가하려니 한도라고 해요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0089",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "법인 담당자로 갔는데 제 신분증으로는 안 된다고 해요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0098",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국인 자녀 개통에 가족관계증명서를 못 냈더니 거절됐습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0112",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0113",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국인 서류랑 한국인 서류랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0114",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "법인 명의 개통이랑 미성년자 개통 중 뭐가 더 까다로워요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0118",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "외국인 미성년자와 내국인 미성년자의 가입 요건이 다른가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0122",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "자녀 명의와 부모 명의 중 어느 쪽으로 개통하는 게 서류가 간단한가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0125",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "하나 더 만드는데 주민등록증이랑 면허증 중 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "SUBSCRIBE-0126",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "처음 만드는 손주 서류가 어른이랑 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0033",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "침수돼서 새 폰 할부로 사려는데 어떻게 진행돼요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0094",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "배터리 노후로 기기변경을 신청했는데 개통일 기준으로 거절됐습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0110",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "기기변경이랑 새 회선 개통이랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0111",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "분실이랑 파손이랑 처리가 어떻게 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0113",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "침수로 새로 살 때 할부랑 일시불이랑 뭐가 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0114",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "배터리 교체랑 기기변경 중 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0118",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "침수 단말의 할부금 완납과 승계 중 어느 쪽이 유리한가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0125",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "기기 바꿀 때 24개월이랑 30개월 중 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "DEVICE-0127",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "액정 수리 보험 있는 거랑 없는 거랑 얼마나 차이 나요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0046",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금 절감을 위해 요금제 라인업을 비교하는 절차를 알려주세요."
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0095",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족 중 한 명 요금이 너무 많이 나와요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0100",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "성인이 됐는데 요금제를 뭘로 해야 할지 모르겠어요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0102",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금을 아끼려고 낮은 요금제로 바꿨더니 속도 제한이 자주 걸립니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0105",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "데이터 사용량에 비해 요금제가 과한 것 같습니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0107",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족 회선 하나만 유독 속도가 느립니다"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0111",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "식구 요금제가 다 달라서 헷갈려요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0123",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족한테 데이터 주는 거랑 이월하는 거랑 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0128",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "이월이랑 선물이랑 양이 어떻게 달라요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0135",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "가족 4명이 5G 프리미엄과 LTE 맥스로 나눌 때 요금 차이는 어떻게 되나요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0138",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "이월과 선물 중 요금 절감에 더 도움이 되는 쪽은 어디인가요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0141",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "5G랑 알뜰이랑 뭐가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0143",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "손주한테 주는 거랑 넘기는 거랑 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "PLAN-0149",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "손주 요금제랑 내 요금제랑 뭐가 달라요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0100",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0127",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "청구서 보니까 요금제가 이상해요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0128",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "요금 너무 많이 나왔어요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0138",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "자동이체랑 가상계좌랑 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0140",
+      "expectedCount": 1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "이메일이랑 모바일 청구서 중에 뭐가 나아요?"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "EXPLICIT_FAQ",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    },
+    {
+      "id": "BILLING-0159",
+      "expectedCount": -1,
+      "expectedIntent": "FAQ",
+      "variants": [
+        "카드랑 통장이랑 뭐가 나아요"
+      ],
+      "expectedRequestCount": 1,
+      "labelStatus": "CONTEXT_REQUIRED",
+      "labelOrigin": "실행 전 코드 담당 AI의 문장 검토. 사람 확정 라벨 아님",
+      "expectedDecision": "SINGLE_OR_COMPARISON"
+    }
+  ],
+  "requestObjective": [
+    {
+      "id": "OVERVIEW-01",
+      "variants": [
+        "선불과 후불 요금제 종류를 차례로 소개해줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "OVERVIEW-02",
+      "variants": [
+        "휴대폰과 인터넷 결합상품 구성을 한눈에 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "OVERVIEW-03",
+      "variants": [
+        "유심과 eSIM을 쓰는 방식은 어떤 것들이 있는지 설명해줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "OVERVIEW-04",
+      "variants": [
+        "로밍 신청부터 현지 이용과 귀국 후 해제까지 순서대로 안내해줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "OVERVIEW-05",
+      "variants": [
+        "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "OVERVIEW-06",
+      "variants": [
+        "미납요금을 납부하고 이용정지를 풀려면 전체 절차가 어떻게 돼?"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "INDEPENDENT-01",
+      "variants": [
+        "로밍 신청 방법과 유심 재발급 비용을 각각 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 2
+    },
+    {
+      "id": "INDEPENDENT-02",
+      "variants": [
+        "부가서비스를 가입하는 방법하고 해지하는 방법 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 2
+    },
+    {
+      "id": "INDEPENDENT-03",
+      "variants": [
+        "번호이동 비용, 필요한 서류, 신청 방법을 각각 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 3
+    },
+    {
+      "id": "INDEPENDENT-04",
+      "variants": [
+        "인터넷 해지 위약금과 휴대폰 명의 변경 서류를 알려줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 2
+    },
+    {
+      "id": "COMPARISON-01",
+      "variants": [
+        "선불 요금제와 후불 요금제 중 내게 유리한 쪽은?"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 1
+    },
+    {
+      "id": "COMPARISON-02",
+      "variants": [
+        "로밍 신청 방법 알려줘. 유심과 eSIM의 차이도 비교해줘"
+      ],
+      "expectedIntent": "FAQ",
+      "expectedCount": 2
+    }
+  ]
+}
