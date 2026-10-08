@@ -89,6 +89,16 @@ class ConditionExtractorTest {
     }
 
     @Test
+    @DisplayName("질문이 빈 조건은 예외 없이 버린다")
+    void 질문이_빈_조건을_버린다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[{"key":"plan_type","question":null,
+                 "options":["3G"],"evidence":"5G 요금제는 앱에서"}]}""");
+
+        assertThat(extract()).isEmpty();
+    }
+
+    @Test
     @DisplayName("예·아니요 선택지는 근거에 없어도 남긴다")
     void 예_아니요는_근거를_보지_않는다() {
         when(client.generate(any())).thenReturn("""

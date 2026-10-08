@@ -26,6 +26,56 @@ import org.springframework.transaction.annotation.Transactional;
 @ExtendWith(OutputCaptureExtension.class)
 class ChatContextBuilderIntegrationTest {
 
+    @Test
+    void ignoresLegacySummaryAndRestoresSummarizedOriginals() {
+        ChatSession session = createSession("아주 긴 이전 요약입니다. ".repeat(80));
+        ChatMessage user = message(session, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "해외 로밍 신청", null);
+        ChatMessage answer = message(session, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "로밍 안내", null, user);
+        ChatMessage current = message(session, 3, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "그건?", null);
+        ChatExecution run = execution(session, current, ChatExecution.Status.RUNNING);
+        entityManager.createNativeQuery("update chat_sessions set summary_through_sequence_no=2 where session_id=?")
+                .setParameter(1, session.getSessionId()).executeUpdate();
+        entityManager.clear();
+        ChatContext context = chatContextBuilder.build(new ChatProcessingCommand(
+                run.getExecutionId(), session.getSessionId(), current.getMessageId(), "그건?"), 100);
+        assertThat(context.summary()).isNull();
+        assertThat(context.history()).extracting(ChatContextMessage::messageId)
+                .containsExactly(user.getMessageId(), answer.getMessageId());
+    }
+
+    @Test
+    void oversizedVerifiedSummaryRestoresRecentOriginalsWithinBudget() throws Exception {
+        var session = createSession(null);
+        var old = message(session, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "해외 로밍 상담입니다. ".repeat(80), null);
+        message(session, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "로밍 안내", null, old);
+        var recent = message(session, 3, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "유심 재발급 문의", null);
+        var reply = message(session, 4, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                ChatMessage.Status.COMPLETED, "유심 안내", null, recent);
+        var current = message(session, 5, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
+                ChatMessage.Status.COMPLETED, "그건 얼마야?", null);
+        var run = execution(session, current, ChatExecution.Status.RUNNING);
+        String memory = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                new com.telme.chat.converter.ChatSummaryConverter.Memory(
+                        com.telme.chat.converter.ChatSummaryConverter.FORMAT,
+                        java.util.List.of(ChatContextMessage.from(old)), null));
+        entityManager.createNativeQuery("update chat_sessions set summary=?,summary_through_sequence_no=2 where session_id=?")
+                .setParameter(1, memory).setParameter(2, session.getSessionId()).executeUpdate();
+        entityManager.clear();
+        var context = chatContextBuilder.build(new ChatProcessingCommand(run.getExecutionId(), session.getSessionId(),
+                current.getMessageId(), current.getContent()), 100);
+        assertThat(context.summary()).isNull();
+        assertThat(context.summarySources()).isEmpty();
+        assertThat(context.history()).extracting(ChatContextMessage::messageId)
+                .containsExactly(recent.getMessageId(), reply.getMessageId());
+        assertThat(context.estimatedContextTokens()).isLessThanOrEqualTo(100);
+    }
+
     @Autowired
     private ChatContextBuilder chatContextBuilder;
 
@@ -76,7 +126,7 @@ class ChatContextBuilderIntegrationTest {
 
         assertThat(context.sessionId()).isEqualTo(session.getSessionId());
         assertThat(context.inputMessageId()).isEqualTo(currentQuestion.getMessageId());
-        assertThat(context.summary()).isEqualTo("사용자는 번호이동 매장을 찾고 있다.");
+        assertThat(context.summary()).isNull();
         assertThat(context.currentQuestion()).isEqualTo("첫 번째 매장은 어디야?");
         assertThat(context.history())
                 .extracting(ChatContextMessage::messageId)
@@ -276,7 +326,7 @@ class ChatContextBuilderIntegrationTest {
     }
 
     @Test
-    void excludesMessagesAlreadyIncludedInSummary() {
+    void excludesMessagesAlreadyIncludedInVerifiedSummary() throws Exception {
         User user = User.builder()
                 .email("summarized-" + UUID.randomUUID() + "@example.com")
                 .name("context")
@@ -293,6 +343,13 @@ class ChatContextBuilderIntegrationTest {
         ChatMessage summarizedQuestion = message(
                 session, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION,
                 ChatMessage.Status.COMPLETED, "이미 요약된 질문", null);
+        String memory = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                new com.telme.chat.converter.ChatSummaryConverter.Memory(
+                        com.telme.chat.converter.ChatSummaryConverter.FORMAT,
+                        java.util.List.of(ChatContextMessage.from(summarizedQuestion)),
+                        "강남역이라는 미검증 이전 요약"));
+        entityManager.createNativeQuery("update chat_sessions set summary=? where session_id=?")
+                .setParameter(1, memory).setParameter(2, session.getSessionId()).executeUpdate();
         message(
                 session, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
                 ChatMessage.Status.COMPLETED, "이미 요약된 답변", null, summarizedQuestion);
@@ -312,7 +369,9 @@ class ChatContextBuilderIntegrationTest {
                 execution.getExecutionId(), session.getSessionId(), current.getMessageId(), current.getContent()),
                 4_096);
 
-        assertThat(context.summary()).isEqualTo("첫 번째 질문과 답변은 이미 요약됨");
+        assertThat(context.summary()).isEqualTo("이미 요약된 질문");
+        assertThat(context.summarySources()).extracting(ChatContextMessage::messageId)
+                .containsExactly(summarizedQuestion.getMessageId());
         assertThat(context.history())
                 .extracting(ChatContextMessage::messageId)
                 .containsExactly(recentQuestion.getMessageId(), recentAnswer.getMessageId());

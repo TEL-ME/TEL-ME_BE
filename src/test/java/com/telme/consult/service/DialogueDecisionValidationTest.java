@@ -13,6 +13,7 @@ import com.telme.consult.dto.DialogueInput.Purpose;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 class DialogueDecisionValidationTest {
@@ -75,6 +76,52 @@ class DialogueDecisionValidationTest {
                 () ->
                         new DialogueDecision(
                                 1L, Action.PROCEED, Map.of(), null, "질문", MessageOrigin.MODEL));
+    }
+
+    @Test
+    void optionsOnlyBelongToClarification() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        new DialogueDecision(
+                                1L,
+                                Action.ALTERNATIVE_GUIDANCE,
+                                Map.of(),
+                                null,
+                                "안내",
+                                MessageOrigin.TEMPLATE,
+                                List.of("예")));
+    }
+
+    @Test
+    void blankOrTooLongOptionIsRejected() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> clarificationWithOptions(List.of(" ")));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> clarificationWithOptions(List.of("가".repeat(256))));
+    }
+
+    @Test
+    void nullOptionIsRejectedBeforeCopy() {
+        var options = new java.util.ArrayList<String>();
+        options.add(null);
+        assertThrows(IllegalArgumentException.class, () -> clarificationWithOptions(options));
+    }
+
+    @Test
+    void absentOptionsBecomeEmptyList() {
+        assertEquals(
+                List.of(),
+                new DialogueDecision(
+                                1L, Action.ASK, Map.of(), "unpaid_bill", "질문", MessageOrigin.TEMPLATE)
+                        .options());
+    }
+
+    private DialogueDecision clarificationWithOptions(List<String> options) {
+        return new DialogueDecision(
+                1L, Action.ASK, Map.of(), "unpaid_bill", "질문", MessageOrigin.TEMPLATE, options);
     }
 
     @Test
