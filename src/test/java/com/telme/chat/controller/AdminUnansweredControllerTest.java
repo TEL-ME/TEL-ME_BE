@@ -93,6 +93,7 @@ class AdminUnansweredControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.messages[0].messageId").value(1))
                 .andExpect(jsonPath("$.result.messages[0].type").value("NO_EVIDENCE"))
+                .andExpect(jsonPath("$.result.messages[0].originQuestionPreview").value("요금제 바꾸고 싶어요"))
                 .andExpect(jsonPath("$.result.totalElements").value(1));
     }
 
@@ -145,27 +146,29 @@ class AdminUnansweredControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("상세를 조회하면 200과 질문·응답·근거를 반환한다")
+    @DisplayName("상세를 조회하면 200과 질문·원래 질문·응답·근거를 반환한다")
     void 상세를_조회한다() throws Exception {
         when(adminUnansweredQueryService.getUnanswered(anyLong())).thenReturn(detail());
 
         mockMvc.perform(get("/api/v1/admin/unanswered/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.question").value("요금제 바꾸고 싶어요"))
+                .andExpect(jsonPath("$.result.question").value("5G 프리미엄이요"))
+                .andExpect(jsonPath("$.result.originQuestion").value("요금제 바꾸고 싶어요"))
                 .andExpect(jsonPath("$.result.type").value("NO_EVIDENCE"))
                 .andExpect(jsonPath("$.result.sources").isArray());
     }
 
     private AdminUnansweredDetailResponse detail() {
         return new AdminUnansweredDetailResponse(
-                1L, 10L, "NO_EVIDENCE", "요금제 바꾸고 싶어요", "안내드릴 수 있는 정보가 없습니다.",
-                Instant.now(), List.of());
+                1L, 10L, "NO_EVIDENCE", "5G 프리미엄이요", "요금제 바꾸고 싶어요",
+                "안내드릴 수 있는 정보가 없습니다.", Instant.now(), List.of());
     }
 
     private AdminUnansweredListResponse listResponse() {
         return new AdminUnansweredListResponse(
                 List.of(new AdminUnansweredListItemResponse(
-                        1L, 10L, "NO_EVIDENCE", "요금제 바꾸고 싶어요", Instant.now())),
+                        1L, 10L, "NO_EVIDENCE", "5G 프리미엄이요", "요금제 바꾸고 싶어요",
+                        Instant.now())),
                 0, 20, 1, 1);
     }
 }
