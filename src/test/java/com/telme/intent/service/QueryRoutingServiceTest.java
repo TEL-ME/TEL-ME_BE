@@ -1301,8 +1301,61 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().queryText()).isEqualTo("로밍 요금제 신청 방법");
             var request = org.mockito.ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
             verify(llmClient).generate(request.capture());
-            assertThat(request.getValue().userPrompt()).contains(previous).endsWith("[현재 질문]\n" + question);
+            assertThat(request.getValue().userPrompt()).contains(previous).endsWith("[현재 질문]\n그럼신청방법은?");
             assertThat(request.getValue().userPrompt()).doesNotContain("[현재 후속 질문]");
+        }
+
+        @Test
+        void restoredFollowUpUsesSameModelInputForSpacingVariants() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법"}]}
+                """);
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            List<String> variants = List.of("그럼 신청 방법은?", "그럼신청방법은?", "그럼 신청방법은?");
+            for (String question : variants) {
+                String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+                service.routeSingleConsult(msg(question), context(question, previous), resolved);
+            }
+            var requests = ArgumentCaptor.forClass(LlmRequest.class);
+            verify(llmClient, times(variants.size())).generate(requests.capture());
+            assertThat(requests.getAllValues()).extracting(LlmRequest::userPrompt).allSatisfy(prompt ->
+                    assertThat(prompt).contains(previous).endsWith("[현재 질문]\n그럼신청방법은?"));
+        }
+
+        // 이전 발언까지 요청으로 세면 개수가 맞지 않는다. 재확인과 인용 근거는 현재 발화로만 판정한다.
+        @Test
+        void restoredCompoundQuestionCountsOnlyCurrentRequests() {
+            String question = "그럼 신청 방법이랑 해지 방법도 알려줘";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+            org.mockito.Mockito.doAnswer(call -> {
+                LlmRequest request = call.getArgument(0);
+                if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) {
+                    int count = request.userPrompt().contains("로밍") ? 3 : 2;
+                    return "{\"decision\":\"MULTIPLE\",\"requestCount\":" + count + "}";
+                }
+                if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"unsafe\":[false,false]}";
+                }
+                return """
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법과 해지 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법","requestQuote":"신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"로밍 요금제 해지 방법","requestQuote":"해지 방법"}]}
+                    """;
+            }).when(llmClient).generate(any());
+
+            var result = service.routeSingleConsult(msg(question), context(question, previous), resolved);
+
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("로밍 요금제 신청 방법", "로밍 요금제 해지 방법");
+            var requests = ArgumentCaptor.forClass(LlmRequest.class);
+            verify(llmClient, times(3)).generate(requests.capture());
+            assertThat(requests.getAllValues()).filteredOn(request ->
+                    RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt()))
+                    .singleElement().extracting(LlmRequest::userPrompt)
+                    .isEqualTo("그럼신청방법이랑해지방법도알려줘");
         }
 
         @ParameterizedTest
