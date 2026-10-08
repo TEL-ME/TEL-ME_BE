@@ -14,6 +14,10 @@ final class ConditionGrounding {
 
     // 모델이 근거를 조금씩 바꿔 쓴다. 이어지는 글자가 이만큼 겹치면 그 문장을 보고 쓴 것으로 친다
     private static final int MIN_OVERLAP = 8;
+    // 조건을 가르는 말은 질문 앞쪽에 온다. 뒤는 어미라 겹쳐도 다른 조건일 수 있다
+    private static final int MIN_QUESTION_PREFIX = 5;
+    // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
+    private static final int MIN_SAID_OVERLAP = 5;
 
     private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
@@ -73,13 +77,20 @@ final class ConditionGrounding {
         return NEGATION.matcher(compacted).find();
     }
 
-    static List<String> groundedOptions(List<String> options, FaqSearchResponse source) {
+    static List<String> groundedOptions(List<String> options, String question, FaqSearchResponse source) {
+        if (question == null || question.isBlank()) {
+            return List.of();
+        }
         if (options.stream().allMatch(option -> YES_NO.contains(option.strip()))) {
             return options;
         }
         String sourceText = source.answer() == null ? "" : compact(source.answer());
         // 선택지는 근거에 적힌 값 그대로여야 한다. 바꿔 쓰면 고객이 고른 값이 검색에 안 걸린다
-        return options.stream().filter(option -> containsValue(sourceText, compact(option))).toList();
+        return options.stream()
+                .filter(option -> containsValue(sourceText, compact(option))
+                        // 한쪽만 근거에 적히기도 한다. "법인인 경우"만 있어도 질문이 개인·법인을 둘 다 물으면 짝이다
+                        || containsValue(compact(question), compact(option)))
+                .toList();
     }
 
     // 11500원 안의 1500원처럼 숫자 중간에 걸린 값은 다른 값이다
@@ -96,6 +107,30 @@ final class ConditionGrounding {
             }
         }
         return false;
+    }
+
+    // 고객이 질문에 쓴 말을 그대로 되묻는 것을 막는다. "로밍 무제한 할까요?"에 무제한을 원하는지 묻는 경우다
+    static boolean alreadySaid(String userQuery, String question) {
+        String asked = compact(question);
+        String said = compact(userQuery == null ? "" : userQuery);
+        return !asked.isEmpty() && !said.isEmpty()
+                && longestOverlap(said, asked) >= MIN_SAID_OVERLAP;
+    }
+
+    // 같은 사실을 범위만 바꿔 두 번 묻는 것을 막는다. "만 14세 이상"과 "만 14세 이상 18세 이하"가 그 경우다
+    static boolean asksTheSame(String question, String other) {
+        String left = compact(question);
+        String right = compact(other);
+        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX;
+    }
+
+    private static int commonPrefix(String left, String right) {
+        int limit = Math.min(left.length(), right.length());
+        int same = 0;
+        while (same < limit && left.charAt(same) == right.charAt(same)) {
+            same++;
+        }
+        return same;
     }
 
     private static int longestOverlap(String text, String sourceText) {

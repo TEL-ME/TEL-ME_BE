@@ -14,7 +14,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = "안내드릴 수 있는 정보가 없습니다.";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.3-multiturn";
+    public static final String PROMPT_VERSION = "rag-answer-v4.5-multiturn";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
@@ -28,6 +28,10 @@ public final class AnswerPromptTemplates {
         2. 근거로 답할 수 없는 질문이면 "안내드릴 수 있는 정보가 없습니다" 한 문장만 출력하고 멈추십시오.
            사과, 이유 설명, 다른 곳 안내를 덧붙이지 마십시오.
         3. 근거에 없는 웹사이트, 페이지, 고객센터, 전화번호를 답변에 쓰지 마십시오.
+           신청하거나 처리하는 곳은 근거에 적힌 단어를 그대로 쓰고, 브랜드나 페이지 이름을 덧붙이지 마십시오.
+           - 근거가 "홈페이지로 신청하시면 됩니다"이면 "홈페이지"라고만 쓰십시오.
+           "LG U+샵", "유플러스샵", "이벤트 페이지", "공식 사이트"는 어떤 경우에도 쓰지 마십시오.
+           근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.
         4. 근거에 있는 숫자만 쓰고, 근거의 숫자를 더하거나 곱해서 새 숫자를 만들지 마십시오.
         5. 고객이 제시한 조건이 있으면 그 조건에 해당하는 내용만 골라 답변하십시오.
         6. 근거에 조건별로 다른 내용이 있는데 고객 조건을 모르면, 조건을 나누어 모두 안내하십시오.
@@ -80,7 +84,7 @@ public final class AnswerPromptTemplates {
             %s
 
             [고객 질문]
-            %s""".formatted(context, formatConditions(request.conditions()), request.userQuery());
+            %s""".formatted(context, formatConditions(request.conditions(), request.conditionLabels()), request.userQuery());
     }
 
     public static String systemPromptFor(String question) {
@@ -104,12 +108,20 @@ public final class AnswerPromptTemplates {
                 ? PROMPT_VERSION + "-comparison-v2" : PROMPT_VERSION;
     }
 
-    private static String formatConditions(Map<String, String> conditions) {
+    private static String formatConditions(
+            Map<String, String> conditions, Map<String, String> askedQuestions) {
         String formatted = conditions.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-                .map(entry -> "- %s: %s".formatted(
-                        CONDITION_LABELS.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue()))
+                .map(entry -> "- %s: %s".formatted(label(entry.getKey(), askedQuestions), entry.getValue()))
                 .collect(Collectors.joining("\n"));
         return formatted.isEmpty() ? "없음" : formatted;
+    }
+
+    // 되물은 질문이 있으면 그 문구를 쓴다. "age: 예"로는 무엇에 대한 답인지 알 수 없다
+    private static String label(String key, Map<String, String> askedQuestions) {
+        String asked = askedQuestions.get(key);
+        return asked != null && !asked.isBlank()
+                ? asked
+                : CONDITION_LABELS.getOrDefault(key, key);
     }
 }

@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
+import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
@@ -8,7 +9,9 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.exception.FaqAnswerSearchException;
@@ -37,6 +40,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     private final ConfirmedConditionConverter conditionConverter;
     private final ConsultChatEvents events;
     private final ExecutionTrace trace;
+    private final AskedQuestions askedQuestions;
 
     public ConsultChatProcessingService(
             TurnAnalyzer analyzer,
@@ -67,6 +71,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
             ExecutionTrace trace) {
+        this(analyzer, answers, persistence, conditionConverter, events, trace, AskedQuestions.none());
+    }
+
+    public ConsultChatProcessingService(
+            TurnAnalyzer analyzer,
+            AnswerProvider answers,
+            ConsultChatPersistenceService persistence,
+            ConfirmedConditionConverter conditionConverter,
+            ConsultChatEvents events,
+            ExecutionTrace trace,
+            AskedQuestions askedQuestions) {
+        this.askedQuestions = Objects.requireNonNull(askedQuestions);
         this.analyzer = Objects.requireNonNull(analyzer);
         this.answers = Objects.requireNonNull(answers);
         this.persistence = Objects.requireNonNull(persistence);
@@ -129,6 +145,60 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             events.completed(command.executionId(), clarification);
             return;
         }
+        ClarificationPlan storedPlan = prepared.clarificationPlan();
+        ClarificationPlan storedRemaining =
+                storedPlan.remaining(prepared.decision().conditions());
+        if (storedRemaining.needsClarification()) {
+            var asking = new ConsultService.PreparedTurn(
+                    prepared.sessionId(),
+                    prepared.expectedVersion(),
+                    FaqClarificationDecisions.ask(
+                            prepared.decision().consultRequestId(),
+                            storedRemaining,
+                            prepared.decision().conditions()),
+                    storedRemaining);
+            var clarification = persistence.persistClarification(
+                    command.executionId(), asking, turn.answeredField());
+            events.completed(command.executionId(), clarification);
+            return;
+        }
+        AnswerInput answerInput = new AnswerInput(
+                command.executionId(),
+                command.sessionId(),
+                prepared.decision().consultRequestId(),
+                turn.purpose(),
+                turn.originalUserQuery(),
+                turn.searchQuery(),
+                conditionConverter.convert(prepared.decision().conditions()),
+                turn.resolvedUserQuery(),
+                turn.context(),
+                command.coordinates(),
+                askedQuestions.of(prepared.decision().consultRequestId()));
+        // 저장된 계획을 모두 처리한 뒤에는 재추출 결과로 새 조건을 추가하지 않는다.
+        // 같은 질문에서 모델 결과가 바뀌어 되묻기가 끝없이 늘어나는 것을 막는다.
+        // 버릴 결과라 조건 추출도 부르지 않는다. 마지막 답변이 그만큼 늦어진다
+        boolean plansClarification = !storedPlan.needsClarification();
+        // 되묻기는 답변 메시지를 열기 전에 정해야 한다. 열고 나서 되물으면 빈 답변이 남는다
+        Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
+                ? answers.prepare(answerInput, plansClarification)
+                : Prepared.none();
+        var plan = plansClarification
+                ? searched.plan().remaining(prepared.decision().conditions())
+                : ClarificationPlan.none();
+        if (plan.needsClarification()) {
+            var asking = new ConsultService.PreparedTurn(
+                    prepared.sessionId(),
+                    prepared.expectedVersion(),
+                    FaqClarificationDecisions.ask(
+                            prepared.decision().consultRequestId(),
+                            plan,
+                            prepared.decision().conditions()),
+                    plan);
+            var clarification = persistence.persistClarification(
+                    command.executionId(), asking, turn.answeredField());
+            events.completed(command.executionId(), clarification);
+            return;
+        }
         persistence.persistReadyTurn(command.executionId(), prepared, turn.answeredField());
         GeneratedAnswer generated;
         if (prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE) {
@@ -143,18 +213,10 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         } else {
             var started = persistence.startAnswer(command.executionId(), command.sessionId());
             events.started(started);
-            generated =
-                    answers.generate(
-                            new AnswerInput(
-                                    command.executionId(),
-                                    command.sessionId(),
-                                    prepared.decision().consultRequestId(),
-                                    turn.purpose(),
-                                    turn.originalUserQuery(),
-                                    turn.searchQuery(),
-                                    conditionConverter.convert(
-                                            prepared.decision().conditions()),
-                                    turn.resolvedUserQuery(), turn.context(), command.coordinates()));
+            // 되묻기를 쓰지 않는 경로는 아직 검색을 안 했다. 그때는 예전처럼 한 번에 처리한다
+            generated = answers.clarifies()
+                    ? answer(answerInput, searched)
+                    : answers.generate(answerInput);
         }
         var completed =
                 persistence.persistFinalAnswer(
@@ -212,7 +274,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                     command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
                     Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
                     conditionConverter.convert(prepared.decision().conditions()),
-                    faq.queryText(), context, false, command.coordinates()));
+                    faq.queryText(), context, false, command.coordinates(), Map.of()));
             if (generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
                 throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
             }
@@ -304,6 +366,45 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     public interface AnswerProvider {
         GeneratedAnswer generate(AnswerInput input);
+
+        /** 되묻기를 판단하는 경로인지. 아니면 검색 시점을 앞당기지 않는다. */
+        default boolean clarifies() {
+            return false;
+        }
+
+        /** 검색과 되묻기 판단만 한다. 되묻는 경로가 아니면 기본값을 쓴다.
+         * plansClarification이 false면 검색만 하고 조건 추출은 부르지 않는다. */
+        default Prepared prepare(AnswerInput input, boolean plansClarification) {
+            return Prepared.none();
+        }
+
+        default GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
+            return generate(input);
+        }
+    }
+
+    /** 검색 결과와 되묻기 계획. 답변을 만들 때 검색을 다시 하지 않으려고 함께 들고 다닌다. */
+    /** answer가 있으면 준비 단계에서 이미 답을 확정한 것이다. 비교·후보 근거 검증이 그 경우다. */
+    public record Prepared(
+            List<FaqSearchResponse> searchResults, ClarificationPlan plan, GeneratedAnswer answer) {
+        private static final Prepared NONE = new Prepared(List.of(), ClarificationPlan.none(), null);
+
+        public Prepared(List<FaqSearchResponse> searchResults, ClarificationPlan plan) {
+            this(searchResults, plan, null);
+        }
+
+        public Prepared {
+            searchResults = List.copyOf(searchResults);
+            Objects.requireNonNull(plan, "plan");
+        }
+
+        public static Prepared answered(GeneratedAnswer answer) {
+            return new Prepared(List.of(), ClarificationPlan.none(), Objects.requireNonNull(answer));
+        }
+
+        public static Prepared none() {
+            return NONE;
+        }
     }
 
     public record GeneratedAnswer(ChatAnswer answer, List<AnswerSource> sources) {
@@ -422,39 +523,48 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             String resolvedUserQuery,
             ChatContext context,
             boolean streamTokens,
-            ChatCoordinates coordinates) {
+            ChatCoordinates coordinates,
+            Map<String, String> askedQuestions) {
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
-                    confirmedConditions, originalUserQuery, null, true, null);
+                    confirmedConditions, originalUserQuery, null, true, null, Map.of());
         }
 
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
-                String resolvedUserQuery, ChatContext context) {
+                boolean streamTokens) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
-                    confirmedConditions, resolvedUserQuery, context, true, null);
-        }
-
-        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
-                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
-                String resolvedUserQuery, ChatContext context, ChatCoordinates coordinates) {
-            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
-                    confirmedConditions, resolvedUserQuery, context, true, coordinates);
+                    confirmedConditions, originalUserQuery, null, streamTokens, null, Map.of());
         }
 
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
                 ChatCoordinates coordinates) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
-                    confirmedConditions, originalUserQuery, null, true, coordinates);
+                    confirmedConditions, originalUserQuery, null, true, coordinates, Map.of());
         }
 
-        public AnswerInput(long executionId, long sessionId, long consultRequestId,
-                Purpose purpose, String originalUserQuery, String searchQuery,
-                Map<String, String> confirmedConditions, boolean streamTokens) {
-            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery,
-                    searchQuery, confirmedConditions, originalUserQuery, null, streamTokens, null);
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, true, null, Map.of());
+        }
+
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, ChatCoordinates coordinates) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, true, coordinates, Map.of());
+        }
+
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, ChatCoordinates coordinates,
+                Map<String, String> askedQuestions) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, true, coordinates, askedQuestions);
         }
 
         @Override
@@ -487,6 +597,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                     Map.copyOf(
                             Objects.requireNonNull(
                                     confirmedConditions, "confirmedConditions"));
+            askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
         }
+    }
+
+    // 준비 단계에서 답이 확정됐으면 모델을 다시 부르지 않는다
+    private GeneratedAnswer answer(AnswerInput input, Prepared prepared) {
+        return prepared.answer() != null ? prepared.answer() : answers.generate(input, prepared);
     }
 }

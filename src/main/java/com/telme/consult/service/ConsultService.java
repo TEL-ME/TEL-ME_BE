@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.consult.dto.DialogueDecision;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.Condition;
@@ -29,13 +30,24 @@ public class ConsultService {
     private final DialogueService dialogueService;
 
     @Builder
-    public record PreparedTurn(long sessionId, int expectedVersion, DialogueDecision decision) {
+    public record PreparedTurn(
+            long sessionId,
+            int expectedVersion,
+            DialogueDecision decision,
+            ClarificationPlan clarificationPlan) {
+        public PreparedTurn(long sessionId, int expectedVersion, DialogueDecision decision) {
+            this(sessionId, expectedVersion, decision, ClarificationPlan.none());
+        }
+
         public PreparedTurn {
             // JPA @Version은 새 엔티티를 0부터 시작하므로 0도 유효한 초기 버전이다.
             if (sessionId <= 0 || expectedVersion < 0) {
                 throw new IllegalArgumentException("Invalid consultation reference");
             }
             Objects.requireNonNull(decision, "decision");
+            clarificationPlan = clarificationPlan == null
+                    ? ClarificationPlan.none()
+                    : clarificationPlan;
         }
     }
 
@@ -85,7 +97,12 @@ public class ConsultService {
                 throw new JdbcConsultStateStore.StateConflict();
             }
             return new PreparationResult(
-                    new PreparedTurn(sessionId, snapshot.version(), decision), pending.messageId());
+                    new PreparedTurn(
+                            sessionId,
+                            snapshot.version(),
+                            decision,
+                            snapshot.clarificationPlan()),
+                    pending.messageId());
         }
     }
 
@@ -117,9 +134,14 @@ public class ConsultService {
                             messageId -> {
                                 throw new ClarificationAlreadyPending(messageId);
                             });
-            return new PreparedTurn(sessionId, snapshot.version(), dialogueService.decide(input));
+            return new PreparedTurn(
+                    sessionId,
+                    snapshot.version(),
+                    dialogueService.decide(input),
+                    snapshot.clarificationPlan());
         }
-        return new PreparedTurn(sessionId, snapshot.version(), assessment);
+        return new PreparedTurn(
+                sessionId, snapshot.version(), assessment, snapshot.clarificationPlan());
     }
 
     // 새 메시지 없이 조건만 바꾸고 기존 질문의 대기를 유지한다.
@@ -142,6 +164,10 @@ public class ConsultService {
     public Snapshot persist(PreparedTurn prepared, MessageLinks links) {
         Objects.requireNonNull(prepared, "prepared");
         return stateStore.save(
-                prepared.sessionId(), prepared.expectedVersion(), prepared.decision(), links);
+                prepared.sessionId(),
+                prepared.expectedVersion(),
+                prepared.decision(),
+                prepared.clarificationPlan(),
+                links);
     }
 }
