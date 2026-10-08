@@ -113,7 +113,10 @@ class LlmClarificationTextGeneratorTest {
     }
 
     private DialogueInput input(Map<String, Condition> previous, Map<String, Condition> updates) {
+        // 지역 질문 생성만 보는 테스트라 업무는 묻지 않도록 거절로 둔다
+        var conditions = new java.util.HashMap<>(previous);
+        conditions.putIfAbsent("serviceType", Condition.declined());
         return new DialogueInput(
-                1L, Purpose.NEARBY_STORE, previous, updates, LocationStatus.DECLINED);
+                1L, Purpose.NEARBY_STORE, conditions, updates, LocationStatus.DECLINED);
     }
 }

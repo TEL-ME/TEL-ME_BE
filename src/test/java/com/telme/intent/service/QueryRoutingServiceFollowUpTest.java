@@ -145,6 +145,57 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("업무 선택지를 그대로 누르면 모델을 부르지 않고 코드로 읽는다")
+    void analyzeFollowUp_readsServiceTypeOptionWithoutLlm() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.STORE)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("serviceType")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsExactly(entry("serviceType", "USIM_REISSUE"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("업무를 직접 풀어 쓴 답은 모델이 읽는다")
+    void analyzeFollowUp_sendsFreeServiceTypeTextToLlm() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.STORE)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("serviceType")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"serviceType\",\"status\":\"FILLED\",\"value\":\"USIM_REISSUE\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급 하려고요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
     @DisplayName("새 상담 요청을 만들지 않고 기존 상담만 재사용한다")
     void analyzeFollowUp_doesNotCreateNewConsultRequest() {
         givenWaitingConsultExists();

@@ -41,7 +41,8 @@ class DialogueServiceTest {
     @Test
     void actualCoordinatesProceedAndResolvePendingLocationWithoutInventingRegion() {
         var result = noModel().assess(input(
-                Map.of("location", Condition.pending()), Map.of(), LocationStatus.COORDINATES_AVAILABLE));
+                Map.of("location", Condition.pending(), "serviceType", Condition.declined()),
+                Map.of(), LocationStatus.COORDINATES_AVAILABLE));
         assertEquals(Action.PROCEED, result.action());
         assertEquals(ConditionStatus.COORDINATES, result.conditions().get("location").status());
         assertEquals(null, result.conditions().get("location").value());
@@ -124,7 +125,8 @@ class DialogueServiceTest {
                 noModel()
                         .decide(
                                 input(
-                                        Map.of("location", Condition.pending()),
+                                        Map.of("location", Condition.pending(),
+                                                "serviceType", Condition.declined()),
                                         Map.of("location", Condition.filled("강남역")),
                                         LocationStatus.AVAILABLE));
         assertEquals(Action.PROCEED, result.action());
@@ -137,7 +139,8 @@ class DialogueServiceTest {
                 noModel()
                         .decide(
                                 input(
-                                        Map.of("location", Condition.pending()),
+                                        Map.of("location", Condition.pending(),
+                                                "serviceType", Condition.declined()),
                                         Map.of("location", Condition.filled(" 강남역 ")),
                                         LocationStatus.MISSING));
         assertEquals(Action.PROCEED, result.action());
@@ -175,7 +178,7 @@ class DialogueServiceTest {
                 noModel()
                         .decide(
                                 input(
-                                        Map.of(),
+                                        Map.of("serviceType", Condition.declined()),
                                         Map.of("location", Condition.filled("강남역")),
                                         LocationStatus.DECLINED))
                         .action());
@@ -220,13 +223,75 @@ class DialogueServiceTest {
 
     @Test
     void previousRegionDeclineStillBlocksCoordinatesButNewRegionCanReplaceIt() {
-        var previous = Map.of("location", Condition.declined());
+        var previous = Map.of("location", Condition.declined(),
+                "serviceType", Condition.declined());
         assertEquals(Action.ALTERNATIVE_GUIDANCE,
                 noModel().assess(input(previous, Map.of(), LocationStatus.COORDINATES_AVAILABLE)).action());
         var updated = noModel().decide(input(
                 previous, Map.of("location", Condition.filled("강남역")), LocationStatus.COORDINATES_AVAILABLE));
         assertEquals(Action.PROCEED, updated.action());
         assertEquals("강남역", updated.conditions().get("location").value());
+    }
+
+    @Test
+    void 지역이_정해지면_업무를_선택지와_함께_묻는다() {
+        var result = noModel().decide(input(
+                Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
+
+        assertEquals(Action.ASK, result.action());
+        assertEquals("serviceType", result.waitingField());
+        assertEquals("어떤 업무로 매장을 찾으시나요?", result.message());
+        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
+        assertEquals(java.util.List.of("유심 재발급", "번호이동", "신규 개통", "명의변경"), result.options());
+        assertEquals(ConditionStatus.PENDING, result.conditions().get("serviceType").status());
+    }
+
+    @Test
+    void 지역과_업무가_모두_없으면_지역을_먼저_묻는다() {
+        var result = service.decide(input(Map.of(), Map.of(), LocationStatus.MISSING));
+
+        assertEquals("location", result.waitingField());
+        assertTrue(result.options().isEmpty());
+    }
+
+    @Test
+    void 좌표로_지역이_정해져도_업무는_묻는다() {
+        var result = noModel().assess(
+                input(Map.of(), Map.of(), LocationStatus.COORDINATES_AVAILABLE));
+
+        assertEquals(Action.ASK, result.action());
+        assertEquals("serviceType", result.waitingField());
+    }
+
+    @Test
+    void 업무를_받으면_더_묻지_않는다() {
+        var result = noModel().decide(input(
+                Map.of("location", Condition.filled("강남역"), "serviceType", Condition.pending()),
+                Map.of("serviceType", Condition.filled("유심 재발급")),
+                LocationStatus.MISSING));
+
+        assertEquals(Action.PROCEED, result.action());
+        assertEquals("유심 재발급", result.conditions().get("serviceType").value());
+        assertNull(result.waitingField());
+    }
+
+    @Test
+    void 업무를_고르지_않겠다고_하면_업무_없이_진행한다() {
+        var result = noModel().decide(input(
+                Map.of("location", Condition.filled("강남역"), "serviceType", Condition.pending()),
+                Map.of("serviceType", Condition.declined()),
+                LocationStatus.MISSING));
+
+        assertEquals(Action.PROCEED, result.action());
+        assertEquals(ConditionStatus.DECLINED, result.conditions().get("serviceType").status());
+    }
+
+    @Test
+    void 일반_FAQ는_업무를_묻지_않는다() {
+        var faq = new DialogueInput(12L, Purpose.GENERAL_FAQ,
+                Map.of(), Map.of(), LocationStatus.COORDINATES_AVAILABLE);
+
+        assertEquals(Action.PROCEED, noModel().decide(faq).action());
     }
 
     @Test
