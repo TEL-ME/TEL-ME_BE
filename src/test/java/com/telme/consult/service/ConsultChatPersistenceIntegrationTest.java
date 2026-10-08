@@ -3,23 +3,36 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatExecutionState;
+import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.converter.ConfirmedConditionConverter;
+import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.MessageOrigin;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.repository.JdbcConsultStateStore;
+import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.service.FaqSearchService;
+import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmClient;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
+import com.telme.rag.service.AnswerPromptTemplates;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -43,10 +57,16 @@ class ConsultChatPersistenceIntegrationTest {
     @Autowired ConsultService consult;
     @Autowired JdbcConsultStateStore states;
     @Autowired ConsultChatPersistenceService persistence;
+    @Autowired ConsultTurnPreparationService preparation;
+    @Autowired ChatMessageRepository messages;
+    @Autowired QueryRoutingService routing;
+    @Autowired ChatExecutionTraceService trace;
+    @MockitoBean LlmClient llmClient;
     long userId;
     long sessionId;
     long executionId;
     long requestId;
+    final List<Long> comparisonFaqIds = new ArrayList<>();
 
     @BeforeEach
     void setup() {
@@ -97,6 +117,8 @@ class ConsultChatPersistenceIntegrationTest {
                         + " chat_sessions WHERE user_id=?)",
                 userId);
         jdbc.update("DELETE FROM chat_sessions WHERE user_id=?", userId);
+        comparisonFaqIds.forEach(id -> jdbc.update("DELETE FROM faqs WHERE faq_id=?", id));
+        comparisonFaqIds.clear();
         jdbc.update("DELETE FROM users WHERE user_id=?", userId);
     }
 
@@ -497,6 +519,287 @@ class ConsultChatPersistenceIntegrationTest {
         assertThat(events.sequence)
                 .containsExactly(
                         "start", "token:매장 안내", "complete:COMPLETED");
+    }
+
+    @Test
+    void independentFaqAndGeneralComparisonSaveOneAnswerWithBothSidesAndMatchingTokens() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?", Long.class, executionId);
+        String firstQuery = "유심 재발급 비용";
+        String comparison = "청소년 요금제와 시니어 요금제 차이점";
+        jdbc.update("UPDATE consult_requests SET intent='FAQ',query_text=? WHERE consult_request_id=?",
+                firstQuery, requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ',?) RETURNING consult_request_id",
+                Long.class, sessionId, inputId, comparison);
+        var first = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
+        var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
+        var fee = comparisonFaq(firstQuery, "유심 재발급 비용은 7,700원입니다.");
+        var youth = comparisonFaq("청소년 요금제 가입 조건", "청소년 요금제는 만 18세 이하가 가입할 수 있습니다.");
+        var senior = comparisonFaq("시니어 요금제 가입 조건", "시니어 요금제는 만 65세 이상이 가입할 수 있습니다.");
+        when(llmClient.generate(any())).thenReturn("""
+                {"answerable":true,"leftTarget":"청소년 요금제","rightTarget":"시니어 요금제",
+                 "criterion":"가입 나이 기준","leftFaqId":%d,"leftQuote":"%s",
+                 "rightFaqId":%d,"rightQuote":"%s"}
+                """.formatted(youth.faqId(), youth.answer(), senior.faqId(), senior.answer()));
+        var searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenAnswer(invocation -> {
+            String query = ((FaqSearchRequest) invocation.getArgument(0)).query();
+            return query.equals(firstQuery) ? List.of(fee) : List.of(youth, senior);
+        });
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) -> {
+            assertThat(input.originalUserQuery()).isEqualTo(firstQuery);
+            return new ConsultChatProcessingService.GeneratedAnswer(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER, fee.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                    List.of(new AnswerSource(fee.faqId(), fee.answer(), 1, null, (short) 1, null)));
+        }, trace, new LlmComparisonEvidenceResolver(llmClient, new ObjectMapper()));
+        var events = new RecordingEvents();
+        var processor = new ConsultChatProcessingService(
+                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        new ConsultChatProcessingService.FaqTurn(first, firstQuery),
+                        new ConsultChatProcessingService.FaqTurn(second, comparison))),
+                answers, persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(processingCommand());
+
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        String content = text("SELECT content FROM chat_messages WHERE message_id="
+                + "(SELECT output_message_id FROM chat_executions WHERE execution_id=?)", executionId);
+        assertThat(content).contains(fee.answer(), youth.answer(), senior.answer())
+                .doesNotContain(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(content.indexOf(fee.answer())).isLessThan(content.indexOf(youth.answer()));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=? AND role='ASSISTANT'",
+                Integer.class, sessionId)).isEqualTo(1);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForList(
+                "SELECT faq_id FROM message_sources WHERE message_id="
+                        + "(SELECT output_message_id FROM chat_executions WHERE execution_id=?)",
+                Long.class, executionId)).containsExactlyInAnyOrder(fee.faqId(), youth.faqId(), senior.faqId()));
+        assertThat(events.sequence).containsExactly("start", "token:" + content, "complete:COMPLETED");
+    }
+
+    private FaqSearchResponse comparisonFaq(String question, String answer) {
+        long id = jdbc.queryForObject("INSERT INTO faqs(category,question,answer,slot_id)"
+                + " VALUES ('SERVICE',?,?,?) RETURNING faq_id", Long.class,
+                question + " " + UUID.randomUUID(), answer, "comparison-" + UUID.randomUUID());
+        comparisonFaqIds.add(id);
+        return new FaqSearchResponse(id, null, "SERVICE", question, answer, 0.9, 1, null, 1, null);
+    }
+
+    @Test
+    void multipleFaqQuestionsSearchSeparatelyAndCompleteOneAnswer() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                Long.class, executionId);
+        jdbc.update("UPDATE consult_requests SET intent='FAQ',query_text='요금제 종류' WHERE consult_request_id=?",
+                requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ','로밍 신청 방법') RETURNING consult_request_id",
+                Long.class, sessionId, inputId);
+        var first = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var searches = mock(FaqSearchService.class);
+        List<String> searched = new ArrayList<>();
+        when(searches.search(any(FaqSearchRequest.class))).thenAnswer(invocation -> {
+            FaqSearchRequest request = invocation.getArgument(0);
+            searched.add(request.query());
+            return List.of(new FaqSearchResponse(null, null, "SERVICE", request.query(),
+                    request.query() + "에 대한 근거", 0.9, 1, null, 1, null));
+        });
+        var events = new RecordingEvents();
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) -> {
+            assertThat(input.streamTokens()).isFalse();
+            assertThat(results).hasSize(1);
+            String query = results.getFirst().question();
+            return new ConsultChatProcessingService.GeneratedAnswer(
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, query + " 답변",
+                            ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                    List.of(new AnswerSource(null, query, 1, null, (short) 1, null)));
+        });
+        var processor = new ConsultChatProcessingService(
+                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                answers, persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(processingCommand());
+
+        assertThat(searched).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(text("SELECT pipeline_trace->'finalTransmission'->>'status'"
+                + " FROM chat_executions WHERE execution_id=?", executionId)).isEqualTo("DISPATCH_RETURNED");
+        assertThat(jdbc.queryForObject("SELECT (pipeline_trace->'finalTransmission'->>'outputMessageId')::bigint"
+                + " = output_message_id FROM chat_executions WHERE execution_id=?", Boolean.class, executionId))
+                .isTrue();
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        String content = jdbc.queryForObject(
+                "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)", String.class, executionId);
+        assertThat(content).contains("1. 요금제 종류\n요금제 종류 답변",
+                "2. 로밍 신청 방법\n로밍 신청 방법 답변");
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM chat_messages WHERE session_id=? AND role='ASSISTANT'",
+                Integer.class, sessionId)).isEqualTo(1);
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM message_sources WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)", Integer.class, executionId))
+                .isEqualTo(2));
+        assertThat(events.sequence).containsExactly("start", "token:" + content,
+                "complete:COMPLETED");
+    }
+
+    @Test
+    void missingSubQuestionDoesNotBorrowSiblingEvidenceFromWholeQuestion() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                Long.class, executionId);
+        jdbc.update("UPDATE consult_requests SET intent='FAQ',query_text='요금제 종류' WHERE consult_request_id=?",
+                requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ','로밍 신청 방법') RETURNING consult_request_id",
+                Long.class, sessionId, inputId);
+        var first = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var searches = mock(FaqSearchService.class);
+        List<String> searched = new ArrayList<>();
+        var siblingEvidence = new FaqSearchResponse(91L, null, "PLAN", "요금제 종류",
+                "요금제 종류 근거", 0.9, 1, null, 1, null);
+        when(searches.search(any(FaqSearchRequest.class))).thenAnswer(invocation -> {
+            String query = ((FaqSearchRequest) invocation.getArgument(0)).query();
+            searched.add(query);
+            return query.equals("로밍 신청 방법") ? List.of() : List.of(siblingEvidence);
+        });
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) ->
+                results.isEmpty()
+                        ? ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
+                                ChatMessage.MessageType.ANSWER,
+                                AnswerPromptTemplates.NO_EVIDENCE_ANSWER,
+                                ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null))
+                        : new ConsultChatProcessingService.GeneratedAnswer(new ChatAnswer(
+                                ChatMessage.MessageType.ANSWER, "요금제 답변",
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                                List.of(new AnswerSource(91L, "요금제 종류 근거", 1, null, (short) 1, null))));
+        var processor = new ConsultChatProcessingService(
+                command -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        new ConsultChatProcessingService.FaqTurn(first, "요금제 종류"),
+                        new ConsultChatProcessingService.FaqTurn(second, "로밍 신청 방법"))),
+                answers, persistence, new ConfirmedConditionConverter(), new RecordingEvents());
+
+        processor.request(processingCommand());
+
+        assertThat(searched).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("DONE");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("DONE");
+        String content = jdbc.queryForObject(
+                "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)", String.class, executionId);
+        assertThat(content).contains("1. 요금제 종류\n요금제 답변",
+                "2. 로밍 신청 방법\n" + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    void routedMultipleFaqQuestionsReachSearchAndOneSavedAnswer() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                Long.class, executionId);
+        jdbc.update("DELETE FROM consult_requests WHERE consult_request_id=?", requestId);
+        String question = "요금제와 로밍 신청 방법 알려줘";
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", question, inputId);
+        when(llmClient.generate(any())).thenReturn("""
+                {"intent":"FAQ","confidence":0.97,
+                 "refinedQuery":"요금제와 로밍 신청 방법",
+                 "extractedConditions":{},"subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}]}
+                """);
+        var context = new FollowupContextService.Context(
+                sessionId, inputId, question, List.of());
+        var analysis = new QueryRoutingAnalysisProvider(messages, routing,
+                ignored -> ConsultTurnAnalysisAdapter.AnalysisResult.rerouteRequest());
+        var analyzer = new ConsultTurnAnalysisAdapter(
+                ignored -> context, analysis, preparation, new FollowupConditionConverter());
+        var searches = mock(FaqSearchService.class);
+        List<String> searchQueries = new ArrayList<>();
+        when(searches.search(any(FaqSearchRequest.class))).thenAnswer(invocation -> {
+            String query = ((FaqSearchRequest) invocation.getArgument(0)).query();
+            searchQueries.add(query);
+            return List.of(new FaqSearchResponse(null, null, "SERVICE", query,
+                    query + " 근거", 0.9, 1, null, 1, null));
+        });
+        var answers = new FaqSearchAnswerProvider(searches, (input, results) ->
+                ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, results.getFirst().question() + " 답변",
+                        ChatMessage.AnswerBasis.GROUNDED, List.of(), null)));
+        var events = new RecordingEvents();
+        var processor = new ConsultChatProcessingService(
+                analyzer, answers, persistence, new ConfirmedConditionConverter(), events);
+
+        processor.request(new ChatProcessingCommand(executionId, sessionId, inputId, question));
+
+        assertThat(searchQueries).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(jdbc.queryForList(
+                "SELECT status FROM consult_requests WHERE origin_message_id=? ORDER BY subquery_order",
+                String.class, inputId)).containsExactly("DONE", "DONE");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("COMPLETED");
+        String content = jdbc.queryForObject(
+                "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)", String.class, executionId);
+        assertThat(content).contains("1. 요금제 종류\n요금제 종류 답변",
+                "2. 로밍 신청 방법\n로밍 신청 방법 답변");
+        assertThat(events.sequence).containsExactly("start", "token:" + content,
+                "complete:COMPLETED");
+    }
+
+    @Test
+    void failureToCompleteSecondFaqRollsBackTheCombinedAnswer() {
+        long inputId = jdbc.queryForObject(
+                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                Long.class, executionId);
+        jdbc.update("UPDATE consult_requests SET intent='FAQ' WHERE consult_request_id=?", requestId);
+        long secondId = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,2,'FAQ','로밍 신청') RETURNING consult_request_id",
+                Long.class, sessionId, inputId);
+        var first = consult.prepare(sessionId, requestId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        var second = consult.prepare(sessionId, secondId, Purpose.GENERAL_FAQ,
+                Map.of(), LocationStatus.MISSING);
+        persistence.persistReadyTurns(executionId, sessionId, List.of(first, second));
+        persistence.startAnswer(executionId, sessionId);
+        jdbc.update("UPDATE consult_requests SET version=version+1 WHERE consult_request_id=?", secondId);
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "두 질문의 답변",
+                ChatMessage.AnswerBasis.GROUNDED, List.of(), null);
+
+        assertThatThrownBy(() -> persistence.persistFinalAnswers(
+                executionId, sessionId,
+                List.of(
+                        new ConsultChatPersistenceService.ConsultCompletion(
+                                requestId, first.expectedVersion() + 1),
+                        new ConsultChatPersistenceService.ConsultCompletion(
+                                secondId, second.expectedVersion() + 1)),
+                answer, List.of())).isInstanceOf(GeneralException.class);
+
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("PENDING");
+        assertThat(states.load(sessionId, secondId).status()).isEqualTo("PENDING");
+        assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
+                .isEqualTo("RUNNING");
+        assertThat(text("SELECT status FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                + " FROM chat_executions WHERE execution_id=?)", executionId))
+                .isEqualTo("GENERATING");
     }
 
     @Test

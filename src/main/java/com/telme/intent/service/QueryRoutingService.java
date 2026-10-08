@@ -49,6 +49,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 @Slf4j
 public class QueryRoutingService {
+    private static final int MAX_FAQ_SUB_QUERIES = 3;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -69,6 +70,9 @@ public class QueryRoutingService {
     private static final Pattern LOCATION_PARTICLE_AFTER = Pattern.compile("^(?:에서|에|으로|로)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
+    private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
+    private static final Set<String> SECTION_FILLERS = Set.of(
+            "비교", "차이", "차이점", "안내", "설명", "및", "그리고", "또", "와", "과", "하고", "랑");
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
@@ -105,7 +109,7 @@ public class QueryRoutingService {
         return route(userMessage, context, false);
     }
 
-    /** 단일 상담 연결용 진입점. 다중 FAQ 질의는 합치고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
+    /** 상담 연결용 진입점. 여러 FAQ 질의는 유지하고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
     public IntentRouteResponse routeSingleConsult(ChatMessage userMessage, ChatContext context) {
         return route(userMessage, context, true);
     }
@@ -122,7 +126,7 @@ public class QueryRoutingService {
                 log.info("[라우팅] 이미 라우팅된 메시지입니다. 기존 결과를 반환합니다: messageId={}", userMessage.getMessageId());
                 IntentRouteResponse result =
                     runInTransaction(() -> buildExistingResponse(existing.get(), userMessage.getMessageId()));
-                ensureSingleConsultSupported(result, singleConsultOnly);
+                ensureSingleConsultSupported(result, singleConsultOnly, userMessage.getContent());
                 return result;
             }
         }
@@ -197,37 +201,98 @@ public class QueryRoutingService {
                     Collections.emptyMap(), Collections.emptyList());
         }
 
-        payload = combineFaqSubQueriesForSingleConsult(payload, question, context, singleConsultOnly);
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.STORE
+                && RoutingIntentCorrection.isGeneralStorePolicy(question, context,
+                        payload.extractedConditions().get(FollowUpRouteResponse.LOCATION_KEY))) {
+            log.info("[라우팅] 일반 매장 운영 질문을 FAQ로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    Collections.emptyMap(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.RULE;
+        }
+
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.FAQ
+                && payload.subQueries().size() > 1
+                && ComparisonQuestionPolicy.isStandaloneComparison(question, context)) {
+            log.info("[라우팅] 단독 비교 질문의 FAQ 하위 질문을 한 건으로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    payload.extractedConditions(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.RULE;
+        }
+
+        if (method == QueryRouting.Method.LLM && payload.intent() == QueryRouting.Intent.FAQ) {
+            var comparison = ComparisonQuestionPolicy.trailingComparison(question, context);
+            if (comparison != null) {
+                payload = preserveTrailingComparison(payload, comparison);
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
-        ensureSingleConsultSupported(result, singleConsultOnly);
+        ensureSingleConsultSupported(result, singleConsultOnly, question);
         return result;
     }
 
-    private LlmRoutingPayload combineFaqSubQueriesForSingleConsult(
-            LlmRoutingPayload payload, String question, ChatContext context, boolean singleConsultOnly) {
-        if (!singleConsultOnly
-                || payload.intent() != QueryRouting.Intent.FAQ
-                || payload.subQueries().size() <= 1
-                || payload.subQueries().stream().anyMatch(
-                        subQuery -> subQuery == null || subQuery.intent() != ConsultRequest.Intent.FAQ)) {
-            return payload;
+    private LlmRoutingPayload preserveTrailingComparison(
+            LlmRoutingPayload payload, ComparisonQuestionPolicy.TrailingComparison comparison) {
+        List<LlmRoutingPayload.SubQueryPayload> independent = new ArrayList<>(
+                Collections.nCopies(comparison.precedingRequests().size(), null));
+        int comparisonParts = 0;
+        for (var sub : payload.subQueries()) {
+            if (sub.queryText() == null || sub.queryText().isBlank()) {
+                throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청의 내용이 필요합니다.");
+            }
+            int precedingIndex = -1;
+            for (int index = 0; index < comparison.precedingRequests().size(); index++) {
+                if (matchesSection(sub.queryText(), comparison.precedingRequests().get(index))) {
+                    if (precedingIndex >= 0) {
+                        throw new UnsupportedCompoundQuestionException("독립 질문의 소속을 안전하게 구분할 수 없습니다.");
+                    }
+                    precedingIndex = index;
+                }
+            }
+            boolean comparing = matchesSection(sub.queryText(), comparison.comparison());
+            // 양쪽에 걸치거나 어느 쪽에도 속하지 않으면 질문을 임의로 소비하지 않는다.
+            if ((precedingIndex >= 0) == comparing) {
+                throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청을 안전하게 구분할 수 없습니다.");
+            }
+            if (comparing) {
+                comparisonParts++;
+            } else {
+                if (independent.get(precedingIndex) != null) {
+                    throw new UnsupportedCompoundQuestionException("독립 질문이 중복으로 분해됐습니다.");
+                }
+                independent.set(precedingIndex, new LlmRoutingPayload.SubQueryPayload((short) (precedingIndex + 1),
+                        sub.intent(), sub.queryText(), sub.conditions()));
+            }
         }
+        if (comparisonParts == 0 || independent.contains(null)) {
+            throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청이 모두 필요합니다.");
+        }
+        independent.add(new LlmRoutingPayload.SubQueryPayload((short) (independent.size() + 1),
+                ConsultRequest.Intent.FAQ, comparison.comparison(), Collections.emptyMap()));
+        return new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
+                payload.extractedConditions(), independent);
+    }
 
-        String queryText = payload.refinedQuery() != null && !payload.refinedQuery().isBlank()
-                ? payload.refinedQuery().strip()
-                : question;
-        // 분해된 질문을 다시 요약하면 일부 대상이 빠질 수 있으므로 원문을 검색에 사용한다.
-        if (context == null
-                || (context.summary() == null && context.history().isEmpty())
-                || !CONTEXT_REFERENCE.matcher(question).find()) {
-            queryText = question;
-        }
-        return new LlmRoutingPayload(
-                payload.intent(), payload.confidence(), payload.refinedQuery(),
-                payload.extractedConditions(),
-                List.of(new LlmRoutingPayload.SubQueryPayload(
-                        (short) 1, ConsultRequest.Intent.FAQ, queryText, Collections.emptyMap())));
+    private boolean matchesSection(String query, String section) {
+        String normalized = section.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        List<String> words = SECTION_WORD.matcher(query).results()
+                .map(match -> match.group().toLowerCase(Locale.ROOT))
+                .map(word -> word.length() > 2 ? word.replaceFirst("[은는이가을를의도]$", "") : word)
+                .filter(word -> !SECTION_FILLERS.contains(word))
+                .toList();
+        return !words.isEmpty() && words.stream().allMatch(normalized::contains);
     }
 
     private LlmRoutingPayload normalizeLlmPayload(
@@ -241,6 +306,7 @@ public class QueryRoutingService {
         Map<String, String> extracted = payload.intent() == QueryRouting.Intent.UNKNOWN
                 ? Collections.emptyMap()
                 : validConditions(payload.extractedConditions(), question, context);
+        extracted = withRuleServiceType(payload.intent(), extracted, question);
         List<LlmRoutingPayload.SubQueryPayload> normalized = new ArrayList<>();
         boolean hasFaq = false;
         boolean hasStore = false;
@@ -286,6 +352,12 @@ public class QueryRoutingService {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
                     payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1);
+            if (payload.intent() == QueryRouting.Intent.FAQ && normalized.size() > 1
+                    && (queryText == null || queryText.isBlank()
+                    || queryText.equals(question))) {
+                throw new UnsupportedCompoundQuestionException(
+                        "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
+            }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
@@ -401,6 +473,9 @@ public class QueryRoutingService {
                         || !ruleBasedFallback.matchesServiceType(value, serviceTypeEvidence))) {
                 continue;
             }
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
+                continue;
+            }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
                     && (!locationEvidence.contains(value)
                         || (!tokens(PLACE, value).isEmpty()
@@ -497,19 +572,40 @@ public class QueryRoutingService {
             return;
         }
         int subQueryCount = payload.subQueries() == null ? 0 : payload.subQueries().size();
-        if (payload.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+        if (payload.intent() == QueryRouting.Intent.BOTH
+                || subQueryCount > 1
+                && (payload.intent() != QueryRouting.Intent.FAQ
+                || payload.subQueries().stream().anyMatch(
+                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
+        }
+        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
         }
     }
 
     private void ensureSingleConsultSupported(
-            IntentRouteResponse response, boolean singleConsultOnly) {
+            IntentRouteResponse response, boolean singleConsultOnly, String originalQuestion) {
         if (!singleConsultOnly || response == null) {
             return;
         }
         int subQueryCount = response.subQueries() == null ? 0 : response.subQueries().size();
-        if (response.intent() == QueryRouting.Intent.BOTH || subQueryCount > 1) {
+        if (response.intent() == QueryRouting.Intent.BOTH
+                || subQueryCount > 1
+                && (response.intent() != QueryRouting.Intent.FAQ
+                || response.subQueries().stream().anyMatch(
+                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
             throw new UnsupportedCompoundQuestionException();
+        }
+        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
+        }
+        if (subQueryCount > 1 && response.intent() == QueryRouting.Intent.FAQ
+                && response.subQueries().stream().anyMatch(sub -> sub.queryText() == null
+                || sub.queryText().isBlank()
+                || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
+            throw new UnsupportedCompoundQuestionException(
+                    "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
         }
     }
 
@@ -562,6 +658,23 @@ public class QueryRoutingService {
         return pending.isEmpty() ? Set.of(FollowUpRouteResponse.LOCATION_KEY) : pending;
     }
 
+    // 매장 찾기에서 LLM이 업무를 비우는 경우가 있어(로컬 EXAONE 기준 유심 외 업무), 현재 질문에 업무 표현이 있으면 규칙으로 채운다.
+    // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
+    private Map<String, String> withRuleServiceType(
+            QueryRouting.Intent intent, Map<String, String> extracted, String question) {
+        if (intent != QueryRouting.Intent.STORE
+                || extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+            return extracted;
+        }
+        String serviceType = ruleBasedFallback.serviceTypeOf(question);
+        if (serviceType == null) {
+            return extracted;
+        }
+        Map<String, String> filled = new LinkedHashMap<>(extracted);
+        filled.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        return filled;
+    }
+
     private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
@@ -588,6 +701,10 @@ public class QueryRoutingService {
 
             String value = condition.value() != null ? condition.value().trim() : "";
             if (value.isBlank() || value.length() > MAX_CONDITION_VALUE_LENGTH) {
+                continue;
+            }
+            if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
+                log.debug("[후속분석] 기준점만 가리키는 위치 표현은 지역명으로 받지 않습니다");
                 continue;
             }
             values.put(key, value);

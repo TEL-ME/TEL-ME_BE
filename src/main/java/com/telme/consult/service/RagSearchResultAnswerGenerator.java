@@ -16,6 +16,11 @@ import java.util.Objects;
 
 /** FAQ 검색 결과와 확정된 상담 조건을 RAG 답변 요청으로 변환한다. */
 public final class RagSearchResultAnswerGenerator implements SearchResultAnswerGenerator {
+    // FAQ 검색 결과가 하나도 없을 때 보내는 안내다. 통신 질문인데 FAQ에 없는 경우와 통신과 무관한
+    // 질문이 FAQ로 분류된 경우를 구분하지 않고, 어느 쪽이든 다음 질문 방법을 알려준다.
+    public static final String NO_SEARCH_RESULT_ANSWER =
+            "관련 안내 정보를 찾지 못했습니다. 통신 서비스나 매장 관련 질문이라면 조금 더 구체적으로 알려주세요.";
+
     private final AnswerGenerator answers;
     private final StreamHandlerFactory streamHandlers;
     private final SuggestedQuestions suggestedQuestions;
@@ -47,25 +52,48 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         .conditions(input.confirmedConditions())
                         .searchResults(results)
                         .build();
+        LlmStreamHandler stream =
+                input.streamTokens()
+                        ? Objects.requireNonNull(
+                                streamHandlers.create(input.executionId()), "streamHandler")
+                        : discardedTokens();
+        // 단일 질문에서 검색 결과가 없으면 RAG의 기존 처리(근거 없음 기록)는 그대로 거치고,
+        // 사용자에게 보내는 문구만 바꾼다. 복합 질문은 하위 질문별 안내를 따로 만든다.
+        boolean noSearchResult = input.streamTokens() && results.isEmpty();
         AnswerResult result =
                 Objects.requireNonNull(
                         answers.generate(
                                 request,
-                                tokenOnlyHandler(
-                                        Objects.requireNonNull(
-                                                streamHandlers.create(input.executionId()),
-                                                "streamHandler"))),
+                                tokenOnlyHandler(noSearchResult ? discardedTokens() : stream)),
                         "answerResult");
+        String content = result.answer();
+        if (noSearchResult) {
+            content = NO_SEARCH_RESULT_ANSWER;
+            stream.onToken(content);
+        }
         return new GeneratedAnswer(
                 new ChatAnswer(
                         ChatMessage.MessageType.ANSWER,
-                        result.answer(),
+                        content,
                         result.answerBasis(),
                         Objects.requireNonNull(
                                 suggestedQuestions.suggest(result.answerBasis(), results),
                                 "suggestedQuestions"),
                         null),
                 result.sources());
+    }
+
+    private LlmStreamHandler discardedTokens() {
+        return new LlmStreamHandler() {
+            @Override
+            public void onToken(String token) {}
+
+            @Override
+            public void onComplete() {}
+
+            @Override
+            public void onError(Throwable error) {}
+        };
     }
 
     private LlmStreamHandler tokenOnlyHandler(LlmStreamHandler delegate) {
