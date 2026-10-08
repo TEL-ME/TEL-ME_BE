@@ -8,6 +8,7 @@ import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ClarificationTextGenerator.ClarificationPrompt;
+import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.consult.service.ClarificationTextGenerator.GenerationUnavailableException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,9 +27,8 @@ public class DialogueService {
     private static final String FALLBACK = "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.";
     private static final String SERVICE_TYPE = "serviceType";
     private static final String SERVICE_TYPE_QUESTION = "어떤 업무로 매장을 찾으시나요?";
-    // 매장이 등록된 업무와 같은 말을 쓴다. 고객이 버튼을 누르면 이 문구가 그대로 답이 된다
-    private static final List<String> SERVICE_TYPE_OPTIONS =
-            List.of("유심 재발급", "번호이동", "신규 개통", "명의변경");
+    // 버튼 문구와 업무 코드의 짝은 라우팅 규칙이 들고 있다. 누른 답을 모델 없이 읽는 쪽과 같은 표를 쓴다
+    private static final List<String> SERVICE_TYPE_OPTIONS = RuleBasedRoutingFallback.serviceTypeOptions();
     private final ClarificationTextGenerator generator;
 
     /** 모델 호출 없이 되물을지 판단한다. */

@@ -524,6 +524,19 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
+        // 버튼을 그대로 누른 업무 답은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
+        String pickedServiceType = ruleBasedFallback.serviceTypeOfOption(reply);
+        if (pickedServiceType != null
+                && waiting.pendingKeys().contains(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+            log.info("[후속분석] 업무 선택지를 코드로 읽었습니다: consultRequestId={}, serviceType={}",
+                    waiting.consultRequestId(), pickedServiceType);
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(),
+                Map.of(FollowUpRouteResponse.SERVICE_TYPE_KEY, pickedServiceType),
+                Collections.emptySet(),
+                QueryRouting.Method.RULE);
+        }
+
         LlmFollowUpPayload payload;
         QueryRouting.Method method;
 
