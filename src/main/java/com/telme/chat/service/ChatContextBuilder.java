@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.config.ChatContextProperties;
+import com.telme.chat.converter.ChatSummaryConverter;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatExecutionRepository;
@@ -9,15 +10,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatContextBuilder {
 
@@ -25,6 +25,23 @@ public class ChatContextBuilder {
     private final ChatExecutionRepository chatExecutionRepository;
     private final ChatContextProperties chatContextProperties;
     private final ChatTokenEstimator chatTokenEstimator;
+    private final ChatSummaryConverter summaryConverter;
+
+    @Autowired
+    public ChatContextBuilder(ChatMessageRepository messages, ChatExecutionRepository executions,
+            ChatContextProperties properties, ChatTokenEstimator estimator, ChatSummaryConverter converter) {
+        this.chatMessageRepository = messages;
+        this.chatExecutionRepository = executions;
+        this.chatContextProperties = properties;
+        this.chatTokenEstimator = estimator;
+        this.summaryConverter = converter;
+    }
+
+    public ChatContextBuilder(ChatMessageRepository messages, ChatExecutionRepository executions,
+            ChatContextProperties properties, ChatTokenEstimator estimator) {
+        this(messages, executions, properties, estimator,
+                new ChatSummaryConverter(new com.fasterxml.jackson.databind.ObjectMapper()));
+    }
 
     public ChatContext build(ChatProcessingCommand command, int availableContextTokens) {
         Objects.requireNonNull(command, "command");
@@ -36,7 +53,34 @@ public class ChatContextBuilder {
         ChatMessage inputMessage = execution.getInputMessage();
         validateInputMessage(inputMessage);
         String currentQuestion = inputMessage.getContent();
-        String summary = normalizeSummary(execution.getSession().getSummary());
+        String storedSummary = normalizeSummary(execution.getSession().getSummary());
+        String summary;
+        List<ChatContextMessage> summarySources;
+        try {
+            summarySources = summaryConverter.sources(storedSummary);
+            if (!summarySources.isEmpty()) {
+                var originals = chatMessageRepository.findAllById(
+                        summarySources.stream().map(ChatContextMessage::messageId).toList());
+                List<ChatContextMessage> verifiedSources = summarySources;
+                if (originals.size() != summarySources.size() || originals.stream().anyMatch(message ->
+                        !Objects.equals(message.getSession().getSessionId(), command.sessionId())
+                                || message.getSequenceNo() > execution.getSession().getSummaryThroughSequenceNo()
+                                || message.getSequenceNo() >= inputMessage.getSequenceNo()
+                                || message.getStatus() != ChatMessage.Status.COMPLETED
+                                || !verifiedSources.contains(ChatContextMessage.from(message)))) {
+                    throw new IllegalArgumentException("요약의 출처가 현재 세션 원문과 일치하지 않습니다.");
+                }
+            }
+            // 자유문장 요약과 구조화 요약의 legacy 문구는 원문 출처가 없어 전달하지 않는다.
+            summary = summarySources.stream().filter(message -> message.role() == ChatMessage.Role.USER)
+                    .map(ChatContextMessage::content).filter(Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            summary = normalizeSummary(summary);
+        } catch (IllegalArgumentException invalidSummary) {
+            log.warn("상담 요약 형식 오류로 원문 조회 사용: sessionId={}", command.sessionId());
+            summary = null;
+            summarySources = List.of();
+        }
         int currentQuestionTokens = chatTokenEstimator.estimatePromptPart(currentQuestion);
         if (currentQuestionTokens > availableContextTokens) {
             throw new IllegalArgumentException("현재 질문이 Context 토큰 예산을 초과합니다.");
@@ -48,6 +92,7 @@ public class ChatContextBuilder {
                     command.sessionId(), summaryTokens, availableContextTokens);
             summary = null;
             summaryTokens = 0;
+            summarySources = List.of();
         }
         int historyTokenBudget = Math.min(
                 availableContextTokens - currentQuestionTokens - summaryTokens,
@@ -56,7 +101,7 @@ public class ChatContextBuilder {
 
         List<ChatMessage> candidates = chatMessageRepository.findCompletedContextMessagesBefore(
                 command.sessionId(),
-                execution.getSession().getSummaryThroughSequenceNo(),
+                summary == null ? 0 : execution.getSession().getSummaryThroughSequenceNo(),
                 inputMessage.getSequenceNo(),
                 ChatMessage.Status.COMPLETED,
                 ChatMessage.MessageType.ERROR,
@@ -94,7 +139,8 @@ public class ChatContextBuilder {
                 summary,
                 selected,
                 currentQuestion,
-                currentQuestionTokens + summaryTokens + estimatedTokens
+                currentQuestionTokens + summaryTokens + estimatedTokens,
+                summarySources
         );
     }
 

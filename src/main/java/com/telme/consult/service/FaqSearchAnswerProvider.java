@@ -154,6 +154,12 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
+        // 지시어만 있는 원문 검색이 엉뚱한 후보를 먼저 찾더라도 복원된 질문을 생략하지 않는다.
+        if (!input.originalUserQuery().equals(input.resolvedUserQuery())) {
+            List<FaqSearchResponse> resolved = search(input, input.resolvedUserQuery(), "RESOLVED");
+            return !resolved.isEmpty() || input.resolvedUserQuery().equals(input.searchQuery())
+                    ? resolved : search(input, input.searchQuery(), "REFINED");
+        }
         List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), "ORIGINAL");
         // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
         if (!originalResults.isEmpty()

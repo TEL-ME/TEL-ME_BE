@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
+@SpringBootTest(properties = "chat.summary.grounded-output=false")
 class ChatSummaryFlowIntegrationTest {
 
     @Autowired
@@ -110,11 +110,11 @@ class ChatSummaryFlowIntegrationTest {
         ChatContext context = chatContextBuilder.build(new ChatProcessingCommand(
                 current.executionId(), sessionId, current.messageId(), "현재 질문"), 4_096);
 
-        assertThat(context.summary()).isEqualTo("[FAKE] 테스트용 응답입니다.");
-        assertThat(context.history()).hasSize(8);
+        assertThat(context.summary()).isNull();
+        assertThat(context.history()).hasSize(16);
         assertThat(context.history())
                 .extracting(ChatContextMessage::sequenceNo)
-                .containsExactly(17, 18, 19, 20, 21, 22, 23, 24);
+                .containsExactly(9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24);
     }
 
     @Test

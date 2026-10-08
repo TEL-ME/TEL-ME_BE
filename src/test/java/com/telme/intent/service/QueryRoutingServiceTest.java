@@ -916,6 +916,43 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역");
         }
 
+        @Test
+        void unverifiedSummaryCannotAuthorizeInventedLocationOrNumber() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 39000원 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 39000원 매장",
+                  "conditions":{"location":"강남역"}}]}
+                """);
+            String question = "거기 매장 알려줘";
+            var context = new ChatContext(1L, 1L, "강남역 매장 39000원", java.util.List.of(), question, 100);
+            var result = service.routeSingleConsult(msg(question), context);
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.extractedConditions()).doesNotContainKey("location");
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("location");
+            var request = org.mockito.ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
+            verify(llmClient).generate(request.capture());
+            assertThat(request.getValue().userPrompt()).doesNotContain("강남역", "39000");
+        }
+
+        @Test
+        void restoredTopicIsContextAndOnlyCurrentQuestionIsTheRoutingTarget() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법"}]}
+                """);
+            String question = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+            var result = service.routeSingleConsult(msg(question), context(question, previous), resolved);
+            assertThat(result.subQueries()).hasSize(1);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("로밍 요금제 신청 방법");
+            var request = org.mockito.ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
+            verify(llmClient).generate(request.capture());
+            assertThat(request.getValue().userPrompt()).contains(previous).endsWith("[현재 질문]\n" + question);
+            assertThat(request.getValue().userPrompt()).doesNotContain("[현재 후속 질문]");
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {
                 "거기 매장 가면 몇 시까지 해?",

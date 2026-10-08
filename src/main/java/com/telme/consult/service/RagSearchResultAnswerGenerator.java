@@ -49,6 +49,8 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         .executionId(input.executionId())
                         .consultRequestId(input.consultRequestId())
                         .userQuery(input.originalUserQuery())
+                        .resolvedQuery(input.resolvedUserQuery())
+                        .chatContext(input.context())
                         .conditions(input.confirmedConditions())
                         .conditionLabels(input.askedQuestions())
                         .searchResults(results)

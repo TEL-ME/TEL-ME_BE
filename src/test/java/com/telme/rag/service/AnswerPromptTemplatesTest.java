@@ -48,7 +48,7 @@ class AnswerPromptTemplatesTest {
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
                 .replace(relationAddition, "")
                 .replace(channelAddition, "")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.4");
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.5-multiturn");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
     }
 
@@ -82,7 +82,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.4");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.5-multiturn");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");
