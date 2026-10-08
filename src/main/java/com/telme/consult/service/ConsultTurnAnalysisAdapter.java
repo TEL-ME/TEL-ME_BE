@@ -106,6 +106,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 updates.put("location", Condition.coordinates());
                 resolution = new Resolution(resolution.candidate(), updates);
             }
+            // 라우팅이 모르는 FAQ 조건은 되묻기에 실어 보낸 선택지로 채운다
+            resolution = FaqClarificationAnswers.fill(resolution, context.message());
             if (!resolution.answersWaitingField()) {
                 var correction =
                         preparation.prepareWaitingUpdate(

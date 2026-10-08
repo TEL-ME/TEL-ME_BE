@@ -1,9 +1,11 @@
 package com.telme.consult.service;
 
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
@@ -29,6 +31,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final ComparisonEvidenceResolver comparisonEvidence;
     private final FaqCandidateEvidenceResolver candidateEvidence;
     private final AnswerContextConverter sourceConverter;
+    private final FaqClarificationPlanner planner;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -56,16 +59,36 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter, null);
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, FaqClarificationPlanner planner) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
         this.comparisonEvidence = Objects.requireNonNull(comparisonEvidence);
         this.candidateEvidence = Objects.requireNonNull(candidateEvidence);
         this.sourceConverter = Objects.requireNonNull(sourceConverter);
+        this.planner = planner;
     }
 
     @Override
     public GeneratedAnswer generate(AnswerInput input) {
+        // 한 번에 처리하는 경로는 되묻기 계획을 쓰지 않는다
+        return answer(input, prepare(input, false));
+    }
+
+    /** 검색과 되묻기 판단만 한다. 답변은 만들지 않아 되묻는 경우 답변 메시지를 먼저 열지 않는다. */
+    @Override
+    public boolean clarifies() {
+        return planner != null;
+    }
+
+    @Override
+    public Prepared prepare(AnswerInput input, boolean plansClarification) {
         Objects.requireNonNull(input, "input");
         if (input.purpose() != Purpose.GENERAL_FAQ) {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
@@ -79,13 +102,15 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 trace.stage(input.executionId(), "comparisonAnswer", Map.of(
                         "method", "VERIFIED_FAQ_QUOTE", "faqIds",
                         resolution.sources().stream().map(FaqSearchResponse::faqId).toList()));
-                return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        resolution.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
-                        sourceConverter.toSources(resolution.sources()));
+                return Prepared.answered(new GeneratedAnswer(
+                        new ChatAnswer(ChatMessage.MessageType.ANSWER, resolution.answer(),
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                        sourceConverter.toSources(resolution.sources())));
             }
             trace.stage(input.executionId(), "guard", Map.of(
                     "outcome", "NOT_RUN", "reason", "COMPARISON_EVIDENCE_INCOMPLETE"));
-            return Objects.requireNonNull(answers.generate(input, List.of()), "generatedAnswer");
+            return Prepared.answered(
+                    Objects.requireNonNull(answers.generate(input, List.of()), "generatedAnswer"));
         }
         List<FaqSearchResponse> results = searchWithOriginalAndRefinedQuery(input);
         if (results.isEmpty() && !input.streamTokens()) {
@@ -96,20 +121,37 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));
-                return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        verified.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
-                        sourceConverter.toSources(List.of(verified)));
+                return Prepared.answered(new GeneratedAnswer(
+                        new ChatAnswer(ChatMessage.MessageType.ANSWER, verified.answer(),
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                        sourceConverter.toSources(List.of(verified))));
             }
         }
         if (results.isEmpty()) {
             // 검색 결과가 없으면 RAG 진입 전에 근거 부족 안내를 직접 반환하는 어댑터도 있어 여기서 한 번만 기록한다.
             trace.stage(input.executionId(), "guard",
-                    Map.of("outcome", "NOT_RUN", "reason",
-                            "NO_SEARCH_RESULTS"));
+                    Map.of("outcome", "NOT_RUN", "reason", "NO_SEARCH_RESULTS"));
+            return new Prepared(results, ClarificationPlan.none());
         }
-        return Objects.requireNonNull(
-                answers.generate(input, results), "generatedAnswer");
+        ClarificationPlan plan = planner == null || !plansClarification
+                ? ClarificationPlan.none()
+                : planner.plan(input.executionId(), input.originalUserQuery(), results);
+        return new Prepared(results, plan);
     }
+
+    /** 검색 결과를 다시 쓰므로 답변을 만들 때 검색을 또 하지 않는다. */
+    @Override
+    public GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
+        return answer(input, Objects.requireNonNull(prepared, "prepared"));
+    }
+
+    private GeneratedAnswer answer(AnswerInput input, Prepared prepared) {
+        // 비교·후보 근거 검증은 준비 단계에서 답을 확정한다. 그때는 모델을 다시 부르지 않는다
+        return prepared.answer() != null
+                ? prepared.answer()
+                : Objects.requireNonNull(answers.generate(input, prepared.searchResults()), "generatedAnswer");
+    }
+
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
         // 지시어만 있는 원문 검색이 엉뚱한 후보를 먼저 찾더라도 복원된 질문을 생략하지 않는다.

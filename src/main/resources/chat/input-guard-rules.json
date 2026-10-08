@@ -1,5 +1,5 @@
 {
-  "version": "chat-input-guard-v1",
+  "version": "chat-input-guard-v2",
   "allowWords": ["시발점", "시발역", "시발열차"],
   "rules": [
     {"id": "SIBAL", "term": "씨발", "reason": "PROFANITY"},

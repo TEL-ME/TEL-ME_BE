@@ -31,9 +31,40 @@ public final class ChatInputInspector {
                             + "(?:무슨)?(?:뜻|의미)(?:(?:이|가|은|는)?(?:뭐|무엇|뭔|알려|설명).*"
                             + "|이에요|인가요|입니까|예요|이야|이죠)$");
     private static final Pattern REPORTED =
-            Pattern.compile("^(?:이라는|라는)?(?:욕|말|표현)(?:을|를)?(?:들었|받았|당했).*$");
+            Pattern.compile(
+                    "^(?:(?:이라는|라는)?(?:욕|말|표현)(?:을|를)?(?:들었|받았|당했)"
+                            + "|(?:이라고|라고)(?:들었|전해들었)).*$");
+    private static final Pattern REPORTED_SPEAKER =
+            Pattern.compile(
+                    "(?:상담원|직원|친구|상대방)(?:이|가)(?:(?:저|나)(?:를|한테|에게))?$");
+    private static final Pattern REPORTED_SPEECH =
+            Pattern.compile("^(?:이라고|라고)(?:했|말했|불렀).*$");
+    private static final String DECORATION_SUFFIX =
+            "["
+                    + "ㅋㅎㅠㅜ".codePoints()
+                            .mapToObj(value -> Normalizer.normalize(
+                                    new String(Character.toChars(value)), Normalizer.Form.NFKC))
+                            .collect(java.util.stream.Collectors.joining())
+                    + "]{1,12}";
+    private static final Pattern DECORATION_BOUNDARY =
+            Pattern.compile("^" + DECORATION_SUFFIX + "(?:$|[^\\p{L}\\p{N}]).*", Pattern.DOTALL);
     private static final Pattern INITIAL_SUFFIX =
-            Pattern.compile("^(?:아|야|이야|이냐|같아|같네|놈|년|새끼|들|임|이네)(?:$|[^\\p{L}]).*");
+            Pattern.compile(
+                    "^(?:아|야|이야|이냐|같아|같네|같은|놈|년|새끼|들|임|이네)"
+                            + "(?:" + DECORATION_SUFFIX + ")?(?:$|[^\\p{L}\\p{N}]).*",
+                    Pattern.DOTALL);
+    private static final Pattern PROFANITY_SUFFIX =
+            Pattern.compile(
+                    "^(?:아|야|이야|이냐|이네|이다|이라고|이고|이요|이에요|입니다"
+                            + "|같아|같네|같은|같다|같이|놈|년|새끼|들|임"
+                            + "|하네|하냐|하지마|하지|하고|하는|하면|하다|해요|해){1,3}"
+                            + "(?:" + DECORATION_SUFFIX + ")?(?:$|[^\\p{L}\\p{N}]).*",
+                    Pattern.DOTALL);
+    private static final Pattern SEPARATED_PROFANITY_SUFFIX =
+            Pattern.compile(
+                    "^(?:아|야|놈|년|새끼|들|같아|같네|같은){1,3}"
+                            + "(?:" + DECORATION_SUFFIX + ")?(?:$|[^\\p{L}\\p{N}]).*",
+                    Pattern.DOTALL);
 
     private static final Pattern INTRODUCTION_TOKEN =
             Pattern.compile("주민등록번호|주민번호|카드번호|카드|번호|입니다|이에요|예요|그리고|제|내|는|이|가|랑|와|과");
@@ -108,6 +139,14 @@ public final class ChatInputInspector {
                 }
                 if (compiled.rule().reason() == Reason.INITIAL_PROFANITY
                         && !initialBoundary(normalized, matcher.start(), matcher.end())) {
+                    continue;
+                }
+                if (compiled.rule().reason() == Reason.PROFANITY
+                        && !profanityBoundary(
+                                normalized,
+                                matcher.start(),
+                                matcher.end(),
+                                !matcher.group().equals(normalize(compiled.rule().term())))) {
                     continue;
                 }
                 detections.add(new Detection(compiled.rule().reason(), compiled.rule().id()));
@@ -255,7 +294,14 @@ public final class ChatInputInspector {
         Matcher quotes = QUOTED.matcher(text);
         while (quotes.find()) {
             String tail = compact(text.substring(quotes.end()));
-            if (MEANING.matcher(tail).matches() || REPORTED.matcher(tail).matches()) {
+            boolean reportedByOther =
+                    REPORTED_SPEECH.matcher(tail).matches()
+                            && REPORTED_SPEAKER
+                                    .matcher(compact(text.substring(0, quotes.start())))
+                                    .find();
+            if (MEANING.matcher(tail).matches()
+                    || REPORTED.matcher(tail).matches()
+                    || reportedByOther) {
                 spans.add(new Span(quotes.start(1), quotes.end(1), ""));
             }
         }
@@ -280,7 +326,21 @@ public final class ChatInputInspector {
         }
         return end == text.length()
                 || !Character.isLetter(text.charAt(end))
+                || DECORATION_BOUNDARY.matcher(text.substring(end)).matches()
                 || INITIAL_SUFFIX.matcher(text.substring(end)).matches();
+    }
+
+    private boolean profanityBoundary(String text, int start, int end, boolean separated) {
+        // 다른 단어의 끝·시작 글자를 구분자 너머로 연결해 욕설을 만들지 않는다.
+        if (start > 0 && Character.isLetterOrDigit(text.charAt(start - 1))) {
+            return false;
+        }
+        // 분리 표기의 마지막 글자가 정상 단어의 일부일 수 있어 어미 범위를 더 좁힌다.
+        Pattern suffix = separated ? SEPARATED_PROFANITY_SUFFIX : PROFANITY_SUFFIX;
+        return end == text.length()
+                || !Character.isLetterOrDigit(text.charAt(end))
+                || DECORATION_BOUNDARY.matcher(text.substring(end)).matches()
+                || suffix.matcher(text.substring(end)).matches();
     }
 
     private boolean covered(List<Span> spans, int start, int end) {
@@ -288,7 +348,22 @@ public final class ChatInputInspector {
     }
 
     private String normalize(String value) {
-        return Normalizer.normalize(value, Normalizer.Form.NFKC).toLowerCase(java.util.Locale.ROOT);
+        StringBuilder normalized = new StringBuilder();
+        int chunkStart = 0;
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.UnicodeBlock.of(current)
+                    != Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO) {
+                continue;
+            }
+            // 초성과 뒤의 울음 자모가 합쳐져 다른 음절이 되지 않도록 자모만 따로 정규화한다.
+            normalized.append(Normalizer.normalize(
+                    value.substring(chunkStart, index), Normalizer.Form.NFKC));
+            normalized.append(Normalizer.normalize(String.valueOf(current), Normalizer.Form.NFKC));
+            chunkStart = index + 1;
+        }
+        normalized.append(Normalizer.normalize(value.substring(chunkStart), Normalizer.Form.NFKC));
+        return normalized.toString().toLowerCase(java.util.Locale.ROOT);
     }
 
     private String compact(String value) {

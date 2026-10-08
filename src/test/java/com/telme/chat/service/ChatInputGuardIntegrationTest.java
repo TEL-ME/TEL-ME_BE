@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -26,6 +27,8 @@ import com.telme.chat.guard.JdbcInputGuardStore;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.dto.ClarificationPlan;
+import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -35,6 +38,7 @@ import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
@@ -161,6 +165,81 @@ class ChatInputGuardIntegrationTest {
         for (Long owner : users) {
             jdbc.update("DELETE FROM users WHERE user_id=?", owner);
         }
+    }
+
+    @Test
+    @DisplayName("기존 경고가 있어도 정상 단어의 오탐 후보는 접수·완료되며 제재 횟수와 감지 이력을 늘리지 않는다")
+    void 정상_단어가_섞인_질문으로_제한하지_않는다() throws Exception {
+        long sid = session(identity);
+        send(sid, "씨발");
+        send(sid, "ㅅㅂ");
+        List<String> inputs =
+                List.of(
+                        "유심 다시 발급받고 싶어요",
+                        "택배는 몇 시 발송돼요?",
+                        "오후 3시 발송인가요",
+                        "새 요금제 출시 발표 언제예요?",
+                        "개통 시 발신 제한이 있나요?",
+                        "병 신청은 어디서 해요",
+                        "아저씨 발 사이즈",
+                        "유심 다시발급받고 싶어요",
+                        "새 요금제 출시발표 언제예요?",
+                        "개통시발신 제한이 있나요?");
+
+        for (String input : inputs) {
+            JsonNode accepted = body(request(sid, identity, input, UUID.randomUUID(), 201));
+            assertThat(accepted.at("/result").has("inputGuard")).isFalse();
+            long executionId = accepted.at("/result/executionId").asLong();
+            assertThat(executionId).isPositive();
+            waitCompleted(executionId);
+            assertThat(analyzedContent.get()).isEqualTo(input);
+            long messageId = accepted.at("/result/messageId").asLong();
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT message_type FROM chat_messages WHERE message_id=?",
+                                    String.class,
+                                    messageId))
+                    .isEqualTo("QUESTION");
+            assertThat(
+                            jdbc.queryForObject(
+                                    "SELECT content FROM chat_messages WHERE message_id=?",
+                                    String.class,
+                                    messageId))
+                    .isEqualTo(input);
+            assertThat(count("chat_input_guard_events")).isEqualTo(2);
+            assertThat(restrictionUntil()).isNull();
+        }
+
+        assertThat(count("chat_executions")).isEqualTo(inputs.size());
+        JsonNode restricted = send(sid, "출시 발표 언제예요? 씨발");
+        assertThat(restricted.at("/result/inputGuard/action").asText()).isEqualTo("RESTRICTED");
+        assertThat(restricted.at("/result/inputGuard/violationCount").asInt()).isEqualTo(3);
+        assertThat(count("chat_input_guard_events")).isEqualTo(3);
+        assertThat(count("chat_executions")).isEqualTo(inputs.size());
+    }
+
+    @Test
+    @DisplayName("피해 인용은 기존 경고를 늘리지 않고 상담으로 전달하며 웃음 자모 욕설은 한 번만 누적한다")
+    void 인용_문의와_자모_욕설의_제재를_구분한다() throws Exception {
+        long sid = session(identity);
+        send(sid, "씨발");
+        send(sid, "ㅅㅂ");
+        List<String> reports =
+                List.of(
+                        "'씨발'이라고 들었는데 어떻게 신고하나요?",
+                        "상담원이 저한테 '병신'이라고 했어요. 신고 방법 알려주세요");
+        for (String input : reports) {
+            JsonNode accepted = body(request(sid, identity, input, UUID.randomUUID(), 201));
+            waitCompleted(accepted.at("/result/executionId").asLong());
+            assertThat(analyzedContent.get()).isEqualTo(input);
+            assertThat(count("chat_input_guard_events")).isEqualTo(2);
+            assertThat(restrictionUntil()).isNull();
+        }
+        JsonNode restricted = send(sid, "씨발ㅋㅋ");
+        assertThat(restricted.at("/result/inputGuard/action").asText()).isEqualTo("RESTRICTED");
+        assertThat(restricted.at("/result/inputGuard/violationCount").asInt()).isEqualTo(3);
+        assertThat(count("chat_executions")).isEqualTo(reports.size());
+        assertThat(count("chat_input_guard_events")).isEqualTo(3);
     }
 
     @Test
@@ -484,6 +563,87 @@ class ChatInputGuardIntegrationTest {
         assertThat(consultStates.load(sid, consultId).status()).isEqualTo("DONE");
         assertThat(history(sid).at("/result/messages").get(6).path("content").asText())
                 .isEqualTo("조건에 맞는 매장을 안내합니다.");
+    }
+
+    @Test
+    @DisplayName("새 FAQ 되묻기 계획·선택지·대기 질문은 욕설 제한 중 보존하고 만료 후 같은 상담에서 완료한다")
+    void 새_FAQ_되묻기를_제한_후에도_이어간다() throws Exception {
+        ClarificationPlan plan = new ClarificationPlan(List.of(new MissingCondition(
+                "delivery_method",
+                "청구서는 어떻게 받으시나요?",
+                List.of("이메일", "우편"),
+                "검증용 고정 근거: 청구서 수령 방식은 이메일 또는 우편이다.")));
+        when(answers.clarifies()).thenReturn(true);
+        when(answers.prepare(any(), anyBoolean())).thenReturn(new Prepared(List.of(), plan));
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(
+                new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER,
+                        "우편 수령 기준을 안내합니다.",
+                        null,
+                        List.of(),
+                        null)));
+        doAnswer(invocation -> {
+            ChatProcessingCommand command = invocation.getArgument(0);
+            var context = consultContexts.loadVerified(command);
+            if (context.candidates().isEmpty()) {
+                long id = jdbc.queryForObject(
+                        "INSERT INTO consult_requests"
+                                + " (session_id,origin_message_id,subquery_order,intent,query_text)"
+                                + " VALUES (?,?,1,'FAQ','청구서 수령') RETURNING consult_request_id",
+                        Long.class,
+                        command.sessionId(),
+                        command.inputMessageId());
+                return new AnalyzedTurn(
+                        turns.prepareAnalysis(command.sessionId(), new IntentSubQueryResponse(
+                                id, (short) 1, ConsultRequest.Intent.FAQ, "청구서 수령", Map.of()),
+                                LocationStatus.MISSING),
+                        null,
+                        Purpose.GENERAL_FAQ,
+                        command.content(),
+                        "청구서 수령");
+            }
+            var candidate = context.candidates().getFirst();
+            var followup = turns.prepareFollowup(
+                    context,
+                    new Selection(
+                            candidate.consultRequestId(),
+                            candidate.questionMessageId(),
+                            candidate.field(),
+                            Map.of(candidate.field(), Condition.filled("우편"))),
+                    LocationStatus.MISSING);
+            return new AnalyzedTurn(
+                    followup.preparation(),
+                    followup.followup().answeredField(),
+                    followup.purpose(),
+                    followup.originalUserQuery(),
+                    followup.searchQuery());
+        }).when(analyzer).analyze(any());
+        long sid = session(identity);
+        waitCompleted(send(sid, "청구서 수령 기준 알려주세요").at("/result/executionId").asLong());
+        long consultId = jdbc.queryForObject(
+                "SELECT consult_request_id FROM consult_requests WHERE session_id=?",
+                Long.class,
+                sid);
+        var before = consultStates.load(sid, consultId);
+        var pending = consultStates.findPendingClarificationMessageId(sid, consultId, "delivery_method");
+        assertThat(before.status()).isEqualTo("WAITING_CONDITION");
+        assertThat(before.clarificationPlan()).isEqualTo(plan);
+        assertThat(pending).isPresent();
+        send(sid, "씨발");
+        send(sid, "ㅅㅂ");
+        send(sid, "지랄");
+        send(sid, "우편");
+        assertThat(consultStates.load(sid, consultId)).isEqualTo(before);
+        assertThat(consultStates.findPendingClarificationMessageId(sid, consultId, "delivery_method"))
+                .isEqualTo(pending);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        now.set(START.plusSeconds(60));
+        waitCompleted(send(sid, "우편").at("/result/executionId").asLong());
+        var completed = consultStates.load(sid, consultId);
+        assertThat(completed.conditions().get("delivery_method")).isEqualTo(Condition.filled("우편"));
+        assertThat(completed.status()).isEqualTo("DONE");
+        assertThat(count("consult_requests")).isEqualTo(1);
+        assertThat(count("chat_executions")).isEqualTo(2);
     }
 
     @Test

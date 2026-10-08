@@ -71,6 +71,120 @@ class ChatInputInspectorTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
+                "유심 다시 발급받고 싶어요",
+                "택배는 몇 시 발송돼요?",
+                "오후 3시 발송인가요",
+                "새 요금제 출시 발표 언제예요?",
+                "개통 시 발신 제한이 있나요?",
+                "병 신청은 어디서 해요",
+                "아저씨 발 사이즈",
+                "유심 다시발급받고 싶어요",
+                "새 요금제 출시발표 언제예요?",
+                "개통시발신 제한이 있나요?",
+                "병신청은 어디서 해요",
+                "아저씨발사이즈",
+                "몇시발송돼요?",
+                "영수증은 몇 시 발행되나요?",
+                "다시.발급받고 싶어요",
+                "신청서 다시\n발급해주세요",
+                "유심 다시\u200B발급해주세요",
+                "입대할 병 신임 교육은 어디서 하나요?"
+            })
+    @DisplayName("정상 단어의 일부를 공백·구분자 너머로 연결하거나 긴 단어에서 잘라 욕설로 판단하지 않는다")
+    void 정상_단어의_경계를_넘어_욕설을_만들지_않는다(String input) {
+        InputInspection result = inspector.inspect(input);
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.detections()).isEmpty();
+        assertThat(result.content()).isEqualTo(input);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "씨 발",
+                "병 신아",
+                "씨.발놈아",
+                "개 새 끼야",
+                "너는 병신같아",
+                "너는 병신같은 놈이야",
+                "지랄하지마",
+                "씨발입니다",
+                "출시 발표 언제예요? 씨발",
+                "아저씨 발 사이즈, 너는 병신아",
+                "유심 다시 발급받고 싶어요. 이거ㅅㅂ",
+                "시발역 안내, 서비스ㅂㅅ같아"
+            })
+    @DisplayName("단어 경계를 확인해도 지원하는 분리 욕설·어미와 다른 구간의 실제 욕설은 감지한다")
+    void 정상_문장과_섞인_실제_욕설은_계속_감지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "씨발ㅋㅋ",
+                "씨발ㅎㅎ",
+                "씨발ㅠㅠ",
+                "씨발ㅜㅜ",
+                "ㅅㅂㅋㅋ",
+                "ㅂㅅㅠㅠ",
+                "병신아ㅋㅋ",
+                "씨.발ㅋㅋ",
+                "서비스ㅂㅅ같은 서비스",
+                "씨발아\n\n요금 문의"
+            })
+    @DisplayName("지원하는 웃음·울음 자모와 어미가 붙어도 명확한 욕설은 감지한다")
+    void 지원_자모와_어미가_붙은_욕설을_감지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "다시 발급ㅋㅋ",
+                "출시 발표ㅠㅠ",
+                "시발점ㅎㅎ",
+                "시발역ㅋㅋ",
+                "병 신청ㅎㅎ",
+                "아저씨 발 사이즈ㅠㅠ",
+                "ㅂㅅ역ㅋㅋ"
+            })
+    @DisplayName("자모 지원을 넓혀도 정상 단어와 지원하지 않는 초성 조합은 보호한다")
+    void 장식_자모가_있어도_정상_단어는_보존한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "'씨발'이라고 들었는데 어떻게 신고하나요?",
+                "상담원이 저한테 '병신'이라고 했어요. 신고 방법 알려주세요",
+                "직원이 '씨발'이라고 말했어요",
+                "친구가 나에게 ‘병신’이라고 했어요",
+                "상대방이 ‘ㅅㅂ’라고 불렀어요"
+            })
+    @DisplayName("명확한 수신·타인 발화 설명에서는 해당 인용 구간만 예외 처리한다")
+    void 명확한_피해_인용을_보존한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "너는 '병신'이라고 했어요",
+                "상담원에게 '병신'이라고 했어요",
+                "직원에게 '씨발'이라고 말했어요",
+                "상담원이 '병신'이라고 했어요. 너도 씨발",
+                "'씨발'이라고 들었어요. 너도 병신아"
+            })
+    @DisplayName("발화 주체가 다른 인용이나 피해 설명 밖의 실제 욕설까지 함께 허용하지 않는다")
+    void 인용_예외가_다른_공격을_허용하지_않는다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
                 "'ㅂㅅ'이 무슨 뜻이에요?",
                 "'병신'이라는 욕을 들었어요",
                 "상담원한테 ‘병신’이라는 욕을 들었어요",
