@@ -31,11 +31,33 @@ final class IndependentQuestionPolicy {
         if (!quote.isBlank() && original.contains(quote)) {
             return sub.requestQuote().strip();
         }
+        String recovered = recoverParticleInsertion(original, quote);
+        if (recovered != null) {
+            return recovered;
+        }
         String query = RoutingQuestionNormalizer.quoteKey(sub.queryText());
         if (!query.isBlank() && original.contains(query)) {
             return sub.queryText().strip();
         }
         throw new UnsupportedCompoundQuestionException("독립 요청의 원문 근거가 필요합니다.");
+    }
+
+    // 조사 한 글자만 빠진 인용은 원문에 실제로 이어진 구간으로 복구한다.
+    private static String recoverParticleInsertion(String original, String quote) {
+        if (quote.isBlank()) {
+            return null;
+        }
+        for (int start = 0; start + quote.length() + 1 <= original.length(); start++) {
+            String candidate = original.substring(start, start + quote.length() + 1);
+            for (int offset = 1; offset < candidate.length() - 1; offset++) {
+                char inserted = candidate.charAt(offset);
+                if ("한는은이가을를의에와과".indexOf(inserted) >= 0
+                        && (candidate.substring(0, offset) + candidate.substring(offset + 1)).equals(quote)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
     }
 
     static void validateQuotes(List<String> quotes, String question) {

@@ -192,7 +192,8 @@ public class QueryRoutingService {
                 throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
             }
 
-            payload = normalizeLlmPayload(payload, question, context);
+            payload = normalizeLlmPayload(payload, question, context,
+                    restored ? promptQuestion.strip() : question);
 
             method = QueryRouting.Method.LLM;
 
@@ -443,38 +444,23 @@ public class QueryRoutingService {
             var sub = payload.subQueries().get(index);
             String queryText = sub.queryText();
             if (unsafe.get(index)) {
-                // 공통 대상이 원문과 모든 하위 질문에 확인되면 모델의 과잉 차단을 피한다.
+                // 의미 검증이 위험하다고 본 검색어는 공통 단어가 있어도 신뢰하지 않는다.
                 String grounded = removeUngroundedQueryWords(payload, sub, current, previousSubject);
-                queryText = grounded.equals(sub.queryText())
-                        && hasGroundedSharedSubject(payload, sub, current + " " + previousSubject) ? grounded
-                        : RoutingQuestionNormalizer.quoteKey(grounded).equals(
+                queryText = RoutingQuestionNormalizer.quoteKey(grounded).equals(
                         RoutingQuestionNormalizer.quoteKey(sub.requestQuote()))
                         ? grounded : sub.requestQuote();
-                log.info("[라우팅] 원문과 다른 FAQ 검색어를 인용구로 대체합니다: order={}", sub.order());
+                if (!queryText.equals(sub.queryText())) {
+                    log.info("[라우팅] 원문과 다른 FAQ 검색어를 인용구로 대체합니다: order={}", sub.order());
+                }
             } else {
                 queryText = removeUngroundedQueryWords(payload, sub, current, previousSubject);
             }
             safe.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, sub.conditions(), sub.requestQuote()));
         }
-        return new LlmRoutingPayload(payload.intent(), payload.confidence(), question,
+        // 복원용 내부 표식과 이전 발언은 라우팅 결과에 저장하지 않는다.
+        return new LlmRoutingPayload(payload.intent(), payload.confidence(), restored ? current : question,
                 payload.extractedConditions(), safe);
-    }
-
-    private boolean hasGroundedSharedSubject(LlmRoutingPayload payload,
-            LlmRoutingPayload.SubQueryPayload sub, String question) {
-        String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
-        String original = RoutingQuestionNormalizer.quoteKey(question);
-        Matcher words = SECTION_WORD.matcher(sub.queryText());
-        while (words.find()) {
-            String word = RoutingQuestionNormalizer.quoteKey(words.group());
-            if (!quote.contains(word) && original.contains(word)
-                    && payload.subQueries().stream().allMatch(candidate ->
-                            RoutingQuestionNormalizer.quoteKey(candidate.queryText()).contains(word))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String removeUngroundedQueryWords(LlmRoutingPayload payload,
@@ -604,7 +590,7 @@ public class QueryRoutingService {
     }
 
     private LlmRoutingPayload normalizeLlmPayload(
-            LlmRoutingPayload payload, String question, ChatContext context) {
+            LlmRoutingPayload payload, String question, ChatContext context, String safeFallback) {
         if (payload.confidence().compareTo(BigDecimal.ZERO) < 0
                 || payload.confidence().compareTo(BigDecimal.ONE) > 0
                 || payload.subQueries().size() > Short.MAX_VALUE) {
@@ -654,12 +640,13 @@ public class QueryRoutingService {
         long storeCount = normalized.stream()
                 .filter(sub -> sub.intent() == ConsultRequest.Intent.STORE)
                 .count();
-        String refined = safeQueryText(payload.refinedQuery(), question, context, true);
+        String refined = safeQueryText(payload.refinedQuery(), question, context, true, safeFallback);
         List<LlmRoutingPayload.SubQueryPayload> safeSubQueries = new ArrayList<>();
         for (LlmRoutingPayload.SubQueryPayload sub : normalized) {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
-                    payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1);
+                    payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1,
+                    safeFallback);
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
@@ -674,7 +661,8 @@ public class QueryRoutingService {
     }
 
     private String safeQueryText(
-            String candidate, String question, ChatContext context, boolean preserveNumbers) {
+            String candidate, String question, ChatContext context, boolean preserveNumbers,
+            String safeFallback) {
         if (candidate == null || candidate.isBlank()) {
             return candidate;
         }
@@ -682,7 +670,7 @@ public class QueryRoutingService {
                 || hasUnsupportedToken(PLACE, candidate, referenceText(PLACE, question, context))
                 || (preserveNumbers && hasUnsupportedToken(NUMBER, question, candidate))) {
             log.info("[라우팅] 검색 질문의 수치 또는 지역이 원문과 맞지 않아 원문을 사용합니다.");
-            return question;
+            return safeFallback;
         }
         return candidate.strip();
     }

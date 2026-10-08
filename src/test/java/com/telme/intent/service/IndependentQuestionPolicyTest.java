@@ -16,6 +16,16 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class IndependentQuestionPolicyTest {
     @Test
+    void recoversLiteralSourceWhenModelDropsOneParticleFromQuote() {
+        var sub = new LlmRoutingPayload.SubQueryPayload((short) 2, ConsultRequest.Intent.FAQ,
+                "번호이동 필요 서류", Map.of(), "필요서류");
+
+        assertThat(IndependentQuestionPolicy.verifiedQuote(sub,
+                "번호이동 비용, 필요한 서류, 신청 방법을 각각 알려줘"))
+                .isEqualTo("필요한서류");
+    }
+
+    @Test
     void acceptsGroundedSearchQuestionWhenItsQuoteWasMisCopied() {
         var subQueries = java.util.List.of(
                 new LlmRoutingPayload.SubQueryPayload((short) 1, ConsultRequest.Intent.FAQ,

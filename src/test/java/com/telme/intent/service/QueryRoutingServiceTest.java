@@ -328,7 +328,7 @@ class QueryRoutingServiceTest {
     }
 
     @Test
-    void modelOverblockingDoesNotDiscardExplicitSharedSubject() {
+    void unsafeDecisionDoesNotOverrideOriginalQuoteWithSharedSubject() {
         given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,"subQueries":[
                   {"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"번호이동비용"},
@@ -343,7 +343,25 @@ class QueryRoutingServiceTest {
         var result = service.routeSingleConsult(msg("번호이동 비용과 신청방법 그리고 필요서류 알려줘"), null);
 
         assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
-                .containsExactly("번호이동 비용", "번호이동 신청 방법", "번호이동 필요 서류");
+                .containsExactly("번호이동 비용", "신청방법", "필요서류");
+    }
+
+    @Test
+    void unsafeDecisionDoesNotBorrowDifferentRequestSubject() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청방법"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍 유심 재발급 비용","requestQuote":"유심 재발급 비용"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":[false,true]}
+                """);
+
+        var result = service.routeSingleConsult(msg("로밍 신청방법과 유심 재발급 비용 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("로밍 신청 방법", "유심 재발급 비용");
     }
 
     @Test
@@ -1306,6 +1324,23 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        void restoredSingleQuestionDoesNotStoreInternalContextWhenSearchQueryIsRejected() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 999원 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금제 999원 신청 방법"}]}
+                """);
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.refinedQuery()).isEqualTo(current);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(current);
+        }
+
+        @Test
         void restoredFollowUpUsesSameModelInputForSpacingVariants() {
             given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
@@ -1350,6 +1385,7 @@ class QueryRoutingServiceTest {
 
             assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
                     .containsExactly("로밍 요금제 신청 방법", "로밍 요금제 해지 방법");
+            assertThat(result.refinedQuery()).isEqualTo("그럼신청방법이랑해지방법도알려줘");
             var requests = ArgumentCaptor.forClass(LlmRequest.class);
             verify(llmClient, times(3)).generate(requests.capture());
             assertThat(requests.getAllValues()).filteredOn(request ->
@@ -1364,6 +1400,34 @@ class QueryRoutingServiceTest {
                     .contains("\"question\":\"그럼신청방법이랑해지방법도알려줘\"")
                     .contains("\"previousSubject\":\"로밍 요금제는 어떻게 골라요?\"")
                     .doesNotContain("[대상을 확인할 이전 고객 발언]", "[현재 후속 질문]");
+        }
+
+        @Test
+        void restoredCompoundQuestionDoesNotKeepPreviousActionWhenJudgeRejectsIt() {
+            String current = "그럼 신청 방법이랑 준비물 알려줘";
+            String previous = "로밍 해지는 어떻게 해요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            org.mockito.Mockito.doAnswer(call -> {
+                LlmRequest request = call.getArgument(0);
+                if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"decision\":\"MULTIPLE\",\"requestCount\":2}";
+                }
+                if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"unsafe\":[true,true]}";
+                }
+                return """
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 해지 신청 방법과 준비물",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 해지 신청 방법","requestQuote":"신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"로밍 해지 준비물","requestQuote":"준비물"}]}
+                    """;
+            }).when(llmClient).generate(any());
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("신청 방법", "준비물");
         }
 
         @Test
