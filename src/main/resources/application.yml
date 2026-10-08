@@ -157,6 +157,9 @@ telme:
     llm-enabled: ${CONSULT_LLM_ENABLED:true}
     chat-integration-enabled: ${CONSULT_CHAT_INTEGRATION_ENABLED:true}
     rag-integration-enabled: ${CONSULT_RAG_INTEGRATION_ENABLED:true}
+    # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
+    faq-clarification:
+      enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
     suggested-questions:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
       # 기본은 끈다. 실제 채팅 경로 확인 결과는 문서 7.2절

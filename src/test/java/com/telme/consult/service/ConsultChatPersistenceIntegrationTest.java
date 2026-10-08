@@ -16,11 +16,13 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.MessageOrigin;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -139,6 +141,27 @@ class ConsultChatPersistenceIntegrationTest {
         assertThat(text("SELECT status FROM chat_sessions WHERE session_id=?", sessionId))
                 .isEqualTo("NEED_CLARIFICATION");
         assertThat(states.load(sessionId, requestId).version()).isEqualTo(2);
+    }
+
+    @Test
+    void savesClarificationPlanForTheNextQuestion() {
+        var plan = new ClarificationPlan(List.of(
+                new MissingCondition(
+                        "joined_this_month", "이번 달에 가입하셨나요?", List.of("예", "아니요"), "가입 시점에 따라 다릅니다."),
+                new MissingCondition(
+                        "changed_this_month", "이번 달에 요금제를 바꾸셨나요?", List.of("예", "아니요"), "변경 시점에 따라 다릅니다.")));
+        var snapshot = states.load(sessionId, requestId);
+        var prepared = new ConsultService.PreparedTurn(
+                sessionId,
+                snapshot.version(),
+                FaqClarificationDecisions.ask(requestId, plan, Map.of()),
+                plan);
+
+        persistence.persistClarification(executionId, prepared);
+
+        assertThat(states.load(sessionId, requestId).clarificationPlan().conditions())
+                .extracting(MissingCondition::key)
+                .containsExactly("joined_this_month", "changed_this_month");
     }
 
     @Test
@@ -444,6 +467,50 @@ class ConsultChatPersistenceIntegrationTest {
         assertThat(states.load(sessionId, requestId).status()).isEqualTo("WAITING_CONDITION");
         assertThat(text("SELECT status FROM chat_executions WHERE execution_id=?", executionId))
                 .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void processingPortAsksTheNextStoredConditionWithoutExtractingAgain() {
+        var plan = new ClarificationPlan(List.of(
+                new MissingCondition(
+                        "joined_this_month", "이번 달에 가입하셨나요?", List.of("예", "아니요"), "가입 시점에 따라 다릅니다."),
+                new MissingCondition(
+                        "changed_this_month", "이번 달에 요금제를 바꾸셨나요?", List.of("예", "아니요"), "변경 시점에 따라 다릅니다.")));
+        var snapshot = states.load(sessionId, requestId);
+        var proceed = new DialogueDecision(
+                requestId,
+                DialogueDecision.Action.PROCEED,
+                Map.of(
+                        "joined_this_month", Condition.filled("예"),
+                        "changed_this_month", Condition.pending()),
+                null,
+                null,
+                MessageOrigin.NONE);
+        var prepared = new ConsultService.PreparationResult(
+                new ConsultService.PreparedTurn(sessionId, snapshot.version(), proceed, plan), null);
+        var processor = new ConsultChatProcessingService(
+                command -> new ConsultChatProcessingService.AnalyzedTurn(
+                        prepared, null, Purpose.GENERAL_FAQ, "요금제 할인", "요금제 할인"),
+                input -> {
+                    throw new AssertionError("저장한 다음 조건을 물을 때는 검색·조건 재추출을 하지 않는다.");
+                },
+                persistence,
+                new ConfirmedConditionConverter());
+
+        processor.request(processingCommand());
+
+        var saved = states.load(sessionId, requestId);
+        assertThat(saved.status()).isEqualTo("WAITING_CONDITION");
+        assertThat(saved.conditions().get("joined_this_month").value()).isEqualTo("예");
+        assertThat(saved.clarificationPlan().conditions())
+                .extracting(MissingCondition::key)
+                .containsExactly("changed_this_month");
+        assertThat(jdbc.queryForObject(
+                "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
+                        + " FROM chat_executions WHERE execution_id=?)",
+                String.class,
+                executionId))
+                .isEqualTo("이번 달에 요금제를 바꾸셨나요?");
     }
 
     @Test

@@ -52,6 +52,7 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         .resolvedQuery(input.resolvedUserQuery())
                         .chatContext(input.context())
                         .conditions(input.confirmedConditions())
+                        .conditionLabels(input.askedQuestions())
                         .searchResults(results)
                         .build();
         LlmStreamHandler stream =

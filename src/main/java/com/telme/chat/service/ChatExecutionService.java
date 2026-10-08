@@ -9,6 +9,7 @@ import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,10 @@ public class ChatExecutionService {
     }
 
     public ChatExecutionState askClarification(Long executionId, String question) {
+        return askClarification(executionId, question, List.of());
+    }
+
+    public ChatExecutionState askClarification(Long executionId, String question, List<String> options) {
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("되묻기 질문은 비어 있을 수 없습니다.");
         }
@@ -72,7 +77,9 @@ public class ChatExecutionService {
         Instant completedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
-        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, null, null, completedAt);
+        // 선택지가 있으면 후속 질문 자리에 실어 보낸다. 화면이 버튼으로 그려 눌러서 답할 수 있다
+        String followUps = options == null || options.isEmpty() ? null : chatMessageConverter.toJson(options);
+        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, followUps, null, completedAt);
         execution.complete(message, completedAt);
         session.waitForClarification();
         session.touch(completedAt);

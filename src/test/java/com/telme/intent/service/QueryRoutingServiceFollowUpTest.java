@@ -10,6 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
@@ -18,7 +20,9 @@ import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.repository.QueryRoutingRepository;
+import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -103,6 +108,40 @@ class QueryRoutingServiceFollowUpTest {
         // 조건은 Map<String, String>으로만 전달한다(상태 변환은 상담 도메인 담당)
         assertThat(response.conditions()).containsExactly(entry("location", "강남역"));
         assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("여러 조건 중 실제로 물은 현재 조건만 LLM에 넘긴다")
+    void analyzeFollowUp_onlyPassesAskedPendingCondition() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(
+                        ConsultCondition.builder()
+                                .conditionKey("joined_this_month")
+                                .status(ConsultCondition.Status.PENDING)
+                                .askedMessage(askedMessage)
+                                .build(),
+                        ConsultCondition.builder()
+                                .conditionKey("changed_this_month")
+                                .status(ConsultCondition.Status.PENDING)
+                                .build()))
+                .build();
+        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"joined_this_month\",\"status\":\"FILLED\",\"value\":\"예\"}]}");
+
+        service.analyzeFollowUp(SESSION_ID, "예");
+
+        ArgumentCaptor<LlmRequest> request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().userPrompt())
+                .contains("되묻는 중인 조건: joined_this_month")
+                .doesNotContain("changed_this_month");
     }
 
     @Test
