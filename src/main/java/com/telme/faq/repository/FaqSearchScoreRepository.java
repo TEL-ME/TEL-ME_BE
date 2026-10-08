@@ -36,7 +36,9 @@ public class FaqSearchScoreRepository {
         return jdbcTemplate.update("DELETE FROM faq_search_scores WHERE created_at < ?", Timestamp.from(cutoff));
     }
     
-    // 질문 수는 원문 검색(ORIGINAL)만 센다. 정제 검색은 원문이 빈 질문에만 한 번 더 돌아 같이 세면 실패가 두 번 잡힌다.
+    // 질문 수는 질문별 첫 검색만 센다. 첫 검색은 원문(ORIGINAL)이거나, 이전 대화로 지시어를 풀어 쓴 질문(RESOLVED)이다.
+    // 한 질문에는 둘 중 하나만 돈다(FaqSearchAnswerProvider). 정제 검색(REFINED)은 첫 검색이 빈 질문에만
+    // 한 번 더 돌아 같이 세면 실패가 두 번 잡히므로 refined_passed에만 쓴다.
     // scored는 분포(buckets)에 들어가는 건수다. 점수가 없는 검색은 total에만 들어간다.
     // 임계값 이상 여부는 검색 당시 임계값으로 센다. passed도 당시 설정으로 정해져 둘을 비교할 수 있다
     public Summary findSummary(Instant from, Instant to) {
@@ -52,7 +54,7 @@ public class FaqSearchScoreRepository {
                       rs.getLong("refined_passed"), rs.getLong("above_threshold")), Timestamp.from(from), Timestamp.from(to));
     }
     
-    // 음수(코사인 유사도는 -1까지 나온다)는 첫 칸, 1.0은 마지막 칸에 넣는다. 점수가 없는 검색은 뺀다
+    // 음수(코사인 유사도는 -1까지 나온다)는 첫 칸, 1.0은 마지막 칸에 넣는다. 점수가 없는 검색과 정제 검색은 뺀다
     public List<BucketCount> findBuckets(Instant from, Instant to) {
         return jdbcTemplate.query("""
                 SELECT least(greatest(floor(qa_top_score * ?)::int, 0), ? - 1) AS bucket, count(*) AS count

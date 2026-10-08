@@ -101,11 +101,14 @@ search:
     # 질문만 벡터(QUESTION_ONLY)를 함께 검색해 합친다. 1,150건 백필과 실측을 마치고 켰다(TELME-83)
     # 실측: Recall@3 0.375 → 0.463(30 → 37), 무관 70건 거부 62건 유지, ANSWER 30건 22건 유지
     enabled: ${SEARCH_DUAL_VECTOR_ENABLED:true}
-    # 이 기간이 지난 기록은 매일 새벽에 지운다. 분포 화면은 최근 기간만 본다
-    retention: ${SEARCH_SCORE_RECORDING_RETENTION:90d}
     # 거부율을 현행 그대로 지키면서 Recall이 최대인 지점(0.87 이하로 내리면 EVAL-175가 통과한다)
     # 측정 조건: FAQ 1,150건 + bge-m3 + 평가셋 130건, 보강 50건, 2026-09-29
     question-threshold: ${SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD:0.88}
+  score-recording:
+    # 관리자 운영 상태의 검색 점수 분포용으로 검색마다 1위 점수를 남긴다(TELME-123)
+    enabled: ${SEARCH_SCORE_RECORDING_ENABLED:true}
+    # 이 기간이 지난 기록은 매일 새벽에 지운다. 분포 화면은 최근 기간만 본다
+    retention: ${SEARCH_SCORE_RECORDING_RETENTION:90d}
 
 member:
   guest:
