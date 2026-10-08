@@ -271,6 +271,22 @@ class PgvectorFaqSearchServiceTest {
     }
 
     @Test
+    @DisplayName("후보 검색은 임계값 미달 결과도 순위를 유지해 반환한다")
+    void 후보_검색은_임계값을_적용하지_않는다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 2, MODEL)).thenReturn(List.of(
+                matchOf(1L, "PLAN", "첫 후보", 0.4),
+                matchOf(2L, "PLAN", "임계값 미달 후보", 0.6)));
+
+        List<FaqSearchResponse> result = service.searchCandidates(new FaqSearchRequest("질문", 2));
+
+        assertThat(result).extracting(FaqSearchResponse::faqId).containsExactly(1L, 2L);
+        assertThat(result).extracting(FaqSearchResponse::searchRank).containsExactly(1, 2);
+        assertThat(result.get(1).score()).isEqualTo(0.4);
+        verify(repository, never()).findNearestByQuestionVector(any(), anyInt(), anyString());
+    }
+
+    @Test
     @DisplayName("후보가 영벡터여서 score가 NaN이면 결과에서 제외한다")
     void score가_NaN이면_결과에서_제외한다() {
         when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);

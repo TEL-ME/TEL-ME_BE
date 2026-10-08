@@ -80,6 +80,18 @@ public class PgvectorFaqSearchService implements FaqSearchService {
         return new Searched(toResponses(candidates, searchProperties.similarityThreshold(),
                 embeddingTextProperties.variant()), topScore(candidates));
     }
+    
+    @Override
+    public List<FaqSearchResponse> searchCandidates(FaqSearchRequest request) {
+        float[] queryVector = embeddingClient.embed(request.query());
+        int topK = request.topK();
+        return switch (vectorOf(request)) {
+        case QA -> searchQaCandidates(queryVector, topK);
+        case QUESTION -> searchQuestionCandidates(queryVector, topK);
+        case DUAL -> DualVectorMerger.merge(
+                searchQuestionCandidates(queryVector, topK), searchQaCandidates(queryVector, topK), topK);
+        };
+    }
 
     // repository가 거리순으로 정렬해 반환하므로 첫 후보가 1위다. 후보가 없거나 점수가 숫자가 아니면 null
     private Double topScore(List<FaqNearestMatch> candidates) {
@@ -89,7 +101,7 @@ public class PgvectorFaqSearchService implements FaqSearchService {
         double score = 1 - candidates.get(0).distance();
         return Double.isFinite(score) ? score : null;
     }
-    
+
     // 요청이 벡터를 고르지 않으면(채팅·상담 경로) 설정을 따른다. 측정용 테스트 API만 벡터를 고른다
     private FaqSearchVector vectorOf(FaqSearchRequest request) {
         if (request.vector() != null) {
@@ -103,6 +115,17 @@ public class PgvectorFaqSearchService implements FaqSearchService {
                 repository.findNearestByQuestionVector(queryVector, topK, embeddingProperties.model());
         return toResponses(candidates, searchProperties.dualVector().questionThreshold(),
                 FaqEmbeddingTextVariant.QUESTION_ONLY);
+    }
+
+    private List<FaqSearchResponse> searchQaCandidates(float[] queryVector, int topK) {
+        List<FaqNearestMatch> candidates = repository.findNearest(queryVector, topK, embeddingProperties.model());
+        return toResponses(candidates, Double.NEGATIVE_INFINITY, embeddingTextProperties.variant());
+    }
+
+    private List<FaqSearchResponse> searchQuestionCandidates(float[] queryVector, int topK) {
+        List<FaqNearestMatch> candidates =
+                repository.findNearestByQuestionVector(queryVector, topK, embeddingProperties.model());
+        return toResponses(candidates, Double.NEGATIVE_INFINITY, FaqEmbeddingTextVariant.QUESTION_ONLY);
     }
 
     // repository가 이미 거리순으로 정렬해 반환하므로, 임계값 미달이 한 번 나오면 그 지점에서 끊는다
