@@ -93,14 +93,13 @@ class AdminIntentDistributionQueryServiceTest {
 
     @Test
     void 기간_생략은_전체_조회다() {
-        Instant max = Instant.parse("9999-12-31T23:59:59Z");
-        when(repository.countDistribution(Instant.EPOCH, max)).thenReturn(List.of());
+        when(repository.countDistributionAll()).thenReturn(List.of());
 
         var result = service.getDistribution(new AdminIntentDistributionSearchRequest(null, null));
 
-        assertThat(result.from()).isEqualTo(Instant.EPOCH);
-        assertThat(result.to()).isEqualTo(max);
-        verify(repository).countDistribution(Instant.EPOCH, max);
+        assertThat(result.from()).isNull();
+        assertThat(result.to()).isNull();
+        verify(repository).countDistributionAll();
     }
 
     @Test
@@ -109,9 +108,11 @@ class AdminIntentDistributionQueryServiceTest {
         when(repository.countDistribution(FROM, max)).thenReturn(List.of());
         when(repository.countDistribution(Instant.EPOCH, TO)).thenReturn(List.of());
 
-        service.getDistribution(new AdminIntentDistributionSearchRequest(FROM, null));
-        service.getDistribution(new AdminIntentDistributionSearchRequest(null, TO));
+        var result1 = service.getDistribution(new AdminIntentDistributionSearchRequest(FROM, null));
+        var result2 = service.getDistribution(new AdminIntentDistributionSearchRequest(null, TO));
 
+        assertThat(result1.to()).isNull();
+        assertThat(result2.from()).isNull();
         verify(repository).countDistribution(FROM, max);
         verify(repository).countDistribution(Instant.EPOCH, TO);
     }

@@ -20,4 +20,11 @@ public interface QueryRoutingRepository extends JpaRepository<QueryRouting, Long
             group by r.intent, r.method
             """)
     List<RoutingCount> countDistribution(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("""
+            select new com.telme.intent.repository.RoutingCount(r.intent, r.method, count(r))
+            from QueryRouting r
+            group by r.intent, r.method
+            """)
+    List<RoutingCount> countDistributionAll();
 }

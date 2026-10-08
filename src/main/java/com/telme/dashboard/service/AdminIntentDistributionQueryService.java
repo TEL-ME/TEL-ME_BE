@@ -7,6 +7,7 @@ import com.telme.dashboard.exception.DashboardErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.repository.QueryRoutingRepository;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +24,15 @@ public class AdminIntentDistributionQueryService {
         if (request.periodReversed()) {
             throw new GeneralException(DashboardErrorCode.INVALID_PERIOD);
         }
-        Instant from = request.fromOrMin();
-        Instant to = request.toOrMax();
+        
+        List<com.telme.intent.repository.RoutingCount> counts;
+        if (request.from() == null && request.to() == null) {
+            counts = queryRoutingRepository.countDistributionAll();
+        } else {
+            counts = queryRoutingRepository.countDistribution(request.fromOrMin(), request.toOrMax());
+        }
+        
         // 한 번의 그룹 집계 결과로 전체·의도·방식을 계산해 분모와 분자의 조회 시점을 맞춘다.
-        return converter.toResponse(from, to, queryRoutingRepository.countDistribution(from, to));
+        return converter.toResponse(request.from(), request.to(), counts);
     }
 }

@@ -67,4 +67,10 @@ public interface AdminUnansweredRepository extends JpaRepository<ChatMessage, Lo
     @Query(COUNT + UNANSWERED_WHERE + " and m.status in :statuses")
     long countUnansweredByStatuses(@Param("statuses") Collection<ChatMessage.Status> statuses,
             @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(COUNT + " where " + UNANSWERED)
+    long countUnansweredAll();
+
+    @Query(COUNT + " where " + UNANSWERED + " and m.status in :statuses")
+    long countUnansweredByStatusesAll(@Param("statuses") Collection<ChatMessage.Status> statuses);
 }
