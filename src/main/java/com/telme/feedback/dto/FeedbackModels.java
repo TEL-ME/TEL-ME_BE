@@ -16,7 +16,8 @@ public final class FeedbackModels {
     public enum Reason {
         WRONG_INFO,
         NOT_RELATED,
-        HARD_TO_READ
+        HARD_TO_READ,
+        OTHER
     }
 
     public record Actor(Long userId, UUID guestId) {

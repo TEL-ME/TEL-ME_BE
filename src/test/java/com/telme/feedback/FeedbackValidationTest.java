@@ -1,16 +1,17 @@
 package com.telme.feedback;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
 
 import com.telme.feedback.dto.FeedbackModels.Actor;
 import com.telme.feedback.dto.FeedbackModels.Input;
 import com.telme.feedback.dto.FeedbackModels.Rating;
 import com.telme.feedback.dto.FeedbackModels.Reason;
+import com.telme.feedback.entity.MessageFeedback;
+import java.util.Arrays;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
 class FeedbackValidationTest {
     @Test
@@ -32,5 +33,11 @@ class FeedbackValidationTest {
         assertThrows(IllegalArgumentException.class, () -> new Input(Rating.DISLIKE, null, null));
         assertThrows(IllegalArgumentException.class, () -> new Input(Rating.LIKE, null, "좋아요"));
         assertNull(new Input(Rating.LIKE, null, "  ").comment());
+    }
+    
+    @Test
+    void reasonEnumsStayInSync() {
+        assertThat(Arrays.stream(MessageFeedback.ReasonCode.values()).map(Enum::name))
+                .containsExactlyElementsOf(Arrays.stream(Reason.values()).map(Enum::name).toList());
     }
 }

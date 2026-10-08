@@ -33,7 +33,7 @@ public record ChatMessageHistoryItemResponse(
     public record MyFeedback(
             String rating,
             @Schema(description = "DISLIKE 사유 코드: WRONG_INFO(정보 오류), NOT_RELATED(관련 없음), "
-                    + "HARD_TO_READ(읽기 어려움). LIKE이면 null") String reason,
+                    + "HARD_TO_READ(읽기 어려움), OTHER(기타). LIKE이면 null") String reason,
             String comment) {
     }
 }

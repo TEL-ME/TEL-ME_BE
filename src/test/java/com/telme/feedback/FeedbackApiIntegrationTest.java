@@ -168,6 +168,17 @@ class FeedbackApiIntegrationTest {
                 .andExpect(jsonPath("$.result").doesNotExist());
         assertFeedbackRows(answer, 0);
     }
+    
+    @Test
+    void dislikeWithOtherReasonKeepsComment() throws Exception {
+        UUID guestId = UUID.randomUUID();
+        long answer = message(chatSession(null, guestId), "ASSISTANT", "ANSWER", "COMPLETED");
+
+        save(guestSession(guestId), answer, "{\"rating\":\"DISLIKE\",\"reason\":\"OTHER\",\"comment\":\"답변이 너무 늦어요\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.reason").value("OTHER"))
+                .andExpect(jsonPath("$.result.comment").value("답변이 너무 늦어요"));
+    }
 
     @Test
     void guestRatesOwnStoreRecommendation() throws Exception {
