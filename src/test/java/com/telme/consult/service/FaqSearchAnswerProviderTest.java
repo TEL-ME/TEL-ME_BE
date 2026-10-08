@@ -22,7 +22,6 @@ import com.telme.faq.service.FaqSearchService;
 import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmClient;
-import com.telme.rag.converter.AnswerContextConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.Test;

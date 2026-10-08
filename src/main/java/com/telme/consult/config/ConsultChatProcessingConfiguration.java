@@ -14,8 +14,6 @@ import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.repository.AskedQuestions;
 
 import org.springframework.beans.factory.ObjectProvider;
-
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
