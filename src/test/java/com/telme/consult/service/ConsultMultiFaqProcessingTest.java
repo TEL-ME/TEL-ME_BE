@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatOutputMessage;
 import com.telme.chat.service.ChatProcessingCommand;
@@ -115,6 +116,31 @@ class ConsultMultiFaqProcessingTest {
                 .containsExactly("요금제 종류", "로밍 신청 방법");
         assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::searchQuery)
                 .containsExactly("요금제 종류", "로밍 신청 방법");
+    }
+
+    @Test
+    void eachQuestionKeepsPreviousConversationContext() {
+        prepareEvents();
+        ChatContext context = new ChatContext(SESSION_ID, 9L, null, List.of(),
+                "요금제와 로밍 신청 방법 알려줘", 0);
+        List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
+        var processor = new ConsultChatProcessingService(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법")))
+                        .withContext(context, "요금제와 로밍 신청 방법 알려줘"),
+                input -> {
+                    inputs.add(input);
+                    return generated("답변", ChatMessage.AnswerBasis.GROUNDED, List.of());
+                }, persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(command);
+
+        assertThat(inputs).hasSize(2);
+        assertThat(inputs).allSatisfy(input -> {
+            assertThat(input.context()).isSameAs(context);
+            assertThat(input.streamTokens()).isFalse();
+            assertThat(input.resolvedUserQuery()).isEqualTo(input.originalUserQuery());
+        });
     }
 
     @Test
@@ -226,6 +252,7 @@ class ConsultMultiFaqProcessingTest {
                         : generated("서류 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimDocs),
                                 List.of("유심 새로 받는 데 얼마 들어요", "평일이랑 토요일 운영시간이 어떻게 다른가요?")),
                 persistence, new ConfirmedConditionConverter(), events, trace,
+                com.telme.consult.repository.AskedQuestions.none(),
                 ConsultChatProcessingService.NoAnswerSuggestions.none(), suggested);
 
         processor.request(command);

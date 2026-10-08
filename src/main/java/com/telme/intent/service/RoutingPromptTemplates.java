@@ -35,6 +35,9 @@ public final class RoutingPromptTemplates {
 
         [이전 상담 요약·이전 대화가 함께 주어진 경우]
         - 분류와 분해 대상은 언제나 [현재 질문]이다. 이전 대화를 다시 분류하지 마십시오.
+        - 이전 고객 발언은 대상과 조건을 알려주는 자료다. 그 발언에서 했던 답변 요구를 subQueries에 추가하지 않는다.
+        - 이전 발언이 '로밍 요금제는 어떻게 골라요?'이고 현재 질문이 '그럼 신청 방법은?'이면
+          queryText는 '로밍 요금제 신청 방법' 한 건이다. '로밍 요금제 선택 방법'을 다시 넣지 않는다.
         - 이전 대화는 "거기", "그럼 그건", "아까 그 요금제"처럼 현재 질문만으로 알 수 없는 표현을 푸는 데만 사용한다.
         - 이전 대화에서 확인된 지역·업무 코드는 현재 질문에 필요하면 extractedConditions에 채운다.
         - refinedQuery에는 지시어를 실제 대상으로 바꾼 문장을 담는다. ("거기 영업시간" -> "강남역 매장 영업시간")
@@ -132,6 +135,7 @@ public final class RoutingPromptTemplates {
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
           "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+        - 그 밖의 키는 "되묻는 중인 조건"에 적힌 이름을 그대로 쓰고, 값은 고객 답변의 표현을 그대로 담는다.
 
         [상태 판정 기준]
         - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
@@ -163,11 +167,16 @@ public final class RoutingPromptTemplates {
         고객 답변: "5G 요금제는 얼마예요?"
         응답: {"responseType":"NEW_QUESTION","conditions":[]}
 
+        되묻는 중인 조건: unpaid_bill
+        고객 답변: "없어요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"unpaid_bill","status":"FILLED","value":"없어요"}]}
+
         [응답 형식 - 반드시 아래 JSON만 출력]
         {
           "responseType": "CONDITION_RESPONSE" | "DEFERRED" | "NEW_QUESTION",
           "conditions": [
-            { "key": "location" | "serviceType", "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
+            { "key": "location" | "serviceType" | 되묻는 중인 조건 이름,
+              "status": "FILLED" | "DECLINED", "value": "값 또는 null" }
           ]
         }
         """;
@@ -179,16 +188,22 @@ public final class RoutingPromptTemplates {
 
     // Context가 없으면 질문만 넘겨 기존 단일 질문 프롬프트와 같은 형태를 유지한다
     public static String routingUserPrompt(ChatContext context, String question) {
-        if (context == null || (context.summary() == null && context.history().isEmpty())) {
+        if (context == null || (context.summarySources().isEmpty() && context.history().isEmpty())) {
             return question;
         }
 
         StringBuilder prompt = new StringBuilder();
-        if (context.summary() != null) {
-            prompt.append("[이전 상담 요약]\n").append(context.summary()).append("\n\n");
+        List<String> summary = context.summarySources().stream()
+                .filter(message -> message.role() == ChatMessage.Role.USER)
+                .map(RoutingPromptTemplates::historyLine).filter(Objects::nonNull).toList();
+        if (!summary.isEmpty()) {
+            prompt.append("[검증된 이전 고객 발언]\n");
+            summary.forEach(line -> prompt.append(line).append("\n"));
+            prompt.append("\n");
         }
 
         List<String> lines = context.history().stream()
+            .filter(message -> message.role() == ChatMessage.Role.USER)
             .map(RoutingPromptTemplates::historyLine)
             .filter(Objects::nonNull)
             .toList();

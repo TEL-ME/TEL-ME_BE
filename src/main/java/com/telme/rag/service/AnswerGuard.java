@@ -56,6 +56,11 @@ public class AnswerGuard {
     );
 
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
+    // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
+    private static final Map<String, Set<String>> ATTRIBUTE_SYNONYMS = Map.of(
+            "위약금", Set.of("위약금", "할인 반환금", "반환금")
+    );
+
     private static final Set<String> POLICY_ATTRIBUTES = Set.of(
             "부가세", "현금영수증", "택배비", "카드", "현금", "문자", "위약금",
             "할부", "재심사", "추가 서류", "관련 절차"
@@ -145,14 +150,22 @@ public class AnswerGuard {
      * 문장 제거가 먼저 실행되어야 남은 답변의 수치만 검증할 수 있으므로 순서를 이곳에서 관리한다.
      */
     public String applyEvidencePolicy(String answer, String context, String userQuery) {
+        return applyEvidencePolicy(answer, context, userQuery, "");
+    }
+
+    /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
+    public String applyEvidencePolicy(
+            String answer, String context, String userQuery, String confirmedValues) {
         String filtered = trimAfterNoEvidence(answer);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
-        verifyAmounts(filtered, context, userQuery);
-        verifyMeasures(filtered, context, userQuery);
+        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
+                ? context : context + "\n" + confirmedValues;
+        verifyAmounts(filtered, numericEvidence, userQuery);
+        verifyMeasures(filtered, numericEvidence, userQuery);
         return filtered;
     }
 
@@ -216,11 +229,12 @@ public class AnswerGuard {
         if (context == null) {
             return false;
         }
+        Set<String> evidenceWords = ATTRIBUTE_SYNONYMS.getOrDefault(attribute, Set.of(attribute));
 
         ClaimPolarity answerPolarity = attributePolarity(answerSentence, attribute);
         boolean mentioned = false;
         for (String evidenceSentence : SENTENCE.split(context)) {
-            if (!evidenceSentence.contains(attribute)) {
+            if (evidenceWords.stream().noneMatch(evidenceSentence::contains)) {
                 continue;
             }
             mentioned = true;

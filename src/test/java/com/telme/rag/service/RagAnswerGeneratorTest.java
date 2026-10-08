@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.entity.ChatMessage.AnswerBasis;
+import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.global.common.exception.GeneralException;
@@ -142,6 +143,28 @@ class RagAnswerGeneratorTest {
         assertThat(sent.userPrompt()).contains("[1] Q: 질문1").contains("강남").contains("요금제 바꾸고 싶어요");
         assertThat(sent.contextCount()).isEqualTo(1);
         assertThat(sent.promptVersion()).isEqualTo(AnswerPromptTemplates.PROMPT_VERSION);
+    }
+
+    @Test
+    @DisplayName("멀티턴 비교 질문에는 비교 규칙과 대화 문맥 규칙을 함께 적용한다")
+    void 멀티턴_비교_질문의_두_규칙을_함께_적용한다() {
+        StubClient client = new StubClient(List.of("5G는 4종이고 LTE는 3종입니다."));
+        ChatContext context = new ChatContext(7L, 9L, null, List.of(),
+                "5G와 LTE 요금제 종류를 비교해줘", 0);
+        AnswerRequest request = AnswerRequest.builder()
+                .executionId(42L)
+                .userQuery("5G와 LTE 요금제 종류를 비교해줘")
+                .chatContext(context)
+                .searchResults(List.of(faq(117L, "5G는 4종이고 LTE는 3종입니다.")))
+                .build();
+
+        generator(client).generate(request, handler);
+
+        assertThat(client.received.systemPrompt())
+                .contains("[비교 답변 추가 규칙]", "[대화 문맥 규칙]");
+        assertThat(client.received.userPrompt()).contains("<conversation_data>");
+        assertThat(client.received.promptVersion()).isEqualTo(
+                AnswerPromptTemplates.promptVersionFor(request.userQuery()));
     }
 
     @Test

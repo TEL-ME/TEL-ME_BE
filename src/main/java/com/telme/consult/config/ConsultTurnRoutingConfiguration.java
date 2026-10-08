@@ -1,6 +1,7 @@
 package com.telme.consult.config;
 
 import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.BasicConversationAnalysisProvider;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
@@ -47,8 +48,9 @@ public class ConsultTurnRoutingConfiguration {
             ContextProvider contexts,
             AnalysisProvider analysis,
             ConsultTurnPreparationService preparation,
-            FollowupConditionConverter followupConverter) {
+            FollowupConditionConverter followupConverter,
+            ChatQuestionResolver resolver) {
         return new ConsultTurnAnalysisAdapter(
-                contexts, analysis, preparation, followupConverter);
+                contexts, analysis, preparation, followupConverter, resolver);
     }
 }

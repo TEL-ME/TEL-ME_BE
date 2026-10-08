@@ -1,6 +1,5 @@
 package com.telme.consult.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.repository.SuggestedQuestionFaqFinder;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
@@ -10,7 +9,11 @@ import com.telme.consult.service.FaqCandidateNoAnswerSuggestions;
 import com.telme.consult.service.ComparisonEvidenceResolver;
 import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.consult.service.ChatStoreAnswerProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.service.ConditionExtractor;
+import com.telme.consult.service.FaqClarificationPlanner;
 import com.telme.consult.service.FaqSearchAnswerProvider;
+import com.telme.llm.service.LlmClient;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFactory;
@@ -35,11 +38,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-
 /** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
 @Configuration(proxyBeanMethods = false)
 @Conditional(ConsultChatEnabledCondition.class)
-@EnableConfigurationProperties(SuggestedQuestionProperties.class)
+@EnableConfigurationProperties({FaqClarificationProperties.class, SuggestedQuestionProperties.class})
 public class ConsultRagAnswerConfiguration {
     @Bean
     StreamHandlerFactory consultAnswerStreamHandlerFactory(ConsultChatEvents events) {
@@ -136,12 +138,18 @@ public class ConsultRagAnswerConfiguration {
     @Bean
     AnswerProvider consultAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ChatStoreAnswerProvider storeAnswers, ObjectProvider<LlmClient> llmClient,
+            FaqClarificationProperties clarification,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
-            AnswerContextConverter sourceConverter, ChatStoreAnswerProvider storeAnswers,
-            SuggestedQuestions suggestedQuestions) {
+            AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions) {
+        // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
+        LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
+        FaqClarificationPlanner planner = client == null
+                ? null
+                : new FaqClarificationPlanner(new ConditionExtractor(client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
                 new FaqSearchAnswerProvider(searches, answers, trace,
-                        comparisonEvidence, candidateEvidence, sourceConverter, suggestedQuestions),
+                        comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions),
                 storeAnswers::generate);
     }
 }

@@ -45,6 +45,8 @@ public class ConditionExtractor {
             // 같은 조건을 두 번 물으면 안 되고, 중복이 개수 제한을 먼저 채우면 다른 조건이 밀려난다
             toCondition(candidate, sources)
                     .filter(condition -> keys.add(condition.key()))
+                    .filter(condition -> notSaidByUser(userQuery, condition))
+                    .filter(condition -> notAskedAlready(conditions, condition))
                     .ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
@@ -82,6 +84,12 @@ public class ConditionExtractor {
 
     private java.util.Optional<MissingCondition> toCondition(
             LlmConditionPayload.ConditionPayload candidate, List<FaqSearchResponse> sources) {
+        if (candidate.key() == null
+                || candidate.question() == null
+                || candidate.question().isBlank()) {
+            log.info("[조건 뽑기] 이름이나 질문이 없는 조건을 건너뜁니다.");
+            return java.util.Optional.empty();
+        }
         ConditionGrounding.Grounded grounded =
                 ConditionGrounding.groundedEvidence(candidate.evidence(), sources);
         if (grounded == null) {
@@ -92,11 +100,28 @@ public class ConditionExtractor {
             // 선택지는 근거로 인정된 FAQ 안에서만 찾는다. 다른 FAQ에 있는 값은 이 질문의 선택지가 아니다
             return java.util.Optional.of(new MissingCondition(
                     candidate.key(), candidate.question(),
-                    ConditionGrounding.groundedOptions(candidate.options(), grounded.source()),
+                    ConditionGrounding.groundedOptions(candidate.options(), candidate.question(), grounded.source()),
                     grounded.sentence()));
         } catch (IllegalArgumentException exception) {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();
         }
+    }
+
+    private boolean notAskedAlready(List<MissingCondition> kept, MissingCondition condition) {
+        boolean duplicate = kept.stream()
+                .anyMatch(each -> ConditionGrounding.asksTheSame(each.question(), condition.question()));
+        if (duplicate) {
+            log.info("[조건 뽑기] 같은 내용을 다시 묻는 조건을 버립니다. key={}", condition.key());
+        }
+        return !duplicate;
+    }
+
+    private boolean notSaidByUser(String userQuery, MissingCondition condition) {
+        boolean said = ConditionGrounding.alreadySaid(userQuery, condition.question());
+        if (said) {
+            log.info("[조건 뽑기] 고객이 이미 말한 조건을 버립니다. key={}", condition.key());
+        }
+        return !said;
     }
 }

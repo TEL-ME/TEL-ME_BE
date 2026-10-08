@@ -1,0 +1,56 @@
+{
+  "BASELINE_TEXT": {
+    "cases": 60,
+    "accepted": 60,
+    "allLiteralAnchorsPreserved": 19,
+    "medianCaseMillis": 447.5,
+    "medianEstimatedMemoryTokens": 78.5,
+    "modelCalls": 72,
+    "categories": {
+      "CORRECTION": 10,
+      "NEGATION_STATUS": 10,
+      "SUBJECT_SCOPE": 10,
+      "OPEN_QUESTIONS": 10,
+      "POLICY_CONTAMINATION": 10,
+      "TOPIC_CHANGE": 10
+    }
+  },
+  "IMPROVED_TEXT": {
+    "cases": 60,
+    "accepted": 60,
+    "allLiteralAnchorsPreserved": 28,
+    "medianCaseMillis": 599.5,
+    "medianEstimatedMemoryTokens": 99.0,
+    "modelCalls": 72,
+    "categories": {
+      "CORRECTION": 10,
+      "NEGATION_STATUS": 10,
+      "SUBJECT_SCOPE": 10,
+      "OPEN_QUESTIONS": 10,
+      "POLICY_CONTAMINATION": 10,
+      "TOPIC_CHANGE": 10
+    }
+  },
+  "GROUNDED_MEMORY": {
+    "cases": 60,
+    "accepted": 60,
+    "allLiteralAnchorsPreserved": 60,
+    "medianCaseMillis": 173.0,
+    "medianEstimatedMemoryTokens": 96.0,
+    "modelCalls": 72,
+    "categories": {
+      "CORRECTION": 10,
+      "NEGATION_STATUS": 10,
+      "SUBJECT_SCOPE": 10,
+      "OPEN_QUESTIONS": 10,
+      "POLICY_CONTAMINATION": 10,
+      "TOPIC_CHANGE": 10
+    }
+  },
+  "notes": [
+    "문구 보존 집계이며 의미 정확도나 환각률이 아님",
+    "60건은 6개 대화 유형의 변형 및 반복 입력이며 독립 사용자 표본이 아님",
+    "분할 양쪽에 같은 유형이 있으므로 독립 블라인드 검증 결과가 아님"
+  ],
+  "distinctInputDialogues": 24
+}

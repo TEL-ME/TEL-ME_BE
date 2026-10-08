@@ -116,6 +116,17 @@ public class QueryRoutingService {
 
     private IntentRouteResponse route(
             ChatMessage userMessage, ChatContext context, boolean singleConsultOnly) {
+        return route(userMessage, context, singleConsultOnly, null);
+    }
+
+    // 원본 메시지는 그대로 저장하고, 고객 원문을 연결한 문맥 질문으로 분류한다.
+    public IntentRouteResponse routeSingleConsult(
+            ChatMessage userMessage, ChatContext context, String resolvedQuestion) {
+        return route(userMessage, context, true, resolvedQuestion);
+    }
+
+    private IntentRouteResponse route(
+            ChatMessage userMessage, ChatContext context, boolean singleConsultOnly, String resolvedQuestion) {
         if (userMessage == null) {
             throw new IllegalArgumentException("사용자 메시지는 필수입니다.");
         }
@@ -131,7 +142,8 @@ public class QueryRoutingService {
             }
         }
 
-        String question = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+        String question = resolvedQuestion != null ? resolvedQuestion.strip()
+                : userMessage.getContent() != null ? userMessage.getContent().trim() : "";
 
         if (question.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
@@ -147,7 +159,9 @@ public class QueryRoutingService {
             LlmRequest request = LlmRequest.builder()
                 .taskType(TaskType.ROUTING)
                 .systemPrompt(RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT)
-                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context, question))
+                // 복원 출처는 문맥으로 전달하고, 분해 대상에는 현재 발화만 넣는다.
+                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context,
+                        resolvedQuestion != null && context != null ? userMessage.getContent() : question))
                 .format(ResponseFormat.JSON)
                 .temperature(0.1)
                 .maxTokens(500)
@@ -444,7 +458,10 @@ public class QueryRoutingService {
         if (context == null || !CONTEXT_REFERENCE.matcher(question).find()) {
             return question;
         }
-        return question + " " + (context.summary() == null ? "" : context.summary()) + " "
+        return question + " " + context.summarySources().stream()
+                        .filter(item -> item.role() == ChatMessage.Role.USER)
+                        .map(item -> item.content() == null ? "" : item.content())
+                        .collect(Collectors.joining(" ")) + " "
                 + context.history().stream()
                         .filter(item -> item.role() == ChatMessage.Role.USER)
                         .map(item -> item.content() == null ? "" : item.content())
@@ -531,7 +548,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
-        ExtractedConditions extracted = toExtractedConditions(payload);
+        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys());
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -540,7 +557,7 @@ public class QueryRoutingService {
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload);
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys());
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -660,6 +677,9 @@ public class QueryRoutingService {
         }
         Set<String> pending = conditions.stream()
             .filter(condition -> condition.getStatus() == ConsultCondition.Status.PENDING)
+            // 한 번에 하나만 묻는다. 아직 질문하지 않은 다음 조건은 이 답의 대상이 아니다.
+            .filter(condition -> condition.getAskedMessage() != null)
+            .filter(condition -> condition.getAnsweredMessage() == null)
             .map(ConsultCondition::getConditionKey)
             .filter(key -> key != null && !key.isBlank())
             .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -683,7 +703,7 @@ public class QueryRoutingService {
         return filled;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload) {
+    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
@@ -697,8 +717,10 @@ public class QueryRoutingService {
             }
 
             String key = condition.key().trim();
-            if (!KNOWN_CONDITION_KEYS.contains(key)) {
-                log.debug("[후속분석] 정의되지 않은 조건 키를 무시합니다: {}", key);
+            // 되묻는 중인 조건은 상담 모듈이 정한다. 매장 밖 조건도 그 목록에 있으면 받는다
+            if (!pendingKeys.contains(key)
+                    && (!KNOWN_CONDITION_KEYS.contains(key) || askedOnlyOtherConditions(pendingKeys))) {
+                log.debug("[후속분석] 되묻지 않은 조건 키를 무시합니다: {}", key);
                 continue;
             }
 
@@ -718,6 +740,11 @@ public class QueryRoutingService {
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);
+    }
+
+    // "미납 요금이 있으신가요?"의 답이 지역일 수는 없는데 "아니요"가 지역으로 들어갔다
+    private boolean askedOnlyOtherConditions(Set<String> pendingKeys) {
+        return !pendingKeys.isEmpty() && pendingKeys.stream().noneMatch(KNOWN_CONDITION_KEYS::contains);
     }
 
     private record ExtractedConditions(Map<String, String> values, Set<String> declinedKeys) {

@@ -11,6 +11,9 @@ import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.repository.AskedQuestions;
+
+import org.springframework.beans.factory.ObjectProvider;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,9 +39,13 @@ public class ConsultChatProcessingConfiguration {
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
             ExecutionTrace trace,
+            ObjectProvider<AskedQuestions> askedQuestions,
             ObjectProvider<NoAnswerSuggestions> noAnswerSuggestions,
             ObjectProvider<SuggestedQuestions> suggestedQuestions) {
-        return new ConsultChatProcessingService(analyzer, answers, persistence, conditionConverter, events, trace,
+        // 되묻기를 저장하지 않는 조합에서는 되물은 질문도 없다
+        return new ConsultChatProcessingService(
+                analyzer, answers, persistence, conditionConverter, events, trace,
+                askedQuestions.getIfAvailable(AskedQuestions::none),
                 noAnswerSuggestions.getIfAvailable(NoAnswerSuggestions::none),
                 suggestedQuestions.getIfAvailable(SuggestedQuestions::none));
     }

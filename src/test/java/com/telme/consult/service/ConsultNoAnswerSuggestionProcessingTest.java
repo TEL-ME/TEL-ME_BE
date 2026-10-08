@@ -128,7 +128,8 @@ class ConsultNoAnswerSuggestionProcessingTest {
     private ConsultChatProcessingService processor(
             ConsultChatProcessingService.TurnAnalyzer analyzer, ConsultChatProcessingService.AnswerProvider answers) {
         return new ConsultChatProcessingService(analyzer, answers, persistence, new ConfirmedConditionConverter(),
-                events, mock(ExecutionTrace.class), noAnswer);
+                events, mock(ExecutionTrace.class), com.telme.consult.repository.AskedQuestions.none(), noAnswer,
+                RagSearchResultAnswerGenerator.SuggestedQuestions.none());
     }
 
     private static ChatAnswer answer(ChatMessage.AnswerBasis basis) {

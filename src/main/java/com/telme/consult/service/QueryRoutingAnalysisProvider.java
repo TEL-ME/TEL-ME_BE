@@ -59,9 +59,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
         if (!context.candidates().isEmpty()) {
             AnalysisResult followup =
                     Objects.requireNonNull(followups.analyze(context), "followupAnalysis");
-            if (!followup.reroute()) {
-                return followup;
-            }
+            // 새 질문 판정은 호출자에게 돌려 문맥 복원 후 한 번만 재라우팅한다.
+            return followup;
         }
 
         return routeInitial(context);
@@ -76,7 +75,9 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                         .orElseThrow(() -> new IllegalArgumentException("라우팅할 사용자 메시지가 없습니다."));
         IntentRouteResponse result;
         try {
-            result = routing.routeSingleConsult(message, context.routingContext());
+            result = context.message().equals(context.resolvedQuestion())
+                    ? routing.routeSingleConsult(message, context.routingContext())
+                    : routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion());
         } catch (UnsupportedCompoundQuestionException exception) {
             // 나눈 질문으로 버튼을 만들지 못하면 기존 고정 버튼을 쓴다
             List<String> buttons = Objects.requireNonNull(

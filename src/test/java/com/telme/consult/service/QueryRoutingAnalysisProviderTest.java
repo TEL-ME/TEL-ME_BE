@@ -108,7 +108,7 @@ class QueryRoutingAnalysisProviderTest {
     }
 
     @Test
-    void newQuestionWhileWaitingIsRoutedAsInitialQuestion() {
+    void newQuestionWhileWaitingReturnsToCallerBeforeInitialRouting() {
         var context =
                 new Context(
                         3L,
@@ -123,34 +123,13 @@ class QueryRoutingAnalysisProviderTest {
                                         "가까운 매장 알려줘",
                                         "가까운 매장",
                                         "STORE")));
-        var message =
-                ChatMessage.builder()
-                        .messageId(8L)
-                        .session(ChatSession.builder().sessionId(3L).build())
-                        .role(ChatMessage.Role.USER)
-                        .messageType(ChatMessage.MessageType.QUESTION)
-                        .build();
-        var query =
-                new IntentSubQueryResponse(
-                        12L, (short) 1, ConsultRequest.Intent.FAQ, "5G 요금제", Map.of());
         when(followups.analyze(context)).thenReturn(AnalysisResult.rerouteRequest());
-        when(messages.findByIdWithSession(8L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
-                .thenReturn(
-                        new IntentRouteResponse(
-                                6L,
-                                8L,
-                                QueryRouting.Intent.FAQ,
-                                "5G 요금제",
-                                BigDecimal.ONE,
-                                QueryRouting.Method.LLM,
-                                Map.of(),
-                                List.of(query)));
 
         AnalysisResult actual = provider.analyze(context);
 
-        assertThat(actual.initialQuery()).isEqualTo(query);
+        assertThat(actual.reroute()).isTrue();
         verify(followups).analyze(context);
+        verifyNoInteractions(messages, routing);
     }
 
     @Test

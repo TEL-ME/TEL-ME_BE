@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
@@ -32,6 +33,7 @@ import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmClient;
 import com.telme.rag.service.AnswerGenerator;
 
 import org.junit.jupiter.api.Test;
@@ -59,6 +61,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
                     .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
                     .withBean(
                             FollowupAnalysisProvider.class,
                             () -> mock(FollowupAnalysisProvider.class))
@@ -117,6 +120,19 @@ class ConsultChatPipelineConfigurationTest {
                                     .isInstanceOf(
                                             com.telme.consult.service.ChatEmitterConsultEvents.class);
                         });
+    }
+
+    @Test
+    void faqClarificationIsEnabledByDefaultWhenLlmClientExists() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(LlmClient.class, () -> mock(LlmClient.class))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(AnswerProvider.class).clarifies()).isTrue();
+                });
     }
 
     @Test

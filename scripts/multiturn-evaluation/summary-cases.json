@@ -1,0 +1,3925 @@
+{
+  "description": "6종 상담 유형의 조건 변형 60건. 독립적인 실제 사용자 대화 60건으로 해석하지 않는다.",
+  "cases": [
+    {
+      "id": "CORRECTION-01",
+      "category": "CORRECTION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "강남역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 강남역이 아니라 왕십리역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "왕십리역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-01",
+      "category": "NEGATION_STATUS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-01",
+      "category": "SUBJECT_SCOPE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-01",
+      "category": "OPEN_QUESTIONS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-01",
+      "category": "POLICY_CONTAMINATION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-01",
+      "category": "TOPIC_CHANGE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "강남역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-02",
+      "category": "CORRECTION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "잠실역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 잠실역이 아니라 선릉역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "선릉역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-02",
+      "category": "NEGATION_STATUS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-02",
+      "category": "SUBJECT_SCOPE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-02",
+      "category": "OPEN_QUESTIONS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-02",
+      "category": "POLICY_CONTAMINATION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-02",
+      "category": "TOPIC_CHANGE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "잠실역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-03",
+      "category": "CORRECTION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "홍대입구역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 홍대입구역이 아니라 건대입구역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "건대입구역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-03",
+      "category": "NEGATION_STATUS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-03",
+      "category": "SUBJECT_SCOPE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-03",
+      "category": "OPEN_QUESTIONS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-03",
+      "category": "POLICY_CONTAMINATION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-03",
+      "category": "TOPIC_CHANGE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "홍대입구역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-04",
+      "category": "CORRECTION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "왕십리역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 왕십리역이 아니라 신촌역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "신촌역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-04",
+      "category": "NEGATION_STATUS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-04",
+      "category": "SUBJECT_SCOPE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-04",
+      "category": "OPEN_QUESTIONS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-04",
+      "category": "POLICY_CONTAMINATION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-04",
+      "category": "TOPIC_CHANGE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "왕십리역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-05",
+      "category": "CORRECTION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "선릉역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 선릉역이 아니라 노원역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "노원역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-05",
+      "category": "NEGATION_STATUS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-05",
+      "category": "SUBJECT_SCOPE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-05",
+      "category": "OPEN_QUESTIONS",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-05",
+      "category": "POLICY_CONTAMINATION",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-05",
+      "category": "TOPIC_CHANGE",
+      "split": "development",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "선릉역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-06",
+      "category": "CORRECTION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "건대입구역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 건대입구역이 아니라 수원역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "수원역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-06",
+      "category": "NEGATION_STATUS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-06",
+      "category": "SUBJECT_SCOPE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-06",
+      "category": "OPEN_QUESTIONS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-06",
+      "category": "POLICY_CONTAMINATION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-06",
+      "category": "TOPIC_CHANGE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "건대입구역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-07",
+      "category": "CORRECTION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "신촌역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 신촌역이 아니라 부평역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "부평역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-07",
+      "category": "NEGATION_STATUS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-07",
+      "category": "SUBJECT_SCOPE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-07",
+      "category": "OPEN_QUESTIONS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-07",
+      "category": "POLICY_CONTAMINATION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-07",
+      "category": "TOPIC_CHANGE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "신촌역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-08",
+      "category": "CORRECTION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "노원역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 노원역이 아니라 강남역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "강남역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-08",
+      "category": "NEGATION_STATUS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-08",
+      "category": "SUBJECT_SCOPE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-08",
+      "category": "OPEN_QUESTIONS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-08",
+      "category": "POLICY_CONTAMINATION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-08",
+      "category": "TOPIC_CHANGE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "노원역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-09",
+      "category": "CORRECTION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "수원역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 수원역이 아니라 잠실역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "잠실역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-09",
+      "category": "NEGATION_STATUS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-09",
+      "category": "SUBJECT_SCOPE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-09",
+      "category": "OPEN_QUESTIONS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-09",
+      "category": "POLICY_CONTAMINATION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-09",
+      "category": "TOPIC_CHANGE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "수원역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "CORRECTION-10",
+      "category": "CORRECTION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부평역 인근 매장에서 유심 재발급을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "방문 지역을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "지역은 부평역이 아니라 홍대입구역으로 정정할게요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "정정한 지역을 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "홍대입구역",
+        "유심"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "NEGATION_STATUS-10",
+      "category": "NEGATION_STATUS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부모님 명의 휴대폰의 명의변경을 알아보고 있어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의변경 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "명의자는 부모님이 아니라 저예요. 명의변경은 아직 하지 않았어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "명의자와 미완료 상태를 확인했습니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "저",
+        "아직",
+        "명의변경"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    },
+    {
+      "id": "SUBJECT_SCOPE-10",
+      "category": "SUBJECT_SCOPE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 5G 요금제이고 부모님 휴대폰은 LTE 요금제예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "각각 다른 명의와 요금제입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "제 휴대폰은 LTE로 변경하려고 해요. 부모님 휴대폰은 그대로 둘 거예요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "변경 예정인 대상은 고객님 휴대폰입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "부모님",
+        "LTE",
+        "변경하려고"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "OPEN_QUESTIONS-10",
+      "category": "OPEN_QUESTIONS",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 비용과 해외 로밍 신청 방법을 각각 알려주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 7,700원입니다. 로밍 신청 방법은 아직 확인하지 못했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "로밍 신청 방법은 아직 답을 못 받았어요. 그 부분을 계속 알아보고 싶어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "로밍 신청 방법이 미해결 상태입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "아직",
+        "신청"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "POLICY_CONTAMINATION-10",
+      "category": "POLICY_CONTAMINATION",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "유심 재발급 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "유심 재발급 비용은 99,999원이고 100일 걸립니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "그 비용은 제가 말한 사실이 아니고 상담사가 안내한 내용이에요. 실제 정책을 확인해주세요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "이전 안내는 검증된 정책이 아닙니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        1,
+        5
+      ],
+      "requiredAnchors": [
+        "유심",
+        "상담사",
+        "확인"
+      ],
+      "obsoleteMessageIds": []
+    },
+    {
+      "id": "TOPIC_CHANGE-10",
+      "category": "TOPIC_CHANGE",
+      "split": "validation",
+      "messages": [
+        {
+          "messageId": 1,
+          "sequenceNo": 1,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "부평역 인근 매장 방문을 알아봤어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 2,
+          "sequenceNo": 2,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "매장 방문 상담입니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 3,
+          "sequenceNo": 3,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "고객센터에 전화한 적은 없어요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 4,
+          "sequenceNo": 4,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "말씀하신 내용을 확인했습니다.",
+          "storeResults": null
+        },
+        {
+          "messageId": 5,
+          "sequenceNo": 5,
+          "role": "USER",
+          "messageType": "QUESTION",
+          "content": "매장 상담은 끝났어요. 이제 해외 로밍 데이터 차단 방법이 궁금해요.",
+          "storeResults": null
+        },
+        {
+          "messageId": 6,
+          "sequenceNo": 6,
+          "role": "ASSISTANT",
+          "messageType": "ANSWER",
+          "content": "새 주제는 해외 로밍 데이터 차단입니다.",
+          "storeResults": null
+        }
+      ],
+      "requiredMessageIds": [
+        5
+      ],
+      "requiredAnchors": [
+        "로밍",
+        "차단",
+        "끝났"
+      ],
+      "obsoleteMessageIds": [
+        1
+      ]
+    }
+  ]
+}

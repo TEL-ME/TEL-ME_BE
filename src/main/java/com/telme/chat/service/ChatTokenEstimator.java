@@ -14,13 +14,13 @@ public class ChatTokenEstimator {
                 + estimateText(message.storeResults());
     }
 
-    int estimatePromptPart(String value) {
+    public int estimatePromptPart(String value) {
         return value == null || value.isBlank()
                 ? 0
                 : MESSAGE_OVERHEAD_TOKENS + estimateText(value);
     }
 
-    int estimateText(String value) {
+    public int estimateText(String value) {
         if (value == null || value.isBlank()) {
             return 0;
         }
