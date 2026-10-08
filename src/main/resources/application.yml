@@ -161,3 +161,6 @@ telme:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
       # 기본은 끈다. 실제 채팅 경로 확인 결과는 문서 7.2절
       enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:false}
+      # 매장 방문이 필요한 답변 뒤 매장 찾기 버튼(문서 10절). 위 추천 질문이 켜져 있을 때만 동작한다.
+      # [현재 위치 사용]이 GPS 검색으로 이어지는지 확인하기 전까지 끈다
+      store-chip-enabled: ${CONSULT_SUGGESTED_QUESTIONS_STORE_CHIP_ENABLED:false}

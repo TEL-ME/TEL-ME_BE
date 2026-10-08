@@ -894,8 +894,9 @@ class QueryRoutingServiceTest {
             IntentRouteResponse result = service.routeSingleConsult(
                     msg(original), context(original, "유심 재발급 매장 알려줘"));
 
-            assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
-            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+            // 이전 대화의 유심 업무는 버리고, 현재 질문의 번호이동으로 채운다
+            assertThat(result.extractedConditions()).containsEntry("serviceType", "PORT_IN");
+            assertThat(result.subQueries().getFirst().conditions()).containsEntry("serviceType", "PORT_IN");
         }
 
         @Test
@@ -1141,6 +1142,113 @@ class QueryRoutingServiceTest {
 
             assertThat(r.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
             assertThat(r.subQueries()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("매장 찾기 조건 보완")
+    class StoreConditions {
+
+        private String store(String extracted, String subConditions) {
+            return """
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"매장 찾기",
+                 "extractedConditions":%s,
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"매장 찾기","conditions":%s}]}
+                """.formatted(extracted, subConditions);
+        }
+
+        // LLM이 유심 외 업무를 비워 보내는 경우가 있어 질문 문장의 업무 표현으로 채운다
+        @ParameterizedTest
+        @CsvSource({
+            "번호이동 가능한 매장 찾아줘, PORT_IN",
+            "명의변경 가능한 매장 찾아줘, NAME_CHANGE",
+            "신규 개통 가능한 매장 찾아줘, NEW_LINE",
+            "유심 재발급 가능한 매장 찾아줘, USIM_REISSUE"
+        })
+        void fillsMissingServiceTypeFromQuestion(String question, String serviceType) {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", serviceType);
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", serviceType);
+        }
+
+        @Test
+        void fillsServiceTypeWhenLlmLeavesSubQueriesEmpty() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"번호이동 매장","extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("번호이동 가능한 매장 찾아줘"));
+
+            assertThat(r.subQueries()).hasSize(1);
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        @Test
+        void keepsServiceTypeChosenByLlm() {
+            given(llmClient.generate(any())).willReturn(
+                    store("{\"serviceType\":\"PORT_IN\"}", "{\"serviceType\":\"PORT_IN\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("번호이동 가능한 매장 찾아줘"), null);
+
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        // 업무 표현이 여럿이면 LLM이 그중 하나를 줘도 부정된 업무일 수 있어 버린다
+        @ParameterizedTest
+        @ValueSource(strings = {"번호이동 말고 신규 개통 가능한 매장 찾아줘", "명의변경하고 번호이동 되는 매장 찾아줘"})
+        void dropsLlmServiceTypeWhenSeveralServiceWords(String question) {
+            given(llmClient.generate(any())).willReturn(
+                    store("{\"serviceType\":\"PORT_IN\"}", "{\"serviceType\":\"PORT_IN\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
+
+            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
+        // 업무 표현이 여럿이면 어느 쪽인지 알 수 없어 임의로 고르지 않는다
+        @ParameterizedTest
+        @ValueSource(strings = {"번호이동 말고 신규 개통 가능한 매장 찾아줘", "명의변경하고 번호이동 되는 매장 찾아줘"})
+        void doesNotFillWhenSeveralServiceWords(String question) {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
+
+            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
+        @Test
+        void doesNotFillWithoutServiceWords() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("가까운 매장 찾아줘"), null);
+
+            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
+        // FAQ 질문의 업무 표현은 매장 조건이 아니고, BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있다
+        @Test
+        void doesNotFillForFaqOrBoth() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"번호이동 구비 서류","extractedConditions":{},
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 구비 서류","conditions":{}}]}
+                """);
+            IntentRouteResponse faq = service.route(msg("번호이동 하려면 뭐 필요해?"));
+            assertThat(faq.extractedConditions()).doesNotContainKey("serviceType");
+            assertThat(faq.subQueries().getFirst().conditions()).isEmpty();
+
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"BOTH","confidence":0.95,"refinedQuery":"번호이동 위약금과 강남역 매장",
+                 "extractedConditions":{"location":"강남역"},
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 위약금","conditions":{}},
+                   {"order":2,"intent":"STORE","queryText":"강남역 매장","conditions":{"location":"강남역"}}]}
+                """);
+            IntentRouteResponse both = service.route(msg("번호이동 위약금 알려주고 강남역 매장도 찾아줘"));
+            assertThat(both.subQueries().get(1).conditions()).doesNotContainKey("serviceType");
         }
     }
 }
