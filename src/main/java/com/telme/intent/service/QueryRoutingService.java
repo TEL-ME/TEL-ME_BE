@@ -17,6 +17,8 @@ import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
 import com.telme.intent.dto.res.LlmRoutingPayload;
+import com.telme.intent.dto.res.LlmRequestInventoryPayload;
+import com.telme.intent.dto.res.LlmRequestInventoryPayload.Decision;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.repository.QueryRoutingRepository;
@@ -70,6 +72,7 @@ public class QueryRoutingService {
     private static final Pattern LOCATION_PARTICLE_AFTER = Pattern.compile("^(?:에서|에|으로|로)");
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
+    private static final Pattern ACTION_REQUEST = Pattern.compile("싶|하려고|할래");
     private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
     private static final Set<String> SECTION_FILLERS = Set.of(
             "비교", "차이", "차이점", "안내", "설명", "및", "그리고", "또", "와", "과", "하고", "랑");
@@ -152,7 +155,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v2")
+                .promptVersion("routing-request-v3")
                 .build();
 
             String json = llmClient.generate(request);
@@ -218,6 +221,17 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
+        LlmRequestInventoryPayload inventory = null;
+        if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
+            inventory = requestInventory(question);
+            if (inventory.decision() != Decision.MULTIPLE) {
+                payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, payload.confidence(), question,
+                        payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
+                                (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         if (method == QueryRouting.Method.LLM
                 && payload.intent() == QueryRouting.Intent.FAQ
                 && payload.subQueries().size() > 1
@@ -240,17 +254,14 @@ public class QueryRoutingService {
             }
         }
 
-        if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
-            var inventory = requestInventory(question);
-            if (inventory.size() == 1) {
-                payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, payload.confidence(), question,
-                        payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
-                                (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
-                method = QueryRouting.Method.RULE;
-            } else {
-                IndependentQuestionPolicy.validateAgainstInventory(payload, question, inventory);
+        if (inventory != null && inventory.decision() == Decision.MULTIPLE) {
+            if (inventory.requestCount() != payload.subQueries().size()) {
+                throw new UnsupportedCompoundQuestionException("질문 분해와 독립 요청 개수가 일치하지 않습니다.");
             }
+            IndependentQuestionPolicy.validate(payload, question);
         }
+        validateFaqSearchQueries(payload, question);
+        payload = preserveFaqQuestionMeaning(payload, question, context);
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
@@ -317,36 +328,219 @@ public class QueryRoutingService {
         return matchesSection(sub.queryText(), section);
     }
 
-    private List<String> requestInventory(String question) {
+    private LlmRequestInventoryPayload requestInventory(String question) {
         LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
                 .systemPrompt(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT)
                 .userPrompt(RoutingQuestionNormalizer.normalize(question))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(256)
-                .promptVersion("routing-request-inventory-v1").build();
+                .promptVersion("routing-request-inventory-v3").build();
         try {
             String response = llmClient.generate(request);
-            if (response == null || response.isBlank()) return Collections.emptyList();
+            if (response == null || response.isBlank()) {
+                throw new UnsupportedCompoundQuestionException("독립 요청 판정이 비어 있습니다.");
+            }
             var root = objectMapper.readTree(response);
-            if (root == null || !root.isObject() || root.size() != 1) return Collections.emptyList();
-            var requests = root.path("requests");
-            if (!requests.isArray() || requests.isEmpty()) return Collections.emptyList();
-            List<String> quotes = new ArrayList<>();
-            for (var item : requests) {
-                if (!item.isObject() || item.size() != 1 || !item.path("requestQuote").isTextual()) {
-                    return Collections.emptyList();
-                }
-                quotes.add(item.path("requestQuote").asText());
+            if (root == null || !root.isObject() || root.size() != 2
+                    || !root.path("decision").isTextual() || !root.path("requestCount").isIntegralNumber()
+                    || !root.path("requestCount").canConvertToInt()) {
+                throw new UnsupportedCompoundQuestionException("독립 요청 판정 형식이 올바르지 않습니다.");
             }
-            if (quotes.size() == 1 && !RoutingQuestionNormalizer.quoteKey(quotes.getFirst())
-                    .equals(RoutingQuestionNormalizer.quoteKey(question))) {
-                return Collections.emptyList();
+            Decision decision = Decision.valueOf(root.path("decision").asText());
+            int count = root.path("requestCount").intValue();
+            if (decision != Decision.MULTIPLE) {
+                // 단일 판정의 개수는 코드가 1로 정한다. 모델이 부연 항목을 세어도 새 요청으로 쓰지 않는다.
+                count = 1;
+            } else if (count < 2) {
+                throw new UnsupportedCompoundQuestionException("복합 요청 판정에는 두 개 이상의 요청이 필요합니다.");
             }
-            IndependentQuestionPolicy.validateQuotes(quotes, question);
-            return List.copyOf(quotes);
-        } catch (JsonProcessingException | GeneralException | RestClientException failed) {
+            return new LlmRequestInventoryPayload(decision, count);
+        } catch (JsonProcessingException | GeneralException | RestClientException | IllegalArgumentException failed) {
             log.warn("[라우팅] 독립 요청 재확인에 실패해 질문 분해를 보류합니다: errorType={}",
                     failed.getClass().getSimpleName());
-            return Collections.emptyList();
+            throw new UnsupportedCompoundQuestionException("독립 요청을 안전하게 판정할 수 없습니다.");
+        }
+    }
+
+    private LlmRoutingPayload preserveFaqQuestionMeaning(
+            LlmRoutingPayload payload, String question, ChatContext context) {
+        if (payload.intent() != QueryRouting.Intent.FAQ || payload.subQueries().isEmpty()) {
+            return payload;
+        }
+        if (payload.subQueries().size() == 1) {
+            // 독립 질문은 원문을 우선한다. 명시적인 업무 수행 의사는 근거 있는 검색어만 유지한다.
+            if (context == null || !CONTEXT_REFERENCE.matcher(question).find()) {
+                var original = payload.subQueries().getFirst();
+                String searchQuery = ACTION_REQUEST.matcher(question).find()
+                        && original.queryText() != null && !original.queryText().isBlank()
+                        ? removeUngroundedQueryWords(payload, original, question) : question;
+                return new LlmRoutingPayload(payload.intent(), payload.confidence(), searchQuery,
+                        payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
+                                original.order(), original.intent(), searchQuery,
+                                original.conditions(), original.requestQuote())));
+            }
+            return payload;
+        }
+
+        List<LlmRoutingPayload.SubQueryPayload> groundedQuotes = payload.subQueries().stream()
+                .map(sub -> new LlmRoutingPayload.SubQueryPayload(sub.order(), sub.intent(),
+                        sub.queryText(), sub.conditions(), IndependentQuestionPolicy.verifiedQuote(sub, question)))
+                .toList();
+        payload = new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
+                payload.extractedConditions(), groundedQuotes);
+
+        List<Boolean> unsafe = findUnsafeFaqQueries(payload, question);
+        List<LlmRoutingPayload.SubQueryPayload> safe = new ArrayList<>();
+        for (int index = 0; index < payload.subQueries().size(); index++) {
+            var sub = payload.subQueries().get(index);
+            String queryText = sub.queryText();
+            if (unsafe.get(index)) {
+                // 공통 대상이 원문과 모든 하위 질문에 확인되면 모델의 과잉 차단을 피한다.
+                String grounded = removeUngroundedQueryWords(payload, sub, question);
+                queryText = grounded.equals(sub.queryText())
+                        && hasGroundedSharedSubject(payload, sub, question) ? grounded
+                        : RoutingQuestionNormalizer.quoteKey(grounded).equals(
+                        RoutingQuestionNormalizer.quoteKey(sub.requestQuote()))
+                        ? grounded : sub.requestQuote();
+                log.info("[라우팅] 원문과 다른 FAQ 검색어를 인용구로 대체합니다: order={}", sub.order());
+            } else {
+                queryText = removeUngroundedQueryWords(payload, sub, question);
+            }
+            safe.add(new LlmRoutingPayload.SubQueryPayload(
+                    sub.order(), sub.intent(), queryText, sub.conditions(), sub.requestQuote()));
+        }
+        return new LlmRoutingPayload(payload.intent(), payload.confidence(), question,
+                payload.extractedConditions(), safe);
+    }
+
+    private boolean hasGroundedSharedSubject(LlmRoutingPayload payload,
+            LlmRoutingPayload.SubQueryPayload sub, String question) {
+        String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
+        String original = RoutingQuestionNormalizer.quoteKey(question);
+        Matcher words = SECTION_WORD.matcher(sub.queryText());
+        while (words.find()) {
+            String word = RoutingQuestionNormalizer.quoteKey(words.group());
+            if (!quote.contains(word) && original.contains(word)
+                    && payload.subQueries().stream().allMatch(candidate ->
+                            RoutingQuestionNormalizer.quoteKey(candidate.queryText()).contains(word))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String removeUngroundedQueryWords(LlmRoutingPayload payload,
+            LlmRoutingPayload.SubQueryPayload sub, String question) {
+        String quote = payload.subQueries().size() > 1
+                ? RoutingQuestionNormalizer.quoteKey(sub.requestQuote()) : "";
+        String original = RoutingQuestionNormalizer.quoteKey(question);
+        if (!quote.isBlank()
+                && !RoutingQuestionNormalizer.quoteKey(sub.queryText()).contains(quote)) {
+            return sub.requestQuote();
+        }
+        Matcher words = SECTION_WORD.matcher(sub.queryText());
+        List<String> grounded = new ArrayList<>();
+        boolean removed = false;
+        while (words.find()) {
+            String word = RoutingQuestionNormalizer.quoteKey(words.group());
+            if (quote.contains(word)) {
+                grounded.add(words.group());
+                continue;
+            }
+            // 자신의 인용구 밖의 표현은 다른 요청의 전용 구간이 아니라면 사용할 수 있다.
+            if (original.contains(word) && (wordOutsideOtherQuotes(payload, sub, original, word)
+                    || payload.subQueries().stream().allMatch(candidate ->
+                            RoutingQuestionNormalizer.quoteKey(candidate.queryText()).contains(word)))) {
+                grounded.add(words.group());
+                continue;
+            }
+            if (word.equals("방법") && (question.contains("어떻게")
+                    || ACTION_REQUEST.matcher(question).find())) {
+                grounded.add(words.group());
+                continue;
+            }
+            removed = true;
+        }
+        if (!removed) {
+            return sub.queryText();
+        }
+        String corrected = String.join(" ", grounded);
+        if (!RoutingQuestionNormalizer.quoteKey(corrected).contains(quote)) {
+            return sub.requestQuote();
+        }
+        log.info("[라우팅] 원문 근거가 없는 검색어 표현을 제거합니다: order={}", sub.order());
+        return corrected;
+    }
+
+    private boolean wordOutsideOtherQuotes(LlmRoutingPayload payload,
+            LlmRoutingPayload.SubQueryPayload current, String original, String word) {
+        StringBuilder unclaimed = new StringBuilder(original);
+        for (var other : payload.subQueries()) {
+            if (other == current) {
+                continue;
+            }
+            String quote = RoutingQuestionNormalizer.quoteKey(other.requestQuote());
+            if (quote.isBlank()) {
+                return false;
+            }
+            int offset = original.indexOf(quote);
+            if (offset < 0) {
+                return false;
+            }
+            while (offset >= 0) {
+                for (int index = offset; index < offset + quote.length(); index++) {
+                    unclaimed.setCharAt(index, ' ');
+                }
+                offset = original.indexOf(quote, offset + quote.length());
+            }
+        }
+        return unclaimed.toString().contains(word);
+    }
+
+    private List<Boolean> findUnsafeFaqQueries(LlmRoutingPayload payload, String question) {
+        String prompt;
+        try {
+            prompt = objectMapper.writeValueAsString(Map.of(
+                    "question", question,
+                    "subQueries", payload.subQueries().stream().map(sub -> Map.of(
+                            "quote", sub.requestQuote() == null ? "" : sub.requestQuote(),
+                            "query", sub.queryText() == null ? "" : sub.queryText())).toList()));
+            LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
+                    .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
+                    .userPrompt(prompt).format(ResponseFormat.JSON)
+                    .temperature(0.0).maxTokens(256)
+                    .promptVersion("routing-faq-faithfulness-v1").build();
+            String response = llmClient.generate(request);
+            var root = objectMapper.readTree(response);
+            var results = root == null ? null : root.path("unsafe");
+            if (root == null || !root.isObject() || root.size() != 1
+                    || results == null || !results.isArray()
+                    || results.size() != payload.subQueries().size()) {
+                throw new IllegalArgumentException("FAQ 검색어 검증 응답 형식 오류");
+            }
+            List<Boolean> unsafe = new ArrayList<>();
+            for (var result : results) {
+                if (!result.isBoolean()) {
+                    throw new IllegalArgumentException("FAQ 검색어 검증 결과가 불리언이 아닙니다.");
+                }
+                unsafe.add(result.booleanValue());
+            }
+            return unsafe;
+        } catch (JsonProcessingException | RuntimeException failed) {
+            log.warn("[라우팅] FAQ 검색어 검증 실패로 원문 인용구를 사용합니다: errorType={}",
+                    failed.getClass().getSimpleName());
+            return Collections.nCopies(payload.subQueries().size(), true);
+        }
+    }
+
+    private void validateFaqSearchQueries(LlmRoutingPayload payload, String question) {
+        if (payload.intent() != QueryRouting.Intent.FAQ || payload.subQueries().size() <= 1) {
+            return;
+        }
+        for (var sub : payload.subQueries()) {
+            if (sub.queryText() == null || sub.queryText().isBlank() || sub.queryText().equals(question)) {
+                throw new UnsupportedCompoundQuestionException(
+                        "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
+            }
         }
     }
 
@@ -407,12 +601,6 @@ public class QueryRoutingService {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
                     payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1);
-            if (payload.intent() == QueryRouting.Intent.FAQ && normalized.size() > 1
-                    && (queryText == null || queryText.isBlank()
-                    || queryText.equals(question))) {
-                throw new UnsupportedCompoundQuestionException(
-                        "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
-            }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);

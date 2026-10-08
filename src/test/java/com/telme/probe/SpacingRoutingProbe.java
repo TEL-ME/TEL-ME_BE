@@ -99,19 +99,30 @@ class SpacingRoutingProbe {
                                 processor, messages.findById(message).orElseThrow(), null);
                         row.put("route", result);
                         outcome = result.intent() + ":" + result.subQueries().size();
-                        if (!result.intent().name().equals(row.get("expectedIntent"))
-                                || result.subQueries().size() != (int) row.get("expectedCount")) {
+                        if ((int) row.get("expectedCount") >= 0
+                                && (!result.intent().name().equals(row.get("expectedIntent"))
+                                || result.subQueries().size() != (int) row.get("expectedCount"))) {
                             failures.add(item.path("id").asText() + ":" + attempt + ":" + outcome);
                         }
                     } catch (InvocationTargetException failed) {
                         outcome = "REJECTED:" + failed.getCause().getClass().getSimpleName();
                         row.put("error", failed.getCause().getMessage());
-                        failures.add(item.path("id").asText() + ":" + attempt + ":" + outcome);
+                        if ((int) row.get("expectedCount") >= 0) {
+                            failures.add(item.path("id").asText() + ":" + attempt + ":" + outcome);
+                        }
                     }
                     row.put("outcome", outcome);
-                    row.put("storedQueries", jdbc.queryForList(
+                    var stored = jdbc.queryForList(
                             "SELECT query_text FROM consult_requests WHERE origin_message_id=? ORDER BY subquery_order",
-                            message));
+                            message);
+                    row.put("storedQueries", stored);
+                    int expectedStored = row.get("route") instanceof IntentRouteResponse route
+                            ? route.subQueries().size() : 0;
+                    assertThat(stored).as("응답과 저장된 요청 수: %s", item.path("id").asText())
+                            .hasSize(expectedStored);
+                    row.put("labelStatus", item.path("labelStatus").asText("REGRESSION"));
+                    row.put("expectedRequestCount", item.path("expectedRequestCount")
+                            .asInt(item.path("expectedCount").asInt()));
                     row.put("calls", List.copyOf(calls));
                     rows.add(row);
                     groupOutcomes.computeIfAbsent(item.path("id").asText(), ignored -> new ArrayList<>()).add(outcome);

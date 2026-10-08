@@ -1,5 +1,6 @@
 package com.telme.intent.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -14,6 +15,62 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 class IndependentQuestionPolicyTest {
+    @Test
+    void acceptsGroundedSearchQuestionWhenItsQuoteWasMisCopied() {
+        var subQueries = java.util.List.of(
+                new LlmRoutingPayload.SubQueryPayload((short) 1, ConsultRequest.Intent.FAQ,
+                        "로밍 요금", Map.of(), "로밍요금"),
+                new LlmRoutingPayload.SubQueryPayload((short) 2, ConsultRequest.Intent.FAQ,
+                        "유심 재발급 방법", Map.of(), "유심재발급받고싶어요"));
+        var result = new LlmRoutingPayload(Intent.FAQ, BigDecimal.ONE, "", Map.of(), subQueries);
+        assertThatCode(() -> IndependentQuestionPolicy.validate(
+                result, "로밍요금과 유심재발급방법 알려줘")).doesNotThrowAnyException();
+        assertThat(IndependentQuestionPolicy.verifiedQuote(subQueries.get(1),
+                "로밍요금과 유심재발급방법 알려줘")).isEqualTo("유심 재발급 방법");
+    }
+
+    @Test
+    void doesNotTreatWordsSplicedFromDifferentRequestsAsOneQuote() {
+        var sub = new LlmRoutingPayload.SubQueryPayload((short) 3, ConsultRequest.Intent.FAQ,
+                "로밍 해지 서류", Map.of(), "로밍해지서류");
+
+        assertThatThrownBy(() -> IndependentQuestionPolicy.verifiedQuote(sub,
+                "유심재발급비용과로밍신청방법그리고해지서류알려줘"))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+    }
+
+    @Test
+    void acceptsSharedSubjectWhenBothRequestsHaveSeparateOriginalAnchors() {
+        assertThatCode(() -> IndependentQuestionPolicy.validate(
+                payload("부가서비스 가입", "부가서비스 해지"),
+                "부가서비스 가입이랑 해지는 어떻게 해요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void acceptsListedCategoriesWhenSharedDescriptionAppearsOnce() {
+        assertThatCode(() -> IndependentQuestionPolicy.validate(
+                payload("5G 요금제 구성 안내", "LTE 요금제 구성 안내", "알뜰요금제 구성 안내"),
+                "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요."))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsInventedAnswerFacetEvenWhenEachRequestHasAnOriginalAnchor() {
+        assertThatThrownBy(() -> IndependentQuestionPolicy.validate(
+                payload("부가서비스 가입 비용", "부가서비스 해지 필요 서류"),
+                "부가서비스 가입이랑 해지는 어떻게 해요?"))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+    }
+
+    @Test
+    void rejectsTwoRephrasingsAnchoredToOnlyOneActualRequest() {
+        assertThatThrownBy(() -> IndependentQuestionPolicy.validate(
+                payload("번호이동 신청", "번호이동 처리"),
+                "번호이동 신청하고 싶어요"))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+    }
+
     @Test
     void acceptsSeparateExplicitRequestsWithSharedSubjectAndPredicate() {
         assertThatCode(() -> IndependentQuestionPolicy.validate(

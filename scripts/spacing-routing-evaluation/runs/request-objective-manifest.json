@@ -1,0 +1,85 @@
+{
+  "experiment": "TELME-132-request-objective",
+  "codeSha256": {
+    "src\\main\\java\\com\\telme\\intent\\service\\QueryRoutingService.java": "f6a528c3a3e6069ae263a7334152028115dd3c680d71974910754a8860ab4079",
+    "src\\main\\java\\com\\telme\\intent\\service\\IndependentQuestionPolicy.java": "358835408c7662cc2c976bdaba94afd99d8b845d6cb4266afb71eb69d951cc10",
+    "src\\main\\java\\com\\telme\\intent\\service\\RoutingPromptTemplates.java": "e1d608a2c250b865b6ee6d567b501308aeb7b23ce13ed51299ca62a8994457d9",
+    "src\\main\\java\\com\\telme\\intent\\dto\\res\\LlmRequestInventoryPayload.java": "41f17c1252fe3d608bfa1cb9a3473bec75d06f31088d84dbbcb5e62fb5645f8e"
+  },
+  "models": [
+    {
+      "name": "bge-m3:latest",
+      "model": "bge-m3:latest",
+      "modified_at": "2026-09-28T07:05:38.429437861Z",
+      "size": 1157672605,
+      "digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "bert",
+        "families": [
+          "bert"
+        ],
+        "parameter_size": "566.70M",
+        "quantization_level": "F16",
+        "context_length": 8192,
+        "embedding_length": 1024
+      },
+      "capabilities": [
+        "embedding"
+      ]
+    },
+    {
+      "name": "exaone3.5:7.8b",
+      "model": "exaone3.5:7.8b",
+      "modified_at": "2026-09-28T07:05:11.795251452Z",
+      "size": 4770664857,
+      "digest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "exaone",
+        "families": [
+          "exaone"
+        ],
+        "parameter_size": "7.8B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 32768,
+        "embedding_length": 4096
+      },
+      "capabilities": [
+        "completion"
+      ]
+    }
+  ],
+  "rawSha256": {
+    "request-objective-routing.json.gz": "1a1a8f790d6a16d4aa11cc7868283162f8ac1ab6fe38017ce38e353254df823c",
+    "request-objective-chat.json.gz": "4950c3f6149b110000672a573c527f7ed713a643d7c2f4228317af7e859e8bfe",
+    "request-objective-chat-before.json.gz": "c7b39c280488abd2e12b73c1c4048d8a75306d21041dd6efa57c4c7027400bba"
+  },
+  "inputSha256": {
+    "cases.json": "fb28afaa61f62fe9d3a71e7aafc9cc307c11a9f9bb314cd70d5688b1defaab23",
+    "additional-cases.json": "bf2d9e967f80bfcc593ec533278c7bcb1c8268942d0d952d05f4fb5607295411",
+    "faq-csv-cases.json": "4b4dd662cb9bd9c38300cd32e0743b4f9de0719d992f1e0d4e6f169d4f4fd99d",
+    "request-objective-cases.json": "c2e8f12f25eb61c9ae4773be19f77766cf7f4b20368c012d506812463e020c82"
+  },
+  "checks": {
+    "build": {
+      "tests": 1975,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 104
+    },
+    "liveRoutingExit": 0,
+    "liveChatExit": 0
+  },
+  "settings": {
+    "routingTemperature": 0,
+    "routingMaxTokens": 768,
+    "inventoryTemperature": 0,
+    "inventoryMaxTokens": 256,
+    "inventoryPromptVersion": "routing-request-inventory-v3",
+    "searchSimilarityThreshold": 0.72
+  },
+  "scope": "Routing intent/count and chat persistence/SSE checks; not overall answer accuracy"
+}

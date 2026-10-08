@@ -725,7 +725,9 @@ class ConsultChatPersistenceIntegrationTest {
                    {"order":1,"intent":"FAQ","queryText":"요금제 종류","requestQuote":"요금제","conditions":{}},
                    {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}}]}
                 """, """
-                {"requests":[{"requestQuote":"요금제"},{"requestQuote":"로밍신청방법"}]}
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":[false,false]}
                 """);
         var context = new FollowupContextService.Context(
                 sessionId, inputId, question, List.of());
@@ -751,7 +753,7 @@ class ConsultChatPersistenceIntegrationTest {
 
         processor.request(new ChatProcessingCommand(executionId, sessionId, inputId, question));
 
-        assertThat(searchQueries).containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(searchQueries).containsExactly("요금제", "로밍 신청 방법");
         assertThat(jdbc.queryForList(
                 "SELECT status FROM consult_requests WHERE origin_message_id=? ORDER BY subquery_order",
                 String.class, inputId)).containsExactly("DONE", "DONE");
@@ -760,7 +762,7 @@ class ConsultChatPersistenceIntegrationTest {
         String content = jdbc.queryForObject(
                 "SELECT content FROM chat_messages WHERE message_id=(SELECT output_message_id"
                         + " FROM chat_executions WHERE execution_id=?)", String.class, executionId);
-        assertThat(content).contains("1. 요금제 종류\n요금제 종류 답변",
+        assertThat(content).contains("1. 요금제\n요금제 답변",
                 "2. 로밍 신청 방법\n로밍 신청 방법 답변");
         assertThat(events.sequence).containsExactly("start", "token:" + content,
                 "complete:COMPLETED");

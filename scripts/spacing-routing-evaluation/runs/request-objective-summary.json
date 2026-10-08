@@ -1,0 +1,20 @@
+{
+  "records": 195,
+  "scored": 165,
+  "matched": 165,
+  "failures": [],
+  "baseMatched": 60,
+  "faqMatched": 93,
+  "newMatched": 12,
+  "previousCorrectLost": [],
+  "chatPassed": 11,
+  "chatCases": 11,
+  "outcomes": {
+    "FAQ:1": 164,
+    "FAQ:2": 15,
+    "FAQ:3": 5,
+    "STORE:1": 2,
+    "UNKNOWN:0": 9
+  },
+  "scope": "Routing intent/count and chat persistence/SSE checks; not overall answer accuracy"
+}

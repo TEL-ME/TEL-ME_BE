@@ -13,20 +13,70 @@ public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}
 
+    public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = """
+        검색 질의가 고객의 원래 요청을 왜곡했는지만 판단한다. 각 하위 질문을 독립적으로 판정한다.
+        원문에 없는 제한 조건, 시간 순서, 설정, 업무 대상을 만들어 넣으면 unsafe=true다.
+        앞 하위 질문의 대상을 뒤 질문에 붙일 때 그 대상이 공통인지 불명확해도 unsafe=true다.
+        띄어쓰기 변경, 같은 뜻의 표현, 질문 전체에 명확히 공통인 대상의 반복은 unsafe=false다.
+        답변이나 수정된 검색 질의를 생성하지 않는다.
+        예: 원문="로밍요금과 유심재발급방법 알려줘", 인용="로밍요금", 질의="로밍 요금 조건" -> unsafe=true
+        예: 원문="유심재발급비용과 로밍신청방법 그리고 해지서류", 인용="해지서류", 질의="로밍 해지 서류" -> unsafe=true
+        예: 원문="유심재발급비용과 로밍신청방법 그리고 해지서류", 인용="유심재발급비용", 질의="유심 재발급 비용" -> unsafe=false
+        예: 원문="유심재발급비용과 로밍신청방법 그리고 해지서류", 인용="로밍신청방법", 질의="로밍 신청 방법" -> unsafe=false
+        예: 원문="부가서비스 가입과 해지는 어떻게 해요", 인용="해지", 질의="부가서비스 해지 방법" -> unsafe=false
+        예: 원문="A와 B 중 뭐가 먼저예요", 질의="A 후 B 순서" -> unsafe=true
+        입력 순서대로 판정하고 {"unsafe":[false,true]} 형식의 JSON만 출력한다.
+        """;
+
     public static final String REQUEST_INVENTORY_PROMPT = """
-        고객 문장에서 실제로 요구한 독립적인 요청의 원문 구간만 추출한다. 답변이나 검색어는 만들지 않는다.
-        한 업무를 하고 싶다는 말은 한 요청이다. 설명에 필요한 방법, 비용, 서류를 상상해서 추가하지 않는다.
-        상황, 이유, 조건, 부정한 업무는 독립 요청이 아니다. 두 대상을 비교하거나 더 저렴한 것을 묻는 것도 한 요청이다.
-        서로 다른 질문을 각각 요구하거나 비용과 방법을 명시적으로 각각 물었으면 각 요청을 유지한다.
-        requestQuote는 현재 입력에서 연속된 구간 그대로 복사하고, 입력 순서대로 서로 겹치지 않아야 한다.
-        한 요청이면 조건과 부정을 포함한 입력 전체를 한 구간으로 복사한다.
+        고객이 원하는 최종 결과의 관계와 요청 개수만 판정한다. 하위 질문, 검색어, 답변을 생성하지 않는다.
+        대상의 개수, 문장 수, 답변에 필요한 설명 항목 수는 요청 개수가 아니다.
+        SINGLE: 한 업무 신청, 하나의 문제 해결, 한 업무의 전체 처리 순서나 전체 구성 안내.
+        상황, 원인, 조건, 부정한 업무는 별도 요청이 아니다. 절차, 비용, 서류를 상상해서 추가하지 않는다.
+        여러 종류나 대상을 나열하고 종류, 구성, 특징을 소개해 달라는 것은 목록 전체의 설명 한 요청이다.
+        목록에서 대상 하나씩을 지워도 같은 구성 안내라는 목적이면 각각 독립 요청으로 세지 않는다.
+        COMPARISON: 대상이나 선택지 사이의 차이, 유불리, 조건별 결과의 차이를 묻는 하나의 관계 요청.
+        비교라는 단어가 없어도 어느 쪽이 나은지, 안 하면 얼마이고 하면 얼마인지 묻는 것은 COMPARISON이다.
+        두 업무를 '와', '이랑'으로 연결했다는 이유만으로 비교라고 판단하지 않는다.
+        '가입과 해지는 어떻게 해요'는 두 방법을 묻는다. 차이, 선택, 유불리나 조건별 결과를 묻지 않았으므로 MULTIPLE이다.
+        MULTIPLE: 서로 다른 업무를 수행하거나 별개의 속성을 확인하는 결과를 명시적으로 요구한다.
+        같은 주제라도 가입 방법과 해지 방법은 서로 다른 업무다. 비용과 방법을 명시적으로 각각 물어도 나눈다.
+        독립 요청과 비교가 함께 있으면 MULTIPLE이며 비교 대상들을 나누지 않고 비교 요청 전체를 유지한다.
+        먼저 관계를 결정한다. SINGLE과 COMPARISON의 requestCount는 항상 1이다.
+        MULTIPLE만 서로 다른 요청 결과를 세어 requestCount를 2 이상으로 출력한다.
+        예: 번호이동하고싶어요
+        {"decision":"SINGLE","requestCount":1}
         예: 미납요금이있는데번호이동하고싶어요
-        {"requests":[{"requestQuote":"미납요금이있는데번호이동하고싶어요"}]}
-        예: LTE랑5G요금제중뭐가더저렴해
-        {"requests":[{"requestQuote":"LTE랑5G요금제중뭐가더저렴해"}]}
-        예: 로밍요금과유심재발급비용알려줘
-        {"requests":[{"requestQuote":"로밍요금"},{"requestQuote":"유심재발급비용"}]}
-        requests 배열과 각 원소의 requestQuote만 담은 JSON을 출력한다.
+        {"decision":"SINGLE","requestCount":1}
+        예: 번호이동은안하고요금제변경만하고싶어요
+        {"decision":"SINGLE","requestCount":1}
+        예: 유심이안읽히는데오늘바로바꿀수있을까요?
+        {"decision":"SINGLE","requestCount":1}
+        예: 명의를아버지한테서저한테바꾸려면뭐가필요해요?
+        {"decision":"SINGLE","requestCount":1}
+        예: 청구서확인부터요금납부까지순서가어떻게되나요?
+        {"decision":"SINGLE","requestCount":1}
+        예: 휴대폰요금제종류를하나씩소개해줘
+        {"decision":"SINGLE","requestCount":1}
+        예: 인터넷,휴대폰,TV상품구성을차례로소개해줘
+        {"decision":"SINGLE","requestCount":1}
+        예: 선불과후불상품의종류를각각설명해줘
+        {"decision":"SINGLE","requestCount":1}
+        예: 개통신분증은어떤걸가져가나요?면허증도가능해요?
+        {"decision":"SINGLE","requestCount":1}
+        예: 요금아끼려면정지가나아요,해지가나아요?
+        {"decision":"COMPARISON","requestCount":1}
+        예: 한도를안올리면얼마까지쓸수있어요?올리면요?
+        {"decision":"COMPARISON","requestCount":1}
+        예: 가입방법과해지방법이궁금해요
+        {"decision":"MULTIPLE","requestCount":2}
+        예: 번호이동비용과신청방법알려줘
+        {"decision":"MULTIPLE","requestCount":2}
+        예: 로밍신청방법알려줘.5G와LTE요금제비교해줘
+        {"decision":"MULTIPLE","requestCount":2}
+        decision과 requestCount만 담은 JSON을 출력한다.
+        예: 부가서비스가입이랑해지는어떻게해요?
+        {"decision":"MULTIPLE","requestCount":2}
         """;
 
     public static final String ROUTING_SYSTEM_PROMPT = """
@@ -39,6 +89,10 @@ public final class RoutingPromptTemplates {
         - 하위 질문은 고객이 실제로 요청한 일이다. 답변에 넣을 절차, 서류, 비용의 목록을 만드는 작업이 아니다.
         - "번호이동하고싶어요", "명의변경하려고요", "유심재발급받고싶어요"는 각각 한 업무 요청이다.
         - 고객이 비용과 신청 방법처럼 별개의 내용을 명시적으로 물었을 때만 여러 질문으로 나눈다.
+        - 같은 주제라도 가입 방법과 해지 방법은 서로 다른 업무이므로 각각 유지한다.
+        - 한 업무의 전체 처리 순서나 전체 구성 안내는 한 요청이다. 단계와 나열된 대상마다 나누지 않는다.
+        - 여러 상품 종류를 나열하고 구성이나 특징을 소개해 달라면 목록 전체의 설명 한 요청이다.
+        - 비교라는 단어 없이 어느 쪽이 유리한지, 조건에 따라 결과가 어떻게 달라지는지 물어도 한 비교 요청이다.
         - 상황, 이유, 조건, 부정한 업무를 별도 요청으로 만들지 않는다. 비교의 두 대상도 한 비교 요청이다.
         - 여러 하위 질문을 만들 때는 각 질문의 requestQuote에 현재 입력의 연속된 원문 구간을 그대로 복사한다.
         - 각 requestQuote는 입력 순서대로 서로 겹치지 않아야 한다. 같은 요청을 두 번 인용할 수 없다.
@@ -90,6 +144,9 @@ public final class RoutingPromptTemplates {
 
         질문: "미납요금이있는데번호이동하고싶어요"
         응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"미납 요금이 있는데 번호이동하고 싶어요","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"미납 요금이 있는데 번호이동하고 싶어요","requestQuote":"미납요금이있는데번호이동하고싶어요","conditions":{}}]}
+
+        질문: "부가서비스가입이랑해지는어떻게해요?"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"부가서비스 가입 방법과 해지 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"부가서비스 가입 방법","requestQuote":"가입","conditions":{}},{"order":2,"intent":"FAQ","queryText":"부가서비스 해지 방법","requestQuote":"해지","conditions":{}}]}
 
         질문: "번호이동비용과신청방법그리고필요서류알려줘"
         응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 비용과 신청 방법 그리고 필요 서류","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"번호이동비용","conditions":{}},{"order":2,"intent":"FAQ","queryText":"번호이동 신청 방법","requestQuote":"신청방법","conditions":{}},{"order":3,"intent":"FAQ","queryText":"번호이동 필요 서류","requestQuote":"필요서류","conditions":{}}]}

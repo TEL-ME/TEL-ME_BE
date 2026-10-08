@@ -1,6 +1,7 @@
 """실제 Spring 라우팅 원시 자료를 집계한다. 모델 호출이나 정답 변경은 하지 않는다."""
 
 import argparse
+from collections import Counter
 import gzip
 import hashlib
 import json
@@ -14,14 +15,20 @@ def summarize(path):
     groups = {}
     failures = []
     calls = []
+    scored = 0
     for row in rows:
         groups.setdefault(row["id"], set()).add(row["outcome"])
-        if row["outcome"] != f'{row["expectedIntent"]}:{row["expectedCount"]}':
+        if row.get("expectedCount", -1) >= 0:
+            scored += 1
+        if row.get("expectedCount", -1) >= 0 and row["outcome"] != f'{row["expectedIntent"]}:{row["expectedCount"]}':
             failures.append({"id": row["id"], "question": row["question"], "outcome": row["outcome"]})
         calls.extend(row.get("calls", [{"modelElapsedMs": row.get("modelElapsedMs", 0)}]))
     return {
         "records": len(rows),
-        "correctIntentAndCount": len(rows) - len(failures),
+        "scoredRecords": scored,
+        "unscoredRecords": len(rows) - scored,
+        "correctIntentAndCount": scored - len(failures),
+        "outcomes": dict(Counter(row["outcome"] for row in rows)),
         "groupCount": len(groups),
         "inconsistentGroups": [group for group, outcomes in groups.items() if len(outcomes) != 1],
         "modelCalls": len(calls),
