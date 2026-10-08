@@ -32,14 +32,24 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
     private final ChatMessageRepository messages;
     private final QueryRoutingService routing;
     private final FollowupAnalysisProvider followups;
+    private final CompoundQuestionSuggestions compoundSuggestions;
 
     public QueryRoutingAnalysisProvider(
             ChatMessageRepository messages,
             QueryRoutingService routing,
             FollowupAnalysisProvider followups) {
+        this(messages, routing, followups, CompoundQuestionSuggestions.none());
+    }
+
+    public QueryRoutingAnalysisProvider(
+            ChatMessageRepository messages,
+            QueryRoutingService routing,
+            FollowupAnalysisProvider followups,
+            CompoundQuestionSuggestions compoundSuggestions) {
         this.messages = Objects.requireNonNull(messages);
         this.routing = Objects.requireNonNull(routing);
         this.followups = Objects.requireNonNull(followups);
+        this.compoundSuggestions = Objects.requireNonNull(compoundSuggestions);
     }
 
     @Override
@@ -69,11 +79,14 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                     ? routing.routeSingleConsult(message, context.routingContext())
                     : routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion());
         } catch (UnsupportedCompoundQuestionException exception) {
+            // 나눈 질문으로 버튼을 만들지 못하면 기존 고정 버튼을 쓴다
+            List<String> buttons = Objects.requireNonNull(
+                    compoundSuggestions.suggest(exception.parts()), "compoundSuggestions");
             return AnalysisResult.direct(new ChatAnswer(
                     ChatMessage.MessageType.ANSWER,
                     COMPOUND_GUIDANCE,
                     null,
-                    List.of("요금제 알려줘", "가까운 매장 찾아줘"),
+                    buttons.isEmpty() ? List.of("요금제 알려줘", "가까운 매장 찾아줘") : buttons,
                     null));
         } catch (TooManyFaqQuestionsException exception) {
             return AnalysisResult.direct(new ChatAnswer(
@@ -105,6 +118,15 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
             throw new IllegalStateException("단일 상담 라우팅 결과가 필요합니다.");
         }
         return new AnalysisResult(result.subQueries().getFirst(), null, LocationStatus.MISSING);
+    }
+
+    /** FAQ와 매장 찾기가 섞여 하나씩 보내 달라고 안내할 때 붙일 버튼과의 경계다. 없으면 빈 목록이다. */
+    public interface CompoundQuestionSuggestions {
+        List<String> suggest(List<UnsupportedCompoundQuestionException.Part> parts);
+
+        static CompoundQuestionSuggestions none() {
+            return parts -> List.of();
+        }
     }
 
     /** 기존 consultRequestId 재사용 여부와 추출 조건을 판단하는 라우팅 모듈의 후속 답변 경계다. */

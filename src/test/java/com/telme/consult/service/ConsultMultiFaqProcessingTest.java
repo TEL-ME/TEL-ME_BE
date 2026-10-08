@@ -182,6 +182,92 @@ class ConsultMultiFaqProcessingTest {
         verify(events).failed(eq(EXECUTION_ID), any());
     }
 
+    // 합친 답변에는 근거가 있는 하위 답변마다 추천 질문을 하나씩 붙인다
+    @Test
+    void combinedAnswerTakesFirstFollowUpOfEachGroundedAnswer() {
+        prepareEvents();
+        var processor = processor(input -> input.originalUserQuery().equals("요금제 종류")
+                ? generated("요금제 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(),
+                        List.of("요금제 변경 방법", "요금제 할인"))
+                : generated("로밍 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(),
+                        List.of("로밍 요금", "로밍 해지")));
+
+        processor.request(command);
+
+        assertThat(savedAnswer().followUps()).containsExactly("요금제 변경 방법", "로밍 요금");
+    }
+
+    @Test
+    void duplicateFollowUpIsReplacedByNextOfSameAnswer() {
+        prepareEvents();
+        var processor = processor(input -> input.originalUserQuery().equals("요금제 종류")
+                ? generated("요금제 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(),
+                        List.of("가까운 매장을 알려주세요.", "요금제 할인"))
+                : generated("로밍 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(),
+                        List.of("가까운 매장을 알려주세요.", "로밍 요금")));
+
+        processor.request(command);
+
+        assertThat(savedAnswer().followUps()).containsExactly("가까운 매장을 알려주세요.", "로밍 요금");
+    }
+
+    // 근거 없는 하위 답변은 건너뛰고, 추천이 없는 하위 답변은 자리를 차지하지 않는다
+    @Test
+    void followUpsComeOnlyFromGroundedAnswers() {
+        prepareEvents();
+        var processor = processor(input -> input.originalUserQuery().equals("요금제 종류")
+                ? generated("요금제 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(), List.of())
+                : generated(AnswerPromptTemplates.NO_EVIDENCE_ANSWER, ChatMessage.AnswerBasis.NO_EVIDENCE,
+                        List.of(), List.of("로밍 요금")));
+
+        processor.request(command);
+
+        assertThat(savedAnswer().followUps()).isEmpty();
+    }
+
+    // 서로 이어진 질문을 함께 물으면 하위 답변끼리 상대 질문을 추천하므로, 답한 정책의 추천은 빼고 다음 추천을 쓴다
+    @Test
+    void followUpAboutAnotherAnsweredQuestionIsSkipped() {
+        prepareEvents();
+        AnswerSource usimCost = new AnswerSource(5L, "유심 비용", 1, null, (short) 1, null);
+        AnswerSource usimDocs = new AnswerSource(6L, "유심 서류", 1, null, (short) 1, null);
+        var suggested = new RagSearchResultAnswerGenerator.SuggestedQuestions() {
+            @Override
+            public List<String> suggest(ChatMessage.AnswerBasis basis, List<com.telme.faq.dto.res.FaqSearchResponse> r) {
+                return List.of();
+            }
+
+            @Override
+            public java.util.Set<String> questionsAbout(java.util.Collection<Long> faqIds) {
+                assertThat(faqIds).containsExactly(5L, 6L);
+                return java.util.Set.of("유심 재발급 시 필요한 서류를 알려주세요.", "유심 새로 받는 데 얼마 들어요");
+            }
+        };
+        var processor = new ConsultChatProcessingService(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        faqTurn(11L, "요금제 종류"), faqTurn(12L, "로밍 신청 방법"))),
+                input -> input.originalUserQuery().equals("요금제 종류")
+                        ? generated("비용 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimCost),
+                                List.of("유심 재발급 시 필요한 서류를 알려주세요.", "유심 재발급 가능한 매장을 알려주세요."))
+                        : generated("서류 답변", ChatMessage.AnswerBasis.GROUNDED, List.of(usimDocs),
+                                List.of("유심 새로 받는 데 얼마 들어요", "평일이랑 토요일 운영시간이 어떻게 다른가요?")),
+                persistence, new ConfirmedConditionConverter(), events, trace,
+                com.telme.consult.repository.AskedQuestions.none(),
+                ConsultChatProcessingService.NoAnswerSuggestions.none(), suggested);
+
+        processor.request(command);
+
+        assertThat(savedAnswer().followUps())
+                .containsExactly("유심 재발급 가능한 매장을 알려주세요.", "평일이랑 토요일 운영시간이 어떻게 다른가요?");
+    }
+
+    private ChatAnswer savedAnswer() {
+        ArgumentCaptor<ChatAnswer> answer = ArgumentCaptor.forClass(ChatAnswer.class);
+        verify(persistence).persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(),
+                answer.capture(), anyList());
+        return answer.getValue();
+    }
+
     private ConsultChatProcessingService processor(ConsultChatProcessingService.AnswerProvider answers) {
         return new ConsultChatProcessingService(
                 ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
@@ -199,8 +285,13 @@ class ConsultMultiFaqProcessingTest {
 
     private ConsultChatProcessingService.GeneratedAnswer generated(
             String content, ChatMessage.AnswerBasis basis, List<AnswerSource> sources) {
+        return generated(content, basis, sources, List.of());
+    }
+
+    private ConsultChatProcessingService.GeneratedAnswer generated(
+            String content, ChatMessage.AnswerBasis basis, List<AnswerSource> sources, List<String> followUps) {
         return new ConsultChatProcessingService.GeneratedAnswer(
-                new ChatAnswer(ChatMessage.MessageType.ANSWER, content, basis, List.of(), null), sources);
+                new ChatAnswer(ChatMessage.MessageType.ANSWER, content, basis, followUps, null), sources);
     }
 
     private void prepareEvents() {

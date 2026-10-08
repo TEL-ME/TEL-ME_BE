@@ -161,6 +161,23 @@ class PolicyLinkSuggestedQuestionsTest {
                 List.of(faq(1L, "S-1", "USIM", "매장에서 재발급할 수 있습니다.")))).isEmpty();
     }
 
+    // 답한 FAQ의 정책을 가리키는 추천 문장(대표 FAQ의 현재 질문). 근거가 여러 개인 답변에서 다시 추천하지 않으려고 쓴다
+    @Test
+    void questionsAboutReturnsRepresentativeQuestionsOfAnsweredPolicies() {
+        when(faqs.policyRef(1L)).thenReturn("B-01");
+        when(faqs.policyRef(2L)).thenReturn("NO-REPRESENTATIVE");
+        when(faqs.searchableQuestions(List.of("B-0001"))).thenReturn(Map.of("B-0001", "고친 B 질문"));
+
+        assertThat(suggestions.questionsAbout(Arrays.asList(1L, 2L, null))).containsExactly("고친 B 질문");
+    }
+
+    @Test
+    void questionsAboutFallsBackToEmpty() {
+        assertThat(suggestions.questionsAbout(List.of())).isEmpty();
+        when(faqs.policyRef(anyLong())).thenThrow(new IllegalStateException("DB 오류"));
+        assertThat(suggestions.questionsAbout(List.of(1L))).isEmpty();
+    }
+
     // 추천은 부가 정보라 조회가 실패하거나 검색 결과가 이상해도 답변 저장을 막지 않는다
     @Test
     void failureFallsBackToEmpty() {

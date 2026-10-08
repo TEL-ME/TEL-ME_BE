@@ -145,7 +145,14 @@ class QueryRoutingServiceTest {
 
             assertThatThrownBy(() -> service.routeSingleConsult(message, null))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("FAQ와 매장 복합 질문");
+                    .hasMessageContaining("FAQ와 매장 복합 질문")
+                    // 하나씩 보낼 버튼을 만들 수 있게 나눈 하위 질문을 넘긴다
+                    .extracting(e -> ((UnsupportedCompoundQuestionException) e).parts())
+                    .isEqualTo(java.util.List.of(
+                            new UnsupportedCompoundQuestionException.Part(
+                                    ConsultRequest.Intent.FAQ, "5G 요금제", java.util.Map.of()),
+                            new UnsupportedCompoundQuestionException.Part(
+                                    ConsultRequest.Intent.STORE, "신촌 매장", java.util.Map.of("location", "신촌"))));
 
             verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());

@@ -594,7 +594,11 @@ public class QueryRoutingService {
                 && (payload.intent() != QueryRouting.Intent.FAQ
                 || payload.subQueries().stream().anyMatch(
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
-            throw new UnsupportedCompoundQuestionException();
+            throw new UnsupportedCompoundQuestionException(payload.subQueries() == null ? List.of()
+                    : payload.subQueries().stream()
+                            .map(sub -> new UnsupportedCompoundQuestionException.Part(
+                                    sub.intent(), sub.queryText(), sub.conditions()))
+                            .toList());
         }
         if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
@@ -612,7 +616,11 @@ public class QueryRoutingService {
                 && (response.intent() != QueryRouting.Intent.FAQ
                 || response.subQueries().stream().anyMatch(
                         sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
-            throw new UnsupportedCompoundQuestionException();
+            throw new UnsupportedCompoundQuestionException(response.subQueries() == null ? List.of()
+                    : response.subQueries().stream()
+                            .map(sub -> new UnsupportedCompoundQuestionException.Part(
+                                    sub.intent(), sub.queryText(), sub.conditions()))
+                            .toList());
         }
         if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);

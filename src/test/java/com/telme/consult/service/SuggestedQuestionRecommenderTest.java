@@ -223,6 +223,21 @@ class SuggestedQuestionRecommenderTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    // 대표 질문은 버튼으로 다시 보내지므로 질문을 그대로 보내도 답이 안 나오는 FAQ(실측 목록)이면 안 된다
+    @Test
+    void representativeQuestionsAreNotUnanswerableFaqs() throws Exception {
+        var recommender = SuggestedQuestionRecommender.load(MAPPER);
+        PolicyLinks links;
+        try (InputStream in =
+                new ClassPathResource(SuggestedQuestionRecommender.POLICY_LINKS_PATH).getInputStream()) {
+            links = MAPPER.readValue(in, PolicyLinks.class);
+        }
+
+        assertThat(recommender.isUnanswerable("PLAN-0041")).isTrue();
+        assertThat(links.representativeQuestions().values())
+                .noneMatch(rep -> recommender.isUnanswerable(rep.slotId()));
+    }
+
     // 독립 검증한 4차 연결표의 FAQ별 추천을 코드가 그대로 재현하는지 본다.
     // 기대값은 scripts/build_suggested_question_data.py가 같은 데이터로 만든다
     @Test

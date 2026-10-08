@@ -237,7 +237,38 @@ class QueryRoutingAnalysisProviderTest {
 
         assertThat(result.directAnswer()).isNotNull();
         assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().followUps()).containsExactly("요금제 알려줘", "가까운 매장 찾아줘");
         assertThat(result.initialQuery()).isNull();
+    }
+
+    // 라우터가 나눈 질문으로 버튼을 만들 수 있으면 고정 버튼 대신 쓴다
+    @Test
+    void compoundQuestionUsesButtonsFromSplitParts() {
+        var parts = List.of(
+                new UnsupportedCompoundQuestionException.Part(
+                        com.telme.consult.entity.ConsultRequest.Intent.FAQ, "명의변경 필요 서류", Map.of()),
+                new UnsupportedCompoundQuestionException.Part(
+                        com.telme.consult.entity.ConsultRequest.Intent.STORE, "강남역 명의변경 매장",
+                        Map.of("location", "강남역")));
+        var withButtons = new QueryRoutingAnalysisProvider(messages, routing, followups,
+                received -> received.equals(parts)
+                        ? List.of("명의변경 시 필요한 서류를 정리해서 알려주세요.", "강남역 명의변경 가능한 매장을 알려주세요.")
+                        : List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null)).thenThrow(new UnsupportedCompoundQuestionException(parts));
+
+        AnalysisResult result = withButtons.analyze(
+                new Context(3L, 7L, "명의변경 서류 알려주고 강남역 근처 매장도 찾아줘", List.of()));
+
+        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().followUps())
+                .containsExactly("명의변경 시 필요한 서류를 정리해서 알려주세요.", "강남역 명의변경 가능한 매장을 알려주세요.");
     }
 
     @Test
