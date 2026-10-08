@@ -23,6 +23,8 @@ import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
 import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
+import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
+import com.telme.consult.service.FaqCandidateNoAnswerSuggestions;
 import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
@@ -170,6 +172,50 @@ class ConsultChatPipelineConfigurationTest {
                             var actual = context.getBean(SuggestedQuestions.class)
                                     .suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(top));
                             assertThat(actual).isEqualTo(expected.isEmpty() ? List.of() : List.of(expected));
+                        });
+    }
+
+    // 답을 못 할 때 버튼은 추천 질문과 이 플래그가 모두 켜져 있어야 동작한다
+    @ParameterizedTest
+    @CsvSource({"false, false, false", "true, false, false", "false, true, false", "true, true, true"})
+    void noAnswerFlagNeedsSuggestedQuestions(boolean enabled, boolean noAnswer, boolean expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=" + enabled,
+                        "telme.consult.suggested-questions.no-answer-enabled=" + noAnswer)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(NoAnswerSuggestions.class)
+                                    instanceof FaqCandidateNoAnswerSuggestions).isEqualTo(expected);
+                        });
+    }
+
+    // FAQ와 매장이 섞인 질문의 버튼: FAQ 버튼은 답을 못 할 때 버튼, 매장 버튼은 매장 칩 플래그를 따른다
+    @ParameterizedTest
+    @CsvSource({"false, false, false", "true, false, true", "false, true, true"})
+    void compoundButtonsFollowNoAnswerAndStoreChipFlags(boolean noAnswer, boolean storeChip, boolean expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true",
+                        "telme.consult.suggested-questions.no-answer-enabled=" + noAnswer,
+                        "telme.consult.suggested-questions.store-chip-enabled=" + storeChip)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(
+                                    com.telme.consult.service.QueryRoutingAnalysisProvider.CompoundQuestionSuggestions.class)
+                                    instanceof com.telme.consult.service.CompoundPartSuggestions).isEqualTo(expected);
                         });
     }
 

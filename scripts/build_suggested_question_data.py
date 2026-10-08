@@ -7,7 +7,8 @@
 
 출력
   - src/main/resources/suggested-question/policy-links.json: 정책별 연결(순서 = 우선순위), 대표 질문, 매장 버튼 문장
-  - src/main/resources/suggested-question/faq-rules.json: 문제 상황(TROUBLE) FAQ, 자격 조건 불가 FAQ, 단말 정책 FAQ의 상황
+  - src/main/resources/suggested-question/faq-rules.json: 문제 상황(TROUBLE) FAQ, 자격 조건 불가 FAQ, 단말 정책 FAQ의 상황,
+    질문을 그대로 보내도 답이 안 나오는 FAQ(scripts/data/faq_unanswerable.json)
   - src/test/resources/suggested-question/expected-recommendations.json: FAQ 1,150개별 기대 추천(코드 결과 비교용)
 """
 
@@ -20,6 +21,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SRC = ROOT / "scripts/data/faq_full_1150.json"
+# check_faq_answerable_live.py가 실제 채팅 경로로 측정한 결과. 버튼으로 쓰면 눌러도 답이 안 나오는 FAQ다
+UNANSWERABLE_SRC = ROOT / "scripts/data/faq_unanswerable.json"
 MAIN_OUT = ROOT / "src/main/resources/suggested-question"
 TEST_OUT = ROOT / "src/test/resources/suggested-question"
 
@@ -77,10 +80,13 @@ POLICY_TITLE = {
 #   ROAMING-0012 "로밍 신청 창구를 알려주세요." → ROAMING-0022
 #   SERVICE-0023 "매장 방문은 언제 가능한가요?" → SERVICE-0058
 #   TERMINATE-0010 "약정 중간에 해지하면 위약금이 얼마나 나오나요?" → TERMINATE-0034
+# 대표 질문은 답이 안 나오는 FAQ(UNANSWERABLE_SRC)가 아니어야 한다. 복합 질문 처리(TELME-87) 뒤 라우터가
+# 여러 대상을 나열한 질문을 대상별로 쪼개 모두 실패해서 바꿨다
+#   PLAN-0041 "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요." → PLAN-0091
 REPRESENTATIVE = {
     "BILLING-01": "BILLING-0015", "BILLING-02": "BILLING-0016", "BILLING-03": "BILLING-0045",
     "BILLING-05": "BILLING-0012", "BILLING-07": "BILLING-0021",
-    "PLAN-01": "PLAN-0041", "PLAN-02": "PLAN-0012", "PLAN-03": "PLAN-0018", "PLAN-04": "PLAN-0014",
+    "PLAN-01": "PLAN-0091", "PLAN-02": "PLAN-0012", "PLAN-03": "PLAN-0018", "PLAN-04": "PLAN-0014",
     "PLAN-05": "PLAN-0045",
     "USIM-01": "USIM-0017", "USIM-02": "USIM-0010", "USIM-04": "USIM-0036",
     "SUBSCRIBE-01": "SUBSCRIBE-0037", "SUBSCRIBE-02": "SUBSCRIBE-0014", "SUBSCRIBE-03": "SUBSCRIBE-0011",
@@ -178,7 +184,7 @@ def load_json(path: Path):
         raise SystemExit(f"{path}: JSON 형식이 아닙니다: {exc}") from None
 
 
-def validate(items: dict[str, dict]) -> None:
+def validate(items: dict[str, dict], unanswerable: list[str]) -> None:
     errors = []
     policies = {x["policy_ref"] for x in items.values()}
     if set(LINKS) != policies:
@@ -193,6 +199,12 @@ def validate(items: dict[str, dict]) -> None:
     for slot in ELIGIBILITY_BLOCKED:
         if slot not in items:
             errors.append(f"자격 조건 불가 {slot}: FAQ가 없습니다")
+    for slot in unanswerable:
+        if slot not in items:
+            errors.append(f"답이 안 나오는 FAQ {slot}: FAQ가 없습니다")
+    for pol, slot in REPRESENTATIVE.items():
+        if slot in unanswerable:
+            errors.append(f"대표 질문 {pol} = {slot}: 눌러도 답이 안 나오는 FAQ입니다")
     if errors:
         raise SystemExit("\n".join(errors))
 
@@ -245,7 +257,7 @@ def trigger_policies() -> set[str]:
             if any("triggerIn" in e.get("condition", {}) or "triggerNotIn" in e.get("condition", {}) for e in links)}
 
 
-def build(items: dict[str, dict]) -> tuple[dict, dict, dict]:
+def build(items: dict[str, dict], unanswerable: list[str]) -> tuple[dict, dict, dict]:
     used = sorted({e["to"] for links in LINKS.values() for e in links})
     policy_links = {
         "representativeQuestions": {
@@ -267,6 +279,8 @@ def build(items: dict[str, dict]) -> tuple[dict, dict, dict]:
         "eligibilityBlockedSlotIds": sorted(ELIGIBILITY_BLOCKED),
         # 상황 조건이 있는 연결을 가진 정책의 FAQ만 담는다
         "triggers": {s: x["trigger"] for s, x in sorted(items.items()) if x["policy_ref"] in tp},
+        # 답을 못 할 때 "혹시 이런 내용을 찾으셨나요?" 후보에서 뺀다
+        "unanswerableSlotIds": sorted(unanswerable),
     }
     # 테스트가 원본 JSON 없이 돌도록 기준 FAQ의 정책·카테고리·질문과 답변의 매장 언급 여부(부정 표현 제외)를 함께 담는다
     expected = {s: {"policyRef": x["policy_ref"], "category": x["category"], "question": x["question"],
@@ -295,8 +309,9 @@ def main() -> None:
     args = parser.parse_args()
 
     items = {x["slot_id"]: x for x in load_json(args.src)}
-    validate(items)
-    policy_links, faq_rules, expected = build(items)
+    unanswerable = load_json(UNANSWERABLE_SRC)["slotIds"]
+    validate(items, unanswerable)
+    policy_links, faq_rules, expected = build(items, unanswerable)
     outputs = {
         MAIN_OUT / "policy-links.json": policy_links,
         MAIN_OUT / "faq-rules.json": faq_rules,
@@ -315,7 +330,8 @@ def main() -> None:
     counts = [len(v["suggestions"]) for v in expected.values()]
     n_links = sum(len(v) for v in LINKS.values())
     print(f"연결 {n_links}개, 쓰인 대표 질문 {len(policy_links['representativeQuestions'])}개, "
-          f"자격 조건 불가 {len(ELIGIBILITY_BLOCKED)}건, TROUBLE {len(faq_rules['troubleSlotIds'])}건")
+          f"자격 조건 불가 {len(ELIGIBILITY_BLOCKED)}건, TROUBLE {len(faq_rules['troubleSlotIds'])}건, "
+          f"답이 안 나오는 FAQ {len(unanswerable)}건")
     print(f"FAQ별 추천 수: 2개 {counts.count(2)}, 1개 {counts.count(1)}, 없음 {counts.count(0)}")
     store = [v for v in expected.values() if v["storeQuestion"]]
     by_question = {}

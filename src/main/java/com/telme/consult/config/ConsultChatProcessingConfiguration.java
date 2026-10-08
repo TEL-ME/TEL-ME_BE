@@ -4,12 +4,14 @@ import com.telme.consult.service.ConsultChatPersistenceService;
 import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ChatEmitterConsultEvents;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
+import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ExecutionTrace;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -32,8 +34,9 @@ public class ConsultChatProcessingConfiguration {
             ConsultChatPersistenceService persistence,
             ConfirmedConditionConverter conditionConverter,
             ConsultChatEvents events,
-            ExecutionTrace trace) {
-        return new ConsultChatProcessingService(
-                analyzer, answers, persistence, conditionConverter, events, trace);
+            ExecutionTrace trace,
+            ObjectProvider<NoAnswerSuggestions> noAnswerSuggestions) {
+        return new ConsultChatProcessingService(analyzer, answers, persistence, conditionConverter, events, trace,
+                noAnswerSuggestions.getIfAvailable(NoAnswerSuggestions::none));
     }
 }

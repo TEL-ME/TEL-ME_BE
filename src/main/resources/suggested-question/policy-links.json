@@ -49,8 +49,8 @@
       "question": "할부금이 남아 있으면 신용 심사는 누가 받나요?"
     },
     "PLAN-01": {
-      "slotId": "PLAN-0041",
-      "question": "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요."
+      "slotId": "PLAN-0091",
+      "question": "요금제가 너무 많아서 뭐가 뭔지 모르겠어요"
     },
     "PLAN-02": {
       "slotId": "PLAN-0012",

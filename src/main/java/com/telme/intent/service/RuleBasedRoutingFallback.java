@@ -222,7 +222,7 @@ public class RuleBasedRoutingFallback {
 
     // 문장에 업무 표현이 하나만 있으면 그 업무 코드, 없거나 여럿이면 null.
     // "번호이동 말고 신규 개통"처럼 여럿이면 어느 쪽인지 규칙으로 알 수 없어 임의로 고르지 않는다(필터 없이 검색)
-    String serviceTypeOf(String text) {
+    public String serviceTypeOf(String text) {
         if (text == null) {
             return null;
         }

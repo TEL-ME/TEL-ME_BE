@@ -4,6 +4,7 @@ import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
@@ -29,6 +30,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final ComparisonEvidenceResolver comparisonEvidence;
     private final FaqCandidateEvidenceResolver candidateEvidence;
     private final AnswerContextConverter sourceConverter;
+    private final SuggestedQuestions suggestedQuestions;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -56,12 +58,21 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter,
+                SuggestedQuestions.none());
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
         this.comparisonEvidence = Objects.requireNonNull(comparisonEvidence);
         this.candidateEvidence = Objects.requireNonNull(candidateEvidence);
         this.sourceConverter = Objects.requireNonNull(sourceConverter);
+        this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
     }
 
     @Override
@@ -79,8 +90,13 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 trace.stage(input.executionId(), "comparisonAnswer", Map.of(
                         "method", "VERIFIED_FAQ_QUOTE", "faqIds",
                         resolution.sources().stream().map(FaqSearchResponse::faqId).toList()));
+                // 비교한 두 FAQ가 모두 근거라 FAQ마다 추천 질문을 하나씩 붙인다
+                List<String> followUps = SuggestedQuestions.oneFromEach(resolution.sources().stream()
+                        .map(source -> Objects.requireNonNull(suggestedQuestions.suggest(
+                                ChatMessage.AnswerBasis.GROUNDED, List.of(source)), "suggestedQuestions"))
+                        .toList());
                 return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        resolution.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                        resolution.answer(), ChatMessage.AnswerBasis.GROUNDED, followUps, null),
                         sourceConverter.toSources(resolution.sources()));
             }
             trace.stage(input.executionId(), "guard", Map.of(
@@ -96,8 +112,11 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));
+                // 확인된 후보 하나가 답의 근거라 일반 답변의 검색 결과 1순위처럼 추천 질문을 만든다
+                List<String> followUps = Objects.requireNonNull(suggestedQuestions.suggest(
+                        ChatMessage.AnswerBasis.GROUNDED, List.of(verified)), "suggestedQuestions");
                 return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        verified.answer(), ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                        verified.answer(), ChatMessage.AnswerBasis.GROUNDED, followUps, null),
                         sourceConverter.toSources(List.of(verified)));
             }
         }

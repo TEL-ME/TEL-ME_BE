@@ -11,8 +11,10 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.service.AnswerGenerator;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** FAQ 검색 결과와 확정된 상담 조건을 RAG 답변 요청으로 변환한다. */
 public final class RagSearchResultAnswerGenerator implements SearchResultAnswerGenerator {
@@ -136,6 +138,18 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
 
         static SuggestedQuestions none() {
             return (answerBasis, searchResults) -> List.of();
+        }
+
+        /** 근거마다 첫 추천 질문을 하나씩 고른다. 앞에서 고른 것과 같으면 그 근거의 다음 추천을 쓴다. */
+        static List<String> oneFromEach(List<List<String>> suggestionsPerEvidence) {
+            Set<String> picked = new LinkedHashSet<>();
+            for (List<String> suggestions : suggestionsPerEvidence) {
+                suggestions.stream()
+                        .filter(question -> !picked.contains(question))
+                        .findFirst()
+                        .ifPresent(picked::add);
+            }
+            return List.copyOf(picked);
         }
     }
 }

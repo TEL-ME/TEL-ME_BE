@@ -9,10 +9,12 @@ import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
 import com.telme.consult.service.QueryRoutingAnalysisProvider;
+import com.telme.consult.service.QueryRoutingAnalysisProvider.CompoundQuestionSuggestions;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
 import com.telme.consult.service.QueryRoutingFollowupAnalysisProvider;
 import com.telme.intent.service.QueryRoutingService;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -33,9 +35,10 @@ public class ConsultTurnRoutingConfiguration {
     AnalysisProvider consultAnalysisProvider(
             ChatMessageRepository messages,
             QueryRoutingService routing,
-            FollowupAnalysisProvider followups) {
-        return new BasicConversationAnalysisProvider(
-                new QueryRoutingAnalysisProvider(messages, routing, followups));
+            FollowupAnalysisProvider followups,
+            ObjectProvider<CompoundQuestionSuggestions> compoundSuggestions) {
+        return new BasicConversationAnalysisProvider(new QueryRoutingAnalysisProvider(messages, routing, followups,
+                compoundSuggestions.getIfAvailable(CompoundQuestionSuggestions::none)));
     }
 
     @Bean
