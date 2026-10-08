@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.config.ChatSummaryProperties;
+import com.telme.chat.converter.ChatSummaryConverter;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.guard.InputGuardProperties;
@@ -94,6 +95,7 @@ class ChatInputGuardIntegrationTest {
     @Autowired private ChatMessageRepository messageRepository;
     @Autowired private ChatExecutionRepository executionRepository;
     @Autowired private ChatTokenEstimator tokenEstimator;
+    @Autowired private ChatSummaryConverter summaryConverter;
     @Autowired private InputGuardProperties properties;
     @Autowired private PlatformTransactionManager transactions;
     @MockitoBean private Clock clock;
@@ -577,7 +579,8 @@ class ChatInputGuardIntegrationTest {
                         messageRepository,
                         executionRepository,
                         new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512),
-                        tokenEstimator);
+                        tokenEstimator,
+                        summaryConverter);
         int through = sequence - 1;
         var snapshot =
                 new TransactionTemplate(transactions)

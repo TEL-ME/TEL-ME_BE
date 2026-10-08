@@ -35,14 +35,25 @@ public final class RoutingPromptTemplates {
 
         [이전 상담 요약·이전 대화가 함께 주어진 경우]
         - 분류와 분해 대상은 언제나 [현재 질문]이다. 이전 대화를 다시 분류하지 마십시오.
+        - 이전 고객 발언은 대상과 조건을 알려주는 자료다. 그 발언에서 했던 답변 요구를 subQueries에 추가하지 않는다.
+        - 이전 발언이 '로밍 요금제는 어떻게 골라요?'이고 현재 질문이 '그럼 신청 방법은?'이면
+          queryText는 '로밍 요금제 신청 방법' 한 건이다. '로밍 요금제 선택 방법'을 다시 넣지 않는다.
         - 이전 대화는 "거기", "그럼 그건", "아까 그 요금제"처럼 현재 질문만으로 알 수 없는 표현을 푸는 데만 사용한다.
         - 이전 대화에서 확인된 지역·업무 코드는 현재 질문에 필요하면 extractedConditions에 채운다.
         - refinedQuery에는 지시어를 실제 대상으로 바꾼 문장을 담는다. ("거기 영업시간" -> "강남역 매장 영업시간")
 
         [검색 질문 보존]
         - 현재 질문이나 이전 대화에 없는 지역, 상품, 기간, 조건을 추측해 추가하지 않는다.
+        - "현재 위치", "내 위치", "여기", "근처", "주변"처럼 기준점만 가리키는 말은 지역명이 아니므로 location에 넣지 않는다.
         - 질문이 여러 대상이나 조건을 함께 묻는다면 FAQ 하위 질문에 모두 남긴다. 5G, LTE, 알뜰 요금제를 묻는 질문을 5G만으로 줄이지 않는다.
-        - FAQ만 묻는 질문은 조건이 여러 개여도 subQueries에 FAQ 한 건만 넣고, queryText에 전체 질문의 조건을 담는다.
+        - 하나의 FAQ 질문에 대상이나 조건이 여러 개 붙은 경우에는 FAQ 하위 질문 한 건에 모든 조건을 남긴다. 특히 두 대상을 비교해 달라는 질문은 각각의 설명으로 쪼개지 않고 비교 요청 한 건으로 둔다.
+        - 서로 독립적으로 답해야 할 FAQ 질문이 2~3개면 질문별 FAQ 하위 질문을 순서대로 만든다. 3개를 넘으면 임의로 합치거나 생략하지 않는다.
+        - 마침표, 물음표, 줄바꿈으로 구분된 문장이 각각 답변을 요구하면 독립 질문이다. 뒤 문장에 '도', '또', '그리고'가 붙어도 하나로 합치거나 앞 질문을 생략하지 않는다.
+        - 독립 질문 뒤에 비교 요청이 붙으면 독립 질문 한 건과 비교 요청 한 건을 각각 유지한다. 비교 요청의 두 대상을 각각의 설명으로 분해하지 않는다.
+        - 하위 질문 수는 비교 대상 수가 아니라 독립적인 답변 요구 수이다. '변경 방법 안내'와 '5G/LTE 비교'는 총 2건이다. '변경 방법', '5G 안내', 'LTE 안내'의 3건으로 바꾸면 잘못된 분해이다.
+        - 비교 요청의 queryText에는 두 대상과 '비교' 또는 '차이'를 함께 남긴다. 비교 요청을 각 대상의 단독 안내로 바꾸지 않는다.
+        - 문장 구분만으로 분해하지 않는다. 앞 문장이 상황이나 조건을 설명하고 뒤 문장만 답변을 요구하면 한 질문으로 유지한다.
+        - 각 FAQ queryText는 그 문장만 검색해도 대상을 알 수 있게 만든다. 원문이나 이전 대화에 있는 공통 대상은 필요한 하위 질문마다 반복하되, 없는 조건은 만들지 않는다.
         - 서로 다른 업무인 FAQ와 지점 검색을 함께 요청한 경우에만 FAQ와 STORE 하위 질문을 각각 한 건씩 넣는다.
         - 의미가 같은 검색 질문으로 바꾸기 어렵다면 사용자 원문을 refinedQuery와 FAQ queryText에 그대로 사용한다.
         - 질문에 없는 다른 업무나 행동을 검색 질문에 추가하지 않는다. 해지를 물으면 번호이동을 추가하지 않는다.
@@ -50,6 +61,21 @@ public final class RoutingPromptTemplates {
         [Few-Shot 예시]
         질문: "너겟 요금제 5G 무제한 결합할인 조건이 어떻게 되나요?"
         응답: {"intent":"FAQ","confidence":0.98,"refinedQuery":"너겟 요금제 5G 무제한 결합할인 조건","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"너겟 요금제 5G 무제한 결합할인 조건","conditions":{}}]}
+
+        질문: "해외 로밍 요금과 해외 로밍 데이터 차단 방법을 알려줘"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"해외 로밍 요금과 해외 로밍 데이터 차단 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"해외 로밍 요금","conditions":{}},{"order":2,"intent":"FAQ","queryText":"해외 로밍 데이터 차단 방법","conditions":{}}]}
+
+        질문: "5G와 LTE 요금제 종류를 비교해줘"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+
+        질문: "요금제 변경 방법 알려줘. 유심 재발급 방법도 알려줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 유심 재발급 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}}]}
+
+        질문: "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+
+        질문: "지금 5G 요금제를 쓰고 있어. LTE 요금제와 데이터 제공량을 비교해줘."
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 데이터 제공량 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 데이터 제공량 비교","conditions":{}}]}
 
         질문: "부모님 명의 휴대폰을 제 명의로 바꾸려면 무엇이 필요한가요?"
         응답: {
@@ -107,6 +133,7 @@ public final class RoutingPromptTemplates {
 
         [조건 정의]
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
+          "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
 
         [상태 판정 기준]
@@ -155,16 +182,22 @@ public final class RoutingPromptTemplates {
 
     // Context가 없으면 질문만 넘겨 기존 단일 질문 프롬프트와 같은 형태를 유지한다
     public static String routingUserPrompt(ChatContext context, String question) {
-        if (context == null || (context.summary() == null && context.history().isEmpty())) {
+        if (context == null || (context.summarySources().isEmpty() && context.history().isEmpty())) {
             return question;
         }
 
         StringBuilder prompt = new StringBuilder();
-        if (context.summary() != null) {
-            prompt.append("[이전 상담 요약]\n").append(context.summary()).append("\n\n");
+        List<String> summary = context.summarySources().stream()
+                .filter(message -> message.role() == ChatMessage.Role.USER)
+                .map(RoutingPromptTemplates::historyLine).filter(Objects::nonNull).toList();
+        if (!summary.isEmpty()) {
+            prompt.append("[검증된 이전 고객 발언]\n");
+            summary.forEach(line -> prompt.append(line).append("\n"));
+            prompt.append("\n");
         }
 
         List<String> lines = context.history().stream()
+            .filter(message -> message.role() == ChatMessage.Role.USER)
             .map(RoutingPromptTemplates::historyLine)
             .filter(Objects::nonNull)
             .toList();

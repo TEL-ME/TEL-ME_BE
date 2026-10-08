@@ -1,0 +1,73 @@
+{
+  "baseCommit": "8dc8123c473f820a7ea753386b695f27277f2ae1",
+  "changesNotCommitted": true,
+  "codeFileSha256": {
+    "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "7c6be203c28205750b22d0c2ce5fee732e3f82c438a7c73f1b27bb1d8392127f",
+    "src/test/java/com/telme/chat/service/ChatQuestionResolverTest.java": "597e47445cced49b5ef1a23d2617bc77947712d8fc6f142cd5fc0e548915e0cd",
+    "src/test/java/com/telme/consult/service/MultiturnChatIntegrationTest.java": "474a8e8a55b2affa9f84b867a575d73714e2015e6475a95ce2130d4be3c8b7d5",
+    "src/test/java/com/telme/consult/service/MultiturnLiveApiEvaluationTest.java": "8bd6bdd903f83eb73400442e4231fed04eaf29c4494a4a866c1987a2d492eb05"
+  },
+  "models": [
+    {
+      "name": "bge-m3:latest",
+      "digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab"
+    },
+    {
+      "name": "exaone3.5:7.8b",
+      "digest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03"
+    }
+  ],
+  "archives": [
+    {
+      "source": ".measure\\telme121\\live-api\\temporal-questions-1791379965609.jsonl",
+      "archive": "scripts\\multiturn-evaluation\\results\\V4-temporal-questions\\raw\\final-cases.jsonl.gz",
+      "uncompressedSha256": "5dbe62ebcf57747ed8086c38ec1a915c0b20908d34203b43e521639869419b22",
+      "bytes": 40455
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\model-1791379965609.jsonl",
+      "archive": "scripts\\multiturn-evaluation\\results\\V4-temporal-questions\\raw\\final-model.jsonl.gz",
+      "uncompressedSha256": "9b20a598e0bb4fc320d2956d032045a264033508435e5ee61dca5070b6bd4168",
+      "bytes": 429687
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\review-regressions-1791379965609.jsonl",
+      "archive": "scripts\\multiturn-evaluation\\results\\V4-temporal-questions\\raw\\final-regressions.jsonl.gz",
+      "uncompressedSha256": "8b6bc48b1b1347c046204f742a4ebd8ea30d3c56ce675d438b84f6c859b512ea",
+      "bytes": 168434
+    }
+  ],
+  "cases": 17,
+  "verified": 17,
+  "fixtures": {
+    "EXPLICIT_ROAMING": 1,
+    "EXPLICIT_USIM": 1,
+    "EXPLICIT_LTE": 1,
+    "UNRELATED_HISTORY": 1,
+    "MISSING_TARGET": 1,
+    "MISSING_TEMPORAL_TARGET": 1,
+    "RESOLVED_TEMPORAL_TARGET": 1,
+    "IMPLICIT_APPLICATION": 3,
+    "IMPLICIT_DOCUMENTS": 1,
+    "IMPLICIT_PERIOD": 1,
+    "INDEPENDENT_ENROLLMENT": 2,
+    "INDEPENDENT_TERMINATION": 1,
+    "PENDING_NEW_QUESTION": 1,
+    "LEGACY_SUMMARY": 1
+  },
+  "distinctFixtures": 14,
+  "modelCalls": 63,
+  "automatedTests": {
+    "tests": 1961,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 108
+  },
+  "temporalQuestionCases": 7,
+  "buildCommand": "gradlew.bat clean test build --build-cache",
+  "notes": [
+    "Spring 채팅 API와 실제 EXAONE 및 FAQ 검색을 사용한 문맥 연결 회귀 검증",
+    "VERIFIED는 대상 복원, 문맥 격리, 검색 및 실행 상태 검증이며 최종 답변 정확도 점수가 아님",
+    "회귀 사례에는 동일 유형의 반복 실행이 포함됨"
+  ]
+}

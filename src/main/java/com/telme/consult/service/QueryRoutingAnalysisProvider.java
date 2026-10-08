@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -11,6 +12,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting.Intent;
 import com.telme.intent.entity.QueryRouting.Method;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.TooManyFaqQuestionsException;
 import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
 import java.math.BigDecimal;
@@ -25,6 +27,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
             "질문을 정확히 분류하기 어렵습니다. 궁금한 통신 서비스나 매장 정보를 조금 더 구체적으로 알려주세요.";
     private static final String COMPOUND_GUIDANCE =
             "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요.";
+    private static final String TOO_MANY_FAQ_GUIDANCE =
+            "FAQ 질문은 한 번에 최대 3개까지 답변할 수 있습니다. 질문을 나누어 보내주세요.";
     private final ChatMessageRepository messages;
     private final QueryRoutingService routing;
     private final FollowupAnalysisProvider followups;
@@ -45,9 +49,8 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
         if (!context.candidates().isEmpty()) {
             AnalysisResult followup =
                     Objects.requireNonNull(followups.analyze(context), "followupAnalysis");
-            if (!followup.reroute()) {
-                return followup;
-            }
+            // 새 질문 판정은 호출자에게 돌려 문맥 복원 후 한 번만 재라우팅한다.
+            return followup;
         }
 
         return routeInitial(context);
@@ -62,13 +65,22 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                         .orElseThrow(() -> new IllegalArgumentException("라우팅할 사용자 메시지가 없습니다."));
         IntentRouteResponse result;
         try {
-            result = routing.routeSingleConsult(message, context.routingContext());
+            result = context.message().equals(context.resolvedQuestion())
+                    ? routing.routeSingleConsult(message, context.routingContext())
+                    : routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion());
         } catch (UnsupportedCompoundQuestionException exception) {
             return AnalysisResult.direct(new ChatAnswer(
                     ChatMessage.MessageType.ANSWER,
                     COMPOUND_GUIDANCE,
                     null,
                     List.of("요금제 알려줘", "가까운 매장 찾아줘"),
+                    null));
+        } catch (TooManyFaqQuestionsException exception) {
+            return AnalysisResult.direct(new ChatAnswer(
+                    ChatMessage.MessageType.ANSWER,
+                    TOO_MANY_FAQ_GUIDANCE,
+                    null,
+                    List.of(),
                     null));
         }
         if (result.intent() == Intent.UNKNOWN) {
@@ -82,6 +94,12 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                             ChatMessage.AnswerBasis.OUT_OF_SCOPE,
                             List.of("요금제 알려줘", "가까운 매장 찾아줘"),
                             null));
+        }
+        if (result.intent() == Intent.FAQ && result.subQueries() != null
+                && result.subQueries().size() > 1
+                && result.subQueries().stream().allMatch(
+                        query -> query.intent() == ConsultRequest.Intent.FAQ)) {
+            return AnalysisResult.multipleFaq(result.subQueries());
         }
         if (result.subQueries() == null || result.subQueries().size() != 1) {
             throw new IllegalStateException("단일 상담 라우팅 결과가 필요합니다.");

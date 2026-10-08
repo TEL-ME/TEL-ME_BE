@@ -9,6 +9,12 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
+import com.telme.chat.service.ChatQuestionResolver;
+import com.telme.chat.service.ExecutionTrace;
+import com.telme.llm.service.LlmClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
@@ -34,6 +40,55 @@ import java.util.Map;
 class ConsultTurnAnalysisAdapterTest {
     private final ConsultTurnPreparationService preparation =
             mock(ConsultTurnPreparationService.class);
+
+    @Test
+    void newQuestionWhileWaitingResolvesBeforeRoutingAndDoesNotConsumePendingCandidate() {
+        var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "로밍 요금제는 어떻게 골라요?", null);
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE");
+        var context = new Context(1, 10, "그럼 신청 방법은?", List.of(candidate),
+                new ChatContext(1L, 10L, null, List.of(previous), "그럼 신청 방법은?", 100));
+        var model = mock(LlmClient.class);
+        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[5]}");
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "로밍 신청 안내", null, List.of(), null);
+        var calls = new java.util.ArrayList<Context>();
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            calls.add(input);
+            return calls.size() == 1 ? AnalysisResult.rerouteRequest() : AnalysisResult.direct(answer);
+        }, preparation, new FollowupConditionConverter(), resolver);
+
+        assertThat(adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer())
+                .isSameAs(answer);
+        assertThat(calls).hasSize(2);
+        assertThat(calls.get(0).candidates()).containsExactly(candidate);
+        assertThat(calls.get(1).candidates()).isEmpty();
+        assertThat(calls.get(1).resolvedQuestion()).contains(previous.content(), context.message());
+        assertThat(calls.get(1).routingContext().history()).containsExactly(previous);
+        assertThat(context.candidates()).containsExactly(candidate);
+        org.mockito.Mockito.verify(model).generate(any());
+        verifyNoInteractions(preparation);
+    }
+
+    @Test
+    void independentQuestionDoesNotPassPreviousTopicToAnalysis() {
+        var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "로밍 요금제는 어떻게 골라요?", null);
+        var context = new Context(1, 10, "미성년자도 가입 되나요", List.of(),
+                new ChatContext(1L, 10L, null, List.of(previous), "미성년자도 가입 되나요", 100));
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "신규 가입 조건", null, List.of(), null);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            assertThat(input.routingContext()).isNull();
+            assertThat(input.resolvedQuestion()).isEqualTo(context.message());
+            return AnalysisResult.direct(answer);
+        }, preparation, new FollowupConditionConverter(), resolver);
+        assertThat(adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer())
+                .isSameAs(answer);
+        verifyNoInteractions(model, preparation);
+    }
 
     @Test
     void gpsResolvesWaitingLocationAndIsPassedAsVerifiedCoordinateStatus() {
@@ -114,6 +169,7 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(turn.answeredField()).isEqualTo("location");
         assertThat(turn.originalUserQuery()).isEqualTo("유심 재발급할 매장을 알려줘");
         assertThat(turn.searchQuery()).isEqualTo("유심 매장");
+        assertThat(turn.context()).isNull();
     }
 
     @Test
@@ -135,6 +191,34 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(turn.answeredField()).isNull();
         assertThat(turn.originalUserQuery()).isEqualTo("요금 납부 방법");
         assertThat(turn.searchQuery()).isEqualTo("요금 납부 방법");
+    }
+
+    @Test
+    void multipleFaqQuestionsArePreparedSeparately() {
+        var context = new Context(1, 10, "요금제와 로밍 알려줘", List.of());
+        var first = new IntentSubQueryResponse(
+                101L, (short) 1, ConsultRequest.Intent.FAQ, "요금제 종류", Map.of());
+        var second = new IntentSubQueryResponse(
+                102L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
+        for (var query : List.of(first, second)) {
+            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING))
+                    .thenReturn(new ConsultService.PreparationResult(
+                            new ConsultService.PreparedTurn(1, 1,
+                                    new DialogueDecision(query.consultRequestId(), Action.PROCEED,
+                                            Map.of(), null, null, MessageOrigin.NONE)), null));
+        }
+        var adapter = new ConsultTurnAnalysisAdapter(
+                command -> context,
+                value -> AnalysisResult.multipleFaq(List.of(first, second)),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "요금제와 로밍 알려줘"));
+
+        assertThat(turn.faqTurns()).extracting(ConsultChatProcessingService.FaqTurn::queryText)
+                .containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(turn.faqTurns()).extracting(
+                faq -> faq.preparation().prepared().decision().consultRequestId())
+                .containsExactly(101L, 102L);
     }
 
     @Test

@@ -1,0 +1,71 @@
+{
+  "baseCommit": "b74bbf19b056bbacdfe24a672cb89cd26ddf4048",
+  "changesNotCommitted": true,
+  "codeFileSha256": {
+    "src/main/java/com/telme/chat/service/ChatContextBuilder.java": "b3ad44ed8a0cd71e1138eecf1b66977b5113c1ef60ea6cd3205ea03b1144fded",
+    "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "0a6ff5383b0751173e4c43f38431a6da9e77614c583af0ede84a2647df561c52",
+    "src/main/java/com/telme/consult/service/ConsultTurnAnalysisAdapter.java": "8617567e8920d0f319075ec22c8f8e809a6a4a5e6dd48c496ce6e95d5aee8c22",
+    "src/main/java/com/telme/consult/service/FollowupContextService.java": "e55341781dbf5f4e3f7b205caf5db97293be62d97a152353f8864fada8ae55e8",
+    "src/main/java/com/telme/consult/service/QueryRoutingAnalysisProvider.java": "ed088ffee1ce7ebc674a7c3e8a07c424161dc0333757be77dc9fcad34f297a17",
+    "src/main/java/com/telme/intent/service/QueryRoutingService.java": "37ec2b35a9498c3464cc3fcd1e711d22e6c68a0571df31367bc298e1dbb2e07b",
+    "src/main/java/com/telme/intent/service/RoutingPromptTemplates.java": "207cc2cd9826db9ed6688f6ccc5c5ec5a9de345c32cc064ad221b1ac3e2a748f",
+    "src/test/java/com/telme/chat/service/ChatContextBuilderIntegrationTest.java": "f27ee06bcb8939ac348934aed73a0f762e4e56b7d8e816eda59add3c7cb24bef",
+    "src/test/java/com/telme/chat/service/ChatQuestionResolverTest.java": "02de12dfea2ce42111b3a49e9aeae3142722f9af787c69e4c0c48f84d8ca4759",
+    "src/test/java/com/telme/chat/service/ChatSummaryFlowIntegrationTest.java": "726f069ec2cd10cffda99ba4587d75b654921254c34b8f5804913413b371bedf",
+    "src/test/java/com/telme/consult/service/ConsultTurnAnalysisAdapterTest.java": "ef7471df510c496bf9305d3af739d7039197ce497dbd90704150daa6b6c82d58",
+    "src/test/java/com/telme/consult/service/MultiturnChatIntegrationTest.java": "ca2751bb860dd53d7be74a42cf58102d0dd245b6057a1b65c08e2daeb0266655",
+    "src/test/java/com/telme/consult/service/MultiturnLiveApiEvaluationTest.java": "abb2144ad5c89998d0c29c8d7a9e354f621f12787bf575049032bd35c37b23e5",
+    "src/test/java/com/telme/consult/service/QueryRoutingAnalysisProviderTest.java": "e6e0884278374759ec46082fb38723bf30eeb2edb36078586f6f0732ae7d9114",
+    "src/test/java/com/telme/intent/service/QueryRoutingServiceTest.java": "1a4f91f8e91291ec481ba194b08a2796df4af7781481fdb787f2cbf7fc8c2020"
+  },
+  "models": [
+    {
+      "name": "bge-m3:latest",
+      "digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab"
+    },
+    {
+      "name": "exaone3.5:7.8b",
+      "digest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03"
+    }
+  ],
+  "archives": [
+    {
+      "source": ".measure\\telme121\\live-api\\review-regressions-1791378075956.jsonl",
+      "archive": "scripts\\multiturn-evaluation\\results\\V3-review-regressions\\raw\\final-cases.jsonl.gz",
+      "uncompressedSha256": "ee2c598231c0b367e2db7ff8773807692f46764d47c6634490bb8f2158b7ae03",
+      "bytes": 161414
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\model-1791378075956.jsonl",
+      "archive": "scripts\\multiturn-evaluation\\results\\V3-review-regressions\\raw\\final-model.jsonl.gz",
+      "uncompressedSha256": "adbae7e7fcdd4d9363bd0da6be780801e79137a240c99a0067c7e26014679085",
+      "bytes": 328544
+    }
+  ],
+  "cases": 10,
+  "verified": 10,
+  "fixtures": {
+    "IMPLICIT_APPLICATION": 3,
+    "IMPLICIT_DOCUMENTS": 1,
+    "IMPLICIT_PERIOD": 1,
+    "INDEPENDENT_ENROLLMENT": 2,
+    "INDEPENDENT_TERMINATION": 1,
+    "PENDING_NEW_QUESTION": 1,
+    "LEGACY_SUMMARY": 1
+  },
+  "distinctFixtures": 7,
+  "modelCalls": 51,
+  "automatedTests": {
+    "tests": 1947,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 107
+  },
+  "buildCommand": "gradlew.bat clean test build --build-cache",
+  "notes": [
+    "Spring 채팅 API와 실제 EXAONE 및 FAQ 검색을 사용한 문맥 연결 회귀 검증",
+    "VERIFIED는 대상 복원, 문맥 격리, 검색 및 실행 상태 검증이며 최종 답변 정확도 점수가 아님",
+    "반복 10건은 서로 독립적인 사용자 질문 10건이 아님",
+    "V1과 V2 결과는 변경하지 않음"
+  ]
+}

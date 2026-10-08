@@ -3,13 +3,18 @@ package com.telme.consult.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatPersistenceService;
 import com.telme.consult.service.ConsultChatProcessingService;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
@@ -23,13 +28,19 @@ import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.rag.service.AnswerGenerator;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.time.LocalDate;
+import java.util.List;
 
 class ConsultChatPipelineConfigurationTest {
     private final ApplicationContextRunner runner =
@@ -47,6 +58,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
                     .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
                     .withBean(
                             FollowupAnalysisProvider.class,
                             () -> mock(FollowupAnalysisProvider.class))
@@ -56,6 +68,11 @@ class ConsultChatPipelineConfigurationTest {
                             () -> mock(ConsultTurnPreparationService.class))
                     .withBean(FollowupConditionConverter.class, FollowupConditionConverter::new)
                     .withBean(FaqSearchService.class, () -> mock(FaqSearchService.class))
+                    .withBean(ComparisonEvidenceResolver.class,
+                            () -> mock(ComparisonEvidenceResolver.class))
+                    .withBean(FaqCandidateEvidenceResolver.class,
+                            () -> mock(FaqCandidateEvidenceResolver.class))
+                    .withBean(AnswerContextConverter.class, AnswerContextConverter::new)
                     .withBean(AnswerGenerator.class, () -> mock(AnswerGenerator.class))
                     .withBean(
                             ConsultChatPersistenceService.class,
@@ -132,6 +149,29 @@ class ConsultChatPipelineConfigurationTest {
                             assertThat(context).hasNotFailed();
                             assertThat(context.getBean(SuggestedQuestions.class))
                                     .isInstanceOf(PolicyLinkSuggestedQuestions.class);
+                        });
+    }
+
+    // 매장 버튼은 추천 질문 안의 옵션이다. 켜야 매장을 언급한 답변 뒤에 매장 찾기 버튼이 붙는다
+    @ParameterizedTest
+    @CsvSource({"false, ''", "true, 유심 재발급 가능한 매장을 알려주세요."})
+    void storeChipFlagControlsStoreQuestion(boolean storeChip, String expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true",
+                        "telme.consult.suggested-questions.store-chip-enabled=" + storeChip)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            var top = new FaqSearchResponse(1L, null, "USIM", "유심 재발급 비용이 얼마예요?",
+                                    "매장에서 바로 재발급할 수 있습니다.", 0.9, 1, LocalDate.of(2026, 10, 1), 1, "Q_A");
+                            var actual = context.getBean(SuggestedQuestions.class)
+                                    .suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(top));
+                            assertThat(actual).isEqualTo(expected.isEmpty() ? List.of() : List.of(expected));
                         });
     }
 
