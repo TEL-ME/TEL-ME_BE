@@ -33,6 +33,12 @@ spring:
             # 비즈 전환 전까지 임시로 빼둔다 — 이메일 없이도 로그인·가입은 정상 동작하고(SocialMemberFinder가
             # email=null을 그대로 처리), 기존 이메일 계정 자동 발견은 불가. 전환되면 다시 추가.
             scope: profile_nickname
+          google:
+            # 키가 없는 환경에서도 앱이 기동하도록 더미값을 기본값으로 둔다.
+            # 실제 Google 로그인은 GOOGLE_CLIENT_ID/SECRET을 설정한 환경에서만 동작한다.
+            client-id: ${GOOGLE_CLIENT_ID:dummy-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:dummy-google-client-secret}
+            scope: openid, profile, email
         provider:
           # 카카오는 Spring Security의 공통 프로바이더 목록(google 등)에 없어 직접 지정한다
           kakao:

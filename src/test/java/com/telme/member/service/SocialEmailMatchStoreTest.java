@@ -1,5 +1,7 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -13,21 +15,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-class KakaoEmailMatchStoreTest {
+class SocialEmailMatchStoreTest {
 
     private final Instant now = Instant.parse("2026-09-23T00:00:00Z");
     private final MutableClock clock = new MutableClock(now);
-    private final KakaoEmailMatchStore store = new KakaoEmailMatchStore(clock);
+    private final SocialEmailMatchStore store = new SocialEmailMatchStore(clock);
 
     @Test
     @DisplayName("발급 직후에는 그대로 조회된다")
     void 발급_직후_조회() {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
-        store.issue(request, "kakao-1", 10L, "match@example.com");
-        KakaoEmailMatch pending = store.require(request);
+        store.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com");
+        SocialEmailMatch pending = store.require(request);
 
-        assertThat(pending.providerUserId()).isEqualTo("kakao-1");
+        assertThat(pending.provider()).isEqualTo(GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("google-sub-1");
         assertThat(pending.matchedUserId()).isEqualTo(10L);
         assertThat(pending.matchedEmail()).isEqualTo("match@example.com");
         assertThat(pending.failedAttempts()).isZero();
@@ -41,51 +44,51 @@ class KakaoEmailMatchStoreTest {
         assertThatThrownBy(() -> store.require(request))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
-                .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+                .isEqualTo(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
     }
 
     @Test
     @DisplayName("10분이 지나면 만료되어 제거되고 예외를 던진다")
     void 만료되면_예외() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         clock.advance(Duration.ofMinutes(11));
 
         assertThatThrownBy(() -> store.require(request))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
-                .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
-        assertThat(request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
+                .isEqualTo(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
+        assertThat(request.getSession(false).getAttribute(SocialEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test
     @DisplayName("실패 시도가 5회 누적되면 제거되고 이후 조회는 예외를 던진다")
     void 시도횟수_초과하면_예외() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         for (int i = 0; i < 5; i++) {
-            KakaoEmailMatch pending = (KakaoEmailMatch)
-                    request.getSession(false).getAttribute(KakaoEmailMatchStore.SESSION_ATTRIBUTE);
+            SocialEmailMatch pending = (SocialEmailMatch)
+                    request.getSession(false).getAttribute(SocialEmailMatchStore.SESSION_ATTRIBUTE);
             store.registerFailedAttempt(request, pending);
         }
 
         assertThatThrownBy(() -> store.require(request))
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
-                .isEqualTo(MemberErrorCode.KAKAO_LINK_SESSION_EXPIRED);
+                .isEqualTo(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
     }
 
     @Test
     @DisplayName("같은 세션에서 다시 발급하면 이전 대기 상태를 덮어쓴다")
     void 재발급하면_덮어쓴다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, "kakao-old", 10L, "old@example.com");
+        store.issue(request, KAKAO, "kakao-old", 10L, "old@example.com");
 
-        store.issue(request, "kakao-new", 20L, "new@example.com");
+        store.issue(request, KAKAO, "kakao-new", 20L, "new@example.com");
 
-        KakaoEmailMatch pending = store.require(request);
+        SocialEmailMatch pending = store.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-new");
         assertThat(pending.matchedUserId()).isEqualTo(20L);
     }
@@ -94,7 +97,7 @@ class KakaoEmailMatchStoreTest {
     @DisplayName("연결 성공 후 clear 하면 더 이상 조회되지 않는다")
     void clear하면_사라진다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         store.clear(request);
 

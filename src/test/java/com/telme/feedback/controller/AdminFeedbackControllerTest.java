@@ -16,10 +16,11 @@ import com.telme.feedback.service.AdminFeedbackQueryService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestIdentityService;
-import com.telme.member.service.KakaoAuthorizationFailureHandler;
-import com.telme.member.service.KakaoLinkRequestStore;
-import com.telme.member.service.KakaoLoginFailureHandler;
-import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.SocialAuthorizationFailureHandler;
+import com.telme.member.service.SocialLinkRequestStore;
+import com.telme.member.service.SocialLoginFailureHandler;
+import com.telme.member.service.SocialLoginSuccessHandler;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberStatusChecker;
 import java.time.Instant;
@@ -60,16 +61,19 @@ class AdminFeedbackControllerTest {
     private KakaoOAuth2UserService kakaoOAuth2UserService;
 
     @MockitoBean
-    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+    private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
-    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+    private SocialLoginSuccessHandler socialLoginSuccessHandler;
 
     @MockitoBean
-    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+    private SocialLoginFailureHandler socialLoginFailureHandler;
 
     @MockitoBean
-    private KakaoLinkRequestStore kakaoLinkRequestStore;
+    private SocialAuthorizationFailureHandler socialAuthorizationFailureHandler;
+
+    @MockitoBean
+    private SocialLinkRequestStore socialLinkRequestStore;
 
     @Test
     @DisplayName("로그인하지 않으면 401을 반환한다")

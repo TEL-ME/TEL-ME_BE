@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-    private static final int MAX_MEMBER_NAME_LENGTH = 50;
-
     private final DefaultOAuth2UserService delegate;
 
     @Override
@@ -58,20 +56,6 @@ public class KakaoOAuth2UserService implements OAuth2UserService<OAuth2UserReque
             return null;
         }
         Object nickname = profile.get("nickname");
-        if (nickname == null) {
-            return null;
-        }
-        String normalized = String.valueOf(nickname).trim();
-        if (normalized.isEmpty()) {
-            return null;
-        }
-        if (normalized.length() <= MAX_MEMBER_NAME_LENGTH) {
-            return normalized;
-        }
-        int endIndex = MAX_MEMBER_NAME_LENGTH;
-        if (Character.isHighSurrogate(normalized.charAt(endIndex - 1))) {
-            endIndex--;
-        }
-        return normalized.substring(0, endIndex);
+        return nickname == null ? null : SocialDisplayNameNormalizer.normalize(String.valueOf(nickname));
     }
 }

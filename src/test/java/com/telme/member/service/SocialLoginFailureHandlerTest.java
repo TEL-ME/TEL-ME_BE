@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.member.config.Oauth2Properties;
@@ -13,14 +14,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 
-class KakaoLoginFailureHandlerTest {
+class SocialLoginFailureHandlerTest {
 
     private final Oauth2Properties oauth2Properties = new Oauth2Properties("http://localhost:3000");
     private final Clock clock = Clock.systemDefaultZone().withZone(ZoneOffset.UTC);
-    private final KakaoLinkRequestStore kakaoLinkRequestStore = new KakaoLinkRequestStore(clock);
-    private final KakaoEmailMatchStore kakaoEmailMatchStore = new KakaoEmailMatchStore(clock);
-    private final KakaoLoginFailureHandler handler =
-            new KakaoLoginFailureHandler(oauth2Properties, kakaoLinkRequestStore);
+    private final SocialLinkRequestStore socialLinkRequestStore = new SocialLinkRequestStore(clock);
+    private final SocialEmailMatchStore socialEmailMatchStore = new SocialEmailMatchStore(clock);
+    private final SocialLoginFailureHandler handler =
+            new SocialLoginFailureHandler(oauth2Properties, socialLinkRequestStore);
 
     @Test
     @DisplayName("OAuth2AuthenticationException이면 오류 코드를 reason으로 실어 리다이렉트한다")
@@ -67,43 +68,43 @@ class KakaoLoginFailureHandlerTest {
     @Test
     void 실패한_state와_일치하는_연결만_제거한다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "current-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "current-state", "kakao");
         request.setParameter("state", "current-state");
-        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new BadCredentialsException("카카오 인증 취소"));
 
-        assertThat(request.getSession().getAttribute(KakaoLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
-        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+        assertThat(request.getSession().getAttribute(SocialLinkRequestStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(socialEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
     }
 
     @Test
     void 이전_콜백이_실패해도_새_연결을_완료할_수_있다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "old-state");
-        kakaoLinkRequestStore.bind(request, kakaoLinkRequestStore.issue(request, 30L), "new-state");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "old-state", "kakao");
+        socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "new-state", "kakao");
         request.setParameter("state", "old-state");
-        kakaoEmailMatchStore.issue(request, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));
 
         request.setParameter("state", "new-state");
-        assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
-        assertThat(kakaoEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
+        assertThat(socialLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
+        assertThat(socialEmailMatchStore.require(request).matchedUserId()).isEqualTo(10L);
     }
 
     @Test
     void state가_없는_실패는_인가_시작_전_연결_정보를_보존한다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        String token = kakaoLinkRequestStore.issue(request, 30L);
+        String token = socialLinkRequestStore.issue(request, 30L, KAKAO);
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new BadCredentialsException("잘못된 콜백"));
 
-        kakaoLinkRequestStore.bind(request, token, "new-state");
+        socialLinkRequestStore.bind(request, token, "new-state", "kakao");
         request.setParameter("state", "new-state");
-        assertThat(kakaoLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
+        assertThat(socialLinkRequestStore.consume(request).targetUserId()).isEqualTo(30L);
     }
 }
