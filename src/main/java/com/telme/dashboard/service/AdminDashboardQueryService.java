@@ -49,11 +49,22 @@ public class AdminDashboardQueryService {
         DashboardDays days = DashboardDays.of(clock);
         QuestionCounts questions = chatStatsRepository.countQuestions(
                 days.yesterdayStart(), days.todayStart(), days.tomorrowStart());
+                
+        long unanswered;
+        long failed;
+        if (request.from() == null && request.to() == null) {
+            unanswered = unansweredRepository.countUnansweredAll();
+            failed = unansweredRepository.countUnansweredByStatusesAll(FAILED_STATUSES);
+        } else {
+            unanswered = unansweredRepository.countUnanswered(request.fromOrMin(), request.toOrMax());
+            failed = unansweredRepository.countUnansweredByStatuses(
+                    FAILED_STATUSES, request.fromOrMin(), request.toOrMax());
+        }
+        
         return new AdminDashboardResponse(
-                unansweredRepository.countUnanswered(request.fromOrMin(), request.toOrMax()),
+                unanswered,
                 feedbackRepository.countUnhandledDislikes(MessageFeedback.Rating.DISLIKE),
-                unansweredRepository.countUnansweredByStatuses(
-                        FAILED_STATUSES, request.fromOrMin(), request.toOrMax()),
+                failed,
                 questions.today(),
                 questions.yesterday());
     }

@@ -53,6 +53,7 @@ STS에서는 `File → Import → Gradle → Existing Gradle Project`로 불러�
 | http://localhost:8080/swagger-ui/index.html | API 문서 |
 
 채팅 API는 회원 세션이나 자동 발급된 게스트 세션으로 이용할 수 있습니다. 피드백 기능의 활성화 방법과 요청 형식은 [피드백 API 문서](docs/feedback-api.md)를 참고하세요.
+욕설 경고·일시 제한, 개인정보 마스킹과 프런트 응답 계약은 [채팅 입력 검사](docs/chat-input-guard.md)를 참고하세요.
 
 ### 4. 종료
 
