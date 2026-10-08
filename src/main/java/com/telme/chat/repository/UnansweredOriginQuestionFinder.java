@@ -39,13 +39,13 @@ public class UnansweredOriginQuestionFinder {
                     FROM consult_requests r
                     WHERE r.origin_message_id = input.message_id
                     UNION ALL
-                    -- 아니면 그 입력은 앞서 되물은 조건의 답이다. 그 상담의 원문을 쓴다
-                    SELECT r.origin_message_id, 1 AS rank, asked.sequence_no AS at
+                    -- 아니면 그 입력이 되물은 조건의 답으로 기록된 상담을 쓴다.
+                    -- 끝난 되묻기가 남아 있어도 이 입력과 이어지지 않으면 고르지 않는다
+                    SELECT r.origin_message_id, 1 AS rank, c.condition_id AS at
                     FROM consult_conditions c
                     JOIN consult_requests r ON r.consult_request_id = c.consult_request_id
-                    JOIN chat_messages asked ON asked.message_id = c.asked_message_id
                     WHERE r.session_id = answer.session_id
-                      AND asked.sequence_no < input.sequence_no
+                      AND c.answered_message_id = input.message_id
                     ORDER BY rank, at DESC
                     LIMIT 1
                 ) picked ON true

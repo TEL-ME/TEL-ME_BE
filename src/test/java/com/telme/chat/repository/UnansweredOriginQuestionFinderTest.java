@@ -40,8 +40,9 @@ class UnansweredOriginQuestionFinderTest {
         long origin = question("유심 재발급 가능한 매장을 알려주세요.");
         long request = request(origin);
         long asked = assistant("어느 지역에서 찾으시나요?");
-        condition(request, "location", asked);
+        long condition = condition(request, "location", asked);
         long reply = question("서울 강남구");
+        answered(condition, reply);
         long answer = assistant("안내드릴 수 있는 정보가 없습니다.");
         execution(reply, answer);
 
@@ -78,19 +79,38 @@ class UnansweredOriginQuestionFinderTest {
         long storeOrigin = question("유심 재발급 가능한 매장을 알려주세요.");
         long storeRequest = request(storeOrigin);
         long asked = assistant("어느 지역에서 찾으시나요?");
-        condition(storeRequest, "location", asked);
+        long condition = condition(storeRequest, "location", asked);
         // 되묻기를 기다리는 중에 끼어든 새 질문. 이 답변의 원문은 자기 자신이다
         long roaming = question("로밍 요금제 알려주세요");
         long roamingAnswer = assistant("안내드릴 수 있는 정보가 없습니다.");
         request(roaming);
         execution(roaming, roamingAnswer);
         long reply = question("강남역이요");
+        answered(condition, reply);
         long storeAnswer = assistant("안내드릴 수 있는 정보가 없습니다.");
         execution(reply, storeAnswer);
 
         Map<Long, String> origins = finder.findByAnswerIds(List.of(roamingAnswer, storeAnswer));
         assertThat(origins.get(roamingAnswer)).isEqualTo("로밍 요금제 알려주세요");
         assertThat(origins.get(storeAnswer)).isEqualTo("유심 재발급 가능한 매장을 알려주세요.");
+    }
+
+    @Test
+    @DisplayName("되묻기를 끝낸 뒤 상담 없이 끝난 새 질문은 원래 질문이 없다")
+    void 되묻기를_끝낸_뒤_새_질문은_원문이_없다() {
+        long origin = question("유심 재발급 가능한 매장을 알려주세요.");
+        long request = request(origin);
+        long asked = assistant("어느 지역에서 찾으시나요?");
+        long condition = condition(request, "location", asked);
+        long reply = question("강남역이요");
+        answered(condition, reply);
+        execution(reply, assistant("매장을 안내드립니다."));
+        // 끝난 되묻기 기록이 남아 있지만 이 질문과는 이어지지 않는다
+        long outOfScope = question("오늘 날씨 알려줘");
+        long answer = assistant("안내드릴 수 있는 정보가 없습니다.");
+        execution(outOfScope, answer);
+
+        assertThat(originOf(answer)).isNull();
     }
 
     @Test
@@ -131,11 +151,19 @@ class UnansweredOriginQuestionFinderTest {
                 Map.of("sessionId", session, "originMessageId", originMessageId));
     }
 
-    private void condition(long requestId, String key, long askedMessageId) {
-        id("insert into consult_conditions (consult_request_id, condition_key, source, status,"
-                        + " asked_message_id) values (:requestId, :key, 'LLM', 'PENDING',"
-                        + " :askedMessageId) returning condition_id",
+    private long condition(long requestId, String key, long askedMessageId) {
+        return id("insert into consult_conditions (consult_request_id, condition_key, source,"
+                        + " status, asked_message_id) values (:requestId, :key, 'ASKED',"
+                        + " 'PENDING', :askedMessageId) returning condition_id",
                 Map.of("requestId", requestId, "key", key, "askedMessageId", askedMessageId));
+    }
+
+    private void answered(long conditionId, long answerMessageId) {
+        entityManager.createNativeQuery("update consult_conditions set status = 'FILLED',"
+                        + " answered_message_id = :answerMessageId where condition_id = :conditionId")
+                .setParameter("answerMessageId", answerMessageId)
+                .setParameter("conditionId", conditionId)
+                .executeUpdate();
     }
 
     private void execution(long inputMessageId, long outputMessageId) {
