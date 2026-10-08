@@ -32,7 +32,7 @@ import lombok.NoArgsConstructor;
 public class LlmGeneration {
 
     public enum TaskType {
-        ROUTING, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE
+        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE
     }
 
     public enum Status {

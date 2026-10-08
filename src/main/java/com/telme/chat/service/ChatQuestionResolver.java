@@ -168,7 +168,7 @@ public class ChatQuestionResolver {
             data.put("currentQuestion", question);
             String input = mapper.writeValueAsString(data);
             String raw = client.generate(LlmRequest.builder().executionId(command.executionId())
-                    .taskType(TaskType.ROUTING).systemPrompt(SYSTEM_PROMPT).userPrompt(input)
+                    .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SYSTEM_PROMPT).userPrompt(input)
                     .format(ResponseFormat.JSON).temperature(0.0).maxTokens(160)
                     .promptVersion("multiturn-resolution-v6").build());
             Resolution result = validate(question, raw, sources);
@@ -211,7 +211,7 @@ public class ChatQuestionResolver {
                     .map(message -> new Source(message.messageId(), message.content())).toList());
             data.put("currentQuestion", question);
             String raw = client.generate(LlmRequest.builder().executionId(command.executionId())
-                    .taskType(TaskType.ROUTING).systemPrompt(LLM_ALL_SYSTEM_PROMPT)
+                    .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(LLM_ALL_SYSTEM_PROMPT)
                     .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON)
                     .temperature(0.0).maxTokens(256).promptVersion("multiturn-resolution-v8").build());
             Resolution result = validateLlmAll(question, raw, sources);

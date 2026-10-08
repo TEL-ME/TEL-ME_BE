@@ -33,6 +33,8 @@ TELME-121은 고객 원문과 최신 조건으로 후속 질문의 대상을 찾
 
 문맥 판정은 `chat.question-resolution.mode`로 선택한다. 기본값 `REGEX_GATED`는 정규식으로 LLM 호출 대상을 선별하는 기존 방식이다. `LLM_ALL`은 새 질문을 모두 LLM에 보내 독립 질문, 이전 대화 의존 질문, 확인이 필요한 질문으로 분류한다. 실행 환경에서 `CHAT_QUESTION_RESOLUTION_MODE=LLM_ALL`로 전환할 수 있으며 `application.yml`은 수정하지 않는다. 한 요청에는 선택한 방식만 실행하고 사용한 모드는 실행 trace의 `questionResolutionMode`에 남긴다. 두 방식 모두 모델이 고른 이전 고객 발언 ID를 검사하고, 잘못된 판정은 확인 안내로 처리한다. `LLM_ALL`의 Ollama 요청은 전용 JSON Schema를 사용하며 Qwen3나 EXAONE 4.0 모델일 때 이 요청의 사고 모드를 끈다.
 
+문맥 복원 LLM 호출은 `CONTEXT_RESOLUTION`으로 기록해 의도 분류의 `ROUTING`과 호출 횟수, 처리 시간, 토큰 사용량을 구분한다. 관리자 LLM 오류 조회에서도 해당 유형으로 필터링할 수 있다. 과거 `ROUTING` 기록은 유지한다.
+
 ### 상담 요약
 
 완료된 답변 뒤 ChatSummaryService가 요약할 원문을 준비한다. 모델은 보존할 messageIds만 반환하고 코드가 해당 원문을 저장한다.

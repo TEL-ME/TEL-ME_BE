@@ -20,6 +20,18 @@ class OllamaRequestConverterTest {
             new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
 
     @Test
+    void contextResolutionKeepsRoutingDefaultsAndExplicitLimits() {
+        var defaults = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question").build(), false);
+        assertThat(defaults.options().temperature()).isEqualTo(0.0);
+        assertThat(defaults.options().numPredict()).isEqualTo(512);
+        var explicit = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question")
+                .temperature(0.0).maxTokens(256).build(), false);
+        assertThat(explicit.options().numPredict()).isEqualTo(256);
+    }
+
+    @Test
     @DisplayName("규칙과 질문을 system, user 순서로 담는다")
     void 규칙과_질문을_순서대로_담는다() {
         OllamaChatRequest result = converter.toChatRequest(LlmRequest.builder()

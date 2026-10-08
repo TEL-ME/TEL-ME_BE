@@ -13,6 +13,7 @@ import com.telme.chat.config.ChatQuestionResolutionProperties.Mode;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -172,6 +173,7 @@ class ChatQuestionResolverTest {
         assertThat(result.question()).doesNotContain("무조건 무료", "감사합니다");
         var sent = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(sent.capture());
+        assertThat(sent.getValue().taskType()).isEqualTo(TaskType.CONTEXT_RESOLUTION);
         var data = new ObjectMapper().readTree(sent.getValue().userPrompt());
         assertThat(data.fieldNames().next()).isEqualTo("sourceMessages");
         assertThat(data.path("sourceMessages")).hasSize(2);
@@ -201,6 +203,7 @@ class ChatQuestionResolverTest {
         assertThat(result.needsClarification()).isFalse();
         var sent = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(sent.capture());
+        assertThat(sent.getValue().taskType()).isEqualTo(TaskType.CONTEXT_RESOLUTION);
         assertThat(sent.getValue().promptVersion()).isEqualTo("multiturn-resolution-v8");
     }
 
