@@ -13,9 +13,38 @@ public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}
 
+    public static final String REQUEST_INVENTORY_PROMPT = """
+        고객 문장에서 실제로 요구한 독립적인 요청의 원문 구간만 추출한다. 답변이나 검색어는 만들지 않는다.
+        한 업무를 하고 싶다는 말은 한 요청이다. 설명에 필요한 방법, 비용, 서류를 상상해서 추가하지 않는다.
+        상황, 이유, 조건, 부정한 업무는 독립 요청이 아니다. 두 대상을 비교하거나 더 저렴한 것을 묻는 것도 한 요청이다.
+        서로 다른 질문을 각각 요구하거나 비용과 방법을 명시적으로 각각 물었으면 각 요청을 유지한다.
+        requestQuote는 현재 입력에서 연속된 구간 그대로 복사하고, 입력 순서대로 서로 겹치지 않아야 한다.
+        한 요청이면 조건과 부정을 포함한 입력 전체를 한 구간으로 복사한다.
+        예: 미납요금이있는데번호이동하고싶어요
+        {"requests":[{"requestQuote":"미납요금이있는데번호이동하고싶어요"}]}
+        예: LTE랑5G요금제중뭐가더저렴해
+        {"requests":[{"requestQuote":"LTE랑5G요금제중뭐가더저렴해"}]}
+        예: 로밍요금과유심재발급비용알려줘
+        {"requests":[{"requestQuote":"로밍요금"},{"requestQuote":"유심재발급비용"}]}
+        requests 배열과 각 원소의 requestQuote만 담은 JSON을 출력한다.
+        """;
+
     public static final String ROUTING_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담 라우터입니다.
         고객 입력을 분석하여 의도(intent)를 분류하고, 복합 질문은 하위 질문으로 분해하십시오.
+
+        [고객 요청 보존 - 분류와 분해의 최우선 기준]
+        - 통신 정책이나 매장 안내와 관계없는 요청은 UNKNOWN이다. 일반적인 방법 문의라는 이유만으로 FAQ로 분류하지 않는다.
+        - 입력의 한글 주변 공백은 통일되어 있다. 붙어 있는 한글을 자연스럽게 읽고 queryText에는 정상 띄어쓰기를 쓴다.
+        - 하위 질문은 고객이 실제로 요청한 일이다. 답변에 넣을 절차, 서류, 비용의 목록을 만드는 작업이 아니다.
+        - "번호이동하고싶어요", "명의변경하려고요", "유심재발급받고싶어요"는 각각 한 업무 요청이다.
+        - 고객이 비용과 신청 방법처럼 별개의 내용을 명시적으로 물었을 때만 여러 질문으로 나눈다.
+        - 상황, 이유, 조건, 부정한 업무를 별도 요청으로 만들지 않는다. 비교의 두 대상도 한 비교 요청이다.
+        - 여러 하위 질문을 만들 때는 각 질문의 requestQuote에 현재 입력의 연속된 원문 구간을 그대로 복사한다.
+        - 각 requestQuote는 입력 순서대로 서로 겹치지 않아야 한다. 같은 요청을 두 번 인용할 수 없다.
+        - 마지막의 "알려줘"를 공유하면 요청별 명사구를 인용한다. 공통 대상은 queryText에서 보충한다.
+        - 원문에 없는 "절차", "필요 서류"를 인용하거나 원문의 단어 하나씩을 나눠 새 요청을 만들지 않는다.
+        - 이전 상담은 대상 복원에만 사용한다. requestQuote는 이전 대화가 아닌 현재 입력에서만 고른다.
         
         [분류 기준]
         1. FAQ: 요금제, 부가서비스, 결합할인, 로밍, 위약금, 번호이동, 기기변경, 유심 재발급, 명의변경, 해지 등 통신 정책/서비스 질의
@@ -56,20 +85,28 @@ public final class RoutingPromptTemplates {
         - 질문에 없는 다른 업무나 행동을 검색 질문에 추가하지 않는다. 해지를 물으면 번호이동을 추가하지 않는다.
 
         [Few-Shot 예시]
+        질문: "번호이동하고싶어요"
+        응답: {"intent":"FAQ","confidence":0.98,"refinedQuery":"번호이동하고 싶어요","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동하고 싶어요","requestQuote":"번호이동하고싶어요","conditions":{}}]}
+
+        질문: "미납요금이있는데번호이동하고싶어요"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"미납 요금이 있는데 번호이동하고 싶어요","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"미납 요금이 있는데 번호이동하고 싶어요","requestQuote":"미납요금이있는데번호이동하고싶어요","conditions":{}}]}
+
+        질문: "번호이동비용과신청방법그리고필요서류알려줘"
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 비용과 신청 방법 그리고 필요 서류","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"번호이동비용","conditions":{}},{"order":2,"intent":"FAQ","queryText":"번호이동 신청 방법","requestQuote":"신청방법","conditions":{}},{"order":3,"intent":"FAQ","queryText":"번호이동 필요 서류","requestQuote":"필요서류","conditions":{}}]}
         질문: "너겟 요금제 5G 무제한 결합할인 조건이 어떻게 되나요?"
         응답: {"intent":"FAQ","confidence":0.98,"refinedQuery":"너겟 요금제 5G 무제한 결합할인 조건","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"너겟 요금제 5G 무제한 결합할인 조건","conditions":{}}]}
 
         질문: "해외 로밍 요금과 해외 로밍 데이터 차단 방법을 알려줘"
-        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"해외 로밍 요금과 해외 로밍 데이터 차단 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"해외 로밍 요금","conditions":{}},{"order":2,"intent":"FAQ","queryText":"해외 로밍 데이터 차단 방법","conditions":{}}]}
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"해외 로밍 요금과 해외 로밍 데이터 차단 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"해외 로밍 요금","requestQuote":"해외 로밍 요금","conditions":{}},{"order":2,"intent":"FAQ","queryText":"해외 로밍 데이터 차단 방법","requestQuote":"해외 로밍 데이터 차단 방법","conditions":{}}]}
 
         질문: "5G와 LTE 요금제 종류를 비교해줘"
-        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","requestQuote":"5G와 LTE 요금제 종류를 비교해줘","conditions":{}}]}
 
         질문: "요금제 변경 방법 알려줘. 유심 재발급 방법도 알려줘."
-        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 유심 재발급 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}}]}
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 유심 재발급 방법","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","requestQuote":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"유심 재발급 방법","requestQuote":"유심 재발급 방법","conditions":{}}]}
 
         질문: "요금제 변경 방법 알려줘. 5G와 LTE 요금제 종류를 비교해줘."
-        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}]}
+        응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 요금제 종류 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","requestQuote":"요금제 변경 방법","conditions":{}},{"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","requestQuote":"5G와 LTE 요금제 종류를 비교해줘","conditions":{}}]}
 
         질문: "지금 5G 요금제를 쓰고 있어. LTE 요금제와 데이터 제공량을 비교해줘."
         응답: {"intent":"FAQ","confidence":0.97,"refinedQuery":"5G와 LTE 요금제 데이터 제공량 비교","extractedConditions":{},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G와 LTE 요금제 데이터 제공량 비교","conditions":{}}]}
@@ -96,7 +133,7 @@ public final class RoutingPromptTemplates {
         }
         
         질문: "5G 요금제 추천해주고, 신촌에서 번호이동 가능한 대리점 찾아줘"
-        응답: {"intent":"BOTH","confidence":0.99,"refinedQuery":"5G 요금제 추천 및 신촌 번호이동 매장","extractedConditions":{"location":"신촌","serviceType":"PORT_IN"},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G 요금제 종류 및 추천","conditions":{}},{"order":2,"intent":"STORE","queryText":"신촌 번호이동 가능 매장","conditions":{"location":"신촌","serviceType":"PORT_IN"}}]}
+        응답: {"intent":"BOTH","confidence":0.99,"refinedQuery":"5G 요금제 추천 및 신촌 번호이동 매장","extractedConditions":{"location":"신촌","serviceType":"PORT_IN"},"subQueries":[{"order":1,"intent":"FAQ","queryText":"5G 요금제 종류 및 추천","requestQuote":"5G 요금제 추천해주고","conditions":{}},{"order":2,"intent":"STORE","queryText":"신촌 번호이동 가능 매장","requestQuote":"신촌에서 번호이동 가능한 대리점 찾아줘","conditions":{"location":"신촌","serviceType":"PORT_IN"}}]}
         
         질문: "안녕 오늘 날씨 어때?"
         응답: {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"","extractedConditions":{},"subQueries":[]}
@@ -118,7 +155,7 @@ public final class RoutingPromptTemplates {
             "serviceType": "NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 또는 null"
           },
           "subQueries": [
-            { "order": 1, "intent": "FAQ" | "STORE", "queryText": "세부 질문", "conditions": {} }
+            { "order": 1, "intent": "FAQ" | "STORE", "queryText": "세부 질문", "requestQuote": "현재 입력의 요청 원문 구간", "conditions": {} }
           ]
         }
         """;

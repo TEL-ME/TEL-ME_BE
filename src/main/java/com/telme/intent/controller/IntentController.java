@@ -12,6 +12,7 @@ import com.telme.intent.dto.req.IntentRouteRequest;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnsupportedCompoundQuestionException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,8 +50,12 @@ public class IntentController {
 
         validateOwnership(servletRequest, message);
 
-        IntentRouteResponse response = queryRoutingService.route(message);
-        return CustomResponse.onSuccess(response);
+        try {
+            IntentRouteResponse response = queryRoutingService.route(message);
+            return CustomResponse.onSuccess(response);
+        } catch (UnsupportedCompoundQuestionException uncertain) {
+            throw new GeneralException(IntentErrorCode.REQUEST_DECOMPOSITION_UNCERTAIN);
+        }
     }
 
     private void validateOwnership(HttpServletRequest servletRequest, ChatMessage message) {

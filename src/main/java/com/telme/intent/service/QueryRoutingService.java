@@ -132,8 +132,9 @@ public class QueryRoutingService {
         }
 
         String question = userMessage.getContent() != null ? userMessage.getContent().trim() : "";
+        String analysisQuestion = RoutingQuestionNormalizer.normalize(question);
 
-        if (question.isBlank()) {
+        if (analysisQuestion.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
             LlmRoutingPayload fallbackPayload = ruleBasedFallback.classify(question);
             ensureSingleConsultSupported(fallbackPayload, singleConsultOnly);
@@ -147,10 +148,11 @@ public class QueryRoutingService {
             LlmRequest request = LlmRequest.builder()
                 .taskType(TaskType.ROUTING)
                 .systemPrompt(RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT)
-                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context, question))
+                .userPrompt(RoutingPromptTemplates.routingUserPrompt(context, analysisQuestion))
                 .format(ResponseFormat.JSON)
-                .temperature(0.1)
-                .maxTokens(500)
+                .temperature(0.0)
+                .maxTokens(768)
+                .promptVersion("routing-request-v2")
                 .build();
 
             String json = llmClient.generate(request);
@@ -191,6 +193,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
+        boolean llmRouting = method == QueryRouting.Method.LLM;
         if (method == QueryRouting.Method.LLM
                 && payload.intent() != QueryRouting.Intent.UNKNOWN
                 && payload.confidence().compareTo(MIN_USABLE_CONFIDENCE) < 0) {
@@ -237,6 +240,17 @@ public class QueryRoutingService {
             }
         }
 
+        if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
+            var inventory = requestInventory(question);
+            if (inventory.size() == 1) {
+                payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, payload.confidence(), question,
+                        payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
+                                (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+                method = QueryRouting.Method.RULE;
+            } else {
+                IndependentQuestionPolicy.validateAgainstInventory(payload, question, inventory);
+            }
+        }
         ensureSingleConsultSupported(payload, singleConsultOnly);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
@@ -254,14 +268,14 @@ public class QueryRoutingService {
             }
             int precedingIndex = -1;
             for (int index = 0; index < comparison.precedingRequests().size(); index++) {
-                if (matchesSection(sub.queryText(), comparison.precedingRequests().get(index))) {
+                if (matchesSection(sub, comparison.precedingRequests().get(index))) {
                     if (precedingIndex >= 0) {
                         throw new UnsupportedCompoundQuestionException("독립 질문의 소속을 안전하게 구분할 수 없습니다.");
                     }
                     precedingIndex = index;
                 }
             }
-            boolean comparing = matchesSection(sub.queryText(), comparison.comparison());
+            boolean comparing = matchesSection(sub, comparison.comparison());
             // 양쪽에 걸치거나 어느 쪽에도 속하지 않으면 질문을 임의로 소비하지 않는다.
             if ((precedingIndex >= 0) == comparing) {
                 throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청을 안전하게 구분할 수 없습니다.");
@@ -273,14 +287,14 @@ public class QueryRoutingService {
                     throw new UnsupportedCompoundQuestionException("독립 질문이 중복으로 분해됐습니다.");
                 }
                 independent.set(precedingIndex, new LlmRoutingPayload.SubQueryPayload((short) (precedingIndex + 1),
-                        sub.intent(), sub.queryText(), sub.conditions()));
+                        sub.intent(), sub.queryText(), sub.conditions(), sub.requestQuote()));
             }
         }
         if (comparisonParts == 0 || independent.contains(null)) {
             throw new UnsupportedCompoundQuestionException("독립 질문과 비교 요청이 모두 필요합니다.");
         }
         independent.add(new LlmRoutingPayload.SubQueryPayload((short) (independent.size() + 1),
-                ConsultRequest.Intent.FAQ, comparison.comparison(), Collections.emptyMap()));
+                ConsultRequest.Intent.FAQ, comparison.comparison(), Collections.emptyMap(), comparison.comparison()));
         return new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
                 payload.extractedConditions(), independent);
     }
@@ -293,6 +307,47 @@ public class QueryRoutingService {
                 .filter(word -> !SECTION_FILLERS.contains(word))
                 .toList();
         return !words.isEmpty() && words.stream().allMatch(normalized::contains);
+    }
+
+    private boolean matchesSection(LlmRoutingPayload.SubQueryPayload sub, String section) {
+        String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
+        if (!quote.isBlank()) {
+            return RoutingQuestionNormalizer.quoteKey(section).contains(quote);
+        }
+        return matchesSection(sub.queryText(), section);
+    }
+
+    private List<String> requestInventory(String question) {
+        LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
+                .systemPrompt(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT)
+                .userPrompt(RoutingQuestionNormalizer.normalize(question))
+                .format(ResponseFormat.JSON).temperature(0.0).maxTokens(256)
+                .promptVersion("routing-request-inventory-v1").build();
+        try {
+            String response = llmClient.generate(request);
+            if (response == null || response.isBlank()) return Collections.emptyList();
+            var root = objectMapper.readTree(response);
+            if (root == null || !root.isObject() || root.size() != 1) return Collections.emptyList();
+            var requests = root.path("requests");
+            if (!requests.isArray() || requests.isEmpty()) return Collections.emptyList();
+            List<String> quotes = new ArrayList<>();
+            for (var item : requests) {
+                if (!item.isObject() || item.size() != 1 || !item.path("requestQuote").isTextual()) {
+                    return Collections.emptyList();
+                }
+                quotes.add(item.path("requestQuote").asText());
+            }
+            if (quotes.size() == 1 && !RoutingQuestionNormalizer.quoteKey(quotes.getFirst())
+                    .equals(RoutingQuestionNormalizer.quoteKey(question))) {
+                return Collections.emptyList();
+            }
+            IndependentQuestionPolicy.validateQuotes(quotes, question);
+            return List.copyOf(quotes);
+        } catch (JsonProcessingException | GeneralException | RestClientException failed) {
+            log.warn("[라우팅] 독립 요청 재확인에 실패해 질문 분해를 보류합니다: errorType={}",
+                    failed.getClass().getSimpleName());
+            return Collections.emptyList();
+        }
     }
 
     private LlmRoutingPayload normalizeLlmPayload(
@@ -331,7 +386,7 @@ public class QueryRoutingService {
                     ? validConditions(sub.conditions(), question, context)
                     : Collections.emptyMap();
             normalized.add(new LlmRoutingPayload.SubQueryPayload(
-                    (short) (normalized.size() + 1), intent, sub.queryText(), conditions));
+                    (short) (normalized.size() + 1), intent, sub.queryText(), conditions, sub.requestQuote()));
         }
 
         boolean inconsistent = switch (payload.intent()) {
@@ -365,7 +420,7 @@ public class QueryRoutingService {
                 conditions = merged;
             }
             safeSubQueries.add(new LlmRoutingPayload.SubQueryPayload(
-                    sub.order(), sub.intent(), queryText, conditions));
+                    sub.order(), sub.intent(), queryText, conditions, sub.requestQuote()));
         }
         return new LlmRoutingPayload(
                 payload.intent(), payload.confidence(), refined, extracted, safeSubQueries);

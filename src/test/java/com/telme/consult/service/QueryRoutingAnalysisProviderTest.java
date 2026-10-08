@@ -257,7 +257,7 @@ class QueryRoutingAnalysisProviderTest {
         AnalysisResult result = provider.analyze(context);
 
         assertThat(result.directAnswer()).isNotNull();
-        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().content()).contains("하나씩 알려");
         assertThat(result.initialQuery()).isNull();
     }
 

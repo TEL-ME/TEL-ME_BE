@@ -722,8 +722,10 @@ class ConsultChatPersistenceIntegrationTest {
                 {"intent":"FAQ","confidence":0.97,
                  "refinedQuery":"요금제와 로밍 신청 방법",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}]}
+                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","requestQuote":"요금제","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}}]}
+                """, """
+                {"requests":[{"requestQuote":"요금제"},{"requestQuote":"로밍신청방법"}]}
                 """);
         var context = new FollowupContextService.Context(
                 sessionId, inputId, question, List.of());

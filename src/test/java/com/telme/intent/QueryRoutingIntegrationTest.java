@@ -1,6 +1,7 @@
 package com.telme.intent;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -12,6 +13,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnsupportedCompoundQuestionException;
 import com.telme.llm.service.LlmClient;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
@@ -51,6 +53,57 @@ class QueryRoutingIntegrationTest {
         entityManager.persist(user);
         entityManager.flush();
         return user;
+    }
+
+    @Test
+    void explicitFaqRequestsAreStoredInOrderAndOriginalIsPreserved() {
+        ChatMessage message = persistQuestion("로밍요금과 유심재발급비용 알려줘");
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍 요금과 유심 재발급 비용",
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"로밍 요금","requestQuote":"로밍요금"},
+                   {"order":2,"intent":"FAQ","queryText":"유심 재발급 비용","requestQuote":"유심재발급비용"}]}
+                """, """
+                {"requests":[{"requestQuote":"로밍요금"},{"requestQuote":"유심재발급비용"}]}
+                """);
+        var result = queryRoutingService.routeSingleConsult(message, null);
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(result.subQueries()).hasSize(2);
+        assertThat(consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(
+                message.getMessageId())).extracting(ConsultRequest::getQueryText)
+                .containsExactly("로밍 요금", "유심 재발급 비용");
+        assertThat(entityManager.find(ChatMessage.class, message.getMessageId()).getContent())
+                .isEqualTo("로밍요금과 유심재발급비용 알려줘");
+    }
+
+    @Test
+    void inventedRequestFacetsLeaveNoPartialRoutingOrConsultation() {
+        ChatMessage message = persistQuestion("번호 이동하고 싶어요");
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 절차와 서류",
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"번호이동 절차","requestQuote":"번호이동 절차"},
+                   {"order":2,"intent":"FAQ","queryText":"번호이동 서류","requestQuote":"서류"}]}
+                """);
+        assertThatThrownBy(() -> queryRoutingService.routeSingleConsult(message, null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        assertThat(queryRoutingRepository.findByMessage_MessageId(message.getMessageId())).isEmpty();
+        assertThat(consultRequestRepository.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(
+                message.getMessageId())).isEmpty();
+    }
+
+    private ChatMessage persistQuestion(String content) {
+        User user = persistUser("spacing");
+        ChatSession session = ChatSession.builder().userId(user.getUserId())
+                .status(ChatSession.Status.ACTIVE).build();
+        entityManager.persist(session);
+        ChatMessage message = ChatMessage.builder().session(session).sequenceNo(1)
+                .role(ChatMessage.Role.USER).messageType(ChatMessage.MessageType.QUESTION)
+                .content(content).status(ChatMessage.Status.COMPLETED).build();
+        entityManager.persist(message);
+        entityManager.flush();
+        return message;
     }
 
     @Test

@@ -1,0 +1,174 @@
+[
+  {
+    "id": "PORT_IN",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "번호이동 하고싶어요",
+      "번호 이동하고싶어요",
+      "번호 이동 하고 싶어요",
+      "번호이동하고싶어요"
+    ],
+    "repetitions": 2
+  },
+  {
+    "id": "NAME_CHANGE",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "명의변경 하고싶어요",
+      "명의 변경하고 싶어요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "USIM",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "유심재발급 받고싶어요",
+      "유심 재발급받고 싶어요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "PLAN",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "요금제변경 하고싶어요",
+      "요금제 변경하고 싶어요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "SITUATION",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "유심을잃어버렸어. 재발급방법 알려줘",
+      "유심을 잃어버렸어. 재발급 방법 알려줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "COMPARISON",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "5G랑LTE요금제차이 비교해줘",
+      "5G랑 LTE 요금제 차이 비교해줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "COMPOUND",
+    "expectedCount": 2,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "로밍요금과 유심재발급방법 알려줘",
+      "로밍 요금과 유심 재발급 방법 알려줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "EXPLICIT_FACETS",
+    "expectedCount": 3,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "번호이동 비용과 신청방법 그리고 필요서류 알려줘",
+      "번호 이동 비용과 신청 방법 그리고 필요 서류 알려줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "NEGATION",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "번호이동은 안하고 요금제변경만 하고싶어요",
+      "번호 이동은 안 하고 요금제 변경만 하고 싶어요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "CONDITION",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "미납요금이있는데 번호이동하고싶어요",
+      "미납 요금이 있는데 번호 이동 하고 싶어요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "INTERNET",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "인터넷해지하려고요",
+      "인터넷 해지 하려고요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "COMPOUND_SENTENCE",
+    "expectedCount": 2,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "휴대폰해지 방법 알려줘. 인터넷가입 방법도 알려줘",
+      "휴대폰 해지 방법 알려줘. 인터넷 가입 방법도 알려줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "SHARED_PREDICATE",
+    "expectedCount": 2,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "로밍요금과 유심재발급비용 알려줘",
+      "로밍 요금과 유심 재발급 비용 알려줘"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "COMPARISON_PRICE",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "LTE랑5G요금제중 뭐가더저렴해",
+      "LTE랑 5G 요금제 중 뭐가 더 저렴해"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "BACKGROUND",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "해외로출장가는데 로밍신청어떻게해",
+      "해외로 출장 가는데 로밍 신청 어떻게 해"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "NEGATION_INTERNET",
+    "expectedCount": 1,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "인터넷가입은안하고 해지만하려고요",
+      "인터넷 가입은 안 하고 해지만 하려고요"
+    ],
+    "repetitions": 1
+  },
+  {
+    "id": "COMPOUND_COMPARE",
+    "expectedCount": 2,
+    "expectedIntent": "FAQ",
+    "variants": [
+      "로밍신청방법 알려줘. 5G와LTE요금제 비교해줘",
+      "로밍 신청 방법 알려줘. 5G와 LTE 요금제 비교해줘"
+    ],
+    "repetitions": 1
+  }
+]

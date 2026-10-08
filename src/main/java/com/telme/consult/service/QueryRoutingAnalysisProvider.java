@@ -26,7 +26,7 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
     private static final String UNCERTAIN_GUIDANCE =
             "질문을 정확히 분류하기 어렵습니다. 궁금한 통신 서비스나 매장 정보를 조금 더 구체적으로 알려주세요.";
     private static final String COMPOUND_GUIDANCE =
-            "한 번에 여러 내용을 요청하셨어요. 질문을 하나씩 나누어 보내주세요.";
+            "현재 질문을 안전하게 나누어 처리하기 어려워요. 궁금한 내용을 하나씩 알려주세요.";
     private static final String TOO_MANY_FAQ_GUIDANCE =
             "FAQ 질문은 한 번에 최대 3개까지 답변할 수 있습니다. 질문을 나누어 보내주세요.";
     private final ChatMessageRepository messages;
