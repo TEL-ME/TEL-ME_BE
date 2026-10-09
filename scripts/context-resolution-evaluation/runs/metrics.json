@@ -1,0 +1,1130 @@
+{
+  "baseline": {
+    "counts": {
+      "baseTotal": 60,
+      "baseMatched": 20,
+      "independentBlocked": 38,
+      "missingRequiredSources": 9,
+      "wrongSources": 9,
+      "variantTotal": 20,
+      "variantMatched": 11
+    },
+    "groups": {
+      "known": {
+        "total": 9,
+        "matched": 0
+      },
+      "independent": {
+        "total": 15,
+        "matched": 1
+      },
+      "followup": {
+        "total": 10,
+        "matched": 9
+      },
+      "ambiguous": {
+        "total": 10,
+        "matched": 9
+      },
+      "transition": {
+        "total": 10,
+        "matched": 1
+      },
+      "same_sentence": {
+        "total": 6,
+        "matched": 0
+      }
+    },
+    "splits": {
+      "regression": {
+        "total": 9,
+        "matched": 0
+      },
+      "development": {
+        "total": 31,
+        "matched": 13
+      },
+      "heldout": {
+        "total": 20,
+        "matched": 7
+      }
+    },
+    "failures": [
+      {
+        "id": "known-01",
+        "split": "regression",
+        "question": "요금이밀렸는데유심재발급받을수있어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-02",
+        "split": "regression",
+        "question": "요금이 밀렸는데 유심 재발급 받을 수 있어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-03",
+        "split": "regression",
+        "question": "요금 납부 방법과 데이터 충전 비용 알려줘",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-04",
+        "split": "regression",
+        "question": "요금 아끼려면 정지가 나아요, 해지가 나아요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-05",
+        "split": "regression",
+        "question": "요금 부담으로 해지할 때 홈페이지와 고객센터 중 어느 쪽이 빠른가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-06",
+        "split": "regression",
+        "question": "요금 절감을 위해 요금제 라인업을 비교하는 절차를 알려주세요.",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-07",
+        "split": "regression",
+        "question": "요금을 아끼려고 낮은 요금제로 바꿨더니 속도 제한이 자주 걸립니다",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-08",
+        "split": "regression",
+        "question": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "known-09",
+        "split": "regression",
+        "question": "요금 너무 많이 나왔어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-01",
+        "split": "development",
+        "question": "요금 안 내면 언제 정지되나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-02",
+        "split": "development",
+        "question": "요금 납부일을 변경하려면 어떻게 하나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-03",
+        "split": "development",
+        "question": "요금 자동이체를 카드로 바꾸고 싶어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-04",
+        "split": "development",
+        "question": "요금 이중 납부는 어떻게 환불받나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-05",
+        "split": "development",
+        "question": "요금 청구서를 이메일로 받을 수 있나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-06",
+        "split": "development",
+        "question": "비용은 유심 재발급할 때 얼마인가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-07",
+        "split": "development",
+        "question": "비용 없이 번호이동 가능한가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-08",
+        "split": "development",
+        "question": "기간은 번호이동 신청 후 얼마나 걸리나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-09",
+        "split": "development",
+        "question": "필요한 서류는 명의 변경할 때 무엇인가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-10",
+        "split": "development",
+        "question": "신청 방법은 로밍을 해외에서 켜는 경우도 같나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-11",
+        "split": "development",
+        "question": "요금 미납을 해결하면 정지가 바로 풀리나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-12",
+        "split": "heldout",
+        "question": "비용이 많이 나오는 해외 로밍을 해지하고 싶어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-13",
+        "split": "heldout",
+        "question": "기간이 끝난 선택약정은 다시 신청 가능한가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-14",
+        "split": "heldout",
+        "question": "필요한 서류를 유심 재발급 전에 준비하고 싶어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "followup-09",
+        "split": "heldout",
+        "question": "이전에 문의한 건 취소할 수 있어요?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "ambiguous-08",
+        "split": "heldout",
+        "question": "그 서비스 비용은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-01",
+        "split": "development",
+        "question": "요금 납부 방법 알려줘",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-03",
+        "split": "development",
+        "question": "비용은 유심 재발급 기준으로 알려줘",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-04",
+        "split": "development",
+        "question": "이전에 신청한 인터넷 설치를 취소하고 싶어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-05",
+        "split": "development",
+        "question": "그럼 신청 방법은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-06",
+        "split": "development",
+        "question": "그건 서류가 뭐가 필요해?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          2
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-07",
+        "split": "heldout",
+        "question": "그럼 비용은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-08",
+        "split": "heldout",
+        "question": "그 상품 신청 방법은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-09",
+        "split": "heldout",
+        "question": "그 서비스 취소는 어떻게 해?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-10",
+        "split": "heldout",
+        "question": "필요한 서류는?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          2
+        ],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-01",
+        "split": "development",
+        "question": "로밍 신청하려는데 그건 얼마예요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-02",
+        "split": "development",
+        "question": "유심 재발급 신청인데 그건 얼마나 걸려요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-03",
+        "split": "heldout",
+        "question": "명의 변경을 하려는데 그 서비스에 필요한 서류는요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-04",
+        "split": "heldout",
+        "question": "인터넷 설치 신청을 취소하려는데 이건 어떻게 해요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-05",
+        "split": "heldout",
+        "question": "번호이동을 신청하고 싶어요. 그건 비용이 드나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-06",
+        "split": "heldout",
+        "question": "컬러링을 해지하고 싶은데 그건 어디서 신청해요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-01-compact",
+        "split": "development",
+        "question": "로밍신청하려는데그건얼마예요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-02-compact",
+        "split": "development",
+        "question": "유심재발급신청인데그건얼마나걸려요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-12-compact",
+        "split": "heldout",
+        "question": "비용이많이나오는해외로밍을해지하고싶어요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-13-compact",
+        "split": "heldout",
+        "question": "기간이끝난선택약정은다시신청가능한가요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "ambiguous-08-compact",
+        "split": "heldout",
+        "question": "그서비스비용은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-07-compact",
+        "split": "heldout",
+        "question": "그럼비용은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          2
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-08-compact",
+        "split": "heldout",
+        "question": "그상품신청방법은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-03-compact",
+        "split": "heldout",
+        "question": "명의변경을하려는데그서비스에필요한서류는요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-04-compact",
+        "split": "heldout",
+        "question": "인터넷설치신청을취소하려는데이건어떻게해요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [
+      "independent-01-compact",
+      "independent-02-compact",
+      "transition-01-compact",
+      "transition-07-compact",
+      "transition-08-compact"
+    ],
+    "calls": {
+      "ROUTING": 28,
+      "CONTEXT_RESOLUTION": 31,
+      "RAG_ANSWER": 13
+    },
+    "contextLatency": {
+      "medianMillis": 334,
+      "p95Millis": 628
+    },
+    "chatLatency": {
+      "medianMillis": 282.0,
+      "p95Millis": 2122,
+      "totalMillis": 63240
+    }
+  },
+  "improved": {
+    "counts": {
+      "baseTotal": 60,
+      "baseMatched": 49,
+      "independentBlocked": 6,
+      "missingRequiredSources": 5,
+      "dependentOrAmbiguousPassed": 3,
+      "wrongSources": 4,
+      "variantTotal": 20,
+      "variantMatched": 16,
+      "validationOrPipelineFailure": 1
+    },
+    "groups": {
+      "known": {
+        "total": 9,
+        "matched": 9
+      },
+      "independent": {
+        "total": 15,
+        "matched": 13
+      },
+      "followup": {
+        "total": 10,
+        "matched": 9
+      },
+      "ambiguous": {
+        "total": 10,
+        "matched": 7
+      },
+      "transition": {
+        "total": 10,
+        "matched": 6
+      },
+      "same_sentence": {
+        "total": 6,
+        "matched": 5
+      }
+    },
+    "splits": {
+      "regression": {
+        "total": 9,
+        "matched": 9
+      },
+      "development": {
+        "total": 31,
+        "matched": 26
+      },
+      "heldout": {
+        "total": 20,
+        "matched": 14
+      }
+    },
+    "failures": [
+      {
+        "id": "independent-08",
+        "split": "development",
+        "question": "기간은 번호이동 신청 후 얼마나 걸리나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "independent-10",
+        "split": "development",
+        "question": "신청 방법은 로밍을 해외에서 켜는 경우도 같나요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "followup-05",
+        "split": "development",
+        "question": "그때 요금은 얼마야?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "ambiguous-04",
+        "split": "development",
+        "question": "필요한 서류는?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "ambiguous-08",
+        "split": "heldout",
+        "question": "그 서비스 비용은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "ambiguous-10",
+        "split": "heldout",
+        "question": "그럼 기간은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-01",
+        "split": "development",
+        "question": "요금 납부 방법 알려줘",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-07",
+        "split": "heldout",
+        "question": "그럼 비용은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-09",
+        "split": "heldout",
+        "question": "그 서비스 취소는 어떻게 해?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          2
+        ],
+        "valid": true
+      },
+      {
+        "id": "transition-10",
+        "split": "heldout",
+        "question": "필요한 서류는?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [
+          2
+        ],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-06",
+        "split": "heldout",
+        "question": "컬러링을 해지하고 싶은데 그건 어디서 신청해요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-01-compact",
+        "split": "development",
+        "question": "요금납부방법알려줘",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-02-compact",
+        "split": "development",
+        "question": "유심재발급신청인데그건얼마나걸려요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": false
+      },
+      {
+        "id": "ambiguous-08-compact",
+        "split": "heldout",
+        "question": "그서비스비용은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "transition-07-compact",
+        "split": "heldout",
+        "question": "그럼비용은?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [
+          1,
+          2
+        ],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [
+      "same_sentence-02-compact",
+      "transition-07-compact"
+    ],
+    "calls": {
+      "CONTEXT_RESOLUTION": 80,
+      "ROUTING": 72,
+      "RAG_ANSWER": 31
+    },
+    "contextLatency": {
+      "medianMillis": 294.5,
+      "p95Millis": 511
+    },
+    "chatLatency": {
+      "medianMillis": 1550.0,
+      "p95Millis": 2891,
+      "totalMillis": 129407
+    }
+  },
+  "confirmation": {
+    "counts": {
+      "baseTotal": 20,
+      "baseMatched": 17,
+      "wrongSources": 2,
+      "independentBlocked": 1
+    },
+    "groups": {
+      "independent": {
+        "total": 4,
+        "matched": 4
+      },
+      "followup": {
+        "total": 4,
+        "matched": 4
+      },
+      "ambiguous": {
+        "total": 4,
+        "matched": 2
+      },
+      "transition": {
+        "total": 4,
+        "matched": 3
+      },
+      "same_sentence": {
+        "total": 4,
+        "matched": 4
+      }
+    },
+    "splits": {
+      "confirmation": {
+        "total": 20,
+        "matched": 17
+      }
+    },
+    "failures": [
+      {
+        "id": "fresh-ambiguous-2",
+        "split": "confirmation",
+        "question": "그럼 요금은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "fresh-ambiguous-3",
+        "split": "confirmation",
+        "question": "그 서비스 해지는 어디서 해요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "HISTORY_DEPENDENT",
+        "expectedIndexes": [],
+        "actualIndexes": [
+          1
+        ],
+        "valid": true
+      },
+      {
+        "id": "fresh-transition-1",
+        "split": "confirmation",
+        "question": "비용은 휴대폰 명의 변경 수수료를 알려주세요",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [],
+    "calls": {
+      "CONTEXT_RESOLUTION": 20,
+      "ROUTING": 21,
+      "RAG_ANSWER": 3
+    },
+    "contextLatency": {
+      "medianMillis": 389.5,
+      "p95Millis": 506
+    },
+    "chatLatency": {
+      "medianMillis": 1569.5,
+      "p95Millis": 3107,
+      "totalMillis": 31364
+    }
+  },
+  "environment": {
+    "source": "telme_132_pr120_recheck_20261008",
+    "target": "telme_139_live",
+    "tables": {
+      "faqs": {
+        "count": 1152,
+        "sha256": "80e869474affe75da9809552d8367fbb30f99644ea40d656aa404d6a140c93c5",
+        "columns": "faq_id,category,question,answer,policy_ref,version,content_hash,status,created_by,updated_by,created_at,updated_at,slot_id,lock_version"
+      },
+      "faq_embeddings": {
+        "count": 1152,
+        "sha256": "bf4401d8883f155547e391d7b386cd1888667586adc66f295e0c28b913d1f264",
+        "columns": "faq_id,embedding,model_name,faq_version,sync_status,embedded_at,embedding_question"
+      }
+    },
+    "fixtureSha256": "0982073769087f1d8fbbf7292ffe90a5a241149efead934ec52bc1d6fb606699",
+    "baseCommit": "9693186518323678f9d6876ad3faf8edd0651acd",
+    "models": "NAME              ID              SIZE      MODIFIED    \nbge-m3:latest     790764642607    1.2 GB    10 days ago    \nexaone3.5:7.8b    c7c4e3d1ca22    4.8 GB    10 days ago    \n",
+    "finalCodeHashes": {
+      "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "fc8cd368885543c3eef53678b0b08e1c23bd9c70dd06567d1887b57bf302e8d4",
+      "src/main/java/com/telme/llm/converter/OllamaRequestConverter.java": "5958cd7784b95a2b2135efccf3cc54777976ec8e0caab1388e2a58a67e47fe89"
+    },
+    "parameters": {
+      "provider": "ollama",
+      "model": "exaone3.5:7.8b",
+      "temperature": 0,
+      "outputTokens": 256,
+      "contextSize": 8192,
+      "mode": "REGEX_GATED",
+      "promptVersion": "multiturn-resolution-v18",
+      "faqClarificationEnabled": true,
+      "schemaPropertyOrder": [
+        "relation",
+        "selectedMessageIds"
+      ],
+      "quantization": "Q4_K_M",
+      "modelMaxContext": 32768
+    },
+    "labelProvenance": "구현자가 실행 전에 고정한 기대값이다. 독립적인 사람 판정이 아니다.",
+    "regressions": {
+      "review-regressions": {
+        "total": 10,
+        "verified": 10,
+        "sha256": "723cfb589d1a98325c693081fffd3455653dddf34b537d4e1c72702879e8ad1a",
+        "file": ".measure/telme121/live-api/review-regressions-1791519012309.jsonl"
+      },
+      "temporal-questions": {
+        "total": 7,
+        "verified": 7,
+        "sha256": "81540aff57c1a48622c9ca0153078d394e7268ad651a1fea4711c8a1e373596f",
+        "file": ".measure/telme121/live-api/temporal-questions-1791519012309.jsonl"
+      }
+    },
+    "regressionModelFile": ".measure/telme121/live-api/model-1791519012309.jsonl",
+    "hardware": {
+      "gpu": "NVIDIA GeForce RTX 5070 Ti",
+      "memoryMiB": 16303,
+      "ollamaVersion": "0.34.0"
+    },
+    "build": {
+      "command": "gradlew.bat clean build --build-cache",
+      "database": "telme_139_checks",
+      "total": 2290,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 109
+    },
+    "confirmationUse": "추가 검증에서 그럼 처리 기간의 후보 누락을 발견해 일반적인 그럼 전환 표지를 후보로 추가하고 재실행했다. 이 결과는 독립 블라인드 평가가 아닌 추가 회귀 검증이다."
+  },
+  "rawFiles": [
+    {
+      "name": "baseline/cases.jsonl",
+      "sha256": "4fd3664628d893552d12a75bc569dbb18004dd6b7c8739d4a43deb5a7949181a"
+    },
+    {
+      "name": "baseline/model.jsonl",
+      "sha256": "2e0ed4b969d759b05dd01ffca250dc82f2623d1fee621e7d325f26ba2b456c47"
+    },
+    {
+      "name": "improved/cases.jsonl",
+      "sha256": "d23752a1a3f5643984ca18f3b253ce421db3cffc8481149d943c4714c95da66e"
+    },
+    {
+      "name": "improved/model.jsonl",
+      "sha256": "6ddfe77b2c49bdefe5dbebc50cd0e1fc54bee1ed876db3a78ca4150c42180fe7"
+    },
+    {
+      "name": "confirmation/cases.jsonl",
+      "sha256": "2b2c791ccdabdf02241fe4e7789dcb7436c7e465fedb03e8021d6d7c764d5cd7"
+    },
+    {
+      "name": "confirmation/model.jsonl",
+      "sha256": "cf5876fb703ac9ff4babe00e5688bb2b096aee1ff6ce39334188dc9a361b8348"
+    },
+    {
+      "name": "development/v10/cases.jsonl",
+      "sha256": "a131a664b215dbfe14e75abc3ecedc3322bcffea4ab95eecd279fa21bfc9a7e0"
+    },
+    {
+      "name": "development/v10/model.jsonl",
+      "sha256": "f64193a4645b002fb4cca61b6531d2c2c43e5bf5859cb340b18569af9bfb6c8f"
+    },
+    {
+      "name": "development/v11/cases.jsonl",
+      "sha256": "d552616212fcc9411136f1061d7d6b534cdbb2c5826ed2c06f7c94ee7ebe8f6d"
+    },
+    {
+      "name": "development/v11/model.jsonl",
+      "sha256": "96d83eccaa8eec472f35c37837fd9d6193615b1d337f2c358cc3567b402d43fd"
+    },
+    {
+      "name": "development/v12/cases.jsonl",
+      "sha256": "87a436c6f3ce34e5a75c058670f43be60c5a1a206ed1b1ec2b3fbcd2fa4a795b"
+    },
+    {
+      "name": "development/v12/model.jsonl",
+      "sha256": "20132a275ee3ad5ddde7a6f4e6781160acec1efe66525bada0928f60e6997bb0"
+    },
+    {
+      "name": "development/v13/cases.jsonl",
+      "sha256": "a0f6e572f98fa6eccfebcb975d9fe44d8ae5e49fa020da32b46d32ee58f58796"
+    },
+    {
+      "name": "development/v13/model.jsonl",
+      "sha256": "fabf9a1a7218f16a05da82d053215011fcfc1a6ea64c15c7893b1624f27bbb67"
+    },
+    {
+      "name": "candidates/v14/cases.jsonl",
+      "sha256": "17db49d9fa86b86fbc8662be9bf8972f1b313dc0d2b8abf751d4156a3bd05cbb"
+    },
+    {
+      "name": "candidates/v14/model.jsonl",
+      "sha256": "505fffa2163cf490bb369e97cb537f5c3e1471b44b0952307b4c5a739e2c449c"
+    },
+    {
+      "name": "candidates/v15/cases.jsonl",
+      "sha256": "d6853c584261ae5bce79d85a110e89ee55ff9485a52fb1e8196013c4be4c7d23"
+    },
+    {
+      "name": "candidates/v15/model.jsonl",
+      "sha256": "fad3269e6815b64099cf28eef7b9956665710bd2c4e22b75d71aa9f691cbcddb"
+    },
+    {
+      "name": "candidates/v16/cases.jsonl",
+      "sha256": "026fa073ea8a9520d7f3f4ca5b89b63dc5c1f5ea67c7cfd90048011e071754a4"
+    },
+    {
+      "name": "candidates/v16/model.jsonl",
+      "sha256": "5877bdd896cc1b600d071fa46594edcc02df328a48698443f8d810f6a3f39b92"
+    },
+    {
+      "name": "candidates/v17/cases.jsonl",
+      "sha256": "f4520c0fb220b6236475b1d0cf47289249f0758f11fa63662e7a653923704523"
+    },
+    {
+      "name": "candidates/v17/model.jsonl",
+      "sha256": "3fa1ece33e82d69b3a50c021b80f43634c2e8492cd1eb786692dce291a86eb62"
+    },
+    {
+      "name": "candidates/v18/cases.jsonl",
+      "sha256": "f23d98b7dd1fea9255f8aad2d7f5986c3b6ea2ec583205f9b90a0f2674c6c10e"
+    },
+    {
+      "name": "candidates/v18/model.jsonl",
+      "sha256": "2eb44c28fcfaa4fc4c28539823a8e36e20c47994f3f36838b093956027051e56"
+    },
+    {
+      "name": "candidate-v9/cases.jsonl",
+      "sha256": "38b7e7d2359b4ad2be1cf55fb5a3b0856ae49d484f1d77516a02a2684c7f78e2"
+    },
+    {
+      "name": "candidate-v9/model.jsonl",
+      "sha256": "1b2b0d3db2897d74b1f146056f25c4f5cdd8935deb31c337defb585b5d770063"
+    },
+    {
+      "name": "regressions/review-regressions.jsonl",
+      "sha256": "723cfb589d1a98325c693081fffd3455653dddf34b537d4e1c72702879e8ad1a"
+    },
+    {
+      "name": "regressions/temporal-questions.jsonl",
+      "sha256": "81540aff57c1a48622c9ca0153078d394e7268ad651a1fea4711c8a1e373596f"
+    },
+    {
+      "name": "regressions/model.jsonl",
+      "sha256": "eec84b0a91242956f4b9338b6e4e3f67c0fbb36f111b1d5be9acda23c3efa02a"
+    }
+  ],
+  "fixtureSha256": "0982073769087f1d8fbbf7292ffe90a5a241149efead934ec52bc1d6fb606699"
+}

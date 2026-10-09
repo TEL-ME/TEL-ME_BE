@@ -29,24 +29,25 @@ class ChatQuestionResolverTest {
 
     @Test
     void resolvesOnlyTheReferenceAndKeepsRequestConditionsAndNegation() throws Exception {
-        var result = resolver.validate("그건 아직 신청 안 했는데 어떻게 신청해?",
-                "{\"needsClarification\":false,\"sourceMessageIds\":[1]}", Map.of(1L, source));
+        var result = resolver.validateResolution("그건 아직 신청 안 했는데 어떻게 신청해?",
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1]}", Map.of(1L, source));
         assertThat(result.question()).contains(source.content(), "그건 아직 신청 안 했는데 어떻게 신청해?");
         assertThat(result.sourceMessageIds()).containsExactly(1L);
     }
 
     @Test
     void rejectsNewTermsForeignSourcesAndChangesToTheRequestedAction() {
-        for (String response : List.of("{\"needsClarification\":false,\"sourceMessageIds\":[99]}",
-                "{\"needsClarification\":false,\"sourceMessageIds\":[1,1]}",
-                "{\"needsClarification\":false,\"sourceMessageIds\":[1],\"replacement\":\"일본 로밍\"}")) {
-            assertThatThrownBy(() -> resolver.validate("그건 신청 안 했어", response, Map.of(1L, source)))
+        for (String response : List.of("{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[99]}",
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1,1]}",
+                "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1],\"replacement\":\"일본 로밍\"}")) {
+            assertThatThrownBy(() -> resolver.validateResolution("그건 신청 안 했어", response, Map.of(1L, source)))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
     @Test
     void missingHistoryAndUnresolvedPronounAskForClarification() {
+        when(model.generate(any())).thenReturn("{\"relation\":\"CLARIFICATION_REQUIRED\",\"selectedMessageIds\":[]}");
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, "그건 얼마야?"), null)
                 .needsClarification()).isTrue();
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, "비용은 얼마야?"), null)
@@ -56,12 +57,13 @@ class ChatQuestionResolverTest {
     @ParameterizedTest
     @ValueSource(strings = {"그때 요금은 얼마야?", "앞서 말한 건 얼마야?", "이전에 물어본 거 얼마야?",
             "아까 얼마랬죠?", "이전에 문의한 건?", "그럼 신청 방법은?", "필요한 서류는?"})
-    void everyDetectedReferenceWithoutASourceRequiresClarification(String question) throws Exception {
+    void unresolvedReferenceUsesModelDecisionWithoutRegexOverride(String question) throws Exception {
+        when(model.generate(any())).thenReturn("{\"relation\":\"CLARIFICATION_REQUIRED\",\"selectedMessageIds\":[]}");
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 1L, question), null)
                 .needsClarification()).isTrue();
-        assertThat(resolver.validate(question, "{\"needsClarification\":false,\"sourceMessageIds\":[]}",
-                Map.of(1L, source)).needsClarification()).isTrue();
-        verifyNoInteractions(model);
+        assertThat(resolver.validateResolution(question, "{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}",
+                Map.of(1L, source)).needsClarification()).isFalse();
+        verify(model).generate(any());
     }
 
     @ParameterizedTest
@@ -69,34 +71,36 @@ class ChatQuestionResolverTest {
             "그때 가입한 LTE 요금제 변경 방법은?", "앞서 신청한 유심 재발급을 취소할 수 있나요?",
             "이전에 로밍 요금제를 신청한 것이 맞는지 확인하려면?"})
     void temporalExpressionDoesNotRequireHistoryForASelfContainedQuestion(String question) throws Exception {
+        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
         var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), null);
         assertThat(result.needsClarification()).isFalse();
         assertThat(result.question()).isEqualTo(question);
         assertThat(result.sourceMessageIds()).isEmpty();
-        verifyNoInteractions(model);
+        verify(model).generate(any());
     }
 
     @Test
     void selfContainedTemporalQuestionDoesNotCarryAnUnrelatedHistoryTopic() {
+        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
         String question = "이전에 신청한 유심 재발급을 취소할 수 있나요?";
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context);
         assertThat(result.needsClarification()).isFalse();
         assertThat(result.question()).isEqualTo(question);
         assertThat(resolver.contextFor(result, context)).isNull();
-        verifyNoInteractions(model);
+        verify(model).generate(any());
     }
 
     @Test
     void missingTemporalTargetStillRequiresClarificationAfterModelAnalysis() {
-        when(model.generate(any())).thenReturn("{\"needsClarification\":true,\"sourceMessageIds\":[]}");
+        when(model.generate(any())).thenReturn("{\"relation\":\"CLARIFICATION_REQUIRED\",\"selectedMessageIds\":[]}");
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, "이전에 신청한 건?"), null)
                 .needsClarification()).isTrue();
         verify(model).generate(any());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"invalid", "{\"needsClarification\":false,\"sourceMessageIds\":[99]}"})
+    @ValueSource(strings = {"invalid", "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[99]}"})
     void failedTemporalAnalysisCannotInventASource(String output) {
         when(model.generate(any())).thenReturn(output);
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L,
@@ -106,7 +110,7 @@ class ChatQuestionResolverTest {
     @ParameterizedTest
     @ValueSource(strings = {"아까 로밍과 유심 중 그건 얼마야?", "이전에 물어본 로밍 요금은 얼마야?"})
     void mentioningATopicDoesNotBypassAnActualHistoryReference(String question) {
-        when(model.generate(any())).thenReturn("{\"needsClarification\":true,\"sourceMessageIds\":[]}");
+        when(model.generate(any())).thenReturn("{\"relation\":\"CLARIFICATION_REQUIRED\",\"selectedMessageIds\":[]}");
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context)
                 .needsClarification()).isTrue();
@@ -117,7 +121,7 @@ class ChatQuestionResolverTest {
     @ValueSource(strings = {"그럼 신청 방법은?", "필요한 서류는?", "기간은 얼마나 걸려?"})
     void implicitFollowupSelectsTheOriginalCustomerTopic(String question) {
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
-        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[1]}");
+        when(model.generate(any())).thenReturn("{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1]}");
         var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, question), context);
         assertThat(result.needsClarification()).isFalse();
         assertThat(result.question()).contains(source.content(), question);
@@ -153,7 +157,7 @@ class ChatQuestionResolverTest {
 
     @Test
     void explicitAmbiguityDoesNotForceAPreviousTopic() throws Exception {
-        var result = resolver.validate("그건?", "{\"needsClarification\":true,\"sourceMessageIds\":[]}", Map.of(1L, source));
+        var result = resolver.validateResolution("그건?", "{\"relation\":\"CLARIFICATION_REQUIRED\",\"selectedMessageIds\":[]}", Map.of(1L, source));
         assertThat(result.needsClarification()).isTrue();
     }
 
@@ -167,7 +171,7 @@ class ChatQuestionResolverTest {
                 ChatMessage.MessageType.QUESTION, "일본이 아니라 미국에 갑니다.", null);
         var context = new ChatContext(1L, 5L, null, List.of(source, answer, social, correction),
                 "그건 어떻게 신청해?", 100);
-        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[1,4]}");
+        when(model.generate(any())).thenReturn("{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1,4]}");
         var result = resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, context.currentQuestion()), context);
         assertThat(result.question()).contains(source.content(), correction.content(), context.currentQuestion());
         assertThat(result.question()).doesNotContain("무조건 무료", "감사합니다");
@@ -184,7 +188,7 @@ class ChatQuestionResolverTest {
     @Test
     void invalidModelOutputAndMismatchedExecutionCannotForceAHistoryTopic() {
         var context = new ChatContext(1L, 5L, null, List.of(source), "그건 얼마야?", 100);
-        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[99]}");
+        when(model.generate(any())).thenReturn("{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[99]}");
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 1L, 5L, context.currentQuestion()), context)
                 .needsClarification()).isTrue();
         assertThat(resolver.resolve(new ChatProcessingCommand(1L, 2L, 5L, context.currentQuestion()), context)
@@ -204,7 +208,7 @@ class ChatQuestionResolverTest {
         var sent = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(sent.capture());
         assertThat(sent.getValue().taskType()).isEqualTo(TaskType.CONTEXT_RESOLUTION);
-        assertThat(sent.getValue().promptVersion()).isEqualTo("multiturn-resolution-v8");
+        assertThat(sent.getValue().promptVersion()).isEqualTo("multiturn-resolution-v18");
     }
 
     @Test

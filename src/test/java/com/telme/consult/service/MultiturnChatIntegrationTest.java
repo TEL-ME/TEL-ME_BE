@@ -3,7 +3,9 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -66,13 +68,15 @@ class MultiturnChatIntegrationTest {
                 "유심 재발급 비용은 얼마인가요?", "재발급 비용은 7,700원입니다.", 0.95, null, null, 1, null)));
         when(model.generate(any())).thenAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if ("multiturn-resolution-v6".equals(request.promptVersion())) {
+            if ("multiturn-resolution-v18".equals(request.promptVersion())) {
                 JsonNode inputs = mapper.readTree(request.userPrompt());
                 if (inputs.path("sourceMessages").isEmpty()) {
-                    return "{\"needsClarification\":false,\"sourceMessageIds\":[]}";
+                    String question = inputs.path("currentQuestion").asText();
+                    String relation = question.contains("유심") ? "SELF_CONTAINED" : "CLARIFICATION_REQUIRED";
+                    return "{\"relation\":\"" + relation + "\",\"selectedMessageIds\":[]}";
                 }
                 long source = inputs.path("sourceMessages").get(0).path("messageId").asLong();
-                return "{\"needsClarification\":false,\"sourceMessageIds\":[" + source + "]}";
+                return "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[" + source + "]}";
             }
             return "{\"intent\":\"FAQ\",\"confidence\":0.99,\"refinedQuery\":\"유심 재발급 비용\","
                     + "\"extractedConditions\":{},\"subQueries\":[{\"order\":1,\"intent\":\"FAQ\","
@@ -113,6 +117,27 @@ class MultiturnChatIntegrationTest {
         assertThat(answerRequest.get().systemPrompt()).contains("이전 상담사의 답변은 정책 근거가 아닙니다");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_executions WHERE execution_id=? AND status='COMPLETED'",
                 Integer.class, execution)).isEqualTo(1);
+    }
+
+    @Test
+    void independentBillingQuestionWithoutHistoryCreatesACompletedConsultation() throws Exception {
+        String question = "요금 안 내면 언제 정지되나요?";
+        doReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}").when(model)
+                .generate(argThat(request -> request != null
+                        && "multiturn-resolution-v18".equals(request.promptVersion())));
+        answer.set("미납 요금 확인은 고객센터에서 가능합니다.");
+        when(search.search(any())).thenReturn(List.of(new FaqSearchResponse(1L, null, "BILLING",
+                question, answer.get(), 0.95, null, null, 1, null)));
+        long execution = send(question);
+        assertThat(history().path("messages")).hasSize(2);
+        assertThat(history().path("messages").get(0).path("content").asText()).isEqualTo(question);
+        assertThat(history().path("messages").get(1).path("content").asText()).isEqualTo(answer.get());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=? AND status='DONE'",
+                Integer.class, sessionId)).isEqualTo(1);
+        var trace = mapper.readTree(jdbc.queryForObject("SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?",
+                String.class, execution));
+        assertThat(trace.path("questionResolution").path("relation").asText()).isEqualTo("SELF_CONTAINED");
+        assertThat(trace.path("questionResolution").path("sourceMessageIds")).isEmpty();
     }
 
     @Test

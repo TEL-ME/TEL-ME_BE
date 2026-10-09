@@ -108,7 +108,7 @@ class MultiturnLiveApiEvaluationTest {
                                 .isEqualTo(fixture.question());
                         if (fixture.initial() != null) {
                             assertThat(REQUESTS.getOrDefault(next, List.of())).allSatisfy(request -> {
-                                if (!"multiturn-resolution-v6".equals(request.promptVersion())) {
+                                if (request.taskType() != com.telme.llm.entity.LlmGeneration.TaskType.CONTEXT_RESOLUTION) {
                                     assertThat(request.userPrompt()).doesNotContain(fixture.initial(), "conversation_data");
                                 }
                             });

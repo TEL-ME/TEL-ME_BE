@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.telme.llm.config.LlmProperties;
 import com.telme.llm.dto.req.LlmRequest;
@@ -126,28 +128,32 @@ class OllamaRequestConverterTest {
         assertThat(result.stream()).isTrue();
     }
 
-    @Test
-    void 멀티턴_LLM_전면_판정에만_JSON_Schema를_적용한다() {
+    @ParameterizedTest
+    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18"})
+    void 문맥_판정_버전에_JSON_Schema를_적용한다(String version) {
         OllamaChatRequest llmAll = converter.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
-                .promptVersion("multiturn-resolution-v8").build(), false);
+                .promptVersion(version).build(), false);
         OllamaChatRequest regexGated = converter.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
                 .promptVersion("multiturn-resolution-v6").build(), false);
 
         assertThat(llmAll.format()).isInstanceOf(Map.class);
         assertThat(((Map<?, ?>) llmAll.format()).get("additionalProperties")).isEqualTo(false);
+        var properties = (Map<?, ?>) ((Map<?, ?>) llmAll.format()).get("properties");
+        assertThat(properties.keySet().stream().map(Object::toString).toList()).containsExactly("relation", "selectedMessageIds");
         assertThat(regexGated.format()).isEqualTo("json");
         assertThat(regexGated.think()).isNull();
     }
 
-    @Test
-    void qwen3_멀티턴_전면_판정은_사고_모드를_끈다() {
+    @ParameterizedTest
+    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18"})
+    void qwen3_문맥_판정은_사고_모드를_끈다(String version) {
         OllamaRequestConverter qwen = new OllamaRequestConverter(
                 new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
         OllamaChatRequest request = qwen.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
-                .promptVersion("multiturn-resolution-v8").build(), false);
+                .promptVersion(version).build(), false);
 
         assertThat(request.think()).isFalse();
     }

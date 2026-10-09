@@ -3,6 +3,7 @@ package com.telme.llm.converter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import org.springframework.stereotype.Component;
 
 import com.telme.llm.config.LlmProperties;
@@ -33,13 +34,18 @@ public class OllamaRequestConverter {
                 .messages(messages)
                 .stream(stream)
                 .format(format(request))
-                .think("multiturn-resolution-v8".equals(request.promptVersion())
+                .think(isContextResolution(request)
                         && supportsThinking(llmProperties.model()) ? false : null)
                 .options(new OllamaChatRequest.Options(
                         request.temperature() != null ? request.temperature() : defaults.temperature(),
                         request.maxTokens() != null ? request.maxTokens() : defaults.maxTokens(),
                         llmProperties.contextSize()))
                 .build();
+    }
+
+    private boolean isContextResolution(LlmRequest request) {
+        return "multiturn-resolution-v8".equals(request.promptVersion())
+                || "multiturn-resolution-v18".equals(request.promptVersion());
     }
 
     private boolean supportsThinking(String model) {
@@ -50,16 +56,18 @@ public class OllamaRequestConverter {
         if (request.format() != ResponseFormat.JSON) {
             return null;
         }
-        if (!"multiturn-resolution-v8".equals(request.promptVersion())) {
+        if (!isContextResolution(request)) {
             return "json";
         }
+        // 관계를 먼저 판정한 뒤 출처를 선택하도록 속성 순서를 고정한다.
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("relation", Map.of("type", "string", "enum",
+                List.of("SELF_CONTAINED", "HISTORY_DEPENDENT", "CLARIFICATION_REQUIRED")));
+        properties.put("selectedMessageIds", Map.of("type", "array", "items", Map.of("type", "integer"),
+                "uniqueItems", true));
         return Map.of(
                 "type", "object",
-                "properties", Map.of(
-                        "relation", Map.of("type", "string", "enum",
-                                List.of("SELF_CONTAINED", "HISTORY_DEPENDENT", "CLARIFICATION_REQUIRED")),
-                        "selectedMessageIds", Map.of("type", "array", "items", Map.of("type", "integer"),
-                                "uniqueItems", true)),
+                "properties", properties,
                 "required", List.of("relation", "selectedMessageIds"),
                 "additionalProperties", false);
     }
