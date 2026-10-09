@@ -52,6 +52,7 @@ public class FeedbackController {
             @ApiResponse(responseCode = "400", description = "FEEDBACK400-0: 잘못된 messageId 또는 평가와 사유 조합. "
                     + "COMMON400-0: JSON 형식이나 enum 값 오류. COMMON400-1: 필수값, 길이 또는 경로 변수 형식 오류"),
             @ApiResponse(responseCode = "401", description = "CHAT401-0: 사용할 수 있는 회원 또는 게스트 신원 없음"),
+            @ApiResponse(responseCode = "403", description = "FEEDBACK403-0: 비회원은 평가를 남길 수 없음"),
             @ApiResponse(responseCode = "404", description = "FEEDBACK404-0: 메시지가 없거나 내 세션의 메시지가 아님"),
             @ApiResponse(responseCode = "409", description = "FEEDBACK409-0: 완료된 상담 답변 또는 매장 추천이 아님")
     })
