@@ -69,6 +69,19 @@ public class ConsultService {
         }
     }
 
+    public void cancelWaiting(long sessionId, java.util.Collection<Long> requestIds) {
+        for (long requestId : requestIds) {
+            try {
+                var snapshot = stateStore.load(sessionId, requestId);
+                if ("WAITING_CONDITION".equals(snapshot.status())) {
+                    stateStore.cancel(sessionId, requestId, snapshot.version());
+                }
+            } catch (GeneralException changedMeanwhile) {
+                // 다른 요청이 먼저 변경한 상담은 건너뜀
+            }
+        }
+    }
+
     // 대기 중인 질문은 다시 만들지 않는다.
     public PreparationResult prepareTurn(
             long sessionId,

@@ -16,6 +16,7 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.MessageOrigin;
@@ -300,11 +301,12 @@ class ConsultChatPersistenceIntegrationTest {
                                 "SELECT count(*) FROM chat_messages WHERE session_id=?",
                                 Integer.class,
                                 sessionId))
-                .isEqualTo(3);
+                .isEqualTo(4);
+        assertThat(reaskCount()).isZero();
     }
 
     @Test
-    void unchangedWaitingCompletesWithoutAnotherQuestion() {
+    void unchangedWaitingReasksSameQuestionWithoutChangingState() {
         createFollowup();
         var result =
                 consult.prepareTurn(
@@ -323,7 +325,62 @@ class ConsultChatPersistenceIntegrationTest {
                                 "SELECT count(*) FROM chat_messages WHERE session_id=?",
                                 Integer.class,
                                 sessionId))
-                .isEqualTo(3);
+                .isEqualTo(4);
+        String question =
+                text("SELECT content FROM chat_messages WHERE message_id=?", result.pendingMessageId());
+        assertThat(
+                        text(
+                                "SELECT content FROM chat_messages WHERE session_id=? ORDER BY"
+                                        + " sequence_no DESC LIMIT 1",
+                                sessionId))
+                .isEqualTo(ClarificationReask.text(question));
+        assertThat(states.findPendingClarificationMessageId(sessionId, requestId, "location"))
+                .contains(result.pendingMessageId());
+        assertThat(reaskCount()).isEqualTo(1);
+    }
+
+    @Test
+    void reaskKeepsOptionsOfTheOriginalQuestion() {
+        createFollowup();
+        var result =
+                consult.prepareTurn(
+                        sessionId,
+                        requestId,
+                        Purpose.NEARBY_STORE,
+                        Map.of(),
+                        LocationStatus.MISSING);
+        jdbc.update(
+                "UPDATE chat_messages SET follow_ups=?::jsonb WHERE message_id=?",
+                "[\"네\",\"아니요\"]",
+                result.pendingMessageId());
+
+        persistence.persistWaiting(executionId, sessionId, result);
+
+        assertThat(
+                        text(
+                                "SELECT follow_ups::text FROM chat_messages WHERE session_id=? ORDER BY"
+                                        + " sequence_no DESC LIMIT 1",
+                                sessionId))
+                .contains("네", "아니요");
+    }
+
+    @Test
+    void cancelWaitingClosesOnlyWaitingRequestsAndIsRepeatable() {
+        createFollowup();
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("WAITING_CONDITION");
+
+        consult.cancelWaiting(sessionId, List.of(requestId));
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("CANCELLED");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM consult_conditions WHERE consult_request_id=?"
+                                        + " AND status='PENDING'",
+                                Integer.class,
+                                requestId))
+                .isPositive();
+
+        consult.cancelWaiting(sessionId, List.of(requestId, Long.MAX_VALUE));
+        assertThat(states.load(sessionId, requestId).status()).isEqualTo("CANCELLED");
     }
 
     @Test
@@ -1181,6 +1238,13 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         inputId);
         return inputId;
+    }
+
+    private int reaskCount() {
+        return jdbc.queryForObject(
+                "SELECT max(reask_count) FROM consult_conditions WHERE consult_request_id=?",
+                Integer.class,
+                requestId);
     }
 
     private String text(String sql, long id) {
