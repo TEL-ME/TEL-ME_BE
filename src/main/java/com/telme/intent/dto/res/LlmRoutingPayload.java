@@ -28,8 +28,14 @@ public record LlmRoutingPayload(
         Short order,
         ConsultRequest.Intent intent,
         String queryText,
-        Map<String, String> conditions
+        Map<String, String> conditions,
+        String requestQuote
     ) {
+        public SubQueryPayload(Short order, ConsultRequest.Intent intent,
+                String queryText, Map<String, String> conditions) {
+            this(order, intent, queryText, conditions, null);
+        }
+
         public SubQueryPayload {
             if (conditions == null) conditions = Collections.emptyMap();
         }
