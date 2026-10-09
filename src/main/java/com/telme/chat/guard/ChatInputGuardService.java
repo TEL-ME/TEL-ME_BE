@@ -88,14 +88,14 @@ public class ChatInputGuardService {
             rejected = true;
             if (count >= properties.threshold()) {
                 Instant until = now.plus(properties.restrictionDuration());
-                store.restrict(state, now, until);
+                state = store.restrict(state, now, until);
                 notice =
                         notice(
                                 "RESTRICTED",
                                 "반복된 욕설로 채팅이 일시 제한되었습니다.",
                                 count,
-                                now,
-                                until,
+                                state.restrictionStartedAt(),
+                                state.restrictionUntil(),
                                 inspection,
                                 now);
             } else {
