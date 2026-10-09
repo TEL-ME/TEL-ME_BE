@@ -14,7 +14,11 @@ public class JdbcInputGuardStatusStore {
 
     private final JdbcTemplate jdbc;
 
-    /** 회원 본인 종료 시각을 먼저, 승계 게스트 종료 시각은 내림차순으로 반환한다. */
+    /**
+     * 회원 본인 종료 시각을 먼저, 승계 게스트 종료 시각은 내림차순으로 반환한다.
+     * JdbcInputGuardStore.resetExpiredAndInherit 및 cohort와 선택·승계 범위를 함께 유지한다.
+     * 정책 변경 시 조회와 실제 전송 결과의 일치 테스트를 확인한다. 조회는 상태를 변경하지 않는다.
+     */
     public List<Instant> findRestrictionEnds(ChatActor actor) {
         return jdbc.query(
                 """

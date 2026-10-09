@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -218,6 +219,80 @@ class ChatInputGuardStatusApiIntegrationTest {
                 .andExpect(jsonPath("$.result.inputGuard.action").value("RESTRICTED"))
                 .andExpect(jsonPath("$.result.inputGuard.retryAfterSeconds").value(40));
 
+        assertThat(저장_상태()).isEqualTo(before);
+    }
+
+    @ParameterizedTest
+    @DisplayName("나노초 시각의 새 제한도 최초 응답·조회·재전송·이력에 같은 DB 시각을 사용한다")
+    @CsvSource({
+            "237818400, 2026-10-08T00:01:00.237818Z",
+            "237818600, 2026-10-08T00:01:00.237818Z",
+            "999999600, 2026-10-08T00:01:00.999999Z"
+    })
+    void 새_제한의_저장_시각과_모든_응답이_일치한다(long nanos, String expectedUntil) throws Exception {
+        current.set(NOW.plusNanos(nanos));
+        ChatSession chat = ChatSession.builder().userId(owner.getUserId()).build();
+        entityManager.persist(chat);
+        entityManager.flush();
+        String path = "/api/v1/chat/sessions/" + chat.getSessionId() + "/messages";
+        UUID requestId = UUID.randomUUID();
+        String request = mapper.writeValueAsString(Map.of("content", "ㅅㅂ", "requestId", requestId));
+        for (int count = 1; count <= 2; count++) {
+            mvc.perform(post(path).session(identity).contentType(MediaType.APPLICATION_JSON)
+                            .content(mapper.writeValueAsString(Map.of(
+                                    "content", "ㅅㅂ", "requestId", UUID.randomUUID()))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result.inputGuard.action").value("WARNED"))
+                    .andExpect(jsonPath("$.result.inputGuard.violationCount").value(count));
+        }
+
+        var result = mvc.perform(post(path).session(identity).contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Retry-After", "60"))
+                .andExpect(jsonPath("$.result.executionId").doesNotExist())
+                .andExpect(jsonPath("$.result.inputGuard.action").value("RESTRICTED"))
+                .andExpect(jsonPath("$.result.inputGuard.retryAfterSeconds").value(60))
+                .andExpect(jsonPath("$.result.inputGuard.restrictionUntil").value(expectedUntil))
+                .andReturn();
+        JsonNode sent = mapper.readTree(result.getResponse().getContentAsByteArray()).path("result");
+        Instant storedUntil = jdbc.queryForObject(
+                "SELECT restriction_until FROM chat_input_guard_states WHERE user_id=?",
+                Timestamp.class, owner.getUserId()).toInstant();
+        assertThat(storedUntil).isEqualTo(Instant.parse(expectedUntil));
+        assertThat(sent.path("inputGuard").path("restrictionStartedAt").asText())
+                .isEqualTo(storedUntil.minusSeconds(60).toString());
+        JsonNode snapshot = mapper.readTree(jdbc.queryForObject(
+                "SELECT response_snapshot::text FROM chat_input_guard_events WHERE request_id=?",
+                String.class, requestId));
+        assertThat(snapshot).isEqualTo(sent);
+        Timestamp eventUntil = jdbc.queryForObject(
+                "SELECT restriction_until FROM chat_input_guard_events WHERE request_id=?",
+                Timestamp.class, requestId);
+        assertThat(eventUntil.toInstant()).isEqualTo(storedUntil);
+        var before = 저장_상태();
+
+        mvc.perform(get(PATH).session(identity))
+                .andExpect(header().string("Retry-After", "60"))
+                .andExpect(jsonPath("$.result.restrictionUntil").value(expectedUntil))
+                .andExpect(jsonPath("$.result.retryAfterSeconds").value(60))
+                .andExpect(jsonPath("$.result.serverTime").value(current.get().toString()));
+        var repeated = mvc.perform(post(path).session(identity)
+                        .contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(mapper.readTree(repeated.getResponse().getContentAsByteArray()).path("result"))
+                .isEqualTo(sent);
+        assertThat(저장_상태()).isEqualTo(before);
+
+        current.set(storedUntil.minusNanos(1));
+        mvc.perform(get(PATH).session(identity))
+                .andExpect(jsonPath("$.result.restricted").value(true))
+                .andExpect(header().string("Retry-After", "1"));
+        current.set(storedUntil);
+        mvc.perform(get(PATH).session(identity))
+                .andExpect(jsonPath("$.result.restricted").value(false))
+                .andExpect(jsonPath("$.result.retryAfterSeconds").value(0))
+                .andExpect(header().doesNotExist("Retry-After"));
         assertThat(저장_상태()).isEqualTo(before);
     }
 
