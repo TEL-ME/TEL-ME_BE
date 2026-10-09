@@ -93,4 +93,19 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
         long third = message(session, "USER", "QUESTION", "COMPLETED");
         assertEquals(2, finder.findBefore(session, third).getFirst().reasks());
     }
+
+    @Test
+    void doesNotCountReasksAfterAnotherConsultAskedTheSameText() {
+        long first = request(session);
+        ask(first);
+        long second = request(session);
+        ask(second);
+        reask("test");
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(0, found.stream().filter(c -> c.consultRequestId() == first).findFirst().orElseThrow().reasks());
+        assertEquals(1, found.stream().filter(c -> c.consultRequestId() == second).findFirst().orElseThrow().reasks());
+    }
 }
