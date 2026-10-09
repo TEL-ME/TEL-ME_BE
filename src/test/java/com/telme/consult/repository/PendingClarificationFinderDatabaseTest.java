@@ -2,7 +2,6 @@ package com.telme.consult.repository;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueInput.*;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.service.DialogueService;
@@ -68,44 +67,46 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
         assertEquals(first, finder.findBefore(session, reply).getFirst().consultRequestId());
     }
 
-    private void reask(String question) {
-        long id = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
+    private void reask(long rid) {
         jdbc.update(
-                "UPDATE chat_messages SET content=? WHERE message_id=?",
-                ClarificationReask.text(question),
-                id);
+                "UPDATE consult_conditions SET reask_count=reask_count+1 WHERE consult_request_id=?",
+                rid);
+    }
+
+    private int reasks(java.util.List<PendingClarificationFinder.Candidate> found, long rid) {
+        return found.stream().filter(c -> c.consultRequestId() == rid).findFirst().orElseThrow().reasks();
     }
 
     @Test
-    void countsOnlyReasksOfTheSameQuestionAfterIt() {
-        long rid = request(session);
-        ask(rid);
-        var finder = new PendingClarificationFinder(jdbc);
-        long first = message(session, "USER", "QUESTION", "COMPLETED");
-        assertEquals(0, finder.findBefore(session, first).getFirst().reasks());
-
-        reask("test");
-        reask("다른 질문");
-        long second = message(session, "USER", "QUESTION", "COMPLETED");
-        assertEquals(1, finder.findBefore(session, second).getFirst().reasks());
-
-        reask("test");
-        long third = message(session, "USER", "QUESTION", "COMPLETED");
-        assertEquals(2, finder.findBefore(session, third).getFirst().reasks());
-    }
-
-    @Test
-    void doesNotCountReasksAfterAnotherConsultAskedTheSameText() {
+    void readsReaskCountPerConsult() {
         long first = request(session);
         ask(first);
         long second = request(session);
         ask(second);
-        reask("test");
+        reask(first);
+        reask(first);
+        reask(second);
         long reply = message(session, "USER", "QUESTION", "COMPLETED");
 
         var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
 
-        assertEquals(0, found.stream().filter(c -> c.consultRequestId() == first).findFirst().orElseThrow().reasks());
-        assertEquals(1, found.stream().filter(c -> c.consultRequestId() == second).findFirst().orElseThrow().reasks());
+        assertEquals(2, reasks(found, first));
+        assertEquals(1, reasks(found, second));
+    }
+
+    @Test
+    void keepsReaskCountAfterAnotherConsultAskedAndFinished() {
+        long first = request(session);
+        ask(first);
+        reask(first);
+        long second = request(session);
+        ask(second);
+        states.cancel(session, second, states.load(session, second).version());
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(1, found.size());
+        assertEquals(1, reasks(found, first));
     }
 }

@@ -203,6 +203,11 @@ public class ConsultChatPersistenceService {
                         optionsOf((String) pending.getFirst().get("follow_ups")));
         if (result.prepared() != null) {
             consultService.persistWaitingChanges(result);
+        } else {
+            jdbc.update(
+                    "UPDATE consult_conditions SET reask_count=reask_count+1"
+                            + " WHERE asked_message_id=? AND status='PENDING'",
+                    result.pendingMessageId());
         }
         return execution;
     }

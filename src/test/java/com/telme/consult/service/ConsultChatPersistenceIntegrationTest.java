@@ -302,6 +302,7 @@ class ConsultChatPersistenceIntegrationTest {
                                 Integer.class,
                                 sessionId))
                 .isEqualTo(4);
+        assertThat(reaskCount()).isZero();
     }
 
     @Test
@@ -335,6 +336,7 @@ class ConsultChatPersistenceIntegrationTest {
                 .isEqualTo(ClarificationReask.text(question));
         assertThat(states.findPendingClarificationMessageId(sessionId, requestId, "location"))
                 .contains(result.pendingMessageId());
+        assertThat(reaskCount()).isEqualTo(1);
     }
 
     @Test
@@ -1236,6 +1238,13 @@ class ConsultChatPersistenceIntegrationTest {
                         sessionId,
                         inputId);
         return inputId;
+    }
+
+    private int reaskCount() {
+        return jdbc.queryForObject(
+                "SELECT max(reask_count) FROM consult_conditions WHERE consult_request_id=?",
+                Integer.class,
+                requestId);
     }
 
     private String text(String sql, long id) {

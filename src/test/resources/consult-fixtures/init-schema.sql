@@ -195,6 +195,7 @@ CREATE TABLE consult_conditions (
     status              VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING / FILLED / DECLINED
     asked_message_id    BIGINT      REFERENCES chat_messages (message_id),
     answered_message_id BIGINT      REFERENCES chat_messages (message_id),
+    reask_count         INT         NOT NULL DEFAULT 0,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uk_condition_key UNIQUE (consult_request_id, condition_key)
