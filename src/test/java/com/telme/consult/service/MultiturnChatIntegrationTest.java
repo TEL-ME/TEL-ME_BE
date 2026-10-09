@@ -68,15 +68,12 @@ class MultiturnChatIntegrationTest {
                 "유심 재발급 비용은 얼마인가요?", "재발급 비용은 7,700원입니다.", 0.95, null, null, 1, null)));
         when(model.generate(any())).thenAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if ("multiturn-resolution-v18".equals(request.promptVersion())) {
-                JsonNode inputs = mapper.readTree(request.userPrompt());
-                if (inputs.path("sourceMessages").isEmpty()) {
-                    String question = inputs.path("currentQuestion").asText();
-                    String relation = question.contains("유심") ? "SELF_CONTAINED" : "CLARIFICATION_REQUIRED";
-                    return "{\"relation\":\"" + relation + "\",\"selectedMessageIds\":[]}";
-                }
-                long source = inputs.path("sourceMessages").get(0).path("messageId").asLong();
-                return "{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[" + source + "]}";
+            if ("multiturn-resolution-v30-reference".equals(request.promptVersion())) {
+                String question = mapper.readTree(request.userPrompt()).path("currentQuestion").asText();
+                return mapper.writeValueAsString(Map.of("reference", question.contains("유심") ? "EXPLICIT" : "OMITTED"));
+            }
+            if ("multiturn-resolution-v30-sources".equals(request.promptVersion())) {
+                return "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}";
             }
             return "{\"intent\":\"FAQ\",\"confidence\":0.99,\"refinedQuery\":\"유심 재발급 비용\","
                     + "\"extractedConditions\":{},\"subQueries\":[{\"order\":1,\"intent\":\"FAQ\","
@@ -122,9 +119,9 @@ class MultiturnChatIntegrationTest {
     @Test
     void independentBillingQuestionWithoutHistoryCreatesACompletedConsultation() throws Exception {
         String question = "요금 안 내면 언제 정지되나요?";
-        doReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}").when(model)
+        doReturn("{\"reference\":\"EXPLICIT\"}").when(model)
                 .generate(argThat(request -> request != null
-                        && "multiturn-resolution-v18".equals(request.promptVersion())));
+                        && "multiturn-resolution-v30-reference".equals(request.promptVersion())));
         answer.set("미납 요금 확인은 고객센터에서 가능합니다.");
         when(search.search(any())).thenReturn(List.of(new FaqSearchResponse(1L, null, "BILLING",
                 question, answer.get(), 0.95, null, null, 1, null)));

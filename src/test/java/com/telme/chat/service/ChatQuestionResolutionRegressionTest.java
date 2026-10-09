@@ -27,7 +27,7 @@ class ChatQuestionResolutionRegressionTest {
             "기간은 번호이동 신청 후 얼마나 걸리나요?", "필요한서류는명의변경할때무엇인가요?",
             "로밍 신청하려는데 그건 얼마예요?", "요금 납부 방법과 데이터 충전 비용 알려줘"})
     void independentCandidatesKeepTheirOriginalTextAndAreNotBlocked(String question) throws Exception {
-        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
+        ChatQuestionResolverTest.respond(model, ChatQuestionResolverTest.explicit());
         var result = resolver.resolve(command(question), null);
         assertThat(result.needsClarification()).isFalse();
         assertThat(result.sourceMessageIds()).isEmpty();
@@ -35,25 +35,25 @@ class ChatQuestionResolutionRegressionTest {
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
         assertThat(mapper.readTree(request.getValue().userPrompt()).path("currentQuestion").asText()).isEqualTo(question);
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v18");
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
     }
 
     @Test
-    void followupTransitionIsAnalyzedEvenWhenTheNextWordIsNotAGateKeyword() {
+    void followupTransitionIsAnalyzedEvenWhenTheNextWordIsNotAGateKeyword() throws Exception {
         String question = "그럼 처리 기간은 얼마나 되죠?";
         var context = new ChatContext(1L, 5L, null, List.of(customer(1L, "휴대폰 해지를 신청하려고 합니다")), question, 100);
-        when(model.generate(any())).thenReturn("{\"relation\":\"HISTORY_DEPENDENT\",\"selectedMessageIds\":[1]}");
+        ChatQuestionResolverTest.respond(model, ChatQuestionResolverTest.omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         var result = resolver.resolve(command(question), context);
         assertThat(result.sourceMessageIds()).containsExactly(1L);
         assertThat(result.question()).contains(context.history().getFirst().content(), question);
-        verify(model).generate(any());
+        org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(any());
     }
 
     @Test
-    void unrelatedHistoryIsNotKeptForASelfContainedBillingQuestion() {
+    void unrelatedHistoryIsNotKeptForASelfContainedBillingQuestion() throws Exception {
         String question = "요금 납부 방법 알려줘";
         var context = new ChatContext(1L, 5L, null, List.of(customer(1L, "일본 로밍을 알아보고 있어요")), question, 100);
-        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
+        ChatQuestionResolverTest.respond(model, ChatQuestionResolverTest.explicit());
         var result = resolver.resolve(command(question), context);
         assertThat(result.question()).isEqualTo(question);
         assertThat(resolver.contextFor(result, context)).isNull();

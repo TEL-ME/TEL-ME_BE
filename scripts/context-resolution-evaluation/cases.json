@@ -1091,5 +1091,294 @@
       "expectedSourceIndexes": []
     }
   ],
-  "confirmationPurpose": "개발군으로 프롬프트를 확정한 후 새로 고정한 20문항이다. 결과를 보고 프롬프트를 변경하지 않는다."
+  "confirmationPurpose": "개발군으로 프롬프트를 확정한 후 새로 고정한 20문항이다. 결과를 보고 프롬프트를 변경하지 않는다.",
+  "evidenceValidationCases": [
+    {
+      "id": "evidence-independent-01",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "기간은 휴대폰 소액결제 차단을 신청하면 얼마나 걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-02",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "비용은 eSIM을 새로 발급받을 때 얼마예요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-03",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는 휴대폰 분실 신고할 때 무엇인가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-04",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "요금 자동이체 계좌를 바꾸는 방법 알려줘",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-followup-01",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그건 어디서 접수하죠?",
+      "history": [
+        "부모님 휴대폰 분실 신고를 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-02",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "eSIM 개통을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-03",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는?",
+      "history": [
+        "휴대폰 소액결제 차단을 신청하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-04",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그때 요금은 얼마나 나와요?",
+      "history": [
+        "태국 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-ambiguous-01",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그쪽 처리는 며칠 걸려요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-02",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그 서비스 혜택은요?",
+      "history": [
+        "멤버십 등급과 데이터 쿠폰을 둘 다 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-03",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "소액결제 차단과 휴대폰 분실 신고를 함께 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-04",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그건 취소는 어디서 해요?",
+      "history": [
+        "eSIM 개통과 인터넷 이전 설치를 둘 다 신청하려고 해요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-correction-01",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "자녀 휴대폰의 eSIM을 개통하려고 합니다",
+        "자녀가 아니라 제 휴대폰입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-02",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는?",
+      "history": [
+        "어머니에게 휴대폰 명의를 변경하려고 합니다",
+        "어머니가 아니라 형에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-03",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 처리 기간은?",
+      "history": [
+        "인터넷 해지를 다음 달에 신청하려고 합니다",
+        "다음 달이 아니라 이번 달입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-04",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 비용은?",
+      "history": [
+        "휴대폰 분실로 유심을 재발급하려고 합니다",
+        "분실이 아니라 유심 고장입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-same_sentence-01",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "eSIM을 재발급받고 싶은데 그건 어디서 신청해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-02",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "소액결제를 차단하려는데 그건 얼마나 걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-03",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "요금 자동이체를 해지하려는데 그건 어디서 신청하죠?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-04",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "휴대폰 분실 신고를 하려는데 그건 어떻게 접수해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "evidenceValidationPurpose": "대상 추출과 발언 연결 방식의 개발 입력 이후 고정한 20건. 실행 결과는 프롬프트 조정에 사용하지 않는다. 이전 100회는 알려진 회귀 검사로만 해석한다.",
+  "sourceSelectionCases": [
+    {
+      "id": "earlier-topic-correction",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 물어본 건 비용이 얼마야?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다",
+        "일본이 아니라 미국입니다",
+        "유심 재발급 방법도 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "second-topic",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 두 번째로 물어본 그건 기간이 얼마나 걸려?",
+      "history": [
+        "인터넷 가입을 신청하려고 합니다",
+        "휴대폰 유심 재발급을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ]
+    },
+    {
+      "id": "earlier-topic-late-correction",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 문의한 건 필요한 서류가 뭐야?",
+      "history": [
+        "아버지에게 명의 변경을 신청하려고 합니다",
+        "유심 재발급도 알아보고 있어요",
+        "아버지가 아니라 배우자에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "earlier-ambiguous",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 물어본 건 비용이 얼마야?",
+      "history": [
+        "인터넷 가입과 번호이동을 둘 다 알아보고 있어요",
+        "컬러링 가입도 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    }
+  ]
 }

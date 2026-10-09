@@ -36,7 +36,7 @@ class ChatQuestionResolutionModeTest {
 
     @Test
     void configuredLlmAllModeCallsModelForStandaloneQuestion() {
-        when(model.generate(any())).thenReturn("{\"relation\":\"SELF_CONTAINED\",\"selectedMessageIds\":[]}");
+        when(model.generate(any())).thenReturn("{\"reference\":\"EXPLICIT\"}");
         context.withPropertyValues("chat.question-resolution.mode=LLM_ALL").run(application -> {
             var result = application.getBean(ChatQuestionResolver.class)
                     .resolve(new ChatProcessingCommand(1L, 1L, 1L, "유심 재발급 비용 알려줘"), null);

@@ -597,6 +597,19 @@
       "CONTEXT_RESOLUTION": 31,
       "RAG_ANSWER": 13
     },
+    "contextStages": {
+      "referenceCalls": 0,
+      "linkageCalls": 0,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "0": 49,
+      "1": 31
+    },
+    "contextCaseLatency": {
+      "medianMillis": 0.0,
+      "p95Millis": 574
+    },
     "contextLatency": {
       "medianMillis": 334,
       "p95Millis": 628
@@ -608,6 +621,290 @@
     }
   },
   "improved": {
+    "counts": {
+      "baseTotal": 60,
+      "baseMatched": 58,
+      "dependentOrAmbiguousPassed": 2,
+      "missingRequiredSources": 2,
+      "variantTotal": 20,
+      "variantMatched": 19,
+      "independentBlocked": 1
+    },
+    "groups": {
+      "known": {
+        "total": 9,
+        "matched": 9
+      },
+      "independent": {
+        "total": 15,
+        "matched": 15
+      },
+      "followup": {
+        "total": 10,
+        "matched": 8
+      },
+      "ambiguous": {
+        "total": 10,
+        "matched": 10
+      },
+      "transition": {
+        "total": 10,
+        "matched": 10
+      },
+      "same_sentence": {
+        "total": 6,
+        "matched": 6
+      }
+    },
+    "splits": {
+      "regression": {
+        "total": 9,
+        "matched": 9
+      },
+      "development": {
+        "total": 31,
+        "matched": 31
+      },
+      "heldout": {
+        "total": 20,
+        "matched": 18
+      }
+    },
+    "failures": [
+      {
+        "id": "followup-08",
+        "split": "heldout",
+        "question": "그럼 비용은 얼마나 드나요?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "followup-09",
+        "split": "heldout",
+        "question": "이전에 문의한 건 취소할 수 있어요?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "same_sentence-03-compact",
+        "split": "heldout",
+        "question": "명의변경을하려는데그서비스에필요한서류는요?",
+        "expected": "SELF_CONTAINED",
+        "actual": "CLARIFICATION_REQUIRED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [
+      "followup-08-compact",
+      "same_sentence-03-compact"
+    ],
+    "calls": {
+      "CONTEXT_RESOLUTION": 105,
+      "ROUTING": 76,
+      "RAG_ANSWER": 36
+    },
+    "contextStages": {
+      "referenceCalls": 80,
+      "linkageCalls": 25,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "1": 55,
+      "2": 25
+    },
+    "contextCaseLatency": {
+      "medianMillis": 222.0,
+      "p95Millis": 747
+    },
+    "contextLatency": {
+      "medianMillis": 221,
+      "p95Millis": 500
+    },
+    "chatLatency": {
+      "medianMillis": 1574.5,
+      "p95Millis": 2622,
+      "totalMillis": 123194
+    }
+  },
+  "confirmation": {
+    "counts": {
+      "baseTotal": 20,
+      "baseMatched": 18,
+      "dependentOrAmbiguousPassed": 2,
+      "missingRequiredSources": 1
+    },
+    "groups": {
+      "independent": {
+        "total": 4,
+        "matched": 4
+      },
+      "followup": {
+        "total": 4,
+        "matched": 3
+      },
+      "ambiguous": {
+        "total": 4,
+        "matched": 3
+      },
+      "transition": {
+        "total": 4,
+        "matched": 4
+      },
+      "same_sentence": {
+        "total": 4,
+        "matched": 4
+      }
+    },
+    "splits": {
+      "confirmation": {
+        "total": 20,
+        "matched": 18
+      }
+    },
+    "failures": [
+      {
+        "id": "fresh-followup-3",
+        "split": "confirmation",
+        "question": "그럼 처리 기간은 얼마나 되죠?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      },
+      {
+        "id": "fresh-ambiguous-4",
+        "split": "confirmation",
+        "question": "아까 물어본 거 처리 기간은요?",
+        "expected": "CLARIFICATION_REQUIRED",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [],
+    "calls": {
+      "CONTEXT_RESOLUTION": 27,
+      "ROUTING": 17,
+      "RAG_ANSWER": 6
+    },
+    "contextStages": {
+      "referenceCalls": 20,
+      "linkageCalls": 7,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "1": 13,
+      "2": 7
+    },
+    "contextCaseLatency": {
+      "medianMillis": 318.0,
+      "p95Millis": 772
+    },
+    "contextLatency": {
+      "medianMillis": 314,
+      "p95Millis": 502
+    },
+    "chatLatency": {
+      "medianMillis": 1534.5,
+      "p95Millis": 1831,
+      "totalMillis": 27962
+    }
+  },
+  "heldout": {
+    "counts": {
+      "baseTotal": 20,
+      "baseMatched": 19,
+      "dependentOrAmbiguousPassed": 1,
+      "missingRequiredSources": 1
+    },
+    "groups": {
+      "independent": {
+        "total": 4,
+        "matched": 4
+      },
+      "followup": {
+        "total": 4,
+        "matched": 3
+      },
+      "ambiguous": {
+        "total": 4,
+        "matched": 4
+      },
+      "correction": {
+        "total": 4,
+        "matched": 4
+      },
+      "same_sentence": {
+        "total": 4,
+        "matched": 4
+      }
+    },
+    "splits": {
+      "evidence-heldout": {
+        "total": 20,
+        "matched": 19
+      }
+    },
+    "failures": [
+      {
+        "id": "evidence-followup-04",
+        "split": "evidence-heldout",
+        "question": "그때 요금은 얼마나 나와요?",
+        "expected": "HISTORY_DEPENDENT",
+        "actual": "SELF_CONTAINED",
+        "expectedIndexes": [
+          1
+        ],
+        "actualIndexes": [],
+        "valid": true
+      }
+    ],
+    "spacingInconsistencies": [],
+    "calls": {
+      "CONTEXT_RESOLUTION": 30,
+      "ROUTING": 16,
+      "RAG_ANSWER": 5
+    },
+    "contextStages": {
+      "referenceCalls": 20,
+      "linkageCalls": 10,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "1": 10,
+      "2": 10
+    },
+    "contextCaseLatency": {
+      "medianMillis": 458.0,
+      "p95Millis": 806
+    },
+    "contextLatency": {
+      "medianMillis": 311.0,
+      "p95Millis": 503
+    },
+    "chatLatency": {
+      "medianMillis": 1430.5,
+      "p95Millis": 2337,
+      "totalMillis": 28789
+    }
+  },
+  "previous": {
     "counts": {
       "baseTotal": 60,
       "baseMatched": 49,
@@ -842,6 +1139,18 @@
       "ROUTING": 72,
       "RAG_ANSWER": 31
     },
+    "contextStages": {
+      "referenceCalls": 0,
+      "linkageCalls": 0,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "1": 80
+    },
+    "contextCaseLatency": {
+      "medianMillis": 294.5,
+      "p95Millis": 511
+    },
     "contextLatency": {
       "medianMillis": 294.5,
       "p95Millis": 511
@@ -852,91 +1161,64 @@
       "totalMillis": 129407
     }
   },
-  "confirmation": {
+  "sourceSelection": {
     "counts": {
-      "baseTotal": 20,
-      "baseMatched": 17,
-      "wrongSources": 2,
-      "independentBlocked": 1
+      "baseTotal": 4,
+      "baseMatched": 3,
+      "wrongSources": 1
     },
     "groups": {
-      "independent": {
-        "total": 4,
-        "matched": 4
-      },
-      "followup": {
-        "total": 4,
-        "matched": 4
-      },
-      "ambiguous": {
-        "total": 4,
-        "matched": 2
-      },
-      "transition": {
+      "source-selection": {
         "total": 4,
         "matched": 3
-      },
-      "same_sentence": {
-        "total": 4,
-        "matched": 4
       }
     },
     "splits": {
-      "confirmation": {
-        "total": 20,
-        "matched": 17
+      "regression": {
+        "total": 4,
+        "matched": 3
       }
     },
     "failures": [
       {
-        "id": "fresh-ambiguous-2",
-        "split": "confirmation",
-        "question": "그럼 요금은요?",
+        "id": "earlier-ambiguous",
+        "split": "regression",
+        "question": "앞서 첫 번째로 물어본 건 비용이 얼마야?",
         "expected": "CLARIFICATION_REQUIRED",
         "actual": "HISTORY_DEPENDENT",
         "expectedIndexes": [],
         "actualIndexes": [
-          1
+          2
         ],
-        "valid": true
-      },
-      {
-        "id": "fresh-ambiguous-3",
-        "split": "confirmation",
-        "question": "그 서비스 해지는 어디서 해요?",
-        "expected": "CLARIFICATION_REQUIRED",
-        "actual": "HISTORY_DEPENDENT",
-        "expectedIndexes": [],
-        "actualIndexes": [
-          1
-        ],
-        "valid": true
-      },
-      {
-        "id": "fresh-transition-1",
-        "split": "confirmation",
-        "question": "비용은 휴대폰 명의 변경 수수료를 알려주세요",
-        "expected": "SELF_CONTAINED",
-        "actual": "CLARIFICATION_REQUIRED",
-        "expectedIndexes": [],
-        "actualIndexes": [],
         "valid": true
       }
     ],
     "spacingInconsistencies": [],
     "calls": {
-      "CONTEXT_RESOLUTION": 20,
-      "ROUTING": 21,
-      "RAG_ANSWER": 3
+      "CONTEXT_RESOLUTION": 8,
+      "ROUTING": 4,
+      "RAG_ANSWER": 1
+    },
+    "contextStages": {
+      "referenceCalls": 4,
+      "linkageCalls": 4,
+      "fallbackCalls": 0
+    },
+    "contextCallsPerCase": {
+      "2": 4
+    },
+    "contextCaseLatency": {
+      "medianMillis": 960.5,
+      "p95Millis": 1095
     },
     "contextLatency": {
-      "medianMillis": 389.5,
-      "p95Millis": 506
+      "medianMillis": 440.0,
+      "p95Millis": 729
     },
     "chatLatency": {
-      "medianMillis": 1569.5,
-      "p95Millis": 3107,
-      "totalMillis": 31364
+      "medianMillis": 1954.0,
+      "p95Millis": 3115,
+      "totalMillis": 8629
     }
   },
   "environment": {
@@ -954,45 +1236,57 @@
         "columns": "faq_id,embedding,model_name,faq_version,sync_status,embedded_at,embedding_question"
       }
     },
-    "fixtureSha256": "0982073769087f1d8fbbf7292ffe90a5a241149efead934ec52bc1d6fb606699",
+    "fixtureSha256": "ed68bbdfd90bd5039a837ecea94d2fc7fa6d0be8137e219ca4f8bfc2961d8b3b",
     "baseCommit": "9693186518323678f9d6876ad3faf8edd0651acd",
     "models": "NAME              ID              SIZE      MODIFIED    \nbge-m3:latest     790764642607    1.2 GB    10 days ago    \nexaone3.5:7.8b    c7c4e3d1ca22    4.8 GB    10 days ago    \n",
     "finalCodeHashes": {
-      "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "fc8cd368885543c3eef53678b0b08e1c23bd9c70dd06567d1887b57bf302e8d4",
-      "src/main/java/com/telme/llm/converter/OllamaRequestConverter.java": "5958cd7784b95a2b2135efccf3cc54777976ec8e0caab1388e2a58a67e47fe89"
+      "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "9eeb369d7997facff3a66887dc5855c2c2720bcf40d3c71e66e00f867e4ceaa3",
+      "src/main/java/com/telme/llm/converter/OllamaRequestConverter.java": "6368dca2a4e9ee70328e1fe8d9ea75ef131ad94740d4424e4db4f8f898fb2577"
     },
     "parameters": {
       "provider": "ollama",
       "model": "exaone3.5:7.8b",
       "temperature": 0,
-      "outputTokens": 256,
+      "outputTokens": {
+        "reference": 64,
+        "sources": "min(2048,128+64*sourceCount)"
+      },
       "contextSize": 8192,
       "mode": "REGEX_GATED",
-      "promptVersion": "multiturn-resolution-v18",
+      "promptVersion": "multiturn-resolution-v30-reference / multiturn-resolution-v30-sources",
       "faqClarificationEnabled": true,
-      "schemaPropertyOrder": [
-        "relation",
-        "selectedMessageIds"
-      ],
+      "schemaPropertyOrder": {
+        "reference": [
+          "reference"
+        ],
+        "sources": [
+          "sources",
+          "referenceScope",
+          "anchorIndex"
+        ]
+      },
       "quantization": "Q4_K_M",
-      "modelMaxContext": 32768
+      "modelMaxContext": 32768,
+      "selectionPolicy": "RECENT: latest business family; POSITION: validated index; retain all linked corrections",
+      "assessmentOrder": "normalize by original index; exact unique coverage; parents must precede children",
+      "version": "v30 with assessment normalization"
     },
     "labelProvenance": "구현자가 실행 전에 고정한 기대값이다. 독립적인 사람 판정이 아니다.",
     "regressions": {
       "review-regressions": {
         "total": 10,
         "verified": 10,
-        "sha256": "723cfb589d1a98325c693081fffd3455653dddf34b537d4e1c72702879e8ad1a",
-        "file": ".measure/telme121/live-api/review-regressions-1791519012309.jsonl"
+        "file": ".measure/telme121/live-api/review-regressions-1791535164795.jsonl",
+        "sha256": "d4f64c367d1a0646744737f981fa457e48fae52b9132ce97b7bead68297734b3"
       },
       "temporal-questions": {
         "total": 7,
         "verified": 7,
-        "sha256": "81540aff57c1a48622c9ca0153078d394e7268ad651a1fea4711c8a1e373596f",
-        "file": ".measure/telme121/live-api/temporal-questions-1791519012309.jsonl"
+        "file": ".measure/telme121/live-api/temporal-questions-1791535164795.jsonl",
+        "sha256": "4f5cfd31c194b9fa0b4a4efe00c262e6d6413efe5066e76cfe344bac8636c570"
       }
     },
-    "regressionModelFile": ".measure/telme121/live-api/model-1791519012309.jsonl",
+    "regressionModelFile": ".measure/telme121/live-api/model-1791535164795.jsonl",
     "hardware": {
       "gpu": "NVIDIA GeForce RTX 5070 Ti",
       "memoryMiB": 16303,
@@ -1001,12 +1295,86 @@
     "build": {
       "command": "gradlew.bat clean build --build-cache",
       "database": "telme_139_checks",
-      "total": 2290,
+      "total": 2304,
       "failures": 0,
       "errors": 0,
-      "skipped": 109
+      "skipped": 109,
+      "log": ".measure/telme139/selected-build.log"
     },
-    "confirmationUse": "추가 검증에서 그럼 처리 기간의 후보 누락을 발견해 일반적인 그럼 전환 표지를 후보로 추가하고 재실행했다. 이 결과는 독립 블라인드 평가가 아닌 추가 회귀 검증이다."
+    "confirmationUse": "추가 검증에서 그럼 처리 기간의 후보 누락을 발견해 일반적인 그럼 전환 표지를 후보로 추가하고 재실행했다. 이 결과는 독립 블라인드 평가가 아닌 추가 회귀 검증이다.",
+    "developmentRegressionAttempts": [
+      {
+        "file": ".measure/telme121/live-api/boundaries-1791530276291.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/boundaries-1791530622282.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/boundaries-1791531320171.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/boundaries-1791532084645.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/cases-1791530276291.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/cases-1791530622282.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/cases-1791531320171.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/cases-1791532084645.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/model-1791530276291.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/model-1791530622282.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/model-1791531320171.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/model-1791532084645.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/review-regressions-1791530276291.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/review-regressions-1791530622282.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/review-regressions-1791531320171.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/review-regressions-1791532084645.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/temporal-questions-1791530276291.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/temporal-questions-1791530622282.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/temporal-questions-1791531320171.jsonl"
+      },
+      {
+        "file": ".measure/telme121/live-api/temporal-questions-1791532084645.jsonl"
+      }
+    ],
+    "evaluationInterpretation": "기존 80회와 추가 20회는 개발에 사용한 회귀 입력이다. 새로운 20건은 프롬프트 예시에 사용하지 않았지만 반복 측정했으므로 독립 블라인드 검증으로 주장하지 않는다. 라벨은 구현자가 고정했으며 사람 판정 결과가 아니다.",
+    "selectedRun": "selected-final",
+    "comparisonCodeSelection": "현재 원문만으로 관계를 먼저 판정하고 이전 발언 연결을 별도로 확인하는 방식을 선택했다. 이전 이력을 현재 판정 입력에 직접 추가한 대안은 주제 전환의 잘못된 연결을 늘려 적용하지 않았다. 남은 오판과 기존 정답 손실은 집계 및 문서에 명시한다.",
+    "candidateCodeSnapshots": [
+      "before-evidence-change.zip",
+      "v29-code.zip",
+      "v30-code.zip",
+      "v31-code.zip",
+      "v32-code.zip",
+      "v30-selected-code.zip"
+    ]
   },
   "rawFiles": [
     {
@@ -1019,19 +1387,43 @@
     },
     {
       "name": "improved/cases.jsonl",
-      "sha256": "d23752a1a3f5643984ca18f3b253ce421db3cffc8481149d943c4714c95da66e"
+      "sha256": "ad514f54d60bf1a5dd7f6d575a96fed6d46f409114ccf64b540e772040b55f91"
     },
     {
       "name": "improved/model.jsonl",
-      "sha256": "6ddfe77b2c49bdefe5dbebc50cd0e1fc54bee1ed876db3a78ca4150c42180fe7"
+      "sha256": "88413454542edbff67b24d040576041243ae10c4748e103c770f8c7ebcd34c0d"
     },
     {
       "name": "confirmation/cases.jsonl",
-      "sha256": "2b2c791ccdabdf02241fe4e7789dcb7436c7e465fedb03e8021d6d7c764d5cd7"
+      "sha256": "aa3d1f7956ecf622f664093008f8ec025f0d90f67b94b40307ef6183149f023b"
     },
     {
       "name": "confirmation/model.jsonl",
-      "sha256": "cf5876fb703ac9ff4babe00e5688bb2b096aee1ff6ce39334188dc9a361b8348"
+      "sha256": "da9dec32fb1e1c4472a26b258134f925628327cc855605edffbfc7530bf8884d"
+    },
+    {
+      "name": "heldout/cases.jsonl",
+      "sha256": "c6359467c0d1be0cb9140650ef181eefe080728db6cd95e9f00216b232884c90"
+    },
+    {
+      "name": "heldout/model.jsonl",
+      "sha256": "f994ed3dc092edd8d0e0c284ff1b782bb517d34108369ea7ed229b1d4cd20592"
+    },
+    {
+      "name": "previous-v18/cases.jsonl",
+      "sha256": "d23752a1a3f5643984ca18f3b253ce421db3cffc8481149d943c4714c95da66e"
+    },
+    {
+      "name": "previous-v18/model.jsonl",
+      "sha256": "6ddfe77b2c49bdefe5dbebc50cd0e1fc54bee1ed876db3a78ca4150c42180fe7"
+    },
+    {
+      "name": "source-selection/cases.jsonl",
+      "sha256": "e28a9a25655a6e0875beac8c1e0b330d61466e8b74b8b1b33c9128d1d7f9df78"
+    },
+    {
+      "name": "source-selection/model.jsonl",
+      "sha256": "612b4a7dec78d4e03b6811e177d4fa6a9e12c8b50dfac3dbfe0d6f0f807477fb"
     },
     {
       "name": "development/v10/cases.jsonl",
@@ -1114,17 +1506,357 @@
       "sha256": "1b2b0d3db2897d74b1f146056f25c4f5cdd8935deb31c337defb585b5d770063"
     },
     {
-      "name": "regressions/review-regressions.jsonl",
+      "name": "development/evidence-development-v19/cases.jsonl",
+      "sha256": "25ebec202ed8d64c64b2bdd762d4420c8521ac0d5f39774b1a892e2bfd71f250"
+    },
+    {
+      "name": "development/evidence-development-v19/model.jsonl",
+      "sha256": "342244fd7f7aa10110c861d943dd5b0f61a4851096b13c8cbcebd0f19c4d85d8"
+    },
+    {
+      "name": "development/evidence-development-v20/cases.jsonl",
+      "sha256": "e626b87eb977f937538cc88f03be51bc8c0791b2d09437f919a32304187be56d"
+    },
+    {
+      "name": "development/evidence-development-v20/model.jsonl",
+      "sha256": "9846f1c6bb216900f2ca708c98576139c0bdd13271065ecd2c7adf9f2bf8d903"
+    },
+    {
+      "name": "development/evidence-development-v21/cases.jsonl",
+      "sha256": "bbd7d3c3db0556c95064d0ad8f7f8d90ea8db786208d842be6de9ee62207668f"
+    },
+    {
+      "name": "development/evidence-development-v21/model.jsonl",
+      "sha256": "65d817defa7ec4af0ab779fbee1edd86b4c2f713d5361b3cb11bde3394fe8b69"
+    },
+    {
+      "name": "development/evidence-development-v22/cases.jsonl",
+      "sha256": "4fba5274cbe3b108ca98724f5ad96a145b447972eabcb899fe538b074c3997b4"
+    },
+    {
+      "name": "development/evidence-development-v22/model.jsonl",
+      "sha256": "394e92f857dde01aaddabc73503371d2f5fb02b03e1f0c03d9de7055e917a818"
+    },
+    {
+      "name": "development/evidence-development-v23/cases.jsonl",
+      "sha256": "faf8b02aeba575c4a34917c9143db704e0c61b97f1b902c1b0911db483dadd68"
+    },
+    {
+      "name": "development/evidence-development-v23/model.jsonl",
+      "sha256": "6e108909ff49299b7bd5230740bfbac879a09c16421de743f6146adb294c2b2e"
+    },
+    {
+      "name": "development/evidence-development-v24/cases.jsonl",
+      "sha256": "5ad70591304452e7e8f89f8b0ed749efe5a83dd720c0c2cab115abbc2f10163b"
+    },
+    {
+      "name": "development/evidence-development-v24/model.jsonl",
+      "sha256": "a1768ef128162e143b32bf3c056106edb4f6c0dd8ff5a42f78a57e197151e478"
+    },
+    {
+      "name": "development/evidence-development-v25/cases.jsonl",
+      "sha256": "10ea700c0ea40d24589bcb5be6b4451f211e4b54f68ac9a21056352091a75bc2"
+    },
+    {
+      "name": "development/evidence-development-v25/model.jsonl",
+      "sha256": "a72f17be9ad8adc78da2a60abdd75127018e3a3e910333edb75c26927e4ddc8a"
+    },
+    {
+      "name": "previous/confirmation-complete/cases.jsonl",
+      "sha256": "2b2c791ccdabdf02241fe4e7789dcb7436c7e465fedb03e8021d6d7c764d5cd7"
+    },
+    {
+      "name": "previous/confirmation-complete/model.jsonl",
+      "sha256": "cf5876fb703ac9ff4babe00e5688bb2b096aee1ff6ce39334188dc9a361b8348"
+    },
+    {
+      "name": "previous/confirmation-v17/cases.jsonl",
+      "sha256": "b0080b16942b556d1e70b81df39a4ddebd07cc4957c3cf60f717c8881d9e8348"
+    },
+    {
+      "name": "previous/confirmation-v17/model.jsonl",
+      "sha256": "918c69354a8abb9e0118358235a619c26dc2eafd1f50d6c4fc8333614c657cc6"
+    },
+    {
+      "name": "previous/confirmation-v18/cases.jsonl",
+      "sha256": "3407fdb96acaee314ba5eeae27859f55d6a3bc448331240881ce52234a1a8940"
+    },
+    {
+      "name": "previous/confirmation-v18/model.jsonl",
+      "sha256": "c21afd6e9917280e5fd26e1fba2d3f8cdaa4e57a54372cf3b9d38c4fe6360f7f"
+    },
+    {
+      "name": "code-snapshots/v29-code.zip",
+      "sha256": "aa3f6b2c352f3abf01aecf55ddc1691ceff9d1fc604ac05975810032b4af3d43"
+    },
+    {
+      "name": "code-snapshots/v30-code.zip",
+      "sha256": "488184991e87d0bdd7551a8c8b8f5e9c0dc90cf3adb861a13271fb770e307aa3"
+    },
+    {
+      "name": "code-snapshots/v30-selected-code.zip",
+      "sha256": "f65e8d3cb7492ace6edc246fb50f436c4cbfde4831b39e0217aee40694f3bfff"
+    },
+    {
+      "name": "code-snapshots/v31-code.zip",
+      "sha256": "09b67b8f571db73a8036c6a573495fd60d7a670c7dacae7302442d83563cb7df"
+    },
+    {
+      "name": "code-snapshots/v32-code.zip",
+      "sha256": "0116626bb34c35eac016778cc5b858d20eed7ed7c5b8e5c6f06da08822f80867"
+    },
+    {
+      "name": "previous/before-evidence-change.zip",
+      "sha256": "c43beb226f3a8d94e598e67dda21445f76b835021789156f30c28369b458d6f8"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v25/cases.jsonl",
+      "sha256": "dc625555c6b081563b50a0bd4a75950ba4f6502f0a8a19e4ca29ea98e54a5453"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v25/model.jsonl",
+      "sha256": "9f2c1d0df613ff0d313f6b8b431503453fd6d3a9d155b0a8bf8fe9c5236d0f5e"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v26/cases.jsonl",
+      "sha256": "2da9764b08791eb9807ff2e7c22cff65ed12d7701df9f11f2ae73549a4720f75"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v26/model.jsonl",
+      "sha256": "77bd2c3a08855dca83f5c51091a2f23c62f54c970f169b388405b3077af2f23a"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v29/cases.jsonl",
+      "sha256": "05d6091da279e781e8c7b92c3f458aae1a6a21986c3c470f74a0681684f0e67a"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v29/model.jsonl",
+      "sha256": "3f85c233b57865079946fa1608b6726f817c74b271ae8df1f473789d6ef04f21"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v30/cases.jsonl",
+      "sha256": "5baf43d40d8087530e04990620ad833d6de9a33482e8eab3dc752a740936370a"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v30/model.jsonl",
+      "sha256": "9493cecc3a59cd0a112c12e3b82f2991d24fb14fa66b6e5a0ceb61960653fe27"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v32/cases.jsonl",
+      "sha256": "eafcecc24f84e7a798ff37a94781394a0275ebecda78230dcb7e3256a0f92715"
+    },
+    {
+      "name": "candidates/evidence-confirmation-v32/model.jsonl",
+      "sha256": "83428bcdf045cd9c0aab2b95bd6638ecff9992a8b3305148c35a16fa255b76e8"
+    },
+    {
+      "name": "candidates/evidence-final-v25/cases.jsonl",
+      "sha256": "86f404038de3e17903391491ae5c061ff80d80b4b7ffcb55972dfb89166102f4"
+    },
+    {
+      "name": "candidates/evidence-final-v25/model.jsonl",
+      "sha256": "e5448de5fd55feb7e5a53693f7e1afbcf07dcd05cac0b5090d7586359fce63de"
+    },
+    {
+      "name": "candidates/evidence-final-v26/cases.jsonl",
+      "sha256": "fb8b58f7055a13297748daf912c77648ca5bee0f9d6168066811d14ac4c8e77a"
+    },
+    {
+      "name": "candidates/evidence-final-v26/model.jsonl",
+      "sha256": "777f60642072756ebb6c9df8bd606ed27c40166bef3146034cb9e5948784f210"
+    },
+    {
+      "name": "candidates/evidence-final-v29/cases.jsonl",
+      "sha256": "9b8185219e0ddae66f56b8392001ddbc9a2a426382867380ae9ef93510d8da60"
+    },
+    {
+      "name": "candidates/evidence-final-v29/model.jsonl",
+      "sha256": "1d7ba52486cb36b10c9a56d5c1dbf12ae164cc13d7cb0ce6f5f75008d4b939d7"
+    },
+    {
+      "name": "candidates/evidence-final-v30/cases.jsonl",
+      "sha256": "f6ff3f9b853809cca6686b1c6db6793d0191ab425a63769f40ca69d503986f22"
+    },
+    {
+      "name": "candidates/evidence-final-v30/model.jsonl",
+      "sha256": "baf35ebb695b7d5957663ff4a08f1692134370e8d7ffa315729c92d7986c520c"
+    },
+    {
+      "name": "candidates/evidence-final-v32/cases.jsonl",
+      "sha256": "a23e87468d7b59daf4234b9f2e3f860cf91a5b25d801350bd67c25b544b1dcb0"
+    },
+    {
+      "name": "candidates/evidence-final-v32/model.jsonl",
+      "sha256": "d934f3948b1707b500495ca9134c5cc46e878acd3ec4d243d5cd3d7337e1c97c"
+    },
+    {
+      "name": "candidates/evidence-heldout-v25/cases.jsonl",
+      "sha256": "a1f2d8accaa2084d4bc66c838d8f3faca11fdc32251ead19fc7fd3e022f4415a"
+    },
+    {
+      "name": "candidates/evidence-heldout-v25/model.jsonl",
+      "sha256": "55b5be8fafce9c4a42218b2bfb9038bbcb203a05a396011371191cc9ad92d3c8"
+    },
+    {
+      "name": "candidates/evidence-heldout-v29/cases.jsonl",
+      "sha256": "25de07b016ba2e6b6ef59c7e78c7deef7467f0e1cc5974fc90c07b78c2362927"
+    },
+    {
+      "name": "candidates/evidence-heldout-v29/model.jsonl",
+      "sha256": "b6ebb5601bc70e88aa77faa89ae0923d38a78ec0c1b3fef1f155a0921f13a5c6"
+    },
+    {
+      "name": "candidates/evidence-heldout-v30/cases.jsonl",
+      "sha256": "9c32e311257cdaaaefb76bbb16a651b13a403b2e47d0258d3ec96783d3641fd6"
+    },
+    {
+      "name": "candidates/evidence-heldout-v30/model.jsonl",
+      "sha256": "7fccca6549e09f686daaaf92b23b54d1697664c965a5221efd844bd546162acf"
+    },
+    {
+      "name": "candidates/evidence-heldout-v32/cases.jsonl",
+      "sha256": "00a5ac7fb1fc89295bad7827aa49fbbcc835b03846066d8a2e570d779e2ac6f2"
+    },
+    {
+      "name": "candidates/evidence-heldout-v32/model.jsonl",
+      "sha256": "186c905b758c042ce79439131309247f8421facdc6d94bdbc4b182bcd401afc7"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v26/cases.jsonl",
+      "sha256": "c0d27d125704f8a31a5d4cec5f85a9e6af91a60ec011458cae7037fb8a06f54d"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v26/model.jsonl",
+      "sha256": "4737d845f12c2fbd70c13b3f88440bec6d3e2b2be5673e2162711def58499607"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v29/cases.jsonl",
+      "sha256": "e25d48a75d19bdf8a1ccdfc77bb5cf6a00eb3f80e298e32c75ebe30d02ef02cb"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v29/model.jsonl",
+      "sha256": "df6de310bbcd291471ee78b2f333952d1a43be9ff2d818342bb24dd03fdc9d87"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v30/cases.jsonl",
+      "sha256": "2d7a2cab87c8f9b6641410b5d02431ac4d7591b09ecc4fe4eb53d97d7d60fd2b"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v30/model.jsonl",
+      "sha256": "4b7a8a2ea1becc5cc39aa53bce9d6da1a128334e0eb597f013d33e7057ab8565"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v32/cases.jsonl",
+      "sha256": "2a8f7cda87cfe61687a926f2d74805c4e9bd3ee42180e6c9138d69ed75dc32ec"
+    },
+    {
+      "name": "candidates/evidence-source-selection-v32/model.jsonl",
+      "sha256": "2cbedd4547e513e999022ff9c44b319b6e14aab9a2c4eebf3013a937725e2e84"
+    },
+    {
+      "name": "previous/regressions/review-regressions.jsonl",
       "sha256": "723cfb589d1a98325c693081fffd3455653dddf34b537d4e1c72702879e8ad1a"
     },
     {
-      "name": "regressions/temporal-questions.jsonl",
+      "name": "previous/regressions/temporal-questions.jsonl",
       "sha256": "81540aff57c1a48622c9ca0153078d394e7268ad651a1fea4711c8a1e373596f"
     },
     {
-      "name": "regressions/model.jsonl",
+      "name": "previous/regressions/model.jsonl",
       "sha256": "eec84b0a91242956f4b9338b6e4e3f67c0fbb36f111b1d5be9acda23c3efa02a"
+    },
+    {
+      "name": "regressions/review-regressions.jsonl",
+      "sha256": "d4f64c367d1a0646744737f981fa457e48fae52b9132ce97b7bead68297734b3"
+    },
+    {
+      "name": "regressions/temporal-questions.jsonl",
+      "sha256": "4f5cfd31c194b9fa0b4a4efe00c262e6d6413efe5066e76cfe344bac8636c570"
+    },
+    {
+      "name": "development/regression-attempts/boundaries-1791530276291.jsonl",
+      "sha256": "1807936ab333b16542bcb356e5d60028e22e852a4410b08ba4b5964081a610d9"
+    },
+    {
+      "name": "development/regression-attempts/boundaries-1791530622282.jsonl",
+      "sha256": "93c36140a51396f367eaae65b2760bf4abd62f835e19689aa71cb0bbeedeeac9"
+    },
+    {
+      "name": "development/regression-attempts/boundaries-1791531320171.jsonl",
+      "sha256": "4baaf8f1a4d0aed0875c1782180b6a63b8e7f487e39864024f77827323d91bb4"
+    },
+    {
+      "name": "development/regression-attempts/boundaries-1791532084645.jsonl",
+      "sha256": "d17e8454f1c47ad423306c3f4f83cd6b4a9614adb452bbab1004d184c486e408"
+    },
+    {
+      "name": "development/regression-attempts/cases-1791530276291.jsonl",
+      "sha256": "261333a5eafb16f1202529d2bdd3f90b2843df9833c138809547d8a8271f3553"
+    },
+    {
+      "name": "development/regression-attempts/cases-1791530622282.jsonl",
+      "sha256": "ec3699326e18f32309ff3e9188ab02d13c46086d9dcc0bad00b408d3f52b37c2"
+    },
+    {
+      "name": "development/regression-attempts/cases-1791531320171.jsonl",
+      "sha256": "52592f67ce17f5b9f3d1ef318dcdd8e8b4852bf2ac80a4c8cbe7964d5490a64a"
+    },
+    {
+      "name": "development/regression-attempts/cases-1791532084645.jsonl",
+      "sha256": "8baea54c90df9380ea1cffd154040d943e75705547b3ce8e65473a24526c3fc5"
+    },
+    {
+      "name": "development/regression-attempts/model-1791530276291.jsonl",
+      "sha256": "e89a20cc19a314a65d04ee1b998aa249ce45a306eeaef6de76e9aa25db642c91"
+    },
+    {
+      "name": "development/regression-attempts/model-1791530622282.jsonl",
+      "sha256": "77073c4426823b89919b96e8cd7101f6c171e588471ea069990b46e4677f3450"
+    },
+    {
+      "name": "development/regression-attempts/model-1791531320171.jsonl",
+      "sha256": "f17994cae48ec3741d49f2cda7fb7d8bfd5a85fea98e2d3d5c6168fb3b07f22a"
+    },
+    {
+      "name": "development/regression-attempts/model-1791532084645.jsonl",
+      "sha256": "e21cb32631fce8553f2b50f9d43d54b447bb629546e806d5cace14f45df1c212"
+    },
+    {
+      "name": "development/regression-attempts/review-regressions-1791530276291.jsonl",
+      "sha256": "71d913ee8fdab04112d3535a1c748a5b82aff821eee933d54c49734b7c7f29e7"
+    },
+    {
+      "name": "development/regression-attempts/review-regressions-1791530622282.jsonl",
+      "sha256": "35fac6610e5f524d0e5cce359dd58fbeda4a4735d4e15ad662c720e86fcdfee3"
+    },
+    {
+      "name": "development/regression-attempts/review-regressions-1791531320171.jsonl",
+      "sha256": "27baabc5380b2dccd473ef71e6c8d682ceda4c85aa3d8d134d3822031f73ac14"
+    },
+    {
+      "name": "development/regression-attempts/review-regressions-1791532084645.jsonl",
+      "sha256": "077c0415f78217fca72663beed23cd9599a4e48e1284ca0454e28c8bd9de70c6"
+    },
+    {
+      "name": "development/regression-attempts/temporal-questions-1791530276291.jsonl",
+      "sha256": "e4dc24af83dab14639fa7395c1b1465f787ca51c2c7ae42f26eb5064e6b8b881"
+    },
+    {
+      "name": "development/regression-attempts/temporal-questions-1791530622282.jsonl",
+      "sha256": "c5d73ae166ac98e780c9b1a9b31b35d85a328781914a71eff744fd32cc17969e"
+    },
+    {
+      "name": "development/regression-attempts/temporal-questions-1791531320171.jsonl",
+      "sha256": "a6d86e30af179726a2045154d0f406585b31c22498b37ff7a53c7de0c6e1fa20"
+    },
+    {
+      "name": "development/regression-attempts/temporal-questions-1791532084645.jsonl",
+      "sha256": "1c0628245d389ca3919ec5f2d4ae0a7f0b02bfe725fcbf5e0de8be3848d7d0d0"
+    },
+    {
+      "name": "regressions/model.jsonl",
+      "sha256": "8213badf227d20382663906b64483067ecd29cccd0b0bdda743143794fb2521f"
     }
   ],
-  "fixtureSha256": "0982073769087f1d8fbbf7292ffe90a5a241149efead934ec52bc1d6fb606699"
+  "fixtureSha256": "ed68bbdfd90bd5039a837ecea94d2fc7fa6d0be8137e219ca4f8bfc2961d8b3b"
 }

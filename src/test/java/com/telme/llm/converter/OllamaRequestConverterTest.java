@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -132,7 +133,7 @@ class OllamaRequestConverterTest {
     @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18"})
     void 문맥_판정_버전에_JSON_Schema를_적용한다(String version) {
         OllamaChatRequest llmAll = converter.toChatRequest(LlmRequest.builder()
-                .userPrompt("질문").format(ResponseFormat.JSON)
+                .userPrompt("{\"sourceMessages\":[]}").format(ResponseFormat.JSON)
                 .promptVersion(version).build(), false);
         OllamaChatRequest regexGated = converter.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
@@ -147,14 +148,39 @@ class OllamaRequestConverterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18"})
+    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18", "multiturn-resolution-v30-reference", "multiturn-resolution-v30-sources"})
     void qwen3_문맥_판정은_사고_모드를_끈다(String version) {
         OllamaRequestConverter qwen = new OllamaRequestConverter(
                 new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
         OllamaChatRequest request = qwen.toChatRequest(LlmRequest.builder()
-                .userPrompt("질문").format(ResponseFormat.JSON)
+                .userPrompt("{\"sourceMessages\":[]}").format(ResponseFormat.JSON)
                 .promptVersion(version).build(), false);
 
         assertThat(request.think()).isFalse();
+    }
+
+    @Test
+    void 문맥_대상과_정정_연결을_구조화한다() {
+        var result = converter.toChatRequest(LlmRequest.builder().userPrompt("{\"sourceMessages\":[{\"index\":1,\"content\":\"유심 재발급\"}]}")
+                .format(ResponseFormat.JSON).promptVersion("multiturn-resolution-v30-sources").build(), false);
+        var schema = (Map<?, ?>) result.format();
+        var properties = (Map<?, ?>) schema.get("properties");
+        assertThat(properties.keySet().stream().map(Object::toString).toList())
+                .containsExactly("sources", "referenceScope", "anchorIndex");
+        var sourceItems = (Map<?, ?>) ((Map<?, ?>) properties.get("sources")).get("items");
+        assertThat(sourceItems.get("additionalProperties")).isEqualTo(false);
+        assertThat(sourceItems.get("required")).isEqualTo(List.of("index", "targetCount", "parentIndex"));
+        var array = (Map<?, ?>) properties.get("sources");
+        assertThat(array.get("minItems")).isEqualTo(1);
+        assertThat(array.get("maxItems")).isEqualTo(1);
+    }
+
+    @Test
+    void 현재_대상_판정에는_별도_출처_선택을_섞지_않는다() {
+        var result = converter.toChatRequest(LlmRequest.builder().userPrompt("질문")
+                .format(ResponseFormat.JSON).promptVersion("multiturn-resolution-v30-reference").build(), false);
+        var schema = (Map<?, ?>) result.format();
+        assertThat(schema.get("required")).isEqualTo(List.of("reference"));
+        assertThat(schema.get("additionalProperties")).isEqualTo(false);
     }
 }
