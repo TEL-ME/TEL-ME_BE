@@ -23,7 +23,6 @@ import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -90,8 +89,8 @@ class QueryRoutingServiceFollowUpTest {
                 .status(ConsultRequest.Status.WAITING_CONDITION)
                 .build();
 
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
     }
 
     @Test
@@ -130,8 +129,8 @@ class QueryRoutingServiceFollowUpTest {
                                 .status(ConsultCondition.Status.PENDING)
                                 .build()))
                 .build();
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
         given(llmClient.generate(any())).willReturn(
                 "{\"conditions\":[{\"key\":\"joined_this_month\",\"status\":\"FILLED\",\"value\":\"예\"}]}");
 
@@ -159,8 +158,8 @@ class QueryRoutingServiceFollowUpTest {
                         .askedMessage(askedMessage)
                         .build()))
                 .build();
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
 
         FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급");
 
@@ -184,8 +183,8 @@ class QueryRoutingServiceFollowUpTest {
                         .askedMessage(askedMessage)
                         .build()))
                 .build();
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
         given(llmClient.generate(any())).willReturn(
                 "{\"conditions\":[{\"key\":\"serviceType\",\"status\":\"FILLED\",\"value\":\"USIM_REISSUE\"}]}");
 
@@ -211,8 +210,8 @@ class QueryRoutingServiceFollowUpTest {
     @Test
     @DisplayName("되묻기 대기 중인 상담이 없으면 consultRequestId 없이 반환해 임의 상담 갱신을 막는다")
     void analyzeFollowUp_withoutWaitingConsult() {
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.empty());
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of());
 
         FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "강남역");
 

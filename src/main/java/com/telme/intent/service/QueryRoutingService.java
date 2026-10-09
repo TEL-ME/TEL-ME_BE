@@ -675,8 +675,9 @@ public class QueryRoutingService {
 
     private WaitingConsult loadWaitingConsult(Long sessionId) {
         return consultRequestRepository
-            .findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                sessionId, ConsultRequest.Status.WAITING_CONDITION)
+            .findByLatestAskedQuestion(sessionId, ConsultRequest.Status.WAITING_CONDITION)
+            .stream()
+            .findFirst()
             .map(request -> new WaitingConsult(request.getConsultRequestId(), pendingKeysOf(request)))
             .orElse(null);
     }
