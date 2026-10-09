@@ -2,6 +2,7 @@ package com.telme.consult.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.dto.ClarificationReask;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -32,7 +33,21 @@ public final class PendingClarificationFinder {
             String originalUserQuery,
             String queryText,
             String intent,
-            List<String> options) {
+            List<String> options,
+            int reasks) {
+
+        public Candidate(
+                long consultRequestId,
+                String field,
+                long questionMessageId,
+                String questionText,
+                String originalUserQuery,
+                String queryText,
+                String intent,
+                List<String> options) {
+            this(consultRequestId, field, questionMessageId, questionText, originalUserQuery,
+                    queryText, intent, options, 0);
+        }
 
         // 선택지는 FAQ 되묻기에만 붙는다. 매장 되묻기 후보는 선택지가 없다
         public Candidate(
@@ -61,7 +76,12 @@ public final class PendingClarificationFinder {
                 jdbc.query(
                         """
                         SELECT r.consult_request_id,c.condition_key,q.message_id,q.content,
-                               origin.content,r.query_text,r.intent,q.follow_ups
+                               origin.content,r.query_text,r.intent,q.follow_ups,
+                               (SELECT count(*) FROM chat_messages re
+                                WHERE re.session_id=q.session_id AND re.role='ASSISTANT'
+                                  AND re.message_type='CLARIFICATION' AND re.status='COMPLETED'
+                                  AND re.sequence_no>q.sequence_no
+                                  AND re.content=? || q.content)
                         FROM consult_requests r
                         JOIN consult_conditions c ON c.consult_request_id=r.consult_request_id
                         JOIN chat_messages q ON q.message_id=c.asked_message_id
@@ -83,7 +103,9 @@ public final class PendingClarificationFinder {
                                         rs.getString(5),
                                         rs.getString(6),
                                         rs.getString(7),
-                                        optionsOf(rs.getString(8))),
+                                        optionsOf(rs.getString(8)),
+                                        rs.getInt(9)),
+                        ClarificationReask.prefix(),
                         userMessageId,
                         sessionId));
     }

@@ -4,6 +4,7 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore;
@@ -11,6 +12,9 @@ import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerSourcesReady;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +36,7 @@ public class ConsultChatPersistenceService {
     private final ConsultService consultService;
     private final JdbcConsultStateStore stateStore;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     public record ConsultCompletion(long consultRequestId, int expectedVersion) {
         public ConsultCompletion {
@@ -149,7 +154,7 @@ public class ConsultChatPersistenceService {
         return state;
     }
 
-    // 기존 질문은 그대로 두고 조건 변경과 실행 완료만 함께 저장한다.
+    // 조건 변경 저장 후 기존 질문 재전송
     @Transactional
     public ChatExecutionState persistWaiting(
             long executionId, long sessionId, ConsultService.PreparationResult result) {
@@ -166,7 +171,6 @@ public class ConsultChatPersistenceService {
         if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
-        ChatExecutionState execution = chatExecutionService.completeWithoutOutput(executionId);
         Integer count =
                 jdbc.queryForObject(
                         """
@@ -186,10 +190,32 @@ public class ConsultChatPersistenceService {
         if (count == null || count == 0) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
+        var pending =
+                jdbc.queryForList(
+                        "SELECT content,follow_ups::text AS follow_ups FROM chat_messages WHERE message_id=?",
+                        result.pendingMessageId());
+        String question = (String) pending.getFirst().get("content");
+        // 조건 변경만 받은 턴은 안내 문구 없이 질문만 재전송
+        ChatExecutionState execution =
+                chatExecutionService.askClarification(
+                        executionId,
+                        result.prepared() == null ? ClarificationReask.text(question) : question,
+                        optionsOf((String) pending.getFirst().get("follow_ups")));
         if (result.prepared() != null) {
             consultService.persistWaitingChanges(result);
         }
         return execution;
+    }
+
+    private List<String> optionsOf(String followUps) {
+        if (followUps == null || followUps.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(followUps, new TypeReference<List<String>>() {});
+        } catch (Exception malformed) {
+            return List.of();
+        }
     }
 
     // 준비·모델 호출은 끝내고, 메시지와 상담 상태 저장만 함께 묶는다.

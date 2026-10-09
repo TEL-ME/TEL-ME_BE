@@ -39,6 +39,10 @@ public class ConsultTurnPreparationService {
                 input.locationStatus());
     }
 
+    public void cancelWaiting(long sessionId, java.util.Collection<Long> consultRequestIds) {
+        consultService.cancelWaiting(sessionId, consultRequestIds);
+    }
+
     // 소유권을 확인해 얻은 문맥과 분석에서 선택한 질문이 일치해야 이어간다.
     public PreparedFollowup prepareFollowup(
             Context context, Selection selection, LocationStatus locationStatus) {

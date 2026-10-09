@@ -537,6 +537,18 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
+        // 지역 질문 중 업무 버튼 문구는 같은 상담의 업무 조건 (모델은 새 질문으로 읽음)
+        if (pickedServiceType != null
+                && waiting.pendingKeys().contains(FollowUpRouteResponse.LOCATION_KEY)) {
+            log.info("[후속분석] 지역을 묻는 중 업무 선택지가 와서 업무 조건으로 반영합니다: consultRequestId={}, serviceType={}",
+                    waiting.consultRequestId(), pickedServiceType);
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(),
+                Map.of(FollowUpRouteResponse.SERVICE_TYPE_KEY, pickedServiceType),
+                Collections.emptySet(),
+                QueryRouting.Method.RULE);
+        }
+
         LlmFollowUpPayload payload;
         QueryRouting.Method method;
 

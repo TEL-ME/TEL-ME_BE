@@ -2,6 +2,7 @@ package com.telme.consult.repository;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueInput.*;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.consult.service.DialogueService;
@@ -65,5 +66,31 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
         assertEquals(2, finder.findBefore(session, reply).size());
         states.cancel(session, second, states.load(session, second).version());
         assertEquals(first, finder.findBefore(session, reply).getFirst().consultRequestId());
+    }
+
+    private void reask(String question) {
+        long id = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
+        jdbc.update(
+                "UPDATE chat_messages SET content=? WHERE message_id=?",
+                ClarificationReask.text(question),
+                id);
+    }
+
+    @Test
+    void countsOnlyReasksOfTheSameQuestionAfterIt() {
+        long rid = request(session);
+        ask(rid);
+        var finder = new PendingClarificationFinder(jdbc);
+        long first = message(session, "USER", "QUESTION", "COMPLETED");
+        assertEquals(0, finder.findBefore(session, first).getFirst().reasks());
+
+        reask("test");
+        reask("다른 질문");
+        long second = message(session, "USER", "QUESTION", "COMPLETED");
+        assertEquals(1, finder.findBefore(session, second).getFirst().reasks());
+
+        reask("test");
+        long third = message(session, "USER", "QUESTION", "COMPLETED");
+        assertEquals(2, finder.findBefore(session, third).getFirst().reasks());
     }
 }
