@@ -302,6 +302,14 @@ class ConsultChatPersistenceIntegrationTest {
                                 Integer.class,
                                 sessionId))
                 .isEqualTo(4);
+        String question =
+                text("SELECT content FROM chat_messages WHERE message_id=?", result.pendingMessageId());
+        assertThat(
+                        text(
+                                "SELECT content FROM chat_messages WHERE session_id=? ORDER BY"
+                                        + " sequence_no DESC LIMIT 1",
+                                sessionId))
+                .isEqualTo("유심 재발급 업무로 확인했어요.\n" + question);
         assertThat(reaskCount()).isZero();
     }
 

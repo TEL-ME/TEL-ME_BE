@@ -5,11 +5,14 @@ import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.consult.dto.ClarificationReask;
+import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
 import com.telme.rag.service.AnswerSourcesReady;
 
@@ -199,7 +202,9 @@ public class ConsultChatPersistenceService {
         ChatExecutionState execution =
                 chatExecutionService.askClarification(
                         executionId,
-                        result.prepared() == null ? ClarificationReask.text(question) : question,
+                        result.prepared() == null
+                                ? ClarificationReask.text(question)
+                                : withReceivedService(result.prepared().decision(), question),
                         optionsOf((String) pending.getFirst().get("follow_ups")));
         if (result.prepared() != null) {
             consultService.persistWaitingChanges(result);
@@ -221,6 +226,16 @@ public class ConsultChatPersistenceService {
         } catch (Exception malformed) {
             return List.of();
         }
+    }
+
+    // 받은 업무를 먼저 알려 같은 질문이 반복돼 보이지 않게 함
+    private String withReceivedService(DialogueDecision decision, String question) {
+        var service = decision.conditions().get("serviceType");
+        if (service == null || service.status() != ConditionStatus.FILLED) {
+            return question;
+        }
+        String label = RuleBasedRoutingFallback.serviceTypeLabel(service.value());
+        return label == null ? question : label + " 업무로 확인했어요.\n" + question;
     }
 
     // 준비·모델 호출은 끝내고, 메시지와 상담 상태 저장만 함께 묶는다.
