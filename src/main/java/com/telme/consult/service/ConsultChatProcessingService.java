@@ -284,6 +284,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 || prepared.decision().action() != Action.PROCEED)) {
             throw new IllegalArgumentException("여러 FAQ 질문에는 진행 가능한 상담 결과만 사용할 수 있습니다.");
         }
+        List<AnswerInput> inputs = new ArrayList<>();
+        List<Prepared> prepareds = new ArrayList<>();
+        for (int i = 0; i < faqTurns.size(); i++) {
+            AnswerInput input = compoundInput(command, faqTurns.get(i), preparedTurns.get(i), context);
+            inputs.add(input);
+            prepareds.add(answers.clarifies() ? answers.prepare(input, true) : Prepared.none());
+        }
+        int askIndex = firstNeedingClarification(preparedTurns, prepareds);
+        if (askIndex >= 0) {
+            processCompoundClarification(command, faqTurns, preparedTurns, inputs, prepareds, askIndex);
+            return;
+        }
         persistence.persistReadyTurns(command.executionId(), command.sessionId(), preparedTurns);
         var started = persistence.startAnswer(command.executionId(), command.sessionId());
         events.started(started);
@@ -297,11 +309,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         for (int i = 0; i < faqTurns.size(); i++) {
             FaqTurn faq = faqTurns.get(i);
             ConsultService.PreparedTurn prepared = preparedTurns.get(i);
-            GeneratedAnswer generated = answers.generate(new AnswerInput(
-                    command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
-                    Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
-                    conditionConverter.convert(prepared.decision().conditions()),
-                    faq.queryText(), context, false, command.coordinates(), Map.of()));
+            GeneratedAnswer generated = generateFor(inputs.get(i), prepareds.get(i));
             if (generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
                 throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
             }
@@ -358,6 +366,75 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             events.completed(command.executionId(), completed);
         } catch (RuntimeException deliveryFailure) {
             log.warn("복합 FAQ 완료 이벤트 전달 실패: executionId={}",
+                    command.executionId(), deliveryFailure);
+        }
+    }
+
+    private AnswerInput compoundInput(ChatProcessingCommand command, FaqTurn faq,
+            ConsultService.PreparedTurn prepared, ChatContext context) {
+        return new AnswerInput(
+                command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
+                Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
+                conditionConverter.convert(prepared.decision().conditions()),
+                faq.queryText(), context, false, command.coordinates(), Map.of());
+    }
+
+    // 먼저 되물을 하위 질문. 한 번에 하나만 묻고 나머지는 조건 없이 답한다. 없으면 -1
+    private int firstNeedingClarification(
+            List<ConsultService.PreparedTurn> preparedTurns, List<Prepared> prepareds) {
+        for (int i = 0; i < prepareds.size(); i++) {
+            Prepared prepared = prepareds.get(i);
+            if (prepared.answer() == null && prepared.plan()
+                    .remaining(preparedTurns.get(i).decision().conditions()).needsClarification()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // 답할 수 있는 하위 질문은 답하고, 되물을 하위 질문은 같은 메시지 끝에 질문으로 붙인다
+    private void processCompoundClarification(ChatProcessingCommand command, List<FaqTurn> faqTurns,
+            List<ConsultService.PreparedTurn> preparedTurns, List<AnswerInput> inputs,
+            List<Prepared> prepareds, int askIndex) {
+        List<String> sections = new ArrayList<>();
+        List<AnswerSource> sources = new ArrayList<>();
+        Set<Long> sourceFaqIds = new HashSet<>();
+        List<ConsultService.PreparedTurn> answeredTurns = new ArrayList<>();
+        for (int i = 0; i < faqTurns.size(); i++) {
+            if (i == askIndex) {
+                continue;
+            }
+            GeneratedAnswer generated = generateFor(inputs.get(i), prepareds.get(i));
+            if (generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
+                throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
+            }
+            boolean grounded = generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
+            sections.add("%d. %s\n%s".formatted(sections.size() + 1, faqTurns.get(i).queryText(),
+                    grounded ? generated.answer().content() : AnswerPromptTemplates.NO_EVIDENCE_ANSWER));
+            if (grounded) {
+                generated.sources().stream()
+                        .filter(source -> source.faqId() == null || sourceFaqIds.add(source.faqId()))
+                        .forEach(sources::add);
+            }
+            answeredTurns.add(preparedTurns.get(i));
+        }
+        ConsultService.PreparedTurn target = preparedTurns.get(askIndex);
+        ClarificationPlan plan = prepareds.get(askIndex).plan().remaining(target.decision().conditions());
+        var asking = new ConsultService.PreparedTurn(
+                target.sessionId(),
+                target.expectedVersion(),
+                FaqClarificationDecisions.ask(
+                        target.decision().consultRequestId(), plan, target.decision().conditions()),
+                plan);
+        sections.add("%d. %s\n%s".formatted(
+                sections.size() + 1, faqTurns.get(askIndex).queryText(), asking.decision().message()));
+        var completed = persistence.persistCompoundClarification(
+                command.executionId(), command.sessionId(), answeredTurns, asking,
+                String.join("\n\n", sections), asking.decision().options(), sources);
+        try {
+            events.completed(command.executionId(), completed);
+        } catch (RuntimeException deliveryFailure) {
+            log.warn("복합 FAQ 되묻기 완료 이벤트 전달 실패: executionId={}",
                     command.executionId(), deliveryFailure);
         }
     }
@@ -669,6 +746,11 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     // 준비 단계에서 답이 확정됐으면 모델을 다시 부르지 않는다
+    // 되묻기를 판단하지 않는 경로는 준비 단계에서 검색하지 않았으므로 예전처럼 한 번에 처리한다
+    private GeneratedAnswer generateFor(AnswerInput input, Prepared prepared) {
+        return answers.clarifies() ? answer(input, prepared) : answers.generate(input);
+    }
+
     private GeneratedAnswer answer(AnswerInput input, Prepared prepared) {
         return prepared.answer() != null ? prepared.answer() : answers.generate(input, prepared);
     }

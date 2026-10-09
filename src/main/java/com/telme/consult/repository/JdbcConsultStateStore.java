@@ -414,6 +414,19 @@ public final class JdbcConsultStateStore {
     /** 최종 답변 저장 후 호출한다. 해당 상담의 답변인지 호출자가 확인한다. */
     public Snapshot complete(
             long sessionId, long requestId, int expectedVersion, long finalMessageId) {
+        return complete(sessionId, requestId, expectedVersion, finalMessageId, "'ANSWER','STORE_RESULT'");
+    }
+
+    /** 복합 질문에서 답한 부분이 되묻기 메시지에 함께 담긴 경우의 완료 */
+    public Snapshot completeInClarification(
+            long sessionId, long requestId, int expectedVersion, long clarificationMessageId) {
+        return complete(sessionId, requestId, expectedVersion, clarificationMessageId, "'CLARIFICATION'");
+    }
+
+    // messageTypes는 상수만 넘긴다
+    private Snapshot complete(
+            long sessionId, long requestId, int expectedVersion, long finalMessageId,
+            String messageTypes) {
         return tx.execute(
                 status -> {
                     var old = read(sessionId, requestId);
@@ -432,7 +445,7 @@ public final class JdbcConsultStateStore {
                                         + " m.message_id=? AND m.session_id=r.session_id AND"
                                         + " origin.session_id=r.session_id AND"
                                         + " m.sequence_no>origin.sequence_no AND m.role='ASSISTANT'"
-                                        + " AND m.message_type IN ('ANSWER','STORE_RESULT') AND"
+                                        + " AND m.message_type IN (" + messageTypes + ") AND"
                                         + " m.status='COMPLETED'",
                                     Integer.class,
                                     requestId,

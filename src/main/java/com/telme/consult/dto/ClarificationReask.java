@@ -13,4 +13,11 @@ public final class ClarificationReask {
     public static String text(String question) {
         return PREFIX + Objects.requireNonNull(question, "question");
     }
+
+    // 복합 질문의 되묻기 메시지는 앞부분에 답변이 있고, 질문은 마지막 줄이다
+    public static String questionOf(String content) {
+        String stripped = Objects.requireNonNull(content, "content").strip();
+        int lastBreak = stripped.lastIndexOf('\n');
+        return lastBreak < 0 ? stripped : stripped.substring(lastBreak + 1).strip();
+    }
 }

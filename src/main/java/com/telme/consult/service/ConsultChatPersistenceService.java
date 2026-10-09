@@ -197,7 +197,7 @@ public class ConsultChatPersistenceService {
                 jdbc.queryForList(
                         "SELECT content,follow_ups::text AS follow_ups FROM chat_messages WHERE message_id=?",
                         result.pendingMessageId());
-        String question = (String) pending.getFirst().get("content");
+        String question = ClarificationReask.questionOf((String) pending.getFirst().get("content"));
         // 조건 변경만 받은 턴은 안내 문구 없이 질문만 재전송
         ChatExecutionState execution =
                 chatExecutionService.askClarification(
@@ -226,6 +226,50 @@ public class ConsultChatPersistenceService {
         } catch (Exception malformed) {
             return List.of();
         }
+    }
+
+    // 복합 질문에서 답한 부분과 되묻는 부분을 한 되묻기 메시지로 저장한다
+    @Transactional
+    public ChatExecutionState persistCompoundClarification(
+            long executionId,
+            long sessionId,
+            List<ConsultService.PreparedTurn> answeredTurns,
+            ConsultService.PreparedTurn asking,
+            String content,
+            List<String> options,
+            List<AnswerSource> sources) {
+        Objects.requireNonNull(asking, "asking");
+        if (answeredTurns.isEmpty()
+                || asking.sessionId() != sessionId
+                || asking.decision().action() != Action.ASK
+                || answeredTurns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+            throw new IllegalArgumentException("복합 질문 되묻기 저장에 필요한 상담 결과가 올바르지 않습니다.");
+        }
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        for (ConsultService.PreparedTurn answered : answeredTurns) {
+            persistReadyTurn(executionId, answered, null);
+        }
+        ChatExecutionState state = chatExecutionService.askClarification(executionId, content, options);
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        long messageId = state.outputMessage().messageId();
+        consultService.persist(asking, new MessageLinks(messageId, null, null));
+        for (ConsultService.PreparedTurn answered : answeredTurns) {
+            stateStore.completeInClarification(sessionId, answered.decision().consultRequestId(),
+                    answered.expectedVersion() + 1, messageId);
+        }
+        if (!sources.isEmpty()) {
+            eventPublisher.publishEvent(new AnswerSourcesReady(messageId, sources));
+        }
+        return state;
     }
 
     // 받은 업무를 먼저 알려 같은 질문이 반복돼 보이지 않게 함
