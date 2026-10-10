@@ -50,7 +50,7 @@ class ConsultTurnAnalysisAdapterTest {
         var context = new Context(1, 10, "그럼 신청 방법은?", List.of(candidate),
                 new ChatContext(1L, 10L, null, List.of(previous), "그럼 신청 방법은?", 100));
         var model = mock(LlmClient.class);
-        when(model.generate(any())).thenReturn("{\"needsClarification\":false,\"sourceMessageIds\":[5]}");
+        when(model.generate(any())).thenReturn("{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}");
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
         var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "로밍 신청 안내", null, List.of(), null);
         var calls = new java.util.ArrayList<Context>();

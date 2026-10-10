@@ -1,0 +1,1736 @@
+{
+  "baseCommit": "9693186518323678f9d6876ad3faf8edd0651acd",
+  "labelOrigin": "실행 전에 코드 작성자가 기대 관계와 필요한 고객 발언을 설정했다. 별도 사람 검토를 거친 라벨은 아니다.",
+  "cases": [
+    {
+      "id": "known-01",
+      "group": "known",
+      "split": "regression",
+      "question": "요금이밀렸는데유심재발급받을수있어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-02",
+      "group": "known",
+      "split": "regression",
+      "question": "요금이 밀렸는데 유심 재발급 받을 수 있어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-03",
+      "group": "known",
+      "split": "regression",
+      "question": "요금 납부 방법과 데이터 충전 비용 알려줘",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-04",
+      "group": "known",
+      "split": "regression",
+      "question": "요금 아끼려면 정지가 나아요, 해지가 나아요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-05",
+      "group": "known",
+      "split": "regression",
+      "question": "요금 부담으로 해지할 때 홈페이지와 고객센터 중 어느 쪽이 빠른가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-06",
+      "group": "known",
+      "split": "regression",
+      "question": "요금 절감을 위해 요금제 라인업을 비교하는 절차를 알려주세요.",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-07",
+      "group": "known",
+      "split": "regression",
+      "question": "요금을 아끼려고 낮은 요금제로 바꿨더니 속도 제한이 자주 걸립니다",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-08",
+      "group": "known",
+      "split": "regression",
+      "question": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "known-09",
+      "group": "known",
+      "split": "regression",
+      "question": "요금 너무 많이 나왔어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-01",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 안 내면 언제 정지되나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-02",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 납부일을 변경하려면 어떻게 하나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-03",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 자동이체를 카드로 바꾸고 싶어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-04",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 이중 납부는 어떻게 환불받나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-05",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 청구서를 이메일로 받을 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-06",
+      "group": "independent",
+      "split": "development",
+      "question": "비용은 유심 재발급할 때 얼마인가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-07",
+      "group": "independent",
+      "split": "development",
+      "question": "비용 없이 번호이동 가능한가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-08",
+      "group": "independent",
+      "split": "development",
+      "question": "기간은 번호이동 신청 후 얼마나 걸리나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-09",
+      "group": "independent",
+      "split": "development",
+      "question": "필요한 서류는 명의 변경할 때 무엇인가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-10",
+      "group": "independent",
+      "split": "development",
+      "question": "신청 방법은 로밍을 해외에서 켜는 경우도 같나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-11",
+      "group": "independent",
+      "split": "development",
+      "question": "요금 미납을 해결하면 정지가 바로 풀리나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-12",
+      "group": "independent",
+      "split": "heldout",
+      "question": "비용이 많이 나오는 해외 로밍을 해지하고 싶어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-13",
+      "group": "independent",
+      "split": "heldout",
+      "question": "기간이 끝난 선택약정은 다시 신청 가능한가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-14",
+      "group": "independent",
+      "split": "heldout",
+      "question": "필요한 서류를 유심 재발급 전에 준비하고 싶어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-15",
+      "group": "independent",
+      "split": "heldout",
+      "question": "어떻게 신청해야 인터넷 설치를 예약할 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "followup-01",
+      "group": "followup",
+      "split": "development",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "로밍 요금제는 어떻게 골라요?"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-02",
+      "group": "followup",
+      "split": "development",
+      "question": "필요한 서류는?",
+      "history": [
+        "명의 변경 방법을 알려주세요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-03",
+      "group": "followup",
+      "split": "development",
+      "question": "기간은 얼마나 걸려?",
+      "history": [
+        "유심 재발급 방법을 알려주세요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-04",
+      "group": "followup",
+      "split": "development",
+      "question": "그건 얼마야?",
+      "history": [
+        "유심 재발급 비용이 궁금합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-05",
+      "group": "followup",
+      "split": "development",
+      "question": "그때 요금은 얼마야?",
+      "history": [
+        "일본 로밍을 신청하고 싶어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-06",
+      "group": "followup",
+      "split": "development",
+      "question": "아까 말한 건 어떻게 신청해?",
+      "history": [
+        "인터넷 가입 방법을 알려주세요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-07",
+      "group": "followup",
+      "split": "heldout",
+      "question": "그 서비스 해지는 어떻게 해요?",
+      "history": [
+        "컬러링 부가서비스 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-08",
+      "group": "followup",
+      "split": "heldout",
+      "question": "그럼 비용은 얼마나 드나요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-09",
+      "group": "followup",
+      "split": "heldout",
+      "question": "이전에 문의한 건 취소할 수 있어요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "followup-10",
+      "group": "followup",
+      "split": "heldout",
+      "question": "그 상품의 이용 기간은요?",
+      "history": [
+        "미국 로밍 상품을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "ambiguous-01",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "그건 얼마야?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-02",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "비용은 얼마야?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-03",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "그럼 신청 방법은?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-04",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "필요한 서류는?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-05",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "그때 요금은 얼마야?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-06",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "아까 신청한 건?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-07",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "그건 취소할 수 있나요?",
+      "history": [
+        "유심 재발급과 인터넷 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-08",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "그 서비스 비용은요?",
+      "history": [
+        "로밍과 컬러링 서비스를 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-09",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "이전에 문의한 건 뭐가 필요하죠?",
+      "history": [
+        "안녕하세요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "ambiguous-10",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "그럼 기간은요?",
+      "history": [
+        "인터넷 가입과 번호이동을 둘 다 신청하고 싶어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "transition-01",
+      "group": "transition",
+      "split": "development",
+      "question": "요금 납부 방법 알려줘",
+      "history": [
+        "일본 로밍 비용을 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "transition-02",
+      "group": "transition",
+      "split": "development",
+      "question": "그때 가입한 LTE 요금제를 변경하고 싶어요",
+      "history": [
+        "인터넷 해지를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "transition-03",
+      "group": "transition",
+      "split": "development",
+      "question": "비용은 유심 재발급 기준으로 알려줘",
+      "history": [
+        "일본 로밍을 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "transition-04",
+      "group": "transition",
+      "split": "development",
+      "question": "이전에 신청한 인터넷 설치를 취소하고 싶어요",
+      "history": [
+        "명의 변경 방법이 궁금해요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "transition-05",
+      "group": "transition",
+      "split": "development",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "일본 로밍을 알아봅니다",
+        "일본이 아니라 미국입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "transition-06",
+      "group": "transition",
+      "split": "development",
+      "question": "그건 서류가 뭐가 필요해?",
+      "history": [
+        "아버지에게 명의 변경하려고 합니다",
+        "아버지가 아니라 배우자에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "transition-07",
+      "group": "transition",
+      "split": "heldout",
+      "question": "그럼 비용은?",
+      "history": [
+        "유심 재발급을 대리인이 신청하려고 합니다",
+        "대리인이 아니라 제가 직접 신청합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "transition-08",
+      "group": "transition",
+      "split": "heldout",
+      "question": "그 상품 신청 방법은?",
+      "history": [
+        "일본 로밍을 알아봅니다",
+        "일본이 아니라 미국입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "transition-09",
+      "group": "transition",
+      "split": "heldout",
+      "question": "그 서비스 취소는 어떻게 해?",
+      "history": [
+        "인터넷 신규 설치를 신청하고 싶어요",
+        "신규가 아니라 이전 설치입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "transition-10",
+      "group": "transition",
+      "split": "heldout",
+      "question": "필요한 서류는?",
+      "history": [
+        "아버지에게 명의를 변경하려고 합니다",
+        "아버지가 아니라 배우자에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "same_sentence-01",
+      "group": "same_sentence",
+      "split": "development",
+      "question": "로밍 신청하려는데 그건 얼마예요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "same_sentence-02",
+      "group": "same_sentence",
+      "split": "development",
+      "question": "유심 재발급 신청인데 그건 얼마나 걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "same_sentence-03",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "명의 변경을 하려는데 그 서비스에 필요한 서류는요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "same_sentence-04",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "인터넷 설치 신청을 취소하려는데 이건 어떻게 해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "same_sentence-05",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "번호이동을 신청하고 싶어요. 그건 비용이 드나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "same_sentence-06",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "컬러링을 해지하고 싶은데 그건 어디서 신청해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "independent-01-compact",
+      "group": "independent",
+      "split": "development",
+      "question": "요금안내면언제정지되나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "independent-01"
+    },
+    {
+      "id": "independent-02-compact",
+      "group": "independent",
+      "split": "development",
+      "question": "요금납부일을변경하려면어떻게하나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "independent-02"
+    },
+    {
+      "id": "followup-01-compact",
+      "group": "followup",
+      "split": "development",
+      "question": "그럼신청방법은?",
+      "history": [
+        "로밍 요금제는 어떻게 골라요?"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "variantOf": "followup-01"
+    },
+    {
+      "id": "followup-02-compact",
+      "group": "followup",
+      "split": "development",
+      "question": "필요한서류는?",
+      "history": [
+        "명의 변경 방법을 알려주세요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "variantOf": "followup-02"
+    },
+    {
+      "id": "ambiguous-01-compact",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "그건얼마야?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "variantOf": "ambiguous-01"
+    },
+    {
+      "id": "ambiguous-02-compact",
+      "group": "ambiguous",
+      "split": "development",
+      "question": "비용은얼마야?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "variantOf": "ambiguous-02"
+    },
+    {
+      "id": "transition-01-compact",
+      "group": "transition",
+      "split": "development",
+      "question": "요금납부방법알려줘",
+      "history": [
+        "일본 로밍 비용을 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "transition-01"
+    },
+    {
+      "id": "transition-02-compact",
+      "group": "transition",
+      "split": "development",
+      "question": "그때가입한LTE요금제를변경하고싶어요",
+      "history": [
+        "인터넷 해지를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "transition-02"
+    },
+    {
+      "id": "same_sentence-01-compact",
+      "group": "same_sentence",
+      "split": "development",
+      "question": "로밍신청하려는데그건얼마예요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "same_sentence-01"
+    },
+    {
+      "id": "same_sentence-02-compact",
+      "group": "same_sentence",
+      "split": "development",
+      "question": "유심재발급신청인데그건얼마나걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "same_sentence-02"
+    },
+    {
+      "id": "independent-12-compact",
+      "group": "independent",
+      "split": "heldout",
+      "question": "비용이많이나오는해외로밍을해지하고싶어요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "independent-12"
+    },
+    {
+      "id": "independent-13-compact",
+      "group": "independent",
+      "split": "heldout",
+      "question": "기간이끝난선택약정은다시신청가능한가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "independent-13"
+    },
+    {
+      "id": "followup-07-compact",
+      "group": "followup",
+      "split": "heldout",
+      "question": "그서비스해지는어떻게해요?",
+      "history": [
+        "컬러링 부가서비스 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "variantOf": "followup-07"
+    },
+    {
+      "id": "followup-08-compact",
+      "group": "followup",
+      "split": "heldout",
+      "question": "그럼비용은얼마나드나요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "variantOf": "followup-08"
+    },
+    {
+      "id": "ambiguous-07-compact",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "그건취소할수있나요?",
+      "history": [
+        "유심 재발급과 인터넷 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "variantOf": "ambiguous-07"
+    },
+    {
+      "id": "ambiguous-08-compact",
+      "group": "ambiguous",
+      "split": "heldout",
+      "question": "그서비스비용은요?",
+      "history": [
+        "로밍과 컬러링 서비스를 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "variantOf": "ambiguous-08"
+    },
+    {
+      "id": "transition-07-compact",
+      "group": "transition",
+      "split": "heldout",
+      "question": "그럼비용은?",
+      "history": [
+        "유심 재발급을 대리인이 신청하려고 합니다",
+        "대리인이 아니라 제가 직접 신청합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ],
+      "variantOf": "transition-07"
+    },
+    {
+      "id": "transition-08-compact",
+      "group": "transition",
+      "split": "heldout",
+      "question": "그상품신청방법은?",
+      "history": [
+        "일본 로밍을 알아봅니다",
+        "일본이 아니라 미국입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ],
+      "variantOf": "transition-08"
+    },
+    {
+      "id": "same_sentence-03-compact",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "명의변경을하려는데그서비스에필요한서류는요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "same_sentence-03"
+    },
+    {
+      "id": "same_sentence-04-compact",
+      "group": "same_sentence",
+      "split": "heldout",
+      "question": "인터넷설치신청을취소하려는데이건어떻게해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "variantOf": "same_sentence-04"
+    }
+  ],
+  "confirmationCases": [
+    {
+      "id": "fresh-independent-1",
+      "group": "independent",
+      "split": "confirmation",
+      "question": "요금 납부 영수증을 다시 받을 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-independent-2",
+      "group": "independent",
+      "split": "confirmation",
+      "question": "비용은 eSIM을 재발급할 때 얼마나 드나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-independent-3",
+      "group": "independent",
+      "split": "confirmation",
+      "question": "기간이 만료된 선택약정은 연장할 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-independent-4",
+      "group": "independent",
+      "split": "confirmation",
+      "question": "필요한 서류는 법인 명의 변경 기준으로 알려주세요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-followup-1",
+      "group": "followup",
+      "split": "confirmation",
+      "question": "그건 신청 어디서 해요?",
+      "history": [
+        "가족 결합 할인을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "fresh-followup-2",
+      "group": "followup",
+      "split": "confirmation",
+      "question": "그 상품 비용은요?",
+      "history": [
+        "싱가포르 로밍 상품을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "fresh-followup-3",
+      "group": "followup",
+      "split": "confirmation",
+      "question": "그럼 처리 기간은 얼마나 되죠?",
+      "history": [
+        "휴대폰 해지를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "fresh-followup-4",
+      "group": "followup",
+      "split": "confirmation",
+      "question": "필요한 서류를 다시 알려주세요",
+      "history": [
+        "미성년자 신규 개통을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "fresh-ambiguous-1",
+      "group": "ambiguous",
+      "split": "confirmation",
+      "question": "그건 언제 쓸 수 있나요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-ambiguous-2",
+      "group": "ambiguous",
+      "split": "confirmation",
+      "question": "그럼 요금은요?",
+      "history": [
+        "인터넷 설치와 싱가포르 로밍을 모두 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-ambiguous-3",
+      "group": "ambiguous",
+      "split": "confirmation",
+      "question": "그 서비스 해지는 어디서 해요?",
+      "history": [
+        "컬러링과 데이터 쿠폰 서비스를 함께 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-ambiguous-4",
+      "group": "ambiguous",
+      "split": "confirmation",
+      "question": "아까 물어본 거 처리 기간은요?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-transition-1",
+      "group": "transition",
+      "split": "confirmation",
+      "question": "비용은 휴대폰 명의 변경 수수료를 알려주세요",
+      "history": [
+        "싱가포르 로밍 비용이 궁금해요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-transition-2",
+      "group": "transition",
+      "split": "confirmation",
+      "question": "이전에 쓰던 5G 요금제를 LTE로 바꾸고 싶어요",
+      "history": [
+        "인터넷 설치를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-transition-3",
+      "group": "transition",
+      "split": "confirmation",
+      "question": "그건 서류가 뭐가 필요하죠?",
+      "history": [
+        "어머니에게 휴대폰 명의를 변경하려고 합니다",
+        "어머니가 아니라 누나에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "fresh-transition-4",
+      "group": "transition",
+      "split": "confirmation",
+      "question": "그럼 신청 방법은 어떻게 되죠?",
+      "history": [
+        "오스트리아 로밍을 알아보고 있어요",
+        "오스트리아 대신 캐나다로 갑니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "fresh-same_sentence-1",
+      "group": "same_sentence",
+      "split": "confirmation",
+      "question": "유심을 잃어버려 재발급하려는데 그건 매장에서도 되나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-same_sentence-2",
+      "group": "same_sentence",
+      "split": "confirmation",
+      "question": "데이터 쿠폰을 구매하고 싶어요. 이건 어떻게 결제하죠?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-same_sentence-3",
+      "group": "same_sentence",
+      "split": "confirmation",
+      "question": "와이파이 서비스를 가입하려는데 그건 비용이 얼마나 드나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "fresh-same_sentence-4",
+      "group": "same_sentence",
+      "split": "confirmation",
+      "question": "휴대폰을 해지하려는데 그건 온라인으로 신청할 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "confirmationPurpose": "개발군으로 프롬프트를 확정한 후 새로 고정한 20문항이다. 결과를 보고 프롬프트를 변경하지 않는다.",
+  "evidenceValidationCases": [
+    {
+      "id": "evidence-independent-01",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "기간은 휴대폰 소액결제 차단을 신청하면 얼마나 걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-02",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "비용은 eSIM을 새로 발급받을 때 얼마예요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-03",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는 휴대폰 분실 신고할 때 무엇인가요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-independent-04",
+      "group": "independent",
+      "split": "evidence-heldout",
+      "question": "요금 자동이체 계좌를 바꾸는 방법 알려줘",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-followup-01",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그건 어디서 접수하죠?",
+      "history": [
+        "부모님 휴대폰 분실 신고를 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-02",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "eSIM 개통을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-03",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는?",
+      "history": [
+        "휴대폰 소액결제 차단을 신청하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-followup-04",
+      "group": "followup",
+      "split": "evidence-heldout",
+      "question": "그때 요금은 얼마나 나와요?",
+      "history": [
+        "태국 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "evidence-ambiguous-01",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그쪽 처리는 며칠 걸려요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-02",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그 서비스 혜택은요?",
+      "history": [
+        "멤버십 등급과 데이터 쿠폰을 둘 다 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-03",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "소액결제 차단과 휴대폰 분실 신고를 함께 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-ambiguous-04",
+      "group": "ambiguous",
+      "split": "evidence-heldout",
+      "question": "그건 취소는 어디서 해요?",
+      "history": [
+        "eSIM 개통과 인터넷 이전 설치를 둘 다 신청하려고 해요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-correction-01",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 신청 방법은?",
+      "history": [
+        "자녀 휴대폰의 eSIM을 개통하려고 합니다",
+        "자녀가 아니라 제 휴대폰입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-02",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "필요한 서류는?",
+      "history": [
+        "어머니에게 휴대폰 명의를 변경하려고 합니다",
+        "어머니가 아니라 형에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-03",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 처리 기간은?",
+      "history": [
+        "인터넷 해지를 다음 달에 신청하려고 합니다",
+        "다음 달이 아니라 이번 달입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-correction-04",
+      "group": "correction",
+      "split": "evidence-heldout",
+      "question": "그럼 비용은?",
+      "history": [
+        "휴대폰 분실로 유심을 재발급하려고 합니다",
+        "분실이 아니라 유심 고장입니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "evidence-same_sentence-01",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "eSIM을 재발급받고 싶은데 그건 어디서 신청해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-02",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "소액결제를 차단하려는데 그건 얼마나 걸려요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-03",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "요금 자동이체를 해지하려는데 그건 어디서 신청하죠?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "evidence-same_sentence-04",
+      "group": "same_sentence",
+      "split": "evidence-heldout",
+      "question": "휴대폰 분실 신고를 하려는데 그건 어떻게 접수해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "evidenceValidationPurpose": "대상 추출과 발언 연결 방식의 개발 입력 이후 고정한 20건. 실행 결과는 프롬프트 조정에 사용하지 않는다. 이전 100회는 알려진 회귀 검사로만 해석한다.",
+  "sourceSelectionCases": [
+    {
+      "id": "earlier-topic-correction",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 물어본 건 비용이 얼마야?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다",
+        "일본이 아니라 미국입니다",
+        "유심 재발급 방법도 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "second-topic",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 두 번째로 물어본 그건 기간이 얼마나 걸려?",
+      "history": [
+        "인터넷 가입을 신청하려고 합니다",
+        "휴대폰 유심 재발급을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ]
+    },
+    {
+      "id": "earlier-topic-late-correction",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 문의한 건 필요한 서류가 뭐야?",
+      "history": [
+        "아버지에게 명의 변경을 신청하려고 합니다",
+        "유심 재발급도 알아보고 있어요",
+        "아버지가 아니라 배우자에게 변경합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "earlier-ambiguous",
+      "group": "source-selection",
+      "split": "regression",
+      "question": "앞서 첫 번째로 물어본 건 비용이 얼마야?",
+      "history": [
+        "인터넷 가입과 번호이동을 둘 다 알아보고 있어요",
+        "컬러링 가입도 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "unseenCases": [
+    {
+      "id": "unseen-independent-1",
+      "group": "independent",
+      "split": "unseen",
+      "question": "데이터 쉐어링 요금은 얼마인가요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-2",
+      "group": "independent",
+      "split": "unseen",
+      "question": "비용 걱정 없이 쓸 수 있는 무제한 요금제 있어요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-3",
+      "group": "independent",
+      "split": "unseen",
+      "question": "그때그때 충전하는 선불 요금제도 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-4",
+      "group": "independent",
+      "split": "unseen",
+      "question": "휴대폰 분실 신고는 어디서 하나요?",
+      "history": [
+        "인터넷 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-5",
+      "group": "independent",
+      "split": "unseen",
+      "question": "이전에 쓰던 번호로 다시 개통할 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-6",
+      "group": "independent",
+      "split": "unseen",
+      "question": "가족 결합 할인 조건이 뭐예요?",
+      "history": [
+        "로밍 요금제를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-7",
+      "group": "independent",
+      "split": "unseen",
+      "question": "소액결제 한도 변경은 어떻게 하나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-followup-1",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그거 하루 단위로도 되나요?",
+      "history": [
+        "미국 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-2",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그럼 준비물은 뭐가 있어요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-3",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그건 위약금이 얼마나 나와요?",
+      "history": [
+        "인터넷 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-4",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그때 신분증 꼭 필요해요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-5",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그럼 언제쯤 완료돼요?",
+      "history": [
+        "번호이동을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-6",
+      "group": "followup",
+      "split": "unseen",
+      "question": "이전에 말한 거 온라인으로도 돼요?",
+      "history": [
+        "태블릿 개통을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-7",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그거 취소도 가능한가요?",
+      "history": [
+        "요금제 변경을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-1",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "미국은요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-2",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "가족이 대신 가도 되나요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-3",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "주말에도 와요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-4",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "수수료 있어요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-5",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "미성년자도 돼요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-ambiguous-1",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "그거 언제까지 해야 돼요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-2",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "그럼 그건 얼마 들어요?",
+      "history": [
+        "로밍과 유심 재발급을 둘 다 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-3",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "아까 그 건 진행됐나요?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-4",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "이전에 신청한 거 확인해 주세요",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-5",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "인터넷이랑 TV 중에 그건 언제 설치돼요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-correction-1",
+      "group": "correction",
+      "split": "unseen",
+      "question": "그럼 요금은 얼마나 나와요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다",
+        "일본 말고 베트남이에요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-correction-2",
+      "group": "correction",
+      "split": "unseen",
+      "question": "필요한 서류가 뭐야?",
+      "history": [
+        "어머니 명의로 개통하려고 합니다",
+        "어머니가 아니라 아버지예요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-correction-3",
+      "group": "correction",
+      "split": "unseen",
+      "question": "그럼 언제쯤 기사님이 오나요?",
+      "history": [
+        "인터넷 이전 설치를 신청합니다",
+        "이전 설치가 아니라 신규 설치예요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-position-1",
+      "group": "position",
+      "split": "unseen",
+      "question": "처음 물어본 거 비용이 얼마예요?",
+      "history": [
+        "로밍 신청을 알아보고 있어요",
+        "유심 재발급도 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-position-2",
+      "group": "position",
+      "split": "unseen",
+      "question": "두 번째로 말한 건 기간이 얼마나 걸려?",
+      "history": [
+        "인터넷 가입을 하려고 해요",
+        "번호이동도 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ]
+    }
+  ],
+  "unseenPurpose": "프롬프트 예시와 기존 사례에 없고 일반어 규칙 설계에도 쓰지 않은 29건. 실측 전에 기대값을 고정했다. 결과를 보고 규칙이나 프롬프트를 고치면 이 묶음은 더 이상 처음 보는 문장이 아니다. implicit_followup 5건은 기본 모드의 알려진 한계를 수치로 남기기 위한 입력이다."
+}
