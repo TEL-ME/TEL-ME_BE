@@ -46,7 +46,8 @@ class ChatQuestionResolutionRegressionTest {
         var result = resolver.resolve(command(question), context);
         assertThat(result.sourceMessageIds()).containsExactly(1L);
         assertThat(result.question()).contains(context.history().getFirst().content(), question);
-        org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(any());
+        // 대상 없는 일반어 질문은 현재 대상 판정을 모델에 묻지 않고 이전 발언 분석만 호출한다.
+        org.mockito.Mockito.verify(model).generate(any());
     }
 
     @Test

@@ -46,9 +46,7 @@ public class OllamaRequestConverter {
     }
 
     private boolean isContextResolution(LlmRequest request) {
-        return "multiturn-resolution-v8".equals(request.promptVersion())
-                || "multiturn-resolution-v18".equals(request.promptVersion())
-                || "multiturn-resolution-v30-reference".equals(request.promptVersion())
+        return "multiturn-resolution-v30-reference".equals(request.promptVersion())
                 || "multiturn-resolution-v30-sources".equals(request.promptVersion());
     }
 
@@ -59,9 +57,6 @@ public class OllamaRequestConverter {
     private Object format(LlmRequest request) {
         if (request.format() != ResponseFormat.JSON) {
             return null;
-        }
-        if (!isContextResolution(request)) {
-            return "json";
         }
         if ("multiturn-resolution-v30-reference".equals(request.promptVersion())) {
             return Map.of("type", "object", "properties", Map.of("reference",
@@ -85,17 +80,7 @@ public class OllamaRequestConverter {
             return Map.of("type", "object", "properties", properties,
                     "required", List.of("sources", "referenceScope", "anchorIndex"), "additionalProperties", false);
         }
-        // 관계를 먼저 판정한 뒤 출처를 선택하도록 속성 순서를 고정한다.
-        Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("relation", Map.of("type", "string", "enum",
-                List.of("SELF_CONTAINED", "HISTORY_DEPENDENT", "CLARIFICATION_REQUIRED")));
-        properties.put("selectedMessageIds", Map.of("type", "array", "items", Map.of("type", "integer"),
-                "uniqueItems", true));
-        return Map.of(
-                "type", "object",
-                "properties", properties,
-                "required", List.of("relation", "selectedMessageIds"),
-                "additionalProperties", false);
+        return "json";
     }
 
     // 문맥 판정기가 만든 입력만 읽고 전역 요청 파싱 설정은 변경하지 않는다.

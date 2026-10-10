@@ -50,7 +50,7 @@ class ConsultTurnAnalysisAdapterTest {
         var context = new Context(1, 10, "그럼 신청 방법은?", List.of(candidate),
                 new ChatContext(1L, 10L, null, List.of(previous), "그럼 신청 방법은?", 100));
         var model = mock(LlmClient.class);
-        when(model.generate(any())).thenReturn("{\"reference\":\"OMITTED\"}", "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}");
+        when(model.generate(any())).thenReturn("{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}");
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
         var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "로밍 신청 안내", null, List.of(), null);
         var calls = new java.util.ArrayList<Context>();
@@ -67,7 +67,7 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(calls.get(1).resolvedQuestion()).contains(previous.content(), context.message());
         assertThat(calls.get(1).routingContext().history()).containsExactly(previous);
         assertThat(context.candidates()).containsExactly(candidate);
-        org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(any());
+        org.mockito.Mockito.verify(model).generate(any());
         org.mockito.Mockito.verify(preparation).cancelWaiting(1L, java.util.Set.of(101L));
         org.mockito.Mockito.verifyNoMoreInteractions(preparation);
     }

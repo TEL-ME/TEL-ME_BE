@@ -129,26 +129,25 @@ class OllamaRequestConverterTest {
         assertThat(result.stream()).isTrue();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18"})
-    void 문맥_판정_버전에_JSON_Schema를_적용한다(String version) {
-        OllamaChatRequest llmAll = converter.toChatRequest(LlmRequest.builder()
-                .userPrompt("{\"sourceMessages\":[]}").format(ResponseFormat.JSON)
-                .promptVersion(version).build(), false);
-        OllamaChatRequest regexGated = converter.toChatRequest(LlmRequest.builder()
+    @Test
+    void 현재_대상_판정에만_JSON_Schema를_적용한다() {
+        OllamaChatRequest reference = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("{\"currentQuestion\":\"그건 얼마야?\"}").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v30-reference").build(), false);
+        OllamaChatRequest other = converter.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
                 .promptVersion("multiturn-resolution-v6").build(), false);
 
-        assertThat(llmAll.format()).isInstanceOf(Map.class);
-        assertThat(((Map<?, ?>) llmAll.format()).get("additionalProperties")).isEqualTo(false);
-        var properties = (Map<?, ?>) ((Map<?, ?>) llmAll.format()).get("properties");
-        assertThat(properties.keySet().stream().map(Object::toString).toList()).containsExactly("relation", "selectedMessageIds");
-        assertThat(regexGated.format()).isEqualTo("json");
-        assertThat(regexGated.think()).isNull();
+        assertThat(reference.format()).isInstanceOf(Map.class);
+        assertThat(((Map<?, ?>) reference.format()).get("additionalProperties")).isEqualTo(false);
+        var properties = (Map<?, ?>) ((Map<?, ?>) reference.format()).get("properties");
+        assertThat(properties.keySet().stream().map(Object::toString).toList()).containsExactly("reference");
+        assertThat(other.format()).isEqualTo("json");
+        assertThat(other.think()).isNull();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"multiturn-resolution-v8", "multiturn-resolution-v18", "multiturn-resolution-v30-reference", "multiturn-resolution-v30-sources"})
+    @ValueSource(strings = {"multiturn-resolution-v30-reference", "multiturn-resolution-v30-sources"})
     void qwen3_문맥_판정은_사고_모드를_끈다(String version) {
         OllamaRequestConverter qwen = new OllamaRequestConverter(
                 new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));

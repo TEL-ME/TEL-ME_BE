@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,9 +52,9 @@ class ChatQuestionResolverTest {
     @ParameterizedTest
     @ValueSource(strings = {"그건 얼마야?", "필요한 서류는?", "그때 요금은 얼마야?", "그럼 기간은요?"})
     void missingTargetWithNoHistoryRequiresClarification(String question) throws Exception {
-        respond(model, omitted("[]"));
         assertThat(resolver.resolve(command(question), null).needsClarification()).isTrue();
-        verify(model).generate(any());
+        // 대상도 이전 발언도 없으면 모델을 부르지 않고 확인 안내로 끝낸다.
+        org.mockito.Mockito.verifyNoInteractions(model);
     }
 
     @Test
@@ -201,7 +200,7 @@ class ChatQuestionResolverTest {
         var context = new ChatContext(1L, 5L, "미검증 요약", List.of(social, assistant), question, 100, List.of(source));
         assertThat(resolver.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
-        verify(model, times(2)).generate(request.capture());
+        verify(model).generate(request.capture());
         var inputs = mapper.readTree(request.getValue().userPrompt());
         assertThat(inputs.path("sourceMessages")).hasSize(1);
         assertThat(inputs.path("sourceMessages").get(0).path("content").asText()).isEqualTo(source.content());
@@ -223,7 +222,7 @@ class ChatQuestionResolverTest {
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         resolver.resolve(command(question), context);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
-        verify(model, times(2)).generate(request.capture());
+        verify(model).generate(request.capture());
         var data = mapper.readTree(request.getValue().userPrompt());
         assertThat(data.path("sourceMessages").get(0).path("index").asInt()).isEqualTo(1);
         assertThat(data.path("sourceMessages").get(0).has("messageId")).isFalse();
@@ -277,6 +276,62 @@ class ChatQuestionResolverTest {
     void trailingOutputCannotOverrideOrHideAnInvalidDecision() {
         when(model.generate(any())).thenReturn("{\"reference\":\"EXPLICIT\"}{\"reference\":\"OMITTED\"}");
         assertThat(resolver.resolve(command("요금 안 내면 언제 정지되나요?"), null).needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"그럼 비용은 얼마나 드나요?", "이전에 문의한 건 취소할 수 있어요?", "그럼 처리 기간은 얼마나 되죠?",
+            "아까 물어본 거 처리 기간은요?", "그때 요금은 얼마나 나와요?", "그럼신청방법은?", "그건 어디서 신청해요?"})
+    void questionMadeOnlyOfReferencesAndAskedItemsIsTreatedAsOmittedTarget(String question) {
+        assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"요금 안 내면 언제 정지되나요?", "요금 너무 많이 나왔어요", "요금제 변경은 어떻게 해요?",
+            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?"})
+    void anyBusinessWordLeavesTheTargetDecisionToTheModel(String question) {
+        assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
+    }
+
+    @Test
+    void genericFollowUpSkipsCurrentTargetModelAndAnalyzesOnlyPreviousSources() throws Exception {
+        String question = "그럼 비용은 얼마나 드나요?";
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+    }
+
+    @Test
+    void ordinalReferenceCountsTopicsInCodeEvenWhenModelChoosesRecent() throws Exception {
+        var correction = customer(902L, 2, "일본이 아니라 미국입니다");
+        var newer = customer(903L, 3, "유심 재발급 방법도 알아보고 있어요");
+        String raw = "{\"reference\":\"OMITTED\",\"anchorIndex\":0,\"referenceScope\":\"RECENT\",\"sources\":["
+                + "{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":0,\"parentIndex\":1},"
+                + "{\"index\":3,\"targetCount\":1,\"parentIndex\":0}]}";
+        var result = resolver.validateResolution("앞서 첫 번째로 물어본 건 비용이 얼마야?", raw,
+                Map.of(501L, source, 902L, correction, 903L, newer));
+        assertThat(result.sourceMessageIds()).containsExactly(501L, 902L);
+        assertThat(result.question()).doesNotContain(newer.content());
+
+        var second = resolver.validateResolution("앞서 두 번째로 물어본 그건 기간이 얼마나 걸려?", raw,
+                Map.of(501L, source, 902L, correction, 903L, newer));
+        assertThat(second.sourceMessageIds()).containsExactly(903L);
+    }
+
+    @Test
+    void ordinalBeyondTopicsOrPointingAtMultipleTargetsRequiresClarification() throws Exception {
+        var multiple = customer(501L, 1, "인터넷 가입과 번호이동을 둘 다 알아보고 있어요");
+        var newer = customer(900L, 2, "컬러링 가입도 알아보고 있어요");
+        String raw = "{\"reference\":\"OMITTED\",\"anchorIndex\":0,\"referenceScope\":\"RECENT\",\"sources\":["
+                + "{\"index\":1,\"targetCount\":2,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":1,\"parentIndex\":0}]}";
+        assertThat(resolver.validateResolution("앞서 첫 번째로 물어본 건 비용이 얼마야?", raw,
+                Map.of(501L, multiple, 900L, newer)).needsClarification()).isTrue();
+        assertThat(resolver.validateResolution("앞서 세 번째로 물어본 건 비용이 얼마야?", raw,
+                Map.of(501L, multiple, 900L, newer)).needsClarification()).isTrue();
     }
 
     static void respond(LlmClient client, String combined) throws Exception {
