@@ -68,7 +68,8 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(calls.get(1).routingContext().history()).containsExactly(previous);
         assertThat(context.candidates()).containsExactly(candidate);
         org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(any());
-        verifyNoInteractions(preparation);
+        org.mockito.Mockito.verify(preparation).cancelWaiting(1L, java.util.Set.of(101L));
+        org.mockito.Mockito.verifyNoMoreInteractions(preparation);
     }
 
     @Test
@@ -110,6 +111,55 @@ class ConsultTurnAnalysisAdapterTest {
                 preparation, new FollowupConditionConverter());
         adapter.analyze(new ChatProcessingCommand(100L, 1L, 10L, "내 주변에서 찾아줘",
                 new com.telme.chat.service.ChatCoordinates(37.5, 127)));
+    }
+
+    @Test
+    void answerNotRecognizedAfterReaskIsTreatedAsDeclinedAndContinues() {
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE", List.of(), 1);
+        var context = new Context(1, 10, "글쎄요", List.of(candidate));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareFollowup(any(), any(), any())).thenAnswer(invocation -> {
+            Selection selection = invocation.getArgument(1);
+            assertThat(selection.updates()).containsOnlyKeys("location");
+            assertThat(selection.updates().get("location").status())
+                    .isEqualTo(com.telme.consult.dto.DialogueInput.ConditionStatus.DECLINED);
+            assertThat((LocationStatus) invocation.getArgument(2)).isEqualTo(LocationStatus.DECLINED);
+            return new ConsultTurnPreparationService.PreparedFollowup(
+                    new ConsultService.PreparationResult(null, 9L),
+                    new ResolvedFollowup(101, 10, "location", selection.updates()),
+                    Purpose.NEARBY_STORE, "매장 찾아줘", "매장");
+        });
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "글쎄요"));
+
+        assertThat(turn.answeredField()).isEqualTo("location");
+        org.mockito.Mockito.verify(preparation, org.mockito.Mockito.never())
+                .prepareWaitingUpdate(any(), any(), any());
+    }
+
+    @Test
+    void firstUnrecognizedAnswerKeepsWaitingInsteadOfDeclining() {
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE");
+        var context = new Context(1, 10, "글쎄요", List.of(candidate));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareWaitingUpdate(any(), any(), any())).thenReturn(
+                new ConsultTurnPreparationService.PreparedWaitingUpdate(
+                        new ConsultService.PreparationResult(null, 9L),
+                        Purpose.NEARBY_STORE, "매장 찾아줘", "매장"));
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "글쎄요"));
+
+        assertThat(turn.preparation().waitingForReply()).isTrue();
+        org.mockito.Mockito.verify(preparation, org.mockito.Mockito.never())
+                .prepareFollowup(any(), any(), any());
     }
 
     @Test

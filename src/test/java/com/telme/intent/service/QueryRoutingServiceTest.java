@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
@@ -19,6 +20,11 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.dto.req.LlmRequest;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -68,6 +74,361 @@ class QueryRoutingServiceTest {
             .build();
     }
 
+    private void routingJson(String json) {
+        org.mockito.Mockito.doAnswer(call -> {
+            LlmRequest request = call.getArgument(0);
+            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                int count = objectMapper.readTree(request.userPrompt()).path("subQueries").size();
+                return objectMapper.writeValueAsString(Map.of(
+                        "unsafe", java.util.Collections.nCopies(count, false)));
+            }
+            if (!RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) return json;
+            if (ComparisonQuestionPolicy.isStandaloneComparison(request.userPrompt(), null)) {
+                return "{\"decision\":\"COMPARISON\",\"requestCount\":1}";
+            }
+            var trailing = ComparisonQuestionPolicy.trailingComparison(request.userPrompt(), null);
+            List<String> quotes;
+            if (trailing != null) {
+                quotes = new ArrayList<>(trailing.precedingRequests());
+                quotes.add(trailing.comparison());
+            } else {
+                quotes = new ArrayList<>();
+                for (var sub : objectMapper.readTree(json).path("subQueries")) {
+                    quotes.add(sub.path("requestQuote").asText(""));
+                }
+            }
+            return objectMapper.writeValueAsString(Map.of("decision", "MULTIPLE", "requestCount", quotes.size()));
+        }).when(llmClient).generate(any());
+    }
+
+    @Test
+    void usesSameModelInputForKoreanSpacingVariantsWithoutChangingStoredOriginal() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"번호이동하고 싶어요",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동하고 싶어요"}]}
+                """);
+        for (String question : List.of("번호이동 하고싶어요", "번호 이동하고싶어요",
+                "번호 이동 하고 싶어요", "번호이동하고싶어요")) {
+            ChatMessage message = msg(question);
+            assertThat(service.routeSingleConsult(message, null).subQueries()).hasSize(1);
+            assertThat(message.getContent()).isEqualTo(question);
+        }
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(4)).generate(requests.capture());
+        assertThat(requests.getAllValues()).allSatisfy(request -> {
+            assertThat(request.userPrompt()).isEqualTo("번호이동하고싶어요");
+            assertThat(request.temperature()).isZero();
+        });
+    }
+
+    @Test
+    void doesNotSaveFacetsInventedForOnePortInRequest() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"번호이동 절차와 서류",
+                 "subQueries":[
+                   {"order":1,"intent":"FAQ","queryText":"번호이동 절차","requestQuote":"번호이동 절차"},
+                   {"order":2,"intent":"FAQ","queryText":"번호이동 필요 서류","requestQuote":"필요 서류"}]}
+                """);
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("번호 이동하고 싶어요"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+        verify(consultRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void retriesOnlyInvalidDecompositionAndKeepsWholeConditionalQuestion() {
+        String question = "미납 요금이 있는데 번호 이동 하고 싶어요";
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"미납 시 번호이동 가능 여부",
+                   "requestQuote":"미납요금이있는데번호이동하고싶어요"},
+                  {"order":2,"intent":"FAQ","queryText":"번호이동 절차","requestQuote":"번호이동하고싶어요"}]}
+                """, """
+                {"decision":"SINGLE","requestCount":1}
+                """);
+        var result = service.routeSingleConsult(msg(question), null);
+        assertThat(result.subQueries()).singleElement().satisfies(sub ->
+                assertThat(sub.queryText()).isEqualTo(question));
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(2)).generate(requests.capture());
+        assertThat(requests.getAllValues().get(1).userPrompt()).isEqualTo("미납요금이있는데번호이동하고싶어요");
+        assertThat(requests.getAllValues().get(1).systemPrompt())
+                .isEqualTo(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}", "null", "{\"requests\":[]}",
+            "{\"requests\":[{\"requestQuote\":\"번호이동\"}]}",
+            "{\"requests\":[{\"requestQuote\":\"번호이동\"},{\"requestQuote\":\"요금제\"}]}"
+    })
+    void doesNotMergeMultipleRequestsWhenRecheckIsInvalidOrPartial(String recheck) {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동","requestQuote":"번호이동"},
+                  {"order":2,"intent":"FAQ","queryText":"요금제","requestQuote":"번호이동"}]}
+                """, recheck);
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("번호이동과 요금제 알려줘"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+        verify(consultRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void recheckFailureLeavesTheInvalidDecompositionRejected() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동","requestQuote":"번호이동"},
+                  {"order":2,"intent":"FAQ","queryText":"서류","requestQuote":"번호이동"}]}
+                """).willThrow(new org.springframework.web.client.RestClientException("timeout"));
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("번호이동하고 싶어요"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void meaningfulComparisonIsNotSplitEvenWhenBothSourceQuotesAreValid() {
+        String question = "eSIM과 유심 중 어느 쪽이 편해";
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"eSIM 편의성","requestQuote":"eSIM"},
+                  {"order":2,"intent":"FAQ","queryText":"유심 편의성","requestQuote":"유심"}]}
+                """, """
+                {"decision":"COMPARISON","requestCount":1}
+                """);
+        assertThat(service.routeSingleConsult(msg(question), null).subQueries()).singleElement()
+                .satisfies(sub -> assertThat(sub.queryText()).isEqualTo(question));
+        verify(llmClient, times(2)).generate(any());
+    }
+
+    @Test
+    void disagreementAboutNumberOfExplicitRequestsDoesNotSaveAnIncompletePlan() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"로밍 요금","requestQuote":"로밍요금"},
+                  {"order":2,"intent":"FAQ","queryText":"유심 비용","requestQuote":"유심비용"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":3}
+                """);
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("로밍 요금과 유심 비용과 해지 서류 알려줘"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+        verify(consultRequestRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "번호 이동 하고 싶어요? | SINGLE",
+            "번호이동하고싶어요. | SINGLE",
+            "미납요금이있는데 번호이동하고싶어요 | SINGLE",
+            "번호이동은 안 하고 요금제 변경만 하고 싶어요 | SINGLE",
+            "청구서 확인부터 요금 납부까지 순서가 어떻게 되나요? | SINGLE",
+            "선불과 후불 요금제의 구성을 차례로 소개해줘 | SINGLE",
+            "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요. | SINGLE",
+            "요금 아끼려면 정지가 나아요, 해지가 나아요? | COMPARISON",
+            "한도를 안 올리면 얼마까지 쓸 수 있어요? 올리면요? | COMPARISON"
+    })
+    void singleDecisionRecoversOriginalBeforeCheckingInventedOrUnsafeSubQueries(String question, String decision) {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"부산역 999원 절차","requestQuote":"없는 원문"},
+                  {"order":2,"intent":"FAQ","queryText":"","requestQuote":"없는 원문"}]}
+                """, "{\"decision\":\"" + decision + "\",\"requestCount\":1}");
+        var result = service.routeSingleConsult(msg(question), null);
+        assertThat(result.subQueries()).singleElement().satisfies(sub ->
+                assertThat(sub.queryText()).isEqualTo(question));
+        assertThat(result.refinedQuery()).isEqualTo(question);
+        verify(llmClient, times(2)).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"decision\":\"SINGLE\",\"requests\":[{\"requestQuote\":\"가입\"}]}",
+            "{\"decision\":\"OTHER\",\"requestCount\":1}",
+            "{\"decision\":\"SINGLE\",\"requestCount\":1,\"extra\":true}",
+            "{\"decision\":\"MULTIPLE\",\"requestCount\":1}",
+            "{\"decision\":\"MULTIPLE\",\"requestCount\":0}",
+            "{\"decision\":\"MULTIPLE\",\"requestCount\":2.5}",
+            "{\"decision\":\"MULTIPLE\",\"requestCount\":\"2\"}",
+            "{\"decision\":\"MULTIPLE\",\"requestCount\":2147483648}",
+            "not json", ""
+    })
+    void invalidRequestCountOrDecisionDoesNotLeavePartialRequests(String inventory) {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"부가서비스 가입 방법","requestQuote":"가입"},
+                  {"order":2,"intent":"FAQ","queryText":"부가서비스 해지 방법","requestQuote":"해지"}]}
+                """, inventory);
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("부가서비스 가입이랑 해지는 어떻게 해요?"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+        verify(consultRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void singleDecisionControlsCountEvenIfModelCountsAnswerFacets() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동 가능 여부","requestQuote":"번호이동"},
+                  {"order":2,"intent":"FAQ","queryText":"번호이동 절차","requestQuote":"번호이동"}]}
+                """, "{\"decision\":\"SINGLE\",\"requestCount\":2}");
+        String question = "미납 요금이 있는데 번호이동하고 싶어요";
+        assertThat(service.routeSingleConsult(msg(question), null).subQueries()).singleElement()
+                .satisfies(sub -> assertThat(sub.queryText()).isEqualTo(question));
+    }
+
+    @Test
+    void sameTopicWithTwoExplicitActionsKeepsBothQueries() {
+        routingJson("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"부가서비스 가입 방법","requestQuote":"가입"},
+                  {"order":2,"intent":"FAQ","queryText":"부가서비스 해지 방법","requestQuote":"해지"}]}
+                """);
+        assertThat(service.routeSingleConsult(msg("부가서비스 가입이랑 해지는 어떻게 해요?"), null).subQueries())
+                .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("부가서비스 가입 방법", "부가서비스 해지 방법");
+    }
+
+    @Test
+    void inventedFacetInCompoundQueryUsesOnlyOriginalQuote() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"로밍 요금 조건","requestQuote":"로밍요금"},
+                  {"order":2,"intent":"FAQ","queryText":"유심 재발급 방법","requestQuote":"유심재발급방법"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":[false,false]}
+                """);
+
+        var result = service.routeSingleConsult(msg("로밍요금과 유심재발급방법 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("로밍 요금", "유심 재발급 방법");
+    }
+
+    @Test
+    void borrowedSubjectInCompoundQueryDoesNotBecomeCustomerRequest() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"유심 재발급 비용","requestQuote":"유심재발급비용"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍신청방법"},
+                  {"order":3,"intent":"FAQ","queryText":"로밍 해지 서류","requestQuote":"해지서류"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":3}
+                """, """
+                {"unsafe":[false,false,false]}
+                """);
+
+        var result = service.routeSingleConsult(
+                msg("유심재발급비용과로밍신청방법그리고해지서류알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("유심 재발급 비용", "로밍 신청 방법", "해지 서류");
+    }
+
+    @Test
+    void unsafeDecisionDoesNotOverrideOriginalQuoteWithSharedSubject() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"번호이동비용"},
+                  {"order":2,"intent":"FAQ","queryText":"번호이동 신청 방법","requestQuote":"신청방법"},
+                  {"order":3,"intent":"FAQ","queryText":"번호이동 필요 서류","requestQuote":"필요서류"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":3}
+                """, """
+                {"unsafe":[false,true,true]}
+                """);
+
+        var result = service.routeSingleConsult(msg("번호이동 비용과 신청방법 그리고 필요서류 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("번호이동 비용", "신청방법", "필요서류");
+    }
+
+    @Test
+    void unsafeDecisionDoesNotBorrowDifferentRequestSubject() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청방법"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍 유심 재발급 비용","requestQuote":"유심 재발급 비용"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":[false,true]}
+                """);
+
+        var result = service.routeSingleConsult(msg("로밍 신청방법과 유심 재발급 비용 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("로밍 신청 방법", "유심 재발급 비용");
+    }
+
+    @Test
+    void invalidModelQuoteCannotBeUsedAsFallbackQuery() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"로밍요금","requestQuote":"없는 문구"},
+                  {"order":2,"intent":"FAQ","queryText":"유심재발급방법","requestQuote":"유심재발급방법"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":"잘못된 형식"}
+                """);
+
+        var result = service.routeSingleConsult(msg("로밍요금과 유심재발급방법 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("로밍요금", "유심재발급방법");
+    }
+
+    @Test
+    void selfContainedQuestionDoesNotKeepInventedOrderOrSetting() {
+        for (var entry : Map.of(
+                "재부팅이랑 데이터 로밍 다시 켜기 중 뭐가 먼저인가요?", "재부팅 후 데이터 로밍 설정 순서",
+                "30일 정지가 끝났는데 자동으로 다시 정지되지 않습니다", "30일 정지 후 자동 재정지 설정 확인 방법"
+        ).entrySet()) {
+            given(llmClient.generate(any())).willReturn(("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"%s","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"%s"}]}
+                    """).formatted(entry.getValue(), entry.getValue()));
+
+            var result = service.routeSingleConsult(msg(entry.getKey()), null);
+
+            assertThat(result.refinedQuery()).isEqualTo(entry.getKey());
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(entry.getKey());
+        }
+    }
+
+    @Test
+    void explicitActionRetainsOnlyGroundedSearchTerms() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 방법 및 필요 절차",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 방법 및 필요 절차",
+                 "requestQuote":"번호이동하고싶어요"}]}
+                """);
+
+        var result = service.routeSingleConsult(msg("번호이동하고싶어요"), null);
+
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("번호이동 방법");
+    }
+
+    @Test
+    void multipleDecisionStillRejectsInventedNumbersBeforeSaving() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"가입 비용 999원","requestQuote":"가입"},
+                  {"order":2,"intent":"FAQ","queryText":"해지 방법","requestQuote":"해지"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """);
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("가입 비용과 해지 방법 알려줘"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class)
+                .hasMessageContaining("안전하게 검색");
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+        verify(consultRequestRepository, never()).save(any());
+    }
+
     @Nested
     @DisplayName("LLM 정상 응답")
     class LlmSuccess {
@@ -108,7 +469,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("BOTH → 서브질의 2건으로 분해, FAQ+STORE 타입 정확성")
         void both() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"BOTH","confidence":0.99,
                  "refinedQuery":"5G 요금제 추천 및 신촌 번호이동 매장",
                  "extractedConditions":{"location":"신촌","serviceType":"PORT_IN"},
@@ -132,7 +493,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("단일 상담 진입점은 BOTH를 저장 전에 차단한다")
         void singleConsultBlocksBothBeforeSaving() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"BOTH","confidence":0.99,
                  "refinedQuery":"5G 요금제와 신촌 매장",
                  "extractedConditions":{"location":"신촌"},
@@ -161,14 +522,14 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("상담 연결에서도 여러 FAQ 하위 질문을 각각 유지한다")
         void singleConsultPreservesFaqSubQueries() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,
                  "refinedQuery":"5G, LTE, 알뜰 요금제 종류를 각각 알려줘",
                  "extractedConditions":{},
                  "subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}},
-                   {"order":3,"intent":"FAQ","queryText":"알뜰 요금제 종류","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","requestQuote":"5G","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","requestQuote":"LTE","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"알뜰 요금제 종류","requestQuote":"알뜰","conditions":{}}
                  ]}
                 """);
 
@@ -197,7 +558,7 @@ class QueryRoutingServiceTest {
         })
         @DisplayName("명확한 비교 요청은 LLM이 나누더라도 원문 한 건으로 보정한다")
         void keepsStandaloneComparisonAsOneFaqQuestion(String question) {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"두 항목 비교",
                  "extractedConditions":{},"subQueries":[
                    {"order":1,"intent":"FAQ","queryText":"첫 항목 안내","conditions":{}},
@@ -222,20 +583,22 @@ class QueryRoutingServiceTest {
         @DisplayName("비교와 독립 요청이 섞이면 전체를 한 질문으로 합치지 않는다")
         void keepsIndependentRequestSeparateFromComparison(String question) {
             boolean comparisonLast = question.startsWith("로밍");
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 비교와 로밍 신청",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"%s","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"%s","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}}
                  ]}
                 """.formatted(comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제 종류 비교",
-                    comparisonLast ? "5G와 LTE 요금제 종류 비교" : "로밍 신청 방법"));
+                    comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제",
+                    comparisonLast ? "5G와 LTE 요금제 종류 비교" : "로밍 신청 방법",
+                    comparisonLast ? "5G와 LTE 요금제" : "로밍 신청 방법"));
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
             assertThat(result.subQueries()).hasSize(2);
             assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
-                    .containsExactly(comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제 종류 비교",
+                    .containsExactly(comparisonLast ? "로밍 신청 방법" : "5G와 LTE 요금제 비교",
                             comparisonLast ? "5G와 LTE 요금제 종류를 비교해줘" : "로밍 신청 방법");
         }
 
@@ -246,11 +609,11 @@ class QueryRoutingServiceTest {
                 "요금제 변경 방법은 뭐야? 5G와 LTE 요금제 종류를 비교해줘 | 5G와 LTE 요금제 종류를 비교해줘"
         })
         void preservesIndependentRequestAndComparisonAsTwoFaqQueries(String question, String comparison) {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경 방법과 5G LTE 종류 비교",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","requestQuote":"요금제 변경 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","requestQuote":"5G와 LTE 요금제","conditions":{}}
                  ]}
                 """);
 
@@ -267,12 +630,12 @@ class QueryRoutingServiceTest {
                 "요금제 변경 방법 알려줘\n5G와 LTE 요금제 종류를 비교해줘"
         })
         void restoresOnlyComparisonPartsWithoutConsumingIndependentRequest(String question) {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"변경 방법과 요금제 비교",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":3,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"요금제 변경 방법","requestQuote":"요금제 변경 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","requestQuote":"5G","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"LTE 요금제 종류","requestQuote":"LTE","conditions":{}}
                  ]}
                 """);
 
@@ -285,11 +648,11 @@ class QueryRoutingServiceTest {
 
         @Test
         void ambiguousComparisonPartsDoNotConsumeAnIndependentRequest() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 종류와 비교",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","requestQuote":"5G","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"LTE 요금제 종류","requestQuote":"LTE","conditions":{}}
                  ]}
                 """);
 
@@ -323,13 +686,13 @@ class QueryRoutingServiceTest {
 
         @Test
         void keepsAllIndependentRequestsBeforeTrailingComparisonInOriginalOrder() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍, 유심, 요금제 비교",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":3,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}},
-                   {"order":4,"intent":"FAQ","queryText":"LTE 요금제 종류","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"유심 재발급 방법","requestQuote":"유심","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G 요금제 종류","requestQuote":"5G","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}},
+                   {"order":4,"intent":"FAQ","queryText":"LTE 요금제 종류","requestQuote":"LTE","conditions":{}}
                  ]}
                 """);
 
@@ -342,11 +705,11 @@ class QueryRoutingServiceTest {
 
         @Test
         void missingIndependentRequestBeforeTrailingComparisonGetsGuidanceBeforeSaving() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍과 요금제 비교",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"5G와 LTE 요금제 종류 비교","requestQuote":"5G와 LTE 요금제","conditions":{}}
                  ]}
                 """);
 
@@ -375,13 +738,13 @@ class QueryRoutingServiceTest {
 
         @Test
         void singleConsultRejectsMoreThanThreeFaqQuestionsBeforeSaving() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제, 로밍, 명의변경, 유심",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"로밍 요금","conditions":{}},
-                   {"order":3,"intent":"FAQ","queryText":"명의변경 방법","conditions":{}},
-                   {"order":4,"intent":"FAQ","queryText":"유심 재발급 방법","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"요금제 종류","requestQuote":"요금제","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 요금","requestQuote":"로밍","conditions":{}},
+                   {"order":3,"intent":"FAQ","queryText":"명의변경 방법","requestQuote":"명의변경","conditions":{}},
+                   {"order":4,"intent":"FAQ","queryText":"유심 재발급 방법","requestQuote":"유심","conditions":{}}
                  ]}
                 """);
 
@@ -395,18 +758,18 @@ class QueryRoutingServiceTest {
 
         @Test
         void unsafeFaqSubQueryDoesNotFallBackToWholeCompoundQuestion() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제와 로밍 방법",
                  "extractedConditions":{},"subQueries":[
-                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","conditions":{}},
-                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","conditions":{}}
+                   {"order":1,"intent":"FAQ","queryText":"5G 요금제 종류","requestQuote":"5G","conditions":{}},
+                   {"order":2,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}}
                  ]}
                 """);
 
             assertThatThrownBy(() -> service.routeSingleConsult(
                     msg("요금제 종류와 로밍 신청 방법 알려줘"), null))
                     .isInstanceOf(UnsupportedCompoundQuestionException.class)
-                    .hasMessageContaining("안전하게 검색");
+                    .hasMessageContaining("원문");
             verify(queryRoutingRepository, never()).saveAndFlush(any());
             verify(consultRequestRepository, never()).save(any());
         }
@@ -632,7 +995,7 @@ class QueryRoutingServiceTest {
         @Test
         @DisplayName("하위 의도가 비어 있으면 상위 의도로 보정하고 순서를 다시 매긴다")
         void subQueryWithNullFields_handledSafely() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"STORE","confidence":0.90,"refinedQuery":"매장 안내",
                  "subQueries":[{"order":99,"intent":null,"queryText":null,
                   "conditions":{"": "val", "key": null, "validKey": "validVal"}}]}
@@ -734,7 +1097,7 @@ class QueryRoutingServiceTest {
 
         @Test
         void ungroundedAndUnsupportedConditionsAreRemoved() {
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
                  "extractedConditions":{"location":"부산역","serviceType":"MADE_UP","branch":"강남역"},
                  "subQueries":[{"order":7,"intent":"STORE","queryText":"강남역 매장",
@@ -847,8 +1210,8 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg("15GB 요금제 알려줘"), null);
 
-            assertThat(result.refinedQuery()).isEqualTo("15 GB 요금제 종류");
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("15 GB 요금제 종류");
+            assertThat(result.refinedQuery()).isEqualTo("15GB 요금제 알려줘");
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("15GB 요금제 알려줘");
         }
 
         @Test
@@ -956,8 +1319,180 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().queryText()).isEqualTo("로밍 요금제 신청 방법");
             var request = org.mockito.ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
             verify(llmClient).generate(request.capture());
-            assertThat(request.getValue().userPrompt()).contains(previous).endsWith("[현재 질문]\n" + question);
+            assertThat(request.getValue().userPrompt()).contains(previous).endsWith("[현재 질문]\n그럼신청방법은?");
             assertThat(request.getValue().userPrompt()).doesNotContain("[현재 후속 질문]");
+        }
+
+        @Test
+        void restoredSingleQuestionDoesNotStoreInternalContextWhenSearchQueryIsRejected() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 999원 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금제 999원 신청 방법"}]}
+                """);
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.refinedQuery()).isEqualTo(current);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(current);
+        }
+
+        @Test
+        void restoredFollowUpUsesSameModelInputForSpacingVariants() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법"}]}
+                """);
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            List<String> variants = List.of("그럼 신청 방법은?", "그럼신청방법은?", "그럼 신청방법은?");
+            for (String question : variants) {
+                String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+                service.routeSingleConsult(msg(question), context(question, previous), resolved);
+            }
+            var requests = ArgumentCaptor.forClass(LlmRequest.class);
+            verify(llmClient, times(variants.size())).generate(requests.capture());
+            assertThat(requests.getAllValues()).extracting(LlmRequest::userPrompt).allSatisfy(prompt ->
+                    assertThat(prompt).contains(previous).endsWith("[현재 질문]\n그럼신청방법은?"));
+        }
+
+        // 이전 발언까지 요청으로 세면 개수가 맞지 않는다. 재확인과 인용 근거는 현재 발화로만 판정한다.
+        @Test
+        void restoredCompoundQuestionCountsOnlyCurrentRequests() {
+            String question = "그럼 신청 방법이랑 해지 방법도 알려줘";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+            org.mockito.Mockito.doAnswer(call -> {
+                LlmRequest request = call.getArgument(0);
+                if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) {
+                    int count = request.userPrompt().contains("로밍") ? 3 : 2;
+                    return "{\"decision\":\"MULTIPLE\",\"requestCount\":" + count + "}";
+                }
+                if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"unsafe\":[false,false]}";
+                }
+                return """
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법과 해지 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법","requestQuote":"신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"로밍 요금제 해지 방법","requestQuote":"해지 방법"}]}
+                    """;
+            }).when(llmClient).generate(any());
+
+            var result = service.routeSingleConsult(msg(question), context(question, previous), resolved);
+
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("로밍 요금제 신청 방법", "로밍 요금제 해지 방법");
+            assertThat(result.refinedQuery()).isEqualTo("그럼신청방법이랑해지방법도알려줘");
+            var requests = ArgumentCaptor.forClass(LlmRequest.class);
+            verify(llmClient, times(3)).generate(requests.capture());
+            assertThat(requests.getAllValues()).filteredOn(request ->
+                    RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt()))
+                    .singleElement().extracting(LlmRequest::userPrompt)
+                    .isEqualTo("그럼신청방법이랑해지방법도알려줘");
+            String faithfulnessInput = requests.getAllValues().stream()
+                    .filter(request -> RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT
+                            .equals(request.systemPrompt()))
+                    .findFirst().orElseThrow().userPrompt();
+            assertThat(faithfulnessInput)
+                    .contains("\"question\":\"그럼신청방법이랑해지방법도알려줘\"")
+                    .contains("\"previousSubject\":\"로밍 요금제는 어떻게 골라요?\"")
+                    .doesNotContain("[대상을 확인할 이전 고객 발언]", "[현재 후속 질문]");
+        }
+
+        @Test
+        void restoredCompoundQuestionDoesNotKeepPreviousActionWhenJudgeRejectsIt() {
+            String current = "그럼 신청 방법이랑 준비물 알려줘";
+            String previous = "로밍 해지는 어떻게 해요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            org.mockito.Mockito.doAnswer(call -> {
+                LlmRequest request = call.getArgument(0);
+                if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"decision\":\"MULTIPLE\",\"requestCount\":2}";
+                }
+                if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"unsafe\":[true,true]}";
+                }
+                return """
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 해지 신청 방법과 준비물",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 해지 신청 방법","requestQuote":"신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"로밍 해지 준비물","requestQuote":"준비물"}]}
+                    """;
+            }).when(llmClient).generate(any());
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .containsExactly("신청 방법", "준비물");
+        }
+
+        @Test
+        void restoredSingleDecisionKeepsGroundedSubjectInSearchQuery() {
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"신청 방법"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}",
+                    "{\"unsafe\":[false]}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo("로밍 요금제 신청 방법");
+            verify(llmClient, times(3)).generate(any());
+        }
+
+        @Test
+        void restoredSingleDecisionRejectsInventedSearchSubject() {
+            String current = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"부가서비스 해지 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"부가서비스 해지 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"해지 방법"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo(current);
+            verify(llmClient, times(2)).generate(any());
+        }
+
+        @Test
+        void restoredSingleDecisionDoesNotReusePreviousAction() {
+            String current = "그럼 신청은?";
+            String previous = "로밍 해지는 어떻게 해요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous
+                    + "\n[현재 후속 질문]\n" + current;
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 해지",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 해지"},
+                       {"order":2,"intent":"FAQ","queryText":"해지"}]}
+                    """, "{\"decision\":\"SINGLE\",\"requestCount\":1}",
+                    "{\"unsafe\":[true]}");
+
+            var result = service.routeSingleConsult(msg(current), context(current, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement()
+                    .extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo(current);
+            verify(llmClient, times(3)).generate(any());
         }
 
         @ParameterizedTest
@@ -1036,8 +1571,8 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
-            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
         }
 
         @Test
@@ -1051,8 +1586,8 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
-            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
+            assertThat(result.refinedQuery()).isEqualTo(question);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
         }
 
         @Test
@@ -1286,7 +1821,7 @@ class QueryRoutingServiceTest {
             assertThat(faq.extractedConditions()).doesNotContainKey("serviceType");
             assertThat(faq.subQueries().getFirst().conditions()).isEmpty();
 
-            given(llmClient.generate(any())).willReturn("""
+            routingJson("""
                 {"intent":"BOTH","confidence":0.95,"refinedQuery":"번호이동 위약금과 강남역 매장",
                  "extractedConditions":{"location":"강남역"},
                  "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 위약금","conditions":{}},
