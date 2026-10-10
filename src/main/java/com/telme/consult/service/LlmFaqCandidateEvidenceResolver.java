@@ -24,7 +24,8 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
     private static final Pattern QUESTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]{2,}");
     private static final Set<String> QUESTION_FILLERS = Set.of(
             "무엇인가요", "무엇인가", "얼마인가요", "얼마인가", "알려줘", "알려주세요",
-            "되나요", "주나요", "있나요", "하나요", "인가요", "어떤", "몇세인가요");
+            "되나요", "주나요", "있나요", "하나요", "인가요", "어떤", "몇세인가요",
+            "뭐고", "뭐야", "뭔가요", "뭔지");
     private static final List<String> PARTICLES = List.of(
             "에서는", "으로", "에게", "부터", "까지", "한", "은", "는", "이", "가", "을", "를", "에", "의");
     private static final String PROMPT = """
@@ -47,6 +48,12 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
     @Override
     public FaqSearchResponse resolve(Long executionId, Long consultRequestId,
             String question, List<FaqSearchResponse> candidates) {
+        return resolve(executionId, consultRequestId, question, candidates, false);
+    }
+
+    @Override
+    public FaqSearchResponse resolve(Long executionId, Long consultRequestId, String question,
+            List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
         if (candidates.isEmpty()) {
             return null;
         }
@@ -112,9 +119,13 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                 return null;
             }
             Matcher retryId = FAQ_ID.matcher(repaired.path("faqId").asText(""));
-            return repaired.path("answerable").asBoolean(false)
+            boolean repairedQuoteIsExact = repaired.path("answerable").asBoolean(false)
                     && retryId.matches() && Long.parseLong(retryId.group(1)) == id
-                    && hasExactQuote(repaired, selected) ? selected : null;
+                    && hasExactQuote(repaired, selected);
+            // 반환하는 것은 모델이 만든 문장이 아니라 선택된 FAQ 원문이다. 복합 질문의 경우에는
+            // 이미 answerable=true, 후보 ID, 핵심 용어 검증을 모두 통과했으므로 인용문 재시도의
+            // JSON/문구 형식 실패만으로 답을 버리지 않는다.
+            return repairedQuoteIsExact || allowQuoteRepairFailure ? selected : null;
         } catch (JsonProcessingException | NumberFormatException failure) {
             log.warn("FAQ 후보 근거 판정 형식 오류: executionId={}, errorType={}",
                     executionId, failure.getClass().getSimpleName());

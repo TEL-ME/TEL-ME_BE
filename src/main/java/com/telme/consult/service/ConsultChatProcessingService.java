@@ -315,7 +315,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             }
             boolean grounded = generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
             String content = grounded ? generated.answer().content() : AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
-            sections.add("%d. %s\n%s".formatted(i + 1, faq.queryText(), content));
+            sections.add("%d. %s\n%s".formatted(i + 1, displayText(command.content(), faq), content));
             if (grounded) {
                 hasGroundedAnswer = true;
                 // 같은 FAQ가 두 하위 질문의 근거가 되면 인용 횟수가 두 번 쌓이므로 한 번만 남긴다
@@ -376,7 +376,13 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
                 Purpose.GENERAL_FAQ, faq.queryText(), faq.queryText(),
                 conditionConverter.convert(prepared.decision().conditions()),
-                faq.queryText(), context, false, command.coordinates(), Map.of());
+                faq.queryText(), context, false, command.coordinates(), Map.of(),
+                displayText(command.content(), faq));
+    }
+
+    // 검색어는 라우팅 정규화 값을 유지하고, 복합 응답 제목만 이번 고객 원문의 띄어쓰기로 복원한다.
+    private String displayText(String originalQuestion, FaqTurn faq) {
+        return CompoundQuestionDisplayText.fromOriginal(originalQuestion, faq.queryText());
     }
 
     // 먼저 되물을 하위 질문. 한 번에 하나만 묻고 나머지는 조건 없이 답한다. 없으면 -1
@@ -409,7 +415,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
             }
             boolean grounded = generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
-            sections.add("%d. %s\n%s".formatted(sections.size() + 1, faqTurns.get(i).queryText(),
+            sections.add("%d. %s\n%s".formatted(sections.size() + 1,
+                    displayText(command.content(), faqTurns.get(i)),
                     grounded ? generated.answer().content() : AnswerPromptTemplates.NO_EVIDENCE_ANSWER));
             if (grounded) {
                 generated.sources().stream()
@@ -427,7 +434,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                         target.decision().consultRequestId(), plan, target.decision().conditions()),
                 plan);
         sections.add("%d. %s\n%s".formatted(
-                sections.size() + 1, faqTurns.get(askIndex).queryText(), asking.decision().message()));
+                sections.size() + 1, displayText(command.content(), faqTurns.get(askIndex)),
+                asking.decision().message()));
         var completed = persistence.persistCompoundClarification(
                 command.executionId(), command.sessionId(), answeredTurns, asking,
                 String.join("\n\n", sections), asking.decision().options(), sources);
@@ -668,7 +676,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ChatContext context,
             boolean streamTokens,
             ChatCoordinates coordinates,
-            Map<String, String> askedQuestions) {
+            Map<String, String> askedQuestions,
+            String candidateEvidenceQuery) {
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, boolean streamTokens,
+                ChatCoordinates coordinates, Map<String, String> askedQuestions) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, streamTokens, coordinates,
+                    askedQuestions, originalUserQuery);
+        }
+
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
@@ -742,6 +760,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                             Objects.requireNonNull(
                                     confirmedConditions, "confirmedConditions"));
             askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
+            candidateEvidenceQuery = candidateEvidenceQuery == null || candidateEvidenceQuery.isBlank()
+                    ? originalUserQuery : candidateEvidenceQuery.strip();
         }
     }
 

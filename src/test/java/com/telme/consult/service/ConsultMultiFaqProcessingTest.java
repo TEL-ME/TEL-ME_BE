@@ -119,6 +119,35 @@ class ConsultMultiFaqProcessingTest {
     }
 
     @Test
+    void displayTextDoesNotChangeNormalizedSearchQuery() {
+        prepareEvents();
+        var displayCommand = new ChatProcessingCommand(
+                EXECUTION_ID, SESSION_ID, 9L, "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
+        List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
+        var processor = new ConsultChatProcessingService(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                        faqTurn(11L, "번호이동서류는뭐고"),
+                        faqTurn(12L, "요금제변경은어떻게해"))),
+                input -> {
+                    inputs.add(input);
+                    return generated("답변", ChatMessage.AnswerBasis.GROUNDED, List.of());
+                },
+                persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(displayCommand);
+
+        ArgumentCaptor<ChatAnswer> answer = ArgumentCaptor.forClass(ChatAnswer.class);
+        verify(persistence).persistFinalAnswers(eq(EXECUTION_ID), eq(SESSION_ID), anyList(),
+                answer.capture(), anyList());
+        assertThat(answer.getValue().content()).contains("번호이동 서류는 뭐고", "요금제 변경은 어떻게 해")
+                .doesNotContain("번호이동서류는뭐고", "요금제변경은어떻게해");
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::searchQuery)
+                .containsExactly("번호이동서류는뭐고", "요금제변경은어떻게해");
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::candidateEvidenceQuery)
+                .containsExactly("번호이동 서류는 뭐고", "요금제 변경은 어떻게 해");
+    }
+
+    @Test
     void eachQuestionKeepsPreviousConversationContext() {
         prepareEvents();
         ChatContext context = new ChatContext(SESSION_ID, 9L, null, List.of(),

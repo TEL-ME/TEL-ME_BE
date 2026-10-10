@@ -64,6 +64,37 @@ class LlmFaqCandidateEvidenceResolverTest {
     }
 
     @Test
+    void acceptsSpacedCompoundPhraseAfterRoutingNormalizedItsSearchQuery() {
+        var porting = new FaqSearchResponse(66L, null, "PORTING", "번호이동 신청 시 필요한 서류",
+                "본인 신분증이 필요하며, 미납 요금은 완납하셔야 합니다.",
+                0.68, 1, null, 1, null);
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":true,"faqId":66,"quote":"본인 신분증이 필요하며, 미납 요금은 완납하셔야 합니다."}
+                """);
+
+        assertThat(resolver.resolve(null, "번호 이동 서류는 뭐고", List.of(porting))).isSameAs(porting);
+    }
+
+    @Test
+    void keepsVerifiedCompoundCandidateWhenQuoteRepairFails() {
+        var porting = new FaqSearchResponse(66L, null, "PORTING", "번호이동 신청 시 필요한 서류",
+                "본인 신분증이 필요하며, 미납 요금은 완납하셔야 합니다.",
+                0.68, 1, null, 1, null);
+        when(llm.generate(any())).thenReturn(
+                """
+                {"answerable":true,"faqId":66,"quote":"본인 신분증과 미납 요금 확인이 필요합니다."}
+                """,
+                """
+                {"answerable":true,"faqId":66,"quote":"원문과 다른 인용문"}
+                """);
+
+        assertThat(resolver.resolve(null, null, "번호 이동 서류는 뭐야", List.of(porting), true))
+                .isSameAs(porting);
+        assertThat(resolver.resolve(null, null, "번호 이동 서류는 뭐야", List.of(porting), false))
+                .isNull();
+    }
+
+    @Test
     void rejectsInventedQuoteAndExplicitAbstention() {
         when(llm.generate(any())).thenReturn(
                 """
