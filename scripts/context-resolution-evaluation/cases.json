@@ -1380,5 +1380,357 @@
       "expectedRelation": "CLARIFICATION_REQUIRED",
       "expectedSourceIndexes": []
     }
-  ]
+  ],
+  "unseenCases": [
+    {
+      "id": "unseen-independent-1",
+      "group": "independent",
+      "split": "unseen",
+      "question": "데이터 쉐어링 요금은 얼마인가요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-2",
+      "group": "independent",
+      "split": "unseen",
+      "question": "비용 걱정 없이 쓸 수 있는 무제한 요금제 있어요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-3",
+      "group": "independent",
+      "split": "unseen",
+      "question": "그때그때 충전하는 선불 요금제도 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-4",
+      "group": "independent",
+      "split": "unseen",
+      "question": "휴대폰 분실 신고는 어디서 하나요?",
+      "history": [
+        "인터넷 가입을 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-5",
+      "group": "independent",
+      "split": "unseen",
+      "question": "이전에 쓰던 번호로 다시 개통할 수 있나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-6",
+      "group": "independent",
+      "split": "unseen",
+      "question": "가족 결합 할인 조건이 뭐예요?",
+      "history": [
+        "로밍 요금제를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-independent-7",
+      "group": "independent",
+      "split": "unseen",
+      "question": "소액결제 한도 변경은 어떻게 하나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-followup-1",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그거 하루 단위로도 되나요?",
+      "history": [
+        "미국 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-2",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그럼 준비물은 뭐가 있어요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-3",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그건 위약금이 얼마나 나와요?",
+      "history": [
+        "인터넷 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-4",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그때 신분증 꼭 필요해요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-5",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그럼 언제쯤 완료돼요?",
+      "history": [
+        "번호이동을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-6",
+      "group": "followup",
+      "split": "unseen",
+      "question": "이전에 말한 거 온라인으로도 돼요?",
+      "history": [
+        "태블릿 개통을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-followup-7",
+      "group": "followup",
+      "split": "unseen",
+      "question": "그거 취소도 가능한가요?",
+      "history": [
+        "요금제 변경을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-1",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "미국은요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-2",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "가족이 대신 가도 되나요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-3",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "주말에도 와요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-4",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "수수료 있어요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-implicit-5",
+      "group": "implicit_followup",
+      "split": "unseen",
+      "question": "미성년자도 돼요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-ambiguous-1",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "그거 언제까지 해야 돼요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-2",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "그럼 그건 얼마 들어요?",
+      "history": [
+        "로밍과 유심 재발급을 둘 다 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-3",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "아까 그 건 진행됐나요?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-4",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "이전에 신청한 거 확인해 주세요",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-ambiguous-5",
+      "group": "ambiguous",
+      "split": "unseen",
+      "question": "인터넷이랑 TV 중에 그건 언제 설치돼요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "unseen-correction-1",
+      "group": "correction",
+      "split": "unseen",
+      "question": "그럼 요금은 얼마나 나와요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다",
+        "일본 말고 베트남이에요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-correction-2",
+      "group": "correction",
+      "split": "unseen",
+      "question": "필요한 서류가 뭐야?",
+      "history": [
+        "어머니 명의로 개통하려고 합니다",
+        "어머니가 아니라 아버지예요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-correction-3",
+      "group": "correction",
+      "split": "unseen",
+      "question": "그럼 언제쯤 기사님이 오나요?",
+      "history": [
+        "인터넷 이전 설치를 신청합니다",
+        "이전 설치가 아니라 신규 설치예요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "unseen-position-1",
+      "group": "position",
+      "split": "unseen",
+      "question": "처음 물어본 거 비용이 얼마예요?",
+      "history": [
+        "로밍 신청을 알아보고 있어요",
+        "유심 재발급도 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "unseen-position-2",
+      "group": "position",
+      "split": "unseen",
+      "question": "두 번째로 말한 건 기간이 얼마나 걸려?",
+      "history": [
+        "인터넷 가입을 하려고 해요",
+        "번호이동도 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ]
+    }
+  ],
+  "unseenPurpose": "프롬프트 예시와 기존 사례에 없고 일반어 규칙 설계에도 쓰지 않은 29건. 실측 전에 기대값을 고정했다. 결과를 보고 규칙이나 프롬프트를 고치면 이 묶음은 더 이상 처음 보는 문장이 아니다. implicit_followup 5건은 기본 모드의 알려진 한계를 수치로 남기기 위한 입력이다."
 }
