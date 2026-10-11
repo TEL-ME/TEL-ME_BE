@@ -25,6 +25,8 @@ public class AnswerGuard {
             "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
 
     // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
+    private static final int MIN_GROUNDED_RUN = 10;
+
     private static final Pattern MEASURE = Pattern.compile(
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
                     + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)");
@@ -47,6 +49,42 @@ public class AnswerGuard {
             return answer;
         }
         return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_ANSWER.length()).strip();
+    }
+
+    // 답변 불가 문구로 시작해도 뒤에 근거 문장과 겹치는 설명이 있으면 그 문장만 남긴다. 근거와 겹치지 않는 문장은 잘라낸다
+    public String trimAfterNoEvidence(String answer, String context) {
+        String trimmed = trimAfterNoEvidence(answer);
+        String phrase = AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        if (answer == null || context == null || !answer.strip().startsWith(phrase)) {
+            return trimmed;
+        }
+        StringBuilder grounded = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip().substring(phrase.length()).strip())) {
+            if (!sentence.isBlank() && longestCommonRun(compactText(sentence), compactText(context)) >= MIN_GROUNDED_RUN) {
+                grounded.append(grounded.isEmpty() ? "" : " ").append(sentence.strip());
+            }
+        }
+        return grounded.isEmpty() ? trimmed : grounded.toString();
+    }
+
+    private static String compactText(String text) {
+        return text.replaceAll("[\\s\\p{Punct}]", "");
+    }
+
+    private static int longestCommonRun(String text, String source) {
+        int[] previous = new int[source.length() + 1];
+        int longest = 0;
+        for (int i = 1; i <= text.length(); i++) {
+            int[] current = new int[source.length() + 1];
+            for (int j = 1; j <= source.length(); j++) {
+                if (text.charAt(i - 1) == source.charAt(j - 1)) {
+                    current[j] = previous[j - 1] + 1;
+                    longest = Math.max(longest, current[j]);
+                }
+            }
+            previous = current;
+        }
+        return longest;
     }
 
     // 프롬프트 3번 규칙이 있어도 지어내 문장째 걷어낸다
@@ -156,7 +194,7 @@ public class AnswerGuard {
     /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
     public String applyEvidencePolicy(
             String answer, String context, String userQuery, String confirmedValues) {
-        String filtered = trimAfterNoEvidence(answer);
+        String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
@@ -393,7 +431,8 @@ public class AnswerGuard {
         Set<String> invented = ungroundedValues(
                 answer, context, userQuery, this::measuresIn,
                 (value, sentence) -> isSafeUserReference(sentence)
-                        || isOutsideSupportedUpperBound(value, sentence, context));
+                        || isOutsideSupportedUpperBound(value, sentence, context)
+                        || isCustomerElapsed(value, sentence));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
             throw new AnswerGuardException("근거에 없는 수치: " + invented);
@@ -424,6 +463,12 @@ public class AnswerGuard {
             invented.addAll(sentenceValues);
         }
         return invented;
+    }
+
+    // 고객이 자기 경과 기간을 말한 것을 받아 적는 문장이다. "개통한 지 4개월이 되셨으므로", "2개월밖에 지나지 않으셨기 때문에"가 그 경우다
+    private boolean isCustomerElapsed(String userMeasure, String sentence) {
+        return Pattern.compile(Pattern.quote(userMeasure) + "(?:이|가|째|밖에)?\\s*(?:되셨|되었|됐|지나셨|지났|지나지|경과)")
+                .matcher(sentence).find();
     }
 
     private boolean isOutsideSupportedUpperBound(
