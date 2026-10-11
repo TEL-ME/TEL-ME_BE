@@ -83,4 +83,16 @@ class ConditionDuplicateQuestionTest {
         assertThat(ConditionGrounding.alreadySaid("", "미납 요금이 있으신가요?")).isFalse();
         assertThat(ConditionGrounding.alreadySaid(null, "미납 요금이 있으신가요?")).isFalse();
     }
+
+    @Test
+    @DisplayName("모델이 이미 안다고 적은 사실을 되묻는 질문은 버린다")
+    void 이미_안다고_적은_것은_되묻지_않는다() {
+        assertThat(ConditionGrounding.alreadyKnown(
+                java.util.List.of("개통한 지 8개월 됐다"), "개통 후 몇 개월이 지났나요?")).isTrue();
+        assertThat(ConditionGrounding.alreadyKnown(
+                java.util.List.of("개통한 지 두 달 됐다"), "개통 후 몇 개월이 지났나요?")).isTrue();
+        assertThat(ConditionGrounding.alreadyKnown(
+                java.util.List.of("개통한 지 4개월 됐다"), "명의 변경을 하셨나요?")).isFalse();
+        assertThat(ConditionGrounding.alreadyKnown(java.util.List.of(), "명의 변경을 하셨나요?")).isFalse();
+    }
 }

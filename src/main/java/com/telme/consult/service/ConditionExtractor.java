@@ -46,6 +46,7 @@ public class ConditionExtractor {
             toCondition(candidate, sources)
                     .filter(condition -> keys.add(condition.key()))
                     .filter(condition -> notSaidByUser(userQuery, condition))
+                    .filter(condition -> notKnown(payload.known(), condition))
                     .filter(condition -> notAskedAlready(conditions, condition))
                     .ifPresent(conditions::add);
             if (conditions.size() == MAX_CONDITIONS) {
@@ -106,6 +107,14 @@ public class ConditionExtractor {
             log.info("[조건 뽑기] 쓸 수 없는 조건을 건너뜁니다. key={}", candidate.key());
             return java.util.Optional.empty();
         }
+    }
+
+    private boolean notKnown(List<String> known, MissingCondition condition) {
+        boolean already = ConditionGrounding.alreadyKnown(known, condition.question());
+        if (already) {
+            log.info("[조건 뽑기] 모델이 이미 안다고 적은 조건을 버립니다. key={}", condition.key());
+        }
+        return !already;
     }
 
     private boolean notAskedAlready(List<MissingCondition> kept, MissingCondition condition) {

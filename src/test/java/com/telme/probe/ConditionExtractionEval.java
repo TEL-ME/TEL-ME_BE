@@ -44,6 +44,7 @@ class ConditionExtractionEval {
         int hit = 0;
         int missed = 0;
         int invented = 0;
+        int lacking = 0;
         int noSource = 0;
         long elapsed = 0;
         System.out.println("EVAL|" + ConditionPromptTemplates.PROMPT_VERSION);
@@ -71,6 +72,9 @@ class ConditionExtractionEval {
             } else if (expected == 0 && !conditions.isEmpty()) {
                 verdict = "헛짚음";
                 invented++;
+            } else if (conditions.size() < expected) {
+                verdict = "부족";
+                lacking++;
             } else {
                 verdict = "맞음";
                 hit++;
@@ -81,10 +85,10 @@ class ConditionExtractionEval {
                             .reduce((a, b) -> a + " / " + b).orElse(""));
         }
 
-        int scored = hit + missed + invented;
+        int scored = hit + missed + invented + lacking;
         // 조건 유무만 센다. 뽑은 조건이 기대한 조건과 같은지는 about과 나온 질문을 눈으로 비교한다
-        System.out.printf("EVAL_SUM|맞음 %d|놓침 %d|헛짚음 %d|검색없음 %d|정확도 %.0f%%|평균 %dms%n",
-                hit, missed, invented, noSource,
+        System.out.printf("EVAL_SUM|맞음 %d|놓침 %d|부족 %d|헛짚음 %d|검색없음 %d|정확도 %.0f%%|평균 %dms%n",
+                hit, missed, lacking, invented, noSource,
                 scored == 0 ? 0 : hit * 100.0 / scored, scored == 0 ? 0 : elapsed / scored);
         assertThat(scored + noSource).isEqualTo(cases.size());
     }

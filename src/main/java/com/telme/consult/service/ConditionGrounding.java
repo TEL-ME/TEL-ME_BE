@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.faq.dto.res.FaqSearchResponse;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ final class ConditionGrounding {
     private static final int MIN_QUESTION_PREFIX = 5;
     // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
     private static final int MIN_SAID_OVERLAP = 5;
+    private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
 
     private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
@@ -115,6 +117,27 @@ final class ConditionGrounding {
         String said = compact(userQuery == null ? "" : userQuery);
         return !asked.isEmpty() && !said.isEmpty()
                 && longestOverlap(said, asked) >= MIN_SAID_OVERLAP;
+    }
+
+    // 모델이 질문에서 이미 안다고 적은 사실을 되묻는 것을 막는다. "개통한 지 8개월"을 알면서 개통 기간을 묻는 경우다
+    static boolean alreadyKnown(List<String> known, String question) {
+        Set<String> asked = bigrams(unitForm(question));
+        return known.stream()
+                .anyMatch(each -> bigrams(unitForm(each)).stream().filter(asked::contains).count()
+                        >= MIN_KNOWN_SHARED_BIGRAMS);
+    }
+
+    // "두 달"과 "2개월"처럼 같은 기간을 다르게 쓴 표현을 맞춘다
+    private static String unitForm(String text) {
+        return compact(text).replaceAll("(한|두|세|네|다섯|여섯|\\d+)달", "$1개월");
+    }
+
+    private static Set<String> bigrams(String text) {
+        Set<String> result = new HashSet<>();
+        for (int i = 0; i + 2 <= text.length(); i++) {
+            result.add(text.substring(i, i + 2));
+        }
+        return result;
     }
 
     // 같은 사실을 범위만 바꿔 두 번 묻는 것을 막는다. "만 14세 이상"과 "만 14세 이상 18세 이하"가 그 경우다
