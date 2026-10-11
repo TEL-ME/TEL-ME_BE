@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import com.telme.llm.config.LlmProperties;
 import com.telme.llm.dto.req.LlmRequest;
@@ -130,56 +128,38 @@ class OllamaRequestConverterTest {
     }
 
     @Test
-    void 현재_대상_판정에만_JSON_Schema를_적용한다() {
-        OllamaChatRequest reference = converter.toChatRequest(LlmRequest.builder()
-                .userPrompt("{\"currentQuestion\":\"그건 얼마야?\"}").format(ResponseFormat.JSON)
-                .promptVersion("multiturn-resolution-v30-reference").build(), false);
-        OllamaChatRequest other = converter.toChatRequest(LlmRequest.builder()
-                .userPrompt("질문").format(ResponseFormat.JSON)
-                .promptVersion("multiturn-resolution-v6").build(), false);
+    void 요청에_담긴_JSON_Schema를_그대로_전달한다() {
+        Map<String, Object> schema = Map.of("type", "object", "required", List.of("answer"));
+        OllamaChatRequest structured = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").responseSchema(schema).build(), false);
+        OllamaChatRequest freeJson = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON).build(), false);
+        OllamaChatRequest text = converter.toChatRequest(LlmRequest.builder().userPrompt("질문").build(), false);
 
-        assertThat(reference.format()).isInstanceOf(Map.class);
-        assertThat(((Map<?, ?>) reference.format()).get("additionalProperties")).isEqualTo(false);
-        var properties = (Map<?, ?>) ((Map<?, ?>) reference.format()).get("properties");
-        assertThat(properties.keySet().stream().map(Object::toString).toList()).containsExactly("reference");
-        assertThat(other.format()).isEqualTo("json");
-        assertThat(other.think()).isNull();
+        assertThat(structured.format()).isEqualTo(schema);
+        assertThat(freeJson.format()).isEqualTo("json");
+        assertThat(text.format()).isNull();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"multiturn-resolution-v30-reference", "multiturn-resolution-v30-sources"})
-    void qwen3_문맥_판정은_사고_모드를_끈다(String version) {
+    @Test
+    void 프롬프트_버전만으로는_응답_형식을_정하지_않는다() {
+        OllamaChatRequest request = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v30-reference").build(), false);
+
+        assertThat(request.format()).isEqualTo("json");
+        assertThat(request.think()).isNull();
+    }
+
+    @Test
+    void 사고_모드는_요청이_끄고_모델이_지원할_때만_끈다() {
         OllamaRequestConverter qwen = new OllamaRequestConverter(
                 new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
-        OllamaChatRequest request = qwen.toChatRequest(LlmRequest.builder()
-                .userPrompt("{\"sourceMessages\":[]}").format(ResponseFormat.JSON)
-                .promptVersion(version).build(), false);
 
-        assertThat(request.think()).isFalse();
-    }
-
-    @Test
-    void 문맥_대상과_정정_연결을_구조화한다() {
-        var result = converter.toChatRequest(LlmRequest.builder().userPrompt("{\"sourceMessages\":[{\"index\":1,\"content\":\"유심 재발급\"}]}")
-                .format(ResponseFormat.JSON).promptVersion("multiturn-resolution-v30-sources").build(), false);
-        var schema = (Map<?, ?>) result.format();
-        var properties = (Map<?, ?>) schema.get("properties");
-        assertThat(properties.keySet().stream().map(Object::toString).toList())
-                .containsExactly("sources", "referenceScope", "anchorIndex");
-        var sourceItems = (Map<?, ?>) ((Map<?, ?>) properties.get("sources")).get("items");
-        assertThat(sourceItems.get("additionalProperties")).isEqualTo(false);
-        assertThat(sourceItems.get("required")).isEqualTo(List.of("index", "targetCount", "parentIndex"));
-        var array = (Map<?, ?>) properties.get("sources");
-        assertThat(array.get("minItems")).isEqualTo(1);
-        assertThat(array.get("maxItems")).isEqualTo(1);
-    }
-
-    @Test
-    void 현재_대상_판정에는_별도_출처_선택을_섞지_않는다() {
-        var result = converter.toChatRequest(LlmRequest.builder().userPrompt("질문")
-                .format(ResponseFormat.JSON).promptVersion("multiturn-resolution-v30-reference").build(), false);
-        var schema = (Map<?, ?>) result.format();
-        assertThat(schema.get("required")).isEqualTo(List.of("reference"));
-        assertThat(schema.get("additionalProperties")).isEqualTo(false);
+        assertThat(qwen.toChatRequest(LlmRequest.builder().userPrompt("질문").think(false).build(), false).think())
+                .isFalse();
+        assertThat(qwen.toChatRequest(LlmRequest.builder().userPrompt("질문").build(), false).think()).isNull();
+        assertThat(converter.toChatRequest(LlmRequest.builder().userPrompt("질문").think(false).build(), false).think())
+                .isNull();
     }
 }

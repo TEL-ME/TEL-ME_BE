@@ -42,16 +42,17 @@
 
 ## 검증과 실패 처리
 
-- Ollama 요청은 JSON Schema로 출력 필드, 배열 길이, 번호 범위를 제한한다.
+- 판정기가 두 요청에 각각의 JSON Schema를 담아 보내 출력 필드, 배열 길이, 번호 범위를 제한한다. AI 요청 변환기는 요청에 담긴 형식을 그대로 전달하며 프롬프트 버전으로 형식을 정하지 않는다.
 - 코드가 중복, 누락, 숫자 형식, 부모 관계, 고객 원문 여부를 다시 검증한다.
-- 잘못된 출력과 호출 실패는 출처 일부만 전달하지 않고 확인 안내로 처리한다.
+- 응답을 받았지만 형식이 틀리거나 검증에 실패하면 출처 일부만 전달하지 않고 확인 안내로 처리한다.
+- AI 서버 연결 실패, 시간 초과, 모델 오류, 사용자 취소는 질문 문제가 아니므로 확인 안내로 바꾸지 않고 기존 채팅 실패 처리로 넘긴다. 사용자에게는 "답변 생성 서비스에 연결할 수 없습니다" 같은 오류 안내가 표시된다.
 - 코드가 보장하는 것은 구조, 출처 존재, 연결의 일관성이다. 모델이 판정한 업무 개수나 참조 의미가 정확하다는 보장은 아니다.
 
 ## 설정과 기록
 
 - 모드는 `chat.question-resolution.mode`(환경 변수 `CHAT_QUESTION_RESOLUTION_MODE`)로 선택하며 기본값은 `REGEX_GATED`다.
 - 두 모델 호출은 `CONTEXT_RESOLUTION` 작업으로 기록하고 프롬프트 버전은 `multiturn-resolution-v30-reference`, `multiturn-resolution-v30-sources`다.
-- 현재 대상 판정 출력은 64토큰, 이전 발언 분석 출력은 `min(2048, 128 + 64 × 출처 수)`다. temperature는 0이고 Qwen3와 EXAONE 4.0에서는 이 요청의 사고 모드를 끈다.
+- 현재 대상 판정 출력은 64토큰, 이전 발언 분석 출력은 `min(2048, 128 + 64 × 출처 수)`다. temperature는 0이고, 두 요청이 사고 모드 끄기를 지정해 Qwen3와 EXAONE 4.0에서는 사고 모드를 끈다.
 - 실행 trace의 `questionResolution`에 최종 관계와 실제 출처 ID를, `questionResolutionEvidence`에 분석 결과, 판정 주체(`referenceSource`: `RULE` 또는 `MODEL`), 순서 번호와 실제 ID의 대응을 남긴다.
 - 내부 `EXPLICIT`, `OMITTED`, `AMBIGUOUS`는 처리 결과에 따라 `SELF_CONTAINED`, `HISTORY_DEPENDENT`, `CLARIFICATION_REQUIRED`로 기록한다.
 
@@ -66,17 +67,17 @@
 
 실제 모델과 API 호출은 `ContextResolutionLiveEvaluationTest`가 수행한다. 평가 입력은 [cases.json](../scripts/context-resolution-evaluation/cases.json)에 기대 관계와 필요한 이전 발언 번호로 고정한다. 관계와 출처가 모두 맞아야 일치로 센다. 질문의 최종 답변 정확도와는 별개다.
 
-- `RUN_TELME139_LIVE=true`일 때만 실행한다. 개발 DB를 쓰지 않도록 DB 이름이 `telme_139_`로 시작하는지 확인한다.
+- `RUN_CONTEXT_EVAL_LIVE=true`일 때만 실행한다. 개발 DB를 쓰지 않도록 DB 이름이 `telme_context_eval_`로 시작하는지 확인한다.
 - 빈 평가 DB에 스키마를 적용한 뒤 `prepare_database.py --source <FAQ가 있는 DB> --target <평가 DB>`로 FAQ와 임베딩만 복사한다. 데이터가 있는 대상 DB에는 복사하지 않는다.
-- `TELME139_FIXTURE_KEY`로 `cases.json`의 입력 묶음을 고르고, 실행마다 새 `TELME139_RUN` 값을 쓴다.
+- `CONTEXT_EVAL_FIXTURE_KEY`로 `cases.json`의 입력 묶음을 고르고, 실행마다 새 `CONTEXT_EVAL_RUN` 값을 쓴다.
 - `summarize.py`가 원시 결과를 집계한다. 결과는 `scripts/context-resolution-evaluation/runs/`에 생성되며 저장소에 포함하지 않는다.
 - `cases.json`의 일부 현재 질문은 프롬프트 예시와 같은 문장이다. 프롬프트에 없는 문장으로 측정한 결과와 구분해서 해석한다.
 
 ```powershell
-$env:POSTGRES_DB = '<telme_139_로 시작하는 평가 DB>'
+$env:POSTGRES_DB = '<telme_context_eval_로 시작하는 평가 DB>'
 $env:SPRING_FLYWAY_LOCATIONS = 'classpath:db/migration'
-$env:RUN_TELME139_LIVE = 'true'
-$env:TELME139_RUN = '<새 실행 이름>'
-$env:TELME139_FIXTURE_KEY = 'cases'
+$env:RUN_CONTEXT_EVAL_LIVE = 'true'
+$env:CONTEXT_EVAL_RUN = '<새 실행 이름>'
+$env:CONTEXT_EVAL_FIXTURE_KEY = 'cases'
 ./gradlew.bat test --tests '*ContextResolutionLiveEvaluationTest' --rerun-tasks
 ```

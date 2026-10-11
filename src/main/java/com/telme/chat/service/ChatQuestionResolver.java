@@ -12,6 +12,9 @@ import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.global.common.exception.GeneralException;
+import com.telme.llm.exception.LlmErrorCode;
+import com.telme.llm.exception.LlmStreamCancelledException;
 import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -206,7 +209,8 @@ public class ChatQuestionResolver {
                         .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SOURCE_PROMPT)
                         .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON).temperature(0.0)
                         .maxTokens(Math.min(2048, 128 + 64 * ordered.size()))
-                        .promptVersion("multiturn-resolution-v30-sources").build());
+                        .promptVersion("multiturn-resolution-v30-sources")
+                        .responseSchema(sourcesSchema(ordered.size())).think(false).build());
                 JsonNode sourcesOutput = readOutput(sourcesRaw);
                 if (sourcesOutput == null || !sourcesOutput.isObject() || sourcesOutput.size() != 3
                         || !sourcesOutput.path("sources").isArray() || !sourcesOutput.path("anchorIndex").isIntegralNumber() || !sourcesOutput.path("referenceScope").isTextual()) {
@@ -224,10 +228,24 @@ public class ChatQuestionResolver {
             recordResolution(command, question, result);
             return result;
         } catch (RuntimeException | JsonProcessingException invalid) {
+            if (isModelUnavailable(invalid)) {
+                trace.stage(command.executionId(), "questionResolution", Map.of(
+                        "originalQuery", question, "status", "MODEL_UNAVAILABLE"));
+                throw (RuntimeException) invalid;
+            }
             trace.stage(command.executionId(), "questionResolution", Map.of(
                     "originalQuery", question, "status", "INVALID_RESOLUTION"));
             return new Resolution(question, true, List.of());
         }
+    }
+
+    // AI 서버 장애·시간 초과·사용자 취소는 질문 문제가 아니므로 확인 안내로 바꾸지 않고 기존 실패 처리로 넘긴다.
+    // 응답을 받았지만 형식이 틀린 경우(INVALID_RESPONSE)는 판정 실패로 보고 확인 안내로 처리한다.
+    private static boolean isModelUnavailable(Exception failure) {
+        return failure instanceof LlmStreamCancelledException
+                || failure instanceof GeneralException general
+                        && general.getErrorCode() instanceof LlmErrorCode code
+                        && code != LlmErrorCode.INVALID_RESPONSE;
     }
 
     // 현재 질문 판정에 이전 주제를 섞지 않고 두 작업을 분리한다.
@@ -237,13 +255,42 @@ public class ChatQuestionResolver {
                 .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SYSTEM_PROMPT)
                 .userPrompt(mapper.writeValueAsString(Map.of("currentQuestion", question)))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(64)
-                .promptVersion("multiturn-resolution-v30-reference").build());
+                .promptVersion("multiturn-resolution-v30-reference")
+                .responseSchema(referenceSchema()).think(false).build());
         JsonNode referenceOutput = readOutput(referenceRaw);
         if (referenceOutput == null || !referenceOutput.isObject() || referenceOutput.size() != 1
                 || !referenceOutput.path("reference").isTextual()) {
             throw new IllegalArgumentException("현재 대상 판정 형식이 올바르지 않습니다.");
         }
         return Reference.valueOf(referenceOutput.path("reference").textValue());
+    }
+
+    // 현재 대상 판정 응답은 reference 하나만 허용한다.
+    static Map<String, Object> referenceSchema() {
+        return Map.of("type", "object", "properties", Map.of("reference",
+                Map.of("type", "string", "enum", List.of("EXPLICIT", "OMITTED", "AMBIGUOUS"))),
+                "required", List.of("reference"), "additionalProperties", false);
+    }
+
+    // 이전 발언 분석 응답은 제공한 발언 수만큼만, 제공한 번호 범위 안에서만 허용한다.
+    // 모든 발언을 분석한 뒤 참조 범위를 정하도록 속성 순서를 유지한다.
+    static Map<String, Object> sourcesSchema(int sourceCount) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("index", Map.of("type", "integer", "minimum", 1, "maximum", sourceCount));
+        source.put("targetCount", Map.of("type", "integer", "minimum", 0, "maximum", 8));
+        source.put("parentIndex", Map.of("type", "integer", "minimum", 0, "maximum", Math.max(0, sourceCount - 1)));
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("sources", Map.of("type", "array", "minItems", sourceCount, "maxItems", sourceCount,
+                "items", Map.of("type", "object", "properties", source,
+                        "required", List.of("index", "targetCount", "parentIndex"), "additionalProperties", false)));
+        properties.put("referenceScope", Map.of("type", "string", "enum", List.of("RECENT", "POSITION")));
+        properties.put("anchorIndex", Map.of("type", "integer", "minimum", 0, "maximum", sourceCount));
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", List.of("sources", "referenceScope", "anchorIndex"));
+        schema.put("additionalProperties", false);
+        return schema;
     }
 
     static boolean isGenericFollowUp(String question) {

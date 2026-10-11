@@ -10,7 +10,10 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.config.ChatQuestionResolutionProperties.Mode;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.exception.LlmErrorCode;
+import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import java.util.List;
@@ -276,6 +279,70 @@ class ChatQuestionResolverTest {
     void trailingOutputCannotOverrideOrHideAnInvalidDecision() {
         when(model.generate(any())).thenReturn("{\"reference\":\"EXPLICIT\"}{\"reference\":\"OMITTED\"}");
         assertThat(resolver.resolve(command("요금 안 내면 언제 정지되나요?"), null).needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CONNECTION_FAILED", "TIMEOUT", "MODEL_ERROR", "STREAM_INTERRUPTED"})
+    void modelOutageIsPassedToFailureHandlingInsteadOfAskingTheCustomer(String code) {
+        var outage = new GeneralException(LlmErrorCode.valueOf(code));
+        when(model.generate(any())).thenThrow(outage);
+        String question = "그 서비스 해지는 어떻게 해요?";
+        assertThatThrownBy(() -> resolver.resolve(command(question),
+                new ChatContext(1L, 5L, null, List.of(source), question, 100))).isSameAs(outage);
+    }
+
+    @Test
+    void cancelledRequestIsNotTurnedIntoClarification() {
+        var cancelled = new LlmStreamCancelledException();
+        when(model.generate(any())).thenThrow(cancelled);
+        assertThatThrownBy(() -> resolver.resolve(command("그 서비스 해지는 어떻게 해요?"), null)).isSameAs(cancelled);
+    }
+
+    @Test
+    void bothModelRequestsCarryTheirOwnSchemaAndDisableThinking() throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        String question = "그 서비스 해지는 어떻게 해요?";
+        resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(requests.capture());
+        assertThat(requests.getAllValues()).allSatisfy(request -> {
+            assertThat(request.responseSchema()).isNotNull();
+            assertThat(request.think()).isFalse();
+        });
+        assertThat(requests.getAllValues().get(0).responseSchema()).isEqualTo(ChatQuestionResolver.referenceSchema());
+        assertThat(requests.getAllValues().get(1).responseSchema()).isEqualTo(ChatQuestionResolver.sourcesSchema(1));
+    }
+
+    @Test
+    void referenceSchemaAllowsOnlyTheThreeJudgements() {
+        var schema = ChatQuestionResolver.referenceSchema();
+        assertThat(schema.get("required")).isEqualTo(List.of("reference"));
+        assertThat(schema.get("additionalProperties")).isEqualTo(false);
+        var reference = (Map<?, ?>) ((Map<?, ?>) schema.get("properties")).get("reference");
+        assertThat(reference.get("enum")).isEqualTo(List.of("EXPLICIT", "OMITTED", "AMBIGUOUS"));
+    }
+
+    @Test
+    void sourcesSchemaFixesCountRangeAndAnalysisOrder() {
+        var schema = ChatQuestionResolver.sourcesSchema(2);
+        var properties = (Map<?, ?>) schema.get("properties");
+        assertThat(properties.keySet().stream().map(Object::toString).toList())
+                .containsExactly("sources", "referenceScope", "anchorIndex");
+        var array = (Map<?, ?>) properties.get("sources");
+        assertThat(array.get("minItems")).isEqualTo(2);
+        assertThat(array.get("maxItems")).isEqualTo(2);
+        var items = (Map<?, ?>) array.get("items");
+        assertThat(items.get("required")).isEqualTo(List.of("index", "targetCount", "parentIndex"));
+        assertThat(items.get("additionalProperties")).isEqualTo(false);
+        var source = (Map<?, ?>) items.get("properties");
+        assertThat(((Map<?, ?>) source.get("index")).get("maximum")).isEqualTo(2);
+        assertThat(((Map<?, ?>) source.get("parentIndex")).get("maximum")).isEqualTo(1);
+    }
+
+    @Test
+    void responseWithBrokenFormatStillAsksForClarification() {
+        when(model.generate(any())).thenThrow(new GeneralException(LlmErrorCode.INVALID_RESPONSE));
+        assertThat(resolver.resolve(command("그 서비스 해지는 어떻게 해요?"), null).needsClarification()).isTrue();
     }
 
     @ParameterizedTest
