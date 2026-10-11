@@ -54,7 +54,7 @@ public final class FeedbackModels {
                     throw new IllegalArgumentException("Comment is for DISLIKE only");
                 }
             }
-            if (reason == Reason.OTHER && comment != null) {
+            if (reason == Reason.OTHER && comment == null) {
                 throw new IllegalArgumentException("Comment is required when reason is OTHER");
             }
         }
