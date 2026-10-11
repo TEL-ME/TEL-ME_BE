@@ -9,6 +9,8 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.chat.safety.ChatOutputBlockedException;
+import com.telme.chat.exception.ChatErrorCode;
 import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.ClarificationPlan;
@@ -381,6 +383,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {
+        recordOutputSafetyFailure(command, exception);
         log.error("상담 AI 처리 실패: executionId={}, sessionId={}",
                 command.executionId(), command.sessionId(), exception);
         ChatFailure failure = failure(exception);
@@ -402,6 +405,21 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         if (persistenceFailure != null) {
             throw persistenceFailure;
+        }
+    }
+
+    private void recordOutputSafetyFailure(ChatProcessingCommand command, RuntimeException exception) {
+        try {
+            if (exception instanceof ChatOutputBlockedException blocked) {
+                trace.stage(command.executionId(), "outputSafety", Map.of(
+                        "outcome", "BLOCKED", "policyVersion", blocked.policyVersion(),
+                        "field", blocked.field(), "ruleIds", blocked.ruleIds()));
+            } else if (exception instanceof GeneralException general
+                    && general.getErrorCode() == ChatErrorCode.OUTPUT_CHECK_FAILED) {
+                trace.stage(command.executionId(), "outputSafety", Map.of("outcome", "CHECK_FAILED"));
+            }
+        } catch (RuntimeException traceFailure) {
+            log.warn("출력 검사 결과 기록 실패: executionId={}", command.executionId());
         }
     }
 
