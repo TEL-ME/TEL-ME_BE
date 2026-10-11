@@ -1,5 +1,6 @@
 package com.telme.faq.config;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -9,7 +10,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "search")
 public record SearchProperties(
         Double similarityThreshold,
-        @DefaultValue DualVector dualVector
+        @DefaultValue DualVector dualVector,
+        @DefaultValue ScoreRecording scoreRecording
 ) {
 
     public SearchProperties {
@@ -28,6 +30,14 @@ public record SearchProperties(
         public DualVector {
             requireScore("search.dual-vector.question-threshold", questionThreshold);
         }
+    }
+    
+    // 관리자 검색 점수 화면용 기록. 테스트는 REQUIRES_NEW로 롤백을 빠져나가 DB에 쌓이므로 끈다.
+    // retention이 지난 기록은 FaqSearchScoreCleanupScheduler가 매일 지운다
+    public record ScoreRecording(
+            @DefaultValue("true") boolean enabled,
+            @DefaultValue("90d") Duration retention
+            ) {
     }
 
     // 측정 때는 임계값을 0으로 풀어 쓰므로 0은 허용한다

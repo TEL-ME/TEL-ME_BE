@@ -19,7 +19,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** 규칙 기반 입력 검사. 민감정보는 먼저 치환하며 원문 매칭 값은 결과에 남기지 않는다. */
+/**
+ * 규칙 기반 입력 검사. 민감정보는 먼저 치환하며 원문 매칭 값은 결과에 남기지 않는다.
+ * 공통 목록·정규화·분리 표기를 변경하면 ChatOutputGuard도 함께 확인한다.
+ * 입력의 피해 인용 예외는 출력에서 허용하지 않으므로 경계·예외 정책은 각각 유지한다.
+ */
 @Component
 public final class ChatInputInspector {
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");

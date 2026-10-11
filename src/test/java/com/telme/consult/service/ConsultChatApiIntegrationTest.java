@@ -308,7 +308,7 @@ class ConsultChatApiIntegrationTest {
                 .isEqualTo(Condition.filled("USIM_REISSUE"));
         assertThat(states.findPendingClarificationMessageId(sid, requestId.get(), "location"))
                 .contains(pendingId);
-        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(3);
+        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(4);
         long finalExecution = send(sid, "강남역이요");
         waitCompleted(finalExecution);
         await().atMost(Duration.ofSeconds(5))
@@ -322,7 +322,7 @@ class ConsultChatApiIntegrationTest {
         assertThat(states.load(sid, requestId.get()).conditions().get("serviceType"))
                 .isEqualTo(Condition.filled("USIM_REISSUE"));
         assertThat(states.load(sid, requestId.get()).status()).isEqualTo("DONE");
-        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(5);
+        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(6);
         assertThat(answerInput.get().originalUserQuery()).isEqualTo("매장 알려줘");
         assertThat(answerInput.get().searchQuery()).isEqualTo("매장");
         assertThat(answerInput.get().confirmedConditions())
@@ -337,7 +337,7 @@ class ConsultChatApiIntegrationTest {
         int version = states.load(sid, requestId.get()).version();
         waitCompleted(send(sid, "잠깐만요"));
         assertThat(states.load(sid, requestId.get()).version()).isEqualTo(version);
-        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(3);
+        assertThat(history(sid).path("result").path("messages").size()).isEqualTo(4);
         long finalExecution = send(sid, "강남역이요");
         waitCompleted(finalExecution);
         await().atMost(Duration.ofSeconds(5))

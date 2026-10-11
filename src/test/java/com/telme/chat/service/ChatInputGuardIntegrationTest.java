@@ -774,7 +774,12 @@ class ChatInputGuardIntegrationTest {
                     turns.prepareAnalysis(
                             command.sessionId(),
                             new IntentSubQueryResponse(
-                                    id, (short) 1, ConsultRequest.Intent.STORE, "매장", Map.of()),
+                                    id,
+                                    (short) 1,
+                                    ConsultRequest.Intent.STORE,
+                                    "매장",
+                                    // 업무를 말한 질문으로 보아 지역만 되묻기
+                                    Map.of("serviceType", "USIM_REISSUE")),
                             LocationStatus.MISSING),
                     null,
                     Purpose.NEARBY_STORE,

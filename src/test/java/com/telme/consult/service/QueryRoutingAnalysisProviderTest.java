@@ -236,7 +236,7 @@ class QueryRoutingAnalysisProviderTest {
         AnalysisResult result = provider.analyze(context);
 
         assertThat(result.directAnswer()).isNotNull();
-        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().content()).contains("하나씩 알려");
         assertThat(result.directAnswer().followUps()).containsExactly("요금제 알려줘", "가까운 매장 찾아줘");
         assertThat(result.initialQuery()).isNull();
     }
@@ -266,7 +266,7 @@ class QueryRoutingAnalysisProviderTest {
         AnalysisResult result = withButtons.analyze(
                 new Context(3L, 7L, "명의변경 서류 알려주고 강남역 근처 매장도 찾아줘", List.of()));
 
-        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().content()).contains("하나씩 알려");
         assertThat(result.directAnswer().followUps())
                 .containsExactly("명의변경 시 필요한 서류를 정리해서 알려주세요.", "강남역 명의변경 가능한 매장을 알려주세요.");
     }
