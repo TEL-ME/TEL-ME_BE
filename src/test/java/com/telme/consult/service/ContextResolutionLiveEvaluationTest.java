@@ -34,14 +34,14 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
 // 이전 고객 발언만 고정하고 현재 질문은 실제 채팅 API, 검색과 EXAONE으로 처리한다.
-@EnabledIfEnvironmentVariable(named = "RUN_TELME139_LIVE", matches = "true")
+@EnabledIfEnvironmentVariable(named = "RUN_CONTEXT_EVAL_LIVE", matches = "true")
 @SpringBootTest(properties = {"llm.provider=ollama", "chat.summary.trigger-messages=1000",
         "chat.summary.trigger-tokens=100000"})
 @AutoConfigureMockMvc
 @Import(ContextResolutionLiveEvaluationTest.CaptureConfiguration.class)
 class ContextResolutionLiveEvaluationTest {
-    private static final Path DIRECTORY = Path.of(".measure", "telme139",
-            System.getenv().getOrDefault("TELME139_RUN", "improved"));
+    private static final Path DIRECTORY = Path.of(".measure", "context-eval",
+            System.getenv().getOrDefault("CONTEXT_EVAL_RUN", "improved"));
     private static volatile String activeCase;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
@@ -50,15 +50,15 @@ class ContextResolutionLiveEvaluationTest {
     @Test
     void recordsFixedCasesThroughActualChatApi() throws Exception {
         String database = jdbc.queryForObject("SELECT current_database()", String.class);
-        assertThat(database).startsWith("telme_139_");
-        if ("true".equals(System.getenv("TELME139_INIT_ONLY"))) return;
+        assertThat(database).startsWith("telme_context_eval_");
+        if ("true".equals(System.getenv("CONTEXT_EVAL_INIT_ONLY"))) return;
         assertThat(jdbc.queryForObject("SELECT count(*) FROM faq_embeddings", Integer.class)).isGreaterThan(1000);
         var fixtures = mapper.readTree(Files.readString(Path.of("scripts/context-resolution-evaluation/cases.json")));
         List<String> errors = new ArrayList<>();
-        String fixtureKey = System.getenv().getOrDefault("TELME139_FIXTURE_KEY", "cases");
+        String fixtureKey = System.getenv().getOrDefault("CONTEXT_EVAL_FIXTURE_KEY", "cases");
         assertThat(fixtures.path(fixtureKey).isArray()).isTrue();
         for (JsonNode fixture : fixtures.path(fixtureKey)) {
-            String split = System.getenv("TELME139_SPLIT");
+            String split = System.getenv("CONTEXT_EVAL_SPLIT");
             if (split != null && !List.of(split.split(",")).contains(fixture.path("split").asText())) continue;
             activeCase = fixture.path("id").asText();
             var row = new LinkedHashMap<String, Object>();
@@ -105,7 +105,7 @@ class ContextResolutionLiveEvaluationTest {
             } finally {
                 row.put("elapsedMillis", (System.nanoTime() - started) / 1_000_000);
                 append(DIRECTORY.resolve("cases.jsonl"), row);
-                System.out.println("TELME139 " + fixture.path("id").asText() + " recorded");
+                System.out.println("CONTEXT_EVAL " + fixture.path("id").asText() + " recorded");
             }
         }
         assertThat(errors).isEmpty();

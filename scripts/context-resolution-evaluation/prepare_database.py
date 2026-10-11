@@ -12,8 +12,8 @@ def main():
     parser.add_argument("--target", required=True)
     parser.add_argument("--container", default="telme-flow-postgres")
     args = parser.parse_args()
-    if not args.target.startswith("telme_139_") or args.target == args.source:
-        raise ValueError("복사 대상은 별도의 telme_139_ 평가 DB여야 합니다.")
+    if not args.target.startswith("telme_context_eval_") or args.target == args.source:
+        raise ValueError("복사 대상은 별도의 telme_context_eval_ 평가 DB여야 합니다.")
 
     def sql(database, query, data=None):
         return subprocess.run(["docker", "exec", "-i", args.container, "psql", "-U", "telme",
@@ -42,7 +42,7 @@ def main():
         report["tables"][table] = dict(count=int(sql(args.target, f"SELECT count(*) FROM {table}")),
                                       sha256=hashlib.sha256(data).hexdigest(), columns=names)
     sql(args.target, "SELECT setval(pg_get_serial_sequence('faqs','faq_id'),(SELECT max(faq_id) FROM faqs))")
-    destination = pathlib.Path(".measure/telme139/database.json")
+    destination = pathlib.Path(".measure/context-eval/database.json")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False))

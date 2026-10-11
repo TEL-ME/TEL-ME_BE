@@ -135,7 +135,7 @@ def main():
                 tar.add(path, arcname=label + "/" + filename)
                 files.append(dict(name=label + "/" + filename, sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
         # 개발 중간 결과와 기존 회귀 검사도 같은 압축 자료에 보존한다.
-        work = ROOT / ".measure/telme139"
+        work = ROOT / ".measure/context-eval"
         for directory in sorted(work.glob("development-v*")):
             for path in directory.glob("*.jsonl"):
                 name = "development/" + directory.name.removeprefix("development-") + "/" + path.name
@@ -184,7 +184,11 @@ def main():
         if before.exists():
             import zipfile
             with zipfile.ZipFile(before) as old_zip:
-                previous_manifest = json.loads(old_zip.read(".measure/telme139/manifest.json"))
+                # 이전에 만든 압축 자료는 예전 작업 폴더 이름으로 저장되어 있다.
+                names = set(old_zip.namelist())
+                stored = next(name for name in (".measure/context-eval/manifest.json",
+                                                ".measure/telme139/manifest.json") if name in names)
+                previous_manifest = json.loads(old_zip.read(stored))
             previous_paths = [(name, ROOT / item["file"]) for name, item in previous_manifest.get("regressions", {}).items()]
             previous_model = previous_manifest.get("regressionModelFile")
             if previous_model:
