@@ -42,6 +42,12 @@ class ChatInputGuardServiceTest {
         when(store.cached(any(State.class), any())).thenReturn(Optional.empty());
         when(store.resetExpiredAndInherit(any(State.class), any(Instant.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(store.restrict(any(State.class), any(Instant.class), any(Instant.class)))
+                .thenAnswer(invocation -> {
+                    State state = invocation.getArgument(0);
+                    return new State(state.id(), state.userId(), state.guestId(), state.countingFrom(),
+                            invocation.getArgument(1), invocation.getArgument(2));
+                });
         service = new ChatInputGuardService(
                 inspector,
                 store,

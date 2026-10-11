@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,6 +87,7 @@ public class JdbcInputGuardStore {
         return timestamp == null ? null : timestamp.toInstant();
     }
 
+    // 조회 경로 JdbcInputGuardStatusStore.findRestrictionEnds와 같은 승계 범위를 유지한다.
     private String cohort(State state) {
         return state.userId() != null
                 ? "(s.user_id=? OR s.guest_id IN (SELECT guest_id FROM guests WHERE"
@@ -104,6 +106,7 @@ public class JdbcInputGuardStore {
         return args.toArray();
     }
 
+    // 본인 제한 우선·승계 제한 선택 정책을 바꾸면 조회 경로와 일치 테스트도 함께 확인한다.
     public State resetExpiredAndInherit(State state, Instant now) {
         if (state.restrictionUntil() != null && !state.restrictionUntil().isAfter(now)) {
             jdbc.update(
@@ -131,14 +134,7 @@ public class JdbcInputGuardStore {
                             parameters(state, java.sql.Timestamp.from(now)));
             if (!active.isEmpty()) {
                 State inherited = active.getFirst();
-                restrict(state, inherited.restrictionStartedAt(), inherited.restrictionUntil());
-                return new State(
-                        state.id(),
-                        state.userId(),
-                        state.guestId(),
-                        state.countingFrom(),
-                        inherited.restrictionStartedAt(),
-                        inherited.restrictionUntil());
+                return restrict(state, inherited.restrictionStartedAt(), inherited.restrictionUntil());
             }
         }
         return state;
@@ -163,14 +159,19 @@ public class JdbcInputGuardStore {
                         java.sql.Timestamp.from(now)));
     }
 
-    public void restrict(State state, Instant started, Instant until) {
-        jdbc.update(
+    public State restrict(State state, Instant started, Instant until) {
+        // 저장 전에 DB 정밀도로 맞춰 반올림으로 제한 종료가 뒤로 밀리는 것을 방지한다.
+        // 접수 응답·이력 스냅샷에는 RETURNING으로 읽은 실제 저장 시각을 사용한다.
+        Instant storedStart = started.truncatedTo(ChronoUnit.MICROS);
+        Instant storedUntil = until.truncatedTo(ChronoUnit.MICROS);
+        return jdbc.queryForObject(
                 "UPDATE chat_input_guard_states SET"
                     + " restriction_started_at=?,restriction_until=?,updated_at=? WHERE"
-                    + " guard_state_id=?",
-                java.sql.Timestamp.from(started),
-                java.sql.Timestamp.from(until),
-                java.sql.Timestamp.from(started),
+                    + " guard_state_id=? RETURNING *",
+                this::state,
+                java.sql.Timestamp.from(storedStart),
+                java.sql.Timestamp.from(storedUntil),
+                java.sql.Timestamp.from(storedStart),
                 state.id());
     }
 
