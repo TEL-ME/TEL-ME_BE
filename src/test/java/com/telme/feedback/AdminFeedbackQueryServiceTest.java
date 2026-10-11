@@ -66,6 +66,19 @@ class AdminFeedbackQueryServiceTest {
 
         assertThat(ids).contains(handledId).doesNotContain(unhandledId);
     }
+    
+    @Test
+    @DisplayName("기타 사유도 저장된 그대로 읽고 기타로 거를 수 있다")
+    void 기타_사유로_거른다() {
+        Long otherId = insertDislike(
+                ANSWER_WITH_STORE_QUESTION, ADMIN_ID, "OTHER", "답변이 너무 늦어요", false);
+
+        AdminFeedbackListResponse response = service.getDislikes(request(
+                MessageFeedback.ReasonCode.OTHER, AdminFeedbackHandledFilter.ALL, null, null));
+
+        assertThat(ids(response)).contains(otherId).doesNotContain(unhandledId, handledId);
+        assertThat(response.feedbacks()).allMatch(item -> "OTHER".equals(item.reasonCode()));
+    }
 
     @Test
     @DisplayName("사유를 주면 그 사유만 남는다")
