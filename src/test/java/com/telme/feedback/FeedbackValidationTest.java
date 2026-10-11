@@ -1,6 +1,7 @@
 package com.telme.feedback;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -33,6 +34,14 @@ class FeedbackValidationTest {
         assertThrows(IllegalArgumentException.class, () -> new Input(Rating.DISLIKE, null, null));
         assertThrows(IllegalArgumentException.class, () -> new Input(Rating.LIKE, null, "좋아요"));
         assertNull(new Input(Rating.LIKE, null, "  ").comment());
+    }
+    
+    @Test
+    void otherReasonRequiresComment() {
+        assertThrows(IllegalArgumentException.class, () -> new Input(Rating.DISLIKE, Reason.OTHER, null));
+        // 공백만 보낸 의견은 없는 것으로 본다
+        assertThrows(IllegalArgumentException.class, () -> new Input(Rating.DISLIKE, Reason.OTHER, "   "));
+        assertEquals("답변이 늦어요", new Input(Rating.DISLIKE, Reason.OTHER, " 답변이 늦어요 ").comment());
     }
     
     @Test
