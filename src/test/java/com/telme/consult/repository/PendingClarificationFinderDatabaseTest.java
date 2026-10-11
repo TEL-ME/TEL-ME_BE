@@ -66,4 +66,47 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
         states.cancel(session, second, states.load(session, second).version());
         assertEquals(first, finder.findBefore(session, reply).getFirst().consultRequestId());
     }
+
+    private void reask(long rid) {
+        jdbc.update(
+                "UPDATE consult_conditions SET reask_count=reask_count+1 WHERE consult_request_id=?",
+                rid);
+    }
+
+    private int reasks(java.util.List<PendingClarificationFinder.Candidate> found, long rid) {
+        return found.stream().filter(c -> c.consultRequestId() == rid).findFirst().orElseThrow().reasks();
+    }
+
+    @Test
+    void readsReaskCountPerConsult() {
+        long first = request(session);
+        ask(first);
+        long second = request(session);
+        ask(second);
+        reask(first);
+        reask(first);
+        reask(second);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(2, reasks(found, first));
+        assertEquals(1, reasks(found, second));
+    }
+
+    @Test
+    void keepsReaskCountAfterAnotherConsultAskedAndFinished() {
+        long first = request(session);
+        ask(first);
+        reask(first);
+        long second = request(session);
+        ask(second);
+        states.cancel(session, second, states.load(session, second).version());
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(1, found.size());
+        assertEquals(1, reasks(found, first));
+    }
 }

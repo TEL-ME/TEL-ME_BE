@@ -6,6 +6,7 @@ import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -65,10 +66,14 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             }
         }
         AnalysisResult result = Objects.requireNonNull(analysis.analyze(context), "analysisResult");
+        Set<Long> abandoned = Set.of();
         if (result.reroute()) {
             if (context.candidates().isEmpty()) {
                 throw new IllegalStateException("대기 중 상담이 없는 질문은 재라우팅할 수 없습니다.");
             }
+            abandoned = context.candidates().stream()
+                    .map(candidate -> candidate.consultRequestId())
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
             context = resolveQuestion(command, context.forNewQuestion());
             if (context == null) {
                 return clarification();
@@ -77,6 +82,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             if (result.reroute()) {
                 throw new IllegalStateException("새 질문을 반복해서 재라우팅할 수 없습니다.");
             }
+            // 새 질문으로 넘어간 턴의 앞선 대기 상담 정리
+            preparation.cancelWaiting(context.sessionId(), abandoned);
         }
         if (result.directAnswer() != null) {
             return AnalyzedTurn.direct(result.directAnswer());
@@ -108,6 +115,16 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             }
             // 라우팅이 모르는 FAQ 조건은 되묻기에 실어 보낸 선택지로 채운다
             resolution = FaqClarificationAnswers.fill(resolution, context.message());
+            // 재질문에도 답이 없으면 거절로 처리
+            if (resolution.updates().isEmpty()
+                    && resolution.candidate().reasks() >= ClarificationReask.MAX_REASKS) {
+                String field = resolution.candidate().field();
+                resolution = followupConverter.resolve(
+                        context, resolution.candidate().consultRequestId(), Map.of(), Set.of(field));
+                if ("location".equals(field)) {
+                    locationStatus = LocationStatus.DECLINED;
+                }
+            }
             if (!resolution.answersWaitingField()) {
                 var correction =
                         preparation.prepareWaitingUpdate(
