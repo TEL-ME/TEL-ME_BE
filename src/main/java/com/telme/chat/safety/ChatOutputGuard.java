@@ -15,7 +15,11 @@ import java.util.stream.Collectors;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
-/** 최종 출력 문구만 검사한다. 사용자 식별자·입력 제재·개인정보 치환과 연결하지 않는다. */
+/**
+ * 최종 출력 문구만 검사한다. 사용자 식별자·입력 제재·개인정보 치환과 연결하지 않는다.
+ * 공통 목록·정규화·분리 표기를 변경하면 ChatInputInspector도 함께 확인한다.
+ * 출력에서는 피해 인용도 차단하므로 입력의 인용 예외를 공통 규칙으로 옮기지 않는다.
+ */
 @Component
 public final class ChatOutputGuard {
 

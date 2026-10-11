@@ -21,7 +21,7 @@ public enum ChatErrorCode implements BaseErrorCode {
     EXECUTION_IN_PROGRESS(HttpStatus.CONFLICT, "CHAT409-3", "이전 질문에 대한 답변을 생성하고 있습니다."),
     INPUT_REQUEST_CONFLICT(HttpStatus.CONFLICT, "CHAT409-4", "같은 요청 식별자를 다른 입력에 사용할 수 없습니다."),
     OUTPUT_POLICY_BLOCKED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-0",
-            "답변을 안전하게 제공하지 못했습니다. 잠시 후 다시 시도해 주세요."),
+            "답변을 안전하게 제공하지 못했습니다. 다른 표현으로 질문해 주세요."),
     OUTPUT_CHECK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-1",
             "답변을 안전하게 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
 

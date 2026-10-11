@@ -396,12 +396,17 @@ class ChatOutputSafetyIntegrationTest {
     }
 
     private void assertFailure(ChatErrorCode code) throws Exception {
+        String expectedMessage = switch (code) {
+            case OUTPUT_POLICY_BLOCKED -> "답변을 안전하게 제공하지 못했습니다. 다른 표현으로 질문해 주세요.";
+            case OUTPUT_CHECK_FAILED -> "답변을 안전하게 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            default -> throw new IllegalArgumentException("출력 검사 실패 사유만 검증합니다.");
+        };
         assertThat(jdbc.queryForObject(
                 "SELECT status FROM chat_executions WHERE execution_id=?", String.class, executionId))
                 .isEqualTo("FAILED");
         assertThat(historyAnswer().messageType()).isEqualTo("ERROR");
         assertThat(historyAnswer().status()).isEqualTo("FAILED");
-        assertThat(historyAnswer().content()).isEqualTo(code.getMessage());
+        assertThat(historyAnswer().content()).isEqualTo(expectedMessage);
         assertThat(historyAnswer().answerBasis()).isNull();
         assertThat(historyAnswer().followUps()).isNull();
         assertThat(historyAnswer().ratable()).isFalse();
@@ -413,7 +418,7 @@ class ChatOutputSafetyIntegrationTest {
         assertThat(failure.path("errorCode").asText()).isEqualTo(code.getCode());
         assertThat(failure.path("message").asText()).isEqualTo(historyAnswer().content());
         String replay = replay();
-        assertThat(replay).contains("event:error", code.getCode(), code.getMessage());
+        assertThat(replay).contains("event:error", code.getCode(), expectedMessage);
         assertThat(replay).doesNotContain("event:token", "event:complete", "씨발", "병신");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM chat_messages WHERE session_id=? AND role='ASSISTANT'",

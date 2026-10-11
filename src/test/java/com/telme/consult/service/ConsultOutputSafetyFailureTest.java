@@ -46,7 +46,8 @@ class ConsultOutputSafetyFailureTest {
         ArgumentCaptor<ChatFailure> failure = ArgumentCaptor.forClass(ChatFailure.class);
         verify(persistence).failAnswer(eq(2L), eq(1L), failure.capture());
         assertThat(failure.getValue().errorCode()).isEqualTo("CHAT500-0");
-        assertThat(failure.getValue().message()).doesNotContain("씨발");
+        assertThat(failure.getValue().message())
+                .isEqualTo("답변을 안전하게 제공하지 못했습니다. 다른 표현으로 질문해 주세요.");
         verify(events).failed(2L, failure.getValue());
     }
 }
