@@ -117,6 +117,28 @@ class SubscriptionCommandServiceTest {
     }
 
     @Test
+    void 청소년_요금제는_오늘_만_14세가_되면_가입할_수_있고_하루_모자라면_거부한다() {
+        Long plan = planId("LTE_YOUTH");
+
+        // 2026-10-12 기준: 2012-10-13생은 내일 14세가 되므로 아직 만 13세
+        assertError(() -> service.subscribe(userId, plan, LocalDate.of(2012, 10, 13)),
+                SubscriptionErrorCode.AGE_NOT_ELIGIBLE);
+        assertThat(birthDateOf(userId)).isNull();
+
+        service.subscribe(userId, plan, LocalDate.of(2012, 10, 12));
+        assertThat(birthDateOf(userId)).isEqualTo(LocalDate.of(2012, 10, 12));
+    }
+
+    @Test
+    void 일반_요금제_가입자가_만_14세_미만으로_청소년_요금제로_변경하는_것도_거부한다() {
+        service.subscribe(userId, planId("FIVE_G_LITE"), null);
+        at(Instant.parse("2026-11-10T03:00:00Z"));
+
+        assertError(() -> service.changePlan(userId, planId("FIVE_G_YOUTH"), LocalDate.of(2015, 1, 1)),
+                SubscriptionErrorCode.AGE_NOT_ELIGIBLE);
+    }
+
+    @Test
     void 시니어_요금제는_오늘_만_65세가_되면_가입할_수_있고_하루_모자라면_거부한다() {
         Long plan = planId("LTE_SENIOR");
 

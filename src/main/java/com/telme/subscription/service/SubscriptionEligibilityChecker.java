@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SubscriptionEligibilityChecker {
 
+    static final int YOUTH_MIN_AGE = 14;
     static final int YOUTH_MAX_AGE = 18;
     static final int SENIOR_MIN_AGE = 65;
     static final int MAX_PLAUSIBLE_AGE = 120;
@@ -29,7 +30,7 @@ public class SubscriptionEligibilityChecker {
         }
         int age = Period.between(birthDate, today).getYears();
         boolean eligible = plan.getTargetGroup() == Plan.TargetGroup.YOUTH
-                ? age <= YOUTH_MAX_AGE
+                ? age >= YOUTH_MIN_AGE && age <= YOUTH_MAX_AGE
                 : age >= SENIOR_MIN_AGE;
         if (!eligible) {
             throw new GeneralException(SubscriptionErrorCode.AGE_NOT_ELIGIBLE);
