@@ -92,6 +92,20 @@ public class ConsultChatPersistenceService {
         return state;
     }
 
+    // 나눠 보내기 안내로 끝난 복합 질문은 하위 상담을 처리하지 않으므로, 안내 저장과 같은 트랜잭션에서 상담을 취소한다.
+    @Transactional
+    public ChatExecutionState persistSplitGuidance(
+            long executionId, long sessionId, ChatAnswer answer, List<ConsultService.PreparedTurn> turns) {
+        if (turns.isEmpty() || turns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+            throw new IllegalArgumentException("취소할 하위 상담이 올바르지 않습니다.");
+        }
+        ChatExecutionState state = persistDirectAnswer(executionId, sessionId, answer);
+        for (ConsultService.PreparedTurn turn : turns) {
+            stateStore.cancel(sessionId, turn.decision().consultRequestId(), turn.expectedVersion());
+        }
+        return state;
+    }
+
     // 답변 저장에 성공했을 때만 상담도 완료한다.
     @Transactional
     public ChatExecutionState persistFinalAnswer(

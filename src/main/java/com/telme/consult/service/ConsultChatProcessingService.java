@@ -301,8 +301,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         // 매장 요청의 지역·업무 되묻기는 상담 판단에서, FAQ 조건 되묻기는 검색 근거를 본 뒤 정한다.
         // 한 메시지에는 한 요청만 되묻는다. 지역이 빠진 매장 요청이 둘 이상이면 나눠서 물어보도록 안내한다.
         if (preparedTurns.stream().filter(prepared -> prepared.decision().action() == Action.ASK).count() > 1) {
-            var completed = persistence.persistDirectAnswer(command.executionId(), command.sessionId(),
-                    new ChatAnswer(ChatMessage.MessageType.ANSWER, SPLIT_STORE_GUIDANCE, null, List.of(), null));
+            var completed = persistence.persistSplitGuidance(command.executionId(), command.sessionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, SPLIT_STORE_GUIDANCE, null, List.of(), null),
+                    preparedTurns);
             events.completed(command.executionId(), completed);
             return;
         }

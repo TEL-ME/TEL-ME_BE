@@ -310,7 +310,8 @@ class CompoundFaqStoreIntegrationTest {
         assertThat(output.path("message_type").asText()).isEqualTo("ANSWER");
         assertThat(output.path("content").asText()).isEqualTo(ConsultChatProcessingService.SPLIT_STORE_GUIDANCE);
         assertThat(answerInputs).isEmpty();
-        assertThat(statuses()).doesNotContain("WAITING_CONDITION");
+        // 처리하지 않은 하위 상담을 열린 상태로 남기지 않는다.
+        assertThat(statuses()).containsOnly("CANCELLED");
     }
 
     @Test
