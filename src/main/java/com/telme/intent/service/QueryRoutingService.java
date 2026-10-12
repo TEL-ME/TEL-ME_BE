@@ -174,7 +174,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v5-both")
+                .promptVersion("routing-request-v4-single-search")
                 .build();
 
             String json = llmClient.generate(request);
