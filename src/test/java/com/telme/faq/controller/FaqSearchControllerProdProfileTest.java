@@ -2,16 +2,17 @@ package com.telme.faq.controller;
 
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.MemberStatusChecker;
-import com.telme.member.service.KakaoLinkRequestStore;
-import com.telme.member.service.KakaoAuthorizationFailureHandler;
+import com.telme.member.service.SocialLinkRequestStore;
+import com.telme.member.service.SocialAuthorizationFailureHandler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.faq.service.FaqSearchService;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.service.GuestIdentityService;
-import com.telme.member.service.KakaoLoginFailureHandler;
-import com.telme.member.service.KakaoLoginSuccessHandler;
+import com.telme.member.service.SocialLoginFailureHandler;
+import com.telme.member.service.SocialLoginSuccessHandler;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.KakaoOAuth2UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,10 +39,10 @@ class FaqSearchControllerProdProfileTest {
     private UserRepository userRepository;
 
     @MockitoBean
-    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+    private SocialAuthorizationFailureHandler socialAuthorizationFailureHandler;
 
     @MockitoBean
-    private KakaoLinkRequestStore kakaoLinkRequestStore;
+    private SocialLinkRequestStore socialLinkRequestStore;
 
     @MockitoBean
     private FaqSearchService faqSearchService;
@@ -54,10 +55,13 @@ class FaqSearchControllerProdProfileTest {
     private KakaoOAuth2UserService kakaoOAuth2UserService;
 
     @MockitoBean
-    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+    private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
-    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+    private SocialLoginSuccessHandler socialLoginSuccessHandler;
+
+    @MockitoBean
+    private SocialLoginFailureHandler socialLoginFailureHandler;
 
     @Test
     @DisplayName("prod 프로파일이면 프로퍼티가 true로 유출돼도 컨트롤러 빈이 생기지 않는다")

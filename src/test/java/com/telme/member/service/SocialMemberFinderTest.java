@@ -1,5 +1,6 @@
 package com.telme.member.service;
 
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
 import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -266,5 +267,49 @@ class SocialMemberFinderTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작을 고르면 이메일이 같은 기존 회원이 있어도 연결하지 않고 새 회원을 만든다")
+    void 새_계정으로_시작은_이메일_대조_없이_생성() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-new")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = finder.createWithoutEmailMatch(GOOGLE, "google-new", "match@example.com", "구글 사용자");
+
+        assertThat(result.getName()).isEqualTo("구글 사용자");
+        verify(userRepository, never()).findByEmail(any());
+        verify(socialAccountRepository).saveAndFlush(argThat(account -> account.getProvider() == GOOGLE
+                && "google-new".equals(account.getProviderUserId())
+                && "match@example.com".equals(account.getEmail())
+                && account.getUser() == result));
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작을 다시 요청해 이미 만든 소셜 계정이 있으면 그 회원을 그대로 쓴다")
+    void 새_계정으로_시작_중복_요청은_기존_회원_반환() {
+        User user = User.builder().userId(31L).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(GOOGLE).providerUserId("google-again").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-again"))
+                .thenReturn(Optional.of(account));
+
+        User result = finder.createWithoutEmailMatch(GOOGLE, "google-again", "match@example.com", "구글 사용자");
+
+        assertThat(result).isEqualTo(user);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작이라도 이미 만든 회원이 정지 상태면 거부한다")
+    void 새_계정으로_시작_정지된_회원은_거부() {
+        User user = User.builder().userId(32L).status(User.Status.SUSPENDED).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(GOOGLE).providerUserId("google-suspended").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-suspended"))
+                .thenReturn(Optional.of(account));
+
+        assertThatThrownBy(() -> finder.createWithoutEmailMatch(GOOGLE, "google-suspended", null, null))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
     }
 }

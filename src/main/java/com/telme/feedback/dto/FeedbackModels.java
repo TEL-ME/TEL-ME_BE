@@ -16,7 +16,8 @@ public final class FeedbackModels {
     public enum Reason {
         WRONG_INFO,
         NOT_RELATED,
-        HARD_TO_READ
+        HARD_TO_READ,
+        OTHER
     }
 
     public record Actor(Long userId, UUID guestId) {
@@ -52,6 +53,9 @@ public final class FeedbackModels {
                 if (rating != Rating.DISLIKE) {
                     throw new IllegalArgumentException("Comment is for DISLIKE only");
                 }
+            }
+            if (reason == Reason.OTHER && comment == null) {
+                throw new IllegalArgumentException("Comment is required when reason is OTHER");
             }
         }
     }

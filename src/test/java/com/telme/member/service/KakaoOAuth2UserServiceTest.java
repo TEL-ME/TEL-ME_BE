@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.telme.member.entity.SocialAccount;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -39,8 +40,10 @@ class KakaoOAuth2UserServiceTest {
         assertThat(result).isInstanceOf(KakaoOAuth2User.class);
         KakaoOAuth2User kakaoUser = (KakaoOAuth2User) result;
         assertThat(kakaoUser.getProviderUserId()).isEqualTo("12345");
+        assertThat(kakaoUser.getProvider()).isEqualTo(SocialAccount.Provider.KAKAO);
         assertThat(kakaoUser.getEmail()).isEqualTo("user@kakao.com");
         assertThat(kakaoUser.getNickname()).isEqualTo("카카오 회원");
+        assertThat(kakaoUser.getDisplayName()).isEqualTo("카카오 회원");
     }
 
     @Test

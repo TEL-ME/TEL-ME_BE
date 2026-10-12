@@ -39,7 +39,7 @@ public class AdminFeedbackController {
     @Operation(
             summary = "싫어요 목록 조회",
             description = "사용자가 싫어요를 남긴 답변을 최신순으로 반환합니다. "
-                    + "사유는 WRONG_INFO·NOT_RELATED·HARD_TO_READ 중 하나이고, 생략하면 전체입니다. "
+                    + "사유는 WRONG_INFO·NOT_RELATED·HARD_TO_READ·OTHER 중 하나이고, 생략하면 전체입니다. "
                     + "handled는 UNHANDLED(기본)·HANDLED·ALL이며, from·to는 남긴 시각 기준이고 to는 그 시각 직전까지입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공"),
