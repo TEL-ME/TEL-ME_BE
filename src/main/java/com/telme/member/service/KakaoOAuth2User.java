@@ -1,15 +1,15 @@
 package com.telme.member.service;
 
+import com.telme.member.entity.SocialAccount;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 
 // 카카오 원본 클레임만 담는다 — 회원 조회·생성·연결(로그인 대 계정연결 판단 포함)은 전부
 // 성공 핸들러에서 처리한다(로드 시점엔 세션에 접근할 수 없어 그 판단을 할 수 없다)
 @Getter
-public class KakaoOAuth2User implements OAuth2User {
+public class KakaoOAuth2User implements SocialOAuth2Principal {
 
     private final String providerUserId;
     private final String email;
@@ -22,6 +22,16 @@ public class KakaoOAuth2User implements OAuth2User {
         this.email = email;
         this.nickname = nickname;
         this.attributes = attributes;
+    }
+
+    @Override
+    public SocialAccount.Provider getProvider() {
+        return SocialAccount.Provider.KAKAO;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return nickname;
     }
 
     @Override
