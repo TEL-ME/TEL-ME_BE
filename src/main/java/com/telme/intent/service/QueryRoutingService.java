@@ -174,7 +174,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v4-single-search")
+                .promptVersion("routing-request-v5-both")
                 .build();
 
             String json = llmClient.generate(request);
@@ -640,18 +640,16 @@ public class QueryRoutingService {
             throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
         }
 
-        Map<String, String> extracted = payload.intent() == QueryRouting.Intent.UNKNOWN
-                ? Collections.emptyMap()
-                : validConditions(payload.extractedConditions(), question, context);
-        extracted = withRuleServiceType(payload.intent(), extracted, question);
         List<LlmRoutingPayload.SubQueryPayload> normalized = new ArrayList<>();
         boolean hasFaq = false;
         boolean hasStore = false;
+        boolean allSubIntentsGiven = true;
         for (LlmRoutingPayload.SubQueryPayload sub : payload.subQueries()) {
             if (sub == null) {
                 throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
             }
             ConsultRequest.Intent intent = sub.intent();
+            allSubIntentsGiven &= intent != null;
             if (intent == null) {
                 intent = switch (payload.intent()) {
                     case FAQ -> ConsultRequest.Intent.FAQ;
@@ -671,7 +669,22 @@ public class QueryRoutingService {
                     (short) (normalized.size() + 1), intent, sub.queryText(), conditions, sub.requestQuote()));
         }
 
-        boolean inconsistent = switch (payload.intent()) {
+        QueryRouting.Intent topIntent = payload.intent();
+        if ((topIntent == QueryRouting.Intent.FAQ || topIntent == QueryRouting.Intent.STORE)
+                && hasFaq && hasStore && allSubIntentsGiven) {
+            // 하위 질문은 FAQ와 매장으로 나눴는데 전체 의도만 한쪽으로 적은 출력이다. 버리면 질문 일부가 사라진다.
+            // 하위 질문마다 원문에 서로 다른 근거가 있을 때만 BOTH로 계산하고, 아니면 나눠 보내기 안내로 넘긴다.
+            IndependentQuestionPolicy.validateParts(normalized, question);
+            log.info("[라우팅] 하위 질문에 FAQ와 매장이 함께 있어 전체 의도를 BOTH로 계산합니다: modelIntent={}",
+                    topIntent);
+            topIntent = QueryRouting.Intent.BOTH;
+        }
+        Map<String, String> extracted = topIntent == QueryRouting.Intent.UNKNOWN
+                ? Collections.emptyMap()
+                : validConditions(payload.extractedConditions(), question, context);
+        extracted = withRuleServiceType(topIntent, extracted, question);
+
+        boolean inconsistent = switch (topIntent) {
             case FAQ -> hasStore;
             case STORE -> hasFaq;
             case BOTH -> !normalized.isEmpty() && (!hasFaq || !hasStore);
@@ -688,11 +701,11 @@ public class QueryRoutingService {
         for (LlmRoutingPayload.SubQueryPayload sub : normalized) {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
-                    payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1,
+                    topIntent == QueryRouting.Intent.FAQ && normalized.size() == 1,
                     safeFallback);
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
-                    && payload.intent() == QueryRouting.Intent.STORE) {
+                    && topIntent == QueryRouting.Intent.STORE) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
                 merged.putAll(conditions);
                 conditions = merged;
@@ -705,7 +718,7 @@ public class QueryRoutingService {
                     sub.order(), sub.intent(), queryText, conditions, sub.requestQuote()));
         }
         return new LlmRoutingPayload(
-                payload.intent(), payload.confidence(), refined, extracted, safeSubQueries);
+                topIntent, payload.confidence(), refined, extracted, safeSubQueries);
     }
 
     private String safeQueryText(

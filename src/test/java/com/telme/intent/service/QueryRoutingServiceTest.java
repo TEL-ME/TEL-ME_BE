@@ -580,6 +580,56 @@ class QueryRoutingServiceTest {
                     .containsEntry("location", "강남역").doesNotContainKey("serviceType");
         }
 
+        // 하위 질문은 FAQ와 매장으로 나눴는데 전체 의도만 FAQ나 STORE로 적은 출력은 버리지 않고 BOTH로 계산한다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "FAQ | 번호이동 방법이랑 번호이동 되는 매장 알려줘 | 번호이동 방법 | 번호이동 방법 | 번호이동 가능 매장 | 번호이동 되는 매장",
+                "STORE | 유심 재발급 비용 알려주고 근처 유심 재발급 매장도 찾아줘 | 유심 재발급 비용 | 유심 재발급 비용 | 유심 재발급 매장 | 근처 유심 재발급 매장도 찾아줘"
+        })
+        void mixedSubQueriesWithOneSidedTopIntentAreRoutedAsBoth(String modelIntent, String question,
+                String faqQuery, String faqQuote, String storeQuery, String storeQuote) {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"%s","confidence":0.97,"refinedQuery":"%s","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"%s","requestQuote":"%s","conditions":{}}]}
+                    """.formatted(modelIntent, question, faqQuery, faqQuote, storeQuery, storeQuote));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+        }
+
+        // 하위 질문마다 원문 근거를 확인할 수 없으면 질문 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
+        @Test
+        void mixedSubQueriesWithoutSeparateOriginalEvidenceAreNotGuessedAsBoth() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경과 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"요금제 변경 절차 안내","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"요금제 변경 가능 대리점","conditions":{}}]}
+                    """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg("요금제 변경은 어떻게 해? 그리고 신촌역 매장 위치도 알려줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+        }
+
+        // 하위 질문의 의도가 비어 있으면 어느 쪽인지 계산할 수 없어 기존처럼 규칙 분류로 넘긴다.
+        @Test
+        void missingSubQueryIntentKeepsRuleFallback() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 방법과 매장","subQueries":[
+                      {"order":1,"queryText":"번호이동 방법","requestQuote":"번호이동 방법","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"번호이동 매장","requestQuote":"번호이동 되는 매장","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg("번호이동 방법이랑 번호이동 되는 매장 알려줘"), null);
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+        }
+
         @Test
         void synonymousUsimSearchTextKeepsTheExplicitStoreServiceType() {
             given(llmClient.generate(any())).willReturn("""

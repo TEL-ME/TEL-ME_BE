@@ -117,6 +117,7 @@ public final class RoutingPromptTemplates {
         - 매장에서 처리할 수 있는지, 매장 방문과 택배 중 무엇이 가능한지 묻는 것은 지점 검색이 아니라 FAQ이다.
         - 해지, 재발급, 명의변경 방법을 묻는 통신 질문은 UNKNOWN이 아니다.
         - 최상위 intent에는 FAQ, STORE, BOTH, UNKNOWN만 쓴다. NAME_CHANGE, USIM_REISSUE 등 매장 업무 코드는 intent가 아니다.
+        - subQueries에 FAQ와 STORE가 함께 있으면 최상위 intent는 반드시 BOTH다. 하위 질문 하나라도 매장 찾기면 FAQ로 적지 않는다.
         
         [매장 업무 코드 - serviceType 추출 시 아래 값만 사용]
         - NEW_LINE: 신규 개통

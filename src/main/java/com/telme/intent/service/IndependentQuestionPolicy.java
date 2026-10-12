@@ -13,8 +13,13 @@ final class IndependentQuestionPolicy {
                 || payload.subQueries().size() <= 1) {
             return;
         }
+        validateParts(payload.subQueries(), question);
+    }
+
+    // 하위 질문마다 현재 요청 안의 서로 다른 원문 근거가 있는지 확인한다. 없으면 UnsupportedCompoundQuestionException.
+    static void validateParts(List<LlmRoutingPayload.SubQueryPayload> subQueries, String question) {
         String original = RoutingQuestionNormalizer.quoteKey(question);
-        validateQuotes(payload.subQueries().stream().map(sub -> {
+        validateQuotes(subQueries.stream().map(sub -> {
             String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
             if (!quote.isBlank() && isComposedOfOriginalSegments(quote, original)) {
                 return quote;

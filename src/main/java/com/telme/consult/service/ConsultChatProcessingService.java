@@ -440,12 +440,15 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     // 먼저 되물을 하위 질문. 한 번에 하나만 묻고 나머지는 조건 없이 답한다. 없으면 -1
+    // 매장 지역처럼 상담 판단이 ASK인 요청은 조건 없이 답할 수 없어 FAQ 조건 되묻기보다 먼저 묻는다.
     private int firstNeedingClarification(List<ConsultTurn> consultTurns,
             List<ConsultService.PreparedTurn> preparedTurns, List<Prepared> prepareds) {
-        for (int i = 0; i < prepareds.size(); i++) {
+        for (int i = 0; i < preparedTurns.size(); i++) {
             if (preparedTurns.get(i).decision().action() == Action.ASK) {
                 return i;
             }
+        }
+        for (int i = 0; i < prepareds.size(); i++) {
             Prepared prepared = prepareds.get(i);
             if (consultTurns.get(i).purpose() == Purpose.GENERAL_FAQ && prepared.answer() == null
                     && prepared.plan().remaining(preparedTurns.get(i).decision().conditions()).needsClarification()) {

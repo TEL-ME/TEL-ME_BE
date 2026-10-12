@@ -18,9 +18,13 @@ import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
+import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
+import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.intent.service.RoutingPromptTemplates;
@@ -64,6 +68,8 @@ class CompoundFaqStoreIntegrationTest {
     long faqId;
     String initialRouting;
     boolean faqGrounded = true;
+    // FAQ 조건 되묻기가 필요한 경우를 흉내 낸다. 기본은 되묻기 없음.
+    ClarificationPlan faqPlan = ClarificationPlan.none();
     final List<AnswerInput> answerInputs = new ArrayList<>();
     final Events events = new Events();
 
@@ -270,6 +276,24 @@ class CompoundFaqStoreIntegrationTest {
     }
 
     // 지역이 빠진 매장 요청이 둘이면 한 메시지에 하나만 물을 수 없어 나눠 보내도록 안내한다.
+    // FAQ 조건 되묻기와 매장 지역 되묻기가 동시에 필요하면, 조건 없이 답할 수 없는 매장을 묻고 FAQ는 조건 없이 답한다.
+    @Test
+    void storeLocationIsAskedBeforeFaqConditionWhenBothAreMissing() throws Exception {
+        faqPlan = new ClarificationPlan(List.of(new MissingCondition(
+                "unpaid_balance", "미납 요금이 있나요?", List.of("있어요", "없어요"), "합성 근거: 미납 요금은 먼저 완납한다.")));
+        route("번호이동 가능한 매장", Map.of("serviceType", "PORT_IN"));
+        var command = command("번호이동 방법과 번호이동 가능한 매장 찾아줘", null);
+        processor(false).request(command);
+
+        var asked = output(command);
+        assertThat(asked.path("message_type").asText()).isEqualTo("CLARIFICATION");
+        assertThat(asked.path("content").asText()).contains("1. 번호이동 방법", "신분증", "2. ", "어느 지역")
+                .doesNotContain("미납 요금이 있나요?");
+        assertThat(statuses()).containsExactly("DONE", "WAITING_CONDITION");
+        assertThat(answerInputs).extracting(AnswerInput::purpose).containsExactly(Purpose.GENERAL_FAQ);
+        assertThat(answerInputs.getFirst().confirmedConditions()).isEmpty();
+    }
+
     @Test
     void twoStoresMissingLocationAskToSplitInsteadOfAskingTwice() throws Exception {
         initialRouting = mapper.writeValueAsString(Map.of("intent", "BOTH", "confidence", 0.99,
@@ -325,17 +349,31 @@ class CompoundFaqStoreIntegrationTest {
                 new QueryRoutingAnalysisProvider(messages, routing, new QueryRoutingFollowupAnalysisProvider(routing)),
                 preparation, new FollowupConditionConverter(), null);
         var stores = new ChatStoreAnswerProvider(nearby, named, new ChatStoreConverter());
-        var answers = new PurposeRoutingAnswerProvider(input -> {
-            answerInputs.add(input);
-            if (!faqGrounded) {
-                return GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                        com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER,
-                        ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null));
+        AnswerProvider faqAnswers = new AnswerProvider() {
+            @Override
+            public GeneratedAnswer generate(AnswerInput input) {
+                answerInputs.add(input);
+                if (!faqGrounded) {
+                    return GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                            com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER,
+                            ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null));
+                }
+                return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        "신분증을 지참해 신청하세요.", ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
+                        List.of(new AnswerSource(faqId, "번호이동 안내", 1, null, (short) 1, null)));
             }
-            return new GeneratedAnswer(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                    "신분증을 지참해 신청하세요.", ChatMessage.AnswerBasis.GROUNDED, List.of(), null),
-                    List.of(new AnswerSource(faqId, "번호이동 안내", 1, null, (short) 1, null)));
-        }, input -> {
+
+            @Override
+            public boolean clarifies() {
+                return faqPlan.needsClarification();
+            }
+
+            @Override
+            public Prepared prepare(AnswerInput input, boolean plansClarification) {
+                return new Prepared(List.of(), faqPlan);
+            }
+        };
+        var answers = new PurposeRoutingAnswerProvider(faqAnswers, input -> {
             answerInputs.add(input);
             if (failStore) {
                 throw new IllegalStateException("변환 실패");
