@@ -119,7 +119,7 @@ public class SocialLoginSuccessHandler implements AuthenticationSuccessHandler {
         } catch (SocialEmailAlreadyLinkedException exception) {
             socialEmailMatchStore.issue(
                     request, principal.getProvider(), principal.getProviderUserId(),
-                    exception.getMatchedUserId(), exception.getMatchedEmail());
+                    exception.getMatchedUserId(), exception.getMatchedEmail(), principal.getDisplayName());
             redirectFailure(request, response, MemberErrorCode.EMAIL_LINK_REQUIRED.getCode());
             return null;
         } catch (GeneralException exception) {

@@ -84,6 +84,19 @@ public class MemberAuthController {
         return CustomResponse.onSuccess(socialAccountLinkService.confirmLink(request, httpRequest, httpResponse));
     }
 
+    @Operation(summary = "기존 이메일 계정에 연결하지 않고 소셜 계정으로 새 회원 시작",
+            description = "소셜 로그인 중 이메일이 일치하는 기존 계정을 발견했을 때(reason=MEMBER409-1), "
+                    + "기존 계정에 연결하지 않고 인증한 소셜 계정으로 새 회원을 만든 뒤 로그인 처리한다. "
+                    + "요청 본문은 없고, 소셜 인증 직후 세션에 남은 정보(10분)만 사용한다. "
+                    + "정보가 없거나 만료되면 MEMBER400-0을 반환한다.")
+    @PostMapping("/social/start-new")
+    public CustomResponse<LoginResponse> startNewSocialMember(
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        return CustomResponse.onSuccess(socialAccountLinkService.startNew(httpRequest, httpResponse));
+    }
+
     @Operation(summary = "이메일 로그인 방법 추가", description = "카카오·구글 등 소셜로만 가입한 회원이 이메일·비밀번호 로그인도 쓸 수 있게 등록한다. 로그인 상태에서만 호출 가능.")
     @PostMapping("/login-methods/email")
     public CustomResponse<SignUpResponse> addEmailLoginMethod(

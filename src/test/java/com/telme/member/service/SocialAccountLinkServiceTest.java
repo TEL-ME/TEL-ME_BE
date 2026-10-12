@@ -166,4 +166,51 @@ class SocialAccountLinkServiceTest {
 
         verify(guestSuccessionService).succeedGuest(eq(guestId), eq(matchedUser));
     }
+
+    @Test
+    @DisplayName("새 계정으로 시작하면 기존 계정에 연결하지 않고 세션의 소셜 정보로 새 회원을 만들어 로그인한다")
+    void 새_계정으로_시작() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        socialEmailMatchStore.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com", "구글 사용자");
+        User newUser = User.builder().userId(30L).name("구글 사용자").build();
+        when(socialMemberFinder.createWithoutEmailMatch(GOOGLE, "google-sub-1", "match@example.com", "구글 사용자"))
+                .thenReturn(newUser);
+
+        LoginResponse response = service.startNew(request, new MockHttpServletResponse());
+
+        assertThat(response).isEqualTo(new LoginResponse(30L, null));
+        verify(socialMemberFinder, never()).linkExisting(any(), any(), any(), any());
+        verify(userRepository, never()).findById(any());
+        assertThatThrownBy(() -> socialEmailMatchStore.require(request)).isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작할 pending 정보가 없으면 만료 예외를 던지고 회원을 만들지 않는다")
+    void 새_계정으로_시작_pending_없으면_예외() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        assertThatThrownBy(() -> service.startNew(request, new MockHttpServletResponse()))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED);
+        verify(socialMemberFinder, never()).createWithoutEmailMatch(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작할 때 guestId가 있으면 새 회원으로 게스트를 승계한다")
+    void 새_계정으로_시작_guestId_있으면_승계() {
+        MockHttpSession session = new MockHttpSession();
+        UUID guestId = UUID.randomUUID();
+        session.setAttribute(GUEST_ID_ATTRIBUTE, guestId);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(session);
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
+        User newUser = User.builder().userId(30L).build();
+        when(socialMemberFinder.createWithoutEmailMatch(KAKAO, "kakao-1", "match@example.com", "카카오닉네임"))
+                .thenReturn(newUser);
+
+        service.startNew(request, new MockHttpServletResponse());
+
+        verify(guestSuccessionService).succeedGuest(eq(guestId), eq(newUser));
+    }
 }

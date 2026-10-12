@@ -67,6 +67,17 @@ public class SocialMemberFinder {
                 .orElseThrow(() -> new GeneralException(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED));
     }
 
+    // 이메일이 같은 기존 회원이 있어도 연결하지 않고 새 회원을 만든다 — 고객이 "새 계정으로 시작"을 고른 경우에만 부른다.
+    // 같은 소셜 계정이 이미 만들어졌으면(중복 요청) 그 회원을 그대로 쓴다
+    public User createWithoutEmailMatch(
+            SocialAccount.Provider provider, String providerUserId, String email, String nickname) {
+        User user = socialAccountRepository.findByProviderAndProviderUserId(provider, providerUserId)
+                .map(SocialAccount::getUser)
+                .orElseGet(() -> insertNew(provider, providerUserId, email, nickname));
+        memberStatusChecker.checkActive(user);
+        return user;
+    }
+
     private User createNew(SocialAccount.Provider provider, String providerUserId, String email, String nickname) {
         if (email != null) {
             Optional<User> matched = userRepository.findByEmail(email);
@@ -75,6 +86,10 @@ public class SocialMemberFinder {
                 throw new SocialEmailAlreadyLinkedException(matched.get().getUserId(), email);
             }
         }
+        return insertNew(provider, providerUserId, email, nickname);
+    }
+
+    private User insertNew(SocialAccount.Provider provider, String providerUserId, String email, String nickname) {
         try {
             return transactionTemplate.execute(status -> {
                 User user = userRepository.save(User.builder().name(nickname).build());

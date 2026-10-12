@@ -196,6 +196,8 @@ class SocialLoginSuccessHandlerTest {
         assertThat(pending.provider()).isEqualTo(GOOGLE);
         assertThat(pending.providerUserId()).isEqualTo("google-sub-1");
         assertThat(pending.matchedUserId()).isEqualTo(20L);
+        // 연결하지 않고 새 회원으로 시작할 때 쓸 이름도 함께 남긴다
+        assertThat(pending.nickname()).isEqualTo("구글 사용자");
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("http://localhost:3000/oauth/callback?success=false&reason=MEMBER409-1");
     }

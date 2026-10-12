@@ -24,9 +24,15 @@ public class SocialEmailMatchStore {
     public void issue(
             HttpServletRequest request, SocialAccount.Provider provider,
             String providerUserId, Long matchedUserId, String matchedEmail) {
+        issue(request, provider, providerUserId, matchedUserId, matchedEmail, null);
+    }
+
+    public void issue(
+            HttpServletRequest request, SocialAccount.Provider provider,
+            String providerUserId, Long matchedUserId, String matchedEmail, String nickname) {
         request.getSession().setAttribute(
                 SESSION_ATTRIBUTE,
-                SocialEmailMatch.issue(provider, providerUserId, matchedUserId, matchedEmail, clock.instant()));
+                SocialEmailMatch.issue(provider, providerUserId, matchedUserId, matchedEmail, nickname, clock.instant()));
     }
 
     // 만료·시도횟수 초과면 바로 제거하고 예외 — 오래전에 인증한 소셜 계정이 엉뚱한 시점에 연결되는 것을 막는다

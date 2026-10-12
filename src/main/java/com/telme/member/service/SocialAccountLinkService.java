@@ -59,4 +59,23 @@ public class SocialAccountLinkService {
         loginCompletionService.completeLogin(linkedUser, guestId, httpRequest, httpResponse);
         return memberConverter.toLoginResponse(linkedUser);
     }
+
+    // 이메일이 같은 기존 계정에 연결하지 않고, 인증한 소셜 계정으로 새 회원을 만든다.
+    // 이메일 가입은 소유 확인이 없어 남이 먼저 가입했거나 비밀번호를 잊으면 연결할 수 없으므로 이 길을 둔다.
+    // 요청 값은 받지 않고 소셜 인증 직후 세션에 남긴 정보만 쓴다
+    public LoginResponse startNew(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        SocialEmailMatch pending = socialEmailMatchStore.require(httpRequest);
+
+        // confirmLink와 같은 이유로 회원 생성과 게스트 승계를 각각의 트랜잭션으로 처리한다
+        UUID guestId = guestIdResolver.resolve(httpRequest);
+        User newUser = socialMemberFinder.createWithoutEmailMatch(
+                pending.provider(), pending.providerUserId(), pending.matchedEmail(), pending.nickname());
+        if (guestId != null) {
+            transactionTemplate.executeWithoutResult(status -> guestSuccessionService.succeedGuest(guestId, newUser));
+        }
+
+        socialEmailMatchStore.clear(httpRequest);
+        loginCompletionService.completeLogin(newUser, guestId, httpRequest, httpResponse);
+        return memberConverter.toLoginResponse(newUser);
+    }
 }

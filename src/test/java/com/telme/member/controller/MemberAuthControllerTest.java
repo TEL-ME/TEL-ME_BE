@@ -459,6 +459,28 @@ class MemberAuthControllerTest {
     }
 
     @Test
+    @DisplayName("새 계정으로 시작은 로그인 전(permitAll)에 본문 없이 호출되고 새 회원 정보를 반환한다")
+    void 새_계정으로_시작은_로그인_전에_호출된다() throws Exception {
+        when(socialAccountLinkService.startNew(any(), any())).thenReturn(new LoginResponse(30L, null));
+
+        mockMvc.perform(post("/api/v1/auth/social/start-new"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.result.userId").value(30));
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작할 세션 정보가 없으면 MEMBER400-0을 반환한다")
+    void 새_계정으로_시작_세션_정보가_없으면_400() throws Exception {
+        when(socialAccountLinkService.startNew(any(), any()))
+                .thenThrow(new GeneralException(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED));
+
+        mockMvc.perform(post("/api/v1/auth/social/start-new"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED.getCode()));
+    }
+
+    @Test
     @DisplayName("카카오 연결 시작은 인증 없이 호출하면 401과 다른 API 오류와 같은 형식의 JSON을 반환한다")
     void 카카오_연결_시작은_미인증이면_401() throws Exception {
         mockMvc.perform(get("/api/v1/auth/kakao/link-start"))
