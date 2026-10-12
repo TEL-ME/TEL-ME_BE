@@ -174,9 +174,9 @@ public class ChatQuestionResolver {
         }
         // 공백 차이와 "[문의]" 같은 앞 표시는 호출 후보 선정에만 정규화하고 고객 원문은 그대로 전달한다.
         String gated = withoutLeadingTag(question);
-        String compact = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
-        boolean candidate = TARGET_REFERENCE.matcher(compact).find()
-                || TEMPORAL_REFERENCE.matcher(compact).find() || IMPLICIT.matcher(compact).find()
+        String noWhitespace = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
+        boolean candidate = TARGET_REFERENCE.matcher(noWhitespace).find()
+                || TEMPORAL_REFERENCE.matcher(noWhitespace).find() || IMPLICIT.matcher(noWhitespace).find()
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
                 || madeOfGenericWords(gated)
                 || shortFollowUpWithHistory(compact(gated), context);

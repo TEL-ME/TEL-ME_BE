@@ -1842,7 +1842,7 @@
       ]
     }
   ],
-  "reviewPurpose": "#126 리뷰로 판정 경로가 바뀐 문장 유형 10건. 지시어 없는 상담 대상 낱말 문장과 '처음' 단독 표현을 실측 전에 기대값과 함께 고정했다.",
+  "reviewPurpose": "판정 경로가 바뀐 문장 유형 10건. 지시어 없는 상담 대상 낱말 문장과 '처음' 단독 표현을 실측 전에 기대값과 함께 고정했다.",
   "accuracyCases": [
     {
       "id": "acc-implicit-01",
@@ -2202,6 +2202,146 @@
     }
   ],
   "accuracyPurpose": "문맥 판정 정확도 개선 검증용 30건. 프롬프트 예시·기존 사례와 겹치지 않으며 개선 작업 전에 기대값을 고정했다. independent 7건은 후보를 넓혔을 때 이전 주제에 잘못 연결되는지 확인하는 대조군이다.",
+  "costCases": [
+    {
+      "id": "cost-bare-01",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "수수료는 얼마나 나와요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-bare-02",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "방문비 따로 있어요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-bare-03",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "할부금 남은 건 어떻게 돼요?",
+      "history": [
+        "휴대폰 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-bare-04",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "부가세 포함된 금액이에요?",
+      "history": [
+        "로밍 요금제를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-bare-05",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "수수료 붙나요?",
+      "history": [
+        "유심 재발급을 받으려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-bare-06",
+      "group": "bare_cost",
+      "split": "cost",
+      "question": "위약금도 내야 하나요?",
+      "history": [
+        "인터넷 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-explicit-01",
+      "group": "explicit_cost",
+      "split": "cost",
+      "question": "혹시 번호이동할 때 수수료는 얼마나 붙어요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "cost-explicit-02",
+      "group": "explicit_cost",
+      "split": "cost",
+      "question": "인터넷 해지 시 장비 위약금은 얼마나 나오나요?",
+      "history": [
+        "해외 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "cost-explicit-03",
+      "group": "explicit_cost",
+      "split": "cost",
+      "question": "유심 재발급 수수료 얼마예요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "cost-boundary-01",
+      "group": "boundary_cost",
+      "split": "cost",
+      "question": "기사님 방문비용은 따로 청구되나요?",
+      "history": [
+        "인터넷 이전 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "cost-long-01",
+      "group": "long_cost",
+      "split": "cost",
+      "question": "설치 기사님 방문비용은 따로 청구되는 건가요?",
+      "history": [
+        "인터넷 이전 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    }
+  ],
+  "costPurpose": "비용 항목 후속 질문 확인용 11건. 실측 전에 기대값을 고정했다. bare_cost는 지시어 없이 비용 항목만 묻는 후속 질문, explicit_cost는 업무가 함께 있어 이전 주제를 붙이지 않아야 하는 대조군, boundary_cost는 공백·문장 부호 제외 15자 경계, long_cost는 15자를 넘는 알려진 한계 확인용이다. 프롬프트 예시와 겹치지 않는다.",
   "promptOverlapIds": [
     "ambiguous-01",
     "ambiguous-03",
