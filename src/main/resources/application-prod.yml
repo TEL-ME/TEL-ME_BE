@@ -8,6 +8,8 @@ spring:
     locations: classpath:db/migration
 
 server:
+  # 앞단(ALB/nginx)에서 TLS를 끝내도 X-Forwarded-Proto를 읽어 OAuth 리다이렉트 URI를 https로 만든다
+  forward-headers-strategy: framework
   servlet:
     session:
       cookie:
