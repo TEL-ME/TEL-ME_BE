@@ -17,7 +17,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
-// 가입 상태·이력 쿼리를 실제 DB(V30 마이그레이션)로 확인한다. 트랜잭션 롤백으로 흔적을 남기지 않는다
 @SpringBootTest
 @Transactional
 class SubscriptionRepositoryTest {
@@ -88,13 +87,11 @@ class SubscriptionRepositoryTest {
         historyRepository.saveAndFlush(
                 SubscriptionHistory.changed(id, litePlanId, standardPlanId, CHANGE_EFFECTIVE, CHANGE_REQUESTED));
 
-        // 변경 신청 직후: 아직 라이트가 현재이고 스탠다드로의 변경이 예약 상태
         assertThat(historyRepository.findCurrent(id, CHANGE_REQUESTED))
                 .get().extracting(SubscriptionHistory::getToPlanId).isEqualTo(litePlanId);
         assertThat(historyRepository.findPendingChange(id, CHANGE_REQUESTED))
                 .get().extracting(SubscriptionHistory::getToPlanId).isEqualTo(standardPlanId);
 
-        // 적용 시작 시각 정각: 스탠다드가 현재이고 예약은 없음
         assertThat(historyRepository.findCurrent(id, CHANGE_EFFECTIVE))
                 .get().extracting(SubscriptionHistory::getToPlanId).isEqualTo(standardPlanId);
         assertThat(historyRepository.findPendingChange(id, CHANGE_EFFECTIVE)).isEmpty();

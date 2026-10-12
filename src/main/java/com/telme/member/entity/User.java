@@ -61,7 +61,7 @@ public class User {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
-    // 청소년·시니어 요금제 가입 때 받아 저장한다. 이미 있으면 바꾸지 않는다
+    // 청소년·시니어 요금제 가입 때 저장
     @Column(name = "birth_date")
     private LocalDate birthDate;
 

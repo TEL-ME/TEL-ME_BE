@@ -12,7 +12,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     Optional<Subscription> findByUserIdAndStatus(Long userId, Subscription.Status status);
 
-    // 변경·해지가 같은 구독에 동시에 들어와도 월 1회 규칙이 깨지지 않게 구독 행을 잠근다
+    // 변경·해지 동시 요청에도 월 1회가 지켜지도록 구독 행 잠금
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select subscription

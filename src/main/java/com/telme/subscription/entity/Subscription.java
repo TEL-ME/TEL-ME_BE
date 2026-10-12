@@ -15,7 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// userId는 member 도메인 엔티티를 직접 참조하지 않고 id만 보관한다. 현재 요금제는 이력(SubscriptionHistory)에서 계산한다
+// 현재 요금제는 저장하지 않고 SubscriptionHistory에서 계산
 @Entity
 @Table(name = "user_subscriptions")
 @Getter

@@ -15,8 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 유형별 요금제 조합(가입: to만, 변경: from·to, 해지: from만)은 DB CHECK가 막는다.
-// createdAt은 신청 시각이라 월 1회 규칙 판단에 쓰므로 DB 기본값이 아니라 서비스의 Clock으로 채운다
+// createdAt은 월 1회 판단용 신청 시각이라 DB 기본값 대신 Clock 값 사용
 @Entity
 @Table(name = "subscription_histories")
 @Getter
