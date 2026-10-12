@@ -419,11 +419,24 @@ class ChatQuestionResolverTest {
         assertThat(third.sourceMessageIds()).containsExactly(900L);
     }
 
+    // 상담 대상 낱말만 있고 지시어가 없으면 규칙으로 정하지 않고 현재 대상 판정 모델을 실제로 호출한다.
     @ParameterizedTest
     @ValueSource(strings = {"요금 언제 나와요?", "요금 변경 어떻게 해요?", "요금은 얼마예요?", "취소 어떻게 해요?",
-            "신청 언제까지 해요?"})
-    void topicCapableWordWithoutReferenceIsLeftToTheModel(String question) {
+            "신청 언제까지 해요?", "변경은 어디서 해요?", "처음 요금은 언제 나와요?"})
+    void topicCapableWordWithoutReferenceIsLeftToTheModel(String question) throws Exception {
         assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
+        respond(model, explicit());
+        var result = resolver.resolve(command(question), null);
+        assertThat(result.needsClarification()).isFalse();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"처음 물어본 거 요금은요?", "첫 번째로 문의한 건 취소할 수 있어요?"})
+    void ordinalPhraseStillCountsAsReference(String question) {
+        assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isTrue();
     }
 
     @Test

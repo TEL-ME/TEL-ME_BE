@@ -45,14 +45,15 @@ public class ChatQuestionResolver {
                     + "|할수있어요|할수있나요|가능해요|가능한가요|되나요|되죠|돼요|드나요|나와요|나오나요"
                     + "|걸려요|걸리나요|걸리죠|걸려|있어요|있나요|알려주세요|알려줘|뭐예요|뭐야"
                     + "|인가요|이에요|예요|에요|하나요|해요|나요|죠|요|야"
-                    + "|은|는|이|가|을|를|도|에|로|건|거|것)+$");
+                    + "|까지|부터|은|는|이|가|을|를|도|에|로|건|거|것)+$");
     private static final Pattern ORDINAL_REFERENCE = Pattern.compile(
             "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한|신청한)|처음(?:물어본|문의한|말한|질문한|신청한)");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무가 아니라 묻는 항목인 합성어. 이 안의 낱말은 상담 대상으로 세지 않는다.
     private static final Pattern ITEM_COMPOUND = Pattern.compile("신청방법|처리기간");
+    // '처음', '첫 번째'는 "처음 요금"처럼 일반 표현에도 쓰여 위치 지정 꼴(ORDINAL_REFERENCE)일 때만 지시어로 본다.
     private static final Pattern REFERENCE_MARKER = Pattern.compile(
-            "그럼|그러면|그때|아까|앞서|이전에|그건|그거|그것|이건|이거|이것|(?:첫|두|세|네)번째|처음");
+            "그럼|그러면|그때|아까|앞서|이전에|그건|그거|그것|이건|이거|이것");
     private static final int GENERIC_FOLLOW_UP_MAX_LENGTH = 30;
     static final String SYSTEM_PROMPT = """
             현재 고객 문장만 보고 상담 대상이 명시되었는지 판정합니다. 정책 답변이나 신청 조건을 확인하지 않습니다.
@@ -162,7 +163,8 @@ public class ChatQuestionResolver {
         String compact = question.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
         boolean candidate = TARGET_REFERENCE.matcher(compact).find()
                 || TEMPORAL_REFERENCE.matcher(compact).find() || IMPLICIT.matcher(compact).find()
-                || isGenericFollowUp(question);
+                // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
+                || madeOfGenericWords(question);
         if (mode == Mode.REGEX_GATED && !candidate) {
             Resolution result = new Resolution(question, false, List.of());
             recordResolution(command, question, result);
@@ -299,15 +301,22 @@ public class ChatQuestionResolver {
     }
 
     static boolean isGenericFollowUp(String question) {
-        String compact = compact(question);
-        if (compact.isEmpty() || compact.length() > GENERIC_FOLLOW_UP_MAX_LENGTH
-                || !GENERIC_FOLLOW_UP.matcher(compact).matches()) {
+        if (!madeOfGenericWords(question)) {
             return false;
         }
         // 요금·변경·취소처럼 그 자체로 상담 대상이 될 수 있는 낱말은 지시어·시점 표현이 함께 있을 때만 일반어로 본다.
         // "요금 언제 나와요?"는 현재 대상 판정 모델로 넘기고 "그때 요금은 얼마나 나와요?"는 대상 생략으로 둔다.
+        String compact = compact(question);
         String withoutItems = ITEM_COMPOUND.matcher(compact).replaceAll("");
-        return !TOPIC_CAPABLE.matcher(withoutItems).find() || REFERENCE_MARKER.matcher(compact).find();
+        return !TOPIC_CAPABLE.matcher(withoutItems).find() || REFERENCE_MARKER.matcher(compact).find()
+                || ORDINAL_REFERENCE.matcher(compact).find();
+    }
+
+    // 문장 전체가 일반어 목록의 낱말로만 이뤄졌는지. 대상 생략 여부와 별개로 모델 호출 후보를 고르는 데도 쓴다.
+    private static boolean madeOfGenericWords(String question) {
+        String compact = compact(question);
+        return !compact.isEmpty() && compact.length() <= GENERIC_FOLLOW_UP_MAX_LENGTH
+                && GENERIC_FOLLOW_UP.matcher(compact).matches();
     }
 
     // "첫 번째로 물어본"처럼 위치를 지정하면 몇 번째 업무인지는 코드가 정한다.
