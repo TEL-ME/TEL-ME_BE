@@ -127,9 +127,10 @@ class PromptRelationComparisonProbe {
             }
         };
         AnswerGuard guard=new AnswerGuard() {
-            @Override public String applyEvidencePolicy(String raw,String evidence,String question) {
+            @Override public String applyEvidencePolicy(
+                    String raw,String evidence,String question,String confirmed) {
                 o.guardApplied=true;
-                try { o.guardFinal=super.applyEvidencePolicy(raw,evidence,question); return o.guardFinal; }
+                try { o.guardFinal=super.applyEvidencePolicy(raw,evidence,question,confirmed); return o.guardFinal; }
                 catch(RuntimeException e) { o.guardError=e.getClass().getSimpleName()+": "+e.getMessage(); throw e; }
             }
         };

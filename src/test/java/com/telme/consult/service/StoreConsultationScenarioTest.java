@@ -29,7 +29,7 @@ class StoreConsultationScenarioTest {
                         new DialogueInput(
                                 1L,
                                 Purpose.NEARBY_STORE,
-                                Map.of(),
+                                Map.of("serviceType", Condition.declined()),
                                 Map.of(),
                                 LocationStatus.MISSING));
         assertEquals(Action.ASK, first.action());
@@ -54,7 +54,7 @@ class StoreConsultationScenarioTest {
                         new DialogueInput(
                                 1L,
                                 Purpose.NEARBY_STORE,
-                                Map.of(),
+                                Map.of("serviceType", Condition.declined()),
                                 Map.of("location", Condition.filled("강남역")),
                                 LocationStatus.DECLINED));
         assertEquals(Action.PROCEED, result.action());
@@ -99,7 +99,7 @@ class StoreConsultationScenarioTest {
                         new DialogueInput(
                                 1L,
                                 Purpose.NEARBY_STORE,
-                                Map.of(),
+                                Map.of("serviceType", Condition.declined()),
                                 Map.of("location", Condition.declined()),
                                 LocationStatus.DECLINED));
         assertEquals(Action.ALTERNATIVE_GUIDANCE, result.action());

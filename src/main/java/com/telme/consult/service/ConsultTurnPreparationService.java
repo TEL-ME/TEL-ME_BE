@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.consult.converter.ConsultAnalysisConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
+import com.telme.consult.repository.PendingClarificationFinder.Candidate;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -36,6 +37,10 @@ public class ConsultTurnPreparationService {
                 input.purpose(),
                 input.updates(),
                 input.locationStatus());
+    }
+
+    public void cancelWaiting(long sessionId, java.util.Collection<Long> consultRequestIds) {
+        consultService.cancelWaiting(sessionId, consultRequestIds);
     }
 
     // 소유권을 확인해 얻은 문맥과 분석에서 선택한 질문이 일치해야 이어간다.
@@ -96,7 +101,18 @@ public class ConsultTurnPreparationService {
                         resolution.updates(),
                         locationStatus);
         return new PreparedWaitingUpdate(
-                result, purpose, candidate.originalUserQuery(), candidate.queryText());
+                keepWaiting(result, resolution, candidate),
+                purpose, candidate.originalUserQuery(), candidate.queryText());
+    }
+
+    // DialogueService는 매장 조건만 안다. FAQ 조건을 되묻는 중에 답을 못 받으면 PROCEED가 나와
+    // 대기가 풀린 것처럼 보인다. 바꿀 조건이 없으면 기존 질문의 대기를 그대로 둔다
+    private ConsultService.PreparationResult keepWaiting(
+            ConsultService.PreparationResult result, Resolution resolution, Candidate candidate) {
+        if (result.waitingForReply() || !resolution.updates().isEmpty()) {
+            return result;
+        }
+        return new ConsultService.PreparationResult(null, candidate.questionMessageId());
     }
 
     private Purpose purpose(String intent) {

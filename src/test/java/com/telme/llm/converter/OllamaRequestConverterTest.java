@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +19,18 @@ class OllamaRequestConverterTest {
 
     private final OllamaRequestConverter converter = new OllamaRequestConverter(
             new LlmProperties("exaone3.5:7.8b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
+
+    @Test
+    void contextResolutionKeepsRoutingDefaultsAndExplicitLimits() {
+        var defaults = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question").build(), false);
+        assertThat(defaults.options().temperature()).isEqualTo(0.0);
+        assertThat(defaults.options().numPredict()).isEqualTo(512);
+        var explicit = converter.toChatRequest(LlmRequest.builder()
+                .taskType(TaskType.CONTEXT_RESOLUTION).userPrompt("question")
+                .temperature(0.0).maxTokens(256).build(), false);
+        assertThat(explicit.options().numPredict()).isEqualTo(256);
+    }
 
     @Test
     @DisplayName("규칙과 질문을 system, user 순서로 담는다")
@@ -111,5 +125,41 @@ class OllamaRequestConverterTest {
 
         assertThat(result.model()).isEqualTo("exaone3.5:7.8b");
         assertThat(result.stream()).isTrue();
+    }
+
+    @Test
+    void 요청에_담긴_JSON_Schema를_그대로_전달한다() {
+        Map<String, Object> schema = Map.of("type", "object", "required", List.of("answer"));
+        OllamaChatRequest structured = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").responseSchema(schema).build(), false);
+        OllamaChatRequest freeJson = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON).build(), false);
+        OllamaChatRequest text = converter.toChatRequest(LlmRequest.builder().userPrompt("질문").build(), false);
+
+        assertThat(structured.format()).isEqualTo(schema);
+        assertThat(freeJson.format()).isEqualTo("json");
+        assertThat(text.format()).isNull();
+    }
+
+    @Test
+    void 프롬프트_버전만으로는_응답_형식을_정하지_않는다() {
+        OllamaChatRequest request = converter.toChatRequest(LlmRequest.builder()
+                .userPrompt("질문").format(ResponseFormat.JSON)
+                .promptVersion("multiturn-resolution-v30-reference").build(), false);
+
+        assertThat(request.format()).isEqualTo("json");
+        assertThat(request.think()).isNull();
+    }
+
+    @Test
+    void 사고_모드는_요청이_끄고_모델이_지원할_때만_끈다() {
+        OllamaRequestConverter qwen = new OllamaRequestConverter(
+                new LlmProperties("qwen3:14b", Duration.ofSeconds(5), Duration.ofSeconds(60), 8192));
+
+        assertThat(qwen.toChatRequest(LlmRequest.builder().userPrompt("질문").think(false).build(), false).think())
+                .isFalse();
+        assertThat(qwen.toChatRequest(LlmRequest.builder().userPrompt("질문").build(), false).think()).isNull();
+        assertThat(converter.toChatRequest(LlmRequest.builder().userPrompt("질문").think(false).build(), false).think())
+                .isNull();
     }
 }

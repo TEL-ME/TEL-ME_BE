@@ -4,6 +4,7 @@ import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 
 import org.springframework.stereotype.Component;
@@ -29,9 +30,14 @@ public class ConsultAnalysisConverter {
                                 throw new IllegalArgumentException("조건 이름이 필요합니다.");
                             }
                             // 빈 추출 값으로 이전에 확인한 조건을 지우지 않는다.
-                            if (value != null && !value.isBlank()) {
-                                updates.put(key, Condition.filled(value));
+                            if (value == null || value.isBlank()) {
+                                return;
                             }
+                            // 업무를 하나로 좁힐 수 없다는 표시는 값이 아니라 되묻지 않겠다는 뜻이다
+                            updates.put(key, FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
+                                    && FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED.equals(value)
+                                    ? Condition.declined()
+                                    : Condition.filled(value));
                         });
         Purpose purpose =
                 switch (analysis.intent()) {

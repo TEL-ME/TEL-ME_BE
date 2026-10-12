@@ -8,6 +8,7 @@ import com.telme.chat.dto.res.AdminUnansweredSourceResponse;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.rag.entity.MessageSource;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +18,10 @@ public class AdminUnansweredConverter {
     // 목록은 훑어보는 화면이라 본문을 잘라 보낸다. 전문은 상세에서 본다
     private static final int QUESTION_PREVIEW_LENGTH = 60;
 
-    public AdminUnansweredListResponse toListResponse(Page<ChatMessage> messages) {
+    public AdminUnansweredListResponse toListResponse(
+            Page<ChatMessage> messages, Map<Long, String> originQuestions) {
         List<AdminUnansweredListItemResponse> items = messages.getContent().stream()
-                .map(this::toListItem)
+                .map(message -> toListItem(message, originQuestions.get(message.getMessageId())))
                 .toList();
         return new AdminUnansweredListResponse(
                 items,
@@ -29,21 +31,24 @@ public class AdminUnansweredConverter {
                 messages.getTotalPages());
     }
 
-    public AdminUnansweredListItemResponse toListItem(ChatMessage message) {
+    public AdminUnansweredListItemResponse toListItem(ChatMessage message, String originQuestion) {
         return new AdminUnansweredListItemResponse(
                 message.getMessageId(),
                 message.getSession().getSessionId(),
                 typeOf(message).name(),
                 preview(question(message)),
+                preview(originQuestion),
                 message.getCreatedAt());
     }
 
-    public AdminUnansweredDetailResponse toDetail(ChatMessage message, List<MessageSource> sources) {
+    public AdminUnansweredDetailResponse toDetail(
+            ChatMessage message, List<MessageSource> sources, String originQuestion) {
         return new AdminUnansweredDetailResponse(
                 message.getMessageId(),
                 message.getSession().getSessionId(),
                 typeOf(message).name(),
                 question(message),
+                originQuestion,
                 message.getContent(),
                 message.getCreatedAt(),
                 sources.stream().map(this::toSource).toList());

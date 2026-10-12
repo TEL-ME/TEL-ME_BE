@@ -107,7 +107,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<CustomResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
 
-        log.warn("[HttpMessageNotReadableException] {}", ex.getMessage());
+        // 파싱 오류 메시지에는 좌표 등 요청 값이 포함될 수 있다.
+        log.warn("[HttpMessageNotReadableException] {}",
+                ex.getMostSpecificCause().getClass().getSimpleName());
 
         BaseErrorCode errorCode = CommonErrorCode.BAD_REQUEST;
 

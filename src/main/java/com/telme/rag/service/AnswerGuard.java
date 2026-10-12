@@ -25,6 +25,11 @@ public class AnswerGuard {
             "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
 
     // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
+    private static final int MIN_GROUNDED_RUN = 10;
+    private static final Pattern GENERIC_PHRASES = Pattern.compile(
+            "(?:안내받으실|안내드릴|확인하실|신청하실|이용하실|하실|받으실|드릴)?수있(?:습니다|어요)"
+                    + "|가능합니다|됩니다|입니다|합니다|있습니다|없습니다");
+
     private static final Pattern MEASURE = Pattern.compile(
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
                     + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)");
@@ -49,6 +54,47 @@ public class AnswerGuard {
         return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_ANSWER.length()).strip();
     }
 
+    // 답변 불가 문구로 시작해도 뒤에 근거 문장과 겹치는 설명이 있으면 그 문장만 남긴다. 근거와 겹치지 않는 문장은 잘라낸다
+    public String trimAfterNoEvidence(String answer, String context) {
+        String trimmed = trimAfterNoEvidence(answer);
+        String phrase = AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        if (answer == null || context == null || !answer.strip().startsWith(phrase)) {
+            return trimmed;
+        }
+        StringBuilder grounded = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip().substring(phrase.length()).strip())) {
+            if (!sentence.isBlank() && longestCommonRun(withoutGenericPhrases(compactText(sentence)), compactText(context)) >= MIN_GROUNDED_RUN) {
+                grounded.append(grounded.isEmpty() ? "" : " ").append(sentence.strip());
+            }
+        }
+        return grounded.isEmpty() ? trimmed : grounded.toString();
+    }
+
+    // 일반 안내 표현은 겹침에서 제외
+    private static String withoutGenericPhrases(String compact) {
+        return GENERIC_PHRASES.matcher(compact).replaceAll("");
+    }
+
+    private static String compactText(String text) {
+        return text.replaceAll("[\\s\\p{Punct}]", "");
+    }
+
+    private static int longestCommonRun(String text, String source) {
+        int[] previous = new int[source.length() + 1];
+        int longest = 0;
+        for (int i = 1; i <= text.length(); i++) {
+            int[] current = new int[source.length() + 1];
+            for (int j = 1; j <= source.length(); j++) {
+                if (text.charAt(i - 1) == source.charAt(j - 1)) {
+                    current[j] = previous[j - 1] + 1;
+                    longest = Math.max(longest, current[j]);
+                }
+            }
+            previous = current;
+        }
+        return longest;
+    }
+
     // 프롬프트 3번 규칙이 있어도 지어내 문장째 걷어낸다
     private static final Set<String> CHANNELS = Set.of(
             "샵", "이벤트", "홈페이지", "페이지", "사이트", "앱", "메뉴",
@@ -56,6 +102,11 @@ public class AnswerGuard {
     );
 
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
+    // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
+    private static final Map<String, Set<String>> ATTRIBUTE_SYNONYMS = Map.of(
+            "위약금", Set.of("위약금", "할인 반환금", "반환금")
+    );
+
     private static final Set<String> POLICY_ATTRIBUTES = Set.of(
             "부가세", "현금영수증", "택배비", "카드", "현금", "문자", "위약금",
             "할부", "재심사", "추가 서류", "관련 절차"
@@ -145,14 +196,22 @@ public class AnswerGuard {
      * 문장 제거가 먼저 실행되어야 남은 답변의 수치만 검증할 수 있으므로 순서를 이곳에서 관리한다.
      */
     public String applyEvidencePolicy(String answer, String context, String userQuery) {
-        String filtered = trimAfterNoEvidence(answer);
+        return applyEvidencePolicy(answer, context, userQuery, "");
+    }
+
+    /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
+    public String applyEvidencePolicy(
+            String answer, String context, String userQuery, String confirmedValues) {
+        String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
-        verifyAmounts(filtered, context, userQuery);
-        verifyMeasures(filtered, context, userQuery);
+        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
+                ? context : context + "\n" + confirmedValues;
+        verifyAmounts(filtered, numericEvidence, userQuery);
+        verifyMeasures(filtered, numericEvidence, userQuery);
         return filtered;
     }
 
@@ -216,11 +275,12 @@ public class AnswerGuard {
         if (context == null) {
             return false;
         }
+        Set<String> evidenceWords = ATTRIBUTE_SYNONYMS.getOrDefault(attribute, Set.of(attribute));
 
         ClaimPolarity answerPolarity = attributePolarity(answerSentence, attribute);
         boolean mentioned = false;
         for (String evidenceSentence : SENTENCE.split(context)) {
-            if (!evidenceSentence.contains(attribute)) {
+            if (evidenceWords.stream().noneMatch(evidenceSentence::contains)) {
                 continue;
             }
             mentioned = true;
@@ -379,7 +439,8 @@ public class AnswerGuard {
         Set<String> invented = ungroundedValues(
                 answer, context, userQuery, this::measuresIn,
                 (value, sentence) -> isSafeUserReference(sentence)
-                        || isOutsideSupportedUpperBound(value, sentence, context));
+                        || isOutsideSupportedUpperBound(value, sentence, context)
+                        || isCustomerElapsed(value, sentence));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
             throw new AnswerGuardException("근거에 없는 수치: " + invented);
@@ -410,6 +471,12 @@ public class AnswerGuard {
             invented.addAll(sentenceValues);
         }
         return invented;
+    }
+
+    // 고객이 자기 경과 기간을 말한 것을 받아 적는 문장이다. "개통한 지 4개월이 되셨으므로", "2개월밖에 지나지 않으셨기 때문에"가 그 경우다
+    private boolean isCustomerElapsed(String userMeasure, String sentence) {
+        return Pattern.compile(Pattern.quote(userMeasure) + "(?:이|가|째|밖에)?\\s*(?:되셨|되었|됐|지나셨|지났|지나지|경과)")
+                .matcher(sentence).find();
     }
 
     private boolean isOutsideSupportedUpperBound(

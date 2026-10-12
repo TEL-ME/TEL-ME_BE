@@ -7,8 +7,11 @@ import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.chat.safety.ChatOutputBlockedException;
+import com.telme.chat.safety.ChatOutputGuard;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ public class ChatExecutionService {
     private final ChatMessageAppender chatMessageAppender;
     private final ChatMessageConverter chatMessageConverter;
     private final ApplicationEventPublisher eventPublisher;
+    private final ChatOutputGuard outputGuard;
 
     public ChatExecutionState startAnswer(Long executionId) {
         ChatExecution execution = getRunningExecution(executionId);
@@ -41,6 +45,11 @@ public class ChatExecutionService {
     public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
+        verifyOutput(() -> outputGuard.verify(answer));
+        String followUps = chatMessageConverter.toJson(answer.followUps());
+        String stores = chatMessageConverter.toJson(answer.storeResults());
+        String searchContext = chatMessageConverter.toContextJson(answer.storeSearchContext());
+        verifyOutput(() -> outputGuard.verifySerialized(answer.content(), followUps, stores, searchContext));
         Instant completedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, answer.messageType());
@@ -48,8 +57,9 @@ public class ChatExecutionService {
                 answer.messageType(),
                 answer.content(),
                 answer.answerBasis(),
-                chatMessageConverter.toJson(answer.followUps()),
-                chatMessageConverter.toJson(answer.storeResults()),
+                followUps,
+                stores,
+                searchContext,
                 completedAt
         );
         execution.complete(message, completedAt);
@@ -62,16 +72,24 @@ public class ChatExecutionService {
     }
 
     public ChatExecutionState askClarification(Long executionId, String question) {
+        return askClarification(executionId, question, List.of());
+    }
+
+    public ChatExecutionState askClarification(Long executionId, String question, List<String> options) {
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("되묻기 질문은 비어 있을 수 없습니다.");
         }
 
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
+        verifyOutput(() -> outputGuard.verifyClarification(question, options));
         Instant completedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
-        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, null, null, completedAt);
+        // 선택지가 있으면 후속 질문 자리에 실어 보낸다. 화면이 버튼으로 그려 눌러서 답할 수 있다
+        String followUps = options == null || options.isEmpty() ? null : chatMessageConverter.toJson(options);
+        verifyOutput(() -> outputGuard.verifySerializedClarification(question, followUps));
+        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, followUps, null, completedAt);
         execution.complete(message, completedAt);
         session.waitForClarification();
         session.touch(completedAt);
@@ -102,10 +120,25 @@ public class ChatExecutionService {
         Instant endedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.ERROR);
+        if (failure.isOutputSafetyFailure()) {
+            // 안전 안내만 남긴다. 차단 후보·근거·추천 질문을 정상 답변 이력으로 저장하지 않는다.
+            message.complete(ChatMessage.MessageType.ERROR, failure.message(), null, null, null, endedAt);
+        }
         message.fail(failure.status(), endedAt);
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
         return flushed(execution);
+    }
+
+    private void verifyOutput(Runnable inspection) {
+        try {
+            inspection.run();
+        } catch (ChatOutputBlockedException blocked) {
+            throw blocked;
+        } catch (RuntimeException inspectionFailure) {
+            // 검사 오류도 검증되지 않은 후보를 전송하지 않는다. 원문·예외 본문은 전달하지 않는다.
+            throw new GeneralException(ChatErrorCode.OUTPUT_CHECK_FAILED);
+        }
     }
 
     private ChatExecutionState flushed(ChatExecution execution) {

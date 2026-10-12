@@ -3,6 +3,7 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -20,9 +22,15 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
+import com.telme.llm.service.LlmClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+
+import org.junit.jupiter.api.DisplayName;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +38,227 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 class FaqSearchAnswerProviderTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "청소년 요금제하고 시니어 요금제 차이가 뭐야",
+            "청소년 요금제와 시니어 요금제 차이",
+            "청소년 요금제와 시니어 요금제 가입 연령 비교"
+    })
+    void comparisonRequestAndSearchPhraseReachEvidenceValidationInsteadOfFreeFormGeneration(String question) {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        LlmClient model = mock(LlmClient.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var youth = new FaqSearchResponse(3L, null, "test", "청소년 요금제 가입 연령",
+                "청소년 요금제는 만 18세 이하만 가입할 수 있습니다.", 0.9, 1, null, 1, null);
+        var senior = new FaqSearchResponse(4L, null, "test", "시니어 요금제 가입 연령",
+                "시니어 요금제는 만 65세 이상만 가입할 수 있습니다.", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(youth, senior));
+        when(model.generate(any())).thenReturn("""
+                {"answerable":true,"leftTarget":"청소년 요금제","rightTarget":"시니어 요금제",
+                 "criterion":"차이","leftFaqId":3,
+                 "leftQuote":"청소년 요금제는 만 18세 이하만 가입할 수 있습니다.","rightFaqId":4,
+                 "rightQuote":"시니어 요금제는 만 65세 이상만 가입할 수 있습니다."}
+                """);
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                new LlmComparisonEvidenceResolver(model, new ObjectMapper()));
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                question, "두 요금제 차이", Map.of()));
+
+        assertThat(result.answer().content()).contains(youth.answer(), senior.answer());
+        assertThat(result.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
+        assertThat(result.sources()).extracting(source -> source.faqId()).containsExactly(3L, 4L);
+        verify(model).generate(any());
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    void comparisonUsesOnlySourcesApprovedByResolver() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var source = new FaqSearchResponse(7L, null, "test", "비교", "A와 B가 다릅니다.",
+                0.9, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of(source));
+        when(evidence.applies("A와 B를 비교해줘")).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        var expected = GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "안내드릴 수 있는 정보가 없습니다.",
+                ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null));
+        when(answers.generate(any(), any())).thenReturn(expected);
+
+        var result = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence)
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                        "A와 B를 비교해줘", "A B 비교", Map.of()));
+
+        assertThat(result).isSameAs(expected);
+        verify(answers).generate(any(), org.mockito.ArgumentMatchers.eq(List.of()));
+    }
+
+    @Test
+    void comparisonReturnsOnlyVerifiedFaqQuotesWithoutFreeFormGeneration() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var source = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.9, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of(source));
+        when(evidence.applies("명의 변경과 번호 이동 서류 비교해줘")).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(source),
+                        "명의 변경: 양도인과 양수인의 신분증이 각각 필요합니다."));
+
+        var result = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence)
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                        "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().content()).contains("양도인과 양수인의 신분증");
+        assertThat(result.answer().followUps()).isEmpty();
+        assertThat(result.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
+        assertThat(result.sources()).extracting(sourceRecord -> sourceRecord.faqId()).containsExactly(65L);
+        verifyNoInteractions(answers);
+    }
+
+    // 비교한 FAQ마다 추천 질문을 하나씩 붙이고, 겹치면 그 FAQ의 다음 추천을 쓴다
+    @Test
+    void comparisonAnswerGetsOneSuggestedQuestionPerComparedFaq() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var nameChange = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.9, 1, null, 1, null);
+        var porting = new FaqSearchResponse(66L, null, "test", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(nameChange, porting));
+        when(evidence.applies(any())).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(nameChange, porting),
+                        "명의 변경: 양도인과 양수인의 신분증이 각각 필요합니다.\n번호 이동: 본인 신분증이 필요합니다."));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(nameChange)))
+                .thenReturn(List.of("가까운 매장을 알려주세요.", "명의변경 수수료가 있나요?"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
+                .thenReturn(List.of("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of());
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
+                FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().followUps())
+                .containsExactly("가까운 매장을 알려주세요.", "번호이동 수수료가 있나요?");
+        verifyNoInteractions(answers);
+    }
+
+    // 비교한 정책 자체를 가리키는 추천(명의변경 쪽에서 번호이동 서류)은 다시 띄우지 않는다
+    @Test
+    void comparisonAnswerSkipsSuggestionsAboutComparedPolicies() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var nameChange = new FaqSearchResponse(65L, null, "test", "명의변경 서류", "신분증", 0.9, 1, null, 1, null);
+        var porting = new FaqSearchResponse(66L, null, "test", "번호이동 서류", "신분증", 0.9, 1, null, 2, null);
+        when(searches.search(any())).thenReturn(List.of(nameChange, porting));
+        when(evidence.applies(any())).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(nameChange, porting), "비교 답변"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(nameChange)))
+                .thenReturn(List.of("번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 수수료가 있나요?"));
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(porting)))
+                .thenReturn(List.of("명의변경 시 필요한 서류를 정리해서 알려주세요.", "번호이동 수수료가 있나요?"));
+        when(suggestions.questionsAbout(List.of(65L, 66L))).thenReturn(java.util.Set.of(
+                "번호이동 신청 시 필요한 서류를 알려주세요.", "명의변경 시 필요한 서류를 정리해서 알려주세요."));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(), evidence,
+                FaqCandidateEvidenceResolver.disabled(), new AnswerContextConverter(), suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경과 번호 이동 서류 비교해줘", "명의 변경 번호 이동", Map.of()));
+
+        assertThat(result.answer().followUps()).containsExactly("명의변경 수수료가 있나요?", "번호이동 수수료가 있나요?");
+    }
+
+    @Test
+    void compoundFaqRecoversOnlyVerifiedCandidateWhenThresholdSearchIsEmpty() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var source = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경에 필요한 서류는 무엇인가요?", "명의 변경에 필요한 서류는 무엇인가요?",
+                Map.of(), false));
+
+        assertThat(result.answer().content()).isEqualTo(source.answer());
+        assertThat(result.answer().followUps()).isEmpty();
+        assertThat(result.sources()).extracting(found -> found.faqId()).containsExactly(65L);
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    void candidateValidationUsesOriginalCompoundPhraseWithoutChangingSearchQuery() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var source = new FaqSearchResponse(65L, null, "PORTING", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "번호이동서류는뭐고", "번호이동서류는뭐고", Map.of(),
+                "번호이동서류는뭐고", null, false, null, Map.of(), "번호 이동 서류는 뭐고"));
+
+        var search = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches).search(search.capture());
+        assertThat(search.getValue().query()).isEqualTo("번호이동서류는뭐고");
+        var evidenceQuestion = ArgumentCaptor.forClass(String.class);
+        var quoteRepairFailure = ArgumentCaptor.forClass(Boolean.class);
+        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), quoteRepairFailure.capture());
+        assertThat(evidenceQuestion.getValue()).isEqualTo("번호 이동 서류는 뭐고");
+        assertThat(quoteRepairFailure.getValue()).isTrue();
+    }
+
+    // 후보 확인으로 답한 경우도 일반 답변과 같이 근거 FAQ로 추천 질문을 붙인다
+    @Test
+    void verifiedCandidateAnswerGetsSuggestedQuestionsOfThatFaq() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var suggestions = mock(RagSearchResultAnswerGenerator.SuggestedQuestions.class);
+        var other = new FaqSearchResponse(64L, null, "test", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.70, 1, null, 2, null);
+        var source = new FaqSearchResponse(65L, null, "test", "명의변경 서류",
+                "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(other, source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source)))
+                .thenReturn(List.of("명의변경 수수료가 있나요?"));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence, new AnswerContextConverter(),
+                suggestions);
+
+        var result = provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "명의 변경에 필요한 서류는 무엇인가요?", "명의 변경에 필요한 서류는 무엇인가요?",
+                Map.of(), false));
+
+        assertThat(result.answer().followUps()).containsExactly("명의변경 수수료가 있나요?");
+        verify(suggestions).suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source));
+        verifyNoInteractions(answers);
+    }
 
     @Test
     void failedSearchRetainsCauseAndDoesNotGenerateFromEmptyEvidence() {
@@ -255,4 +484,80 @@ class FaqSearchAnswerProviderTest {
         verifyNoInteractions(searches);
     }
 
+
+    @Test
+    @DisplayName("되묻기 계획 담당이 없으면 되묻지 않는다")
+    void 계획_담당이_없으면_되묻지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        var prepared = provider.prepare(input(), true);
+
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        assertThat(prepared.searchResults()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("되묻기 계획을 안 쓰는 턴에서는 검색만 하고 조건을 뽑지 않는다")
+    void 계획을_안_쓰면_조건을_뽑지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var planner = mock(FaqClarificationPlanner.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), planner);
+
+        var prepared = provider.prepare(input(), false);
+
+        assertThat(prepared.searchResults()).hasSize(1);
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        verifyNoInteractions(planner);
+    }
+
+    @Test
+    @DisplayName("검색 결과가 없으면 되묻기 판단을 하지 않는다")
+    void 근거가_없으면_판단하지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var planner = mock(FaqClarificationPlanner.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), planner);
+
+        var prepared = provider.prepare(input(), true);
+
+        assertThat(prepared.plan().needsClarification()).isFalse();
+        verifyNoInteractions(planner);
+    }
+
+    @Test
+    @DisplayName("답변을 만들 때 검색을 다시 하지 않는다")
+    void 검색을_두_번_하지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.search(any())).thenReturn(List.of(source()));
+        when(answers.generate(any(), any())).thenReturn(
+                GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED,
+                        List.of(), null)));
+        var provider = new FaqSearchAnswerProvider(searches, answers);
+
+        var prepared = provider.prepare(input(), true);
+        provider.generate(input(), prepared);
+
+        verify(searches, times(1)).search(any());
+    }
+
+    private AnswerInput input() {
+        return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "로밍 신청하고 싶어요", "로밍 신청", Map.of());
+    }
+
+    private FaqSearchResponse source() {
+        return new FaqSearchResponse(1L, null, "로밍", "로밍 신청", "요금제에 따라 다릅니다.",
+                0.9, 1, null, 1, null);
+    }
 }

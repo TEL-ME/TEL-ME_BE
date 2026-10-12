@@ -1,0 +1,23 @@
+{
+  "version": "chat-output-guard-v1",
+  "allowWords": ["시발점", "시발역", "시발열차"],
+  "joinedPrefixes": ["이거", "서비스", "너", "진짜"],
+  "rules": [
+    {"id": "OUTPUT_SIBAL", "term": "씨발", "initial": false},
+    {"id": "OUTPUT_SIPAL", "term": "씨팔", "initial": false},
+    {"id": "OUTPUT_SIBEOL", "term": "씨벌", "initial": false},
+    {"id": "OUTPUT_SIBAL_VARIANT", "term": "시발", "initial": false},
+    {"id": "OUTPUT_GAESAEKKI", "term": "개새끼", "initial": false},
+    {"id": "OUTPUT_GAESAEGI", "term": "개새기", "initial": false},
+    {"id": "OUTPUT_GAESAEKI", "term": "개새키", "initial": false},
+    {"id": "OUTPUT_BYEONGSIN", "term": "병신", "initial": false},
+    {"id": "OUTPUT_BYUNGSIN", "term": "븅신", "initial": false},
+    {"id": "OUTPUT_BYEONGSWIN", "term": "병쉰", "initial": false},
+    {"id": "OUTPUT_INITIAL_SB", "term": "ㅅㅂ", "initial": true},
+    {"id": "OUTPUT_INITIAL_SSB", "term": "ㅆㅂ", "initial": true},
+    {"id": "OUTPUT_INITIAL_BS", "term": "ㅂㅅ", "initial": true},
+    {"id": "OUTPUT_INITIAL_BS_COMPOUND", "term": "ㅄ", "initial": true},
+    {"id": "OUTPUT_JIRAL", "term": "지랄", "initial": false},
+    {"id": "OUTPUT_INITIAL_JR", "term": "ㅈㄹ", "initial": true}
+  ]
+}

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
@@ -21,6 +22,7 @@ class ConsultTurnRoutingConfigurationTest {
                     .withUserConfiguration(ConsultTurnRoutingConfiguration.class)
                     .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
                     .withBean(ContextProvider.class, () -> mock(ContextProvider.class))
                     .withBean(
                             ConsultTurnPreparationService.class,

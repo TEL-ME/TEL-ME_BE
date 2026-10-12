@@ -1,0 +1,189 @@
+package com.telme.consult.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.telme.chat.entity.ChatMessage.AnswerBasis;
+import com.telme.consult.service.PolicyLinkSuggestedQuestions.FaqLookup;
+import com.telme.faq.dto.res.FaqSearchResponse;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+class PolicyLinkSuggestedQuestionsTest {
+    // SuggestedQuestionRecommenderTest.sample()의 대표 FAQ가 모두 검색에 나오는 상태
+    private static final Map<String, String> ALL_SEARCHABLE =
+            Map.of("B-0001", "B 질문", "C-0001", "C 질문", "D-0001", "D 질문");
+
+    private final FaqLookup faqs = mock(FaqLookup.class);
+    private final PolicyLinkSuggestedQuestions suggestions =
+            new PolicyLinkSuggestedQuestions(SuggestedQuestionRecommenderTest.sample(), faqs);
+
+    @BeforeEach
+    void searchableByDefault() {
+        when(faqs.searchableQuestions(anyList())).thenReturn(ALL_SEARCHABLE);
+    }
+
+    private static FaqSearchResponse faq(Long faqId, String slotId) {
+        return faq(faqId, slotId, "BILLING", "답변");
+    }
+
+    private static FaqSearchResponse faq(Long faqId, String slotId, String category, String answer) {
+        return new FaqSearchResponse(faqId, slotId, category, "질문", answer, 0.9, 1,
+                LocalDate.of(2026, 10, 1), 1, "Q_A");
+    }
+
+    private final PolicyLinkSuggestedQuestions withStore =
+            new PolicyLinkSuggestedQuestions(SuggestedQuestionRecommenderTest.sample(), faqs, true);
+
+    @Test
+    void usesPolicyOfFirstSearchResultOnly() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        var actual = suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1"), faq(2L, "S-2")));
+
+        assertThat(actual).containsExactly("B 질문", "C 질문");
+        verify(faqs).policyRef(1L);
+        verify(faqs, never()).policyRef(2L);
+    }
+
+    @Test
+    void appliesRulesOfFirstSearchResult() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "TROUBLE-1"))))
+                .containsExactly("B 질문");
+    }
+
+    // 관리자가 숨긴 대표 FAQ는 버튼을 눌러도 검색되지 않으므로 빼고, 다음 후보로 채운다
+    @Test
+    void skipsRepresentativeFaqThatSearchCannotFind() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+        var searchable = new HashMap<>(ALL_SEARCHABLE);
+        searchable.remove("B-0001");
+        when(faqs.searchableQuestions(List.of("B-0001", "C-0001", "D-0001"))).thenReturn(searchable);
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1"))))
+                .containsExactly("C 질문", "D 질문");
+    }
+
+    // 관리자가 대표 FAQ 질문을 고치면 연결표 JSON이 아니라 현재 질문으로 버튼을 만든다
+    @Test
+    void usesCurrentQuestionOfRepresentativeFaq() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+        var searchable = new HashMap<>(ALL_SEARCHABLE);
+        searchable.put("B-0001", "고친 B 질문");
+        when(faqs.searchableQuestions(anyList())).thenReturn(searchable);
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1"))))
+                .containsExactly("고친 B 질문", "C 질문");
+    }
+
+    @Test
+    void returnsEmptyWhenNoRepresentativeFaqIsSearchable() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+        when(faqs.searchableQuestions(anyList())).thenReturn(Map.of());
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1")))).isEmpty();
+    }
+
+    // 근거 없음·범위 밖 답변 뒤에 정상 추천을 붙이지 않는다
+    @Test
+    void returnsEmptyUnlessGrounded() {
+        assertThat(suggestions.suggest(AnswerBasis.NO_EVIDENCE, List.of(faq(1L, "S-1")))).isEmpty();
+        assertThat(suggestions.suggest(AnswerBasis.OUT_OF_SCOPE, List.of(faq(1L, "S-1")))).isEmpty();
+        assertThat(suggestions.suggest(null, List.of(faq(1L, "S-1")))).isEmpty();
+        verify(faqs, never()).policyRef(anyLong());
+    }
+
+    @Test
+    void returnsEmptyWithoutSearchResults() {
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of())).isEmpty();
+        verify(faqs, never()).policyRef(anyLong());
+    }
+
+    @Test
+    void returnsEmptyWhenFaqHasNoPolicy() {
+        when(faqs.policyRef(1L)).thenReturn(null);
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1")))).isEmpty();
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(null, "S-1")))).isEmpty();
+    }
+
+    // 매장 방문이 필요한 답변 뒤에는 매장 찾기를 첫 자리에 두고, 연결표 추천 2개는 그대로 둔다
+    @Test
+    void storeQuestionComesFirstWithoutTakingLinkSlots() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        var actual = withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "가까운 매장에서 재발급할 수 있습니다.")));
+
+        assertThat(actual).containsExactly("유심 매장 버튼", "B 질문", "C 질문");
+    }
+
+    @Test
+    void noStoreQuestionWhenDisabledOrAnswerDoesNotMentionStore() {
+        when(faqs.policyRef(1L)).thenReturn("A-01");
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "매장에서 재발급할 수 있습니다."))))
+                .containsExactly("B 질문", "C 질문");
+        assertThat(withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, "S-1", "USIM", "고객센터로 신청할 수 있습니다."))))
+                .containsExactly("B 질문", "C 질문");
+    }
+
+    // 정책 ID가 없어 연결표 추천이 없어도 매장 버튼은 붙는다
+    @Test
+    void storeQuestionAloneWhenNoPolicyLinks() {
+        when(faqs.policyRef(1L)).thenReturn(null);
+
+        assertThat(withStore.suggest(AnswerBasis.GROUNDED,
+                List.of(faq(1L, null, "DEVICE", "가까운 매장에 방문해 주세요."))))
+                .containsExactly("가까운 매장 버튼");
+    }
+
+    @Test
+    void noStoreQuestionUnlessGrounded() {
+        assertThat(withStore.suggest(AnswerBasis.NO_EVIDENCE,
+                List.of(faq(1L, "S-1", "USIM", "매장에서 재발급할 수 있습니다.")))).isEmpty();
+    }
+
+    // 답한 FAQ의 정책을 가리키는 추천 문장(대표 FAQ의 현재 질문). 근거가 여러 개인 답변에서 다시 추천하지 않으려고 쓴다
+    @Test
+    void questionsAboutReturnsRepresentativeQuestionsOfAnsweredPolicies() {
+        when(faqs.policyRef(1L)).thenReturn("B-01");
+        when(faqs.policyRef(2L)).thenReturn("NO-REPRESENTATIVE");
+        when(faqs.searchableQuestions(List.of("B-0001"))).thenReturn(Map.of("B-0001", "고친 B 질문"));
+
+        assertThat(suggestions.questionsAbout(Arrays.asList(1L, 2L, null))).containsExactly("고친 B 질문");
+    }
+
+    @Test
+    void questionsAboutFallsBackToEmpty() {
+        assertThat(suggestions.questionsAbout(List.of())).isEmpty();
+        when(faqs.policyRef(anyLong())).thenThrow(new IllegalStateException("DB 오류"));
+        assertThat(suggestions.questionsAbout(List.of(1L))).isEmpty();
+    }
+
+    // 추천은 부가 정보라 조회가 실패하거나 검색 결과가 이상해도 답변 저장을 막지 않는다
+    @Test
+    void failureFallsBackToEmpty() {
+        when(faqs.policyRef(anyLong())).thenThrow(new IllegalStateException("DB 오류"));
+
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, List.of(faq(1L, "S-1")))).isEmpty();
+        assertThat(suggestions.suggest(AnswerBasis.GROUNDED, Arrays.asList((FaqSearchResponse) null))).isEmpty();
+    }
+}

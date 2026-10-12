@@ -15,6 +15,8 @@ public record FollowUpRouteResponse(
 ) {
     public static final String LOCATION_KEY = "location";
     public static final String SERVICE_TYPE_KEY = "serviceType";
+    /** 질문에 업무 표현이 여럿이라 하나로 좁힐 수 없다는 표시. 되묻지 않고 업무 필터 없이 검색한다 */
+    public static final String SERVICE_TYPE_UNDECIDED = "UNDECIDED";
 
     public enum Disposition {
         CONDITION_RESPONSE,

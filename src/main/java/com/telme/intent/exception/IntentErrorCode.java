@@ -17,6 +17,10 @@ public enum IntentErrorCode implements BaseErrorCode {
         HttpStatus.NOT_FOUND, "INTENT404-1",
         "해당 메시지를 찾을 수 없습니다."
     ),
+    REQUEST_DECOMPOSITION_UNCERTAIN(
+        HttpStatus.UNPROCESSABLE_ENTITY, "INTENT422-0",
+        "질문의 요청을 정확히 구분하기 어렵습니다. 궁금한 내용을 조금 더 구체적으로 알려주세요."
+    ),
     LLM_RESPONSE_PARSE_FAILED(
         HttpStatus.INTERNAL_SERVER_ERROR, "INTENT500-0",
         "LLM 응답 JSON 파싱에 실패했습니다."

@@ -14,6 +14,13 @@ import com.telme.chat.service.ChatSessionService;
 import com.telme.global.common.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.SchemaProperty;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -22,6 +29,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -118,16 +126,199 @@ public class ChatSessionController {
         return CustomResponse.onSuccess(chatSessionService.closeSession(actor, sessionId));
     }
 
-    @Operation(summary = "사용자 메시지 전송")
+    @Operation(
+            summary = "사용자 메시지 전송",
+            description = "inputGuard가 있어도 MASKED는 정상 접수입니다. 실행 ID 유무로 생성 접수 여부를 구분합니다.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "정상 접수 및 마스킹 후 정상 접수. executionId와 executionStatus가 있으며 기존 SSE 흐름을 이어갑니다.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type = "object"),
+                            schemaProperties = {
+                                    @SchemaProperty(name = "isSuccess", schema = @Schema(type = "boolean")),
+                                    @SchemaProperty(name = "code", schema = @Schema(type = "string")),
+                                    @SchemaProperty(name = "message", schema = @Schema(type = "string")),
+                                    @SchemaProperty(name = "result",
+                                            schema = @Schema(implementation = ChatMessageSendResponse.class))
+                            },
+                            examples = {
+                                    @ExampleObject(
+                                            name = "normal",
+                                            summary = "정상 접수",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "201",
+                                                      "message": "Created",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 501,
+                                                        "sequenceNo": 1,
+                                                        "executionId": 901,
+                                                        "executionStatus": "RUNNING",
+                                                        "createdAt": "2026-10-08T00:00:00Z"
+                                                      }
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "masked",
+                                            summary = "마스킹 후 정상 접수",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "201",
+                                                      "message": "Created",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 501,
+                                                        "sequenceNo": 1,
+                                                        "executionId": 901,
+                                                        "executionStatus": "RUNNING",
+                                                        "createdAt": "2026-10-08T00:00:00Z",
+                                                        "inputGuard": {
+                                                          "action": "MASKED",
+                                                          "message": "민감정보를 가리고 문의를 처리합니다.",
+                                                          "violationCount": 0,
+                                                          "retryAfterSeconds": 0,
+                                                          "restrictionStartedAt": null,
+                                                          "restrictionUntil": null,
+                                                          "detections": [
+                                                            {
+                                                              "reason": "SENSITIVE_INFORMATION",
+                                                              "ruleId": "PII_PAYMENT_CARD"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                    """)
+                            })),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "경고·일시 제한·재입력 안내. executionId와 executionStatus는 JSON에서 생략되며 SSE·생성 재시도를 시작하지 않습니다.",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "남은 제한 시간이 양수일 때 초 단위로 반환합니다.",
+                            schema = @Schema(type = "integer", format = "int64")),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(type = "object"),
+                            schemaProperties = {
+                                    @SchemaProperty(name = "isSuccess", schema = @Schema(type = "boolean")),
+                                    @SchemaProperty(name = "code", schema = @Schema(type = "string")),
+                                    @SchemaProperty(name = "message", schema = @Schema(type = "string")),
+                                    @SchemaProperty(name = "result",
+                                            schema = @Schema(implementation = ChatMessageSendResponse.class))
+                            },
+                            examples = {
+                                    @ExampleObject(
+                                            name = "warned",
+                                            summary = "욕설 경고",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "200",
+                                                      "message": "OK",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 502,
+                                                        "sequenceNo": 2,
+                                                        "createdAt": "2026-10-08T00:00:00Z",
+                                                        "inputGuard": {
+                                                          "action": "WARNED",
+                                                                "message": "원활한 상담을 위해 욕설을 제외하고 질문해 주세요. \
+                                                    최근 집계 기간 내 3회 감지되면 일시 제한됩니다.",
+                                                          "violationCount": 1,
+                                                          "retryAfterSeconds": 0,
+                                                          "restrictionStartedAt": null,
+                                                          "restrictionUntil": null,
+                                                          "detections": [
+                                                            {
+                                                              "reason": "INITIAL_PROFANITY",
+                                                              "ruleId": "INITIAL_SB"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "restricted",
+                                            summary = "일시 제한",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "200",
+                                                      "message": "OK",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 503,
+                                                        "sequenceNo": 3,
+                                                        "createdAt": "2026-10-08T00:00:00Z",
+                                                        "inputGuard": {
+                                                          "action": "RESTRICTED",
+                                                          "message": "반복된 욕설로 채팅이 일시 제한되었습니다.",
+                                                          "violationCount": 3,
+                                                          "retryAfterSeconds": 60,
+                                                          "restrictionStartedAt": "2026-10-08T00:00:00Z",
+                                                          "restrictionUntil": "2026-10-08T00:01:00Z",
+                                                          "detections": [
+                                                            {
+                                                              "reason": "INITIAL_PROFANITY",
+                                                              "ruleId": "INITIAL_SB"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "rewriteRequired",
+                                            summary = "재입력 안내",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "200",
+                                                      "message": "OK",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 504,
+                                                        "sequenceNo": 4,
+                                                        "createdAt": "2026-10-08T00:00:00Z",
+                                                        "inputGuard": {
+                                                          "action": "REWRITE_REQUIRED",
+                                                          "message": "민감정보를 제외한 문의 내용을 입력해 주세요.",
+                                                          "violationCount": 0,
+                                                          "retryAfterSeconds": 0,
+                                                          "restrictionStartedAt": null,
+                                                          "restrictionUntil": null,
+                                                          "detections": [
+                                                            {
+                                                              "reason": "SENSITIVE_INFORMATION",
+                                                              "ruleId": "PII_PAYMENT_CARD"
+                                                            }
+                                                          ]
+                                                        }
+                                                      }
+                                                    }
+                                                    """)
+                            }))
+    })
     @PostMapping("/{sessionId}/messages")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CustomResponse<ChatMessageSendResponse> sendMessage(
+    public ResponseEntity<CustomResponse<ChatMessageSendResponse>> sendMessage(
             HttpServletRequest servletRequest,
             @PathVariable Long sessionId,
             @Valid @RequestBody ChatMessageSendRequest request
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
         ChatMessageSendResponse response = chatSessionService.sendMessage(actor, sessionId, request);
-        return CustomResponse.onSuccess(HttpStatus.CREATED, response);
+        HttpStatus status = response.accepted() ? HttpStatus.CREATED : HttpStatus.OK;
+        var result = ResponseEntity.status(status);
+        if (response.inputGuard() != null && response.inputGuard().retryAfterSeconds() > 0) {
+            result.header("Retry-After", Long.toString(response.inputGuard().retryAfterSeconds()));
+        }
+        return result.body(CustomResponse.onSuccess(status, response));
     }
 }

@@ -21,6 +21,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.TooManyFaqQuestionsException;
 import com.telme.intent.service.UnsupportedCompoundQuestionException;
 
 import org.junit.jupiter.api.Test;
@@ -107,7 +108,7 @@ class QueryRoutingAnalysisProviderTest {
     }
 
     @Test
-    void newQuestionWhileWaitingIsRoutedAsInitialQuestion() {
+    void newQuestionWhileWaitingReturnsToCallerBeforeInitialRouting() {
         var context =
                 new Context(
                         3L,
@@ -122,34 +123,13 @@ class QueryRoutingAnalysisProviderTest {
                                         "가까운 매장 알려줘",
                                         "가까운 매장",
                                         "STORE")));
-        var message =
-                ChatMessage.builder()
-                        .messageId(8L)
-                        .session(ChatSession.builder().sessionId(3L).build())
-                        .role(ChatMessage.Role.USER)
-                        .messageType(ChatMessage.MessageType.QUESTION)
-                        .build();
-        var query =
-                new IntentSubQueryResponse(
-                        12L, (short) 1, ConsultRequest.Intent.FAQ, "5G 요금제", Map.of());
         when(followups.analyze(context)).thenReturn(AnalysisResult.rerouteRequest());
-        when(messages.findByIdWithSession(8L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
-                .thenReturn(
-                        new IntentRouteResponse(
-                                6L,
-                                8L,
-                                QueryRouting.Intent.FAQ,
-                                "5G 요금제",
-                                BigDecimal.ONE,
-                                QueryRouting.Method.LLM,
-                                Map.of(),
-                                List.of(query)));
 
         AnalysisResult actual = provider.analyze(context);
 
-        assertThat(actual.initialQuery()).isEqualTo(query);
+        assertThat(actual.reroute()).isTrue();
         verify(followups).analyze(context);
+        verifyNoInteractions(messages, routing);
     }
 
     @Test
@@ -217,6 +197,30 @@ class QueryRoutingAnalysisProviderTest {
     }
 
     @Test
+    void multipleFaqQuestionsKeepEverySubQuery() {
+        var context = new Context(3L, 7L, "요금제와 로밍 신청 방법 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        var first = new IntentSubQueryResponse(
+                11L, (short) 1, ConsultRequest.Intent.FAQ, "요금제 종류", Map.of());
+        var second = new IntentSubQueryResponse(
+                12L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null)).thenReturn(new IntentRouteResponse(
+                5L, 7L, QueryRouting.Intent.FAQ, "요금제와 로밍", BigDecimal.ONE,
+                QueryRouting.Method.LLM, Map.of(), List.of(first, second)));
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.faqQueries()).containsExactly(first, second);
+        assertThat(result.initialQuery()).isNull();
+    }
+
+    @Test
     void unsupportedCompoundQuestionReturnsSplitGuidance() {
         var context = new Context(3L, 7L, "요금제와 근처 매장 알려줘", List.of());
         var message = ChatMessage.builder()
@@ -232,7 +236,57 @@ class QueryRoutingAnalysisProviderTest {
         AnalysisResult result = provider.analyze(context);
 
         assertThat(result.directAnswer()).isNotNull();
-        assertThat(result.directAnswer().content()).contains("나누어 보내");
+        assertThat(result.directAnswer().content()).contains("하나씩 알려");
+        assertThat(result.directAnswer().followUps()).containsExactly("요금제 알려줘", "가까운 매장 찾아줘");
+        assertThat(result.initialQuery()).isNull();
+    }
+
+    // 라우터가 나눈 질문으로 버튼을 만들 수 있으면 고정 버튼 대신 쓴다
+    @Test
+    void compoundQuestionUsesButtonsFromSplitParts() {
+        var parts = List.of(
+                new UnsupportedCompoundQuestionException.Part(
+                        com.telme.consult.entity.ConsultRequest.Intent.FAQ, "명의변경 필요 서류", Map.of()),
+                new UnsupportedCompoundQuestionException.Part(
+                        com.telme.consult.entity.ConsultRequest.Intent.STORE, "강남역 명의변경 매장",
+                        Map.of("location", "강남역")));
+        var withButtons = new QueryRoutingAnalysisProvider(messages, routing, followups,
+                received -> received.equals(parts)
+                        ? List.of("명의변경 시 필요한 서류를 정리해서 알려주세요.", "강남역 명의변경 가능한 매장을 알려주세요.")
+                        : List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null)).thenThrow(new UnsupportedCompoundQuestionException(parts));
+
+        AnalysisResult result = withButtons.analyze(
+                new Context(3L, 7L, "명의변경 서류 알려주고 강남역 근처 매장도 찾아줘", List.of()));
+
+        assertThat(result.directAnswer().content()).contains("하나씩 알려");
+        assertThat(result.directAnswer().followUps())
+                .containsExactly("명의변경 시 필요한 서류를 정리해서 알려주세요.", "강남역 명의변경 가능한 매장을 알려주세요.");
+    }
+
+    @Test
+    void tooManyFaqQuestionsReturnsLimitGuidance() {
+        var context = new Context(3L, 7L, "요금제, 로밍, 명의변경, 유심 알려줘", List.of());
+        var message = ChatMessage.builder()
+                .messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER)
+                .messageType(ChatMessage.MessageType.QUESTION)
+                .build();
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        when(routing.routeSingleConsult(message, null))
+                .thenThrow(new TooManyFaqQuestionsException(3));
+
+        AnalysisResult result = provider.analyze(context);
+
+        assertThat(result.directAnswer().content()).contains("최대 3개", "나누어 보내");
         assertThat(result.initialQuery()).isNull();
     }
 

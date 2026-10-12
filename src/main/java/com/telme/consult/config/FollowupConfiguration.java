@@ -1,5 +1,7 @@
 package com.telme.consult.config;
 
+import com.telme.consult.repository.AskedConditionQuestionFinder;
+import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.repository.PendingClarificationFinder;
 import com.telme.consult.service.ChatCommandContextProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
@@ -20,6 +22,11 @@ public class FollowupConfiguration {
     @Bean
     PendingClarificationFinder pendingClarificationFinder(JdbcTemplate jdbc) {
         return new PendingClarificationFinder(jdbc);
+    }
+
+    @Bean
+    AskedQuestions askedConditionQuestions(JdbcTemplate jdbc) {
+        return new AskedConditionQuestionFinder(jdbc);
     }
 
     @Bean

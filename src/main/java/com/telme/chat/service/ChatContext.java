@@ -9,8 +9,14 @@ public record ChatContext(
         String summary,
         List<ChatContextMessage> history,
         String currentQuestion,
-        int estimatedContextTokens
+        int estimatedContextTokens,
+        List<ChatContextMessage> summarySources
 ) {
+
+    public ChatContext(Long sessionId, Long inputMessageId, String summary,
+            List<ChatContextMessage> history, String currentQuestion, int estimatedContextTokens) {
+        this(sessionId, inputMessageId, summary, history, currentQuestion, estimatedContextTokens, List.of());
+    }
 
     public ChatContext {
         Objects.requireNonNull(sessionId, "sessionId");
@@ -24,5 +30,6 @@ public record ChatContext(
         }
         summary = summary == null || summary.isBlank() ? null : summary;
         history = List.copyOf(history);
+        summarySources = List.copyOf(summarySources);
     }
 }

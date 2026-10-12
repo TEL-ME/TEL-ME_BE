@@ -15,6 +15,8 @@
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `simulate_dual_vector.py` | `Q_A`, `QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
+| `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
+| `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`) | 앱 경유 |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
 | `check_stores.py` | 매장 데이터 제약, 분포 + 시드 SQL 대조 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |

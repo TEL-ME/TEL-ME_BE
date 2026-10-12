@@ -17,12 +17,15 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.guard.ChatInputGuardService;
+import com.telme.chat.guard.InputInspection;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -55,8 +58,22 @@ class ChatSessionServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private ChatInputGuardService inputGuard;
+
     @InjectMocks
     private ChatSessionService chatSessionService;
+
+    @BeforeEach
+    void 기본_입력_검사를_준비한다() {
+        org.mockito.Mockito.lenient().when(inputGuard.begin(any(), org.mockito.ArgumentMatchers.anyLong(), any()))
+                .thenAnswer(invocation -> {
+                    ChatMessageSendRequest request = invocation.getArgument(2);
+                    return new ChatInputGuardService.Turn(null,
+                            new InputInspection(request.content(), java.util.List.of(), true),
+                            null, null, false, false, "", Instant.now());
+                });
+    }
 
     @Test
     void createsMemberSessionWithNormalizedTitle() {

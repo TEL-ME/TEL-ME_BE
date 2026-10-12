@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.telme.chat.entity.ChatMessage.AnswerBasis;
+import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.global.common.exception.GeneralException;
@@ -145,6 +146,28 @@ class RagAnswerGeneratorTest {
     }
 
     @Test
+    @DisplayName("멀티턴 비교 질문에는 비교 규칙과 대화 문맥 규칙을 함께 적용한다")
+    void 멀티턴_비교_질문의_두_규칙을_함께_적용한다() {
+        StubClient client = new StubClient(List.of("5G는 4종이고 LTE는 3종입니다."));
+        ChatContext context = new ChatContext(7L, 9L, null, List.of(),
+                "5G와 LTE 요금제 종류를 비교해줘", 0);
+        AnswerRequest request = AnswerRequest.builder()
+                .executionId(42L)
+                .userQuery("5G와 LTE 요금제 종류를 비교해줘")
+                .chatContext(context)
+                .searchResults(List.of(faq(117L, "5G는 4종이고 LTE는 3종입니다.")))
+                .build();
+
+        generator(client).generate(request, handler);
+
+        assertThat(client.received.systemPrompt())
+                .contains("[비교 답변 추가 규칙]", "[대화 문맥 규칙]");
+        assertThat(client.received.userPrompt()).contains("<conversation_data>");
+        assertThat(client.received.promptVersion()).isEqualTo(
+                AnswerPromptTemplates.promptVersionFor(request.userQuery()));
+    }
+
+    @Test
     @DisplayName("클라이언트가 실패를 알리면 완료로 끝내지 않고 예외를 던진다")
     void 실패하면_완료로_끝내지_않는다() {
         RagAnswerGenerator generator = generator(
@@ -273,6 +296,19 @@ class RagAnswerGeneratorTest {
 
         assertThat(result.answer()).isEqualTo(answer);
         assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("비교 답변의 사실이 둘째 문장에 있어도 자르지 않는다")
+    void 비교_답변의_뒷문장을_보존한다() {
+        String answer = "비교 내용을 안내드립니다. 5G는 4종이고 LTE는 3종입니다.";
+        RagAnswerGenerator generator = generator(new StubClient(List.of(answer)));
+        AnswerRequest request = request("5G와 LTE 요금제 종류를 비교해줘",
+                List.of(faq(117L, "5G는 4종이고 LTE는 3종입니다.")));
+
+        AnswerResult result = generator.generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(answer);
     }
 
     @Test

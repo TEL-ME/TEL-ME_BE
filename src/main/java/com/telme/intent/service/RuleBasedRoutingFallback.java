@@ -89,6 +89,29 @@ public class RuleBasedRoutingFallback {
 
     private record ServiceTypeRule(String code, Pattern pattern) {}
 
+    private record ServiceTypeOption(String label, String code) {}
+
+    // 업무를 되물을 때 버튼으로 내보내는 문구. 화면에 이 순서로 그려진다
+    private static final List<ServiceTypeOption> SERVICE_TYPE_OPTIONS = List.of(
+        new ServiceTypeOption("유심 재발급", "USIM_REISSUE"),
+        new ServiceTypeOption("번호이동", "PORT_IN"),
+        new ServiceTypeOption("신규 개통", "NEW_LINE"),
+        new ServiceTypeOption("명의변경", "NAME_CHANGE")
+    );
+
+    /** 업무 되묻기 버튼 문구. */
+    public static List<String> serviceTypeOptions() {
+        return SERVICE_TYPE_OPTIONS.stream().map(ServiceTypeOption::label).toList();
+    }
+
+    public static String serviceTypeLabel(String code) {
+        return SERVICE_TYPE_OPTIONS.stream()
+                .filter(option -> option.code().equals(code))
+                .map(ServiceTypeOption::label)
+                .findFirst()
+                .orElse(null);
+    }
+
     private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
         new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
         new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
@@ -198,6 +221,10 @@ public class RuleBasedRoutingFallback {
         if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
             return null;
         }
+        // 기준점 표현이 있으면 그 앞의 실제 지명만 받는다("판교 근처요" -> 판교, "현재 위치에서 찾아줘" -> 없음)
+        if (RelativeLocation.mentions(reply)) {
+            return RelativeLocation.placeBefore(reply);
+        }
         // 짧다고 모두 지역으로 보면 "네", "잠깐만요"까지 FILLED가 되어 되묻기가 끊긴다
         if (ACK_ONLY_PATTERN.matcher(reply).find() || DEFERRAL_PATTERN.matcher(reply).find()) {
             return null;
@@ -216,9 +243,36 @@ public class RuleBasedRoutingFallback {
         return conditions;
     }
 
+    // 문장에 업무 표현이 하나만 있으면 그 업무 코드, 없거나 여럿이면 null.
+    // "번호이동 말고 신규 개통"처럼 여럿이면 어느 쪽인지 규칙으로 알 수 없어 임의로 고르지 않는다(필터 없이 검색)
+    public String serviceTypeOf(String text) {
+        if (text == null) {
+            return null;
+        }
+        List<String> codes = SERVICE_TYPE_RULES.stream()
+                .filter(rule -> rule.pattern().matcher(text).find())
+                .map(ServiceTypeRule::code)
+                .toList();
+        return codes.size() == 1 ? codes.getFirst() : null;
+    }
+
+    // LLM이 준 업무가 문장의 유일한 업무 표현과 같을 때만 인정한다.
+    // "번호이동 말고 신규 개통"처럼 업무 표현이 여럿이면 LLM이 어떤 값을 줘도 필터 없이 검색한다
     boolean matchesServiceType(String code, String text) {
-        return SERVICE_TYPE_RULES.stream()
-                .anyMatch(rule -> rule.code().equals(code) && rule.pattern().matcher(text).find());
+        return code != null && code.equals(serviceTypeOf(text));
+    }
+
+    /** 버튼 문구를 그대로 누른 답이면 그 업무 코드, 아니면 null. 직접 쓴 문장은 모델이 읽는다. */
+    public String serviceTypeOfOption(String reply) {
+        if (reply == null) {
+            return null;
+        }
+        String trimmed = reply.strip();
+        return SERVICE_TYPE_OPTIONS.stream()
+                .filter(option -> option.label().equals(trimmed))
+                .map(ServiceTypeOption::code)
+                .findFirst()
+                .orElse(null);
     }
 
     boolean hasServiceTypeMention(String text) {

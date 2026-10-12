@@ -1,0 +1,107 @@
+[ {
+  "eval_id" : "CMP-001",
+  "question" : "5G와 LTE 요금제 종류를 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "5G랑 LTE랑 뭐가 달라요?",
+    "faq_id" : 117,
+    "answer" : "5G는 라이트·스탠다드·프리미엄·언리미티드 4종, LTE는 베이직·플러스·맥스 3종으로 구성이 다릅니다. 알뜰 요금제 2종도 별도로 있습니다."
+  } ],
+  "expected_facts" : [ "5G 요금제 종류 수", "LTE 요금제 종류 수" ],
+  "answer" : "5G 요금제는 라이트, 스탠다드, 프리미엄, 언리미티드 총 4가지 종류로 구성되어 있으며, LTE 요금제는 베이직, 플러스, 맥스 총 3가지 종류로 구성되어 있습니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 5841,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-005",
+  "question" : "명의 변경과 번호 이동의 필요 서류를 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "명의변경 시 필요한 서류를 정리해서 알려주세요.",
+    "faq_id" : 65,
+    "answer" : "양도인과 양수인의 신분증이 각각 필요하며, 원칙적으로 두 분이 함께 매장을 방문하셔야 합니다. 대리인이 방문하는 경우에는 위임장이 필요합니다."
+  }, {
+    "question" : "번호이동 신청 시 필요한 서류를 알려주세요.",
+    "faq_id" : 125,
+    "answer" : "본인 신분증이 필요하며, 기존 통신사에 미납 요금이 있다면 완납하셔야 합니다."
+  } ],
+  "expected_facts" : [ "명의 변경 서류", "번호 이동 서류" ],
+  "answer" : "명의 변경과 번호 이동 시 필요한 서류를 비교해 드리겠습니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 1329,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-010",
+  "question" : "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "폰을 잃어버렸는데 정지시킬 수 있을까요?",
+    "faq_id" : 45,
+    "answer" : "네, 분실 신고를 하시면 바로 이용 정지가 가능합니다."
+  }, {
+    "question" : "폰 잃어버렸을 때 일시 정지 신청은 어떻게 해요?",
+    "faq_id" : 637,
+    "answer" : "고객센터나 매장에서 신청하시면 됩니다. 1회 최대 30일, 연간 최대 90일까지 가능하고 정지 중 기본료는 50%입니다."
+  } ],
+  "expected_facts" : [ "분실 신고 시 즉시 정지", "일시 정지 기간", "일시 정지 요금" ],
+  "answer" : "분실 신고와 일시 정지는 목적과 이용 제한 측면에서 차이가 있습니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 1327,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-011",
+  "question" : "물리 유심 재발급과 eSIM 발급 비용을 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "물리 유심이랑 eSIM이랑 비용이 달라요?",
+    "faq_id" : 297,
+    "answer" : "물리 유심 재발급은 7,700원, eSIM 발급은 2,750원으로 eSIM이 더 저렴합니다."
+  } ],
+  "expected_facts" : [ "물리 유심 비용", "eSIM 비용" ],
+  "answer" : "물리 유심 재발급 비용은 7,700원이고, eSIM 발급 비용은 2,750원으로 eSIM이 더 저렴합니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 461,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-012",
+  "question" : "청소년 요금제와 시니어 요금제의 가입 연령을 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "청소년 요금제랑 시니어 요금제 가입 나이가 다른가요",
+    "faq_id" : 121,
+    "answer" : "청소년 요금제는 만 18세 이하, 시니어 요금제는 만 65세 이상이 대상이라 기준이 다릅니다."
+  } ],
+  "expected_facts" : [ "청소년 가입 연령", "시니어 가입 연령" ],
+  "answer" : "청소년 요금제는 만 18세 이하가 대상이고, 시니어 요금제는 만 65세 이상이 대상으로 가입 연령 기준이 다릅니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 449,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-013",
+  "question" : "5G 라이트와 LTE 플러스의 월 요금과 데이터 제공량을 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "5G 라이트랑 LTE 플러스 중 뭐가 나아요?",
+    "faq_id" : 1001,
+    "answer" : "5G 라이트는 45,000원에 8GB, LTE 플러스는 49,000원에 15GB입니다. 데이터가 더 필요하면 LTE 플러스입니다."
+  } ],
+  "expected_facts" : [ "5G 라이트 요금", "5G 라이트 데이터", "LTE 플러스 요금", "LTE 플러스 데이터" ],
+  "answer" : "5G 라이트는 월 45,000원에 8GB의 데이터를 제공하고, LTE 플러스는 월 49,000원에 15GB의 데이터를 제공합니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 513,
+  "model" : "exaone3.5:7.8b"
+}, {
+  "eval_id" : "CMP-014",
+  "question" : "일시 정지와 해지의 요금 차이를 비교해줘",
+  "retrieval_bypassed" : true,
+  "evidence" : [ {
+    "question" : "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?",
+    "faq_id" : 697,
+    "answer" : "정지는 기본료의 50%가 계속 부과되고, 해지는 해지월 요금만 일할 계산됩니다."
+  } ],
+  "expected_facts" : [ "일시 정지 요금", "해지 요금" ],
+  "answer" : "일시 정지 시 기본료의 50%가 계속 부과되지만, 해지 시에는 해지 월의 요금만 일할 계산되어 부과됩니다.",
+  "answer_basis" : "GROUNDED",
+  "elapsed_ms" : 453,
+  "model" : "exaone3.5:7.8b"
+} ]

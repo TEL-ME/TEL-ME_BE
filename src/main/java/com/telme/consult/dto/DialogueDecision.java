@@ -4,6 +4,7 @@ import com.telme.consult.dto.DialogueInput.Condition;
 
 import lombok.Builder;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -15,7 +16,20 @@ public record DialogueDecision(
         Map<String, Condition> conditions,
         String waitingField,
         String message,
-        MessageOrigin messageOrigin) {
+        MessageOrigin messageOrigin,
+        List<String> options) {
+
+    // 선택지는 되묻기에만 붙고, 기존 판단은 선택지가 없다
+    public DialogueDecision(
+            Long consultRequestId,
+            Action action,
+            Map<String, Condition> conditions,
+            String waitingField,
+            String message,
+            MessageOrigin messageOrigin) {
+        this(consultRequestId, action, conditions, waitingField, message, messageOrigin, List.of());
+    }
+
     public enum Action {
         PROCEED,
         ASK,
@@ -57,5 +71,14 @@ public record DialogueDecision(
         } else if (message == null || message.isBlank() || messageOrigin == MessageOrigin.NONE) {
             throw new IllegalArgumentException("안내 문장과 생성 출처가 필요합니다.");
         }
+        options = options == null ? List.of() : options;
+        if (action != Action.ASK && !options.isEmpty()) {
+            throw new IllegalArgumentException("되묻기 외에는 선택지를 넣을 수 없습니다.");
+        }
+        // 선택지는 사용자가 눌러 그대로 답으로 보내므로 조건 값 길이를 넘을 수 없다
+        if (options.stream().anyMatch(option -> option == null || option.isBlank() || option.length() > 255)) {
+            throw new IllegalArgumentException("선택지가 올바르지 않습니다.");
+        }
+        options = List.copyOf(options);
     }
 }

@@ -5,13 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.telme.dashboard.dto.req.AdminDashboardSearchRequest;
+import com.telme.dashboard.dto.res.AdminDashboardDailyResponse;
 import com.telme.dashboard.dto.res.AdminDashboardResponse;
-import com.telme.dashboard.service.AdminDashboardQueryService;
 import com.telme.dashboard.exception.DashboardErrorCode;
+import com.telme.dashboard.service.AdminDashboardQueryService;
 import com.telme.global.common.exception.GeneralException;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -133,6 +137,68 @@ class AdminDashboardQueryServiceTest {
         assertThatThrownBy(() -> service.getSummary(reversed))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DashboardErrorCode.INVALID_PERIOD);
+    }
+    
+    @Test
+    @DisplayName("오늘을 포함한 최근 7일을 오래된 날부터, 기록이 없는 날도 빠짐없이 반환한다")
+    void 최근_7일을_빠짐없이_반환한다() {
+        AdminDashboardDailyResponse daily = service.getDaily();
+
+        assertThat(daily.days()).extracting(AdminDashboardDailyResponse.Day::date).containsExactly(
+                LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 27), LocalDate.of(2026, 9, 28),
+                LocalDate.of(2026, 9, 29), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 1),
+                LocalDate.of(2026, 10, 2));
+    }
+
+    @Test
+    @DisplayName("질문은 한국 시간 자정으로 날짜를 나누고, 7일 밖의 질문은 세지 않는다")
+    void 날짜별_질문_수가_한국_시간으로_나뉜다() {
+        Map<LocalDate, Long> before = questionsByDay(service.getDaily());
+        long sessionId = insertSession();
+        // 한국 시간 10-01 23:59:59와 10-02 00:00:00. UTC 날짜로 끊으면 둘 다 10-01이다
+        insertQuestion(sessionId, 1, "2026-10-01T14:59:59Z");
+        insertQuestion(sessionId, 2, "2026-10-01T15:00:00Z");
+        // 한국 시간 09-26 00:00은 첫날에 들어가고, 1초 전인 09-25 23:59:59는 7일 밖이다
+        insertQuestion(sessionId, 3, "2026-09-25T15:00:00Z");
+        insertQuestion(sessionId, 4, "2026-09-25T14:59:59Z");
+
+        Map<LocalDate, Long> after = questionsByDay(service.getDaily());
+
+        assertThat(after.get(LocalDate.of(2026, 10, 1))).isEqualTo(before.get(LocalDate.of(2026, 10, 1)) + 1);
+        assertThat(after.get(LocalDate.of(2026, 10, 2))).isEqualTo(before.get(LocalDate.of(2026, 10, 2)) + 1);
+        assertThat(after.get(LocalDate.of(2026, 9, 26))).isEqualTo(before.get(LocalDate.of(2026, 9, 26)) + 1);
+        assertThat(after.values().stream().mapToLong(Long::longValue).sum())
+                .isEqualTo(before.values().stream().mapToLong(Long::longValue).sum() + 3);
+    }
+
+    @Test
+    @DisplayName("오류는 오류 목록과 같은 기준으로 세고 성공·근거 없음·취소는 뺀다")
+    void 날짜별_오류_수는_오류만_센다() {
+        long before = errorsOn(service.getDaily(), LocalDate.of(2026, 10, 2));
+        for (String status : new String[] {"TIMEOUT", "CONNECTION_FAILED", "MODEL_ERROR", "SUCCESS", "NO_EVIDENCE", "CANCELLED"}) {
+            insertGeneration(status, "2026-10-02T01:00:00Z");
+        }
+
+        assertThat(errorsOn(service.getDaily(), LocalDate.of(2026, 10, 2))).isEqualTo(before + 3);
+    }
+
+    private Map<LocalDate, Long> questionsByDay(AdminDashboardDailyResponse daily) {
+        return daily.days().stream().collect(Collectors.toMap(
+                AdminDashboardDailyResponse.Day::date, AdminDashboardDailyResponse.Day::questionCount));
+    }
+
+    private long errorsOn(AdminDashboardDailyResponse daily, LocalDate date) {
+        return daily.days().stream().filter(day -> day.date().equals(date)).findFirst().orElseThrow().errorCount();
+    }
+
+    // 시드의 실행 1번에 붙인다
+    private void insertGeneration(String status, String createdAt) {
+        entityManager.createNativeQuery(
+                        "insert into llm_generations (execution_id, task_type, attempt, model, status, created_at)"
+                                + " values (1, 'RAG_ANSWER', 1, 'qwen', :status, cast(:createdAt as timestamptz))")
+                .setParameter("status", status)
+                .setParameter("createdAt", createdAt)
+                .executeUpdate();
     }
 
     // 기간을 안 주면 전체를 센다

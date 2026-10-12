@@ -1,5 +1,6 @@
 package com.telme.consult.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.consult.service.ConsultService;
 import com.telme.consult.service.DialogueService;
@@ -17,8 +18,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class ConsultPersistenceConfiguration {
     @Bean
     JdbcConsultStateStore consultStateStore(
-            JdbcTemplate jdbc, PlatformTransactionManager transactionManager) {
-        return new JdbcConsultStateStore(jdbc, new TransactionTemplate(transactionManager));
+            JdbcTemplate jdbc,
+            PlatformTransactionManager transactionManager,
+            ObjectMapper objectMapper) {
+        return new JdbcConsultStateStore(
+                jdbc, new TransactionTemplate(transactionManager), objectMapper);
     }
 
     @Bean

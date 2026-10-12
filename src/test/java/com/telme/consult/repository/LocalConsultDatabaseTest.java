@@ -119,6 +119,14 @@ class LocalConsultDatabaseTest {
                 status);
     }
 
+    /** 지역 되묻기 흐름만 보는 테스트다. 업무는 거절로 두어 되묻지 않게 한다. */
+    DialogueInput storeInput(long requestId, Map<String, Condition> previous,
+            Map<String, Condition> updates, LocationStatus locationStatus) {
+        var conditions = new java.util.HashMap<>(previous);
+        conditions.putIfAbsent("serviceType", Condition.declined());
+        return new DialogueInput(requestId, Purpose.NEARBY_STORE, conditions, updates, locationStatus);
+    }
+
     long request(long sid) {
         long origin = message(sid, "USER", "QUESTION", "COMPLETED");
         return jdbc.queryForObject(
@@ -150,22 +158,12 @@ class LocalConsultDatabaseTest {
         var service = new DialogueService(p -> p.fallbackText());
         var ask =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                Map.of(),
-                                Map.of(),
-                                LocationStatus.MISSING));
+                        storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting = states.save(session, 1, ask, new MessageLinks(question, null, null));
         var decision =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                waiting.conditions(),
-                                Map.of("location", Condition.filled("강남역")),
-                                LocationStatus.MISSING));
+                        storeInput(rid, waiting.conditions(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -209,12 +207,7 @@ class LocalConsultDatabaseTest {
         var service = new DialogueService(p -> p.fallbackText());
         var ask =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                initial.conditions(),
-                                Map.of(),
-                                LocationStatus.MISSING));
+                        storeInput(rid, initial.conditions(), Map.of(), LocationStatus.MISSING));
         long asked = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting =
                 states.save(session, initial.version(), ask, new MessageLinks(asked, null, null));
@@ -223,12 +216,7 @@ class LocalConsultDatabaseTest {
         long replied = message(session, "USER", "QUESTION", "COMPLETED");
         var next =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                states.load(session, rid).conditions(),
-                                Map.of("location", Condition.filled("강남역")),
-                                LocationStatus.MISSING));
+                        storeInput(rid, states.load(session, rid).conditions(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
         assertEquals(Action.PROCEED, next.action());
         var saved =
                 states.save(
@@ -242,35 +230,30 @@ class LocalConsultDatabaseTest {
                 replied,
                 jdbc.queryForObject(
                         "SELECT answered_message_id FROM consult_conditions WHERE"
-                                + " consult_request_id=?",
+                                + " consult_request_id=? AND condition_key='location'",
                         Long.class,
                         rid));
         assertEquals(
                 asked,
                 jdbc.queryForObject(
                         "SELECT asked_message_id FROM consult_conditions WHERE"
-                                + " consult_request_id=?",
+                                + " consult_request_id=? AND condition_key='location'",
                         Long.class,
                         rid));
         var correction =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                saved.conditions(),
-                                Map.of("location", Condition.filled("홍대입구")),
-                                LocationStatus.MISSING));
+                        storeInput(rid, saved.conditions(), Map.of("location", Condition.filled("홍대입구")), LocationStatus.MISSING));
         states.save(session, saved.version(), correction, MessageLinks.none());
         assertNull(
                 jdbc.queryForObject(
                         "SELECT answered_message_id FROM consult_conditions WHERE"
-                                + " consult_request_id=?",
+                                + " consult_request_id=? AND condition_key='location'",
                         Long.class,
                         rid));
         assertEquals(
                 "EXTRACTED",
                 jdbc.queryForObject(
-                        "SELECT source FROM consult_conditions WHERE consult_request_id=?",
+                        "SELECT source FROM consult_conditions WHERE consult_request_id=? AND condition_key='location'",
                         String.class,
                         rid));
     }
@@ -282,12 +265,7 @@ class LocalConsultDatabaseTest {
         var ask =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        rid,
-                                        Purpose.NEARBY_STORE,
-                                        Map.of(),
-                                        Map.of(),
-                                        LocationStatus.MISSING));
+                                storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long wrong = message(session(2L, null), "ASSISTANT", "CLARIFICATION", "COMPLETED");
         assertThrows(
                 IllegalArgumentException.class,
@@ -316,12 +294,7 @@ class LocalConsultDatabaseTest {
         var decision =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        a,
-                                        Purpose.NEARBY_STORE,
-                                        Map.of(),
-                                        Map.of("location", Condition.filled("강남역")),
-                                        LocationStatus.MISSING));
+                                storeInput(a, Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
         states.save(session, states.load(session, a).version(), decision, MessageLinks.none());
         assertTrue(states.load(session, b).conditions().isEmpty());
     }
@@ -332,12 +305,7 @@ class LocalConsultDatabaseTest {
         var ask =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        rid,
-                                        Purpose.NEARBY_STORE,
-                                        Map.of(),
-                                        Map.of(),
-                                        LocationStatus.MISSING));
+                                storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long firstMessage = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting =
                 states.save(
@@ -348,12 +316,7 @@ class LocalConsultDatabaseTest {
         var repeatedAsk =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        rid,
-                                        Purpose.NEARBY_STORE,
-                                        waiting.conditions(),
-                                        Map.of(),
-                                        LocationStatus.MISSING));
+                                storeInput(rid, waiting.conditions(), Map.of(), LocationStatus.MISSING));
         int count = jdbc.queryForObject("SELECT count(*) FROM chat_messages", Integer.class);
         var error =
                 assertThrows(
@@ -430,12 +393,7 @@ class LocalConsultDatabaseTest {
         var ask =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        rid,
-                                        Purpose.NEARBY_STORE,
-                                        Map.of(),
-                                        Map.of(),
-                                        LocationStatus.MISSING));
+                                storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long asked = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting =
                 states.save(
@@ -475,12 +433,7 @@ class LocalConsultDatabaseTest {
         var ask =
                 new DialogueService(p -> p.fallbackText())
                         .decide(
-                                new DialogueInput(
-                                        rid,
-                                        Purpose.NEARBY_STORE,
-                                        Map.of(),
-                                        Map.of(),
-                                        LocationStatus.MISSING));
+                                storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
@@ -560,7 +513,8 @@ class LocalConsultDatabaseTest {
                                         store,
                                         Purpose.NEARBY_STORE,
                                         asked,
-                                        Map.of("location", Condition.filled("강남역")))));
+                                        Map.of("location", Condition.filled("강남역"),
+                                                "serviceType", Condition.declined()))));
         assertEquals(1, resumed.ready().size());
         assertEquals(store, resumed.ready().getFirst().consultRequestId());
         var saved =
@@ -595,20 +549,10 @@ class LocalConsultDatabaseTest {
         var service = new DialogueService(p -> p.fallbackText());
         var a =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                Map.of(),
-                                Map.of("location", Condition.filled("강남역")),
-                                LocationStatus.MISSING));
+                        storeInput(rid, Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
         var b =
                 service.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                Map.of(),
-                                Map.of("location", Condition.filled("홍대입구역")),
-                                LocationStatus.MISSING));
+                        storeInput(rid, Map.of(), Map.of("location", Condition.filled("홍대입구역")), LocationStatus.MISSING));
         try (var pool = Executors.newFixedThreadPool(2)) {
             var ready = new CountDownLatch(2);
             var go = new CountDownLatch(1);
@@ -649,7 +593,7 @@ class LocalConsultDatabaseTest {
         assertEquals(
                 1,
                 jdbc.queryForObject(
-                        "SELECT count(*) FROM consult_conditions WHERE consult_request_id=?",
+                        "SELECT count(*) FROM consult_conditions WHERE consult_request_id=? AND condition_key='location'",
                         Integer.class,
                         rid));
     }
@@ -672,7 +616,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var prepared =
                 service.prepare(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         assertEquals(Action.ASK, prepared.decision().action());
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting = service.persist(prepared, new MessageLinks(question, null, null));
@@ -683,7 +627,7 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         assertEquals(Action.PROCEED, resumed.decision().action());
         var saved = service.persist(resumed, new MessageLinks(null, reply, "location"));
@@ -696,7 +640,7 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("홍대입구역")),
+                        Map.of("location", Condition.filled("홍대입구역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         service.persist(correction, MessageLinks.none());
         assertEquals("홍대입구역", states.load(session, rid).conditions().get("location").value());
@@ -711,7 +655,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var first =
                 service.prepare(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         service.persist(first, new MessageLinks(question, null, null));
         long reply = message(session, "USER", "QUESTION", "COMPLETED");
@@ -720,7 +664,7 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.declined()),
+                        Map.of("location", Condition.declined(), "serviceType", Condition.declined()),
                         LocationStatus.DECLINED);
         assertEquals(Action.ALTERNATIVE_GUIDANCE, refused.decision().action());
         service.persist(refused, new MessageLinks(null, reply, "location"));
@@ -740,14 +684,14 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         var fresh =
                 service.prepare(
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("역삼역")),
+                        Map.of("location", Condition.filled("역삼역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         service.persist(fresh, MessageLinks.none());
         assertThrows(
@@ -770,7 +714,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var first =
                 service.prepare(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var waiting = service.persist(first, new MessageLinks(question, null, null));
 
@@ -782,7 +726,7 @@ class LocalConsultDatabaseTest {
                                         session,
                                         rid,
                                         Purpose.NEARBY_STORE,
-                                        Map.of(),
+                                        Map.of("serviceType", Condition.declined()),
                                         LocationStatus.MISSING));
         assertEquals(question, pending.messageId());
         assertEquals(1, calls.get());
@@ -795,7 +739,7 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         assertEquals(Action.PROCEED, next.decision().action());
         service.persist(next, new MessageLinks(null, reply, "location"));
@@ -826,7 +770,7 @@ class LocalConsultDatabaseTest {
                                 session,
                                 rid,
                                 Purpose.NEARBY_STORE,
-                                Map.of(),
+                                Map.of("serviceType", Condition.declined()),
                                 LocationStatus.MISSING)
                         .decision()
                         .action());
@@ -839,12 +783,7 @@ class LocalConsultDatabaseTest {
         var dialogue = new DialogueService(prompt -> prompt.fallbackText());
         var ask =
                 dialogue.decide(
-                        new DialogueInput(
-                                rid,
-                                Purpose.NEARBY_STORE,
-                                Map.of(),
-                                Map.of(),
-                                LocationStatus.MISSING));
+                        storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         states.save(session, 1, ask, new MessageLinks(question, null, null));
 
@@ -879,7 +818,7 @@ class LocalConsultDatabaseTest {
                                                 session,
                                                 rid,
                                                 Purpose.NEARBY_STORE,
-                                                Map.of(),
+                                                Map.of("serviceType", Condition.declined()),
                                                 LocationStatus.MISSING)));
         assertEquals(1, states.load(session, rid).version());
     }
@@ -898,7 +837,7 @@ class LocalConsultDatabaseTest {
                                 }));
         var first =
                 service.prepareTurn(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         assertFalse(first.waitingForReply());
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var saved = service.persist(first.prepared(), new MessageLinks(question, null, null));
@@ -916,7 +855,7 @@ class LocalConsultDatabaseTest {
                         session,
                         rid,
                         Purpose.NEARBY_STORE,
-                        Map.of("location", Condition.filled("강남역")),
+                        Map.of("location", Condition.filled("강남역"), "serviceType", Condition.declined()),
                         LocationStatus.MISSING);
         assertFalse(resumed.waitingForReply());
         var ready = service.persist(resumed.prepared(), new MessageLinks(null, reply, "location"));
@@ -932,10 +871,10 @@ class LocalConsultDatabaseTest {
                         states, new DialogueService(prompt -> prompt.fallbackText()));
         var first =
                 service.prepare(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         var second =
                 service.prepare(
-                        session, rid, Purpose.NEARBY_STORE, Map.of(), LocationStatus.MISSING);
+                        session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
         var start = new CountDownLatch(1);
         try (var pool = Executors.newFixedThreadPool(2)) {
             var outcomes = new ArrayList<Future<Boolean>>();

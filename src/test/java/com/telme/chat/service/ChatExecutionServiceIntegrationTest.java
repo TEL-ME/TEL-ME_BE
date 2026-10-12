@@ -66,6 +66,29 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
+    void persistsSearchContextAndSnapshotsAcrossReload() {
+        var request = new ChatMessageSendRequest("가까운 매장", 37.456789, 127.987654);
+        var sent = chatSessionService.sendMessage(actor, sessionId, request);
+        var command = applicationEvents.stream(ChatProcessingCommand.class).findFirst().orElseThrow();
+        assertThat(command.coordinates()).isEqualTo(new ChatCoordinates(37.456789, 127.987654));
+        var context = new com.telme.chat.dto.res.ChatStoreSearchContextResponse(
+                com.telme.chat.dto.res.ChatStoreSearchContextResponse.Type.CURRENT_LOCATION, "현재 위치", 10000);
+        chatExecutionService.completeAnswer(sent.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.STORE_RESULT, "현재 위치 기준 매장", null, List.of(),
+                List.of(Map.of("storeId", 2, "name", "매장", "latitude", 37.5,
+                        "longitude", 127.0, "distanceMeters", 300)), context));
+        entityManager.flush();
+        entityManager.clear();
+        var answer = historyItem(2);
+        assertThat(answer.storeSearchContext()).isEqualTo(context);
+        assertThat(answer.storeResults().getFirst()).containsEntry("distanceMeters", 300);
+        String saved = jdbcTemplate.queryForObject(
+                "SELECT store_search_context::text FROM chat_messages WHERE message_id=?",
+                String.class, answer.messageId());
+        assertThat(saved).doesNotContain("37.456789", "127.987654");
+    }
+
+    @Test
     void completesStartedAnswerInPlace() {
         ChatMessageSendResponse question = send("5G 요금제 알려줘");
 

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
@@ -18,14 +20,17 @@ import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.repository.QueryRoutingRepository;
+import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -85,8 +90,8 @@ class QueryRoutingServiceFollowUpTest {
                 .status(ConsultRequest.Status.WAITING_CONDITION)
                 .build();
 
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.of(waiting));
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
     }
 
     @Test
@@ -106,6 +111,91 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("여러 조건 중 실제로 물은 현재 조건만 LLM에 넘긴다")
+    void analyzeFollowUp_onlyPassesAskedPendingCondition() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(
+                        ConsultCondition.builder()
+                                .conditionKey("joined_this_month")
+                                .status(ConsultCondition.Status.PENDING)
+                                .askedMessage(askedMessage)
+                                .build(),
+                        ConsultCondition.builder()
+                                .conditionKey("changed_this_month")
+                                .status(ConsultCondition.Status.PENDING)
+                                .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"joined_this_month\",\"status\":\"FILLED\",\"value\":\"예\"}]}");
+
+        service.analyzeFollowUp(SESSION_ID, "예");
+
+        ArgumentCaptor<LlmRequest> request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().userPrompt())
+                .contains("되묻는 중인 조건: joined_this_month")
+                .doesNotContain("changed_this_month");
+    }
+
+    @Test
+    @DisplayName("업무 선택지를 그대로 누르면 모델을 부르지 않고 코드로 읽는다")
+    void analyzeFollowUp_readsServiceTypeOptionWithoutLlm() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.STORE)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("serviceType")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsExactly(entry("serviceType", "USIM_REISSUE"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("업무를 직접 풀어 쓴 답은 모델이 읽는다")
+    void analyzeFollowUp_sendsFreeServiceTypeTextToLlm() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.STORE)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("serviceType")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"serviceType\",\"status\":\"FILLED\",\"value\":\"USIM_REISSUE\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급 하려고요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
     @DisplayName("새 상담 요청을 만들지 않고 기존 상담만 재사용한다")
     void analyzeFollowUp_doesNotCreateNewConsultRequest() {
         givenWaitingConsultExists();
@@ -121,8 +211,8 @@ class QueryRoutingServiceFollowUpTest {
     @Test
     @DisplayName("되묻기 대기 중인 상담이 없으면 consultRequestId 없이 반환해 임의 상담 갱신을 막는다")
     void analyzeFollowUp_withoutWaitingConsult() {
-        given(consultRequestRepository.findFirstBySession_SessionIdAndStatusOrderBySubqueryOrderAsc(
-                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(Optional.empty());
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of());
 
         FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "강남역");
 
@@ -145,6 +235,59 @@ class QueryRoutingServiceFollowUpTest {
         // 거절은 값을 못 찾은 경우와 구분되도록 declinedKeys로 온다
         assertThat(response.conditions()).isEmpty();
         assertThat(response.declinedKeys()).containsExactly("location");
+    }
+
+    @Test
+    @DisplayName("LLM이 '현재 위치'를 지역으로 뽑아도 조건으로 받지 않고, 규칙 기반 재시도도 문장을 지역으로 받지 않는다")
+    void analyzeFollowUp_ignoresRelativeLocation() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"CONDITION_RESPONSE\","
+                        + "\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"현재 위치\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "현재 위치에서 가까운 매장을 찾아줘");
+
+        assertThat(response.conditions()).doesNotContainKey("location");
+        assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("지역을 묻는 중 업무 버튼 문구만 오면 모델 없이 같은 상담의 업무 조건으로 받는다")
+    void analyzeFollowUp_acceptsServiceOptionWhileAskingLocation() {
+        givenWaitingConsultExists();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급");
+
+        assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(response.conditions()).containsExactly(Map.entry("serviceType", "USIM_REISSUE"));
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("지역을 묻는 중이라도 업무가 들어간 문장형 질문은 업무 조건으로 가로채지 않는다")
+    void analyzeFollowUp_doesNotHijackSentenceQuestionWithServiceWords() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn("{\"responseType\":\"NEW_QUESTION\",\"conditions\":[]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "유심 재발급 어떻게 해요?");
+
+        assertThat(response.conditions()).doesNotContainKey("serviceType");
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
+    @DisplayName("LLM 오류로 규칙 기반에 넘어가도 '신촌 근처요'의 신촌을 지역으로 받는다")
+    void analyzeFollowUp_keepsPlaceBeforeRelativeWordOnRuleFallback() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any()))
+                .willThrow(new GeneralException(IntentErrorCode.LLM_CONNECTION_FAILED));
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "신촌 근처요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsEntry("location", "신촌");
     }
 
     @Test

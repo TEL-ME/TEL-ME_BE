@@ -1,5 +1,6 @@
 package com.telme.chat.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -57,6 +59,66 @@ class ChatSessionApiIntegrationTest {
         ownerSession.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, owner.getUserId());
         otherSession = new MockHttpSession();
         otherSession.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, other.getUserId());
+    }
+
+    @Test
+    @DisplayName("생성된 API 명세는 정상 접수 201과 정책 안내 200 및 실행 필드 유무를 구분한다")
+    void 입력_API_명세는_접수와_안내_응답을_구분한다() throws Exception {
+        JsonNode responses = 입력_API_응답_명세();
+
+        assertThat(responses.has("201")).isTrue();
+        assertThat(responses.has("200")).isTrue();
+        assertThat(responses.path("201").path("description").asText())
+                .contains("executionId", "executionStatus", "SSE");
+        assertThat(responses.path("200").path("description").asText())
+                .contains("executionId", "executionStatus", "생략", "재시도");
+        assertThat(responses.path("201").path("content").path("application/json").has("schema"))
+                .isTrue();
+        assertThat(responses.path("200").path("content").path("application/json").has("schema"))
+                .isTrue();
+        assertThat(responses.path("200").path("headers").path("Retry-After")
+                .path("schema").path("type").asText()).isEqualTo("integer");
+    }
+
+    @Test
+    @DisplayName("명세 예시는 MASKED를 정상 접수로 유지하고 안내에는 실행 ID를 만들지 않는다")
+    void 입력_API_예시는_마스킹과_차단을_혼동하지_않는다() throws Exception {
+        JsonNode responses = 입력_API_응답_명세();
+
+        for (String name : new String[] {"normal", "masked"}) {
+            JsonNode body = 응답_예시(responses, "201", name);
+            assertThat(body.path("code").asText()).isEqualTo("201");
+            assertThat(body.path("result").path("executionId").asLong()).isPositive();
+            assertThat(body.path("result").path("executionStatus").asText())
+                    .isEqualTo("RUNNING");
+        }
+        assertThat(응답_예시(responses, "201", "masked")
+                .path("result").path("inputGuard").path("action").asText()).isEqualTo("MASKED");
+
+        for (String name : new String[] {"warned", "restricted", "rewriteRequired"}) {
+            JsonNode body = 응답_예시(responses, "200", name);
+            assertThat(body.path("code").asText()).isEqualTo("200");
+            assertThat(body.path("result").has("executionId")).isFalse();
+            assertThat(body.path("result").has("executionStatus")).isFalse();
+            assertThat(body.path("result").path("inputGuard").path("action").asText())
+                    .isIn("WARNED", "RESTRICTED", "REWRITE_REQUIRED");
+        }
+    }
+
+    private JsonNode 입력_API_응답_명세() throws Exception {
+        MvcResult result = mockMvc.perform(get("/v3/api-docs").session(ownerSession))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsByteArray())
+                .path("paths").path("/api/v1/chat/sessions/{sessionId}/messages")
+                .path("post").path("responses");
+    }
+
+    private JsonNode 응답_예시(JsonNode responses, String code, String name) throws Exception {
+        JsonNode value = responses.path(code).path("content").path("application/json")
+                .path("examples").path(name).path("value");
+        assertThat(value.isMissingNode()).isFalse();
+        return value.isTextual() ? objectMapper.readTree(value.asText()) : value;
     }
 
     @Test

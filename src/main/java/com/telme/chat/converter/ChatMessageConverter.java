@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.dto.res.ChatMessageHistoryItemResponse;
+import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
@@ -53,8 +54,35 @@ public class ChatMessageConverter {
                 message.getCreatedAt(),
                 message.getCompletedAt(),
                 ratable,
-                myFeedback
+                myFeedback,
+                parseSearchContext(message)
         );
+    }
+
+    public String toContextJson(ChatStoreSearchContextResponse context) {
+        if (context == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(context);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("매장 검색 기준 직렬화에 실패했습니다.", exception);
+        }
+    }
+
+    private ChatStoreSearchContextResponse parseSearchContext(ChatMessage message) {
+        JsonNode root = readJson(message, "storeSearchContext", message.getStoreSearchContext(), "OBJECT");
+        if (root == null || root.isNull()) {
+            return null;
+        }
+        if (!root.isObject()) {
+            return invalidShape(message, "storeSearchContext", "OBJECT", root.getNodeType().name());
+        }
+        try {
+            return objectMapper.convertValue(root, ChatStoreSearchContextResponse.class);
+        } catch (IllegalArgumentException exception) {
+            return invalidShape(message, "storeSearchContext", "OBJECT", "CONVERSION_FAILED");
+        }
     }
 
     public String toJson(List<?> values) {
