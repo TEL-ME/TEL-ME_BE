@@ -32,6 +32,7 @@ public class SpeechUsageLimiter {
         this.properties = properties;
     }
 
+    // Polly 호출 전에 차감하고 실패해도 돌려주지 않는다. 시간 초과는 Polly에서 이미 과금됐을 수 있고, 실패를 반복하는 요청도 막아야 해서다
     public synchronized void acquire(ChatActor actor, int characters) {
         Instant now = clock.instant();
         LocalDate today = LocalDate.ofInstant(now, KOREA);

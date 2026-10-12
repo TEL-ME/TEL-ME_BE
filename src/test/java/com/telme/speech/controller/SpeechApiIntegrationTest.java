@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -70,6 +71,7 @@ class SpeechApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "audio/mpeg"))
                 .andExpect(header().string("Cache-Control", "max-age=3600, private"))
+                .andExpect(header().string("Vary", "Cookie"))
                 .andExpect(content().bytes(AUDIO));
     }
 
@@ -150,6 +152,26 @@ class SpeechApiIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("CHAT404-2"));
         verifyNoInteractions(pollySpeechClient);
+    }
+
+    @Test
+    void Accept에_audio_mpeg만_보내도_오류는_JSON으로_받는다() throws Exception {
+        ChatMessage answer = persistMessage(persistMemberChatSession(owner.getUserId()), 1,
+                ChatMessage.Role.ASSISTANT, "남의 답변입니다.");
+        MockHttpSession otherSession = memberSession(persistUser("speech-accept").getUserId());
+
+        mockMvc.perform(get("/api/v1/chat/messages/{messageId}/speech", answer.getMessageId())
+                        .session(otherSession)
+                        .header("Accept", "audio/mpeg"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("CHAT404-2"));
+        mockMvc.perform(get("/api/v1/chat/messages/{messageId}/speech", 0)
+                        .session(ownerSession)
+                        .header("Accept", "audio/mpeg"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.result.messageId").value("메시지 ID는 1 이상이어야 합니다."));
     }
 
     @Test

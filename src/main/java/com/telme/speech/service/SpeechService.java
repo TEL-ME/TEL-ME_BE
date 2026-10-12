@@ -10,6 +10,10 @@ import com.telme.speech.config.SpeechTtsProperties;
 import com.telme.speech.exception.SpeechErrorCode;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +27,7 @@ public class SpeechService {
     private final SpeechAudioCache speechAudioCache;
     private final SpeechUsageLimiter speechUsageLimiter;
     private final SpeechTtsProperties properties;
+    private final ConcurrentMap<Long, CompletableFuture<byte[]>> inFlight = new ConcurrentHashMap<>();
 
     public byte[] synthesizeMessage(ChatActor actor, Long messageId) {
         ChatMessage message = chatMessageRepository.findByIdWithSession(messageId)
@@ -37,7 +42,30 @@ public class SpeechService {
             return cached.get();
         }
 
-        String text = SpeechText.toSpeakable(message.getContent(), properties.maxTextLength());
+        // 같은 답변을 동시에 요청하면 먼저 온 요청만 Polly를 부르고 나머지는 그 결과를 기다린다
+        CompletableFuture<byte[]> mine = new CompletableFuture<>();
+        CompletableFuture<byte[]> running = inFlight.putIfAbsent(messageId, mine);
+        if (running != null) {
+            return await(running);
+        }
+        try {
+            byte[] audio = synthesize(actor, messageId, message.getContent());
+            mine.complete(audio);
+            return audio;
+        } catch (RuntimeException e) {
+            mine.completeExceptionally(e);
+            throw e;
+        } finally {
+            inFlight.remove(messageId, mine);
+        }
+    }
+
+    private byte[] synthesize(ChatActor actor, Long messageId, String content) {
+        Optional<byte[]> cached = speechAudioCache.get(messageId);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+        String text = SpeechText.toSpeakable(content, properties.maxTextLength());
         if (text.isEmpty()) {
             throw new GeneralException(SpeechErrorCode.NOT_SPEAKABLE);
         }
@@ -45,6 +73,17 @@ public class SpeechService {
         byte[] audio = pollySpeechClient.synthesize(text);
         speechAudioCache.put(messageId, audio);
         return audio;
+    }
+
+    private static byte[] await(CompletableFuture<byte[]> running) {
+        try {
+            return running.join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException cause) {
+                throw cause;
+            }
+            throw e;
+        }
     }
 
     private boolean owns(ChatActor actor, ChatSession session) {
