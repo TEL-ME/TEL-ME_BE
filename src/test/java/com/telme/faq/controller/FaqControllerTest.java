@@ -13,13 +13,14 @@ import com.telme.faq.service.FaqQueryService;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.global.config.SecurityConfig;
 import com.telme.member.repository.UserRepository;
+import com.telme.member.service.GoogleOidcUserService;
 import com.telme.member.service.GuestIdentityService;
-import com.telme.member.service.KakaoAuthorizationFailureHandler;
-import com.telme.member.service.KakaoLinkRequestStore;
-import com.telme.member.service.KakaoLoginFailureHandler;
-import com.telme.member.service.KakaoLoginSuccessHandler;
 import com.telme.member.service.KakaoOAuth2UserService;
 import com.telme.member.service.MemberStatusChecker;
+import com.telme.member.service.SocialAuthorizationFailureHandler;
+import com.telme.member.service.SocialLinkRequestStore;
+import com.telme.member.service.SocialLoginFailureHandler;
+import com.telme.member.service.SocialLoginSuccessHandler;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,16 +54,19 @@ class FaqControllerTest {
     private KakaoOAuth2UserService kakaoOAuth2UserService;
 
     @MockitoBean
-    private KakaoLoginSuccessHandler kakaoLoginSuccessHandler;
+    private GoogleOidcUserService googleOidcUserService;
 
     @MockitoBean
-    private KakaoLoginFailureHandler kakaoLoginFailureHandler;
+    private SocialLoginSuccessHandler socialLoginSuccessHandler;
 
     @MockitoBean
-    private KakaoAuthorizationFailureHandler kakaoAuthorizationFailureHandler;
+    private SocialLoginFailureHandler socialLoginFailureHandler;
 
     @MockitoBean
-    private KakaoLinkRequestStore kakaoLinkRequestStore;
+    private SocialAuthorizationFailureHandler socialAuthorizationFailureHandler;
+
+    @MockitoBean
+    private SocialLinkRequestStore socialLinkRequestStore;
 
     @Test
     @DisplayName("로그인하지 않아도 목록과 상세를 조회한다")
@@ -82,6 +86,7 @@ class FaqControllerTest {
         mockMvc.perform(get("/api/v1/faqs").param("category", "NOPE")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/faqs").param("sort", "NOPE")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/faqs").param("size", "101")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/faqs").param("size", "0")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/faqs/0")).andExpect(status().isBadRequest());
     }
 

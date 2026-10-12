@@ -11,7 +11,7 @@ public record FaqListRequest(
         FaqCategory category,
         FaqSort sort,
         @Min(0) Integer page,
-        @Min(0) @Max(100) Integer size
+        @Min(1) @Max(100) Integer size
         ) {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
