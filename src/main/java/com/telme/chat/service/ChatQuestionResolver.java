@@ -48,6 +48,11 @@ public class ChatQuestionResolver {
                     + "|은|는|이|가|을|를|도|에|로|건|거|것)+$");
     private static final Pattern ORDINAL_REFERENCE = Pattern.compile(
             "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한|신청한)|처음(?:물어본|문의한|말한|질문한|신청한)");
+    private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
+    // 업무가 아니라 묻는 항목인 합성어. 이 안의 낱말은 상담 대상으로 세지 않는다.
+    private static final Pattern ITEM_COMPOUND = Pattern.compile("신청방법|처리기간");
+    private static final Pattern REFERENCE_MARKER = Pattern.compile(
+            "그럼|그러면|그때|아까|앞서|이전에|그건|그거|그것|이건|이거|이것|(?:첫|두|세|네)번째|처음");
     private static final int GENERIC_FOLLOW_UP_MAX_LENGTH = 30;
     static final String SYSTEM_PROMPT = """
             현재 고객 문장만 보고 상담 대상이 명시되었는지 판정합니다. 정책 답변이나 신청 조건을 확인하지 않습니다.
@@ -295,8 +300,14 @@ public class ChatQuestionResolver {
 
     static boolean isGenericFollowUp(String question) {
         String compact = compact(question);
-        return !compact.isEmpty() && compact.length() <= GENERIC_FOLLOW_UP_MAX_LENGTH
-                && GENERIC_FOLLOW_UP.matcher(compact).matches();
+        if (compact.isEmpty() || compact.length() > GENERIC_FOLLOW_UP_MAX_LENGTH
+                || !GENERIC_FOLLOW_UP.matcher(compact).matches()) {
+            return false;
+        }
+        // 요금·변경·취소처럼 그 자체로 상담 대상이 될 수 있는 낱말은 지시어·시점 표현이 함께 있을 때만 일반어로 본다.
+        // "요금 언제 나와요?"는 현재 대상 판정 모델로 넘기고 "그때 요금은 얼마나 나와요?"는 대상 생략으로 둔다.
+        String withoutItems = ITEM_COMPOUND.matcher(compact).replaceAll("");
+        return !TOPIC_CAPABLE.matcher(withoutItems).find() || REFERENCE_MARKER.matcher(compact).find();
     }
 
     // "첫 번째로 물어본"처럼 위치를 지정하면 몇 번째 업무인지는 코드가 정한다.
@@ -379,14 +390,23 @@ public class ChatQuestionResolver {
         }
         Integer ordinal = ordinalReference(question);
         if (ordinal != null) {
-            // 발언 번호가 아니라 정정을 제외한 업무 순서로 센다. 모델의 위치 판정은 쓰지 않는다.
-            List<Integer> topics = java.util.stream.IntStream.range(0, parsed.size())
-                    .filter(index -> parsed.get(index).parentIndex() == 0 && parsed.get(index).targetCount() > 0)
-                    .boxed().toList();
-            if (ordinal > topics.size()) {
+            // 발언 번호가 아니라 정정을 제외한 업무 순서로 센다. 한 발언의 업무가 여럿이면 그 개수만큼 센다.
+            // 순번이 업무가 여러 개인 발언 안을 가리키면 개별 업무를 특정할 수 없어 아래에서 확인 안내가 된다.
+            // 모델의 위치 판정은 쓰지 않는다.
+            int counted = 0;
+            anchor = 0;
+            for (int i = 0; i < parsed.size() && anchor == 0; i++) {
+                if (parsed.get(i).parentIndex() != 0 || parsed.get(i).targetCount() == 0) {
+                    continue;
+                }
+                counted += parsed.get(i).targetCount();
+                if (ordinal <= counted) {
+                    anchor = i + 1;
+                }
+            }
+            if (anchor == 0) {
                 return new Resolution(question, true, List.of());
             }
-            anchor = topics.get(ordinal - 1) + 1;
         } else if (scope == SourceScope.RECENT) {
             anchor = 0;
             for (int i = 0; i < parsed.size(); i++) {

@@ -397,8 +397,45 @@ class ChatQuestionResolverTest {
                 + "{\"index\":2,\"targetCount\":1,\"parentIndex\":0}]}";
         assertThat(resolver.validateResolution("앞서 첫 번째로 물어본 건 비용이 얼마야?", raw,
                 Map.of(501L, multiple, 900L, newer)).needsClarification()).isTrue();
-        assertThat(resolver.validateResolution("앞서 세 번째로 물어본 건 비용이 얼마야?", raw,
+        assertThat(resolver.validateResolution("앞서 네 번째로 물어본 건 비용이 얼마야?", raw,
                 Map.of(501L, multiple, 900L, newer)).needsClarification()).isTrue();
+    }
+
+    // 한 발언의 업무가 여럿이면 그 개수만큼 업무 순서를 센다. 발언 순서로 세지 않는다.
+    @Test
+    void ordinalCountsEachTargetInsideAMessageNotEachMessage() throws Exception {
+        var multiple = customer(501L, 1, "인터넷 가입과 번호이동을 알아보고 있어요");
+        var roaming = customer(900L, 2, "로밍도 알아보고 있어요");
+        String raw = "{\"reference\":\"OMITTED\",\"anchorIndex\":0,\"referenceScope\":\"RECENT\",\"sources\":["
+                + "{\"index\":1,\"targetCount\":2,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":1,\"parentIndex\":0}]}";
+        var sources = Map.of(501L, multiple, 900L, roaming);
+
+        var second = resolver.validateResolution("두 번째로 물어본 건 비용이 얼마야?", raw, sources);
+        assertThat(second.needsClarification()).isTrue();
+        assertThat(second.sourceMessageIds()).isEmpty();
+        var third = resolver.validateResolution("세 번째로 물어본 건 비용이 얼마야?", raw, sources);
+        assertThat(third.needsClarification()).isFalse();
+        assertThat(third.sourceMessageIds()).containsExactly(900L);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"요금 언제 나와요?", "요금 변경 어떻게 해요?", "요금은 얼마예요?", "취소 어떻게 해요?",
+            "신청 언제까지 해요?"})
+    void topicCapableWordWithoutReferenceIsLeftToTheModel(String question) {
+        assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
+    }
+
+    @Test
+    void selfContainedFeeQuestionIsJudgedByModelAndKeepsNoHistory() throws Exception {
+        String question = "요금 언제 나와요?";
+        respond(model, explicit());
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
     }
 
     static void respond(LlmClient client, String combined) throws Exception {
