@@ -43,7 +43,7 @@ public record AdminFaqSearchRequest(
 
     // LIKE에서 %와 _는 와일드카드라 그대로 넘기면 "10%" 검색이 "10" 검색이 된다.
     // 이스케이프 문자인 역슬래시를 먼저 바꿔야 뒤에서 붙인 역슬래시를 다시 바꾸지 않는다
-    private static String escapeLike(String value) {
+    static String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

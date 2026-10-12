@@ -3,6 +3,7 @@ package com.telme.faq.repository;
 import com.telme.faq.entity.Faq;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,4 +62,6 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
             @Param("category") String category,
             @Param("statuses") Collection<Faq.Status> statuses,
             Pageable pageable);
+    
+    Optional<Faq> findByFaqIdAndStatus(Long faqId, Faq.Status stauts);
 }
