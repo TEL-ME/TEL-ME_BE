@@ -61,7 +61,7 @@ class SocialAccountLinkServiceTest {
     @DisplayName("비밀번호가 맞으면 연결하고 로그인 처리한 뒤 pending 정보를 지운다")
     void 정상_연결() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);
@@ -79,7 +79,7 @@ class SocialAccountLinkServiceTest {
     @DisplayName("Google pending이면 비밀번호 확인 후 Google 로그인 수단을 연결한다")
     void 구글_계정_연결() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com", "구글 사용자");
         User matchedUser = User.builder()
                 .userId(10L)
                 .email("match@example.com")
@@ -102,7 +102,7 @@ class SocialAccountLinkServiceTest {
     @DisplayName("비밀번호가 틀리면 실패 시도를 기록하고 연결하지 않는다")
     void 비밀번호_틀리면_실패_기록() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("wrong", "HASHED")).thenReturn(false);
@@ -122,7 +122,7 @@ class SocialAccountLinkServiceTest {
     @DisplayName("연결 대상 회원이 정지 상태면 거부한다")
     void 정지된_회원은_거부() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED")
                 .status(User.Status.SUSPENDED).build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
@@ -156,7 +156,7 @@ class SocialAccountLinkServiceTest {
         session.setAttribute(GUEST_ID_ATTRIBUTE, guestId);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setSession(session);
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
         User matchedUser = User.builder().userId(10L).email("match@example.com").passwordHash("HASHED").build();
         when(userRepository.findById(10L)).thenReturn(Optional.of(matchedUser));
         when(passwordEncoder.matches("password123", "HASHED")).thenReturn(true);

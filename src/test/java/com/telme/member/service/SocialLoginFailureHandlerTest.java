@@ -70,7 +70,7 @@ class SocialLoginFailureHandlerTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "current-state", "kakao");
         request.setParameter("state", "current-state");
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new BadCredentialsException("카카오 인증 취소"));
@@ -85,7 +85,7 @@ class SocialLoginFailureHandlerTest {
         socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "old-state", "kakao");
         socialLinkRequestStore.bind(request, socialLinkRequestStore.issue(request, 30L, KAKAO), "new-state", "kakao");
         request.setParameter("state", "old-state");
-        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
 
         handler.onAuthenticationFailure(request, new MockHttpServletResponse(),
                 new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));

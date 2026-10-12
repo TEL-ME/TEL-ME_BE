@@ -458,7 +458,7 @@ class SocialLoginSuccessHandlerTest {
     @DisplayName("이전에 남아있던 B pending은 이번 로그인 결과와 섞이지 않고 지워진다")
     void 이전_B_pending은_섞이지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 999L, "old@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 999L, "old@example.com", "카카오닉네임");
         MockHttpServletResponse response = new MockHttpServletResponse();
         User user = User.builder().userId(5L).build();
         when(socialMemberFinder.findOrCreate(KAKAO, "kakao-12", null, null)).thenReturn(user);

@@ -59,7 +59,7 @@ class SocialLinkStartServiceTest {
     @DisplayName("이전에 남아있던 B(이메일 계정 발견) pending을 지운다")
     void 이전_B_pending을_지운다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 99L, "old@example.com");
+        socialEmailMatchStore.issue(request, KAKAO, "old-kakao-id", 99L, "old@example.com", "카카오닉네임");
         when(currentMemberResolver.resolve(request)).thenReturn(User.builder().userId(30L).build());
 
         service.start(request, KAKAO);

@@ -23,12 +23,6 @@ public class SocialEmailMatchStore {
     // 같은 세션에서 새로 소셜 인증을 시작하면 이전 대기 상태를 그대로 덮어써 최신 것만 유효하게 한다
     public void issue(
             HttpServletRequest request, SocialAccount.Provider provider,
-            String providerUserId, Long matchedUserId, String matchedEmail) {
-        issue(request, provider, providerUserId, matchedUserId, matchedEmail, null);
-    }
-
-    public void issue(
-            HttpServletRequest request, SocialAccount.Provider provider,
             String providerUserId, Long matchedUserId, String matchedEmail, String nickname) {
         request.getSession().setAttribute(
                 SESSION_ATTRIBUTE,

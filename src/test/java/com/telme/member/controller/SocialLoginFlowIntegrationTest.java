@@ -202,6 +202,40 @@ class SocialLoginFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("같은 이메일 회원이 있어도 새 계정으로 시작하면 Google 회원을 새로 만들고, 다음 로그인부터는 그 회원으로 바로 들어간다")
+    void 연결하지_않고_새_계정으로_시작() throws Exception {
+        String email = uniqueEmail();
+        User emailUser = createEmailUser(email, "password123");
+        MockHttpSession session = new MockHttpSession();
+        assertThat(callback(session, google("start-new", email, "구글새계정"), null).getRedirectedUrl())
+                .isEqualTo(FAILURE_REDIRECT_PREFIX + MemberErrorCode.EMAIL_LINK_REQUIRED.getCode());
+
+        mockMvc.perform(post("/api/v1/auth/social/start-new").session(session))
+                .andExpect(status().isOk());
+
+        Long newUserId = (Long) session.getAttribute(USER_ID_ATTRIBUTE);
+        assertThat(newUserId).isNotNull().isNotEqualTo(emailUser.getUserId());
+        assertThat(session.getAttribute(SocialEmailMatchStore.SESSION_ATTRIBUTE)).isNull();
+        assertThat(userRepository.findById(newUserId).orElseThrow().getName()).isEqualTo("구글새계정");
+        assertThat(socialAccountCount(newUserId, "GOOGLE")).isEqualTo(1);
+        assertThat(socialAccountCount(emailUser.getUserId(), "GOOGLE")).isZero();
+        mockMvc.perform(get("/api/v1/auth/me").session(session))
+                .andExpect(jsonPath("$.result.loginMethods.length()").value(1))
+                .andExpect(jsonPath("$.result.loginMethods[0]").value("GOOGLE"));
+
+        // 대기 정보는 한 번 쓰면 지워지므로 같은 세션으로 다시 호출해도 회원이 더 생기지 않는다
+        mockMvc.perform(post("/api/v1/auth/social/start-new").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(MemberErrorCode.SOCIAL_LINK_SESSION_EXPIRED.getCode()));
+
+        // 다음 Google 로그인은 이메일 충돌 없이 새로 만든 회원으로 바로 들어간다
+        MockHttpSession next = new MockHttpSession();
+        assertThat(callback(next, google("start-new", email, "구글새계정"), null).getRedirectedUrl())
+                .isEqualTo(SUCCESS_REDIRECT);
+        assertThat(next.getAttribute(USER_ID_ATTRIBUTE)).isEqualTo(newUserId);
+    }
+
+    @Test
     @DisplayName("로그인한 이메일 회원이 Google 연결을 시작하면 인가 요청을 거쳐 현재 회원에 Google이 연결된다")
     void 로그인_상태에서_구글_추가_연결() throws Exception {
         User emailUser = createEmailUser(uniqueEmail(), "password123");

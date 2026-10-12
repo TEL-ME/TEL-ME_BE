@@ -26,7 +26,7 @@ class SocialEmailMatchStoreTest {
     void 발급_직후_조회() {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
-        store.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com");
+        store.issue(request, GOOGLE, "google-sub-1", 10L, "match@example.com", "구글 사용자");
         SocialEmailMatch pending = store.require(request);
 
         assertThat(pending.provider()).isEqualTo(GOOGLE);
@@ -51,7 +51,7 @@ class SocialEmailMatchStoreTest {
     @DisplayName("10분이 지나면 만료되어 제거되고 예외를 던진다")
     void 만료되면_예외() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
 
         clock.advance(Duration.ofMinutes(11));
 
@@ -66,7 +66,7 @@ class SocialEmailMatchStoreTest {
     @DisplayName("실패 시도가 5회 누적되면 제거되고 이후 조회는 예외를 던진다")
     void 시도횟수_초과하면_예외() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
 
         for (int i = 0; i < 5; i++) {
             SocialEmailMatch pending = (SocialEmailMatch)
@@ -84,9 +84,9 @@ class SocialEmailMatchStoreTest {
     @DisplayName("같은 세션에서 다시 발급하면 이전 대기 상태를 덮어쓴다")
     void 재발급하면_덮어쓴다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, KAKAO, "kakao-old", 10L, "old@example.com");
+        store.issue(request, KAKAO, "kakao-old", 10L, "old@example.com", "카카오닉네임");
 
-        store.issue(request, KAKAO, "kakao-new", 20L, "new@example.com");
+        store.issue(request, KAKAO, "kakao-new", 20L, "new@example.com", "카카오닉네임");
 
         SocialEmailMatch pending = store.require(request);
         assertThat(pending.providerUserId()).isEqualTo("kakao-new");
@@ -97,7 +97,7 @@ class SocialEmailMatchStoreTest {
     @DisplayName("연결 성공 후 clear 하면 더 이상 조회되지 않는다")
     void clear하면_사라진다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com");
+        store.issue(request, KAKAO, "kakao-1", 10L, "match@example.com", "카카오닉네임");
 
         store.clear(request);
 
