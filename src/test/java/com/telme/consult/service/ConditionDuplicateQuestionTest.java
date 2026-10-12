@@ -94,5 +94,7 @@ class ConditionDuplicateQuestionTest {
         assertThat(ConditionGrounding.alreadyKnown(
                 java.util.List.of("개통한 지 4개월 됐다"), "명의 변경을 하셨나요?")).isFalse();
         assertThat(ConditionGrounding.alreadyKnown(java.util.List.of(), "명의 변경을 하셨나요?")).isFalse();
+        assertThat(ConditionGrounding.alreadyKnown(
+                java.util.List.of("로밍 요금제를 쓰고 있다"), "로밍 요금제 약정이 남아 있나요?")).isFalse();
     }
 }

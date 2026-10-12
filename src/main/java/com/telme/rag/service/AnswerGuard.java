@@ -26,6 +26,9 @@ public class AnswerGuard {
 
     // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
     private static final int MIN_GROUNDED_RUN = 10;
+    private static final Pattern GENERIC_PHRASES = Pattern.compile(
+            "(?:안내받으실|안내드릴|확인하실|신청하실|이용하실|하실|받으실|드릴)?수있(?:습니다|어요)"
+                    + "|가능합니다|됩니다|입니다|합니다|있습니다|없습니다");
 
     private static final Pattern MEASURE = Pattern.compile(
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
@@ -60,11 +63,16 @@ public class AnswerGuard {
         }
         StringBuilder grounded = new StringBuilder();
         for (String sentence : SENTENCE.split(answer.strip().substring(phrase.length()).strip())) {
-            if (!sentence.isBlank() && longestCommonRun(compactText(sentence), compactText(context)) >= MIN_GROUNDED_RUN) {
+            if (!sentence.isBlank() && longestCommonRun(withoutGenericPhrases(compactText(sentence)), compactText(context)) >= MIN_GROUNDED_RUN) {
                 grounded.append(grounded.isEmpty() ? "" : " ").append(sentence.strip());
             }
         }
         return grounded.isEmpty() ? trimmed : grounded.toString();
+    }
+
+    // 일반 안내 표현은 겹침에서 제외
+    private static String withoutGenericPhrases(String compact) {
+        return GENERIC_PHRASES.matcher(compact).replaceAll("");
     }
 
     private static String compactText(String text) {

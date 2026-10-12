@@ -36,6 +36,17 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("일반 안내 표현만 겹치는 문장은 근거 문장으로 보지 않는다")
+    void 일반_안내_표현만_겹치면_문구만_남긴다() {
+        String context = "가입 방법은 상담을 통해 안내받으실 수 있습니다.";
+        String answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 해지는 즉시 처리된다고 안내받으실 수 있습니다.";
+
+        assertThat(guard.trimAfterNoEvidence(answer, context))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
     @DisplayName("답변 불가 문구 뒤가 근거와 겹치지 않으면 문구만 남긴다")
     void 근거와_겹치지_않으면_문구만_남긴다() {
         String answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER

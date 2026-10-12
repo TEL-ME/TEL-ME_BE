@@ -76,6 +76,25 @@ class LlmFaqCandidateEvidenceResolverTest {
     }
 
     @Test
+    void dropsCompoundCandidateWhenRetryDeniesOrSwitchesCandidate() {
+        var porting = new FaqSearchResponse(66L, null, "PORTING", "번호이동 신청 시 필요한 서류",
+                "본인 신분증이 필요하며, 미납 요금은 완납하셔야 합니다.",
+                0.68, 1, null, 1, null);
+        String first = """
+                {"answerable":true,"faqId":66,"quote":"본인 신분증과 미납 요금 확인이 필요합니다."}
+                """;
+        when(llm.generate(any())).thenReturn(first, """
+                {"answerable":false,"faqId":null,"quote":null}
+                """);
+        assertThat(resolver.resolve(null, null, "번호 이동 서류는 뭐야", List.of(porting), true)).isNull();
+
+        when(llm.generate(any())).thenReturn(first, """
+                {"answerable":true,"faqId":99,"quote":"원문과 다른 인용문"}
+                """);
+        assertThat(resolver.resolve(null, null, "번호 이동 서류는 뭐야", List.of(porting), true)).isNull();
+    }
+
+    @Test
     void keepsVerifiedCompoundCandidateWhenQuoteRepairFails() {
         var porting = new FaqSearchResponse(66L, null, "PORTING", "번호이동 신청 시 필요한 서류",
                 "본인 신분증이 필요하며, 미납 요금은 완납하셔야 합니다.",

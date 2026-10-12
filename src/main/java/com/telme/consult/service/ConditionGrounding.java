@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** 뽑은 조건이 FAQ 답변에 실제로 있는지 본다. 답변(A)만 근거로 치고 질문(Q)은 보지 않는다. */
@@ -20,6 +21,8 @@ final class ConditionGrounding {
     // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
     private static final int MIN_SAID_OVERLAP = 5;
     private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
+    private static final Pattern QUANTITY_UNIT =
+            Pattern.compile("(?:\\d|몇|한|두|세|네)(개월|영업일|시간|년|세|일|회)");
 
     private static final Pattern NEGATION = Pattern.compile("없|못|불가|아니");
 
@@ -121,10 +124,24 @@ final class ConditionGrounding {
 
     // 모델이 질문에서 이미 안다고 적은 사실을 되묻는 것을 막는다. "개통한 지 8개월"을 알면서 개통 기간을 묻는 경우다
     static boolean alreadyKnown(List<String> known, String question) {
-        Set<String> asked = bigrams(unitForm(question));
-        return known.stream()
-                .anyMatch(each -> bigrams(unitForm(each)).stream().filter(asked::contains).count()
-                        >= MIN_KNOWN_SHARED_BIGRAMS);
+        String askedText = unitForm(question);
+        Set<String> askedUnits = unitsIn(askedText);
+        Set<String> asked = bigrams(askedText);
+        return known.stream().anyMatch(each -> {
+            String knownText = unitForm(each);
+            // 주제만 같은 조건을 거르지 않도록 같은 기간·횟수 단위를 함께 요구
+            return unitsIn(knownText).stream().anyMatch(askedUnits::contains)
+                    && bigrams(knownText).stream().filter(asked::contains).count() >= MIN_KNOWN_SHARED_BIGRAMS;
+        });
+    }
+
+    private static Set<String> unitsIn(String text) {
+        Set<String> units = new HashSet<>();
+        Matcher matcher = QUANTITY_UNIT.matcher(text);
+        while (matcher.find()) {
+            units.add(matcher.group(1));
+        }
+        return units;
     }
 
     // "두 달"과 "2개월"처럼 같은 기간을 다르게 쓴 표현을 맞춘다

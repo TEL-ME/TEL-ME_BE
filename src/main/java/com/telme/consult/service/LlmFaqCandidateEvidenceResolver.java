@@ -119,13 +119,11 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                 return null;
             }
             Matcher retryId = FAQ_ID.matcher(repaired.path("faqId").asText(""));
-            boolean repairedQuoteIsExact = repaired.path("answerable").asBoolean(false)
-                    && retryId.matches() && Long.parseLong(retryId.group(1)) == id
-                    && hasExactQuote(repaired, selected);
-            // 반환하는 것은 모델이 만든 문장이 아니라 선택된 FAQ 원문이다. 복합 질문의 경우에는
-            // 이미 answerable=true, 후보 ID, 핵심 용어 검증을 모두 통과했으므로 인용문 재시도의
-            // JSON/문구 형식 실패만으로 답을 버리지 않는다.
-            return repairedQuoteIsExact || allowQuoteRepairFailure ? selected : null;
+            boolean sameCandidateAnswerable = repaired.path("answerable").asBoolean(false)
+                    && retryId.matches() && Long.parseLong(retryId.group(1)) == id;
+            // 재시도가 같은 후보를 골랐다면 인용문만 틀려도 원문 후보는 살린다
+            return sameCandidateAnswerable && (allowQuoteRepairFailure || hasExactQuote(repaired, selected))
+                    ? selected : null;
         } catch (JsonProcessingException | NumberFormatException failure) {
             log.warn("FAQ 후보 근거 판정 형식 오류: executionId={}, errorType={}",
                     executionId, failure.getClass().getSimpleName());
