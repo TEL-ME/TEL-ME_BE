@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,23 +16,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.intent.service.RoutingPromptTemplates;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
-import com.telme.intent.service.RoutingPromptTemplates;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -105,7 +109,7 @@ class MultiturnChatIntegrationTest {
         assertThat(history.path("messages").get(2).path("content").asText()).isEqualTo("그건 비용이 얼마야?");
         assertThat(history.path("messages").get(3).path("content").asText()).isEqualTo("재발급 비용은 7,700원입니다.");
         assertThat(history.path("messages").get(3).path("answerBasis").asText()).isEqualTo("GROUNDED");
-        var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        var query = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(search).search(query.capture());
         assertThat(query.getValue().query()).isEqualTo("유심 재발급 비용");
         assertThat(answerRequest.get().userPrompt()).contains("그건 비용이 얼마야?", "유심 재발급 방법을 알아보고 있어요.",
@@ -154,12 +158,12 @@ class MultiturnChatIntegrationTest {
 
         long execution = send(original);
 
-        var queries = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
-        verify(search, org.mockito.Mockito.times(2)).search(queries.capture());
+        var queries = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(search, times(2)).search(queries.capture());
         assertThat(queries.getAllValues()).extracting(FaqSearchRequest::query).containsExactly(original, refined);
         assertThat(queries.getAllValues()).extracting(FaqSearchRequest::kind)
-                .containsExactly(com.telme.faq.dto.req.FaqSearchKind.ORIGINAL,
-                        com.telme.faq.dto.req.FaqSearchKind.REFINED);
+                .containsExactly(FaqSearchKind.ORIGINAL, FaqSearchKind.REFINED);
+        assertThat(meaningChecks).hasValue(1);
         assertThat(history().path("messages").get(0).path("content").asText()).isEqualTo(original);
         assertThat(history().path("messages").get(1).path("content").asText()).isEqualTo(supported);
         assertThat(answerRequest.get().userPrompt()).contains(original);
@@ -174,14 +178,16 @@ class MultiturnChatIntegrationTest {
     }
 
     @Test
-    void successfulOriginalSearchSkipsVerifiedRewrite() throws Exception {
+    void successfulOriginalSearchSkipsRewriteAndItsMeaningValidation() throws Exception {
         scriptSingleFaqRewrite("유심 재발급 비용", false);
 
         send("유심 새로 받는 데 얼마인가요?");
 
-        var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        var query = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(search).search(query.capture());
         assertThat(query.getValue().query()).isEqualTo("유심 새로 받는 데 얼마인가요?");
+        // 원문 검색이 성공하면 검색 문장의 의미 검증 모델을 부르지 않는다.
+        assertThat(meaningChecks).hasValue(0);
         assertThat(history().path("messages").get(1).path("answerBasis").asText()).isEqualTo("GROUNDED");
     }
 
@@ -192,17 +198,21 @@ class MultiturnChatIntegrationTest {
 
         send("유심을 잃어버렸어요");
 
-        var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        var query = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(search).search(query.capture());
         assertThat(query.getValue().query()).isEqualTo("유심을 잃어버렸어요");
+        assertThat(meaningChecks).hasValue(1);
         assertThat(history().path("messages").get(1).path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
         assertThat(answerRequest.get()).isNull();
     }
+
+    private final AtomicInteger meaningChecks = new AtomicInteger();
 
     private void scriptSingleFaqRewrite(String refined, boolean unsafe) {
         doAnswer(call -> {
             LlmRequest request = call.getArgument(0);
             if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                meaningChecks.incrementAndGet();
                 return mapper.writeValueAsString(Map.of("unsafe", List.of(unsafe)));
             }
             return mapper.writeValueAsString(Map.of("intent", "FAQ", "confidence", 0.99,

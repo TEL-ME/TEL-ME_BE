@@ -33,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.DisplayName;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -381,7 +382,7 @@ class FaqSearchAnswerProviderTest {
         var found = new FaqSearchResponse(
                 7L, null, "PLAN", "요금제 변경 횟수는?", "월 1회 변경할 수 있습니다.",
                 0.80, 1, LocalDate.of(2026, 9, 21), 1, null);
-        List<String> stages = new java.util.ArrayList<>();
+        List<String> stages = new ArrayList<>();
         ExecutionTrace trace = new ExecutionTrace() {
             @Override
             public void stage(Long executionId, String stage, Object value) {
@@ -433,6 +434,74 @@ class FaqSearchAnswerProviderTest {
         assertThat(requests.getAllValues()).extracting(FaqSearchRequest::query)
                 .containsExactly("요금제는 한 달에 몇 번까지 바꿀 수 있나요?", "요금제 변경 횟수");
         assertThat(received.get()).containsExactly(found);
+    }
+
+    @Test
+    void refinedSearchUsesQuerySelectedAfterEmptyOriginalSearch() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        FaqSearchAnswerProvider.SearchResultAnswerGenerator answers = (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
+                        ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
+        List<String> selected = new ArrayList<>();
+        var provider = refinedProvider(searches, answers, (original, candidate) -> {
+            selected.add(candidate);
+            return "번호이동 방법";
+        });
+
+        provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "번호이동하고싶어요", "번호이동 방법 및 필요 절차", Map.of()));
+
+        var requests = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches, times(2)).search(requests.capture());
+        assertThat(requests.getAllValues()).extracting(FaqSearchRequest::query)
+                .containsExactly("번호이동하고싶어요", "번호이동 방법");
+        assertThat(selected).containsExactly("번호이동 방법 및 필요 절차");
+    }
+
+    @Test
+    void rejectedRefinedQueryIsNotSearched() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        FaqSearchAnswerProvider.SearchResultAnswerGenerator answers = (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
+                        ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
+        var provider = refinedProvider(searches, answers, (original, candidate) -> original);
+
+        provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "유심을 잃어버렸어요", "유심 분실 시 재발급 방법", Map.of()));
+
+        var requests = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches).search(requests.capture());
+        assertThat(requests.getValue().query()).isEqualTo("유심을 잃어버렸어요");
+    }
+
+    @Test
+    void originalSearchHitSkipsRefinedQuerySelection() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of(new FaqSearchResponse(
+                7L, null, "USIM", "유심 재발급 비용은?", "7,700원입니다.",
+                0.90, 1, LocalDate.of(2026, 9, 21), 1, null)));
+        FaqSearchAnswerProvider.SearchResultAnswerGenerator answers = (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
+                        ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
+        var provider = refinedProvider(searches, answers, (original, candidate) -> {
+            throw new AssertionError("원문 검색이 성공하면 검색 문장을 검증하지 않는다.");
+        });
+
+        provider.generate(new AnswerInput(
+                1L, 2L, 3L, Purpose.GENERAL_FAQ, "유심 새로 받는 데 얼마인가요?", "유심 재발급 비용", Map.of()));
+
+        verify(searches).search(any());
+    }
+
+    private FaqSearchAnswerProvider refinedProvider(FaqSearchService searches,
+            FaqSearchAnswerProvider.SearchResultAnswerGenerator answers,
+            FaqSearchAnswerProvider.RefinedQuerySelector selector) {
+        return new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                selector);
     }
 
     @Test
