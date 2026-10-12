@@ -174,7 +174,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v3")
+                .promptVersion("routing-request-v4-single-search")
                 .build();
 
             String json = llmClient.generate(request);
@@ -417,12 +417,24 @@ public class QueryRoutingService {
             return payload;
         }
         if (payload.subQueries().size() == 1) {
-            // 독립 질문은 원문을 우선한다. 명시적인 업무 수행 의사는 근거 있는 검색어만 유지한다.
+            // 원문은 메시지에 보존하고, 의미가 같은 검색 문장은 별도로 유지한다.
             if (!restored && (context == null || !CONTEXT_REFERENCE.matcher(question).find())) {
                 var original = payload.subQueries().getFirst();
-                String searchQuery = ACTION_REQUEST.matcher(question).find()
-                        && original.queryText() != null && !original.queryText().isBlank()
-                        ? removeUngroundedQueryWords(payload, original, current, previousSubject) : question;
+                String candidate = original.queryText();
+                String searchQuery = question;
+                if (candidate != null && !candidate.isBlank()
+                        && !RoutingQuestionNormalizer.quoteKey(candidate)
+                                .equals(RoutingQuestionNormalizer.quoteKey(question))
+                        && !ComparisonQuestionPolicy.isStandaloneComparison(question, context)) {
+                    // 동의어는 원문의 단어 포함 여부로 검사하지 않는다. 업무와 조건의 의미를 검증한다.
+                    var single = new LlmRoutingPayload(payload.intent(), payload.confidence(), candidate,
+                            payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
+                                    original.order(), original.intent(), candidate,
+                                    original.conditions(), current)));
+                    if (!findUnsafeFaqQueries(single, current, previousSubject).getFirst()) {
+                        searchQuery = candidate.strip();
+                    }
+                }
                 return new LlmRoutingPayload(payload.intent(), payload.confidence(), searchQuery,
                         payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
                                 original.order(), original.intent(), searchQuery,
@@ -551,7 +563,7 @@ public class QueryRoutingService {
                     .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
                     .userPrompt(prompt).format(ResponseFormat.JSON)
                     .temperature(0.0).maxTokens(256)
-                    .promptVersion("routing-faq-faithfulness-v1").build();
+                    .promptVersion("routing-faq-faithfulness-v2-single-search").build();
             String response = llmClient.generate(request);
             var root = objectMapper.readTree(response);
             var results = root == null ? null : root.path("unsafe");

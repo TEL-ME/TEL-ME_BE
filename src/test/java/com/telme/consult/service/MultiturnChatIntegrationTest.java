@@ -21,6 +21,7 @@ import com.telme.faq.service.FaqSearchService;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.intent.service.RoutingPromptTemplates;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -135,6 +136,79 @@ class MultiturnChatIntegrationTest {
                 String.class, execution));
         assertThat(trace.path("questionResolution").path("relation").asText()).isEqualTo("SELF_CONTAINED");
         assertThat(trace.path("questionResolution").path("sourceMessageIds")).isEmpty();
+    }
+
+    @Test
+    void realRoutingKeepsRewriteForEmptyOriginalSearchAndRagReceivesOriginal() throws Exception {
+        String original = "유심을 잃어버렸어요";
+        String refined = "유심 분실 처리 안내";
+        String supported = "고객센터나 홈페이지에서 분실 신고하시면 즉시 이용 정지됩니다.";
+        scriptSingleFaqRewrite(refined, false);
+        answer.set(supported);
+        when(search.search(any())).thenAnswer(call -> {
+            FaqSearchRequest request = call.getArgument(0);
+            return request.query().equals(original) ? List.of() : List.of(new FaqSearchResponse(
+                    1L, null, "USIM", "유심 분실 신고는 어디로 하나요?", supported,
+                    0.95, 1, null, 1, null));
+        });
+
+        long execution = send(original);
+
+        var queries = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(search, org.mockito.Mockito.times(2)).search(queries.capture());
+        assertThat(queries.getAllValues()).extracting(FaqSearchRequest::query).containsExactly(original, refined);
+        assertThat(queries.getAllValues()).extracting(FaqSearchRequest::kind)
+                .containsExactly(com.telme.faq.dto.req.FaqSearchKind.ORIGINAL,
+                        com.telme.faq.dto.req.FaqSearchKind.REFINED);
+        assertThat(history().path("messages").get(0).path("content").asText()).isEqualTo(original);
+        assertThat(history().path("messages").get(1).path("content").asText()).isEqualTo(supported);
+        assertThat(answerRequest.get().userPrompt()).contains(original);
+        assertThat(jdbc.queryForObject("SELECT query_text FROM consult_requests WHERE session_id=?",
+                String.class, sessionId)).isEqualTo(refined);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=? AND status='DONE'",
+                Integer.class, sessionId)).isEqualTo(1);
+        JsonNode trace = mapper.readTree(jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?", String.class, execution));
+        assertThat(trace.path("searchResults").get(0).path("status").asText()).isEqualTo("EMPTY");
+        assertThat(trace.path("searchResults").get(1).path("status").asText()).isEqualTo("FOUND");
+    }
+
+    @Test
+    void successfulOriginalSearchSkipsVerifiedRewrite() throws Exception {
+        scriptSingleFaqRewrite("유심 재발급 비용", false);
+
+        send("유심 새로 받는 데 얼마인가요?");
+
+        var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(search).search(query.capture());
+        assertThat(query.getValue().query()).isEqualTo("유심 새로 받는 데 얼마인가요?");
+        assertThat(history().path("messages").get(1).path("answerBasis").asText()).isEqualTo("GROUNDED");
+    }
+
+    @Test
+    void unsafeRewriteIsNotSearchedEvenWhenOriginalHasNoResults() throws Exception {
+        scriptSingleFaqRewrite("유심 분실 시 재발급 방법", true);
+        when(search.search(any())).thenReturn(List.of());
+
+        send("유심을 잃어버렸어요");
+
+        var query = org.mockito.ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(search).search(query.capture());
+        assertThat(query.getValue().query()).isEqualTo("유심을 잃어버렸어요");
+        assertThat(history().path("messages").get(1).path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
+        assertThat(answerRequest.get()).isNull();
+    }
+
+    private void scriptSingleFaqRewrite(String refined, boolean unsafe) {
+        doAnswer(call -> {
+            LlmRequest request = call.getArgument(0);
+            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                return mapper.writeValueAsString(Map.of("unsafe", List.of(unsafe)));
+            }
+            return mapper.writeValueAsString(Map.of("intent", "FAQ", "confidence", 0.99,
+                    "refinedQuery", refined, "subQueries", List.of(Map.of("order", 1,
+                            "intent", "FAQ", "queryText", refined))));
+        }).when(model).generate(any());
     }
 
     @Test

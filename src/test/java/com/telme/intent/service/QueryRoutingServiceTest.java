@@ -401,16 +401,94 @@ class QueryRoutingServiceTest {
     }
 
     @Test
-    void explicitActionRetainsOnlyGroundedSearchTerms() {
+    void explicitActionRejectsInventedSearchFacets() {
         given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 방법 및 필요 절차",
                  "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 방법 및 필요 절차",
                  "requestQuote":"번호이동하고싶어요"}]}
-                """);
+                """, "{\"unsafe\":[true]}");
 
         var result = service.routeSingleConsult(msg("번호이동하고싶어요"), null);
 
-        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("번호이동 방법");
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("번호이동하고싶어요");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "유심을 잃어버렸어요 | 유심 분실 처리 안내",
+            "다른 통신사로 번호를 옮기고 싶어요 | 번호이동 신청 방법",
+            "해외에서 데이터가 안 돼요 | 해외 데이터 이용 불가 처리 안내",
+            "미납 요금이 있는데 번호이동하고 싶어요 | 미납 요금이 있는 경우 번호이동 안내"
+    })
+    void singleFaqKeepsSemanticallyVerifiedSearchQueryAndOriginal(String question, String refined) {
+        given(llmClient.generate(any())).willReturn(singleFaqJson(refined), "{\"unsafe\":[false]}");
+        ChatMessage message = msg(question);
+
+        var result = service.routeSingleConsult(message, null);
+
+        assertThat(message.getContent()).isEqualTo(question);
+        assertThat(result.refinedQuery()).isEqualTo(refined);
+        assertThat(result.subQueries()).singleElement().satisfies(sub ->
+                assertThat(sub.queryText()).isEqualTo(refined));
+        var calls = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(2)).generate(calls.capture());
+        assertThat(calls.getAllValues().get(1).systemPrompt())
+                .isEqualTo(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "유심을 잃어버렸어요 | 유심 분실 시 재발급 방법",
+            "미납 요금이 있는데 번호이동하고 싶어요 | 번호이동 신청 방법",
+            "해지는 원하지 않고 요금만 줄이고 싶어요 | 해지 신청 방법",
+            "유심이 망가졌어요 | 유심 분실 신고 방법",
+            "재부팅이랑 데이터 로밍 다시 켜기 중 뭐가 먼저인가요? | 재부팅 후 데이터 로밍 설정 순서"
+    })
+    void singleFaqUsesOriginalWhenSearchQueryChangesMeaning(String question, String refined) {
+        given(llmClient.generate(any())).willReturn(singleFaqJson(refined), "{\"unsafe\":[true]}");
+
+        var result = service.routeSingleConsult(msg(question), null);
+
+        assertThat(result.refinedQuery()).isEqualTo(question);
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "{}", "{\"unsafe\":[]}", "{\"unsafe\":[false,false]}",
+            "{\"unsafe\":[\"false\"]}", "not-json"})
+    void singleFaqValidationFailureKeepsOriginalInsteadOfUnsafeSearchQuery(String validation) {
+        given(llmClient.generate(any())).willReturn(singleFaqJson("유심 분실 처리 안내"), validation);
+
+        var result = service.routeSingleConsult(msg("유심을 잃어버렸어요"), null);
+
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심을 잃어버렸어요");
+    }
+
+    @Test
+    void singleFaqValidationCallFailureKeepsOriginal() {
+        given(llmClient.generate(any())).willReturn(singleFaqJson("유심 분실 처리 안내"))
+                .willThrow(new org.springframework.web.client.RestClientException("timeout"));
+
+        var result = service.routeSingleConsult(msg("유심을 잃어버렸어요"), null);
+
+        assertThat(result.refinedQuery()).isEqualTo("유심을 잃어버렸어요");
+    }
+
+    @Test
+    void identicalSingleFaqQueryDoesNotCallMeaningValidation() {
+        given(llmClient.generate(any())).willReturn(singleFaqJson("유심 재발급 비용"));
+
+        var result = service.routeSingleConsult(msg("유심재발급 비용"), null);
+
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심재발급 비용");
+        verify(llmClient).generate(any());
+    }
+
+    private String singleFaqJson(String refined) {
+        return ("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"%s",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"%s"}]}
+                """).formatted(refined, refined);
     }
 
     @Test
