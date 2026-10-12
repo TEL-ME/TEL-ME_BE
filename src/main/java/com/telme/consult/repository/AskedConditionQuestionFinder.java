@@ -1,5 +1,7 @@
 package com.telme.consult.repository;
 
+import com.telme.consult.dto.ClarificationReask;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.HashMap;
@@ -30,7 +32,7 @@ public final class AskedConditionQuestionFinder implements AskedQuestions {
                 rs -> {
                     String question = rs.getString(2);
                     if (question != null && !question.isBlank()) {
-                        questions.put(rs.getString(1), question.strip());
+                        questions.put(rs.getString(1), ClarificationReask.questionOf(question));
                     }
                 },
                 consultRequestId);

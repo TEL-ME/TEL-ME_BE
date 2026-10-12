@@ -1,24 +1,24 @@
 package com.telme.consult.service;
 
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
+import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
-import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
-import com.telme.chat.service.ExecutionTrace;
-import com.telme.chat.entity.ChatMessage;
-import com.telme.chat.service.ChatAnswer;
 import com.telme.rag.converter.AnswerContextConverter;
-import java.util.Map;
-
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -116,7 +116,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
         }
         if (comparisonEvidence.applies(input.originalUserQuery())) {
-            List<FaqSearchResponse> original = search(input, input.originalUserQuery(), "ORIGINAL");
+            List<FaqSearchResponse> original = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
             var resolution = comparisonEvidence.resolveDetailed(input.executionId(),
                     input.consultRequestId(), input.originalUserQuery(), original,
                     (query, kind) -> searchComparisonCandidate(input, query, kind));
@@ -148,7 +148,10 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             List<FaqSearchResponse> candidates = searchComparisonCandidate(
                     input, input.originalUserQuery(), "FAQ_CANDIDATE");
             FaqSearchResponse verified = candidateEvidence.resolve(
-                    input.executionId(), input.consultRequestId(), input.originalUserQuery(), candidates);
+                    input.executionId(), input.consultRequestId(), input.candidateEvidenceQuery(), candidates,
+                    // 복합 질문은 검색용 문장이 공백 없이 정규화된다. 후보 FAQ를 선택한 모델이
+                    // 인용문만 형식에 맞추지 못한 경우까지 근거 부족으로 버리지는 않는다.
+                    !input.candidateEvidenceQuery().equals(input.originalUserQuery()));
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));
@@ -190,21 +193,21 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
         // 지시어만 있는 원문 검색이 엉뚱한 후보를 먼저 찾더라도 복원된 질문을 생략하지 않는다.
         if (!input.originalUserQuery().equals(input.resolvedUserQuery())) {
-            List<FaqSearchResponse> resolved = search(input, input.resolvedUserQuery(), "RESOLVED");
+            List<FaqSearchResponse> resolved = search(input, input.resolvedUserQuery(), FaqSearchKind.RESOLVED);
             return !resolved.isEmpty() || input.resolvedUserQuery().equals(input.searchQuery())
-                    ? resolved : search(input, input.searchQuery(), "REFINED");
+                    ? resolved : search(input, input.searchQuery(), FaqSearchKind.REFINED);
         }
-        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), "ORIGINAL");
+        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
         // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
         if (!originalResults.isEmpty()
                 || input.originalUserQuery().equals(input.searchQuery())) {
             return originalResults;
         }
-        return search(input, input.searchQuery(), "REFINED");
+        return search(input, input.searchQuery(), FaqSearchKind.REFINED);
     }
 
-    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind) {
-        return search(input, query, kind, SEARCH_TOP_K, false);
+    private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
+        return search(input, query, kind.name(), SEARCH_TOP_K, false);
     }
 
     private List<FaqSearchResponse> searchComparisonCandidate(
@@ -218,7 +221,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 "candidateMode", unfilteredCandidates, "consultRequestId", input.consultRequestId());
         trace.append(input.executionId(), "searchRequests", request);
         try {
-            FaqSearchRequest searchRequest = new FaqSearchRequest(query, topK);
+            FaqSearchRequest searchRequest = unfilteredCandidates ? new FaqSearchRequest(query, topK)
+                                                                  : new FaqSearchRequest(query, topK, FaqSearchKind.valueOf(kind));
             var found = unfilteredCandidates
                     ? searches.searchCandidates(searchRequest)
                     : searches.search(searchRequest);

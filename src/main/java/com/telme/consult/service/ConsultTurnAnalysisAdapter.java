@@ -6,11 +6,10 @@ import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.Purpose;
-import com.telme.consult.entity.ConsultRequest;
-import com.telme.consult.repository.CompoundConsultRequestFinder;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -30,7 +29,6 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
     private final ConsultTurnPreparationService preparation;
     private final FollowupConditionConverter followupConverter;
     private final ChatQuestionResolver resolver;
-    private final CompoundConsultRequestFinder compoundRequests;
 
     public ConsultTurnAnalysisAdapter(
             ContextProvider contexts,
@@ -43,18 +41,11 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
     public ConsultTurnAnalysisAdapter(ContextProvider contexts, AnalysisProvider analysis,
             ConsultTurnPreparationService preparation, FollowupConditionConverter followupConverter,
             ChatQuestionResolver resolver) {
-        this(contexts, analysis, preparation, followupConverter, resolver, null);
-    }
-
-    public ConsultTurnAnalysisAdapter(ContextProvider contexts, AnalysisProvider analysis,
-            ConsultTurnPreparationService preparation, FollowupConditionConverter followupConverter,
-            ChatQuestionResolver resolver, CompoundConsultRequestFinder compoundRequests) {
         this.contexts = Objects.requireNonNull(contexts);
         this.analysis = Objects.requireNonNull(analysis);
         this.preparation = Objects.requireNonNull(preparation);
         this.followupConverter = Objects.requireNonNull(followupConverter);
         this.resolver = resolver;
-        this.compoundRequests = compoundRequests;
     }
 
     @Override
@@ -74,10 +65,14 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             }
         }
         AnalysisResult result = analyzeContext(command, context);
+        Set<Long> abandoned = Set.of();
         if (result.reroute()) {
             if (context.candidates().isEmpty()) {
                 throw new IllegalStateException("대기 중 상담이 없는 질문은 재라우팅할 수 없습니다.");
             }
+            abandoned = context.candidates().stream()
+                    .map(candidate -> candidate.consultRequestId())
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
             context = resolveQuestion(command, context.forNewQuestion());
             if (context == null) {
                 return clarification();
@@ -86,6 +81,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             if (result.reroute()) {
                 throw new IllegalStateException("새 질문을 반복해서 재라우팅할 수 없습니다.");
             }
+            // 새 질문으로 넘어간 턴의 앞선 대기 상담 정리
+            preparation.cancelWaiting(context.sessionId(), abandoned);
         }
         if (result.directAnswer() != null) {
             return AnalyzedTurn.direct(result.directAnswer());
@@ -119,6 +116,16 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             }
             // 라우팅이 모르는 FAQ 조건은 되묻기에 실어 보낸 선택지로 채운다
             resolution = FaqClarificationAnswers.fill(resolution, context.message());
+            // 재질문에도 답이 없으면 거절로 처리
+            if (resolution.updates().isEmpty()
+                    && resolution.candidate().reasks() >= ClarificationReask.MAX_REASKS) {
+                String field = resolution.candidate().field();
+                resolution = followupConverter.resolve(
+                        context, resolution.candidate().consultRequestId(), Map.of(), Set.of(field));
+                if ("location".equals(field)) {
+                    locationStatus = LocationStatus.DECLINED;
+                }
+            }
             if (!resolution.answersWaitingField()) {
                 var correction =
                         preparation.prepareWaitingUpdate(
@@ -134,23 +141,6 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
             var followup =
                     preparation.prepareFollowup(
                             context, selection, locationStatus);
-            if (compoundRequests != null) {
-                var siblings = compoundRequests.findOpenGroup(context.sessionId(),
-                        followup.followup().consultRequestId());
-                if (!siblings.isEmpty()) {
-                    long sessionId = context.sessionId();
-                    List<ConsultChatProcessingService.ConsultTurn> turns = siblings.stream()
-                            .map(query -> new ConsultChatProcessingService.ConsultTurn(
-                                    query.consultRequestId() == followup.followup().consultRequestId()
-                                            ? followup.preparation()
-                                            : preparation.prepareExisting(sessionId, query, locationStatus),
-                                    purpose(query.intent().name()), query.queryText(),
-                                    query.consultRequestId() == followup.followup().consultRequestId()
-                                            ? followup.followup().answeredField() : null))
-                            .toList();
-                    return AnalyzedTurn.compound(turns);
-                }
-            }
             return new AnalyzedTurn(
                     followup.preparation(),
                     followup.followup().answeredField(),

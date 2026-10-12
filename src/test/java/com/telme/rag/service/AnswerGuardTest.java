@@ -25,6 +25,38 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("답변 불가 문구 뒤에 근거와 겹치는 문장이 있으면 그 문장만 남긴다")
+    void 근거와_겹치는_문장만_남긴다() {
+        String context = "시니어 요금제는 만 65세 이상만 가입할 수 있어 나이가 안 되시면 변경이 어렵습니다.";
+        String answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 시니어 요금제는 만 65세 이상만 가입 가능합니다. 다른 요금제를 고려해 보시는 것을 추천드립니다.";
+
+        assertThat(guard.trimAfterNoEvidence(answer, context))
+                .isEqualTo("시니어 요금제는 만 65세 이상만 가입 가능합니다.");
+    }
+
+    @Test
+    @DisplayName("일반 안내 표현만 겹치는 문장은 근거 문장으로 보지 않는다")
+    void 일반_안내_표현만_겹치면_문구만_남긴다() {
+        String context = "가입 방법은 상담을 통해 안내받으실 수 있습니다.";
+        String answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 해지는 즉시 처리된다고 안내받으실 수 있습니다.";
+
+        assertThat(guard.trimAfterNoEvidence(answer, context))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("답변 불가 문구 뒤가 근거와 겹치지 않으면 문구만 남긴다")
+    void 근거와_겹치지_않으면_문구만_남긴다() {
+        String answer = AnswerPromptTemplates.NO_EVIDENCE_ANSWER
+                + " 날씨 정보는 기상청 웹사이트를 참고해 주세요.";
+
+        assertThat(guard.trimAfterNoEvidence(answer, "요금제는 한 달에 한 번만 변경할 수 있습니다."))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
     @DisplayName("답변이 null이면 빈 문자열로 둔다")
     void 답변이_null이면_빈_문자열() {
         assertThat(guard.trimAfterNoEvidence(null)).isEmpty();

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-// 하위 질문을 안전하게 구분할 수 없을 때 부분 저장과 처리를 막는다.
+/** 하위 질문을 안전하게 구분할 수 없을 때 상담 처리기가 부분 저장·처리하지 않도록 알리는 예외다. */
 public final class UnsupportedCompoundQuestionException extends IllegalStateException {
     // 안전한 분해를 확인하지 못했을 때 하나씩 다시 보낼 버튼을 만드는 데 쓴다.
     private final transient List<Part> parts;

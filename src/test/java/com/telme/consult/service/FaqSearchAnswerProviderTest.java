@@ -3,6 +3,7 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -189,7 +190,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(source));
-        when(candidateEvidence.resolve(any(), any(), any(), any())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), candidateEvidence);
 
@@ -201,6 +202,33 @@ class FaqSearchAnswerProviderTest {
         assertThat(result.answer().followUps()).isEmpty();
         assertThat(result.sources()).extracting(found -> found.faqId()).containsExactly(65L);
         verifyNoInteractions(answers);
+    }
+
+    @Test
+    void candidateValidationUsesOriginalCompoundPhraseWithoutChangingSearchQuery() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var source = new FaqSearchResponse(65L, null, "PORTING", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "번호이동서류는뭐고", "번호이동서류는뭐고", Map.of(),
+                "번호이동서류는뭐고", null, false, null, Map.of(), "번호 이동 서류는 뭐고"));
+
+        var search = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches).search(search.capture());
+        assertThat(search.getValue().query()).isEqualTo("번호이동서류는뭐고");
+        var evidenceQuestion = ArgumentCaptor.forClass(String.class);
+        var quoteRepairFailure = ArgumentCaptor.forClass(Boolean.class);
+        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), quoteRepairFailure.capture());
+        assertThat(evidenceQuestion.getValue()).isEqualTo("번호 이동 서류는 뭐고");
+        assertThat(quoteRepairFailure.getValue()).isTrue();
     }
 
     // 후보 확인으로 답한 경우도 일반 답변과 같이 근거 FAQ로 추천 질문을 붙인다
@@ -216,7 +244,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(other, source));
-        when(candidateEvidence.resolve(any(), any(), any(), any())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source)))
                 .thenReturn(List.of("명의변경 수수료가 있나요?"));
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),

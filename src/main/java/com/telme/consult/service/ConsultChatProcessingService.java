@@ -10,6 +10,8 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.chat.safety.ChatOutputBlockedException;
+import com.telme.chat.exception.ChatErrorCode;
 import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.ClarificationPlan;
@@ -38,6 +40,8 @@ import lombok.extern.slf4j.Slf4j;
 public final class ConsultChatProcessingService implements ChatProcessingPort {
     private static final String PROCESSING_ERROR_CODE = "AI_PROCESSING_ERROR";
     static final String NO_ANSWER_SUGGESTION_GUIDE = "혹시 이런 내용을 찾으셨나요?";
+    static final String SPLIT_STORE_GUIDANCE =
+            "지역이 필요한 매장 찾기가 여러 개라 한 번에 확인하기 어려워요. 매장 찾기는 하나씩 나누어 보내주세요.";
 
     private final TurnAnalyzer analyzer;
     private final AnswerProvider answers;
@@ -294,10 +298,25 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (preparedTurns.stream().anyMatch(prepared -> prepared.sessionId() != command.sessionId())) {
             throw new IllegalArgumentException("하위 상담의 채팅방이 일치하지 않습니다.");
         }
-        if (preparedTurns.stream().anyMatch(prepared -> prepared.decision().action() == Action.ASK)) {
-            var completed = persistence.persistCompoundClarification(
-                    command.executionId(), command.sessionId(), consultTurns);
+        // 매장 요청의 지역·업무 되묻기는 상담 판단에서, FAQ 조건 되묻기는 검색 근거를 본 뒤 정한다.
+        // 한 메시지에는 한 요청만 되묻는다. 지역이 빠진 매장 요청이 둘 이상이면 나눠서 물어보도록 안내한다.
+        if (preparedTurns.stream().filter(prepared -> prepared.decision().action() == Action.ASK).count() > 1) {
+            var completed = persistence.persistDirectAnswer(command.executionId(), command.sessionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, SPLIT_STORE_GUIDANCE, null, List.of(), null));
             events.completed(command.executionId(), completed);
+            return;
+        }
+        List<AnswerInput> inputs = new ArrayList<>();
+        List<Prepared> prepareds = new ArrayList<>();
+        for (int i = 0; i < consultTurns.size(); i++) {
+            AnswerInput input = compoundInput(command, consultTurns.get(i), preparedTurns.get(i), context);
+            inputs.add(input);
+            boolean faq = consultTurns.get(i).purpose() == Purpose.GENERAL_FAQ;
+            prepareds.add(faq && answers.clarifies() ? answers.prepare(input, true) : Prepared.none());
+        }
+        int askIndex = firstNeedingClarification(consultTurns, preparedTurns, prepareds);
+        if (askIndex >= 0) {
+            processCompoundClarification(command, consultTurns, preparedTurns, inputs, prepareds, askIndex);
             return;
         }
         persistence.persistCompoundReadyTurns(command.executionId(), command.sessionId(), consultTurns);
@@ -315,39 +334,16 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         boolean faqOnly = consultTurns.stream().allMatch(turn -> turn.purpose() == Purpose.GENERAL_FAQ);
         for (int i = 0; i < consultTurns.size(); i++) {
             ConsultTurn part = consultTurns.get(i);
-            ConsultService.PreparedTurn prepared = preparedTurns.get(i);
-            GeneratedAnswer generated = prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE
-                    ? GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                            prepared.decision().message(), ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null))
-                    : answers.generate(new AnswerInput(
-                            command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
-                            part.purpose(), part.queryText(), part.queryText(),
-                            conditionConverter.convert(prepared.decision().conditions()),
-                            part.queryText(), context, false,
-                            prepared.decision().conditions().containsKey("location")
-                                    && prepared.decision().conditions().get("location").status()
-                                            == ConditionStatus.FILLED
-                                    ? null : command.coordinates(),
-                            askedQuestions.of(prepared.decision().consultRequestId())));
-            if (part.purpose() == Purpose.GENERAL_FAQ
-                    && generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
-                throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
-            }
+            GeneratedAnswer generated = generatePart(part, preparedTurns.get(i), inputs.get(i), prepareds.get(i));
             boolean grounded = part.purpose() == Purpose.GENERAL_FAQ
                     && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
-            String content = part.purpose() == Purpose.GENERAL_FAQ && !grounded
-                    ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER
-                    : Objects.toString(generated.answer().content(), "조건에 맞는 매장이에요.");
+            String content = partContent(part, generated, grounded);
             if (part.purpose() == Purpose.NEARBY_STORE && generated.answer().storeResults() != null
                     && !generated.answer().storeResults().isEmpty()) {
                 storeResults.addAll(generated.answer().storeResults());
                 storeContexts.add(generated.answer().storeSearchContext());
-                // 서로 다른 지역의 매장 목록을 합쳐도 각 질문의 검색 결과를 본문에서 구분한다.
-                content += "\n" + String.join(", ", generated.answer().storeResults().stream()
-                        .map(store -> Objects.toString(store.get("name"), "매장"))
-                        .toList());
             }
-            sections.add("%d. %s\n%s".formatted(i + 1, part.queryText(), content));
+            sections.add("%d. %s\n%s".formatted(i + 1, displayText(command.content(), part), content));
             if (grounded) {
                 hasGroundedAnswer = true;
                 // 같은 FAQ가 두 하위 질문의 근거가 되면 인용 횟수가 두 번 쌓이므로 한 번만 남긴다
@@ -420,6 +416,128 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
     }
 
+    private AnswerInput compoundInput(ChatProcessingCommand command, ConsultTurn part,
+            ConsultService.PreparedTurn prepared, ChatContext context) {
+        var conditions = prepared.decision().conditions();
+        boolean namedLocation = conditions.containsKey("location")
+                && conditions.get("location").status() == ConditionStatus.FILLED;
+        // 매장 요청에 지역을 말했으면 그 지역으로 찾는다. 현재 위치 좌표는 지역이 없을 때만 쓴다.
+        ChatCoordinates coordinates = part.purpose() == Purpose.NEARBY_STORE && namedLocation
+                ? null : command.coordinates();
+        Map<String, String> asked = part.purpose() == Purpose.NEARBY_STORE
+                ? askedQuestions.of(prepared.decision().consultRequestId()) : Map.of();
+        return new AnswerInput(
+                command.executionId(), command.sessionId(), prepared.decision().consultRequestId(),
+                part.purpose(), part.queryText(), part.queryText(),
+                conditionConverter.convert(conditions),
+                part.queryText(), context, false, coordinates, asked,
+                displayText(command.content(), part));
+    }
+
+    // 검색어는 라우팅 정규화 값을 유지하고, 복합 응답 제목만 이번 고객 원문의 띄어쓰기로 복원한다.
+    private String displayText(String originalQuestion, ConsultTurn part) {
+        return CompoundQuestionDisplayText.fromOriginal(originalQuestion, part.queryText());
+    }
+
+    // 먼저 되물을 하위 질문. 한 번에 하나만 묻고 나머지는 조건 없이 답한다. 없으면 -1
+    private int firstNeedingClarification(List<ConsultTurn> consultTurns,
+            List<ConsultService.PreparedTurn> preparedTurns, List<Prepared> prepareds) {
+        for (int i = 0; i < prepareds.size(); i++) {
+            if (preparedTurns.get(i).decision().action() == Action.ASK) {
+                return i;
+            }
+            Prepared prepared = prepareds.get(i);
+            if (consultTurns.get(i).purpose() == Purpose.GENERAL_FAQ && prepared.answer() == null
+                    && prepared.plan().remaining(preparedTurns.get(i).decision().conditions()).needsClarification()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // 답할 수 있는 하위 질문은 답하고, 되물을 하위 질문은 같은 메시지 끝에 질문으로 붙인다
+    private void processCompoundClarification(ChatProcessingCommand command, List<ConsultTurn> consultTurns,
+            List<ConsultService.PreparedTurn> preparedTurns, List<AnswerInput> inputs,
+            List<Prepared> prepareds, int askIndex) {
+        List<String> sections = new ArrayList<>();
+        List<AnswerSource> sources = new ArrayList<>();
+        Set<Long> sourceFaqIds = new HashSet<>();
+        List<ConsultService.PreparedTurn> answeredTurns = new ArrayList<>();
+        for (int i = 0; i < consultTurns.size(); i++) {
+            if (i == askIndex) {
+                continue;
+            }
+            ConsultTurn part = consultTurns.get(i);
+            GeneratedAnswer generated = generatePart(part, preparedTurns.get(i), inputs.get(i), prepareds.get(i));
+            boolean grounded = part.purpose() == Purpose.GENERAL_FAQ
+                    && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
+            // 되묻기 메시지에는 매장 목록 칸이 없어 매장 이름을 본문에 남긴다
+            sections.add("%d. %s\n%s".formatted(sections.size() + 1,
+                    displayText(command.content(), part), partContent(part, generated, grounded)));
+            if (grounded) {
+                generated.sources().stream()
+                        .filter(source -> source.faqId() == null || sourceFaqIds.add(source.faqId()))
+                        .forEach(sources::add);
+            }
+            answeredTurns.add(preparedTurns.get(i));
+        }
+        ConsultService.PreparedTurn target = preparedTurns.get(askIndex);
+        ConsultService.PreparedTurn asking;
+        if (target.decision().action() == Action.ASK) {
+            // 매장 지역·업무 되묻기는 상담 판단이 만든 질문을 그대로 쓴다
+            asking = target;
+        } else {
+            ClarificationPlan plan = prepareds.get(askIndex).plan().remaining(target.decision().conditions());
+            asking = new ConsultService.PreparedTurn(
+                    target.sessionId(),
+                    target.expectedVersion(),
+                    FaqClarificationDecisions.ask(
+                            target.decision().consultRequestId(), plan, target.decision().conditions()),
+                    plan);
+        }
+        sections.add("%d. %s\n%s".formatted(
+                sections.size() + 1, displayText(command.content(), consultTurns.get(askIndex)),
+                asking.decision().message()));
+        var completed = persistence.persistCompoundClarification(
+                command.executionId(), command.sessionId(), answeredTurns, asking,
+                String.join("\n\n", sections), asking.decision().options(), sources);
+        try {
+            events.completed(command.executionId(), completed);
+        } catch (RuntimeException deliveryFailure) {
+            log.warn("복합 상담 되묻기 완료 이벤트 전달 실패: executionId={}",
+                    command.executionId(), deliveryFailure);
+        }
+    }
+
+    private GeneratedAnswer generatePart(ConsultTurn part, ConsultService.PreparedTurn prepared,
+            AnswerInput input, Prepared preparedAnswer) {
+        if (prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE) {
+            return GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                    prepared.decision().message(), ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null));
+        }
+        GeneratedAnswer generated = part.purpose() == Purpose.GENERAL_FAQ
+                ? generateFor(input, preparedAnswer) : answers.generate(input);
+        if (part.purpose() == Purpose.GENERAL_FAQ
+                && generated.answer().messageType() != ChatMessage.MessageType.ANSWER) {
+            throw new IllegalStateException("FAQ 답변 유형이 올바르지 않습니다.");
+        }
+        return generated;
+    }
+
+    private static String partContent(ConsultTurn part, GeneratedAnswer generated, boolean grounded) {
+        if (part.purpose() == Purpose.GENERAL_FAQ) {
+            return grounded ? generated.answer().content() : AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        }
+        String content = Objects.toString(generated.answer().content(), "조건에 맞는 매장이에요.");
+        if (generated.answer().storeResults() != null && !generated.answer().storeResults().isEmpty()) {
+            // 서로 다른 지역의 매장 목록을 합쳐도 각 질문의 검색 결과를 본문에서 구분한다.
+            content += "\n" + String.join(", ", generated.answer().storeResults().stream()
+                    .map(store -> Objects.toString(store.get("name"), "매장"))
+                    .toList());
+        }
+        return content;
+    }
+
     // 근거가 없어 답을 못 했으면 사용자가 쓴 문장과 가까운 FAQ 질문을 버튼으로 붙인다.
     // 질문을 쪼갠 답변은 하위 질문이 모두 근거 없을 때만 해당하고, 쪼개기 전 원문으로 찾는다
     private ChatAnswer withNoAnswerSuggestion(ChatAnswer answer, String userQuestion) {
@@ -439,6 +557,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {
+        recordOutputSafetyFailure(command, exception);
         log.error("상담 AI 처리 실패: executionId={}, sessionId={}",
                 command.executionId(), command.sessionId(), exception);
         ChatFailure failure = failure(exception);
@@ -460,6 +579,21 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         if (persistenceFailure != null) {
             throw persistenceFailure;
+        }
+    }
+
+    private void recordOutputSafetyFailure(ChatProcessingCommand command, RuntimeException exception) {
+        try {
+            if (exception instanceof ChatOutputBlockedException blocked) {
+                trace.stage(command.executionId(), "outputSafety", Map.of(
+                        "outcome", "BLOCKED", "policyVersion", blocked.policyVersion(),
+                        "field", blocked.field(), "ruleIds", blocked.ruleIds()));
+            } else if (exception instanceof GeneralException general
+                    && general.getErrorCode() == ChatErrorCode.OUTPUT_CHECK_FAILED) {
+                trace.stage(command.executionId(), "outputSafety", Map.of("outcome", "CHECK_FAILED"));
+            }
+        } catch (RuntimeException traceFailure) {
+            log.warn("출력 검사 결과 기록 실패: executionId={}", command.executionId());
         }
     }
 
@@ -655,7 +789,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             ChatContext context,
             boolean streamTokens,
             ChatCoordinates coordinates,
-            Map<String, String> askedQuestions) {
+            Map<String, String> askedQuestions,
+            String candidateEvidenceQuery) {
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, boolean streamTokens,
+                ChatCoordinates coordinates, Map<String, String> askedQuestions) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, streamTokens, coordinates,
+                    askedQuestions, originalUserQuery);
+        }
+
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions) {
             this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
@@ -729,10 +873,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                             Objects.requireNonNull(
                                     confirmedConditions, "confirmedConditions"));
             askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
+            candidateEvidenceQuery = candidateEvidenceQuery == null || candidateEvidenceQuery.isBlank()
+                    ? originalUserQuery : candidateEvidenceQuery.strip();
         }
     }
 
     // 준비 단계에서 답이 확정됐으면 모델을 다시 부르지 않는다
+    // 되묻기를 판단하지 않는 경로는 준비 단계에서 검색하지 않았으므로 예전처럼 한 번에 처리한다
+    private GeneratedAnswer generateFor(AnswerInput input, Prepared prepared) {
+        return answers.clarifies() ? answer(input, prepared) : answers.generate(input);
+    }
+
     private GeneratedAnswer answer(AnswerInput input, Prepared prepared) {
         return prepared.answer() != null ? prepared.answer() : answers.generate(input, prepared);
     }

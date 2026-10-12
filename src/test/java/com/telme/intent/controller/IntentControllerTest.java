@@ -20,6 +20,7 @@ import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnsupportedCompoundQuestionException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
@@ -70,6 +71,22 @@ class IntentControllerTest {
                 GeneralException ge = (GeneralException) e;
                 assertThat(ge.getErrorCode()).isEqualTo(IntentErrorCode.MESSAGE_NOT_FOUND);
             });
+    }
+
+    @Test
+    void uncertainDecompositionReturnsDomainErrorInsteadOfUnhandledServerError() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        ChatMessage message = ChatMessage.builder().messageId(10L)
+                .session(ChatSession.builder().userId(1L).build()).content("번호이동하고 싶어요").build();
+        given(chatMessageRepository.findByIdWithSession(10L)).willReturn(Optional.of(message));
+        given(chatActorProvider.getCurrentActor(request)).willReturn(new ChatActor(1L, null));
+        given(queryRoutingService.route(message)).willThrow(new UnsupportedCompoundQuestionException("판정 불일치"));
+        assertThatThrownBy(() -> intentController.route(request, new IntentRouteRequest(10L, message.getContent())))
+                .isInstanceOfSatisfying(GeneralException.class, failure -> {
+                    assertThat(failure.getErrorCode()).isEqualTo(IntentErrorCode.REQUEST_DECOMPOSITION_UNCERTAIN);
+                    assertThat(failure.getErrorCode().getStatus()).isEqualTo(
+                            org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY);
+                });
     }
 
     @Test
