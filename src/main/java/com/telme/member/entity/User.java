@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,9 +61,19 @@ public class User {
     @Column(name = "withdrawn_at")
     private Instant withdrawnAt;
 
+    // 청소년·시니어 요금제 가입 때 받아 저장한다. 이미 있으면 바꾸지 않는다
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
     public void fillNameIfMissing(String name) {
         if (this.name == null) {
             this.name = name;
+        }
+    }
+
+    public void fillBirthDateIfMissing(LocalDate birthDate) {
+        if (this.birthDate == null) {
+            this.birthDate = birthDate;
         }
     }
 }
