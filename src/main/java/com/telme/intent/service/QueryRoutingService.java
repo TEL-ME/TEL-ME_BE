@@ -670,6 +670,22 @@ public class QueryRoutingService {
         }
 
         QueryRouting.Intent topIntent = payload.intent();
+        String refinedSource = payload.refinedQuery();
+        if (topIntent == QueryRouting.Intent.FAQ && hasFaq && hasStore && allSubIntentsGiven
+                && !RuleBasedRoutingFallback.mentionsStore(question)) {
+            // "어디서 볼 수 있나요"처럼 매장을 말하지 않은 질문에 모델이 매장 찾기를 덧붙인 출력이다.
+            // 고객이 요청하지 않은 매장 하위 질문만 빼고 FAQ로 처리한다.
+            log.info("[라우팅] 원문에 매장 언급이 없어 모델이 만든 매장 하위 질문을 제외합니다.");
+            normalized.removeIf(sub -> sub.intent() == ConsultRequest.Intent.STORE);
+            for (int index = 0; index < normalized.size(); index++) {
+                var sub = normalized.get(index);
+                normalized.set(index, new LlmRoutingPayload.SubQueryPayload((short) (index + 1), sub.intent(),
+                        sub.queryText(), sub.conditions(), sub.requestQuote()));
+            }
+            hasStore = false;
+            // 모델의 전체 정제 질문에도 매장 찾기가 섞여 있어 원문을 쓴다.
+            refinedSource = question;
+        }
         if ((topIntent == QueryRouting.Intent.FAQ || topIntent == QueryRouting.Intent.STORE)
                 && hasFaq && hasStore && allSubIntentsGiven) {
             // 하위 질문은 FAQ와 매장으로 나눴는데 전체 의도만 한쪽으로 적은 출력이다. 버리면 질문 일부가 사라진다.
@@ -696,7 +712,7 @@ public class QueryRoutingService {
         long storeCount = normalized.stream()
                 .filter(sub -> sub.intent() == ConsultRequest.Intent.STORE)
                 .count();
-        String refined = safeQueryText(payload.refinedQuery(), question, context, true, safeFallback);
+        String refined = safeQueryText(refinedSource, question, context, true, safeFallback);
         List<LlmRoutingPayload.SubQueryPayload> safeSubQueries = new ArrayList<>();
         for (LlmRoutingPayload.SubQueryPayload sub : normalized) {
             String queryText = safeQueryText(

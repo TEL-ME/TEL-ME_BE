@@ -120,6 +120,11 @@ public class RuleBasedRoutingFallback {
         new ServiceTypeRule("NEW_LINE",     Pattern.compile("신규.*개통|새.*번호"))
     );
 
+    // 매장, 대리점, 지점처럼 매장 자체를 가리키는 낱말이 있는지. 매장 요청 여부의 최소 근거로 쓴다.
+    static boolean mentionsStore(String text) {
+        return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
+    }
+
     public LlmRoutingPayload classify(String text) {
         if (text == null || text.isBlank()) {
             return new LlmRoutingPayload(

@@ -602,6 +602,26 @@ class QueryRoutingServiceTest {
                     .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
         }
 
+        // 매장을 말하지 않은 질문에 모델이 덧붙인 매장 찾기는 고객 요청이 아니므로 빼고 FAQ로 처리한다.
+        @Test
+        void storeSubQueryInventedWithoutStoreMentionIsDroppedAndFaqIsKept() {
+            String question = "내일 새벽 비행기인데 지금 신청이 제대로 됐는지 어디서 볼 수 있을까요";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍 신청 확인 및 가능 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 상태 확인 방법","requestQuote":"지금 신청이 제대로 됐는지","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"로밍 신청 가능 매장 위치","requestQuote":"어디서 볼 수 있을까요","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).singleElement().satisfies(sub -> {
+                assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                assertThat(sub.order()).isEqualTo((short) 1);
+            });
+            assertThat(result.refinedQuery()).doesNotContain("매장");
+        }
+
         // 하위 질문마다 원문 근거를 확인할 수 없으면 질문 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
         @Test
         void mixedSubQueriesWithoutSeparateOriginalEvidenceAreNotGuessedAsBoth() {
