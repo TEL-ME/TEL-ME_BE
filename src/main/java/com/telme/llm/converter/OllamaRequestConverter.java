@@ -2,7 +2,6 @@ package com.telme.llm.converter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 
 import com.telme.llm.config.LlmProperties;
@@ -33,7 +32,7 @@ public class OllamaRequestConverter {
                 .messages(messages)
                 .stream(stream)
                 .format(format(request))
-                .think("multiturn-resolution-v8".equals(request.promptVersion())
+                .think(Boolean.FALSE.equals(request.think())
                         && supportsThinking(llmProperties.model()) ? false : null)
                 .options(new OllamaChatRequest.Options(
                         request.temperature() != null ? request.temperature() : defaults.temperature(),
@@ -46,22 +45,12 @@ public class OllamaRequestConverter {
         return model.startsWith("qwen3:") || model.contains("EXAONE-4.0");
     }
 
+    // 응답 형식은 요청한 기능이 정한다. 변환기는 지정된 JSON Schema를 그대로 전달한다.
     private Object format(LlmRequest request) {
         if (request.format() != ResponseFormat.JSON) {
             return null;
         }
-        if (!"multiturn-resolution-v8".equals(request.promptVersion())) {
-            return "json";
-        }
-        return Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "relation", Map.of("type", "string", "enum",
-                                List.of("SELF_CONTAINED", "HISTORY_DEPENDENT", "CLARIFICATION_REQUIRED")),
-                        "selectedMessageIds", Map.of("type", "array", "items", Map.of("type", "integer"),
-                                "uniqueItems", true)),
-                "required", List.of("relation", "selectedMessageIds"),
-                "additionalProperties", false);
+        return request.responseSchema() != null ? request.responseSchema() : "json";
     }
 
     private Defaults defaultsOf(TaskType taskType) {

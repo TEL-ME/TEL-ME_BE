@@ -103,4 +103,30 @@ class FaqClarificationAnswersTest {
         assertThat(filled.updates().get("self_presentation").status())
                 .isEqualTo(ConditionStatus.DECLINED);
     }
+
+    @Test
+    @DisplayName("예·아니요 선택지에는 같은 뜻의 짧은 답도 그 선택지로 채운다")
+    void 같은_뜻의_짧은_답을_선택지로_본다() {
+        for (String yes : List.of("네", "넵", "응", "그럼요", "맞아요", "있어요", "당연하죠")) {
+            var resolution = new Resolution(waiting("age", List.of("예", "아니요")), Map.of());
+            assertThat(FaqClarificationAnswers.fill(resolution, yes).updates().get("age").value())
+                    .as(yes).isEqualTo("예");
+        }
+        for (String no : List.of("아뇨", "아니에요", "아니야", "없어요", "없습니다")) {
+            var resolution = new Resolution(waiting("age", List.of("예", "아니요")), Map.of());
+            assertThat(FaqClarificationAnswers.fill(resolution, no).updates().get("age").value())
+                    .as(no).isEqualTo("아니요");
+        }
+    }
+
+    @Test
+    @DisplayName("문장 속에 든 긍정·부정어나 예·아니요 선택지가 아닌 질문은 바꾸지 않는다")
+    void 문장과_다른_선택지는_바꾸지_않는다() {
+        var yesNo = new Resolution(waiting("age", List.of("예", "아니요")), Map.of());
+        assertThat(FaqClarificationAnswers.fill(yesNo, "네 근데 잘 모르겠어요").answersWaitingField()).isFalse();
+        assertThat(FaqClarificationAnswers.fill(yesNo, "아니 그게 아니라 만 12세예요").answersWaitingField()).isFalse();
+
+        var other = new Resolution(waiting("plan", List.of("5G", "LTE")), Map.of());
+        assertThat(FaqClarificationAnswers.fill(other, "네").answersWaitingField()).isFalse();
+    }
 }

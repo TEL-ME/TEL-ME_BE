@@ -104,6 +104,14 @@ public class RuleBasedRoutingFallback {
         return SERVICE_TYPE_OPTIONS.stream().map(ServiceTypeOption::label).toList();
     }
 
+    public static String serviceTypeLabel(String code) {
+        return SERVICE_TYPE_OPTIONS.stream()
+                .filter(option -> option.code().equals(code))
+                .map(ServiceTypeOption::label)
+                .findFirst()
+                .orElse(null);
+    }
+
     private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
         new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
         new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
