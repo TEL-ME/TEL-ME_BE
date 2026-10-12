@@ -35,6 +35,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final AnswerContextConverter sourceConverter;
     private final FaqClarificationPlanner planner;
     private final SuggestedQuestions suggestedQuestions;
+    private final RefinedQuerySelector refinedQueries;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -87,6 +88,15 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
             SuggestedQuestions suggestedQuestions) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter, planner,
+                suggestedQuestions, RefinedQuerySelector.unchecked());
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
+            SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
@@ -95,6 +105,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         this.sourceConverter = Objects.requireNonNull(sourceConverter);
         this.planner = planner;
         this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
+        this.refinedQueries = Objects.requireNonNull(refinedQueries);
     }
 
     @Override
@@ -203,7 +214,15 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 || input.originalUserQuery().equals(input.searchQuery())) {
             return originalResults;
         }
-        return search(input, input.searchQuery(), FaqSearchKind.REFINED);
+        // 검색 문장의 의미 검증은 원문 검색이 0건일 때만 한다. 원문을 돌려받으면 재검색하지 않는다.
+        String refined = Objects.requireNonNull(
+                refinedQueries.select(input.originalUserQuery(), input.searchQuery()), "refinedQuery");
+        trace.append(input.executionId(), "refinedQueryChecks", Map.of(
+                "candidate", input.searchQuery(), "selected", refined,
+                "searched", !refined.equals(input.originalUserQuery()),
+                "consultRequestId", input.consultRequestId()));
+        return refined.equals(input.originalUserQuery())
+                ? originalResults : search(input, refined, FaqSearchKind.REFINED);
     }
 
     private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
@@ -243,6 +262,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                     "consultRequestId", input.consultRequestId()));
             // 빈 목록은 근거 없음이다. 호출·응답 계약 실패는 원인을 보존해 별도로 종료한다.
             throw new FaqAnswerSearchException(failure);
+        }
+    }
+
+    /** 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문을 돌려주면 재검색하지 않는다. */
+    public interface RefinedQuerySelector {
+        String select(String originalUserQuery, String searchQuery);
+
+        /** 검색 문장을 검증 없이 쓴다. 이미 검증된 문장만 넘기는 경로와 테스트에서 쓴다. */
+        static RefinedQuerySelector unchecked() {
+            return (originalUserQuery, searchQuery) -> searchQuery;
         }
     }
 

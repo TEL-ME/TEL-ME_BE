@@ -35,6 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.client.RestClientException;
 
 @ExtendWith(MockitoExtension.class)
 class QueryRoutingServiceTest {
@@ -394,14 +395,16 @@ class QueryRoutingServiceTest {
                     """).formatted(entry.getValue(), entry.getValue()));
 
             var result = service.routeSingleConsult(msg(entry.getKey()), null);
+            // 라우팅은 후보로만 남기고, 재검색 직전 의미 검증에서 거절되면 원문을 유지한다.
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(entry.getValue());
 
-            assertThat(result.refinedQuery()).isEqualTo(entry.getKey());
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(entry.getKey());
+            given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}");
+            assertThat(service.refinedSearchQuery(entry.getKey(), entry.getValue())).isEqualTo(entry.getKey());
         }
     }
 
     @Test
-    void explicitActionRetainsOnlyGroundedSearchTerms() {
+    void explicitActionKeepsRewriteAsUnverifiedCandidate() {
         given(llmClient.generate(any())).willReturn("""
                 {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 방법 및 필요 절차",
                  "subQueries":[{"order":1,"intent":"FAQ","queryText":"번호이동 방법 및 필요 절차",
@@ -410,7 +413,125 @@ class QueryRoutingServiceTest {
 
         var result = service.routeSingleConsult(msg("번호이동하고싶어요"), null);
 
-        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("번호이동 방법");
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("번호이동 방법 및 필요 절차");
+        verify(llmClient).generate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "유심을 잃어버렸어요 | 유심 분실 처리 안내",
+            "다른 통신사로 번호를 옮기고 싶어요 | 번호이동 신청 방법",
+            "해외에서 데이터가 안 돼요 | 해외 데이터 이용 불가 처리 안내"
+    })
+    void singleFaqRoutingStoresRewriteWithoutCallingMeaningValidation(String question, String refined) {
+        given(llmClient.generate(any())).willReturn(singleFaqJson(refined));
+        ChatMessage message = msg(question);
+
+        var result = service.routeSingleConsult(message, null);
+
+        // 의미 검증은 원문 검색이 0건일 때 refinedSearchQuery에서만 한다.
+        assertThat(message.getContent()).isEqualTo(question);
+        assertThat(result.refinedQuery()).isEqualTo(refined);
+        assertThat(result.subQueries()).singleElement().satisfies(sub ->
+                assertThat(sub.queryText()).isEqualTo(refined));
+        verify(llmClient).generate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "유심을 잃어버렸어요 | 유심 분실 처리 안내",
+            "다른 통신사로 번호를 옮기고 싶어요 | 번호이동 신청 방법",
+            "미납 요금이 있는데 번호이동하고 싶어요 | 미납 요금이 있는 경우 번호이동 안내"
+    })
+    void refinedSearchQueryKeepsSemanticallyVerifiedRewrite(String question, String refined) {
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[false]}");
+
+        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(refined);
+
+        var call = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(call.capture());
+        assertThat(call.getValue().systemPrompt()).isEqualTo(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "유심을 잃어버렸어요 | 유심 분실 시 재발급 방법",
+            "해지는 원하지 않고 요금만 줄이고 싶어요 | 해지 신청 방법",
+            "재부팅이랑 데이터 로밍 다시 켜기 중 뭐가 먼저인가요? | 재부팅 후 데이터 로밍 설정 순서"
+    })
+    void refinedSearchQueryReturnsOriginalWhenRewriteChangesMeaning(String question, String refined) {
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}");
+
+        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+    }
+
+    // 원문에 없는 업무 대상을 만든 문장은 모델 의미 검증 없이 거절한다. 모델 검증이 이런 문장을 통과시킨 사례가 있다.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "지난달에 한 번 바꿨는데 이달에 또 바꿔도 되는지 궁금합니다 | 동일 기간 내 유심 재발급 가능 여부",
+            "유심이 망가졌어요 | 유심 분실 신고 방법"
+    })
+    void refinedSearchQueryRejectsInventedTopicWithoutModelCall(String question, String refined) {
+        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    void explicitActionFallsBackToVerifiedGroundedWordsWhenRewriteIsUnsafe() {
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}", "{\"unsafe\":[false]}");
+
+        assertThat(service.refinedSearchQuery("번호이동하고싶어요", "번호이동 방법 및 필요 절차"))
+                .isEqualTo("번호이동 방법");
+
+        var calls = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(2)).generate(calls.capture());
+        assertThat(calls.getAllValues().get(1).userPrompt()).contains("번호이동 방법");
+    }
+
+    @Test
+    void explicitActionGroundedFallbackIsRejectedWhenItDropsCondition() {
+        // 단어만 남긴 "번호이동 방법"도 미납 조건을 빠뜨리므로 원문을 유지해 재검색하지 않는다.
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}", "{\"unsafe\":[true]}");
+
+        assertThat(service.refinedSearchQuery("미납 요금이 있는데 번호이동하고 싶어요", "번호이동 신청 방법"))
+                .isEqualTo("미납 요금이 있는데 번호이동하고 싶어요");
+        verify(llmClient, times(2)).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "{}", "{\"unsafe\":[]}", "{\"unsafe\":[false,false]}",
+            "{\"unsafe\":[\"false\"]}", "not-json"})
+    void refinedSearchQueryValidationFailureKeepsOriginal(String validation) {
+        given(llmClient.generate(any())).willReturn(validation);
+
+        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내"))
+                .isEqualTo("유심을 잃어버렸어요");
+    }
+
+    @Test
+    void refinedSearchQueryCallFailureKeepsOriginal() {
+        given(llmClient.generate(any())).willThrow(new RestClientException("timeout"));
+
+        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내"))
+                .isEqualTo("유심을 잃어버렸어요");
+    }
+
+    @Test
+    void identicalSingleFaqQueryKeepsOriginalWithoutMeaningValidation() {
+        given(llmClient.generate(any())).willReturn(singleFaqJson("유심 재발급 비용"));
+
+        var result = service.routeSingleConsult(msg("유심재발급 비용"), null);
+
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심재발급 비용");
+        assertThat(service.refinedSearchQuery("유심재발급 비용", "유심 재발급 비용")).isEqualTo("유심재발급 비용");
+        verify(llmClient).generate(any());
+    }
+
+    private String singleFaqJson(String refined) {
+        return ("""
+                {"intent":"FAQ","confidence":0.97,"refinedQuery":"%s",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"%s"}]}
+                """).formatted(refined, refined);
     }
 
     @Test
@@ -1210,8 +1331,9 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg("15GB 요금제 알려줘"), null);
 
-            assertThat(result.refinedQuery()).isEqualTo("15GB 요금제 알려줘");
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("15GB 요금제 알려줘");
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.refinedQuery()).isEqualTo("15 GB 요금제 종류");
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("15 GB 요금제 종류");
         }
 
         @Test
@@ -1571,8 +1693,10 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
-            assertThat(result.refinedQuery()).isEqualTo(question);
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
+            // 장소를 만든 것으로 오인해 규칙 분류로 떨어지지 않고, 재검색 후보로 남는다.
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
         }
 
         @Test
@@ -1586,8 +1710,10 @@ class QueryRoutingServiceTest {
 
             IntentRouteResponse result = service.routeSingleConsult(msg(question), null);
 
-            assertThat(result.refinedQuery()).isEqualTo(question);
-            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(question);
+            // 장소를 만든 것으로 오인해 규칙 분류로 떨어지지 않고, 재검색 후보로 남는다.
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.refinedQuery()).isEqualTo(refinedQuery);
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo(refinedQuery);
         }
 
         @Test

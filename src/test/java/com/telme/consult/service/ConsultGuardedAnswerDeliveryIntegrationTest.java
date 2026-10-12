@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,6 +31,7 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.intent.service.RoutingPromptTemplates;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmClient;
@@ -484,12 +486,20 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
                 new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED));
     }
 
+    // 재검색 직전의 검색 문장 의미 검증을 통과시킨다. 이 테스트들은 재검색 이후의 처리를 본다.
+    private void allowRefinedQuery() {
+        when(model.generate(argThat(request -> request != null
+                && RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt()))))
+                .thenReturn("{\"unsafe\":[false]}");
+    }
+
     @Test
     void refinedSearchFailureAfterEmptyOriginalSearchIsNotReportedAsNoEvidence() {
         var prepared = consult.prepareTurn(sessionId, requestId, Purpose.GENERAL_FAQ,
                 Map.of(), LocationStatus.MISSING);
         when(analyzer.analyze(command)).thenReturn(new AnalyzedTurn(prepared, null,
                 Purpose.GENERAL_FAQ, QUERY, "유심 배송비 포함 여부"));
+        allowRefinedQuery();
         when(search.search(any())).thenReturn(List.of())
                 .thenThrow(new IllegalStateException("internal-search-detail"));
         processor.request(command);
@@ -581,6 +591,7 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
                 Map.of(), LocationStatus.MISSING);
         when(analyzer.analyze(command)).thenReturn(new AnalyzedTurn(prepared, null,
                 Purpose.GENERAL_FAQ, QUERY, refined));
+        allowRefinedQuery();
         long faqId = jdbc.queryForObject(
                 "INSERT INTO faqs(category,question,answer) VALUES ('USIM',?,?) RETURNING faq_id",
                 Long.class, "재발급 비용 질문", "재발급 비용은 7,700원입니다.");
