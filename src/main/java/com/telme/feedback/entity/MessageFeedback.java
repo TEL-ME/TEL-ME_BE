@@ -47,7 +47,7 @@ public class MessageFeedback {
     }
 
     public enum ReasonCode {
-        WRONG_INFO, NOT_RELATED, HARD_TO_READ
+        WRONG_INFO, NOT_RELATED, HARD_TO_READ, OTHER
     }
 
     @Id
