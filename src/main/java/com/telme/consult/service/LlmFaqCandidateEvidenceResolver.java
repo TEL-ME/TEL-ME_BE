@@ -24,7 +24,8 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
     private static final Pattern QUESTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]{2,}");
     private static final Set<String> QUESTION_FILLERS = Set.of(
             "무엇인가요", "무엇인가", "얼마인가요", "얼마인가", "알려줘", "알려주세요",
-            "되나요", "주나요", "있나요", "하나요", "인가요", "어떤", "몇세인가요");
+            "되나요", "주나요", "있나요", "하나요", "인가요", "어떤", "몇세인가요",
+            "뭐고", "뭐야", "뭔가요", "뭔지");
     private static final List<String> PARTICLES = List.of(
             "에서는", "으로", "에게", "부터", "까지", "한", "은", "는", "이", "가", "을", "를", "에", "의");
     private static final String PROMPT = """
@@ -47,6 +48,12 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
     @Override
     public FaqSearchResponse resolve(Long executionId, Long consultRequestId,
             String question, List<FaqSearchResponse> candidates) {
+        return resolve(executionId, consultRequestId, question, candidates, false);
+    }
+
+    @Override
+    public FaqSearchResponse resolve(Long executionId, Long consultRequestId, String question,
+            List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
         if (candidates.isEmpty()) {
             return null;
         }
@@ -112,9 +119,11 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                 return null;
             }
             Matcher retryId = FAQ_ID.matcher(repaired.path("faqId").asText(""));
-            return repaired.path("answerable").asBoolean(false)
-                    && retryId.matches() && Long.parseLong(retryId.group(1)) == id
-                    && hasExactQuote(repaired, selected) ? selected : null;
+            boolean sameCandidateAnswerable = repaired.path("answerable").asBoolean(false)
+                    && retryId.matches() && Long.parseLong(retryId.group(1)) == id;
+            // 재시도가 같은 후보를 골랐다면 인용문만 틀려도 원문 후보는 살린다
+            return sameCandidateAnswerable && (allowQuoteRepairFailure || hasExactQuote(repaired, selected))
+                    ? selected : null;
         } catch (JsonProcessingException | NumberFormatException failure) {
             log.warn("FAQ 후보 근거 판정 형식 오류: executionId={}, errorType={}",
                     executionId, failure.getClass().getSimpleName());

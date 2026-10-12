@@ -109,4 +109,27 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
         assertEquals(1, found.size());
         assertEquals(1, reasks(found, first));
     }
+
+    @Test
+    void splitConsultUsesSubQueryAsOriginalQuery() {
+        long first = request(session);
+        long origin = jdbc.queryForObject(
+                "SELECT origin_message_id FROM consult_requests WHERE consult_request_id=?", Long.class, first);
+        jdbc.update("UPDATE consult_requests SET query_text='번호이동 필요 서류', intent='FAQ' WHERE consult_request_id=?", first);
+        ask(first);
+        long second = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,1,'FAQ','유심 재발급 비용') RETURNING consult_request_id",
+                Long.class, session, origin);
+        long single = request(session);
+        ask(single);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals("번호이동 필요 서류", found.stream()
+                .filter(c -> c.consultRequestId() == first).findFirst().orElseThrow().originalUserQuery());
+        assertEquals("test", found.stream()
+                .filter(c -> c.consultRequestId() == single).findFirst().orElseThrow().originalUserQuery());
+    }
 }

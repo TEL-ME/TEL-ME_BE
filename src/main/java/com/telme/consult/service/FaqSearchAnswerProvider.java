@@ -148,7 +148,10 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             List<FaqSearchResponse> candidates = searchComparisonCandidate(
                     input, input.originalUserQuery(), "FAQ_CANDIDATE");
             FaqSearchResponse verified = candidateEvidence.resolve(
-                    input.executionId(), input.consultRequestId(), input.originalUserQuery(), candidates);
+                    input.executionId(), input.consultRequestId(), input.candidateEvidenceQuery(), candidates,
+                    // 복합 질문은 검색용 문장이 공백 없이 정규화된다. 후보 FAQ를 선택한 모델이
+                    // 인용문만 형식에 맞추지 못한 경우까지 근거 부족으로 버리지는 않는다.
+                    !input.candidateEvidenceQuery().equals(input.originalUserQuery()));
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));

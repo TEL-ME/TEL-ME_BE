@@ -75,7 +75,10 @@ public final class PendingClarificationFinder {
                 jdbc.query(
                         """
                         SELECT r.consult_request_id,c.condition_key,q.message_id,q.content,
-                               origin.content,r.query_text,r.intent,q.follow_ups,
+                               CASE WHEN (SELECT count(*) FROM consult_requests sib
+                                          WHERE sib.origin_message_id=r.origin_message_id)>1
+                                    THEN r.query_text ELSE origin.content END,
+                               r.query_text,r.intent,q.follow_ups,
                                c.reask_count
                         FROM consult_requests r
                         JOIN consult_conditions c ON c.consult_request_id=r.consult_request_id
