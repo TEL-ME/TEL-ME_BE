@@ -1732,5 +1732,115 @@
       ]
     }
   ],
-  "unseenPurpose": "프롬프트 예시와 기존 사례에 없고 일반어 규칙 설계에도 쓰지 않은 29건. 실측 전에 기대값을 고정했다. 결과를 보고 규칙이나 프롬프트를 고치면 이 묶음은 더 이상 처음 보는 문장이 아니다. implicit_followup 5건은 기본 모드의 알려진 한계를 수치로 남기기 위한 입력이다."
+  "unseenPurpose": "프롬프트 예시와 기존 사례에 없고 일반어 규칙 설계에도 쓰지 않은 29건. 실측 전에 기대값을 고정했다. 결과를 보고 규칙이나 프롬프트를 고치면 이 묶음은 더 이상 처음 보는 문장이 아니다. implicit_followup 5건은 기본 모드의 알려진 한계를 수치로 남기기 위한 입력이다.",
+  "reviewCases": [
+    {
+      "id": "review-topic-01",
+      "group": "topic_word",
+      "split": "review",
+      "question": "취소 어떻게 해요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "review-topic-02",
+      "group": "topic_word",
+      "split": "review",
+      "question": "취소 어떻게 해요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-topic-03",
+      "group": "topic_word",
+      "split": "review",
+      "question": "신청 언제까지 해요?",
+      "history": [
+        "해외 로밍을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "review-topic-04",
+      "group": "topic_word",
+      "split": "review",
+      "question": "신청 언제까지 해요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-topic-05",
+      "group": "topic_word",
+      "split": "review",
+      "question": "변경은 어디서 해요?",
+      "history": [
+        "요금제를 바꾸려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "review-topic-06",
+      "group": "topic_word",
+      "split": "review",
+      "question": "변경은 어디서 해요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-fee-01",
+      "group": "fee_self",
+      "split": "review",
+      "question": "요금 언제 나와요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-fee-02",
+      "group": "fee_self",
+      "split": "review",
+      "question": "요금 변경 어떻게 해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-fee-03",
+      "group": "fee_self",
+      "split": "review",
+      "question": "처음 요금은 언제 나와요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "review-ordinal-01",
+      "group": "ordinal",
+      "split": "review",
+      "question": "처음 물어본 거 요금은요?",
+      "history": [
+        "로밍 신청을 알아보고 있어요",
+        "유심 재발급도 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    }
+  ],
+  "reviewPurpose": "#126 리뷰로 판정 경로가 바뀐 문장 유형 10건. 지시어 없는 상담 대상 낱말 문장과 '처음' 단독 표현을 실측 전에 기대값과 함께 고정했다."
 }
