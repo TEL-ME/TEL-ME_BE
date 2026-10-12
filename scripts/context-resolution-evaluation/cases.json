@@ -1842,5 +1842,390 @@
       ]
     }
   ],
-  "reviewPurpose": "#126 리뷰로 판정 경로가 바뀐 문장 유형 10건. 지시어 없는 상담 대상 낱말 문장과 '처음' 단독 표현을 실측 전에 기대값과 함께 고정했다."
+  "reviewPurpose": "#126 리뷰로 판정 경로가 바뀐 문장 유형 10건. 지시어 없는 상담 대상 낱말 문장과 '처음' 단독 표현을 실측 전에 기대값과 함께 고정했다.",
+  "accuracyCases": [
+    {
+      "id": "acc-implicit-01",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "베트남도 돼요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-02",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "토요일에도 가능해요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-03",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "택배로도 받을 수 있나요?",
+      "history": [
+        "유심 재발급을 받으려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-04",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "배우자도 해당돼요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-05",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "태블릿도 연결돼요?",
+      "history": [
+        "데이터 쉐어링을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-06",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "최대 며칠까지예요?",
+      "history": [
+        "휴대폰 일시정지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-07",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "출국 당일에 해도 돼요?",
+      "history": [
+        "해외 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-08",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "장비는 어떻게 반납해요?",
+      "history": [
+        "인터넷 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-09",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "온라인으로 바로 돼요?",
+      "history": [
+        "요금제 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-implicit-10",
+      "group": "implicit_followup",
+      "split": "accuracy",
+      "question": "해외에서도 할 수 있어요?",
+      "history": [
+        "분실 신고를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-01",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "그럼 수수료는 얼마나 붙어요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-02",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "그때 설치 기사님 방문비가 있나요?",
+      "history": [
+        "인터넷 이전 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-03",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "그건 신분증 사본으로도 돼요?",
+      "history": [
+        "유심 재발급을 받으려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-04",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "그럼 데이터 다 쓰면 어떻게 돼요?",
+      "history": [
+        "로밍 요금제를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-05",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "그거 할부금은 어떻게 처리돼요?",
+      "history": [
+        "휴대폰 해지를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-item-06",
+      "group": "item_followup",
+      "split": "accuracy",
+      "question": "이전에 말한 거 미성년자 자녀한테도 돼요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-compact-01",
+      "group": "compact",
+      "split": "accuracy",
+      "question": "그럼수수료는얼마나붙어요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-compact-02",
+      "group": "compact",
+      "split": "accuracy",
+      "question": "그건신분증사본으로도돼요?",
+      "history": [
+        "유심 재발급을 받으려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "acc-compact-03",
+      "group": "compact",
+      "split": "accuracy",
+      "question": "로밍신청하려는데그건출국전에해야돼요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-compact-04",
+      "group": "compact",
+      "split": "accuracy",
+      "question": "인터넷해지할때장비반납은어떻게해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-01",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "유심 가격은요?",
+      "history": [
+        "일본 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-02",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "5G 요금제 추천해 주세요",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-03",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "멤버십 혜택은요?",
+      "history": [
+        "명의 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-04",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "분실폰 위치 조회 돼요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-05",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "가족결합 할인도 있어요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-06",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "고객센터 번호 알려줘",
+      "history": [
+        "유심 재발급을 받으려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-independent-07",
+      "group": "independent",
+      "split": "accuracy",
+      "question": "eSIM 개통 방법 알려주세요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-ambiguous-01",
+      "group": "ambiguous",
+      "split": "accuracy",
+      "question": "그건 언제까지 해야 해요?",
+      "history": [
+        "로밍이랑 인터넷 해지를 같이 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-ambiguous-02",
+      "group": "ambiguous",
+      "split": "accuracy",
+      "question": "아까 그거 어떻게 됐어요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "acc-ambiguous-03",
+      "group": "ambiguous",
+      "split": "accuracy",
+      "question": "그럼 수수료는요?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "accuracyPurpose": "문맥 판정 정확도 개선 검증용 30건. 프롬프트 예시·기존 사례와 겹치지 않으며 개선 작업 전에 기대값을 고정했다. independent 7건은 후보를 넓혔을 때 이전 주제에 잘못 연결되는지 확인하는 대조군이다.",
+  "promptOverlapIds": [
+    "ambiguous-01",
+    "ambiguous-03",
+    "ambiguous-04",
+    "evidence-ambiguous-03",
+    "evidence-correction-01",
+    "evidence-correction-02",
+    "evidence-followup-02",
+    "evidence-followup-03",
+    "followup-01",
+    "followup-02",
+    "followup-03",
+    "followup-04",
+    "followup-07",
+    "independent-01",
+    "independent-06",
+    "independent-08",
+    "known-02",
+    "known-04",
+    "known-09",
+    "same_sentence-01",
+    "same_sentence-06",
+    "transition-04",
+    "transition-05",
+    "transition-10"
+  ]
 }

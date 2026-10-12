@@ -430,7 +430,7 @@ class ChatQuestionResolverTest {
         assertThat(result.needsClarification()).isFalse();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
     }
 
     // 앞에 붙은 "[문의]" 표시 때문에 문맥 판정 후보에서 빠지지 않는다. 고객 원문은 그대로 전달한다.
@@ -466,7 +466,42 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+    }
+
+    // 지시어 없이 조건만 말한 짧은 후속 질문도 이전 고객 발언이 있으면 대상 생략 여부를 모델이 판정한다.
+    @ParameterizedTest
+    @ValueSource(strings = {"중국도 되나요?", "주말에도 접수돼요?", "자녀 명의도 괜찮아요?"})
+    void shortQuestionWithCustomerHistoryIsJudgedByTheModel(String question) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).contains(source.content(), question);
+    }
+
+    // 이전 고객 발언이 없거나 인사뿐이면, 또는 질문이 길면 지금처럼 모델 없이 독립 질문으로 둔다.
+    @Test
+    void shortQuestionWithoutCustomerHistoryOrLongQuestionSkipsTheModel() throws Exception {
+        String shortQuestion = "중국도 되나요?";
+        var greeting = customer(502L, 1, "안녕하세요");
+        assertThat(resolver.resolve(command(shortQuestion), null).sourceMessageIds()).isEmpty();
+        assertThat(resolver.resolve(command(shortQuestion),
+                new ChatContext(1L, 5L, null, List.of(greeting), shortQuestion, 100)).sourceMessageIds()).isEmpty();
+        String longQuestion = "중국 출장 가는데 현지에서 데이터 무제한으로 쓰려면 어떻게 해야 하나요?";
+        assertThat(resolver.resolve(command(longQuestion),
+                new ChatContext(1L, 5L, null, List.of(source), longQuestion, 100)).sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
+    }
+
+    // 짧아도 상품이나 업무가 있으면 모델이 EXPLICIT으로 판정해 이전 주제를 붙이지 않는다.
+    @Test
+    void shortQuestionWithItsOwnTargetKeepsNoHistory() throws Exception {
+        String question = "청소년 요금제도 있나요?";
+        respond(model, explicit());
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).isEmpty();
+        assertThat(result.question()).isEqualTo(question);
+        verify(model).generate(any());
     }
 
     static void respond(LlmClient client, String combined) throws Exception {
