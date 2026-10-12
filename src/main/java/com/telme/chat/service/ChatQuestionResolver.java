@@ -159,12 +159,13 @@ public class ChatQuestionResolver {
                     "originalQuery", question, "status", "INVALID_CONTEXT"));
             return new Resolution(question, true, List.of());
         }
-        // 공백 차이는 호출 후보 선정에만 정규화하고 고객 원문은 그대로 전달한다.
-        String compact = question.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
+        // 공백 차이와 "[문의]" 같은 앞 표시는 호출 후보 선정에만 정규화하고 고객 원문은 그대로 전달한다.
+        String gated = withoutLeadingTag(question);
+        String compact = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
         boolean candidate = TARGET_REFERENCE.matcher(compact).find()
                 || TEMPORAL_REFERENCE.matcher(compact).find() || IMPLICIT.matcher(compact).find()
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
-                || madeOfGenericWords(question);
+                || madeOfGenericWords(gated);
         if (mode == Mode.REGEX_GATED && !candidate) {
             Resolution result = new Resolution(question, false, List.of());
             recordResolution(command, question, result);
@@ -199,7 +200,7 @@ public class ChatQuestionResolver {
                 }
             }
             List<ChatContextMessage> ordered = orderedSources(sources);
-            boolean generic = isGenericFollowUp(question);
+            boolean generic = isGenericFollowUp(withoutLeadingTag(question));
             Reference reference = generic ? Reference.OMITTED : judgeReference(command, question);
             var analysis = mapper.createObjectNode();
             analysis.put("reference", reference.name());
@@ -227,7 +228,7 @@ public class ChatQuestionResolver {
                 analysis.set("anchorIndex", sourcesOutput.path("anchorIndex"));
                 analysis.set("referenceScope", sourcesOutput.path("referenceScope"));
             }
-            Resolution result = validateResolution(question, mapper.writeValueAsString(analysis), sources);
+            Resolution result = validateResolution(question, analysis, sources);
             trace.stage(command.executionId(), "questionResolutionEvidence", Map.of(
                     "analysis", analysis,
                     "referenceSource", generic ? "RULE" : "MODEL",
@@ -333,13 +334,24 @@ public class ChatQuestionResolver {
         };
     }
 
+    // 문장 앞의 "[문의]", "[질문]" 같은 짧은 대괄호 표시. 후보 선정과 일반어 판정에서만 뗀다.
+    private static final Pattern LEADING_TAG = Pattern.compile("^\\s*\\[[^\\]]{1,10}\\]\\s*");
+
+    static String withoutLeadingTag(String question) {
+        return question == null ? "" : LEADING_TAG.matcher(question).replaceFirst("");
+    }
+
     private static String compact(String question) {
         return question == null ? "" : question.replaceAll("[\\p{javaWhitespace}\\p{Zs}\\p{P}\\p{S}]+", "");
     }
 
+    // 문자열로 만든 판정 사례를 검증할 때만 쓴다. 파싱과 객체 검증을 나눈다.
     Resolution validateResolution(String question, String raw, Map<Long, ChatContextMessage> sources)
             throws JsonProcessingException {
-        JsonNode root = readOutput(raw);
+        return validateResolution(question, readOutput(raw), sources);
+    }
+
+    private Resolution validateResolution(String question, JsonNode root, Map<Long, ChatContextMessage> sources) {
         if (root == null || !root.isObject() || root.size() != 4 || !root.path("reference").isTextual()
                 || !root.path("sources").isArray() || !root.path("anchorIndex").isIntegralNumber() || !root.path("referenceScope").isTextual()) {
             throw new IllegalArgumentException("문맥 판정 형식이 올바르지 않습니다.");

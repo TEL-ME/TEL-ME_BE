@@ -433,6 +433,24 @@ class ChatQuestionResolverTest {
         assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
     }
 
+    // 앞에 붙은 "[문의]" 표시 때문에 문맥 판정 후보에서 빠지지 않는다. 고객 원문은 그대로 전달한다.
+    @Test
+    void leadingTagDoesNotHideAFollowUpFromContextResolution() throws Exception {
+        String question = "[문의] 비용은 얼마인가요?";
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).contains(source.content(), question);
+    }
+
+    @Test
+    void onlyAShortLeadingBracketTagIsRemovedForGating() {
+        assertThat(ChatQuestionResolver.withoutLeadingTag("[문의] 비용은 얼마인가요?")).isEqualTo("비용은 얼마인가요?");
+        assertThat(ChatQuestionResolver.withoutLeadingTag("비용은 [VAT 포함] 얼마인가요?"))
+                .isEqualTo("비용은 [VAT 포함] 얼마인가요?");
+        assertThat(ChatQuestionResolver.withoutLeadingTag("요금 납부 방법 알려줘")).isEqualTo("요금 납부 방법 알려줘");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"처음 물어본 거 요금은요?", "첫 번째로 문의한 건 취소할 수 있어요?"})
     void ordinalPhraseStillCountsAsReference(String question) {
