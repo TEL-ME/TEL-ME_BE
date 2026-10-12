@@ -24,6 +24,7 @@ import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
+import com.telme.intent.service.QueryRoutingService;
 import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.rag.service.AnswerGenerator;
 import com.telme.rag.converter.AnswerContextConverter;
@@ -141,7 +142,8 @@ public class ConsultRagAnswerConfiguration {
             ChatStoreAnswerProvider storeAnswers, ObjectProvider<LlmClient> llmClient,
             FaqClarificationProperties clarification,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
-            AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions) {
+            AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions,
+            QueryRoutingService routing) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
@@ -149,7 +151,8 @@ public class ConsultRagAnswerConfiguration {
                 : new FaqClarificationPlanner(new ConditionExtractor(client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
                 new FaqSearchAnswerProvider(searches, answers, trace,
-                        comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions),
+                        comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
+                        routing::refinedSearchQuery),
                 storeAnswers::generate);
     }
 }

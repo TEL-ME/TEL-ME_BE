@@ -174,7 +174,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v3")
+                .promptVersion("routing-request-v4-single-search")
                 .build();
 
             String json = llmClient.generate(request);
@@ -410,6 +410,45 @@ public class QueryRoutingService {
         return findUnsafeFaqQueries(single, current, previousSubject).getFirst() ? current : candidate;
     }
 
+    /**
+     * 단일 FAQ의 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문 검색이 성공하면 부르지 않아 검증 비용이 없다.
+     * 의미가 같으면 후보를, 업무 수행 의사를 밝힌 질문은 원문 근거가 있는 단어만 남긴 문장을 돌려준다.
+     * 쓸 문장이 없으면 원문을 그대로 돌려주며, 호출자는 이때 재검색하지 않는다.
+     */
+    public String refinedSearchQuery(String question, String candidate) {
+        if (question == null || question.isBlank() || candidate == null || candidate.isBlank()
+                || RoutingQuestionNormalizer.quoteKey(candidate).equals(RoutingQuestionNormalizer.quoteKey(question))) {
+            return question;
+        }
+        // 원문에 없는 업무 대상을 추측해 넣은 문장은 모델 의미 검증이 통과시키는 경우가 있어 먼저 거절한다.
+        if (SearchTopicPolicy.introducesNewTopic(question, candidate)) {
+            log.info("[라우팅] 원문에 없는 업무 대상이 생긴 재검색 문장을 쓰지 않습니다.");
+            return question;
+        }
+        var sub = new LlmRoutingPayload.SubQueryPayload(
+                (short) 1, ConsultRequest.Intent.FAQ, candidate.strip(), Collections.emptyMap(), question);
+        var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate.strip(),
+                Collections.emptyMap(), List.of(sub));
+        // 동의어는 원문의 단어 포함 여부로 검사하지 않는다. 업무와 조건의 의미를 검증한다.
+        if (!findUnsafeFaqQueries(single, question, "").getFirst()) {
+            return candidate.strip();
+        }
+        if (!ACTION_REQUEST.matcher(question).find()) {
+            return question;
+        }
+        // 원문에 없는 단어를 뺀 문장도 조건이나 부정을 빠뜨릴 수 있어 같은 의미 검증을 거친다.
+        String grounded = removeUngroundedQueryWords(single, sub, question, "");
+        if (grounded == null || grounded.isBlank() || grounded.equals(candidate.strip())
+                || RoutingQuestionNormalizer.quoteKey(grounded).equals(RoutingQuestionNormalizer.quoteKey(question))) {
+            return question;
+        }
+        var groundedSub = new LlmRoutingPayload.SubQueryPayload(
+                (short) 1, ConsultRequest.Intent.FAQ, grounded, Collections.emptyMap(), question);
+        var groundedSingle = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, grounded,
+                Collections.emptyMap(), List.of(groundedSub));
+        return findUnsafeFaqQueries(groundedSingle, question, "").getFirst() ? question : grounded;
+    }
+
     // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.
     private LlmRoutingPayload preserveFaqQuestionMeaning(LlmRoutingPayload payload, String current,
             String question, String previousSubject, ChatContext context, boolean restored) {
@@ -417,12 +456,16 @@ public class QueryRoutingService {
             return payload;
         }
         if (payload.subQueries().size() == 1) {
-            // 독립 질문은 원문을 우선한다. 명시적인 업무 수행 의사는 근거 있는 검색어만 유지한다.
+            // 원문은 메시지에 보존하고, 검색 문장은 후보로만 저장한다.
+            // 후보는 원문 검색이 0건일 때 refinedSearchQuery로 의미를 검증한 뒤에만 검색에 쓴다.
             if (!restored && (context == null || !CONTEXT_REFERENCE.matcher(question).find())) {
                 var original = payload.subQueries().getFirst();
-                String searchQuery = ACTION_REQUEST.matcher(question).find()
-                        && original.queryText() != null && !original.queryText().isBlank()
-                        ? removeUngroundedQueryWords(payload, original, current, previousSubject) : question;
+                String candidate = original.queryText();
+                String searchQuery = candidate != null && !candidate.isBlank()
+                        && !RoutingQuestionNormalizer.quoteKey(candidate)
+                                .equals(RoutingQuestionNormalizer.quoteKey(question))
+                        && !ComparisonQuestionPolicy.isStandaloneComparison(question, context)
+                        ? candidate.strip() : question;
                 return new LlmRoutingPayload(payload.intent(), payload.confidence(), searchQuery,
                         payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
                                 original.order(), original.intent(), searchQuery,
@@ -551,7 +594,7 @@ public class QueryRoutingService {
                     .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
                     .userPrompt(prompt).format(ResponseFormat.JSON)
                     .temperature(0.0).maxTokens(256)
-                    .promptVersion("routing-faq-faithfulness-v1").build();
+                    .promptVersion("routing-faq-faithfulness-v2-single-search").build();
             String response = llmClient.generate(request);
             var root = objectMapper.readTree(response);
             var results = root == null ? null : root.path("unsafe");
