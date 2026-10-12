@@ -420,6 +420,11 @@ public class QueryRoutingService {
                 || RoutingQuestionNormalizer.quoteKey(candidate).equals(RoutingQuestionNormalizer.quoteKey(question))) {
             return question;
         }
+        // 원문에 없는 업무 대상을 추측해 넣은 문장은 모델 의미 검증이 통과시키는 경우가 있어 먼저 거절한다.
+        if (SearchTopicPolicy.introducesNewTopic(question, candidate)) {
+            log.info("[라우팅] 원문에 없는 업무 대상이 생긴 재검색 문장을 쓰지 않습니다.");
+            return question;
+        }
         var sub = new LlmRoutingPayload.SubQueryPayload(
                 (short) 1, ConsultRequest.Intent.FAQ, candidate.strip(), Collections.emptyMap(), question);
         var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate.strip(),

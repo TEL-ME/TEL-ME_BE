@@ -457,13 +457,23 @@ class QueryRoutingServiceTest {
     @CsvSource(delimiter = '|', value = {
             "유심을 잃어버렸어요 | 유심 분실 시 재발급 방법",
             "해지는 원하지 않고 요금만 줄이고 싶어요 | 해지 신청 방법",
-            "유심이 망가졌어요 | 유심 분실 신고 방법",
             "재부팅이랑 데이터 로밍 다시 켜기 중 뭐가 먼저인가요? | 재부팅 후 데이터 로밍 설정 순서"
     })
     void refinedSearchQueryReturnsOriginalWhenRewriteChangesMeaning(String question, String refined) {
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}");
 
         assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+    }
+
+    // 원문에 없는 업무 대상을 만든 문장은 모델 의미 검증 없이 거절한다. 모델 검증이 이런 문장을 통과시킨 사례가 있다.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "지난달에 한 번 바꿨는데 이달에 또 바꿔도 되는지 궁금합니다 | 동일 기간 내 유심 재발급 가능 여부",
+            "유심이 망가졌어요 | 유심 분실 신고 방법"
+    })
+    void refinedSearchQueryRejectsInventedTopicWithoutModelCall(String question, String refined) {
+        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+        verify(llmClient, never()).generate(any());
     }
 
     @Test
