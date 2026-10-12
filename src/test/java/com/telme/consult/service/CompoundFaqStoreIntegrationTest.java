@@ -19,7 +19,6 @@ import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.dto.DialogueInput.Purpose;
-import com.telme.consult.repository.CompoundConsultRequestFinder;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
@@ -55,7 +54,6 @@ class CompoundFaqStoreIntegrationTest {
     @Autowired ContextProvider contexts;
     @Autowired ConsultTurnPreparationService preparation;
     @Autowired ConsultChatPersistenceService persistence;
-    @Autowired CompoundConsultRequestFinder groups;
     @Autowired StoreSearchService nearby;
     @Autowired NamedLocationStoreSearchAdapter named;
     @MockitoBean LlmClient llm;
@@ -125,30 +123,37 @@ class CompoundFaqStoreIntegrationTest {
         assertThat(answerInputs).allSatisfy(input -> assertThat(input.streamTokens()).isFalse());
     }
 
+    // 답할 수 있는 FAQ는 바로 답하고, 매장 지역 되묻기를 같은 메시지 끝에 붙인다(복합 되묻기와 같은 동작).
     @Test
-    void locationThenServiceClarificationKeepsFaqUntilAllConditionsAreFilled() throws Exception {
+    void faqIsAnsweredNowAndStoreConditionsAreAskedInTheSameMessage() throws Exception {
         route("번호이동 가능한 매장", Map.of());
         var processor = processor(false);
         var initial = command("번호이동 방법과 번호이동 가능한 매장 찾아줘", null);
         processor.request(initial);
-        assertThat(answerInputs).isEmpty();
-        assertThat(output(initial).path("message_type").asText()).isEqualTo("CLARIFICATION");
-        assertThat(statuses()).containsExactly("PENDING", "WAITING_CONDITION");
+        var asked = output(initial);
+        assertThat(asked.path("message_type").asText()).isEqualTo("CLARIFICATION");
+        assertThat(asked.path("content").asText()).contains("1. 번호이동 방법", "신분증", "2. ", "어느 지역");
+        assertThat(statuses()).containsExactly("DONE", "WAITING_CONDITION");
+        assertThat(answerInputs).extracting(AnswerInput::purpose).containsExactly(Purpose.GENERAL_FAQ);
+        long askedId = asked.path("message_id").asLong();
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM message_sources WHERE message_id=? AND faq_id=?",
+                Integer.class, askedId, faqId)).isEqualTo(1));
 
         var location = command("강남역", null);
         processor.request(location);
         assertThat(output(location).path("content").asText()).isEqualTo("어떤 업무로 매장을 찾으시나요?");
-        assertThat(statuses()).containsExactly("PENDING", "WAITING_CONDITION");
-        assertThat(answerInputs).isEmpty();
+        assertThat(statuses()).containsExactly("DONE", "WAITING_CONDITION");
 
         var service = command("번호이동", null);
         processor.request(service);
-        assertCombined(service, true);
+        assertStoreOnly(service);
+        // 이미 답한 FAQ는 다시 생성하지 않는다.
+        assertThat(answerInputs).extracting(AnswerInput::purpose)
+                .containsExactly(Purpose.GENERAL_FAQ, Purpose.NEARBY_STORE);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_conditions c JOIN consult_requests r"
                 + " ON r.consult_request_id=c.consult_request_id WHERE r.session_id=?"
                 + " AND c.condition_key IN ('location','serviceType') AND c.answered_message_id IS NOT NULL",
-                Integer.class, sessionId)).isEqualTo(2);
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=?",
                 Integer.class, sessionId)).isEqualTo(2);
     }
 
@@ -162,8 +167,8 @@ class CompoundFaqStoreIntegrationTest {
         var gps = command("현재 위치로 찾아줘", new ChatCoordinates(37.501, 127.021));
         processor.request(gps);
 
-        assertCombined(gps, true);
-        assertThat(answerInputs.get(1).coordinates()).isEqualTo(gps.coordinates());
+        assertStoreOnly(gps);
+        assertThat(answerInputs.getLast().coordinates()).isEqualTo(gps.coordinates());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM query_routings q JOIN chat_messages m"
                 + " ON m.message_id=q.message_id WHERE m.session_id=?", Integer.class, sessionId)).isEqualTo(1);
     }
@@ -190,8 +195,9 @@ class CompoundFaqStoreIntegrationTest {
                 .when(llm).generate(any());
         processor.request(declined);
 
-        assertCombined(declined, false);
-        assertThat(output(declined).path("content").asText()).contains("검색 지역 없이는", "신분증");
+        assertThat(statuses()).containsExactly("DONE", "DONE");
+        assertThat(output(declined).path("content").asText()).contains("검색 지역 없이는");
+        // FAQ는 처음 메시지에서 이미 답했다.
         assertThat(answerInputs).extracting(AnswerInput::purpose).containsExactly(Purpose.GENERAL_FAQ);
     }
 
@@ -236,7 +242,7 @@ class CompoundFaqStoreIntegrationTest {
     }
 
     @Test
-    void twoStoreRequestsResumeTogetherWithoutSharingTheirLocations() throws Exception {
+    void storeWithLocationIsAnsweredAndOnlyTheMissingLocationIsAsked() throws Exception {
         initialRouting = mapper.writeValueAsString(Map.of("intent", "BOTH", "confidence", 0.99,
                 "refinedQuery", "번호이동 안내와 매장 찾기", "subQueries", List.of(
                         Map.of("order", 1, "intent", "FAQ", "queryText", "번호이동 방법", "conditions", Map.of()),
@@ -247,35 +253,40 @@ class CompoundFaqStoreIntegrationTest {
         when(locations.lookup("신촌역")).thenReturn(Optional.of(new LocationLookupResult(
                 "신촌역", LocationLookupResult.Type.PLACE, 37.501, 127.021, null)));
         var processor = processor(false);
-        processor.request(command("번호이동 방법과 번호이동 매장, 신촌역 번호이동 매장 찾아줘", null));
-        assertThat(statuses()).containsExactly("PENDING", "WAITING_CONDITION", "PENDING");
+        var initial = command("번호이동 방법과 번호이동 매장, 신촌역 번호이동 매장 찾아줘", null);
+        processor.request(initial);
+        // 지역이 있는 매장 요청은 바로 답하고, 지역이 없는 요청만 되묻는다.
+        assertThat(statuses()).containsExactly("DONE", "WAITING_CONDITION", "DONE");
+        assertThat(output(initial).path("content").asText())
+                .contains("신분증", "신촌역 기준", "복합 검증 매장", "어느 지역");
         var followup = command("강남역", null);
         processor.request(followup);
 
-        var output = output(followup);
+        assertStoreOnly(followup);
         assertThat(statuses()).containsExactly("DONE", "DONE", "DONE");
         assertThat(answerInputs).hasSize(3);
-        assertThat(answerInputs.get(1).confirmedConditions()).containsEntry("location", "강남역");
-        assertThat(answerInputs.get(2).confirmedConditions()).containsEntry("location", "신촌역");
-        assertThat(output.path("store_search_context").isNull()).isTrue();
-        output.path("store_results").forEach(store -> assertThat(store.path("distanceMeters").isNull()).isTrue());
-        assertThat(output.path("content").asText()).contains("강남역 기준", "신촌역 기준", "3. 신촌역");
-        assertThat(events.tokens).containsExactly(output.path("content").asText());
+        assertThat(answerInputs.get(1).confirmedConditions()).containsEntry("location", "신촌역");
+        assertThat(answerInputs.get(2).confirmedConditions()).containsEntry("location", "강남역");
     }
 
+    // 지역이 빠진 매장 요청이 둘이면 한 메시지에 하나만 물을 수 없어 나눠 보내도록 안내한다.
     @Test
-    void closedSiblingIsNotRevivedByStoreConditionReply() throws Exception {
-        route("매장 찾기", Map.of());
-        var processor = processor(false);
-        processor.request(command("번호이동 방법과 매장 찾아줘", null));
-        jdbc.update("UPDATE consult_requests SET status='CANCELLED' WHERE session_id=? AND intent='FAQ'", sessionId);
-        var followup = command("강남역", null);
-        processor.request(followup);
+    void twoStoresMissingLocationAskToSplitInsteadOfAskingTwice() throws Exception {
+        initialRouting = mapper.writeValueAsString(Map.of("intent", "BOTH", "confidence", 0.99,
+                "refinedQuery", "번호이동 안내와 매장 찾기", "subQueries", List.of(
+                        Map.of("order", 1, "intent", "FAQ", "queryText", "번호이동 방법", "conditions", Map.of()),
+                        Map.of("order", 2, "intent", "STORE", "queryText", "번호이동 매장",
+                                "conditions", Map.of("serviceType", "PORT_IN")),
+                        Map.of("order", 3, "intent", "STORE", "queryText", "유심 재발급 매장",
+                                "conditions", Map.of("serviceType", "USIM_REISSUE")))));
+        var command = command("번호이동 방법과 번호이동 매장, 유심 재발급 매장 찾아줘", null);
+        processor(false).request(command);
 
-        assertThat(statuses()).containsExactly("CANCELLED", "WAITING_CONDITION");
-        assertThat(output(followup).path("status").asText()).isEqualTo("FAILED");
+        var output = output(command);
+        assertThat(output.path("message_type").asText()).isEqualTo("ANSWER");
+        assertThat(output.path("content").asText()).isEqualTo(ConsultChatProcessingService.SPLIT_STORE_GUIDANCE);
         assertThat(answerInputs).isEmpty();
-        assertThat(events.tokens).isEmpty();
+        assertThat(statuses()).doesNotContain("WAITING_CONDITION");
     }
 
     @Test
@@ -291,9 +302,9 @@ class CompoundFaqStoreIntegrationTest {
         int version = first.prepared().expectedVersion();
         var stale = new ConsultService.PreparationResult(new ConsultService.PreparedTurn(sessionId,
                 second.prepared().expectedVersion() + 1, second.prepared().decision()), null);
-        assertThatThrownBy(() -> persistence.persistCompoundClarification(command.executionId(), sessionId, List.of(
-                new ConsultChatProcessingService.ConsultTurn(first, "번호이동 방법"),
-                new ConsultChatProcessingService.ConsultTurn(stale, Purpose.NEARBY_STORE, "매장 찾기", null))))
+        assertThatThrownBy(() -> persistence.persistCompoundClarification(command.executionId(), sessionId,
+                List.of(first.prepared()), stale.prepared(), "1. 번호이동 방법\n안내\n\n2. 매장 찾기\n어느 지역인가요?",
+                List.of(), List.of()))
                 .isInstanceOf(RuntimeException.class);
         assertThat(statuses()).containsExactly("PENDING", "PENDING");
         assertThat(jdbc.queryForObject("SELECT version FROM consult_requests WHERE consult_request_id=?",
@@ -312,7 +323,7 @@ class CompoundFaqStoreIntegrationTest {
     private ConsultChatProcessingService processor(boolean failStore) {
         var analyzer = new ConsultTurnAnalysisAdapter(contexts,
                 new QueryRoutingAnalysisProvider(messages, routing, new QueryRoutingFollowupAnalysisProvider(routing)),
-                preparation, new FollowupConditionConverter(), null, groups);
+                preparation, new FollowupConditionConverter(), null);
         var stores = new ChatStoreAnswerProvider(nearby, named, new ChatStoreConverter());
         var answers = new PurposeRoutingAnswerProvider(input -> {
             answerInputs.add(input);
@@ -372,6 +383,15 @@ class CompoundFaqStoreIntegrationTest {
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM message_sources WHERE message_id=? AND faq_id=?",
                 Integer.class, outputId, faqId)).isEqualTo(1));
+    }
+
+    // 되묻기 뒤 이어진 매장 답변은 매장 요청 하나만 완료한다.
+    private void assertStoreOnly(ChatProcessingCommand command) throws Exception {
+        var output = output(command);
+        assertThat(output.path("message_type").asText()).isEqualTo("STORE_RESULT");
+        assertThat(output.path("status").asText()).isEqualTo("COMPLETED");
+        assertThat(output.path("store_results").toString()).contains("복합 검증 매장");
+        assertThat(statuses()).doesNotContain("WAITING_CONDITION", "PENDING");
     }
 
     private static class Events implements ConsultChatEvents {

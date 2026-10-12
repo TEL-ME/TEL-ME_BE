@@ -125,7 +125,7 @@ class ConsultMultiFaqProcessingTest {
                 EXECUTION_ID, SESSION_ID, 9L, "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
         List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
         var processor = new ConsultChatProcessingService(
-                ignored -> ConsultChatProcessingService.AnalyzedTurn.multipleFaq(List.of(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
                         faqTurn(11L, "번호이동서류는뭐고"),
                         faqTurn(12L, "요금제변경은어떻게해"))),
                 input -> {

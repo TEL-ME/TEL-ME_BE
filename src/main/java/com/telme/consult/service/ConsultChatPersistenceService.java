@@ -400,22 +400,6 @@ public class ConsultChatPersistenceService {
         }
     }
 
-    // 한 번에는 한 요청만 되묻는다. 다른 요청의 조건 변경도 같은 트랜잭션에서 보존한다.
-    @Transactional
-    public ChatExecutionState persistCompoundClarification(
-            long executionId, long sessionId, List<ConsultTurn> turns) {
-        validateCompound(sessionId, turns);
-        ConsultTurn asking = turns.stream().filter(turn ->
-                turn.preparation().prepared().decision().action() == Action.ASK).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("되물을 하위 상담이 필요합니다."));
-        for (ConsultTurn turn : turns) {
-            if (turn.preparation().prepared().decision().action() != Action.ASK) {
-                persistReadyTurn(executionId, turn.preparation().prepared(), turn.answeredField());
-            }
-        }
-        return persistClarification(executionId, asking.preparation().prepared(), asking.answeredField());
-    }
-
     private void validateCompound(long sessionId, List<ConsultTurn> turns) {
         if (turns == null || turns.size() < 2 || turns.size() > 3 || turns.stream().anyMatch(turn -> turn == null
                 || turn.preparation().waitingForReply() || turn.preparation().prepared() == null
