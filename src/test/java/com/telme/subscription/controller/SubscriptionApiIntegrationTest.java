@@ -46,7 +46,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 // 동시 요청은 실제 커밋이 필요해 트랜잭션 롤백을 쓰지 않고, 만든 데이터는 직접 지운다
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "telme.subscription.instant-apply=false")
+@TestPropertySource(properties = "telme.subscription.demo-mode=false")
 class SubscriptionApiIntegrationTest {
 
     static final String URL = "/api/v1/subscriptions";

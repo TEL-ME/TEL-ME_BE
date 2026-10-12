@@ -30,7 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@TestPropertySource(properties = "telme.subscription.instant-apply=false")
+@TestPropertySource(properties = "telme.subscription.demo-mode=false")
 @Transactional
 class SubscriptionCommandServiceTest {
 

@@ -34,7 +34,7 @@ public class SubscriptionCommandService {
     private final SubscriptionStateReader stateReader;
     private final SubscriptionProperties properties;
 
-    // 온라인 신청은 다음 날 09:00 개통(SUBSCRIBE-03). 즉시 적용 설정이 켜져 있으면 바로 개통
+    // 온라인 신청은 다음 날 09:00 개통(SUBSCRIBE-03). 시연 모드는 즉시 개통
     public SubscriptionSnapshot subscribe(Long userId, Long planId, LocalDate birthDate) {
         Instant now = calendar.now();
         User user = findUser(userId);
@@ -51,7 +51,7 @@ public class SubscriptionCommandService {
             // 동시 가입 요청은 활성 구독 유니크 인덱스에서 차단
             throw new GeneralException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
         }
-        Instant activatesAt = properties.instantApply() ? now : calendar.nextDayActivation(now);
+        Instant activatesAt = properties.demoMode() ? now : calendar.nextDayActivation(now);
         historyRepository.save(SubscriptionHistory.subscribed(
                 subscription.getSubscriptionId(), plan.getPlanId(), activatesAt, now));
         return stateReader.read(subscription, now);
@@ -63,7 +63,8 @@ public class SubscriptionCommandService {
         Subscription subscription = findActiveSubscriptionForUpdate(userId);
         Plan plan = findSellingPlan(planId);
 
-        if (calendar.isSameMonth(subscription.getSubscribedAt(), now)) {
+        // 시연 모드는 가입 직후 변경도 보여주려고 가입 당월·월 1회 제한 생략
+        if (!properties.demoMode() && calendar.isSameMonth(subscription.getSubscribedAt(), now)) {
             throw new GeneralException(SubscriptionErrorCode.CHANGE_NOT_ALLOWED_IN_SUBSCRIBED_MONTH);
         }
         Plan currentPlan = stateReader.findCurrentPlan(subscription.getSubscriptionId(), now)
@@ -71,13 +72,13 @@ public class SubscriptionCommandService {
         if (currentPlan.getPlanId().equals(plan.getPlanId())) {
             throw new GeneralException(SubscriptionErrorCode.SAME_PLAN);
         }
-        if (historyRepository.existsChangeRequestedBetween(
+        if (!properties.demoMode() && historyRepository.existsChangeRequestedBetween(
                 subscription.getSubscriptionId(), calendar.startOfMonth(now), calendar.startOfNextMonth(now))) {
             throw new GeneralException(SubscriptionErrorCode.MONTHLY_CHANGE_LIMIT_EXCEEDED);
         }
         eligibilityChecker.verifyAndRemember(findUser(userId), plan, birthDate, calendar.today(now));
 
-        Instant appliesAt = properties.instantApply() ? now : calendar.startOfNextDay(now);
+        Instant appliesAt = properties.demoMode() ? now : calendar.startOfNextDay(now);
         historyRepository.save(SubscriptionHistory.changed(
                 subscription.getSubscriptionId(), currentPlan.getPlanId(), plan.getPlanId(), appliesAt, now));
         return stateReader.read(subscription, now);

@@ -180,5 +180,6 @@ telme:
       # 통신 주변 무관 질문에 엉뚱한 버튼이 뜨는 제한이 있어 켜는 결정 전까지 끈다
       no-answer-enabled: ${CONSULT_SUGGESTED_QUESTIONS_NO_ANSWER_ENABLED:false}
   subscription:
-    # 켜면 요금제 가입·변경이 신청 즉시 적용된다(시연용). 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용
-    instant-apply: ${TELME_SUBSCRIPTION_INSTANT_APPLY:true}
+    # 시연용. 켜면 가입·변경이 즉시 적용되고 가입 당월·월 1회 변경 제한도 생략한다.
+    # 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용(FAQ와 같은 동작)
+    demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
