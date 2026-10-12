@@ -37,6 +37,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -45,6 +46,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 // 동시 요청은 실제 커밋이 필요해 트랜잭션 롤백을 쓰지 않고, 만든 데이터는 직접 지운다
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "telme.subscription.instant-apply=false")
 class SubscriptionApiIntegrationTest {
 
     static final String URL = "/api/v1/subscriptions";
@@ -98,16 +100,23 @@ class SubscriptionApiIntegrationTest {
     }
 
     @Test
-    void 가입하면_바로_현재_요금제가_되고_내_요금제에서_조회된다() throws Exception {
+    void 가입하면_개통_대기로_응답하고_내_요금제에서도_조회된다() throws Exception {
         mvc.perform(subscribe("FIVE_G_STANDARD", null))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.currentPlan.code").value("FIVE_G_STANDARD"))
-                .andExpect(jsonPath("$.result.currentPlan.monthlyFee").value(65000))
+                .andExpect(jsonPath("$.result.currentPlan").doesNotExist())
+                .andExpect(jsonPath("$.result.pendingActivation.plan.code").value("FIVE_G_STANDARD"))
+                .andExpect(jsonPath("$.result.pendingActivation.plan.monthlyFee").value(65000))
+                .andExpect(jsonPath("$.result.pendingActivation.effectiveFrom").value("2026-10-13T00:00:00Z"))
                 .andExpect(jsonPath("$.result.pendingChange").doesNotExist());
 
         mvc.perform(get(URL + "/me").session(session))
                 .andExpect(jsonPath("$.result.subscribed").value(true))
-                .andExpect(jsonPath("$.result.subscription.currentPlan.name").value("5G 스탠다드"));
+                .andExpect(jsonPath("$.result.subscription.pendingActivation.plan.name").value("5G 스탠다드"));
+
+        at(Instant.parse("2026-10-13T00:00:00Z"));
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.currentPlan.name").value("5G 스탠다드"))
+                .andExpect(jsonPath("$.result.subscription.pendingActivation").doesNotExist());
     }
 
     @Test
@@ -144,7 +153,7 @@ class SubscriptionApiIntegrationTest {
 
         mvc.perform(subscribe("FIVE_G_YOUTH", "2010-05-01"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.currentPlan.targetGroup").value("YOUTH"));
+                .andExpect(jsonPath("$.result.pendingActivation.plan.targetGroup").value("YOUTH"));
         assertThat(birthDate()).isEqualTo("2010-05-01");
     }
 

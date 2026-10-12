@@ -4,15 +4,16 @@ import com.telme.plan.dto.res.PlanResponse;
 import java.time.Instant;
 import lombok.Builder;
 
-// pendingChange는 아직 적용 전인 요금제 변경이고 없으면 null
+// 개통 전에는 currentPlan이 null이고 pendingActivation에 개통 예정이 있다. pendingChange는 적용 전인 변경이고 없으면 null
 @Builder
 public record SubscriptionResponse(
         Long subscriptionId,
         Instant subscribedAt,
         PlanResponse currentPlan,
-        PendingChangeResponse pendingChange
+        ScheduledPlanResponse pendingActivation,
+        ScheduledPlanResponse pendingChange
 ) {
 
-    public record PendingChangeResponse(PlanResponse plan, Instant effectiveFrom) {
+    public record ScheduledPlanResponse(PlanResponse plan, Instant effectiveFrom) {
     }
 }

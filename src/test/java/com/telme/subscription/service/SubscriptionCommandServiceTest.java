@@ -25,15 +25,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
+@TestPropertySource(properties = "telme.subscription.instant-apply=false")
 @Transactional
 class SubscriptionCommandServiceTest {
 
     // 2026-10-12(월) 정오(KST)
     static final Instant OCT_12 = Instant.parse("2026-10-12T03:00:00Z");
+    static final Instant OCT_13_0900_KST = Instant.parse("2026-10-13T00:00:00Z");
 
     @MockitoBean Clock clock;
 
@@ -54,10 +57,12 @@ class SubscriptionCommandServiceTest {
     }
 
     @Test
-    void 일반_요금제는_생년월일_없이_가입하고_바로_적용된다() {
+    void 일반_요금제는_생년월일_없이_가입하고_다음_날_09시에_개통된다() {
         SubscriptionSnapshot snapshot = service.subscribe(userId, planId("FIVE_G_LITE"), null);
 
-        assertThat(snapshot.currentPlan().getCode()).isEqualTo("FIVE_G_LITE");
+        assertThat(snapshot.currentPlan()).isNull();
+        assertThat(snapshot.pendingActivation().plan().getCode()).isEqualTo("FIVE_G_LITE");
+        assertThat(snapshot.pendingActivation().effectiveFrom()).isEqualTo(OCT_13_0900_KST);
         assertThat(snapshot.pendingChange()).isNull();
         assertThat(snapshot.subscription().getStatus()).isEqualTo(Subscription.Status.ACTIVE);
         assertThat(historyOf(snapshot.subscription()))
@@ -156,6 +161,56 @@ class SubscriptionCommandServiceTest {
         assertError(() -> service.subscribe(userId, planId("FIVE_G_YOUTH"), LocalDate.of(2010, 1, 1)),
                 SubscriptionErrorCode.AGE_NOT_ELIGIBLE);
         service.subscribe(userId, planId("FIVE_G_SENIOR"), null);
+    }
+
+    @Test
+    void 개통_시각_전까지는_현재_요금제가_없고_정각부터_현재_요금제가_된다() {
+        Subscription subscription = service.subscribe(userId, planId("FIVE_G_LITE"), null).subscription();
+
+        SubscriptionSnapshot before = stateReader.read(subscription, OCT_13_0900_KST.minusSeconds(1));
+        assertThat(before.currentPlan()).isNull();
+        assertThat(before.pendingActivation()).isNotNull();
+
+        SubscriptionSnapshot after = stateReader.read(subscription, OCT_13_0900_KST);
+        assertThat(after.currentPlan().getCode()).isEqualTo("FIVE_G_LITE");
+        assertThat(after.pendingActivation()).isNull();
+    }
+
+    @Test
+    void 저녁이나_새벽에_신청해도_다음_날_09시에_개통된다() {
+        at(Instant.parse("2026-10-12T12:00:00Z")); // 10월 12일 21시(KST)
+        SubscriptionSnapshot night = service.subscribe(userId, planId("FIVE_G_LITE"), null);
+        assertThat(night.pendingActivation().effectiveFrom()).isEqualTo(OCT_13_0900_KST);
+
+        service.cancel(userId);
+        at(Instant.parse("2026-10-11T15:30:00Z")); // 10월 12일 0시 30분(KST)
+        SubscriptionSnapshot dawn = service.subscribe(userId, planId("FIVE_G_LITE"), null);
+        assertThat(dawn.pendingActivation().effectiveFrom()).isEqualTo(Instant.parse("2026-10-13T00:00:00Z"));
+    }
+
+    @Test
+    void 월말에_가입해_다음_달이_됐어도_개통_전이면_변경할_수_없다() {
+        at(Instant.parse("2026-10-31T10:00:00Z")); // 10월 31일 19시(KST), 개통은 11월 1일 09시
+        service.subscribe(userId, planId("FIVE_G_LITE"), null);
+
+        at(Instant.parse("2026-10-31T16:00:00Z")); // 11월 1일 1시(KST)
+        assertError(() -> service.changePlan(userId, planId("FIVE_G_STANDARD"), null),
+                SubscriptionErrorCode.CHANGE_NOT_ALLOWED_BEFORE_ACTIVATION);
+
+        at(Instant.parse("2026-11-01T00:00:00Z")); // 11월 1일 9시(KST) 개통 직후
+        assertThat(service.changePlan(userId, planId("FIVE_G_STANDARD"), null).pendingChange()).isNotNull();
+    }
+
+    @Test
+    void 개통_전에도_해지할_수_있고_신청한_요금제가_해지_당시_요금제로_남는다() {
+        Subscription subscription = service.subscribe(userId, planId("FIVE_G_LITE"), null).subscription();
+
+        service.cancel(userId);
+
+        assertThat(subscriptionRepository.findByUserIdAndStatus(userId, Subscription.Status.ACTIVE)).isEmpty();
+        SubscriptionHistory last = historyOf(subscription).get(1);
+        assertThat(last.getType()).isEqualTo(SubscriptionHistory.Type.CANCEL);
+        assertThat(last.getFromPlanId()).isEqualTo(planId("FIVE_G_LITE"));
     }
 
     @Test

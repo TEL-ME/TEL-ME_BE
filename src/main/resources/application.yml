@@ -179,3 +179,6 @@ telme:
       # 답을 못 할 때 "혹시 이런 내용을 찾으셨나요?" + FAQ 질문 1개(문서 11절). 위 추천 질문이 켜져 있을 때만 동작한다.
       # 통신 주변 무관 질문에 엉뚱한 버튼이 뜨는 제한이 있어 켜는 결정 전까지 끈다
       no-answer-enabled: ${CONSULT_SUGGESTED_QUESTIONS_NO_ANSWER_ENABLED:false}
+  subscription:
+    # 켜면 요금제 가입·변경이 신청 즉시 적용된다(시연용). 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용
+    instant-apply: ${TELME_SUBSCRIPTION_INSTANT_APPLY:true}

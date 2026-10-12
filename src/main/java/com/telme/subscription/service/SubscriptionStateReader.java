@@ -6,6 +6,7 @@ import com.telme.subscription.entity.Subscription;
 import com.telme.subscription.entity.SubscriptionHistory;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,18 +20,22 @@ public class SubscriptionStateReader {
 
     public SubscriptionSnapshot read(Subscription subscription, Instant now) {
         Long subscriptionId = subscription.getSubscriptionId();
-        Plan currentPlan = currentPlan(subscriptionId, now);
-        SubscriptionSnapshot.PendingChange pending = historyRepository.findPendingChange(subscriptionId, now)
-                .map(history -> new SubscriptionSnapshot.PendingChange(
-                        findPlan(history.getToPlanId()), history.getEffectiveFrom()))
-                .orElse(null);
-        return new SubscriptionSnapshot(subscription, currentPlan, pending);
+        return new SubscriptionSnapshot(
+                subscription,
+                findCurrentPlan(subscriptionId, now).orElse(null),
+                scheduled(historyRepository.findPendingActivation(subscriptionId, now)),
+                scheduled(historyRepository.findPendingChange(subscriptionId, now)));
     }
 
-    Plan currentPlan(Long subscriptionId, Instant now) {
-        SubscriptionHistory current = historyRepository.findCurrent(subscriptionId, now)
-                .orElseThrow(() -> new IllegalStateException("가입 이력이 없는 구독입니다. subscriptionId=" + subscriptionId));
-        return findPlan(current.getToPlanId());
+    // 개통 전에는 없다
+    Optional<Plan> findCurrentPlan(Long subscriptionId, Instant now) {
+        return historyRepository.findCurrent(subscriptionId, now)
+                .map(history -> findPlan(history.getToPlanId()));
+    }
+
+    private SubscriptionSnapshot.ScheduledPlan scheduled(Optional<SubscriptionHistory> history) {
+        return history.map(h -> new SubscriptionSnapshot.ScheduledPlan(findPlan(h.getToPlanId()), h.getEffectiveFrom()))
+                .orElse(null);
     }
 
     private Plan findPlan(Long planId) {

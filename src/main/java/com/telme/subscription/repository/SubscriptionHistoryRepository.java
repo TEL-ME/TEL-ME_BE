@@ -28,6 +28,11 @@ public interface SubscriptionHistoryRepository extends JpaRepository<Subscriptio
                 subscriptionId, SubscriptionHistory.Type.CHANGE, now);
     }
 
+    default Optional<SubscriptionHistory> findPendingActivation(Long subscriptionId, Instant now) {
+        return findFirstBySubscriptionIdAndTypeAndEffectiveFromAfterOrderByEffectiveFromAsc(
+                subscriptionId, SubscriptionHistory.Type.SUBSCRIBE, now);
+    }
+
     // 신청 시각 기준(예약된 변경 포함)
     boolean existsBySubscriptionIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
             Long subscriptionId, SubscriptionHistory.Type type, Instant from, Instant to);

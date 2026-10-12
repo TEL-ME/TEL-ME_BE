@@ -7,6 +7,7 @@ import com.telme.member.repository.UserRepository;
 import com.telme.plan.entity.Plan;
 import com.telme.plan.exception.PlanErrorCode;
 import com.telme.plan.repository.PlanRepository;
+import com.telme.subscription.config.SubscriptionProperties;
 import com.telme.subscription.entity.Subscription;
 import com.telme.subscription.entity.SubscriptionHistory;
 import com.telme.subscription.exception.SubscriptionErrorCode;
@@ -31,8 +32,9 @@ public class SubscriptionCommandService {
     private final SubscriptionCalendar calendar;
     private final SubscriptionEligibilityChecker eligibilityChecker;
     private final SubscriptionStateReader stateReader;
+    private final SubscriptionProperties properties;
 
-    // 정책에 가입 적용 시점 규정이 없어 즉시 적용
+    // 온라인 신청은 다음 날 09:00 개통(SUBSCRIBE-03). 즉시 적용 설정이 켜져 있으면 바로 개통
     public SubscriptionSnapshot subscribe(Long userId, Long planId, LocalDate birthDate) {
         Instant now = calendar.now();
         User user = findUser(userId);
@@ -49,7 +51,9 @@ public class SubscriptionCommandService {
             // 동시 가입 요청은 활성 구독 유니크 인덱스에서 차단
             throw new GeneralException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
         }
-        historyRepository.save(SubscriptionHistory.subscribed(subscription.getSubscriptionId(), plan.getPlanId(), now));
+        Instant activatesAt = properties.instantApply() ? now : calendar.nextDayActivation(now);
+        historyRepository.save(SubscriptionHistory.subscribed(
+                subscription.getSubscriptionId(), plan.getPlanId(), activatesAt, now));
         return stateReader.read(subscription, now);
     }
 
@@ -58,13 +62,14 @@ public class SubscriptionCommandService {
         Instant now = calendar.now();
         Subscription subscription = findActiveSubscriptionForUpdate(userId);
         Plan plan = findSellingPlan(planId);
-        Plan currentPlan = stateReader.currentPlan(subscription.getSubscriptionId(), now);
 
-        if (currentPlan.getPlanId().equals(plan.getPlanId())) {
-            throw new GeneralException(SubscriptionErrorCode.SAME_PLAN);
-        }
         if (calendar.isSameMonth(subscription.getSubscribedAt(), now)) {
             throw new GeneralException(SubscriptionErrorCode.CHANGE_NOT_ALLOWED_IN_SUBSCRIBED_MONTH);
+        }
+        Plan currentPlan = stateReader.findCurrentPlan(subscription.getSubscriptionId(), now)
+                .orElseThrow(() -> new GeneralException(SubscriptionErrorCode.CHANGE_NOT_ALLOWED_BEFORE_ACTIVATION));
+        if (currentPlan.getPlanId().equals(plan.getPlanId())) {
+            throw new GeneralException(SubscriptionErrorCode.SAME_PLAN);
         }
         if (historyRepository.existsChangeRequestedBetween(
                 subscription.getSubscriptionId(), calendar.startOfMonth(now), calendar.startOfNextMonth(now))) {
@@ -72,20 +77,21 @@ public class SubscriptionCommandService {
         }
         eligibilityChecker.verifyAndRemember(findUser(userId), plan, birthDate, calendar.today(now));
 
+        Instant appliesAt = properties.instantApply() ? now : calendar.startOfNextDay(now);
         historyRepository.save(SubscriptionHistory.changed(
-                subscription.getSubscriptionId(), currentPlan.getPlanId(), plan.getPlanId(),
-                calendar.startOfNextDay(now), now));
+                subscription.getSubscriptionId(), currentPlan.getPlanId(), plan.getPlanId(), appliesAt, now));
         return stateReader.read(subscription, now);
     }
 
-    // 즉시 해지(TERMINATE-01). 예약된 변경은 구독 종료와 함께 소멸
+    // 즉시 해지(TERMINATE-01). 개통 전이면 신청한 요금제가 해지 당시 요금제. 예약된 변경은 구독 종료와 함께 소멸
     public void cancel(Long userId) {
         Instant now = calendar.now();
         Subscription subscription = findActiveSubscriptionForUpdate(userId);
-        Plan currentPlan = stateReader.currentPlan(subscription.getSubscriptionId(), now);
+        SubscriptionSnapshot state = stateReader.read(subscription, now);
+        Plan plan = state.currentPlan() != null ? state.currentPlan() : state.pendingActivation().plan();
 
         subscription.cancel(now);
-        historyRepository.save(SubscriptionHistory.canceled(subscription.getSubscriptionId(), currentPlan.getPlanId(), now));
+        historyRepository.save(SubscriptionHistory.canceled(subscription.getSubscriptionId(), plan.getPlanId(), now));
     }
 
     private User findUser(Long userId) {

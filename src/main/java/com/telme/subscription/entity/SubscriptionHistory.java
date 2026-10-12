@@ -50,12 +50,12 @@ public class SubscriptionHistory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    public static SubscriptionHistory subscribed(Long subscriptionId, Long toPlanId, Instant now) {
+    public static SubscriptionHistory subscribed(Long subscriptionId, Long toPlanId, Instant effectiveFrom, Instant now) {
         return SubscriptionHistory.builder()
                 .subscriptionId(subscriptionId)
                 .type(Type.SUBSCRIBE)
                 .toPlanId(toPlanId)
-                .effectiveFrom(now)
+                .effectiveFrom(effectiveFrom)
                 .createdAt(now)
                 .build();
     }

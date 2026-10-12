@@ -13,13 +13,17 @@ public class SubscriptionConverter {
     private final PlanConverter planConverter;
 
     public SubscriptionResponse toResponse(SubscriptionSnapshot snapshot) {
-        SubscriptionSnapshot.PendingChange pending = snapshot.pendingChange();
         return SubscriptionResponse.builder()
                 .subscriptionId(snapshot.subscription().getSubscriptionId())
                 .subscribedAt(snapshot.subscription().getSubscribedAt())
-                .currentPlan(planConverter.toResponse(snapshot.currentPlan()))
-                .pendingChange(pending == null ? null : new SubscriptionResponse.PendingChangeResponse(
-                        planConverter.toResponse(pending.plan()), pending.effectiveFrom()))
+                .currentPlan(snapshot.currentPlan() == null ? null : planConverter.toResponse(snapshot.currentPlan()))
+                .pendingActivation(toScheduled(snapshot.pendingActivation()))
+                .pendingChange(toScheduled(snapshot.pendingChange()))
                 .build();
+    }
+
+    private SubscriptionResponse.ScheduledPlanResponse toScheduled(SubscriptionSnapshot.ScheduledPlan scheduled) {
+        return scheduled == null ? null : new SubscriptionResponse.ScheduledPlanResponse(
+                planConverter.toResponse(scheduled.plan()), scheduled.effectiveFrom());
     }
 }

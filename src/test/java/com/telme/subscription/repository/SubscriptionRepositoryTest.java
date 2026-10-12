@@ -83,7 +83,7 @@ class SubscriptionRepositoryTest {
     void 현재_요금제는_적용_시작이_지난_가장_최근_이력이고_예약된_변경은_따로_조회된다() {
         Subscription subscription = subscriptionRepository.saveAndFlush(Subscription.subscribe(userId, JOINED));
         Long id = subscription.getSubscriptionId();
-        historyRepository.save(SubscriptionHistory.subscribed(id, litePlanId, JOINED));
+        historyRepository.save(SubscriptionHistory.subscribed(id, litePlanId, JOINED, JOINED));
         historyRepository.saveAndFlush(
                 SubscriptionHistory.changed(id, litePlanId, standardPlanId, CHANGE_EFFECTIVE, CHANGE_REQUESTED));
 
@@ -101,7 +101,7 @@ class SubscriptionRepositoryTest {
     void 이번_달_변경_신청_여부는_신청_시각_기준이고_예약된_변경도_센다() {
         Subscription subscription = subscriptionRepository.saveAndFlush(Subscription.subscribe(userId, JOINED));
         Long id = subscription.getSubscriptionId();
-        historyRepository.save(SubscriptionHistory.subscribed(id, litePlanId, JOINED));
+        historyRepository.save(SubscriptionHistory.subscribed(id, litePlanId, JOINED, JOINED));
         // 11월 30일 신청 -> 12월 1일 0시(KST) 적용. 신청은 11월이므로 11월 변경 1회로 센다
         Instant requested = Instant.parse("2026-11-30T05:00:00Z");
         Instant effective = Instant.parse("2026-11-30T15:00:00Z");

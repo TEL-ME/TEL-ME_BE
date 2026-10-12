@@ -36,8 +36,9 @@ public class SubscriptionController {
 
     @Operation(
             summary = "요금제 가입",
-            description = "요금제에 가입하고 바로 적용됩니다. 청소년·시니어 요금제는 만 나이를 확인하며, 저장된 생년월일이 없으면 "
-                    + "birthDate가 필요합니다. 저장된 생년월일이 있으면 요청 값은 쓰지 않습니다.")
+            description = "요금제에 가입합니다. 온라인 신청은 다음 날 09:00(KST)에 개통되며, 개통 전에는 currentPlan이 null이고 "
+                    + "pendingActivation에 개통 예정 요금제와 시각이 내려갑니다. 청소년(만 14~18세)·시니어(만 65세 이상) 요금제는 "
+                    + "만 나이를 확인하며, 저장된 생년월일이 없으면 birthDate가 필요합니다. 저장된 생년월일이 있으면 요청 값은 쓰지 않습니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "가입 성공"),
         @ApiResponse(responseCode = "400", description = "SUBSCRIPTION400-0: 생년월일 필요, SUBSCRIPTION400-1: 생년월일 오류, "
@@ -56,15 +57,15 @@ public class SubscriptionController {
 
     @Operation(
             summary = "요금제 변경",
-            description = "요금제는 매월 1회, 가입 다음 달부터 변경할 수 있고 신청 다음 날 0시(KST)부터 적용됩니다. "
-                    + "응답의 pendingChange가 적용 전인 변경입니다.")
+            description = "요금제는 매월 1회, 가입 다음 달부터 변경할 수 있고 신청 다음 날 0시(KST)부터 적용됩니다. 개통 전에는 "
+                    + "변경할 수 없습니다. 응답의 pendingChange가 적용 전인 변경입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "변경 신청 성공"),
         @ApiResponse(responseCode = "400", description = "SUBSCRIPTION400-0·1·2: 청소년·시니어 자격 오류, COMMON400-1: 값 형식 오류"),
         @ApiResponse(responseCode = "401", description = "로그인 필요"),
         @ApiResponse(responseCode = "404", description = "SUBSCRIPTION404-0: 가입한 요금제 없음, PLAN404-0: 요금제가 없거나 판매 종료"),
         @ApiResponse(responseCode = "409", description = "SUBSCRIPTION409-1: 현재와 같은 요금제, SUBSCRIPTION409-2: 가입한 달, "
-                + "SUBSCRIPTION409-3: 이번 달 이미 변경")
+                + "SUBSCRIPTION409-3: 이번 달 이미 변경, SUBSCRIPTION409-4: 개통 전")
     })
     @PatchMapping("/plan")
     public CustomResponse<SubscriptionResponse> changePlan(
@@ -74,7 +75,7 @@ public class SubscriptionController {
                 commandService.changePlan(userId, request.planId(), request.birthDate())));
     }
 
-    @Operation(summary = "요금제 해지", description = "신청 즉시 해지됩니다. 적용 전인 변경이 있어도 함께 사라집니다.")
+    @Operation(summary = "요금제 해지", description = "신청 즉시 해지됩니다. 개통 전에도 해지할 수 있고, 적용 전인 변경이 있어도 함께 사라집니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "해지 성공"),
         @ApiResponse(responseCode = "401", description = "로그인 필요"),
@@ -89,7 +90,7 @@ public class SubscriptionController {
     @Operation(
             summary = "내 요금제 조회",
             description = "가입하지 않았으면 subscribed가 false이고 subscription이 null입니다(오류 아님). "
-                    + "가입 중이면 현재 요금제와 적용 전인 변경(pendingChange)을 반환합니다.")
+                    + "가입 중이면 현재 요금제(개통 전이면 null)와 개통 예정(pendingActivation), 적용 전인 변경(pendingChange)을 반환합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
         @ApiResponse(responseCode = "401", description = "로그인 필요")
