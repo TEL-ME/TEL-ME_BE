@@ -92,7 +92,7 @@ public class SubscriptionCommandService {
         Plan plan = state.currentPlan() != null ? state.currentPlan() : state.pendingActivation().plan();
 
         subscription.cancel(now);
-        historyRepository.save(SubscriptionHistory.canceled(subscription.getSubscriptionId(), plan.getPlanId(), now));
+        historyRepository.save(SubscriptionHistory.canceled(subscription.getSubscriptionId(), plan.getPlanId(), now, 0L));
     }
 
     private User findUser(Long userId) {
