@@ -73,6 +73,10 @@ public class QueryRoutingService {
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
     private static final Pattern ACTION_REQUEST = Pattern.compile("싶|하려고|할래");
+    // 매장 하위 질문의 원문 구간에 있어야 하는 장소 찾기 표현. 역 이름 같은 지명은 PLACE로 따로 확인한다.
+    // "어디서"는 "어디서 확인해요"처럼 FAQ에도 쓰여 넣지 않는다.
+    private static final Pattern STORE_LOOKUP = Pattern.compile(
+        "매장|대리점|지점|직영점|판매점|역점|근처|가까운|가까이|주변|인근|동네|곳|위치");
     private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
     private static final String PREVIOUS_UTTERANCE_HEADER = "[대상을 확인할 이전 고객 발언]\n";
     private static final String CURRENT_QUESTION_HEADER = "\n[현재 후속 질문]\n";
@@ -710,6 +714,25 @@ public class QueryRoutingService {
                     topIntent);
             topIntent = QueryRouting.Intent.BOTH;
         }
+        if (topIntent == QueryRouting.Intent.BOTH && hasFaq && hasStore && allSubIntentsGiven) {
+            // 인용이 원문에 있어도 장소를 찾는 요청이라는 뜻은 아니다. "유심 재발급 비용 알려줘"를 매장 요청으로 둔 출력은
+            // 그 요청을 버리지 않고 FAQ로 처리한다. 이후 FAQ 복합 질문의 요청 수와 검색어 검증을 그대로 거친다.
+            for (int index = 0; index < normalized.size(); index++) {
+                var sub = normalized.get(index);
+                String section = sub.intent() == ConsultRequest.Intent.STORE
+                        ? IndependentQuestionPolicy.ownSectionText(normalized, sub, question) : null;
+                if (section != null && !STORE_LOOKUP.matcher(section).find() && tokens(PLACE, section).isEmpty()) {
+                    log.info("[라우팅] 장소를 찾는 표현이 없는 매장 하위 질문을 FAQ로 처리합니다: order={}", sub.order());
+                    normalized.set(index, new LlmRoutingPayload.SubQueryPayload(sub.order(),
+                            ConsultRequest.Intent.FAQ, section, Collections.emptyMap(), sub.requestQuote()));
+                }
+            }
+            hasStore = normalized.stream().anyMatch(sub -> sub.intent() == ConsultRequest.Intent.STORE);
+            if (!hasStore) {
+                topIntent = QueryRouting.Intent.FAQ;
+                refinedSource = question;
+            }
+        }
         Map<String, String> extracted = topIntent == QueryRouting.Intent.UNKNOWN
                 ? Collections.emptyMap()
                 : validConditions(payload.extractedConditions(), question, context);
@@ -738,12 +761,14 @@ public class QueryRoutingService {
             String ownSection = normalized.size() > 1
                     ? IndependentQuestionPolicy.withoutOtherQuotes(normalized, sub, question) : null;
             if (sub.intent() == ConsultRequest.Intent.FAQ && topIntent == QueryRouting.Intent.BOTH
-                    && ownSection != null && queryText != null
-                    && SearchTopicPolicy.introducesNewTopic(groundingText(ownSection, context), queryText)) {
-                // FAQ만 있는 복합 질문의 의미 검증처럼, 다른 요청의 업무로 바뀐 검색어는 이 요청의 원문 인용으로 되돌린다.
-                log.info("[라우팅] 복합 질문의 FAQ 검색어에 다른 요청의 업무가 있어 원문 인용을 사용합니다: order={}",
+                    && queryText != null && (ownSection == null
+                        || SearchTopicPolicy.introducesNewTopic(groundingText(ownSection, context), queryText))) {
+                // FAQ만 있는 복합 질문의 의미 검증처럼, 다른 요청의 업무로 바뀐 검색어는 이 요청의 원문 구간으로 되돌린다.
+                // 구간을 확정하지 못하면 검사를 건너뛰지 않고 원문 근거만 쓴다.
+                log.info("[라우팅] 복합 질문의 FAQ 검색어를 원문 근거로 확인하지 못해 원문 구간을 사용합니다: order={}",
                         sub.order());
-                queryText = IndependentQuestionPolicy.verifiedQuote(sub, question);
+                String section = IndependentQuestionPolicy.ownSectionText(normalized, sub, question);
+                queryText = section != null ? section : IndependentQuestionPolicy.verifiedQuote(sub, question);
             }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
@@ -754,13 +779,14 @@ public class QueryRoutingService {
             }
             if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
                 // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
-                // 원문 구간을 나눌 수 없으면 기존처럼 이 요청의 검색어를 근거로 쓴다.
-                conditions = validConditions(conditions, ownSection != null ? ownSection : sub.queryText(), context);
-                // 모델이 업무를 비워도 이 요청의 원문 인용에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
-                String quote = sub.requestQuote();
-                if (quote != null && !quote.isBlank() && RoutingQuestionNormalizer.quoteKey(question)
-                        .contains(RoutingQuestionNormalizer.quoteKey(quote))) {
-                    conditions = withRuleServiceType(conditions, quote);
+                // 원문 구간을 확정하지 못하면 모델 검색어로 되돌아가지 않고 조건을 비워 되묻는다.
+                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context);
+                // 모델이 업무를 비워도 이 요청의 원문 인용 구간에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
+                // 인용이 없으면 채우지 않는다. 검색어는 모델이 다시 쓴 문장이라 업무 근거로 쓰지 않는다.
+                String section = sub.requestQuote() == null || sub.requestQuote().isBlank()
+                        ? null : IndependentQuestionPolicy.ownSectionText(normalized, sub, question);
+                if (section != null && !section.isBlank()) {
+                    conditions = withRuleServiceType(conditions, section);
                 }
             }
             safeSubQueries.add(new LlmRoutingPayload.SubQueryPayload(

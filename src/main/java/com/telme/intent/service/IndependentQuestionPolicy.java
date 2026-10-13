@@ -19,15 +19,18 @@ final class IndependentQuestionPolicy {
     // 하위 질문마다 현재 요청 안의 서로 다른 원문 근거가 있는지 확인한다. 없으면 UnsupportedCompoundQuestionException.
     static void validateParts(List<LlmRoutingPayload.SubQueryPayload> subQueries, String question) {
         String original = RoutingQuestionNormalizer.quoteKey(question);
-        validateQuotes(subQueries.stream().map(sub -> {
-            String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
-            if (!quote.isBlank() && isComposedOfOriginalSegments(quote, original)) {
-                return quote;
-            }
-            // 원문 인용을 잘못 복사해도 실제 검색 질문이 원문 표현으로 구성되어 있으면 그 근거를 사용한다.
-            String query = RoutingQuestionNormalizer.quoteKey(sub.queryText());
-            return !query.isBlank() && isComposedOfOriginalSegments(query, original) ? query : quote;
-        }).toList(), question);
+        validateQuotes(subQueries.stream().map(sub -> evidenceKey(sub, original)).toList(), question);
+    }
+
+    // validateParts가 이 하위 질문의 근거로 쓰는 정규화 문자열.
+    private static String evidenceKey(LlmRoutingPayload.SubQueryPayload sub, String original) {
+        String quote = RoutingQuestionNormalizer.quoteKey(sub.requestQuote());
+        if (!quote.isBlank() && isComposedOfOriginalSegments(quote, original)) {
+            return quote;
+        }
+        // 원문 인용을 잘못 복사해도 실제 검색 질문이 원문 표현으로 구성되어 있으면 그 근거를 사용한다.
+        String query = RoutingQuestionNormalizer.quoteKey(sub.queryText());
+        return !query.isBlank() && isComposedOfOriginalSegments(query, original) ? query : quote;
     }
 
     static String verifiedQuote(LlmRoutingPayload.SubQueryPayload sub, String question) {
@@ -47,36 +50,85 @@ final class IndependentQuestionPolicy {
         throw new UnsupportedCompoundQuestionException("독립 요청의 원문 근거가 필요합니다.");
     }
 
-    // 고객 원문에서 다른 하위 질문의 인용 구간만 공백으로 지운다. 이 요청의 구간과 어느 요청에도 속하지 않은 공통 구간이 남는다.
-    // 원문 띄어쓰기는 유지한다. 다른 요청의 인용을 원문에서 찾지 못하면 구간을 나눌 수 없어 null을 돌려준다.
+    // 고객 원문에서 다른 하위 질문의 근거 구간만 공백으로 지운다. 이 요청의 구간과 어느 요청에도 속하지 않은 공통 구간이 남는다.
+    // 원문 띄어쓰기는 유지한다. 구간을 확정하지 못하면 null을 돌려준다.
     static String withoutOtherQuotes(List<LlmRoutingPayload.SubQueryPayload> subQueries,
             LlmRoutingPayload.SubQueryPayload current, String question) {
         String normalized = RoutingQuestionNormalizer.quoteKey(question);
+        int[][] spans = spans(subQueries, normalized);
+        if (spans == null) {
+            return null;
+        }
         int[] positions = originalPositions(normalized, question);
-        String own = RoutingQuestionNormalizer.quoteKey(current.requestQuote());
-        int ownStart = own.isBlank() ? -1 : normalized.indexOf(own);
         StringBuilder masked = new StringBuilder(question);
-        for (var other : subQueries) {
-            if (other == current) {
+        for (int index = 0; index < subQueries.size(); index++) {
+            if (subQueries.get(index) == current) {
                 continue;
             }
-            String quote = RoutingQuestionNormalizer.quoteKey(other.requestQuote());
-            if (quote.isBlank()) {
-                return null;
-            }
-            int start = normalized.indexOf(quote);
-            // 이 요청의 인용과 겹치는 위치는 다른 요청의 구간으로 보지 않는다.
-            while (start >= 0 && ownStart >= 0 && start < ownStart + own.length() && ownStart < start + quote.length()) {
-                start = normalized.indexOf(quote, start + 1);
-            }
-            if (start < 0) {
-                return null;
-            }
-            for (int index = positions[start]; index <= positions[start + quote.length() - 1]; index++) {
-                masked.setCharAt(index, ' ');
+            for (int character = positions[spans[index][0]]; character <= positions[spans[index][1] - 1]; character++) {
+                masked.setCharAt(character, ' ');
             }
         }
         return masked.toString();
+    }
+
+    // 이 하위 질문의 근거가 차지하는 원문 구간. 인용에서 빠진 조사도 포함한다. 확정하지 못하면 null.
+    static String ownSectionText(List<LlmRoutingPayload.SubQueryPayload> subQueries,
+            LlmRoutingPayload.SubQueryPayload current, String question) {
+        String normalized = RoutingQuestionNormalizer.quoteKey(question);
+        int[][] spans = spans(subQueries, normalized);
+        int index = -1;
+        for (int candidate = 0; candidate < subQueries.size(); candidate++) {
+            if (subQueries.get(candidate) == current) {
+                index = candidate;
+            }
+        }
+        if (spans == null || index < 0) {
+            return null;
+        }
+        int[] positions = originalPositions(normalized, question);
+        return question.substring(positions[spans[index][0]], positions[spans[index][1] - 1] + 1).strip();
+    }
+
+    // 하위 질문마다 근거가 정규화 원문에서 차지하는 [시작, 끝). validateQuotes처럼 입력 순서대로 찾는다.
+    // 인용 검증과 같은 기준으로, 원문 조각을 순서대로 이어 맞춘 첫 조각부터 마지막 조각까지를 구간으로 본다.
+    private static int[][] spans(List<LlmRoutingPayload.SubQueryPayload> subQueries, String original) {
+        int[][] spans = new int[subQueries.size()][];
+        int from = 0;
+        for (int index = 0; index < subQueries.size(); index++) {
+            String key = evidenceKey(subQueries.get(index), original);
+            int[] span = key.isBlank() ? null : segmentSpan(key, original, from);
+            if (span == null) {
+                return null;
+            }
+            spans[index] = span;
+            from = span[1];
+        }
+        return spans;
+    }
+
+    private static int[] segmentSpan(String key, String original, int from) {
+        int keyOffset = 0;
+        int originalOffset = from;
+        int start = -1;
+        while (keyOffset < key.length()) {
+            int minimumLength = key.length() == 1 ? 1 : 2;
+            boolean matched = false;
+            for (int end = key.length(); end >= keyOffset + minimumLength; end--) {
+                int position = original.indexOf(key.substring(keyOffset, end), originalOffset);
+                if (position >= 0) {
+                    start = start < 0 ? position : start;
+                    originalOffset = position + end - keyOffset;
+                    keyOffset = end;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                return null;
+            }
+        }
+        return new int[] {start, originalOffset};
     }
 
     // 정규화 문자열의 각 글자가 원문의 몇 번째 글자인지. 정규화는 공백만 지우거나 하나로 줄인다.

@@ -75,10 +75,11 @@ def main():
                                  input=query, encoding="utf-8", capture_output=True, check=True, timeout=20)
         return process.stdout.strip()
 
+    # 운영체제와 무관하게 같은 값이 나오도록 경로는 POSIX 문자열 순서로, 줄바꿈은 LF로 맞춘다.
     digest = hashlib.sha256()
-    for path in sorted((repo / "src/main/java").rglob("*.java")):
-        digest.update(path.relative_to(repo).as_posix().encode())
-        digest.update(path.read_bytes())
+    for name in sorted(path.relative_to(repo).as_posix() for path in (repo / "src/main/java").rglob("*.java")):
+        digest.update(name.encode())
+        digest.update((repo / name).read_bytes().replace(b"\r\n", b"\n"))
     result = {"gitHead": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
               "sourceTreeSha256": digest.hexdigest(), "database": args.database, "baseUrl": args.base_url,
               "recordedAt": datetime.now(timezone.utc).isoformat(),

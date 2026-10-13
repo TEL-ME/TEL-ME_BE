@@ -643,6 +643,73 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().get(1).conditions()).doesNotContainKey("location");
         }
 
+        // 인용에서 조사가 빠져도 인용 검증과 같은 기준으로 원문 구간을 찾아, 모델 검색어의 다른 지역을 쓰지 않는다.
+        @Test
+        void compoundStoreLocationIsCheckedEvenWhenAnotherQuoteDropsAParticle() {
+            String question = "강남역 매장 영업시간도 알려주고 신촌역 번호이동 매장 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"강남역 매장 영업시간과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"매장 영업시간","requestQuote":"강남역 매장 영업시간 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"강남역 신촌역 번호이동 매장","requestQuote":"신촌역 번호이동 매장 찾아줘",
+                       "conditions":{"location":"강남역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().get(1).conditions()).doesNotContainKey("location");
+        }
+
+        // 매장 인용에서 조사가 빠져도 FAQ 검색어 검사를 건너뛰지 않는다.
+        @Test
+        void compoundFaqQueryIsCheckedEvenWhenTheStoreQuoteDropsAParticle() {
+            String question = "유심 재발급 비용 알려주고 번호이동 가능한 매장도 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"번호이동 비용과 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"유심 재발급 비용","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"번호이동 가능 매장","requestQuote":"번호이동 가능한 매장 찾아줘",
+                       "conditions":{"serviceType":"PORT_IN"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심 재발급 비용");
+        }
+
+        // 원문에 있는 비용 문의를 매장 요청으로 둔 출력은 그 요청을 버리지 않고 FAQ로 처리한다.
+        @Test
+        void costQuestionLabeledAsStoreIsHandledAsFaq() {
+            String question = "로밍 신청 방법과 유심 재발급 비용 알려줘";
+            routingJson("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"로밍 신청 방법과 유심 재발급 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"유심 재발급 가능한 매장","requestQuote":"유심 재발급 비용 알려줘","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.FAQ);
+            assertThat(result.subQueries().get(1).queryText()).contains("유심 재발급 비용").doesNotContain("매장");
+        }
+
+        // 지명만 있는 장소 요청은 매장 낱말이 없어도 매장 요청으로 유지한다.
+        @Test
+        void placeRequestWithStationNameIsKeptAsStore() {
+            String question = "번호이동 방법 알려주고 신촌역에서 번호이동 할 수 있는지도 알려줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"번호이동 방법과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"번호이동 방법","requestQuote":"번호이동 방법 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"신촌역 번호이동 가능 매장","requestQuote":"신촌역에서 번호이동 할 수 있는지도 알려줘",
+                       "conditions":{"location":"신촌역","serviceType":"PORT_IN"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("location", "신촌역");
+        }
+
         // 어느 요청에도 속하지 않은 앞부분의 지역은 뒤의 매장 요청도 함께 쓴다.
         @Test
         void sharedLocationOutsideAllQuotesStaysWithTheStoreRequest() {
