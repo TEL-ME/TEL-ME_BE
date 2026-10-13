@@ -27,9 +27,17 @@ import java.util.regex.Pattern;
 @Component
 public final class ChatInputInspector {
     private static final String MASK = "***";
+    // 욕설 우회 문자에 포함되지 않는 경계다. 저장·상담·해시에는 전달하지 않는다.
+    private static final char PII_BOUNDARY = '\uFFFC';
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
-    private static final Pattern NUMBER_UNIT = Pattern.compile(
+    // 감지한 번호에 붙은 단위·조사만 제외한다. 일반 단어와 남은 숫자 조건은 문의로 보존한다.
+    private static final Pattern MASKED_NUMBER_UNIT = Pattern.compile(
+            "\\uFFFC\\s*(?:만원|원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
+                    + "(?:입니다|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
+                    + "(?=$|[\\s\\p{Punct}])", Pattern.CASE_INSENSITIVE);
+    // 기존 별표 배포의 요청 해시를 재현할 때만 사용한다. 신규 번호 경계는 단위로 자르지 않는다.
+    private static final Pattern LEGACY_NUMBER_UNIT = Pattern.compile(
             "^\\s*(?:원|만원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
                     + "(?:$|[\\s\\p{Punct}]|(?:은|는|이|가|을|를|에|도|만|부터|까지|으로|마다|입니다|이에요|예요)"
                     + "(?:$|[\\s\\p{Punct}]))", Pattern.CASE_INSENSITIVE);
@@ -137,9 +145,9 @@ public final class ChatInputInspector {
             throw new IllegalArgumentException("검사할 입력이 필요합니다.");
         }
         List<Detection> detections = new ArrayList<>();
-        MaskedContent maskedContent = mask(input, detections, true);
+        MaskedContent maskedContent = mask(input, detections, false);
         String safe = maskedContent.content();
-        String normalized = normalize(safe);
+        String normalized = normalize(maskedContent.inspectionContent());
         List<Span> exemptions = exemptions(normalized);
         for (CompiledRule compiled : rules) {
             Matcher matcher = compiled.pattern().matcher(normalized);
@@ -163,7 +171,9 @@ public final class ChatInputInspector {
                 break;
             }
         }
-        String remaining = safe.replaceAll("[\\s\\p{Punct}]", "");
+        String remaining = MASKED_NUMBER_UNIT.matcher(normalized).replaceAll("")
+                .replace(String.valueOf(PII_BOUNDARY), "")
+                .replaceAll("[\\s\\p{Punct}]", "");
         boolean masked =
                 detections.stream()
                         .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
@@ -186,12 +196,12 @@ public final class ChatInputInspector {
         return false;
     }
 
-    /** 이전 배포에서 만든 요청 영수증 비교에만 사용하며 감지한 원문 번호를 반환하지 않는다. */
+    /** 이전 별표 배포의 숫자 조건 보존 경계를 재현한다. 기존 영수증 비교에만 사용한다. */
     String legacyFingerprintContent(String input) {
-        return mask(input, new ArrayList<>(), false).fingerprintContent();
+        return mask(input, new ArrayList<>(), true).fingerprintContent();
     }
 
-    private MaskedContent mask(String input, List<Detection> detections, boolean preserveNumericConditions) {
+    private MaskedContent mask(String input, List<Detection> detections, boolean legacyNumericConditions) {
         List<Span> spans = new ArrayList<>();
         // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문에서 치환할 위치를 보존한다.
         String numeric = numericForm(input);
@@ -207,16 +217,17 @@ public final class ChatInputInspector {
             int candidateEnd = card.end();
             String candidateDigits = numeric.substring(card.start(), candidateEnd).replaceAll("[ -]", "");
             boolean completeLongestCard = candidateDigits.length() == 19 && validCard(candidateDigits);
-            if (preserveNumericConditions && !completeLongestCard
-                    && NUMBER_UNIT.matcher(numeric.substring(candidateEnd)).find()) {
+            if (legacyNumericConditions && !completeLongestCard
+                    && LEGACY_NUMBER_UNIT.matcher(numeric.substring(candidateEnd)).find()) {
                 int separator = numeric.lastIndexOf(' ', candidateEnd - 1);
                 if (separator > card.start()
                         && validCard(numeric.substring(card.start(), separator).replaceAll("[ -]", ""))) {
-                    // 유효한 번호 뒤에 공백으로 구분된 금액·기간까지 이어 붙여 가리지 않는다.
+                    // 이전 별표 배포에서 공백 뒤 숫자 조건을 보존하던 해시만 재현한다.
                     candidateEnd = separator;
                 }
             }
-            // 뒤의 별도 숫자까지 붙은 후보가 검증에 실패해도 원래 번호의 그룹 경계를 확인한다.
+            // 전체 후보가 검증을 통과하면 길이와 단위에 관계없이 전체를 보호한다.
+            // 실패한 경우에만 구분자 경계의 유효한 앞 번호를 찾아 나머지 숫자를 보존한다.
             for (int end = candidateEnd; end > card.start(); end--) {
                 if (end < card.end() && numeric.charAt(end) != ' ' && numeric.charAt(end) != '-') {
                     continue;
@@ -232,19 +243,22 @@ public final class ChatInputInspector {
         spans.sort(Comparator.comparingInt(Span::start));
         StringBuilder result = new StringBuilder();
         StringBuilder fingerprintContent = new StringBuilder();
+        StringBuilder inspectionContent = new StringBuilder();
         int cursor = 0;
         for (Span span : spans) {
             if (span.start() < cursor) {
                 continue;
             }
             result.append(input, cursor, span.start()).append(MASK);
+            inspectionContent.append(input, cursor, span.start()).append(PII_BOUNDARY);
             // 기존 요청 해시와 호환되는 유형 문구만 유지한다. 원문 번호는 어느 결과에도 넣지 않는다.
             fingerprintContent.append(input, cursor, span.start()).append(span.replacement());
             cursor = span.end();
         }
         return new MaskedContent(
                 result.append(input, cursor, input.length()).toString(),
-                fingerprintContent.append(input, cursor, input.length()).toString());
+                fingerprintContent.append(input, cursor, input.length()).toString(),
+                inspectionContent.append(input, cursor, input.length()).toString());
     }
 
     private String numericForm(String input) {
@@ -409,5 +423,5 @@ public final class ChatInputInspector {
 
     private record Span(int start, int end, String replacement) {}
 
-    private record MaskedContent(String content, String fingerprintContent) {}
+    private record MaskedContent(String content, String fingerprintContent, String inspectionContent) {}
 }

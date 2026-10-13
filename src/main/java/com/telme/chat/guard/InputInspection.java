@@ -12,10 +12,6 @@ public record InputInspection(
         boolean hasQuestion,
         String fingerprintContent) {
 
-    public InputInspection(String content, List<Detection> detections, boolean hasQuestion) {
-        this(content, detections, hasQuestion, content);
-    }
-
     public enum Reason {
         PROFANITY,
         INITIAL_PROFANITY,

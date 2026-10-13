@@ -48,6 +48,11 @@ public class ChatInputGuardService {
         Instant now = clock.instant();
         var cached = store.cached(state, request.requestId());
         if (cached.isPresent()) {
+            // TODO(TELME-154): 숫자 조건을 보존하던 이전 별표 배포의 영수증 재전송 호환이다.
+            // 유형 문구 배포와 현재 경계의 해시는 위 fingerprint로 비교한다. 모두 v2이므로
+            // policy_version만으로 구경계 영수증을 구분할 수 없다. 마지막 구경계 영수증 생성 이후
+            // 설정된 retention(기본 30일)이 지나 실제 정리가 완료되고, 구버전 롤백도 종료된 것을
+            // 확인한 뒤 이 비교와 legacyFingerprintContent를 함께 제거한다. 제거 날짜는 배포 시 확정한다.
             if (!fingerprint.equals(cached.get().fingerprint())
                     && !fingerprint(sessionId, inspector.legacyFingerprintContent(request.content()), request)
                             .equals(cached.get().fingerprint())) {

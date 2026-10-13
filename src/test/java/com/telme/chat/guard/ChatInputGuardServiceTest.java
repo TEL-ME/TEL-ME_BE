@@ -63,7 +63,7 @@ class ChatInputGuardServiceTest {
         Instant acquired = START.plusSeconds(2);
         잠금_획득_시각을_설정한다(state, acquired);
         when(inspector.inspect("문의"))
-                .thenReturn(new InputInspection("문의", List.of(), true));
+                .thenReturn(new InputInspection("문의", List.of(), true, "문의"));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("문의"));
 
@@ -81,7 +81,7 @@ class ChatInputGuardServiceTest {
         State state = 제한_상태(until);
         잠금_획득_시각을_설정한다(state, START.plusSeconds(20));
         when(inspector.inspect("문의"))
-                .thenReturn(new InputInspection("문의", List.of(), true));
+                .thenReturn(new InputInspection("문의", List.of(), true, "문의"));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("문의"));
 
@@ -101,7 +101,7 @@ class ChatInputGuardServiceTest {
                         "ㅅㅂ",
                         List.of(new InputInspection.Detection(
                                 InputInspection.Reason.INITIAL_PROFANITY, "INITIAL_SB")),
-                        true));
+                        true, "ㅅㅂ"));
         var request = new ChatMessageSendRequest("ㅅㅂ", null, null, UUID.randomUUID());
         var original = service.begin(ACTOR, 3L, request);
         var response = new ChatMessageSendResponse(
@@ -134,7 +134,7 @@ class ChatInputGuardServiceTest {
                         "ㅅㅂ",
                         List.of(new InputInspection.Detection(
                                 InputInspection.Reason.INITIAL_PROFANITY, "INITIAL_SB")),
-                        true));
+                        true, "ㅅㅂ"));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("ㅅㅂ"));
 

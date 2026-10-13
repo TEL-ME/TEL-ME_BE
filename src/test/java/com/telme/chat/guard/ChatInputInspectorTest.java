@@ -230,6 +230,7 @@ class ChatInputInspectorTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "990101-1234567", "9901011234567", "９９０１０１－１２３４５６７",
+        "4222222222222", "40000000000002", "41111111111111113", "411111111111111118",
         "4111-1111-1111-1111", "4111 1111 1111 1111", "4111111111111111",
         "378282246310005", "4000000000000000006", "2221000000000009"
     })
@@ -323,14 +324,114 @@ class ChatInputInspectorTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "123원 요금 문의", "500원 요금 문의", "17개 문의", "123번 문의",
-        "18개월 약정 문의", "27개월 약정 문의", "18원 요금 문의", "18 원 요금 문의", "18GB 요금 문의"
+        "27개월 약정 문의", "요금 18원 문의", "약정 18개월 문의", ", 18GB 요금 문의"
     })
-    @DisplayName("카드번호 뒤의 별도 숫자 때문에 유효한 카드번호 마스킹을 놓치지 않는다")
+    @DisplayName("전체 후보가 카드 검증에 실패하거나 설명 단어로 분리된 숫자 조건은 보존한다")
     void 카드번호_뒤의_금액과_수량을_유지한다(String tail) {
         var result = inspector.inspect("카드 4111111111111111 " + tail);
         assertThat(result.wasMasked()).isTrue();
         assertThat(result.content()).isEqualTo("카드 *** " + tail);
         assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "4111 1111 1111 1111 3번 | ***번",
+        "41111111111111113번 | ***번",
+        "4111-1111-1111-1111-3번 | ***번",
+        "4111111111111111 18개월 약정 문의 | ***개월 약정 문의",
+        "4111-1111-1111-1111-18개월 약정 문의 | ***개월 약정 문의",
+        "４１１１ １１１１ １１１１ １１１１ ３번 | ***번",
+        "４１１１－１１１１－１１１１－１１１１－１８개월 | ***개월",
+        "4111111111111111 003원 문의 | ***원 문의",
+        "4111111111111111 18 원 문의 | *** 원 문의"
+    })
+    @DisplayName("17~19자리 전체 후보도 유효하면 단위나 공백·하이픈으로 끝 숫자를 잘라 노출하지 않는다")
+    void 모호한_숫자_묶음은_전체_번호를_보호한다(String input, String expected) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(expected);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "4111111111111111, 18개월 문의 | ***, 18개월 문의",
+        "4111-1111-1111-1111 약정 18개월 문의 | *** 약정 18개월 문의",
+        "4111111111111111 수량 3개 문의 | *** 수량 3개 문의",
+        "4111111111111111 요금 18원 문의 | *** 요금 18원 문의",
+        "４１１１－１１１１－１１１１－１１１１ 약정 １８개월 문의 | *** 약정 １８개월 문의"
+    })
+    @DisplayName("설명 단어·쉼표로 번호와 분리된 금액·기간·수량은 상담 조건으로 보존한다")
+    void 명확히_분리된_숫자_조건은_보존한다(String input, String expected) {
+        assertThat(inspector.inspect(input).content()).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "개 4111111111111111 새끼", "개4111111111111111새끼",
+        "씨 990101-1234567 발", "ㅅ4111111111111111ㅂ",
+        "개 ４１１１－１１１１－１１１１－１１１１ 새끼"
+    })
+    @DisplayName("민감번호의 별표 마스크가 양옆 글자를 새 욕설로 연결하지 않는다")
+    void 마스킹_경계에서_욕설을_만들지_않는다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).contains("***").doesNotContain("\uFFFC");
+        assertThat(result.fingerprintContent()).doesNotContain("\uFFFC");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "개새끼 4111111111111111", "4111111111111111 개새끼",
+        "개 *** 새끼 4111111111111111", "씨 990101-1234567 발 개새끼"
+    })
+    @DisplayName("마스킹 경계를 분리해도 실제 욕설과 사용자가 입력한 별표 우회 욕설은 계속 감지한다")
+    void 번호_외부의_실제_욕설을_유지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "4111 1111 1111 1111 3번", "카드 4111-1111-1111-1111-18개월",
+        "카드 4111111111111111 18개월입니다", "카드 4111111111111111 18개월은",
+        "카드 ４１１１－１１１１－１１１１－１１１１－１８개월"
+    })
+    @DisplayName("번호를 가린 뒤 소개 문구와 단위만 남으면 실제 문의를 다시 입력해야 한다")
+    void 번호와_단위만_남으면_재입력을_요청한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "카드 4111111111111111 18개월 약정 문의",
+        "카드 4111111111111111 약정 18개월 문의",
+        "카드 4111111111111111 27개월 문의",
+        "카드 4111111111111111 분실 신고", "카드 4111111111111111 원하는 요금제 문의"
+    })
+    @DisplayName("번호 뒤 단위를 제외하더라도 실제 문의·숫자 조건·단위와 비슷한 단어는 유지한다")
+    void 단위_제외로_실제_문의를_없애지_않는다(String input) {
+        assertThat(inspector.inspect(input).hasQuestion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("번호와 함께 입력한 피해 인용 예외와 유형별 재전송 문구를 유지한다")
+    void 인용_예외와_유형별_비교_문구를_유지한다() {
+        assertThat(inspector.inspect("'병신'이라는 욕을 들었어요. 카드 4111111111111111 문의")
+                .hasProfanity()).isFalse();
+        var resident = inspector.inspect("990101-1234567");
+        var card = inspector.inspect("4111111111111111");
+        assertThat(resident.content()).isEqualTo(card.content()).isEqualTo("***");
+        assertThat(resident.fingerprintContent()).isEqualTo("[주민등록번호]");
+        assertThat(card.fingerprintContent()).isEqualTo("[카드번호]");
     }
 
     @ParameterizedTest
