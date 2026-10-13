@@ -17,6 +17,7 @@ import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.IntentRouteResponse;
+import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
 import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.service.LlmClient;
@@ -555,6 +556,347 @@ class QueryRoutingServiceTest {
     class LlmSuccess {
 
         @Test
+        void mixedIntentWithoutIndependentQuestionsIsRejectedBeforeSaving() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"번호이동과 매장","subQueries":[]}
+                    """);
+            assertThatThrownBy(() -> service.routeSingleConsult(msg("번호이동 방법과 매장 찾아줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+            verify(consultRequestRepository, never()).save(any());
+        }
+
+        @Test
+        void faqServiceTypeDoesNotBecomeConditionOfGenericStoreRequest() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"번호이동 방법과 강남역 매장",
+                     "extractedConditions":{"serviceType":"PORT_IN"},
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"번호이동 방법","conditions":{}},
+                       {"order":2,"intent":"STORE","queryText":"강남역 매장","conditions":{"location":"강남역"}}]}
+                    """);
+            var result = service.routeSingleConsult(msg("번호이동 방법과 강남역 매장 알려줘"), null);
+            assertThat(result.subQueries().get(1).conditions())
+                    .containsEntry("location", "강남역").doesNotContainKey("serviceType");
+        }
+
+        // 하위 질문은 FAQ와 매장으로 나눴는데 전체 의도만 FAQ나 STORE로 적은 출력은 버리지 않고 BOTH로 계산한다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "FAQ | 번호이동 방법이랑 번호이동 되는 매장 알려줘 | 번호이동 방법 | 번호이동 방법 | 번호이동 가능 매장 | 번호이동 되는 매장",
+                "STORE | 유심 재발급 비용 알려주고 근처 유심 재발급 매장도 찾아줘 | 유심 재발급 비용 | 유심 재발급 비용 | 유심 재발급 매장 | 근처 유심 재발급 매장도 찾아줘"
+        })
+        void mixedSubQueriesWithOneSidedTopIntentAreRoutedAsBoth(String modelIntent, String question,
+                String faqQuery, String faqQuote, String storeQuery, String storeQuote) {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"%s","confidence":0.97,"refinedQuery":"%s","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"%s","requestQuote":"%s","conditions":{}}]}
+                    """.formatted(modelIntent, question, faqQuery, faqQuote, storeQuery, storeQuote));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.LLM);
+            assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+        }
+
+        // 복합 질문의 매장 요청은 자기 원문 인용에 있는 업무만 채운다. FAQ 요청의 업무는 가져오지 않는다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "번호이동 방법이랑 번호이동 되는 매장 알려줘 | 번호이동 방법 | 번호이동 가능 매장 | 번호이동 되는 매장 | PORT_IN",
+                "명의변경 서류 알려주고 가까운 매장도 찾아줘 | 명의변경 서류 | 가까운 매장 | 가까운 매장도 찾아줘 | ''"
+        })
+        void compoundStoreRequestTakesServiceTypeOnlyFromItsOwnQuote(String question, String faqQuote,
+                String storeQuery, String storeQuote, String expected) {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"%s","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"%s","requestQuote":"%s","conditions":{}}]}
+                    """.formatted(question, faqQuote, faqQuote, storeQuery, storeQuote));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            var store = result.subQueries().get(1).conditions();
+            if (expected.isEmpty()) {
+                assertThat(store).doesNotContainKey("serviceType");
+            } else {
+                assertThat(store).containsEntry("serviceType", expected);
+            }
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
+        // 매장 요청의 지역은 모델 검색어가 아니라 원문에서 이 요청의 구간과 공통 구간을 근거로 확인한다.
+        @Test
+        void compoundStoreLocationIsNotTakenFromAnotherRequest() {
+            String question = "강남역 매장 영업시간 알려주고 신촌역 번호이동 매장 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"강남역 매장 영업시간과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"매장 영업시간","requestQuote":"강남역 매장 영업시간 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"강남역 신촌역 번호이동 매장","requestQuote":"신촌역 번호이동 매장 찾아줘",
+                       "conditions":{"location":"강남역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().get(1).conditions()).doesNotContainKey("location");
+        }
+
+        // 인용에서 조사가 빠져도 인용 검증과 같은 기준으로 원문 구간을 찾아, 모델 검색어의 다른 지역을 쓰지 않는다.
+        @Test
+        void compoundStoreLocationIsCheckedEvenWhenAnotherQuoteDropsAParticle() {
+            String question = "강남역 매장 영업시간도 알려주고 신촌역 번호이동 매장 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"강남역 매장 영업시간과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"매장 영업시간","requestQuote":"강남역 매장 영업시간 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"강남역 신촌역 번호이동 매장","requestQuote":"신촌역 번호이동 매장 찾아줘",
+                       "conditions":{"location":"강남역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().get(1).conditions()).doesNotContainKey("location");
+        }
+
+        // 매장 인용에서 조사가 빠져도 FAQ 검색어 검사를 건너뛰지 않는다.
+        @Test
+        void compoundFaqQueryIsCheckedEvenWhenTheStoreQuoteDropsAParticle() {
+            String question = "유심 재발급 비용 알려주고 번호이동 가능한 매장도 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"번호이동 비용과 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"유심 재발급 비용","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"번호이동 가능 매장","requestQuote":"번호이동 가능한 매장 찾아줘",
+                       "conditions":{"serviceType":"PORT_IN"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심 재발급 비용");
+        }
+
+        // 원문에 있는 비용 문의를 매장 요청으로 둔 출력은 그 요청을 버리지 않고 FAQ로 처리한다.
+        @Test
+        void costQuestionLabeledAsStoreIsHandledAsFaq() {
+            String question = "로밍 신청 방법과 유심 재발급 비용 알려줘";
+            routingJson("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"로밍 신청 방법과 유심 재발급 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"유심 재발급 가능한 매장","requestQuote":"유심 재발급 비용 알려줘","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.FAQ);
+            assertThat(result.subQueries().get(1).queryText()).contains("유심 재발급 비용").doesNotContain("매장");
+        }
+
+        // 행정구역과 방문 표현으로 장소를 묻는 요청은 매장 낱말이 없어도 매장 요청으로 유지한다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "{\"location\":\"서울 강남구\",\"serviceType\":\"PORT_IN\"} | 서울 강남구",
+                "{} | ''"
+        })
+        void administrativeAreaVisitRequestIsKeptAsStore(String conditions, String expectedLocation) {
+            String question = "로밍 신청 방법 알려주고 서울 강남구에서 번호이동하려면 어디로 가야 하나요?";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"로밍 신청 방법과 강남구 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"서울 강남구 번호이동 매장",
+                       "requestQuote":"서울 강남구에서 번호이동하려면 어디로 가야 하나요?","conditions":%s}]}
+                    """.formatted(conditions));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries().get(1).intent()).isEqualTo(ConsultRequest.Intent.STORE);
+            if (!expectedLocation.isEmpty()) {
+                assertThat(result.subQueries().get(1).conditions()).containsEntry("location", expectedLocation);
+            }
+        }
+
+        // 다른 요청 구간에 있는 지명은 비용 문의를 장소 요청으로 만들지 않는다.
+        @Test
+        void placeFromAnotherSectionDoesNotMakeCostQuestionAStoreRequest() {
+            String question = "강남역에서 로밍 신청하는 방법이랑 유심 재발급 비용 알려줘";
+            routingJson("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"강남역 로밍 신청과 유심 재발급 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"강남역에서 로밍 신청하는 방법이랑","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"강남역 유심 재발급 매장","requestQuote":"유심 재발급 비용 알려줘",
+                       "conditions":{"location":"강남역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsOnly(ConsultRequest.Intent.FAQ);
+        }
+
+        // 지명만 있는 장소 요청은 매장 낱말이 없어도 매장 요청으로 유지한다.
+        @Test
+        void placeRequestWithStationNameIsKeptAsStore() {
+            String question = "번호이동 방법 알려주고 신촌역에서 번호이동 할 수 있는지도 알려줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"번호이동 방법과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"번호이동 방법","requestQuote":"번호이동 방법 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"신촌역 번호이동 가능 매장","requestQuote":"신촌역에서 번호이동 할 수 있는지도 알려줘",
+                       "conditions":{"location":"신촌역","serviceType":"PORT_IN"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("location", "신촌역");
+        }
+
+        // 어느 요청에도 속하지 않은 앞부분의 지역은 뒤의 매장 요청도 함께 쓴다.
+        @Test
+        void sharedLocationOutsideAllQuotesStaysWithTheStoreRequest() {
+            String question = "신촌역 근처에서 유심 재발급 비용 알려주고 번호이동 매장도 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"유심 재발급 비용과 신촌역 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"유심 재발급 비용","requestQuote":"유심 재발급 비용 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"신촌역 번호이동 매장","requestQuote":"번호이동 매장도 찾아줘",
+                       "conditions":{"location":"신촌역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("location", "신촌역");
+        }
+
+        // BOTH 안의 FAQ 검색어가 다른 요청의 업무로 바뀌면 이 요청의 원문 인용으로 되돌린다.
+        @Test
+        void compoundFaqQueryTakingAnotherRequestTopicFallsBackToItsQuote() {
+            String question = "유심 재발급 비용 알려주고 번호이동 가능한 매장 찾아줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"번호이동 비용과 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"번호이동 비용","requestQuote":"유심 재발급 비용","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"번호이동 가능 매장","requestQuote":"번호이동 가능한 매장 찾아줘",
+                       "conditions":{"serviceType":"PORT_IN"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심 재발급 비용");
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        // 매장을 말하지 않은 질문에서 원문 근거가 없는 BOTH의 매장 요청은 빼고 FAQ 요청만 처리한다.
+        @ParameterizedTest
+        @ValueSource(strings = {"", "로밍 신청 방법"})
+        void ungroundedStoreRequestInBothWithoutStoreMentionIsDropped(String storeQuote) {
+            String question = "로밍 신청 방법과 유심 재발급 비용 알려줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"로밍 신청 방법과 유심 재발급 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"유심 재발급 가능한 매장","requestQuote":"%s","conditions":{}}]}
+                    """.formatted(storeQuote));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsOnly(ConsultRequest.Intent.FAQ);
+        }
+
+        // '매장'이라고 말하지 않아도 원문 근거가 있는 매장 요청은 BOTH로 유지한다.
+        @Test
+        void groundedStoreRequestWithoutStoreWordIsKept() {
+            String question = "eSIM 개통 절차 알려주고 근처에 개통 가능한 곳도 알려줘";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"eSIM 개통 절차와 근처 개통 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"eSIM 개통 절차","requestQuote":"eSIM 개통 절차 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"근처 개통 가능 매장","requestQuote":"근처에 개통 가능한 곳도 알려줘","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+        }
+
+        // 매장을 말한 질문에서 원문 근거를 확인할 수 없는 BOTH는 요청 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
+        @Test
+        void ungroundedBothWithStoreMentionIsNotGuessed() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"요금제 변경과 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"요금제 변경 절차 안내","requestQuote":"요금제 변경 절차","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"요금제 변경 가능 대리점","requestQuote":"요금제 변경 절차","conditions":{}}]}
+                    """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg("요금제 변경은 어떻게 해? 그리고 신촌역 매장 위치도 알려줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+        }
+
+        // 매장을 말하지 않은 질문에 모델이 덧붙인 매장 찾기는 고객 요청이 아니므로 빼고 FAQ로 처리한다.
+        @Test
+        void storeSubQueryInventedWithoutStoreMentionIsDroppedAndFaqIsKept() {
+            String question = "내일 새벽 비행기인데 지금 신청이 제대로 됐는지 어디서 볼 수 있을까요";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"로밍 신청 확인 및 가능 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 상태 확인 방법","requestQuote":"지금 신청이 제대로 됐는지","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"로밍 신청 가능 매장 위치","requestQuote":"어디서 볼 수 있을까요","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).singleElement().satisfies(sub -> {
+                assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                assertThat(sub.order()).isEqualTo((short) 1);
+            });
+            assertThat(result.refinedQuery()).doesNotContain("매장");
+        }
+
+        // 하위 질문마다 원문 근거를 확인할 수 없으면 질문 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
+        @Test
+        void mixedSubQueriesWithoutSeparateOriginalEvidenceAreNotGuessedAsBoth() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"요금제 변경과 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"요금제 변경 절차 안내","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"요금제 변경 가능 대리점","conditions":{}}]}
+                    """);
+
+            assertThatThrownBy(() -> service.routeSingleConsult(msg("요금제 변경은 어떻게 해? 그리고 신촌역 매장 위치도 알려줘"), null))
+                    .isInstanceOf(UnsupportedCompoundQuestionException.class);
+            verify(queryRoutingRepository, never()).saveAndFlush(any());
+        }
+
+        // 하위 질문의 의도가 비어 있으면 어느 쪽인지 계산할 수 없어 기존처럼 규칙 분류로 넘긴다.
+        @Test
+        void missingSubQueryIntentKeepsRuleFallback() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"FAQ","confidence":0.97,"refinedQuery":"번호이동 방법과 매장","subQueries":[
+                      {"order":1,"queryText":"번호이동 방법","requestQuote":"번호이동 방법","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"번호이동 매장","requestQuote":"번호이동 되는 매장","conditions":{}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg("번호이동 방법이랑 번호이동 되는 매장 알려줘"), null);
+
+            assertThat(result.method()).isEqualTo(QueryRouting.Method.RULE);
+        }
+
+        @Test
+        void synonymousUsimSearchTextKeepsTheExplicitStoreServiceType() {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.99,"refinedQuery":"유심 재발급 비용과 강남역 매장",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"유심 재발급 비용","requestQuote":"유심 재발급 비용과","conditions":{}},
+                       {"order":2,"intent":"STORE","queryText":"강남역 USIM 재발급 매장",
+                        "requestQuote":"강남역 유심 재발급 매장 알려줘",
+                        "conditions":{"location":"강남역","serviceType":"USIM_REISSUE"}}]}
+                    """);
+            var result = service.routeSingleConsult(msg("유심 재발급 비용과 강남역 유심 재발급 매장 알려줘"), null);
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("serviceType", "USIM_REISSUE");
+        }
+
+        @Test
         @DisplayName("FAQ 단독 → intent=FAQ, 서브질의 1건")
         void faq() {
             given(llmClient.generate(any())).willReturn("""
@@ -612,8 +954,8 @@ class QueryRoutingServiceTest {
         }
 
         @Test
-        @DisplayName("단일 상담 진입점은 BOTH를 저장 전에 차단한다")
-        void singleConsultBlocksBothBeforeSaving() {
+        @DisplayName("상담 진입점은 FAQ와 매장 하위 요청을 함께 저장한다")
+        void chatConsultationKeepsBothBeforeSaving() {
             routingJson("""
                 {"intent":"BOTH","confidence":0.99,
                  "refinedQuery":"5G 요금제와 신촌 매장",
@@ -625,19 +967,11 @@ class QueryRoutingServiceTest {
                 """);
             ChatMessage message = msg("5G 요금제와 신촌 매장 알려줘");
 
-            assertThatThrownBy(() -> service.routeSingleConsult(message, null))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("FAQ와 매장 복합 질문")
-                    // 하나씩 보낼 버튼을 만들 수 있게 나눈 하위 질문을 넘긴다
-                    .extracting(e -> ((UnsupportedCompoundQuestionException) e).parts())
-                    .isEqualTo(java.util.List.of(
-                            new UnsupportedCompoundQuestionException.Part(
-                                    ConsultRequest.Intent.FAQ, "5G 요금제", java.util.Map.of()),
-                            new UnsupportedCompoundQuestionException.Part(
-                                    ConsultRequest.Intent.STORE, "신촌 매장", java.util.Map.of("location", "신촌"))));
-
-            verify(queryRoutingRepository, never()).saveAndFlush(any());
-            verify(consultRequestRepository, never()).save(any());
+            var result = service.routeSingleConsult(message, null);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
+            assertThat(result.subQueries().get(0).conditions()).isEmpty();
+            assertThat(result.subQueries().get(1).conditions()).containsEntry("location", "신촌");
         }
 
         @Test
