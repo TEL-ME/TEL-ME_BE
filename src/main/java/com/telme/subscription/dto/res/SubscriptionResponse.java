@@ -19,8 +19,8 @@ public record SubscriptionResponse(
     public record ScheduledPlanResponse(PlanResponse plan, Instant effectiveFrom) {
     }
 
-    // monthlyDiscount는 월정액에서 할인되는 금액(원)
-    public record ContractResponse(int months, int discountPercent, int monthlyDiscount) {
+    // monthlyDiscount는 월정액에서 할인되는 금액(원)이고 약정이 만료되면(active=false) 0. endsAt은 약정 만료일
+    public record ContractResponse(int months, int discountPercent, int monthlyDiscount, boolean active, Instant endsAt) {
     }
 
     // reducedMonthlyFee는 정지 기간에 부과되는 기본료(원)

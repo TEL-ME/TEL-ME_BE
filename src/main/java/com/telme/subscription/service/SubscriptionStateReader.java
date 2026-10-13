@@ -19,6 +19,7 @@ public class SubscriptionStateReader {
     private final SubscriptionHistoryRepository historyRepository;
     private final PlanRepository planRepository;
     private final SubscriptionPauseRepository pauseRepository;
+    private final SubscriptionCalendar calendar;
 
     public SubscriptionSnapshot read(Subscription subscription, Instant now) {
         Long subscriptionId = subscription.getSubscriptionId();
@@ -27,12 +28,24 @@ public class SubscriptionStateReader {
                 findCurrentPlan(subscriptionId, now).orElse(null),
                 scheduled(historyRepository.findPendingActivation(subscriptionId, now)),
                 scheduled(historyRepository.findPendingChange(subscriptionId, now)),
-                pauseRepository.findActive(subscriptionId, now).orElse(null));
+                pauseRepository.findActive(subscriptionId, now).orElse(null),
+                contractInfo(subscription, now));
     }
 
     Optional<Plan> findCurrentPlan(Long subscriptionId, Instant now) {
         return historyRepository.findCurrent(subscriptionId, now)
                 .map(history -> findPlan(history.getToPlanId()));
+    }
+
+    // 위약금과 같은 기준(가입일부터 만 개월)으로 약정 진행 여부를 판단하고, 만료일은 그 날 0시(KST)
+    private SubscriptionSnapshot.ContractInfo contractInfo(Subscription subscription, Instant now) {
+        if (!subscription.hasContract()) {
+            return null;
+        }
+        int months = subscription.getContractMonths();
+        boolean active = calendar.monthsBetween(subscription.getSubscribedAt(), now) < months;
+        Instant endsAt = calendar.startOfDay(calendar.plusMonths(subscription.getSubscribedAt(), months));
+        return new SubscriptionSnapshot.ContractInfo(active, endsAt);
     }
 
     private SubscriptionSnapshot.ScheduledPlan scheduled(Optional<SubscriptionHistory> history) {

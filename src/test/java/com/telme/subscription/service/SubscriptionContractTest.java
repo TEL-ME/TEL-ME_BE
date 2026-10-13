@@ -36,6 +36,7 @@ class SubscriptionContractTest {
 
     @Autowired SubscriptionCommandService service;
     @Autowired SubscriptionQueryService queryService;
+    @Autowired SubscriptionStateReader stateReader;
     @Autowired UserRepository userRepository;
     @Autowired PlanRepository planRepository;
     @Autowired SubscriptionRepository subscriptionRepository;
@@ -133,6 +134,30 @@ class SubscriptionContractTest {
     }
 
     @Test
+    void 약정은_만료일_0시_정각에_끝나고_위약금이_없어지는_순간과_같다() {
+        Subscription subscription = service.subscribe(userId, planId("FIVE_G_STANDARD"), null, true).subscription();
+        // 2026-01-05 가입, 24개월 뒤 2028-01-05 0시(KST)가 만료일
+        Instant endsAt = Instant.parse("2028-01-04T15:00:00Z");
+
+        SubscriptionSnapshot.ContractInfo before = contractAt(subscription, "2028-01-04T14:59:59Z");
+        assertThat(before.active()).isTrue();
+        assertThat(before.endsAt()).isEqualTo(endsAt);
+        assertThat(queryService.getTerminationPenalty(userId).refundPercent()).isEqualTo(50);
+
+        SubscriptionSnapshot.ContractInfo after = contractAt(subscription, "2028-01-04T15:00:00Z");
+        assertThat(after.active()).isFalse();
+        assertThat(after.endsAt()).isEqualTo(endsAt);
+        assertThat(queryService.getTerminationPenalty(userId).refundPercent()).isZero();
+    }
+
+    @Test
+    void 약정이_없는_구독은_약정_정보가_없다() {
+        Subscription subscription = service.subscribe(userId, planId("FIVE_G_STANDARD"), null).subscription();
+
+        assertThat(stateReader.read(subscription, Instant.parse("2026-06-01T03:00:00Z")).contract()).isNull();
+    }
+
+    @Test
     void 해지_후_다시_가입하면_약정은_새_구독의_선택을_따른다() {
         service.subscribe(userId, planId("FIVE_G_STANDARD"), null, true);
         at(Instant.parse("2026-02-05T03:00:00Z"));
@@ -148,6 +173,11 @@ class SubscriptionContractTest {
         assertThatThrownBy(() -> queryService.getTerminationPenalty(userId))
                 .isInstanceOfSatisfying(GeneralException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
+    }
+
+    private SubscriptionSnapshot.ContractInfo contractAt(Subscription subscription, String at) {
+        at(Instant.parse(at));
+        return stateReader.read(subscription, Instant.parse(at)).contract();
     }
 
     private void assertPenalty(String at, int elapsed, long received, int refundPercent, long penalty) {

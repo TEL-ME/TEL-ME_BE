@@ -256,10 +256,27 @@ class SubscriptionApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.contract.months").value(24))
                 .andExpect(jsonPath("$.result.contract.discountPercent").value(25))
-                .andExpect(jsonPath("$.result.contract.monthlyDiscount").value(16250));
+                .andExpect(jsonPath("$.result.contract.monthlyDiscount").value(16250))
+                .andExpect(jsonPath("$.result.contract.active").value(true))
+                .andExpect(jsonPath("$.result.contract.endsAt").value("2028-10-11T15:00:00Z"));
 
         mvc.perform(get(URL + "/me").session(session))
                 .andExpect(jsonPath("$.result.subscription.contract.monthlyDiscount").value(16250));
+    }
+
+    @Test
+    void 약정이_만료되면_contract가_할인_중으로_보이지_않는다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null, true)).andExpect(status().isOk());
+
+        at(Instant.parse("2028-10-12T03:00:00Z")); // 가입 24개월째
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.contract.months").value(24))
+                .andExpect(jsonPath("$.result.subscription.contract.active").value(false))
+                .andExpect(jsonPath("$.result.subscription.contract.monthlyDiscount").value(0))
+                .andExpect(jsonPath("$.result.subscription.contract.endsAt").value("2028-10-11T15:00:00Z"));
+        mvc.perform(get(URL + "/me/termination-penalty").session(session))
+                .andExpect(jsonPath("$.result.refundPercent").value(0))
+                .andExpect(jsonPath("$.result.penalty").value(0));
     }
 
     @Test

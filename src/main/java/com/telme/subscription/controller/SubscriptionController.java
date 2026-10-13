@@ -99,7 +99,7 @@ public class SubscriptionController {
     @Operation(
             summary = "내 요금제 조회",
             description = "가입하지 않았으면 subscribed가 false이고 subscription이 null입니다(오류 아님). "
-                    + "가입 중이면 현재 요금제(개통 전이면 null), 약정(contract), 개통 예정(pendingActivation), "
+                    + "가입 중이면 현재 요금제(개통 전이면 null), 약정(contract, 만료되면 active=false·monthlyDiscount=0), 개통 예정(pendingActivation), "
                     + "적용 전인 변경(pendingChange), 일시 정지 중이면 정지 정보(pause)를 반환합니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),

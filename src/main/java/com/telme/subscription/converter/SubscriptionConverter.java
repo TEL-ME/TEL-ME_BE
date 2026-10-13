@@ -25,7 +25,7 @@ public class SubscriptionConverter {
                 .subscriptionId(snapshot.subscription().getSubscriptionId())
                 .subscribedAt(snapshot.subscription().getSubscribedAt())
                 .currentPlan(snapshot.currentPlan() == null ? null : planConverter.toResponse(snapshot.currentPlan()))
-                .contract(toContract(snapshot.subscription(), basePlan))
+                .contract(toContract(snapshot, basePlan))
                 .pendingActivation(toScheduled(snapshot.pendingActivation()))
                 .pendingChange(toScheduled(snapshot.pendingChange()))
                 .pause(toPause(snapshot.pause(), basePlan))
@@ -37,13 +37,16 @@ public class SubscriptionConverter {
                 penalty.elapsedMonths(), penalty.receivedDiscount(), penalty.refundPercent(), penalty.penalty());
     }
 
-    private SubscriptionResponse.ContractResponse toContract(Subscription subscription, Plan basePlan) {
-        if (!subscription.hasContract()) {
+    private SubscriptionResponse.ContractResponse toContract(SubscriptionSnapshot snapshot, Plan basePlan) {
+        SubscriptionSnapshot.ContractInfo contract = snapshot.contract();
+        if (contract == null) {
             return null;
         }
+        Subscription subscription = snapshot.subscription();
         int percent = subscription.getContractDiscountPercent();
+        int monthlyDiscount = contract.active() ? basePlan.getMonthlyFee() * percent / 100 : 0;
         return new SubscriptionResponse.ContractResponse(
-                subscription.getContractMonths(), percent, basePlan.getMonthlyFee() * percent / 100);
+                subscription.getContractMonths(), percent, monthlyDiscount, contract.active(), contract.endsAt());
     }
 
     private SubscriptionResponse.PauseResponse toPause(SubscriptionPause pause, Plan basePlan) {

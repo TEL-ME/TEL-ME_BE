@@ -11,9 +11,14 @@ public record SubscriptionSnapshot(
         Plan currentPlan,
         ScheduledPlan pendingActivation,
         ScheduledPlan pendingChange,
-        SubscriptionPause pause
+        SubscriptionPause pause,
+        ContractInfo contract
 ) {
 
     public record ScheduledPlan(Plan plan, Instant effectiveFrom) {
+    }
+
+    // 약정이 없으면 null. 만료 후에도 약정 이력은 남아 active만 false가 된다
+    public record ContractInfo(boolean active, Instant endsAt) {
     }
 }

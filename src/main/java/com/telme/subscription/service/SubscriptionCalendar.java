@@ -30,6 +30,10 @@ public class SubscriptionCalendar {
         return LocalDate.ofInstant(now, TimeZones.KST);
     }
 
+    public Instant startOfDay(Instant at) {
+        return today(at).atStartOfDay(TimeZones.KST).toInstant();
+    }
+
     public Instant startOfMonth(Instant now) {
         return today(now).withDayOfMonth(1).atStartOfDay(TimeZones.KST).toInstant();
     }
