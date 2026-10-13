@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -79,6 +80,8 @@ class ConsultTurnAnalysisAdapterTest {
         var context = new Context(1, 10, "미성년자도 가입 되나요", List.of(),
                 new ChatContext(1L, 10L, null, List.of(previous), "미성년자도 가입 되나요", 100));
         var model = mock(LlmClient.class);
+        // 이전 발언이 있는 짧은 질문이라 현재 대상 판정을 한 번 부르고, 대상이 있다고 판정한다.
+        when(model.generate(any())).thenReturn("{\"reference\":\"EXPLICIT\"}");
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
         var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "신규 가입 조건", null, List.of(), null);
         var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
@@ -88,7 +91,8 @@ class ConsultTurnAnalysisAdapterTest {
         }, preparation, new FollowupConditionConverter(), resolver);
         assertThat(adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer())
                 .isSameAs(answer);
-        verifyNoInteractions(model, preparation);
+        verify(model).generate(any());
+        verifyNoInteractions(preparation);
     }
 
     @Test
