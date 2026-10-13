@@ -120,7 +120,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 resolution = new Resolution(resolution.candidate(), updates);
             }
             // 라우팅이 모르는 FAQ 조건은 되묻기에 실어 보낸 선택지로 채운다
-            resolution = FaqClarificationAnswers.fill(resolution, context.message());
+            resolution = FaqClarificationAnswers.fill(resolution, ConsultationQuestion.extract(context.message()));
             // 재질문에도 답이 없으면 거절로 처리
             if (resolution.updates().isEmpty()
                     && resolution.candidate().reasks() >= ClarificationReask.MAX_REASKS) {

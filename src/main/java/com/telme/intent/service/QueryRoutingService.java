@@ -936,7 +936,7 @@ public class QueryRoutingService {
             return FollowUpRouteResponse.noTarget();
         }
 
-        String reply = followUpText != null ? followUpText.trim() : "";
+        String reply = followUpText != null ? ConsultationQuestion.extract(followUpText).strip() : "";
         if (reply.isBlank()) {
             log.info("[후속분석] 후속 답변이 비어 있어 조건 없이 반환합니다: consultRequestId={}", waiting.consultRequestId());
             return new FollowUpRouteResponse(

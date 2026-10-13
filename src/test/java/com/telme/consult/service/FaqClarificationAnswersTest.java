@@ -17,6 +17,16 @@ class FaqClarificationAnswersTest {
         return new Candidate(1L, field, 10L, "질문", "원문", "검색어", "FAQ", options);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', value = {
+            "네, 고마워요|예", "성인, 고마워요|성인", "아니요, 고마워 바라야 😊|아니요"})
+    void mixedThanksPreservesTheSelectedCondition(String raw, String expected) {
+        var resolution = new Resolution(waiting("age", List.of("예", "아니요", "성인")), Map.of());
+        var result = FaqClarificationAnswers.fill(resolution,
+                com.telme.chat.service.ConsultationQuestion.extract(raw));
+        assertThat(result.updates().get("age").value()).isEqualTo(expected);
+    }
+
     @Test
     @DisplayName("선택지와 똑같은 답이면 대기 중인 조건을 채운다")
     void 선택지를_누르면_채운다() {
