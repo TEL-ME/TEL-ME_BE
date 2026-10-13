@@ -26,7 +26,19 @@ import org.mockito.ArgumentCaptor;
 class AnswerPromptTemplatesTest {
 
     @Test
-    @DisplayName("일반 관계 제한 두 줄 외에는 v3 전문의 역할·거절·출력 계약을 유지한다")
+    void promptUsesConsultationBodyWhileRequestKeepsOriginal() {
+        String original = "안녕 바라야, 유심 재발급 비용 알려줘. 고마워";
+        var request = new AnswerRequest(1L, original, Map.of(), List.of());
+
+        String prompt = AnswerPromptTemplates.buildUserPrompt(request, "유심 재발급 비용은 7,700원입니다.");
+
+        assertThat(prompt).contains("[고객 질문]\n유심 재발급 비용 알려줘.");
+        assertThat(prompt).doesNotContain("바라야", "고마워", "[문맥을 반영한 현재 질문]");
+        assertThat(request.userQuery()).isEqualTo(original);
+    }
+
+    @Test
+    @DisplayName("페르소나와 친근한 거절 문구 외에는 기존 근거·출력 계약을 유지한다")
     void 일반_관계_제한_외_v3_전문을_유지한다() throws Exception {
         String baseline;
         try (var input = getClass().getResourceAsStream("/rag/prompt-relations/rag-answer-v3.txt")) {
@@ -47,9 +59,14 @@ class AnswerPromptTemplatesTest {
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(channelAddition);
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
                 .replace(relationAddition, "")
-                .replace(channelAddition, "")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.5-multiturn");
-        assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
+                .replace(channelAddition, "")
+                .replace(com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS, "")
+                .replace("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요",
+                        "안내드릴 수 있는 정보가 없습니다")).isEqualTo(baseline);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT)
+                .contains(com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS);
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.6-persona");
+        assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요.");
     }
 
     @Test
@@ -82,7 +99,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.5-multiturn");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.6-persona");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");

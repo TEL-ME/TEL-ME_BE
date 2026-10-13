@@ -1,5 +1,7 @@
 package com.telme.consult.service;
 
+import static com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -240,7 +242,7 @@ class MultiturnChatIntegrationTest {
         answer.set("재발급 비용은 99,999원입니다.");
         send("그건 비용이 얼마야?");
         JsonNode output = history().path("messages").get(3);
-        assertThat(output.path("content").asText()).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
+        assertThat(output.path("content").asText()).isEqualTo(NO_EVIDENCE_ANSWER);
         assertThat(output.path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
     }
 

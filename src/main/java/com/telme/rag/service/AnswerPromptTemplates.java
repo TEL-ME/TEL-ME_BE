@@ -1,5 +1,6 @@
 package com.telme.rag.service;
 
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.service.ChatTokenEstimator;
@@ -11,10 +12,11 @@ public final class AnswerPromptTemplates {
     private AnswerPromptTemplates() {}
 
     // 프롬프트 2번 규칙의 문구와 동일하게 유지
-    public static final String NO_EVIDENCE_ANSWER = "안내드릴 수 있는 정보가 없습니다.";
+    public static final String NO_EVIDENCE_MESSAGE = "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요";
+    public static final String NO_EVIDENCE_ANSWER = NO_EVIDENCE_MESSAGE + ".";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.5-multiturn";
+    public static final String PROMPT_VERSION = "rag-answer-v4.6-persona";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
@@ -25,7 +27,7 @@ public final class AnswerPromptTemplates {
         1. 근거에 없는 내용은 절대 만들어내지 마십시오. 추측하거나 일반 상식으로 채우지 마십시오.
            FAQ 답변(A)에 각각 나열된 사실을 임의로 원인·결과, 비교 우위, 포함 관계로 연결하지 마십시오.
            해당 관계가 답변(A)에 명시된 경우에만 설명하십시오.
-        2. 근거로 답할 수 없는 질문이면 "안내드릴 수 있는 정보가 없습니다" 한 문장만 출력하고 멈추십시오.
+        2. 근거로 답할 수 없는 질문이면 "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요" 한 문장만 출력하고 멈추십시오.
            사과, 이유 설명, 다른 곳 안내를 덧붙이지 마십시오.
         3. 근거에 없는 웹사이트, 페이지, 고객센터, 전화번호를 답변에 쓰지 마십시오.
            신청하거나 처리하는 곳은 근거에 적힌 단어를 그대로 쓰고, 브랜드나 페이지 이름을 덧붙이지 마십시오.
@@ -40,8 +42,8 @@ public final class AnswerPromptTemplates {
         9. 조건에 영문 코드가 있어도 답변에는 쓰지 말고 자연스러운 우리말로 바꿔 쓰십시오.
         10. "더 궁금한 점 있으시면", "문의해 주세요" 같은 맺음말을 붙이지 마십시오.
         11. FAQ 답변(A)에 없는 수치·속도·조건은 고객 질문이나 FAQ 질문에 있더라도 사실로 단정하지 마십시오.
-            답변(A)에 직접 근거가 없으면 "안내드릴 수 있는 정보가 없습니다"라고 답하십시오.
-        """;
+            답변(A)에 직접 근거가 없으면 "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요"라고 답하십시오.
+        """ + com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS;
 
     public static final String MULTITURN_RULES = """
 
@@ -66,13 +68,14 @@ public final class AnswerPromptTemplates {
 
     public static String buildUserPrompt(AnswerRequest request, String context, int historyBudget) {
         String base = baseUserPrompt(request, context);
-        if (request.chatContext() == null && request.resolvedQuery().equals(request.userQuery())) {
+        if (request.chatContext() == null && ConsultationQuestion.extract(request.resolvedQuery())
+                .equals(ConsultationQuestion.extract(request.userQuery()))) {
             return base;
         }
         return "<conversation_data>\n" + ChatContextFormatter.format(
                 request.chatContext(), historyBudget, new ChatTokenEstimator())
                 + "\n</conversation_data>\n\n" + base
-                + "\n\n[문맥을 반영한 현재 질문]\n" + request.resolvedQuery();
+                + "\n\n[문맥을 반영한 현재 질문]\n" + ConsultationQuestion.extract(request.resolvedQuery());
     }
 
     public static String baseUserPrompt(AnswerRequest request, String context) {
@@ -84,7 +87,8 @@ public final class AnswerPromptTemplates {
             %s
 
             [고객 질문]
-            %s""".formatted(context, formatConditions(request.conditions(), request.conditionLabels()), request.userQuery());
+            %s""".formatted(context, formatConditions(request.conditions(), request.conditionLabels()),
+                    ConsultationQuestion.extract(request.userQuery()));
     }
 
     public static String systemPromptFor(String question) {

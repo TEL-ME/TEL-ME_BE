@@ -47,22 +47,23 @@ public class AnswerGuard {
         if (answer == null) {
             return "";
         }
-        int found = answer.indexOf(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        int found = answer.indexOf(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE);
         if (found < 0) {
             return answer;
         }
-        return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_ANSWER.length()).strip();
+        return answer.substring(0, found + AnswerPromptTemplates.NO_EVIDENCE_MESSAGE.length()).strip() + ".";
     }
 
     // 답변 불가 문구로 시작해도 뒤에 근거 문장과 겹치는 설명이 있으면 그 문장만 남긴다. 근거와 겹치지 않는 문장은 잘라낸다
     public String trimAfterNoEvidence(String answer, String context) {
         String trimmed = trimAfterNoEvidence(answer);
-        String phrase = AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        String phrase = AnswerPromptTemplates.NO_EVIDENCE_MESSAGE;
         if (answer == null || context == null || !answer.strip().startsWith(phrase)) {
             return trimmed;
         }
         StringBuilder grounded = new StringBuilder();
-        for (String sentence : SENTENCE.split(answer.strip().substring(phrase.length()).strip())) {
+        String remaining = answer.strip().substring(phrase.length()).replaceFirst("^[.!?]+\\s*", "").strip();
+        for (String sentence : SENTENCE.split(remaining)) {
             if (!sentence.isBlank() && longestCommonRun(withoutGenericPhrases(compactText(sentence)), compactText(context)) >= MIN_GROUNDED_RUN) {
                 grounded.append(grounded.isEmpty() ? "" : " ").append(sentence.strip());
             }
@@ -125,7 +126,7 @@ public class AnswerGuard {
             "(?:안내(?:된|드린)?\\s*(?:정보|내용)(?:에는|에)?\\s*(?:없(?:습니다|어요)?|포함되지\\s*않(?:습니다|아요)?)|"
                     + "근거(?:에는|에서)?\\s*(?:없(?:습니다|어요)?|확인되지\\s*않(?:습니다|아요)?|찾을\\s*수\\s*없(?:습니다|어요)?)|"
                     + "(?:확인|알)(?:할)?\\s*수\\s*없(?:습니다|어요)?|"
-                    + "(?:확인|안내|답변)(?:하기|드리기)?\\s*어렵(?:습니다|어요)?|"
+                    + "(?:확인|안내|답변)(?:하기|드리기)?\\s*(?:어렵(?:습니다|어요)?|어려워요)|"
                     + "명시되어\\s*있지\\s*않(?:습니다|아요)?|정보가\\s*없(?:습니다|어요)?)"
                     + "[.!?]?$");
     private static final Pattern USER_VALUE_ASSERTION = Pattern.compile(
@@ -139,7 +140,7 @@ public class AnswerGuard {
             "(?:(?:제공|안내)된\\s*(?:정보|내용)(?:에는|에)?.*"
                     + "(?:없(?:습니다|어요)?|포함되어\\s*있지\\s*않(?:습니다|아요)?|확인되지\\s*않(?:습니다|아요)?)|"
                     + "근거(?:에는|에서)?.*(?:없(?:습니다|어요)?|확인되지\\s*않(?:습니다|아요)?|찾을\\s*수\\s*없(?:습니다|어요)?)|"
-                    + "(?:확인|안내|답변)(?:하기|드리기)?\\s*어렵(?:습니다|어요)?)");
+                    + "(?:확인|안내|답변)(?:하기|드리기)?\\s*(?:어렵(?:습니다|어요)?|어려워요))");
     private static final Pattern NEGATIVE_SCOPE = Pattern.compile(
             "(?:(?:발급|제공|지원|이용|적용|조회)(?:되지|할 수 없)|"
                     + "범위\\s*밖|대상이\\s*아니|불가)");

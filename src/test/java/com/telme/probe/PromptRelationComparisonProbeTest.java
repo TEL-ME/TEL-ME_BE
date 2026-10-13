@@ -101,7 +101,7 @@ class PromptRelationComparisonProbeTest {
         assertThat(before.systemPrompt()).isEqualTo(baseline);
         assertThat(before.promptVersion()).isEqualTo("rag-answer-v3");
         assertThat(after.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(after.promptVersion()).isEqualTo("rag-answer-v4.5-multiturn");
+        assertThat(after.promptVersion()).isEqualTo("rag-answer-v4.6-persona");
         assertThat(converter.toChatRequest(before, true).options())
                 .isEqualTo(converter.toChatRequest(after, true).options());
         assertThat(converter.toChatRequest(before, true).model())
@@ -159,15 +159,15 @@ class PromptRelationComparisonProbeTest {
     }
 
     @Test
-    @DisplayName("마침표 없는 거절과 거절이 섞인 답변의 원래 상태를 유지한다")
+    @DisplayName("마침표 없는 거절은 정규 안내로 판정하고 혼합 거절은 별도 관찰한다")
     void 거절_문구와_혼합_답변을_구분한다() throws Exception {
         assertThat(PromptRelationComparisonProbe.runCase(
-                row(), emitting("안내드릴 수 있는 정보가 없습니다"), "p", "v", false))
+                row(), emitting("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요"), "p", "v", false))
                 .containsEntry("observed_stage", "MODEL_REFUSAL")
-                .containsEntry("status", "GROUNDED");
+                .containsEntry("status", "NO_EVIDENCE");
         // 프로브는 관찰만 수행하며 원래 Guard·Judge 판정을 변경하지 않는다.
         assertThat(PromptRelationComparisonProbe.runCase(
-                row(), emitting("7,700원입니다. 안내드릴 수 있는 정보가 없습니다."), "p", "v", false))
+                row(), emitting("7,700원입니다. 지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요."), "p", "v", false))
                 .containsEntry("observed_stage", "UNCONFIRMED_MIXED_REFUSAL");
     }
 
