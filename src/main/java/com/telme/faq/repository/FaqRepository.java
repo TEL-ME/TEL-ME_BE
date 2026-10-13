@@ -63,5 +63,5 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
             @Param("statuses") Collection<Faq.Status> statuses,
             Pageable pageable);
     
-    Optional<Faq> findByFaqIdAndStatus(Long faqId, Faq.Status stauts);
+    Optional<Faq> findByFaqIdAndStatus(Long faqId, Faq.Status status);
 }
