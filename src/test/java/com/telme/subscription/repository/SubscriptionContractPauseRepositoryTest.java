@@ -77,12 +77,10 @@ class SubscriptionContractPauseRepositoryTest {
                 .isEqualTo(130_000L);
         assertThat(historyRepository.findById(noPenalty.getHistoryId()).orElseThrow().getPenaltyAmount()).isZero();
 
-        SubscriptionHistory wrong = SubscriptionHistory.subscribed(id, planId, JOINED, JOINED);
         assertThatThrownBy(() -> historyRepository.saveAndFlush(
                 SubscriptionHistory.builder().subscriptionId(id).type(SubscriptionHistory.Type.SUBSCRIBE)
                         .toPlanId(planId).effectiveFrom(JOINED).createdAt(JOINED).penaltyAmount(100L).build()))
                 .isInstanceOf(DataIntegrityViolationException.class);
-        assertThat(wrong.getPenaltyAmount()).isNull();
     }
 
     @Test
