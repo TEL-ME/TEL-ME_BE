@@ -113,11 +113,17 @@ public class RuleBasedRoutingFallback {
     }
 
     private static final List<ServiceTypeRule> SERVICE_TYPE_RULES = List.of(
-        new ServiceTypeRule("USIM_REISSUE", Pattern.compile("유심.*변경|유심.*교체|유심.*재발급|eSIM|이심")),
+        new ServiceTypeRule("USIM_REISSUE", Pattern.compile("(?:유심|USIM).*(?:변경|교체|재발급)|eSIM|이심",
+                Pattern.CASE_INSENSITIVE)),
         new ServiceTypeRule("NAME_CHANGE",  Pattern.compile("명의.*변경")),
         new ServiceTypeRule("PORT_IN",      Pattern.compile("번호.*이동|통신사.*변경")),
         new ServiceTypeRule("NEW_LINE",     Pattern.compile("신규.*개통|새.*번호"))
     );
+
+    // 매장, 대리점, 지점처럼 매장 자체를 가리키는 낱말이 있는지. 매장 요청 여부의 최소 근거로 쓴다.
+    static boolean mentionsStore(String text) {
+        return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
+    }
 
     public LlmRoutingPayload classify(String text) {
         if (text == null || text.isBlank()) {

@@ -34,7 +34,7 @@ import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
-import com.telme.consult.service.ConsultChatProcessingService.FaqTurn;
+import com.telme.consult.service.ConsultChatProcessingService.ConsultTurn;
 import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
@@ -278,8 +278,8 @@ class ChatOutputSafetyIntegrationTest {
         long secondId = newConsult(sessionId, command.inputMessageId(), unsafeQuery, 2);
         var first = consult.prepareTurn(sessionId, consultId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
         var second = consult.prepareTurn(sessionId, secondId, Purpose.GENERAL_FAQ, Map.of(), LocationStatus.MISSING);
-        when(analyzer.analyze(command)).thenReturn(AnalyzedTurn.multipleFaq(List.of(
-                new FaqTurn(first, QUERY), new FaqTurn(second, unsafeQuery))));
+        when(analyzer.analyze(command)).thenReturn(AnalyzedTurn.compound(List.of(
+                new ConsultTurn(first, QUERY), new ConsultTurn(second, unsafeQuery))));
         processor.request(command);
         assertBlocked();
         assertThat(jdbc.queryForList(

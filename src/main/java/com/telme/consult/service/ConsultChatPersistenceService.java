@@ -11,6 +11,7 @@ import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.exception.ConsultErrorCode;
 import com.telme.consult.repository.JdbcConsultStateStore;
 import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
+import com.telme.consult.service.ConsultChatProcessingService.ConsultTurn;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.rag.dto.res.AnswerResult.AnswerSource;
@@ -87,6 +88,20 @@ public class ConsultChatPersistenceService {
         ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
         if (state.outputMessage() == null) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        return state;
+    }
+
+    // 나눠 보내기 안내로 끝난 복합 질문은 하위 상담을 처리하지 않으므로, 안내 저장과 같은 트랜잭션에서 상담을 취소한다.
+    @Transactional
+    public ChatExecutionState persistSplitGuidance(
+            long executionId, long sessionId, ChatAnswer answer, List<ConsultService.PreparedTurn> turns) {
+        if (turns.isEmpty() || turns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+            throw new IllegalArgumentException("취소할 하위 상담이 올바르지 않습니다.");
+        }
+        ChatExecutionState state = persistDirectAnswer(executionId, sessionId, answer);
+        for (ConsultService.PreparedTurn turn : turns) {
+            stateStore.cancel(sessionId, turn.decision().consultRequestId(), turn.expectedVersion());
         }
         return state;
     }
@@ -387,6 +402,35 @@ public class ConsultChatPersistenceService {
         }
         for (ConsultService.PreparedTurn prepared : preparedTurns) {
             persistReadyTurn(executionId, prepared, null);
+        }
+    }
+
+    // 조건을 채운 요청과 나머지 요청을 함께 저장한 뒤 답변 생성을 시작한다.
+    @Transactional
+    public void persistCompoundReadyTurns(long executionId, long sessionId, List<ConsultTurn> turns) {
+        validateCompound(sessionId, turns);
+        for (ConsultTurn turn : turns) {
+            persistReadyTurn(executionId, turn.preparation().prepared(), turn.answeredField());
+        }
+    }
+
+    private void validateCompound(long sessionId, List<ConsultTurn> turns) {
+        if (turns == null || turns.size() < 2 || turns.size() > 3 || turns.stream().anyMatch(turn -> turn == null
+                || turn.preparation().waitingForReply() || turn.preparation().prepared() == null
+                || turn.preparation().prepared().sessionId() != sessionId)
+                || turns.stream().map(turn -> turn.preparation().prepared().decision().consultRequestId())
+                        .distinct().count() != turns.size()) {
+            throw new IllegalArgumentException("같은 채팅방의 서로 다른 하위 상담 요청이 필요합니다.");
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(turns.size(), "?"));
+        var parameters = new java.util.ArrayList<Object>();
+        turns.forEach(turn -> parameters.add(turn.preparation().prepared().decision().consultRequestId()));
+        parameters.add(sessionId);
+        var origins = jdbc.queryForList("SELECT origin_message_id FROM consult_requests"
+                + " WHERE consult_request_id IN (" + placeholders + ") AND session_id=?",
+                Long.class, parameters.toArray());
+        if (origins.size() != turns.size() || origins.stream().distinct().count() != 1) {
+            throw new IllegalArgumentException("같은 원문에서 만든 하위 상담 요청이 필요합니다.");
         }
     }
 }

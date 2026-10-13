@@ -113,7 +113,7 @@ class ConsultNoAnswerSuggestionProcessingTest {
 
     private ChatAnswer processMultiple(ChatAnswer first, ChatAnswer second) {
         prepareEvents();
-        var processor = processor(ignored -> AnalyzedTurn.multipleFaq(List.of(
+        var processor = processor(ignored -> AnalyzedTurn.compound(List.of(
                         faqTurn(11L, "신고 절차"), faqTurn(12L, "회수 방법"))),
                 input -> GeneratedAnswer.withoutSources(input.originalUserQuery().equals("신고 절차") ? first : second));
 
@@ -142,9 +142,9 @@ class ConsultNoAnswerSuggestionProcessingTest {
                 Map.of(), null, null, DialogueDecision.MessageOrigin.NONE);
     }
 
-    private static ConsultChatProcessingService.FaqTurn faqTurn(long requestId, String queryText) {
+    private static ConsultChatProcessingService.ConsultTurn faqTurn(long requestId, String queryText) {
         var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision(requestId));
-        return new ConsultChatProcessingService.FaqTurn(
+        return new ConsultChatProcessingService.ConsultTurn(
                 new ConsultService.PreparationResult(prepared, null), queryText);
     }
 
