@@ -163,7 +163,7 @@ class QueryRoutingAnalysisProviderTest {
     }
 
     @Test
-    void compoundQuestionIsNotPartiallyProcessed() {
+    void compoundQuestionKeepsFaqAndStoreRequestsInOrder() {
         var context = new Context(3L, 7L, "요금과 매장을 알려줘", List.of());
         var message =
                 ChatMessage.builder()
@@ -191,9 +191,7 @@ class QueryRoutingAnalysisProviderTest {
                                 Map.of(),
                                 List.of(faq, store)));
 
-        assertThatThrownBy(() -> provider.analyze(context))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("단일 상담");
+        assertThat(provider.analyze(context).compoundQueries()).containsExactly(faq, store);
     }
 
     @Test
@@ -216,7 +214,7 @@ class QueryRoutingAnalysisProviderTest {
 
         AnalysisResult result = provider.analyze(context);
 
-        assertThat(result.faqQueries()).containsExactly(first, second);
+        assertThat(result.compoundQueries()).containsExactly(first, second);
         assertThat(result.initialQuery()).isNull();
     }
 

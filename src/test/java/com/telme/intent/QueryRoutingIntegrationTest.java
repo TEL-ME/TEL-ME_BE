@@ -186,12 +186,14 @@ class QueryRoutingIntegrationTest {
                   "order": 1,
                   "intent": "STORE",
                   "queryText": "강남역점 위치 안내",
+                  "requestQuote": "강남역점 위치 알려주고",
                   "conditions": { "location": "강남역점" }
                 },
                 {
                   "order": 2,
                   "intent": "STORE",
                   "queryText": "강남역점 주차 가능 여부",
+                  "requestQuote": "주차 가능한지도 알려줘",
                   "conditions": { "location": "강남역점" }
                 }
               ]
