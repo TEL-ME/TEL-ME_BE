@@ -26,8 +26,13 @@ import java.util.regex.Pattern;
  */
 @Component
 public final class ChatInputInspector {
+    private static final String MASK = "***";
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
+    private static final Pattern NUMBER_UNIT = Pattern.compile(
+            "^\\s*(?:원|만원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
+                    + "(?:$|[\\s\\p{Punct}]|(?:은|는|이|가|을|를|에|도|만|부터|까지|으로|마다|입니다|이에요|예요)"
+                    + "(?:$|[\\s\\p{Punct}]))", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUOTED = Pattern.compile("['\"‘“]([^'\"’”]{1,60})['\"’”]");
     private static final Pattern MEANING =
             Pattern.compile(
@@ -132,7 +137,8 @@ public final class ChatInputInspector {
             throw new IllegalArgumentException("검사할 입력이 필요합니다.");
         }
         List<Detection> detections = new ArrayList<>();
-        String safe = mask(input, detections);
+        MaskedContent maskedContent = mask(input, detections, true);
+        String safe = maskedContent.content();
         String normalized = normalize(safe);
         List<Span> exemptions = exemptions(normalized);
         for (CompiledRule compiled : rules) {
@@ -157,15 +163,14 @@ public final class ChatInputInspector {
                 break;
             }
         }
-        String remaining =
-                safe.replace("[주민등록번호]", "")
-                        .replace("[카드번호]", "")
-                        .replaceAll("[\\s\\p{Punct}]", "");
+        String remaining = safe.replaceAll("[\\s\\p{Punct}]", "");
         boolean masked =
                 detections.stream()
                         .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
         boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
-        return new InputInspection(safe, detections.stream().distinct().toList(), hasQuestion);
+        return new InputInspection(
+                safe, detections.stream().distinct().toList(), hasQuestion,
+                maskedContent.fingerprintContent());
     }
 
     private boolean hasRemainingQuestion(String remaining) {
@@ -181,7 +186,12 @@ public final class ChatInputInspector {
         return false;
     }
 
-    private String mask(String input, List<Detection> detections) {
+    /** 이전 배포에서 만든 요청 영수증 비교에만 사용하며 감지한 원문 번호를 반환하지 않는다. */
+    String legacyFingerprintContent(String input) {
+        return mask(input, new ArrayList<>(), false).fingerprintContent();
+    }
+
+    private MaskedContent mask(String input, List<Detection> detections, boolean preserveNumericConditions) {
         List<Span> spans = new ArrayList<>();
         // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문에서 치환할 위치를 보존한다.
         String numeric = numericForm(input);
@@ -194,8 +204,20 @@ public final class ChatInputInspector {
         }
         Matcher card = CARD.matcher(numeric);
         while (card.find()) {
+            int candidateEnd = card.end();
+            String candidateDigits = numeric.substring(card.start(), candidateEnd).replaceAll("[ -]", "");
+            boolean completeLongestCard = candidateDigits.length() == 19 && validCard(candidateDigits);
+            if (preserveNumericConditions && !completeLongestCard
+                    && NUMBER_UNIT.matcher(numeric.substring(candidateEnd)).find()) {
+                int separator = numeric.lastIndexOf(' ', candidateEnd - 1);
+                if (separator > card.start()
+                        && validCard(numeric.substring(card.start(), separator).replaceAll("[ -]", ""))) {
+                    // 유효한 번호 뒤에 공백으로 구분된 금액·기간까지 이어 붙여 가리지 않는다.
+                    candidateEnd = separator;
+                }
+            }
             // 뒤의 별도 숫자까지 붙은 후보가 검증에 실패해도 원래 번호의 그룹 경계를 확인한다.
-            for (int end = card.end(); end > card.start(); end--) {
+            for (int end = candidateEnd; end > card.start(); end--) {
                 if (end < card.end() && numeric.charAt(end) != ' ' && numeric.charAt(end) != '-') {
                     continue;
                 }
@@ -209,15 +231,20 @@ public final class ChatInputInspector {
         }
         spans.sort(Comparator.comparingInt(Span::start));
         StringBuilder result = new StringBuilder();
+        StringBuilder fingerprintContent = new StringBuilder();
         int cursor = 0;
         for (Span span : spans) {
             if (span.start() < cursor) {
                 continue;
             }
-            result.append(input, cursor, span.start()).append(span.replacement());
+            result.append(input, cursor, span.start()).append(MASK);
+            // 기존 요청 해시와 호환되는 유형 문구만 유지한다. 원문 번호는 어느 결과에도 넣지 않는다.
+            fingerprintContent.append(input, cursor, span.start()).append(span.replacement());
             cursor = span.end();
         }
-        return result.append(input, cursor, input.length()).toString();
+        return new MaskedContent(
+                result.append(input, cursor, input.length()).toString(),
+                fingerprintContent.append(input, cursor, input.length()).toString());
     }
 
     private String numericForm(String input) {
@@ -381,4 +408,6 @@ public final class ChatInputInspector {
     private record CompiledRule(Rule rule, Pattern pattern) {}
 
     private record Span(int start, int end, String replacement) {}
+
+    private record MaskedContent(String content, String fingerprintContent) {}
 }

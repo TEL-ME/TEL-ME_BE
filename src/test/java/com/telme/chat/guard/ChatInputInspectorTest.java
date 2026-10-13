@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ChatInputInspectorTest {
@@ -214,7 +215,9 @@ class ChatInputInspectorTest {
     void 개인정보를_가리고_질문을_유지한다() {
         String input = "주민등록번호 990101-1234567, 카드 4111-1111-1111-1111인데 유심 비용 알려주세요";
         InputInspection result = inspector.inspect(input);
-        assertThat(result.content()).isEqualTo("주민등록번호 [주민등록번호], 카드 [카드번호]인데 유심 비용 알려주세요");
+        assertThat(result.content()).isEqualTo("주민등록번호 ***, 카드 ***인데 유심 비용 알려주세요");
+        assertThat(result.fingerprintContent())
+                .isEqualTo("주민등록번호 [주민등록번호], 카드 [카드번호]인데 유심 비용 알려주세요");
         assertThat(result.wasMasked()).isTrue();
         assertThat(result.hasProfanity()).isFalse();
         assertThat(result.hasQuestion()).isTrue();
@@ -224,12 +227,69 @@ class ChatInputInspectorTest {
                 .containsExactly("PII_RESIDENT_NUMBER", "PII_PAYMENT_CARD");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "990101-1234567", "9901011234567", "９９０１０１－１２３４５６７",
+        "4111-1111-1111-1111", "4111 1111 1111 1111", "4111111111111111",
+        "378282246310005", "4000000000000000006", "2221000000000009"
+    })
+    @DisplayName("지원 번호는 자릿수·구분자와 무관하게 숫자를 남기지 않고 고정 별표로 바꾼다")
+    void 번호_전체를_같은_별표로_가린다(String number) {
+        var result = inspector.inspect(number);
+
+        assertThat(result.content()).isEqualTo("***");
+        assertThat(result.fingerprintContent()).isIn("[주민등록번호]", "[카드번호]");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.toString()).doesNotContain(number, result.fingerprintContent());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "990101-1234567 유심 재발급은 어떻게 해요? | *** 유심 재발급은 어떻게 해요?",
+        "로밍 신청 방법 알려주세요 4111111111111111 | 로밍 신청 방법 알려주세요 ***",
+        "65세이고 주민번호 990101-1234567인데 시니어 요금제 가입 가능한가요?"
+                + " | 65세이고 주민번호 ***인데 시니어 요금제 가입 가능한가요?",
+        "제 카드번호는 4111111111111111이고 이번 달 요금 123원 납부 방법은요?"
+                + " | 제 카드번호는 ***이고 이번 달 요금 123원 납부 방법은요?",
+        "주민번호 990101-1234567 카드 4111111111111111 유심 재발급"
+                + " | 주민번호 *** 카드 *** 유심 재발급"
+    })
+    @DisplayName("마스킹 전후에 있는 문의·나이·금액·기간 조건은 그대로 보존한다")
+    void 번호_앞뒤의_문의와_조건을_보존한다(String input, String expected) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(expected);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "65세인데 시니어 요금제 가입 가능한가요?",
+        "생년월일은 1960-01-01이고 명의변경 방법이 궁금해요",
+        "주민등록번호 변경 후 명의변경은 어떻게 하나요?",
+        "주민번호 없이 유심 재발급 가능한가요?",
+        "이번 달 요금은 123원이고 약정은 18개월이에요"
+    })
+    @DisplayName("민감번호가 없는 정상 숫자와 주민번호 관련 상담 조건을 삭제하지 않는다")
+    void 정상_상담_조건을_마스킹하지_않는다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(input);
+        assertThat(result.fingerprintContent()).isEqualTo(input);
+        assertThat(result.wasMasked()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
     @Test
     @DisplayName("개인정보와 욕설이 섞여도 안전한 내용과 욕설 사유만 반환한다")
     void 개인정보를_가린_욕설_입력을_반환한다() {
         InputInspection result = inspector.inspect("씨발 카드 4111111111111111 요금 왜 이래");
         assertThat(result.hasProfanity()).isTrue();
-        assertThat(result.content()).isEqualTo("씨발 카드 [카드번호] 요금 왜 이래");
+        assertThat(result.content()).isEqualTo("씨발 카드 *** 요금 왜 이래");
         assertThat(result.content()).doesNotContain("4111111111111111");
     }
 
@@ -254,20 +314,46 @@ class ChatInputInspectorTest {
     @DisplayName("전각 숫자와 지원 구분자도 원문 위치를 유지하면서 마스킹한다")
     void 전각_개인정보도_마스킹한다() {
         var result = inspector.inspect("카드 ４１１１－１１１１－１１１１－１１１１ 요금 문의");
-        assertThat(result.content()).isEqualTo("카드 [카드번호] 요금 문의");
+        assertThat(result.content()).isEqualTo("카드 *** 요금 문의");
         assertThat(result.hasQuestion()).isTrue();
         var resident = inspector.inspect("주민등록번호 ９９０１０１–１２３４５６７ 유심 비용");
-        assertThat(resident.content()).isEqualTo("주민등록번호 [주민등록번호] 유심 비용");
+        assertThat(resident.content()).isEqualTo("주민등록번호 *** 유심 비용");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"123원 요금 문의", "500원 요금 문의", "17개 문의", "123번 문의"})
+    @ValueSource(strings = {
+        "123원 요금 문의", "500원 요금 문의", "17개 문의", "123번 문의",
+        "18개월 약정 문의", "27개월 약정 문의", "18원 요금 문의", "18 원 요금 문의", "18GB 요금 문의"
+    })
     @DisplayName("카드번호 뒤의 별도 숫자 때문에 유효한 카드번호 마스킹을 놓치지 않는다")
     void 카드번호_뒤의_금액과_수량을_유지한다(String tail) {
         var result = inspector.inspect("카드 4111111111111111 " + tail);
         assertThat(result.wasMasked()).isTrue();
-        assertThat(result.content()).isEqualTo("카드 [카드번호] " + tail);
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
         assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"원 납부 문의", "개인정보를 가려주세요", "원하는 요금제 문의", "일반 요금 문의", "세부 정보 문의"})
+    @DisplayName("유효한 19자리 카드의 끝 그룹이나 단위와 비슷한 정상 단어를 숫자 조건으로 잘라 남기지 않는다")
+    void 긴_카드번호와_단위_유사_단어의_경계를_보존한다(String tail) {
+        // 전체 19자리와 앞의 16자리가 모두 Luhn을 통과하는 합성 번호다.
+        var result = inspector.inspect("카드 4111111111111111 003 " + tail);
+
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
+        assertThat(result.content()).doesNotContain("003", "4111");
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.wasMasked()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"개인정보를 가려주세요", "원하는 요금제 문의", "일반 요금 문의", "세부 정보 문의"})
+    @DisplayName("17~18자리 카드 뒤 일반 단어도 숫자 단위로 오인하지 않는다")
+    void 긴_카드_뒤의_일반_단어를_단위로_오인하지_않는다(String tail) {
+        var result = inspector.inspect("카드 4111111111111111 18 " + tail);
+
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
+        assertThat(result.content()).doesNotContain("18", "4111");
     }
 
     @Test
@@ -301,7 +387,7 @@ class ChatInputInspectorTest {
     void 이_시리즈_카드번호를_마스킹한다(String number) {
         var result = inspector.inspect("카드 " + number + " 요금 문의");
         assertThat(result.wasMasked()).isTrue();
-        assertThat(result.content()).isEqualTo("카드 [카드번호] 요금 문의");
+        assertThat(result.content()).isEqualTo("카드 *** 요금 문의");
     }
 
     @ParameterizedTest

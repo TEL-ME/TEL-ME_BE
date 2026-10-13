@@ -49,6 +49,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,7 +69,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -344,6 +350,185 @@ class ChatInputGuardIntegrationTest {
         assertThat(count("chat_input_guard_events")).isEqualTo(1);
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "주민번호 990101-1234567 납부 문의 | 주민번호 [주민등록번호] 납부 문의",
+        "카드 4111111111111111 납부 문의 | 카드 [카드번호] 납부 문의",
+        "990101-1234567 4111111111111111 납부 문의 | [주민등록번호] [카드번호] 납부 문의"
+    })
+    @DisplayName("유형 문구를 사용하던 배포 전 요청도 같은 요청 ID로 재전송하면 원래 실행을 반환한다")
+    void 기존_마스킹_요청의_해시와_재전송을_유지한다(String input, String legacyContent) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 201));
+        long eid = first.at("/result/executionId").asLong();
+        long messageId = first.at("/result/messageId").asLong();
+        waitCompleted(eid);
+        String legacyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + legacyContent + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        assertThat(jdbc.queryForObject(
+                "SELECT request_fingerprint FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo(legacyHash);
+
+        // 독립 검증 DB에서만 배포 전 저장된 마스킹 문구와 해시를 재현한다.
+        jdbc.update("UPDATE chat_input_guard_events SET sanitized_content=?,request_fingerprint=?"
+                + " WHERE session_id=?", legacyContent, legacyHash, sid);
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", legacyContent, messageId);
+
+        var replay = body(request(sid, identity, input, key, 201));
+        assertThat(replay).isEqualTo(first);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText())
+                .isEqualTo(legacyContent);
+        request(sid, identity, input + " 다른 문의", key, 409);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("이전 검사에서 카드 뒤 기간까지 가렸던 요청 영수증도 재전송 시 중복 접수하지 않는다")
+    void 이전_숫자_경계의_요청_영수증도_재전송한다() throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        String input = "카드 4111111111111111 18개월 약정 문의";
+        var first = body(request(sid, identity, input, key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        String legacyContent = "카드 [카드번호]개월 약정 문의";
+        String legacyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + legacyContent + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        jdbc.update("UPDATE chat_input_guard_events SET request_fingerprint=? WHERE session_id=?", legacyHash, sid);
+
+        assertThat(body(request(sid, identity, input, key, 201))).isEqualTo(first);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("새로 저장한 요청은 카드 뒤 기간을 해시에 보존해 같은 요청 ID의 다른 조건을 거절한다")
+    void 새_요청_해시는_마스킹_뒤_정상_조건을_구분한다() throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, "카드 4111111111111111 18개월 약정 문의", key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        request(sid, identity, "카드 4111111111111111 27개월 약정 문의", key, 409);
+
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("유효한 19자리 카드 끝자리도 채팅·감지 이력·분석 입력에 남기지 않는다")
+    void 긴_카드의_끝자리를_상담_조건으로_남기지_않는다() throws Exception {
+        long sid = session(identity);
+        var accepted = body(request(sid, identity,
+                "카드 4111111111111111 003 개인정보를 가려주세요", UUID.randomUUID(), 201));
+        waitCompleted(accepted.at("/result/executionId").asLong());
+        assertThat(analyzedContent.get()).isEqualTo("카드 *** 개인정보를 가려주세요");
+        assertThat(history(sid).toString()).doesNotContain("4111", "003");
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo("카드 *** 개인정보를 가려주세요");
+    }
+
+    @Test
+    @DisplayName("표시가 같은 별표여도 서로 다른 개인정보 유형에 요청 ID를 재사용할 수 없다")
+    void 같은_별표_표시로_다른_유형의_요청을_허용하지_않는다() throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        request(sid, identity, "990101-1234567", key, 200);
+        request(sid, identity, "4111111111111111", key, 409);
+
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "990101-1234567", "제 주민번호는 990101-1234567입니다",
+        "4111111111111111", "제 카드번호는 4111111111111111입니다",
+        "주민번호 990101-1234567, 카드번호 4111111111111111"
+    })
+    @DisplayName("번호와 소개만 있는 입력은 별표로 저장하고 검색·생성 없이 재입력을 안내한다")
+    void 별표만_남는_요청으로_상담을_시작하지_않는다(String input) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var result = body(request(sid, identity, input, key, 200));
+        assertThat(result.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(result.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(result.at("/result").has("executionId")).isFalse();
+        assertThat(body(request(sid, identity, input, key, 200))).isEqualTo(result);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).contains("***");
+        assertThat(history(sid).toString()).doesNotContain("990101", "1234567", "4111");
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "990101-1234567 유심 재발급 방법 알려주세요 | *** 유심 재발급 방법 알려주세요",
+        "로밍 신청 방법 알려주세요 4111111111111111 | 로밍 신청 방법 알려주세요 ***",
+        "주민번호 990101-1234567 카드 4111111111111111 18개월 약정 문의"
+                + " | 주민번호 *** 카드 *** 18개월 약정 문의"
+    })
+    @DisplayName("주민번호·카드번호와 함께 보낸 문의는 별표 상태로 접수·분석·저장·조회된다")
+    void 별표로_가린_문의가_정상_접수_계약을_유지한다(String input, String expected) throws Exception {
+        long sid = session(identity);
+        var accepted = body(request(sid, identity, input, UUID.randomUUID(), 201));
+        long eid = accepted.at("/result/executionId").asLong();
+        waitCompleted(eid);
+
+        assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
+        assertThat(accepted.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(analyzedContent.get()).isEqualTo(expected);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(expected);
+        assertThat(history(sid).toString()).doesNotContain("990101", "1234567", "4111");
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo(expected);
+        assertThat(jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?",
+                String.class, eid)).doesNotContain("990101", "1234567", "4111", "[주민등록번호]", "[카드번호]");
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("이미 마스킹해 저장된 문의는 다음 턴 문맥과 내부 요약에도 별표 상태로 전달된다")
+    void 문맥과_내부_요약에_마스킹된_문의만_전달한다() throws Exception {
+        long sid = session(identity);
+        waitCompleted(send(sid, "주민번호 990101-1234567 카드 4111111111111111 유심 재발급")
+                .at("/result/executionId").asLong());
+        long eid = send(sid, "로밍 신청 방법").at("/result/executionId").asLong();
+        waitCompleted(eid);
+        long current = message(sid, 5, "USER", "QUESTION", "다음 문의", null);
+        long currentExecution = jdbc.queryForObject(
+                "INSERT INTO chat_executions(session_id,input_message_id,status)"
+                        + " VALUES (?,?,'RUNNING') RETURNING execution_id", Long.class, sid, current);
+        var context = contexts.build(
+                new ChatProcessingCommand(currentExecution, sid, current, "다음 문의"), 2000);
+        assertThat(context.history()).extracting(ChatContextMessage::content)
+                .contains("주민번호 *** 카드 *** 유심 재발급");
+
+        var summary = new ChatSummaryStore(
+                sessionRepository, messageRepository, executionRepository,
+                new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512),
+                tokenEstimator, summaryConverter);
+        var snapshot = new TransactionTemplate(transactions).execute(status ->
+                summary.prepare(new ChatSummaryRequested(eid, sid, 4)).orElseThrow());
+        assertThat(snapshot.messages()).extracting(ChatContextMessage::content)
+                .contains("주민번호 *** 카드 *** 유심 재발급");
+        assertThat(snapshot.messages().toString())
+                .doesNotContain("990101", "1234567", "4111", "[주민등록번호]", "[카드번호]");
+    }
+
     @Test
     @DisplayName("제한을 발생시킨 요청의 재전송에는 현재 남은 시간을 반환한다")
     void 재전송이_제한_남은_시간을_되돌리지_않는다() throws Exception {
@@ -470,7 +655,7 @@ class ChatInputGuardIntegrationTest {
         assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
         long eid = accepted.at("/result/executionId").asLong();
         waitCompleted(eid);
-        assertThat(analyzedContent.get()).isEqualTo("카드 [카드번호] 123원 요금 납부 방법 알려주세요");
+        assertThat(analyzedContent.get()).isEqualTo("카드 *** 123원 요금 납부 방법 알려주세요");
         assertThat(history(sid).toString()).doesNotContain("4111");
         assertThat(
                         jdbc.queryForObject(
