@@ -729,6 +729,12 @@ public class QueryRoutingService {
             if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
                 // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
                 conditions = validConditions(conditions, sub.queryText(), context);
+                // 모델이 업무를 비워도 이 요청의 원문 인용에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
+                String quote = sub.requestQuote();
+                if (quote != null && !quote.isBlank() && RoutingQuestionNormalizer.quoteKey(question)
+                        .contains(RoutingQuestionNormalizer.quoteKey(quote))) {
+                    conditions = withRuleServiceType(conditions, quote);
+                }
             }
             safeSubQueries.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, conditions, sub.requestQuote()));
@@ -1060,8 +1066,12 @@ public class QueryRoutingService {
     // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
     private Map<String, String> withRuleServiceType(
             QueryRouting.Intent intent, Map<String, String> extracted, String question) {
-        if (intent != QueryRouting.Intent.STORE
-                || extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+        return intent == QueryRouting.Intent.STORE ? withRuleServiceType(extracted, question) : extracted;
+    }
+
+    // 업무 조건이 없으면 주어진 원문에서 규칙으로 업무를 채운다.
+    private Map<String, String> withRuleServiceType(Map<String, String> extracted, String question) {
+        if (extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
             return extracted;
         }
         String serviceType = ruleBasedFallback.serviceTypeOf(question);

@@ -602,6 +602,31 @@ class QueryRoutingServiceTest {
                     .containsExactly(ConsultRequest.Intent.FAQ, ConsultRequest.Intent.STORE);
         }
 
+        // 복합 질문의 매장 요청은 자기 원문 인용에 있는 업무만 채운다. FAQ 요청의 업무는 가져오지 않는다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "번호이동 방법이랑 번호이동 되는 매장 알려줘 | 번호이동 방법 | 번호이동 가능 매장 | 번호이동 되는 매장 | PORT_IN",
+                "명의변경 서류 알려주고 가까운 매장도 찾아줘 | 명의변경 서류 | 가까운 매장 | 가까운 매장도 찾아줘 | ''"
+        })
+        void compoundStoreRequestTakesServiceTypeOnlyFromItsOwnQuote(String question, String faqQuote,
+                String storeQuery, String storeQuote, String expected) {
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"%s","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"%s","requestQuote":"%s","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"%s","requestQuote":"%s","conditions":{}}]}
+                    """.formatted(question, faqQuote, faqQuote, storeQuery, storeQuote));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            var store = result.subQueries().get(1).conditions();
+            if (expected.isEmpty()) {
+                assertThat(store).doesNotContainKey("serviceType");
+            } else {
+                assertThat(store).containsEntry("serviceType", expected);
+            }
+            assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
         // 매장을 말하지 않은 질문에 모델이 덧붙인 매장 찾기는 고객 요청이 아니므로 빼고 FAQ로 처리한다.
         @Test
         void storeSubQueryInventedWithoutStoreMentionIsDroppedAndFaqIsKept() {
