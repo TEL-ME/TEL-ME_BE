@@ -15,7 +15,7 @@ evidence_check_bedrock.py와 같다. #139와 독립적으로 돌도록 필요한
 질문 임베딩은 로컬 Ollama bge-m3로 만든다.
 
 사용법
-  # 1) 예상 비용만 확인 (판정 캐시에 없는 쌍만 셈, 호출 안 함)
+  # 1) 예상 비용만 확인 (캐시에 없거나 입력이 바뀐 쌍만 셈, 호출 안 함)
   python3 scripts/gray_zone_upper_band_bedrock.py
   # 2) 판정 실행 후 결과 표
   python3 scripts/gray_zone_upper_band_bedrock.py --run
@@ -25,6 +25,7 @@ evidence_check_bedrock.py와 같다. #139와 독립적으로 돌도록 필요한
   AWS_REGION        기본 us-east-1
 """
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -130,6 +131,25 @@ def parse_answerable(text):
     if isinstance(value, str) and value.strip().lower() in ("true", "false"):
         return value.strip().lower() == "true"
     return True
+
+
+def input_hash(prompt):
+    """판정에 실제로 보내는 입력(모델, 시스템 프롬프트, 사용자 프롬프트). 하나라도 바뀌면 다시 판정한다."""
+    text = json.dumps([MODEL, B3_SYSTEM_PROMPT, prompt], ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def pairs_to_judge(pairs, cached, hashes):
+    """캐시에 없거나 입력이 바뀐 쌍."""
+    return sorted(key for key in pairs if cached.get(key, {}).get("inputHash") != hashes[key])
+
+
+def cache_entry(runs, prompt_hash):
+    """호출 오류가 섞이면 None. fail-open으로 '답 됨'이 저장되지 않게 그 쌍은 저장하지 않고 다음 실행에 다시 판정한다.
+    응답은 왔는데 JSON이 깨진 경우는 #139와 같이 fail-open을 유지한다."""
+    if any(run["error"] for run in runs):
+        return None
+    return {"answerable": majority([run["answerable"] for run in runs]), "inputHash": prompt_hash, "runs": runs}
 
 
 def score_eval(rows, official, multi, unrelated_ids, config, verdicts):
@@ -257,15 +277,21 @@ def main():
     questions = {row["id"]: row["question"] for row in rows + holdout_rows}
     pairs = {f"{row['id']}|{slot}" for row in rows + holdout_rows
              for slot in needs_judgment(row["qo"], row["qa"], *widest)}
+    faqs = {slot: (question, answer) for slot, question, answer in
+            psql(args.container, "select slot_id, question, answer from faqs where status = 'ACTIVE'")}
+    prompts = {}
+    for key in pairs:
+        eval_id, slot = key.split("|", 1)
+        prompts[key] = user_prompt(*faqs[slot], questions[eval_id])
+    hashes = {key: input_hash(prompt) for key, prompt in prompts.items()}
     cache = json.loads(args.cache.read_text()) if args.cache.exists() else {}
-    if cache and cache.get("promptVersion") != PROMPT_VERSION:
-        sys.exit(f"캐시 프롬프트가 다릅니다: {cache.get('promptVersion')}")
     verdicts = cache.get("pairs", {})
-    todo = sorted(pairs - set(verdicts))
+    todo = pairs_to_judge(pairs, verdicts, hashes)
+    changed = sum(1 for key in todo if key in verdicts)
     calls = len(todo) * REPEAT
     usd = calls * (EST_INPUT_TOKENS * PRICE_IN + EST_OUTPUT_TOKENS * PRICE_OUT) / 1_000_000
-    print(f"판정 쌍 {len(pairs)}개 중 캐시에 없는 {len(todo)}개 × {REPEAT}회 = {calls}호출, "
-          f"예상 ${usd:.4f} ≈ {usd * args.krw_per_usd:,.0f}원")
+    print(f"판정 쌍 {len(pairs)}개 중 새로 판정할 {len(todo)}개(입력이 바뀐 {changed}개 포함) × {REPEAT}회 = "
+          f"{calls}호출, 예상 ${usd:.4f} ≈ {usd * args.krw_per_usd:,.0f}원")
 
     if todo:
         if not args.run:
@@ -275,16 +301,12 @@ def main():
         if not api_key:
             sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
         region = os.environ.get("AWS_REGION", "us-east-1")
-        faqs = {slot: (question, answer) for slot, question, answer in
-                psql(args.container, "select slot_id, question, answer from faqs where status = 'ACTIVE'")}
         tokens = [0, 0]
 
         def judge(key):
-            eval_id, slot = key.split("|", 1)
-            prompt = user_prompt(*faqs[slot], questions[eval_id])
             runs = []
             for _ in range(REPEAT):
-                text, error, usage = call_model(api_key, region, prompt)
+                text, error, usage = call_model(api_key, region, prompts[key])
                 if error and error.startswith("HTTP 4"):
                     raise SystemExit(f"요청 오류로 중단: {error}")
                 runs.append({"answerable": parse_answerable(text), "error": error, "raw": text})
@@ -292,16 +314,24 @@ def main():
                 tokens[1] += usage.get("outputTokens", 0)
             return key, runs
 
+        failed = []
         args.cache.parent.mkdir(parents=True, exist_ok=True)
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             for done, (key, runs) in enumerate(pool.map(judge, todo), 1):
-                verdicts[key] = {"answerable": majority([r["answerable"] for r in runs]), "runs": runs}
-                args.cache.write_text(json.dumps({"model": MODEL, "promptVersion": PROMPT_VERSION,
-                                                  "pairs": verdicts}, ensure_ascii=False))
+                entry = cache_entry(runs, hashes[key])
+                if entry is None:
+                    failed.append(key)
+                else:
+                    verdicts[key] = entry
+                    args.cache.write_text(json.dumps({"model": MODEL, "promptVersion": PROMPT_VERSION,
+                                                      "pairs": verdicts}, ensure_ascii=False))
                 if done % 25 == 0:
                     print(f"  {done} / {len(todo)}", flush=True)
         spent = (tokens[0] * PRICE_IN + tokens[1] * PRICE_OUT) / 1_000_000
         print(f"토큰 입력 {tokens[0]:,} / 출력 {tokens[1]:,} | 실제 ${spent:.4f} ≈ {spent * args.krw_per_usd:,.0f}원")
+        if failed:
+            sys.exit(f"호출 오류로 {len(failed)}쌍을 저장하지 않았습니다(예: {failed[0]}). "
+                     "--run 을 다시 하면 그 쌍만 다시 판정합니다.")
 
     judged = {key: value["answerable"] for key, value in verdicts.items()}
     flips = sum(1 for key in pairs if len({r["answerable"] for r in verdicts[key]["runs"]}) > 1)

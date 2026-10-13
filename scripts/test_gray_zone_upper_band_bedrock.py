@@ -2,8 +2,9 @@
 """gray_zone_upper_band_bedrock.py 계산 검증. DB, Ollama, Bedrock을 부르지 않는다."""
 import unittest
 
-from gray_zone_upper_band_bedrock import (keep, majority, needs_judgment, parse_answerable, score_eval,
-                                          score_holdout, served)
+from gray_zone_upper_band_bedrock import (cache_entry, input_hash, keep, majority, needs_judgment,
+                                          pairs_to_judge, parse_answerable, score_eval, score_holdout, served,
+                                          user_prompt)
 
 CURRENT = (0.88, 0.72, 0.72)  # 판정 없음
 LOWER_ONLY = (0.80, 0.71, 0.72)  # 아래로만 넓힘 (TELME-122 구조)
@@ -76,6 +77,32 @@ class ParseAnswerableTest(unittest.TestCase):
 
     def test_string_boolean(self):
         self.assertFalse(parse_answerable('{"answerable": "false"}'))
+
+
+class CacheTest(unittest.TestCase):
+    OK = {"answerable": False, "error": None, "raw": '{"answerable": false}'}
+    FAILED = {"answerable": True, "error": "HTTP 503", "raw": None}
+
+    def test_call_error_is_not_cached(self):
+        self.assertIsNone(cache_entry([self.OK, self.OK, self.FAILED], "h"))
+
+    def test_broken_json_without_error_stays_fail_open(self):
+        broken = {"answerable": True, "error": None, "raw": "깨짐"}
+        self.assertTrue(cache_entry([broken, broken, self.OK], "h")["answerable"])
+
+    def test_entry_keeps_hash_and_majority(self):
+        entry = cache_entry([self.OK, self.OK, self.OK], "h")
+        self.assertEqual((entry["answerable"], entry["inputHash"]), (False, "h"))
+
+    def test_changed_faq_text_changes_hash(self):
+        before = input_hash(user_prompt("유심 비용은?", "2,750원입니다.", "eSIM 비용은?"))
+        after = input_hash(user_prompt("유심 비용은?", "2,750원(부가세 포함)입니다.", "eSIM 비용은?"))
+        self.assertNotEqual(before, after)
+
+    def test_rejudges_missing_changed_and_unhashed_pairs_only(self):
+        cached = {"same": {"inputHash": "a"}, "changed": {"inputHash": "old"}, "unhashed": {"answerable": True}}
+        hashes = {"same": "a", "changed": "b", "unhashed": "c", "new": "d"}
+        self.assertEqual(pairs_to_judge(hashes.keys(), cached, hashes), ["changed", "new", "unhashed"])
 
 
 class ScoreTest(unittest.TestCase):
