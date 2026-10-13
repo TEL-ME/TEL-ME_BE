@@ -12,6 +12,10 @@ public final class ContractPolicy {
     private ContractPolicy() {
     }
 
+    public static boolean isActive(int elapsedMonths, int contractMonths) {
+        return elapsedMonths < contractMonths;
+    }
+
     public static int refundPercent(int elapsedMonths, int contractMonths) {
         if (elapsedMonths < FULL_REFUND_UNDER_MONTHS) {
             return FULL_REFUND_PERCENT;
