@@ -73,10 +73,10 @@ public class QueryRoutingService {
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
     private static final Pattern ACTION_REQUEST = Pattern.compile("싶|하려고|할래");
-    // 매장 하위 질문의 원문 구간에 있어야 하는 장소 찾기 표현. 역 이름 같은 지명은 PLACE로 따로 확인한다.
-    // "어디서"는 "어디서 확인해요"처럼 FAQ에도 쓰여 넣지 않는다.
+    // 매장 하위 질문의 원문 구간에 있어야 하는 장소 찾기·방문 표현. 지명은 PLACE와 원문 근거가 있는 지역 조건으로 따로 확인한다.
+    // "어디서", "어디로"는 "어디서 확인해요", "어디로 문의해요"처럼, "가면"은 "해외 가면"처럼 FAQ에도 쓰여 넣지 않는다.
     private static final Pattern STORE_LOOKUP = Pattern.compile(
-        "매장|대리점|지점|직영점|판매점|역점|근처|가까운|가까이|주변|인근|동네|곳|위치");
+        "매장|대리점|지점|직영점|판매점|역점|근처|가까운|가까이|주변|인근|동네|곳|위치|방문|가야|찾아가|들러|들를");
     private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
     private static final String PREVIOUS_UTTERANCE_HEADER = "[대상을 확인할 이전 고객 발언]\n";
     private static final String CURRENT_QUESTION_HEADER = "\n[현재 후속 질문]\n";
@@ -721,7 +721,11 @@ public class QueryRoutingService {
                 var sub = normalized.get(index);
                 String section = sub.intent() == ConsultRequest.Intent.STORE
                         ? IndependentQuestionPolicy.ownSectionText(normalized, sub, question) : null;
-                if (section != null && !STORE_LOOKUP.matcher(section).find() && tokens(PLACE, section).isEmpty()) {
+                // "서울 강남구"처럼 역 이름 꼴이 아닌 지역도, 모델의 지역 조건이 이 요청의 원문 구간에 있으면 장소 요청으로 본다.
+                boolean namedPlace = section != null && validConditions(sub.conditions(), section, context)
+                        .containsKey(FollowUpRouteResponse.LOCATION_KEY);
+                if (section != null && !namedPlace && !STORE_LOOKUP.matcher(section).find()
+                        && tokens(PLACE, section).isEmpty()) {
                     log.info("[라우팅] 장소를 찾는 표현이 없는 매장 하위 질문을 FAQ로 처리합니다: order={}", sub.order());
                     normalized.set(index, new LlmRoutingPayload.SubQueryPayload(sub.order(),
                             ConsultRequest.Intent.FAQ, section, Collections.emptyMap(), sub.requestQuote()));

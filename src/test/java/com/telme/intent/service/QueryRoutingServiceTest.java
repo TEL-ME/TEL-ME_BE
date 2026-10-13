@@ -693,6 +693,48 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().get(1).queryText()).contains("유심 재발급 비용").doesNotContain("매장");
         }
 
+        // 행정구역과 방문 표현으로 장소를 묻는 요청은 매장 낱말이 없어도 매장 요청으로 유지한다.
+        @ParameterizedTest
+        @CsvSource(delimiter = '|', value = {
+                "{\"location\":\"서울 강남구\",\"serviceType\":\"PORT_IN\"} | 서울 강남구",
+                "{} | ''"
+        })
+        void administrativeAreaVisitRequestIsKeptAsStore(String conditions, String expectedLocation) {
+            String question = "로밍 신청 방법 알려주고 서울 강남구에서 번호이동하려면 어디로 가야 하나요?";
+            given(llmClient.generate(any())).willReturn("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"로밍 신청 방법과 강남구 번호이동 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"로밍 신청 방법 알려주고","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"서울 강남구 번호이동 매장",
+                       "requestQuote":"서울 강남구에서 번호이동하려면 어디로 가야 하나요?","conditions":%s}]}
+                    """.formatted(conditions));
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.BOTH);
+            assertThat(result.subQueries().get(1).intent()).isEqualTo(ConsultRequest.Intent.STORE);
+            if (!expectedLocation.isEmpty()) {
+                assertThat(result.subQueries().get(1).conditions()).containsEntry("location", expectedLocation);
+            }
+        }
+
+        // 다른 요청 구간에 있는 지명은 비용 문의를 장소 요청으로 만들지 않는다.
+        @Test
+        void placeFromAnotherSectionDoesNotMakeCostQuestionAStoreRequest() {
+            String question = "강남역에서 로밍 신청하는 방법이랑 유심 재발급 비용 알려줘";
+            routingJson("""
+                    {"intent":"BOTH","confidence":0.97,"refinedQuery":"강남역 로밍 신청과 유심 재발급 매장","subQueries":[
+                      {"order":1,"intent":"FAQ","queryText":"로밍 신청 방법","requestQuote":"강남역에서 로밍 신청하는 방법이랑","conditions":{}},
+                      {"order":2,"intent":"STORE","queryText":"강남역 유심 재발급 매장","requestQuote":"유심 재발급 비용 알려줘",
+                       "conditions":{"location":"강남역"}}]}
+                    """);
+
+            var result = service.routeSingleConsult(msg(question), null);
+
+            assertThat(result.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(result.subQueries()).extracting(IntentSubQueryResponse::intent)
+                    .containsOnly(ConsultRequest.Intent.FAQ);
+        }
+
         // 지명만 있는 장소 요청은 매장 낱말이 없어도 매장 요청으로 유지한다.
         @Test
         void placeRequestWithStationNameIsKeptAsStore() {
