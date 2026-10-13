@@ -421,6 +421,103 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(2));
     }
 
+    @Test
+    @DisplayName("선택 8개 뒤 최신 조건 안내를 보정해도 요약이 실패하지 않고 저장·조회된다")
+    void 여덟_선택과_최신_안내를_안전하게_저장한다() throws Exception {
+        String earlier = java.util.stream.IntStream.rangeClosed(1, 8)
+                .mapToObj(index -> "이전 조건 안내 " + index + "입니다.")
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        var fixture = fixture(false, "가입월에 따른 요금제 변경 문의", earlier);
+        long correction = message(fixture.sessionId(), 3, "USER", "QUESTION", "이번 달 가입입니다.", null);
+        long latestAnswer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                "이번 달 조건 안내입니다.", correction);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id IN (?,?)",
+                fixture.answerId(), latestAnswer);
+        long request = jdbc.queryForObject("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
+                VALUES (?, ?, 1, 'FAQ', '요금제 변경 문의', 'DONE') RETURNING consult_request_id
+                """, Long.class, fixture.sessionId(), fixture.questionId());
+        jdbc.update("""
+                INSERT INTO consult_conditions(consult_request_id,condition_key,condition_value,source,status,
+                    answered_message_id) VALUES (?, 'joined_this_month', 'true', 'ASKED', 'FILLED', ?)
+                """, request, correction);
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(
+                fixture.questionId(), java.util.stream.IntStream.rangeClosed(1, 8).toArray()));
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        mvc.perform(get(path(fixture)).session(fixture.actor()))
+                .andExpect(jsonPath("$.result.summary.guidance.length()").value(8))
+                .andExpect(jsonPath("$.result.summary.guidance[7]")
+                        .value("조건 확인 후 안내: 이번 달 조건 안내입니다."));
+        var stored = mapper.readTree(jdbc.queryForObject(
+                "SELECT result::text FROM chat_session_end_summaries WHERE session_id=?",
+                String.class, fixture.sessionId()));
+        assertThat(stored.path("guidance")).hasSize(8);
+        assertThat(stored.path("guidance").get(7).path("sourceMessageIds").get(0).asLong())
+                .isEqualTo(latestAnswer);
+    }
+
+    @Test
+    @DisplayName("DB에 저장된 필수 확인 항목 9개도 종료 요약의 저장·조회에서 누락하지 않는다")
+    void 아홉_필수_확인_항목을_모두_저장한다() throws Exception {
+        var fixture = fixture(false, "로밍 조건 문의", "홈페이지를 확인해 주세요.");
+        for (int index = 1; index <= 9; index++) {
+            long request = jdbc.queryForObject("""
+                    INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,
+                        status,clarification_plan) VALUES (?, ?, ?, 'FAQ', ?, 'WAITING_CONDITION', ?::jsonb)
+                    RETURNING consult_request_id
+                    """, Long.class, fixture.sessionId(), fixture.questionId(), index, "로밍 확인 " + index,
+                    "{\"conditions\":[{\"key\":\"country\",\"question\":\"어느 나라로 가시나요?\"}]}");
+            jdbc.update("""
+                    INSERT INTO consult_conditions(consult_request_id,condition_key,status,asked_message_id)
+                    VALUES (?, 'country', 'PENDING', ?)
+                    """, request, fixture.answerId());
+        }
+        var model = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(
+                ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        model.withArray("pendingItems").addObject().put("text", "목적지 확인 필요")
+                .putArray("sourceMessageIds").add(fixture.questionId());
+        when(client.generate(any())).thenReturn(model.toString());
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        mvc.perform(get(path(fixture)).session(fixture.actor()))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(9));
+        var stored = mapper.readTree(jdbc.queryForObject(
+                "SELECT result::text FROM chat_session_end_summaries WHERE session_id=?",
+                String.class, fixture.sessionId()));
+        assertThat(stored.path("pendingItems")).hasSize(9);
+        assertThat(stored.path("pendingItems")).allSatisfy(item ->
+                assertThat(item.path("sourceMessageIds").get(0).asLong()).isEqualTo(fixture.questionId()));
+        var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
+        verify(client).generate(captor.capture());
+        assertThat(mapper.valueToTree(captor.getValue().responseSchema()).path("properties").path("pendingItems")
+                .path("maxItems").asInt()).isEqualTo(9);
+    }
+
+    @Test
+    @DisplayName("일반 생성 오류의 진단 로그를 추가해도 안전한 실패 저장·조회 계약을 유지한다")
+    void 진단_로그가_생성_실패_응답을_바꾸지_않는다() throws Exception {
+        var fixture = fixture(false, "로밍 문의", "신청 경로 안내");
+        when(client.generate(any())).thenThrow(new IllegalStateException("합성 오류 990101-1234567"));
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "FAILED");
+        assertThat(jdbc.queryForObject(
+                "SELECT failure_code FROM chat_session_end_summaries WHERE session_id=?",
+                String.class, fixture.sessionId())).isEqualTo("GENERATION_FAILED");
+        var response = mvc.perform(get(path(fixture)).session(fixture.actor()))
+                .andExpect(jsonPath("$.result.summary").doesNotExist()).andReturn();
+        assertThat(response.getResponse().getContentAsString()).doesNotContain("990101-1234567", "합성 오류");
+    }
+
     private Fixture fixture(boolean running, String question, String answer) throws Exception {
         var actor = new MockHttpSession();
         var response = mvc.perform(post("/api/v1/chat/sessions").session(actor)

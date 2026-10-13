@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +58,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 .isEqualTo("[2]");
         var request = request();
         assertThat(request.executionId()).isEqualTo(10L);
-        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v9");
+        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v10");
         var schema = mapper.valueToTree(request.responseSchema()).path("properties");
         assertThat(schema.has("guidance")).isFalse();
         assertThat(schema.path("selectedSentenceIds").path("items").path("enum").toString()).isEqualTo("[1]");
@@ -420,6 +423,166 @@ class ChatSessionEndSummaryGeneratorTest {
         assertThat(result.content().guidance()).containsExactly(
                 "조건 확인 전 안내: 지난달 가입 조건에서는 변경 가능합니다.",
                 "조건 확인 후 안내: 이번 달 가입 조건에서는 변경 불가합니다.");
+    }
+
+    @Test
+    @DisplayName("모델이 8개를 골라도 최신 안내의 자리를 먼저 확보해 정상 요약한다")
+    void 여덟_선택과_최신_안내_보정이_충돌하지_않는다() {
+        when(client.generate(any())).thenReturn(selection(1, IntStream.rangeClosed(1, 8).toArray()));
+
+        var result = generate(latestInput(1));
+
+        assertThat(result.content().guidance()).hasSize(8);
+        assertThat(result.content().guidance()).contains("조건 확인 후 안내: 최신 조건 안내 1입니다.");
+        assertThat(result.content().guidance()).doesNotContain("조건 확인 전 안내: 이전 조건 안내 8입니다.");
+        verify(client, times(1)).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {8, 9})
+    @DisplayName("최신 필수 안내 자체가 8개면 모두 보존하고 9개면 일부 성공으로 제공하지 않는다")
+    void 최신_필수_안내_자체의_한도를_지킨다(int count) {
+        when(client.generate(any())).thenReturn(selection(1, IntStream.rangeClosed(1, 8).toArray()));
+        var target = generator(20000);
+
+        if (count == 8) {
+            assertThat(target.generate(latestInput(count), now.plusSeconds(300)).content().guidance())
+                    .hasSize(8).allSatisfy(text -> assertThat(text).startsWith("조건 확인 후 안내:"));
+        } else {
+            assertThatThrownBy(() -> target.generate(latestInput(count), now.plusSeconds(300)))
+                    .hasMessage("INPUT_LIMIT");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {8, 9, 12})
+    @DisplayName("저장된 필수 미확인 조건 수에 맞춰 스키마와 보정 결과의 한도를 함께 늘린다")
+    void 여덟_개를_넘는_필수_미확인_조건도_보존한다(int count) throws Exception {
+        var questions = IntStream.rangeClosed(1, count).mapToObj(i -> "확인 항목 " + i + " 알려주세요.").toList();
+        var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(
+                new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION", questions, 11L)), Set.of(1L));
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.withArray("pendingItems").addObject().put("text", "지역 확인 필요")
+                .putArray("sourceMessageIds").add(1);
+        when(client.generate(any())).thenReturn(response.toString());
+
+        var result = generate(input);
+
+        assertThat(result.content().pendingItems()).containsExactlyElementsOf(
+                questions.stream().map(question -> "미확인 조건: 로밍 — " + question).toList());
+        assertThat(mapper.valueToTree(request().responseSchema()).path("properties").path("pendingItems")
+                .path("maxItems").asInt()).isEqualTo(Math.max(8, count));
+    }
+
+    @Test
+    @DisplayName("저장된 근거 없이 모델이 남은 항목 수를 임의로 늘리지 못한다")
+    void 모델의_임의_남은_항목_확장을_거부한다() throws Exception {
+        var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(), Set.of(1L));
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        for (int index = 0; index < 9; index++) {
+            response.withArray("pendingItems").addObject().put("text", "남은 항목 " + index)
+                    .putArray("sourceMessageIds").add(1);
+        }
+        when(client.generate(any())).thenReturn(response.toString());
+
+        assertThatThrownBy(() -> generate(input)).hasMessage("INVALID_OUTPUT");
+        assertThat(mapper.valueToTree(request().responseSchema()).path("properties").path("pendingItems")
+                .path("maxItems").asInt()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("필수 확인 항목 9개와 답변을 마치지 못한 다른 문의를 함께 보존한다")
+    void 필수_조건과_실패_문의의_한도를_함께_계산한다() throws Exception {
+        var questions = IntStream.rangeClosed(1, 9).mapToObj(i -> "확인 항목 " + i + " 알려주세요.").toList();
+        var messages = new ArrayList<>(input().messages());
+        messages.add(new ChatEndSummaryData.Message(3, 3, null, "USER", "QUESTION", "유심 비용 문의",
+                null, "FAILED"));
+        var input = new ChatEndSummaryData.Input(1, 3, 10L, messages, List.of(
+                new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION", questions, 11L),
+                new ChatEndSummaryData.Request(3, 1, "유심 비용", "PENDING")), Set.of(1L, 3L));
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.withObject("topics").put("3", "유심 비용 문의");
+        response.withArray("pendingItems").addObject().put("text", "지역 확인 필요")
+                .putArray("sourceMessageIds").add(1);
+        when(client.generate(any())).thenReturn(response.toString());
+
+        var result = generate(input);
+
+        assertThat(result.content().pendingItems()).hasSize(10)
+                .contains("답변을 마치지 못한 문의: 유심 비용 문의");
+        assertThat(mapper.valueToTree(request().responseSchema()).path("properties").path("pendingItems")
+                .path("maxItems").asInt()).isEqualTo(10);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {4, 8, 16})
+    @DisplayName("분할·모델 호출·최종 검증에서 전체 안내 원문의 후보 검사를 작업당 한 번만 수행한다")
+    void 전체_안내_원문은_후보_생성에서_한_번만_검사한다(int exchanges) throws Exception {
+        var inspector = spy(new ChatInputInspector(mapper));
+        var target = new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(), inspector,
+                new ChatOutputGuard(mapper), new ChatEndSummaryProperties(true, false, false, 20000, 768,
+                        400, 8, 2, Duration.ofMinutes(5), Duration.ofMinutes(15)), Clock.fixed(now, ZoneOffset.UTC));
+        var messages = new ArrayList<ChatEndSummaryData.Message>();
+        var requests = new ArrayList<ChatEndSummaryData.Request>();
+        Set<String> originals = new java.util.HashSet<>();
+        for (int index = 0; index < exchanges; index++) {
+            long q = index * 2L + 1;
+            String text = "안내 " + index + "의 조건입니다.\n\n안내 " + index + "의 예외입니다.";
+            originals.add(text);
+            messages.add(message(q, index * 2 + 1, null, "USER", "QUESTION", "서비스 문의 " + index, null));
+            messages.add(message(q + 1, index * 2 + 2, q, "ASSISTANT", "ANSWER", text, "GROUNDED"));
+            requests.add(new ChatEndSummaryData.Request(q, 1, "서비스 문의 " + index, "DONE"));
+        }
+        when(client.generate(any())).thenAnswer(invocation -> {
+            var prompt = mapper.readTree(((LlmRequest) invocation.getArgument(0)).userPrompt());
+            var output = mapper.createObjectNode();
+            var topics = output.putObject("topics");
+            for (var request : prompt.path("requests")) {
+                topics.put(request.path("originMessageId").asText(), request.path("query").asText());
+            }
+            output.putArray("selectedSentenceIds").add(prompt.path("guidanceCandidates").get(0)
+                    .path("sentenceId").asInt());
+            output.putArray("pendingItems");
+            return output.toString();
+        });
+
+        var result = target.generate(new ChatEndSummaryData.Input(1, exchanges * 2, 10L,
+                messages, requests, Set.of()), now.plusSeconds(300));
+
+        assertThat(result.content().topics()).hasSize(exchanges);
+        long inspections = mockingDetails(inspector).getInvocations().stream()
+                .filter(call -> call.getMethod().getName().equals("inspect"))
+                .filter(call -> originals.contains((String) call.getArgument(0))).count();
+        assertThat(inspections).isEqualTo(exchanges);
+    }
+
+    @Test
+    @DisplayName("같은 생성기에서도 다음 상담의 후보에 이전 상담이 섞이지 않는다")
+    void 같은_생성기의_상담별_후보를_분리한다() {
+        when(client.generate(any())).thenReturn(selection(1, 1), selection(11, 1));
+        var first = generate(withGuidance("첫 번째 상담 안내입니다."));
+        var second = generate(new ChatEndSummaryData.Input(2, 2, 20L, List.of(
+                message(11, 1, null, "USER", "QUESTION", "두 번째 문의", null),
+                message(12, 2, 11L, "ASSISTANT", "ANSWER", "두 번째 상담 안내입니다.", "GROUNDED")),
+                List.of(), Set.of()));
+
+        assertThat(first.content().guidance()).containsExactly("안내받은 내용: 첫 번째 상담 안내입니다.");
+        assertThat(second.content().guidance()).containsExactly("안내받은 내용: 두 번째 상담 안내입니다.");
+    }
+
+    private ChatEndSummaryData.Input latestInput(int count) {
+        String earlier = IntStream.rangeClosed(1, 8).mapToObj(i -> "이전 조건 안내 " + i + "입니다.")
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        String current = IntStream.rangeClosed(1, count).mapToObj(i -> "최신 조건 안내 " + i + "입니다.")
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        return new ChatEndSummaryData.Input(1, 4, 10L, List.of(
+                message(1, 1, null, "USER", "QUESTION", "지난달 가입 요금제 변경", null),
+                message(2, 2, 1L, "ASSISTANT", "ANSWER", earlier, "GROUNDED"),
+                message(3, 3, null, "USER", "QUESTION", "이번 달 가입으로 정정합니다.", null),
+                message(4, 4, 3L, "ASSISTANT", "ANSWER", current, "GROUNDED")),
+                List.of(new ChatEndSummaryData.Request(1, 1, "요금제 변경", "DONE")), Set.of(),
+                List.of(new ChatEndSummaryData.Condition(11, 1, "joined_this_month", "true",
+                        "FILLED", "ASKED", 3L, 3)));
     }
 
     static String selection(long question, int... ids) {

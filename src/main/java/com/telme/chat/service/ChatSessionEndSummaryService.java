@@ -6,10 +6,12 @@ import com.telme.chat.entity.ChatSession;
 import com.telme.chat.safety.ChatOutputBlockedException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ChatSessionEndSummaryService {
     private final ChatSessionEndSummaryStore store;
@@ -58,6 +60,8 @@ public class ChatSessionEndSummaryService {
             store.finish(lease.get(), input, null, "FAILED", code);
         } catch (RuntimeException exception) {
             // 후보 원문·사용자 문장·예외 본문을 새 로그나 실패 결과에 노출하지 않는다.
+            log.warn("상담 종료 요약 생성 실패: sessionId={}, exceptionType={}",
+                    sessionId, exception.getClass().getSimpleName());
             store.finish(lease.get(), input, null, "FAILED", "GENERATION_FAILED");
         }
     }
