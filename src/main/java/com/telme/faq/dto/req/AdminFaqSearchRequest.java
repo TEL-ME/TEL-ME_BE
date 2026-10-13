@@ -10,7 +10,7 @@ public record AdminFaqSearchRequest(
         FaqCategory category,
         AdminFaqStatusFilter status,
         AdminFaqSort sort,
-        @Min(0) Integer page,
+        @Min(0) @Max(10_000) Integer page,
         @Min(1) @Max(100) Integer size
 ) {
     private static final int DEFAULT_PAGE = 0;
