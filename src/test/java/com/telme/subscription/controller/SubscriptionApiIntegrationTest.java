@@ -73,6 +73,8 @@ class SubscriptionApiIntegrationTest {
 
     @AfterEach
     void cleanUp() {
+        jdbc.update("DELETE FROM subscription_pauses WHERE subscription_id IN "
+                + "(SELECT subscription_id FROM user_subscriptions WHERE user_id = ?)", userId);
         jdbc.update("DELETE FROM subscription_histories WHERE subscription_id IN "
                 + "(SELECT subscription_id FROM user_subscriptions WHERE user_id = ?)", userId);
         jdbc.update("DELETE FROM user_subscriptions WHERE user_id = ?", userId);
@@ -248,6 +250,179 @@ class SubscriptionApiIntegrationTest {
                 .isZero();
     }
 
+    @Test
+    void 약정으로_가입하면_약정_정보와_월_할인액이_내려간다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null, true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.contract.months").value(24))
+                .andExpect(jsonPath("$.result.contract.discountPercent").value(25))
+                .andExpect(jsonPath("$.result.contract.monthlyDiscount").value(16250))
+                .andExpect(jsonPath("$.result.contract.active").value(true))
+                .andExpect(jsonPath("$.result.contract.endsAt").value("2028-10-11T15:00:00Z"));
+
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.contract.monthlyDiscount").value(16250));
+    }
+
+    @Test
+    void 약정이_만료되면_contract가_할인_중으로_보이지_않는다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null, true)).andExpect(status().isOk());
+
+        at(Instant.parse("2028-10-12T03:00:00Z")); // 가입 24개월째
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.contract.months").value(24))
+                .andExpect(jsonPath("$.result.subscription.contract.active").value(false))
+                .andExpect(jsonPath("$.result.subscription.contract.monthlyDiscount").value(0))
+                .andExpect(jsonPath("$.result.subscription.contract.endsAt").value("2028-10-11T15:00:00Z"));
+        mvc.perform(get(URL + "/me/termination-penalty").session(session))
+                .andExpect(jsonPath("$.result.refundPercent").value(0))
+                .andExpect(jsonPath("$.result.penalty").value(0));
+    }
+
+    @Test
+    void 약정을_고르지_않으면_contract가_없다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.contract").doesNotExist());
+    }
+
+    @Test
+    void 해지_전에_예상_위약금을_조회하고_해지하면_같은_위약금이_확정되어_기록된다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null, true)).andExpect(status().isOk());
+        at(Instant.parse("2027-06-12T03:00:00Z")); // 가입 8개월째
+
+        mvc.perform(get(URL + "/me/termination-penalty").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.hasContract").value(true))
+                .andExpect(jsonPath("$.result.contractMonths").value(24))
+                .andExpect(jsonPath("$.result.elapsedMonths").value(8))
+                .andExpect(jsonPath("$.result.receivedDiscount").value(130000))
+                .andExpect(jsonPath("$.result.refundPercent").value(100))
+                .andExpect(jsonPath("$.result.penalty").value(130000));
+        mvc.perform(get(URL + "/me").session(session)).andExpect(jsonPath("$.result.subscribed").value(true));
+
+        mvc.perform(delete(URL).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.penalty").value(130000));
+        mvc.perform(get(URL + "/me").session(session)).andExpect(jsonPath("$.result.subscribed").value(false));
+        assertThat(jdbc.queryForObject("SELECT h.penalty_amount FROM subscription_histories h JOIN user_subscriptions s "
+                + "ON s.subscription_id = h.subscription_id WHERE s.user_id = ? AND h.type = 'CANCEL'",
+                Long.class, userId)).isEqualTo(130000L);
+    }
+
+    @Test
+    void 약정이_없으면_위약금_조회와_해지_응답이_0원이고_가입하지_않았으면_조회는_404() throws Exception {
+        mvc.perform(get(URL + "/me/termination-penalty").session(session))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION404-0"));
+
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        mvc.perform(get(URL + "/me/termination-penalty").session(session))
+                .andExpect(jsonPath("$.result.hasContract").value(false))
+                .andExpect(jsonPath("$.result.contractMonths").doesNotExist())
+                .andExpect(jsonPath("$.result.penalty").value(0));
+        mvc.perform(delete(URL).session(session))
+                .andExpect(jsonPath("$.result.penalty").value(0));
+    }
+
+    @Test
+    void 개통_후에_정지를_신청하면_정지_정보와_정지_기간_기본료가_내려가고_해제할_수_있다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        at(Instant.parse("2026-10-14T03:00:00Z"));
+
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content("{\"days\":10}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.pause.startedAt").value("2026-10-14T03:00:00Z"))
+                .andExpect(jsonPath("$.result.pause.endsAt").value("2026-10-24T03:00:00Z"))
+                .andExpect(jsonPath("$.result.pause.reducedMonthlyFee").value(32500));
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.pause.reducedMonthlyFee").value(32500));
+
+        mvc.perform(delete(URL + "/pause").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.pause").doesNotExist());
+        mvc.perform(get(URL + "/me").session(session))
+                .andExpect(jsonPath("$.result.subscription.pause").doesNotExist());
+    }
+
+    @Test
+    void 정지_신청_오류는_상황별_코드로_응답한다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        String ten = "{\"days\":10}";
+
+        // 개통 전(가입 당일)
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content(ten))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION409-5"));
+
+        at(Instant.parse("2026-10-14T03:00:00Z"));
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content("{\"days\":0}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION400-3"));
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content("{\"days\":31}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION400-3"));
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+
+        mvc.perform(delete(URL + "/pause").session(session))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION404-1"));
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content(ten))
+                .andExpect(status().isOk());
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content(ten))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION409-6"));
+    }
+
+    @Test
+    void 정지_중에는_요금제를_변경할_수_없다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        at(NOV_10);
+        mvc.perform(post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON).content("{\"days\":10}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(change("FIVE_G_LITE"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SUBSCRIPTION409-8"));
+    }
+
+    @Test
+    void 새_API도_로그인하지_않으면_401() throws Exception {
+        mvc.perform(get(URL + "/me/termination-penalty")).andExpect(status().isUnauthorized());
+        mvc.perform(post(URL + "/pause").contentType(MediaType.APPLICATION_JSON).content("{\"days\":5}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(delete(URL + "/pause")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 같은_구독의_정지를_동시에_신청해도_하나만_받는다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        at(NOV_10);
+
+        List<Integer> statuses = race(() -> pauseRequest(10), () -> pauseRequest(10));
+
+        assertThat(statuses).containsExactlyInAnyOrder(200, 409);
+        assertThat(count("SELECT count(*) FROM subscription_pauses p JOIN user_subscriptions s "
+                + "ON s.subscription_id = p.subscription_id WHERE s.user_id = ?")).isEqualTo(1);
+    }
+
+    @Test
+    void 정지와_해지가_동시에_들어와도_해지_뒤에_진행_중인_정지가_남지_않는다() throws Exception {
+        mvc.perform(subscribe("FIVE_G_STANDARD", null)).andExpect(status().isOk());
+        at(NOV_10);
+
+        List<Integer> statuses = race(() -> pauseRequest(10), () -> delete(URL).session(session));
+
+        // 해지가 먼저면 정지는 404, 정지가 먼저면 둘 다 성공. 어느 쪽이든 서버 오류는 없다
+        assertThat(statuses).contains(200).doesNotContain(500);
+        assertThat(count("SELECT count(*) FROM user_subscriptions WHERE user_id = ? AND status = 'ACTIVE'")).isZero();
+        assertThat(count("SELECT count(*) FROM subscription_pauses p JOIN user_subscriptions s "
+                + "ON s.subscription_id = p.subscription_id WHERE s.user_id = ? AND p.ends_at > s.canceled_at"))
+                .isZero();
+    }
+
     private List<Integer> race(Supplier<MockHttpServletRequestBuilder> first,
             Supplier<MockHttpServletRequestBuilder> second) throws Exception {
         CountDownLatch ready = new CountDownLatch(2);
@@ -271,6 +446,21 @@ class SubscriptionApiIntegrationTest {
         ready.countDown();
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
         return mvc.perform(request.get()).andReturn();
+    }
+
+    private MockHttpServletRequestBuilder subscribe(String planCode, String birthDate, boolean contract) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("planId", planId(planCode));
+        if (birthDate != null) {
+            body.put("birthDate", birthDate);
+        }
+        body.put("contract", contract);
+        return post(URL).session(session).contentType(MediaType.APPLICATION_JSON).content(json(body));
+    }
+
+    private MockHttpServletRequestBuilder pauseRequest(int days) {
+        return post(URL + "/pause").session(session).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"days\":" + days + "}");
     }
 
     private MockHttpServletRequestBuilder subscribe(String planCode, String birthDate) {

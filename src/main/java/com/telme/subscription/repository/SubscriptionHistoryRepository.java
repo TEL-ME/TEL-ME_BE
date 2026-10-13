@@ -33,6 +33,9 @@ public interface SubscriptionHistoryRepository extends JpaRepository<Subscriptio
                 subscriptionId, SubscriptionHistory.Type.SUBSCRIBE, now);
     }
 
+    // 위약금의 월별 요금제 계산용
+    List<SubscriptionHistory> findBySubscriptionIdOrderByEffectiveFromAscHistoryIdAsc(Long subscriptionId);
+
     // 신청 시각 기준(예약된 변경 포함)
     boolean existsBySubscriptionIdAndTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
             Long subscriptionId, SubscriptionHistory.Type type, Instant from, Instant to);
