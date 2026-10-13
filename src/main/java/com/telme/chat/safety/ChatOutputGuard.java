@@ -101,6 +101,11 @@ public final class ChatOutputGuard {
         verifyJson(options, "clarificationOptions");
     }
 
+    /** 최종 직렬화된 종료 요약의 문장만 검사한다. 입력 제재 상태는 변경하지 않는다. */
+    public void verifySummary(String value) {
+        verifyJson(value, "summary");
+    }
+
     private void verifyJson(String value, String field) {
         if (value == null) {
             return;
