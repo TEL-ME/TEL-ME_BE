@@ -430,7 +430,7 @@ class ChatQuestionResolverTest {
         assertThat(result.needsClarification()).isFalse();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
     }
 
     // 앞에 붙은 "[문의]" 표시 때문에 문맥 판정 후보에서 빠지지 않는다. 고객 원문은 그대로 전달한다.
@@ -466,7 +466,84 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+    }
+
+    // 지시어 없이 조건만 말한 짧은 후속 질문도 이전 고객 발언이 있으면 대상 생략 여부를 모델이 판정한다.
+    @ParameterizedTest
+    @ValueSource(strings = {"중국도 되나요?", "주말에도 접수돼요?", "자녀 명의도 괜찮아요?"})
+    void shortQuestionWithCustomerHistoryIsJudgedByTheModel(String question) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).contains(source.content(), question);
+    }
+
+    // 이전 고객 발언이 없거나 인사뿐이면, 또는 질문이 길면 지금처럼 모델 없이 독립 질문으로 둔다.
+    @Test
+    void shortQuestionWithoutCustomerHistoryOrLongQuestionSkipsTheModel() throws Exception {
+        String shortQuestion = "중국도 되나요?";
+        var greeting = customer(502L, 1, "안녕하세요");
+        assertThat(resolver.resolve(command(shortQuestion), null).sourceMessageIds()).isEmpty();
+        assertThat(resolver.resolve(command(shortQuestion),
+                new ChatContext(1L, 5L, null, List.of(greeting), shortQuestion, 100)).sourceMessageIds()).isEmpty();
+        String longQuestion = "중국 출장 가는데 현지에서 데이터 무제한으로 쓰려면 어떻게 해야 하나요?";
+        assertThat(resolver.resolve(command(longQuestion),
+                new ChatContext(1L, 5L, null, List.of(source), longQuestion, 100)).sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
+    }
+
+    // 짧아도 상품이나 업무가 있으면 모델이 EXPLICIT으로 판정해 이전 주제를 붙이지 않는다.
+    @Test
+    void shortQuestionWithItsOwnTargetKeepsNoHistory() throws Exception {
+        String question = "청소년 요금제도 있나요?";
+        respond(model, explicit());
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).isEmpty();
+        assertThat(result.question()).isEqualTo(question);
+        verify(model).generate(any());
+    }
+
+    // 대화 속 발언을 순서로 가리키면 일반어 목록 밖의 낱말이 있고 15자를 넘어도 현재 대상 판정 없이 업무 순서대로 연결한다.
+    @Test
+    void ordinalQuestionBeyondShortLengthIsStillResolved() throws Exception {
+        String question = "두 번째로 물어본 건 수수료가 얼마예요?";
+        var newer = customer(903L, 2, "인터넷 설치를 신청하려고 합니다");
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question),
+                new ChatContext(1L, 5L, null, List.of(source, newer), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(903L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+    }
+
+    // '처음 신청한'은 일반 문장에도 쓰여 규칙으로 대상 생략을 정하지 않고 현재 대상 판정 모델에 맡긴다.
+    @Test
+    void firstTimeApplicantPhraseIsStillJudgedByTheModel() throws Exception {
+        String question = "처음 신청한 사람도 할인 받을 수 있나요?";
+        respond(model, explicit());
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+    }
+
+    // 앞 표시는 모델 판정 입력에서 떼고, 결과 질문에는 고객 원문을 그대로 쓴다.
+    @Test
+    void leadingTagIsRemovedFromModelInputOnly() throws Exception {
+        String question = "[문의] 기사님 방문비용은 따로 청구되나요?";
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model, org.mockito.Mockito.times(2)).generate(requests.capture());
+        for (LlmRequest request : requests.getAllValues()) {
+            assertThat(mapper.readTree(request.userPrompt()).path("currentQuestion").asText())
+                    .isEqualTo("기사님 방문비용은 따로 청구되나요?");
+        }
+        assertThat(result.question()).contains(question);
     }
 
     static void respond(LlmClient client, String combined) throws Exception {
