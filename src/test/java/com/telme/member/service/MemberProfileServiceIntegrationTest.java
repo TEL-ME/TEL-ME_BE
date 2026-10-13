@@ -1,6 +1,7 @@
 package com.telme.member.service;
 
 import static com.telme.chat.service.HttpSessionChatActorProvider.USER_ID_ATTRIBUTE;
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
 import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -90,6 +91,21 @@ class MemberProfileServiceIntegrationTest {
         MemberMeResponse response = memberProfileService.getMe(authenticatedRequest(user.getUserId()));
 
         assertThat(response.loginMethods()).containsExactly(LoginMethod.EMAIL, LoginMethod.KAKAO);
+    }
+
+    @Test
+    @DisplayName("구글 전용 회원은 구글 로그인만 연결되어 조회된다")
+    void 구글_전용_회원() {
+        User user = userRepository.saveAndFlush(User.builder().name("구글회원").build());
+        socialAccountRepository.saveAndFlush(SocialAccount.builder()
+                .user(user)
+                .provider(GOOGLE)
+                .providerUserId("profile-google-" + UUID.randomUUID())
+                .build());
+
+        MemberMeResponse response = memberProfileService.getMe(authenticatedRequest(user.getUserId()));
+
+        assertThat(response.loginMethods()).containsExactly(LoginMethod.GOOGLE);
     }
 
     private MockHttpServletRequest authenticatedRequest(Long userId) {

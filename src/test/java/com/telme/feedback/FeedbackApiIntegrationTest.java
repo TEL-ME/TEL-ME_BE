@@ -2,6 +2,7 @@ package com.telme.feedback;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -10,12 +11,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.feedback.repository.FeedbackStore;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
@@ -166,6 +172,14 @@ class FeedbackApiIntegrationTest {
                 .andExpect(jsonPath("$.result").doesNotExist());
         assertFeedbackRows(answer, 0);
     }
+    
+    @Test
+    void dislikeWithOtherReasonKeepsComment() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"OTHER\",\"comment\":\"답변이 너무 늦어요\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.reason").value("OTHER"))
+                .andExpect(jsonPath("$.result.comment").value("답변이 너무 늦어요"));
+    }
 
     @Test
     void guestRatesOwnStoreRecommendation() throws Exception {
@@ -260,8 +274,48 @@ class FeedbackApiIntegrationTest {
         save(owner, answer, "{\"rating\":\"DISLIKE\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"OTHER\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"OTHER\",\"comment\":\"   \"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FEEDBACK400-0"));
         save(owner, answer, "{\"rating\":\"OTHER\"}").andExpect(status().isBadRequest());
         assertFeedbackRows(answer, 0);
+    }
+
+    // 우회 쓰기도 막히는지 본다. 애플리케이션 검증을 거치지 않고 DB에 바로 넣는다.
+    // 실패한 INSERT 뒤에는 테스트 트랜잭션이 중단돼 다른 쿼리를 이어서 실행할 수 없어, 공백 하나마다 테스트를 나눈다
+    @ParameterizedTest
+    @MethodSource("applicationWhitespace")
+    void databaseRejectsOtherWithOnlyWhitespace(String blank) {
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+                "INSERT INTO message_feedback (message_id, user_id, rating, reason_code, comment)"
+                        + " VALUES (?, ?, 'DISLIKE', 'OTHER', ?)", answer, ownerId, blank + blank));
+    }
+
+    // Input이 쓰는 String.strip()이 지우는 문자 전부. 하나라도 DB 제약을 통과하면
+    // 우회 쓰기로 저장된 행을 조회할 때 Input 검증이 실패해 500이 난다
+    static List<String> applicationWhitespace() {
+        return IntStream.rangeClosed(Character.MIN_VALUE, Character.MAX_VALUE)
+                .filter(Character::isWhitespace)
+                .mapToObj(c -> String.valueOf((char) c))
+                .toList();
+    }
+
+    // 반대로 strip()이 남기는 문자(줄바꿈 없는 공백 U+00A0)는 의견으로 저장돼야 한다.
+    // DB가 이것까지 막으면 검증을 통과한 정상 요청이 저장에서 실패한다
+    @Test
+    void databaseKeepsCommentThatApplicationKeeps() throws Exception {
+        save(owner, answer, "{\"rating\":\"DISLIKE\",\"reason\":\"OTHER\",\"comment\":\"\u00A0\"}")
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void databaseRejectsOtherWithoutComment() {
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+                "INSERT INTO message_feedback (message_id, user_id, rating, reason_code, comment)"
+                        + " VALUES (?, ?, 'DISLIKE', 'OTHER', '  ')", answer, ownerId));
     }
 
     @Test

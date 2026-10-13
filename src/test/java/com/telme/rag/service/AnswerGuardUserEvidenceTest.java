@@ -700,4 +700,26 @@ class AnswerGuardUserEvidenceTest {
 
         assertThat(guard.trimUnsupportedPolicyClaims(answer, context)).isEqualTo(answer);
     }
+
+    @Test
+    @DisplayName("고객이 말한 경과 기간을 받아 적는 문장은 통과시킨다")
+    void 고객의_경과_기간을_받아_적으면_통과한다() {
+        String answer = "네, 개통한 지 4개월이 되셨으므로 번호이동 신청이 가능합니다.";
+        String context = "개통 후 3개월이 지나야 번호이동이 가능합니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(
+                answer, context, "개통한 지 4개월 됐는데 번호이동 할 수 있어요?"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("고객이 말한 경과 기간이 기준에 못 미친다고 받아 적는 문장도 통과시킨다")
+    void 기준에_못_미치는_경과_기간을_받아_적으면_통과한다() {
+        String answer = "아직 개통한 지 2개월밖에 지나지 않으셨기 때문에 번호이동을 신청하실 수 없습니다.";
+        String context = "개통 후 3개월이 지나야 번호이동이 가능합니다.";
+
+        assertThatCode(() -> guard.verifyMeasures(
+                answer, context, "개통한 지 2개월 됐는데 번호이동 할 수 있어요?"))
+                .doesNotThrowAnyException();
+    }
 }

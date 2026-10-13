@@ -33,6 +33,12 @@ spring:
             # 비즈 전환 전까지 임시로 빼둔다 — 이메일 없이도 로그인·가입은 정상 동작하고(SocialMemberFinder가
             # email=null을 그대로 처리), 기존 이메일 계정 자동 발견은 불가. 전환되면 다시 추가.
             scope: profile_nickname
+          google:
+            # 키가 없는 환경에서도 앱이 기동하도록 더미값을 기본값으로 둔다.
+            # 실제 Google 로그인은 GOOGLE_CLIENT_ID/SECRET을 설정한 환경에서만 동작한다.
+            client-id: ${GOOGLE_CLIENT_ID:dummy-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:dummy-google-client-secret}
+            scope: openid, profile, email
         provider:
           # 카카오는 Spring Security의 공통 프로바이더 목록(google 등)에 없어 직접 지정한다
           kakao:
@@ -173,3 +179,7 @@ telme:
       # 답을 못 할 때 "혹시 이런 내용을 찾으셨나요?" + FAQ 질문 1개(문서 11절). 위 추천 질문이 켜져 있을 때만 동작한다.
       # 통신 주변 무관 질문에 엉뚱한 버튼이 뜨는 제한이 있어 켜는 결정 전까지 끈다
       no-answer-enabled: ${CONSULT_SUGGESTED_QUESTIONS_NO_ANSWER_ENABLED:false}
+  subscription:
+    # 시연용. 켜면 가입·변경이 즉시 적용되고 가입 당월·월 1회 변경 제한도 생략한다.
+    # 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용(FAQ와 같은 동작)
+    demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}

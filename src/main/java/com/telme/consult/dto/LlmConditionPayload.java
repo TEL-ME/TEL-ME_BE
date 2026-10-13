@@ -6,9 +6,10 @@ import java.util.Objects;
 
 /** 조건 뽑기 모델의 응답. 어느 칸이든 비어 올 수 있어 읽는 쪽에서 막지 않는다. */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record LlmConditionPayload(List<ConditionPayload> conditions) {
+public record LlmConditionPayload(List<String> known, List<ConditionPayload> conditions) {
 
     public LlmConditionPayload {
+        known = known == null ? List.of() : known.stream().filter(Objects::nonNull).toList();
         conditions = conditions == null ? List.of() : conditions.stream().filter(Objects::nonNull).toList();
     }
 

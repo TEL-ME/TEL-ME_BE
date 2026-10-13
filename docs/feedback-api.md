@@ -22,9 +22,9 @@
 | --- | --- |
 | `rating` | 필수. `LIKE` 또는 `DISLIKE` |
 | `reason` | `DISLIKE`일 때 필수, `LIKE`일 때 사용 불가 |
-| `comment` | `DISLIKE`일 때만 사용 가능. 앞뒤 공백을 제거하고 최대 1000자 |
+| `comment` | `DISLIKE`일 때만 사용 가능. `reason`이 `OTHER`면 필수. 앞뒤 공백을 제거하고 최대 1000자 |
 
-`reason`의 값은 `WRONG_INFO`(정보 오류), `NOT_RELATED`(질문과 관련 없음), `HARD_TO_READ`(읽기 어려움)입니다.
+`reason`의 값은 `WRONG_INFO`(정보 오류), `NOT_RELATED`(질문과 관련 없음), `HARD_TO_READ`(읽기 어려움), `OTHER`(기타)입니다.
 
 ## 조회와 취소
 
