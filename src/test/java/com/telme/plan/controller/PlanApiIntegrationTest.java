@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.telme.plan.entity.Plan;
+import com.telme.plan.repository.PlanRepository;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +36,7 @@ class PlanApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlanRepository planRepository;
 
     @Test
     void 로그인_없이_판매_중인_요금제_15종을_정렬_순서대로_내려준다() throws Exception {
@@ -145,6 +148,42 @@ class PlanApiIntegrationTest {
                 assertThat(seededData.get(name)).as("%s 데이터", name).isEqualByComparingTo(expected);
             }
         });
+    }
+
+    // 통화·문자 시드(V33)가 POLICY.md PLAN-07 표와 같은지 엔티티 매핑까지 포함해 확인한다
+    @Test
+    void 통화_문자_시드는_POLICY_md_PLAN_07_표와_같다() throws Exception {
+        Pattern row = Pattern.compile("^\\| ((?:5G|LTE|알뜰) \\S+) \\| ([^|]+?) \\| ([^|]+?) \\|$");
+        Map<String, String[]> policy = new LinkedHashMap<>();
+        boolean inPlan07 = false;
+        for (String line : Files.readAllLines(Path.of("docs/POLICY.md"))) {
+            if (line.startsWith("#### ")) {
+                inPlan07 = line.startsWith("#### PLAN-07");
+            }
+            Matcher m = row.matcher(line);
+            if (inPlan07 && m.matches()) {
+                policy.put(m.group(1), new String[] {m.group(2).trim(), m.group(3).trim()});
+            }
+        }
+        assertThat(policy).hasSize(15);
+
+        List<Plan> plans = planRepository.findAll();
+        assertThat(plans.stream().map(Plan::getName)).containsExactlyInAnyOrderElementsOf(policy.keySet());
+        for (Plan plan : plans) {
+            String[] expected = policy.get(plan.getName());
+            assertLimit(plan.getName() + " 통화", expected[0], plan.getVoiceMinutes(), plan.isVoiceUnlimited());
+            assertLimit(plan.getName() + " 문자", expected[1], plan.getSmsCount(), plan.isSmsUnlimited());
+        }
+    }
+
+    private void assertLimit(String label, String policyValue, Integer limit, boolean unlimited) {
+        if (policyValue.equals("무제한")) {
+            assertThat(unlimited).as("%s 무제한 플래그", label).isTrue();
+            assertThat(limit).as("%s 한도", label).isNull();
+        } else {
+            assertThat(unlimited).as("%s 무제한 플래그", label).isFalse();
+            assertThat(limit).as("%s 한도", label).isEqualTo(Integer.parseInt(policyValue.replaceAll("[^\\d]", "")));
+        }
     }
 
     private long planId(String code) {
