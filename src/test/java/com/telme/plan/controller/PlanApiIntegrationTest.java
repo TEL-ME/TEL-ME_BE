@@ -95,6 +95,20 @@ class PlanApiIntegrationTest {
     }
 
     @Test
+    void 통화_문자_제공량은_무제한이면_null과_플래그로_내려준다() throws Exception {
+        mvc.perform(get(PLANS_URL + "/" + planId("BUDGET_SAVE")))
+                .andExpect(jsonPath("$.result.voiceMinutes").value(500))
+                .andExpect(jsonPath("$.result.voiceUnlimited").value(false))
+                .andExpect(jsonPath("$.result.smsCount").value(300))
+                .andExpect(jsonPath("$.result.smsUnlimited").value(false));
+        mvc.perform(get(PLANS_URL + "/" + planId("LTE_SENIOR")))
+                .andExpect(jsonPath("$.result.voiceMinutes").doesNotExist())
+                .andExpect(jsonPath("$.result.voiceUnlimited").value(true))
+                .andExpect(jsonPath("$.result.smsCount").value(300))
+                .andExpect(jsonPath("$.result.smsUnlimited").value(false));
+    }
+
+    @Test
     void 없는_요금제는_404_ID_형식_오류와_잘못된_필터값은_400() throws Exception {
         mvc.perform(get(PLANS_URL + "/999999"))
                 .andExpect(status().isNotFound())
