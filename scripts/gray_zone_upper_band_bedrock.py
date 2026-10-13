@@ -90,8 +90,9 @@ def keep(score, upper, floor, verdict):
 def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
     """앱처럼 질문 벡터 결과를 먼저 합치고 중복을 빼 상위 3개를 근거로 쓴다.
 
-    qo_results, qa_results: [(slot_id, score)] 벡터별 상위 결과
+    qo_results, qa_results: [(slot_id, score)] 벡터별 상위 결과. slot_id가 없는 시드 FAQ는 None
     verdict_of: slot_id -> 판정(True/False). 판정 구간 밖이면 부르지 않는다
+    slot_id가 없으면 본문을 특정할 수 없어 판정 구간에서는 판정 없이 거부한다(#139와 같음)
     """
     picked = []
     for results, upper, floor in ((qo_results, QO_UPPER, qo_floor), (qa_results, qa_top, qa_floor)):
@@ -99,15 +100,15 @@ def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
             if slot in picked:
                 continue
             judged = floor <= score < upper
-            if keep(score, upper, floor, verdict_of(slot) if judged else None):
+            if keep(score, upper, floor, verdict_of(slot) if judged and slot is not None else None):
                 picked.append(slot)
     return picked[:TOP_K]
 
 
 def needs_judgment(qo_results, qa_results, qo_floor, qa_floor, qa_top):
-    """판정 구간에 든 slot 목록(중복 제거)."""
-    slots = [s for s, v in qo_results if qo_floor <= v < QO_UPPER]
-    slots += [s for s, v in qa_results if qa_floor <= v < qa_top]
+    """판정 구간에 든 slot 목록(중복 제거). slot_id 없는 후보는 판정하지 않으므로 뺀다."""
+    slots = [s for s, v in qo_results if qo_floor <= v < QO_UPPER and s is not None]
+    slots += [s for s, v in qa_results if qa_floor <= v < qa_top and s is not None]
     return list(dict.fromkeys(slots))
 
 
@@ -202,7 +203,8 @@ def nearest(container, column, vector):
            "join faqs f on f.faq_id = e.faq_id where f.status = 'ACTIVE' and e.sync_status = 'SYNCED' "
            f"and e.faq_version = f.version and e.model_name = 'bge-m3' and e.{column} is not null "
            f"order by e.{column} <=> '{literal}'::vector limit {TOP_K}")
-    return [(slot, float(score)) for slot, score in psql(container, sql)]
+    # psql -At는 NULL을 빈 문자열로 내보낸다. slot_id 없는 시드 FAQ끼리 섞이지 않게 None으로 둔다
+    return [(slot or None, float(score)) for slot, score in psql(container, sql)]
 
 
 def search_rows(items, container, ollama_url):
@@ -278,7 +280,8 @@ def main():
     pairs = {f"{row['id']}|{slot}" for row in rows + holdout_rows
              for slot in needs_judgment(row["qo"], row["qa"], *widest)}
     faqs = {slot: (question, answer) for slot, question, answer in
-            psql(args.container, "select slot_id, question, answer from faqs where status = 'ACTIVE'")}
+            psql(args.container, "select slot_id, question, answer from faqs "
+                     "where status = 'ACTIVE' and slot_id is not null")}
     prompts = {}
     for key in pairs:
         eval_id, slot = key.split("|", 1)

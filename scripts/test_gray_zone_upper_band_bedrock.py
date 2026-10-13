@@ -53,6 +53,13 @@ class ServedTest(unittest.TestCase):
         verdicts = {"B": False, "D": True}
         self.assertEqual(served(qo, qa, *UPPER, verdicts.get), ["A", "C", "D"])
 
+    def test_candidate_without_slot_is_rejected_in_band_without_judging(self):
+        def fail(slot):
+            raise AssertionError("slot_id 없는 후보를 판정기에 보냈다")
+        qa = [(None, 0.75), ("C", 0.74), (None, 0.85)]
+        self.assertEqual(served([], qa, *UPPER, lambda slot: slot == "C" or fail(slot)), ["C", None])
+        self.assertEqual(needs_judgment([(None, 0.85)], qa, *UPPER), ["C"])
+
     def test_same_slot_judged_once_per_question(self):
         self.assertEqual(needs_judgment([("A", 0.85)], [("A", 0.75), ("B", 0.70)], *UPPER), ["A"])
 
