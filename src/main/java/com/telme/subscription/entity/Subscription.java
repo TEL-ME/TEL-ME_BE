@@ -44,6 +44,13 @@ public class Subscription {
     @Column(name = "canceled_at")
     private Instant canceledAt;
 
+    // 약정이 없으면 둘 다 null
+    @Column(name = "contract_months")
+    private Integer contractMonths;
+
+    @Column(name = "contract_discount_percent")
+    private Integer contractDiscountPercent;
+
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private Instant createdAt;
 
@@ -51,11 +58,22 @@ public class Subscription {
     private Instant updatedAt;
 
     public static Subscription subscribe(Long userId, Instant now) {
+        return subscribe(userId, now, null, null);
+    }
+
+    public static Subscription subscribe(
+            Long userId, Instant now, Integer contractMonths, Integer contractDiscountPercent) {
         return Subscription.builder()
                 .userId(userId)
                 .status(Status.ACTIVE)
                 .subscribedAt(now)
+                .contractMonths(contractMonths)
+                .contractDiscountPercent(contractDiscountPercent)
                 .build();
+    }
+
+    public boolean hasContract() {
+        return contractMonths != null;
     }
 
     public void cancel(Instant now) {

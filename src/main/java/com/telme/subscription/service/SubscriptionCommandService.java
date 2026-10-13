@@ -12,6 +12,7 @@ import com.telme.subscription.entity.Subscription;
 import com.telme.subscription.entity.SubscriptionHistory;
 import com.telme.subscription.exception.SubscriptionErrorCode;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
+import com.telme.subscription.repository.SubscriptionPauseRepository;
 import com.telme.subscription.repository.SubscriptionRepository;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -29,13 +30,19 @@ public class SubscriptionCommandService {
     private final PlanRepository planRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionHistoryRepository historyRepository;
+    private final SubscriptionPauseRepository pauseRepository;
     private final SubscriptionCalendar calendar;
     private final SubscriptionEligibilityChecker eligibilityChecker;
     private final SubscriptionStateReader stateReader;
     private final SubscriptionProperties properties;
+    private final ContractPenaltyCalculator penaltyCalculator;
 
     // 온라인 신청은 다음 날 09:00 개통(SUBSCRIBE-03). 시연 모드는 즉시 개통
     public SubscriptionSnapshot subscribe(Long userId, Long planId, LocalDate birthDate) {
+        return subscribe(userId, planId, birthDate, false);
+    }
+
+    public SubscriptionSnapshot subscribe(Long userId, Long planId, LocalDate birthDate, boolean contract) {
         Instant now = calendar.now();
         User user = findUser(userId);
         Plan plan = findSellingPlan(planId);
@@ -46,7 +53,9 @@ public class SubscriptionCommandService {
 
         Subscription subscription;
         try {
-            subscription = subscriptionRepository.saveAndFlush(Subscription.subscribe(userId, now));
+            subscription = subscriptionRepository.saveAndFlush(contract
+                    ? Subscription.subscribe(userId, now, ContractPolicy.CONTRACT_MONTHS, ContractPolicy.DISCOUNT_PERCENT)
+                    : Subscription.subscribe(userId, now));
         } catch (DataIntegrityViolationException e) {
             // 동시 가입 요청은 활성 구독 유니크 인덱스에서 차단
             throw new GeneralException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
@@ -69,6 +78,9 @@ public class SubscriptionCommandService {
         }
         Plan currentPlan = stateReader.findCurrentPlan(subscription.getSubscriptionId(), now)
                 .orElseThrow(() -> new GeneralException(SubscriptionErrorCode.CHANGE_NOT_ALLOWED_BEFORE_ACTIVATION));
+        if (pauseRepository.findActive(subscription.getSubscriptionId(), now).isPresent()) {
+            throw new GeneralException(SubscriptionErrorCode.CHANGE_NOT_ALLOWED_WHILE_PAUSED);
+        }
         if (currentPlan.getPlanId().equals(plan.getPlanId())) {
             throw new GeneralException(SubscriptionErrorCode.SAME_PLAN);
         }
@@ -84,15 +96,20 @@ public class SubscriptionCommandService {
         return stateReader.read(subscription, now);
     }
 
-    // 즉시 해지(TERMINATE-01). 개통 전이면 신청한 요금제가 해지 당시 요금제. 예약된 변경은 구독 종료와 함께 소멸
-    public void cancel(Long userId) {
+    // 즉시 해지(TERMINATE-01). 개통 전이면 신청한 요금제가 해지 당시 요금제
+    public ContractPenalty cancel(Long userId) {
         Instant now = calendar.now();
         Subscription subscription = findActiveSubscriptionForUpdate(userId);
         SubscriptionSnapshot state = stateReader.read(subscription, now);
         Plan plan = state.currentPlan() != null ? state.currentPlan() : state.pendingActivation().plan();
 
+        ContractPenalty penalty = penaltyCalculator.calculate(subscription, now);
+
+        pauseRepository.findActive(subscription.getSubscriptionId(), now).ifPresent(pause -> pause.endAt(now));
         subscription.cancel(now);
-        historyRepository.save(SubscriptionHistory.canceled(subscription.getSubscriptionId(), plan.getPlanId(), now));
+        historyRepository.save(SubscriptionHistory.canceled(
+                subscription.getSubscriptionId(), plan.getPlanId(), now, penalty.penalty()));
+        return penalty;
     }
 
     private User findUser(Long userId) {

@@ -125,6 +125,13 @@ class RuleBasedRoutingFallbackTest {
         assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"USIM 재발급", "usim 교체", "유심 재발급"})
+    void equivalentUsimNamesUseTheSameServiceType(String query) {
+        assertThat(fallback.classify(query + " 가능한 매장 찾아줘").extractedConditions())
+                .containsEntry("serviceType", "USIM_REISSUE");
+    }
+
     @Test
     @DisplayName("여러 패턴이 동시에 매칭될 경우 우선순위에 따라 결정론적으로 serviceType을 추출한다")
     void extract_conditions_priority() {

@@ -51,7 +51,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 @Slf4j
 public class QueryRoutingService {
-    private static final int MAX_FAQ_SUB_QUERIES = 3;
+    private static final int MAX_CONSULT_SUB_QUERIES = 3;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -73,6 +73,10 @@ public class QueryRoutingService {
     private static final Pattern CONTEXT_REFERENCE = Pattern.compile(
         "그거|그건|거기|그\\s*지역|아까|앞서|그때|이거|저거|방금|그러면|그럼");
     private static final Pattern ACTION_REQUEST = Pattern.compile("싶|하려고|할래");
+    // 매장 하위 질문의 원문 구간에 있어야 하는 장소 찾기·방문 표현. 지명은 PLACE와 원문 근거가 있는 지역 조건으로 따로 확인한다.
+    // "어디서", "어디로"는 "어디서 확인해요", "어디로 문의해요"처럼, "가면"은 "해외 가면"처럼 FAQ에도 쓰여 넣지 않는다.
+    private static final Pattern STORE_LOOKUP = Pattern.compile(
+        "매장|대리점|지점|직영점|판매점|역점|근처|가까운|가까이|주변|인근|동네|곳|위치|방문|가야|찾아가|들러|들를");
     private static final Pattern SECTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
     private static final String PREVIOUS_UTTERANCE_HEADER = "[대상을 확인할 이전 고객 발언]\n";
     private static final String CURRENT_QUESTION_HEADER = "\n[현재 후속 질문]\n";
@@ -114,7 +118,7 @@ public class QueryRoutingService {
         return route(userMessage, context, false);
     }
 
-    /** 상담 연결용 진입점. 여러 FAQ 질의는 유지하고 FAQ와 STORE 복합 질문은 저장 전에 차단한다. */
+    // 상담 연결용 진입점. 하위 요청별 검색이 가능한 FAQ와 매장 복합 질문을 유지한다.
     public IntentRouteResponse routeSingleConsult(ChatMessage userMessage, ChatContext context) {
         return route(userMessage, context, true);
     }
@@ -158,7 +162,7 @@ public class QueryRoutingService {
         if (analysisQuestion.isBlank()) {
             log.info("[라우팅] 질문 내용이 비어 있어 UNKNOWN으로 처리합니다.");
             LlmRoutingPayload fallbackPayload = ruleBasedFallback.classify(question);
-            ensureSingleConsultSupported(fallbackPayload, singleConsultOnly);
+            ensureSingleConsultSupported(fallbackPayload, singleConsultOnly, question);
             return executeInTransaction(userMessage, fallbackPayload, QueryRouting.Method.RULE);
         }
 
@@ -285,7 +289,7 @@ public class QueryRoutingService {
         }
         validateFaqSearchQueries(payload, question, analysisQuestion);
         payload = preserveFaqQuestionMeaning(payload, analysisQuestion, question, previousSubject, context, restored);
-        ensureSingleConsultSupported(payload, singleConsultOnly);
+        ensureSingleConsultSupported(payload, singleConsultOnly, question);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
         return result;
@@ -640,18 +644,16 @@ public class QueryRoutingService {
             throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
         }
 
-        Map<String, String> extracted = payload.intent() == QueryRouting.Intent.UNKNOWN
-                ? Collections.emptyMap()
-                : validConditions(payload.extractedConditions(), question, context);
-        extracted = withRuleServiceType(payload.intent(), extracted, question);
         List<LlmRoutingPayload.SubQueryPayload> normalized = new ArrayList<>();
         boolean hasFaq = false;
         boolean hasStore = false;
+        boolean allSubIntentsGiven = true;
         for (LlmRoutingPayload.SubQueryPayload sub : payload.subQueries()) {
             if (sub == null) {
                 throw new GeneralException(IntentErrorCode.LLM_RESPONSE_PARSE_FAILED);
             }
             ConsultRequest.Intent intent = sub.intent();
+            allSubIntentsGiven &= intent != null;
             if (intent == null) {
                 intent = switch (payload.intent()) {
                     case FAQ -> ConsultRequest.Intent.FAQ;
@@ -671,7 +673,76 @@ public class QueryRoutingService {
                     (short) (normalized.size() + 1), intent, sub.queryText(), conditions, sub.requestQuote()));
         }
 
-        boolean inconsistent = switch (payload.intent()) {
+        QueryRouting.Intent topIntent = payload.intent();
+        String refinedSource = payload.refinedQuery();
+        boolean ungroundedBoth = false;
+        if (topIntent == QueryRouting.Intent.BOTH && hasFaq && hasStore && allSubIntentsGiven) {
+            // 모델이 처음부터 BOTH로 적은 출력도 하위 질문마다 원문에 서로 다른 근거가 있어야 한다.
+            try {
+                IndependentQuestionPolicy.validateParts(normalized, question);
+            } catch (UnsupportedCompoundQuestionException unsupported) {
+                // 매장을 말한 질문은 요청 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
+                if (RuleBasedRoutingFallback.mentionsStore(question)) {
+                    throw unsupported;
+                }
+                ungroundedBoth = true;
+            }
+        }
+        if ((topIntent == QueryRouting.Intent.FAQ || ungroundedBoth) && hasFaq && hasStore && allSubIntentsGiven
+                && !RuleBasedRoutingFallback.mentionsStore(question)) {
+            // "어디서 볼 수 있나요"처럼 매장을 말하지 않은 질문에 모델이 매장 찾기를 덧붙인 출력이다.
+            // 고객이 요청하지 않은 매장 하위 질문만 빼고 FAQ로 처리한다.
+            // BOTH 출력은 매장 요청에 원문 근거가 없을 때만 뺀다. "근처 개통 가능한 곳"처럼 매장이라 말하지 않은 요청도 있다.
+            log.info("[라우팅] 원문에 매장 언급이 없어 모델이 만든 매장 하위 질문을 제외합니다.");
+            normalized.removeIf(sub -> sub.intent() == ConsultRequest.Intent.STORE);
+            for (int index = 0; index < normalized.size(); index++) {
+                var sub = normalized.get(index);
+                normalized.set(index, new LlmRoutingPayload.SubQueryPayload((short) (index + 1), sub.intent(),
+                        sub.queryText(), sub.conditions(), sub.requestQuote()));
+            }
+            hasStore = false;
+            topIntent = QueryRouting.Intent.FAQ;
+            // 모델의 전체 정제 질문에도 매장 찾기가 섞여 있어 원문을 쓴다.
+            refinedSource = question;
+        }
+        if ((topIntent == QueryRouting.Intent.FAQ || topIntent == QueryRouting.Intent.STORE)
+                && hasFaq && hasStore && allSubIntentsGiven) {
+            // 하위 질문은 FAQ와 매장으로 나눴는데 전체 의도만 한쪽으로 적은 출력이다. 버리면 질문 일부가 사라진다.
+            // 하위 질문마다 원문에 서로 다른 근거가 있을 때만 BOTH로 계산하고, 아니면 나눠 보내기 안내로 넘긴다.
+            IndependentQuestionPolicy.validateParts(normalized, question);
+            log.info("[라우팅] 하위 질문에 FAQ와 매장이 함께 있어 전체 의도를 BOTH로 계산합니다: modelIntent={}",
+                    topIntent);
+            topIntent = QueryRouting.Intent.BOTH;
+        }
+        if (topIntent == QueryRouting.Intent.BOTH && hasFaq && hasStore && allSubIntentsGiven) {
+            // 인용이 원문에 있어도 장소를 찾는 요청이라는 뜻은 아니다. "유심 재발급 비용 알려줘"를 매장 요청으로 둔 출력은
+            // 그 요청을 버리지 않고 FAQ로 처리한다. 이후 FAQ 복합 질문의 요청 수와 검색어 검증을 그대로 거친다.
+            for (int index = 0; index < normalized.size(); index++) {
+                var sub = normalized.get(index);
+                String section = sub.intent() == ConsultRequest.Intent.STORE
+                        ? IndependentQuestionPolicy.ownSectionText(normalized, sub, question) : null;
+                // "서울 강남구"처럼 역 이름 꼴이 아닌 지역도, 모델의 지역 조건이 이 요청의 원문 구간에 있으면 장소 요청으로 본다.
+                boolean namedPlace = section != null && validConditions(sub.conditions(), section, context)
+                        .containsKey(FollowUpRouteResponse.LOCATION_KEY);
+                if (section != null && !namedPlace && !STORE_LOOKUP.matcher(section).find()
+                        && tokens(PLACE, section).isEmpty()) {
+                    log.info("[라우팅] 장소를 찾는 표현이 없는 매장 하위 질문을 FAQ로 처리합니다: order={}", sub.order());
+                    normalized.set(index, new LlmRoutingPayload.SubQueryPayload(sub.order(),
+                            ConsultRequest.Intent.FAQ, section, Collections.emptyMap(), sub.requestQuote()));
+                }
+            }
+            hasStore = normalized.stream().anyMatch(sub -> sub.intent() == ConsultRequest.Intent.STORE);
+            if (!hasStore) {
+                topIntent = QueryRouting.Intent.FAQ;
+                refinedSource = question;
+            }
+        }
+        Map<String, String> extracted = topIntent == QueryRouting.Intent.UNKNOWN
+                ? Collections.emptyMap()
+                : validConditions(payload.extractedConditions(), question, context);
+        extracted = withRuleServiceType(topIntent, extracted, question);
+
+        boolean inconsistent = switch (topIntent) {
             case FAQ -> hasStore;
             case STORE -> hasFaq;
             case BOTH -> !normalized.isEmpty() && (!hasFaq || !hasStore);
@@ -683,24 +754,50 @@ public class QueryRoutingService {
         long storeCount = normalized.stream()
                 .filter(sub -> sub.intent() == ConsultRequest.Intent.STORE)
                 .count();
-        String refined = safeQueryText(payload.refinedQuery(), question, context, true, safeFallback);
+        String refined = safeQueryText(refinedSource, question, context, true, safeFallback);
         List<LlmRoutingPayload.SubQueryPayload> safeSubQueries = new ArrayList<>();
         for (LlmRoutingPayload.SubQueryPayload sub : normalized) {
             String queryText = safeQueryText(
                     sub.queryText(), question, context,
-                    payload.intent() == QueryRouting.Intent.FAQ && normalized.size() == 1,
+                    topIntent == QueryRouting.Intent.FAQ && normalized.size() == 1,
                     safeFallback);
+            // 모델 검색어는 다른 하위 질문의 낱말을 섞어 쓰기도 해, 이 요청의 구간과 공통 구간을 근거로 쓴다.
+            String ownSection = normalized.size() > 1
+                    ? IndependentQuestionPolicy.withoutOtherQuotes(normalized, sub, question) : null;
+            if (sub.intent() == ConsultRequest.Intent.FAQ && topIntent == QueryRouting.Intent.BOTH
+                    && queryText != null && (ownSection == null
+                        || SearchTopicPolicy.introducesNewTopic(groundingText(ownSection, context), queryText))) {
+                // FAQ만 있는 복합 질문의 의미 검증처럼, 다른 요청의 업무로 바뀐 검색어는 이 요청의 원문 구간으로 되돌린다.
+                // 구간을 확정하지 못하면 검사를 건너뛰지 않고 원문 근거만 쓴다.
+                log.info("[라우팅] 복합 질문의 FAQ 검색어를 원문 근거로 확인하지 못해 원문 구간을 사용합니다: order={}",
+                        sub.order());
+                String section = IndependentQuestionPolicy.ownSectionText(normalized, sub, question);
+                queryText = section != null ? section : IndependentQuestionPolicy.verifiedQuote(sub, question);
+            }
             Map<String, String> conditions = sub.conditions();
-            if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1) {
+            if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
+                    && topIntent == QueryRouting.Intent.STORE) {
                 Map<String, String> merged = new LinkedHashMap<>(extracted);
                 merged.putAll(conditions);
                 conditions = merged;
+            }
+            if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
+                // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
+                // 원문 구간을 확정하지 못하면 모델 검색어로 되돌아가지 않고 조건을 비워 되묻는다.
+                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context);
+                // 모델이 업무를 비워도 이 요청의 원문 인용 구간에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
+                // 인용이 없으면 채우지 않는다. 검색어는 모델이 다시 쓴 문장이라 업무 근거로 쓰지 않는다.
+                String section = sub.requestQuote() == null || sub.requestQuote().isBlank()
+                        ? null : IndependentQuestionPolicy.ownSectionText(normalized, sub, question);
+                if (section != null && !section.isBlank()) {
+                    conditions = withRuleServiceType(conditions, section);
+                }
             }
             safeSubQueries.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, conditions, sub.requestQuote()));
         }
         return new LlmRoutingPayload(
-                payload.intent(), payload.confidence(), refined, extracted, safeSubQueries);
+                topIntent, payload.confidence(), refined, extracted, safeSubQueries);
     }
 
     private String safeQueryText(
@@ -928,24 +1025,23 @@ public class QueryRoutingService {
     }
 
     private void ensureSingleConsultSupported(
-            LlmRoutingPayload payload, boolean singleConsultOnly) {
+            LlmRoutingPayload payload, boolean singleConsultOnly, String originalQuestion) {
         if (!singleConsultOnly || payload == null) {
             return;
         }
         int subQueryCount = payload.subQueries() == null ? 0 : payload.subQueries().size();
-        if (payload.intent() == QueryRouting.Intent.BOTH
-                || subQueryCount > 1
-                && (payload.intent() != QueryRouting.Intent.FAQ
-                || payload.subQueries().stream().anyMatch(
-                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
+        if (payload.intent() == QueryRouting.Intent.BOTH && subQueryCount < 2
+                || subQueryCount > 1 && payload.subQueries().stream().anyMatch(sub ->
+                sub.queryText() == null || sub.queryText().isBlank()
+                        || sub.queryText().strip().equals(originalQuestion.strip()))) {
             throw new UnsupportedCompoundQuestionException(payload.subQueries() == null ? List.of()
                     : payload.subQueries().stream()
                             .map(sub -> new UnsupportedCompoundQuestionException.Part(
                                     sub.intent(), sub.queryText(), sub.conditions()))
                             .toList());
         }
-        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
-            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
+        if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
     }
 
@@ -955,26 +1051,18 @@ public class QueryRoutingService {
             return;
         }
         int subQueryCount = response.subQueries() == null ? 0 : response.subQueries().size();
-        if (response.intent() == QueryRouting.Intent.BOTH
-                || subQueryCount > 1
-                && (response.intent() != QueryRouting.Intent.FAQ
-                || response.subQueries().stream().anyMatch(
-                        sub -> sub.intent() != ConsultRequest.Intent.FAQ))) {
+        if (response.intent() == QueryRouting.Intent.BOTH && subQueryCount < 2
+                || subQueryCount > 1 && response.subQueries().stream().anyMatch(sub ->
+                sub.queryText() == null || sub.queryText().isBlank()
+                        || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
             throw new UnsupportedCompoundQuestionException(response.subQueries() == null ? List.of()
                     : response.subQueries().stream()
                             .map(sub -> new UnsupportedCompoundQuestionException.Part(
                                     sub.intent(), sub.queryText(), sub.conditions()))
                             .toList());
         }
-        if (subQueryCount > MAX_FAQ_SUB_QUERIES) {
-            throw new TooManyFaqQuestionsException(MAX_FAQ_SUB_QUERIES);
-        }
-        if (subQueryCount > 1 && response.intent() == QueryRouting.Intent.FAQ
-                && response.subQueries().stream().anyMatch(sub -> sub.queryText() == null
-                || sub.queryText().isBlank()
-                || sub.queryText().strip().equals(originalQuestion == null ? "" : originalQuestion.strip()))) {
-            throw new UnsupportedCompoundQuestionException(
-                    "FAQ 하위 질문을 원문과 분리해 안전하게 검색할 수 없습니다.");
+        if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
+            throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
     }
 
@@ -1035,8 +1123,12 @@ public class QueryRoutingService {
     // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
     private Map<String, String> withRuleServiceType(
             QueryRouting.Intent intent, Map<String, String> extracted, String question) {
-        if (intent != QueryRouting.Intent.STORE
-                || extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+        return intent == QueryRouting.Intent.STORE ? withRuleServiceType(extracted, question) : extracted;
+    }
+
+    // 업무 조건이 없으면 주어진 원문에서 규칙으로 업무를 채운다.
+    private Map<String, String> withRuleServiceType(Map<String, String> extracted, String question) {
+        if (extracted.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
             return extracted;
         }
         String serviceType = ruleBasedFallback.serviceTypeOf(question);

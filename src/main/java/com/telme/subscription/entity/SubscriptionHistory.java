@@ -50,6 +50,10 @@ public class SubscriptionHistory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    // 해지 이력에만 있고 약정이 없으면 0
+    @Column(name = "penalty_amount")
+    private Long penaltyAmount;
+
     public static SubscriptionHistory subscribed(Long subscriptionId, Long toPlanId, Instant effectiveFrom, Instant now) {
         return SubscriptionHistory.builder()
                 .subscriptionId(subscriptionId)
@@ -72,13 +76,15 @@ public class SubscriptionHistory {
                 .build();
     }
 
-    public static SubscriptionHistory canceled(Long subscriptionId, Long fromPlanId, Instant now) {
+    public static SubscriptionHistory canceled(
+            Long subscriptionId, Long fromPlanId, Instant now, long penaltyAmount) {
         return SubscriptionHistory.builder()
                 .subscriptionId(subscriptionId)
                 .type(Type.CANCEL)
                 .fromPlanId(fromPlanId)
                 .effectiveFrom(now)
                 .createdAt(now)
+                .penaltyAmount(penaltyAmount)
                 .build();
     }
 }
