@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
@@ -151,10 +152,12 @@ public class QueryRoutingService {
             }
         }
 
-        String question = resolvedQuestion != null ? resolvedQuestion.strip()
-                : userMessage.getContent() != null ? userMessage.getContent().trim() : "";
         boolean restored = resolvedQuestion != null && context != null;
-        String promptQuestion = restored ? userMessage.getContent() : question;
+        String currentQuestion = ConsultationQuestion.extract(userMessage.getContent());
+        String question = restored ? resolvedQuestion.strip()
+                : ConsultationQuestion.extract(resolvedQuestion != null ? resolvedQuestion : currentQuestion);
+        question = question == null ? "" : question.strip();
+        String promptQuestion = restored ? currentQuestion : question;
         // 요청 개수·인용 근거는 현재 발화로만 판정한다. 복원된 이전 발언은 검색 대상의 근거로만 쓴다.
         String analysisQuestion = RoutingQuestionNormalizer.normalize(promptQuestion);
         String previousSubject = restored ? previousSubject(question, promptQuestion) : "";
@@ -391,7 +394,8 @@ public class QueryRoutingService {
     private String previousSubject(String resolved, String current) {
         int split = resolved.lastIndexOf(CURRENT_QUESTION_HEADER);
         if (!resolved.startsWith(PREVIOUS_UTTERANCE_HEADER) || split <= PREVIOUS_UTTERANCE_HEADER.length()
-                || !RoutingQuestionNormalizer.quoteKey(resolved.substring(split + CURRENT_QUESTION_HEADER.length()))
+                || !RoutingQuestionNormalizer.quoteKey(ConsultationQuestion.extract(
+                        resolved.substring(split + CURRENT_QUESTION_HEADER.length())))
                         .equals(RoutingQuestionNormalizer.quoteKey(current))) {
             return "";
         }

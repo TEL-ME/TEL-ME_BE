@@ -29,6 +29,38 @@ class ChatQuestionResolverTest {
     private final ChatQuestionResolver resolver = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop());
     private final ChatContextMessage source = customer(501L, 1, "해외 로밍 신청을 알아보고 있어요.");
 
+    @ParameterizedTest
+    @ValueSource(strings = {"바라야 그럼 신청 방법은?", "안녕 바라야, 그럼 신청 방법은?",
+            "그럼 신청 방법은? 고마워 바라야"})
+    void addressedFollowUpStillResolvesTheSameCustomerSource(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).endsWith("[현재 후속 질문]\n그럼 신청 방법은?");
+        assertThat(context.currentQuestion()).isEqualTo(original);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(mapper.readTree(request.getValue().userPrompt()).path("currentQuestion").asText())
+                .isEqualTo("그럼 신청 방법은?");
+    }
+
+    @Test
+    void resolutionTraceKeepsOriginalAlongsideAnalysisBody() {
+        var trace = mock(ExecutionTrace.class);
+        var traced = new ChatQuestionResolver(model, mapper, trace);
+        String original = "바라야 근처 매장 알려줘";
+        traced.resolve(command(original), null);
+        var value = ArgumentCaptor.forClass(Object.class);
+        verify(trace).stage(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("questionResolution"), value.capture());
+        assertThat((Map<?, ?>) value.getValue()).extracting("originalQuery", "analysisQuery")
+                .containsExactly(original, "근처 매장 알려줘");
+    }
+
     @Test
     void preservesOriginalRequestNegationAndResolvesOnlyCustomerSources() throws Exception {
         String question = "그건 아직 신청 안 했는데 어떻게 신청해?";
@@ -433,14 +465,14 @@ class ChatQuestionResolverTest {
         assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
     }
 
-    // 앞에 붙은 "[문의]" 표시 때문에 문맥 판정 후보에서 빠지지 않는다. 고객 원문은 그대로 전달한다.
+    // 허용한 앞 표시는 상담 판별용 입력에서 제외한다. 저장 원문은 변경하지 않는다.
     @Test
     void leadingTagDoesNotHideAFollowUpFromContextResolution() throws Exception {
         String question = "[문의] 비용은 얼마인가요?";
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
         assertThat(result.sourceMessageIds()).containsExactly(501L);
-        assertThat(result.question()).contains(source.content(), question);
+        assertThat(result.question()).contains(source.content(), "비용은 얼마인가요?");
     }
 
     @Test
@@ -531,9 +563,9 @@ class ChatQuestionResolverTest {
         assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
     }
 
-    // 앞 표시는 모델 판정 입력에서 떼고, 결과 질문에는 고객 원문을 그대로 쓴다.
+    // 앞 표시는 공통 분석 입력에서 제외하므로 모델 입력과 복원 질문에 같은 본문을 쓴다.
     @Test
-    void leadingTagIsRemovedFromModelInputOnly() throws Exception {
+    void leadingTagIsRemovedFromAnalysisInput() throws Exception {
         String question = "[문의] 기사님 방문비용은 따로 청구되나요?";
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
@@ -543,7 +575,19 @@ class ChatQuestionResolverTest {
             assertThat(mapper.readTree(request.userPrompt()).path("currentQuestion").asText())
                     .isEqualTo("기사님 방문비용은 따로 청구되나요?");
         }
-        assertThat(result.question()).contains(question);
+        assertThat(result.question()).contains("기사님 방문비용은 따로 청구되나요?").doesNotContain("[문의]");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[문의] 그럼 필요한 서류는 어떻게 준비하나요?",
+            "[문의] 무러바라님 그럼 필요한 서류는 어떻게 준비하나요?"})
+    void leadingTagAndAddressUseTheSameHistory(String question) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question),
+                new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).contains("그럼 필요한 서류는 어떻게 준비하나요?")
+                .doesNotContain("[문의]", "무러바라님");
     }
 
     static void respond(LlmClient client, String combined) throws Exception {

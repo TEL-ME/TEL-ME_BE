@@ -166,7 +166,7 @@ public class ChatQuestionResolver {
     }
 
     public Resolution resolve(ChatProcessingCommand command, ChatContext context) {
-        String question = command.content().strip();
+        String question = ConsultationQuestion.extract(command.content()).strip();
         trace.stage(command.executionId(), "questionResolutionMode", mode.name());
         if (context != null && (!Objects.equals(context.sessionId(), command.sessionId())
                 || !Objects.equals(context.inputMessageId(), command.inputMessageId())
@@ -175,7 +175,7 @@ public class ChatQuestionResolver {
                     "originalQuery", question, "status", "INVALID_CONTEXT"));
             return new Resolution(question, true, List.of());
         }
-        // 공백 차이와 "[문의]" 같은 앞 표시는 호출 후보 선정과 모델 판정 입력에서만 떼고, 결과 질문에는 고객 원문을 그대로 쓴다.
+        // 소유권은 원문으로 확인하고 상담 본문으로 후보를 고른다. 앞 표시는 모델 판정 입력에서만 뗀다.
         String gated = withoutLeadingTag(question);
         String noWhitespace = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
         boolean candidate = TARGET_REFERENCE.matcher(noWhitespace).find()
@@ -197,12 +197,13 @@ public class ChatQuestionResolver {
         String relation = result.needsClarification() ? "CLARIFICATION_REQUIRED"
                 : result.sourceMessageIds().isEmpty() ? "SELF_CONTAINED" : "HISTORY_DEPENDENT";
         trace.stage(command.executionId(), "questionResolution", Map.of(
-                "originalQuery", question, "resolvedQuery", result.question(), "relation", relation,
+                "originalQuery", command.content().strip(), "analysisQuery", question,
+                "resolvedQuery", result.question(), "relation", relation,
                 "sourceMessageIds", result.sourceMessageIds(), "needsClarification", result.needsClarification()));
     }
 
     private Resolution resolveWithLlm(ChatProcessingCommand command, ChatContext context) {
-        String question = command.content().strip();
+        String question = ConsultationQuestion.extract(command.content()).strip();
         try {
             Map<Long, ChatContextMessage> sources = new LinkedHashMap<>();
             if (context != null) {
@@ -232,7 +233,8 @@ public class ChatQuestionResolver {
                 Map<String, Object> data = new LinkedHashMap<>();
                 // DB의 식별자는 판정 입력에서 제외하고 검증 후 실제 식별자로 연결한다.
                 data.put("sourceMessages", java.util.stream.IntStream.range(0, ordered.size())
-                        .mapToObj(index -> new Source(index + 1, ordered.get(index).content())).toList());
+                        .mapToObj(index -> new Source(index + 1,
+                                ConsultationQuestion.extract(ordered.get(index).content()))).toList());
                 data.put("currentQuestion", judged);
                 String sourcesRaw = client.generate(LlmRequest.builder().executionId(command.executionId())
                         .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SOURCE_PROMPT)
@@ -365,11 +367,8 @@ public class ChatQuestionResolver {
         };
     }
 
-    // 문장 앞의 "[문의]", "[질문]" 같은 짧은 대괄호 표시. 후보 선정과 일반어 판정에서만 뗀다.
-    private static final Pattern LEADING_TAG = Pattern.compile("^\\s*\\[[^\\]]{1,10}\\]\\s*");
-
     static String withoutLeadingTag(String question) {
-        return question == null ? "" : LEADING_TAG.matcher(question).replaceFirst("");
+        return ConversationInput.withoutLeadingTag(question);
     }
 
     private static String compact(String question) {

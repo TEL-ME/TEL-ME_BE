@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.entity.ChatMessage;
@@ -155,8 +156,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
                 result.initialQuery().queryText()).withContext(context.routingContext(),
-                        context.message().equals(context.resolvedQuestion())
-                                ? context.message() : result.initialQuery().queryText());
+                        context.historyResolved()
+                                ? result.initialQuery().queryText() : context.resolvedQuestion());
     }
 
     private Context resolveQuestion(ChatProcessingCommand command, Context context) {
@@ -167,7 +168,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         if (resolution.needsClarification()) {
             return null;
         }
-        return context.withResolvedQuestion(resolution.question())
+        return context.withResolution(resolution.question(), !resolution.sourceMessageIds().isEmpty())
                 .withRoutingContext(resolver.contextFor(resolution, context.routingContext()));
     }
 
