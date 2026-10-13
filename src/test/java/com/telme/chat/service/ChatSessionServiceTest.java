@@ -61,6 +61,9 @@ class ChatSessionServiceTest {
     @Mock
     private ChatInputGuardService inputGuard;
 
+    @Mock
+    private ChatSessionEndSummaryService endSummary;
+
     @InjectMocks
     private ChatSessionService chatSessionService;
 

@@ -48,6 +48,7 @@ public class ChatSessionService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<ChatFeedbackReader> chatFeedbackReader;
     private final ChatInputGuardService inputGuard;
+    private final ChatSessionEndSummaryService endSummary;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -155,7 +156,10 @@ public class ChatSessionService {
     @Transactional
     public ChatSessionUpdateResponse closeSession(ChatActor actor, Long sessionId) {
         ChatSession session = getOwnedSessionForUpdate(actor, sessionId);
-        session.close();
+        if (session.getStatus() != ChatSession.Status.CLOSED) {
+            session.close();
+            endSummary.request(session);
+        }
         return chatSessionConverter.toUpdateResponse(session);
     }
 
