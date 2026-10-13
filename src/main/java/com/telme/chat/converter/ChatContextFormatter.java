@@ -13,6 +13,8 @@ public final class ChatContextFormatter {
 
     public static boolean isSocial(String content) {
         if (content == null) return false;
+        if (com.telme.chat.service.BasicConversationClassifier.classify(content).isPure()
+                || com.telme.chat.service.BasicConversationResponder.isFixedResponse(content)) return true;
         String normalized = content.strip().replaceAll("(?U)\\s+", "").replaceAll("[.!?~…]+", "");
         return java.util.Set.of("안녕", "안녕하세요", "안녕하십니까", "반가워요", "반갑습니다",
                 "감사합니다", "감사해요", "감사", "고마워", "고마워요", "고맙습니다", "고맙네요",
