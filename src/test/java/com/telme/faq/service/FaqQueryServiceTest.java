@@ -8,6 +8,7 @@ import com.telme.faq.dto.req.FaqSort;
 import com.telme.faq.dto.res.FaqResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqCategory;
+import com.telme.faq.exception.FaqErrorCode;
 import com.telme.faq.repository.FaqRepository;
 import com.telme.global.common.exception.GeneralException;
 import java.util.List;
@@ -82,8 +83,12 @@ class FaqQueryServiceTest {
     @DisplayName("상세는 공개 중인 FAQ의 답변을 주고, 숨김·삭제는 없는 FAQ처럼 404다")
     void 숨김_삭제는_상세에서_404다() {
         assertThat(service.getFaq(citedTwice).answer()).startsWith(MARKER);
-        assertThatThrownBy(() -> service.getFaq(hidden)).isInstanceOf(GeneralException.class);
-        assertThatThrownBy(() -> service.getFaq(deleted)).isInstanceOf(GeneralException.class);
+        assertThatThrownBy(() -> service.getFaq(hidden))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.FAQ_NOT_FOUND);
+        assertThatThrownBy(() -> service.getFaq(deleted))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("errorCode", FaqErrorCode.FAQ_NOT_FOUND);
     }
 
     private List<Long> ids(FaqListRequest request) {

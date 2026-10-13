@@ -88,6 +88,7 @@ class FaqControllerTest {
         mockMvc.perform(get("/api/v1/faqs").param("size", "101")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/faqs").param("size", "0")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/faqs/0")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/faqs").param("page", "10001")).andExpect(status().isBadRequest());
     }
 
     @Test
