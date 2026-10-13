@@ -137,6 +137,45 @@ class UsageApiIntegrationTest {
     }
 
     @Test
+    void 월을_고르면_그달_사용량과_조회_가능_범위를_주고_이번_달_전용_값은_없다() throws Exception {
+        subscribe("LTE_BASIC", false);
+        at(NOV_10);
+        GeneratedUsage october = generator.generate(userId, LocalDate.of(2026, 10, 1));
+
+        // 10월은 개통한 달(13일 개통)이라 13~31일 19일분만 반영
+        mvc.perform(get(URL).param("month", "2026-10").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.result.availableFrom").value("2026-10-01"))
+                .andExpect(jsonPath("$.result.availableTo").value("2026-11-01"))
+                .andExpect(jsonPath("$.result.usage.month").value("2026-10-01"))
+                .andExpect(jsonPath("$.result.usage.data.used").value(Math.round(october.dataMb() * 19 / 31.0)))
+                .andExpect(jsonPath("$.result.usage.voice.limit").value(700))
+                .andExpect(jsonPath("$.result.usage.daysUntilBilling").doesNotExist())
+                .andExpect(jsonPath("$.result.usage.paused").doesNotExist())
+                .andExpect(jsonPath("$.result.usage.expectedFee").doesNotExist());
+    }
+
+    @Test
+    void 조회할_수_없는_달과_잘못된_형식은_400() throws Exception {
+        subscribe("LTE_BASIC", false);
+        at(NOV_10);
+
+        mvc.perform(get(URL).param("month", "2026-09").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USAGE400-0"));
+        mvc.perform(get(URL).param("month", "2026-12").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USAGE400-0"));
+        mvc.perform(get(URL).param("month", "2026-13").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+        mvc.perform(get(URL).param("month", "abc").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON400-1"));
+    }
+
+    @Test
     void 같은_달에_다시_조회해도_저장된_값이라_응답이_같고_행이_늘지_않는다() throws Exception {
         subscribe("FIVE_G_STANDARD", false);
         at(NOV_10);

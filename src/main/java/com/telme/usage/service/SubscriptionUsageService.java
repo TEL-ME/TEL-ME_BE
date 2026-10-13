@@ -1,6 +1,7 @@
 package com.telme.usage.service;
 
 import com.telme.global.common.TimeZones;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.plan.entity.Plan;
 import com.telme.plan.repository.PlanRepository;
 import com.telme.subscription.entity.Subscription;
@@ -13,11 +14,13 @@ import com.telme.subscription.service.SubscriptionCalendar;
 import com.telme.subscription.service.SubscriptionSnapshot;
 import com.telme.subscription.service.SubscriptionStateReader;
 import com.telme.usage.entity.SubscriptionUsage;
+import com.telme.usage.exception.UsageErrorCode;
 import com.telme.usage.repository.SubscriptionUsageRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class SubscriptionUsageService {
 
-    static final int PAST_MONTHS = 3;
+    static final int VIEWABLE_PAST_MONTHS = 6;
+    static final int RECENT_MONTHS_LIMIT = 3;
     private static final int MB_PER_GB = 1024;
 
     private final SubscriptionRepository subscriptionRepository;
@@ -47,6 +51,11 @@ public class SubscriptionUsageService {
     private final UsageGenerator generator;
 
     public UsageOverview getOverview(Long userId) {
+        return getOverview(userId, null);
+    }
+
+    // month가 null이면 이번 달. 개통한 달 이후이면서 6개월 전까지만 조회할 수 있고 범위 밖이면 예외
+    public UsageOverview getOverview(Long userId, YearMonth month) {
         Instant now = calendar.now();
         Optional<Subscription> found = subscriptionRepository.findByUserIdAndStatus(userId, Subscription.Status.ACTIVE);
         if (found.isEmpty()) {
@@ -62,18 +71,44 @@ public class SubscriptionUsageService {
         LocalDate activationDate = activationDate(planHistories);
         LocalDate today = calendar.today(now);
         LocalDate thisMonth = today.withDayOfMonth(1);
-        SubscriptionUsage stored = ensureGenerated(subscription, activationDate, thisMonth).get(thisMonth);
+        LocalDate availableFrom = firstMonth(activationDate, thisMonth);
+        LocalDate target = month == null ? thisMonth : month.atDay(1);
+        if (target.isBefore(availableFrom) || target.isAfter(thisMonth)) {
+            throw new GeneralException(UsageErrorCode.MONTH_OUT_OF_RANGE);
+        }
 
-        double fraction = visibleFraction(thisMonth, activationDate, today);
+        SubscriptionUsage stored = ensureGenerated(subscription, activationDate, thisMonth).get(target);
+        double fraction = visibleFraction(target, activationDate, today);
+        MonthUsage usage = target.equals(thisMonth)
+                ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, now, today, activationDate)
+                : pastMonthUsage(stored, fraction, PlanTimeline.planAt(planHistories, startOfMonth(target)));
+        return UsageOverview.active(availableFrom, thisMonth, usage);
+    }
+
+    private MonthUsage thisMonthUsage(Subscription subscription, SubscriptionSnapshot snapshot,
+            List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction, Instant now,
+            LocalDate today, LocalDate activationDate) {
+        LocalDate thisMonth = today.withDayOfMonth(1);
         Plan plan = snapshot.currentPlan();
-        return UsageOverview.active(new ThisMonthUsage(
+        return new MonthUsage(
                 thisMonth,
                 thisMonth.lengthOfMonth() - today.getDayOfMonth(),
                 snapshot.pause() != null,
                 ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), dataLimitMb(plan)),
                 ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), voiceLimit(plan)),
                 ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), smsLimit(plan)),
-                expectedFee(subscription, plan, planHistories, now, thisMonth, activationDate)));
+                expectedFee(subscription, plan, planHistories, now, thisMonth, activationDate));
+    }
+
+    // 제공량은 그달 1일에 적용 중이던 요금제 기준
+    private MonthUsage pastMonthUsage(SubscriptionUsage stored, double fraction, Long planIdAtMonthStart) {
+        Plan plan = planRepository.findById(planIdAtMonthStart).orElseThrow();
+        return new MonthUsage(
+                stored.getUsageMonth(), null, null,
+                ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), dataLimitMb(plan)),
+                ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), voiceLimit(plan)),
+                ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), smsLimit(plan)),
+                null);
     }
 
     // 이번 달을 뺀 최근 지난 달들(오래된 순). 추천에 쓰는 값이라 개통한 달은 개통 이후 일수만큼만 반영한다
@@ -96,7 +131,7 @@ public class SubscriptionUsageService {
                 .sorted((a, b) -> a.getUsageMonth().compareTo(b.getUsageMonth()))
                 .toList();
         List<MonthlyUsage> result = new ArrayList<>();
-        for (SubscriptionUsage usage : past.subList(Math.max(0, past.size() - Math.min(months, PAST_MONTHS)), past.size())) {
+        for (SubscriptionUsage usage : past.subList(Math.max(0, past.size() - Math.min(months, RECENT_MONTHS_LIMIT)), past.size())) {
             double fraction = visibleFraction(usage.getUsageMonth(), activationDate, today);
             result.add(new MonthlyUsage(usage.getUsageMonth(), scale(usage.getUsedDataMb(), fraction),
                     (int) scale(usage.getUsedVoiceMinutes(), fraction), (int) scale(usage.getUsedSmsCount(), fraction)));
@@ -104,13 +139,11 @@ public class SubscriptionUsageService {
         return result;
     }
 
-    // 개통한 달부터 이번 달까지(최대 지난 3개월 + 이번 달) 없는 달만 만든다. 동시 요청이 같은 달을 만들어도 먼저 들어간 값이 남는다
+    // 개통한 달부터 이번 달까지(최대 지난 6개월 + 이번 달) 없는 달만 만든다. 동시 요청이 같은 달을 만들어도 먼저 들어간 값이 남는다
     private Map<LocalDate, SubscriptionUsage> ensureGenerated(
             Subscription subscription, LocalDate activationDate, LocalDate thisMonth) {
         Long subscriptionId = subscription.getSubscriptionId();
-        LocalDate activationMonth = activationDate.withDayOfMonth(1);
-        LocalDate first = activationMonth.isAfter(thisMonth.minusMonths(PAST_MONTHS))
-                ? activationMonth : thisMonth.minusMonths(PAST_MONTHS);
+        LocalDate first = firstMonth(activationDate, thisMonth);
 
         Map<LocalDate, SubscriptionUsage> stored = byMonth(usageRepository.findFromMonth(subscriptionId, first));
         boolean inserted = false;
@@ -123,6 +156,17 @@ public class SubscriptionUsageService {
             }
         }
         return inserted ? byMonth(usageRepository.findFromMonth(subscriptionId, first)) : stored;
+    }
+
+    // 개통한 달과 6개월 전 중 늦은 달
+    private LocalDate firstMonth(LocalDate activationDate, LocalDate thisMonth) {
+        LocalDate activationMonth = activationDate.withDayOfMonth(1);
+        LocalDate oldestViewable = thisMonth.minusMonths(VIEWABLE_PAST_MONTHS);
+        return activationMonth.isAfter(oldestViewable) ? activationMonth : oldestViewable;
+    }
+
+    private Instant startOfMonth(LocalDate month) {
+        return month.atStartOfDay(TimeZones.KST).toInstant();
     }
 
     private Map<LocalDate, SubscriptionUsage> byMonth(List<SubscriptionUsage> usages) {
@@ -148,7 +192,7 @@ public class SubscriptionUsageService {
         if (!activationDate.isBefore(thisMonth)) {
             return new ExpectedFee(amount, null, null);
         }
-        Instant previousMonthStart = thisMonth.minusMonths(1).atStartOfDay(TimeZones.KST).toInstant();
+        Instant previousMonthStart = startOfMonth(thisMonth.minusMonths(1));
         Long previousPlanId = PlanTimeline.planAt(planHistories, previousMonthStart);
         Plan previousPlan = planRepository.findById(previousPlanId).orElseThrow();
         int previousAmount = feeAfterContract(subscription, previousPlan.getMonthlyFee(), previousMonthStart);
