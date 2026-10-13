@@ -48,6 +48,9 @@ public class ChatQuestionResolver {
                     + "|까지|부터|은|는|이|가|을|를|도|에|로|건|거|것)+$");
     private static final Pattern ORDINAL_REFERENCE = Pattern.compile(
             "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한|신청한)|처음(?:물어본|문의한|말한|질문한|신청한)");
+    // 대화 속 발언을 순서로 가리키는 꼴. '처음 신청한'은 "처음 신청한 사람도"처럼 일반 문장에도 쓰여 제외한다.
+    private static final Pattern CONVERSATION_ORDINAL = Pattern.compile(
+            "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한)|처음(?:물어본|문의한|말한|질문한)");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무가 아니라 묻는 항목인 합성어. 이 안의 낱말은 상담 대상으로 세지 않는다.
     private static final Pattern ITEM_COMPOUND = Pattern.compile("신청방법|처리기간");
@@ -172,11 +175,13 @@ public class ChatQuestionResolver {
                     "originalQuery", question, "status", "INVALID_CONTEXT"));
             return new Resolution(question, true, List.of());
         }
-        // 공백 차이와 "[문의]" 같은 앞 표시는 호출 후보 선정에만 정규화하고 고객 원문은 그대로 전달한다.
+        // 공백 차이와 "[문의]" 같은 앞 표시는 호출 후보 선정과 모델 판정 입력에서만 떼고, 결과 질문에는 고객 원문을 그대로 쓴다.
         String gated = withoutLeadingTag(question);
         String noWhitespace = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");
         boolean candidate = TARGET_REFERENCE.matcher(noWhitespace).find()
                 || TEMPORAL_REFERENCE.matcher(noWhitespace).find() || IMPLICIT.matcher(noWhitespace).find()
+                // "두 번째로 물어본 건 수수료가 얼마예요?"처럼 위치 지정 표현이 있으면 길이와 낱말에 상관없이 후보로 본다.
+                || ORDINAL_REFERENCE.matcher(noWhitespace).find()
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
                 || madeOfGenericWords(gated)
                 || shortFollowUpWithHistory(compact(gated), context);
@@ -214,8 +219,10 @@ public class ChatQuestionResolver {
                 }
             }
             List<ChatContextMessage> ordered = orderedSources(sources);
-            boolean generic = isGenericFollowUp(withoutLeadingTag(question));
-            Reference reference = generic ? Reference.OMITTED : judgeReference(command, question);
+            String judged = withoutLeadingTag(question);
+            // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
+            boolean generic = isGenericFollowUp(judged) || CONVERSATION_ORDINAL.matcher(compact(judged)).find();
+            Reference reference = generic ? Reference.OMITTED : judgeReference(command, judged);
             var analysis = mapper.createObjectNode();
             analysis.put("reference", reference.name());
             analysis.putArray("sources");
@@ -226,7 +233,7 @@ public class ChatQuestionResolver {
                 // DB의 식별자는 판정 입력에서 제외하고 검증 후 실제 식별자로 연결한다.
                 data.put("sourceMessages", java.util.stream.IntStream.range(0, ordered.size())
                         .mapToObj(index -> new Source(index + 1, ordered.get(index).content())).toList());
-                data.put("currentQuestion", question);
+                data.put("currentQuestion", judged);
                 String sourcesRaw = client.generate(LlmRequest.builder().executionId(command.executionId())
                         .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SOURCE_PROMPT)
                         .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON).temperature(0.0)
