@@ -5,6 +5,7 @@ import com.telme.plan.repository.PlanRepository;
 import com.telme.subscription.entity.Subscription;
 import com.telme.subscription.entity.SubscriptionHistory;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
+import com.telme.subscription.repository.SubscriptionPauseRepository;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class SubscriptionStateReader {
 
     private final SubscriptionHistoryRepository historyRepository;
     private final PlanRepository planRepository;
+    private final SubscriptionPauseRepository pauseRepository;
 
     public SubscriptionSnapshot read(Subscription subscription, Instant now) {
         Long subscriptionId = subscription.getSubscriptionId();
@@ -24,10 +26,10 @@ public class SubscriptionStateReader {
                 subscription,
                 findCurrentPlan(subscriptionId, now).orElse(null),
                 scheduled(historyRepository.findPendingActivation(subscriptionId, now)),
-                scheduled(historyRepository.findPendingChange(subscriptionId, now)));
+                scheduled(historyRepository.findPendingChange(subscriptionId, now)),
+                pauseRepository.findActive(subscriptionId, now).orElse(null));
     }
 
-    // 개통 전에는 없다
     Optional<Plan> findCurrentPlan(Long subscriptionId, Instant now) {
         return historyRepository.findCurrent(subscriptionId, now)
                 .map(history -> findPlan(history.getToPlanId()));
