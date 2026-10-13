@@ -262,7 +262,7 @@ class ChatQuestionResolverTest {
         assertThat(data.path("sourceMessages").get(0).path("index").asInt()).isEqualTo(1);
         assertThat(data.path("sourceMessages").get(0).has("messageId")).isFalse();
         assertThat(request.getValue().taskType()).isEqualTo(TaskType.CONTEXT_RESOLUTION);
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v30-sources");
     }
 
     @Test
@@ -340,6 +340,7 @@ class ChatQuestionResolverTest {
         assertThat(requests.getAllValues()).allSatisfy(request -> {
             assertThat(request.responseSchema()).isNotNull();
             assertThat(request.think()).isFalse();
+            assertThat(request.promptVersion()).hasSizeLessThanOrEqualTo(30);
         });
         assertThat(requests.getAllValues().get(0).responseSchema()).isEqualTo(ChatQuestionResolver.referenceSchema());
         assertThat(requests.getAllValues().get(1).responseSchema()).isEqualTo(ChatQuestionResolver.sourcesSchema(1));
@@ -399,7 +400,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).containsExactly(501L);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v30-sources");
     }
 
     @Test
@@ -462,7 +463,7 @@ class ChatQuestionResolverTest {
         assertThat(result.needsClarification()).isFalse();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v31-reference");
     }
 
     // 허용한 앞 표시는 상담 판별용 입력에서 제외한다. 저장 원문은 변경하지 않는다.
@@ -498,7 +499,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v31-reference");
     }
 
     // 지시어 없이 조건만 말한 짧은 후속 질문도 이전 고객 발언이 있으면 대상 생략 여부를 모델이 판정한다.
@@ -548,7 +549,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).containsExactly(903L);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v30-sources");
     }
 
     // '처음 신청한'은 일반 문장에도 쓰여 규칙으로 대상 생략을 정하지 않고 현재 대상 판정 모델에 맡긴다.
@@ -560,7 +561,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v31-reference");
     }
 
     // 앞 표시는 공통 분석 입력에서 제외하므로 모델 입력과 복원 질문에 같은 본문을 쓴다.

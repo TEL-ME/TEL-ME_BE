@@ -240,7 +240,7 @@ public class ChatQuestionResolver {
                         .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SOURCE_PROMPT)
                         .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON).temperature(0.0)
                         .maxTokens(Math.min(2048, 128 + 64 * ordered.size()))
-                        .promptVersion("multiturn-resolution-v30-sources")
+                        .promptVersion("context-v30-sources")
                         .responseSchema(sourcesSchema(ordered.size())).think(false).build());
                 JsonNode sourcesOutput = readOutput(sourcesRaw);
                 if (sourcesOutput == null || !sourcesOutput.isObject() || sourcesOutput.size() != 3
@@ -286,7 +286,7 @@ public class ChatQuestionResolver {
                 .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SYSTEM_PROMPT)
                 .userPrompt(mapper.writeValueAsString(Map.of("currentQuestion", question)))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(64)
-                .promptVersion("multiturn-resolution-v31-reference")
+                .promptVersion("context-v31-reference")
                 .responseSchema(referenceSchema()).think(false).build());
         JsonNode referenceOutput = readOutput(referenceRaw);
         if (referenceOutput == null || !referenceOutput.isObject() || referenceOutput.size() != 1
