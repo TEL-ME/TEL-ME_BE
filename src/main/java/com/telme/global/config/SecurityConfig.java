@@ -121,6 +121,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/stores/**", "/api/v1/stores/**").permitAll()
                         .requestMatchers("/api/plans/**", "/api/v1/plans/**").permitAll()
                         .requestMatchers("/api/faq/**", "/api/v1/faq/**").permitAll()
+                        .requestMatchers("/api/faqs/**", "/api/v1/faqs/**").permitAll()
                         .requestMatchers("/api/intent-routes/**", "/api/v1/intent-routes/**").permitAll()
                         .requestMatchers("/api/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
