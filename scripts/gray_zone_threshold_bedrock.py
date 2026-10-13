@@ -155,15 +155,16 @@ def load_cache(path, prompt_version):
     return data["judgments"]
 
 
-def input_hash(prompt):
-    """판정에 넣은 사용자 프롬프트(평가 질문 + FAQ 본문)의 해시. 질문 문장이 바뀐 캐시를 걸러낸다."""
-    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+def input_hash(system, prompt):
+    """판정 입력 전체(시스템 프롬프트 + 평가 질문 + FAQ 본문)의 해시.
+    버전 문자열은 그대로 두고 프롬프트 내용만 고친 경우나 질문 문장이 바뀐 경우를 걸러낸다."""
+    return hashlib.sha256((system + "\0" + prompt).encode("utf-8")).hexdigest()
 
 
-def reusable(entry, prompt, repeat):
+def reusable(entry, system, prompt, repeat):
     """같은 입력을 같은 반복 수로 판정한 캐시만 다시 쓴다. 해시가 없는 예전 캐시도 다시 판정한다."""
     return (entry is not None
-            and entry.get("inputHash") == input_hash(prompt)
+            and entry.get("inputHash") == input_hash(system, prompt)
             and len(entry["runs"]) == repeat)
 
 
@@ -224,7 +225,7 @@ def main():
         faq = faqs[pair[1]]
         return user_prompt(build_context([faq]), multigold[pair[0]]["question"])
 
-    todo = [p for p in pairs if not reusable(cache.get(f"{p[0]}|{p[1]}"), prompt_of(p), args.repeat)]
+    todo = [p for p in pairs if not reusable(cache.get(f"{p[0]}|{p[1]}"), system, prompt_of(p), args.repeat)]
     stale = sum(1 for p in todo if f"{p[0]}|{p[1]}" in cache)
 
     calls = len(todo) * args.repeat
@@ -269,7 +270,7 @@ def main():
             if any(r["error"] for r in runs):
                 failed.append(pair)
             else:
-                cache[f"{pair[0]}|{pair[1]}"] = {"inputHash": input_hash(prompt_of(pair)), "runs": runs}
+                cache[f"{pair[0]}|{pair[1]}"] = {"inputHash": input_hash(system, prompt_of(pair)), "runs": runs}
             if index % 20 == 0 or index == len(todo):
                 save_cache(cache_path, args.model, args.prompt, cache)
                 spent = cost_usd(args.model, tokens_in, tokens_out)

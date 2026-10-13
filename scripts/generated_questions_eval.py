@@ -130,12 +130,20 @@ def pick(base, rows, sources, slack):
     return max(keep, key=lambda r: (len(r["answered"]["공식"]), r["qoLine"])) if keep else None
 
 
+def needs_generation(entry, faq):
+    """FAQ 문장이 바뀌었거나, 예전 실행에서 오류·빈 결과로 저장된 항목은 다시 생성한다."""
+    return (entry is None
+            or entry.get("hash") != content_hash(faq["question"], faq["answer"])
+            or bool(entry.get("error"))
+            or not entry.get("questions"))
+
+
 def generate_all(faqs, cache, cache_path, model, krw):
     api_key = os.environ.get("BEDROCK_API_KEY")
     if not api_key:
         sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
     region = os.environ.get("AWS_REGION", "us-east-1")
-    todo = [f for f in faqs if cache.get(f["slot_id"], {}).get("hash") != content_hash(f["question"], f["answer"])]
+    todo = [f for f in faqs if needs_generation(cache.get(f["slot_id"]), f)]
     tokens_in = tokens_out = 0
     failed = []
     for index, faq in enumerate(todo, 1):
@@ -197,7 +205,7 @@ def main():
         # 프롬프트가 바뀌면 예전 생성 결과를 쓰지 않는다
         if saved.get("promptVersion") == PROMPT_VERSION:
             cache = saved["faqs"]
-    todo = [f for f in targets if cache.get(f["slot_id"], {}).get("hash") != content_hash(f["question"], f["answer"])]
+    todo = [f for f in targets if needs_generation(cache.get(f["slot_id"]), f)]
     chars = sum(len(SYSTEM_PROMPT) + len(user_prompt(f)) for f in todo)
     est = cost_usd(args.model, int(chars / CHARS_PER_TOKEN) + EST_INPUT_EXTRA * len(todo),
                    EST_OUTPUT_TOKENS * len(todo))

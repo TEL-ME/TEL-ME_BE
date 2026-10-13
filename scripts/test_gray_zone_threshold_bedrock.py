@@ -61,15 +61,18 @@ class EvaluateTest(unittest.TestCase):
 
 class ReusableTest(unittest.TestCase):
 
-    def entry(self, prompt, runs):
-        return {"inputHash": input_hash(prompt), "runs": [{"answerable": True}] * runs}
+    def entry(self, system, prompt, runs):
+        return {"inputHash": input_hash(system, prompt), "runs": [{"answerable": True}] * runs}
 
     def test_reuses_only_same_input_and_repeat(self):
-        self.assertTrue(reusable(self.entry("질문 A", 3), "질문 A", 3))
-        self.assertFalse(reusable(self.entry("질문 A", 3), "질문 B", 3))
-        self.assertFalse(reusable(self.entry("질문 A", 1), "질문 A", 3))
-        self.assertFalse(reusable({"runs": [{"answerable": True}] * 3}, "질문 A", 3))
-        self.assertFalse(reusable(None, "질문 A", 3))
+        self.assertTrue(reusable(self.entry("B3", "질문 A", 3), "B3", "질문 A", 3))
+        self.assertFalse(reusable(self.entry("B3", "질문 A", 3), "B3", "질문 B", 3))
+        self.assertFalse(reusable(self.entry("B3", "질문 A", 1), "B3", "질문 A", 3))
+        self.assertFalse(reusable({"runs": [{"answerable": True}] * 3}, "B3", "질문 A", 3))
+        self.assertFalse(reusable(None, "B3", "질문 A", 3))
+
+    def test_detects_system_prompt_change_with_same_version(self):
+        self.assertFalse(reusable(self.entry("B3", "질문 A", 3), "B3 수정", "질문 A", 3))
 
 
 class LinesTest(unittest.TestCase):

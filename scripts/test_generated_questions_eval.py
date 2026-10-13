@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from generated_questions_eval import generate_all, parse_questions, pick
+from generated_questions_eval import generate_all, needs_generation, parse_questions, pick
+from gray_zone_threshold_bedrock import content_hash
 
 
 class ParseQuestionsTest(unittest.TestCase):
@@ -48,6 +49,21 @@ class GenerateAllTest(unittest.TestCase):
             generate_all(faqs, cache, Path(tmp) / "cache.json", "openai.gpt-oss-120b-1:0", 1450)
 
         self.assertEqual(["OK"], list(cache))
+
+
+class NeedsGenerationTest(unittest.TestCase):
+
+    faq = {"slot_id": "A", "question": "q", "answer": "a"}
+
+    def entry(self, **fields):
+        return {"hash": content_hash("q", "a"), "questions": ["x"], "error": None, **fields}
+
+    def test_regenerates_stored_errors_and_empty_results(self):
+        self.assertFalse(needs_generation(self.entry(), self.faq))
+        self.assertTrue(needs_generation(None, self.faq))
+        self.assertTrue(needs_generation(self.entry(hash="old"), self.faq))
+        self.assertTrue(needs_generation(self.entry(error="HTTP 503"), self.faq))
+        self.assertTrue(needs_generation(self.entry(questions=[]), self.faq))
 
 
 if __name__ == "__main__":
