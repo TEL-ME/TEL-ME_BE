@@ -27,7 +27,7 @@ public record AdminFaqSearchRequest(
     public String keywordPattern() {
         return FaqLikePatterns.keyword(keyword);
     }
-    
+
     public String categoryPattern() {
         return FaqLikePatterns.category(category);
     }

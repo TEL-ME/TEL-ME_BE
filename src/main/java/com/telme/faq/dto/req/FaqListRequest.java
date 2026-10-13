@@ -24,8 +24,8 @@ public record FaqListRequest(
     
     // 관리자 목록과 같은 쿼리를 써서 패턴도 같은 규칙으로 만든다
     public String keywordPattern() {
-            return FaqLikePatterns.keyword(keyword);
-        }
+        return FaqLikePatterns.keyword(keyword);
+    }
     
     public String categoryPattern() {
         return FaqLikePatterns.category(category);
