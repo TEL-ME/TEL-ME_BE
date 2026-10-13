@@ -1,6 +1,6 @@
 import unittest
 
-from gray_zone_threshold_bedrock import gray_pairs, lines, pick, served
+from gray_zone_threshold_bedrock import evaluate, gray_pairs, input_hash, lines, pick, reusable, served
 from simulate_dual_vector import merge
 
 
@@ -44,6 +44,32 @@ class GrayPairsTest(unittest.TestCase):
             sorted([("E1", "a2"), ("E1", "a3"), ("E1", "a1"), ("E1", "b2")]),
             gray_pairs(qa, qo, 0.60, 0.70),
         )
+
+
+class EvaluateTest(unittest.TestCase):
+
+    def test_candidate_without_slot_id_is_not_counted_as_judge_call(self):
+        qa = {"E1": {"type": "UNRELATED", "source": "130",
+                     "results": results((None, 0.70), ("a2", 0.69))}}
+        qo = {"E1": {"results": results(("b1", 0.70))}}
+
+        result = evaluate(qa, qo, {}, 0.68, 0.88, {("E1", "a2"): False})
+
+        self.assertEqual(1, result["judgeCalls"])
+        self.assertEqual(1, result["judgedQuestions"])
+
+
+class ReusableTest(unittest.TestCase):
+
+    def entry(self, prompt, runs):
+        return {"inputHash": input_hash(prompt), "runs": [{"answerable": True}] * runs}
+
+    def test_reuses_only_same_input_and_repeat(self):
+        self.assertTrue(reusable(self.entry("질문 A", 3), "질문 A", 3))
+        self.assertFalse(reusable(self.entry("질문 A", 3), "질문 B", 3))
+        self.assertFalse(reusable(self.entry("질문 A", 1), "질문 A", 3))
+        self.assertFalse(reusable({"runs": [{"answerable": True}] * 3}, "질문 A", 3))
+        self.assertFalse(reusable(None, "질문 A", 3))
 
 
 class LinesTest(unittest.TestCase):

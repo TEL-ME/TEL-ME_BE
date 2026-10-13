@@ -106,8 +106,11 @@ def evaluate(qa, qo, labels, qa_line, qo_line, verdicts):
             return slot is not None and verdicts[(eval_id, slot)]
 
         slots = served(qa[eval_id]["results"], qo[eval_id]["results"], qa_line, qo_line, verdict)
-        gray = {r["slot_id"] for r in qa[eval_id]["results"][:TOP_K] if qa_line <= r["score"] < QA_UPPER}
-        gray |= {r["slot_id"] for r in qo[eval_id]["results"][:TOP_K] if qo_line <= r["score"] < QO_UPPER}
+        # slot_id 없는 후보는 판정 없이 거부하므로 판정 호출로 세지 않는다
+        gray = {r["slot_id"] for r in qa[eval_id]["results"][:TOP_K]
+                if qa_line <= r["score"] < QA_UPPER and r["slot_id"] is not None}
+        gray |= {r["slot_id"] for r in qo[eval_id]["results"][:TOP_K]
+                 if qo_line <= r["score"] < QO_UPPER and r["slot_id"] is not None}
         if gray:
             judged_questions.add(eval_id)
             calls += len(gray)
@@ -150,6 +153,18 @@ def load_cache(path, prompt_version):
     if data.get("promptVersion") != prompt_version:
         sys.exit(f"{path}: 다른 프롬프트({data.get('promptVersion')})로 만든 캐시입니다")
     return data["judgments"]
+
+
+def input_hash(prompt):
+    """판정에 넣은 사용자 프롬프트(평가 질문 + FAQ 본문)의 해시. 질문 문장이 바뀐 캐시를 걸러낸다."""
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
+def reusable(entry, prompt, repeat):
+    """같은 입력을 같은 반복 수로 판정한 캐시만 다시 쓴다. 해시가 없는 예전 캐시도 다시 판정한다."""
+    return (entry is not None
+            and entry.get("inputHash") == input_hash(prompt)
+            and len(entry["runs"]) == repeat)
 
 
 def save_cache(path, model, prompt_version, cache):
@@ -204,11 +219,13 @@ def main():
     system = PROMPTS[args.prompt]
     cache_path = args.out_dir / f"e3-gray-judgments-{slug}.json"
     cache = load_cache(cache_path, args.prompt)
-    todo = [p for p in pairs if f"{p[0]}|{p[1]}" not in cache]
 
     def prompt_of(pair):
         faq = faqs[pair[1]]
         return user_prompt(build_context([faq]), multigold[pair[0]]["question"])
+
+    todo = [p for p in pairs if not reusable(cache.get(f"{p[0]}|{p[1]}"), prompt_of(p), args.repeat)]
+    stale = sum(1 for p in todo if f"{p[0]}|{p[1]}" in cache)
 
     calls = len(todo) * args.repeat
     chars = sum(len(system) + len(prompt_of(p)) for p in todo) * args.repeat
@@ -219,6 +236,8 @@ def main():
     if skipped:
         print(f"slot_id 없는 FAQ라 판정 못 하는 회색 지대 후보 {skipped}개 → 거부로 계산")
     print(f"캐시에 있음 {len(pairs) - len(todo)}개 → 새로 판정 {len(todo)}쌍 × {args.repeat}회 = {calls}호출")
+    if stale:
+        print(f"  그중 {stale}쌍은 캐시에 있지만 입력(질문·FAQ 문장)이나 반복 수가 달라 다시 판정")
     print(f"예상 비용 ${est:.4f} ≈ {est * args.krw_per_usd:,.0f}원 (모델 {args.model}, 프롬프트 {args.prompt}, 환율 {args.krw_per_usd:,.0f})")
 
     if todo and not args.run:
@@ -232,6 +251,7 @@ def main():
         region = os.environ.get("AWS_REGION", "us-east-1")
         args.out_dir.mkdir(parents=True, exist_ok=True)
         tokens_in = tokens_out = 0
+        failed = []
         for index, pair in enumerate(todo, 1):
             runs = []
             for i in range(1, args.repeat + 1):
@@ -245,7 +265,11 @@ def main():
                 tokens_out += usage.get("outputTokens", 0)
                 runs.append({"run": i, "answerable": answerable, "parsed": parsed, "rawResponse": text,
                              "error": error, "elapsedMs": int((time.monotonic() - start) * 1000)})
-            cache[f"{pair[0]}|{pair[1]}"] = {"runs": runs}
+            # 재시도 후에도 남은 오류는 fail-open(true)으로 판정되므로 캐시에 남기지 않고 다음 실행에서 다시 판정한다
+            if any(r["error"] for r in runs):
+                failed.append(pair)
+            else:
+                cache[f"{pair[0]}|{pair[1]}"] = {"inputHash": input_hash(prompt_of(pair)), "runs": runs}
             if index % 20 == 0 or index == len(todo):
                 save_cache(cache_path, args.model, args.prompt, cache)
                 spent = cost_usd(args.model, tokens_in, tokens_out)
@@ -253,6 +277,9 @@ def main():
         spent = cost_usd(args.model, tokens_in, tokens_out)
         print(f"토큰 입력 {tokens_in:,} / 출력 {tokens_out:,} | 실제 비용 ${spent:.4f} "
               f"≈ {spent * args.krw_per_usd:,.0f}원")
+        if failed:
+            sys.exit(f"오류가 남은 {len(failed)}쌍은 캐시에 저장하지 않았습니다 (예: {failed[:3]}). "
+                     f"다시 실행하면 그 쌍만 판정합니다")
 
     verdicts = {p: majority(cache[f"{p[0]}|{p[1]}"]["runs"]) for p in pairs}
     labels = {

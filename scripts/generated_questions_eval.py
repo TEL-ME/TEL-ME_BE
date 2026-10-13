@@ -137,6 +137,7 @@ def generate_all(faqs, cache, cache_path, model, krw):
     region = os.environ.get("AWS_REGION", "us-east-1")
     todo = [f for f in faqs if cache.get(f["slot_id"], {}).get("hash") != content_hash(f["question"], f["answer"])]
     tokens_in = tokens_out = 0
+    failed = []
     for index, faq in enumerate(todo, 1):
         text, error, usage = call_model(api_key, region, model, SYSTEM_PROMPT, user_prompt(faq))
         if error and error.startswith("HTTP 4"):
@@ -144,8 +145,13 @@ def generate_all(faqs, cache, cache_path, model, krw):
             sys.exit(f"요청 오류로 중단 (지금까지는 캐시에 저장): {error}")
         tokens_in += usage.get("inputTokens", 0)
         tokens_out += usage.get("outputTokens", 0)
-        cache[faq["slot_id"]] = {"hash": content_hash(faq["question"], faq["answer"]),
-                                 "questions": parse_questions(text), "raw": text, "error": error}
+        questions = parse_questions(text)
+        # 오류나 빈 결과를 캐시하면 해시가 같아 다시 생성하지 않으므로 남기지 않는다
+        if error or not questions:
+            failed.append(faq["slot_id"])
+        else:
+            cache[faq["slot_id"]] = {"hash": content_hash(faq["question"], faq["answer"]),
+                                     "questions": questions, "raw": text, "error": error}
         if index % 50 == 0 or index == len(todo):
             save(cache_path, model, cache)
             spent = cost_usd(model, tokens_in, tokens_out)
@@ -153,6 +159,9 @@ def generate_all(faqs, cache, cache_path, model, krw):
     if todo:
         spent = cost_usd(model, tokens_in, tokens_out)
         print(f"토큰 입력 {tokens_in:,} / 출력 {tokens_out:,} | 실제 비용 ${spent:.4f} ≈ {spent * krw:,.0f}원")
+    if failed:
+        sys.exit(f"생성 실패 {len(failed)}개는 캐시에 저장하지 않았습니다 (예: {failed[:5]}). "
+                 f"다시 실행하면 그 FAQ만 생성합니다")
 
 
 def save(path, model, cache):
