@@ -316,7 +316,7 @@ class CompoundFaqStoreIntegrationTest {
 
     @Test
     void clarificationVersionConflictRollsBackSiblingChangesAndMessage() throws Exception {
-        route("매장 찾기", Map.of());
+        route("매장", Map.of());
         var command = command("번호이동 방법과 매장 찾아줘", null);
         var queries = routing.routeSingleConsult(messages.findByIdWithSession(command.inputMessageId()).orElseThrow(), null)
                 .subQueries();

@@ -173,6 +173,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
 
     // 현재 위치 버튼의 좌표는 지역 되묻기에 대한 명시적인 응답이다.
     // 모델이 버튼 문구를 새 질문으로 분류해 원래 복합 상담을 버리지 않도록 한다.
+    // 클라이언트는 좌표를 현재 위치 버튼 응답(과 그 재전송)에만 담는다. 새 질문에 좌표를 함께 보내면 이 단축 처리로 새 질문이 분석되지 않는다.
     private AnalysisResult analyzeContext(ChatProcessingCommand command, Context context) {
         if (command.coordinates() != null && !context.candidates().isEmpty()) {
             var candidate = context.candidates().getFirst();

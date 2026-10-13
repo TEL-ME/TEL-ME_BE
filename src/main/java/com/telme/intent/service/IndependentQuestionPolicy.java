@@ -47,6 +47,66 @@ final class IndependentQuestionPolicy {
         throw new UnsupportedCompoundQuestionException("독립 요청의 원문 근거가 필요합니다.");
     }
 
+    // 고객 원문에서 다른 하위 질문의 인용 구간만 공백으로 지운다. 이 요청의 구간과 어느 요청에도 속하지 않은 공통 구간이 남는다.
+    // 원문 띄어쓰기는 유지한다. 다른 요청의 인용을 원문에서 찾지 못하면 구간을 나눌 수 없어 null을 돌려준다.
+    static String withoutOtherQuotes(List<LlmRoutingPayload.SubQueryPayload> subQueries,
+            LlmRoutingPayload.SubQueryPayload current, String question) {
+        String normalized = RoutingQuestionNormalizer.quoteKey(question);
+        int[] positions = originalPositions(normalized, question);
+        String own = RoutingQuestionNormalizer.quoteKey(current.requestQuote());
+        int ownStart = own.isBlank() ? -1 : normalized.indexOf(own);
+        StringBuilder masked = new StringBuilder(question);
+        for (var other : subQueries) {
+            if (other == current) {
+                continue;
+            }
+            String quote = RoutingQuestionNormalizer.quoteKey(other.requestQuote());
+            if (quote.isBlank()) {
+                return null;
+            }
+            int start = normalized.indexOf(quote);
+            // 이 요청의 인용과 겹치는 위치는 다른 요청의 구간으로 보지 않는다.
+            while (start >= 0 && ownStart >= 0 && start < ownStart + own.length() && ownStart < start + quote.length()) {
+                start = normalized.indexOf(quote, start + 1);
+            }
+            if (start < 0) {
+                return null;
+            }
+            for (int index = positions[start]; index <= positions[start + quote.length() - 1]; index++) {
+                masked.setCharAt(index, ' ');
+            }
+        }
+        return masked.toString();
+    }
+
+    // 정규화 문자열의 각 글자가 원문의 몇 번째 글자인지. 정규화는 공백만 지우거나 하나로 줄인다.
+    private static int[] originalPositions(String normalized, String question) {
+        int[] positions = new int[normalized.length()];
+        int cursor = 0;
+        for (int index = 0; index < normalized.length(); index++) {
+            char character = normalized.charAt(index);
+            if (isSpace(character)) {
+                while (cursor < question.length() && !isSpace(question.charAt(cursor))) {
+                    cursor++;
+                }
+                positions[index] = cursor;
+                while (cursor < question.length() && isSpace(question.charAt(cursor))) {
+                    cursor++;
+                }
+                continue;
+            }
+            while (cursor < question.length() && question.charAt(cursor) != character) {
+                cursor++;
+            }
+            positions[index] = cursor++;
+        }
+        return positions;
+    }
+
+    private static boolean isSpace(char character) {
+        return Character.isWhitespace(character) || Character.isSpaceChar(character);
+    }
+
     // 조사 한 글자만 빠진 인용은 원문에 실제로 이어진 구간으로 복구한다.
     private static String recoverParticleInsertion(String original, String quote) {
         if (quote.isBlank()) {

@@ -671,10 +671,24 @@ public class QueryRoutingService {
 
         QueryRouting.Intent topIntent = payload.intent();
         String refinedSource = payload.refinedQuery();
-        if (topIntent == QueryRouting.Intent.FAQ && hasFaq && hasStore && allSubIntentsGiven
+        boolean ungroundedBoth = false;
+        if (topIntent == QueryRouting.Intent.BOTH && hasFaq && hasStore && allSubIntentsGiven) {
+            // 모델이 처음부터 BOTH로 적은 출력도 하위 질문마다 원문에 서로 다른 근거가 있어야 한다.
+            try {
+                IndependentQuestionPolicy.validateParts(normalized, question);
+            } catch (UnsupportedCompoundQuestionException unsupported) {
+                // 매장을 말한 질문은 요청 일부를 버리지 않고 나눠 보내기 안내로 넘긴다.
+                if (RuleBasedRoutingFallback.mentionsStore(question)) {
+                    throw unsupported;
+                }
+                ungroundedBoth = true;
+            }
+        }
+        if ((topIntent == QueryRouting.Intent.FAQ || ungroundedBoth) && hasFaq && hasStore && allSubIntentsGiven
                 && !RuleBasedRoutingFallback.mentionsStore(question)) {
             // "어디서 볼 수 있나요"처럼 매장을 말하지 않은 질문에 모델이 매장 찾기를 덧붙인 출력이다.
             // 고객이 요청하지 않은 매장 하위 질문만 빼고 FAQ로 처리한다.
+            // BOTH 출력은 매장 요청에 원문 근거가 없을 때만 뺀다. "근처 개통 가능한 곳"처럼 매장이라 말하지 않은 요청도 있다.
             log.info("[라우팅] 원문에 매장 언급이 없어 모델이 만든 매장 하위 질문을 제외합니다.");
             normalized.removeIf(sub -> sub.intent() == ConsultRequest.Intent.STORE);
             for (int index = 0; index < normalized.size(); index++) {
@@ -683,6 +697,7 @@ public class QueryRoutingService {
                         sub.queryText(), sub.conditions(), sub.requestQuote()));
             }
             hasStore = false;
+            topIntent = QueryRouting.Intent.FAQ;
             // 모델의 전체 정제 질문에도 매장 찾기가 섞여 있어 원문을 쓴다.
             refinedSource = question;
         }
@@ -719,6 +734,17 @@ public class QueryRoutingService {
                     sub.queryText(), question, context,
                     topIntent == QueryRouting.Intent.FAQ && normalized.size() == 1,
                     safeFallback);
+            // 모델 검색어는 다른 하위 질문의 낱말을 섞어 쓰기도 해, 이 요청의 구간과 공통 구간을 근거로 쓴다.
+            String ownSection = normalized.size() > 1
+                    ? IndependentQuestionPolicy.withoutOtherQuotes(normalized, sub, question) : null;
+            if (sub.intent() == ConsultRequest.Intent.FAQ && topIntent == QueryRouting.Intent.BOTH
+                    && ownSection != null && queryText != null
+                    && SearchTopicPolicy.introducesNewTopic(groundingText(ownSection, context), queryText)) {
+                // FAQ만 있는 복합 질문의 의미 검증처럼, 다른 요청의 업무로 바뀐 검색어는 이 요청의 원문 인용으로 되돌린다.
+                log.info("[라우팅] 복합 질문의 FAQ 검색어에 다른 요청의 업무가 있어 원문 인용을 사용합니다: order={}",
+                        sub.order());
+                queryText = IndependentQuestionPolicy.verifiedQuote(sub, question);
+            }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
                     && topIntent == QueryRouting.Intent.STORE) {
@@ -728,7 +754,8 @@ public class QueryRoutingService {
             }
             if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
                 // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
-                conditions = validConditions(conditions, sub.queryText(), context);
+                // 원문 구간을 나눌 수 없으면 기존처럼 이 요청의 검색어를 근거로 쓴다.
+                conditions = validConditions(conditions, ownSection != null ? ownSection : sub.queryText(), context);
                 // 모델이 업무를 비워도 이 요청의 원문 인용에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
                 String quote = sub.requestQuote();
                 if (quote != null && !quote.isBlank() && RoutingQuestionNormalizer.quoteKey(question)
