@@ -183,3 +183,17 @@ telme:
     # 시연용. 켜면 가입·변경이 즉시 적용되고 가입 당월·월 1회 변경 제한도 생략한다.
     # 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용(FAQ와 같은 동작)
     demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
+
+speech:
+  tts:
+    # 챗봇 답변 듣기(Amazon Polly). 키는 AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY 환경 변수로만 넣고, 없으면 앱은 뜨고 음성 요청만 SPEECH503-0으로 실패한다
+    region: ${SPEECH_TTS_REGION:ap-northeast-2}
+    voice-id: ${SPEECH_TTS_VOICE_ID:Seoyeon}
+    engine: ${SPEECH_TTS_ENGINE:neural}
+    # Polly 1회 한도가 3,000자라 더 긴 답변은 문장 끝에서 잘라 읽는다
+    max-text-length: 3000
+    # 팀 공용 크레딧 보호. 하루 10만 자는 neural 기준 약 1.6달러
+    requests-per-minute: ${SPEECH_TTS_REQUESTS_PER_MINUTE:10}
+    daily-character-limit: ${SPEECH_TTS_DAILY_CHARACTER_LIMIT:100000}
+    cache-max-size: 20MB
+    cache-ttl: 1h
