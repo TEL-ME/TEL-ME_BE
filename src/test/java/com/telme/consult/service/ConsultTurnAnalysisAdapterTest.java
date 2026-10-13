@@ -84,6 +84,22 @@ class ConsultTurnAnalysisAdapterTest {
     }
 
     @Test
+    void pureConversationBypassesResolutionEvenWhenAllQuestionsUseTheModel() {
+        var context = new Context(1, 10, "안녕 바라야", List.of());
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(),
+                com.telme.chat.config.ChatQuestionResolutionProperties.Mode.LLM_ALL);
+        var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, analysis,
+                preparation, new FollowupConditionConverter(), resolver);
+
+        var answer = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer();
+
+        assertThat(answer.content()).isEqualTo(com.telme.chat.service.ChatPersona.GREETING);
+        verifyNoInteractions(model, analysis, preparation);
+    }
+
+    @Test
     void newQuestionWhileWaitingResolvesBeforeRoutingAndDoesNotConsumePendingCandidate() {
         var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
                 ChatMessage.MessageType.QUESTION, "로밍 요금제는 어떻게 골라요?", null);

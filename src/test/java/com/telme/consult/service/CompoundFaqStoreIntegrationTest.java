@@ -115,6 +115,19 @@ class CompoundFaqStoreIntegrationTest {
     }
 
     @Test
+    void personaGreetingPreservesDevelopFaqAndStoreCombination() throws Exception {
+        route("강남역 번호이동 매장", Map.of("location", "강남역", "serviceType", "PORT_IN"));
+        String original = "안녕 바라야, 번호이동 방법과 강남역 번호이동 매장 찾아줘";
+        ChatProcessingCommand command = command(original, null);
+
+        processor(false).request(command);
+
+        assertCombined(command, true);
+        assertThat(output(command).path("content").asText()).startsWith("안녕하세요! ");
+        assertThat(messages.findById(command.inputMessageId()).orElseThrow().getContent()).isEqualTo(original);
+    }
+
+    @Test
     void faqAndRealStoreSearchCompleteOneAnswerWithSourcesAndMatchingSse() throws Exception {
         route("강남역 번호이동 매장", Map.of("location", "강남역", "serviceType", "PORT_IN"));
         ChatProcessingCommand command = command("번호이동 방법과 강남역 번호이동 매장 찾아줘", null);

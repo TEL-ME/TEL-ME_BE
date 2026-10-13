@@ -76,6 +76,16 @@ public class ConsultChatPersistenceService {
     @Transactional
     public ChatExecutionState persistDirectAnswer(
             long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, false);
+    }
+
+    @Transactional
+    public ChatExecutionState persistBasicConversation(long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, true);
+    }
+
+    private ChatExecutionState persistDirectAnswer(
+            long executionId, long sessionId, ChatAnswer answer, boolean preserveConsultation) {
         Objects.requireNonNull(answer, "answer");
         var sessions =
                 jdbc.queryForList(
@@ -85,7 +95,9 @@ public class ConsultChatPersistenceService {
         if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
-        ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
+        ChatExecutionState state = preserveConsultation
+                ? chatExecutionService.completeBasicConversation(executionId, answer)
+                : chatExecutionService.completeAnswer(executionId, answer);
         if (state.outputMessage() == null) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }

@@ -59,6 +59,10 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 || context.userMessageId() != command.inputMessageId()) {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
         }
+        // 순수 인사는 문맥 복원이나 조건 실패 판정 전에 처리한다. 좌표 입력은 상담 처리에 남긴다.
+        ChatAnswer basicAnswer = command.coordinates() == null
+                ? BasicConversationAnalysisProvider.answerFor(context) : null;
+        if (basicAnswer != null) return AnalyzedTurn.direct(basicAnswer);
         if (context.candidates().isEmpty()) {
             context = resolveQuestion(command, context);
             if (context == null) {

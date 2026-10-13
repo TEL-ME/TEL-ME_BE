@@ -27,6 +27,18 @@ class BasicConversationAnalysisProviderTest {
     private final BasicConversationAnalysisProvider provider =
             new BasicConversationAnalysisProvider(delegate);
 
+    @org.junit.jupiter.api.Test
+    void repeatedClarificationDoesNotRepeatStoredGreeting() {
+        var context = new Context(1, 10, "고마워 바라야", List.of(new Candidate(
+                101, "location", 9, "안녕하세요! 어느 지역의 매장을 찾으시나요?", "매장 알려줘", "매장", "STORE")));
+
+        var result = provider.analyze(context);
+
+        assertThat(result.directAnswer().content())
+                .isEqualTo("천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요.\n\n어느 지역의 매장을 찾으시나요?");
+        verifyNoInteractions(delegate);
+    }
+
     @ParameterizedTest
     @MethodSource("기본_대화_사례")
     @DisplayName("대기 상담이 없는 기본 대화는 기존 분석 없이 고정 응답한다")
@@ -44,22 +56,22 @@ class BasicConversationAnalysisProviderTest {
 
     static Stream<Arguments> 기본_대화_사례() {
         return Stream.of(
-                Arguments.of("안녕하세요", "안녕하세요. 무엇을 도와드릴까요?"),
-                Arguments.of("  안녕하세요!!  ", "안녕하세요. 무엇을 도와드릴까요?"),
-                Arguments.of("안녕~", "안녕하세요. 무엇을 도와드릴까요?"),
-                Arguments.of("반갑습니다.", "안녕하세요. 무엇을 도와드릴까요?"),
-                Arguments.of("감사합니다", "천만에요. 더 궁금한 점이 있으면 말씀해 주세요."),
-                Arguments.of("고마워요!", "천만에요. 더 궁금한 점이 있으면 말씀해 주세요."),
-                Arguments.of("고맙습니다", "천만에요. 더 궁금한 점이 있으면 말씀해 주세요."),
-                Arguments.of("감사해요…", "천만에요. 더 궁금한 점이 있으면 말씀해 주세요."),
-                Arguments.of("안녕히 계세요", "이용해 주셔서 감사합니다. 궁금한 점이 생기면 다시 말씀해 주세요."),
-                Arguments.of("잘 가요", "이용해 주셔서 감사합니다. 궁금한 점이 생기면 다시 말씀해 주세요."),
-                Arguments.of("수고하세요", "이용해 주셔서 감사합니다. 궁금한 점이 생기면 다시 말씀해 주세요."),
+                Arguments.of("안녕하세요", "안녕하세요! 무러바라예요 😊 무엇이 궁금하세요?"),
+                Arguments.of("  안녕하세요!!  ", "안녕하세요! 무러바라예요 😊 무엇이 궁금하세요?"),
+                Arguments.of("안녕~", "안녕하세요! 무러바라예요 😊 무엇이 궁금하세요?"),
+                Arguments.of("반갑습니다.", "안녕하세요! 무러바라예요 😊 무엇이 궁금하세요?"),
+                Arguments.of("감사합니다", "천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요."),
+                Arguments.of("고마워요!", "천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요."),
+                Arguments.of("고맙습니다", "천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요."),
+                Arguments.of("감사해요…", "천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요."),
+                Arguments.of("안녕히 계세요", "이용해 주셔서 감사해요 😊 궁금한 점이 생기면 다시 찾아주세요."),
+                Arguments.of("잘 가요", "이용해 주셔서 감사해요 😊 궁금한 점이 생기면 다시 찾아주세요."),
+                Arguments.of("수고하세요", "이용해 주셔서 감사해요 😊 궁금한 점이 생기면 다시 찾아주세요."),
                 Arguments.of(
-                        "도움말", "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요. 궁금한 내용을 말씀해 주세요."),
+                        "도움말", "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요 😊 궁금한 내용을 말씀해 주세요."),
                 Arguments.of(
                         "뭐 물어볼 수 있어요?",
-                        "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요. 궁금한 내용을 말씀해 주세요."));
+                        "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요 😊 궁금한 내용을 말씀해 주세요."));
     }
 
     @ParameterizedTest
@@ -94,8 +106,8 @@ class BasicConversationAnalysisProviderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"안녕하세요", "감사합니다", "네, 고마워요", "안녕히 계세요", "도움말"})
-    @DisplayName("되묻기 대기 중에는 기본 대화도 기존 후속 처리로 전달한다")
+    @ValueSource(strings = {"네, 고마워요", "강남역이요, 고마워요"})
+    @DisplayName("되묻기 대기 중 실제 조건 답변은 기존 후속 처리로 전달한다")
     void 대기_상담의_후속_처리를_우선한다(String input) {
         Context context =
                 new Context(
