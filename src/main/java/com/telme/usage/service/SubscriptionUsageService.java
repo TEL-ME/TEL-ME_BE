@@ -84,7 +84,7 @@ public class SubscriptionUsageService {
                 pausedDates(subscription.getSubscriptionId(), availableFrom, today));
         MonthUsage usage = target.equals(thisMonth)
                 ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, now, today, activationDate)
-                : pastMonthUsage(stored, fraction, PlanTimeline.planAt(planHistories, startOfMonth(target)));
+                : pastMonthUsage(stored, fraction, limitsAt(planHistories, target));
         return UsageOverview.active(availableFrom, thisMonth, usage);
     }
 
@@ -92,7 +92,7 @@ public class SubscriptionUsageService {
             List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction, Instant now,
             LocalDate today, LocalDate activationDate) {
         LocalDate thisMonth = today.withDayOfMonth(1);
-        UsageLimits limits = UsageLimits.of(snapshot.currentPlan());
+        UsageLimits limits = limitsAt(planHistories, thisMonth);
         Plan plan = snapshot.currentPlan();
         return new MonthUsage(
                 thisMonth,
@@ -104,9 +104,7 @@ public class SubscriptionUsageService {
                 expectedFee(subscription, plan, planHistories, now, thisMonth, activationDate));
     }
 
-    // 제공량은 그달 1일에 적용 중이던 요금제 기준
-    private MonthUsage pastMonthUsage(SubscriptionUsage stored, double fraction, Long planIdAtMonthStart) {
-        UsageLimits limits = UsageLimits.of(planRepository.findById(planIdAtMonthStart).orElseThrow());
+    private MonthUsage pastMonthUsage(SubscriptionUsage stored, double fraction, UsageLimits limits) {
         return new MonthUsage(
                 stored.getUsageMonth(), null, null,
                 ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), limits.dataMb()),
@@ -156,15 +154,25 @@ public class SubscriptionUsageService {
         boolean inserted = false;
         for (LocalDate month = first; !month.isAfter(thisMonth); month = month.plusMonths(1)) {
             if (!stored.containsKey(month)) {
-                Plan plan = planRepository.findById(PlanTimeline.planAt(planHistories, startOfMonth(month)))
-                        .orElseThrow();
-                GeneratedUsage generated = generator.generate(subscription.getUserId(), month, UsageLimits.of(plan));
+                GeneratedUsage generated = generator.generate(subscription.getUserId(), month,
+                        habitLimits(planHistories), limitsAt(planHistories, month));
                 usageRepository.insertIfAbsent(subscriptionId, month,
                         generated.dataMb(), generated.voiceMinutes(), generated.smsCount());
                 inserted = true;
             }
         }
         return inserted ? byMonth(usageRepository.findFromMonth(subscriptionId, first)) : stored;
+    }
+
+    // 사용 습관의 기준인 가입 당시 요금제의 제공량
+    private UsageLimits habitLimits(List<SubscriptionHistory> planHistories) {
+        return UsageLimits.of(planRepository.findById(planHistories.get(0).getToPlanId()).orElseThrow());
+    }
+
+    // 사용량 생성과 한도 표시는 그 달 1일에 쓰던 요금제의 제공량 기준
+    private UsageLimits limitsAt(List<SubscriptionHistory> planHistories, LocalDate month) {
+        return UsageLimits.of(planRepository.findById(PlanTimeline.planAt(planHistories, startOfMonth(month)))
+                .orElseThrow());
     }
 
     // 개통한 달과 6개월 전 중 늦은 달

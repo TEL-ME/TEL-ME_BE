@@ -18,6 +18,9 @@ class UsageGeneratorTest {
     // 알뜰 미니: 1.5GB, 300분, 100건
     static final UsageLimits MINI = new UsageLimits(1536L, 300L, 100L);
 
+    // 5G 프리미엄: 150GB, 통화·문자 무제한
+    static final UsageLimits PREMIUM = new UsageLimits(153_600L, null, null);
+
     final UsageGenerator generator = new UsageGenerator();
 
     @Test
@@ -155,5 +158,46 @@ class UsageGeneratorTest {
 
         assertThat(generator.generate(7L, OCT, larger).dataMb()).isNotEqualTo(generator.generate(7L, OCT, MINI).dataMb());
         assertThat(generator.generate(7L, OCT, MINI)).isEqualTo(generator.generate(7L, OCT, MINI));
+    }
+
+    @Test
+    void 요금제를_올려도_가입_당시_습관이_이어진다() {
+        for (long userId = 1; userId <= 300; userId++) {
+            long habit = generator.generate(userId, OCT, MINI).dataMb();
+
+            assertThat(generator.generate(userId, OCT, MINI, PREMIUM).dataMb()).isEqualTo(habit);
+            assertThat(generator.generate(userId, OCT, MINI, NONE).dataMb()).isEqualTo(habit);
+        }
+    }
+
+    @Test
+    void 요금제를_내리면_바뀐_요금제에서_쓸_만한_양으로_맞춰진다() {
+        for (long userId = 1; userId <= 300; userId++) {
+            long fitted = generator.generate(userId, OCT, MINI).dataMb();
+
+            assertThat(generator.generate(userId, OCT, PREMIUM, MINI).dataMb()).isEqualTo(fitted);
+            assertThat(generator.generate(userId, OCT, NONE, MINI).dataMb()).isEqualTo(fitted);
+        }
+    }
+
+    @Test
+    void 제한이_생긴_항목은_가입_당시_습관과_그_달_요금제_기준_중_작은_값이고_무제한_항목은_습관_그대로이다() {
+        UsageLimits dataLimited = new UsageLimits(153_600L, null, null);
+        for (long userId = 1; userId <= 500; userId++) {
+            GeneratedUsage changed = generator.generate(userId, OCT, MINI, dataLimited);
+            GeneratedUsage habit = generator.generate(userId, OCT, MINI);
+            GeneratedUsage month = generator.generate(userId, OCT, dataLimited);
+
+            assertThat(changed.dataMb()).isLessThanOrEqualTo(Math.min(habit.dataMb(), month.dataMb()));
+            assertThat(changed.voiceMinutes()).isEqualTo(habit.voiceMinutes());
+            assertThat(changed.smsCount()).isEqualTo(habit.smsCount());
+        }
+    }
+
+    @Test
+    void 가입_당시도_그_달도_무제한이면_절대_범위로_만든다() {
+        for (long userId = 1; userId <= 300; userId++) {
+            assertThat(generator.generate(userId, OCT, NONE, NONE)).isEqualTo(generator.generate(userId, OCT, NONE));
+        }
     }
 }

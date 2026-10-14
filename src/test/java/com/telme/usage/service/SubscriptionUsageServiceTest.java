@@ -10,6 +10,7 @@ import com.telme.member.repository.UserRepository;
 import com.telme.plan.repository.PlanRepository;
 import com.telme.subscription.service.SubscriptionCommandService;
 import com.telme.subscription.service.SubscriptionPauseService;
+import com.telme.usage.entity.SubscriptionUsage;
 import com.telme.usage.exception.UsageErrorCode;
 import com.telme.usage.repository.SubscriptionUsageRepository;
 import jakarta.persistence.EntityManager;
@@ -307,7 +308,7 @@ class SubscriptionUsageServiceTest {
     }
 
     @Test
-    void 생성된_사용량은_그_달_1일에_쓰던_요금제의_제공량에_맞춰진다() {
+    void 생성된_사용량은_가입_당시_습관과_그_달_1일에_쓰던_요금제의_제공량으로_정해진다() {
         Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
         at(Instant.parse("2026-04-10T03:00:00Z"));
         commandService.changePlan(userId, planId("LTE_PLUS"), null); // 4월 11일부터 LTE 플러스
@@ -321,7 +322,80 @@ class SubscriptionUsageServiceTest {
         assertThat(storedDataMb(subscriptionId, LocalDate.of(2026, 4, 1)))
                 .isEqualTo(generated(LocalDate.of(2026, 4, 1), "FIVE_G_STANDARD").dataMb());
         assertThat(storedDataMb(subscriptionId, LocalDate.of(2026, 5, 1)))
-                .isEqualTo(generated(LocalDate.of(2026, 5, 1), "LTE_PLUS").dataMb());
+                .isEqualTo(generated(LocalDate.of(2026, 5, 1), "FIVE_G_STANDARD", "LTE_PLUS").dataMb());
+    }
+
+    @Test
+    void 요금제를_올려도_다음_달_사용량은_이어진다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 4월 11일부터 150GB
+        at(Instant.parse("2026-06-12T03:00:00Z"));
+
+        usageService.getOverview(userId);
+
+        long march = storedDataMb(subscriptionId, LocalDate.of(2026, 3, 1));
+        long may = storedDataMb(subscriptionId, LocalDate.of(2026, 5, 1));
+        assertThat(may / (double) march).isBetween(0.6, 1.6);
+        assertThat(may).isLessThan(3L * 1024);
+    }
+
+    @Test
+    void 요금제를_내리면_새_요금제_제공량에_맞게_줄어든다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_PREMIUM", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("BUDGET_MINI"), null); // 4월 11일부터 1.5GB
+        at(Instant.parse("2026-06-12T03:00:00Z"));
+
+        usageService.getOverview(userId);
+
+        long march = storedDataMb(subscriptionId, LocalDate.of(2026, 3, 1));
+        long may = storedDataMb(subscriptionId, LocalDate.of(2026, 5, 1));
+        assertThat(may).isLessThanOrEqualTo((long) (1536 * 1.5));
+        assertThat(march).isGreaterThan(may * 5);
+    }
+
+    @Test
+    void 한도가_있는_요금제에서_무제한으로_바꿔도_사용량이_이어진다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_UNLIMITED"), null);
+        at(Instant.parse("2026-06-12T03:00:00Z"));
+
+        usageService.getOverview(userId);
+
+        long march = storedDataMb(subscriptionId, LocalDate.of(2026, 3, 1));
+        long may = storedDataMb(subscriptionId, LocalDate.of(2026, 5, 1));
+        assertThat(may / (double) march).isBetween(0.6, 1.6);
+    }
+
+    @Test
+    void 달_중간에_요금제를_바꿔도_그_달_한도는_달_1일에_쓰던_요금제_기준이다() {
+        subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 4월 11일부터 적용
+
+        at(Instant.parse("2026-04-20T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(1536L);
+
+        at(Instant.parse("2026-05-03T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(150L * 1024);
+    }
+
+    @Test
+    void 해지하고_다시_가입하면_새_구독의_요금제와_개통일_기준으로_만든다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_PREMIUM", false);
+        at(Instant.parse("2026-02-05T03:00:00Z"));
+        commandService.cancel(userId);
+        Long newSubscriptionId = subscribeAt(Instant.parse("2026-03-05T03:00:00Z"), "BUDGET_MINI", false);
+        at(Instant.parse("2026-06-12T03:00:00Z"));
+
+        UsageOverview overview = usageService.getOverview(userId);
+
+        assertThat(overview.availableFrom()).isEqualTo(LocalDate.of(2026, 3, 1));
+        for (SubscriptionUsage usage : usageRepository.findFromMonth(newSubscriptionId, LocalDate.of(2020, 1, 1))) {
+            assertThat(usage.getUsedDataMb()).isLessThanOrEqualTo((long) (1536 * 1.5));
+        }
     }
 
     @Test
@@ -515,8 +589,16 @@ class SubscriptionUsageServiceTest {
     }
 
     private GeneratedUsage generated(LocalDate month, String planCode) {
-        return generator.generate(userId, month, UsageLimits.of(planRepository.findAll().stream()
-                .filter(plan -> plan.getCode().equals(planCode)).findFirst().orElseThrow()));
+        return generated(month, planCode, planCode);
+    }
+
+    private GeneratedUsage generated(LocalDate month, String habitPlanCode, String monthPlanCode) {
+        return generator.generate(userId, month, limitsOf(habitPlanCode), limitsOf(monthPlanCode));
+    }
+
+    private UsageLimits limitsOf(String planCode) {
+        return UsageLimits.of(planRepository.findAll().stream()
+                .filter(plan -> plan.getCode().equals(planCode)).findFirst().orElseThrow());
     }
 
     private long dataUsed(LocalDate month, int usedDays, int monthDays) {
