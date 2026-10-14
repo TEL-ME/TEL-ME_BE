@@ -454,6 +454,20 @@ class QueryRoutingServiceTest {
         assertThat(call.getValue().systemPrompt()).isEqualTo(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
     }
 
+    // 키 순서만 바뀌어도 모델 판정이 달라지므로 JVM과 관계없이 같은 문자열이어야 한다
+    @Test
+    void faithfulnessPromptKeepsFixedKeyOrder() {
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[false]}");
+
+        service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내");
+
+        var call = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(call.capture());
+        assertThat(call.getValue().userPrompt()).isEqualTo(
+                "{\"question\":\"유심을 잃어버렸어요\",\"previousSubject\":\"\","
+                        + "\"subQueries\":[{\"quote\":\"유심을 잃어버렸어요\",\"query\":\"유심 분실 처리 안내\"}]}");
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
             "유심을 잃어버렸어요 | 유심 분실 시 재발급 방법",
