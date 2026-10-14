@@ -31,11 +31,8 @@ public class ContractPenaltyCalculator {
         int elapsedMonths = Math.max(0, calendar.monthsBetween(subscription.getSubscribedAt(), now));
         int discountedMonths = Math.min(elapsedMonths, contractMonths);
 
-        List<SubscriptionHistory> planHistories = historyRepository
-                .findBySubscriptionIdOrderByEffectiveFromAscHistoryIdAsc(subscription.getSubscriptionId())
-                .stream()
-                .filter(history -> history.getType() != SubscriptionHistory.Type.CANCEL)
-                .toList();
+        List<SubscriptionHistory> planHistories = PlanTimeline.planHistories(historyRepository
+                .findBySubscriptionIdOrderByEffectiveFromAscHistoryIdAsc(subscription.getSubscriptionId()));
         Map<Long, Plan> plans = planRepository
                 .findAllById(planHistories.stream().map(SubscriptionHistory::getToPlanId).distinct().toList())
                 .stream()
@@ -44,24 +41,12 @@ public class ContractPenaltyCalculator {
         long receivedDiscount = 0;
         for (int month = 0; month < discountedMonths; month++) {
             Instant monthStart = calendar.plusMonths(subscription.getSubscribedAt(), month);
-            Plan plan = plans.get(planAt(planHistories, monthStart));
+            Plan plan = plans.get(PlanTimeline.planAt(planHistories, monthStart));
             receivedDiscount += (long) plan.getMonthlyFee() * discountPercent / 100;
         }
 
         int refundPercent = ContractPolicy.refundPercent(elapsedMonths, contractMonths);
         return new ContractPenalty(contractMonths, elapsedMonths, receivedDiscount, refundPercent,
                 receivedDiscount * refundPercent / 100);
-    }
-
-    // 개통 전인 첫 달에는 적용 중인 요금제가 없어 가입한 요금제로 본다
-    private Long planAt(List<SubscriptionHistory> planHistories, Instant at) {
-        Long planId = planHistories.get(0).getToPlanId();
-        for (SubscriptionHistory history : planHistories) {
-            if (history.getEffectiveFrom().isAfter(at)) {
-                break;
-            }
-            planId = history.getToPlanId();
-        }
-        return planId;
     }
 }

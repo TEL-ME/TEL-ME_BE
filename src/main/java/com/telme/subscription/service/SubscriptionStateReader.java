@@ -43,7 +43,7 @@ public class SubscriptionStateReader {
             return null;
         }
         int months = subscription.getContractMonths();
-        boolean active = calendar.monthsBetween(subscription.getSubscribedAt(), now) < months;
+        boolean active = ContractPolicy.isActive(calendar.monthsBetween(subscription.getSubscribedAt(), now), months);
         Instant endsAt = calendar.startOfDay(calendar.plusMonths(subscription.getSubscribedAt(), months));
         return new SubscriptionSnapshot.ContractInfo(active, endsAt);
     }
