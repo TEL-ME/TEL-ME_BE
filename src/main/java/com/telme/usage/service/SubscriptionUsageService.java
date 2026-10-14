@@ -43,6 +43,7 @@ public class SubscriptionUsageService {
 
     static final int VIEWABLE_PAST_MONTHS = 6;
     static final int RECENT_MONTHS_LIMIT = 3;
+    static final int DEMAND_MONTHS = 3;
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionHistoryRepository historyRepository;
@@ -142,6 +143,32 @@ public class SubscriptionUsageService {
                     (int) scale(usage.getUsedVoiceMinutes(), fraction), (int) scale(usage.getUsedSmsCount(), fraction)));
         }
         return result;
+    }
+
+    // 추천에 쓰는 평소 사용량. 이번 달을 포함한 최근 3개월의 한 달 전체 값의 평균이고 개통 전 달은 뺀다
+    public Optional<UsageDemand> getDemand(Long userId) {
+        Instant now = calendar.now();
+        Optional<Subscription> found = subscriptionRepository.findByUserIdAndStatus(userId, Subscription.Status.ACTIVE);
+        if (found.isEmpty() || stateReader.read(found.get(), now).currentPlan() == null) {
+            return Optional.empty();
+        }
+        Subscription subscription = found.get();
+        List<SubscriptionHistory> planHistories = planHistories(subscription);
+        LocalDate activationDate = activationDate(planHistories);
+        LocalDate thisMonth = calendar.today(now).withDayOfMonth(1);
+        LocalDate from = thisMonth.minusMonths(DEMAND_MONTHS - 1L);
+        List<SubscriptionUsage> months = ensureGenerated(subscription, planHistories, activationDate, thisMonth).values()
+                .stream()
+                .filter(usage -> !usage.getUsageMonth().isBefore(from))
+                .toList();
+        if (months.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new UsageDemand(
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedDataMb).average().orElse(0)),
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedVoiceMinutes).average().orElse(0)),
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedSmsCount).average().orElse(0)),
+                months.size()));
     }
 
     // 개통한 달부터 이번 달까지(최대 6개월 전부터) 없는 달만 그 달 1일의 요금제 제공량 기준으로 만든다. 동시 요청은 먼저 들어간 값이 남는다

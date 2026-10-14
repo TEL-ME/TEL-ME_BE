@@ -159,6 +159,53 @@ class SubscriptionUsageServiceTest {
     }
 
     @Test
+    void 평소_사용량은_이번_달을_포함한_최근_3개월의_한_달_전체_값_평균이다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, LocalDate.of(2026, 7, 1), 99_000, 999, 99);
+        setMonth(subscriptionId, LocalDate.of(2026, 8, 1), 3_000, 100, 30);
+        setMonth(subscriptionId, LocalDate.of(2026, 9, 1), 6_000, 200, 60);
+        setMonth(subscriptionId, OCT, 9_000, 300, 90);
+
+        UsageDemand demand = usageService.getDemand(userId).orElseThrow();
+
+        assertThat(demand).isEqualTo(new UsageDemand(6_000, 200, 60, 3));
+    }
+
+    @Test
+    void 개통한_지_얼마_안_됐으면_있는_달만_평균하고_개통한_달도_한_달_전체_값을_쓴다() {
+        at(Instant.parse("2026-09-05T03:00:00Z")); // 9월 6일 9시 개통
+        Long subscriptionId = subscribe("FIVE_G_STANDARD", false).subscriptionId;
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, LocalDate.of(2026, 9, 1), 4_000, 100, 10);
+        setMonth(subscriptionId, OCT, 8_000, 300, 30);
+
+        assertThat(usageService.getDemand(userId).orElseThrow()).isEqualTo(new UsageDemand(6_000, 200, 20, 2));
+    }
+
+    @Test
+    void 이번_달에_개통했으면_지난_일수로_줄이지_않은_이번_달_값이다() {
+        at(Instant.parse("2026-10-01T03:00:00Z")); // 10월 2일 9시 개통
+        Long subscriptionId = subscribe("FIVE_G_STANDARD", false).subscriptionId;
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, OCT, 10_000, 400, 40);
+
+        assertThat(usageService.getDemand(userId).orElseThrow()).isEqualTo(new UsageDemand(10_000, 400, 40, 1));
+    }
+
+    @Test
+    void 가입하지_않았거나_개통_전이면_평소_사용량이_없다() {
+        at(OCT_12);
+        assertThat(usageService.getDemand(userId)).isEmpty();
+
+        subscribe("FIVE_G_STANDARD", false);
+        assertThat(usageService.getDemand(userId)).isEmpty();
+    }
+
+    @Test
     void 지난_달을_고르면_그달_전체_사용량을_주고_이번_달_전용_값은_없다() {
         subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false); // 1.5GB, 통화 300분, 문자 100건
         at(OCT_12);
@@ -655,6 +702,12 @@ class SubscriptionUsageServiceTest {
 
     private int prorated(int monthDays, int daysBefore, int feeBefore, int feeAfter) {
         return (int) Math.round(((long) daysBefore * feeBefore + (long) (monthDays - daysBefore) * feeAfter) / (double) monthDays);
+    }
+
+    private void setMonth(Long subscriptionId, LocalDate month, long dataMb, int voice, int sms) {
+        jdbc.update("UPDATE subscription_usages SET used_data_mb = ?, used_voice_minutes = ?, used_sms_count = ? "
+                + "WHERE subscription_id = ? AND usage_month = ?", dataMb, voice, sms, subscriptionId, month);
+        entityManager.clear();
     }
 
     private long storedDataMb(Long subscriptionId, LocalDate month) {

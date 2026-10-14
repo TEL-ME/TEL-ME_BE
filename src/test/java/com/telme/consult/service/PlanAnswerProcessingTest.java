@@ -22,6 +22,7 @@ import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.service.ConsultChatProcessingService.AnalyzedTurn;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
@@ -45,6 +46,7 @@ class PlanAnswerProcessingTest {
     private final AnswerProvider faq = mock(AnswerProvider.class);
     private final PlanQuestionClassifier classifier = mock(PlanQuestionClassifier.class);
     private final PlanCatalogAnswerer catalog = mock(PlanCatalogAnswerer.class);
+    private final MemberRecommendationAnswerer recommendation = mock(MemberRecommendationAnswerer.class);
     private final ChatProcessingCommand command = new ChatProcessingCommand(EXECUTION_ID, SESSION_ID, 9L, PLAN_QUESTION);
 
     @Test
@@ -88,6 +90,31 @@ class PlanAnswerProcessingTest {
         assertThat(saved.getValue().content()).contains(PLAN_ANSWER, "신고 절차 FAQ 답변");
     }
 
+    @Test
+    void 나이대를_모르면_답변_메시지를_열기_전에_나이대를_선택지로_되묻는다() {
+        when(faq.clarifies()).thenReturn(true);
+        when(classifier.classify(anyLong(), eq("요금제 추천해줘"))).thenReturn(PlanQuestionType.RECOMMENDATION);
+        MissingCondition ask = new MissingCondition("age_group", "나이대가 어떻게 되세요?",
+                List.of("만 14~18세", "만 19~64세", "만 65세 이상"), null);
+        when(recommendation.recommend(any(), any(), eq(true)))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(ask)));
+        prepareEvents();
+        var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision(11L));
+        var processor = processor(ignored -> new AnalyzedTurn(
+                new ConsultService.PreparationResult(prepared, null), null, Purpose.GENERAL_FAQ, "요금제 추천해줘",
+                "요금제 추천해줘"));
+
+        processor.request(new ChatProcessingCommand(EXECUTION_ID, SESSION_ID, 9L, "요금제 추천해줘"));
+
+        ArgumentCaptor<ConsultService.PreparedTurn> asking = ArgumentCaptor.forClass(ConsultService.PreparedTurn.class);
+        verify(persistence).persistClarification(eq(EXECUTION_ID), asking.capture(), any());
+        assertThat(asking.getValue().decision().action()).isEqualTo(DialogueDecision.Action.ASK);
+        assertThat(asking.getValue().decision().message()).isEqualTo("나이대가 어떻게 되세요?");
+        assertThat(asking.getValue().decision().options()).containsExactly("만 14~18세", "만 19~64세", "만 65세 이상");
+        verify(persistence, never()).startAnswer(anyLong(), anyLong());
+        verify(faq, never()).generate(any());
+    }
+
     private void stubPlanAnswer() {
         when(classifier.classify(anyLong(), eq(PLAN_QUESTION))).thenReturn(PlanQuestionType.PLAN_CATALOG);
         when(classifier.classify(anyLong(), eq("분실 신고 절차"))).thenReturn(PlanQuestionType.NONE);
@@ -95,7 +122,7 @@ class PlanAnswerProcessingTest {
     }
 
     private ConsultChatProcessingService processor(ConsultChatProcessingService.TurnAnalyzer analyzer) {
-        AnswerProvider answers = new PlanAnswerProvider(faq, classifier, catalog, mock(MemberPlanAnswerer.class),
+        AnswerProvider answers = new PlanAnswerProvider(faq, classifier, catalog, mock(MemberPlanAnswerer.class), recommendation,
                 sessionId -> java.util.Optional.empty(), ComparisonEvidenceResolver.passthrough(),
                 mock(ExecutionTrace.class), true);
         return new ConsultChatProcessingService(analyzer, answers, persistence, new ConfirmedConditionConverter(),

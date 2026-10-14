@@ -15,6 +15,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
@@ -36,6 +37,7 @@ class PlanAnswerProviderTest {
     PlanQuestionClassifier classifier = mock(PlanQuestionClassifier.class);
     PlanCatalogAnswerer catalog = mock(PlanCatalogAnswerer.class);
     MemberPlanAnswerer member = mock(MemberPlanAnswerer.class);
+    MemberRecommendationAnswerer recommendation = mock(MemberRecommendationAnswerer.class);
     AtomicInteger sessionLookups = new AtomicInteger();
     Optional<Long> sessionOwner = Optional.of(77L);
     ComparisonEvidenceResolver comparison = mock(ComparisonEvidenceResolver.class);
@@ -80,14 +82,13 @@ class PlanAnswerProviderTest {
 
     @Test
     void 요금제_목록이_아닌_질문은_기존_FAQ_경로에_맡긴다() {
-        for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.MY_USAGE,
-                PlanQuestionType.RECOMMENDATION)) {
+        for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.MY_USAGE)) {
             when(classifier.classify(1L, QUESTION)).thenReturn(type);
 
             assertThat(provider.prepare(input(QUESTION), true)).isEqualTo(Prepared.none());
             assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
         }
-        verifyNoInteractions(catalog, member);
+        verifyNoInteractions(catalog, member, recommendation);
     }
 
     @Test
@@ -120,7 +121,7 @@ class PlanAnswerProviderTest {
     @Test
     void 채팅방_주인은_내_요금제와_위약금_질문일_때만_조회한다() {
         for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.PLAN_CATALOG,
-                PlanQuestionType.MY_USAGE, PlanQuestionType.RECOMMENDATION)) {
+                PlanQuestionType.MY_USAGE)) {
             when(classifier.classify(1L, QUESTION)).thenReturn(type);
             provider.generate(input(QUESTION));
         }
@@ -129,6 +130,12 @@ class PlanAnswerProviderTest {
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.MY_PENALTY);
         provider.generate(input(QUESTION));
         assertThat(sessionLookups).hasValue(1);
+
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(any(), any(), anyBoolean()))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("추천", List.of(), null));
+        provider.generate(input(QUESTION));
+        assertThat(sessionLookups).hasValue(2);
     }
 
     @Test
@@ -139,13 +146,66 @@ class PlanAnswerProviderTest {
     }
 
     @Test
+    void 요금제_추천_질문은_채팅방_주인의_추천_답변을_FAQ_검색_없이_확정한다() {
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(77L, Map.of(), true)).thenReturn(
+                new MemberRecommendationAnswerer.Outcome("추천 답변", List.of("요금제 변경은 어떻게 해요?"), null));
+
+        Prepared prepared = provider.prepare(input(QUESTION), true);
+
+        assertThat(prepared.answer().answer().content()).isEqualTo("추천 답변");
+        assertThat(prepared.answer().answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
+        assertThat(prepared.answer().answer().followUps()).containsExactly("요금제 변경은 어떻게 해요?");
+        verify(faq, never()).prepare(any(), anyBoolean());
+    }
+
+    @Test
+    void 나이대를_알아야_하면_되묻기_계획만_주고_답변은_확정하지_않는다() {
+        MissingCondition ask = new MissingCondition("age_group", "나이대가 어떻게 되세요?",
+                List.of("만 14~18세", "만 19~64세", "만 65세 이상"), null);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(77L, Map.of(), true)).thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(ask)));
+
+        Prepared prepared = provider.prepare(input(QUESTION), true);
+
+        assertThat(prepared.answer()).isNull();
+        assertThat(prepared.plan().needsClarification()).isTrue();
+        assertThat(prepared.plan().first()).isEqualTo(ask);
+        verify(faq, never()).prepare(any(), anyBoolean());
+    }
+
+    @Test
+    void 되묻기를_이미_마친_턴에는_되묻지_않고_확정된_나이대로_추천한다() {
+        AnswerInput answered = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION,
+                Map.of("age_group", "만 65세 이상"));
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), false)).thenReturn(
+                new MemberRecommendationAnswerer.Outcome("시니어 추천", List.of(), null));
+
+        Prepared prepared = provider.prepare(answered, false);
+
+        assertThat(prepared.answer().answer().content()).isEqualTo("시니어 추천");
+        verify(recommendation).recommend(77L, Map.of("age_group", "만 65세 이상"), false);
+    }
+
+    @Test
+    void 한_번에_처리하는_경로에서는_되묻지_않는다() {
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(77L, Map.of(), false)).thenReturn(
+                new MemberRecommendationAnswerer.Outcome("일반 요금제 추천", List.of(), null));
+
+        assertThat(provider.generate(input(QUESTION)).answer().content()).isEqualTo("일반 요금제 추천");
+        verify(recommendation).recommend(77L, Map.of(), false);
+    }
+
+    @Test
     void 비교_질문은_분류하지_않고_기존_비교_답변_경로에_맡긴다() {
         when(comparison.applies(QUESTION)).thenReturn(true);
 
         assertThat(provider.prepare(input(QUESTION), true)).isEqualTo(Prepared.none());
         assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
 
-        verifyNoInteractions(classifier, catalog, member);
+        verifyNoInteractions(classifier, catalog, member, recommendation);
     }
 
     @Test
@@ -155,7 +215,7 @@ class PlanAnswerProviderTest {
         assertThat(provider.prepare(input(QUESTION), true)).isEqualTo(Prepared.none());
         assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
 
-        verifyNoInteractions(classifier, catalog, member);
+        verifyNoInteractions(classifier, catalog, member, recommendation);
     }
 
     @Test
@@ -191,7 +251,7 @@ class PlanAnswerProviderTest {
     }
 
     private PlanAnswerProvider provider(boolean enabled) {
-        return new PlanAnswerProvider(faq, classifier, catalog, member, sessionId -> {
+        return new PlanAnswerProvider(faq, classifier, catalog, member, recommendation, sessionId -> {
             sessionLookups.incrementAndGet();
             return sessionOwner;
         }, comparison, trace, enabled);
