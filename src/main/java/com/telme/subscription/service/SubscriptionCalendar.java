@@ -58,8 +58,12 @@ public class SubscriptionCalendar {
         return LocalDate.of(today(at).getYear() + 1, 1, 1).atStartOfDay(TimeZones.KST).toInstant();
     }
 
+    // plusMonths와 같은 기준(없는 날은 말일)으로 센 경과 개월
     public int monthsBetween(Instant from, Instant to) {
-        return (int) ChronoUnit.MONTHS.between(today(from), today(to));
+        LocalDate start = today(from);
+        LocalDate end = today(to);
+        int months = (int) ChronoUnit.MONTHS.between(start, end);
+        return start.plusMonths(months + 1L).isAfter(end) ? months : months + 1;
     }
 
     public Instant plusMonths(Instant base, int months) {
