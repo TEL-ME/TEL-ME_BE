@@ -36,6 +36,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final FaqClarificationPlanner planner;
     private final SuggestedQuestions suggestedQuestions;
     private final RefinedQuerySelector refinedQueries;
+    // null이면 회색 구간 판정을 쓰지 않는 기존 검색이다
+    private final FaqGrayZoneSelector grayZone;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -97,6 +99,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
             SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter, planner,
+                suggestedQuestions, refinedQueries, null);
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
+            SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries,
+            FaqGrayZoneSelector grayZone) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
@@ -106,6 +118,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         this.planner = planner;
         this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
         this.refinedQueries = Objects.requireNonNull(refinedQueries);
+        this.grayZone = grayZone;
     }
 
     @Override
@@ -242,8 +255,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         try {
             FaqSearchRequest searchRequest = unfilteredCandidates ? new FaqSearchRequest(query, topK)
                                                                   : new FaqSearchRequest(query, topK, FaqSearchKind.valueOf(kind));
-            var found = unfilteredCandidates
-                    ? searches.searchCandidates(searchRequest)
+            var found = unfilteredCandidates ? searches.searchCandidates(searchRequest)
+                    : grayZone != null ? searchGrayZone(input, searchRequest)
                     : searches.search(searchRequest);
             var results = List.copyOf(found);
             trace.append(input.executionId(), "searchResults", Map.of(
@@ -263,6 +276,12 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             // 빈 목록은 근거 없음이다. 호출·응답 계약 실패는 원인을 보존해 별도로 종료한다.
             throw new FaqAnswerSearchException(failure);
         }
+    }
+
+    // 판정은 검색 문장이 아니라 고객이 실제로 물은 질문으로 한다. 원문·문맥 복원·재검색 어느 경로든 같다
+    private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest) {
+        return grayZone.select(input.executionId(), input.consultRequestId(), input.resolvedUserQuery(),
+                searches.searchGrayZone(searchRequest), searchRequest.topK()).results();
     }
 
     /** 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문을 돌려주면 재검색하지 않는다. */
