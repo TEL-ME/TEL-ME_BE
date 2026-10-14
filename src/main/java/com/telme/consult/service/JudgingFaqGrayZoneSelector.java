@@ -8,6 +8,7 @@ import com.telme.faq.service.DualVectorMerger;
 import com.telme.rag.service.FaqEvidenceJudge;
 import com.telme.rag.service.FaqEvidenceJudge.Verdict;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +30,20 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
     // 빈으로 등록하면 스프링의 기본 비동기 실행기 설정이 물러나므로 이 안에서만 쓴다
     private static final ExecutorService JUDGE_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
+    // 한 질문을 처리하며 원문 검색 뒤 재검색을 하면 같은 FAQ가 다시 나온다. 같은 실행·같은 고객 질문이면 앞 판정을 다시 쓴다.
+    // 실패는 기억하지 않아 다음 검색에서 다시 판정한다. 실행이 끝난 뒤에는 쓰지 않으므로 최근 것만 남긴다
+    private static final int REMEMBERED_VERDICTS = 2_000;
+
     private final FaqEvidenceJudge judge;
     private final double qaPassedBefore;
     private final double questionPassedBefore;
+    private final Map<VerdictKey, Verdict> remembered = Collections.synchronizedMap(
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<VerdictKey, Verdict> eldest) {
+                    return size() > REMEMBERED_VERDICTS;
+                }
+            });
 
     /**
      * qaPassedBefore, questionPassedBefore는 판정을 붙이기 전의 임계값(search.similarity-threshold,
@@ -64,12 +76,24 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
             FaqSearchResponse result = candidate.result();
             // 같은 FAQ가 두 벡터에 모두 나오면 한 번만 판정한다
             if (candidate.needsJudgment() && result.slotId() != null) {
-                pending.computeIfAbsent(result.faqId(), faqId -> CompletableFuture.supplyAsync(
-                        () -> judgeTimed(executionId, consultRequestId, question, result), JUDGE_EXECUTOR));
+                pending.computeIfAbsent(result.faqId(), faqId -> {
+                    Verdict known = executionId == null
+                            ? null : remembered.get(new VerdictKey(executionId, question, faqId));
+                    return known != null
+                            ? CompletableFuture.completedFuture(new Timed(known, true, 0))
+                            : CompletableFuture.supplyAsync(
+                                    () -> judgeTimed(executionId, consultRequestId, question, result), JUDGE_EXECUTOR);
+                });
             }
         }
         Map<Long, Timed> verdicts = new LinkedHashMap<>();
-        pending.forEach((faqId, future) -> verdicts.put(faqId, future.join()));
+        pending.forEach((faqId, future) -> {
+            Timed timed = future.join();
+            verdicts.put(faqId, timed);
+            if (executionId != null && timed.verdict() != Verdict.FAILED) {
+                remembered.put(new VerdictKey(executionId, question, faqId), timed.verdict());
+            }
+        });
 
         List<Judgment> judgments = new ArrayList<>();
         List<FaqSearchResponse> questionOnly =
@@ -99,7 +123,7 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
                 kept.add(result);
             }
             judgments.add(new Judgment(result.faqId(), result.slotId(), result.matchedVariant(), result.score(),
-                    upperBand, timed == null ? null : timed.verdict(), keep,
+                    upperBand, timed == null ? null : timed.verdict(), keep, timed != null && timed.reused(),
                     timed == null ? null : timed.elapsedMs()));
         }
         return kept;
@@ -114,7 +138,7 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
             // 판정기는 실패를 돌려주지만, 예상하지 못한 예외도 구간 규칙으로 처리되게 실패로 둔다
             verdict = Verdict.FAILED;
         }
-        return new Timed(verdict, (System.nanoTime() - started) / 1_000_000);
+        return new Timed(verdict, false, (System.nanoTime() - started) / 1_000_000);
     }
 
     private static List<Candidate> allOf(FaqGrayZoneSearchResponse candidates) {
@@ -123,6 +147,9 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
         return all;
     }
 
-    private record Timed(Verdict verdict, long elapsedMs) {
+    private record Timed(Verdict verdict, boolean reused, long elapsedMs) {
+    }
+
+    private record VerdictKey(Long executionId, String question, Long faqId) {
     }
 }

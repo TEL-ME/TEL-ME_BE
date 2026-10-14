@@ -663,7 +663,7 @@ class FaqSearchAnswerProviderTest {
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
         when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of()));
         var judgment = new FaqGrayZoneSelector.Judgment(9L, "USIM-0001", "Q_A", 0.75, true,
-                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, 1800L);
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, false, 1800L);
         FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
                 new FaqGrayZoneSelector.Selection(List.of(), List.of(judgment));
 

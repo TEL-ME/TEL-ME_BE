@@ -109,6 +109,44 @@ class JudgingFaqGrayZoneSelectorTest {
     }
 
     @Test
+    @DisplayName("같은 실행에서 같은 고객 질문으로 다시 검색하면 앞 판정을 다시 쓴다")
+    void 같은_실행의_재검색은_판정을_다시_쓴다() {
+        verdicts(Map.of(15L, Verdict.NOT_ANSWERABLE));
+
+        select(List.of(), List.of(judgeNeeded(15L, 0.75, QA)));
+        Selection again = select(List.of(), List.of(judgeNeeded(15L, 0.73, QA)));
+
+        verify(judge, times(1)).judge(any(), any(), anyString(), anyString(), anyString());
+        assertThat(again.judgments()).singleElement().satisfies(judgment -> {
+            assertThat(judgment.reused()).isTrue();
+            assertThat(judgment.verdict()).isEqualTo(Verdict.NOT_ANSWERABLE);
+            assertThat(judgment.kept()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("다른 실행이거나 고객 질문이 다르거나 앞 판정이 실패였으면 다시 판정한다")
+    void 다시_판정하는_경우() {
+        when(judge.judge(any(), any(), anyString(), anyString(), anyString())).thenReturn(Verdict.ANSWERABLE);
+        FaqGrayZoneSearchResponse candidates = new FaqGrayZoneSearchResponse(List.of(),
+                List.of(judgeNeeded(16L, 0.75, QA)));
+
+        selector.select(1L, 2L, QUESTION, candidates, 3);
+        selector.select(99L, 2L, QUESTION, candidates, 3);
+        selector.select(1L, 2L, "다른 질문", candidates, 3);
+        selector.select(null, null, QUESTION, candidates, 3);
+        selector.select(null, null, QUESTION, candidates, 3);
+        verify(judge, times(5)).judge(any(), any(), anyString(), anyString(), anyString());
+
+        when(judge.judge(any(), any(), anyString(), eq("FAQ 질문 17"), anyString())).thenReturn(Verdict.FAILED);
+        FaqGrayZoneSearchResponse failing = new FaqGrayZoneSearchResponse(List.of(),
+                List.of(judgeNeeded(17L, 0.75, QA)));
+        selector.select(5L, 2L, QUESTION, failing, 3);
+        selector.select(5L, 2L, QUESTION, failing, 3);
+        verify(judge, times(2)).judge(any(), any(), anyString(), eq("FAQ 질문 17"), anyString());
+    }
+
+    @Test
     @DisplayName("판정에는 고객 질문과 FAQ 질문·답변을 넘긴다")
     void 판정_입력() {
         verdicts(Map.of(10L, Verdict.ANSWERABLE));

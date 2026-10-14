@@ -22,9 +22,9 @@ public interface FaqGrayZoneSelector {
 
     /**
      * 판정 필요 후보 하나의 결과. upperBand는 판정을 붙이기 전에는 바로 통과하던 점수 구간(위로 넓힌 구간)이다.
-     * verdict가 null이면 slot_id가 없어 판정하지 않고 거부한 후보다.
+     * verdict가 null이면 slot_id가 없어 판정하지 않고 거부한 후보다. reused면 같은 실행의 앞 검색에서 받은 판정을 다시 썼다.
      */
     record Judgment(Long faqId, String slotId, String vector, double score, boolean upperBand,
-            Verdict verdict, boolean kept, Long elapsedMs) {
+            Verdict verdict, boolean kept, boolean reused, Long elapsedMs) {
     }
 }
