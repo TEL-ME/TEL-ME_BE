@@ -178,6 +178,40 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 약정_중이면_할인을_적용한_금액으로_절약액을_알려준다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 35 * GB, 100, 50, true); // 85,000원 - 25% = 63,750원
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        // 5G 스탠다드 65,000원 - 25% = 48,750원이라 차이는 정가 기준 20,000원이 아니라 15,000원
+        assertThat(outcome.content()).contains("월 15,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 63,750원이에요",
+                "약정 할인 25%를 적용한 금액이에요").doesNotContain("월 20,000원 아낄");
+    }
+
+    @Test
+    void 약정_중에_더_큰_요금제를_권할_때도_할인을_적용한_차이를_알려준다() {
+        subscribeAndUse("FIVE_G_LITE", 20 * GB, 100, 50, true);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        // 5G 라이트 45,000원 → 5G 스탠다드 65,000원은 정가 차이 20,000원이고 약정 할인 후에는 15,000원
+        assertThat(outcome.content()).contains("월 15,000원이 더 들어요", "약정 할인 25%를 적용한 금액이에요")
+                .doesNotContain("월 20,000원이 더");
+    }
+
+    @Test
+    void 약정이_만료됐으면_할인_없이_정가로_절약액을_알려준다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_PREMIUM", true);
+        at(Instant.parse("2028-02-12T03:00:00Z")); // 약정 24개월이 지남
+        setUsage(35 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        assertThat(outcome.content()).contains("월 20,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 85,000원이에요")
+                .doesNotContain("약정 할인");
+    }
+
+    @Test
     void 지금_요금제가_사용량에_알맞으면_그대로_쓰라고_한다() {
         subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
 
@@ -302,14 +336,22 @@ class MemberRecommendationAnswererTest {
     }
 
     private void subscribeAndUse(String planCode, long dataMb, int voice, int sms) {
-        subscribeAt(JANUARY_JOIN, planCode);
+        subscribeAndUse(planCode, dataMb, voice, sms, false);
+    }
+
+    private void subscribeAndUse(String planCode, long dataMb, int voice, int sms, boolean contract) {
+        subscribeAt(JANUARY_JOIN, planCode, contract);
         at(OCT_12);
         setUsage(dataMb, voice, sms);
     }
 
     private void subscribeAt(Instant joinedAt, String planCode) {
+        subscribeAt(joinedAt, planCode, false);
+    }
+
+    private void subscribeAt(Instant joinedAt, String planCode, boolean contract) {
         at(joinedAt);
-        commandService.subscribe(userId, planId(planCode), null);
+        commandService.subscribe(userId, planId(planCode), null, contract);
     }
 
     // 사용량 행을 만든 뒤 모든 달의 값을 같게 고정해 평균이 곧 이 값이 되게 한다

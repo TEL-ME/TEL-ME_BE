@@ -244,8 +244,18 @@ class MemberPlanAnswererTest {
 
         String content = answerer.answer(PlanQuestionType.MY_USAGE, userId).content();
 
-        assertThat(content).contains("이번 달에 요금제가 바뀌어 날짜별로 나눠 계산했어요", "지난달보다", "적어요");
+        assertThat(content).contains("이번 달은 날짜별로 나눠 계산했어요", "지난달보다", "적어요");
         assertThat(content).doesNotContain("- 예상 요금 65,000원").doesNotContain("- 예상 요금 45,000원");
+    }
+
+    @Test
+    void 이번_달에_개통했으면_개통일부터_날짜별로_나눠_계산했다고_알린다() {
+        subscribeAt(Instant.parse("2026-10-01T03:00:00Z"), "FIVE_G_STANDARD", false); // 10월 2일 9시 개통
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+
+        String content = answerer.answer(PlanQuestionType.MY_USAGE, userId).content();
+
+        assertThat(content).contains("- 예상 요금 62,903원", "이번 달은 날짜별로 나눠 계산했어요").doesNotContain("지난달보다");
     }
 
     @Test

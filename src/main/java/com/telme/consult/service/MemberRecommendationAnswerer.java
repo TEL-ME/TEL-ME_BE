@@ -104,10 +104,10 @@ public class MemberRecommendationAnswerer {
             if (mayAsk && !any.plan().equals(general.plan())) {
                 return new Outcome(null, List.of(), List.of(ageQuestion()));
             }
-            return answer(general, current, demand, usage.get(), note);
+            return answer(general, current, demand, usage.get(), discountPercent(subscription), note);
         }
         return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand,
-                usage.get(), note);
+                usage.get(), discountPercent(subscription), note);
     }
 
     // 사용량이 없으면 나이대와 데이터를 많이 쓰는지만 묻고 그에 맞는 요금제를 추천한다
@@ -195,22 +195,41 @@ public class MemberRecommendationAnswerer {
                         && calendar.plusMonths(history.getEffectiveFrom(), COOLDOWN_MONTHS).isAfter(now));
     }
 
-    private Outcome answer(Recommendation recommendation, Plan current, Demand demand, UsageDemand usage, String note) {
+    // 약정 중이면 요금제를 바꿔도 같은 할인율이 붙으므로 비교하는 두 요금제 모두 할인 후 금액으로 본다
+    private Outcome answer(Recommendation recommendation, Plan current, Demand demand, UsageDemand usage,
+            int discountPercent, String note) {
         Plan plan = recommendation.plan();
         String use = "최근 평균 사용량은 데이터 %s, 통화 %d분, 문자 %d건이에요.".formatted(
                 gb(usage.dataMb()), usage.voiceMinutes(), usage.smsCount());
-        int gap = Math.abs(plan.getMonthlyFee() - current.getMonthlyFee());
+        int currentFee = afterDiscount(current.getMonthlyFee(), discountPercent);
+        int gap = Math.abs(afterDiscount(plan.getMonthlyFee(), discountPercent) - currentFee);
         Outcome outcome = switch (recommendation.kind()) {
             case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요."
                     .formatted(use, current.getName(), summary(current)), List.of(CATALOG_QUESTION), null);
-            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요."
+            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요.%s"
                     .formatted(use, plan.getName(), summary(plan), PlanFormat.money(gap), current.getName(),
-                            PlanFormat.money(current.getMonthlyFee())), List.of(CHANGE_QUESTION), null);
-            case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요."
+                            PlanFormat.money(currentFee), discountNote(discountPercent)),
+                    List.of(CHANGE_QUESTION), null);
+            case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요.%s"
                     .formatted(use, current.getName(), summary(current), shortage(current, demand), plan.getName(),
-                            summary(plan), PlanFormat.money(gap)), List.of(CHANGE_QUESTION), null);
+                            summary(plan), PlanFormat.money(gap), discountNote(discountPercent)),
+                    List.of(CHANGE_QUESTION), null);
         };
         return note.isEmpty() ? outcome : new Outcome(outcome.content() + note, outcome.followUps(), null);
+    }
+
+    private static int discountPercent(SubscriptionResponse subscription) {
+        var contract = subscription.contract();
+        return contract != null && contract.active() ? contract.discountPercent() : 0;
+    }
+
+    // 예상 요금 계산(SubscriptionUsageService.feeAfterContract)과 같은 식
+    private static int afterDiscount(int monthlyFee, int discountPercent) {
+        return monthlyFee - monthlyFee * discountPercent / 100;
+    }
+
+    private static String discountNote(int discountPercent) {
+        return discountPercent == 0 ? "" : " 월 금액 차이와 지금 요금은 약정 할인 %d%%를 적용한 금액이에요.".formatted(discountPercent);
     }
 
     private static String shortage(Plan current, Demand demand) {

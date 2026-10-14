@@ -90,7 +90,7 @@ public class MemberPlanAnswerer {
                     fee.difference() > 0 ? "많아요" : "적어요"));
         }
         if (fee.prorated()) {
-            text.append("\n- 이번 달에 요금제가 바뀌어 날짜별로 나눠 계산했어요");
+            text.append("\n- 이번 달은 날짜별로 나눠 계산했어요 (요금제 변경·약정 만료·개통일 반영)");
         }
         if (Boolean.TRUE.equals(usage.paused())) {
             text.append("\n- 지금은 일시 정지 중이에요");
