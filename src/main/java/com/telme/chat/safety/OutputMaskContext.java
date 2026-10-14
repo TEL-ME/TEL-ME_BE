@@ -43,6 +43,14 @@ public record OutputMaskContext(List<Source> sources) {
         boolean[] protectedCharacters = new boolean[value.length()];
         for (Source source : sources) {
             for (MaskSpan span : source.spans()) {
+                // 공백 없이 글자 사이에 끼운 마스크는 출처가 있어도 기존 출력 욕설 검사에 남긴다.
+                if (span.start() > 0 && span.end() < source.content().length()
+                        && !Character.isWhitespace(source.content().charAt(span.start() - 1))
+                        && !Character.isSpaceChar(source.content().charAt(span.start() - 1))
+                        && !Character.isWhitespace(source.content().charAt(span.end()))
+                        && !Character.isSpaceChar(source.content().charAt(span.end()))) {
+                    continue;
+                }
                 int left = span.start();
                 while (left > 0 && separator(source.content().charAt(left - 1))) {
                     left--;

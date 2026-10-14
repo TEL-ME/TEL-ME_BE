@@ -323,6 +323,34 @@ class ChatInputGuardIntegrationTest {
         assertThat(send(sid, "씨발").at("/result/inputGuard/violationCount").asInt()).isEqualTo(2);
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "시4111111111111111발 | 시***발",
+        "씨990101-1234567발 | 씨***발",
+        "ㅅ4111111111111111ㅂ | ㅅ***ㅂ"
+    })
+    @DisplayName("번호를 끼운 욕설은 상담을 생성하지 않고 같은 요청 재전송도 한 번만 경고한다")
+    void 번호를_끼운_욕설을_차단하고_재전송을_유지한다(String input, String safe) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 200));
+        var repeated = body(request(sid, identity, input, key, 200));
+
+        assertThat(first.at("/result/inputGuard/action").asText()).isEqualTo("WARNED");
+        assertThat(first.at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        assertThat(first.at("/result").hasNonNull("executionId")).isFalse();
+        assertThat(repeated).isEqualTo(first);
+        assertThat(count("chat_executions")).isZero();
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT content FROM chat_messages WHERE session_id=?", String.class, sid))
+                .isEqualTo(safe);
+        assertThat(jdbc.queryForObject(
+                "SELECT message_type FROM chat_messages WHERE session_id=?", String.class, sid))
+                .isEqualTo("BLOCKED");
+        verifyNoInteractions(analyzer, answers);
+    }
+
     @Test
     @DisplayName("한 입력의 여러 욕설 규칙은 기록하되 제재 횟수는 한 번만 증가한다")
     void 여러_욕설이_있어도_한_번_집계한다() throws Exception {

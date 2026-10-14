@@ -147,6 +147,40 @@ class ChatOutputGuardTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {
+        "시4111111111111111발", "씨990101-1234567발", "개4111111111111111새끼", "ㅅ4111111111111111ㅂ",
+        "씨*4111111111111111*발", "'시4111111111111111발'이라고 들었어요"
+    })
+    @DisplayName("번호를 끼운 욕설은 서버 마스크 출처나 입력의 피해 인용 예외로 출력 검사를 우회하지 못한다")
+    void 번호를_끼운_욕설_출력을_차단한다(String original) throws Exception {
+        var inspection = new ChatInputInspector(new ObjectMapper()).inspect(original);
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspection)));
+        var visible = inspection.content();
+        var strings = new ObjectMapper().writeValueAsString(List.of(visible));
+
+        assertThatThrownBy(() -> guard.verify(answer(visible), masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifySerialized(visible, null, null, null, masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifyClarification(visible, List.of(), masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifySummary(strings, masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "다시4111111111111111발급 문의", "출시4111111111111111발표 안내", "시4111111111111111발점 안내"
+    })
+    @DisplayName("공백 없는 정상 단어의 마스크 인용은 기존 출력 단어 경계로 허용한다")
+    void 번호_사이_정상_단어_출력을_유지한다(String original) {
+        var inspection = new ChatInputInspector(new ObjectMapper()).inspect(original);
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspection)));
+
+        assertThatCode(() -> guard.verify(answer(inspection.content()), masks)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"씨***발", "개***새끼", "씨 *** 발", "개 *** 새끼", "씨**발", "씨******발"})
     @DisplayName("다른 정상 마스크가 있어도 새로 생성한 별표 욕설을 허용하지 않는다")
     void 다른_문맥의_마스크로_별표_욕설을_우회하지_못한다(String unsafe) {

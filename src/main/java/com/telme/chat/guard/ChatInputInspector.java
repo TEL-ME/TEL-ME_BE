@@ -29,6 +29,7 @@ public final class ChatInputInspector {
     private static final String MASK = "***";
     // 욕설 우회 문자에 포함되지 않는 경계다. 저장·상담·해시에는 전달하지 않는다.
     private static final char PII_BOUNDARY = '\uFFFC';
+    private static final Pattern BRIDGED_MASK = Pattern.compile("(?<=\\S)\\uFFFC(?=\\S)");
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
     // 감지한 번호에 붙은 단위·조사만 제외한다. 일반 단어와 남은 숫자 조건은 문의로 보존한다.
@@ -143,6 +144,25 @@ public final class ChatInputInspector {
         MaskedContent maskedContent = mask(input, detections);
         String safe = maskedContent.content();
         String normalized = normalize(maskedContent.inspectionContent());
+        collectProfanity(normalized, detections);
+        // 공백 없이 번호를 끼운 우회만 추가 검사한다. 공백을 둔 마스크 인용 경계는 유지한다.
+        String bridged = BRIDGED_MASK.matcher(normalized).replaceAll("");
+        if (!bridged.equals(normalized)) {
+            collectProfanity(bridged, detections);
+        }
+        String remaining = MASKED_NUMBER_UNIT.matcher(normalized).replaceAll("")
+                .replace(String.valueOf(PII_BOUNDARY), "")
+                .replaceAll("[\\s\\p{Punct}]", "");
+        boolean masked =
+                detections.stream()
+                        .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
+        boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
+        return new InputInspection(
+                safe, detections.stream().distinct().toList(), hasQuestion,
+                maskedContent.fingerprintContent(), maskedContent.maskSpans());
+    }
+
+    private void collectProfanity(String normalized, List<Detection> detections) {
         List<Span> exemptions = exemptions(normalized);
         for (CompiledRule compiled : rules) {
             Matcher matcher = compiled.pattern().matcher(normalized);
@@ -166,16 +186,6 @@ public final class ChatInputInspector {
                 break;
             }
         }
-        String remaining = MASKED_NUMBER_UNIT.matcher(normalized).replaceAll("")
-                .replace(String.valueOf(PII_BOUNDARY), "")
-                .replaceAll("[\\s\\p{Punct}]", "");
-        boolean masked =
-                detections.stream()
-                        .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
-        boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
-        return new InputInspection(
-                safe, detections.stream().distinct().toList(), hasQuestion,
-                maskedContent.fingerprintContent(), maskedContent.maskSpans());
     }
 
     private boolean hasRemainingQuestion(String remaining) {

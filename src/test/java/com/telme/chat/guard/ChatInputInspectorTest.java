@@ -385,11 +385,11 @@ class ChatInputInspectorTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "개 4111111111111111 새끼", "개4111111111111111새끼",
-        "씨 990101-1234567 발", "ㅅ4111111111111111ㅂ",
+        "개 4111111111111111 새끼",
+        "씨 990101-1234567 발",
         "개 ４１１１－１１１１－１１１１－１１１１ 새끼"
     })
-    @DisplayName("민감번호의 별표 마스크가 양옆 글자를 새 욕설로 연결하지 않는다")
+    @DisplayName("공백을 둔 민감번호 마스크는 양옆 글자를 새 욕설로 연결하지 않는다")
     void 마스킹_경계에서_욕설을_만들지_않는다(String input) {
         var result = inspector.inspect(input);
 
@@ -398,6 +398,48 @@ class ChatInputInspectorTest {
         assertThat(result.wasMasked()).isTrue();
         assertThat(result.hasProfanity()).isFalse();
         assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "시4111111111111111발", "씨4111111111111111발", "개4111111111111111새끼",
+        "ㅅ4111111111111111ㅂ", "씨990101-1234567발", "시４１１１－１１１１－１１１１－１１１１발",
+        "시.4111111111111111.발", "씨*4111111111111111*발"
+    })
+    @DisplayName("공백 없이 욕설 사이에 민감번호를 끼워도 마스킹한 내용으로 욕설을 감지한다")
+    void 번호를_끼운_욕설_우회를_감지한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isTrue();
+        assertThat(result.content()).contains("***").doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(result.fingerprintContent()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(result.maskSpans()).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "다시4111111111111111발급 문의", "출시4111111111111111발표 문의",
+        "시4111111111111111발점이 뭐예요?", "개4111111111111111통 문의",
+        "'씨4111111111111111발'이라고 들었어요", "'시4111111111111111발'이라는 말의 뜻이 뭐예요?"
+    })
+    @DisplayName("번호 경계의 추가 검사도 정상 단어와 지원하는 피해 인용·뜻 질문은 유지한다")
+    void 번호_경계의_정상_문맥과_인용을_유지한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("번호를 끼운 욕설도 기존 유형 문구 해시와 실제 마스크 위치는 유지한다")
+    void 번호_우회_검사로_재전송_문구와_마스크_위치를_바꾸지_않는다() {
+        var result = inspector.inspect("시4111111111111111발");
+
+        assertThat(result.content()).isEqualTo("시***발");
+        assertThat(result.fingerprintContent()).isEqualTo("시[카드번호]발");
+        assertThat(result.maskSpans()).containsExactly(new MaskSpan(1, 4));
     }
 
     @ParameterizedTest
