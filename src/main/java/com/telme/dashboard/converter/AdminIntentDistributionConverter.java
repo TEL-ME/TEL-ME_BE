@@ -5,6 +5,7 @@ import com.telme.dashboard.dto.res.AdminIntentDistributionResponse.Classificatio
 import com.telme.dashboard.dto.res.AdminIntentDistributionResponse.IntentShare;
 import com.telme.dashboard.dto.res.AdminIntentDistributionResponse.MethodShare;
 import com.telme.intent.entity.QueryRouting.Intent;
+import com.telme.intent.entity.QueryRouting.Method;
 import com.telme.intent.repository.RoutingCount;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,8 +25,7 @@ public class AdminIntentDistributionConverter {
         for (RoutingCount count : counts) {
             total += count.count();
             intents.merge(count.intent(), count.count(), Long::sum);
-            ClassificationMethod method = count.method() == null
-                    ? ClassificationMethod.UNRECORDED : ClassificationMethod.valueOf(count.method().name());
+            ClassificationMethod method = toClassificationMethod(count.method());
             methods.merge(method, count.count(), Long::sum);
         }
         final long totalCount = total;
@@ -38,6 +38,14 @@ public class AdminIntentDistributionConverter {
                     long count = methods.getOrDefault(method, 0L);
                     return new MethodShare(method, count, percentage(count, totalCount));
                 }).toList());
+    }
+
+    // 검색 보정(SEARCH)은 규칙 보정이므로 응답 항목을 늘리지 않고 RULE로 센다
+    private ClassificationMethod toClassificationMethod(Method method) {
+        if (method == null) {
+            return ClassificationMethod.UNRECORDED;
+        }
+        return method == Method.SEARCH ? ClassificationMethod.RULE : ClassificationMethod.valueOf(method.name());
     }
 
     private BigDecimal percentage(long count, long total) {
