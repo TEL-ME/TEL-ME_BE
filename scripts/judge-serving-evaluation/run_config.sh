@@ -21,13 +21,22 @@ ROUTER_PORT="${ROUTER_PORT:-11435}"
 DB="telme_judge_eval_$(echo "$NAME" | tr '[:upper:]' '[:lower:]')"
 mkdir -p "$OUT"
 
-stop_port() {
-  local pid
-  pid=$(netstat -ano 2>/dev/null | grep -E ":$1 .*LISTEN" | awk '{print $NF}' | head -1)
-  [ -n "$pid" ] && { taskkill //PID "$pid" //F >/dev/null 2>&1 || kill "$pid" 2>/dev/null; }
-}
+# Windows의 python3는 Microsoft Store 안내 스텁일 수 있어 실제로 실행되는 인터프리터를 고른다
+PYTHON="${PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+  for c in python3 python; do "$c" -c "" >/dev/null 2>&1 && { PYTHON=$c; break; }; done
+fi
+[ -n "$PYTHON" ] || { echo "python3 또는 python이 필요하다"; exit 1; }
+
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+for port in "$APP_PORT" "$ROUTER_PORT"; do
+  port_in_use "$port" && { echo "포트 $port가 이미 사용 중이다. 이전 측정의 앱·라우터를 먼저 끈다"; exit 1; }
+done
+
+# 띄운 프로세스의 PID로 끈다 (포트로 PID를 찾는 방식은 OS마다 달라서 쓰지 않는다)
+ROUTER_PID=""; APP_PID=""
 cleanup() {
-  stop_port "$APP_PORT"; stop_port "$ROUTER_PORT"
+  for pid in $APP_PID $ROUTER_PID; do kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; done
   docker exec "$PG_CONTAINER" psql -U telme -d postgres -qc "DROP DATABASE IF EXISTS $DB WITH (FORCE)"
 }
 trap cleanup EXIT
@@ -35,18 +44,23 @@ trap cleanup EXIT
 docker exec "$PG_CONTAINER" psql -U telme -d postgres -qc "DROP DATABASE IF EXISTS $DB WITH (FORCE)" \
   -c "CREATE DATABASE $DB TEMPLATE $TEMPLATE_DB"
 
-python -X utf8 "$HERE/judge_router.py" --port "$ROUTER_PORT" --log "$OUT/router.jsonl" "$@" > "$OUT/router.log" 2>&1 &
-sleep 4
+"$PYTHON" -X utf8 "$HERE/judge_router.py" --port "$ROUTER_PORT" --log "$OUT/router.jsonl" "$@" > "$OUT/router.log" 2>&1 &
+ROUTER_PID=$!
+for _ in $(seq 1 30); do
+  curl -sf -m 2 "http://127.0.0.1:$ROUTER_PORT/health" >/dev/null || ! kill -0 "$ROUTER_PID" 2>/dev/null && break; sleep 1
+done
 cat "$OUT/router.log"
+curl -sf -m 2 "http://127.0.0.1:$ROUTER_PORT/health" >/dev/null || { echo "라우터 기동 실패: $OUT/router.log"; exit 1; }
 
 OLLAMA_URL="http://127.0.0.1:$ROUTER_PORT" LLM_PROVIDER=ollama RAG_EVIDENCE_CHECK_ENABLED="$JUDGE" \
   SEARCH_SIMILARITY_THRESHOLD="${QA_T:-0.72}" SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD="${QO_T:-0.88}" \
   POSTGRES_PORT="$PG_PORT" POSTGRES_DB="$DB" SERVER_PORT="$APP_PORT" \
   java -jar "$APP_JAR" > "$OUT/app.log" 2>&1 &
+APP_PID=$!
 for _ in $(seq 1 90); do grep -aq "Started TelmeApplication\|APPLICATION FAILED" "$OUT/app.log" 2>/dev/null && break; sleep 2; done
 grep -aq "Started TelmeApplication" "$OUT/app.log" || { echo "앱 기동 실패: $OUT/app.log"; exit 1; }
 
-python -X utf8 "$ROOT/scripts/single-faq-search-evaluation/run_chat_eval.py" --base-url "http://localhost:$APP_PORT" \
+"$PYTHON" -X utf8 "$ROOT/scripts/single-faq-search-evaluation/run_chat_eval.py" --base-url "http://localhost:$APP_PORT" \
   --database "$DB" --output "$OUT/chat.json" > "$OUT/chat.log" 2>&1
 echo "eval exit=$?"
 
