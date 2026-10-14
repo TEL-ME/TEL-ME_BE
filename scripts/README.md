@@ -18,6 +18,7 @@
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
 | `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`) | 앱 경유 |
+| `check_faq_answerable_live.py` | FAQ 질문을 그대로 채팅에 보내 최종 근거 답이 나오는지 확인(되묻기는 첫 선택지로 이어서 답함). 결과 `data/faq_unanswerable.json` (`--recheck`: 실패·되묻기·표본만 다시) | 앱 경유 |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
 | `check_stores.py` | 매장 데이터 제약, 분포 + 시드 SQL 대조 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |
@@ -408,6 +409,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 | `simulate_dual_vector.py` | 29건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 8: 정상, 동점이면 높은 t, 평가셋별 무관 상쇄 제외, ANSWER 포함 합계, 기존 긍정 0건, 무관 0건, ANSWER 수 감소 제외, 잃고 얻으면 수 기준 통과 + 구성 경고 2 + 수집 벡터 확인 4) |
+| `check_faq_answerable_live.py` | 10건 (판정 6: 바로 답, 되묻기 첫 선택지로 같은 채팅방, 되묻기 여러 번, 선택지 없는 되묻기, 되묻기 후 근거 없음, 끝나지 않는 되묻기 + 재시도·두 번 실패 1 + 결과 목록 1 + 부분 재측정 2: 지난 결과 복원, 다시 잴 대상·고정 표본) |
 | `gray_zone_upper_band_bedrock.py` | 23건 (구간 판정 4: 위 선 통과, 아래 선 버림, 경계값 + 합치기 6: 판정 없음 구성, 위로 넓히기 거절, 질문 벡터 우선·중복 제거·3개 컷, 거절 후 빈자리, slot_id 없는 후보는 판정 없이 거부, 같은 slot 1회 판정 + 다수결 2 + 응답 해석 3: fail-open 포함 + 캐시 5: 호출 오류 저장 안 함, 깨진 JSON fail-open, 해시·다수결 저장, FAQ 문장 변경 감지, 바뀐 쌍만 재판정 + 채점 3) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
