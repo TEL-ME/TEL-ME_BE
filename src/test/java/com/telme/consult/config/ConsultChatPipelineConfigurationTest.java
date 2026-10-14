@@ -13,6 +13,8 @@ import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
 import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatPersistenceService;
@@ -80,6 +82,9 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
+                    .withBean(PlanQuestionClassifier.class, () -> mock(PlanQuestionClassifier.class))
+                    .withBean(PlanCatalogAnswerer.class, () -> mock(PlanCatalogAnswerer.class))
+                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new);
 
     @Test
