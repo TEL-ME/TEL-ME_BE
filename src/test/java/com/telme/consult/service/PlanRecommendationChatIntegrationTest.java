@@ -68,6 +68,7 @@ class PlanRecommendationChatIntegrationTest {
     @Autowired ConsultChatPersistenceService persistence;
     @Autowired ConsultTurnPreparationService turns;
     @Autowired ContextProvider contexts;
+    @Autowired com.telme.consult.repository.SessionRecommendationAnswers answersMemory;
     @MockitoBean ChatProcessingPort processing;
 
     final AtomicLong requestId = new AtomicLong();
@@ -89,9 +90,10 @@ class PlanRecommendationChatIntegrationTest {
         PlanQuestionClassifier classifier = mock(PlanQuestionClassifier.class);
         when(classifier.classify(any(), any())).thenReturn(PlanQuestionType.RECOMMENDATION);
         MemberRecommendationAnswerer recommendation = mock(MemberRecommendationAnswerer.class);
-        when(recommendation.recommend(any(), any(), anyBoolean())).thenAnswer(call -> {
-            Map<String, String> confirmed = call.getArgument(1);
-            boolean mayAsk = call.getArgument(2);
+        when(recommendation.recommend(any(), any(), any(), anyBoolean())).thenAnswer(call -> {
+            Map<String, String> confirmed = new java.util.HashMap<>(call.<Map<String, String>>getArgument(2));
+            confirmed.putAll(call.getArgument(1));
+            boolean mayAsk = call.getArgument(3);
             askedWith.set(confirmed.get("age_group") + "/" + confirmed.get("heavy_data"));
             mayAskLast.set(mayAsk);
             if (confirmed.isEmpty() && mayAsk) {
@@ -102,7 +104,7 @@ class PlanRecommendationChatIntegrationTest {
             return new MemberRecommendationAnswerer.Outcome("추천 답변: " + askedWith.get(), List.of(), null);
         });
         var answers = new PlanAnswerProvider(faq, classifier, mock(PlanCatalogAnswerer.class),
-                mock(MemberPlanAnswerer.class), recommendation, sessionId -> Optional.of(userId),
+                mock(MemberPlanAnswerer.class), recommendation, sessionId -> Optional.of(userId), answersMemory::of,
                 ComparisonEvidenceResolver.passthrough(), ExecutionTrace.noop(), true);
         var actualProcessing = new ConsultChatProcessingService(this::analyze, answers, persistence,
                 new ConfirmedConditionConverter());
@@ -151,6 +153,9 @@ class PlanRecommendationChatIntegrationTest {
         assertThat(last.get(5).path("content").asText()).isEqualTo("추천 답변: 만 65세 이상/예");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM consult_requests WHERE session_id=?", Integer.class,
                 sessionId)).isEqualTo(1);
+        assertThat(answersMemory.of(sessionId)).containsOnly(
+                java.util.Map.entry("age_group", "만 65세 이상"), java.util.Map.entry("heavy_data", "예"));
+        assertThat(answersMemory.of(createSession())).isEmpty();
     }
 
     private AnalyzedTurn analyze(ChatProcessingCommand command) {

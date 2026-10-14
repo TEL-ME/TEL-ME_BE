@@ -20,8 +20,8 @@ public class PlanCatalogAnswerer {
     private static final Pattern CHEAPEST = Pattern.compile("제일싼|가장싼|제일저렴|가장저렴|제일싸|최저가");
     private static final Pattern PRICIEST = Pattern.compile("제일비싼|가장비싼|제일비싸|최고가");
     private static final Pattern COUNT = Pattern.compile("몇종류|몇가지|몇개|몇종");
-    private static final Pattern PRICE_BAND = Pattern.compile("(\\d+)만원대");
-    private static final Pattern PRICE_UNDER = Pattern.compile("(\\d+)만원(이하|안쪽|이내|미만)");
+    private static final Pattern PRICE_BAND = Pattern.compile("(?<!\\d)(\\d{1,4})만원대");
+    private static final Pattern PRICE_UNDER = Pattern.compile("(?<!\\d)(\\d{1,4})만원(이하|안쪽|이내|미만)");
     private static final int WON_PER_MAN = 10_000;
 
     private final PlanRepository planRepository;

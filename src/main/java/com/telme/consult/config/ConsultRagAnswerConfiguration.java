@@ -21,6 +21,7 @@ import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestio
 import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.SuggestedQuestionRecommender;
 import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.repository.SessionRecommendationAnswers;
 import com.telme.consult.service.MemberPlanAnswerer;
 import com.telme.consult.service.MemberRecommendationAnswerer;
 import com.telme.consult.service.PlanAnswerProvider;
@@ -151,7 +152,8 @@ public class ConsultRagAnswerConfiguration {
             AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions,
             QueryRoutingService routing, PlanQuestionClassifier planClassifier, PlanCatalogAnswerer planCatalog,
             MemberPlanAnswerer memberPlans, MemberRecommendationAnswerer recommendations,
-            ChatSessionRepository chatSessions, PlanQuestionProperties planProperties) {
+            ChatSessionRepository chatSessions, SessionRecommendationAnswers recommendationAnswers,
+            PlanQuestionProperties planProperties) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
@@ -163,6 +165,7 @@ public class ConsultRagAnswerConfiguration {
                                 comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
                                 routing::refinedSearchQuery),
                         planClassifier, planCatalog, memberPlans, recommendations, chatSessions::findUserIdBySessionId,
+                        recommendationAnswers::of,
                         comparisonEvidence, trace, planProperties.answerEnabled()),
                 storeAnswers::generate);
     }

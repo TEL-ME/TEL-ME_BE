@@ -109,4 +109,11 @@ class PlanCatalogAnswererTest {
         jdbc.update("UPDATE plans SET status = 'DISCONTINUED'");
         assertThat(answerer.answer("요금제 뭐가 있어요")).isNull();
     }
+
+    @Test
+    void 터무니없이_큰_가격_숫자도_오류_없이_조건_없는_질문처럼_처리한다() {
+        for (String question : new String[] {"99999999999만원대 요금제", "2147483648만원이하 요금제 알려줘", "9".repeat(3000) + "만원대 요금제"}) {
+            assertThat(answerer.answer(question)).contains("요금제 안내예요");
+        }
+    }
 }

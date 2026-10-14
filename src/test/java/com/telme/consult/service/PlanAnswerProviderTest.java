@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,6 +41,7 @@ class PlanAnswerProviderTest {
     MemberRecommendationAnswerer recommendation = mock(MemberRecommendationAnswerer.class);
     AtomicInteger sessionLookups = new AtomicInteger();
     Optional<Long> sessionOwner = Optional.of(77L);
+    Map<String, String> previous = Map.of();
     ComparisonEvidenceResolver comparison = mock(ComparisonEvidenceResolver.class);
     ExecutionTrace trace = mock(ExecutionTrace.class);
     PlanAnswerProvider provider;
@@ -136,7 +138,7 @@ class PlanAnswerProviderTest {
         assertThat(sessionLookups).hasValue(2);
 
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(any(), any(), anyBoolean()))
+        when(recommendation.recommend(any(), any(), any(), anyBoolean()))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("추천", List.of(), null));
         provider.generate(input(QUESTION));
         assertThat(sessionLookups).hasValue(3);
@@ -152,7 +154,7 @@ class PlanAnswerProviderTest {
     @Test
     void 요금제_추천_질문은_채팅방_주인의_추천_답변을_FAQ_검색_없이_확정한다() {
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(77L, Map.of(), true)).thenReturn(
+        when(recommendation.recommend(77L, Map.of(), Map.of(), true)).thenReturn(
                 new MemberRecommendationAnswerer.Outcome("추천 답변", List.of("요금제 변경은 어떻게 해요?"), null));
 
         Prepared prepared = provider.prepare(input(QUESTION), true);
@@ -168,7 +170,7 @@ class PlanAnswerProviderTest {
         MissingCondition ask = new MissingCondition("age_group", "나이대가 어떻게 되세요?",
                 List.of("만 14~18세", "만 19~64세", "만 65세 이상"), null);
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(77L, Map.of(), true)).thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(ask)));
+        when(recommendation.recommend(77L, Map.of(), Map.of(), true)).thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(ask)));
 
         Prepared prepared = provider.prepare(input(QUESTION), true);
 
@@ -183,23 +185,34 @@ class PlanAnswerProviderTest {
         AnswerInput answered = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION,
                 Map.of("age_group", "만 65세 이상"));
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), false)).thenReturn(
+        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), false)).thenReturn(
                 new MemberRecommendationAnswerer.Outcome("시니어 추천", List.of(), null));
 
         Prepared prepared = provider.prepare(answered, false);
 
         assertThat(prepared.answer().answer().content()).isEqualTo("시니어 추천");
-        verify(recommendation).recommend(77L, Map.of("age_group", "만 65세 이상"), false);
+        verify(recommendation).recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), false);
+    }
+
+    @Test
+    void 같은_채팅방에서_앞서_한_답을_추천_답변기에_함께_넘긴다() {
+        previous = Map.of("age_group", "만 65세 이상", "heavy_data", "예");
+        provider = provider(true);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(77L, Map.of(), previous, true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("이어받은 추천", List.of(), null));
+
+        assertThat(provider.prepare(input(QUESTION), true).answer().answer().content()).isEqualTo("이어받은 추천");
     }
 
     @Test
     void 한_번에_처리하는_경로에서는_되묻지_않는다() {
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(77L, Map.of(), false)).thenReturn(
+        when(recommendation.recommend(77L, Map.of(), Map.of(), false)).thenReturn(
                 new MemberRecommendationAnswerer.Outcome("일반 요금제 추천", List.of(), null));
 
         assertThat(provider.generate(input(QUESTION)).answer().content()).isEqualTo("일반 요금제 추천");
-        verify(recommendation).recommend(77L, Map.of(), false);
+        verify(recommendation).recommend(77L, Map.of(), Map.of(), false);
     }
 
     @Test
@@ -258,7 +271,33 @@ class PlanAnswerProviderTest {
         return new PlanAnswerProvider(faq, classifier, catalog, member, recommendation, sessionId -> {
             sessionLookups.incrementAndGet();
             return sessionOwner;
-        }, comparison, trace, enabled);
+        }, sessionId -> previous, comparison, trace, enabled);
+    }
+
+    @Test
+    void 답변을_만들다_예외가_나면_채팅을_실패시키지_않고_FAQ_경로에_맡긴다() {
+        for (PlanQuestionType type : List.of(PlanQuestionType.PLAN_CATALOG, PlanQuestionType.MY_SUBSCRIPTION,
+                PlanQuestionType.MY_USAGE, PlanQuestionType.RECOMMENDATION)) {
+            when(classifier.classify(1L, QUESTION)).thenReturn(type);
+            doThrow(new IllegalStateException("catalog")).when(catalog).answer(any());
+            doThrow(new IllegalStateException("member")).when(member).answer(any(), any());
+            doThrow(new IllegalStateException("recommend")).when(recommendation).recommend(any(), any(), any(), anyBoolean());
+
+            assertThat(provider.prepare(input(QUESTION), true)).isEqualTo(Prepared.none());
+            assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
+        }
+    }
+
+    @Test
+    void 채팅방_주인을_찾다_예외가_나도_FAQ_경로에_맡긴다() {
+        sessionLookups.set(0);
+        provider = new PlanAnswerProvider(faq, classifier, catalog, member, recommendation,
+                sessionId -> {
+                    throw new IllegalStateException("db");
+                }, sessionId -> Map.of(), comparison, trace, true);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.MY_SUBSCRIPTION);
+
+        assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
     }
 
     private static AnswerInput input(String question) {

@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,9 +63,18 @@ public class MemberRecommendationAnswerer {
     private final SubscriptionCalendar calendar;
     private final PlanRecommender recommender = new PlanRecommender();
 
-    // 회원이 아니면 userId는 null. confirmed는 되묻기로 확정된 답이고 mayAsk가 false이면 되묻지 않는다
     public Outcome recommend(Long userId, Map<String, String> confirmed, boolean mayAsk) {
-        String ageAnswer = confirmed.get(AGE_KEY);
+        return recommend(userId, confirmed, Map.of(), mayAsk);
+    }
+
+    // 회원이 아니면 userId는 null. confirmed는 이번 질문의 되묻기 답, previous는 같은 채팅방에서 앞서 한 답이고
+    // 앞서 한 답은 다시 묻지 않고 쓴다. mayAsk가 false이면 되묻지 않는다
+    public Outcome recommend(Long userId, Map<String, String> confirmed, Map<String, String> previous, boolean mayAsk) {
+        Map<String, String> answers = new HashMap<>(previous);
+        answers.putAll(confirmed);
+        boolean ageReused = !confirmed.containsKey(AGE_KEY) && previous.containsKey(AGE_KEY);
+        boolean heavyReused = !confirmed.containsKey(HEAVY_KEY) && previous.containsKey(HEAVY_KEY);
+        String ageAnswer = answers.get(AGE_KEY);
         Optional<UsageDemand> usage = Optional.empty();
         Plan current = null;
         SubscriptionResponse subscription = null;
@@ -78,11 +88,14 @@ public class MemberRecommendationAnswerer {
                 }
             }
         }
-        Plan.TargetGroup group = ageGroup(userId, ageAnswer);
+        AgeGroup age = ageGroup(userId, ageAnswer);
+        Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
-            return byAnswers(group, confirmed.get(HEAVY_KEY), active, userId != null, mayAsk);
+            return byAnswers(group, answers.get(HEAVY_KEY), active, userId != null, mayAsk,
+                    reuseNote(ageReused && age.fromAnswer(), heavyReused));
         }
+        String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
         boolean allowDowngrade = !changedRecently(subscription.subscriptionId());
         if (group == null) {
@@ -91,14 +104,15 @@ public class MemberRecommendationAnswerer {
             if (mayAsk && !any.plan().equals(general.plan())) {
                 return new Outcome(null, List.of(), List.of(ageQuestion()));
             }
-            return answer(general, current, demand, usage.get());
+            return answer(general, current, demand, usage.get(), note);
         }
-        return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand, usage.get());
+        return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand,
+                usage.get(), note);
     }
 
     // 사용량이 없으면 나이대와 데이터를 많이 쓰는지만 묻고 그에 맞는 요금제를 추천한다
     private Outcome byAnswers(Plan.TargetGroup group, String heavy, List<Plan> active,
-            boolean member, boolean mayAsk) {
+            boolean member, boolean mayAsk, String note) {
         boolean answered = YES.equals(heavy) || NO.equals(heavy);
         if (mayAsk && (group == null || !answered)) {
             List<MissingCondition> asks = new ArrayList<>();
@@ -115,10 +129,13 @@ public class MemberRecommendationAnswerer {
         }
         boolean isHeavy = YES.equals(heavy);
         Plan plan = recommender.forDataNeed(pool(active, group), isHeavy ? HEAVY_DATA_MB : LIGHT_DATA_MB);
+        if (plan == null) {
+            return nudge("지금은 추천할 수 있는 요금제가 없어요.");
+        }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
         return new Outcome("데이터를 %s %s(%s) 요금제를 추천해요.%s".formatted(
-                isHeavy ? "많이 쓰신다면" : "적게 쓰신다면", plan.getName(), summary(plan), tail),
+                isHeavy ? "많이 쓰신다면" : "적게 쓰신다면", plan.getName(), summary(plan), tail) + note,
                 List.of(CATALOG_QUESTION), null);
     }
 
@@ -129,24 +146,36 @@ public class MemberRecommendationAnswerer {
                 .toList();
     }
 
-    // 생년월일이 있으면 그것을, 없으면 되묻기 답을 쓴다. 둘 다 없으면 null
-    private Plan.TargetGroup ageGroup(Long userId, String ageAnswer) {
+    private record AgeGroup(Plan.TargetGroup group, boolean fromAnswer) {
+    }
+
+    // 생년월일이 있으면 그것을, 없으면 되묻기 답을 쓴다. 둘 다 없으면 group이 null
+    private AgeGroup ageGroup(Long userId, String ageAnswer) {
         LocalDate birthDate = userId == null ? null : userRepository.findById(userId).map(User::getBirthDate).orElse(null);
         if (birthDate != null) {
             int age = Period.between(birthDate, calendar.today(calendar.now())).getYears();
             if (age >= SubscriptionEligibilityChecker.SENIOR_MIN_AGE) {
-                return Plan.TargetGroup.SENIOR;
+                return new AgeGroup(Plan.TargetGroup.SENIOR, false);
             }
-            return age >= SubscriptionEligibilityChecker.YOUTH_MIN_AGE && age <= SubscriptionEligibilityChecker.YOUTH_MAX_AGE
-                    ? Plan.TargetGroup.YOUTH : Plan.TargetGroup.GENERAL;
+            return new AgeGroup(age >= SubscriptionEligibilityChecker.YOUTH_MIN_AGE && age <= SubscriptionEligibilityChecker.YOUTH_MAX_AGE
+                    ? Plan.TargetGroup.YOUTH : Plan.TargetGroup.GENERAL, false);
         }
         if (YOUTH_OPTION.equals(ageAnswer)) {
-            return Plan.TargetGroup.YOUTH;
+            return new AgeGroup(Plan.TargetGroup.YOUTH, true);
         }
         if (SENIOR_OPTION.equals(ageAnswer)) {
-            return Plan.TargetGroup.SENIOR;
+            return new AgeGroup(Plan.TargetGroup.SENIOR, true);
         }
-        return GENERAL_OPTION.equals(ageAnswer) ? Plan.TargetGroup.GENERAL : null;
+        return GENERAL_OPTION.equals(ageAnswer) ? new AgeGroup(Plan.TargetGroup.GENERAL, true) : new AgeGroup(null, false);
+    }
+
+    // 앞서 한 답을 다시 묻지 않고 썼으면 답변 끝에 알린다
+    private static String reuseNote(boolean age, boolean heavy) {
+        if (!age && !heavy) {
+            return "";
+        }
+        String what = age && heavy ? "나이대와 데이터 사용량" : age ? "나이대" : "데이터 사용량";
+        return " 앞서 알려주신 %s 답을 기준으로 했어요.".formatted(what);
     }
 
     private static MissingCondition ageQuestion() {
@@ -166,12 +195,12 @@ public class MemberRecommendationAnswerer {
                         && calendar.plusMonths(history.getEffectiveFrom(), COOLDOWN_MONTHS).isAfter(now));
     }
 
-    private Outcome answer(Recommendation recommendation, Plan current, Demand demand, UsageDemand usage) {
+    private Outcome answer(Recommendation recommendation, Plan current, Demand demand, UsageDemand usage, String note) {
         Plan plan = recommendation.plan();
         String use = "최근 평균 사용량은 데이터 %s, 통화 %d분, 문자 %d건이에요.".formatted(
                 gb(usage.dataMb()), usage.voiceMinutes(), usage.smsCount());
         int gap = Math.abs(plan.getMonthlyFee() - current.getMonthlyFee());
-        return switch (recommendation.kind()) {
+        Outcome outcome = switch (recommendation.kind()) {
             case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요."
                     .formatted(use, current.getName(), summary(current)), List.of(CATALOG_QUESTION), null);
             case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요."
@@ -181,6 +210,7 @@ public class MemberRecommendationAnswerer {
                     .formatted(use, current.getName(), summary(current), shortage(current, demand), plan.getName(),
                             summary(plan), PlanFormat.money(gap)), List.of(CHANGE_QUESTION), null);
         };
+        return note.isEmpty() ? outcome : new Outcome(outcome.content() + note, outcome.followUps(), null);
     }
 
     private static String shortage(Plan current, Demand demand) {

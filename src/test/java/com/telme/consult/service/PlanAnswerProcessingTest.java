@@ -96,7 +96,7 @@ class PlanAnswerProcessingTest {
         when(classifier.classify(anyLong(), eq("요금제 추천해줘"))).thenReturn(PlanQuestionType.RECOMMENDATION);
         MissingCondition ask = new MissingCondition("age_group", "나이대가 어떻게 되세요?",
                 List.of("만 14~18세", "만 19~64세", "만 65세 이상"), null);
-        when(recommendation.recommend(any(), any(), eq(true)))
+        when(recommendation.recommend(any(), any(), any(), eq(true)))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(ask)));
         prepareEvents();
         var prepared = new ConsultService.PreparedTurn(SESSION_ID, 1, decision(11L));
@@ -123,7 +123,7 @@ class PlanAnswerProcessingTest {
 
     private ConsultChatProcessingService processor(ConsultChatProcessingService.TurnAnalyzer analyzer) {
         AnswerProvider answers = new PlanAnswerProvider(faq, classifier, catalog, mock(MemberPlanAnswerer.class), recommendation,
-                sessionId -> java.util.Optional.empty(), ComparisonEvidenceResolver.passthrough(),
+                sessionId -> java.util.Optional.empty(), sessionId -> Map.of(), ComparisonEvidenceResolver.passthrough(),
                 mock(ExecutionTrace.class), true);
         return new ConsultChatProcessingService(analyzer, answers, persistence, new ConfirmedConditionConverter(),
                 events, mock(ExecutionTrace.class), com.telme.consult.repository.AskedQuestions.none(),

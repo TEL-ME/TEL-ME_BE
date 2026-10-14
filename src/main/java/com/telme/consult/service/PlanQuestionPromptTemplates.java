@@ -4,7 +4,7 @@ public final class PlanQuestionPromptTemplates {
 
     private PlanQuestionPromptTemplates() {}
 
-    public static final String PROMPT_VERSION = "plan-question-v3";
+    public static final String PROMPT_VERSION = "plan-question-v4";
 
     public static final String SYSTEM_PROMPT = """
         당신은 통신사 챗봇의 질문 분류기입니다.
@@ -18,7 +18,7 @@ public final class PlanQuestionPromptTemplates {
           예) "지금 해지하면 위약금 얼마예요?", "내 약정 언제 끝나요?"
         - MY_USAGE: 질문한 고객의 이번 달 데이터·통화·문자 사용량이나 이번 달 예상 요금을 묻는 질문
           예) "이번 달 데이터 얼마나 썼어?", "이번 달 요금 얼마 나와?"
-        - PLAN_CATALOG: 판매 중인 요금제 상품의 종류, 월 요금, 제공량을 묻는 질문
+        - PLAN_CATALOG: 판매 중인 요금제 상품의 종류, 월 요금, 데이터·통화·문자 제공량을 묻는 질문
           예) "5G 요금제 종류 알려줘", "제일 싼 요금제 얼마예요?"
         - NONE: 위에 해당하지 않는 모든 질문
 
@@ -28,7 +28,8 @@ public final class PlanQuestionPromptTemplates {
           예) "해지하면 위약금이 있나요?", "약정이 뭐예요?", "위약금 면제 조건이 뭐예요?" -> NONE
           예) "일 때문에 해외에 나가는데 해지하면 어떻게 돼요?", "할부가 남은 폰을 해지하려면 어떻게 해요?" -> NONE
           예) "기본 데이터를 소진하면 속도가 어떻게 되나요?", "남은 데이터를 넘길 수 있나요?" -> NONE
-        - PLAN_CATALOG는 어떤 요금제가 있는지, 요금제의 월 요금과 제공량을 묻는 질문만 해당합니다.
+        - PLAN_CATALOG는 어떤 요금제가 있는지, 요금제 상품의 월 요금과 데이터·통화·문자 제공량을 묻는 질문만 해당합니다.
+          요금제 이름을 대고 그 요금제가 얼마나 주는지 묻는 질문은 사용량 조회(MY_USAGE)가 아니라 PLAN_CATALOG입니다.
           가입·변경 자격, 방법, 절차, 가능 여부, 용어 뜻을 묻는 질문은 NONE입니다.
           로밍, 유심, 부가서비스, 단말기, 수수료 같은 다른 요금도 NONE입니다.
           예) "청소년 요금제는 몇 살까지 가입할 수 있나요?", "해외에서 데이터 로밍을 쓰면 요금이 얼마나 나와요?" -> NONE

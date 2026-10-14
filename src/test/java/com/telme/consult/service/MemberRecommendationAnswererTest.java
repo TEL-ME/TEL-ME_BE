@@ -109,6 +109,56 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 같은_채팅방에서_앞서_한_답은_다시_묻지_않고_쓰며_썼다고_알린다() {
+        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "heavy_data", "아니요");
+
+        Outcome outcome = answerer.recommend(null, Map.of(), previous, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("알뜰 시니어(월 18,000원, 데이터 3GB)")
+                .endsWith("앞서 알려주신 나이대와 데이터 사용량 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 이번에_한_답이_앞서_한_답보다_우선하고_이번_답은_앞서_썼다고_알리지_않는다() {
+        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "heavy_data", "아니요");
+
+        String content = answerer.recommend(null, Map.of("age_group", "만 14~18세", "heavy_data", "예"), previous, false)
+                .content();
+
+        assertThat(content).contains("5G 청소년(월 55,000원").doesNotContain("앞서 알려주신");
+    }
+
+    @Test
+    void 일부만_앞서_답했으면_나머지만_되묻고_쓴_것만_알린다() {
+        Outcome ask = answerer.recommend(null, Map.of(), Map.of("age_group", GENERAL), true);
+        assertThat(ask.asks()).extracting(MissingCondition::key).containsExactly("heavy_data");
+
+        String content = answerer.recommend(null, Map.of("heavy_data", "예"), Map.of("age_group", GENERAL), false).content();
+        assertThat(content).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 생년월일이_있으면_앞서_한_나이대_답은_쓰지_않아서_썼다고_알리지_않는다() {
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+
+        String content = answerer.recommend(userId, Map.of("heavy_data", "예"), Map.of("age_group", "만 65세 이상"), false)
+                .content();
+
+        assertThat(content).doesNotContain("시니어").doesNotContain("앞서 알려주신");
+    }
+
+    @Test
+    void 사용량이_있는_회원에게는_앞서_한_데이터_사용량_답을_썼다고_알리지_않는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, Map.of(), Map.of("age_group", GENERAL, "heavy_data", "예"), true).content();
+
+        assertThat(content).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
     void 이미_답한_항목은_다시_묻지_않는다() {
         assertThat(answerer.recommend(null, Map.of("age_group", GENERAL), true).asks())
                 .extracting(MissingCondition::key).containsExactly("heavy_data");

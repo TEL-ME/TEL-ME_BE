@@ -50,6 +50,12 @@ class PlanQuestionEvaluationProbe {
         score("검증3", holdoutCases3());
     }
 
+    // 요금제 이름을 대고 통화·문자 제공량을 묻는 질문과, 같은 단어가 든 다른 문의를 가르는지 보는 네 번째 검증 질문이다
+    @Test
+    void 네번째_새_질문_평가셋으로_채점한다() {
+        score("검증4", holdoutCases4());
+    }
+
     private void score(String name, List<Case> cases) {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
@@ -134,6 +140,19 @@ class PlanQuestionEvaluationProbe {
                 "유심 재발급 비용이 얼마예요", "번호이동하면 위약금 면제돼요", "가입하려면 뭐가 필요해요",
                 "일시 정지는 며칠까지 돼요", "요금 납부는 어떻게 해요", "오늘 날씨 어때요",
                 "약정 없이 가입할 수 있나요", "해지 신청은 어디서 해요", "데이터 다 쓰면 어떻게 돼요");
+        return cases;
+    }
+
+    private List<Case> holdoutCases4() {
+        List<Case> cases = new ArrayList<>();
+        add(cases, PlanQuestionType.PLAN_CATALOG,
+                "5G 라이트 통화 몇 분 줘요", "알뜰 미니는 문자가 몇 건이에요", "LTE 플러스 통화 무제한인가요",
+                "5G 스탠다드는 통화가 어떻게 돼요", "시니어 요금제 문자 제공량 알려주세요", "알뜰 세이브 데이터 얼마 줘요");
+        add(cases, PlanQuestionType.NONE,
+                "통화 품질이 너무 안 좋아요", "문자 스팸 차단은 어떻게 해요", "해외에서 통화하면 요금이 어떻게 돼요",
+                "통화 내역은 어디서 볼 수 있어요", "문자 요금 정지 해제하려면 어떻게 해요");
+        add(cases, PlanQuestionType.MY_USAGE,
+                "내 통화 사용량 알려줘", "제 문자 몇 건 남았어요");
         return cases;
     }
 

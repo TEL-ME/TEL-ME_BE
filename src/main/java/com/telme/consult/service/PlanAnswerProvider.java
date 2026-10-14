@@ -14,8 +14,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.LongFunction;
+import lombok.extern.slf4j.Slf4j;
 
 /** 요금제 목록과 내 요금제·위약금 질문은 FAQ 검색 없이 데이터로 답하고, 그 밖의 질문은 FAQ 답변 경로에 맡긴다. */
+@Slf4j
 public final class PlanAnswerProvider implements AnswerProvider {
     private final AnswerProvider faqAnswers;
     private final PlanQuestionClassifier classifier;
@@ -23,13 +25,14 @@ public final class PlanAnswerProvider implements AnswerProvider {
     private final MemberPlanAnswerer member;
     private final MemberRecommendationAnswerer recommendation;
     private final LongFunction<Optional<Long>> memberOfSession;
+    private final LongFunction<Map<String, String>> previousAnswers;
     private final ComparisonEvidenceResolver comparisonEvidence;
     private final ExecutionTrace trace;
     private final boolean enabled;
 
     public PlanAnswerProvider(AnswerProvider faqAnswers, PlanQuestionClassifier classifier,
             PlanCatalogAnswerer catalog, MemberPlanAnswerer member, MemberRecommendationAnswerer recommendation,
-            LongFunction<Optional<Long>> memberOfSession,
+            LongFunction<Optional<Long>> memberOfSession, LongFunction<Map<String, String>> previousAnswers,
             ComparisonEvidenceResolver comparisonEvidence, ExecutionTrace trace, boolean enabled) {
         this.faqAnswers = Objects.requireNonNull(faqAnswers);
         this.classifier = Objects.requireNonNull(classifier);
@@ -37,6 +40,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
         this.member = Objects.requireNonNull(member);
         this.recommendation = Objects.requireNonNull(recommendation);
         this.memberOfSession = Objects.requireNonNull(memberOfSession);
+        this.previousAnswers = Objects.requireNonNull(previousAnswers);
         this.comparisonEvidence = Objects.requireNonNull(comparisonEvidence);
         this.trace = Objects.requireNonNull(trace);
         this.enabled = enabled;
@@ -72,7 +76,17 @@ public final class PlanAnswerProvider implements AnswerProvider {
         static final Outcome NONE = new Outcome(null, null);
     }
 
+    // 요금제 데이터로 답을 만들다 실패하면 채팅을 실패시키지 않고 기존 FAQ 경로에 맡긴다
     private Outcome outcome(AnswerInput input, boolean mayAsk) {
+        try {
+            return planOutcome(input, mayAsk);
+        } catch (RuntimeException exception) {
+            log.warn("[요금제 답변] 답변을 만들지 못해 FAQ 경로로 넘깁니다. executionId={}", input.executionId(), exception);
+            return Outcome.NONE;
+        }
+    }
+
+    private Outcome planOutcome(AnswerInput input, boolean mayAsk) {
         // 비교 질문은 기존 비교 답변 경로가 양쪽 FAQ 근거를 확인해 답한다
         if (!enabled || comparisonEvidence.applies(input.originalUserQuery())) {
             return Outcome.NONE;
@@ -92,7 +106,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
             followUps = memberAnswer == null ? List.of() : memberAnswer.followUps();
         } else if (type == PlanQuestionType.RECOMMENDATION) {
             MemberRecommendationAnswerer.Outcome result = recommendation.recommend(memberOf(input),
-                    input.confirmedConditions(), mayAsk);
+                    input.confirmedConditions(), previousAnswers.apply(input.sessionId()), mayAsk);
             if (result.asks() != null) {
                 trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name(), "clarify",
                         result.asks().stream().map(MissingCondition::key).toList()));
