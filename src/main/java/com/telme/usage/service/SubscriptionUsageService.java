@@ -18,8 +18,6 @@ import com.telme.subscription.service.SubscriptionStateReader;
 import com.telme.usage.entity.SubscriptionUsage;
 import com.telme.usage.exception.UsageErrorCode;
 import com.telme.usage.repository.SubscriptionUsageRepository;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -44,7 +42,6 @@ public class SubscriptionUsageService {
 
     static final int VIEWABLE_PAST_MONTHS = 6;
     static final int RECENT_MONTHS_LIMIT = 3;
-    private static final int MB_PER_GB = 1024;
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionHistoryRepository historyRepository;
@@ -82,7 +79,7 @@ public class SubscriptionUsageService {
             throw new GeneralException(UsageErrorCode.MONTH_OUT_OF_RANGE);
         }
 
-        SubscriptionUsage stored = ensureGenerated(subscription, activationDate, thisMonth).get(target);
+        SubscriptionUsage stored = ensureGenerated(subscription, planHistories, activationDate, thisMonth).get(target);
         double fraction = visibleFraction(target, activationDate, today,
                 pausedDates(subscription.getSubscriptionId(), availableFrom, today));
         MonthUsage usage = target.equals(thisMonth)
@@ -95,25 +92,26 @@ public class SubscriptionUsageService {
             List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction, Instant now,
             LocalDate today, LocalDate activationDate) {
         LocalDate thisMonth = today.withDayOfMonth(1);
+        UsageLimits limits = UsageLimits.of(snapshot.currentPlan());
         Plan plan = snapshot.currentPlan();
         return new MonthUsage(
                 thisMonth,
                 thisMonth.lengthOfMonth() - today.getDayOfMonth(),
                 snapshot.pause() != null,
-                ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), dataLimitMb(plan)),
-                ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), voiceLimit(plan)),
-                ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), smsLimit(plan)),
+                ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), limits.dataMb()),
+                ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), limits.voiceMinutes()),
+                ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), limits.smsCount()),
                 expectedFee(subscription, plan, planHistories, now, thisMonth, activationDate));
     }
 
     // 제공량은 그달 1일에 적용 중이던 요금제 기준
     private MonthUsage pastMonthUsage(SubscriptionUsage stored, double fraction, Long planIdAtMonthStart) {
-        Plan plan = planRepository.findById(planIdAtMonthStart).orElseThrow();
+        UsageLimits limits = UsageLimits.of(planRepository.findById(planIdAtMonthStart).orElseThrow());
         return new MonthUsage(
                 stored.getUsageMonth(), null, null,
-                ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), dataLimitMb(plan)),
-                ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), voiceLimit(plan)),
-                ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), smsLimit(plan)),
+                ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), limits.dataMb()),
+                ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), limits.voiceMinutes()),
+                ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), limits.smsCount()),
                 null);
     }
 
@@ -128,13 +126,14 @@ public class SubscriptionUsageService {
             return List.of();
         }
         Subscription subscription = found.get();
-        LocalDate activationDate = activationDate(planHistories(subscription));
+        List<SubscriptionHistory> planHistories = planHistories(subscription);
+        LocalDate activationDate = activationDate(planHistories);
         LocalDate today = calendar.today(now);
         LocalDate thisMonth = today.withDayOfMonth(1);
 
         Set<LocalDate> pausedDates = pausedDates(
                 subscription.getSubscriptionId(), firstMonth(activationDate, thisMonth), today);
-        List<SubscriptionUsage> past = ensureGenerated(subscription, activationDate, thisMonth).values().stream()
+        List<SubscriptionUsage> past = ensureGenerated(subscription, planHistories, activationDate, thisMonth).values().stream()
                 .filter(usage -> usage.getUsageMonth().isBefore(thisMonth))
                 .sorted((a, b) -> a.getUsageMonth().compareTo(b.getUsageMonth()))
                 .toList();
@@ -147,9 +146,9 @@ public class SubscriptionUsageService {
         return result;
     }
 
-    // 개통한 달부터 이번 달까지(최대 지난 6개월 + 이번 달) 없는 달만 만든다. 동시 요청이 같은 달을 만들어도 먼저 들어간 값이 남는다
-    private Map<LocalDate, SubscriptionUsage> ensureGenerated(
-            Subscription subscription, LocalDate activationDate, LocalDate thisMonth) {
+    // 개통한 달부터 이번 달까지(최대 6개월 전부터) 없는 달만 그 달 1일의 요금제 제공량 기준으로 만든다. 동시 요청은 먼저 들어간 값이 남는다
+    private Map<LocalDate, SubscriptionUsage> ensureGenerated(Subscription subscription,
+            List<SubscriptionHistory> planHistories, LocalDate activationDate, LocalDate thisMonth) {
         Long subscriptionId = subscription.getSubscriptionId();
         LocalDate first = firstMonth(activationDate, thisMonth);
 
@@ -157,7 +156,9 @@ public class SubscriptionUsageService {
         boolean inserted = false;
         for (LocalDate month = first; !month.isAfter(thisMonth); month = month.plusMonths(1)) {
             if (!stored.containsKey(month)) {
-                GeneratedUsage generated = generator.generate(subscription.getUserId(), month);
+                Plan plan = planRepository.findById(PlanTimeline.planAt(planHistories, startOfMonth(month)))
+                        .orElseThrow();
+                GeneratedUsage generated = generator.generate(subscription.getUserId(), month, UsageLimits.of(plan));
                 usageRepository.insertIfAbsent(subscriptionId, month,
                         generated.dataMb(), generated.voiceMinutes(), generated.smsCount());
                 inserted = true;
@@ -244,18 +245,5 @@ public class SubscriptionUsageService {
     // 첫 가입 이력의 적용 시작이 개통 시각이다
     private LocalDate activationDate(List<SubscriptionHistory> planHistories) {
         return calendar.today(planHistories.get(0).getEffectiveFrom());
-    }
-
-    private Long dataLimitMb(Plan plan) {
-        return plan.isUnlimited() ? null
-                : plan.getDataGb().multiply(BigDecimal.valueOf(MB_PER_GB)).setScale(0, RoundingMode.HALF_UP).longValue();
-    }
-
-    private Long voiceLimit(Plan plan) {
-        return plan.isVoiceUnlimited() ? null : Long.valueOf(plan.getVoiceMinutes());
-    }
-
-    private Long smsLimit(Plan plan) {
-        return plan.isSmsUnlimited() ? null : Long.valueOf(plan.getSmsCount());
     }
 }

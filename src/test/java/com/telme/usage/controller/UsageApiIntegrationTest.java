@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.telme.usage.service.GeneratedUsage;
 import com.telme.usage.service.UsageGenerator;
+import com.telme.usage.service.UsageLimits;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -51,6 +52,8 @@ class UsageApiIntegrationTest {
     // 2026-11-10 정오(KST): 11월 중 10일째, 말일(30일)까지 20일
     static final Instant NOV_10 = Instant.parse("2026-11-10T03:00:00Z");
     static final LocalDate NOVEMBER = LocalDate.of(2026, 11, 1);
+    // LTE 베이직: 4GB, 통화 700분, 문자 무제한
+    static final UsageLimits LTE_BASIC = new UsageLimits(4096L, 700L, null);
 
     @MockitoBean Clock clock;
 
@@ -114,7 +117,7 @@ class UsageApiIntegrationTest {
         // LTE 베이직: 데이터 제공량은 DB 값, 통화 700분, 문자 무제한
         long dataLimitMb = jdbc.queryForObject(
                 "SELECT (data_gb * 1024)::bigint FROM plans WHERE code = 'LTE_BASIC'", Long.class);
-        GeneratedUsage november = generator.generate(userId, NOVEMBER);
+        GeneratedUsage november = generator.generate(userId, NOVEMBER, LTE_BASIC);
 
         mvc.perform(get(URL).session(session))
                 .andExpect(status().isOk())
@@ -140,7 +143,7 @@ class UsageApiIntegrationTest {
     void 월을_고르면_그달_사용량과_조회_가능_범위를_주고_이번_달_전용_값은_없다() throws Exception {
         subscribe("LTE_BASIC", false);
         at(NOV_10);
-        GeneratedUsage october = generator.generate(userId, LocalDate.of(2026, 10, 1));
+        GeneratedUsage october = generator.generate(userId, LocalDate.of(2026, 10, 1), LTE_BASIC);
 
         // 10월은 개통한 달(13일 개통)이라 13~31일 19일분만 반영
         mvc.perform(get(URL).param("month", "2026-10").session(session))

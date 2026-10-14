@@ -14,14 +14,18 @@ class UsageGeneratorTest {
 
     static final LocalDate OCT = LocalDate.of(2026, 10, 1);
 
+    static final UsageLimits NONE = UsageLimits.unlimited();
+    // 알뜰 미니: 1.5GB, 300분, 100건
+    static final UsageLimits MINI = new UsageLimits(1536L, 300L, 100L);
+
     final UsageGenerator generator = new UsageGenerator();
 
     @Test
     void 같은_사용자와_같은_달이면_몇_번을_만들어도_같은_값이다() {
-        GeneratedUsage first = generator.generate(7L, OCT);
+        GeneratedUsage first = generator.generate(7L, OCT, NONE);
 
-        assertThat(generator.generate(7L, OCT)).isEqualTo(first);
-        assertThat(new UsageGenerator().generate(7L, OCT)).isEqualTo(first);
+        assertThat(generator.generate(7L, OCT, NONE)).isEqualTo(first);
+        assertThat(new UsageGenerator().generate(7L, OCT, NONE)).isEqualTo(first);
         assertThat(generator.profileOf(7L)).isEqualTo(new UsageGenerator().profileOf(7L));
     }
 
@@ -53,7 +57,7 @@ class UsageGeneratorTest {
         for (long userId = 1; userId <= 3_000; userId++) {
             UsageProfile profile = generator.profileOf(userId);
             for (int month = 1; month <= 3; month++) {
-                GeneratedUsage usage = generator.generate(userId, LocalDate.of(2026, month, 1));
+                GeneratedUsage usage = generator.generate(userId, LocalDate.of(2026, month, 1), NONE);
 
                 assertThat(usage.dataMb()).isBetween((long) (profile.minDataGb() * 0.8 * 1024) - 1,
                         (long) (profile.maxDataGb() * 1.2 * 1024) + 1);
@@ -72,7 +76,7 @@ class UsageGeneratorTest {
             long max = Long.MIN_VALUE;
             Set<Long> distinct = new HashSet<>();
             for (int month = 1; month <= 12; month++) {
-                long dataMb = generator.generate(userId, LocalDate.of(2026, month, 1)).dataMb();
+                long dataMb = generator.generate(userId, LocalDate.of(2026, month, 1), NONE).dataMb();
                 min = Math.min(min, dataMb);
                 max = Math.max(max, dataMb);
                 distinct.add(dataMb);
@@ -88,9 +92,68 @@ class UsageGeneratorTest {
     void 사용자가_다르면_사용량도_다르다() {
         Set<Long> dataValues = new HashSet<>();
         for (long userId = 1; userId <= 100; userId++) {
-            dataValues.add(generator.generate(userId, OCT).dataMb());
+            dataValues.add(generator.generate(userId, OCT, NONE).dataMb());
         }
 
         assertThat(dataValues).hasSizeGreaterThan(90);
+    }
+
+    @Test
+    void 한도가_있는_항목은_한도_대비_유형_비율의_플러스마이너스_20퍼센트_안이다() {
+        for (long userId = 1; userId <= 3_000; userId++) {
+            UsageProfile profile = generator.profileOf(userId);
+            for (int month = 1; month <= 3; month++) {
+                GeneratedUsage usage = generator.generate(userId, LocalDate.of(2026, month, 1), MINI);
+
+                assertThat(usage.dataMb()).isBetween((long) (1536 * profile.minRatio() * 0.8) - 1,
+                        (long) (1536 * profile.maxRatio() * 1.2) + 1);
+                assertThat(usage.voiceMinutes()).isBetween((int) (300 * profile.minRatio() * 0.8) - 1,
+                        (int) (300 * profile.maxRatio() * 1.2) + 1);
+                assertThat(usage.smsCount()).isBetween((int) (100 * profile.minRatio() * 0.8) - 1,
+                        (int) (100 * profile.maxRatio() * 1.2) + 1);
+            }
+        }
+    }
+
+    @Test
+    void 한도가_있는_항목만_한도에_맞추고_무제한_항목은_한도가_없을_때와_같다() {
+        UsageLimits dataOnly = new UsageLimits(1536L, null, null);
+        for (long userId = 1; userId <= 200; userId++) {
+            GeneratedUsage limited = generator.generate(userId, OCT, dataOnly);
+            GeneratedUsage free = generator.generate(userId, OCT, NONE);
+
+            assertThat(limited.voiceMinutes()).isEqualTo(free.voiceMinutes());
+            assertThat(limited.smsCount()).isEqualTo(free.smsCount());
+            assertThat(limited.dataMb()).isNotEqualTo(free.dataMb());
+        }
+    }
+
+    @Test
+    void 유형별_초과_비율은_가벼움_0_보통_거의_없음_많이_씀_절반_안팎이다() {
+        Map<UsageProfile, int[]> counts = new EnumMap<>(UsageProfile.class);
+        for (UsageProfile profile : UsageProfile.values()) {
+            counts.put(profile, new int[2]);
+        }
+        for (long userId = 1; userId <= 20_000; userId++) {
+            int[] count = counts.get(generator.profileOf(userId));
+            for (int month = 1; month <= 6; month++) {
+                GeneratedUsage usage = generator.generate(userId, LocalDate.of(2026, month, 1), MINI);
+                count[0]++;
+                count[1] += usage.dataMb() > 1536 ? 1 : 0;
+            }
+        }
+
+        assertThat(counts.get(UsageProfile.LIGHT)[1]).isZero();
+        assertThat(counts.get(UsageProfile.NORMAL)[1] / (double) counts.get(UsageProfile.NORMAL)[0]).isLessThan(0.05);
+        assertThat(counts.get(UsageProfile.HEAVY)[1] / (double) counts.get(UsageProfile.HEAVY)[0])
+                .isBetween(0.3, 0.8);
+    }
+
+    @Test
+    void 제공량이_다르면_같은_사용자도_다른_값이고_같으면_같은_값이다() {
+        UsageLimits larger = new UsageLimits(51_200L, 300L, 100L);
+
+        assertThat(generator.generate(7L, OCT, larger).dataMb()).isNotEqualTo(generator.generate(7L, OCT, MINI).dataMb());
+        assertThat(generator.generate(7L, OCT, MINI)).isEqualTo(generator.generate(7L, OCT, MINI));
     }
 }

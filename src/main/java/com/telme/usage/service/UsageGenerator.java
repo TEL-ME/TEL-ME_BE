@@ -4,8 +4,7 @@ import java.time.LocalDate;
 import java.util.SplittableRandom;
 import org.springframework.stereotype.Component;
 
-// 실제 통신망이 없어 사용자별 월 사용량을 만든다. 같은 사용자·같은 달이면 언제 실행해도 같은 값이다.
-// 유형(30/50/20%)과 평소 사용 수준은 사용자 ID로 정해지고, 달마다 그 수준의 ±20% 안에서 변한다
+// 사용자별 월 사용량. 같은 사용자·같은 달·같은 제공량이면 언제 실행해도 같은 값이다
 @Component
 public class UsageGenerator {
 
@@ -25,22 +24,32 @@ public class UsageGenerator {
         return bucket < NORMAL_UNDER ? UsageProfile.NORMAL : UsageProfile.HEAVY;
     }
 
-    public GeneratedUsage generate(long userId, LocalDate month) {
+    public GeneratedUsage generate(long userId, LocalDate month, UsageLimits limits) {
         UsageProfile profile = profileOf(userId);
         SplittableRandom habit = new SplittableRandom(mix(userId ^ HABIT_SALT));
-        double dataGb = between(habit, profile.minDataGb(), profile.maxDataGb());
-        double voice = between(habit, profile.minVoiceMinutes(), profile.maxVoiceMinutes());
-        double sms = between(habit, profile.minSmsCount(), profile.maxSmsCount());
+        double dataLevel = habit.nextDouble();
+        double voiceLevel = habit.nextDouble();
+        double smsLevel = habit.nextDouble();
+
+        double dataMb = limits.dataMb() == null
+                ? between(dataLevel, profile.minDataGb(), profile.maxDataGb()) * MB_PER_GB
+                : limits.dataMb() * between(dataLevel, profile.minRatio(), profile.maxRatio());
+        double voice = limits.voiceMinutes() == null
+                ? between(voiceLevel, profile.minVoiceMinutes(), profile.maxVoiceMinutes())
+                : limits.voiceMinutes() * between(voiceLevel, profile.minRatio(), profile.maxRatio());
+        double sms = limits.smsCount() == null
+                ? between(smsLevel, profile.minSmsCount(), profile.maxSmsCount())
+                : limits.smsCount() * between(smsLevel, profile.minRatio(), profile.maxRatio());
 
         SplittableRandom monthly = new SplittableRandom(mix(userId ^ MONTH_SALT ^ mix(month.toEpochDay())));
         return new GeneratedUsage(
-                Math.round(dataGb * jitter(monthly) * MB_PER_GB),
+                Math.round(dataMb * jitter(monthly)),
                 (int) Math.round(voice * jitter(monthly)),
                 (int) Math.round(sms * jitter(monthly)));
     }
 
-    private static double between(SplittableRandom random, int min, int max) {
-        return min + (max - min) * random.nextDouble();
+    private static double between(double level, double min, double max) {
+        return min + (max - min) * level;
     }
 
     private static double jitter(SplittableRandom random) {

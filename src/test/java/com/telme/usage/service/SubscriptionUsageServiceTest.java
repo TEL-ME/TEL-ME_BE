@@ -92,7 +92,7 @@ class SubscriptionUsageServiceTest {
 
         MonthUsage usage = usageService.getOverview(userId).usage();
 
-        GeneratedUsage full = generator.generate(userId, OCT);
+        GeneratedUsage full = generated(OCT, "FIVE_G_STANDARD");
         assertThat(usage.month()).isEqualTo(OCT);
         assertThat(usage.daysUntilBilling()).isEqualTo(19); // 31일 - 12일
         assertThat(usage.data().used()).isEqualTo(Math.round(full.dataMb() * 12 / 31.0));
@@ -110,7 +110,7 @@ class SubscriptionUsageServiceTest {
         MonthUsage usage = usageService.getOverview(userId).usage();
 
         assertThat(usage.daysUntilBilling()).isZero();
-        assertThat(usage.data().used()).isEqualTo(generator.generate(userId, OCT).dataMb());
+        assertThat(usage.data().used()).isEqualTo(generated(OCT, "FIVE_G_STANDARD").dataMb());
     }
 
     @Test
@@ -125,7 +125,7 @@ class SubscriptionUsageServiceTest {
         assertThat(recent.get(0).month()).isEqualTo(LocalDate.of(2026, 9, 1));
         // 9월은 11일부터 30일까지 20일
         assertThat(recent.get(0).dataMb()).isEqualTo(
-                Math.round(generator.generate(userId, LocalDate.of(2026, 9, 1)).dataMb() * 20 / 30.0));
+                Math.round(generated(LocalDate.of(2026, 9, 1), "FIVE_G_STANDARD").dataMb() * 20 / 30.0));
     }
 
     @Test
@@ -151,7 +151,7 @@ class SubscriptionUsageServiceTest {
 
         assertThat(recent).extracting(MonthlyUsage::month)
                 .containsExactly(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 1));
-        assertThat(recent.get(0).dataMb()).isEqualTo(generator.generate(userId, LocalDate.of(2026, 7, 1)).dataMb());
+        assertThat(recent.get(0).dataMb()).isEqualTo(generated(LocalDate.of(2026, 7, 1), "FIVE_G_STANDARD").dataMb());
         assertThat(usageService.getRecentMonths(userId, 2)).hasSize(2);
         assertThat(usageService.getRecentMonths(userId, 10)).hasSize(3);
         assertThat(usageService.getRecentMonths(userId, 0)).isEmpty();
@@ -164,7 +164,7 @@ class SubscriptionUsageServiceTest {
 
         UsageOverview overview = usageService.getOverview(userId, YearMonth.of(2026, 9));
 
-        GeneratedUsage september = generator.generate(userId, LocalDate.of(2026, 9, 1));
+        GeneratedUsage september = generated(LocalDate.of(2026, 9, 1), "BUDGET_MINI");
         MonthUsage usage = overview.usage();
         assertThat(overview.status()).isEqualTo(UsageOverview.Status.ACTIVE);
         assertThat(overview.availableFrom()).isEqualTo(LocalDate.of(2026, 4, 1));
@@ -205,7 +205,7 @@ class SubscriptionUsageServiceTest {
         assertThat(overview.availableFrom()).isEqualTo(LocalDate.of(2026, 9, 1));
         // 9월은 11일부터 30일까지 20일
         assertThat(overview.usage().data().used()).isEqualTo(
-                Math.round(generator.generate(userId, LocalDate.of(2026, 9, 1)).dataMb() * 20 / 30.0));
+                Math.round(generated(LocalDate.of(2026, 9, 1), "FIVE_G_STANDARD").dataMb() * 20 / 30.0));
         assertThatThrownBy(() -> usageService.getOverview(userId, YearMonth.of(2026, 8)))
                 .isInstanceOfSatisfying(GeneralException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(UsageErrorCode.MONTH_OUT_OF_RANGE));
@@ -284,23 +284,44 @@ class SubscriptionUsageServiceTest {
 
     @Test
     void 한도를_넘기면_사용률이_100을_넘고_초과로_표시되고_남은_양은_0이다() {
-        subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false); // 1.5GB, 통화 300분, 문자 100건
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false); // 1.5GB, 통화 300분, 문자 100건
         at(Instant.parse("2026-10-31T03:00:00Z"));
+        usageService.getOverview(userId);
+        jdbc.update("UPDATE subscription_usages SET used_data_mb = 3000, used_voice_minutes = 250, used_sms_count = 150 "
+                + "WHERE subscription_id = ? AND usage_month = ?", subscriptionId, OCT);
+        entityManager.clear();
 
         MonthUsage usage = usageService.getOverview(userId).usage();
 
-        GeneratedUsage full = generator.generate(userId, OCT);
-        // 가장 가벼운 유형도 월 1.6GB 이상이라 1.5GB 한도를 넘는다
         assertThat(usage.data().limit()).isEqualTo(1536L);
         assertThat(usage.data().exceeded()).isTrue();
         assertThat(usage.data().remaining()).isZero();
-        assertThat(usage.data().percent()).isEqualTo((int) Math.round(full.dataMb() * 100.0 / 1536));
-        assertThat(usage.data().percent()).isGreaterThan(100);
+        assertThat(usage.data().percent()).isEqualTo(195);
         assertThat(usage.voice().limit()).isEqualTo(300L);
-        assertThat(usage.voice().exceeded()).isEqualTo(full.voiceMinutes() > 300);
-        assertThat(usage.voice().remaining()).isEqualTo(Math.max(0, 300 - full.voiceMinutes()));
-        assertThat(usage.sms().limit()).isEqualTo(100L);
-        assertThat(usage.sms().percent()).isEqualTo((int) Math.round(full.smsCount() * 100.0 / 100));
+        assertThat(usage.voice().exceeded()).isFalse();
+        assertThat(usage.voice().remaining()).isEqualTo(50L);
+        assertThat(usage.voice().percent()).isEqualTo(83);
+        assertThat(usage.sms().exceeded()).isTrue();
+        assertThat(usage.sms().remaining()).isZero();
+        assertThat(usage.sms().percent()).isEqualTo(150);
+    }
+
+    @Test
+    void 생성된_사용량은_그_달_1일에_쓰던_요금제의_제공량에_맞춰진다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 4월 11일부터 LTE 플러스
+        at(Instant.parse("2026-06-12T03:00:00Z"));
+
+        usageService.getOverview(userId);
+
+        // 4월 1일에는 아직 스탠다드, 5월 1일에는 LTE 플러스
+        assertThat(storedDataMb(subscriptionId, LocalDate.of(2026, 3, 1)))
+                .isEqualTo(generated(LocalDate.of(2026, 3, 1), "FIVE_G_STANDARD").dataMb());
+        assertThat(storedDataMb(subscriptionId, LocalDate.of(2026, 4, 1)))
+                .isEqualTo(generated(LocalDate.of(2026, 4, 1), "FIVE_G_STANDARD").dataMb());
+        assertThat(storedDataMb(subscriptionId, LocalDate.of(2026, 5, 1)))
+                .isEqualTo(generated(LocalDate.of(2026, 5, 1), "LTE_PLUS").dataMb());
     }
 
     @Test
@@ -489,8 +510,17 @@ class SubscriptionUsageServiceTest {
         when(clock.instant()).thenReturn(instant);
     }
 
+    private long storedDataMb(Long subscriptionId, LocalDate month) {
+        return usageRepository.findFromMonth(subscriptionId, month).get(0).getUsedDataMb();
+    }
+
+    private GeneratedUsage generated(LocalDate month, String planCode) {
+        return generator.generate(userId, month, UsageLimits.of(planRepository.findAll().stream()
+                .filter(plan -> plan.getCode().equals(planCode)).findFirst().orElseThrow()));
+    }
+
     private long dataUsed(LocalDate month, int usedDays, int monthDays) {
-        return Math.round(generator.generate(userId, month).dataMb() * ((double) usedDays / monthDays));
+        return Math.round(generated(month, "FIVE_G_STANDARD").dataMb() * ((double) usedDays / monthDays));
     }
 
     private Long dataLimitMb(String code) {
