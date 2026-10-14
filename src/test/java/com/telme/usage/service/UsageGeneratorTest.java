@@ -171,24 +171,46 @@ class UsageGeneratorTest {
     }
 
     @Test
-    void 요금제를_내리면_바뀐_요금제에서_쓸_만한_양으로_맞춰진다() {
-        for (long userId = 1; userId <= 300; userId++) {
-            long fitted = generator.generate(userId, OCT, MINI).dataMb();
+    void 요금제를_내려도_쓰던_양은_바뀐_한도의_120퍼센트까지_이어진다() {
+        for (long userId = 1; userId <= 500; userId++) {
+            long habit = generator.generate(userId, OCT, PREMIUM).dataMb();
+            long changed = generator.generate(userId, OCT, PREMIUM, MINI).dataMb();
 
-            assertThat(generator.generate(userId, OCT, PREMIUM, MINI).dataMb()).isEqualTo(fitted);
-            assertThat(generator.generate(userId, OCT, NONE, MINI).dataMb()).isEqualTo(fitted);
+            assertThat(changed).isLessThanOrEqualTo(habit);
+            assertThat(changed).isLessThanOrEqualTo(Math.round(MINI.dataMb() * 1.2 * 1.2) + 1);
+        }
+        for (long userId = 1; userId <= 500; userId++) {
+            assertThat(generator.generate(userId, OCT, NONE, MINI).dataMb())
+                    .isLessThanOrEqualTo(Math.round(MINI.dataMb() * 1.2 * 1.2) + 1);
+        }
+    }
+
+    // 요금제를 연달아 내려도 한도 안에 드는 습관은 줄지 않는다. 줄면 추천이 계속 더 싼 요금제로 내려간다
+    @Test
+    void 한도에_드는_습관은_요금제를_연달아_내려도_그대로이다() {
+        UsageLimits start = new UsageLimits(51_200L, 100_000L, 100_000L);
+        for (long userId = 1; userId <= 500; userId++) {
+            GeneratedUsage habit = generator.generate(userId, OCT, start);
+            for (double gb : new double[] {50, 30, 15, 8}) {
+                UsageLimits plan = new UsageLimits(Math.round(gb * 1024), 100_000L, 100_000L);
+                GeneratedUsage changed = generator.generate(userId, OCT, start, plan);
+                if (habit.dataMb() <= plan.dataMb() * 0.8) {
+                    assertThat(changed.dataMb()).isEqualTo(habit.dataMb());
+                }
+                assertThat(changed.voiceMinutes()).isEqualTo(habit.voiceMinutes());
+                assertThat(changed.smsCount()).isEqualTo(habit.smsCount());
+            }
         }
     }
 
     @Test
-    void 제한이_생긴_항목은_가입_당시_습관과_그_달_요금제_기준_중_작은_값이고_무제한_항목은_습관_그대로이다() {
-        UsageLimits dataLimited = new UsageLimits(153_600L, null, null);
+    void 제한이_생긴_항목만_맞추고_무제한_항목은_습관_그대로이다() {
+        UsageLimits dataLimited = new UsageLimits(1_024L, null, null);
         for (long userId = 1; userId <= 500; userId++) {
-            GeneratedUsage changed = generator.generate(userId, OCT, MINI, dataLimited);
-            GeneratedUsage habit = generator.generate(userId, OCT, MINI);
-            GeneratedUsage month = generator.generate(userId, OCT, dataLimited);
+            GeneratedUsage changed = generator.generate(userId, OCT, PREMIUM, dataLimited);
+            GeneratedUsage habit = generator.generate(userId, OCT, PREMIUM);
 
-            assertThat(changed.dataMb()).isLessThanOrEqualTo(Math.min(habit.dataMb(), month.dataMb()));
+            assertThat(changed.dataMb()).isLessThanOrEqualTo(Math.min(habit.dataMb(), Math.round(1_024 * 1.2 * 1.2) + 1));
             assertThat(changed.voiceMinutes()).isEqualTo(habit.voiceMinutes());
             assertThat(changed.smsCount()).isEqualTo(habit.smsCount());
         }
