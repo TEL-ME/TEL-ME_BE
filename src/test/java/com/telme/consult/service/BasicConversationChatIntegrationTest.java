@@ -314,6 +314,24 @@ class BasicConversationChatIntegrationTest {
         verifyNoInteractions(search, model);
     }
 
+    @Test
+    @DisplayName("인사가 붙은 되묻기를 다시 물을 때 인사를 반복하지 않는다")
+    void 재질문에_인사를_반복하지_않는다() throws Exception {
+        when(routing.routeSingleConsult(any(), any()))
+                .thenAnswer(invocation -> 라우팅_결과(invocation.getArgument(0), Intent.STORE));
+        processor.request(입력을_준비한다("안녕 바라야, 근처 매장 알려줘"));
+        assertThat(이력을_조회한다().path("messages").get(1).path("content").asText()).startsWith("안녕하세요!");
+        when(routing.analyzeFollowUp(sessionId, "음"))
+                .thenReturn(new FollowUpRouteResponse(requestId, Map.of(), Set.of(), Method.RULE));
+
+        processor.request(입력을_준비한다("음"));
+
+        assertThat(이력을_조회한다().path("messages").get(3).path("content").asText())
+                .startsWith("답변을 잘 이해하지 못했어요.")
+                .contains("지역")
+                .doesNotContain("안녕하세요");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"고마워 바라야", "고마워 바라야 😊", "안녕 무러바라야 👋",
             "😊", "?!", "[문의] 고마워 바라야 😊", "바라야 뭐 하고 있어?", "잘 가 바라야"})
