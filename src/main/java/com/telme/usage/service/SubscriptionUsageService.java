@@ -6,7 +6,9 @@ import com.telme.plan.entity.Plan;
 import com.telme.plan.repository.PlanRepository;
 import com.telme.subscription.entity.Subscription;
 import com.telme.subscription.entity.SubscriptionHistory;
+import com.telme.subscription.entity.SubscriptionPause;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
+import com.telme.subscription.repository.SubscriptionPauseRepository;
 import com.telme.subscription.repository.SubscriptionRepository;
 import com.telme.subscription.service.ContractPolicy;
 import com.telme.subscription.service.PlanTimeline;
@@ -23,9 +25,11 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +48,7 @@ public class SubscriptionUsageService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionHistoryRepository historyRepository;
+    private final SubscriptionPauseRepository pauseRepository;
     private final SubscriptionUsageRepository usageRepository;
     private final PlanRepository planRepository;
     private final SubscriptionStateReader stateReader;
@@ -78,7 +83,8 @@ public class SubscriptionUsageService {
         }
 
         SubscriptionUsage stored = ensureGenerated(subscription, activationDate, thisMonth).get(target);
-        double fraction = visibleFraction(target, activationDate, today);
+        double fraction = visibleFraction(target, activationDate, today,
+                pausedDates(subscription.getSubscriptionId(), availableFrom, today));
         MonthUsage usage = target.equals(thisMonth)
                 ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, now, today, activationDate)
                 : pastMonthUsage(stored, fraction, PlanTimeline.planAt(planHistories, startOfMonth(target)));
@@ -111,7 +117,7 @@ public class SubscriptionUsageService {
                 null);
     }
 
-    // 이번 달을 뺀 최근 지난 달들(오래된 순). 추천에 쓰는 값이라 개통한 달은 개통 이후 일수만큼만 반영한다
+    // 이번 달을 뺀 최근 지난 달들(오래된 순). 추천에 쓰는 값이라 개통 이전과 정지한 날은 반영하지 않는다
     public List<MonthlyUsage> getRecentMonths(Long userId, int months) {
         if (months <= 0) {
             return List.of();
@@ -126,13 +132,15 @@ public class SubscriptionUsageService {
         LocalDate today = calendar.today(now);
         LocalDate thisMonth = today.withDayOfMonth(1);
 
+        Set<LocalDate> pausedDates = pausedDates(
+                subscription.getSubscriptionId(), firstMonth(activationDate, thisMonth), today);
         List<SubscriptionUsage> past = ensureGenerated(subscription, activationDate, thisMonth).values().stream()
                 .filter(usage -> usage.getUsageMonth().isBefore(thisMonth))
                 .sorted((a, b) -> a.getUsageMonth().compareTo(b.getUsageMonth()))
                 .toList();
         List<MonthlyUsage> result = new ArrayList<>();
         for (SubscriptionUsage usage : past.subList(Math.max(0, past.size() - Math.min(months, RECENT_MONTHS_LIMIT)), past.size())) {
-            double fraction = visibleFraction(usage.getUsageMonth(), activationDate, today);
+            double fraction = visibleFraction(usage.getUsageMonth(), activationDate, today, pausedDates);
             result.add(new MonthlyUsage(usage.getUsageMonth(), scale(usage.getUsedDataMb(), fraction),
                     (int) scale(usage.getUsedVoiceMinutes(), fraction), (int) scale(usage.getUsedSmsCount(), fraction)));
         }
@@ -173,13 +181,33 @@ public class SubscriptionUsageService {
         return usages.stream().collect(Collectors.toMap(SubscriptionUsage::getUsageMonth, Function.identity()));
     }
 
-    // 해당 달 중 개통 이후이면서 오늘까지 지난 일수 / 그 달의 일수
-    private double visibleFraction(LocalDate month, LocalDate activationDate, LocalDate today) {
+    // 해당 달 중 개통 이후이면서 오늘까지 지난 일수에서 정지한 날을 뺀 값 / 그 달의 일수
+    private double visibleFraction(LocalDate month, LocalDate activationDate, LocalDate today,
+            Set<LocalDate> pausedDates) {
         LocalDate from = activationDate.isAfter(month) ? activationDate : month;
         LocalDate monthEnd = month.withDayOfMonth(month.lengthOfMonth());
         LocalDate to = today.isBefore(monthEnd) ? today : monthEnd;
         long days = ChronoUnit.DAYS.between(from, to) + 1;
-        return days <= 0 ? 0 : (double) days / month.lengthOfMonth();
+        if (days <= 0) {
+            return 0;
+        }
+        long paused = from.datesUntil(to.plusDays(1)).filter(pausedDates::contains).count();
+        return (double) (days - paused) / month.lengthOfMonth();
+    }
+
+    // 정지를 신청한 날과 복귀한 날은 이용한 날로 보고 그 사이 날만 정지한 날로 센다
+    private Set<LocalDate> pausedDates(Long subscriptionId, LocalDate from, LocalDate to) {
+        Instant fromAt = from.atStartOfDay(TimeZones.KST).toInstant();
+        Instant toAt = to.plusDays(1).atStartOfDay(TimeZones.KST).toInstant();
+        Set<LocalDate> dates = new HashSet<>();
+        for (SubscriptionPause pause : pauseRepository.findOverlapping(subscriptionId, fromAt, toAt)) {
+            LocalDate endDate = calendar.today(pause.getEndsAt());
+            for (LocalDate date = calendar.today(pause.getStartedAt()).plusDays(1); date.isBefore(endDate);
+                    date = date.plusDays(1)) {
+                dates.add(date);
+            }
+        }
+        return dates;
     }
 
     private long scale(long value, double fraction) {

@@ -412,6 +412,58 @@ class SubscriptionUsageServiceTest {
     }
 
     @Test
+    void 정지_중에는_날짜가_지나도_사용량이_늘지_않고_복귀하면_이어서_늘어난다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(OCT_12);
+        long beforePause = usageService.getOverview(userId).usage().data().used();
+
+        pauseService.pause(userId, 10); // 10월 22일 12시(KST)에 끝남
+        at(Instant.parse("2026-10-14T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(beforePause);
+        at(Instant.parse("2026-10-18T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(beforePause);
+
+        // 13~21일 9일은 정지한 날이라 22일에는 22 - 9 = 13일분
+        at(Instant.parse("2026-10-22T03:00:00Z"));
+        MonthUsage resumed = usageService.getOverview(userId).usage();
+        assertThat(resumed.paused()).isFalse();
+        assertThat(resumed.data().used()).isEqualTo(dataUsed(OCT, 13, 31));
+        at(Instant.parse("2026-10-25T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(dataUsed(OCT, 16, 31));
+    }
+
+    @Test
+    void 정지를_중간에_해제하면_해제한_날부터_다시_늘어난다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(OCT_12);
+        pauseService.pause(userId, 10);
+
+        at(Instant.parse("2026-10-15T03:00:00Z"));
+        pauseService.resume(userId);
+
+        // 13, 14일만 정지한 날
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(dataUsed(OCT, 13, 31));
+        at(Instant.parse("2026-10-16T03:00:00Z"));
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(dataUsed(OCT, 14, 31));
+    }
+
+    @Test
+    void 달에_걸친_정지는_각_달의_정지한_날만_뺀다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-09-28T03:00:00Z"));
+        pauseService.pause(userId, 10); // 10월 8일 12시(KST)에 끝남
+        at(OCT_12);
+
+        // 9월은 29, 30일 2일, 10월은 1~7일 7일이 정지한 날
+        LocalDate september = LocalDate.of(2026, 9, 1);
+        assertThat(usageService.getOverview(userId, YearMonth.of(2026, 9)).usage().data().used())
+                .isEqualTo(dataUsed(september, 28, 30));
+        assertThat(usageService.getOverview(userId).usage().data().used()).isEqualTo(dataUsed(OCT, 5, 31));
+        assertThat(usageService.getRecentMonths(userId, 3)).filteredOn(usage -> usage.month().equals(september))
+                .extracting(MonthlyUsage::dataMb).containsExactly(dataUsed(september, 28, 30));
+    }
+
+    @Test
     void 해지하면_미가입_상태가_된다() {
         subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
         at(OCT_12);
@@ -435,6 +487,10 @@ class SubscriptionUsageServiceTest {
 
     private void at(Instant instant) {
         when(clock.instant()).thenReturn(instant);
+    }
+
+    private long dataUsed(LocalDate month, int usedDays, int monthDays) {
+        return Math.round(generator.generate(userId, month).dataMb() * ((double) usedDays / monthDays));
     }
 
     private Long dataLimitMb(String code) {
