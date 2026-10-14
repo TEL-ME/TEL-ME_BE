@@ -19,8 +19,9 @@ public record BedrockProperties(
         @DefaultValue("low") String reasoningEffort,
         // 요청에 maxTokens가 없을 때 쓴다. gpt-oss는 생각 토큰도 출력에 들어가 짧으면 답이 잘린다
         @DefaultValue("1000") int maxTokens,
-        // 앱 전체에서 동시에 Bedrock으로 나가는 호출 수 상한(HTTP 연결 수). 기본은 SDK 기본값과 같은 50이다.
-        // 호출 1회 약 1.5초라 분당 최대 약 max-connections × 40회다. Bedrock 분당 한도를 넘지 않게 조정한다
+        // 앱 전체에서 동시에 진행되는 Bedrock 호출 수 상한(HTTP 연결 수). 기본은 SDK 기본값과 같은 50이다.
+        // 분당 호출 수 한도는 아니다. 끝난 연결은 바로 다시 쓰여, 응답이 빠르거나 오류가 바로 돌아오면 분당 호출이 늘어난다.
+        // 평균 1.5초면 분당 약 max-connections × 40회 정도다. 분당 한도를 강제하려면 별도 제한이 필요하다
         @DefaultValue("50") int maxConnections,
         // 연결이 모두 쓰이는 중이면 이만큼만 기다리고 판정 실패로 넘긴다. 기다리는 동안 고객 응답도 늦어진다
         @DefaultValue("1s") Duration connectionAcquireTimeout

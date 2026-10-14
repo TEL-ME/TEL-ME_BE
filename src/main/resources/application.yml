@@ -100,8 +100,8 @@ llm:
     timeout: ${LLM_BEDROCK_TIMEOUT:5s}
     reasoning-effort: low
     max-tokens: 1000
-    # 동시에 Bedrock으로 나가는 호출 수 상한과 연결 대기 시간. 넘치면 판정 실패로 처리한다
-    # 분당 최대 호출 ≈ max-connections × 40이라 Bedrock 분당 한도에 맞춰 조정한다
+    # 동시에 진행되는 Bedrock 호출 수 상한과 연결 대기 시간. 넘치면 판정 실패로 처리한다
+    # 분당 호출 수 한도는 아니다(평균 1.5초면 분당 약 max-connections × 40회 정도)
     max-connections: ${LLM_BEDROCK_MAX_CONNECTIONS:50}
     connection-acquire-timeout: 1s
 

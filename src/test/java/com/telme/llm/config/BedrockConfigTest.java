@@ -15,6 +15,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -90,8 +92,11 @@ class BedrockConfigTest {
     @DisplayName("연결이 모두 쓰이는 중이면 응답을 기다리지 않고 연결 대기 시간 뒤 바로 실패한다")
     void 연결이_꽉_차면_짧게_기다리고_실패한다() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.setExecutor(Executors.newCachedThreadPool());
+        ExecutorService serverThreads = Executors.newCachedThreadPool();
+        server.setExecutor(serverThreads);
+        CountDownLatch firstArrived = new CountDownLatch(1);
         server.createContext("/", exchange -> {
+            firstArrived.countDown();
             sleep(1500);
             byte[] body = """
                     {"output":{"message":{"role":"assistant","content":[{"text":"answerable true"}]}},
@@ -114,7 +119,8 @@ class BedrockConfigTest {
             LlmRequest request = LlmRequest.builder().taskType(TaskType.EVIDENCE_CHECK).userPrompt("질문").build();
 
             CompletableFuture<String> first = CompletableFuture.supplyAsync(() -> client.generate(request));
-            sleep(300);
+            // 첫 요청이 서버에 도착해 하나뿐인 연결을 쓰고 있는 것을 확인한 뒤 두 번째를 보낸다
+            assertThat(firstArrived.await(5, TimeUnit.SECONDS)).isTrue();
             long started = System.nanoTime();
             assertThatThrownBy(() -> client.generate(request)).isInstanceOf(GeneralException.class);
             long waitedMs = (System.nanoTime() - started) / 1_000_000;
@@ -123,6 +129,7 @@ class BedrockConfigTest {
             assertThat(first.get(5, TimeUnit.SECONDS)).contains("answerable");
         } finally {
             server.stop(0);
+            serverThreads.shutdownNow();
         }
     }
 
