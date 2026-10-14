@@ -14,7 +14,7 @@ docs/FOLLOWUP_RECOMMENDATION.md 11.4절. 라우터·검색·답변 생성이 바
 LLM 결과가 매번 같지 않으므로 한 번이라도 안 나오면 목록에 넣는다. 질문마다 새 채팅방을 쓴다.
 
 --recheck: 지난 결과의 실패·되묻기 후 답변 FAQ와, 바로 답이 나오던 FAQ 일부(표본)만 다시 재고 그 결과만 바꾼다.
-표본에서 새로 실패가 나오면 되던 것이 깨진 것이라 전체를 다시 잰다.
+표본에서 새로 실패가 나오면 되던 것이 깨진 것이라 재지 않은 나머지도 믿을 수 없다. 결과 파일을 쓰지 않고 멈추므로 전체를 다시 잰다.
 """
 
 from __future__ import annotations
@@ -112,6 +112,18 @@ def recheck_targets(previous: dict, all_slots: list[str], sample: int, seed: int
     return sorted(watched | set(picked)), sorted(picked)
 
 
+def recheck(client: Client, previous: dict, all_items: list[dict], sample: int, seed: int
+            ) -> tuple[dict, list[str], list[str]]:
+    """지난 결과에 다시 잰 결과를 덮은 전체 결과, 표본, 그중 이번에 실패한 표본(되던 것이 깨진 것)."""
+    all_slots = [faq["slot_id"] for faq in all_items]
+    targets, sampled = recheck_targets(previous, all_slots, sample, seed)
+    items = [faq for faq in all_items if faq["slot_id"] in set(targets)]
+    print(f"다시 잴 FAQ {len(items)}개 (지난 실패·되묻기 후 답변 {len(items) - len(sampled)}, 바로 답 표본 {len(sampled)})")
+    rechecked = measure(client, items)
+    broken = [slot for slot in sampled if rechecked[slot]["outcome"] in FAILURES]
+    return previous_results(previous, all_slots) | rechecked, sampled, broken
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-url", default="http://localhost:8080")
@@ -131,16 +143,12 @@ def main() -> None:
               "실패하면 한 번 더 보내고, 한 번이라도 실패하면 slotIds에 넣는다")
 
     if args.recheck:
-        previous = load_json(OUT)
-        targets, sampled = recheck_targets(previous, all_slots, args.sample, args.seed)
-        items = [faq for faq in all_items if faq["slot_id"] in set(targets)]
-        print(f"다시 잴 FAQ {len(items)}개 (지난 실패·되묻기 후 답변 {len(items) - len(sampled)}, 바로 답 표본 {len(sampled)})")
-        rechecked = measure(client, items)
-        broken = [slot for slot in sampled if rechecked[slot]["outcome"] in FAILURES]
+        results, sampled, broken = recheck(client, load_json(OUT), all_items, args.sample, args.seed)
         if broken:
-            print(f"바로 답이 나오던 표본 {len(broken)}개가 이번엔 실패했습니다(예: {broken[:5]}). 전체를 다시 재는 게 좋습니다")
-        results = previous_results(previous, all_slots) | rechecked
-        method += f". {datetime.date.today().isoformat()} 부분 재측정(--recheck, 표본 {len(sampled)}, 표본 실패 {len(broken)})"
+            raise SystemExit(f"바로 답이 나오던 표본 {len(broken)}개가 이번엔 실패했습니다: {broken}\n"
+                             f"재지 않은 나머지도 믿을 수 없어 {OUT.relative_to(ROOT)}를 쓰지 않았습니다. "
+                             "전체를 다시 재세요(--recheck 없이 실행)")
+        method += f". {datetime.date.today().isoformat()} 부분 재측정(--recheck, 표본 {len(sampled)}개 모두 통과)"
     else:
         items = all_items[:args.limit] if args.limit else all_items
         results = measure(client, items)

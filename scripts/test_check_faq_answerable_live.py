@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """check_faq_answerable_live.py 판정 규칙 검증. 앱을 띄우지 않고 가짜 채팅 클라이언트로 되묻기 흐름을 흉내 낸다."""
+import io
+import json
+import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
+from unittest import mock
 
+import check_faq_answerable_live as live
 from check_faq_answerable_live import (
     ANSWERED, CLARIFICATION_UNVERIFIED, CLARIFIED_ANSWERED, FAILED, measure, outcome, previous_results,
     recheck_targets, summarize)
@@ -112,6 +120,51 @@ class RecheckTest(unittest.TestCase):
         self.assertEqual(len(sampled), 2)
         self.assertTrue(set(sampled) <= {"A", "E", "F"})
         self.assertEqual(recheck_targets(self.PREVIOUS, self.SLOTS, sample=2, seed=0), (targets, sampled))
+
+
+class SameReplyClient(FakeClient):
+    """질문마다 늘 같은 응답을 돌려준다. 다시 재는 횟수와 상관없이 쓴다."""
+
+    def send(self, session, content):
+        self.sent.append((session, content))
+        return self.replies[self.current][0]
+
+
+class RecheckRunTest(unittest.TestCase):
+    """--recheck 실행 전체: 표본이 깨지면 결과 파일을 쓰지 않는다."""
+    PREVIOUS = {"slotIds": ["C"], "clarifiedAnsweredSlotIds": [], "clarificationUnverifiedSlotIds": []}
+
+    def run_recheck(self, replies):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src, out = root / "faq.json", root / "out.json"
+            src.write_text(json.dumps([{"slot_id": s, "question": s} for s in ("A", "B", "C")]), encoding="utf-8")
+            out.write_text(json.dumps(self.PREVIOUS), encoding="utf-8")
+            client = SameReplyClient(replies)
+            argv = ["check_faq_answerable_live.py", "--recheck", "--sample", "2"]
+            with mock.patch.object(live, "ROOT", root), mock.patch.object(live, "SRC", src), \
+                    mock.patch.object(live, "OUT", out), mock.patch.object(live, "Client", return_value=client), \
+                    mock.patch.object(sys, "argv", argv), redirect_stdout(io.StringIO()):
+                try:
+                    live.main()
+                    exited = None
+                except SystemExit as exc:
+                    exited = exc
+            return exited, json.loads(out.read_text(encoding="utf-8"))
+
+    def test_broken_sample_stops_without_writing(self):
+        exited, written = self.run_recheck({"A": [NO_EVIDENCE], "B": [GROUNDED], "C": [GROUNDED]})
+
+        self.assertIsNotNone(exited)
+        self.assertNotEqual(exited.code, 0)
+        self.assertEqual(written, self.PREVIOUS)
+
+    def test_healthy_sample_writes_merged_result(self):
+        exited, written = self.run_recheck({"A": [GROUNDED], "B": [GROUNDED], "C": [GROUNDED]})
+
+        self.assertIsNone(exited)
+        self.assertEqual(written["slotIds"], [])
+        self.assertEqual((written["total"], written["answered"]), (3, 3))
 
 
 if __name__ == "__main__":
