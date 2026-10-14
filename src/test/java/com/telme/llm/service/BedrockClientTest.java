@@ -33,7 +33,7 @@ class BedrockClientTest {
 
     private final BedrockRuntimeClient runtime = mock(BedrockRuntimeClient.class);
     private final BedrockClient client = new BedrockClient(runtime, new BedrockRequestConverter(
-            new BedrockProperties(true, "us-east-1", "openai.gpt-oss-120b-1:0", Duration.ofSeconds(5), "low", 1000)));
+            new BedrockProperties(true, "us-east-1", "openai.gpt-oss-120b-1:0", Duration.ofSeconds(5), "low", 1000, 50, Duration.ofSeconds(1))));
 
     @Test
     @DisplayName("생각 블록은 빼고 답 글만 반환한다")

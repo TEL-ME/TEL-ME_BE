@@ -22,7 +22,7 @@ class FaqEvidenceJudgeProbe {
     @Test
     void 측정과_같은_판정이_나온다() {
         BedrockProperties properties = new BedrockProperties(
-                true, "us-east-1", "openai.gpt-oss-120b-1:0", Duration.ofSeconds(15), "low", 1000);
+                true, "us-east-1", "openai.gpt-oss-120b-1:0", Duration.ofSeconds(15), "low", 1000, 50, Duration.ofSeconds(1));
         try (BedrockRuntimeClient runtime = BedrockRuntimeClient.builder()
                 .region(Region.of(properties.region()))
                 .build()) {

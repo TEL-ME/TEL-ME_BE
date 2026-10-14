@@ -58,6 +58,8 @@ dependencies {
 	implementation 'software.amazon.awssdk:polly'
 	// 검색 근거 판정 (Amazon Bedrock)
 	implementation 'software.amazon.awssdk:bedrockruntime'
+	// Bedrock 호출용 HTTP 클라이언트. 동시 연결 수·연결 대기 시간을 설정하려고 직접 둔다
+	implementation 'software.amazon.awssdk:apache5-client'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'

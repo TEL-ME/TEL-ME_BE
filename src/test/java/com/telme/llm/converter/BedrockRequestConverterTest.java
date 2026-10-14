@@ -15,7 +15,7 @@ class BedrockRequestConverterTest {
 
     private static BedrockProperties properties(String reasoningEffort) {
         return new BedrockProperties(true, "us-east-1", "openai.gpt-oss-120b-1:0",
-                Duration.ofSeconds(5), reasoningEffort, 1000);
+                Duration.ofSeconds(5), reasoningEffort, 1000, 50, Duration.ofSeconds(1));
     }
 
     private final BedrockRequestConverter converter = new BedrockRequestConverter(properties("low"));
