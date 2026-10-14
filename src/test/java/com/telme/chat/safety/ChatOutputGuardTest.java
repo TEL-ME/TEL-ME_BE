@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.guard.ChatInputInspector;
+import com.telme.chat.guard.MaskSpan;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.service.ChatAnswer;
 import java.util.HashMap;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ChatOutputGuardTest {
 
@@ -100,6 +103,82 @@ class ChatOutputGuardTest {
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.STORE_RESULT, "정상 안내", null, List.of(), List.of(cycle));
         assertThatThrownBy(() -> guard.verify(answer)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("서버 마스크 인용은 모든 출력 경로에서 허용하지만 출처 없는 같은 별표는 차단한다")
+    void 실제_마스크_인용만_출력_경계로_검사한다(String original, String visible) throws Exception {
+        var inspection = new ChatInputInspector(new ObjectMapper()).inspect(original);
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspection)));
+        var mapper = new ObjectMapper();
+        String strings = mapper.writeValueAsString(List.of(visible));
+        var stores = List.<Map<String, Object>>of(Map.of("name", visible));
+        var context = new ChatStoreSearchContextResponse(ChatStoreSearchContextResponse.Type.PLACE, visible, null);
+        var content = answer(visible);
+        var followUp = new ChatAnswer(ChatMessage.MessageType.ANSWER, "정상 안내", null, List.of(visible), null);
+        var store = new ChatAnswer(ChatMessage.MessageType.STORE_RESULT, "정상 안내", null, List.of(), stores);
+        var label = new ChatAnswer(ChatMessage.MessageType.STORE_RESULT, "정상 안내", null,
+                List.of(), List.of(Map.of("name", "정상 매장")), context);
+        List<Runnable> paths = List.of(
+                () -> guard.verify(content, masks), () -> guard.verify(followUp, masks),
+                () -> guard.verify(store, masks), () -> guard.verify(label, masks),
+                () -> guard.verifyClarification(visible, List.of(), masks),
+                () -> guard.verifyClarification("정상 질문", List.of(visible), masks),
+                () -> guard.verifySummary(strings, masks),
+                () -> guard.verifySerialized(visible, null, null, null, masks),
+                () -> guard.verifySerialized("정상 안내", strings, null, null, masks),
+                () -> guard.verifySerialized("정상 안내", null, strings, null, masks),
+                () -> guard.verifySerialized("정상 안내", null, null, strings, masks),
+                () -> guard.verifySerializedClarification(visible, null, masks),
+                () -> guard.verifySerializedClarification("정상 질문", strings, masks));
+        paths.forEach(path -> assertThatCode(path::run).doesNotThrowAnyException());
+        assertThat(content.content()).isEqualTo(visible);
+        assertThat(masks.toString()).doesNotContain(visible);
+        assertThatThrownBy(() -> guard.verify(content)).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifyClarification(visible, List.of()))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifySummary(strings)).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verify(answer(visible + " 씨***발"), masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"씨***발", "개***새끼", "씨 *** 발", "개 *** 새끼", "씨**발", "씨******발"})
+    @DisplayName("다른 정상 마스크가 있어도 새로 생성한 별표 욕설을 허용하지 않는다")
+    void 다른_문맥의_마스크로_별표_욕설을_우회하지_못한다(String unsafe) {
+        var inspection = new ChatInputInspector(new ObjectMapper()).inspect("카드 4111111111111111 문의");
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspection)));
+        assertThatThrownBy(() -> guard.verify(answer(unsafe), masks)).isInstanceOf(ChatOutputBlockedException.class);
+    }
+
+    @Test
+    @DisplayName("원문에 없던 단어를 마스크 양옆에 붙이면 신뢰한 인용으로 취급하지 않는다")
+    void 마스크_양옆_단어와_경계를_확인한다() {
+        var inspector = new ChatInputInspector(new ObjectMapper());
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(
+                inspector.inspect("씨 990101-1234567 발 요금 문의"))));
+        assertThatThrownBy(() -> guard.verify(answer("씨 *** 발아"), masks))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        var leading = new OutputMaskContext(List.of(OutputMaskContext.Source.from(
+                inspector.inspect("990101-1234567 발 요금 문의"))));
+        assertThatThrownBy(() -> guard.verify(answer("씨 *** 발 요금 문의"), leading))
+                .isInstanceOf(ChatOutputBlockedException.class);
+    }
+
+    @Test
+    @DisplayName("문구와 다르거나 겹치는 마스크 위치를 검사 출처로 받지 않는다")
+    void 잘못된_마스크_위치로_검사를_완화하지_않는다() {
+        assertThatThrownBy(() -> new OutputMaskContext.Source("씨 *** 발", List.of(new MaskSpan(0, 3))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new OutputMaskContext.Source("******",
+                List.of(new MaskSpan(0, 3), new MaskSpan(2, 5))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new MaskSpan(Integer.MAX_VALUE, Integer.MIN_VALUE + 2))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private ChatAnswer answer(String content) {

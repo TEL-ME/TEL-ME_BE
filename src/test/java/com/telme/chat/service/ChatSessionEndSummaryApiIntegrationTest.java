@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.llm.service.LlmClient;
+import com.telme.chat.guard.ChatInputInspector;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -25,6 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -516,6 +519,39 @@ class ChatSessionEndSummaryApiIntegrationTest {
         var response = mvc.perform(get(path(fixture)).session(fixture.actor()))
                 .andExpect(jsonPath("$.result.summary").doesNotExist()).andReturn();
         assertThat(response.getResponse().getContentAsString()).doesNotContain("990101-1234567", "합성 오류");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("저장된 서버 마스크 인용과 미확인 조건을 종료 요약에서 완료·조회한다")
+    void 저장된_마스크_출처로_종료_요약을_완료한다(String original, String visible) throws Exception {
+        var inspection = new ChatInputInspector(mapper).inspect(original);
+        var fixture = fixture(false, visible, "가입 시점이 확인되어야 안내할 수 있습니다.");
+        jdbc.update("UPDATE chat_messages SET input_mask_spans=?::jsonb WHERE message_id=?",
+                mapper.writeValueAsString(inspection.maskSpans()), fixture.questionId());
+        long request = jdbc.queryForObject("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
+                VALUES (?, ?, 1, 'FAQ', ?, 'WAITING_CONDITION') RETURNING consult_request_id
+                """, Long.class, fixture.sessionId(), fixture.questionId(), visible);
+        jdbc.update("""
+                INSERT INTO consult_conditions(consult_request_id,condition_key,status)
+                VALUES (?, 'joined_this_month', 'PENDING')
+                """, request);
+        var response = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(
+                ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        response.withObject("topics").put(Long.toString(fixture.questionId()), visible);
+        when(client.generate(any())).thenReturn(response.toString());
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
+        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .contains(visible).doesNotContain("4111", "990101", "1234567", "\uFFFC", "input_mask_spans");
     }
 
     private Fixture fixture(boolean running, String question, String answer) throws Exception {

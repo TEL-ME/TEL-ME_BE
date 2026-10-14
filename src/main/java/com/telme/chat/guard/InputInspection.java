@@ -10,7 +10,8 @@ public record InputInspection(
         String content,
         List<Detection> detections,
         boolean hasQuestion,
-        String fingerprintContent) {
+        String fingerprintContent,
+        List<MaskSpan> maskSpans) {
 
     public enum Reason {
         PROFANITY,
@@ -22,6 +23,7 @@ public record InputInspection(
 
     public InputInspection {
         detections = List.copyOf(detections);
+        maskSpans = List.copyOf(maskSpans);
     }
 
     public boolean hasProfanity() {

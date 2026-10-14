@@ -6,6 +6,8 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.repository.ChatExecutionRepository;
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.safety.OutputMaskContext;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.chat.safety.ChatOutputGuard;
@@ -28,6 +30,7 @@ public class ChatExecutionService {
     private final ChatMessageConverter chatMessageConverter;
     private final ApplicationEventPublisher eventPublisher;
     private final ChatOutputGuard outputGuard;
+    private final ChatInputMaskRepository inputMasks;
 
     public ChatExecutionState startAnswer(Long executionId) {
         ChatExecution execution = getRunningExecution(executionId);
@@ -45,11 +48,12 @@ public class ChatExecutionService {
     public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        verifyOutput(() -> outputGuard.verify(answer));
+        OutputMaskContext masks = readMasks(execution);
+        verifyOutput(() -> outputGuard.verify(answer, masks));
         String followUps = chatMessageConverter.toJson(answer.followUps());
         String stores = chatMessageConverter.toJson(answer.storeResults());
         String searchContext = chatMessageConverter.toContextJson(answer.storeSearchContext());
-        verifyOutput(() -> outputGuard.verifySerialized(answer.content(), followUps, stores, searchContext));
+        verifyOutput(() -> outputGuard.verifySerialized(answer.content(), followUps, stores, searchContext, masks));
         Instant completedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, answer.messageType());
@@ -82,13 +86,14 @@ public class ChatExecutionService {
 
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        verifyOutput(() -> outputGuard.verifyClarification(question, options));
+        OutputMaskContext masks = readMasks(execution);
+        verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
         Instant completedAt = Instant.now();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
         // 선택지가 있으면 후속 질문 자리에 실어 보낸다. 화면이 버튼으로 그려 눌러서 답할 수 있다
         String followUps = options == null || options.isEmpty() ? null : chatMessageConverter.toJson(options);
-        verifyOutput(() -> outputGuard.verifySerializedClarification(question, followUps));
+        verifyOutput(() -> outputGuard.verifySerializedClarification(question, followUps, masks));
         message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, followUps, null, completedAt);
         execution.complete(message, completedAt);
         session.waitForClarification();
@@ -128,6 +133,14 @@ public class ChatExecutionService {
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
         return flushed(execution);
+    }
+
+    private OutputMaskContext readMasks(ChatExecution execution) {
+        try {
+            return inputMasks.read(execution.getSession().getSessionId(), execution.getInputMessage().getSequenceNo());
+        } catch (RuntimeException inspectionFailure) {
+            throw new GeneralException(ChatErrorCode.OUTPUT_CHECK_FAILED);
+        }
     }
 
     private void verifyOutput(Runnable inspection) {

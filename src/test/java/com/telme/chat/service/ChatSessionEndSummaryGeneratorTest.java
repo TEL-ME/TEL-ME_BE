@@ -18,6 +18,7 @@ import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.chat.safety.ChatOutputGuard;
+import com.telme.chat.safety.OutputMaskContext;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import java.time.Clock;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 
 class ChatSessionEndSummaryGeneratorTest {
@@ -568,6 +570,43 @@ class ChatSessionEndSummaryGeneratorTest {
 
         assertThat(first.content().guidance()).containsExactly("안내받은 내용: 첫 번째 상담 안내입니다.");
         assertThat(second.content().guidance()).containsExactly("안내받은 내용: 두 번째 상담 안내입니다.");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("모델 인용과 서버가 조립한 미확인 조건 모두 실제 마스크 경계로 검사한다")
+    void 마스크_인용과_서버_남은_사항을_차단하지_않는다(String original, String visible) throws Exception {
+        var inspected = new ChatInputInspector(mapper).inspect(original);
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspected)));
+        var messages = List.of(message(1, 1, null, "USER", "QUESTION", visible, null));
+        var requests = List.of(new ChatEndSummaryData.Request(1, 1, visible, "WAITING_CONDITION",
+                List.of("가입 시점 확인 필요"), 11L));
+        var input = new ChatEndSummaryData.Input(1, 1, 10L, messages, requests, Set.of(1L), List.of(), masks);
+        var response = mapper.createObjectNode();
+        response.putObject("topics").put("1", visible);
+        response.putArray("selectedSentenceIds");
+        response.putArray("pendingItems");
+        when(client.generate(any())).thenReturn(response.toString());
+
+        var result = generate(input);
+
+        assertThat(result.content().topics()).containsExactly(visible);
+        assertThat(result.content().pendingItems()).anyMatch(item -> item.contains(visible));
+        assertThat(result.json()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(request().userPrompt()).doesNotContain("4111", "990101", "1234567", "maskSpans");
+    }
+
+    @Test
+    @DisplayName("출처 없는 같은 별표 요약과 새 욕설은 기존 출력 정책으로 차단한다")
+    void 마스크_출처가_없는_별표_요약을_허용하지_않는다() {
+        var input = new ChatEndSummaryData.Input(1, 1, 10L,
+                List.of(message(1, 1, null, "USER", "QUESTION", "요금 문의", null)), List.of(), Set.of());
+        when(client.generate(any())).thenReturn(
+                "{\"topics\":{\"1\":\"씨 *** 발 요금 문의\"},\"selectedSentenceIds\":[],\"pendingItems\":[]}");
+        assertThatThrownBy(() -> generate(input)).isInstanceOf(ChatOutputBlockedException.class);
     }
 
     private ChatEndSummaryData.Input latestInput(int count) {

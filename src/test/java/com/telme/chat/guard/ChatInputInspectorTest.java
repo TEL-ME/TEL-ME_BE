@@ -13,6 +13,21 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ChatInputInspectorTest {
     private final ChatInputInspector inspector = new ChatInputInspector(new ObjectMapper());
 
+    @Test
+    @DisplayName("저장 문구의 실제 번호 마스크 위치만 반환하고 직접 입력한 별표와 구분한다")
+    void 원문_번호_없이_실제_마스크_위치만_보존한다() {
+        var result = inspector.inspect("*** 카드 4111111111111111 주민번호 990101-1234567 문의");
+        assertThat(result.content()).isEqualTo("*** 카드 *** 주민번호 *** 문의");
+        assertThat(result.maskSpans()).hasSize(2);
+        assertThat(result.maskSpans()).allSatisfy(span -> {
+            assertThat(span.start()).isGreaterThan(0);
+            assertThat(result.content().substring(span.start(), span.end())).isEqualTo("***");
+        });
+        assertThat(result.maskSpans().getFirst().start()).isEqualTo(result.content().indexOf("***", 3));
+        assertThat(result.maskSpans().toString()).doesNotContain("4111", "990101", "1234567");
+        assertThat(inspector.inspect("카드 *** 문의").maskSpans()).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -324,7 +339,7 @@ class ChatInputInspectorTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "123원 요금 문의", "500원 요금 문의", "17개 문의", "123번 문의",
-        "27개월 약정 문의", "요금 18원 문의", "약정 18개월 문의", ", 18GB 요금 문의"
+        "27개월 약정 문의", "12개월 약정 문의", "요금 18원 문의", "약정 18개월 문의", ", 18GB 요금 문의"
     })
     @DisplayName("전체 후보가 카드 검증에 실패하거나 설명 단어로 분리된 숫자 조건은 보존한다")
     void 카드번호_뒤의_금액과_수량을_유지한다(String tail) {
@@ -383,6 +398,25 @@ class ChatInputInspectorTest {
         assertThat(result.wasMasked()).isTrue();
         assertThat(result.hasProfanity()).isFalse();
         assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("표시 문구가 같아도 실제 번호 마스크와 사용자가 쓴 별표 욕설을 구분한다")
+    void 같은_표시의_번호_마스크와_별표_욕설을_구분한다(String original, String literal) {
+        var masked = inspector.inspect(original);
+        var written = inspector.inspect(literal);
+
+        assertThat(masked.content()).isEqualTo(written.content()).isEqualTo(literal);
+        assertThat(masked.wasMasked()).isTrue();
+        assertThat(masked.hasProfanity()).isFalse();
+        assertThat(masked.hasQuestion()).isTrue();
+        assertThat(written.wasMasked()).isFalse();
+        assertThat(written.hasProfanity()).isTrue();
+        assertThat(masked.fingerprintContent()).isNotEqualTo(written.fingerprintContent());
     }
 
     @ParameterizedTest

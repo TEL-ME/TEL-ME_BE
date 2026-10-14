@@ -36,11 +36,6 @@ public final class ChatInputInspector {
             "\\uFFFC\\s*(?:만원|원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
                     + "(?:입니다|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
                     + "(?=$|[\\s\\p{Punct}])", Pattern.CASE_INSENSITIVE);
-    // 기존 별표 배포의 요청 해시를 재현할 때만 사용한다. 신규 번호 경계는 단위로 자르지 않는다.
-    private static final Pattern LEGACY_NUMBER_UNIT = Pattern.compile(
-            "^\\s*(?:원|만원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
-                    + "(?:$|[\\s\\p{Punct}]|(?:은|는|이|가|을|를|에|도|만|부터|까지|으로|마다|입니다|이에요|예요)"
-                    + "(?:$|[\\s\\p{Punct}]))", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUOTED = Pattern.compile("['\"‘“]([^'\"’”]{1,60})['\"’”]");
     private static final Pattern MEANING =
             Pattern.compile(
@@ -145,7 +140,7 @@ public final class ChatInputInspector {
             throw new IllegalArgumentException("검사할 입력이 필요합니다.");
         }
         List<Detection> detections = new ArrayList<>();
-        MaskedContent maskedContent = mask(input, detections, false);
+        MaskedContent maskedContent = mask(input, detections);
         String safe = maskedContent.content();
         String normalized = normalize(maskedContent.inspectionContent());
         List<Span> exemptions = exemptions(normalized);
@@ -180,7 +175,7 @@ public final class ChatInputInspector {
         boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
         return new InputInspection(
                 safe, detections.stream().distinct().toList(), hasQuestion,
-                maskedContent.fingerprintContent());
+                maskedContent.fingerprintContent(), maskedContent.maskSpans());
     }
 
     private boolean hasRemainingQuestion(String remaining) {
@@ -196,12 +191,7 @@ public final class ChatInputInspector {
         return false;
     }
 
-    /** 이전 별표 배포의 숫자 조건 보존 경계를 재현한다. 기존 영수증 비교에만 사용한다. */
-    String legacyFingerprintContent(String input) {
-        return mask(input, new ArrayList<>(), true).fingerprintContent();
-    }
-
-    private MaskedContent mask(String input, List<Detection> detections, boolean legacyNumericConditions) {
+    private MaskedContent mask(String input, List<Detection> detections) {
         List<Span> spans = new ArrayList<>();
         // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문에서 치환할 위치를 보존한다.
         String numeric = numericForm(input);
@@ -214,21 +204,9 @@ public final class ChatInputInspector {
         }
         Matcher card = CARD.matcher(numeric);
         while (card.find()) {
-            int candidateEnd = card.end();
-            String candidateDigits = numeric.substring(card.start(), candidateEnd).replaceAll("[ -]", "");
-            boolean completeLongestCard = candidateDigits.length() == 19 && validCard(candidateDigits);
-            if (legacyNumericConditions && !completeLongestCard
-                    && LEGACY_NUMBER_UNIT.matcher(numeric.substring(candidateEnd)).find()) {
-                int separator = numeric.lastIndexOf(' ', candidateEnd - 1);
-                if (separator > card.start()
-                        && validCard(numeric.substring(card.start(), separator).replaceAll("[ -]", ""))) {
-                    // 이전 별표 배포에서 공백 뒤 숫자 조건을 보존하던 해시만 재현한다.
-                    candidateEnd = separator;
-                }
-            }
             // 전체 후보가 검증을 통과하면 길이와 단위에 관계없이 전체를 보호한다.
             // 실패한 경우에만 구분자 경계의 유효한 앞 번호를 찾아 나머지 숫자를 보존한다.
-            for (int end = candidateEnd; end > card.start(); end--) {
+            for (int end = card.end(); end > card.start(); end--) {
                 if (end < card.end() && numeric.charAt(end) != ' ' && numeric.charAt(end) != '-') {
                     continue;
                 }
@@ -241,6 +219,7 @@ public final class ChatInputInspector {
             }
         }
         spans.sort(Comparator.comparingInt(Span::start));
+        List<MaskSpan> maskSpans = new ArrayList<>();
         StringBuilder result = new StringBuilder();
         StringBuilder fingerprintContent = new StringBuilder();
         StringBuilder inspectionContent = new StringBuilder();
@@ -249,7 +228,9 @@ public final class ChatInputInspector {
             if (span.start() < cursor) {
                 continue;
             }
-            result.append(input, cursor, span.start()).append(MASK);
+            result.append(input, cursor, span.start());
+            maskSpans.add(new MaskSpan(result.length(), result.length() + MASK.length()));
+            result.append(MASK);
             inspectionContent.append(input, cursor, span.start()).append(PII_BOUNDARY);
             // 기존 요청 해시와 호환되는 유형 문구만 유지한다. 원문 번호는 어느 결과에도 넣지 않는다.
             fingerprintContent.append(input, cursor, span.start()).append(span.replacement());
@@ -258,7 +239,7 @@ public final class ChatInputInspector {
         return new MaskedContent(
                 result.append(input, cursor, input.length()).toString(),
                 fingerprintContent.append(input, cursor, input.length()).toString(),
-                inspectionContent.append(input, cursor, input.length()).toString());
+                inspectionContent.append(input, cursor, input.length()).toString(), maskSpans);
     }
 
     private String numericForm(String input) {
@@ -423,5 +404,6 @@ public final class ChatInputInspector {
 
     private record Span(int start, int end, String replacement) {}
 
-    private record MaskedContent(String content, String fingerprintContent, String inspectionContent) {}
+    private record MaskedContent(String content, String fingerprintContent, String inspectionContent,
+            List<MaskSpan> maskSpans) {}
 }
