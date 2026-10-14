@@ -56,6 +56,12 @@ class PlanQuestionEvaluationProbe {
         score("검증4", holdoutCases4());
     }
 
+    // 프롬프트 예시와 다른 말투로 통화·문자 제공량을 묻는 다섯 번째 검증 질문이다
+    @Test
+    void 다섯번째_새_질문_평가셋으로_채점한다() {
+        score("검증5", holdoutCases5());
+    }
+
     private void score(String name, List<Case> cases) {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
@@ -140,6 +146,16 @@ class PlanQuestionEvaluationProbe {
                 "유심 재발급 비용이 얼마예요", "번호이동하면 위약금 면제돼요", "가입하려면 뭐가 필요해요",
                 "일시 정지는 며칠까지 돼요", "요금 납부는 어떻게 해요", "오늘 날씨 어때요",
                 "약정 없이 가입할 수 있나요", "해지 신청은 어디서 해요", "데이터 다 쓰면 어떻게 돼요");
+        return cases;
+    }
+
+    private List<Case> holdoutCases5() {
+        List<Case> cases = new ArrayList<>();
+        add(cases, PlanQuestionType.PLAN_CATALOG,
+                "5G 프리미엄은 통화를 얼마나 쓸 수 있죠", "알뜰 시니어에 문자 몇 개 들어 있나요", "LTE 맥스는 통화 따로 안 내도 되나요",
+                "5G 언리미티드 문자도 무제한이에요", "알뜰 청소년 요금제 통화 시간 알려주세요");
+        add(cases, PlanQuestionType.NONE,
+                "통화 연결음 바꾸는 방법이 궁금해요", "문자 수신 거부는 어떻게 하나요", "해외 문자 요금은 얼마인가요");
         return cases;
     }
 

@@ -111,6 +111,14 @@ class PlanQuestionRulesTest {
         assertMarker(PlanQuestionType.MY_SUBSCRIPTION, false, "요금제 바꾸는 방법 알려주세요");
     }
 
+    @Test
+    void 통화_문자_데이터를_얼마나_쓸_수_있는지는_제공량_질문이고_다른_가능_여부는_절차_질문이다() {
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, false, "5G 프리미엄은 통화를 얼마나 쓸 수 있죠",
+                "알뜰 세이브는 문자를 몇 건 보낼 수 있나요", "데이터는 얼마나 쓸 수 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제를 바꿀 수 있나요", "청소년 요금제에 가입할 수 있어요",
+                "통화 품질을 개선할 수 있나요 얼마나 걸려요");
+    }
+
     // 규칙을 바꿔 목록이 달라지면 FAQ를 가로채지 않는지 확인한 뒤 고친다
     @Test
     void 기존_FAQ_질문은_요금제_목록과_추천_질문만_가져간다() throws Exception {
