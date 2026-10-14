@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -42,6 +43,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -90,6 +92,19 @@ public class QueryRoutingService {
     private final RuleBasedRoutingFallback ruleBasedFallback;
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
+    private final UnknownFaqRecheck unknownFaqRecheck;
+
+    public QueryRoutingService(
+            LlmClient llmClient,
+            ObjectMapper objectMapper,
+            QueryRoutingRepository queryRoutingRepository,
+            ConsultRequestRepository consultRequestRepository,
+            RuleBasedRoutingFallback ruleBasedFallback,
+            IntentConverter intentConverter,
+            TransactionTemplate transactionTemplate) {
+        this(llmClient, objectMapper, queryRoutingRepository, consultRequestRepository, ruleBasedFallback,
+                intentConverter, transactionTemplate, UnknownFaqRecheck.none());
+    }
 
     @Autowired
     public QueryRoutingService(
@@ -99,7 +114,21 @@ public class QueryRoutingService {
             ConsultRequestRepository consultRequestRepository,
             RuleBasedRoutingFallback ruleBasedFallback,
             IntentConverter intentConverter,
-            TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate,
+            ObjectProvider<UnknownFaqRecheck> unknownFaqRecheck) {
+        this(llmClient, objectMapper, queryRoutingRepository, consultRequestRepository, ruleBasedFallback,
+                intentConverter, transactionTemplate, unknownFaqRecheck.getIfAvailable(UnknownFaqRecheck::none));
+    }
+
+    public QueryRoutingService(
+            LlmClient llmClient,
+            ObjectMapper objectMapper,
+            QueryRoutingRepository queryRoutingRepository,
+            ConsultRequestRepository consultRequestRepository,
+            RuleBasedRoutingFallback ruleBasedFallback,
+            IntentConverter intentConverter,
+            TransactionTemplate transactionTemplate,
+            UnknownFaqRecheck unknownFaqRecheck) {
         this.llmClient = llmClient;
         this.objectMapper = objectMapper;
         this.queryRoutingRepository = queryRoutingRepository;
@@ -107,6 +136,7 @@ public class QueryRoutingService {
         this.ruleBasedFallback = ruleBasedFallback;
         this.intentConverter = intentConverter;
         this.transactionTemplate = transactionTemplate;
+        this.unknownFaqRecheck = Objects.requireNonNull(unknownFaqRecheck);
     }
 
     // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
@@ -132,6 +162,16 @@ public class QueryRoutingService {
     public IntentRouteResponse routeSingleConsult(
             ChatMessage userMessage, ChatContext context, String resolvedQuestion) {
         return route(userMessage, context, true, resolvedQuestion);
+    }
+
+    // 검색이 실패하면 모델 분류(UNKNOWN)를 그대로 둔다
+    private boolean hasFaqForUnknown(String question) {
+        try {
+            return unknownFaqRecheck.hasFaq(question);
+        } catch (RuntimeException e) {
+            log.warn("[라우팅] UNKNOWN 재확인 검색 실패, 모델 분류를 유지합니다: {}", e.getMessage());
+            return false;
+        }
     }
 
     private IntentRouteResponse route(
@@ -218,6 +258,20 @@ public class QueryRoutingService {
             log.warn("[라우팅] LLM 호출 실패, Rule Fallback으로 전환: {}", e.getMessage());
             payload = ruleBasedFallback.classify(question);
             method = QueryRouting.Method.RULE;
+        }
+
+        // 모델이 직접 UNKNOWN이라고 한 질문만 다시 본다. 낮은 신뢰도로 보류하는 아래 경우는 되묻기 안내를 유지한다
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.UNKNOWN
+                && hasFaqForUnknown(question)) {
+            log.info("[라우팅] UNKNOWN이지만 FAQ 검색 결과가 있어 FAQ로 보정합니다: messageId={}",
+                    userMessage.getMessageId());
+            payload = new LlmRoutingPayload(
+                    QueryRouting.Intent.FAQ, payload.confidence(), question,
+                    Collections.emptyMap(),
+                    List.of(new LlmRoutingPayload.SubQueryPayload(
+                            (short) 1, ConsultRequest.Intent.FAQ, question, Collections.emptyMap())));
+            method = QueryRouting.Method.SEARCH;
         }
 
         boolean llmRouting = method == QueryRouting.Method.LLM;

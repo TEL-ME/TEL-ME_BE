@@ -36,8 +36,9 @@ public class QueryRouting {
         FAQ, STORE, BOTH, UNKNOWN
     }
 
+    // SEARCH: 모델이 UNKNOWN으로 분류했지만 FAQ 검색 결과가 있어 FAQ로 보정한 경우
     public enum Method {
-        RULE, LLM
+        RULE, LLM, SEARCH
     }
 
     @Id
