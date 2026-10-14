@@ -48,7 +48,14 @@ public class ChatInputGuardService {
         Instant now = clock.instant();
         var cached = store.cached(state, request.requestId());
         if (cached.isPresent()) {
-            if (!fingerprint.equals(cached.get().fingerprint())) {
+            String compared = fingerprint;
+            if ("chat-input-guard-v2".equals(cached.get().policyVersion())) {
+                // 실제 배포된 이전 정책의 영수증만 당시 경계로 비교하며 새 영수증에는 저장하지 않는다.
+                compared = fingerprint(sessionId, inspector.previousFingerprintContent(request.content()), request);
+            } else if (!inspector.policyVersion().equals(cached.get().policyVersion())) {
+                throw new GeneralException(ChatErrorCode.INPUT_REQUEST_CONFLICT);
+            }
+            if (!compared.equals(cached.get().fingerprint())) {
                 throw new GeneralException(ChatErrorCode.INPUT_REQUEST_CONFLICT);
             }
             var response = cached.get().response();
@@ -112,12 +119,15 @@ public class ChatInputGuardService {
                                 inspection,
                                 now);
             }
-        } else if (!inspection.hasQuestion()) {
+        } else if (inspection.ambiguousCondition() || !inspection.hasQuestion()) {
             rejected = true;
             notice =
                     notice(
                             "REWRITE_REQUIRED",
-                            "민감정보를 제외한 문의 내용을 입력해 주세요.",
+                            inspection.ambiguousCondition()
+                                    ? "번호와 금액·기간의 경계가 불명확합니다. 번호를 제외하고 "
+                                            + "금액·기간과 문의 내용을 다시 입력해 주세요."
+                                    : "민감정보를 제외한 문의 내용을 입력해 주세요.",
                             count,
                             null,
                             null,

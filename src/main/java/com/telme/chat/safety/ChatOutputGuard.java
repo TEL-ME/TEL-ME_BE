@@ -1,5 +1,7 @@
 package com.telme.chat.safety;
 
+import static com.telme.chat.guard.MaskSpan.MASK;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.telme.chat.service.ChatAnswer;
@@ -75,10 +77,6 @@ public final class ChatOutputGuard {
         }).toList();
     }
 
-    public void verify(ChatAnswer answer) {
-        verify(answer, OutputMaskContext.empty());
-    }
-
     public void verify(ChatAnswer answer, OutputMaskContext masks) {
         verifyText(answer.content(), "content", masks);
         verifyValues(answer.followUps(), "followUps", 0, masks);
@@ -88,20 +86,12 @@ public final class ChatOutputGuard {
         }
     }
 
-    public void verifyClarification(String question, List<String> options) {
-        verifyClarification(question, options, OutputMaskContext.empty());
-    }
-
     public void verifyClarification(String question, List<String> options, OutputMaskContext masks) {
         verifyText(question, "clarification", masks);
         verifyValues(options, "clarificationOptions", 0, masks);
     }
 
     /** 객체가 바뀌더라도 실제로 저장할 직렬화 결과와 검사 대상이 같도록 확인한다. */
-    public void verifySerialized(String content, String followUps, String stores, String context) {
-        verifySerialized(content, followUps, stores, context, OutputMaskContext.empty());
-    }
-
     public void verifySerialized(String content, String followUps, String stores, String context,
             OutputMaskContext masks) {
         verifyText(content, "content", masks);
@@ -110,22 +100,40 @@ public final class ChatOutputGuard {
         verifyJson(context, "storeSearchContext", masks);
     }
 
-    public void verifySerializedClarification(String question, String options) {
-        verifySerializedClarification(question, options, OutputMaskContext.empty());
-    }
-
     public void verifySerializedClarification(String question, String options, OutputMaskContext masks) {
         verifyText(question, "clarification", masks);
         verifyJson(options, "clarificationOptions", masks);
     }
 
     /** 최종 직렬화된 종료 요약의 문장만 검사한다. 입력 제재 상태는 변경하지 않는다. */
-    public void verifySummary(String value) {
-        verifySummary(value, OutputMaskContext.empty());
-    }
-
     public void verifySummary(String value, OutputMaskContext masks) {
         verifyJson(value, "summary", masks);
+    }
+
+    public boolean needsMaskContext(ChatAnswer answer) {
+        return containsMask(answer.content(), 0) || containsMask(answer.followUps(), 0)
+                || containsMask(answer.storeResults(), 0)
+                || answer.storeSearchContext() != null && containsMask(answer.storeSearchContext().label(), 0);
+    }
+
+    private boolean containsMask(Object value, int depth) {
+        if (depth > MAX_METADATA_DEPTH) {
+            throw new IllegalArgumentException("출력 항목의 중첩 범위를 초과했습니다.");
+        }
+        if (value instanceof String text) {
+            return text.contains(MASK);
+        }
+        if (value instanceof java.util.Map<?, ?> map) {
+            return map.values().stream().anyMatch(entry -> containsMask(entry, depth + 1));
+        }
+        if (value instanceof Iterable<?> values) {
+            for (Object entry : values) {
+                if (containsMask(entry, depth + 1)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void verifyJson(String value, String field, OutputMaskContext masks) {

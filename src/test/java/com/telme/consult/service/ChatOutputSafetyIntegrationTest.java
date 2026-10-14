@@ -344,7 +344,7 @@ class ChatOutputSafetyIntegrationTest {
                 "SELECT status FROM chat_executions WHERE execution_id=?", String.class, executionId))
                 .isEqualTo("CANCELLED");
         assertThat(emitter.tokens()).isEmpty();
-        verify(outputGuard, never()).verify(any());
+        verify(outputGuard, never()).verify(any(), any());
     }
 
     @Test

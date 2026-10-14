@@ -1,5 +1,7 @@
 package com.telme.chat.service;
 
+import static com.telme.chat.guard.MaskSpan.MASK;
+
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
@@ -14,6 +16,7 @@ import com.telme.chat.safety.ChatOutputGuard;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -48,7 +51,7 @@ public class ChatExecutionService {
     public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        OutputMaskContext masks = readMasks(execution);
+        OutputMaskContext masks = readMasks(execution, () -> outputGuard.needsMaskContext(answer));
         verifyOutput(() -> outputGuard.verify(answer, masks));
         String followUps = chatMessageConverter.toJson(answer.followUps());
         String stores = chatMessageConverter.toJson(answer.storeResults());
@@ -86,7 +89,8 @@ public class ChatExecutionService {
 
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        OutputMaskContext masks = readMasks(execution);
+        OutputMaskContext masks = readMasks(execution, () -> question.contains(MASK)
+                || options != null && options.stream().anyMatch(option -> option != null && option.contains(MASK)));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
         Instant completedAt = Instant.now();
 
@@ -135,8 +139,11 @@ public class ChatExecutionService {
         return flushed(execution);
     }
 
-    private OutputMaskContext readMasks(ChatExecution execution) {
+    private OutputMaskContext readMasks(ChatExecution execution, BooleanSupplier needed) {
         try {
+            if (!needed.getAsBoolean()) {
+                return OutputMaskContext.empty();
+            }
             return inputMasks.read(execution.getSession().getSessionId(), execution.getInputMessage().getSequenceNo());
         } catch (RuntimeException inspectionFailure) {
             throw new GeneralException(ChatErrorCode.OUTPUT_CHECK_FAILED);

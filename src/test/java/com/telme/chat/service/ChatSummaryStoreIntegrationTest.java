@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.telme.chat.repository.ChatInputMaskRepository;
+
 import com.telme.chat.config.ChatSummaryProperties;
 import com.telme.chat.converter.ChatSummaryConverter;
 import com.telme.chat.entity.ChatExecution;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @Transactional
 class ChatSummaryStoreIntegrationTest {
+    @Autowired private ChatInputMaskRepository inputMasks;
 
     @Autowired
     private ChatSummaryStore chatSummaryStore;
@@ -213,7 +216,7 @@ class ChatSummaryStoreIntegrationTest {
 
         LlmClient model = mock(LlmClient.class);
         when(model.generate(any())).thenReturn("{\"messageIds\":[" + snapshot.messages().get(2).messageId() + "]}");
-        assertThat(new ChatSummaryService(boundedStore, model, properties, converter)
+        assertThat(new ChatSummaryService(boundedStore, model, properties, converter, inputMasks)
                 .summarizeIfNeeded(request)).isTrue();
         verify(model).generate(any());
         entityManager.clear();
@@ -313,7 +316,7 @@ class ChatSummaryStoreIntegrationTest {
         assertThat(snapshot.messages()).isEmpty();
         assertThat(snapshot.throughSequenceNo()).isEqualTo(2);
         LlmClient model = mock(LlmClient.class);
-        assertThat(new ChatSummaryService(boundedStore, model, properties, converter)
+        assertThat(new ChatSummaryService(boundedStore, model, properties, converter, inputMasks)
                 .summarizeIfNeeded(request)).isTrue();
         verify(model, never()).generate(any());
         entityManager.clear();
