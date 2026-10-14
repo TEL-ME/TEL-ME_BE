@@ -89,15 +89,16 @@ def keep(score, upper, floor, verdict):
     return bool(verdict)
 
 
-def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
+def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of, qo_top=QO_UPPER):
     """앱처럼 질문 벡터 결과를 먼저 합치고 중복을 빼 상위 3개를 근거로 쓴다.
 
     qo_results, qa_results: [(slot_id, score)] 벡터별 상위 결과. slot_id가 없는 시드 FAQ는 None
     verdict_of: slot_id -> 판정(True/False). 판정 구간 밖이면 부르지 않는다
     slot_id가 없으면 본문을 특정할 수 없어 판정 구간에서는 판정 없이 거부한다(#139와 같음)
+    qo_top: 질문 벡터 위 선. 기본은 지금 임계값 0.88이고, 올리면 그 아래까지 판정한다(질문 벡터 위로 넓히기)
     """
     picked = []
-    for results, upper, floor in ((qo_results, QO_UPPER, qo_floor), (qa_results, qa_top, qa_floor)):
+    for results, upper, floor in ((qo_results, qo_top, qo_floor), (qa_results, qa_top, qa_floor)):
         for slot, score in results:
             if slot in picked:
                 continue
@@ -107,9 +108,9 @@ def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
     return picked[:TOP_K]
 
 
-def needs_judgment(qo_results, qa_results, qo_floor, qa_floor, qa_top):
+def needs_judgment(qo_results, qa_results, qo_floor, qa_floor, qa_top, qo_top=QO_UPPER):
     """판정 구간에 든 slot 목록(중복 제거). slot_id 없는 후보는 판정하지 않으므로 뺀다."""
-    slots = [s for s, v in qo_results if qo_floor <= v < QO_UPPER and s is not None]
+    slots = [s for s, v in qo_results if qo_floor <= v < qo_top and s is not None]
     slots += [s for s, v in qa_results if qa_floor <= v < qa_top and s is not None]
     return list(dict.fromkeys(slots))
 
@@ -165,13 +166,13 @@ def cache_entry(runs, prompt_hash):
 
 def score_eval(rows, official, multi, unrelated_ids, config, verdicts):
     """개선용 180: 정답(공식/다중), 무관 통과(기존 EVAL-081~130 / 보강 EVAL-161~180), 판정 붙는 질문 수."""
-    qo_floor, qa_floor, qa_top = config
+    qo_floor, qa_floor, qa_top, qo_top = unpack(config)
     answered_official = answered_multi = unrelated_old = unrelated_supplement = judged_questions = 0
     for row in rows:
         eval_id = row["id"]
-        judged_questions += bool(needs_judgment(row["qo"], row["qa"], qo_floor, qa_floor, qa_top))
+        judged_questions += bool(needs_judgment(row["qo"], row["qa"], qo_floor, qa_floor, qa_top, qo_top))
         picked = set(served(row["qo"], row["qa"], qo_floor, qa_floor, qa_top,
-                            lambda slot: verdicts[f"{eval_id}|{slot}"]))
+                            lambda slot: verdicts[f"{eval_id}|{slot}"], qo_top))
         if eval_id in unrelated_ids:
             if picked:
                 number = int(eval_id.split("-")[1])
@@ -185,9 +186,14 @@ def score_eval(rows, official, multi, unrelated_ids, config, verdicts):
 
 
 def score_holdout(rows, config, verdicts):
-    qo_floor, qa_floor, qa_top = config
+    qo_floor, qa_floor, qa_top, qo_top = unpack(config)
     return sum(1 for row in rows if served(row["qo"], row["qa"], qo_floor, qa_floor, qa_top,
-                                          lambda slot, i=row["id"]: verdicts[f"{i}|{slot}"]))
+                                          lambda slot, i=row["id"]: verdicts[f"{i}|{slot}"], qo_top))
+
+
+def unpack(config):
+    """(질문 아래 선, Q_A 아래 선, Q_A 위 선[, 질문 위 선]). 질문 위 선이 없으면 지금 임계값 0.88."""
+    return (*config, QO_UPPER) if len(config) == 3 else tuple(config)
 
 
 # ---------- 입출력 ----------
@@ -266,6 +272,8 @@ def main():
     parser.add_argument("--qo-floor", type=float, default=0.80)
     parser.add_argument("--qa-floors", type=float, nargs="+", default=[0.71, 0.70, 0.69])
     parser.add_argument("--qa-tops", type=float, nargs="+", default=[0.72, 0.74, 0.76, 0.78, 0.80])
+    parser.add_argument("--qo-tops", type=float, nargs="+", default=[QO_UPPER],
+                        help="질문 벡터 위 선. 0.88보다 높이면 그 아래까지 판정한다(질문 벡터 위로 넓히기)")
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--container", default="telme-postgres")
     parser.add_argument("--ollama-url", default="http://localhost:11434")
@@ -288,7 +296,7 @@ def main():
     rows = search_rows(eval_items, args.container, args.ollama_url)
     holdout_rows = search_rows(holdout_items, args.container, args.ollama_url)
 
-    widest = (args.qo_floor, min(args.qa_floors), max(args.qa_tops))
+    widest = (args.qo_floor, min(args.qa_floors), max(args.qa_tops), max(args.qo_tops))
     questions = {row["id"]: row["question"] for row in rows + holdout_rows}
     pairs = {f"{row['id']}|{slot}" for row in rows + holdout_rows
              for slot in needs_judgment(row["qo"], row["qa"], *widest)}
@@ -356,20 +364,21 @@ def main():
     judged = {key: value["answerable"] for key, value in verdicts.items()}
     flips = sum(1 for key in pairs if len({r["answerable"] for r in verdicts[key]["runs"]}) > 1)
     print(f"\n판정 {len(pairs)}쌍 중 3회 안에서 갈린 쌍 {flips}")
-    print(f"\n질문 벡터 아래 선 {args.qo_floor:.2f} 고정 (위 선 {QO_UPPER})")
-    print("Q_A 아래 선 ~ 위 선 | 정답 공식 / 다중 (110) | 무관 기존 / 보강 (70) | holdout (90) | 판정 붙는 질문")
+    print(f"\n질문 벡터 아래 선 {args.qo_floor:.2f} 고정")
+    print("질문 위 선 | Q_A 아래 선 ~ 위 선 | 정답 공식 / 다중 (110) | 무관 기존 / 보강 (70) | holdout (90) | 판정 붙는 질문")
     baseline = score_eval(rows, official, multi, unrelated_ids, (QO_UPPER, QA_UPPER, QA_UPPER), judged)
     print(f"  현행 (판정 없음)      | {baseline['official']} / {baseline['multi']} | "
           f"{baseline['unrelatedOld']} / {baseline['unrelatedSupplement']} | "
           f"{score_holdout(holdout_rows, (QO_UPPER, QA_UPPER, QA_UPPER), judged)} | 0")
-    for qa_floor in sorted(args.qa_floors, reverse=True):
-        for qa_top in sorted(args.qa_tops):
-            config = (args.qo_floor, qa_floor, qa_top)
-            result = score_eval(rows, official, multi, unrelated_ids, config, judged)
-            print(f"  {qa_floor:.2f} ~ {qa_top:.2f}        | {result['official']} / {result['multi']} | "
-                  f"{result['unrelatedOld']} / {result['unrelatedSupplement']} | "
-                  f"{score_holdout(holdout_rows, config, judged)} | "
-                  f"{result['judgedQuestions'] / len(rows):.0%}")
+    for qo_top in sorted(args.qo_tops):
+        for qa_floor in sorted(args.qa_floors, reverse=True):
+            for qa_top in sorted(args.qa_tops):
+                config = (args.qo_floor, qa_floor, qa_top, qo_top)
+                result = score_eval(rows, official, multi, unrelated_ids, config, judged)
+                print(f"  {qo_top:.2f} | {qa_floor:.2f} ~ {qa_top:.2f} | {result['official']} / {result['multi']} | "
+                      f"{result['unrelatedOld']} / {result['unrelatedSupplement']} | "
+                      f"{score_holdout(holdout_rows, config, judged)} | "
+                      f"{result['judgedQuestions'] / len(rows):.0%}")
 
     if args.latency_sample:
         if not args.run:

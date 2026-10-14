@@ -60,6 +60,14 @@ class ServedTest(unittest.TestCase):
         self.assertEqual(served([], qa, *UPPER, lambda slot: slot == "C" or fail(slot)), ["C", None])
         self.assertEqual(needs_judgment([(None, 0.85)], qa, *UPPER), ["C"])
 
+    def test_question_upper_line_can_be_raised(self):
+        qo = [("A", 0.89)]
+        # 지금(질문 위 선 0.88)은 판정 없이 통과, 0.90으로 올리면 판정해서 거절할 수 있다
+        self.assertEqual(served(qo, [], *UPPER, always(False)), ["A"])
+        self.assertEqual(served(qo, [], *UPPER, always(False), qo_top=0.90), [])
+        self.assertEqual(needs_judgment(qo, [], *UPPER), [])
+        self.assertEqual(needs_judgment(qo, [], *UPPER, qo_top=0.90), ["A"])
+
     def test_same_slot_judged_once_per_question(self):
         self.assertEqual(needs_judgment([("A", 0.85)], [("A", 0.75), ("B", 0.70)], *UPPER), ["A"])
 
@@ -143,6 +151,13 @@ class ScoreTest(unittest.TestCase):
     def test_upper_band(self):
         self.assertEqual(self.score(UPPER), {"official": 2, "multi": 2, "unrelatedOld": 0,
                                              "unrelatedSupplement": 1, "judgedQuestions": 3})
+
+    def test_question_upper_line_in_config(self):
+        rows = [{"id": "EVAL-081", "qo": [("Z", 0.89)], "qa": []}]
+        verdicts = {"EVAL-081|Z": False}
+        self.assertEqual(score_eval(rows, {}, {}, {"EVAL-081"}, UPPER, verdicts)["unrelatedOld"], 1)
+        self.assertEqual(score_eval(rows, {}, {}, {"EVAL-081"}, UPPER + (0.90,), verdicts)["unrelatedOld"], 0)
+        self.assertEqual(score_holdout(rows, UPPER + (0.90,), verdicts), 0)
 
     def test_holdout_counts_questions_with_any_result(self):
         rows = [{"id": "H-1", "qo": [], "qa": [("A", 0.75)]}, {"id": "H-2", "qo": [], "qa": [("B", 0.60)]}]
