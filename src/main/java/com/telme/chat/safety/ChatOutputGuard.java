@@ -16,7 +16,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 /**
- * 최종 출력 문구만 검사한다. 사용자 식별자·입력 제재·개인정보 치환과 연결하지 않는다.
+ * 최종 출력 문구를 검사하며 사용자 식별자·입력 제재·개인정보 치환과 연결하지 않는다.
+ * 서버가 확인한 마스크 인용만 내부 경계로 검사하고 실제 저장·표시 문구는 변경하지 않는다.
  * 공통 목록·정규화·분리 표기를 변경하면 ChatInputInspector도 함께 확인한다.
  * 출력에서는 피해 인용도 차단하므로 입력의 인용 예외를 공통 규칙으로 옮기지 않는다.
  */
@@ -75,49 +76,70 @@ public final class ChatOutputGuard {
     }
 
     public void verify(ChatAnswer answer) {
-        verifyText(answer.content(), "content");
-        verifyValues(answer.followUps(), "followUps", 0);
-        verifyValues(answer.storeResults(), "storeResults", 0);
+        verify(answer, OutputMaskContext.empty());
+    }
+
+    public void verify(ChatAnswer answer, OutputMaskContext masks) {
+        verifyText(answer.content(), "content", masks);
+        verifyValues(answer.followUps(), "followUps", 0, masks);
+        verifyValues(answer.storeResults(), "storeResults", 0, masks);
         if (answer.storeSearchContext() != null) {
-            verifyText(answer.storeSearchContext().label(), "storeSearchContext");
+            verifyText(answer.storeSearchContext().label(), "storeSearchContext", masks);
         }
     }
 
     public void verifyClarification(String question, List<String> options) {
-        verifyText(question, "clarification");
-        verifyValues(options, "clarificationOptions", 0);
+        verifyClarification(question, options, OutputMaskContext.empty());
+    }
+
+    public void verifyClarification(String question, List<String> options, OutputMaskContext masks) {
+        verifyText(question, "clarification", masks);
+        verifyValues(options, "clarificationOptions", 0, masks);
     }
 
     /** 객체가 바뀌더라도 실제로 저장할 직렬화 결과와 검사 대상이 같도록 확인한다. */
     public void verifySerialized(String content, String followUps, String stores, String context) {
-        verifyText(content, "content");
-        verifyJson(followUps, "followUps");
-        verifyJson(stores, "storeResults");
-        verifyJson(context, "storeSearchContext");
+        verifySerialized(content, followUps, stores, context, OutputMaskContext.empty());
+    }
+
+    public void verifySerialized(String content, String followUps, String stores, String context,
+            OutputMaskContext masks) {
+        verifyText(content, "content", masks);
+        verifyJson(followUps, "followUps", masks);
+        verifyJson(stores, "storeResults", masks);
+        verifyJson(context, "storeSearchContext", masks);
     }
 
     public void verifySerializedClarification(String question, String options) {
-        verifyText(question, "clarification");
-        verifyJson(options, "clarificationOptions");
+        verifySerializedClarification(question, options, OutputMaskContext.empty());
+    }
+
+    public void verifySerializedClarification(String question, String options, OutputMaskContext masks) {
+        verifyText(question, "clarification", masks);
+        verifyJson(options, "clarificationOptions", masks);
     }
 
     /** 최종 직렬화된 종료 요약의 문장만 검사한다. 입력 제재 상태는 변경하지 않는다. */
     public void verifySummary(String value) {
-        verifyJson(value, "summary");
+        verifySummary(value, OutputMaskContext.empty());
     }
 
-    private void verifyJson(String value, String field) {
+    public void verifySummary(String value, OutputMaskContext masks) {
+        verifyJson(value, "summary", masks);
+    }
+
+    private void verifyJson(String value, String field, OutputMaskContext masks) {
         if (value == null) {
             return;
         }
         try {
-            verifyNode(mapper.readTree(value), field, 0);
+            verifyNode(mapper.readTree(value), field, 0, masks);
         } catch (IOException exception) {
             throw new IllegalArgumentException("저장할 출력 항목 형식이 올바르지 않습니다.");
         }
     }
 
-    private void verifyNode(JsonNode value, String field, int depth) {
+    private void verifyNode(JsonNode value, String field, int depth, OutputMaskContext masks) {
         if (depth > MAX_METADATA_DEPTH) {
             throw new IllegalArgumentException("출력 항목의 중첩 범위를 초과했습니다.");
         }
@@ -125,36 +147,36 @@ public final class ChatOutputGuard {
             return;
         }
         if (value.isTextual()) {
-            verifyText(value.asText(), field);
+            verifyText(value.asText(), field, masks);
         } else if (value.isContainerNode()) {
             for (JsonNode child : value) {
-                verifyNode(child, field, depth + 1);
+                verifyNode(child, field, depth + 1, masks);
             }
         }
     }
 
-    private void verifyValues(Object value, String field, int depth) {
+    private void verifyValues(Object value, String field, int depth, OutputMaskContext masks) {
         if (depth > MAX_METADATA_DEPTH) {
             throw new IllegalArgumentException("출력 항목의 중첩 범위를 초과했습니다.");
         }
         if (value instanceof String text) {
-            verifyText(text, field);
+            verifyText(text, field, masks);
         } else if (value instanceof java.util.Map<?, ?> map) {
             for (Object entry : map.values()) {
-                verifyValues(entry, field, depth + 1);
+                verifyValues(entry, field, depth + 1, masks);
             }
         } else if (value instanceof Iterable<?> values) {
             for (Object entry : values) {
-                verifyValues(entry, field, depth + 1);
+                verifyValues(entry, field, depth + 1, masks);
             }
         }
     }
 
-    private void verifyText(String value, String field) {
+    private void verifyText(String value, String field, OutputMaskContext masks) {
         if (value == null || value.isBlank()) {
             return;
         }
-        String normalized = normalize(value);
+        String normalized = normalize(masks.protect(value));
         List<Span> allowed = allowedWords(normalized);
         List<String> detected = new ArrayList<>();
         for (CompiledRule rule : rules) {

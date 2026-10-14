@@ -59,7 +59,7 @@ public class LlmGeneration {
     @Column(name = "model", length = 50)
     private String model;
 
-    @Column(name = "prompt_version", length = 30)
+    @Column(name = "prompt_version", length = 100)
     private String promptVersion;
 
     @JdbcTypeCode(SqlTypes.JSON)

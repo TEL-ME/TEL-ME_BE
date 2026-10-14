@@ -11,7 +11,9 @@ import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.consult.service.ConsultTurnPreparationService;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
+import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnknownFaqRecheck;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -22,6 +24,7 @@ class ConsultTurnRoutingConfigurationTest {
                     .withUserConfiguration(ConsultTurnRoutingConfiguration.class)
                     .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
                     .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(FaqSearchService.class, () -> mock(FaqSearchService.class))
                     .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
                     .withBean(ContextProvider.class, () -> mock(ContextProvider.class))
                     .withBean(
@@ -61,6 +64,7 @@ class ConsultTurnRoutingConfigurationTest {
                             assertThat(context).hasSingleBean(AnalysisProvider.class);
                             assertThat(context).hasSingleBean(FollowupAnalysisProvider.class);
                             assertThat(context).hasSingleBean(TurnAnalyzer.class);
+                            assertThat(context).hasSingleBean(UnknownFaqRecheck.class);
                         });
     }
 }

@@ -151,6 +151,34 @@ class SubscriptionContractTest {
     }
 
     @Test
+    void 윤일_가입자의_약정은_평년_2월_28일_0시에_끝나고_그날부터_위약금이_없다() {
+        at(Instant.parse("2028-02-29T03:00:00Z"));
+        Subscription subscription = service.subscribe(userId, planId("FIVE_G_STANDARD"), null, true).subscription();
+
+        // 2030-02-28 0시(KST) 직전과 정각
+        SubscriptionSnapshot.ContractInfo before = contractAt(subscription, "2030-02-27T14:59:59Z");
+        assertThat(before.active()).isTrue();
+        assertThat(queryService.getTerminationPenalty(userId).refundPercent()).isEqualTo(50);
+
+        SubscriptionSnapshot.ContractInfo after = contractAt(subscription, "2030-02-27T15:00:00Z");
+        assertThat(after.active()).isFalse();
+        assertThat(after.endsAt()).isEqualTo(Instant.parse("2030-02-27T15:00:00Z"));
+        ContractPenalty penalty = queryService.getTerminationPenalty(userId);
+        assertThat(penalty.elapsedMonths()).isEqualTo(24);
+        assertThat(penalty.refundPercent()).isZero();
+        assertThat(penalty.penalty()).isZero();
+    }
+
+    @Test
+    void 윤일_가입자의_12개월_위약금_비율은_평년_2월_28일_0시에_바뀐다() {
+        at(Instant.parse("2028-02-29T03:00:00Z"));
+        service.subscribe(userId, planId("FIVE_G_STANDARD"), null, true);
+
+        assertPenalty("2029-02-27T14:59:59Z", 11, 178_750L, 100, 178_750L);
+        assertPenalty("2029-02-27T15:00:00Z", 12, 195_000L, 50, 97_500L);
+    }
+
+    @Test
     void 약정이_없는_구독은_약정_정보가_없다() {
         Subscription subscription = service.subscribe(userId, planId("FIVE_G_STANDARD"), null).subscription();
 

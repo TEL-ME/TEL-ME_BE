@@ -26,6 +26,10 @@ final class ChatSummaryNormalizer {
     private static final Pattern HEADING = Pattern.compile("^#{1,6}\\s+");
     private static final Pattern LIST_MARKER = Pattern.compile("^(?:[-*+]\\s+|\\d+[.)]\\s+|>\\s*)");
     private static final Pattern MARKDOWN_LINK = Pattern.compile("\\[([^]\\r\\n]+)]\\([^)]*\\)");
+    // 고정 민감정보 마스크(***)는 보존하고 일반 강조용 별표 두 개만 제거한다.
+    private static final Pattern BOLD_MARKER = Pattern.compile("(?<!\\*)\\*\\*(?!\\*)");
+    // 마스크에 강조 기호가 붙은 5개·7개 별표를 보존한다. 인접한 두 마스크(6개)는 합치지 않는다.
+    private static final Pattern EMPHASIZED_MASK = Pattern.compile("(?<!\\*)\\*{5}(?:\\*{2})?(?!\\*)");
     private static final Pattern MEANINGFUL_TEXT = Pattern.compile("[\\p{L}\\p{N}]");
 
     private ChatSummaryNormalizer() {
@@ -64,8 +68,8 @@ final class ChatSummaryNormalizer {
         String normalized = HEADING.matcher(line).replaceFirst("");
         normalized = LIST_MARKER.matcher(normalized).replaceFirst("");
         normalized = MARKDOWN_LINK.matcher(normalized).replaceAll("$1");
-        return normalized
-                .replace("**", "")
+        normalized = EMPHASIZED_MASK.matcher(normalized).replaceAll("***");
+        return BOLD_MARKER.matcher(normalized).replaceAll("")
                 .replace("__", "")
                 .replace("`", "")
                 .trim();

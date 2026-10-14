@@ -12,7 +12,10 @@ import com.telme.consult.service.QueryRoutingAnalysisProvider;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.CompoundQuestionSuggestions;
 import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
 import com.telme.consult.service.QueryRoutingFollowupAnalysisProvider;
+import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.UnknownFaqRecheck;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,6 +31,13 @@ public class ConsultTurnRoutingConfiguration {
     @ConditionalOnMissingBean(FollowupAnalysisProvider.class)
     FollowupAnalysisProvider consultFollowupAnalysisProvider(QueryRoutingService routing) {
         return new QueryRoutingFollowupAnalysisProvider(routing);
+    }
+
+    // 답변 검색과 같은 설정(벡터, 임계값)으로 원문을 검색한다. 점수 기록은 남기지 않는다(kind 없음)
+    @Bean
+    @ConditionalOnMissingBean(UnknownFaqRecheck.class)
+    UnknownFaqRecheck consultUnknownFaqRecheck(FaqSearchService searches) {
+        return question -> !searches.search(new FaqSearchRequest(question, 1)).isEmpty();
     }
 
     @Bean

@@ -126,7 +126,7 @@ class AnswerPromptTemplatesTest {
     @DisplayName("일반·비교 질문 프롬프트 버전명은 llm_generations.prompt_version 길이 안에 들어간다")
     void 프롬프트_버전명은_저장_컬럼_길이를_넘지_않는다() {
         // 길이를 넘으면 생성 기록 저장이 경고 로그만 남기고 빠진다
-        int promptVersionColumnLength = 30;
+        int promptVersionColumnLength = 100;
 
         assertThat(AnswerPromptTemplates.promptVersionFor("유심 재발급 비용 알려줘"))
                 .hasSizeLessThanOrEqualTo(promptVersionColumnLength);
