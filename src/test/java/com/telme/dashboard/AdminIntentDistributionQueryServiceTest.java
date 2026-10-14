@@ -63,6 +63,18 @@ class AdminIntentDistributionQueryServiceTest {
     }
 
     @Test
+    void 검색_보정은_RULE로_센다() {
+        when(repository.countDistribution(FROM, TO)).thenReturn(List.of(
+                new RoutingCount(Intent.FAQ, Method.SEARCH, 2),
+                new RoutingCount(Intent.FAQ, Method.RULE, 1),
+                new RoutingCount(Intent.FAQ, Method.LLM, 1)));
+
+        var result = service.getDistribution(new AdminIntentDistributionSearchRequest(FROM, TO));
+
+        assertThat(result.methods()).extracting(share -> share.count()).containsExactly(3L, 1L, 0L);
+    }
+
+    @Test
     void 없는_유형도_0으로_반환한다() {
         when(repository.countDistribution(FROM, TO))
                 .thenReturn(List.of(new RoutingCount(Intent.STORE, Method.LLM, 1)));
