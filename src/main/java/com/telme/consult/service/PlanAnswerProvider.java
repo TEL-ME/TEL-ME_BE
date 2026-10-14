@@ -10,22 +10,28 @@ import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.LongFunction;
 
-/** 요금제 목록 질문은 FAQ 검색 없이 요금제 테이블로 답하고, 그 밖의 질문은 FAQ 답변 경로에 맡긴다. */
+/** 요금제 목록과 내 요금제·위약금 질문은 FAQ 검색 없이 데이터로 답하고, 그 밖의 질문은 FAQ 답변 경로에 맡긴다. */
 public final class PlanAnswerProvider implements AnswerProvider {
     private final AnswerProvider faqAnswers;
     private final PlanQuestionClassifier classifier;
     private final PlanCatalogAnswerer catalog;
+    private final MemberPlanAnswerer member;
+    private final LongFunction<Optional<Long>> memberOfSession;
     private final ComparisonEvidenceResolver comparisonEvidence;
     private final ExecutionTrace trace;
     private final boolean enabled;
 
     public PlanAnswerProvider(AnswerProvider faqAnswers, PlanQuestionClassifier classifier,
-            PlanCatalogAnswerer catalog, ComparisonEvidenceResolver comparisonEvidence, ExecutionTrace trace,
-            boolean enabled) {
+            PlanCatalogAnswerer catalog, MemberPlanAnswerer member, LongFunction<Optional<Long>> memberOfSession,
+            ComparisonEvidenceResolver comparisonEvidence, ExecutionTrace trace, boolean enabled) {
         this.faqAnswers = Objects.requireNonNull(faqAnswers);
         this.classifier = Objects.requireNonNull(classifier);
         this.catalog = Objects.requireNonNull(catalog);
+        this.member = Objects.requireNonNull(member);
+        this.memberOfSession = Objects.requireNonNull(memberOfSession);
         this.comparisonEvidence = Objects.requireNonNull(comparisonEvidence);
         this.trace = Objects.requireNonNull(trace);
         this.enabled = enabled;
@@ -61,15 +67,24 @@ public final class PlanAnswerProvider implements AnswerProvider {
         String question = input.resolvedUserQuery() == null || input.resolvedUserQuery().isBlank()
                 ? input.originalUserQuery() : input.resolvedUserQuery();
         PlanQuestionType type = classifier.classify(input.executionId(), question);
-        if (type != PlanQuestionType.PLAN_CATALOG) {
+        String content;
+        List<String> followUps = List.of();
+        if (type == PlanQuestionType.PLAN_CATALOG) {
+            content = catalog.answer(question);
+        } else if (type == PlanQuestionType.MY_SUBSCRIPTION || type == PlanQuestionType.MY_PENALTY) {
+            // 개인 정보는 이 채팅방 주인(회원)의 것만 읽는다. 회원이 아니면 로그인 안내를 준다
+            MemberPlanAnswerer.MemberAnswer memberAnswer = member.answer(type,
+                    memberOfSession.apply(input.sessionId()).orElse(null));
+            content = memberAnswer == null ? null : memberAnswer.content();
+            followUps = memberAnswer == null ? List.of() : memberAnswer.followUps();
+        } else {
             return null;
         }
-        String content = catalog.answer(question);
         if (content == null) {
             return null;
         }
         trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name()));
         return GeneratedAnswer.withoutSources(
-                new ChatAnswer(ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
+                new ChatAnswer(ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, followUps, null));
     }
 }

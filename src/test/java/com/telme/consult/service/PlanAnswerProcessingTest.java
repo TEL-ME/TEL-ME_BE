@@ -95,8 +95,9 @@ class PlanAnswerProcessingTest {
     }
 
     private ConsultChatProcessingService processor(ConsultChatProcessingService.TurnAnalyzer analyzer) {
-        AnswerProvider answers = new PlanAnswerProvider(faq, classifier, catalog,
-                ComparisonEvidenceResolver.passthrough(), mock(ExecutionTrace.class), true);
+        AnswerProvider answers = new PlanAnswerProvider(faq, classifier, catalog, mock(MemberPlanAnswerer.class),
+                sessionId -> java.util.Optional.empty(), ComparisonEvidenceResolver.passthrough(),
+                mock(ExecutionTrace.class), true);
         return new ConsultChatProcessingService(analyzer, answers, persistence, new ConfirmedConditionConverter(),
                 events, mock(ExecutionTrace.class), com.telme.consult.repository.AskedQuestions.none(),
                 NoAnswerSuggestions.none(), RagSearchResultAnswerGenerator.SuggestedQuestions.none());

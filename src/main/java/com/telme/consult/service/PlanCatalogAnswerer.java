@@ -114,8 +114,8 @@ public class PlanCatalogAnswerer {
             if (!text.isEmpty()) {
                 text.append("\n\n");
             }
-            text.append(plan.getName()).append("\n- 월정액 ").append(money(plan.getMonthlyFee()))
-                    .append("\n- 데이터 ").append(data(plan));
+            text.append(plan.getName()).append("\n- 월정액 ").append(PlanFormat.money(plan.getMonthlyFee()))
+                    .append("\n- 데이터 ").append(PlanFormat.data(plan.isUnlimited(), plan.getDataGb()));
         }
         String note = ageNote(plans);
         return note.isEmpty() ? text.toString() : text + "\n\n" + note;
@@ -127,8 +127,8 @@ public class PlanCatalogAnswerer {
         StringBuilder text = new StringBuilder();
         byNetwork.forEach((network, group) -> {
             text.append("\n[").append(networkLabel(network)).append("]\n");
-            group.forEach(plan -> text.append("- ").append(plan.getName()).append(": 월 ").append(money(plan.getMonthlyFee()))
-                    .append(" · 데이터 ").append(data(plan)).append('\n'));
+            group.forEach(plan -> text.append("- ").append(plan.getName()).append(": 월 ").append(PlanFormat.money(plan.getMonthlyFee()))
+                    .append(" · 데이터 ").append(PlanFormat.data(plan.isUnlimited(), plan.getDataGb())).append('\n'));
         });
         String note = ageNote(plans);
         return (text.toString().stripLeading() + (note.isEmpty() ? "" : "\n" + note)).stripTrailing();
@@ -154,13 +154,5 @@ public class PlanCatalogAnswerer {
             case LTE -> "LTE";
             case BUDGET -> "알뜰";
         };
-    }
-
-    private static String money(int won) {
-        return "%,d원".formatted(won);
-    }
-
-    private static String data(Plan plan) {
-        return plan.isUnlimited() ? "무제한" : plan.getDataGb().stripTrailingZeros().toPlainString() + "GB";
     }
 }
