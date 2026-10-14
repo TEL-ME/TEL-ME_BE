@@ -115,7 +115,9 @@ public class PlanCatalogAnswerer {
                 text.append("\n\n");
             }
             text.append(plan.getName()).append("\n- 월정액 ").append(PlanFormat.money(plan.getMonthlyFee()))
-                    .append("\n- 데이터 ").append(PlanFormat.data(plan.isUnlimited(), plan.getDataGb()));
+                    .append("\n- 데이터 ").append(PlanFormat.data(plan.isUnlimited(), plan.getDataGb()))
+                    .append("\n- 통화 ").append(PlanFormat.voice(plan.isVoiceUnlimited(), plan.getVoiceMinutes()))
+                    .append("\n- 문자 ").append(PlanFormat.sms(plan.isSmsUnlimited(), plan.getSmsCount()));
         }
         String note = ageNote(plans);
         return note.isEmpty() ? text.toString() : text + "\n\n" + note;

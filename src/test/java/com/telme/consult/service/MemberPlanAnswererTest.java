@@ -15,12 +15,15 @@ import com.telme.subscription.exception.SubscriptionErrorCode;
 import com.telme.subscription.service.SubscriptionCommandService;
 import com.telme.subscription.service.SubscriptionPauseService;
 import com.telme.subscription.service.SubscriptionQueryService;
+import com.telme.usage.service.SubscriptionUsageService;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,9 @@ class MemberPlanAnswererTest {
     @Autowired SubscriptionPauseService pauseService;
     @Autowired UserRepository userRepository;
     @Autowired PlanRepository planRepository;
+    @Autowired SubscriptionUsageService usageService;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired EntityManager entityManager;
 
     Long userId;
 
@@ -62,9 +68,9 @@ class MemberPlanAnswererTest {
     }
 
     @Test
-    void 내_요금제와_위약금_질문이_아니면_답하지_않는다() {
+    void 내_요금제와_위약금과_사용량_질문이_아니면_답하지_않는다() {
         for (PlanQuestionType type : new PlanQuestionType[] {PlanQuestionType.NONE, PlanQuestionType.PLAN_CATALOG,
-                PlanQuestionType.MY_USAGE, PlanQuestionType.RECOMMENDATION}) {
+                PlanQuestionType.RECOMMENDATION}) {
             assertThat(answerer.answer(type, userId)).isNull();
             assertThat(answerer.answer(type, null)).isNull();
         }
@@ -97,7 +103,7 @@ class MemberPlanAnswererTest {
         String penalty = answerer.answer(PlanQuestionType.MY_PENALTY, userId).content();
 
         assertThat(subscription).contains("5G 스탠다드 요금제에 가입하셨어요", "10월 13일 오전 9시에 개통될 예정이에요",
-                "월정액 65,000원", "데이터 50GB", "약정 24개월 (월 16,250원 할인");
+                "월정액 65,000원", "데이터 50GB", "통화 ", "문자 ", "약정 24개월 (월 16,250원 할인");
         assertThat(penalty).contains("아직 개통 전이라 받은 할인이 없어서 지금 해지하셔도 위약금은 없어요(0원)");
     }
 
@@ -173,9 +179,90 @@ class MemberPlanAnswererTest {
         when(query.getTerminationPenalty(anyLong()))
                 .thenThrow(new GeneralException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        MemberAnswer answer = new MemberPlanAnswerer(query).answer(PlanQuestionType.MY_PENALTY, 1L);
+        MemberAnswer answer = new MemberPlanAnswerer(query, mock(SubscriptionUsageService.class)).answer(PlanQuestionType.MY_PENALTY, 1L);
 
         assertThat(answer.content()).contains("확인할 약정이 없어요");
+    }
+
+    @Test
+    void 로그인하지_않았거나_가입하지_않았으면_사용량_대신_안내를_준다() {
+        MemberAnswer guest = answerer.answer(PlanQuestionType.MY_USAGE, null);
+        MemberAnswer member = answerer.answer(PlanQuestionType.MY_USAGE, userId);
+
+        assertThat(guest.content()).contains("로그인하시면 이번 달 사용량과 예상 요금을 확인해 드릴 수 있어요");
+        assertThat(member.content()).contains("가입한 요금제가 없어서 확인할 사용량이 없어요");
+        assertThat(guest.followUps()).containsExactly("요금제 종류 알려줘");
+        assertThat(member.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    @Test
+    void 개통_전에는_사용량이_없고_개통_예정_시각을_알려준다() {
+        subscribe("FIVE_G_STANDARD", false);
+
+        assertThat(answerer.answer(PlanQuestionType.MY_USAGE, userId).content())
+                .contains("아직 개통 전이라 사용량이 없어요", "10월 13일 오전 9시에 개통될 예정이에요");
+    }
+
+    @Test
+    void 이번_달_사용량은_사용한_양과_한도와_남은_양과_예상_요금을_알려준다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-31T14:00:00Z")); // 10월 31일 23시(KST)
+        setThisMonthUsage(10 * 1024, 120, 30);
+
+        MemberAnswer answer = answerer.answer(PlanQuestionType.MY_USAGE, userId);
+
+        assertThat(answer.content()).startsWith("10월 사용량이에요. 오늘이 정산일이에요.")
+                .contains("- 데이터 10GB / 50GB (남은 양 40GB)", "- 예상 요금 65,000원")
+                .doesNotContain("한도를 넘었어요", "일시 정지", "나눠 계산");
+        assertThat(answer.followUps()).containsExactly("나한테 맞는 요금제 추천해줘");
+    }
+
+    @Test
+    void 정산일까지_남은_일수를_알려준다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(OCT_12);
+
+        assertThat(answerer.answer(PlanQuestionType.MY_USAGE, userId).content()).contains("정산일까지 19일 남았어요");
+    }
+
+    @Test
+    void 한도를_넘긴_항목은_넘었다고_알린다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_LITE", false);
+        at(Instant.parse("2026-10-31T14:00:00Z"));
+        setThisMonthUsage(20 * 1024, 10, 10);
+
+        assertThat(answerer.answer(PlanQuestionType.MY_USAGE, userId).content())
+                .contains("- 데이터 20GB / 8GB (남은 양 0GB) - 한도를 넘었어요");
+    }
+
+    @Test
+    void 요금제를_바꾼_달에는_일할_계산했다고_알리고_지난달과의_차이를_알려준다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-09T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_LITE"), null); // 10월 10일부터 적용
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+
+        String content = answerer.answer(PlanQuestionType.MY_USAGE, userId).content();
+
+        assertThat(content).contains("이번 달에 요금제가 바뀌어 날짜별로 나눠 계산했어요", "지난달보다", "적어요");
+        assertThat(content).doesNotContain("- 예상 요금 65,000원").doesNotContain("- 예상 요금 45,000원");
+    }
+
+    @Test
+    void 일시_정지_중이면_사용량_답변에_정지_중이라고_알린다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+        pauseService.pause(userId, 5);
+
+        assertThat(answerer.answer(PlanQuestionType.MY_USAGE, userId).content()).contains("지금은 일시 정지 중이에요");
+    }
+
+    private void setThisMonthUsage(long dataMb, int voice, int sms) {
+        usageService.getOverview(userId);
+        jdbc.update("UPDATE subscription_usages SET used_data_mb = ?, used_voice_minutes = ?, used_sms_count = ? "
+                + "WHERE usage_month = '2026-10-01' AND subscription_id IN "
+                + "(SELECT subscription_id FROM user_subscriptions WHERE user_id = ?)", dataMb, voice, sms, userId);
+        entityManager.clear();
     }
 
     private void subscribeAt(Instant joinedAt, String planCode, boolean contract) {

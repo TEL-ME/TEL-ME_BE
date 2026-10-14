@@ -20,8 +20,8 @@ class PlanCatalogAnswererTest {
         assertThat(answerer.answer("5G 스탠다드 얼마예요"))
                 .contains("5G 스탠다드", "월정액 65,000원", "데이터 50GB")
                 .doesNotContain("LTE", "알뜰");
-        assertThat(answerer.answer("알뜰 미니가 얼마예요")).contains("월정액 15,000원", "데이터 1.5GB");
-        assertThat(answerer.answer("5G 언리미티드 요금 알려줘")).contains("데이터 무제한");
+        assertThat(answerer.answer("알뜰 미니가 얼마예요")).contains("월정액 15,000원", "데이터 1.5GB", "통화 300분", "문자 100건");
+        assertThat(answerer.answer("5G 언리미티드 요금 알려줘")).contains("데이터 무제한", "통화 무제한", "문자 무제한");
     }
 
     @Test

@@ -84,7 +84,8 @@ public final class PlanAnswerProvider implements AnswerProvider {
         List<String> followUps = List.of();
         if (type == PlanQuestionType.PLAN_CATALOG) {
             content = catalog.answer(question);
-        } else if (type == PlanQuestionType.MY_SUBSCRIPTION || type == PlanQuestionType.MY_PENALTY) {
+        } else if (type == PlanQuestionType.MY_SUBSCRIPTION || type == PlanQuestionType.MY_PENALTY
+                || type == PlanQuestionType.MY_USAGE) {
             // 개인 정보는 이 채팅방 주인(회원)의 것만 읽는다. 회원이 아니면 로그인 안내를 준다
             MemberPlanAnswerer.MemberAnswer memberAnswer = member.answer(type, memberOf(input));
             content = memberAnswer == null ? null : memberAnswer.content();

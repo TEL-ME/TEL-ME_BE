@@ -6,10 +6,16 @@ import com.telme.subscription.dto.res.SubscriptionMeResponse;
 import com.telme.subscription.dto.res.SubscriptionResponse;
 import com.telme.subscription.service.ContractPenalty;
 import com.telme.subscription.service.SubscriptionQueryService;
+import com.telme.usage.service.ExpectedFee;
+import com.telme.usage.service.MonthUsage;
+import com.telme.usage.service.ResourceUsage;
+import com.telme.usage.service.SubscriptionUsageService;
+import com.telme.usage.service.UsageOverview;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.LongFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -21,15 +27,20 @@ public class MemberPlanAnswerer {
     }
 
     private static final String CATALOG_QUESTION = "요금제 종류 알려줘";
+    private static final String RECOMMEND_QUESTION = "나한테 맞는 요금제 추천해줘";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN)
             .withZone(TimeZones.KST);
     private static final DateTimeFormatter ACTIVATION = DateTimeFormatter.ofPattern("M월 d일 a h시", Locale.KOREAN)
             .withZone(TimeZones.KST);
 
     private final SubscriptionQueryService queryService;
+    private final SubscriptionUsageService usageService;
 
-    // 회원이 아니면 userId는 null. 내 요금제·위약금 질문이 아니면 null
+    // 회원이 아니면 userId는 null. 내 요금제·위약금·사용량 질문이 아니면 null
     public MemberAnswer answer(PlanQuestionType type, Long userId) {
+        if (type == PlanQuestionType.MY_USAGE) {
+            return usage(userId);
+        }
         if (type != PlanQuestionType.MY_SUBSCRIPTION && type != PlanQuestionType.MY_PENALTY) {
             return null;
         }
@@ -53,6 +64,49 @@ public class MemberPlanAnswerer {
         }
     }
 
+    private MemberAnswer usage(Long userId) {
+        if (userId == null) {
+            return nudge("로그인하시면 이번 달 사용량과 예상 요금을 확인해 드릴 수 있어요.");
+        }
+        UsageOverview overview = usageService.getOverview(userId);
+        return switch (overview.status()) {
+            case NOT_SUBSCRIBED -> nudge("가입한 요금제가 없어서 확인할 사용량이 없어요.");
+            case PENDING_ACTIVATION -> nudge("아직 개통 전이라 사용량이 없어요. %s에 개통될 예정이에요."
+                    .formatted(ACTIVATION.format(overview.activatesAt())));
+            case ACTIVE -> new MemberAnswer(thisMonth(overview.usage()), List.of(RECOMMEND_QUESTION));
+        };
+    }
+
+    private String thisMonth(MonthUsage usage) {
+        StringBuilder text = new StringBuilder("%d월 사용량이에요. ".formatted(usage.month().getMonthValue()));
+        text.append(usage.daysUntilBilling() == 0 ? "오늘이 정산일이에요." : "정산일까지 %d일 남았어요.".formatted(usage.daysUntilBilling()));
+        text.append("\n- 데이터 ").append(resource(usage.data(), PlanFormat::megabytes))
+                .append("\n- 통화 ").append(resource(usage.voice(), minutes -> minutes + "분"))
+                .append("\n- 문자 ").append(resource(usage.sms(), count -> count + "건"));
+        ExpectedFee fee = usage.expectedFee();
+        text.append("\n- 예상 요금 ").append(PlanFormat.money(fee.amount()));
+        if (fee.difference() != null && fee.difference() != 0) {
+            text.append(" (지난달보다 %s %s)".formatted(PlanFormat.money(Math.abs(fee.difference())),
+                    fee.difference() > 0 ? "많아요" : "적어요"));
+        }
+        if (fee.prorated()) {
+            text.append("\n- 이번 달에 요금제가 바뀌어 날짜별로 나눠 계산했어요");
+        }
+        if (Boolean.TRUE.equals(usage.paused())) {
+            text.append("\n- 지금은 일시 정지 중이에요");
+        }
+        return text.toString();
+    }
+
+    private static String resource(ResourceUsage usage, LongFunction<String> format) {
+        if (usage.unlimited()) {
+            return "%s 사용 (무제한)".formatted(format.apply(usage.used()));
+        }
+        String text = "%s / %s (남은 양 %s)".formatted(format.apply(usage.used()), format.apply(usage.limit()),
+                format.apply(usage.remaining()));
+        return usage.exceeded() ? text + " - 한도를 넘었어요" : text;
+    }
+
     private MemberAnswer notSubscribed(boolean penalty) {
         return nudge(penalty
                 ? "가입한 요금제가 없어서 확인할 약정이 없어요."
@@ -73,7 +127,9 @@ public class MemberPlanAnswerer {
             text.append("지금 가입한 요금제는 %s예요.".formatted(plan.name()));
         }
         text.append("\n- 월정액 ").append(PlanFormat.money(plan.monthlyFee()))
-                .append("\n- 데이터 ").append(PlanFormat.data(plan.unlimited(), plan.dataGb()));
+                .append("\n- 데이터 ").append(PlanFormat.data(plan.unlimited(), plan.dataGb()))
+                .append("\n- 통화 ").append(PlanFormat.voice(plan.voiceUnlimited(), plan.voiceMinutes()))
+                .append("\n- 문자 ").append(PlanFormat.sms(plan.smsUnlimited(), plan.smsCount()));
         var contract = subscription.contract();
         if (contract != null) {
             text.append(contract.active()

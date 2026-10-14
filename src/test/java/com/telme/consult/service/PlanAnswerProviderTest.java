@@ -82,7 +82,7 @@ class PlanAnswerProviderTest {
 
     @Test
     void 요금제_목록이_아닌_질문은_기존_FAQ_경로에_맡긴다() {
-        for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.MY_USAGE)) {
+        for (PlanQuestionType type : List.of(PlanQuestionType.NONE)) {
             when(classifier.classify(1L, QUESTION)).thenReturn(type);
 
             assertThat(provider.prepare(input(QUESTION), true)).isEqualTo(Prepared.none());
@@ -92,8 +92,9 @@ class PlanAnswerProviderTest {
     }
 
     @Test
-    void 내_요금제와_위약금_질문은_채팅방_주인으로_답을_만들어_FAQ_검색_없이_확정한다() {
-        for (PlanQuestionType type : List.of(PlanQuestionType.MY_SUBSCRIPTION, PlanQuestionType.MY_PENALTY)) {
+    void 내_요금제와_위약금과_사용량_질문은_채팅방_주인으로_답을_만들어_FAQ_검색_없이_확정한다() {
+        for (PlanQuestionType type : List.of(PlanQuestionType.MY_SUBSCRIPTION, PlanQuestionType.MY_PENALTY,
+                PlanQuestionType.MY_USAGE)) {
             when(classifier.classify(1L, QUESTION)).thenReturn(type);
             when(member.answer(type, 77L)).thenReturn(new MemberPlanAnswerer.MemberAnswer(type + " 답변", List.of("요금제 종류 알려줘")));
 
@@ -119,9 +120,8 @@ class PlanAnswerProviderTest {
     }
 
     @Test
-    void 채팅방_주인은_내_요금제와_위약금_질문일_때만_조회한다() {
-        for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.PLAN_CATALOG,
-                PlanQuestionType.MY_USAGE)) {
+    void 채팅방_주인은_내_정보와_추천_질문일_때만_조회한다() {
+        for (PlanQuestionType type : List.of(PlanQuestionType.NONE, PlanQuestionType.PLAN_CATALOG)) {
             when(classifier.classify(1L, QUESTION)).thenReturn(type);
             provider.generate(input(QUESTION));
         }
@@ -131,11 +131,15 @@ class PlanAnswerProviderTest {
         provider.generate(input(QUESTION));
         assertThat(sessionLookups).hasValue(1);
 
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.MY_USAGE);
+        provider.generate(input(QUESTION));
+        assertThat(sessionLookups).hasValue(2);
+
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
         when(recommendation.recommend(any(), any(), anyBoolean()))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("추천", List.of(), null));
         provider.generate(input(QUESTION));
-        assertThat(sessionLookups).hasValue(2);
+        assertThat(sessionLookups).hasValue(3);
     }
 
     @Test
