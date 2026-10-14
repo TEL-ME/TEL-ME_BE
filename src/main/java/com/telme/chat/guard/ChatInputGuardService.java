@@ -6,19 +6,18 @@ import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.guard.JdbcInputGuardStore.State;
 import com.telme.chat.service.ChatActor;
 import com.telme.global.common.exception.GeneralException;
-
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 소유권 확인 후 접수 트랜잭션에서 실행한다. 정책 거절은 예외로 던지지 않아 기록을 함께 커밋한다. */
 @Service
@@ -29,6 +28,7 @@ public class ChatInputGuardService {
     private final JdbcInputGuardStore store;
     private final InputGuardProperties properties;
     private final Clock clock;
+    private final MessageSource messageSource;
 
     public record Turn(
             State state,
@@ -73,7 +73,6 @@ public class ChatInputGuardService {
             var notice =
                     notice(
                             "RESTRICTED",
-                            "반복된 욕설로 채팅이 일시 제한되었습니다.",
                             count,
                             state.restrictionStartedAt(),
                             state.restrictionUntil(),
@@ -92,7 +91,6 @@ public class ChatInputGuardService {
                 notice =
                         notice(
                                 "RESTRICTED",
-                                "반복된 욕설로 채팅이 일시 제한되었습니다.",
                                 count,
                                 state.restrictionStartedAt(),
                                 state.restrictionUntil(),
@@ -102,10 +100,6 @@ public class ChatInputGuardService {
                 notice =
                         notice(
                                 "WARNED",
-                                "원활한 상담을 위해 욕설을 제외하고 질문해 주세요. "
-                                        + "최근 집계 기간 내 "
-                                        + properties.threshold()
-                                        + "회 감지되면 일시 제한됩니다.",
                                 count,
                                 null,
                                 null,
@@ -117,14 +111,13 @@ public class ChatInputGuardService {
             notice =
                     notice(
                             "REWRITE_REQUIRED",
-                            "민감정보를 제외한 문의 내용을 입력해 주세요.",
                             count,
                             null,
                             null,
                             inspection,
                             now);
         } else if (inspection.wasMasked()) {
-            notice = notice("MASKED", "민감정보를 가리고 문의를 처리합니다.", count, null, null, inspection, now);
+            notice = notice("MASKED", count, null, null, inspection, now);
         }
         return new Turn(state, inspection, notice, null, rejected, false, fingerprint, now);
     }
@@ -152,12 +145,13 @@ public class ChatInputGuardService {
 
     private InputGuardNotice notice(
             String action,
-            String message,
             int count,
             Instant started,
             Instant until,
             InputInspection inspection,
             Instant now) {
+        String message = messageSource.getMessage(
+                "chat.input-guard." + action, new Object[] {properties.threshold()}, LocaleContextHolder.getLocale());
         return new InputGuardNotice(
                 action,
                 message,

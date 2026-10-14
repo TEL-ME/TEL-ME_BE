@@ -52,7 +52,7 @@ public class PlanController {
     })
     @GetMapping("/{planId}")
     public CustomResponse<PlanResponse> getPlan(
-            @Parameter(description = "조회할 요금제 ID") @PathVariable @Positive(message = "요금제 ID는 1 이상이어야 합니다.") long planId) {
+            @Parameter(description = "조회할 요금제 ID") @PathVariable @Positive(message = "{plan.id.positive}") long planId) {
         return CustomResponse.onSuccess(planQueryService.getPlan(planId));
     }
 }

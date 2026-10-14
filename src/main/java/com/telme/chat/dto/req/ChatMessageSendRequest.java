@@ -9,8 +9,8 @@ import lombok.Builder;
 
 @Builder
 public record ChatMessageSendRequest(
-        @NotBlank(message = "메시지 내용을 입력해 주세요.")
-        @Size(max = 2000, message = "메시지 내용은 2,000자 이하여야 합니다.")
+        @NotBlank(message = "{chat.content.required}")
+        @Size(max = 2000, message = "{chat.content.size}")
         String content,
         Double latitude,
         Double longitude,
@@ -24,7 +24,7 @@ public record ChatMessageSendRequest(
         this(content, latitude, longitude, null);
     }
 
-    @AssertTrue(message = "위도와 경도를 함께 입력하고 올바른 좌표 범위를 사용해 주세요.")
+    @AssertTrue(message = "{chat.coordinates.invalid}")
     public boolean isCoordinatesValid() {
         return ChatCoordinates.isValid(latitude, longitude);
     }

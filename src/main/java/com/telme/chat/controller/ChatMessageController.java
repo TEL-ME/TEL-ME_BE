@@ -31,7 +31,7 @@ public class ChatMessageController {
     public CustomResponse<ChatMessageSourcesResponse> getMessageSources(
             HttpServletRequest servletRequest,
             @PathVariable
-            @Positive(message = "메시지 ID는 1 이상이어야 합니다.")
+            @Positive(message = "{chat.message-id.positive}")
             Long messageId
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);

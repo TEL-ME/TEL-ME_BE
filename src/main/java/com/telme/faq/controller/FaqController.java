@@ -56,7 +56,7 @@ public class FaqController {
     @GetMapping("/{faqId}")
     public CustomResponse<FaqResponse> getFaq(
             @Parameter(description = "조회할 FAQ ID") @PathVariable
-            @Positive(message = "FAQ ID는 1 이상이어야 합니다.") long faqId) {
+            @Positive(message = "{faq.id.positive}") long faqId) {
         return CustomResponse.onSuccess(faqQueryService.getFaq(faqId));
     }
 }

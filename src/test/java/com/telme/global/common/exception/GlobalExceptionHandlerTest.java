@@ -6,6 +6,7 @@ import com.telme.global.common.CustomResponse;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(new StaticMessageSource());
 
     @Test
     @DisplayName("타입 변환 실패는 내부 클래스 이름이 든 기본 메시지 대신 형식 오류 문구로 응답한다")

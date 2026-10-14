@@ -1,6 +1,12 @@
 spring:
   application:
     name: telme
+  web:
+    # Accept-Language 헤더가 없으면 한국어로 응답한다
+    locale: ko
+  messages:
+   # 번역 파일이 없는 언어는 서버 OS 언어가 아니라 기본 파일(messages.properties, 한국어)로 떨어진다
+   fallback-to-system-locale: false
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:telme}
     username: ${POSTGRES_USER:telme}
