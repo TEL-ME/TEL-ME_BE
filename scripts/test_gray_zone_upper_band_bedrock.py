@@ -3,7 +3,7 @@
 import unittest
 
 from gray_zone_upper_band_bedrock import (cache_entry, input_hash, keep, majority, needs_judgment,
-                                          pairs_to_judge, parse_answerable, score_eval, score_holdout, served,
+                                          pairs_to_judge, parse_answerable, percentile, score_eval, score_holdout, served,
                                           user_prompt)
 
 CURRENT = (0.88, 0.72, 0.72)  # 판정 없음
@@ -62,6 +62,15 @@ class ServedTest(unittest.TestCase):
 
     def test_same_slot_judged_once_per_question(self):
         self.assertEqual(needs_judgment([("A", 0.85)], [("A", 0.75), ("B", 0.70)], *UPPER), ["A"])
+
+
+class PercentileTest(unittest.TestCase):
+    def test_nearest_rank(self):
+        values = [500, 100, 300, 200, 400]
+        self.assertEqual((percentile(values, 50), percentile(values, 95), percentile(values, 100)), (300, 500, 500))
+
+    def test_empty_is_none(self):
+        self.assertIsNone(percentile([], 50))
 
 
 class MajorityTest(unittest.TestCase):

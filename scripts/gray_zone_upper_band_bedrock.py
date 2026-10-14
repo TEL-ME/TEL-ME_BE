@@ -27,7 +27,9 @@ evidence_check_bedrock.py와 같다. #139와 독립적으로 돌도록 필요한
 import argparse
 import hashlib
 import json
+import math
 import os
+import random
 import subprocess
 import sys
 import time
@@ -132,6 +134,14 @@ def parse_answerable(text):
     if isinstance(value, str) and value.strip().lower() in ("true", "false"):
         return value.strip().lower() == "true"
     return True
+
+
+def percentile(values, p):
+    """가장 가까운 순위 방식의 백분위수. 값이 없으면 None."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(p / 100 * len(ordered)) - 1)]
 
 
 def input_hash(prompt):
@@ -262,6 +272,9 @@ def main():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--krw-per-usd", type=float, default=1450.0)
     parser.add_argument("--run", action="store_true", help="없으면 예상 비용만 출력하고 끝낸다")
+    parser.add_argument("--latency-sample", type=int, default=0,
+                        help="--run과 함께 쓰면 판정 붙는 질문 N개를 골라 질문마다 판정을 1회씩 병렬로 보내 지연을 잰다")
+    parser.add_argument("--latency-top", type=float, default=0.80, help="지연 측정에 쓸 Q_A 위 선")
     args = parser.parse_args()
 
     eval_items = json.loads(DEFAULT_EVAL.read_text())
@@ -300,19 +313,19 @@ def main():
         if not args.run:
             print("예상만 출력했습니다. 실제로 돌리려면 --run 을 붙이세요.")
             return
-        api_key = os.environ.get("BEDROCK_API_KEY")
-        if not api_key:
-            sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
-        region = os.environ.get("AWS_REGION", "us-east-1")
+        api_key, region = bedrock_credentials()
         tokens = [0, 0]
 
         def judge(key):
             runs = []
             for _ in range(REPEAT):
+                start = time.monotonic()
                 text, error, usage = call_model(api_key, region, prompts[key])
+                elapsed_ms = int((time.monotonic() - start) * 1000)
                 if error and error.startswith("HTTP 4"):
                     raise SystemExit(f"요청 오류로 중단: {error}")
-                runs.append({"answerable": parse_answerable(text), "error": error, "raw": text})
+                runs.append({"answerable": parse_answerable(text), "error": error, "raw": text,
+                             "elapsedMs": elapsed_ms})
                 tokens[0] += usage.get("inputTokens", 0)
                 tokens[1] += usage.get("outputTokens", 0)
             return key, runs
@@ -332,6 +345,10 @@ def main():
                     print(f"  {done} / {len(todo)}", flush=True)
         spent = (tokens[0] * PRICE_IN + tokens[1] * PRICE_OUT) / 1_000_000
         print(f"토큰 입력 {tokens[0]:,} / 출력 {tokens[1]:,} | 실제 ${spent:.4f} ≈ {spent * args.krw_per_usd:,.0f}원")
+        elapsed = [r["elapsedMs"] for key in todo if key in verdicts for r in verdicts[key]["runs"]]
+        if elapsed:
+            print(f"이번 판정 호출 1회 지연: p50 {percentile(elapsed, 50):,}ms / p95 {percentile(elapsed, 95):,}ms "
+                  f"({len(elapsed)}회, 3회 반복을 쌍마다 4개씩 동시에 보낸 값)")
         if failed:
             sys.exit(f"호출 오류로 {len(failed)}쌍을 저장하지 않았습니다(예: {failed[0]}). "
                      "--run 을 다시 하면 그 쌍만 다시 판정합니다.")
@@ -353,6 +370,62 @@ def main():
                   f"{result['unrelatedOld']} / {result['unrelatedSupplement']} | "
                   f"{score_holdout(holdout_rows, config, judged)} | "
                   f"{result['judgedQuestions'] / len(rows):.0%}")
+
+    if args.latency_sample:
+        if not args.run:
+            print("\n지연 측정은 --run 일 때만 합니다.")
+            return
+        measure_latency(rows, prompts, (args.qo_floor, min(args.qa_floors), args.latency_top),
+                        args.latency_sample, args.krw_per_usd)
+
+
+def bedrock_credentials():
+    api_key = os.environ.get("BEDROCK_API_KEY")
+    if not api_key:
+        sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
+    return api_key, os.environ.get("AWS_REGION", "us-east-1")
+
+
+def measure_latency(rows, prompts, config, sample_size, krw_per_usd):
+    """운영처럼 질문의 판정 후보를 한 번씩 동시에 보내, 질문 하나에 판정이 더하는 시간을 잰다.
+    3회 다수결 캐시와 섞이지 않게 결과는 저장하지 않는다."""
+    candidates = [row for row in rows if needs_judgment(row["qo"], row["qa"], *config)]
+    missing = [f"{row['id']}|{slot}" for row in candidates for slot in needs_judgment(row["qo"], row["qa"], *config)
+               if f"{row['id']}|{slot}" not in prompts]
+    if missing:
+        sys.exit(f"--latency-top {config[2]}이 --qa-tops 범위 밖입니다(예: {missing[0]}). --qa-tops에 포함하세요")
+    sample = random.Random(0).sample(candidates, min(sample_size, len(candidates)))
+    api_key, region = bedrock_credentials()
+    call_ms, question_ms, pair_counts, errors, tokens = [], [], [], 0, [0, 0]
+
+    def timed(key):
+        start = time.monotonic()
+        _, error, usage = call_model(api_key, region, prompts[key])
+        return int((time.monotonic() - start) * 1000), error, usage
+
+    print(f"\n지연 측정: Q_A {config[1]:.2f} ~ {config[2]:.2f}, 판정 붙는 질문 {len(candidates)}개 중 {len(sample)}개, "
+          "질문마다 후보를 1회씩 동시에 보냄", flush=True)
+    for row in sample:
+        keys = [f"{row['id']}|{slot}" for slot in needs_judgment(row["qo"], row["qa"], *config)]
+        start = time.monotonic()
+        with ThreadPoolExecutor(max_workers=len(keys)) as pool:
+            results = list(pool.map(timed, keys))
+        wall_ms = int((time.monotonic() - start) * 1000)
+        for _, _, usage in results:
+            tokens[0] += usage.get("inputTokens", 0)
+            tokens[1] += usage.get("outputTokens", 0)
+        if any(error for _, error, _ in results):
+            errors += 1
+            continue
+        call_ms += [ms for ms, _, _ in results]
+        question_ms.append(wall_ms)
+        pair_counts.append(len(keys))
+    spent = (tokens[0] * PRICE_IN + tokens[1] * PRICE_OUT) / 1_000_000
+    print(f"  호출 1회: p50 {percentile(call_ms, 50):,}ms / p95 {percentile(call_ms, 95):,}ms ({len(call_ms)}회)")
+    print(f"  질문당 추가 시간(병렬): p50 {percentile(question_ms, 50):,}ms / p95 {percentile(question_ms, 95):,}ms / "
+          f"최대 {max(question_ms):,}ms ({len(question_ms)}개 질문, 질문당 후보 평균 "
+          f"{sum(pair_counts) / len(pair_counts):.1f}개)")
+    print(f"  오류로 뺀 질문 {errors}개 | 비용 ${spent:.4f} ≈ {spent * krw_per_usd:,.0f}원")
 
 
 if __name__ == "__main__":
