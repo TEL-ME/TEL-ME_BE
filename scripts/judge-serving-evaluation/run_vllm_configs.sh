@@ -7,11 +7,13 @@
 #   --vllm-url은 이 스크립트가 붙인다.
 #
 # 필요한 환경 변수: AWS_PROFILE, AWS_REGION, AMI_ID, KEY_NAME, SUBNET_ID, SG_ID (보안 그룹은 이 PC IP에만 8000 허용)
+# 서버 모델은 USER_DATA로 고른다 (기본 user-data-vllm-exaone.sh, gpt-oss-20b는 user-data-vllm-gpt-oss-20b.sh)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${AWS_PROFILE:?}" "${AWS_REGION:?}" "${AMI_ID:?}" "${KEY_NAME:?}" "${SUBNET_ID:?}" "${SG_ID:?}"
 export AWS_PROFILE AWS_REGION
-UD="fileb://$(cygpath -m "$HERE/user-data-vllm-exaone.sh" 2>/dev/null || echo "$HERE/user-data-vllm-exaone.sh")"
+USER_DATA="${USER_DATA:-$HERE/user-data-vllm-exaone.sh}"
+UD="fileb://$(cygpath -m "$USER_DATA" 2>/dev/null || echo "$USER_DATA")"
 
 ID=""
 for attempt in $(seq 1 15); do

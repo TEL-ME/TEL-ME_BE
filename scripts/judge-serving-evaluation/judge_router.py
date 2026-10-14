@@ -30,7 +30,8 @@ def is_judge(source: dict) -> bool:
                for m in source.get("messages") or [])
 
 
-def vllm_payload(source: dict, model: str) -> dict:
+def vllm_payload(source: dict, model: str, no_thinking: bool = False, reasoning_effort: str = "",
+                 schema_as_instruction: bool = False) -> dict:
     """Ollama /api/chat 요청을 vLLM(OpenAI 호환) 요청으로 바꾼다."""
     options = source.get("options") or {}
     payload = {
@@ -44,9 +45,23 @@ def vllm_payload(source: dict, model: str) -> dict:
     fmt = source.get("format")
     if fmt == "json":
         payload["response_format"] = {"type": "json_object"}
+    elif isinstance(fmt, dict) and schema_as_instruction:
+        # 스키마 강제가 깨지는 모델용. Bedrock 변환과 같이 스키마를 지시문으로 넣고 JSON 모드로 보낸다
+        messages = json.loads(json.dumps(source["messages"]))
+        [m for m in messages if m["role"] == "user"][-1]["content"] += (
+            "\n\n다음 JSON Schema를 따르는 JSON 객체 하나만 출력하세요.\n" + json.dumps(fmt, ensure_ascii=False))
+        payload["messages"] = messages
+        payload["response_format"] = {"type": "json_object"}
     elif isinstance(fmt, dict):
         payload["response_format"] = {"type": "json_schema",
                                       "json_schema": {"name": "telme_response", "schema": fmt}}
+    if no_thinking:
+        # Qwen3 등 사고 모드가 있는 모델은 끈다. 켜 두면 짧은 판정에도 긴 추론을 출력한다
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
+    if reasoning_effort:
+        # gpt-oss는 내부 추론도 출력 한도를 쓴다. Bedrock과 같이 추론 강도를 낮추고 한도를 512 이상으로 둔다
+        payload["reasoning_effort"] = reasoning_effort
+        payload["max_tokens"] = max(payload["max_tokens"], 512)
     return payload
 
 
@@ -173,7 +188,8 @@ class Handler(BaseHTTPRequestHandler):
         self.record(kind, "ollama", started, 200, content=content)
 
     def to_vllm(self, source: dict, kind: str, started: float) -> None:
-        payload = vllm_payload(source, self.server.vllm_model)
+        payload = vllm_payload(source, self.server.vllm_model, self.server.no_thinking,
+                               self.server.reasoning_effort, self.server.schema_as_instruction)
         request = Request(self.server.vllm_url + "/v1/chat/completions", data=json.dumps(payload).encode(),
                           headers={"Content-Type": "application/json"})
         try:
@@ -248,6 +264,9 @@ def main() -> None:
     parser.add_argument("--judge", choices=["bedrock", "chat"], required=True)
     parser.add_argument("--vllm-url", default="")
     parser.add_argument("--vllm-model", default="ab-chat", help="vLLM --served-model-name")
+    parser.add_argument("--no-thinking", action="store_true", help="vLLM 요청에 enable_thinking=false (Qwen3 등)")
+    parser.add_argument("--reasoning-effort", default="", help="vLLM 요청의 reasoning_effort (gpt-oss는 low)")
+    parser.add_argument("--schema-as-instruction", action="store_true", help="JSON Schema 강제 대신 지시문 + JSON 모드")
     parser.add_argument("--ollama-url", default="http://127.0.0.1:11434")
     parser.add_argument("--profile", default="telme-bedrock-eval")
     parser.add_argument("--region", default="ap-northeast-1", help="서울 리전에는 gpt-oss-120b가 없다")
@@ -260,6 +279,8 @@ def main() -> None:
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     server.chat, server.judge = args.chat, args.judge
     server.vllm_url, server.vllm_model = args.vllm_url.rstrip("/"), args.vllm_model
+    server.no_thinking, server.reasoning_effort = args.no_thinking, args.reasoning_effort
+    server.schema_as_instruction = args.schema_as_instruction
     server.ollama_url = args.ollama_url.rstrip("/")
     server.bedrock_model = args.bedrock_model
     server.log_path, server.log_lock = args.log, threading.Lock()
