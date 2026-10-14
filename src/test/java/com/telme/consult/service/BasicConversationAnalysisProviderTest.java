@@ -1,19 +1,14 @@
 package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.consult.repository.PendingClarificationFinder.Candidate;
-import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
-import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
 import com.telme.consult.service.FollowupContextService.Context;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -23,35 +18,27 @@ import java.util.List;
 import java.util.stream.Stream;
 
 class BasicConversationAnalysisProviderTest {
-    private final AnalysisProvider delegate = mock(AnalysisProvider.class);
-    private final BasicConversationAnalysisProvider provider =
-            new BasicConversationAnalysisProvider(delegate);
-
-    @org.junit.jupiter.api.Test
+    @Test
     void repeatedClarificationDoesNotRepeatStoredGreeting() {
         var context = new Context(1, 10, "고마워 바라야", List.of(new Candidate(
                 101, "location", 9, "안녕하세요! 어느 지역의 매장을 찾으시나요?", "매장 알려줘", "매장", "STORE")));
 
-        var result = provider.analyze(context);
+        ChatAnswer answer = BasicConversationAnalysisProvider.answerFor(context);
 
-        assertThat(result.directAnswer().content())
+        assertThat(answer.content())
                 .isEqualTo("천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요.\n\n어느 지역의 매장을 찾으시나요?");
-        verifyNoInteractions(delegate);
     }
 
     @ParameterizedTest
     @MethodSource("기본_대화_사례")
     @DisplayName("대기 상담이 없는 기본 대화는 기존 분석 없이 고정 응답한다")
     void 기본_대화는_고정_응답한다(String input, String expected) {
-        AnalysisResult result = provider.analyze(new Context(1, 10, input, List.of()));
+        ChatAnswer answer = BasicConversationAnalysisProvider.answerFor(new Context(1, 10, input, List.of()));
 
-        assertThat(result.directAnswer().content()).isEqualTo(expected);
-        assertThat(result.directAnswer().messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
-        assertThat(result.directAnswer().answerBasis()).isNull();
-        assertThat(result.directAnswer().followUps()).isEmpty();
-        assertThat(result.initialQuery()).isNull();
-        assertThat(result.followup()).isNull();
-        verifyNoInteractions(delegate);
+        assertThat(answer.content()).isEqualTo(expected);
+        assertThat(answer.messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
+        assertThat(answer.answerBasis()).isNull();
+        assertThat(answer.followUps()).isEmpty();
     }
 
     static Stream<Arguments> 기본_대화_사례() {
@@ -93,43 +80,18 @@ class BasicConversationAnalysisProviderTest {
                 "오늘 날씨 어때요?",
                 "도움말 말고 로밍 알려줘"
             })
-    @DisplayName("상담 질문과 조건 응답은 인사나 감사가 섞여도 기존 분석기에 그대로 전달한다")
+    @DisplayName("상담 질문과 조건 응답은 인사나 감사가 섞여도 기본 대화로 답하지 않는다")
     void 상담_발화는_가로채지_않는다(String input) {
-        Context context = new Context(1, 10, input, List.of());
-        AnalysisResult expected = AnalysisResult.rerouteRequest();
-        when(delegate.analyze(context)).thenReturn(expected);
-
-        AnalysisResult result = provider.analyze(context);
-
-        assertThat(result).isSameAs(expected);
-        verify(delegate).analyze(context);
+        assertThat(BasicConversationAnalysisProvider.answerFor(new Context(1, 10, input, List.of()))).isNull();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"네, 고마워요", "강남역이요, 고마워요"})
-    @DisplayName("되묻기 대기 중 실제 조건 답변은 기존 후속 처리로 전달한다")
+    @DisplayName("되묻기 대기 중 실제 조건 답변은 기본 대화로 답하지 않고 후속 처리에 남긴다")
     void 대기_상담의_후속_처리를_우선한다(String input) {
-        Context context =
-                new Context(
-                        1,
-                        10,
-                        input,
-                        List.of(
-                                new Candidate(
-                                        101, "location", 9, "어느 지역인가요?", "매장 알려줘", "매장", "STORE")));
-        AnalysisResult expected =
-                AnalysisResult.direct(
-                        new ChatAnswer(
-                                ChatMessage.MessageType.ANSWER,
-                                "기존 후속 처리 결과",
-                                null,
-                                List.of(),
-                                null));
-        when(delegate.analyze(context)).thenReturn(expected);
+        Context context = new Context(1, 10, input, List.of(
+                new Candidate(101, "location", 9, "어느 지역인가요?", "매장 알려줘", "매장", "STORE")));
 
-        AnalysisResult result = provider.analyze(context);
-
-        assertThat(result).isSameAs(expected);
-        verify(delegate).analyze(context);
+        assertThat(BasicConversationAnalysisProvider.answerFor(context)).isNull();
     }
 }

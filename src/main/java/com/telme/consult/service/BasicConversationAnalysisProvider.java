@@ -7,26 +7,14 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ConsultationQuestion;
 import com.telme.chat.service.ConversationInput;
 import com.telme.consult.dto.ClarificationReask;
-import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
-import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
 import com.telme.consult.service.FollowupContextService.Context;
 
 import java.util.List;
 import java.util.Objects;
 
-/** 기본 대화 여부만 판단하고 상담 상태를 변경하지 않는다. */
-public final class BasicConversationAnalysisProvider implements AnalysisProvider {
-    private final AnalysisProvider delegate;
-
-    public BasicConversationAnalysisProvider(AnalysisProvider delegate) {
-        this.delegate = Objects.requireNonNull(delegate);
-    }
-
-    @Override
-    public AnalysisResult analyze(Context context) {
-        ChatAnswer answer = answerFor(context);
-        return answer == null ? delegate.analyze(context) : AnalysisResult.direct(answer);
-    }
+/** 기본 대화 여부만 판단하고 상담 상태를 변경하지 않는다. 분석 순서는 ConsultTurnAnalysisAdapter가 정한다. */
+public final class BasicConversationAnalysisProvider {
+    private BasicConversationAnalysisProvider() {}
 
     public static boolean preservesWaitingState(String content) {
         return BasicConversationClassifier.classify(content).isPure()
