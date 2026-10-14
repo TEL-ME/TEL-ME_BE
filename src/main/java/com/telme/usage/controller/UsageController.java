@@ -36,7 +36,8 @@ public class UsageController {
                     + "사용량은 실제 통신망이 없어 서비스가 사용자별로 생성해 저장한 값입니다. 이번 달은 개통 이후 지난 일수만큼만 "
                     + "반영하고, 지난 달은 그달 전체 값입니다(개통한 달은 개통 이후 일수만큼). 지난 달의 한도는 그달 1일에 쓰던 "
                     + "요금제 기준입니다. 정산일까지 남은 일수(daysUntilBilling)·일시 정지 여부(paused)·예상 요금(expectedFee)은 "
-                    + "이번 달에만 있고 지난 달은 null입니다. 예상 요금은 월정액에서 약정 할인(진행 중일 때만)을 뺀 값이며 "
+                    + "이번 달에만 있고 지난 달은 null입니다. 예상 요금은 월정액에서 약정 할인(진행 중일 때만)을 뺀 값이고, 그 달에 요금제를 바꿨으면 "
+                    + "바꾼 날부터 새 요금제로 일할 계산하며(prorated=true) 전월 대비의 지난달도 같은 방식입니다. "
                     + "previousAmount·difference는 지난달에 가입 전이었으면 null입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
