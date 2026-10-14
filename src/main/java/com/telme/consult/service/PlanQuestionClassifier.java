@@ -50,8 +50,12 @@ public class PlanQuestionClassifier {
     }
 
     private static PlanQuestionType guard(PlanQuestionType type, String question) {
-        if (isMyData(type) && !PlanQuestionRules.hasPersonalMarker(type, question)) {
+        if (type != PlanQuestionType.NONE && PlanQuestionRules.asksOtherService(question)) {
             return PlanQuestionType.NONE;
+        }
+        if (isMyData(type)) {
+            return PlanQuestionRules.hasPersonalMarker(type, question) && !PlanQuestionRules.asksProcedure(type, question)
+                    ? type : PlanQuestionType.NONE;
         }
         boolean listOrRecommend = type == PlanQuestionType.PLAN_CATALOG || type == PlanQuestionType.RECOMMENDATION;
         return listOrRecommend && PlanQuestionRules.asksProcedure(type, question) ? PlanQuestionType.NONE : type;

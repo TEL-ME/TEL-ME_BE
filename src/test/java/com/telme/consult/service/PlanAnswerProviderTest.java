@@ -301,6 +301,37 @@ class PlanAnswerProviderTest {
     }
 
     @Test
+    void 후속_질문_버튼_문구는_추천이나_내_정보_답변으로_가져가지_않는다() {
+        String button = "요금제가 너무 많아서 뭐가 뭔지 모르겠어요";
+        for (PlanQuestionType type : List.of(PlanQuestionType.RECOMMENDATION, PlanQuestionType.MY_USAGE,
+                PlanQuestionType.MY_SUBSCRIPTION)) {
+            when(classifier.classify(anyLong(), any())).thenReturn(type);
+
+            assertThat(provider.prepare(input(button), true)).isEqualTo(Prepared.none());
+            assertThat(provider.generate(input(button))).isEqualTo(FAQ_ANSWER);
+            assertThat(provider.generate(input("요금제가 너무 많아서  뭐가 뭔지 모르겠어요 "))).isEqualTo(FAQ_ANSWER);
+        }
+        verifyNoInteractions(recommendation, member);
+    }
+
+    @Test
+    void 후속_질문_버튼_문구도_요금제_목록_질문이면_요금제_표로_답한다() {
+        String button = "요금제가 너무 많아서 뭐가 뭔지 모르겠어요";
+        when(classifier.classify(1L, button)).thenReturn(PlanQuestionType.PLAN_CATALOG);
+
+        assertThat(provider.generate(input(button)).answer().content()).isEqualTo("요금제 안내예요.");
+    }
+
+    @Test
+    void 버튼_문구가_아닌_추천_질문은_그대로_처리한다() {
+        when(classifier.classify(1L, "나에게 맞는 요금제 찾기")).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(recommendation.recommend(any(), any(), any(), anyBoolean()))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("추천", List.of(), null));
+
+        assertThat(provider.generate(input("나에게 맞는 요금제 찾기")).answer().content()).isEqualTo("추천");
+    }
+
+    @Test
     void 문맥으로_풀어쓴_문장이_달라도_사용자가_쓴_원문으로_먼저_분류한다() {
         String original = "나 요금제 뭐야?";
         String rewritten = "만 19~64세 대상 요금제 종류";

@@ -119,6 +119,21 @@ class PlanQuestionRulesTest {
                 "통화 품질을 개선할 수 있나요 얼마나 걸려요");
     }
 
+    @Test
+    void 방법_자격_비교_로밍_질문은_요금제_답변이_아니라_FAQ가_답한다() {
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제 표 보는 법 좀 알려주세요",
+                "시니어 요금제와 알뜰 요금제 중 요금 절감 효과가 더 큰 쪽은 어디인가요");
+        assertProcedure(PlanQuestionType.RECOMMENDATION, true, "할머니는 시니어 요금제 되고 저는 청소년 요금제 되는 거예요?");
+        assertProcedure(PlanQuestionType.MY_PENALTY, false, "지금 당장 해지하면 위약금이 얼마나 되나요");
+        assertProcedure(PlanQuestionType.MY_USAGE, true, "데이터 다 썼다고 문자 오면 어떻게 해요");
+        assertProcedure(PlanQuestionType.MY_USAGE, false, "이번 달 데이터 얼마나 썼어요", "내 통화 사용량 알려줘");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, false, "5G 스탠다드 얼마예요", "요금제 종류 알려줘");
+        assertThat(PlanQuestionRules.asksOtherService("해외 나갈 때 데이터 하루에 얼마예요")).isTrue();
+        assertThat(PlanQuestionRules.asksOtherService("보름 동안 로밍을 썼는데 요금이 많이 나왔어요")).isTrue();
+        assertThat(PlanQuestionRules.asksOtherService("5G 요금제 종류 알려줘")).isFalse();
+        assertType(PlanQuestionType.NONE, "로밍 요금제 종류 알려줘", "해외에서 쓸 요금제 추천해줘");
+    }
+
     // 규칙을 바꿔 목록이 달라지면 FAQ를 가로채지 않는지 확인한 뒤 고친다
     @Test
     void 기존_FAQ_질문은_요금제_목록과_추천_질문만_가져간다() throws Exception {

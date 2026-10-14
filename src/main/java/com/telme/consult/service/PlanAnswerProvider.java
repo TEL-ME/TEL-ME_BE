@@ -98,6 +98,10 @@ public final class PlanAnswerProvider implements AnswerProvider {
         if (type == PlanQuestionType.NONE && !question.equals(input.originalUserQuery())) {
             type = classifier.classify(input.executionId(), question);
         }
+        // 후속 질문 버튼의 문구에는 이전 답을 되풀이하는 추천·내 정보 답변을 하지 않는다. 요금제 표 안내는 FAQ 대신 쓴다
+        if (type != PlanQuestionType.PLAN_CATALOG && FaqButtonQuestions.contains(input.originalUserQuery())) {
+            return Outcome.NONE;
+        }
         String content;
         List<String> followUps = List.of();
         if (type == PlanQuestionType.PLAN_CATALOG) {

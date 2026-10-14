@@ -58,6 +58,19 @@ class PlanQuestionClassifierTest {
     }
 
     @Test
+    void 모델이_가져가도_로밍_질문과_내_정보의_방법_질문은_NONE이다() {
+        for (String type : new String[] {"PLAN_CATALOG", "MY_USAGE", "RECOMMENDATION"}) {
+            when(llm.generate(any())).thenReturn("{\"type\":\"" + type + "\"}");
+            assertThat(classifier.classify(1L, "해외 나갈 때 데이터 하루에 얼마예요")).as(type).isEqualTo(PlanQuestionType.NONE);
+            assertThat(classifier.classify(1L, "보름 동안 로밍을 썼는데 요금이 생각보다 많이 나왔습니다")).as(type)
+                    .isEqualTo(PlanQuestionType.NONE);
+        }
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_USAGE\"}");
+        assertThat(classifier.classify(1L, "내 데이터 다 썼다고 문자 오면 어떻게 해요")).isEqualTo(PlanQuestionType.NONE);
+        assertThat(classifier.classify(1L, "이번 달 내 데이터 얼마나 썼어요")).isEqualTo(PlanQuestionType.MY_USAGE);
+    }
+
+    @Test
     void 요금제_추천과_목록은_본인_표현이_없어도_모델_분류를_따른다() {
         when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\"}");
         assertThat(classifier.classify(1L, "가성비 좋은 요금제 하나만 골라주세요")).isEqualTo(PlanQuestionType.RECOMMENDATION);

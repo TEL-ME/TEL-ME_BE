@@ -37,11 +37,14 @@ public final class PlanQuestionRules {
 
     private static final Pattern HOW_OR_IF = Pattern.compile(
             "어떻게(해|하|바꿔|바꾸|가입|신청|변경|골라|고르|알아|봐|받|신고|등록|확인)|어디서|어디에서|방법|절차|요령|기준|조건"
-                    + "|자격|누가|몇살|가능|무슨뜻|란무엇|이란|라는게");
+                    + "|자격|누가|몇살|가능|무슨뜻|란무엇|이란|라는게|[는할]법|되는거");
     private static final Pattern CAN_DO = Pattern.compile("수있(어요|나요|을까요|습니까|는지|을지|죠)");
     // 데이터·통화·문자를 얼마나 쓸 수 있는지는 가능 여부가 아니라 제공량을 묻는 질문이다
     private static final Pattern ALLOWANCE_AMOUNT = Pattern.compile("(통화|문자|데이터).{0,6}(얼마나|몇)|(얼마나|몇).{0,6}(통화|문자|데이터)");
-    private static final Pattern COMPARES = Pattern.compile("비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중");
+    private static final Pattern COMPARES = Pattern.compile(
+            "비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중|[와과랑].{1,15}중(에서)?(요금|어느|어떤|뭐|어디|가장|더|무엇)");
+    // 요금제 표로 답할 수 없는 다른 서비스의 요금·사용 질문
+    private static final Pattern OTHER_SERVICE = Pattern.compile("로밍|해외|국제전화");
     private static final Pattern CHANGES = Pattern.compile(
             "려면|변경|바꾸|바꿔|바꿀|옮기|옮겨|갈아|전환|가입|신청|해지|할인|약정|로밍|자동|갑자기|올랐|부족|계속|안쓰고|따로"
                     + "|될까|나이|연령");
@@ -53,6 +56,11 @@ public final class PlanQuestionRules {
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
 
     private PlanQuestionRules() {
+    }
+
+    // 로밍처럼 요금제 표 밖의 서비스를 묻는 질문이면 FAQ가 답한다
+    public static boolean asksOtherService(String question) {
+        return question != null && OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
     }
 
     // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
@@ -92,6 +100,9 @@ public final class PlanQuestionRules {
             return PlanQuestionType.NONE;
         }
         String text = question.replaceAll("\\s+", "");
+        if (asksOtherService(text)) {
+            return PlanQuestionType.NONE;
+        }
         if (RECOMMENDATION.matcher(text).find() && !asksProcedure(PlanQuestionType.RECOMMENDATION, text)) {
             return PlanQuestionType.RECOMMENDATION;
         }
