@@ -233,7 +233,7 @@ class SuggestedQuestionRecommenderTest {
             links = MAPPER.readValue(in, PolicyLinks.class);
         }
 
-        assertThat(recommender.isUnanswerable("PLAN-0041")).isTrue();
+        assertThat(recommender.isUnanswerable("PLAN-0091")).isTrue();
         assertThat(links.representativeQuestions().values())
                 .noneMatch(rep -> recommender.isUnanswerable(rep.slotId()));
     }
