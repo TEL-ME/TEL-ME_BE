@@ -1,0 +1,96 @@
+package com.telme.consult.service;
+
+import java.util.regex.Pattern;
+
+// 일반 정책 질문을 가로채지 않도록 표현이 분명할 때만 NONE이 아닌 값을 주는 규칙 기반 분류
+public final class PlanQuestionRules {
+
+    private static final Pattern COMPARISON = Pattern.compile("랑|비교|차이|중에|달라|나아요|나은");
+    private static final Pattern PROCEDURE = Pattern.compile("절차|방법|기준|조건");
+
+    private static final Pattern RECOMMENDATION = Pattern.compile(
+            "요금제.*(추천|맞는|어울리는|알맞은)|(추천|맞는|어울리는|알맞은).*요금제"
+                    + "|어떤요금제.{0,3}(좋|맞|나을|써야|갈아|바꿔)|요금제.{0,12}(갈아타야|바꿔야|옮겨야)"
+                    + "|요금제.{0,6}나한테(맞|어울)");
+
+    private static final Pattern MY_SUBSCRIPTION = Pattern.compile(
+            "(내요금제|제요금제|내가(가입한|쓰는|쓰고있는|이용하는)요금제"
+                    + "|지금(쓰는|쓰고있는|가입한|이용중인|사용중인)요금제"
+                    + "|현재(쓰는|가입한|이용중인|사용중인)?요금제|가입한요금제|쓰고있는요금제)"
+                    + ".{0,10}(뭐|뭔|무엇|어떤|얼마|알려|확인|조회|이름)");
+    private static final Pattern SUBSCRIPTION_EXCLUDED = Pattern.compile("변경|바꾸|해지|신청");
+
+    private static final Pattern MY_PENALTY = Pattern.compile(
+            "내위약금|제위약금|내약정|제약정|(지금|현재|오늘|바로|당장)해지(하면|할때|시|하는경우|한다면)"
+                    + "|해지하면.{0,6}(얼마|위약금)나오");
+    private static final Pattern PENALTY_EXCLUDED = Pattern.compile("면제|어떻게알");
+
+    private static final Pattern MY_USAGE = Pattern.compile(
+            "(내|제)(사용량|데이터|통화|문자)|이번달(사용량|데이터|통화|문자|요금.{0,6}(얼마|나올|예상|나와)|예상)"
+                    + "|남은(데이터|통화|문자)(가|는|량)?(얼마|몇)|(데이터|통화|문자).{0,4}(얼마나(썼|사용했|남았|남아)|확인|조회)"
+                    + "|사용량(을|좀)?(알려|확인|조회|얼마)|예상요금|청구될요금");
+    private static final Pattern USAGE_EXCLUDED = Pattern.compile(
+            "이월|넘길|넘어가|넘겨|다음달|선물|양도|공유|손주|이전|못쓰면|로밍|하루|보낼");
+
+    private static final Pattern PLAN_CATALOG = Pattern.compile(
+            "요금제.{0,8}(종류|몇가지|몇개|몇종류|목록|뭐가있|뭐있|어떤게있|얼마|가격|월정액)"
+                    + "|(제일|가장)(싼|저렴한|비싼).{0,4}요금제|요금제(가|도|는)?(있나요|있어요)");
+    private static final Pattern CATALOG_EXCLUDED = Pattern.compile(
+            "가능|될까|되나요|몇살|자동|갑자기|올랐|부족|나이|전환|계속|안쓰고|따로|어떻게|방법|절차|조건|변경|바꾸|해지|가입|신청|할인|약정|로밍");
+
+    private static final Pattern PRONOUN = Pattern.compile("^(내|내가|제|제가|저|저는|저도|저의|나|나는|나도|우리|우리는|우리가)$");
+    private static final Pattern OWN_STATE =
+            Pattern.compile("지금|현재|오늘|이번\\s*달|가입한\\s*요금제|가입돼|가입되어|쓰고\\s*있|사용\\s*중|당장");
+    private static final Pattern OWN_USAGE = Pattern.compile("남은|남았|남아|썼|사용했|보냈|했는지");
+    private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*남(은|았|아)");
+    private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
+
+    private PlanQuestionRules() {
+    }
+
+    // 모델이 내 정보 질문이라고 해도 본인을 가리키는 표현이 없으면 일반 질문으로 본다
+    public static boolean hasPersonalMarker(PlanQuestionType type, String question) {
+        if (question == null || GENERAL_COMPARISON.matcher(question).find()) {
+            return false;
+        }
+        for (String token : question.trim().split("\\s+")) {
+            if (PRONOUN.matcher(token).matches()) {
+                return true;
+            }
+        }
+        if (OWN_STATE.matcher(question).find()) {
+            return true;
+        }
+        return switch (type) {
+            case MY_USAGE -> OWN_USAGE.matcher(question).find();
+            case MY_PENALTY -> OWN_CONTRACT.matcher(question.replaceAll("\\s+", "")).find();
+            default -> false;
+        };
+    }
+
+    public static PlanQuestionType classify(String question) {
+        if (question == null) {
+            return PlanQuestionType.NONE;
+        }
+        String text = question.replaceAll("\\s+", "");
+        if (RECOMMENDATION.matcher(text).find() && !PROCEDURE.matcher(text).find()) {
+            return PlanQuestionType.RECOMMENDATION;
+        }
+        if (MY_SUBSCRIPTION.matcher(text).find()
+                && !COMPARISON.matcher(text).find() && !SUBSCRIPTION_EXCLUDED.matcher(text).find()) {
+            return PlanQuestionType.MY_SUBSCRIPTION;
+        }
+        if (MY_PENALTY.matcher(text).find()
+                && !COMPARISON.matcher(text).find() && !PENALTY_EXCLUDED.matcher(text).find()) {
+            return PlanQuestionType.MY_PENALTY;
+        }
+        if (MY_USAGE.matcher(text).find() && !USAGE_EXCLUDED.matcher(text).find()) {
+            return PlanQuestionType.MY_USAGE;
+        }
+        if (PLAN_CATALOG.matcher(text).find()
+                && !CATALOG_EXCLUDED.matcher(text).find() && !COMPARISON.matcher(text).find()) {
+            return PlanQuestionType.PLAN_CATALOG;
+        }
+        return PlanQuestionType.NONE;
+    }
+}
