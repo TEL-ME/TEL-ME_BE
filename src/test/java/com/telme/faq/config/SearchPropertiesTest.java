@@ -54,7 +54,7 @@ class SearchPropertiesTest {
     }
 
     @Test
-    @DisplayName("회색 구간은 기본 꺼짐이고, 선은 측정으로 고른 Q_A 0.69 ~ 0.80, 질문 0.80 ~ 0.88이다")
+    @DisplayName("회색 구간은 기본 꺼짐이고, 선은 측정으로 고른 Q_A 0.69 ~ 0.80, 질문 0.80 ~ 0.90이다")
     void 회색_구간_기본값() {
         runner.withPropertyValues("search.similarity-threshold=0.72")
                 .run(context -> {
@@ -62,7 +62,7 @@ class SearchPropertiesTest {
                     assertThat(zone.enabled()).isFalse();
                     assertThat(zone.qaPass()).isEqualTo(0.80);
                     assertThat(zone.qaFloor()).isEqualTo(0.69);
-                    assertThat(zone.questionPass()).isEqualTo(0.88);
+                    assertThat(zone.questionPass()).isEqualTo(0.90);
                     assertThat(zone.questionFloor()).isEqualTo(0.80);
                 });
     }

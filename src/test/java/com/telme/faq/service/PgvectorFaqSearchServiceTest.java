@@ -350,6 +350,27 @@ class PgvectorFaqSearchServiceTest {
     }
 
     @Test
+    @DisplayName("기본 선에서는 기존 질문 임계값(0.88) 위라도 0.90 미만이면 판정 필요다(질문 벡터 위로 넓히기)")
+    void 기본_선은_질문_벡터_0_88에서_0_90도_판정한다() {
+        PgvectorFaqSearchService defaults = new PgvectorFaqSearchService(embeddingClient, repository,
+                embeddingProperties,
+                new SearchProperties(0.72, new SearchProperties.DualVector(true, 0.88), RECORDING_ON,
+                        new SearchProperties.GrayZone(true, 0.80, 0.69, 0.90, 0.80)),
+                new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of());
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(1L, "USIM", "0.905", 0.095),
+                matchOf(2L, "USIM", "0.895", 0.105),
+                matchOf(3L, "USIM", "0.85", 0.15)));
+
+        FaqGrayZoneSearchResponse result = defaults.searchGrayZone(new FaqSearchRequest("질문", 3));
+
+        assertThat(result.questionOnly()).extracting(c -> c.result().faqId(), FaqGrayZoneSearchResponse.Candidate::needsJudgment)
+                .containsExactly(tuple(1L, false), tuple(2L, true), tuple(3L, true));
+    }
+
+    @Test
     @DisplayName("이중 벡터가 꺼져 있으면 회색 구간 검색도 질문 벡터를 조회하지 않는다")
     void 이중_벡터가_꺼지면_회색_구간도_QA만() {
         PgvectorFaqSearchService qaOnly = new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,

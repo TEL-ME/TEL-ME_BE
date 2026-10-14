@@ -78,10 +78,11 @@ class BedrockConfigTest {
     }
 
     @Test
-    @DisplayName("동시 연결 수 기본은 50, 연결 대기는 1초이고 1 미만이면 기동에 실패한다")
+    @DisplayName("호출 제한 기본은 8초, 동시 연결 수는 50, 연결 대기는 1초이고 연결 수가 1 미만이면 기동에 실패한다")
     void 연결_설정_기본값과_검증() {
         runner.run(context -> {
             BedrockProperties properties = context.getBean(BedrockProperties.class);
+            assertThat(properties.timeout()).isEqualTo(Duration.ofSeconds(8));
             assertThat(properties.maxConnections()).isEqualTo(50);
             assertThat(properties.connectionAcquireTimeout()).isEqualTo(Duration.ofSeconds(1));
         });

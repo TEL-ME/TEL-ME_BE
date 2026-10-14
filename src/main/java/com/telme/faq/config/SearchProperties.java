@@ -44,16 +44,17 @@ public record SearchProperties(
 
     // 점수가 pass 이상이면 판정 없이 통과, floor 이상 pass 미만이면 판정기가 통과시켜야 근거로 쓰고, floor 미만은 버린다
     // 꺼져 있으면 similarityThreshold·dualVector.questionThreshold만 쓰는 기존 검색과 같다
-    // 기본 선은 측정으로 고른 값이다(docs/GRAY_ZONE_UPPER_BAND.md: Q_A 0.69 ~ 0.80, 질문 0.80 ~ 0.88)
+    // 기본 선은 측정으로 고른 값이다(docs/GRAY_ZONE_UPPER_BAND.md: Q_A 0.69 ~ 0.80, 질문 0.80 ~ 0.90).
+    // 질문 통과 선 0.90은 기존 질문 임계값 0.88보다 높아 0.88 ~ 0.90도 판정한다(질문 벡터 위로 넓히기)
     public record GrayZone(
             @DefaultValue("false") boolean enabled,
             @DefaultValue("0.80") double qaPass,
             @DefaultValue("0.69") double qaFloor,
-            @DefaultValue("0.88") double questionPass,
+            @DefaultValue("0.90") double questionPass,
             @DefaultValue("0.80") double questionFloor
     ) {
 
-        public static final GrayZone DISABLED = new GrayZone(false, 0.80, 0.69, 0.88, 0.80);
+        public static final GrayZone DISABLED = new GrayZone(false, 0.80, 0.69, 0.90, 0.80);
 
         public GrayZone {
             requireScore("search.gray-zone.qa-pass", qaPass);
