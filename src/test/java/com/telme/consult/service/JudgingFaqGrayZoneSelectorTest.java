@@ -147,6 +147,18 @@ class JudgingFaqGrayZoneSelectorTest {
     }
 
     @Test
+    @DisplayName("통과 선 이상인데 판정에 넘긴 후보(재검색)는 안 됨이면 빼고, 실패하면 예전처럼 남긴다")
+    void 통과_선_이상_후보도_판정_결과를_따른다() {
+        verdicts(Map.of(18L, Verdict.NOT_ANSWERABLE, 19L, Verdict.FAILED));
+
+        Selection selection = select(List.of(judgeNeeded(19L, 0.90, QO)), List.of(judgeNeeded(18L, 0.85, QA)));
+
+        assertThat(selection.results()).extracting(FaqSearchResponse::faqId).containsExactly(19L);
+        assertThat(selection.judgments()).extracting(Judgment::faqId, Judgment::upperBand, Judgment::kept)
+                .containsExactly(tuple(19L, true, true), tuple(18L, true, false));
+    }
+
+    @Test
     @DisplayName("판정에는 고객 질문과 FAQ 질문·답변을 넘긴다")
     void 판정_입력() {
         verdicts(Map.of(10L, Verdict.ANSWERABLE));

@@ -686,6 +686,36 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("재검색 후보는 통과 선 이상이어도 모두 판정하고, 원문 검색 후보는 점수대로 둔다")
+    void 재검색_후보는_모두_판정한다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var high = new FaqSearchResponse(5L, "ROAMING-0036", "ROAMING", "로밍 요금", "9,900원입니다.",
+                0.85, 1, null, 1, "Q_A");
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(high)));
+        List<FaqGrayZoneSearchResponse> seen = new ArrayList<>();
+        // 원문 검색에서 모두 걸러져 재검색까지 가게 한다
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) -> {
+            seen.add(candidates);
+            return new FaqGrayZoneSelector.Selection(List.of(), List.of());
+        };
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        assertThat(seen).hasSize(2);
+        assertThat(seen.get(0).questionAnswer()).singleElement()
+                .satisfies(candidate -> assertThat(candidate.needsJudgment()).isFalse());
+        assertThat(seen.get(1).questionAnswer()).singleElement().satisfies(candidate -> {
+            assertThat(candidate.needsJudgment()).isTrue();
+            assertThat(candidate.result()).isSameAs(high);
+        });
+    }
+
+    @Test
     @DisplayName("회색 구간이 켜져 있어도 후보 검색(searchCandidates)은 그대로 쓴다")
     void 후보_검색은_회색_구간을_쓰지_않는다() {
         FaqSearchService searches = mock(FaqSearchService.class);

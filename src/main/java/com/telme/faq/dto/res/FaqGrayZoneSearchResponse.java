@@ -15,6 +15,15 @@ public record FaqGrayZoneSearchResponse(List<Candidate> questionOnly, List<Candi
     public record Candidate(FaqSearchResponse result, boolean needsJudgment) {
     }
 
+    // 점수와 관계없이 모든 후보를 판정 필요로 바꾼다. 아래 선 미만은 이미 빠져 있어 그대로다
+    public FaqGrayZoneSearchResponse judgingAll() {
+        return new FaqGrayZoneSearchResponse(judgingAll(questionOnly), judgingAll(questionAnswer));
+    }
+
+    private static List<Candidate> judgingAll(List<Candidate> candidates) {
+        return candidates.stream().map(candidate -> new Candidate(candidate.result(), true)).toList();
+    }
+
     // 판정 없이 모두 통과로 볼 결과. 회색 구간을 지원하지 않는 검색 구현이 쓴다
     public static FaqGrayZoneSearchResponse allPassed(List<FaqSearchResponse> results) {
         return new FaqGrayZoneSearchResponse(List.of(),

@@ -282,6 +282,11 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     // 어떤 후보를 왜 남기고 뺐는지(판정 결과·위쪽 구간 여부·지연)를 검색마다 실행 기록에 남긴다. 모델이 쓴 문장은 넣지 않는다
     private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest) {
         var candidates = searches.searchGrayZone(searchRequest);
+        // 재검색 문장은 FAQ 말투로 다듬어져 점수가 높게 나온다. 원문 검색에서 판정기가 막은 FAQ가 통과 선을 넘어
+        // 판정 없이 들어오지 않게 재검색 후보는 모두 판정한다. 원문에서 받은 판정은 같은 실행 안에서 다시 쓴다
+        if (searchRequest.kind() == FaqSearchKind.REFINED) {
+            candidates = candidates.judgingAll();
+        }
         long started = System.nanoTime();
         var selection = grayZone.select(input.executionId(), input.consultRequestId(), input.resolvedUserQuery(),
                 candidates, searchRequest.topK());
