@@ -125,6 +125,15 @@ search:
     enabled: ${SEARCH_SCORE_RECORDING_ENABLED:true}
     # 이 기간이 지난 기록은 매일 새벽에 지운다. 분포 화면은 최근 기간만 본다
     retention: ${SEARCH_SCORE_RECORDING_RETENTION:90d}
+  gray-zone:
+    # 채팅 답변용 검색에서 점수 구간 일부를 판정기(llm.bedrock)로 한 번 더 확인한다. 기본 꺼짐(TELME-160)
+    # pass 이상은 판정 없이 통과, floor ~ pass는 판정기가 통과시켜야 근거, floor 미만은 버린다
+    # 측정: 정답 근거 59 → 73, 엉뚱한 근거 8 → 4, holdout 20 → 11 (docs/GRAY_ZONE_UPPER_BAND.md)
+    enabled: ${SEARCH_GRAY_ZONE_ENABLED:false}
+    qa-pass: 0.80
+    qa-floor: 0.69
+    question-pass: 0.88
+    question-floor: 0.80
 
 member:
   guest:

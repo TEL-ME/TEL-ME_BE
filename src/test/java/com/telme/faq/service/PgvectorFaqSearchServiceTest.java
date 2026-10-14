@@ -1,6 +1,7 @@
 package com.telme.faq.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -20,6 +21,7 @@ import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.req.FaqSearchVector;
+import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
@@ -48,11 +50,13 @@ class PgvectorFaqSearchServiceTest {
             new EmbeddingProperties(MODEL, 3, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120));
     private final PgvectorFaqSearchService service =
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
-                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88), RECORDING_ON),
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88), RECORDING_ON,
+                            SearchProperties.GrayZone.DISABLED),
                     new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
     private final PgvectorFaqSearchService dualVectorService =
             new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
-                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD), RECORDING_ON),
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD), RECORDING_ON,
+                            SearchProperties.GrayZone.DISABLED),
                     new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
     
     @Test
@@ -72,7 +76,7 @@ class PgvectorFaqSearchServiceTest {
     void 기록을_끄면_남기지_않는다() {
         PgvectorFaqSearchService recordingOff = new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
                 new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, 0.88),
-                        new SearchProperties.ScoreRecording(false, Duration.ofDays(90))),
+                        new SearchProperties.ScoreRecording(false, Duration.ofDays(90)), SearchProperties.GrayZone.DISABLED),
                 new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
         when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
         when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "요금제 질문", 0.2)));
@@ -312,6 +316,81 @@ class PgvectorFaqSearchServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).faqId()).isEqualTo(1L);
         assertThat(result.get(0).searchRank()).isEqualTo(1);
+    }
+
+    // 경계값을 이진수로 정확히 나타낼 수 있는 선(0.875, 0.75, 0.5)으로 둔다
+    private final PgvectorFaqSearchService grayZoneService =
+            new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
+                    new SearchProperties(THRESHOLD, new SearchProperties.DualVector(true, QUESTION_THRESHOLD), RECORDING_ON,
+                            new SearchProperties.GrayZone(true, 0.75, 0.5, 0.875, 0.75)),
+                    new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
+
+    @Test
+    @DisplayName("회색 구간 검색은 벡터별로 통과 선 이상은 통과, 아래 선 이상은 판정 필요로 두고 그 아래는 뺀다")
+    void 회색_구간은_점수로_나눈다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(1L, "BILLING", "통과 선과 같음", 0.25),    // 0.75
+                matchOf(2L, "USIM", "아래 선과 같음", 0.5),        // 0.5
+                matchOf(3L, "PLAN", "아래 선 미만", 0.625)));       // 0.375
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(
+                matchOf(4L, "ROAMING", "통과 선과 같음", 0.125),   // 0.875
+                matchOf(5L, "DEVICE", "판정 구간", 0.1875),        // 0.8125
+                matchOf(6L, "PORTING", "아래 선 미만", 0.5)));      // 0.5
+
+        FaqGrayZoneSearchResponse result = grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3));
+
+        assertThat(result.questionOnly()).extracting(c -> c.result().faqId(), FaqGrayZoneSearchResponse.Candidate::needsJudgment)
+                .containsExactly(tuple(4L, false), tuple(5L, true));
+        assertThat(result.questionAnswer()).extracting(c -> c.result().faqId(), FaqGrayZoneSearchResponse.Candidate::needsJudgment)
+                .containsExactly(tuple(1L, false), tuple(2L, true));
+        assertThat(result.questionOnly()).extracting(c -> c.result().matchedVariant())
+                .containsOnly(FaqEmbeddingTextVariant.QUESTION_ONLY.name());
+        verify(embeddingClient, times(1)).embed("질문");
+    }
+
+    @Test
+    @DisplayName("이중 벡터가 꺼져 있으면 회색 구간 검색도 질문 벡터를 조회하지 않는다")
+    void 이중_벡터가_꺼지면_회색_구간도_QA만() {
+        PgvectorFaqSearchService qaOnly = new PgvectorFaqSearchService(embeddingClient, repository, embeddingProperties,
+                new SearchProperties(THRESHOLD, new SearchProperties.DualVector(false, QUESTION_THRESHOLD), RECORDING_ON,
+                        new SearchProperties.GrayZone(true, 0.75, 0.5, 0.875, 0.75)),
+                new FaqEmbeddingTextProperties(FaqEmbeddingTextVariant.Q_A), scoreRepository);
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.375)));
+
+        FaqGrayZoneSearchResponse result = qaOnly.searchGrayZone(new FaqSearchRequest("질문", 3));
+
+        assertThat(result.questionOnly()).isEmpty();
+        assertThat(result.questionAnswer()).singleElement().satisfies(c -> assertThat(c.needsJudgment()).isTrue());
+        verify(repository, never()).findNearestByQuestionVector(any(), anyInt(), anyString());
+    }
+
+    @Test
+    @DisplayName("회색 구간 검색도 관리자 점수 기록은 판정 전 기존 임계값 기준으로 남긴다")
+    void 회색_구간_점수_기록은_기존_임계값_기준() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        // Q_A 0.375 < 0.5, 질문 0.875 < 0.88: 기존 검색이었다면 결과가 없다
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.625)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL))
+                .thenReturn(List.of(matchOf(2L, "USIM", "질문", 0.125)));
+
+        grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
+
+        verify(scoreRepository).save(FaqSearchKind.ORIGINAL, 0.375, false, THRESHOLD);
+    }
+
+    @Test
+    @DisplayName("회색 구간을 지원하지 않는 구현은 기존 검색 결과를 모두 통과로 돌려준다")
+    void 기본_구현은_모두_통과() {
+        FaqSearchResponse found = new FaqSearchResponse(1L, "BILLING-0001", "BILLING", "질문", "답변", 0.9, 1,
+                null, 1, null);
+        FaqSearchService dummy = request -> List.of(found);
+
+        FaqGrayZoneSearchResponse result = dummy.searchGrayZone(new FaqSearchRequest("질문", 3));
+
+        assertThat(result.questionOnly()).isEmpty();
+        assertThat(result.questionAnswer()).containsExactly(new FaqGrayZoneSearchResponse.Candidate(found, false));
     }
 
     private FaqNearestMatch matchOf(long faqId, String category, String question, double distance) {
