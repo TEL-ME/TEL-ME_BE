@@ -60,6 +60,31 @@ class PlanQuestionRulesTest {
     }
 
     @Test
+    void 방법_자격_가능_여부_뜻_비교를_묻는_질문은_요금제_목록과_추천이_아니다() {
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true,
+                "시니어 요금제로 바꾸려면 어떻게 해요", "제일 싼 요금제로 가입할 수 있을까요", "알뜰 요금제로 5G를 쓸 수 있어요",
+                "청소년 요금제는 몇 살까지 쓸 수 있어요", "알뜰 요금제라는 게 뭐예요", "요금제 뭐가 있는지 어떻게 알아요",
+                "5G 요금제랑 알뜰 요금제 중 뭐가 싸요", "싼 거랑 비싼 거랑 얼마 차이예요",
+                "가족 모두 5G 언리미티드로 바꿀 수 있나요");
+        assertProcedure(PlanQuestionType.RECOMMENDATION, true,
+                "요금제를 고르는 방법 알려주세요", "식구들 요금제 어떻게 골라요", "5G 라이트랑 LTE 플러스 중 뭐가 나아요",
+                "요금이 많이 나와서 요금제를 낮추려면 어떻게 해요");
+    }
+
+    @Test
+    void 목록을_묻거나_추천을_바라는_질문은_막지_않는다() {
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, false,
+                "요금제 뭐가 있어요", "5G 스탠다드 얼마예요", "LTE 요금제 이름이 뭐뭐예요", "알뜰 미니가 얼마예요",
+                "요금제가 다 해서 몇 가지예요", "시니어 요금제 월 요금이 얼마예요", "제일 저렴한 요금제가 뭐예요",
+                "가장 비싼 요금제는 뭐예요", "LTE 요금제 종류가 어떻게 돼요", "청소년이 쓸 수 있는 요금제는 뭐가 있나요");
+        assertProcedure(PlanQuestionType.RECOMMENDATION, false,
+                "요금제 추천해줘", "저한테 맞는 요금제 있을까요", "데이터 많이 쓰는데 어떤 요금제가 좋아요",
+                "어떤 요금제로 갈아타야 할지 모르겠습니다", "데이터를 아끼려면 어떤 요금제가 좋아요",
+                "영상을 많이 보는데 어떤 요금제를 쓰면 될까요", "제가 쓰기에 가성비 좋은 요금제가 뭐예요",
+                "지금 요금제보다 더 나은 게 있을까요", "지금보다 저렴하게 쓰려면 어떤 걸로 옮기는 게 나아요");
+    }
+
+    @Test
     void 본인을_가리키는_표현이_있으면_내_정보_질문으로_인정한다() {
         assertMarker(PlanQuestionType.MY_SUBSCRIPTION, true,
                 "내 요금제 뭐야", "내가 가입한 요금제 확인해줘", "나 어떤 요금제야", "제가 쓰는 요금제 알려줘",
@@ -118,6 +143,12 @@ class PlanQuestionRulesTest {
     private void assertMarker(PlanQuestionType type, boolean expected, String... questions) {
         for (String question : questions) {
             assertThat(PlanQuestionRules.hasPersonalMarker(type, question)).as(question).isEqualTo(expected);
+        }
+    }
+
+    private void assertProcedure(PlanQuestionType type, boolean expected, String... questions) {
+        for (String question : questions) {
+            assertThat(PlanQuestionRules.asksProcedure(type, question)).as(question).isEqualTo(expected);
         }
     }
 

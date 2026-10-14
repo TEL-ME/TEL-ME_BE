@@ -44,6 +44,12 @@ class PlanQuestionEvaluationProbe {
         score("검증2", holdoutCases2());
     }
 
+    // 요금제 목록 질문과 같은 단어가 든 절차·자격 질문을 가르는 능력을 보는 세 번째 검증 질문이다
+    @Test
+    void 세번째_새_질문_평가셋으로_채점한다() {
+        score("검증3", holdoutCases3());
+    }
+
     private void score(String name, List<Case> cases) {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
@@ -128,6 +134,29 @@ class PlanQuestionEvaluationProbe {
                 "유심 재발급 비용이 얼마예요", "번호이동하면 위약금 면제돼요", "가입하려면 뭐가 필요해요",
                 "일시 정지는 며칠까지 돼요", "요금 납부는 어떻게 해요", "오늘 날씨 어때요",
                 "약정 없이 가입할 수 있나요", "해지 신청은 어디서 해요", "데이터 다 쓰면 어떻게 돼요");
+        return cases;
+    }
+
+    private List<Case> holdoutCases3() {
+        List<Case> cases = new ArrayList<>();
+        add(cases, PlanQuestionType.RECOMMENDATION,
+                "요즘 데이터가 모자라는데 뭘로 바꾸는 게 좋을까요", "저한테 어울리는 요금제 하나 알려주세요",
+                "통화를 거의 안 하는데 맞는 요금제가 있을까요", "제가 쓰기에 가성비 좋은 요금제가 뭐예요");
+        add(cases, PlanQuestionType.MY_SUBSCRIPTION,
+                "내가 지금 쓰는 요금제가 뭐더라", "제 요금제 한 달에 얼마 나가죠", "가입해 둔 요금제 이름 좀 알려줘");
+        add(cases, PlanQuestionType.MY_PENALTY,
+                "지금 해지하면 위약금 얼마나 되죠", "제 약정 기간이 얼마나 남았나요", "해지하려는데 내 위약금이 얼마인지 알려주세요");
+        add(cases, PlanQuestionType.MY_USAGE,
+                "이번 달 문자 얼마나 보냈어요", "내가 데이터를 얼마나 썼는지 궁금해요", "이번 달 요금은 얼마쯤 나와요");
+        add(cases, PlanQuestionType.PLAN_CATALOG,
+                "5G 요금제는 어떤 게 있나요", "LTE 요금제 월 요금 알려주세요", "시니어 요금제 월 요금이 얼마예요",
+                "가장 비싼 요금제는 뭐예요", "5G 프리미엄은 데이터를 얼마나 주나요", "알뜰 요금제 목록 보여주세요");
+        add(cases, PlanQuestionType.NONE,
+                "시니어 요금제는 어떻게 가입해요", "LTE 요금제에서 5G 요금제로 옮길 수 있나요", "청소년 요금제 가입 연령이 어떻게 돼요",
+                "알뜰 요금제는 무슨 뜻이에요", "요금제를 고르는 요령이 있나요", "5G 요금제로 바꾸면 위약금이 있나요",
+                "요금제 변경은 언제 적용돼요", "가족과 요금제를 같이 쓸 수 있나요", "약정은 어떻게 신청해요",
+                "데이터 무제한 요금제도 속도 제한이 있나요", "해지는 어떻게 해요", "요금 납부일을 바꾸고 싶어요",
+                "단말 할부는 어떻게 되나요", "일시 정지는 어떻게 신청해요");
         return cases;
     }
 

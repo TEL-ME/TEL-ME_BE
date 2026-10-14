@@ -40,14 +40,21 @@ public class PlanQuestionClassifier {
         try {
             PlanQuestionType classified = parse(llmClient.generate(request(executionId, question)));
             if (classified != null) {
-                return isMyData(classified) && !PlanQuestionRules.hasPersonalMarker(classified, question)
-                        ? PlanQuestionType.NONE : classified;
+                return guard(classified, question);
             }
             log.info("[요금제 질문 분류] 응답을 읽지 못해 규칙으로 분류합니다. executionId={}", executionId);
         } catch (RuntimeException exception) {
             log.warn("[요금제 질문 분류] 모델 호출에 실패해 규칙으로 분류합니다. executionId={}", executionId, exception);
         }
         return PlanQuestionRules.classify(question);
+    }
+
+    private static PlanQuestionType guard(PlanQuestionType type, String question) {
+        if (isMyData(type) && !PlanQuestionRules.hasPersonalMarker(type, question)) {
+            return PlanQuestionType.NONE;
+        }
+        boolean listOrRecommend = type == PlanQuestionType.PLAN_CATALOG || type == PlanQuestionType.RECOMMENDATION;
+        return listOrRecommend && PlanQuestionRules.asksProcedure(type, question) ? PlanQuestionType.NONE : type;
     }
 
     private static boolean isMyData(PlanQuestionType type) {

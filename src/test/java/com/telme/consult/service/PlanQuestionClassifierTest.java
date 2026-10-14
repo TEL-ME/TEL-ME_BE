@@ -45,6 +45,19 @@ class PlanQuestionClassifierTest {
     }
 
     @Test
+    void 모델이_요금제_목록이나_추천이라고_해도_방법이나_자격을_묻는_질문이면_NONE이다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\"}");
+        assertThat(classifier.classify(1L, "시니어 요금제로 바꾸려면 어떻게 해요")).isEqualTo(PlanQuestionType.NONE);
+        assertThat(classifier.classify(1L, "알뜰 요금제로 5G를 쓸 수 있어요")).isEqualTo(PlanQuestionType.NONE);
+        assertThat(classifier.classify(1L, "5G 요금제랑 알뜰 요금제 중 뭐가 싸요")).isEqualTo(PlanQuestionType.NONE);
+        assertThat(classifier.classify(1L, "5G 스탠다드 얼마예요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+
+        when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\"}");
+        assertThat(classifier.classify(1L, "식구들 요금제 어떻게 골라요")).isEqualTo(PlanQuestionType.NONE);
+        assertThat(classifier.classify(1L, "데이터를 아끼려면 어떤 요금제가 좋아요")).isEqualTo(PlanQuestionType.RECOMMENDATION);
+    }
+
+    @Test
     void 요금제_추천과_목록은_본인_표현이_없어도_모델_분류를_따른다() {
         when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\"}");
         assertThat(classifier.classify(1L, "가성비 좋은 요금제 하나만 골라주세요")).isEqualTo(PlanQuestionType.RECOMMENDATION);

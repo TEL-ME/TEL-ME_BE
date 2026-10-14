@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 public final class PlanQuestionRules {
 
     private static final Pattern COMPARISON = Pattern.compile("랑|비교|차이|중에|달라|나아요|나은");
-    private static final Pattern PROCEDURE = Pattern.compile("절차|방법|기준|조건");
 
     private static final Pattern RECOMMENDATION = Pattern.compile(
             "요금제.*(추천|맞는|어울리는|알맞은)|(추천|맞는|어울리는|알맞은).*요금제"
@@ -35,9 +34,14 @@ public final class PlanQuestionRules {
     private static final Pattern PLAN_CATALOG = Pattern.compile(
             "요금제.{0,8}(종류|몇가지|몇개|몇종류|목록|뭐가있|뭐있|어떤게있|얼마|가격|월정액)"
                     + "|(제일|가장)(싼|저렴한|비싼).{0,4}요금제|요금제(가|도|는)?(있나요|있어요)");
-    private static final Pattern CATALOG_EXCLUDED = Pattern.compile(
-            "가능|될까|되나요|몇살|자동|갑자기|올랐|부족|나이|전환|계속|안쓰고|따로|어떻게|방법|절차|조건|변경|바꾸|해지|가입|신청|할인|약정|로밍");
 
+    private static final Pattern HOW_OR_IF = Pattern.compile(
+            "어떻게(해|하|바꿔|바꾸|가입|신청|변경|골라|고르|알아|봐|받|신고|등록|확인)|어디서|어디에서|방법|절차|요령|기준|조건"
+                    + "|자격|누가|몇살|가능|수있(어요|나요|을까요|습니까|는지|을지|죠)|무슨뜻|란무엇|이란|라는게");
+    private static final Pattern COMPARES = Pattern.compile("비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중");
+    private static final Pattern CHANGES = Pattern.compile(
+            "려면|변경|바꾸|바꿔|바꿀|옮기|옮겨|갈아|전환|가입|신청|해지|할인|약정|로밍|자동|갑자기|올랐|부족|계속|안쓰고|따로"
+                    + "|될까|나이|연령");
     private static final Pattern PRONOUN = Pattern.compile("^(내|내가|제|제가|저|저는|저도|저의|나|나는|나도|우리|우리는|우리가)$");
     private static final Pattern OWN_STATE =
             Pattern.compile("지금|현재|오늘|이번\\s*달|가입한\\s*요금제|가입돼|가입되어|쓰고\\s*있|사용\\s*중|당장");
@@ -46,6 +50,15 @@ public final class PlanQuestionRules {
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
 
     private PlanQuestionRules() {
+    }
+
+    // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
+    public static boolean asksProcedure(PlanQuestionType type, String question) {
+        String text = question.replaceAll("\\s+", "");
+        if (HOW_OR_IF.matcher(text).find() || COMPARES.matcher(text).find()) {
+            return true;
+        }
+        return type == PlanQuestionType.PLAN_CATALOG && CHANGES.matcher(text).find();
     }
 
     // 모델이 내 정보 질문이라고 해도 본인을 가리키는 표현이 없으면 일반 질문으로 본다
@@ -73,7 +86,7 @@ public final class PlanQuestionRules {
             return PlanQuestionType.NONE;
         }
         String text = question.replaceAll("\\s+", "");
-        if (RECOMMENDATION.matcher(text).find() && !PROCEDURE.matcher(text).find()) {
+        if (RECOMMENDATION.matcher(text).find() && !asksProcedure(PlanQuestionType.RECOMMENDATION, text)) {
             return PlanQuestionType.RECOMMENDATION;
         }
         if (MY_SUBSCRIPTION.matcher(text).find()
@@ -87,8 +100,7 @@ public final class PlanQuestionRules {
         if (MY_USAGE.matcher(text).find() && !USAGE_EXCLUDED.matcher(text).find()) {
             return PlanQuestionType.MY_USAGE;
         }
-        if (PLAN_CATALOG.matcher(text).find()
-                && !CATALOG_EXCLUDED.matcher(text).find() && !COMPARISON.matcher(text).find()) {
+        if (PLAN_CATALOG.matcher(text).find() && !asksProcedure(PlanQuestionType.PLAN_CATALOG, text)) {
             return PlanQuestionType.PLAN_CATALOG;
         }
         return PlanQuestionType.NONE;
