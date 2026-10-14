@@ -1257,6 +1257,67 @@ class QueryRoutingServiceTest {
             assertThat(r.subQueries()).isEmpty();
         }
 
+        private QueryRoutingService withRecheck(UnknownFaqRecheck recheck) {
+            return new QueryRoutingService(llmClient, objectMapper, queryRoutingRepository, consultRequestRepository,
+                    new RuleBasedRoutingFallback(), new IntentConverter(objectMapper), transactionTemplate, recheck);
+        }
+
+        @Test
+        @DisplayName("모델이 UNKNOWN이라 해도 원문으로 FAQ가 검색되면 원문 한 건의 FAQ로 보정한다")
+        void unknownWithFaqHitBecomesFaq() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+            List<String> searched = new ArrayList<>();
+
+            IntentRouteResponse r = withRecheck(question -> searched.add(question))
+                    .routeSingleConsult(msg("위임장만 있으면 둘 중 한 사람만 가도 되나요?"), null);
+
+            assertThat(searched).containsExactly("위임장만 있으면 둘 중 한 사람만 가도 되나요?");
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(r.method()).isEqualTo(QueryRouting.Method.SEARCH);
+            assertThat(r.subQueries()).singleElement().satisfies(sub -> {
+                assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                assertThat(sub.queryText()).isEqualTo("위임장만 있으면 둘 중 한 사람만 가도 되나요?");
+            });
+            verify(consultRequestRepository).save(any());
+        }
+
+        @Test
+        @DisplayName("FAQ 검색 결과가 없거나 검색이 실패하면 UNKNOWN을 유지한다")
+        void unknownWithoutFaqHitStaysUnknown() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse miss = withRecheck(question -> false).route(msg("김치찌개 끓이는 법 알려줘"));
+            IntentRouteResponse failed = withRecheck(question -> {
+                throw new IllegalStateException("embedding down");
+            }).route(msg("김치찌개 끓이는 법 알려줘"));
+
+            assertThat(miss.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(miss.subQueries()).isEmpty();
+            assertThat(failed.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(failed.subQueries()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("낮은 신뢰도로 보류한 UNKNOWN은 재확인하지 않는다")
+        void lowConfidenceHoldIsNotRechecked() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.3,"refinedQuery":"요금제 변경",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경"}]}
+                """);
+            List<String> searched = new ArrayList<>();
+
+            IntentRouteResponse r = withRecheck(question -> searched.add(question)).route(msg("요금제 변경"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            assertThat(searched).isEmpty();
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {
                 "노트북 테더링하면 요금 따로 나와요?",
