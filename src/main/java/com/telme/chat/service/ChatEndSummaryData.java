@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
+import com.telme.chat.safety.OutputMaskContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -33,10 +34,18 @@ final class ChatEndSummaryData {
             String source, Long answeredMessageId, Integer answeredSequence) {}
 
     record Input(long sessionId, int throughSequence, Long executionId,
-            List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions) {
+            List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions,
+            OutputMaskContext maskContext) {
         Input(long sessionId, int throughSequence, Long executionId,
                 List<Message> messages, List<Request> requests, Set<Long> pendingIds) {
-            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, List.of());
+            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, List.of(),
+                    OutputMaskContext.empty());
+        }
+
+        Input(long sessionId, int throughSequence, Long executionId,
+                List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions) {
+            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, conditions,
+                    OutputMaskContext.empty());
         }
 
         Input {
@@ -47,5 +56,5 @@ final class ChatEndSummaryData {
         }
     }
 
-    record Result(String json, Content content) {}
+    record Result(String json, Content content, OutputMaskContext maskContext) {}
 }

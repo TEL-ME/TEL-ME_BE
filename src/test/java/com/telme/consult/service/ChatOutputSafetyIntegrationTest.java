@@ -21,6 +21,8 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.safety.ChatOutputGuard;
+import com.telme.chat.safety.OutputMaskContext;
+import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.service.ChatActor;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatEmitterRegistry;
@@ -54,6 +56,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -194,6 +198,38 @@ class ChatOutputSafetyIntegrationTest {
                 .isEqualTo("DONE");
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("실제 출력 검사 뒤 마스크 인용의 저장 문자열을 그대로 한 번 전송한다")
+    void 마스크_인용_답변을_검사한_뒤_저장하고_전송한다(String original, String visible) throws Exception {
+        var inspection = new ChatInputInspector(mapper).inspect(original);
+        jdbc.update("UPDATE chat_messages SET content=?, input_mask_spans=?::jsonb WHERE message_id=?",
+                inspection.content(), mapper.writeValueAsString(inspection.maskSpans()), command.inputMessageId());
+        jdbc.update("UPDATE consult_requests SET query_text=? WHERE consult_request_id=?", visible, consultId);
+        command = new ChatProcessingCommand(executionId, sessionId, command.inputMessageId(), visible);
+        when(analyzer.analyze(command)).thenReturn(faqTurn(consultId, visible));
+        String reply = "확인한 문의: " + visible;
+        when(search.search(any())).thenReturn(List.of(new FaqSearchResponse(
+                faqId, null, "USIM", visible, reply, 0.9, 1, LocalDate.of(2026, 9, 17), 1, null)));
+        script = stream -> {
+            stream.onToken(reply);
+            assertThat(emitter.tokens()).isEmpty();
+            stream.onComplete();
+            assertThat(emitter.tokens()).isEmpty();
+        };
+
+        processor.request(command);
+
+        assertThat(emitter.tokens()).containsExactly(reply);
+        assertThat(emitter.names()).containsExactly("start", "token", "complete");
+        assertThat(historyAnswer().content()).isEqualTo(reply);
+        assertThat(historyAnswer().status()).isEqualTo("COMPLETED");
+        assertThat(historyAnswer().content()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+    }
+
     @Test
     @DisplayName("모델을 거치지 않는 직접 답변도 최종 저장 경계에서 검사한다")
     void 직접_응답도_출력_검사를_우회하지_않는다() throws Exception {
@@ -290,7 +326,8 @@ class ChatOutputSafetyIntegrationTest {
     @Test
     @DisplayName("검사 오류가 나도 후보를 전송하지 않고 별도 실패 안내를 제공한다")
     void 검사_오류도_안전하게_종료한다() throws Exception {
-        doThrow(new IllegalStateException("검증용 검사 실패")).when(outputGuard).verify(any());
+        doThrow(new IllegalStateException("검증용 검사 실패")).when(outputGuard)
+                .verify(any(ChatAnswer.class), any(OutputMaskContext.class));
         processor.request(command);
         assertFailure(ChatErrorCode.OUTPUT_CHECK_FAILED);
         assertThat(trace().at("/steps/outputSafety/outcome").asText()).isEqualTo("CHECK_FAILED");
