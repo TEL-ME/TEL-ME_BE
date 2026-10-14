@@ -655,6 +655,37 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("회색 구간 검색마다 판정 결과와 걸린 시간을 실행 기록에 남긴다")
+    @SuppressWarnings("unchecked")
+    void 회색_구간_판정을_실행_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ExecutionTrace trace = mock(ExecutionTrace.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of()));
+        var judgment = new FaqGrayZoneSelector.Judgment(9L, "USIM-0001", "Q_A", 0.75, true,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, trace,
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 두 번 남는다
+        ArgumentCaptor<Object> recorded = ArgumentCaptor.forClass(Object.class);
+        verify(trace, times(2)).append(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("grayZoneJudgments"), recorded.capture());
+        Map<String, Object> original = (Map<String, Object>) recorded.getAllValues().get(0);
+        assertThat(original).containsEntry("query", "로밍 신청하고 싶어요").containsEntry("kind", "ORIGINAL")
+                .containsEntry("judgments", List.of(judgment)).containsEntry("consultRequestId", 3L)
+                .containsKey("elapsedMs");
+        assertThat((Map<String, Object>) recorded.getAllValues().get(1))
+                .containsEntry("query", "로밍 신청").containsEntry("kind", "REFINED");
+    }
+
+    @Test
     @DisplayName("회색 구간이 켜져 있어도 후보 검색(searchCandidates)은 그대로 쓴다")
     void 후보_검색은_회색_구간을_쓰지_않는다() {
         FaqSearchService searches = mock(FaqSearchService.class);

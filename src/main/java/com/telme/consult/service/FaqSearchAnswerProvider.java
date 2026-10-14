@@ -279,9 +279,18 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     // 판정은 검색 문장이 아니라 고객이 실제로 물은 질문으로 한다. 원문·문맥 복원·재검색 어느 경로든 같다
+    // 어떤 후보를 왜 남기고 뺐는지(판정 결과·위쪽 구간 여부·지연)를 검색마다 실행 기록에 남긴다. 모델이 쓴 문장은 넣지 않는다
     private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest) {
-        return grayZone.select(input.executionId(), input.consultRequestId(), input.resolvedUserQuery(),
-                searches.searchGrayZone(searchRequest), searchRequest.topK()).results();
+        var candidates = searches.searchGrayZone(searchRequest);
+        long started = System.nanoTime();
+        var selection = grayZone.select(input.executionId(), input.consultRequestId(), input.resolvedUserQuery(),
+                candidates, searchRequest.topK());
+        trace.append(input.executionId(), "grayZoneJudgments", Map.of(
+                "query", searchRequest.query(), "kind", String.valueOf(searchRequest.kind()),
+                "judgments", selection.judgments(),
+                "elapsedMs", (System.nanoTime() - started) / 1_000_000,
+                "consultRequestId", input.consultRequestId()));
+        return selection.results();
     }
 
     /** 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문을 돌려주면 재검색하지 않는다. */
