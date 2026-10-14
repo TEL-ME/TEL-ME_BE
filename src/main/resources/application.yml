@@ -197,3 +197,14 @@ speech:
     daily-character-limit: ${SPEECH_TTS_DAILY_CHARACTER_LIMIT:100000}
     cache-max-size: 20MB
     cache-ttl: 1h
+  stt:
+    # 음성 질문 인식(Amazon Transcribe 실시간 인식). 키는 위 Polly와 같은 환경 변수를 쓴다
+    region: ${SPEECH_STT_REGION:ap-northeast-2}
+    language-code: ko-KR
+    max-duration: 30s
+    timeout: 20s
+    # 요청마다 최소 15초 과금. 하루 60분은 약 1.44달러이고, 게스트는 쿠키만 지우면 새로 발급돼 서비스 전체 상한이 실제 비용 상한이다
+    requests-per-minute: ${SPEECH_STT_REQUESTS_PER_MINUTE:5}
+    daily-duration-limit: ${SPEECH_STT_DAILY_DURATION_LIMIT:60m}
+    # 요금제명·통신 용어 인식을 돕는 사용자 지정 어휘(Transcribe 콘솔, 서울 리전). 비우면 어휘 없이 인식한다
+    vocabulary-name: ${SPEECH_STT_VOCABULARY_NAME:}
