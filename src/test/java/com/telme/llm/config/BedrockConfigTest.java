@@ -3,10 +3,12 @@ package com.telme.llm.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.rag.service.FaqEvidenceJudge;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -39,6 +41,23 @@ class BedrockConfigTest {
                     assertThat(context).hasBean(BedrockConfig.JUDGE_LLM_CLIENT);
                     assertThat(context.getBean(LlmClient.class)).isInstanceOf(AnswerClient.class);
                 });
+    }
+
+    @Test
+    @DisplayName("켜면 판정기가 만들어지고, 답변용이 아닌 판정 전용 LLM을 받는다")
+    void 판정기는_판정_전용_LLM을_받는다() {
+        runner.withUserConfiguration(FaqEvidenceJudge.class)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withPropertyValues("llm.bedrock.enabled=true", "llm.bedrock.region=us-east-1")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(FaqEvidenceJudge.class);
+                    assertThat(context.getBean(FaqEvidenceJudge.class))
+                            .extracting("llmClient")
+                            .isSameAs(context.getBean(BedrockConfig.JUDGE_LLM_CLIENT));
+                });
+        runner.withUserConfiguration(FaqEvidenceJudge.class)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .run(context -> assertThat(context).doesNotHaveBean(FaqEvidenceJudge.class));
     }
 
     private static final class AnswerClient implements LlmClient {
