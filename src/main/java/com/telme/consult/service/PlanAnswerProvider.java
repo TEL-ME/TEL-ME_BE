@@ -93,7 +93,11 @@ public final class PlanAnswerProvider implements AnswerProvider {
         }
         String question = input.resolvedUserQuery() == null || input.resolvedUserQuery().isBlank()
                 ? input.originalUserQuery() : input.resolvedUserQuery();
-        PlanQuestionType type = classifier.classify(input.executionId(), question);
+        // 문맥으로 풀어쓴 문장은 "나", "내" 같은 본인 표현이 사라질 수 있어 사용자가 쓴 원문으로 먼저 분류한다
+        PlanQuestionType type = classifier.classify(input.executionId(), input.originalUserQuery());
+        if (type == PlanQuestionType.NONE && !question.equals(input.originalUserQuery())) {
+            type = classifier.classify(input.executionId(), question);
+        }
         String content;
         List<String> followUps = List.of();
         if (type == PlanQuestionType.PLAN_CATALOG) {

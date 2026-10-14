@@ -300,6 +300,35 @@ class PlanAnswerProviderTest {
         assertThat(provider.generate(input(QUESTION))).isEqualTo(FAQ_ANSWER);
     }
 
+    @Test
+    void 문맥으로_풀어쓴_문장이_달라도_사용자가_쓴_원문으로_먼저_분류한다() {
+        String original = "나 요금제 뭐야?";
+        String rewritten = "만 19~64세 대상 요금제 종류";
+        when(classifier.classify(1L, original)).thenReturn(PlanQuestionType.MY_SUBSCRIPTION);
+        when(classifier.classify(1L, rewritten)).thenReturn(PlanQuestionType.PLAN_CATALOG);
+        when(member.answer(PlanQuestionType.MY_SUBSCRIPTION, 77L))
+                .thenReturn(new MemberPlanAnswerer.MemberAnswer("내 요금제 답변", List.of()));
+        AnswerInput input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, original, rewritten, Map.of(),
+                rewritten, null);
+
+        assertThat(provider.prepare(input, true).answer().answer().content()).isEqualTo("내 요금제 답변");
+        verify(classifier, never()).classify(1L, rewritten);
+        verifyNoInteractions(catalog);
+    }
+
+    @Test
+    void 원문이_해당_없음이면_풀어쓴_문장으로_다시_분류해_후속_질문을_처리한다() {
+        String original = "그건 얼마예요";
+        String rewritten = "5G 스탠다드 얼마예요";
+        when(classifier.classify(1L, original)).thenReturn(PlanQuestionType.NONE);
+        when(classifier.classify(1L, rewritten)).thenReturn(PlanQuestionType.PLAN_CATALOG);
+        when(catalog.answer(rewritten)).thenReturn("5G 스탠다드 안내");
+        AnswerInput input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, original, rewritten, Map.of(),
+                rewritten, null);
+
+        assertThat(provider.prepare(input, true).answer().answer().content()).isEqualTo("5G 스탠다드 안내");
+    }
+
     private static AnswerInput input(String question) {
         return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of());
     }
