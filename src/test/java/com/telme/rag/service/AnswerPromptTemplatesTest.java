@@ -60,12 +60,11 @@ class AnswerPromptTemplatesTest {
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
                 .replace(relationAddition, "")
                 .replace(channelAddition, "")
-                .replace(com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS, "")
                 .replace("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요",
                         "안내드릴 수 있는 정보가 없습니다")).isEqualTo(baseline);
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT)
-                .contains(com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS);
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.6-persona");
+        // 정체성 지침이 붙으면 무관 질문에 근거 없는 GROUNDED 답변이 늘어 FAQ 답변 프롬프트에는 넣지 않는다.
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).doesNotContain("무러바라", "[정체성과 말투]");
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.7");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요.");
     }
 
@@ -99,7 +98,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.6-persona");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.7");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");

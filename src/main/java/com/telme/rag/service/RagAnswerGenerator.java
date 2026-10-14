@@ -66,7 +66,6 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 "promptVersion", AnswerPromptTemplates.promptVersionFor(request.userQuery()),
                 "guardEvidenceScope", "FAQ_ANSWERS_ONLY"));
         generationInput.put("consultRequestId", request.consultRequestId());
-        generationInput.put("personaVersion", com.telme.chat.service.ChatPersona.VERSION);
         generationInput.put("resolvedQuery", request.resolvedQuery());
         if (request.chatContext() != null) {
             generationInput.put("historyMessageIds", request.chatContext().history().stream()

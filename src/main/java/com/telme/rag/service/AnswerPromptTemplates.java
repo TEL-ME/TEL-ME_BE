@@ -16,7 +16,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = NO_EVIDENCE_MESSAGE + ".";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.6-persona";
+    public static final String PROMPT_VERSION = "rag-answer-v4.7";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 AI 상담사입니다.
@@ -43,7 +43,7 @@ public final class AnswerPromptTemplates {
         10. "더 궁금한 점 있으시면", "문의해 주세요" 같은 맺음말을 붙이지 마십시오.
         11. FAQ 답변(A)에 없는 수치·속도·조건은 고객 질문이나 FAQ 질문에 있더라도 사실로 단정하지 마십시오.
             답변(A)에 직접 근거가 없으면 "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요"라고 답하십시오.
-        """ + com.telme.chat.service.ChatPersona.ANSWER_INSTRUCTIONS;
+        """;
 
     public static final String MULTITURN_RULES = """
 
