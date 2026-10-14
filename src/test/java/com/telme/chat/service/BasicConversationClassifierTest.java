@@ -13,7 +13,7 @@ class BasicConversationClassifierTest {
             "안녕 바라야 | GREETING", "안녕 바라야 😊 | GREETING",
             "고마워 바라야 😊 | THANKS", "[문의] 바라야 안녕 👋 | GREETING", "무러바라님 안녕하세요! | GREETING", "바라야 안녕~ | GREETING",
             "물어봐라야 반가워 | GREETING", "무러봐라님 하이 | GREETING", "무러 바라야 안녕하세요 | GREETING",
-            "무러바라씨 hello | GREETING", "Mureobara hi | GREETING", "바라야 좋은 아침! | GREETING",
+            "무러바라씨 hello | GREETING", "Mureobara hi | GREETING", "헬로 바라야 | GREETING", "바라야 좋은 아침! | GREETING",
             "바라야 고마워 | THANKS", "감사합니다 무러바라님 | THANKS", "정말 고마워 바라야 | THANKS",
             "잘 가 무러바라야 | FAREWELL", "다음에 또 올게 바라야 | FAREWELL", "바라야 | CALL",
             "무러바라 | CALL", "무러바라야 | CALL", "물어바라님 | CALL", "무러바 | CALL",

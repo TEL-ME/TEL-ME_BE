@@ -51,10 +51,20 @@ class ConsultationQuestionTest {
             "안녕 문자를 보내면 얼마인가요?", "고마워 인사를 문자로 보내면 얼마야?",
             "'안녕 바라야'라는 문자를 보내면 요금이 나와?", "로밍 중 ‘고마워’ 문자를 보내면 얼마야?",
             "요금제 이름이 \"바라\"인가요?", "유심 비용과 로밍 신청 방법 알려줘",
-            "요금제 고마워 신청 방법 알려줘", "안녕 바라야", "고마워 바라야", "무러바라야"
+            "요금제 고마워 신청 방법 알려줘", "안녕 바라야", "고마워 바라야", "무러바라야",
+            "헬로 모바일 요금제 알려줘", "Hello 모바일 번호이동 방법은?", "하이 브리드 요금제 있나요?",
+            "hi 요금제 알려줘"
     })
     @DisplayName("일반 단어·인용문·애매한 중간 표현·순수 기본 대화는 보존한다")
     void preservesQuestion(String question) {
         assertThat(ConsultationQuestion.extract(question)).isEqualTo(question);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"헬로 모바일 요금제 알려줘", "하이 브리드 요금제 있나요?"})
+    @DisplayName("상품·브랜드명일 수 있는 헬로·하이는 상담 본문의 인사로 보지 않는다")
+    void doesNotTreatBrandPrefixAsGreeting(String question) {
+        assertThat(ConsultationQuestion.analyze(question).hasGreeting()).isFalse();
+        assertThat(ChatPersona.prependGreeting(question, "요금제를 안내해 드려요.")).isEqualTo("요금제를 안내해 드려요.");
     }
 }

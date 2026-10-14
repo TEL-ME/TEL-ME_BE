@@ -39,6 +39,7 @@ public final class BasicConversationClassifier {
             Type.WELLBEING, Set.of("잘지냈어", "잘지냈어요", "잘지내", "잘지내요", "잘지내고있어",
                     "뭐하고있어", "뭐하고있어요", "뭐해", "뭐하세요", "오늘어때", "오늘어때요",
                     "기분이어때", "기분이어때요", "잘있었어", "잘있었어요"));
+    private static final Set<String> NON_REMOVABLE_PHRASES = Set.of("감사", "헬로", "hello", "하이", "hi");
     private static final List<String> PHRASES = EXPRESSIONS.values().stream().flatMap(Set::stream)
             .sorted(Comparator.comparingInt(String::length).reversed()).toList();
     private static final String ADDRESS_PATTERN = ADDRESSES.stream()
@@ -58,7 +59,8 @@ public final class BasicConversationClassifier {
                         java.util.stream.Stream.of(Type.GREETING, Type.THANKS)
                                 .flatMap(type -> EXPRESSIONS.get(type).stream()))
                 // '감사 인사'처럼 명사로 쓰이는 표현은 상담 문장에서 제거하지 않는다.
-                .filter(phrase -> !phrase.equals("감사"))
+                // 헬로·하이는 '헬로 모바일'처럼 띄어 쓴 상품·브랜드명의 앞부분일 수 있어 제거하지 않는다.
+                .filter(phrase -> !NON_REMOVABLE_PHRASES.contains(phrase))
                 .sorted(Comparator.comparingInt(String::length).reversed()).toList();
     }
 
