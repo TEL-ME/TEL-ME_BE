@@ -588,12 +588,17 @@ public class QueryRoutingService {
             LlmRoutingPayload payload, String current, String previousSubject) {
         String prompt;
         try {
-            prompt = objectMapper.writeValueAsString(Map.of(
-                    "question", current,
-                    "previousSubject", previousSubject,
-                    "subQueries", payload.subQueries().stream().map(sub -> Map.of(
-                            "quote", sub.requestQuote() == null ? "" : sub.requestQuote(),
-                            "query", sub.queryText() == null ? "" : sub.queryText())).toList()));
+            // Map.of는 JVM마다 키 순서가 달라 같은 입력에도 판정이 바뀐다. 키 순서를 고정한다
+            Map<String, Object> input = new LinkedHashMap<>();
+            input.put("question", current);
+            input.put("previousSubject", previousSubject);
+            input.put("subQueries", payload.subQueries().stream().map(sub -> {
+                Map<String, String> item = new LinkedHashMap<>();
+                item.put("quote", sub.requestQuote() == null ? "" : sub.requestQuote());
+                item.put("query", sub.queryText() == null ? "" : sub.queryText());
+                return item;
+            }).toList());
+            prompt = objectMapper.writeValueAsString(input);
             LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
                     .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
                     .userPrompt(prompt).format(ResponseFormat.JSON)
