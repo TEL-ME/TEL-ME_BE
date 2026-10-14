@@ -90,6 +90,16 @@ llm:
     # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
     max-attempts: 2
     wait-duration: 1s
+  # 검색 근거 판정용 Bedrock(답변 생성은 위 provider 그대로). 기본 꺼짐
+  # 키는 설정에 두지 않는다. AWS_BEARER_TOKEN_BEDROCK(Bedrock API 키) 또는 AWS 기본 자격 증명을 SDK가 찾는다
+  bedrock:
+    enabled: ${LLM_BEDROCK_ENABLED:false}
+    region: ${LLM_BEDROCK_REGION:us-east-1}
+    model: ${LLM_BEDROCK_MODEL:openai.gpt-oss-120b-1:0}
+    # 로컬 측정 p95 3.8초(docs/GRAY_ZONE_UPPER_BAND.md 4.4절). 넘으면 판정 실패로 처리한다
+    timeout: ${LLM_BEDROCK_TIMEOUT:5s}
+    reasoning-effort: low
+    max-tokens: 1000
 
 embedding:
   model: ${EMBEDDING_MODEL:bge-m3}
