@@ -3,10 +3,12 @@ package com.telme.chat.service;
 import java.text.Normalizer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** 전체 발화가 기본 대화일 때만 소비한다. 상담 내용을 부분 문자열 인사로 가로채지 않는다. */
 public final class BasicConversationClassifier {
@@ -55,8 +57,8 @@ public final class BasicConversationClassifier {
     private BasicConversationClassifier() {}
 
     static List<String> consultationPhrases() {
-        return java.util.stream.Stream.concat(ADDRESSES.stream(),
-                        java.util.stream.Stream.of(Type.GREETING, Type.THANKS)
+        return Stream.concat(ADDRESSES.stream(),
+                        Stream.of(Type.GREETING, Type.THANKS)
                                 .flatMap(type -> EXPRESSIONS.get(type).stream()))
                 // '감사 인사'처럼 명사로 쓰이는 표현은 상담 문장에서 제거하지 않는다.
                 // 헬로·하이는 '헬로 모바일'처럼 띄어 쓴 상품·브랜드명의 앞부분일 수 있어 제거하지 않는다.
@@ -99,7 +101,8 @@ public final class BasicConversationClassifier {
     }
 
     private static String normalize(String content) {
-        return Normalizer.normalize(ConversationInput.normalize(content), Normalizer.Form.NFKC).strip().toLowerCase(java.util.Locale.ROOT);
+        return Normalizer.normalize(ConversationInput.normalize(content), Normalizer.Form.NFKC)
+                .strip().toLowerCase(Locale.ROOT);
     }
 
     private static String compact(String content) {
