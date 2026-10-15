@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class PiiMaskingBoundaryTest {
@@ -104,6 +107,48 @@ class PiiMaskingBoundaryTest {
     }
 
     @ParameterizedTest
+    @MethodSource("조건_말끝_조합")
+    @DisplayName("정해둔 7개 단위·8개 표현·5개 말끝 조합은 모호성만 기록하고 명확한 조건은 보존한다")
+    void 정해둔_조건과_말끝_조합의_마스킹과_정상_문의를_유지한다(
+            String unit, String expression, String ending) {
+        String suffix = unit + expression + ending;
+        var card = inspector.inspect("카드 4111111111111111 18" + suffix + " 문의");
+
+        assertThat(card.content()).isEqualTo("카드 ***" + suffix + " 문의");
+        assertThat(card.fingerprintContent()).isEqualTo("카드 [카드번호]" + suffix + " 문의");
+        assertThat(card.maskSpans()).isEqualTo(List.of(new MaskSpan(3, 6)));
+        assertThat(card.ambiguousCondition()).isTrue();
+        assertThat(card.hasProfanity()).isFalse();
+
+        var resident = inspector.inspect("주민번호 990101-1234567 4" + suffix + " 문의");
+        assertThat(resident.content()).isEqualTo("주민번호 ***" + suffix + " 문의");
+        assertThat(resident.fingerprintContent()).isEqualTo("주민번호 [카드번호]" + suffix + " 문의");
+        assertThat(resident.maskSpans()).isEqualTo(List.of(new MaskSpan(5, 8)));
+        assertThat(resident.ambiguousCondition()).isTrue();
+        assertThat(resident.hasProfanity()).isFalse();
+
+        for (String input : List.of(
+                "카드 4111111111111111, 18" + suffix + " 문의",
+                "카드 4111111111111111 조건 18" + suffix + " 문의",
+                "카드 4111111111111111 12" + suffix + " 문의",
+                "18" + suffix + " 문의")) {
+            var normal = inspector.inspect(input);
+            assertThat(normal.content()).isEqualTo(input.replace("4111111111111111", "***"));
+            assertThat(normal.fingerprintContent()).isEqualTo(input.replace("4111111111111111", "[카드번호]"));
+            assertThat(normal.ambiguousCondition()).isFalse();
+            assertThat(normal.hasQuestion()).isTrue();
+            assertThat(normal.hasProfanity()).isFalse();
+        }
+    }
+
+    static Stream<Arguments> 조건_말끝_조합() {
+        return Stream.of("원", "만원", "개월", "년", "일", "시간", "분")
+                .flatMap(unit -> Stream.of("로", "동안", "짜리", "간", "째", "치", "씩", "이요")
+                        .flatMap(expression -> Stream.of("인데요", "예요", "이에요", "입니다", "이고요")
+                                .map(ending -> Arguments.of(unit, expression, ending))));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"개월로", "개월동안", "개월짜리", "개월간", "개월째", "개월치", "개월씩", "개월이요"})
     @DisplayName("주민번호와 겹친 기존 마스크·해시는 유지하고 소실된 조건은 재입력으로 안내한다")
     void 주민번호_겹침의_기존_마스킹과_해시를_변경하지_않는다(String ending) {
@@ -181,7 +226,12 @@ class PiiMaskingBoundaryTest {
     @CsvSource(delimiter = '|', value = {
         "카드번호 4111111111111111 18분실 신고 | 카드번호 ***분실 신고 | 카드번호 [카드번호]분실 신고",
         "카드번호 4111111111111111 18일반 문의 | 카드번호 ***일반 문의 | 카드번호 [카드번호]일반 문의",
-        "카드번호 4111111111111111 003원룸 주소 변경 | 카드번호 ***원룸 주소 변경 | 카드번호 [카드번호]원룸 주소 변경"
+        "카드번호 4111111111111111 003원룸 주소 변경 | 카드번호 ***원룸 주소 변경 | 카드번호 [카드번호]원룸 주소 변경",
+        "카드 4111111111111111 18분실인데요 | 카드 ***분실인데요 | 카드 [카드번호]분실인데요",
+        "카드 4111111111111111 18일반이에요 | 카드 ***일반이에요 | 카드 [카드번호]일반이에요",
+        "카드 4111111111111111 003원룸입니다 | 카드 ***원룸입니다 | 카드 [카드번호]원룸입니다",
+        "카드 4111111111111111 18일간지예요 | 카드 ***일간지예요 | 카드 [카드번호]일간지예요",
+        "카드 4111111111111111 일간 요금 문의 | 카드 *** 일간 요금 문의 | 카드 [카드번호] 일간 요금 문의"
     })
     @DisplayName("분실·일반·원룸의 일부를 조건 단위로 잘라 정상 문의를 재입력으로 보내지 않는다")
     void 정상_단어를_조건_단위로_오인하지_않는다(String input, String content, String fingerprint) {

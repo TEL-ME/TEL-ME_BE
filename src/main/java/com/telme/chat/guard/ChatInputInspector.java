@@ -42,6 +42,7 @@ public final class ChatInputInspector {
     private static final Pattern AMBIGUOUS_CONDITION_UNIT = Pattern.compile(
             "\\s*(?:만원|개월|시간|원|년|일|분)(?:로|동안|짜리|간|째|치|씩|이요)"
                     + "(?:으로|로|은|는|이|가|을|를|에|도|만|요){0,3}"
+                    + "(?:입니다|인데요|이고요|이에요|예요)?"
                     + "(?=$|[\\s\\p{Punct}])");
     // 배포된 v2 영수증 비교에서만 당시 탐색 경계를 재현한다.
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
