@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextMessage;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -284,6 +285,8 @@ public final class RoutingPromptTemplates {
         - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
           부정하는 답은 거부가 아니다. 대답 자체를 하지 않겠다고 할 때만 DECLINED다.
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
+        - 입력에 되물은 질문이 있으면 고객 답변이 그 질문에 답하는지로 판단한다. 고객이 다른 사정을 덧붙여도
+          질문에 대한 답이 들어 있으면 CONDITION_RESPONSE이고 그 조건은 FILLED다.
 
         [예시]
         되묻는 중인 조건: location
@@ -320,9 +323,32 @@ public final class RoutingPromptTemplates {
         }
         """;
 
+    /** 고객에게 실제로 되물은 질문과 버튼 선택지. 조건 이름만으로는 무엇을 물었는지 알기 어렵다. */
+    public record AskedCondition(String question, List<String> options) {
+        public AskedCondition {
+            options = options == null ? List.of() : List.copyOf(options);
+        }
+    }
+
     public static String followUpUserPrompt(Set<String> pendingKeys, String reply) {
+        return followUpUserPrompt(pendingKeys, Map.of(), reply);
+    }
+
+    // 되물은 질문을 알면 함께 넘긴다(TELME-175). 조건 이름만 받으면 사정을 덧붙인 답을 보류나 새 질문으로 읽는 경우가 있다
+    public static String followUpUserPrompt(Set<String> pendingKeys, Map<String, AskedCondition> asked, String reply) {
         String keys = (pendingKeys == null || pendingKeys.isEmpty()) ? "location" : String.join(", ", pendingKeys);
-        return "되묻는 중인 조건: " + keys + "\n고객 답변: \"" + reply + "\"";
+        StringBuilder prompt = new StringBuilder("되묻는 중인 조건: ").append(keys).append("\n");
+        if (asked != null && !asked.isEmpty()) {
+            prompt.append("되물은 질문:\n");
+            asked.forEach((key, condition) -> {
+                prompt.append("- ").append(key).append(": \"").append(condition.question()).append("\"");
+                if (!condition.options().isEmpty()) {
+                    prompt.append(" (선택지: ").append(String.join(", ", condition.options())).append(")");
+                }
+                prompt.append("\n");
+            });
+        }
+        return prompt.append("고객 답변: \"").append(reply).append("\"").toString();
     }
 
     // Context가 없으면 질문만 넘겨 기존 단일 질문 프롬프트와 같은 형태를 유지한다

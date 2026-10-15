@@ -427,17 +427,26 @@ class RoutingEvaluationProbe {
     private List<Map<String, Object>> runFollowupOnce(List<JsonNode> cases, String runName) throws Exception {
         var client = new LocalOllamaClient(mapper, null);
         var service = routingService(client);
-        Method analyze = accessible(QueryRoutingService.class, "requestFollowUpAnalysis", String.class, java.util.Set.class);
+        Method analyze = accessible(QueryRoutingService.class, "requestFollowUpAnalysis",
+                String.class, java.util.Set.class, Map.class);
         List<Map<String, Object>> records = new ArrayList<>();
         for (JsonNode item : cases) {
             java.util.Set<String> keys = new java.util.LinkedHashSet<>();
             item.path("pending_keys").forEach(node -> keys.add(node.asText()));
             String reply = item.path("reply").asText();
+            // 앱이 되물은 질문과 선택지(평가셋 asked_questions). 앱은 되물은 메시지에서 읽어 함께 넘긴다
+            Map<String, RoutingPromptTemplates.AskedCondition> asked = new LinkedHashMap<>();
+            item.path("asked_questions").fields().forEachRemaining(entry -> {
+                List<String> options = new ArrayList<>();
+                entry.getValue().path("options").forEach(option -> options.add(option.asText()));
+                asked.put(entry.getKey(), new RoutingPromptTemplates.AskedCondition(
+                        entry.getValue().path("question").asText(), options));
+            });
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("case_id", item.path("case_id").asText());
             row.put("pending_keys", new ArrayList<>(keys));
             row.put("reply", reply);
-            row.put("user_prompt", RoutingPromptTemplates.followUpUserPrompt(keys, reply));
+            row.put("user_prompt", RoutingPromptTemplates.followUpUserPrompt(keys, asked, reply));
             long started = System.nanoTime();
             client.lastResponse = null;
             // 앱은 업무를 묻거나 지역을 묻는 중 업무 이름만 짧게 답하면 모델을 부르지 않고 규칙으로 읽는다
@@ -454,7 +463,7 @@ class RoutingEvaluationProbe {
             }
             row.put("method", "LLM");
             try {
-                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, keys);
+                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, keys, asked);
                 row.put("response_type", payload.responseType().name());
                 row.put("conditions", mapper.convertValue(payload.conditions(), List.class));
                 row.put("failed", false);

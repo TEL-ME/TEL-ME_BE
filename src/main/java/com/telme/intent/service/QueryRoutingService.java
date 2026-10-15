@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ConsultationQuestion;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
@@ -1036,7 +1037,7 @@ public class QueryRoutingService {
         QueryRouting.Method method;
 
         try {
-            payload = requestFollowUpAnalysis(reply, waiting.pendingKeys());
+            payload = requestFollowUpAnalysis(reply, waiting.pendingKeys(), waiting.askedConditions());
             method = QueryRouting.Method.LLM;
             log.info("[후속분석] LLM 조건 추출 완료: consultRequestId={}, 추출 건수={}",
                     waiting.consultRequestId(), payload.conditions().size());
@@ -1133,16 +1134,17 @@ public class QueryRoutingService {
         }
     }
 
-    private LlmFollowUpPayload requestFollowUpAnalysis(String reply, Set<String> pendingKeys) {
+    private LlmFollowUpPayload requestFollowUpAnalysis(
+            String reply, Set<String> pendingKeys, Map<String, RoutingPromptTemplates.AskedCondition> asked) {
         LlmRequest request = LlmRequest.builder()
             .taskType(TaskType.ROUTING)
             .systemPrompt(RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT)
-            .userPrompt(RoutingPromptTemplates.followUpUserPrompt(pendingKeys, reply))
+            .userPrompt(RoutingPromptTemplates.followUpUserPrompt(pendingKeys, asked, reply))
             .format(ResponseFormat.JSON)
             .temperature(0.0)
             .maxTokens(300)
-            // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽도록 고친 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v2")
+            // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
+            .promptVersion("routing-follow-up-v3")
             .build();
 
         String json = llmClient.generate(request);
@@ -1166,8 +1168,42 @@ public class QueryRoutingService {
             .findByLatestAskedQuestion(sessionId, ConsultRequest.Status.WAITING_CONDITION)
             .stream()
             .findFirst()
-            .map(request -> new WaitingConsult(request.getConsultRequestId(), pendingKeysOf(request)))
+            .map(request -> new WaitingConsult(
+                request.getConsultRequestId(), pendingKeysOf(request), askedConditionsOf(request)))
             .orElse(null);
+    }
+
+    // 지금 답을 기다리는 조건마다 고객에게 실제로 보낸 질문과 선택지. 복합 질문의 되묻기 메시지는 앞부분에 답변이 있고 질문은 마지막 줄이다
+    private Map<String, RoutingPromptTemplates.AskedCondition> askedConditionsOf(ConsultRequest request) {
+        Map<String, RoutingPromptTemplates.AskedCondition> asked = new LinkedHashMap<>();
+        List<ConsultCondition> conditions = request.getConditions();
+        if (conditions == null) {
+            return asked;
+        }
+        for (ConsultCondition condition : conditions) {
+            ChatMessage message = condition.getAskedMessage();
+            if (condition.getStatus() != ConsultCondition.Status.PENDING || message == null
+                    || condition.getAnsweredMessage() != null || condition.getConditionKey() == null
+                    || message.getContent() == null || message.getContent().isBlank()) {
+                continue;
+            }
+            String question = ConsultationQuestion.extract(ClarificationReask.questionOf(message.getContent()));
+            asked.put(condition.getConditionKey(),
+                    new RoutingPromptTemplates.AskedCondition(question, optionsOf(message.getFollowUps())));
+        }
+        return asked;
+    }
+
+    private List<String> optionsOf(String followUps) {
+        if (followUps == null || followUps.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(followUps,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            return List.of();
+        }
     }
 
     // 되묻는 조건을 알 수 없으면 지역으로 본다(현재 DialogueService는 지역만 묻는다)
@@ -1266,7 +1302,8 @@ public class QueryRoutingService {
         }
     }
 
-    private record WaitingConsult(Long consultRequestId, Set<String> pendingKeys) {}
+    private record WaitingConsult(Long consultRequestId, Set<String> pendingKeys,
+            Map<String, RoutingPromptTemplates.AskedCondition> askedConditions) {}
 
     private <T> T runInTransaction(Supplier<T> action) {
         return transactionTemplate.execute(status -> action.get());

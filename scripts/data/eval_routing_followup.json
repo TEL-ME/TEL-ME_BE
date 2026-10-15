@@ -1,10 +1,10 @@
 {
  "description": "TELME-175 4단계 후속 분석 평가셋. 실제 입력은 TELME-174 대화 흐름 DB의 조건 이름과 답변, 나머지는 새로 썼다. 정답은 사람 검토 전이다.",
  "counts": {
-  "cases": 68,
-  "flow_db": 14,
+  "cases": 69,
+  "flow_db": 15,
   "by_response_type": {
-   "CONDITION_RESPONSE": 58,
+   "CONDITION_RESPONSE": 59,
    "DEFERRED": 6,
    "NEW_QUESTION": 4
   }
@@ -17,6 +17,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "강남역",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -36,6 +42,15 @@
    "pending_keys": [
     "agent_presents"
    ],
+   "asked_questions": {
+    "agent_presents": {
+     "question": "대리인이 방문하시는 경우인가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -53,6 +68,15 @@
    "pending_keys": [
     "visit_together"
    ],
+   "asked_questions": {
+    "visit_together": {
+     "question": "양수인과 양도인이 함께 방문하시나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "예",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -70,6 +94,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "명의변경이라고",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -93,6 +123,15 @@
    "pending_keys": [
     "six_months_passed"
    ],
+   "asked_questions": {
+    "six_months_passed": {
+     "question": "개통 후 6개월이 지났나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "개통한 지 1년 넘었고 남은 할부금은 없어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -110,6 +149,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "미납 요금은 없고 개통한 지 2년 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -127,6 +175,15 @@
    "pending_keys": [
     "over_12_months"
    ],
+   "asked_questions": {
+    "over_12_months": {
+     "question": "가입하신 지 12개월이 넘었나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "24개월 약정 중에 10개월 썼어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -144,6 +201,15 @@
    "pending_keys": [
     "self_pickup"
    ],
+   "asked_questions": {
+    "self_pickup": {
+     "question": "본인 직접 받으실 건가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "유심을 잃어버렸고 제가 직접 매장에 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -161,6 +227,15 @@
    "pending_keys": [
     "age_at_least_14"
    ],
+   "asked_questions": {
+    "age_at_least_14": {
+     "question": "만 14세 이상이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "만 15세이고 부모님이랑 같이 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -178,6 +253,15 @@
    "pending_keys": [
     "both_present"
    ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "양도인이랑 양수인 둘 다 직접 매장에 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -195,6 +279,15 @@
    "pending_keys": [
     "both_present"
    ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "직접 매장에 가요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -213,6 +306,15 @@
    "pending_keys": [
     "past_due"
    ],
+   "asked_questions": {
+    "past_due": {
+     "question": "납부 기한이 이미 지나셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "납부일이 지난 지 20일 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -230,6 +332,15 @@
    "pending_keys": [
     "contract_less_12"
    ],
+   "asked_questions": {
+    "contract_less_12": {
+     "question": "계약 시작 후 12개월이 지나지 않았나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "24개월 약정 중에 10개월 썼어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -247,6 +358,15 @@
    "pending_keys": [
     "both_parties_present"
    ],
+   "asked_questions": {
+    "both_parties_present": {
+     "question": "양도인과 양수인 두 분이 함께 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "둘 다 직접 가요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -264,6 +384,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "서초동 쪽이요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -283,6 +409,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "부산 해운대 근처요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -302,6 +434,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "그건 알려드리기 곤란해요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -319,6 +457,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "잠깐만요 주소 좀 볼게요",
    "response_types": [
     "DEFERRED"
@@ -336,6 +480,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "지금 있는 곳 기준으로 찾아줘",
    "response_types": [
     "CONDITION_RESPONSE",
@@ -355,6 +505,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "요금제 변경은 어떻게 해요?",
    "response_types": [
     "NEW_QUESTION"
@@ -372,6 +528,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "신촌에서 번호이동 하려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -396,6 +558,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "합정역 근처 매장에서 유심 새로 받으려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -420,6 +588,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "유심 재발급이요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -443,6 +617,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "유심이 망가져서 새로 받으려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -462,6 +647,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "다른 통신사에서 옮겨 오려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -481,6 +677,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "폰을 처음 새로 만들려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -500,6 +707,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "엄마 폰을 제 명의로 돌리려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -519,6 +737,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "로밍 요금은 얼마예요?",
    "response_types": [
     "NEW_QUESTION"
@@ -536,6 +765,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "없어요 다 냈어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -553,6 +791,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "조금 밀린 게 있긴 해요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -570,6 +817,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "번호이동 수수료는 얼마예요?",
    "response_types": [
     "NEW_QUESTION"
@@ -587,6 +843,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "그건 왜 물어보시는 거예요?",
    "response_types": [
     "DEFERRED"
@@ -605,6 +870,15 @@
    "pending_keys": [
     "six_months_passed"
    ],
+   "asked_questions": {
+    "six_months_passed": {
+     "question": "개통 후 6개월이 지났나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "3개월밖에 안 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -622,6 +896,15 @@
    "pending_keys": [
     "six_months_passed"
    ],
+   "asked_questions": {
+    "six_months_passed": {
+     "question": "개통 후 6개월이 지났나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "고마워요",
    "response_types": [
     "DEFERRED"
@@ -639,6 +922,15 @@
    "pending_keys": [
     "self_pickup"
    ],
+   "asked_questions": {
+    "self_pickup": {
+     "question": "본인 직접 받으실 건가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "동생이 대신 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -656,6 +948,15 @@
    "pending_keys": [
     "self_pickup"
    ],
+   "asked_questions": {
+    "self_pickup": {
+     "question": "본인 직접 받으실 건가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "잠시만요 확인해 볼게요",
    "response_types": [
     "DEFERRED"
@@ -673,6 +974,15 @@
    "pending_keys": [
     "age_at_least_14"
    ],
+   "asked_questions": {
+    "age_at_least_14": {
+     "question": "만 14세 이상이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "중학교 1학년이에요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -690,6 +1000,15 @@
    "pending_keys": [
     "age_at_least_14"
    ],
+   "asked_questions": {
+    "age_at_least_14": {
+     "question": "만 14세 이상이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "나이는 말하고 싶지 않아요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -707,6 +1026,15 @@
    "pending_keys": [
     "both_present"
    ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "저만 가고 아버지는 못 가세요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -724,6 +1052,15 @@
    "pending_keys": [
     "both_present"
    ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아직 정하지 못했어요",
    "response_types": [
     "DEFERRED",
@@ -743,6 +1080,15 @@
    "pending_keys": [
     "agent_visiting"
    ],
+   "asked_questions": {
+    "agent_visiting": {
+     "question": "대리인이 방문하실 경우 위임장이 필요합니다. 대리인으로 방문하실 예정인가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 둘 다 직접 가요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -760,6 +1106,15 @@
    "pending_keys": [
     "agent_visiting"
    ],
+   "asked_questions": {
+    "agent_visiting": {
+     "question": "대리인이 방문하실 경우 위임장이 필요합니다. 대리인으로 방문하실 예정인가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "네 아내가 대신 가요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -777,6 +1132,15 @@
    "pending_keys": [
     "joined_this_month"
    ],
+   "asked_questions": {
+    "joined_this_month": {
+     "question": "이번 달에 가입하셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 작년에 가입했어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -794,6 +1158,15 @@
    "pending_keys": [
     "changed_this_month"
    ],
+   "asked_questions": {
+    "changed_this_month": {
+     "question": "이번 달에 요금제를 변경하신 적 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "이번 달엔 안 바꿨어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -811,6 +1184,12 @@
    "pending_keys": [
     "travel_days"
    ],
+   "asked_questions": {
+    "travel_days": {
+     "question": "며칠 동안 이용하실 예정인가요?",
+     "options": []
+    }
+   },
    "reply": "일본에 5일 가요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -828,6 +1207,12 @@
    "pending_keys": [
     "travel_days"
    ],
+   "asked_questions": {
+    "travel_days": {
+     "question": "며칠 동안 이용하실 예정인가요?",
+     "options": []
+    }
+   },
    "reply": "그런데 해외에서 데이터 차단은 어떻게 해요?",
    "response_types": [
     "NEW_QUESTION"
@@ -845,6 +1230,15 @@
    "pending_keys": [
     "installment_settled"
    ],
+   "asked_questions": {
+    "installment_settled": {
+     "question": "남은 할부금을 모두 납부하셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "할부는 지난달에 다 갚았어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -862,6 +1256,15 @@
    "pending_keys": [
     "over_12_months"
    ],
+   "asked_questions": {
+    "over_12_months": {
+     "question": "가입하신 지 12개월이 넘었나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아직 1년 안 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -879,6 +1282,15 @@
    "pending_keys": [
     "agent_visiting"
    ],
+   "asked_questions": {
+    "agent_visiting": {
+     "question": "대리인이 방문하실 경우 위임장이 필요합니다. 대리인으로 방문하실 예정인가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아뇨 제가 직접 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -896,6 +1308,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "없어요 지난달에 다 냈어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -913,6 +1334,15 @@
    "pending_keys": [
     "six_months_passed"
    ],
+   "asked_questions": {
+    "six_months_passed": {
+     "question": "개통 후 6개월이 지났나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 이제 두 달 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -930,6 +1360,15 @@
    "pending_keys": [
     "over_12_months"
    ],
+   "asked_questions": {
+    "over_12_months": {
+     "question": "가입하신 지 12개월이 넘었나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아뇨 아직 반년밖에 안 됐어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -947,6 +1386,15 @@
    "pending_keys": [
     "joined_this_month"
    ],
+   "asked_questions": {
+    "joined_this_month": {
+     "question": "이번 달에 가입하셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 이번 달 아니에요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -964,6 +1412,15 @@
    "pending_keys": [
     "self_pickup"
    ],
+   "asked_questions": {
+    "self_pickup": {
+     "question": "본인 직접 받으실 건가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 남편이 받으러 갈 거예요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -981,6 +1438,15 @@
    "pending_keys": [
     "age_at_least_14"
    ],
+   "asked_questions": {
+    "age_at_least_14": {
+     "question": "만 14세 이상이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 열두 살이에요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -998,6 +1464,15 @@
    "pending_keys": [
     "both_present"
    ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 한 명만 갈 수 있어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1015,6 +1490,15 @@
    "pending_keys": [
     "installment_settled"
    ],
+   "asked_questions": {
+    "installment_settled": {
+     "question": "남은 할부금을 모두 납부하셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아뇨 아직 할부 남았어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1032,6 +1516,15 @@
    "pending_keys": [
     "unpaid_bill"
    ],
+   "asked_questions": {
+    "unpaid_bill": {
+     "question": "현재 미납 요금이 있으신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "그런 건 대답하기 싫어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1049,6 +1542,15 @@
    "pending_keys": [
     "age_at_least_14"
    ],
+   "asked_questions": {
+    "age_at_least_14": {
+     "question": "만 14세 이상이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "개인정보라 말씀 못 드려요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1066,6 +1568,15 @@
    "pending_keys": [
     "agent_visiting"
    ],
+   "asked_questions": {
+    "agent_visiting": {
+     "question": "대리인이 방문하실 경우 위임장이 필요합니다. 대리인으로 방문하실 예정인가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "그건 나중에 말씀드릴게요",
    "response_types": [
     "DEFERRED"
@@ -1083,6 +1594,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "유심을 새 걸로 바꾸고 싶어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1102,6 +1624,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "eSIM으로 새로 발급받으려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1121,6 +1654,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "번호 하나 새로 개통하려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1140,6 +1684,17 @@
    "pending_keys": [
     "serviceType"
    ],
+   "asked_questions": {
+    "serviceType": {
+     "question": "어떤 업무로 매장을 찾으시나요?",
+     "options": [
+      "유심 재발급",
+      "번호이동",
+      "신규 개통",
+      "명의변경"
+     ]
+    }
+   },
    "reply": "아이 폰을 새로 하나 만들어 주려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1159,6 +1714,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "여의도역 근처에서 유심 새로 받을래요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1183,6 +1744,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "목동에서 새 회선 하나 만들려고요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1207,6 +1774,12 @@
    "pending_keys": [
     "location"
    ],
+   "asked_questions": {
+    "location": {
+     "question": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+     "options": []
+    }
+   },
    "reply": "망원동에서 유심만 바꾸면 돼요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1231,6 +1804,15 @@
    "pending_keys": [
     "past_due"
    ],
+   "asked_questions": {
+    "past_due": {
+     "question": "납부 기한이 이미 지나셨나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
    "reply": "아니요 아직 납부일 안 지났어요",
    "response_types": [
     "CONDITION_RESPONSE"
@@ -1240,6 +1822,33 @@
      "status": "FILLED"
     }
    }
+  },
+  {
+   "case_id": "FU-69",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "agent_collecting"
+   ],
+   "asked_questions": {
+    "agent_collecting": {
+     "question": "대리인이 대신 받으러 오실 예정이신가요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
+   "reply": "유심을 잃어버렸고 제가 직접 매장에 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "agent_collecting": {
+     "status": "FILLED"
+    }
+   },
+   "note": "대리인 수령 질문에 분실 사정을 덧붙여 직접 간다고 답함"
   }
  ]
 }

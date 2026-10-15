@@ -117,9 +117,40 @@ CASES += [
     ("prompt-check", ["past_due"], "아니요 아직 납부일 안 지났어요", [CR], {"past_due": filled()}, ""),
 ]
 
+# TELME-175 마지막 확인(채팅 API) 3회차에서 후속 분석이 놓친 실제 입력. 같은 입력을 30번 넣으면 5번 틀린다
+CASES += [
+    ("flow-db", ["agent_collecting"], "유심을 잃어버렸고 제가 직접 매장에 갈 거예요", [CR], {"agent_collecting": filled()},
+     "대리인 수령 질문에 분실 사정을 덧붙여 직접 간다고 답함"),
+]
+
+# 조건마다 앱이 되물은 질문과 선택지(chat_messages.content의 마지막 줄, follow_ups). 실제 입력은 대화 흐름 DB에 남은 문장이다
+YES_NO = ["예", "아니요"]
+ASKED = {
+    "location": ("어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.", []),
+    "serviceType": ("어떤 업무로 매장을 찾으시나요?", ["유심 재발급", "번호이동", "신규 개통", "명의변경"]),
+    "agent_presents": ("대리인이 방문하시는 경우인가요?", YES_NO),
+    "visit_together": ("양수인과 양도인이 함께 방문하시나요?", YES_NO),
+    "six_months_passed": ("개통 후 6개월이 지났나요?", YES_NO),
+    "unpaid_bill": ("현재 미납 요금이 있으신가요?", YES_NO),
+    "over_12_months": ("가입하신 지 12개월이 넘었나요?", YES_NO),
+    "self_pickup": ("본인 직접 받으실 건가요?", YES_NO),
+    "age_at_least_14": ("만 14세 이상이신가요?", YES_NO),
+    "both_present": ("양도인과 양수인 두 분이 모두 직접 매장에 오실 수 있나요?", YES_NO),
+    "past_due": ("납부 기한이 이미 지나셨나요?", YES_NO),
+    "contract_less_12": ("계약 시작 후 12개월이 지나지 않았나요?", YES_NO),
+    "both_parties_present": ("양도인과 양수인 두 분이 함께 매장에 오실 수 있나요?", YES_NO),
+    "agent_collecting": ("대리인이 대신 받으러 오실 예정이신가요?", YES_NO),
+    "agent_visiting": ("대리인이 방문하실 경우 위임장이 필요합니다. 대리인으로 방문하실 예정인가요?", YES_NO),
+    "joined_this_month": ("이번 달에 가입하셨나요?", YES_NO),
+    "changed_this_month": ("이번 달에 요금제를 변경하신 적 있나요?", YES_NO),
+    "travel_days": ("며칠 동안 이용하실 예정인가요?", []),
+    "installment_settled": ("남은 할부금을 모두 납부하셨나요?", YES_NO),
+}
+
 items = []
 for number, (source, keys, reply, types, conditions, note) in enumerate(CASES, 1):
     item = {"case_id": f"FU-{number:02d}", "expected_intent": "FAQ", "source": source, "pending_keys": keys,
+            "asked_questions": {key: {"question": ASKED[key][0], "options": ASKED[key][1]} for key in keys},
             "reply": reply, "response_types": types, "conditions": conditions}
     if note:
         item["note"] = note
