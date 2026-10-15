@@ -79,7 +79,8 @@ class QueryRoutingServiceTest {
     private void routingJson(String json) {
         org.mockito.Mockito.doAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+            if ((RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())
+                || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt()))) {
                 int count = objectMapper.readTree(request.userPrompt()).path("subQueries").size();
                 return objectMapper.writeValueAsString(Map.of(
                         "unsafe", java.util.Collections.nCopies(count, false)));
@@ -522,7 +523,9 @@ class QueryRoutingServiceTest {
 
         var call = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient).generate(call.capture());
-        assertThat(call.getValue().systemPrompt()).isEqualTo(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
+        // 재검색 후보는 단일 검색어라 조건을 하나씩 대조하는 프롬프트로 검증한다
+        assertThat(call.getValue().systemPrompt())
+                .isEqualTo(RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT);
     }
 
     // 키 순서만 바뀌어도 모델 판정이 달라지므로 JVM과 관계없이 같은 문자열이어야 한다

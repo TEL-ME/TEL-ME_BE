@@ -13,7 +13,7 @@ public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}
 
-    public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = """
+    private static final String FAITHFULNESS_RULES = """
         검색 질의가 고객의 원래 요청을 왜곡했는지만 판단한다. 각 하위 질문을 독립적으로 판정한다.
         question은 현재 고객 발화다. previousSubject는 현재 발화에서 생략한 대상을 복원하는 데만 사용한다.
         이전 발언의 별도 요청이나 조건을 현재 발화의 요청으로 취급하지 않는다.
@@ -22,6 +22,22 @@ public final class RoutingPromptTemplates {
         띄어쓰기 변경, 같은 뜻의 표현, 질문 전체에 명확히 공통인 대상의 반복은 unsafe=false다.
         상황 설명을 그 상황의 일반적인 처리 안내로 바꾸는 것은 허용한다. 특정 해결책을 선택한 것으로 바꾸면 unsafe=true다.
         원문의 조건, 부정, 비교 대상을 빠뜨리거나 비교를 한쪽의 단독 설명으로 바꾸면 unsafe=true다.
+        """;
+
+    // 단일 검색어(원문 검색 0건 뒤 재검색 후보)에만 쓰는 대조 순서. 복합 하위 질문에 쓰면 멀쩡한 하위 검색어까지 막아
+    // 단일 검색어에만 붙인다(TELME-175 3단계)
+    private static final String SINGLE_QUERY_CHECK = """
+        질의를 다음 순서로 판정한다.
+        1. 원문의 조건을 모두 찾는다. 상황·이유(~인데, ~해서), 조건(~하면, ~때, ~전, ~후), 사람과 대상(외국인, 자녀, 법인, 대리인, 미성년자),
+           나이·금액·기간·횟수, 경로(온라인, 매장, 택배), 부정(~안 하고, ~말고)이 조건이다.
+        2. 찾은 조건이 질의에 같은 뜻으로 모두 남아 있는지 하나씩 대조한다. 하나라도 빠지거나 뜻이 바뀌면 unsafe=true다.
+        3. 질의에만 있는 업무, 대상, 상품명, 금액, 기간, 등급, 수령 방법, 서류 이름이 있으면 unsafe=true다.
+           원문의 넓은 말을 좁은 말로 바꾼 것(결합 할인을 특정 결합 상품으로, 등급을 특정 등급으로)도 원문에 없는 것을 넣은 것이다.
+        4. 판단이 서지 않으면 unsafe=true다. unsafe=true인 질의는 고객 원문으로 검색하므로 손해가 작다.
+        질문을 검색어 형태로 바꾼 것('~ 여부', '~ 방법', '~ 비교', '~ 차이')은 조건이 모두 남아 있으면 unsafe=false다.
+        """;
+
+    private static final String FAITHFULNESS_EXAMPLES = """
         답변이나 수정된 검색 질의를 생성하지 않는다.
         예: 원문="유심을 잃어버렸어요", 질의="유심 분실 처리 안내" -> unsafe=false
         예: 원문="유심을 잃어버렸어요", 질의="유심 분실 시 재발급 방법" -> unsafe=true
@@ -36,6 +52,13 @@ public final class RoutingPromptTemplates {
         예: 원문="A와 B 중 뭐가 먼저예요", 질의="A 후 B 순서" -> unsafe=true
         입력 순서대로 판정하고 {"unsafe":[false,true]} 형식의 JSON만 출력한다.
         """;
+
+    // 복합 FAQ 하위 질문 묶음의 검색어 검증
+    public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = FAITHFULNESS_RULES + FAITHFULNESS_EXAMPLES;
+
+    // 단일 검색어의 검색어 검증. 조건을 하나씩 대조하는 순서를 더한다
+    public static final String FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT =
+            FAITHFULNESS_RULES + SINGLE_QUERY_CHECK + FAITHFULNESS_EXAMPLES;
 
     public static final String REQUEST_INVENTORY_PROMPT = """
         고객이 원하는 최종 결과의 관계와 요청 개수만 판정한다. 하위 질문, 검색어, 답변을 생성하지 않는다.

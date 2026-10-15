@@ -657,11 +657,15 @@ public class QueryRoutingService {
                 return item;
             }).toList());
             prompt = objectMapper.writeValueAsString(input);
+            // 단일 검색어는 조건을 하나씩 대조하는 프롬프트로 검증한다. 복합 하위 질문에 쓰면 멀쩡한 검색어까지 막는다
+            boolean single = payload.subQueries().size() == 1;
             LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
-                    .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
+                    .systemPrompt(single ? RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT
+                            : RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
                     .userPrompt(prompt).format(ResponseFormat.JSON)
                     .temperature(0.0).maxTokens(256)
-                    .promptVersion("routing-faq-faithfulness-v2-single-search").build();
+                    .promptVersion(single ? "routing-faq-faithfulness-single-v3"
+                            : "routing-faq-faithfulness-v2-single-search").build();
             String response = llmClient.generate(request);
             var root = objectMapper.readTree(response);
             var results = root == null ? null : root.path("unsafe");

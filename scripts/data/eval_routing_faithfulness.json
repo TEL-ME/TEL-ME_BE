@@ -1,0 +1,4399 @@
+{
+ "description": "TELME-175 3단계 검색어 검증 평가셋. 실제 입력은 1단계 gpt-oss 1회차 의도 분류 출력에서 앱 코드로 만들었고, 뜻을 일부러 바꾼 검색어(source=synthetic)를 더했다. skipped는 앱에서 모델을 부르지 않는 경우다. 정답은 사람 검토 전이다.",
+ "counts": {
+  "cases": 250,
+  "skipped_cases": 9,
+  "queries": 301,
+  "gold_unsafe": 54,
+  "gold_safe": 239,
+  "gold_either": 8
+ },
+ "cases": [
+  {
+   "eval_id": "RU-001",
+   "expected_intent": "FAQ",
+   "question": "이번 달에 요금제를 변경할 수 있을까요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "이번 달에 요금제를 변경할 수 있을까요?",
+     "query": "이번 달에 요금제 변경 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-001",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-002",
+   "expected_intent": "FAQ",
+   "question": "한 번 교환한 단말을 다시 교환할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "한 번 교환한 단말을 다시 교환할 수 있나요?",
+     "query": "한번 교환한 단말을 다시 교환할 수 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-002",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-003",
+   "expected_intent": "FAQ",
+   "question": "휴대폰을 분실했을 때 가장 먼저 무엇을 해야 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "휴대폰을 분실했을 때 가장 먼저 무엇을 해야 하나요?",
+     "query": "휴대폰 분실 시 가장 먼저 해야 할 일",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-003",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-004",
+   "expected_intent": "FAQ",
+   "question": "할부금이 없으면 신용 심사 없이 명의변경이 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "할부금이 없으면 신용 심사 없이 명의변경이 되나요?",
+     "query": "할부금이 없으면 신용심사 없이 명의변경이 되나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-004",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-005",
+   "expected_intent": "FAQ",
+   "question": "알뜰 미니 요금제는 얼마인가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "알뜰 미니 요금제는 얼마인가요?",
+     "query": "알뜰미니요금제 가격",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-005",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-006",
+   "expected_intent": "FAQ",
+   "question": "데이터 소진 후 400kbps에서 영상 시청이 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "데이터 소진 후 400kbps에서 영상 시청이 되나요?",
+     "query": "데이터 소진 후 400kbps에서 영상 시청 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-006",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-007",
+   "expected_intent": "FAQ",
+   "question": "개통한 지 두 달인데 번호이동이 가능한가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "개통한 지 두 달인데 번호이동이 가능한가요?",
+     "query": "개통한지 두 달인데 번호이동이 가능한가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-007",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-008",
+   "expected_intent": "FAQ",
+   "question": "다른 통신사로 번호를 가져가려면 어떻게 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "다른 통신사로 번호를 가져가려면 어떻게 하나요?",
+     "query": "다른 통신사로 번호를 가져가는 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-008",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-010",
+   "expected_intent": "FAQ",
+   "question": "4년 전 요금 납부 기록을 발급받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "4년 전 요금 납부 기록을 발급받을 수 있나요?",
+     "query": "4년 전 요금 납부 기록 발급 방법",
+     "gold_unsafe": null,
+     "note": "'발급받을 수 있나요'를 '발급 방법'으로 바꿈(가능 여부를 전제로 바꿨는지 애매)"
+    }
+   ],
+   "case_id": "RU-010",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-011",
+   "expected_intent": "FAQ",
+   "question": "법인 담당자인데 제 신분증으로는 개통이 안 된다고 합니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "법인 담당자인데 제 신분증으로는 개통이 안 된다고 합니다",
+     "query": "법인 담당자 신분증으로 개통이 안 되는 경우",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-011",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-012",
+   "expected_intent": "FAQ",
+   "question": "법인 명의로 개통하려는데 심사 때문에 안 된다고 합니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "법인 명의로 개통하려는데 심사 때문에 안 된다고 합니다",
+     "query": "법인 명의 개통 심사 거절 사유와 해결 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-012",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-013",
+   "expected_intent": "FAQ",
+   "question": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른가요?",
+     "query": "분실 시 매장 방문과 전화 중 어느 쪽이 빠른가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-013",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-014",
+   "expected_intent": "FAQ",
+   "question": "분실 해지할 때 일시 납부와 할부 유지의 총액이 다른가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분실 해지할 때 일시 납부와 할부 유지의 총액이 다른가요?",
+     "query": "분실 해지 시 일시납부와 할부 유지의 총액 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-014",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-015",
+   "expected_intent": "FAQ",
+   "question": "유심을 새로 받으면 예전 유심도 계속 쓸 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심을 새로 받으면 예전 유심도 계속 쓸 수 있나요?",
+     "query": "새 유심을 받으면 기존 유심을 계속 사용할 수 있는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-015",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-016",
+   "expected_intent": "FAQ",
+   "question": "이번 달에 고지서를 두 통 받았습니다. 하나만 내면 되는 건지 확인 부탁드려요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "이번 달에 고지서를 두 통 받았습니다. 하나만 내면 되는 건지 확인 부탁드려요",
+     "query": "이번 달에 고지서를 두 통 받았는데 하나만 내면 되는지 확인 요청",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-016",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-019",
+   "expected_intent": "FAQ",
+   "question": "약정 반년 지났는데 새 폰으로 갈아타려면 뭘 준비해서 어디로 가야 하나요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "약정 반년 지났는데 새 폰으로 갈아타려면 뭘 준비해서 어디로 가야 하나요",
+     "query": "약정 반년이 지난 후 새 폰으로 갈아타려면 준비물과 방문 장소",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-019",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-021",
+   "expected_intent": "FAQ",
+   "question": "아버지 회선을 제 이름으로 돌리려는데 돈이 드는지 알고 싶습니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "아버지 회선을 제 이름으로 돌리려는데 돈이 드는지 알고 싶습니다",
+     "query": "아버지 회선을 제 이름으로 돌릴 때 비용",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-021",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-022",
+   "expected_intent": "FAQ",
+   "question": "제일 싼 알뜰 상품 월 얼마고 데이터는 얼마나 주는지 알려주세요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "제일 싼 알뜰 상품 월 얼마고 데이터는 얼마나 주는지 알려주세요",
+     "query": "제일 싼 알뜰 상품 월 요금과 데이터 제공량",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-022",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-023",
+   "expected_intent": "FAQ",
+   "question": "가입한 지 얼마 안 됐는데 벌써 통신사를 바꾸고 싶습니다. 될까요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "가입한 지 얼마 안 됐는데 벌써 통신사를 바꾸고 싶습니다. 될까요",
+     "query": "통신사 변경 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 '가입한 지 얼마 안 됐는데'를 빠뜨림"
+    }
+   ],
+   "case_id": "RU-023",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-024",
+   "expected_intent": "FAQ",
+   "question": "인터넷이 서툴러서 상담원 통해 해외 데이터 신청하고 싶은데 얼마나 걸리나요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷이 서툴러서 상담원 통해 해외 데이터 신청하고 싶은데 얼마나 걸리나요",
+     "query": "해외 데이터 신청 소요 시간",
+     "gold_unsafe": true,
+     "note": "조건 '상담원 통해'를 빠뜨림"
+    }
+   ],
+   "case_id": "RU-024",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-025",
+   "expected_intent": "FAQ",
+   "question": "해외에서 데이터가 막혔다는 안내를 받았는데 인증하면 뭐가 달라지나요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외에서 데이터가 막혔다는 안내를 받았는데 인증하면 뭐가 달라지나요",
+     "query": "해외에서 데이터가 막혔다는 안내를 받고 인증하면 뭐가 달라지나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-025",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-027",
+   "expected_intent": "FAQ",
+   "question": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
+     "query": "제주민등록증만으로는 처리되지 않는 이유와 필요한 서류",
+     "gold_unsafe": true,
+     "note": "조건 '회사 심부름(법인 업무 대리)'을 빠뜨림"
+    }
+   ],
+   "case_id": "RU-027",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-028",
+   "expected_intent": "FAQ",
+   "question": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
+     "query": "남은 폰값을 한꺼번에 내는 것이 손해인지 나눠 내는 것이 손해인지 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-028",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-029",
+   "expected_intent": "FAQ",
+   "question": "장기 출장으로 몇 달 폰을 안 쓸 건데 번호는 살려 두고 싶습니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "장기 출장으로 몇 달 폰을 안 쓸 건데 번호는 살려 두고 싶습니다",
+     "query": "장기 출장으로 몇 달 동안 폰을 사용하지 않지만 번호는 유지하고 싶어요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-029",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-030",
+   "expected_intent": "FAQ",
+   "question": "기기를 바꿨더니 칩 크기가 달라서 안 들어갑니다. 어디서 바꿔야 하나요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "기기를 바꿨더니 칩 크기가 달라서 안 들어갑니다. 어디서 바꿔야 하나요",
+     "query": "칩 크기가 달라서 유심 교체 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-030",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-047",
+   "expected_intent": "FAQ",
+   "question": "와이파이 공유기는 대여인가요 구매인가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "와이파이 공유기는 대여인가요 구매인가요?",
+     "query": "와이파이 공유기는 대여인지 구매인지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-047",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-048",
+   "expected_intent": "FAQ",
+   "question": "우리 동네가 5G 커버리지에 들어가는지 어떻게 확인해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "우리 동네가 5G 커버리지에 들어가는지 어떻게 확인해요?",
+     "query": "우리 동네 5G 커버리지 확인 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-048",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-051",
+   "expected_intent": "FAQ",
+   "question": "휴대폰 소액결제를 아예 막아 둘 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "휴대폰 소액결제를 아예 막아 둘 수 있나요?",
+     "query": "휴대폰 소액결제 차단 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-051",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-052",
+   "expected_intent": "FAQ",
+   "question": "데이터 쉐어링 전용 요금제는 따로 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "데이터 쉐어링 전용 요금제는 따로 있나요?",
+     "query": "데이터 쉐어링 전용 요금제 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-052",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-053",
+   "expected_intent": "FAQ",
+   "question": "아이 워치용 요금제는 어떤 게 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "아이 워치용 요금제는 어떤 게 있나요?",
+     "query": "아이워치용 요금제는 어떤 것이 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-053",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-054",
+   "expected_intent": "FAQ",
+   "question": "eSIM 발급 비용 2,750원은 부가세가 포함된 금액인가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "eSIM 발급 비용 2,750원은 부가세가 포함된 금액인가요?",
+     "query": "eSIM 발급 비용 2,750원에 부가세 포함 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-054",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-055",
+   "expected_intent": "FAQ",
+   "question": "유심 재발급 비용은 카드로 결제할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급 비용은 카드로 결제할 수 있나요?",
+     "query": "유심 재발급 비용을 카드 결제로 할 수 있는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-055",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-056",
+   "expected_intent": "FAQ",
+   "question": "번호이동 후에도 기존 통신사 멤버십을 쓸 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "번호이동 후에도 기존 통신사 멤버십을 쓸 수 있나요?",
+     "query": "번호이동 후 기존 통신사 멤버십 사용 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-056",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-057",
+   "expected_intent": "FAQ",
+   "question": "명의변경 수수료가 없으면 인지세도 안 내나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "명의변경 수수료가 없으면 인지세도 안 내나요?",
+     "query": "명의변경 수수료가 없을 때 인지세 안내 여부",
+     "gold_unsafe": true,
+     "note": "'인지세도 안 내나요'를 '인지세 안내 여부'로 바꿈"
+    }
+   ],
+   "case_id": "RU-057",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-058",
+   "expected_intent": "FAQ",
+   "question": "요금 밀리고 60일 지나면 번호가 아예 없어지는 건가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "요금 밀리고 60일 지나면 번호가 아예 없어지는 건가요?",
+     "query": "요금이 밀리고 60일이 지나면 번호가 없어지는지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-058",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-059",
+   "expected_intent": "FAQ",
+   "question": "7,700원 내면 택배로도 받을 수 있어요? 며칠 걸려요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "7,700원 내면 택배로도 받을 수 있어요? 며칠 걸려요?",
+     "query": "7700원 이하로 택배 배송 가능 여부와 소요 기간",
+     "gold_unsafe": true,
+     "note": "원문에 없는 조건 '7700원 이하'를 넣음"
+    }
+   ],
+   "case_id": "RU-059",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-060",
+   "expected_intent": "FAQ",
+   "question": "2,750원짜리 발급은 아무 폰에서나 되는 거예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "skipped": "업무 대상 규칙이 먼저 거절(모델 호출 없음)",
+   "sub_queries": [
+    {
+     "quote": "2,750원짜리 발급은 아무 폰에서나 되는 거예요?",
+     "query": "2,750원짜리 유심 발급은 어떤 폰에서도 가능한가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-060",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-061",
+   "expected_intent": "FAQ",
+   "question": "대리인이 가면 가입자 신분증 사본도 챙겨야 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "대리인이 가면 가입자 신분증 사본도 챙겨야 해요?",
+     "query": "대리인으로 가입할 때 가입자 신분증 사본이 필요한가요",
+     "gold_unsafe": true,
+     "note": "원문에 없는 업무 '가입'을 넣음"
+    }
+   ],
+   "case_id": "RU-061",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-062",
+   "expected_intent": "FAQ",
+   "question": "3개월 지나야 옮길 수 있다는데 그 기준이 개통일이에요?",
+   "previous_subject": "",
+   "path": "refined",
+   "skipped": "업무 대상 규칙이 먼저 거절(모델 호출 없음)",
+   "sub_queries": [
+    {
+     "quote": "3개월 지나야 옮길 수 있다는데 그 기준이 개통일이에요?",
+     "query": "번호이동 3개월 기준이 개통일인지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-062",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-064",
+   "expected_intent": "FAQ",
+   "question": "약정 반 넘게 채웠으면 할인 반환금 50%만 내는 거죠?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "약정 반 넘게 채웠으면 할인 반환금 50%만 내는 거죠?",
+     "query": "약정 초과 시 할인 반환금 50%만 내는지 여부",
+     "gold_unsafe": true,
+     "note": "조건 '약정 반 넘게 채웠으면'을 '약정 초과 시'로 바꿈"
+    }
+   ],
+   "case_id": "RU-064",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-065",
+   "expected_intent": "FAQ",
+   "question": "정지해도 기본료 50%는 나온다는데 한 번에 며칠까지 정지돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "정지해도 기본료 50%는 나온다는데 한 번에 며칠까지 정지돼요?",
+     "query": "정지해도 기본료 50%는 나오는데 한번에 며칠까지 정지되는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-065",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-066",
+   "expected_intent": "FAQ",
+   "question": "폰 보험 들어 두면 수리비는 얼마나 내요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "폰 보험 들어 두면 수리비는 얼마나 내요?",
+     "query": "폰보험 가입 시 수리비 부담 금액",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-066",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-067",
+   "expected_intent": "FAQ",
+   "question": "14일 안이면 뜯은 폰도 반품되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "14일 안이면 뜯은 폰도 반품되나요?",
+     "query": "14일 안에 뜯은 폰도 반품되는지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-067",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-068",
+   "expected_intent": "FAQ",
+   "question": "하루 9,900원짜리랑 12,100원짜리 차이가 뭐예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "skipped": "업무 대상 규칙이 먼저 거절(모델 호출 없음)",
+   "sub_queries": [
+    {
+     "quote": "하루 9,900원짜리랑 12,100원짜리 차이가 뭐예요?",
+     "query": "하루 9,900원짜리와 12,100원짜리 요금제 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-068",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-069",
+   "expected_intent": "FAQ",
+   "question": "이중 납부로 환불받으면 이자도 같이 붙어서 들어오나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "이중 납부로 환불받으면 이자도 같이 붙어서 들어오나요?",
+     "query": "이중납부 환불 시 이자도 같이 들어오는지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-069",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-070",
+   "expected_intent": "FAQ",
+   "question": "5G 요금제를 LTE 폰에서 쓰면 요금이 달라지나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "5G 요금제를 LTE 폰에서 쓰면 요금이 달라지나요?",
+     "query": "5G 요금제를 LTE 폰에서 사용하면 요금이 달라지는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-070",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-071",
+   "expected_intent": "FAQ",
+   "question": "유심을 재발급받으면 예전 유심에 저장된 연락처도 새 유심으로 옮겨지나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심을 재발급받으면 예전 유심에 저장된 연락처도 새 유심으로 옮겨지나요?",
+     "query": "유심 재발급 시 기존 유심에 저장된 연락처가 새 유심으로 옮겨지는지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-071",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-072",
+   "expected_intent": "FAQ",
+   "question": "외국인등록증 유효기간이 한 달 남았는데 개통할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "외국인등록증 유효기간이 한 달 남았는데 개통할 수 있나요?",
+     "query": "외국인등록증 유효기간이 한 달 남았을 때 개통 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-072",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-073",
+   "expected_intent": "FAQ",
+   "question": "온라인으로 개통 신청하면 유심은 편의점에서 받을 수도 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "온라인으로 개통 신청하면 유심은 편의점에서 받을 수도 있나요?",
+     "query": "온라인 개통 신청 시 유심을 편의점에서 받을 수 있는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-073",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-074",
+   "expected_intent": "FAQ",
+   "question": "번호이동하면 기존 통신사에서 남은 데이터는 어떻게 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "번호이동하면 기존 통신사에서 남은 데이터는 어떻게 되나요?",
+     "query": "번호이동 시 기존 통신사의 남은 데이터는 어떻게 되는가",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-074",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-075",
+   "expected_intent": "FAQ",
+   "question": "일시 정지 중에도 문자는 받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "일시 정지 중에도 문자는 받을 수 있나요?",
+     "query": "일시정지 중에도 문자는 받을 수 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-075",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-076",
+   "expected_intent": "FAQ",
+   "question": "기기변경할 때 쓰던 폰을 보상 판매로 넘길 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "기기변경할 때 쓰던 폰을 보상 판매로 넘길 수 있나요?",
+     "query": "기기변경 시 사용하던 폰을 보상판매로 넘길 수 있는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-076",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-077",
+   "expected_intent": "FAQ",
+   "question": "매장 방문 전에 상담 예약을 미리 할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "매장 방문 전에 상담 예약을 미리 할 수 있나요?",
+     "query": "매장 방문 전에 상담 예약을 미리 할 수 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-077",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-078",
+   "expected_intent": "FAQ",
+   "question": "멤버십 VIP면 영화 할인도 받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "멤버십 VIP면 영화 할인도 받을 수 있나요?",
+     "query": "멤버십 VIP면 영화 할인도 받을 수 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-078",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-079",
+   "expected_intent": "FAQ",
+   "question": "U+ 멤버십으로 헬스장 결제 할인을 받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "U+ 멤버십으로 헬스장 결제 할인을 받을 수 있나요?",
+     "query": "U+ 멤버십으로 헬스장 결제 할인 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-079",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-081",
+   "expected_intent": "FAQ",
+   "question": "USIM을 잃어버렸다면 재발급할 때 어떤 서류가 필요해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "USIM을 잃어버렸다면 재발급할 때 어떤 서류가 필요해요?",
+     "query": "USIM 분실 재발급 필요 서류",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-081",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-082",
+   "expected_intent": "FAQ",
+   "question": "통신요금 자동이체 계좌를 바꾸려면 어떻게 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "통신요금 자동이체 계좌를 바꾸려면 어떻게 하나요?",
+     "query": "통신 요금 자동이체 계좌 변경 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-082",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-083",
+   "expected_intent": "FAQ",
+   "question": "집 인터넷이 끊기면 어디에 장애 신고하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "집 인터넷이 끊기면 어디에 장애 신고하나요?",
+     "query": "집 인터넷이 끊겼을 때 장애 신고 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-083",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-099",
+   "expected_intent": "FAQ",
+   "question": "휴대폰 요금제를 낮추면 약정 할인도 바뀌나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "휴대폰 요금제를 낮추면 약정 할인도 바뀌나요?",
+     "query": "휴대폰 요금제를 낮추면 약정 할인도 바뀌나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-099",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-100",
+   "expected_intent": "FAQ",
+   "question": "번호이동을 신청하려면 어떤 조건이 필요한가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "번호이동을 신청하려면 어떤 조건이 필요한가요?",
+     "query": "번호이동 신청 조건",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-100",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-102",
+   "expected_intent": "FAQ",
+   "question": "유심 재발급은 꼭 매장에 방문해야 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급은 꼭 매장에 방문해야 하나요?",
+     "query": "유심 재발급은 매장 방문이 필수인지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-102",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-103",
+   "expected_intent": "FAQ",
+   "question": "명의변경할 때 양도인과 양수인이 모두 가야 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "명의변경할 때 양도인과 양수인이 모두 가야 하나요?",
+     "query": "명의변경 시 양도인과 양수인 모두가 필요한가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-103",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-104",
+   "expected_intent": "FAQ",
+   "question": "해외 로밍 요금은 언제 청구되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외 로밍 요금은 언제 청구되나요?",
+     "query": "해외 로밍 요금은 언제 청구되나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-104",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-105",
+   "expected_intent": "FAQ",
+   "question": "약정 중 해지하면 위약금은 어떻게 계산하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "약정 중 해지하면 위약금은 어떻게 계산하나요?",
+     "query": "약정 중 해지 시 위약금 계산 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-105",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-106",
+   "expected_intent": "FAQ",
+   "question": "인터넷과 TV를 휴대폰에 결합하면 어떤 할인이 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷과 TV를 휴대폰에 결합하면 어떤 할인이 있나요?",
+     "query": "인터넷과 TV를 휴대폰에 결합하면 어떤 할인이 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-106",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-131",
+   "expected_intent": "FAQ",
+   "question": "노트북은요?",
+   "previous_subject": "U+ 인터넷 와이파이 연결 방법 알려줘",
+   "path": "restored",
+   "skipped": "맥락 복원 단일 질문(재검색 검증과 경로가 다름)",
+   "sub_queries": [
+    {
+     "quote": "노트북은요?",
+     "query": "노트북에서 U+ 인터넷 와이파이 연결 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-131",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-148",
+   "expected_intent": "FAQ",
+   "question": "물리 유심 재발급 비용은 얼마인가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "물리 유심 재발급 비용은 얼마인가요?",
+     "query": "물리 유심 재발급 비용",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-148",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-149",
+   "expected_intent": "FAQ",
+   "question": "명의 변경에 필요한 서류와 번호 이동에 필요한 서류를 각각 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "명의변경에필요한서류",
+     "query": "명의변경에 필요한 서류",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "번호이동에필요한서류",
+     "query": "번호이동에 필요한 서류",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-149",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-150",
+   "expected_intent": "FAQ",
+   "question": "명의 변경에 필요한 서류와 명의 변경 시 무료 해외 항공권을 주는지 각각 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "명의변경에필요한서류",
+     "query": "명의변경 필요 서류",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "명의변경시무료해외항공권을주는지",
+     "query": "명의변경 시 무료 해외 항공권 제공 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-150",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-151",
+   "expected_intent": "FAQ",
+   "question": "명의 변경과 번호 이동의 필요 서류를 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "명의 변경과 번호 이동의 필요 서류를 비교해줘",
+     "query": "명의변경과 번호이동 필요 서류 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-151",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-152",
+   "expected_intent": "FAQ",
+   "question": "5G 라이트와 LTE 플러스의 월 요금과 데이터 제공량을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "5G 라이트와 LTE 플러스의 월 요금과 데이터 제공량을 비교해줘",
+     "query": "5G 라이트와 LTE 플러스 월요금 및 데이터 제공량 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-152",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-153",
+   "expected_intent": "FAQ",
+   "question": "너겟 5G 요금제와 LTE 요금제의 데이터 제공량 차이를 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "너겟 5G 요금제와 LTE 요금제의 데이터 제공량 차이를 비교해줘",
+     "query": "너겟 5G 요금제와 LTE 요금제의 데이터 제공량 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-153",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-155",
+   "expected_intent": "FAQ",
+   "question": "월 5만 원대 요금제에서 데이터와 속도 제한 조건을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "월 5만 원대 요금제에서 데이터와 속도 제한 조건을 비교해줘",
+     "query": "월 5만원대 요금제 데이터와 속도 제한 조건 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-155",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-156",
+   "expected_intent": "FAQ",
+   "question": "eSIM과 유심의 개통 절차를 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "eSIM과 유심의 개통 절차를 비교해줘",
+     "query": "eSIM과 유심 개통 절차 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-156",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-157",
+   "expected_intent": "FAQ",
+   "question": "선택약정과 공시지원금 할인 차이를 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "선택약정과 공시지원금 할인 차이를 비교해줘",
+     "query": "선택약정과 공시지원금 할인 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-157",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-158",
+   "expected_intent": "FAQ",
+   "question": "해외 로밍 패스와 데이터 로밍 종량제의 요금 및 제공량을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외 로밍 패스와 데이터 로밍 종량제의 요금 및 제공량을 비교해줘",
+     "query": "해외 로밍패스와 데이터 로밍 종량제 요금 및 제공량 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-158",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-159",
+   "expected_intent": "FAQ",
+   "question": "일반 요금제와 청소년 요금제의 가입 조건을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "일반 요금제와 청소년 요금제의 가입 조건을 비교해줘",
+     "query": "일반요금제와 청소년요금제 가입조건 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-159",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-160",
+   "expected_intent": "FAQ",
+   "question": "인터넷 결합 할인과 가족 결합 할인 차이를 비교해서 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷 결합 할인과 가족 결합 할인 차이를 비교해서 알려줘",
+     "query": "인터넷 결합할인과 가족 결합할인 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-160",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-161",
+   "expected_intent": "FAQ",
+   "question": "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘",
+     "query": "분실 신고와 일시 정지의 차이와 이용 제한 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-161",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-162",
+   "expected_intent": "FAQ",
+   "question": "물리 유심 재발급과 eSIM 발급 비용을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "물리 유심 재발급과 eSIM 발급 비용을 비교해줘",
+     "query": "물리유심 재발급과 eSIM 발급 비용 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-162",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-163",
+   "expected_intent": "FAQ",
+   "question": "청소년 요금제와 시니어 요금제의 가입 연령을 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "청소년 요금제와 시니어 요금제의 가입 연령을 비교해줘",
+     "query": "청소년요금제와 시니어요금제의 가입 연령 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-163",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-164",
+   "expected_intent": "FAQ",
+   "question": "일시 정지와 해지의 요금 차이를 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "일시 정지와 해지의 요금 차이를 비교해줘",
+     "query": "일시정지와 해지의 요금 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-164",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-166",
+   "expected_intent": "FAQ",
+   "question": "유심재발급 받고싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심재발급 받고싶어요",
+     "query": "유심 재발급 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-166",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-167",
+   "expected_intent": "FAQ",
+   "question": "요금제변경 하고싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "요금제변경 하고싶어요",
+     "query": "요금제 변경 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-167",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-168",
+   "expected_intent": "FAQ",
+   "question": "유심을잃어버렸어. 재발급방법 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심을잃어버렸어. 재발급방법 알려줘",
+     "query": "유심 분실 재발급 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-168",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-169",
+   "expected_intent": "FAQ",
+   "question": "5G랑LTE요금제차이 비교해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "5G랑LTE요금제차이 비교해줘",
+     "query": "5G와 LTE 요금제 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-169",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-170",
+   "expected_intent": "FAQ",
+   "question": "로밍요금과 유심재발급방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "로밍요금",
+     "query": "로밍 요금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "유심재발급방법",
+     "query": "유심 재발급 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-170",
+   "source": "step1-gptoss-1",
+   "skipped": "원문이 검색어 검증 프롬프트 예시"
+  },
+  {
+   "eval_id": "RU-171",
+   "expected_intent": "FAQ",
+   "question": "인터넷해지하려고요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷해지하려고요",
+     "query": "인터넷 해지 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-171",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-172",
+   "expected_intent": "FAQ",
+   "question": "휴대폰해지 방법 알려줘. 인터넷가입 방법도 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "휴대폰해지방법알려줘",
+     "query": "휴대폰 해지 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "인터넷가입방법도알려줘",
+     "query": "인터넷 가입 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-172",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-173",
+   "expected_intent": "FAQ",
+   "question": "로밍요금과 유심재발급비용 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "로밍요금",
+     "query": "로밍 요금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "유심재발급비용",
+     "query": "유심 재발급 비용",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-173",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-174",
+   "expected_intent": "FAQ",
+   "question": "LTE랑5G요금제중 뭐가더저렴해",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "LTE랑5G요금제중 뭐가더저렴해",
+     "query": "LTE와 5G 요금제 중 어느 것이 더 저렴한가",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-174",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-175",
+   "expected_intent": "FAQ",
+   "question": "해외로출장가는데 로밍신청어떻게해",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외로출장가는데 로밍신청어떻게해",
+     "query": "해외 출장 시 로밍 신청 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-175",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-176",
+   "expected_intent": "FAQ",
+   "question": "인터넷가입은안하고 해지만하려고요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷가입은안하고 해지만하려고요",
+     "query": "인터넷 가입 방법",
+     "gold_unsafe": true,
+     "note": "부정 '가입은 안 하고 해지만'을 '가입 방법'으로 뒤집음"
+    }
+   ],
+   "case_id": "RU-176",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-177",
+   "expected_intent": "FAQ",
+   "question": "eSIM재발급받고싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "eSIM재발급받고싶어요",
+     "query": "eSIM 재발급 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-177",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-178",
+   "expected_intent": "FAQ",
+   "question": "로밍가입하고싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "로밍가입하고싶어요",
+     "query": "로밍 가입 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-178",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-179",
+   "expected_intent": "FAQ",
+   "question": "휴대폰기기변경하려고요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "휴대폰기기변경하려고요",
+     "query": "휴대폰 기기변경 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-179",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-180",
+   "expected_intent": "FAQ",
+   "question": "요금이밀렸는데유심재발급받을수있어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "요금이밀렸는데유심재발급받을수있어요",
+     "query": "요금이 밀렸는데 유심 재발급 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-180",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-181",
+   "expected_intent": "FAQ",
+   "question": "해지는안하고일시정지만하고싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해지는안하고일시정지만하고싶어요",
+     "query": "해지 없이 일시 정지 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-181",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-182",
+   "expected_intent": "FAQ",
+   "question": "요금납부방법과데이터충전비용알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "요금납부방법",
+     "query": "요금 납부 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "데이터충전비용",
+     "query": "데이터 충전 비용",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-182",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-183",
+   "expected_intent": "FAQ",
+   "question": "유심재발급비용과로밍신청방법그리고해지서류알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "유심재발급비용",
+     "query": "유심 재발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "로밍신청방법",
+     "query": "로밍 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "해지서류",
+     "query": "해지 서류",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-183",
+   "source": "step1-gptoss-1",
+   "skipped": "원문이 검색어 검증 프롬프트 예시"
+  },
+  {
+   "eval_id": "RU-184",
+   "expected_intent": "FAQ",
+   "question": "eSIM과유심중어느쪽이편해",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "eSIM과유심중어느쪽이편해",
+     "query": "eSIM과 유심 중 어느 쪽이 편한가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-184",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-187",
+   "expected_intent": "FAQ",
+   "question": "선불과 후불 요금제 종류를 차례로 소개해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "선불과 후불 요금제 종류를 차례로 소개해줘",
+     "query": "선불과 후불 요금제 종류 차례로 소개",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-187",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-188",
+   "expected_intent": "FAQ",
+   "question": "휴대폰과 인터넷 결합상품 구성을 한눈에 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "휴대폰과 인터넷 결합상품 구성을 한눈에 알려줘",
+     "query": "휴대폰과 인터넷 결합 상품 구성 안내",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-188",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-189",
+   "expected_intent": "FAQ",
+   "question": "유심과 eSIM을 쓰는 방식은 어떤 것들이 있는지 설명해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심과 eSIM을 쓰는 방식은 어떤 것들이 있는지 설명해줘",
+     "query": "유심과 eSIM 사용 방식",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-189",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-190",
+   "expected_intent": "FAQ",
+   "question": "로밍 신청부터 현지 이용과 귀국 후 해제까지 순서대로 안내해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "로밍 신청부터 현지 이용과 귀국 후 해제까지 순서대로 안내해줘",
+     "query": "로밍 신청부터 현지 이용과 귀국 후 해제까지 순서대로 안내",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-190",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-191",
+   "expected_intent": "FAQ",
+   "question": "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘",
+     "query": "요금제 변경 온라인과 매장 절차",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-191",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-192",
+   "expected_intent": "FAQ",
+   "question": "미납요금을 납부하고 이용정지를 풀려면 전체 절차가 어떻게 돼?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "미납요금을 납부하고 이용정지를 풀려면 전체 절차가 어떻게 돼?",
+     "query": "미납 요금 납부하고 이용 정지 풀는 전체 절차",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-192",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-193",
+   "expected_intent": "FAQ",
+   "question": "로밍 신청 방법과 유심 재발급 비용을 각각 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "로밍신청방법",
+     "query": "로밍 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "유심재발급비용",
+     "query": "유심 재발급 비용",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-193",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-194",
+   "expected_intent": "FAQ",
+   "question": "부가서비스를 가입하는 방법하고 해지하는 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "부가서비스를가입하는방법",
+     "query": "부가서비스 가입 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "해지하는방법",
+     "query": "부가서비스 해지 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-194",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-195",
+   "expected_intent": "FAQ",
+   "question": "번호이동 비용, 필요한 서류, 신청 방법을 각각 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "번호이동비용",
+     "query": "번호이동 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "필요한서류",
+     "query": "번호이동 필요 서류",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "신청방법",
+     "query": "번호이동 신청 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-195",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-196",
+   "expected_intent": "FAQ",
+   "question": "인터넷 해지 위약금과 휴대폰 명의 변경 서류를 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "인터넷해지위약금",
+     "query": "인터넷 해지 위약금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "휴대폰명의변경서류",
+     "query": "휴대폰 명의변경 서류",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-196",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-197",
+   "expected_intent": "FAQ",
+   "question": "선불 요금제와 후불 요금제 중 내게 유리한 쪽은?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "선불 요금제와 후불 요금제 중 내게 유리한 쪽은?",
+     "query": "선불 요금제와 후불 요금제 중 내게 유리한 쪽 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-197",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-198",
+   "expected_intent": "FAQ",
+   "question": "로밍 신청 방법 알려줘. 유심과 eSIM의 차이도 비교해줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "로밍신청방법알려줘",
+     "query": "로밍 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "유심과eSIM의차이도비교해줘",
+     "query": "유심과 eSIM 차이 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-198",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-199",
+   "expected_intent": "FAQ",
+   "question": "명의변경 신청했는데 신용 심사에서 거절됐습니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "명의변경 신청했는데 신용 심사에서 거절됐습니다",
+     "query": "명의변경 신청 신용심사 거절 처리 안내",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-199",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-201",
+   "expected_intent": "FAQ",
+   "question": "일반 요금제랑 언리미티드 요금제 중에 뭐가 나아요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "일반 요금제랑 언리미티드 요금제 중에 뭐가 나아요?",
+     "query": "일반요금제와 언리미티드요금제 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-201",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-203",
+   "expected_intent": "FAQ",
+   "question": "출국 전에 신청하는 거랑 도착해서 신청하는 거랑 뭐가 나아요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "출국 전에 신청하는 거랑 도착해서 신청하는 거랑 뭐가 나아요?",
+     "query": "출국 전에 신청과 도착 후 신청의 차이점",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-203",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-204",
+   "expected_intent": "FAQ",
+   "question": "제 명의로 누가 개통한 것 같아요. 신고하면 어떻게 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "제 명의로 누가 개통한 것 같아요. 신고하면 어떻게 되나요?",
+     "query": "제명으로 누가 개통한 것 같은데 신고하면 어떻게 되나요",
+     "gold_unsafe": null,
+     "note": "'제 명의로'를 '제명으로'로 붙여 씀(뜻은 같지만 다른 단어로 읽힐 수 있음)"
+    }
+   ],
+   "case_id": "RU-204",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-206",
+   "expected_intent": "FAQ",
+   "question": "외국인인데 폰을 여러 개 만들고 싶으면 어떻게 해야 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "외국인인데 폰을 여러 개 만들고 싶으면 어떻게 해야 해요?",
+     "query": "외국인인데 폰을 여러 개 만들고 싶으면 어떻게 해야 해요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-206",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-207",
+   "expected_intent": "FAQ",
+   "question": "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?",
+     "query": "정지와 해지 차이점",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-207",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-208",
+   "expected_intent": "FAQ",
+   "question": "매장 가는 거랑 전화하는 거랑 뭐가 더 빨라요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "매장 가는 거랑 전화하는 거랑 뭐가 더 빨라요",
+     "query": "매장 방문과 전화 문의 중 어느 것이 더 빠른가요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-208",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-209",
+   "expected_intent": "FAQ",
+   "question": "빨리 해지하는 거랑 좀 더 쓰다 해지하는 거랑 위약금이 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "빨리 해지하는 거랑 좀 더 쓰다 해지하는 거랑 위약금이 달라요?",
+     "query": "해지 시 위약금 차이",
+     "gold_unsafe": true,
+     "note": "비교 대상(빨리 해지 vs 더 쓰다 해지)을 빠뜨림"
+    }
+   ],
+   "case_id": "RU-209",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-210",
+   "expected_intent": "FAQ",
+   "question": "집에서 신청하는 거랑 공항에서 신청하는 거랑 달라요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "집에서 신청하는 거랑 공항에서 신청하는 거랑 달라요",
+     "query": "집에서 신청하는 것과 공항에서 신청하는 것의 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-210",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-211",
+   "expected_intent": "FAQ",
+   "question": "배우자 명의로 변경할 때 매장에서 처리되는 흐름을 알려주세요.",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "배우자 명의로 변경할 때 매장에서 처리되는 흐름을 알려주세요.",
+     "query": "배우자 명의로 변경할 때 매장에서 처리되는 흐름",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-211",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-212",
+   "expected_intent": "FAQ",
+   "question": "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?",
+     "query": "성인 자녀 명의변경과 신규 개통 비용 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-212",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-213",
+   "expected_intent": "FAQ",
+   "question": "본인 신분증만 있으면 되는 거랑 사본까지 필요한 거랑 뭐가 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "본인 신분증만 있으면 되는 거랑 사본까지 필요한 거랑 뭐가 달라요?",
+     "query": "신분증만 필요할 때와 사본까지 필요할 때의 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-213",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-214",
+   "expected_intent": "FAQ",
+   "question": "폰 바꿀 때 물리 유심 그대로 쓰는 거랑 eSIM 새로 받는 거랑 뭐가 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "폰 바꿀 때 물리 유심 그대로 쓰는 거랑 eSIM 새로 받는 거랑 뭐가 달라요?",
+     "query": "물리유심과 eSIM의 차이점",
+     "gold_unsafe": true,
+     "note": "조건 '폰 바꿀 때'와 비교 대상(그대로 쓰기 vs 새로 받기)을 일반 비교로 바꿈"
+    }
+   ],
+   "case_id": "RU-214",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-215",
+   "expected_intent": "FAQ",
+   "question": "폰 잃어버렸는데 eSIM이랑 보통 유심 중 뭐가 나아요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "폰 잃어버렸는데 eSIM이랑 보통 유심 중 뭐가 나아요",
+     "query": "eSIM과 일반 유심 중 어떤 것이 좋은가",
+     "gold_unsafe": true,
+     "note": "조건 '폰 잃어버렸는데'를 빠뜨림"
+    }
+   ],
+   "case_id": "RU-215",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-216",
+   "expected_intent": "FAQ",
+   "question": "원래 회사로 되돌아갈 때 14일 안이랑 밖이랑 뭐가 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "원래 회사로 되돌아갈 때 14일 안이랑 밖이랑 뭐가 달라요?",
+     "query": "원래 회사로 되돌아갈 때 14일 이내와 이후의 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-216",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-217",
+   "expected_intent": "FAQ",
+   "question": "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?",
+     "query": "분실 시 일시정지와 해지 요금 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-217",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-218",
+   "expected_intent": "FAQ",
+   "question": "외국인 자녀 개통에 가족관계증명서를 못 냈더니 거절됐습니다",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "외국인 자녀 개통에 가족관계증명서를 못 냈더니 거절됐습니다",
+     "query": "외국인 자녀 개통이 가족관계증명서 미제출로 거절된 경우 해결 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-218",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-219",
+   "expected_intent": "FAQ",
+   "question": "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?",
+     "query": "애명의 회선과 제명의 회선 한도 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-219",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-220",
+   "expected_intent": "FAQ",
+   "question": "법인 명의 개통이랑 미성년자 개통 중 뭐가 더 까다로워요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "법인 명의 개통이랑 미성년자 개통 중 뭐가 더 까다로워요?",
+     "query": "법인 명의 개통과 미성년자 개통 어려움 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-220",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-221",
+   "expected_intent": "FAQ",
+   "question": "배터리 교체랑 기기변경 중 뭐가 나아요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "배터리 교체랑 기기변경 중 뭐가 나아요?",
+     "query": "배터리 교체와 기기 변경 비용 비교",
+     "gold_unsafe": true,
+     "note": "원문에 없는 비교 기준 '비용'을 넣음"
+    }
+   ],
+   "case_id": "RU-221",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-222",
+   "expected_intent": "FAQ",
+   "question": "침수 단말의 할부금 완납과 승계 중 어느 쪽이 유리한가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "침수 단말의 할부금 완납과 승계 중 어느 쪽이 유리한가요?",
+     "query": "침수단말 할부금 완납과 승계 중 어느 쪽이 유리한가",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-222",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-223",
+   "expected_intent": "FAQ",
+   "question": "기기 바꿀 때 24개월이랑 30개월 중 뭐가 나아요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "기기 바꿀 때 24개월이랑 30개월 중 뭐가 나아요",
+     "query": "기기 교체 시 24개월과 30개월 중 어떤 것이 좋은지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-223",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-225",
+   "expected_intent": "FAQ",
+   "question": "이월과 선물 중 요금 절감에 더 도움이 되는 쪽은 어디인가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "이월과 선물 중 요금 절감에 더 도움이 되는 쪽은 어디인가요?",
+     "query": "이월과 선물 중 요금 절감에 더 도움이 되는 쪽",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-225",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-226",
+   "expected_intent": "FAQ",
+   "question": "손주 요금제랑 내 요금제랑 뭐가 달라요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "손주 요금제랑 내 요금제랑 뭐가 달라요",
+     "query": "손주요금제와 내요금제 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-226",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-227",
+   "expected_intent": "FAQ",
+   "question": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+   "previous_subject": "",
+   "path": "refined",
+   "skipped": "업무 대상 규칙이 먼저 거절(모델 호출 없음)",
+   "sub_queries": [
+    {
+     "quote": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+     "query": "요금이 너무 많이 나와서 25일까지 납부가 어려워요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-227",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-228",
+   "expected_intent": "FAQ",
+   "question": "자동이체랑 가상계좌랑 뭐가 나아요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "자동이체랑 가상계좌랑 뭐가 나아요?",
+     "query": "자동이체와 가상계좌의 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-228",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-233",
+   "expected_intent": "FAQ",
+   "question": "분당 서현역 매장에서 기기변경 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분당 서현역 매장에서 기기변경 돼요?",
+     "query": "분당 서현역 매장에서 기기변경 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-233",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-243",
+   "expected_intent": "FAQ",
+   "question": "직영점이랑 대리점은 처리할 수 있는 업무가 달라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "직영점이랑 대리점은 처리할 수 있는 업무가 달라요?",
+     "query": "직영점과 대리점에서 처리 가능한 업무 차이",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-243",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-244",
+   "expected_intent": "FAQ",
+   "question": "대리점에서도 명의변경 처리가 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "대리점에서도 명의변경 처리가 되나요?",
+     "query": "대리점에서도 명의변경 처리 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-244",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-245",
+   "expected_intent": "FAQ",
+   "question": "매장에서 산 폰도 온라인으로 개통 취소할 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "매장에서 산 폰도 온라인으로 개통 취소할 수 있어요?",
+     "query": "매장에서 산 폰의 온라인 개통 취소 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-245",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-246",
+   "expected_intent": "FAQ",
+   "question": "매장에서 개통하면 신분증 원본 꼭 있어야 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "매장에서 개통하면 신분증 원본 꼭 있어야 해요?",
+     "query": "매장에서 개통 시 신분증 원본 필요 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-246",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-309",
+   "expected_intent": "FAQ",
+   "question": "택배로도 받을 수 있어요?",
+   "previous_subject": "유심 재발급 비용 얼마예요?",
+   "path": "restored",
+   "skipped": "맥락 복원 단일 질문(재검색 검증과 경로가 다름)",
+   "sub_queries": [
+    {
+     "quote": "택배로도 받을 수 있어요?",
+     "query": "유심 재발급 택배 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-309",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-310",
+   "expected_intent": "FAQ",
+   "question": "LTE랑 비교하면요?",
+   "previous_subject": "5G 요금제 종류 알려줘",
+   "path": "restored",
+   "skipped": "맥락 복원 단일 질문(재검색 검증과 경로가 다름)",
+   "sub_queries": [
+    {
+     "quote": "LTE랑 비교하면요?",
+     "query": "5G와 LTE 요금제 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-310",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-311",
+   "expected_intent": "FAQ",
+   "question": "거기서 eSIM 발급하면 비용은 얼마예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "거기서 eSIM 발급하면 비용은 얼마예요?",
+     "query": "강남역 매장에서 eSIM 발급 비용",
+     "gold_unsafe": true,
+     "note": "원문에 없는 지역 '강남역'을 넣음"
+    }
+   ],
+   "case_id": "RU-311",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-315",
+   "expected_intent": "FAQ",
+   "question": "데이터 쉐어링 신청 방법과 소액결제 차단 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "데이터쉐어링신청방법",
+     "query": "데이터 쉐어링 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "소액결제차단방법",
+     "query": "소액 결제 차단 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-315",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-316",
+   "expected_intent": "FAQ",
+   "question": "일시정지 기간이랑 분실 신고 절차 알려주세요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "일시정지기간",
+     "query": "일시정지 기간",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "분실신고절차",
+     "query": "분실 신고 절차",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-316",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-317",
+   "expected_intent": "FAQ",
+   "question": "eSIM 발급 비용하고 멤버십 등급 기준 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "eSIM발급비용",
+     "query": "eSIM 발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "멤버십등급기준",
+     "query": "멤버십 등급 기준",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-317",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-318",
+   "expected_intent": "FAQ",
+   "question": "가족결합 할인 조건, 청소년 요금제 가입 나이 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "가족결합할인조건",
+     "query": "가족결합 할인 조건",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "청소년요금제가입나이",
+     "query": "청소년 요금제 가입 연령",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-318",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-319",
+   "expected_intent": "FAQ",
+   "question": "인터넷 이전 설치는 어떻게 신청해요? 자동이체 계좌 변경은요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "인터넷이전설치는어떻게신청해요",
+     "query": "인터넷 이전설치 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "자동이체계좌변경은요",
+     "query": "자동이체 계좌 변경 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-319",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-320",
+   "expected_intent": "FAQ",
+   "question": "요금 청구서 재발행 방법 알려주고 미납 요금 납부 방법도 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "요금청구서재발행방법",
+     "query": "요금청구서 재발행 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "미납요금납부방법",
+     "query": "미납요금 납부 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-320",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-321",
+   "expected_intent": "FAQ",
+   "question": "개통 취소 가능 기간이 언제까지예요? 그리고 취소하면 위약금 있어요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "개통취소가능기간이언제까지예요?",
+     "query": "개통 취소 가능 기간",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "취소하면위약금있어요?",
+     "query": "개통 취소 시 위약금 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-321",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-322",
+   "expected_intent": "FAQ",
+   "question": "기기변경할 때 선택약정이랑 공시지원금 중 뭐가 나은지, 그리고 쓰던 폰 보상 판매 방법",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "선택약정이랑공시지원금중뭐가나은지",
+     "query": "선택약정과 공시지원금 중 어느 것이 나은지 비교",
+     "gold_unsafe": null,
+     "note": "질문 전체 조건 '기기변경할 때'가 이 하위 질문에서 빠짐"
+    },
+    {
+     "quote": "쓰던폰보상판매방법",
+     "query": "쓰던 폰 보상판매 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-322",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-323",
+   "expected_intent": "FAQ",
+   "question": "약정 중에 해지하면 위약금 얼마나 나와요? 번호 변경 수수료도 궁금해요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "위약금얼마나나와요",
+     "query": "약정 중 해지 위약금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "번호변경수수료도궁금해요",
+     "query": "번호 변경 수수료",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-323",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-324",
+   "expected_intent": "FAQ",
+   "question": "데이터선물하기방법이랑로밍패스요금알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "데이터선물하기방법",
+     "query": "데이터 선물하기 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "로밍패스요금",
+     "query": "로밍패스 요금",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-324",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-325",
+   "expected_intent": "FAQ",
+   "question": "컬러링 해지 방법, 번호 변경 방법, 명의도용 신고 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "컬러링해지방법",
+     "query": "컬러링 해지방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "번호변경방법",
+     "query": "번호변경방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "명의도용신고방법",
+     "query": "명의도용신고방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-325",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-326",
+   "expected_intent": "FAQ",
+   "question": "납부일 변경이랑 청구서 이메일 신청이랑 자동이체 해지 어떻게 해요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "납부일변경",
+     "query": "납부일 변경 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "청구서이메일신청",
+     "query": "청구서 이메일 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "자동이체해지",
+     "query": "자동이체 해지 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-326",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-327",
+   "expected_intent": "FAQ",
+   "question": "휴대폰 보험 가입 조건 알려주고 보험금 청구는 어떻게 하는지도 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "휴대폰보험가입조건알려주고",
+     "query": "휴대폰 보험 가입 조건",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "보험금청구는어떻게하는지도알려줘",
+     "query": "보험금 청구 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-327",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-328",
+   "expected_intent": "FAQ",
+   "question": "TV 셋톱박스 반납 방법이랑 인터넷 해지 신청 방법",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "TV셋톱박스반납방법",
+     "query": "TV 셋톱박스 반납 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "인터넷해지신청방법",
+     "query": "인터넷 해지 신청 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-328",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-329",
+   "expected_intent": "FAQ",
+   "question": "출국 전에 로밍 패스 가입하는 법이랑 현지 유심 쓸 때 주의할 점 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "출국전에로밍패스가입하는법",
+     "query": "출국 전에 로밍패스 가입 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "현지유심쓸때주의할점",
+     "query": "현지 유심 사용 시 주의할 점",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-329",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-330",
+   "expected_intent": "FAQ",
+   "question": "유심 분실했을 때 정지하는 방법 알려줘. 재발급 받으려면 신분증 꼭 있어야 해?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "유심분실했을때정지하는방법알려줘",
+     "query": "유심 분실 시 정지 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "재발급받으려면신분증꼭있어야해?",
+     "query": "유심 재발급 시 신분증 필요 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-330",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-331",
+   "expected_intent": "FAQ",
+   "question": "5G 요금제 중 제일 싼 거 알려주고 그 요금제 데이터 다 쓰면 속도 제한이 어떻게 되는지도",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "5G요금제중제일싼거알려주고",
+     "query": "5G 요금제 중 가장 싼 요금제",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "그요금제데이터다쓰면속도제한이어떻게되는지도",
+     "query": "해당 요금제 데이터 사용 시 속도 제한",
+     "gold_unsafe": true,
+     "note": "조건 '데이터 다 쓰면'을 '데이터 사용 시'로 바꿈"
+    }
+   ],
+   "case_id": "RU-331",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-332",
+   "expected_intent": "FAQ",
+   "question": "알뜰 요금제랑 무제한 요금제 차이 비교해 주고 가족결합 신청 방법도 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "알뜰요금제랑무제한요금제차이비교해주고",
+     "query": "알뜰요금제와 무제한요금제 차이 비교",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "가족결합신청방법도알려줘",
+     "query": "가족결합 신청 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-332",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-333",
+   "expected_intent": "FAQ",
+   "question": "멤버십 VIP 혜택 뭐 있어요? 등급 올리는 방법도 알려주세요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "멤버십VIP혜택뭐있어요?",
+     "query": "멤버십 VIP 혜택이 무엇인지",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "등급올리는방법도알려주세요",
+     "query": "멤버십 등급을 올리는 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-333",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-334",
+   "expected_intent": "FAQ",
+   "question": "소액결제 한도 올리는 법이랑 결제 내역 확인하는 법",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "소액결제한도올리는법",
+     "query": "소액결제한도 올리는 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "결제내역확인하는법",
+     "query": "결제내역 확인 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-334",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-335",
+   "expected_intent": "FAQ",
+   "question": "번호이동 할 때 위약금, 남은 할부금, 멤버십 포인트는 각각 어떻게 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "번호이동 할 때 위약금, 남은 할부금, 멤버십 포인트는 각각 어떻게 돼요?",
+     "query": "번호이동 시 위약금, 남은 할부금, 멤버십 포인트 각각 어떻게 되는지",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-335",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-336",
+   "expected_intent": "FAQ",
+   "question": "배우자 명의로 회선 넘기는 방법이랑 그 회선 가족결합에 넣는 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "배우자명의로회선넘기는방법",
+     "query": "배우자 명의로 회선 넘기는 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "그회선가족결합에넣는방법",
+     "query": "회선 가족결합 넣는 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-336",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-337",
+   "expected_intent": "FAQ",
+   "question": "인터넷 속도가 느린데 장애 신고는 어디서 해요? 그리고 요금제 속도 올리는 방법도요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "인터넷속도가느린데장애신고는어디서해요?",
+     "query": "인터넷 속도가 느릴 때 장애 신고 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "그리고요금제속도올리는방법도요",
+     "query": "요금제 속도 올리는 방법",
+     "gold_unsafe": null,
+     "note": "공통 대상 '인터넷'이 빠져 '요금제 속도'만 남음"
+    }
+   ],
+   "case_id": "RU-337",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-338",
+   "expected_intent": "FAQ",
+   "question": "외국인 개통에 필요한 서류랑 외국인 선불폰 충전 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "외국인개통에필요한서류",
+     "query": "외국인 개통 필요 서류",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "외국인선불폰충전방법",
+     "query": "외국인 선불폰 충전 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-338",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-339",
+   "expected_intent": "FAQ",
+   "question": "자녀 폰 유해차단 서비스 가입 방법이랑 데이터 사용량 확인하는 법 알려주세요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "자녀폰유해차단서비스가입방법",
+     "query": "자녀폰 유해 차단 서비스 가입 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "데이터사용량확인하는법",
+     "query": "데이터 사용량 확인 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-339",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-340",
+   "expected_intent": "FAQ",
+   "question": "일시정지 중에도 요금 나오나요? 정지 해제는 어떻게 해요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "일시정지중에도요금나오나요",
+     "query": "일시정지 중에도 요금이 나오나요",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "정지해제는어떻게해요",
+     "query": "정지 해제는 어떻게 하나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-340",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-341",
+   "expected_intent": "FAQ",
+   "question": "eSIM 발급 비용이랑 발급 가능 기종, 그리고 기존 유심 처리 방법까지 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "eSIM발급비용",
+     "query": "eSIM 발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "발급가능기종",
+     "query": "eSIM 발급 가능 기종",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "기존유심처리방법",
+     "query": "기존 유심 처리 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-341",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-342",
+   "expected_intent": "FAQ",
+   "question": "분실한 폰 위치 찾는 서비스 있나요? 분실폰 할부금은 계속 내야 해요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "분실한폰위치찾는서비스있나요",
+     "query": "분실한 폰 위치 찾는 서비스",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "분실폰할부금은계속내야해요",
+     "query": "분실 폰 할부금 계속 납부해야 하는지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-342",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-343",
+   "expected_intent": "FAQ",
+   "question": "기기변경하면 쓰던 요금제 유지돼요? 그리고 데이터 이월도 그대로 되나요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "기기변경하면쓰던요금제유지돼요?",
+     "query": "기기변경 시 기존 요금제 유지 여부",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "데이터이월도그대로되나요?",
+     "query": "기기변경 시 데이터 이월 유지 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-343",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-344",
+   "expected_intent": "FAQ",
+   "question": "로밍 중에 받은 문자 요금이랑 귀국 후 로밍 자동 해제 여부 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "로밍중에받은문자요금",
+     "query": "로밍 중에 받은 문자 요금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "귀국후로밍자동해제여부",
+     "query": "귀국 후 로밍 자동 해제 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-344",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-345",
+   "expected_intent": "FAQ",
+   "question": "분실폰 보험 처리 기간은 얼마나 걸려요? 자기부담금도 내야 하나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "분실폰 보험 처리 기간은 얼마나 걸려요? 자기부담금도 내야 하나요?",
+     "query": "분실폰보험 처리 기간과 자기부담금 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-345",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-346",
+   "expected_intent": "FAQ",
+   "question": "해외 로밍 패스는 며칠짜리까지 있어요? 현지에서 연장도 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외 로밍 패스는 며칠짜리까지 있어요? 현지에서 연장도 되나요?",
+     "query": "해외 로밍패스 기간과 현지 연장 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-346",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-347",
+   "expected_intent": "FAQ",
+   "question": "번호 변경하면 기존 번호 안내 서비스 돼요? 수수료는 있어요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "번호변경하면기존번호안내서비스돼요?",
+     "query": "번호변경 시 기존 번호 안내 서비스 여부",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "수수료는있어요?",
+     "query": "번호변경 수수료 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-347",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-348",
+   "expected_intent": "FAQ",
+   "question": "인터넷 이전 설치 비용, 소요 기간, 신청 방법 알려주세요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "인터넷이전설치비용",
+     "query": "인터넷 이전 설치 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "소요기간",
+     "query": "인터넷 이전 설치 소요 기간",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "신청방법",
+     "query": "인터넷 이전 설치 신청 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-348",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-349",
+   "expected_intent": "FAQ",
+   "question": "데이터 쉐어링 요금이랑 연결 가능한 기기 수를 각각 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "데이터쉐어링요금",
+     "query": "데이터 쉐어링 요금",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "연결가능한기기수",
+     "query": "연결 가능한 기기 수",
+     "gold_unsafe": null,
+     "note": "공통 대상 '데이터 쉐어링'이 빠짐"
+    }
+   ],
+   "case_id": "RU-349",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-350",
+   "expected_intent": "FAQ",
+   "question": "청소년 요금제 데이터 제공량 알려주고 부모 동의 절차도 알려주세요",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "청소년요금제데이터제공량",
+     "query": "청소년 요금제 데이터 제공량",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "부모동의절차",
+     "query": "부모 동의 절차",
+     "gold_unsafe": null,
+     "note": "공통 대상 '청소년 요금제'가 빠짐"
+    }
+   ],
+   "case_id": "RU-350",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-351",
+   "expected_intent": "FAQ",
+   "question": "선택약정 할인율이 얼마예요? 약정 기간 중에 해지하면 할인 반환금도 있나요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "선택약정할인율이얼마예요?",
+     "query": "선택 약정 할인율",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "약정기간중에해지하면할인반환금도있나요?",
+     "query": "약정 기간 중 해지 시 할인 반환금",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-351",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-352",
+   "expected_intent": "FAQ",
+   "question": "유심 재발급 비용, 소요 시간, 대리 수령 가능 여부를 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "유심재발급비용",
+     "query": "유심 재발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "소요시간",
+     "query": "유심 재발급 소요 시간",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "대리수령가능여부",
+     "query": "유심 재발급 대리 수령 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-352",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-353",
+   "expected_intent": "FAQ",
+   "question": "소액결제 차단하면 앱 결제도 막혀요? 다시 풀려면 어떻게 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "소액결제 차단하면 앱 결제도 막혀요? 다시 풀려면 어떻게 해요?",
+     "query": "소액결제 차단 시 앱 결제 차단 여부와 해제 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-353",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-354",
+   "expected_intent": "FAQ",
+   "question": "가족결합 하면 할인 얼마나 돼요? 결합 해지할 때 위약금도 있어요?",
+   "previous_subject": "",
+   "path": "compound",
+   "sub_queries": [
+    {
+     "quote": "가족결합하면할인얼마나돼요?",
+     "query": "가족결합 할인 금액",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "결합해지할때위약금도있어요?",
+     "query": "가족결합 해지 시 위약금",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-354",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-355",
+   "expected_intent": "FAQ",
+   "question": "번호이동하면 멤버십 등급, 포인트, 가족결합 할인은 어떻게 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "번호이동하면 멤버십 등급, 포인트, 가족결합 할인은 어떻게 되나요?",
+     "query": "번호이동 시 멤버십 등급, 포인트, 가족 결합 할인 적용 방법",
+     "gold_unsafe": null,
+     "note": "'어떻게 되나요'를 '적용 방법'으로 바꿈"
+    }
+   ],
+   "case_id": "RU-355",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-356",
+   "expected_intent": "FAQ",
+   "question": "개통할 때 여권도 신분증으로 되나요? 외국인등록증만 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "개통할 때 여권도 신분증으로 되나요? 외국인등록증만 되나요?",
+     "query": "개통 시 여권과 외국인등록증 사용 가능 여부",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-356",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-357",
+   "expected_intent": "FAQ",
+   "question": "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘",
+     "query": "저가형 요금제와 무제한형 요금제 각각 소개",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-357",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-358",
+   "expected_intent": "FAQ",
+   "question": "유심 재발급을 온라인이나 고객센터로 신청하는 방법 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급을 온라인이나 고객센터로 신청하는 방법 알려줘",
+     "query": "유심 재발급을 온라인이나 고객센터로 신청하는 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-358",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-359",
+   "expected_intent": "FAQ",
+   "question": "해외 출장 가는데 로밍 요금 폭탄 안 맞으려면 어떻게 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "해외 출장 가는데 로밍 요금 폭탄 안 맞으려면 어떻게 해요?",
+     "query": "해외 출장 시 로밍 요금 폭탄을 피하는 방법",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-359",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-360",
+   "expected_intent": "FAQ",
+   "question": "미납 요금 때문에 정지됐는데 오늘 바로 풀 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "미납 요금 때문에 정지됐는데 오늘 바로 풀 수 있나요?",
+     "query": "미납 요금 때문에 정지됐는데 오늘 바로 풀 수 있나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-360",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-361",
+   "expected_intent": "FAQ",
+   "question": "알뜰폰이랑 일반 요금제 중에 저한테 뭐가 이득이에요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "알뜰폰이랑 일반 요금제 중에 저한테 뭐가 이득이에요?",
+     "query": "알뜰폰과 일반 요금제 중 어떤 것이 더 이득인지 비교",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-361",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-362",
+   "expected_intent": "FAQ",
+   "question": "명의변경 처음부터 끝까지 순서대로 알려주세요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "명의변경 처음부터 끝까지 순서대로 알려주세요",
+     "query": "명의변경 전체 순서 알려주세요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-362",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-363",
+   "expected_intent": "FAQ",
+   "question": "5G 요금제 데이터 다 쓰면 속도 제한은 어떻게 걸려요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "5G 요금제 데이터 다 쓰면 속도 제한은 어떻게 걸려요?",
+     "query": "5G 요금제 데이터 다 쓰면 속도 제한은 어떻게 걸려요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-363",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-364",
+   "expected_intent": "FAQ",
+   "question": "인터넷 장애 신고는 앱, 전화, 홈페이지 중 어디서 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "인터넷 장애 신고는 앱, 전화, 홈페이지 중 어디서 해요?",
+     "query": "인터넷 장애 신고는 앱, 전화, 홈페이지 중 어디서 하나요",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-364",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "eval_id": "RU-365",
+   "expected_intent": "FAQ",
+   "question": "외국인 개통 서류 중에 여권 사본도 되는지 확인 부탁드려요",
+   "previous_subject": "",
+   "path": "refined",
+   "sub_queries": [
+    {
+     "quote": "외국인 개통 서류 중에 여권 사본도 되는지 확인 부탁드려요",
+     "query": "외국인 개통 서류에 여권 사본이 가능한지 확인",
+     "gold_unsafe": false
+    }
+   ],
+   "case_id": "RU-365",
+   "source": "step1-gptoss-1"
+  },
+  {
+   "case_id": "SYN-R01",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "미납 요금이 있는데 기기변경 할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "미납 요금이 있는데 기기변경 할 수 있나요?",
+     "query": "기기변경 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R02",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "해외에 있는데 유심 재발급 받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "해외에 있는데 유심 재발급 받을 수 있나요?",
+     "query": "유심 재발급 방법",
+     "gold_unsafe": true,
+     "note": "조건 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R03",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "법인 폰인데 명의변경 서류가 뭐예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "법인 폰인데 명의변경 서류가 뭐예요?",
+     "query": "명의변경 필요 서류",
+     "gold_unsafe": true,
+     "note": "조건 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R04",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "약정 1년 남았는데 요금제 낮추면 위약금 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "약정 1년 남았는데 요금제 낮추면 위약금 있나요?",
+     "query": "요금제 변경 위약금",
+     "gold_unsafe": true,
+     "note": "조건 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R05",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "번호는 바꾸지 않고 통신사만 옮기고 싶어요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "번호는 바꾸지 않고 통신사만 옮기고 싶어요",
+     "query": "번호 변경 방법",
+     "gold_unsafe": true,
+     "note": "부정 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R06",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "인터넷은 유지하고 TV만 해지하려고요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "인터넷은 유지하고 TV만 해지하려고요",
+     "query": "인터넷 TV 해지 방법",
+     "gold_unsafe": true,
+     "note": "부정·대상 범위 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R07",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "부가서비스 해지 말고 잠깐 멈출 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "부가서비스 해지 말고 잠깐 멈출 수 있어요?",
+     "query": "부가서비스 해지 방법",
+     "gold_unsafe": true,
+     "note": "부정 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R08",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 요금이 얼마예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "로밍 요금이 얼마예요?",
+     "query": "일본 로밍 요금",
+     "gold_unsafe": true,
+     "note": "없는 대상 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R09",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "유심 재발급 비용 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급 비용 알려줘",
+     "query": "eSIM 재발급 비용",
+     "gold_unsafe": true,
+     "note": "대상 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R10",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "데이터 쉐어링 신청 방법 알려주세요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "데이터 쉐어링 신청 방법 알려주세요",
+     "query": "태블릿 데이터 쉐어링 신청 방법",
+     "gold_unsafe": true,
+     "note": "없는 기기 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R11",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "요금제 변경은 언제 적용돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "요금제 변경은 언제 적용돼요?",
+     "query": "5G 요금제 변경 다음 달 적용 여부",
+     "gold_unsafe": true,
+     "note": "없는 상품·시점 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R12",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "명의변경 수수료 얼마예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "명의변경 수수료 얼마예요?",
+     "query": "가족 간 명의변경 수수료 면제 조건",
+     "gold_unsafe": true,
+     "note": "없는 조건 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R13",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "폰을 잃어버렸어요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "폰을 잃어버렸어요",
+     "query": "분실폰 할부금 납부 방법",
+     "gold_unsafe": true,
+     "note": "상황을 특정 해결책으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R14",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "요금이 너무 많이 나왔어요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "요금이 너무 많이 나왔어요",
+     "query": "요금제 변경 방법",
+     "gold_unsafe": true,
+     "note": "상황을 특정 해결책으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R15",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "인터넷이 계속 끊겨요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "인터넷이 계속 끊겨요",
+     "query": "인터넷 해지 방법",
+     "gold_unsafe": true,
+     "note": "상황을 특정 해결책으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R16",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "해외에서 데이터가 안 돼요",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "해외에서 데이터가 안 돼요",
+     "query": "로밍 패스 가입 방법",
+     "gold_unsafe": true,
+     "note": "상황을 특정 해결책으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R17",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "선불폰이랑 후불폰 중 뭐가 싸요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "선불폰이랑 후불폰 중 뭐가 싸요?",
+     "query": "선불폰 요금",
+     "gold_unsafe": true,
+     "note": "비교를 한쪽 설명으로 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R18",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "매장 개통이랑 온라인 개통 중 뭐가 빨라요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "매장 개통이랑 온라인 개통 중 뭐가 빨라요?",
+     "query": "온라인 개통 방법",
+     "gold_unsafe": true,
+     "note": "비교를 한쪽 설명으로 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R19",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "분실 신고랑 일시정지 차이 알려줘",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "분실 신고랑 일시정지 차이 알려줘",
+     "query": "분실 신고 방법",
+     "gold_unsafe": true,
+     "note": "비교를 한쪽 설명으로 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-R20",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "가족결합 할인이랑 선택약정 할인 같이 받을 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "가족결합 할인이랑 선택약정 할인 같이 받을 수 있어요?",
+     "query": "가족결합 할인 후 선택약정 적용 순서",
+     "gold_unsafe": true,
+     "note": "없는 순서 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-C01",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 신청 방법이랑 해지 위약금 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "로밍 신청 방법",
+     "query": "로밍 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "해지 위약금",
+     "query": "로밍 해지 위약금",
+     "gold_unsafe": true,
+     "note": "공통인지 불분명한 앞 대상 '로밍'을 붙임"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-C02",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "유심 재발급 비용이랑 분실 신고 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급 비용",
+     "query": "유심 재발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "분실 신고 방법",
+     "query": "유심 분실 신고 방법",
+     "gold_unsafe": true,
+     "note": "공통인지 불분명한 앞 대상 '유심'을 붙임"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-C03",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "eSIM 발급 비용하고 개통 취소 방법 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "eSIM 발급 비용",
+     "query": "eSIM 발급 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "개통 취소 방법",
+     "query": "eSIM 개통 취소 방법",
+     "gold_unsafe": true,
+     "note": "공통인지 불분명한 앞 대상 'eSIM'을 붙임"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-C04",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "미납 요금 있는데 번호이동 방법이랑 필요 서류 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "번호이동 방법",
+     "query": "번호이동 방법",
+     "gold_unsafe": true,
+     "note": "질문 전체 조건 '미납 요금 있는데'를 빠뜨림"
+    },
+    {
+     "quote": "필요 서류",
+     "query": "번호이동 필요 서류",
+     "gold_unsafe": true,
+     "note": "질문 전체 조건 '미납 요금 있는데'를 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "SYN-C05",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 신청 방법 알려주고 5G랑 LTE 데이터 차이도 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "synthetic",
+   "sub_queries": [
+    {
+     "quote": "로밍 신청 방법",
+     "query": "로밍 신청 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "5G랑 LTE 데이터 차이",
+     "query": "5G 데이터 제공량",
+     "gold_unsafe": true,
+     "note": "비교를 한쪽 설명으로 바꿈"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R01",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "군대 가는데 휴대폰 정지하면 요금 나와요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "군대 가는데 휴대폰 정지하면 요금 나와요?",
+     "query": "휴대폰 정지 시 요금 발생 여부",
+     "gold_unsafe": true,
+     "note": "조건 '군대 가는데'를 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R02",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "해외 체류 중인데 명의변경 할 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "해외 체류 중인데 명의변경 할 수 있나요?",
+     "query": "명의변경 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 '해외 체류 중인데'를 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R03",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "자녀가 만 14세 미만인데 혼자 개통할 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "자녀가 만 14세 미만인데 혼자 개통할 수 있어요?",
+     "query": "자녀 혼자 개통 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 '만 14세 미만'을 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R04",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "약정 끝나기 한 달 전인데 해지하면 위약금 나와요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "약정 끝나기 한 달 전인데 해지하면 위약금 나와요?",
+     "query": "해지 시 위약금 발생 여부",
+     "gold_unsafe": true,
+     "note": "조건 '약정 끝나기 한 달 전'을 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R05",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "외국인인데 선불폰도 번호이동 되나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "외국인인데 선불폰도 번호이동 되나요?",
+     "query": "선불폰 번호이동 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 '외국인'을 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R06",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "온라인으로 산 폰인데 매장에서 개통 취소돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "온라인으로 산 폰인데 매장에서 개통 취소돼요?",
+     "query": "개통 취소 가능 여부",
+     "gold_unsafe": true,
+     "note": "조건 '온라인 구매'와 '매장에서'를 빠뜨림"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R07",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "데이터 선물하기 한도 얼마예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "데이터 선물하기 한도 얼마예요?",
+     "query": "데이터 선물하기 월 2GB 한도 여부",
+     "gold_unsafe": true,
+     "note": "원문에 없는 기준 '월 2GB'를 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R08",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 요금 언제 청구돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "로밍 요금 언제 청구돼요?",
+     "query": "로밍 요금 다음 달 청구 여부",
+     "gold_unsafe": true,
+     "note": "원문에 없는 시점 '다음 달'을 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R09",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "명의변경할 때 대리인도 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "명의변경할 때 대리인도 돼요?",
+     "query": "명의변경 대리인 위임장 양식",
+     "gold_unsafe": true,
+     "note": "가능 여부를 특정 서류 양식으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R10",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "요금제 바꾸면 결합 할인 유지돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "요금제 바꾸면 결합 할인 유지돼요?",
+     "query": "요금제 변경 시 가족결합 할인 유지 여부",
+     "gold_unsafe": true,
+     "note": "결합 할인을 '가족결합'으로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R11",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "유심 재발급 비용 얼마예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "유심 재발급 비용 얼마예요?",
+     "query": "유심 재발급 택배 비용",
+     "gold_unsafe": true,
+     "note": "원문에 없는 '택배'를 넣음"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R12",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "번호이동하면 멤버십 등급 유지돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "번호이동하면 멤버십 등급 유지돼요?",
+     "query": "번호이동 시 VIP 등급 유지 여부",
+     "gold_unsafe": true,
+     "note": "등급을 'VIP'로 좁힘"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R13",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "폰이 물에 빠졌는데 어떻게 해야 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "폰이 물에 빠졌는데 어떻게 해야 돼요?",
+     "query": "휴대폰 침수 시 처리 방법",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R14",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "요금 자동이체 날짜 바꿀 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "요금 자동이체 날짜 바꿀 수 있어요?",
+     "query": "요금 자동이체 날짜 변경 가능 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R15",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "데이터 다 쓰면 추가로 살 수 있어요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "데이터 다 쓰면 추가로 살 수 있어요?",
+     "query": "데이터 소진 후 추가 구매 가능 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R16",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "유심 바꾸면 전화번호 그대로예요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "유심 바꾸면 전화번호 그대로예요?",
+     "query": "유심 교체 시 전화번호 유지 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R17",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "명의변경하는데 둘 다 매장 가야 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "명의변경하는데 둘 다 매장 가야 돼요?",
+     "query": "명의변경 시 양측 매장 방문 필요 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R18",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "해지하면 남은 할부금은 어떻게 내요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "해지하면 남은 할부금은 어떻게 내요?",
+     "query": "해지 시 남은 할부금 납부 방법",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R19",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 켜 두면 요금 자동으로 나가요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "로밍 켜 두면 요금 자동으로 나가요?",
+     "query": "로밍 설정 시 요금 자동 부과 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R20",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "청소년 요금제랑 일반 요금제 중 뭐가 데이터 많이 줘요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "청소년 요금제랑 일반 요금제 중 뭐가 데이터 많이 줘요?",
+     "query": "청소년 요금제와 일반 요금제 데이터 제공량 비교",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R21",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "약정 없이 가입하면 요금이 더 비싸요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "약정 없이 가입하면 요금이 더 비싸요?",
+     "query": "무약정 가입 시 요금 차이",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R22",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "미성년자 개통할 때 부모님이 같이 가야 해요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "미성년자 개통할 때 부모님이 같이 가야 해요?",
+     "query": "미성년자 개통 시 법정대리인 동행 필요 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R23",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "가족결합은 몇 명까지 돼요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "가족결합은 몇 명까지 돼요?",
+     "query": "가족결합 가능 인원",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-R24",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "청구서를 문자로 받을 수 있나요?",
+   "previous_subject": "",
+   "path": "refined",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "청구서를 문자로 받을 수 있나요?",
+     "query": "청구서 문자 수신 가능 여부",
+     "gold_unsafe": false
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-C01",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "로밍 패스 가입 방법이랑 번호 변경 수수료 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "로밍 패스 가입 방법",
+     "query": "로밍 패스 가입 방법",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "번호 변경 수수료",
+     "query": "로밍 번호 변경 수수료",
+     "gold_unsafe": true,
+     "note": "공통인지 불분명한 앞 대상 '로밍'을 붙임"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-C02",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "외국인인데 개통 서류랑 요금제 종류 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "개통 서류",
+     "query": "개통 서류",
+     "gold_unsafe": true,
+     "note": "질문 전체 조건 '외국인'을 빠뜨림"
+    },
+    {
+     "quote": "요금제 종류",
+     "query": "요금제 종류",
+     "gold_unsafe": null,
+     "note": "'외국인' 조건이 요금제 종류에도 걸리는지 애매"
+    }
+   ]
+  },
+  {
+   "case_id": "CHK-C03",
+   "eval_id": null,
+   "expected_intent": "FAQ",
+   "question": "번호이동 비용이랑 소요 시간 알려줘",
+   "previous_subject": "",
+   "path": "compound",
+   "source": "prompt-check",
+   "sub_queries": [
+    {
+     "quote": "번호이동 비용",
+     "query": "번호이동 비용",
+     "gold_unsafe": false
+    },
+    {
+     "quote": "소요 시간",
+     "query": "번호이동 소요 시간",
+     "gold_unsafe": false
+    }
+   ]
+  }
+ ]
+}

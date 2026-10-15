@@ -9,6 +9,9 @@ import com.telme.chat.service.ChatContextMessage;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.LlmRequestInventoryPayload;
+import com.telme.intent.dto.res.LlmRoutingPayload;
+import com.telme.intent.entity.QueryRouting;
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.intent.service.QueryRoutingService;
@@ -20,6 +23,7 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -74,6 +78,9 @@ class RoutingEvaluationProbe {
     // 이 호출의 입력은 질문 하나뿐이라, 의도 분류가 나눈 문항에만 도는 앱 흐름보다 넓게 시험할 수 있다
     private static final boolean INVENTORY_STEP =
             "inventory".equals(System.getenv().getOrDefault("TELME_ROUTING_STEP", "intent"));
+    // faithfulness-cases: 1단계 의도 분류 출력(고정 입력)에서 검색어 검증 호출이 받을 입력을 앱 코드로 만든다.
+    // faithfulness: 그 입력(정답 라벨을 붙인 파일)으로 검색어 검증 호출만 부른다(TELME-175 3단계)
+    private static final String STEP = System.getenv().getOrDefault("TELME_ROUTING_STEP", "intent");
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -98,6 +105,15 @@ class RoutingEvaluationProbe {
         int repeats = Integer.parseInt(System.getenv().getOrDefault("TELME_ROUTING_REPEATS", "1"));
         if (INVENTORY_STEP) {
             runRepeated(repeats, name -> buildInventoryResult(runInventoryOnce(cases, name)));
+            return;
+        }
+        if ("faithfulness-cases".equals(STEP)) {
+            writeJson(buildFaithfulnessCases(cases));
+            System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+            return;
+        }
+        if ("faithfulness".equals(STEP)) {
+            runRepeated(repeats, name -> buildFaithfulnessResult(runFaithfulnessOnce(cases, name)));
             return;
         }
         if (repeats <= 1) {
@@ -201,6 +217,196 @@ class RoutingEvaluationProbe {
         summary.put("matches", matches);
         summary.put("by_expected_request_count", byExpected);
         summary.put("decisions", decisions);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("records", records);
+        return result;
+    }
+
+    private QueryRoutingService routingService(LocalOllamaClient client) {
+        return new QueryRoutingService(
+                client, mapper, mock(QueryRoutingRepository.class), mock(ConsultRequestRepository.class),
+                new RuleBasedRoutingFallback(), new IntentConverter(mapper), mock(TransactionTemplate.class));
+    }
+
+    private static Method accessible(Class<?> type, String name, Class<?>... parameters) throws Exception {
+        Method method = type.getDeclaredMethod(name, parameters);
+        method.setAccessible(true);
+        return method;
+    }
+
+    // 1단계 기록의 의도 분류 응답에서 앱과 같은 방식으로 검색어 검증 입력을 만든다.
+    // 복합 FAQ는 인용구를 IndependentQuestionPolicy.verifiedQuote로 확인한 하위 질문 묶음,
+    // 단일 FAQ는 원문과 다른 검색어 후보(원문 검색 0건일 때의 재검색 후보)다.
+    // 업무 대상 규칙(SearchTopicPolicy)이 먼저 거절하거나 인용 근거가 없어 복합 안내로 끝나면 모델을 부르지 않으므로 skipped로 남긴다
+    private List<Map<String, Object>> buildFaithfulnessCases(List<JsonNode> records) throws Exception {
+        var service = routingService(new LocalOllamaClient(mapper, null));
+        Class<?> quotePolicy = Class.forName("com.telme.intent.service.IndependentQuestionPolicy");
+        Method verifiedQuote = accessible(quotePolicy, "verifiedQuote", LlmRoutingPayload.SubQueryPayload.class, String.class);
+        Method newTopic = accessible(Class.forName("com.telme.intent.service.SearchTopicPolicy"),
+                "introducesNewTopic", String.class, String.class);
+        Method quoteKey = accessible(RoutingQuestionNormalizer.class, "quoteKey", String.class);
+        Method previousSubject = accessible(QueryRoutingService.class, "previousSubject", String.class, String.class);
+        List<Map<String, Object>> cases = new ArrayList<>();
+        for (JsonNode record : records) {
+            JsonNode response;
+            try {
+                response = mapper.readTree(record.path("model_response").asText());
+            } catch (Exception exception) {
+                continue;
+            }
+            List<JsonNode> subs = new ArrayList<>();
+            response.path("subQueries").forEach(subs::add);
+            if (!"FAQ".equals(response.path("intent").asText()) || subs.isEmpty()) {
+                continue;
+            }
+            String question = record.path("question").asText();
+            String resolved = record.path("resolved_question").asText(null);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("eval_id", record.path("eval_id").asText());
+            item.put("expected_intent", "FAQ");
+            item.put("question", question);
+            item.put("previous_subject", resolved == null ? "" : previousSubject.invoke(service, resolved, question));
+            List<Map<String, Object>> queries = new ArrayList<>();
+            if (subs.size() > 1) {
+                item.put("path", "compound");
+                try {
+                    for (JsonNode node : subs) {
+                        var sub = new LlmRoutingPayload.SubQueryPayload((short) node.path("order").asInt(),
+                                ConsultRequest.Intent.FAQ, node.path("queryText").asText(), Map.of(),
+                                node.path("requestQuote").asText(null));
+                        Map<String, Object> query = new LinkedHashMap<>();
+                        query.put("quote", verifiedQuote.invoke(null, sub, question));
+                        query.put("query", sub.queryText());
+                        queries.add(query);
+                    }
+                } catch (InvocationTargetException exception) {
+                    item.put("skipped", "인용 근거 없음(복합 질문 안내로 끝남)");
+                    queries.clear();
+                }
+            } else {
+                String candidate = subs.getFirst().path("queryText").asText();
+                if (quoteKey.invoke(null, candidate).equals(quoteKey.invoke(null, question))) {
+                    continue;
+                }
+                item.put("path", resolved == null ? "refined" : "restored");
+                if (resolved != null) {
+                    // 이전 발언을 복원한 단일 질문은 재검색 검증과 경로가 달라(groundedSingleFaqQuery) 여기서 재지 않는다
+                    item.put("skipped", "맥락 복원 단일 질문(재검색 검증과 경로가 다름)");
+                } else if ((boolean) newTopic.invoke(null, question, candidate)) {
+                    item.put("skipped", "업무 대상 규칙이 먼저 거절(모델 호출 없음)");
+                }
+                Map<String, Object> query = new LinkedHashMap<>();
+                query.put("quote", question);
+                query.put("query", candidate);
+                queries.add(query);
+            }
+            item.put("sub_queries", queries);
+            cases.add(item);
+        }
+        return cases;
+    }
+
+    // 앱의 findUnsafeFaqQueries를 그대로 부른다. 앱은 응답 형식이 틀리면 모두 unsafe로 보므로,
+    // 실패 여부는 원 응답을 따로 확인해 failed로 남긴다
+    private List<Map<String, Object>> runFaithfulnessOnce(List<JsonNode> cases, String runName) throws Exception {
+        var client = new LocalOllamaClient(mapper, null);
+        var service = routingService(client);
+        Method findUnsafe = accessible(QueryRoutingService.class, "findUnsafeFaqQueries",
+                LlmRoutingPayload.class, String.class, String.class);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JsonNode item : cases) {
+            if (item.hasNonNull("skipped") || item.path("sub_queries").isEmpty()) {
+                continue;
+            }
+            String question = item.path("question").asText();
+            List<LlmRoutingPayload.SubQueryPayload> subs = new ArrayList<>();
+            List<Boolean> gold = new ArrayList<>();
+            short order = 1;
+            for (JsonNode node : item.path("sub_queries")) {
+                subs.add(new LlmRoutingPayload.SubQueryPayload(order++, ConsultRequest.Intent.FAQ,
+                        node.path("query").asText(), Map.of(), node.path("quote").asText()));
+                // gold_unsafe가 null이면 판단이 갈리는 검색어라 어느 판정이든 맞은 것으로 본다
+                JsonNode label = node.path("gold_unsafe");
+                gold.add(label.isBoolean() ? label.booleanValue() : null);
+            }
+            var payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, question, Map.of(), subs);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("case_id", item.path("case_id").asText(item.path("eval_id").asText()));
+            row.put("eval_id", item.path("eval_id").asText());
+            row.put("path", item.path("path").asText());
+            row.put("question", question);
+            row.put("previous_subject", item.path("previous_subject").asText(""));
+            row.put("sub_queries", mapper.convertValue(item.path("sub_queries"), List.class));
+            row.put("gold_unsafe", gold);
+            long started = System.nanoTime();
+            client.lastResponse = null;
+            @SuppressWarnings("unchecked")
+            List<Boolean> unsafe = (List<Boolean>) findUnsafe.invoke(service, payload, question,
+                    item.path("previous_subject").asText(""));
+            row.put("unsafe", unsafe);
+            row.put("failed", !validFaithfulnessResponse(client.lastResponse, subs.size()));
+            List<Boolean> matches = new ArrayList<>();
+            for (int index = 0; index < gold.size(); index++) {
+                matches.add(gold.get(index) == null || gold.get(index).equals(unsafe.get(index)));
+            }
+            row.put("matches", matches);
+            row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
+            row.put("model_response", client.lastResponse);
+            records.add(row);
+            if (records.size() % 20 == 0) {
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
+            }
+        }
+        return records;
+    }
+
+    private boolean validFaithfulnessResponse(String response, int size) {
+        try {
+            JsonNode root = mapper.readTree(response);
+            JsonNode unsafe = root.path("unsafe");
+            if (!root.isObject() || root.size() != 1 || !unsafe.isArray() || unsafe.size() != size) {
+                return false;
+            }
+            for (JsonNode value : unsafe) {
+                if (!value.isBoolean()) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private Map<String, Object> buildFaithfulnessResult(List<Map<String, Object>> records) {
+        Map<String, Map<String, Integer>> byGold = new LinkedHashMap<>();
+        int queries = 0;
+        int matches = 0;
+        int failed = 0;
+        for (Map<String, Object> row : records) {
+            failed += Boolean.TRUE.equals(row.get("failed")) ? 1 : 0;
+            @SuppressWarnings("unchecked")
+            List<Boolean> gold = (List<Boolean>) row.get("gold_unsafe");
+            @SuppressWarnings("unchecked")
+            List<Boolean> matched = (List<Boolean>) row.get("matches");
+            for (int index = 0; index < gold.size(); index++) {
+                queries++;
+                matches += matched.get(index) ? 1 : 0;
+                String group = gold.get(index) == null ? "gold_either" : gold.get(index) ? "gold_unsafe" : "gold_safe";
+                Map<String, Integer> counts = byGold.computeIfAbsent(group,
+                        ignored -> new LinkedHashMap<>(Map.of("total", 0, "matches", 0)));
+                counts.merge("total", 1, Integer::sum);
+                counts.merge("matches", matched.get(index) ? 1 : 0, Integer::sum);
+            }
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("cases", records.size());
+        summary.put("queries", queries);
+        summary.put("matches", matches);
+        summary.put("by_gold", byGold);
+        summary.put("failed_cases", failed);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summary", summary);
         result.put("records", records);
@@ -500,7 +706,8 @@ class RoutingEvaluationProbe {
             if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(systemPrompt)) {
                 return INVENTORY_URL;
             }
-            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)) {
+            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)
+                    || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)) {
                 return FAITHFULNESS_URL;
             }
             return BASE_URL;
