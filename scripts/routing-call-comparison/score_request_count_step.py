@@ -63,6 +63,9 @@ errors = collections.defaultdict(dict)
 wrong = collections.defaultdict(list)
 for name in args.names:
     records = runs[name]["records"]
+    # 실행 당시 기록된 일치 여부가 아니라 현재 평가셋 정답으로 다시 채점한다(라벨이 바뀌어도 같은 기준)
+    for r in records:
+        r["count_matches"] = r["request_count"] in items[r["eval_id"]]["acceptable_request_counts"]
     ok = {r["eval_id"]: r["count_matches"] for r in records}
     single = [r for r in records if max(items[r["eval_id"]]["acceptable_request_counts"]) == 1]
     multiple = [r for r in records if r not in single]

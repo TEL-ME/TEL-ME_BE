@@ -23,7 +23,11 @@ mkdir -p "$OUT" "$TMP"
 python -X utf8 -c "import json; json.dump(json.load(open('scripts/data/eval_routing_unified.json', encoding='utf-8'))['items'], open('$TMP/items.json', 'w', encoding='utf-8'), ensure_ascii=False)"
 
 run() {  # $1=결과 파일 이름 $2=의도 분류 호출 주소 $3=회차 수(2 이상이면 회차를 동시에 돌려 {"$1-1": ..} 형식으로 쓴다)
-  TELME_ROUTING_EVAL=true TELME_ROUTING_BASE_URL="$EXAONE_URL" TELME_ROUTING_INTENT_URL="$2"     TELME_ROUTING_REPEATS="$3" TELME_ROUTING_RUN_PREFIX="$1"     TELME_ROUTING_INPUT="$TMP/items.json" TELME_ROUTING_OUT="$TMP/$1.json"     ./gradlew test --tests 'com.telme.probe.RoutingEvaluationProbe' --rerun -q
+  TELME_ROUTING_EVAL=true TELME_ROUTING_BASE_URL="$EXAONE_URL" TELME_ROUTING_INTENT_URL="$2" \
+    TELME_ROUTING_INVENTORY_URL="$EXAONE_URL" TELME_ROUTING_FAITHFULNESS_URL="$EXAONE_URL" \
+    TELME_ROUTING_REPEATS="$3" TELME_ROUTING_RUN_PREFIX="$1" \
+    TELME_ROUTING_INPUT="$TMP/items.json" TELME_ROUTING_OUT="$TMP/$1.json" \
+    ./gradlew test --tests 'com.telme.probe.RoutingEvaluationProbe' --rerun -q
   echo "$1 끝 $(date +%H:%M:%S)"
 }
 

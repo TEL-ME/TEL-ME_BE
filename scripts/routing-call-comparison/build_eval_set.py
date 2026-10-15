@@ -343,6 +343,37 @@ for k, (count, q, tag) in enumerate(FAQ_MULTI_NEW, 1):
     items.append({"eval_id": "", "question": q, "expected_intent": "FAQ", "source": "new175",
                   "source_id": f"NEW-MULTI-{k:02d}", "split": "holdout", "expected_request_count": count,
                   "tags": [tag, "여러 요청", "TELME-175 신규(사람 검토 전)"]})
+# 요청 개수 판정 프롬프트를 고친 뒤 과적합을 확인하려고 쓴 문항. 결과를 보기 전에 정답을 고정했고 프롬프트 수정에 쓰지 않았다.
+# 개수 기준: 한 업무라도 다른 정보를 나열하거나 이어 물으면 나눈다. 목록 소개, 처리 경로 나열, 같은 정보의 재확인,
+# 전체 절차, 조건 + 요청, 비교는 한 요청
+FAQ_COUNT_CHECK = [
+    (2, "분실폰 보험 처리 기간은 얼마나 걸려요? 자기부담금도 내야 하나요?", "같은 업무 이어 묻기"),
+    (2, "해외 로밍 패스는 며칠짜리까지 있어요? 현지에서 연장도 되나요?", "같은 업무 이어 묻기"),
+    (2, "번호 변경하면 기존 번호 안내 서비스 돼요? 수수료는 있어요?", "같은 업무 이어 묻기"),
+    (3, "인터넷 이전 설치 비용, 소요 기간, 신청 방법 알려주세요", "한 업무 정보 나열"),
+    (2, "데이터 쉐어링 요금이랑 연결 가능한 기기 수를 각각 알려줘", "각각"),
+    (2, "청소년 요금제 데이터 제공량 알려주고 부모 동의 절차도 알려주세요", "~고 ~도"),
+    (2, "선택약정 할인율이 얼마예요? 약정 기간 중에 해지하면 할인 반환금도 있나요?", "같은 업무 이어 묻기"),
+    (3, "유심 재발급 비용, 소요 시간, 대리 수령 가능 여부를 알려줘", "한 업무 정보 나열"),
+    (2, "소액결제 차단하면 앱 결제도 막혀요? 다시 풀려면 어떻게 해요?", "같은 업무 이어 묻기"),
+    (2, "가족결합 하면 할인 얼마나 돼요? 결합 해지할 때 위약금도 있어요?", "같은 업무 이어 묻기"),
+    (3, "번호이동하면 멤버십 등급, 포인트, 가족결합 할인은 어떻게 되나요?", "한 업무 정보 나열"),
+    (1, "개통할 때 여권도 신분증으로 되나요? 외국인등록증만 되나요?", "같은 정보 재확인"),
+    (1, "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘", "목록 소개 + 각각"),
+    (1, "유심 재발급을 온라인이나 고객센터로 신청하는 방법 알려줘", "처리 경로 나열"),
+    (1, "해외 출장 가는데 로밍 요금 폭탄 안 맞으려면 어떻게 해요?", "상황 + 한 요청"),
+    (1, "미납 요금 때문에 정지됐는데 오늘 바로 풀 수 있나요?", "조건 + 한 요청"),
+    (1, "알뜰폰이랑 일반 요금제 중에 저한테 뭐가 이득이에요?", "비교"),
+    (1, "명의변경 처음부터 끝까지 순서대로 알려주세요", "전체 절차"),
+    (1, "5G 요금제 데이터 다 쓰면 속도 제한은 어떻게 걸려요?", "단일 질문"),
+    (1, "인터넷 장애 신고는 앱, 전화, 홈페이지 중 어디서 해요?", "처리 경로 나열"),
+    (1, "외국인 개통 서류 중에 여권 사본도 되는지 확인 부탁드려요", "같은 정보 재확인"),
+]
+for k, (count, q, tag) in enumerate(FAQ_COUNT_CHECK, 1):
+    items.append({"eval_id": "", "question": q, "expected_intent": "FAQ", "source": "new175",
+                  "source_id": f"NEW-COUNT-{k:02d}", "split": "holdout", "expected_request_count": count,
+                  "tags": [tag] + (["여러 요청"] if count > 1 else [])
+                          + ["요청 개수 프롬프트 수정 확인용", "TELME-175 신규(사람 검토 전)"]})
 
 
 def stratum(item):
@@ -386,7 +417,11 @@ ACCEPT = {
     "NAME_CHANGE-0068#0": ({"intents": ["FAQ", "UNKNOWN"]}, "주제 없이 '수수료를 내라고 하는데'만 있음"),
     "SERVICE-0062#0": ({"counts": [1, 2]}, "등급 수와 결정 기준. 한 안내로도, 두 질문으로도 볼 수 있다"),
     "EVAL-055": ({"counts": [1, 2]}, "한 상품의 월 요금과 데이터. 한 질문으로도, 두 질문으로도 볼 수 있다"),
-    "EVAL-137": ({"counts": [1, 2]}, "택배 수령 가능 여부와 걸리는 기간. 물음표로 나뉜 두 질문이지만 같은 업무다"),
+}
+# 요청 개수 기준(팀 결정, 2026-10-15): 같은 업무를 이어 물어도 두 번째 질문의 답이 첫 질문의 답에 들어 있지 않은
+# 다른 정보면 요청을 나눈다. 첫 질문 답의 일부를 확인하는 것(어떤 신분증인지 묻고 면허증도 되는지)만 합친다
+COUNT_RULE = {
+    "EVAL-137": (2, "택배 수령 가능 여부와 걸리는 기간은 서로 다른 정보라 요청 2개(요청 개수 기준 적용)"),
 }
 # 사람이 기준을 정해야 하는 라벨(현재 라벨 그대로 채점하되 결과를 따로 본다)
 REVIEW = {
@@ -401,6 +436,8 @@ for i in items:
         i["expected_request_count"] = {"UNKNOWN": 0, "BOTH": 2}.get(i["expected_intent"], 1)
     if i["expected_intent"] == "UNKNOWN":
         i["expected_request_count"] = 0
+    if i["source_id"] in COUNT_RULE:
+        i["expected_request_count"], i["answer_note"] = COUNT_RULE[i["source_id"]]
     accept, note = ACCEPT.get(i["source_id"], ({}, None))
     i["acceptable_intents"] = accept.get("intents", [i["expected_intent"]])
     i["acceptable_request_counts"] = accept.get("counts", [i["expected_request_count"]])
@@ -412,7 +449,7 @@ for i in items:
         i["review_note"] = REVIEW[i["source_id"]]
     assert i["expected_intent"] in i["acceptable_intents"]
     assert i["expected_request_count"] in i["acceptable_request_counts"]
-missing = (set(ACCEPT) | set(REVIEW)) - {i["source_id"] for i in items}
+missing = (set(ACCEPT) | set(REVIEW) | set(COUNT_RULE)) - {i["source_id"] for i in items}
 assert not missing, missing
 
 # 근거 검증 프롬프트 예시(원문=...)에 나온 문장은 3단계에서 따로 표시한다

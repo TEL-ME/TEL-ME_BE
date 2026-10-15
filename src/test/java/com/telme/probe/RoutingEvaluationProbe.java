@@ -65,8 +65,9 @@ class RoutingEvaluationProbe {
     // 의도 분류는 1단계 비교로 gpt-oss(Bedrock 라우터)로 정했다
     private static final String INTENT_URL =
             System.getenv().getOrDefault("TELME_ROUTING_INTENT_URL", "http://127.0.0.1:11435");
+    // 요청 개수 판정은 2단계 비교로 gpt-oss로 정했다
     private static final String INVENTORY_URL =
-            System.getenv().getOrDefault("TELME_ROUTING_INVENTORY_URL", BASE_URL);
+            System.getenv().getOrDefault("TELME_ROUTING_INVENTORY_URL", "http://127.0.0.1:11435");
     private static final String FAITHFULNESS_URL =
             System.getenv().getOrDefault("TELME_ROUTING_FAITHFULNESS_URL", BASE_URL);
     // inventory: 라우팅 흐름 대신 요청 개수 판정 호출만 문항마다 직접 부른다(TELME-175 2단계).

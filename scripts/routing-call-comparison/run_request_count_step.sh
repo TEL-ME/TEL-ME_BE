@@ -7,6 +7,8 @@
 # 준비: run_intent_step.sh와 같다(Ollama EXAONE, Bedrock 라우터)
 # 결과: scripts/routing-call-comparison/results/step2-request-count/results.json.gz
 #       ({"exaone": 프로브 출력, "gptoss-1": ..., "gptoss-2": ..., "gptoss-3": ...})
+#       같은 파일의 "<이름>-v3" 키는 요청 개수 판정 프롬프트를 고치기 전(routing-request-inventory-v3)에
+#       이 스크립트로 돈 결과다. 고친 뒤(v4)와 비교하려고 남긴다. 이 스크립트는 현재 프롬프트 결과만 새로 쓴다
 # 채점: python scripts/routing-call-comparison/score_request_count_step.py
 set -euo pipefail
 cd "$(dirname "$0")/../.."

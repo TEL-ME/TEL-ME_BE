@@ -417,7 +417,7 @@ public class QueryRoutingService {
                 .systemPrompt(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT)
                 .userPrompt(RoutingQuestionNormalizer.normalize(question))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(256)
-                .promptVersion("routing-request-inventory-v3").build();
+                .promptVersion("routing-request-inventory-v4").build();
         try {
             String response = llmClient.generate(request);
             if (response == null || response.isBlank()) {
