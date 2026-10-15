@@ -116,6 +116,10 @@ public final class ChatOutputGuard {
                 || answer.storeSearchContext() != null && containsMask(answer.storeSearchContext().label(), 0);
     }
 
+    public boolean needsClarificationMaskContext(String question, List<String> options) {
+        return containsMask(question, 0) || containsMask(options, 0);
+    }
+
     private boolean containsMask(Object value, int depth) {
         if (depth > MAX_METADATA_DEPTH) {
             throw new IllegalArgumentException("출력 항목의 중첩 범위를 초과했습니다.");

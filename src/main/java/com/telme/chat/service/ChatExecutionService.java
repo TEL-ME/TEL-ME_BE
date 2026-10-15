@@ -1,7 +1,5 @@
 package com.telme.chat.service;
 
-import static com.telme.chat.guard.MaskSpan.MASK;
-
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
@@ -99,8 +97,8 @@ public class ChatExecutionService {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         String question = ChatPersona.prependGreeting(execution.getInputMessage().getContent(), originalQuestion);
-        OutputMaskContext masks = readMasks(execution, () -> question.contains(MASK)
-                || options != null && options.stream().anyMatch(option -> option != null && option.contains(MASK)));
+        OutputMaskContext masks = readMasks(execution,
+                () -> outputGuard.needsClarificationMaskContext(question, options));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
         Instant completedAt = Instant.now();
 

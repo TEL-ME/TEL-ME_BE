@@ -73,6 +73,17 @@ class ChatOutputGuardTest {
     }
 
     @Test
+    @DisplayName("되묻기 질문이나 선택지에 마스크가 있을 때만 출처 조회를 요청한다")
+    void 되묻기의_마스크_조회_필요성을_판단한다() {
+        assertThat(guard.needsClarificationMaskContext("카드 *** 문의인가요?", null)).isTrue();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", List.of("카드 *** 문의"))).isTrue();
+        assertThat(guard.needsClarificationMaskContext("7700원, 18개월 조건인가요?", List.of("네", "아니요")))
+                .isFalse();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", List.of())).isFalse();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", null)).isFalse();
+    }
+
+    @Test
     @DisplayName("되묻기 질문과 선택지에도 같은 출력 정책을 적용한다")
     void 되묻기와_선택지를_검사한다() {
         assertThatThrownBy(() -> guard.verifyClarification("씨발 가입하셨나요?", List.of(), OutputMaskContext.empty()))

@@ -99,6 +99,18 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("인사말을 붙인 되묻기의 선택지에만 마스크가 있어도 출처를 한 번 조회하고 보존한다")
+    void 인사말과_선택지의_마스크를_함께_처리한다() {
+        var question = send("안녕하세요 씨 990101-1234567 발 요금 문의");
+
+        chatExecutionService.askClarification(question.executionId(), "어떤 조건인가요?", List.of("씨 *** 발 요금 문의"));
+
+        verify(inputMasks, times(1)).read(sessionId, 1);
+        assertThat(historyItem(2).content()).isEqualTo("안녕하세요! 어떤 조건인가요?");
+        assertThat(historyItem(2).followUps()).containsExactly("씨 *** 발 요금 문의");
+    }
+
+    @Test
     @DisplayName("다른 세션의 마스크 출처로 같은 별표 출력 검사를 완화하지 않는다")
     void 다른_세션의_마스크를_출력_출처로_사용하지_않는다() {
         var first = send("씨 990101-1234567 발 요금 문의");
