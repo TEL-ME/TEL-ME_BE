@@ -3,8 +3,11 @@ package com.telme.rag.service;
 import com.telme.rag.exception.AnswerGuardException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -109,6 +112,14 @@ public class AnswerGuard {
                     + "(?:신청|접수|가입)(?:을|를)?\\s*(?:권장|권유|추천)");
     private static final Pattern UNPROCESSED_RECORD = Pattern.compile(
             "(?:이번\\s*상담|상담\\s*(?:과정|중)).*(?:신청|접수|처리|완료).*(?:않았|미접수|미처리)");
+    private static final Pattern APPLICATION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
+    private static final Pattern APPLICATION_TASK = Pattern.compile(
+            "재발급|발급|재가입|가입|변경|해지|취소|교체|등록|정지|개통|이전|납부|결제|충전|해제");
+    private static final Pattern APPLICATION_VISITOR = Pattern.compile("본인|대리인|미성년자|법인");
+    private static final Set<String> APPLICATION_PROCEDURE_WORDS = Set.of(
+            "본인", "대리인", "미성년자", "법인", "신분증", "위임장", "지참", "지참한", "지참하여", "지참하고",
+            "가지고", "방문", "방문하는", "방문하여", "방문하시어", "방문해야", "절차", "안내했습니다",
+            "시", "경우", "조건", "필요", "해야", "합니다", "됩니다", "입니다", "그것", "해당", "상품", "서비스");
 
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
     // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
@@ -276,13 +287,17 @@ public class AnswerGuard {
         for (String sentence : SENTENCE.split(answer.strip())) {
             if (!APPLICATION_ADVICE.matcher(sentence).find() || evidence.contains(sentence)) {
                 kept.add(sentence);
-            } else if (instructions.size() == 1) {
-                // 신청 절차를 허용하더라도 근거에 있는 준비물·방문자 조건을 생략하지 않는다.
-                kept.add(instructions.getFirst());
-            } else if (instructions.isEmpty()) {
-                String visit = findGroundedVisitProcedure(sentence, context);
-                if (visit != null) {
-                    kept.add(visit);
+            } else {
+                var matching = instructions.stream()
+                        .filter(instruction -> hasMatchingApplicationBusiness(sentence, instruction)).toList();
+                if (matching.size() == 1) {
+                    // 대상과 업무가 확인된 원문 전체를 써야 준비물과 방문자 조건도 함께 보존된다.
+                    kept.add(matching.getFirst());
+                } else if (matching.isEmpty()) {
+                    String visit = findGroundedVisitProcedure(sentence, context);
+                    if (visit != null) {
+                        kept.add(visit);
+                    }
                 }
             }
         }
@@ -295,6 +310,58 @@ public class AnswerGuard {
             kept.add(records.getFirst());
         }
         return String.join(" ", kept);
+    }
+
+    private boolean hasMatchingApplicationBusiness(String sentence, String evidenceSentence) {
+        List<String> subjects = extractApplicationSubjects(sentence);
+        Set<String> tasks = extractApplicationTasks(sentence);
+        Set<String> visitors = extractApplicationTerms(sentence, APPLICATION_VISITOR);
+        // 상품명·명의자까지 같은 순서로 확인하며, 생략된 대상이나 여러 업무의 연결 관계를 추정하지 않는다.
+        boolean sameVisitor = visitors.isEmpty()
+                || visitors.equals(extractApplicationTerms(evidenceSentence, APPLICATION_VISITOR));
+        return !subjects.isEmpty() && subjects.equals(extractApplicationSubjects(evidenceSentence))
+                && tasks.size() == 1 && tasks.equals(extractApplicationTasks(evidenceSentence))
+                && sameVisitor;
+    }
+
+    private List<String> extractApplicationSubjects(String sentence) {
+        List<String> subjects = new ArrayList<>();
+        String withoutAdvice = APPLICATION_ADVICE.matcher(sentence).replaceAll("");
+        Matcher matcher = APPLICATION_WORD.matcher(withoutAdvice);
+        while (matcher.find()) {
+            String word = APPLICATION_TASK.matcher(matcher.group().toLowerCase(Locale.ROOT)).replaceAll("");
+            if (APPLICATION_PROCEDURE_WORDS.contains(word)) {
+                continue;
+            }
+            String previous;
+            do {
+                previous = word;
+                word = TOPIC_PARTICLE.matcher(word).replaceFirst("");
+            } while (!word.equals(previous));
+            if (!word.isBlank() && !CHANNELS.contains(word) && !APPLICATION_PROCEDURE_WORDS.contains(word)) {
+                subjects.add(word);
+            }
+        }
+        return subjects;
+    }
+
+    private Set<String> extractApplicationTasks(String sentence) {
+        String withoutAdvice = APPLICATION_ADVICE.matcher(sentence).replaceAll("");
+        Set<String> tasks = extractApplicationTerms(withoutAdvice, APPLICATION_TASK);
+        Matcher advice = APPLICATION_ADVICE.matcher(sentence);
+        if (tasks.isEmpty() && advice.find()) {
+            tasks.add(advice.group().substring(0, 2));
+        }
+        return tasks;
+    }
+
+    private Set<String> extractApplicationTerms(String sentence, Pattern pattern) {
+        Set<String> terms = new LinkedHashSet<>();
+        Matcher matcher = pattern.matcher(sentence);
+        while (matcher.find()) {
+            terms.add(matcher.group().replaceAll("\\s+", "").toLowerCase(Locale.ROOT));
+        }
+        return terms;
     }
 
     public String trimUngroundedPolicyAttributes(String answer, String context, String userQuery) {
@@ -452,6 +519,10 @@ public class AnswerGuard {
         Set<String> candidates = new LinkedHashSet<>();
         for (String evidenceSentence : SENTENCE.split(context.strip())) {
             if (!evidenceSentence.contains("신분증") || !evidenceSentence.contains("방문")) {
+                continue;
+            }
+            if (APPLICATION_ADVICE.matcher(sentence).find()
+                    && !hasMatchingApplicationBusiness(sentence, evidenceSentence)) {
                 continue;
             }
             boolean sameChannel = VISIT_CHANNELS.stream()

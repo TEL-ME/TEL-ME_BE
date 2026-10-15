@@ -514,6 +514,59 @@ class RagAnswerGeneratorTest {
         assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
     }
 
+    @Test
+    @DisplayName("로밍 근거가 섞여도 이심 비용만 최종 답변으로 전달한다")
+    void 혼합_근거의_다른_업무_절차를_최종_답변에서_제거한다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        StubClient client = new StubClient(List.of(cost, " eSIM을 신청하세요."));
+        AnswerRequest request = request("eSIM 발급 비용을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, cost)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(cost);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일치하는 신청 근거가 없으면 답변 생성 경로에서도 근거 없음으로 반환한다")
+    void 다른_업무의_신청만_생성하면_근거_없음으로_반환한다() {
+        StubClient client = new StubClient(List.of("eSIM을 신청하세요."));
+        AnswerRequest request = request("eSIM 발급 비용을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, "eSIM 발급 비용은 2,750원입니다.")));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일치하는 재발급 업무는 대리인과 위임장 및 신분증 조건을 복원하여 전달한다")
+    void 최종_답변에_방문자와_준비물_조건을_그대로_전달한다() {
+        String evidence = "대리인은 위임장과 신분증을 지참한 경우에만 매장에서 유심 재발급을 신청하시면 됩니다.";
+        StubClient client = new StubClient(List.of("유심 재발급을 신청하세요."));
+        AnswerRequest request = request("유심 재발급 방법을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, evidence)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(evidence);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(evidence);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
     private RagAnswerGenerator generator(LlmClient client) {
         return generator(client, ExecutionTrace.noop());
     }
