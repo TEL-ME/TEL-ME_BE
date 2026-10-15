@@ -66,6 +66,10 @@ public class ChatMessage {
 
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
+    
+    // 한국어로 번역해 처리한 질문의 사용자 원문. 한국어 질문은 null
+    @Column(name = "original_content", columnDefinition = "TEXT")
+    private String originalContent;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)

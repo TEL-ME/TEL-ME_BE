@@ -7,13 +7,14 @@ import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
+import com.telme.chat.translation.ChatQuestionTranslator;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
@@ -56,6 +57,9 @@ class ChatProcessingDispatchIntegrationTest {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private ChatQuestionTranslator questionTranslator;
 
     @Autowired
     private ObjectProvider<ChatProcessingPort> chatProcessingPorts;
@@ -142,7 +146,7 @@ class ChatProcessingDispatchIntegrationTest {
         when(duplicated.getIfAvailable())
                 .thenThrow(new NoUniqueBeanDefinitionException(ChatProcessingPort.class, 2, "처리 구현체 2개"));
         ChatProcessingDispatcher dispatcher = new ChatProcessingDispatcher(
-                duplicated, chatExecutionService, transactionManager);
+                duplicated, chatExecutionService, transactionManager, questionTranslator);
 
         try {
             dispatcher.dispatch(command);
@@ -178,7 +182,7 @@ class ChatProcessingDispatchIntegrationTest {
             }
         });
         ChatProcessingDispatcher dispatcher = new ChatProcessingDispatcher(
-                chatProcessingPorts, chatExecutionService, transactionManager, saturated);
+                chatProcessingPorts, chatExecutionService, transactionManager, questionTranslator, saturated);
 
         try {
             transactionTemplate.executeWithoutResult(status ->

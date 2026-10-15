@@ -1,6 +1,7 @@
 package com.telme.chat.service;
 
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.translation.ChatQuestionTranslator;
 import com.telme.global.common.exception.GeneralException;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -28,24 +29,28 @@ class ChatProcessingDispatcher {
     private final ChatExecutionService chatExecutionService;
     private final TransactionTemplate newTransaction;
     private final ThreadPoolTaskExecutor executor;
+    private final ChatQuestionTranslator questionTranslator;
 
     @Autowired
     ChatProcessingDispatcher(
             ObjectProvider<ChatProcessingPort> chatProcessingPort,
             ChatExecutionService chatExecutionService,
-            PlatformTransactionManager transactionManager
+            PlatformTransactionManager transactionManager,
+            ChatQuestionTranslator questionTranslator
     ) {
-        this(chatProcessingPort, chatExecutionService, transactionManager, createExecutor());
+        this(chatProcessingPort, chatExecutionService, transactionManager, questionTranslator, createExecutor());
     }
 
     ChatProcessingDispatcher(
             ObjectProvider<ChatProcessingPort> chatProcessingPort,
             ChatExecutionService chatExecutionService,
             PlatformTransactionManager transactionManager,
+            ChatQuestionTranslator questionTranslator,
             ThreadPoolTaskExecutor executor
     ) {
         this.chatProcessingPort = chatProcessingPort;
         this.chatExecutionService = chatExecutionService;
+        this.questionTranslator = questionTranslator;
         this.newTransaction = new TransactionTemplate(transactionManager);
         this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.executor = executor;
@@ -68,7 +73,7 @@ class ChatProcessingDispatcher {
                 failQuietly(command, NOT_CONNECTED);
                 return;
             }
-            port.request(command);
+            port.request(questionTranslator.toKorean(command));
         } catch (RuntimeException exception) {
             log.error("AI 처리 중 오류: executionId={}", command.executionId(), exception);
             failQuietly(command, PROCESSING_ERROR);

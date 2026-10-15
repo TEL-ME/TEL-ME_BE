@@ -65,6 +65,7 @@ public class OllamaRequestConverter {
             case CONDITION_EXTRACT -> new Defaults(0.0, 500);
             case SUMMARY -> new Defaults(0.3, 512);
             case SESSION_TITLE -> new Defaults(0.2, 32);
+            case TRANSLATION -> new Defaults(0.0, 1024);
         };
     }
 
