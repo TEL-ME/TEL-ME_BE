@@ -38,6 +38,35 @@ class QueryRoutingAnalysisProviderTest {
     private final QueryRoutingAnalysisProvider provider =
             new QueryRoutingAnalysisProvider(messages, routing, followups);
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void selectsRoutingByHistoryResolutionInsteadOfTextChanges(boolean restored) {
+        String raw = "안녕 바라야, 유심을 잃어버렸어요";
+        var history = new ChatContext(3L, 7L, null, List.of(), raw, 20);
+        var context = new Context(3L, 7L, raw, List.of(), history)
+                .withResolution("유심을 잃어버렸어요", restored);
+        var message = ChatMessage.builder().messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER).messageType(ChatMessage.MessageType.QUESTION).content(raw).build();
+        var query = new IntentSubQueryResponse(11L, (short) 1,
+                ConsultRequest.Intent.FAQ, "유심 분실 시 재발급 방법", Map.of());
+        var result = new IntentRouteResponse(5L, 7L, QueryRouting.Intent.FAQ, query.queryText(),
+                BigDecimal.ONE, QueryRouting.Method.LLM, Map.of(), List.of(query));
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        if (restored) {
+            when(routing.routeSingleConsult(message, history, context.resolvedQuestion())).thenReturn(result);
+        } else {
+            when(routing.routeSingleConsult(message, history)).thenReturn(result);
+        }
+        assertThat(provider.analyze(context).initialQuery()).isEqualTo(query);
+        if (restored) {
+            verify(routing).routeSingleConsult(message, history, context.resolvedQuestion());
+        } else {
+            verify(routing).routeSingleConsult(message, history);
+        }
+        org.mockito.Mockito.verifyNoMoreInteractions(routing);
+    }
+
     @Test
     void initialQuestionUsesActualRoutingResult() {
         var routingContext =

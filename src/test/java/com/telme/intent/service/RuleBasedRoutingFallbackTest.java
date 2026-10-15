@@ -22,6 +22,14 @@ class RuleBasedRoutingFallbackTest {
         fallback = new RuleBasedRoutingFallback();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"네,", "네, 고마워요", "😊", "?!", "1️⃣", "₩"})
+    void acknowledgementsAndSymbolsAreNotLocations(String reply) {
+        var result = fallback.classifyFollowUp(reply, Set.of("location"));
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.DEFERRED);
+        assertThat(result.conditions()).isEmpty();
+    }
+
     @Test
     @DisplayName("null 또는 빈 문자열이 전달되면 UNKNOWN으로 안전하게 반환한다")
     void classify_null_and_blank() {

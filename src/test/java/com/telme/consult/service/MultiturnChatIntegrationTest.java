@@ -1,5 +1,7 @@
 package com.telme.consult.service;
 
+import static com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,13 +75,13 @@ class MultiturnChatIntegrationTest {
                 "유심 재발급 비용은 얼마인가요?", "재발급 비용은 7,700원입니다.", 0.95, null, null, 1, null)));
         when(model.generate(any())).thenAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if ("multiturn-resolution-v31-reference".equals(request.promptVersion())) {
+            if ("context-v31-reference".equals(request.promptVersion())) {
                 String question = mapper.readTree(request.userPrompt()).path("currentQuestion").asText();
                 // 업무 이름(유심 재발급, 가입)이 있는 질문은 대상이 있다고 판정한다.
                 boolean explicit = question.contains("유심") || question.contains("가입");
                 return mapper.writeValueAsString(Map.of("reference", explicit ? "EXPLICIT" : "OMITTED"));
             }
-            if ("multiturn-resolution-v30-sources".equals(request.promptVersion())) {
+            if ("context-v30-sources".equals(request.promptVersion())) {
                 return "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}";
             }
             return "{\"intent\":\"FAQ\",\"confidence\":0.99,\"refinedQuery\":\"유심 재발급 비용\","
@@ -128,7 +130,7 @@ class MultiturnChatIntegrationTest {
         String question = "요금 안 내면 언제 정지되나요?";
         doReturn("{\"reference\":\"EXPLICIT\"}").when(model)
                 .generate(argThat(request -> request != null
-                        && "multiturn-resolution-v31-reference".equals(request.promptVersion())));
+                        && "context-v31-reference".equals(request.promptVersion())));
         answer.set("미납 요금 확인은 고객센터에서 가능합니다.");
         when(search.search(any())).thenReturn(List.of(new FaqSearchResponse(1L, null, "BILLING",
                 question, answer.get(), 0.95, null, null, 1, null)));
@@ -240,7 +242,7 @@ class MultiturnChatIntegrationTest {
         answer.set("재발급 비용은 99,999원입니다.");
         send("그건 비용이 얼마야?");
         JsonNode output = history().path("messages").get(3);
-        assertThat(output.path("content").asText()).isEqualTo("안내드릴 수 있는 정보가 없습니다.");
+        assertThat(output.path("content").asText()).isEqualTo(NO_EVIDENCE_ANSWER);
         assertThat(output.path("answerBasis").asText()).isEqualTo("NO_EVIDENCE");
     }
 

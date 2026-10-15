@@ -33,7 +33,12 @@ public final class FollowupContextService {
             String message,
             List<Candidate> candidates,
             ChatContext routingContext,
-            String resolvedQuestion) {
+            String resolvedQuestion,
+            boolean historyResolved) {
+        public Context(long sessionId, long userMessageId, String message, List<Candidate> candidates,
+                ChatContext routingContext, String resolvedQuestion) {
+            this(sessionId, userMessageId, message, candidates, routingContext, resolvedQuestion, false);
+        }
         public Context(long sessionId, long userMessageId, String message, List<Candidate> candidates,
                 ChatContext routingContext) {
             this(sessionId, userMessageId, message, candidates, routingContext, message);
@@ -52,16 +57,16 @@ public final class FollowupContextService {
         }
 
         public Context withRoutingContext(ChatContext value) {
-            return new Context(sessionId, userMessageId, message, candidates, value, resolvedQuestion);
+            return new Context(sessionId, userMessageId, message, candidates, value, resolvedQuestion, historyResolved);
         }
 
-        public Context withResolvedQuestion(String value) {
-            return new Context(sessionId, userMessageId, message, candidates, routingContext, value);
+        public Context withResolution(String value, boolean restored) {
+            return new Context(sessionId, userMessageId, message, candidates, routingContext, value, restored);
         }
 
         // 새 질문으로 판정된 이번 분석에서만 대기 후보를 제외한다. 저장된 상담 상태는 유지한다.
         public Context forNewQuestion() {
-            return new Context(sessionId, userMessageId, message, List.of(), routingContext, resolvedQuestion);
+            return new Context(sessionId, userMessageId, message, List.of(), routingContext, resolvedQuestion, false);
         }
     }
 

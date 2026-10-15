@@ -49,8 +49,17 @@ public class ChatExecutionService {
     }
 
     public ChatExecutionState completeAnswer(Long executionId, ChatAnswer answer) {
+        return completeAnswer(executionId, answer, false);
+    }
+
+    public ChatExecutionState completeBasicConversation(Long executionId, ChatAnswer answer) {
+        return completeAnswer(executionId, answer, true);
+    }
+
+    private ChatExecutionState completeAnswer(Long executionId, ChatAnswer original, boolean preserveConsultation) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
+        ChatAnswer answer = ChatPersona.decorate(execution.getInputMessage().getContent(), original);
         OutputMaskContext masks = readMasks(execution, () -> outputGuard.needsMaskContext(answer));
         verifyOutput(() -> outputGuard.verify(answer, masks));
         String followUps = chatMessageConverter.toJson(answer.followUps());
@@ -70,7 +79,7 @@ public class ChatExecutionService {
                 completedAt
         );
         execution.complete(message, completedAt);
-        session.resume();
+        if (!preserveConsultation) session.resume();
         session.touch(completedAt);
         ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
@@ -82,13 +91,14 @@ public class ChatExecutionService {
         return askClarification(executionId, question, List.of());
     }
 
-    public ChatExecutionState askClarification(Long executionId, String question, List<String> options) {
-        if (question == null || question.isBlank()) {
+    public ChatExecutionState askClarification(Long executionId, String originalQuestion, List<String> options) {
+        if (originalQuestion == null || originalQuestion.isBlank()) {
             throw new IllegalArgumentException("되묻기 질문은 비어 있을 수 없습니다.");
         }
 
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
+        String question = ChatPersona.prependGreeting(execution.getInputMessage().getContent(), originalQuestion);
         OutputMaskContext masks = readMasks(execution, () -> question.contains(MASK)
                 || options != null && options.stream().anyMatch(option -> option != null && option.contains(MASK)));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
