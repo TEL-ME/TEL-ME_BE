@@ -74,8 +74,8 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
         Map<Long, CompletableFuture<Timed>> pending = new LinkedHashMap<>();
         for (Candidate candidate : allOf(candidates)) {
             FaqSearchResponse result = candidate.result();
-            // 같은 FAQ가 두 벡터에 모두 나오면 한 번만 판정한다
-            if (candidate.needsJudgment() && result.slotId() != null) {
+            // 같은 FAQ가 두 벡터에 모두 나오면 한 번만 판정한다. faqId로 묶으므로 관리자가 등록한(slot_id 없는) FAQ도 판정한다
+            if (candidate.needsJudgment()) {
                 pending.computeIfAbsent(result.faqId(), faqId -> {
                     Verdict known = executionId == null
                             ? null : remembered.get(new VerdictKey(executionId, question, faqId));
@@ -113,7 +113,7 @@ public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {
                 continue;
             }
             boolean upperBand = result.score() >= passedBefore;
-            Timed timed = result.slotId() == null ? null : verdicts.get(result.faqId());
+            Timed timed = verdicts.get(result.faqId());
             boolean keep = timed != null && switch (timed.verdict()) {
                 case ANSWERABLE -> true;
                 case NOT_ANSWERABLE -> false;

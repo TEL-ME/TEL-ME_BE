@@ -82,19 +82,24 @@ class JudgingFaqGrayZoneSelectorTest {
     }
 
     @Test
-    @DisplayName("slot_id 없는 판정 필요 후보는 위쪽 구간이어도 판정하지 않고 거부한다")
-    void slot_없는_후보는_판정_없이_거부() {
-        Candidate seed = new Candidate(response(8L, null, 0.75, QA), true);
+    @DisplayName("slot_id 없는 후보(관리자 등록 FAQ)도 판정하고, 실패하면 위쪽 구간만 통과시킨다")
+    void slot_없는_후보도_판정() {
+        verdicts(Map.of(8L, Verdict.ANSWERABLE, 10L, Verdict.FAILED, 11L, Verdict.FAILED));
+        Candidate answerable = new Candidate(response(8L, null, 0.70, QA), true);
+        Candidate failedUpper = new Candidate(response(10L, null, 0.75, QA), true);
+        Candidate failedLower = new Candidate(response(11L, null, 0.70, QA), true);
 
         Selection selection = selector.select(1L, 2L, QUESTION,
-                new FaqGrayZoneSearchResponse(List.of(), List.of(seed)), 3);
+                new FaqGrayZoneSearchResponse(List.of(), List.of(answerable, failedUpper, failedLower)), 3);
 
-        assertThat(selection.results()).isEmpty();
-        assertThat(selection.judgments()).singleElement().satisfies(judgment -> {
-            assertThat(judgment.verdict()).isNull();
-            assertThat(judgment.kept()).isFalse();
-        });
-        verifyNoInteractions(judge);
+        assertThat(selection.results()).extracting(FaqSearchResponse::faqId).containsExactly(8L, 10L);
+        assertThat(selection.judgments())
+                .extracting(Judgment::faqId, Judgment::slotId, Judgment::verdict, Judgment::kept)
+                .containsExactly(
+                        tuple(8L, null, Verdict.ANSWERABLE, true),
+                        tuple(10L, null, Verdict.FAILED, true),
+                        tuple(11L, null, Verdict.FAILED, false));
+        verify(judge, times(3)).judge(any(), any(), anyString(), anyString(), anyString());
     }
 
     @Test
