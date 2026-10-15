@@ -54,7 +54,7 @@ public final class ChatRepeatedInquiryResolver {
         var chain = ordered.subList(start, ordered.size());
         if (chain.stream().anyMatch(message -> DIFFERENT_TARGET.matcher(message.content()).find()
                 || message.messageId() != roots.getFirst().messageId() && !isRepeat(message.content()))
-                || !sameOperation(question, chain)) {
+                || !hasSameOperation(question, chain)) {
             return new ChatQuestionResolver.Resolution(question, true, List.of());
         }
         String antecedents = chain.stream().map(ChatContextMessage::content)
@@ -68,7 +68,7 @@ public final class ChatRepeatedInquiryResolver {
         return REPEAT.matcher(question).find() && CONTINUE.matcher(question).find();
     }
 
-    private static boolean sameOperation(String question, List<ChatContextMessage> chain) {
+    private static boolean hasSameOperation(String question, List<ChatContextMessage> chain) {
         var operations = new java.util.LinkedHashSet<String>();
         for (String text : java.util.stream.Stream.concat(chain.stream().map(ChatContextMessage::content),
                 java.util.stream.Stream.of(question)).toList()) {

@@ -11,7 +11,7 @@ import java.util.Set;
 final class ChatEndSummaryInquiryGrouper {
     record Inquiry(String key, String title, String sourceText, String periodContext,
             List<Long> sourceMessageIds, List<Long> questionMessageIds, int sourceItems) {
-        String protectedText() {
+        String composeProtectedText() {
             return periodContext.isBlank() ? sourceText : periodContext + " " + sourceText;
         }
     }
@@ -21,12 +21,12 @@ final class ChatEndSummaryInquiryGrouper {
     static List<Inquiry> group(ChatEndSummaryData.Input input, JsonNode summary) {
         Map<Long, ChatEndSummaryData.Message> messages = new LinkedHashMap<>();
         input.messages().forEach(message -> messages.put(message.id(), message));
-        Map<Long, Long> roots = ChatEndSummaryInquiryLinker.roots(input);
+        Map<Long, Long> roots = ChatEndSummaryInquiryLinker.resolveRoots(input);
         Map<String, Builder> groups = new LinkedHashMap<>();
         int unknown = 0;
         for (var item : summary.path("guidance")) {
             String text = stripLabel(item.path("text").asText());
-            List<Long> ids = ids(item);
+            List<Long> ids = extractSourceIds(item);
             Map<Long, List<Long>> scopedSources = new LinkedHashMap<>();
             for (long id : ids) {
                 var answer = messages.get(id);
@@ -73,7 +73,7 @@ final class ChatEndSummaryInquiryGrouper {
             if (!topic.path("text").asText().startsWith(prefix)) {
                 continue;
             }
-            List<Long> topicIds = ids(topic);
+            List<Long> topicIds = extractSourceIds(topic);
             var targets = groups.values().stream().filter(group -> topicIds.stream()
                     .map(id -> roots.getOrDefault(id, id)).anyMatch(group.origins::contains)).toList();
             // 한 사용자 발언이 여러 문의를 포함하면 기간을 임의의 상품에 붙이지 않는다.
@@ -90,15 +90,15 @@ final class ChatEndSummaryInquiryGrouper {
             Map<Long, ChatEndSummaryData.Message> messages, Map<Long, Long> roots, Map<String, Builder> groups,
             String text, List<Long> ids, Long origin, int unknown) {
         long root = origin == null ? -1 : roots.getOrDefault(origin, origin);
-        String purpose = ChatEndSummaryInquiryLinker.purpose(text);
+        String purpose = ChatEndSummaryInquiryLinker.identifyPurpose(text);
         if (purpose.equals("UNKNOWN") && origin != null) {
             purpose = input.requests().stream().filter(request -> request.originMessageId() == origin)
-                    .map(ChatEndSummaryData.Request::query).map(ChatEndSummaryInquiryLinker::purpose)
+                    .map(ChatEndSummaryData.Request::query).map(ChatEndSummaryInquiryLinker::identifyPurpose)
                     .filter(value -> !value.equals("UNKNOWN")).distinct().reduce((a, b) -> "UNKNOWN")
                     .orElse("UNKNOWN");
         }
         if (purpose.equals("UNKNOWN") && messages.containsKey(root)) {
-            purpose = ChatEndSummaryInquiryLinker.purpose(messages.get(root).content());
+            purpose = ChatEndSummaryInquiryLinker.identifyPurpose(messages.get(root).content());
         }
         String key = root + ":" + purpose;
         if (root < 0 || purpose.equals("UNKNOWN")) {
@@ -117,7 +117,7 @@ final class ChatEndSummaryInquiryGrouper {
         return text.replaceFirst("^(?:안내받은 내용|조건 확인 전 안내|조건 확인 후 안내|상담 정리):\\s*", "");
     }
 
-    private static List<Long> ids(JsonNode item) {
+    private static List<Long> extractSourceIds(JsonNode item) {
         List<Long> ids = new ArrayList<>();
         item.path("sourceMessageIds").forEach(value -> ids.add(value.asLong()));
         return ids;

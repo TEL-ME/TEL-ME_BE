@@ -38,7 +38,7 @@ class ChatSessionEndSummaryInputReader {
                 """, (rs, n) -> {
                     String content = safeContent(rs.getString("content"), rs.getString("store_results"), maskSources);
                     String basis = rs.getString("answer_basis");
-                    String type = ChatEndSummarySourceText.summaryMessageType(
+                    String type = ChatEndSummarySourceText.resolveSummaryMessageType(
                             rs.getString("message_type"), basis, content);
                     return new ChatEndSummaryData.Message(rs.getLong("message_id"), rs.getInt("sequence_no"),
                             (Long) rs.getObject("reply_to_id"), rs.getString("role"), type, content, basis,

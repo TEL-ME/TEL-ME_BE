@@ -7,9 +7,9 @@ final class ChatEndSummaryInquiryTitle {
     private ChatEndSummaryInquiryTitle() {}
 
     static String create(String purpose, String questions) {
-        String text = ChatEndSummaryInquiryLinker.compact(questions);
+        String text = ChatEndSummaryInquiryLinker.normalizeText(questions);
         return switch (purpose) {
-            case "USIM" -> usimTitle(text);
+            case "USIM" -> createUsimTitle(text);
             case "ROAMING" -> text.contains("기간") && (text.contains("금액") || text.contains("요금"))
                     ? "해외 로밍 기간·요금" : "해외 로밍 문의";
             case "CANCELLATION" -> text.contains("비용") ? "해지 예상 비용" : "해지 문의";
@@ -19,7 +19,7 @@ final class ChatEndSummaryInquiryTitle {
         };
     }
 
-    private static String scope(String text) {
+    private static String extractScope(String text) {
         String person = "";
         for (String name : List.of("어머니", "아버지", "배우자", "자녀", "남편", "아내")) {
             if (text.contains(name)) {
@@ -34,7 +34,7 @@ final class ChatEndSummaryInquiryTitle {
         return person + (line.find() ? line.group() + " " : "");
     }
 
-    private static String usimTitle(String text) {
+    private static String createUsimTitle(String text) {
         String product = text.contains("esim") || text.contains("이심") ? "eSIM" : "유심";
         String subject;
         if (text.contains("최초등록") || text.contains("처음등록") || text.contains("활성화")) {
@@ -59,6 +59,6 @@ final class ChatEndSummaryInquiryTitle {
         if (text.contains("절차") || text.contains("방법") || text.contains("방문")) {
             facets.add(subject.contains("최초 등록") ? "방법" : "절차");
         }
-        return scope(text) + subject + (facets.isEmpty() ? " 문의" : " " + String.join("·", facets));
+        return extractScope(text) + subject + (facets.isEmpty() ? " 문의" : " " + String.join("·", facets));
     }
 }

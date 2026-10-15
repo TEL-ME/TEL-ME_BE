@@ -27,7 +27,7 @@ final class ChatEndSummaryPendingResolver {
             for (var request : waiting) {
                 addConditions(input, request, result);
             }
-            String title = title(message.content());
+            String title = createTitle(message.content());
             var replies = input.messages().stream()
                     .filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo()))
                     .filter(answer -> answer.role().equals("ASSISTANT") && answer.type().equals("ANSWER"))
@@ -41,17 +41,17 @@ final class ChatEndSummaryPendingResolver {
             if (recovered) {
                 continue;
             }
-            if (Set.of("FAILED", "CANCELLED").contains(orEmpty(message.executionStatus()))) {
-                result.add(item(message, title, "답변을 마치지 못한 문의: ", Kind.INTERRUPTED));
+            if (Set.of("FAILED", "CANCELLED").contains(normalizeNullable(message.executionStatus()))) {
+                result.add(createPending(message, title, "답변을 마치지 못한 문의: ", Kind.INTERRUPTED));
                 continue;
             }
             Set<String> bases = new LinkedHashSet<>();
             input.messages().stream().filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo()))
                     .map(ChatEndSummaryData.Message::basis).filter(java.util.Objects::nonNull).forEach(bases::add);
             if (bases.contains("NO_EVIDENCE")) {
-                result.add(item(message, title, "근거 있는 답변을 확인하지 못한 문의: ", Kind.UNANSWERED));
+                result.add(createPending(message, title, "근거 있는 답변을 확인하지 못한 문의: ", Kind.UNANSWERED));
             } else if (bases.contains("OUT_OF_SCOPE")) {
-                result.add(item(message, title, "상담 범위에 해당하는 안내를 받지 못한 문의: ", Kind.OUT_OF_SCOPE));
+                result.add(createPending(message, title, "상담 범위에 해당하는 안내를 받지 못한 문의: ", Kind.OUT_OF_SCOPE));
             } else if (result.size() == start) {
                 var clarification = input.messages().stream()
                         .filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo())
@@ -62,7 +62,7 @@ final class ChatEndSummaryPendingResolver {
                             "추가 확인이 필요한 문의: ‘" + message.content() + "’ 확인 요청: ‘"
                                     + clarification.get().content() + "’", Kind.NEEDS_CONFIRMATION));
                 } else {
-                    result.add(item(message, title, "답변 완료 여부가 확인되지 않은 문의: ", Kind.WAITING_RESPONSE));
+                    result.add(createPending(message, title, "답변 완료 여부가 확인되지 않은 문의: ", Kind.WAITING_RESPONSE));
                 }
             }
         }
@@ -96,32 +96,32 @@ final class ChatEndSummaryPendingResolver {
                 .contains(key));
         if (keys.isEmpty() || unknown) {
             Set<String> questions = new LinkedHashSet<>();
-            request.pendingQuestions().stream().map(ChatEndSummarySourceText::clarificationQuestion)
+            request.pendingQuestions().stream().map(ChatEndSummarySourceText::extractClarificationQuestion)
                     .filter(question -> !question.isBlank()).forEach(questions::add);
             int index = 0;
             for (String question : questions) {
                 output.add(new Pending(scope + ":question-" + ++index, request.originMessageId(),
-                        title(request.query()),
+                        createTitle(request.query()),
                         "‘" + request.query() + "’ 문의에서 아직 확인되지 않은 내용: ‘" + question + "’",
                         Kind.NEEDS_CONFIRMATION));
             }
             if (questions.isEmpty()) {
-                output.add(new Pending(scope + ":waiting", request.originMessageId(), title(request.query()),
+                output.add(new Pending(scope + ":waiting", request.originMessageId(), createTitle(request.query()),
                         "추가 확인이 완료되지 않은 문의: ‘" + request.query() + "’", Kind.NEEDS_CONFIRMATION));
             }
         }
     }
 
-    private static Pending item(ChatEndSummaryData.Message message, String title, String prefix, Kind kind) {
+    private static Pending createPending(ChatEndSummaryData.Message message, String title, String prefix, Kind kind) {
         return new Pending(message.id() + ":" + kind, message.id(), title,
                 prefix + "‘" + message.content() + "’", kind);
     }
 
-    private static String title(String question) {
-        return ChatEndSummaryInquiryTitle.create(ChatEndSummaryInquiryLinker.purpose(question), question);
+    private static String createTitle(String question) {
+        return ChatEndSummaryInquiryTitle.create(ChatEndSummaryInquiryLinker.identifyPurpose(question), question);
     }
 
-    private static String orEmpty(String value) {
+    private static String normalizeNullable(String value) {
         return value == null ? "" : value;
     }
 }

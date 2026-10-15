@@ -18,7 +18,7 @@ final class ChatEndSummaryInquiryLinker {
 
     private ChatEndSummaryInquiryLinker() {}
 
-    static Map<Long, Long> roots(ChatEndSummaryData.Input input) {
+    static Map<Long, Long> resolveRoots(ChatEndSummaryData.Input input) {
         Map<Long, Long> roots = new LinkedHashMap<>();
         Map<String, Episode> episodes = new LinkedHashMap<>();
         Episode previous = null;
@@ -26,17 +26,17 @@ final class ChatEndSummaryInquiryLinker {
             if (!message.role().equals("USER")) {
                 continue;
             }
-            String text = compact(message.content());
+            String text = normalizeText(message.content());
             String queries = input.requests().stream().filter(r -> r.originMessageId() == message.id())
                     .map(ChatEndSummaryData.Request::query).reduce("", (a, b) -> a + " " + b);
-            String domain = purpose(message.content());
+            String domain = identifyPurpose(message.content());
             if (domain.equals("UNKNOWN")) {
-                domain = purpose(queries);
+                domain = identifyPurpose(queries);
             }
-            String person = person(text);
-            String product = product(text);
-            String line = line(text);
-            String operation = operation(text);
+            String person = extractPerson(text);
+            String product = identifyProduct(text);
+            String line = extractLine(text);
+            String operation = identifyOperation(text);
             boolean reset = RESET.matcher(text).find();
             boolean correction = text.matches("(?s).*(?:정정|아니라|잘못말|확인해보니).*");
             boolean followup = FOLLOWUP.matcher(text).find();
@@ -61,7 +61,7 @@ final class ChatEndSummaryInquiryLinker {
                 List<Episode> candidates = new ArrayList<>();
                 for (var episode : episodes.values()) {
                     if (episode.domain.equals("USIM")
-                            && compatible(episode, person, product, line, operation, true)) {
+                            && isCompatible(episode, person, product, line, operation, true)) {
                         candidates.add(episode);
                     }
                 }
@@ -74,7 +74,7 @@ final class ChatEndSummaryInquiryLinker {
             }
             if (target == null && !ambiguousReference && !reset && previous != null
                     && domain.equals(previous.domain)
-                    && compatible(previous, person, product, line, operation, backReference)) {
+                    && isCompatible(previous, person, product, line, operation, backReference)) {
                 if ((domain.equals("USIM") && followup) || correction) {
                     target = previous;
                 }
@@ -103,8 +103,8 @@ final class ChatEndSummaryInquiryLinker {
         return roots;
     }
 
-    static String purpose(String text) {
-        String value = compact(text);
+    static String identifyPurpose(String text) {
+        String value = normalizeText(text);
         if (value.contains("로밍")) {
             return "ROAMING";
         }
@@ -120,12 +120,12 @@ final class ChatEndSummaryInquiryLinker {
         return value.contains("요금제") ? "PLAN" : "UNKNOWN";
     }
 
-    static String compact(String text) {
+    static String normalizeText(String text) {
         return text.replaceAll("\\s+", "").toLowerCase(java.util.Locale.ROOT)
                 .replace("엄마", "어머니").replace("아빠", "아버지");
     }
 
-    private static boolean compatible(Episode episode, String person, String product, String line,
+    private static boolean isCompatible(Episode episode, String person, String product, String line,
             String operation, boolean reference) {
         if (!person.isBlank() && !episode.person.equals(person)) {
             return false;
@@ -142,7 +142,7 @@ final class ChatEndSummaryInquiryLinker {
         return operation.isBlank() || episode.operation.isBlank() || operation.equals(episode.operation) || reference;
     }
 
-    private static String person(String text) {
+    private static String extractPerson(String text) {
         Set<String> people = new LinkedHashSet<>();
         for (String name : List.of("어머니", "아버지", "배우자", "자녀", "남편", "아내")) {
             if (text.contains(name)) {
@@ -155,14 +155,14 @@ final class ChatEndSummaryInquiryLinker {
         return people.size() > 1 ? "MULTIPLE" : people.stream().findFirst().orElse("");
     }
 
-    private static String product(String text) {
+    private static String identifyProduct(String text) {
         if (text.contains("esim") || text.contains("이심")) {
             return "ESIM";
         }
         return text.contains("실물") || text.contains("물리유심") ? "PHYSICAL" : "";
     }
 
-    private static String operation(String text) {
+    private static String identifyOperation(String text) {
         if (text.contains("최초등록") || text.contains("처음등록") || text.contains("활성화")) {
             return "ACTIVATE";
         }
@@ -172,7 +172,7 @@ final class ChatEndSummaryInquiryLinker {
         return text.contains("교체") ? "REPLACE" : "";
     }
 
-    private static String line(String text) {
+    private static String extractLine(String text) {
         var matcher = Pattern.compile(
                 "(?:첫번째|두번째|세번째|[0-9]+번|[ab])회선|회선(?:[ab]|[0-9]+번?)").matcher(text);
         if (!matcher.find()) {

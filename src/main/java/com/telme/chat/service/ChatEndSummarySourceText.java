@@ -16,7 +16,7 @@ final class ChatEndSummarySourceText {
 
     private ChatEndSummarySourceText() {}
 
-    static String summaryMessageType(String type, String basis, String content) {
+    static String resolveSummaryMessageType(String type, String basis, String content) {
         // 라우팅 확인 요청은 ANSWER로 저장되므로 이 고정 문구만 정확히 구분한다.
         return "ANSWER".equals(type) && basis == null && isTopicClarification(content)
                 ? "CLARIFICATION" : type;
@@ -27,7 +27,7 @@ final class ChatEndSummarySourceText {
                 + "상품이나 상담 주제를 조금 더 구체적으로 알려주세요.").equals(content);
     }
 
-    static List<String> paragraphs(String text) {
+    static List<String> splitParagraphs(String text) {
         List<String> paragraphs = new ArrayList<>();
         List<String> lines = new ArrayList<>();
         for (String source : text.split("\\R", -1)) {
@@ -48,22 +48,22 @@ final class ChatEndSummarySourceText {
         return List.copyOf(paragraphs);
     }
 
-    static List<String> periodQuotes(String text) {
-        return sentences(text).stream()
+    static List<String> extractPeriodQuotes(String text) {
+        return splitSentences(text).stream()
                 .filter(sentence -> PERIOD.matcher(sentence).find() && CONTRACT.matcher(sentence).find())
                 .distinct().toList();
     }
 
-    static String clarificationQuestion(String text) {
-        List<String> questions = paragraphs(text).stream().flatMap(paragraph -> sentences(paragraph).stream())
+    static String extractClarificationQuestion(String text) {
+        List<String> questions = splitParagraphs(text).stream().flatMap(paragraph -> splitSentences(paragraph).stream())
                 .filter(ChatEndSummarySourceText::isQuestion).distinct().toList();
         // 명사형 확인 항목처럼 질문 표지가 없는 기존 문구는 임의로 버리지 않는다.
         return questions.isEmpty() ? text : String.join(" ", questions);
     }
 
     static boolean containsSentences(String longer, String shorter) {
-        List<String> source = sentences(longer);
-        List<String> quote = sentences(shorter);
+        List<String> source = splitSentences(longer);
+        List<String> quote = splitSentences(shorter);
         if (quote.isEmpty() || source.size() <= quote.size()) {
             return false;
         }
@@ -91,7 +91,7 @@ final class ChatEndSummarySourceText {
         return text.endsWith("?") || REQUEST_ENDINGS.stream().anyMatch(compact::endsWith);
     }
 
-    static List<String> sentences(String text) {
+    static List<String> splitSentences(String text) {
         return List.of(text.split("(?<=[.!?])\\s+|\\R+")).stream()
                 .map(String::strip).filter(sentence -> !sentence.isBlank()).toList();
     }
@@ -100,7 +100,7 @@ final class ChatEndSummarySourceText {
         var seen = new java.util.LinkedHashSet<String>();
         List<String> result = new ArrayList<>();
         for (String paragraph : paragraphs) {
-            for (String sentence : sentences(paragraph)) {
+            for (String sentence : splitSentences(paragraph)) {
                 // 앞 조건을 가리키는 같은 문장은 서로 다른 조건의 안내일 수 있다.
                 if (DEPENDENT.matcher(sentence).find() || seen.add(sentence)) {
                     result.add(sentence);

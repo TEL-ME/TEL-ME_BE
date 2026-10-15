@@ -30,9 +30,9 @@ class ChatEndSummaryMixedScopeTest {
     @Test
     @DisplayName("가족의 가입 기간을 고객 본인의 가입 기간으로 바꾸지 않는다")
     void 가족_가입_기간의_주체를_바꾸지_않는다() {
-        var input = input("아버지 유심 재발급 문의이고 가입 기간은 24개월입니다.",
+        var input = createInput("아버지 유심 재발급 문의이고 가입 기간은 24개월입니다.",
                 "본인 유심 재발급 비용은요?");
-        var root = summary();
+        var root = createSummary();
         var topic = root.withArray("topics").addObject();
         topic.put("text", "고객이 언급한 기간(원문): 아버지 유심 재발급 문의이고 가입 기간은 24개월입니다.");
         topic.putArray("sourceMessageIds").add(1);
@@ -40,7 +40,13 @@ class ChatEndSummaryMixedScopeTest {
                 new ChatOutputGuard(mapper));
 
         var result = generator.generate(input, new ChatEndSummaryData.Result(root.toString(),
-                new Content(List.of(), List.of(), List.of()), OutputMaskContext.empty()));
+                Content.builder()
+                        .topics(List.of())
+                        .guidance(List.of())
+                        .pendingItems(List.of())
+                        .inquiries(List.of())
+                        .remaining(List.of())
+                        .build(), OutputMaskContext.empty()));
 
         assertThat(result.summary().content().guidance().getFirst())
                 .contains("아버지", "24개월")
@@ -48,7 +54,7 @@ class ChatEndSummaryMixedScopeTest {
     }
 
     private void verifySeparateSources(String first, String second) {
-        var groups = ChatEndSummaryInquiryGrouper.group(input(first, second), summary());
+        var groups = ChatEndSummaryInquiryGrouper.group(createInput(first, second), createSummary());
 
         assertThat(groups).hasSize(2);
         assertThat(groups.getFirst().sourceText()).contains("7,700원");
@@ -57,7 +63,7 @@ class ChatEndSummaryMixedScopeTest {
         assertThat(groups.getLast().sourceMessageIds()).containsExactly(4L);
     }
 
-    private ChatEndSummaryData.Input input(String first, String second) {
+    private ChatEndSummaryData.Input createInput(String first, String second) {
         return new ChatEndSummaryData.Input(1, 4, 1L, List.of(
                 new ChatEndSummaryData.Message(1, 1, null, "USER", "QUESTION", first, null, "COMPLETED"),
                 new ChatEndSummaryData.Message(2, 2, 1L, "ASSISTANT", "ANSWER", "안내", "GROUNDED", "COMPLETED"),
@@ -66,7 +72,7 @@ class ChatEndSummaryMixedScopeTest {
                 List.of(), Set.of(), List.of(), OutputMaskContext.empty());
     }
 
-    private com.fasterxml.jackson.databind.node.ObjectNode summary() {
+    private com.fasterxml.jackson.databind.node.ObjectNode createSummary() {
         var root = mapper.createObjectNode();
         root.putArray("topics");
         root.putArray("pendingItems");

@@ -121,7 +121,7 @@ class ChatSessionEndSummaryGenerator {
 
     private ChatEndSummaryData.Result preserveAnsweredGuidance(ChatEndSummaryData.Input input,
             ChatEndSummaryData.Result result, GuidanceCatalog catalog) {
-        var answered = answeredGuidance(input, allIds(input));
+        var answered = collectAnsweredGuidance(input, allIds(input));
         if (answered.isEmpty()) {
             return result;
         }
@@ -435,7 +435,7 @@ class ChatSessionEndSummaryGenerator {
         return result;
     }
 
-    private Map<Long, Boolean> answeredGuidance(ChatEndSummaryData.Input input, Set<Long> allowed) {
+    private Map<Long, Boolean> collectAnsweredGuidance(ChatEndSummaryData.Input input, Set<Long> allowed) {
         if (input.requests().size() < 2) {
             return Map.of();
         }
@@ -526,7 +526,7 @@ class ChatSessionEndSummaryGenerator {
             if (!inspection.maskSpans().isEmpty()) {
                 maskSources.add(OutputMaskContext.Source.from(inspection));
             }
-            for (String quote : ChatEndSummarySourceText.periodQuotes(inspection.content())) {
+            for (String quote : ChatEndSummarySourceText.extractPeriodQuotes(inspection.content())) {
                 String text = "고객이 언급한 기간(원문): " + quote;
                 if (text.length() > 240) {
                     throw new IllegalArgumentException("INPUT_LIMIT");
@@ -704,19 +704,29 @@ class ChatSessionEndSummaryGenerator {
         List<Inquiry> inquiries = new ArrayList<>();
         for (var item : root.path("guidance")) {
             if (item.path("title").isTextual()) {
-                inquiries.add(new Inquiry(
-                        item.path("title").asText(), item.path("text").asText()));
+                inquiries.add(Inquiry.builder()
+                        .title(item.path("title").asText())
+                        .text(item.path("text").asText())
+                        .build());
             }
         }
         List<Remaining> remaining = new ArrayList<>();
         for (var item : root.path("pendingItems")) {
             if (item.path("title").isTextual() && item.path("kind").isTextual()) {
-                remaining.add(new Remaining(
-                        item.path("title").asText(), item.path("text").asText(), item.path("kind").asText()));
+                remaining.add(Remaining.builder()
+                        .title(item.path("title").asText())
+                        .text(item.path("text").asText())
+                        .kind(item.path("kind").asText())
+                        .build());
             }
         }
-        return new Content(texts(root.path("topics")), texts(root.path("guidance")),
-                texts(root.path("pendingItems")), inquiries, remaining);
+        return Content.builder()
+                .topics(texts(root.path("topics")))
+                .guidance(texts(root.path("guidance")))
+                .pendingItems(texts(root.path("pendingItems")))
+                .inquiries(inquiries)
+                .remaining(remaining)
+                .build();
     }
 
     private List<String> texts(JsonNode values) {
@@ -767,7 +777,7 @@ class ChatSessionEndSummaryGenerator {
             if (!inspection.maskSpans().isEmpty()) {
                 maskSources.add(OutputMaskContext.Source.from(inspection));
             }
-            for (String paragraph : ChatEndSummarySourceText.paragraphs(inspection.content())) {
+            for (String paragraph : ChatEndSummarySourceText.splitParagraphs(inspection.content())) {
                 List<String> kept = new ArrayList<>();
                 for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
                     String text = sentence.strip();
