@@ -121,7 +121,8 @@ class ChatSessionEndSummaryGeneratorTest {
         messages.add(message(3, 3, 1L, "ASSISTANT", "ANSWER", "고객센터 안내", "GROUNDED"));
         when(client.generate(any())).thenReturn(selection(1, 1));
 
-        var result = generate(new ChatEndSummaryData.Input(1, 3, 10L, messages, List.of(), Set.of()));
+        var result = generate(new ChatEndSummaryData.Input(1, 3, 10L, messages, List.of(), Set.of(), List.of(),
+                OutputMaskContext.empty()));
 
         assertThat(mapper.readTree(result.json()).path("guidance").get(0).path("sourceMessageIds").toString())
                 .isEqualTo("[2]");
@@ -168,7 +169,7 @@ class ChatSessionEndSummaryGeneratorTest {
         var input = new ChatEndSummaryData.Input(1, 2, 10L, List.of(
                 message(1, 1, null, "USER", "QUESTION", "로밍 신청 방법", null),
                 message(2, 2, 1L, "ASSISTANT", "ANSWER", "안내드릴 수 있는 정보가 없습니다.", basis)),
-                List.of(), Set.of(1L));
+                List.of(), Set.of(1L), List.of(), OutputMaskContext.empty());
 
         var result = generate(input);
 
@@ -186,7 +187,7 @@ class ChatSessionEndSummaryGeneratorTest {
         var input = new ChatEndSummaryData.Input(1, 2, 10L, List.of(
                 message(1, 1, null, "USER", "QUESTION", "유심 서류", null),
                 message(2, 2, 1L, "ASSISTANT", "CLARIFICATION", "대리인이 방문하시는 건가요?", null)),
-                List.of(), Set.of());
+                List.of(), Set.of(), List.of(), OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(selection(1));
 
         assertThat(generate(input).content().guidance()).isEmpty();
@@ -199,7 +200,8 @@ class ChatSessionEndSummaryGeneratorTest {
         var input = new ChatEndSummaryData.Input(1, 2, 10L, List.of(
                 message(1, 1, null, "USER", "QUESTION", "로밍과 매장 문의", null),
                 message(2, 2, 1L, "ASSISTANT", "CLARIFICATION",
-                        "로밍은 홈페이지에서 신청합니다. 방문할 지역을 알려주세요.", null)), List.of(), Set.of());
+                        "로밍은 홈페이지에서 신청합니다. 방문할 지역을 알려주세요.", null)), List.of(), Set.of(), List.of(),
+                        OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(selection(1, 1));
 
         assertThat(generate(input).content().guidance())
@@ -237,7 +239,8 @@ class ChatSessionEndSummaryGeneratorTest {
     @DisplayName("한 대화가 예산을 넘으면 원문을 임의로 잘라 성공시키지 않는다")
     void 한_대화_초과는_명확히_거부한다() {
         var input = new ChatEndSummaryData.Input(1, 1, 10L, List.of(
-                message(1, 1, null, "USER", "QUESTION", "문의".repeat(4000), null)), List.of(), Set.of());
+                message(1, 1, null, "USER", "QUESTION", "문의".repeat(4000), null)), List.of(), Set.of(), List.of(),
+                OutputMaskContext.empty());
 
         assertThatThrownBy(() -> generate(input)).hasMessage("INPUT_LIMIT");
         verify(client, never()).generate(any());
@@ -267,7 +270,8 @@ class ChatSessionEndSummaryGeneratorTest {
         var messages = new ArrayList<>(input().messages());
         messages.add(message(3, 3, null, "USER", "QUESTION", "예", null));
         var input = new ChatEndSummaryData.Input(1, 3, 10L, messages,
-                List.of(new ChatEndSummaryData.Request(1, 1, "로밍", "DONE")), Set.of());
+                List.of(new ChatEndSummaryData.Request(1, 1, "로밍", "DONE")), Set.of(), List.of(),
+                OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(selection(3, 1));
 
         assertThatThrownBy(() -> generate(input)).hasMessage("INVALID_OUTPUT");
@@ -280,7 +284,7 @@ class ChatSessionEndSummaryGeneratorTest {
         messages.add(message(3, 3, null, "USER", "QUESTION", "유심 서류", null));
         var input = new ChatEndSummaryData.Input(1, 3, 10L, messages, List.of(
                 new ChatEndSummaryData.Request(1, 1, "로밍", "DONE"),
-                new ChatEndSummaryData.Request(3, 1, "유심 서류", "DONE")), Set.of());
+                new ChatEndSummaryData.Request(3, 1, "유심 서류", "DONE")), Set.of(), List.of(), OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(selection(3, 1));
 
         assertThatThrownBy(() -> generate(input)).hasMessage("INVALID_OUTPUT");
@@ -291,7 +295,8 @@ class ChatSessionEndSummaryGeneratorTest {
     void 미확인_조건을_모두_남긴다() throws Exception {
         var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(
                 new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION",
-                        List.of("방문할 지역을 알려주세요.", "대리인이 방문하시는 건가요?"))), Set.of(1L));
+                        List.of("방문할 지역을 알려주세요.", "대리인이 방문하시는 건가요?"))), Set.of(1L), List.of(),
+                        OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1, 1));
         response.withArray("pendingItems").addObject().put("text", "지역 확인 필요")
                 .putArray("sourceMessageIds").add(1);
@@ -317,7 +322,8 @@ class ChatSessionEndSummaryGeneratorTest {
         messages.add(message(7, 7, null, "USER", "QUESTION", "지난달이 아니라 이번 달이에요", null));
         var conditions = List.of(new ChatEndSummaryData.Condition(11, 1, "joined_this_month", "true",
                 "FILLED", "ASKED", 7L, 7));
-        var input = new ChatEndSummaryData.Input(1, 7, 10L, messages, requests, Set.of(), conditions);
+        var input = new ChatEndSummaryData.Input(1, 7, 10L, messages, requests, Set.of(), conditions,
+                OutputMaskContext.empty());
         var calls = new ArrayList<JsonNode>();
         when(client.generate(any())).thenAnswer(invocation -> {
             LlmRequest request = invocation.getArgument(0);
@@ -366,7 +372,8 @@ class ChatSessionEndSummaryGeneratorTest {
     void 실패한_문의에_새_질문을_만들지_않는다(String status) throws Exception {
         var input = new ChatEndSummaryData.Input(1, 1, 10L, List.of(
                 new ChatEndSummaryData.Message(1, 1, null, "USER", "QUESTION",
-                        "유심 재발급 비용이 얼마예요?", null, status)), List.of(), Set.of(1L));
+                        "유심 재발급 비용이 얼마예요?", null, status)), List.of(), Set.of(1L), List.of(),
+                        OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1));
         response.withObject("topics").put("1", "유심 재발급 비용");
         response.withArray("pendingItems").addObject().put("text", "유심 비용을 알려주세요.")
@@ -386,7 +393,8 @@ class ChatSessionEndSummaryGeneratorTest {
     void 모델이_누락한_실패_문의도_보존한다() throws Exception {
         var input = new ChatEndSummaryData.Input(1, 1, 10L, List.of(
                 new ChatEndSummaryData.Message(1, 1, null, "USER", "QUESTION",
-                        "유심 재발급 비용이 얼마예요?", null, "FAILED")), List.of(), Set.of(1L));
+                        "유심 재발급 비용이 얼마예요?", null, "FAILED")), List.of(), Set.of(1L), List.of(),
+                        OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1));
         response.withObject("topics").put("1", "유심 재발급 비용");
         when(client.generate(any())).thenReturn(response.toString());
@@ -417,7 +425,7 @@ class ChatSessionEndSummaryGeneratorTest {
         var input = new ChatEndSummaryData.Input(1, 4, 10L, messages,
                 List.of(new ChatEndSummaryData.Request(1, 1, "요금제 변경", "DONE")), Set.of(),
                 List.of(new ChatEndSummaryData.Condition(11, 1, "joined_this_month", "true",
-                        "FILLED", "ASKED", 3L, 3)));
+                        "FILLED", "ASKED", 3L, 3)), OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(selection(1, 1));
 
         var result = generate(input);
@@ -462,7 +470,8 @@ class ChatSessionEndSummaryGeneratorTest {
     void 여덟_개를_넘는_필수_미확인_조건도_보존한다(int count) throws Exception {
         var questions = IntStream.rangeClosed(1, count).mapToObj(i -> "확인 항목 " + i + " 알려주세요.").toList();
         var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(
-                new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION", questions, 11L)), Set.of(1L));
+                new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION", questions, 11L)), Set.of(1L), List.of(),
+                OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1, 1));
         response.withArray("pendingItems").addObject().put("text", "지역 확인 필요")
                 .putArray("sourceMessageIds").add(1);
@@ -479,7 +488,8 @@ class ChatSessionEndSummaryGeneratorTest {
     @Test
     @DisplayName("저장된 근거 없이 모델이 남은 항목 수를 임의로 늘리지 못한다")
     void 모델의_임의_남은_항목_확장을_거부한다() throws Exception {
-        var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(), Set.of(1L));
+        var input = new ChatEndSummaryData.Input(1, 2, 10L, input().messages(), List.of(), Set.of(1L), List.of(),
+                OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1, 1));
         for (int index = 0; index < 9; index++) {
             response.withArray("pendingItems").addObject().put("text", "남은 항목 " + index)
@@ -501,7 +511,8 @@ class ChatSessionEndSummaryGeneratorTest {
                 null, "FAILED"));
         var input = new ChatEndSummaryData.Input(1, 3, 10L, messages, List.of(
                 new ChatEndSummaryData.Request(1, 1, "로밍", "WAITING_CONDITION", questions, 11L),
-                new ChatEndSummaryData.Request(3, 1, "유심 비용", "PENDING")), Set.of(1L, 3L));
+                new ChatEndSummaryData.Request(3, 1, "유심 비용", "PENDING")), Set.of(1L, 3L), List.of(),
+                OutputMaskContext.empty());
         var response = (ObjectNode) mapper.readTree(selection(1, 1));
         response.withObject("topics").put("3", "유심 비용 문의");
         response.withArray("pendingItems").addObject().put("text", "지역 확인 필요")
@@ -549,7 +560,7 @@ class ChatSessionEndSummaryGeneratorTest {
         });
 
         var result = target.generate(new ChatEndSummaryData.Input(1, exchanges * 2, 10L,
-                messages, requests, Set.of()), now.plusSeconds(300));
+                messages, requests, Set.of(), List.of(), OutputMaskContext.empty()), now.plusSeconds(300));
 
         assertThat(result.content().topics()).hasSize(exchanges);
         long inspections = mockingDetails(inspector).getInvocations().stream()
@@ -566,7 +577,7 @@ class ChatSessionEndSummaryGeneratorTest {
         var second = generate(new ChatEndSummaryData.Input(2, 2, 20L, List.of(
                 message(11, 1, null, "USER", "QUESTION", "두 번째 문의", null),
                 message(12, 2, 11L, "ASSISTANT", "ANSWER", "두 번째 상담 안내입니다.", "GROUNDED")),
-                List.of(), Set.of()));
+                List.of(), Set.of(), List.of(), OutputMaskContext.empty()));
 
         assertThat(first.content().guidance()).containsExactly("안내받은 내용: 첫 번째 상담 안내입니다.");
         assertThat(second.content().guidance()).containsExactly("안내받은 내용: 두 번째 상담 안내입니다.");
@@ -603,10 +614,30 @@ class ChatSessionEndSummaryGeneratorTest {
     @DisplayName("출처 없는 같은 별표 요약과 새 욕설은 기존 출력 정책으로 차단한다")
     void 마스크_출처가_없는_별표_요약을_허용하지_않는다() {
         var input = new ChatEndSummaryData.Input(1, 1, 10L,
-                List.of(message(1, 1, null, "USER", "QUESTION", "요금 문의", null)), List.of(), Set.of());
+                List.of(message(1, 1, null, "USER", "QUESTION", "요금 문의", null)), List.of(), Set.of(), List.of(),
+                OutputMaskContext.empty());
         when(client.generate(any())).thenReturn(
                 "{\"topics\":{\"1\":\"씨 *** 발 요금 문의\"},\"selectedSentenceIds\":[],\"pendingItems\":[]}");
         assertThatThrownBy(() -> generate(input)).isInstanceOf(ChatOutputBlockedException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "씨 990101-1234567 발 요금 안내입니다. | 씨 *** 발 요금 안내입니다.",
+        "개 4111111111111111 새끼 유심 안내입니다. | 개 *** 새끼 유심 안내입니다."
+    })
+    @DisplayName("안내 원문을 처음 가린 위치를 최종 요약 검사까지 보존한다")
+    void 안내_후보의_첫_검사_마스크_위치를_유지한다(String original, String expected) {
+        when(client.generate(any())).thenReturn(selection(1, 1));
+
+        var result = generate(withGuidance(original));
+
+        assertThat(result.content().guidance()).containsExactly("안내받은 내용: " + expected);
+        assertThat(result.maskContext().sources()).anySatisfy(source -> {
+            assertThat(source.content()).isEqualTo(expected);
+            assertThat(source.spans()).hasSize(1);
+        });
+        assertThat(request().userPrompt()).doesNotContain("990101", "1234567", "4111");
     }
 
     private ChatEndSummaryData.Input latestInput(int count) {
@@ -621,7 +652,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 message(4, 4, 3L, "ASSISTANT", "ANSWER", current, "GROUNDED")),
                 List.of(new ChatEndSummaryData.Request(1, 1, "요금제 변경", "DONE")), Set.of(),
                 List.of(new ChatEndSummaryData.Condition(11, 1, "joined_this_month", "true",
-                        "FILLED", "ASKED", 3L, 3)));
+                        "FILLED", "ASKED", 3L, 3)), OutputMaskContext.empty());
     }
 
     static String selection(long question, int... ids) {
@@ -661,7 +692,8 @@ class ChatSessionEndSummaryGeneratorTest {
     private ChatEndSummaryData.Input withGuidance(String text) {
         return new ChatEndSummaryData.Input(1, 2, 10L, List.of(
                 message(1, 1, null, "USER", "QUESTION", "로밍 신청 방법", null),
-                message(2, 2, 1L, "ASSISTANT", "ANSWER", text, "GROUNDED")), List.of(), Set.of());
+                message(2, 2, 1L, "ASSISTANT", "ANSWER", text, "GROUNDED")), List.of(), Set.of(), List.of(),
+                OutputMaskContext.empty());
     }
 
     private ChatEndSummaryData.Message message(long id, int sequence, Long reply, String role,

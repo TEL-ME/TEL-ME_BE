@@ -6,9 +6,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.safety.OutputMaskContext;
+
 import com.telme.chat.config.ChatSummaryProperties;
+import com.telme.chat.converter.ChatSummaryConverter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
@@ -18,16 +25,20 @@ import com.telme.llm.service.LlmClient;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class ChatSummaryServiceTest {
 
+    private final ChatInputMaskRepository inputMasks = mock(ChatInputMaskRepository.class);
+    private final ChatSummaryConverter summaryConverter = new ChatSummaryConverter(new ObjectMapper());
     private final ChatSummaryStore store = mock(ChatSummaryStore.class);
     private final LlmClient llmClient = mock(LlmClient.class);
     private final ChatSummaryProperties properties =
             new ChatSummaryProperties(16, 2_048, 8, 1_024, 16, 3_072, 512);
-    private final ChatSummaryService service = new ChatSummaryService(store, llmClient, properties);
+    private final ChatSummaryService service = new ChatSummaryService(store, llmClient, properties,
+                summaryConverter, inputMasks);
     private ChatSummaryRequested request;
     private ChatSummarySnapshot snapshot;
 
@@ -70,6 +81,40 @@ class ChatSummaryServiceTest {
                 .contains("강남역 매장을 찾고 있어")
                 .contains("강남역 인근 매장을 안내했어요");
         verify(store).saveIfCurrent(snapshot, "갱신된 요약");
+        verifyNoInteractions(inputMasks);
+    }
+
+    @Test
+    @DisplayName("텍스트 요약의 실제 마스크만 보존하고 별도 강조 별표는 제거한다")
+    void 실제_마스크_출처와_강조_별표를_구분해_저장한다() {
+        var inspected = new ChatInputInspector(new ObjectMapper())
+                .inspect("카드 4111111111111111 안내");
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspected)));
+        when(store.prepare(request)).thenReturn(Optional.of(snapshot));
+        when(inputMasks.read(snapshot.sessionId(), snapshot.throughSequenceNo())).thenReturn(masks);
+        when(llmClient.generate(any())).thenReturn("**카드 *** 안내** **강조**");
+        when(store.saveIfCurrent(snapshot, "카드 *** 안내 강조")).thenReturn(true);
+
+        assertThat(service.summarizeIfNeeded(request)).isTrue();
+
+        verify(inputMasks).read(snapshot.sessionId(), snapshot.throughSequenceNo());
+        verify(store).saveIfCurrent(snapshot, "카드 *** 안내 강조");
+    }
+
+    @Test
+    @DisplayName("저장된 출처와 문구가 달라진 텍스트 요약에서도 마스크 여러 개를 삭제하지 않는다")
+    void 재작성된_요약의_마스크를_그대로_저장한다() {
+        var inspected = new ChatInputInspector(new ObjectMapper())
+                .inspect("제 카드번호는 4111111111111111인데요 납부 문의");
+        var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspected)));
+        when(store.prepare(request)).thenReturn(Optional.of(snapshot));
+        when(inputMasks.read(snapshot.sessionId(), snapshot.throughSequenceNo())).thenReturn(masks);
+        when(llmClient.generate(any())).thenReturn("**카드번호 *** 납부**, 주민번호 *** 확인");
+        when(store.saveIfCurrent(snapshot, "카드번호 *** 납부, 주민번호 *** 확인")).thenReturn(true);
+
+        assertThat(service.summarizeIfNeeded(request)).isTrue();
+
+        verify(store).saveIfCurrent(snapshot, "카드번호 *** 납부, 주민번호 *** 확인");
     }
 
     @Test
@@ -144,7 +189,7 @@ class ChatSummaryServiceTest {
     @Test
     void invalidGroundedSelectionCannotMoveTheCursor() {
         var grounded = new ChatSummaryService(store, llmClient,
-                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true), summaryConverter, inputMasks);
         when(store.prepare(request)).thenReturn(Optional.of(snapshot));
         when(llmClient.generate(any())).thenReturn("{\"messageIds\":[999]}");
         assertThatThrownBy(() -> grounded.summarizeIfNeeded(request)).isInstanceOf(IllegalArgumentException.class);
@@ -159,7 +204,7 @@ class ChatSummaryServiceTest {
                 new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
                         "천만에요", null)));
         var grounded = new ChatSummaryService(store, llmClient,
-                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true), summaryConverter, inputMasks);
         when(store.prepare(request)).thenReturn(Optional.of(socialSnapshot));
         when(store.saveIfCurrent(any(), any())).thenReturn(true);
         assertThat(grounded.summarizeIfNeeded(request)).isTrue();
@@ -175,7 +220,7 @@ class ChatSummaryServiceTest {
                 "제 명의이고 아직 변경하지 않았어요.", null);
         var prepared = new ChatSummarySnapshot(10L, 20L, null, 0, 4, List.of(old, corrected));
         var grounded = new ChatSummaryService(store, llmClient,
-                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 80, true));
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 80, true), summaryConverter, inputMasks);
         when(store.prepare(request)).thenReturn(Optional.of(prepared));
         when(llmClient.generate(any())).thenReturn("{\"messageIds\":[1,3]}");
         when(store.saveIfCurrent(any(), any())).thenReturn(true);
@@ -192,7 +237,7 @@ class ChatSummaryServiceTest {
     void aBatchWhoseOversizedOriginalsWereExcludedCanAdvanceWithoutInventingFacts() {
         var prepared = new ChatSummarySnapshot(10L, 20L, null, 0, 2, List.of());
         var grounded = new ChatSummaryService(store, llmClient,
-                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true));
+                new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, true), summaryConverter, inputMasks);
         when(store.prepare(request)).thenReturn(Optional.of(prepared));
         when(store.saveIfCurrent(any(), any())).thenReturn(true);
         assertThat(grounded.summarizeIfNeeded(request)).isTrue();

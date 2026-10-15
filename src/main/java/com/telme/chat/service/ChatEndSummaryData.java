@@ -36,18 +36,6 @@ final class ChatEndSummaryData {
     record Input(long sessionId, int throughSequence, Long executionId,
             List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions,
             OutputMaskContext maskContext) {
-        Input(long sessionId, int throughSequence, Long executionId,
-                List<Message> messages, List<Request> requests, Set<Long> pendingIds) {
-            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, List.of(),
-                    OutputMaskContext.empty());
-        }
-
-        Input(long sessionId, int throughSequence, Long executionId,
-                List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions) {
-            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, conditions,
-                    OutputMaskContext.empty());
-        }
-
         Input {
             messages = List.copyOf(messages);
             requests = List.copyOf(requests);

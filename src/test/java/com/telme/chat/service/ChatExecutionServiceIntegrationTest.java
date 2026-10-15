@@ -2,6 +2,9 @@ package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
@@ -12,6 +15,11 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.guard.ChatInputInspector;
+import com.telme.chat.safety.OutputMaskContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.global.common.code.BaseErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.entity.User;
@@ -24,17 +32,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
 @RecordApplicationEvents
 class ChatExecutionServiceIntegrationTest {
+    @MockitoSpyBean private ChatInputMaskRepository inputMasks;
 
     @Autowired
     private ChatSessionService chatSessionService;
@@ -88,6 +99,18 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("인사말을 붙인 되묻기의 선택지에만 마스크가 있어도 출처를 한 번 조회하고 보존한다")
+    void 인사말과_선택지의_마스크를_함께_처리한다() {
+        var question = send("안녕하세요 씨 990101-1234567 발 요금 문의");
+
+        chatExecutionService.askClarification(question.executionId(), "어떤 조건인가요?", List.of("씨 *** 발 요금 문의"));
+
+        verify(inputMasks, times(1)).read(sessionId, 1);
+        assertThat(historyItem(2).content()).isEqualTo("안녕하세요! 어떤 조건인가요?");
+        assertThat(historyItem(2).followUps()).containsExactly("씨 *** 발 요금 문의");
+    }
+
+    @Test
     @DisplayName("다른 세션의 마스크 출처로 같은 별표 출력 검사를 완화하지 않는다")
     void 다른_세션의_마스크를_출력_출처로_사용하지_않는다() {
         var first = send("씨 990101-1234567 발 요금 문의");
@@ -111,6 +134,58 @@ class ChatExecutionServiceIntegrationTest {
                 "씨 *** 발 요금 문의", List.of())).isInstanceOf(GeneralException.class)
                 .extracting(error -> ((GeneralException) error).getErrorCode())
                 .isEqualTo(ChatErrorCode.OUTPUT_CHECK_FAILED);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?",
+                Integer.class, sessionId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("마스크가 없는 정상 답변과 되묻기는 마스크 이력을 조회하지 않는다")
+    void 마스크가_없는_출력은_마스크_조회만_생략한다() {
+        var first = send("요금 문의");
+        chatExecutionService.completeAnswer(first.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "요금은 7700원이며 약정은 18개월입니다.", null,
+                List.of("다른 요금제는?"), null));
+        var next = send("변경 문의");
+        chatExecutionService.askClarification(next.executionId(), "가입한 달을 알려주세요.", List.of("이번 달", "지난달"));
+
+        verifyNoInteractions(inputMasks);
+        assertThat(historyItem(2).content()).contains("7700원", "18개월");
+    }
+
+    @Test
+    @DisplayName("마스크가 없는 실제 욕설도 조회 생략과 관계없이 차단한다")
+    void 마스크_조회_생략으로_일반_욕설_검사를_건너뛰지_않는다() {
+        var question = send("요금 문의");
+
+        assertThatThrownBy(() -> chatExecutionService.askClarification(question.executionId(), "씨발", List.of()))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        verifyNoInteractions(inputMasks);
+    }
+
+    @Test
+    @DisplayName("본문이 정상이어도 추천 질문에 마스크가 있으면 출처를 한 번 조회해 두 검사에 재사용한다")
+    void 추천_질문의_마스크도_한_번_조회한다() {
+        var question = send("씨 990101-1234567 발 요금 문의");
+        chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "정상 안내", null, List.of("씨 *** 발 요금 문의"), null));
+
+        verify(inputMasks, times(1)).read(sessionId, 1);
+        assertThat(historyItem(2).followUps()).containsExactly("씨 *** 발 요금 문의");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"씨***발", "개***새끼", "씨 *** 발", "씨******발"})
+    @DisplayName("형식 정리에서 별표가 보존돼도 실제 답변 저장 경로는 욕설을 차단한다")
+    void 보존된_별표_욕설을_답변으로_저장하지_않는다(String unsafe) {
+        var question = send("카드 4111111111111111 납부 문의");
+        var inspected = new ChatInputInspector(new ObjectMapper()).inspect("카드 4111111111111111 납부 문의");
+        var sources = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspected)));
+        String normalized = ChatSummaryNormalizer.normalize(unsafe, sources);
+
+        assertThat(normalized).isEqualTo(unsafe);
+        assertThatThrownBy(() -> chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, normalized, null, List.of(), null)))
+                .isInstanceOf(ChatOutputBlockedException.class);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?",
                 Integer.class, sessionId)).isEqualTo(1);
     }
