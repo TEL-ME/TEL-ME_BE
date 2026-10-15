@@ -20,6 +20,13 @@ import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFac
 import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
 import com.telme.consult.service.PolicyLinkSuggestedQuestions;
 import com.telme.consult.service.SuggestedQuestionRecommender;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberPlanAnswerer;
+import com.telme.consult.service.MemberRecommendationAnswerer;
+import com.telme.consult.service.PlanAnswerProvider;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
 import com.telme.consult.service.PurposeRoutingAnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.faq.config.EmbeddingProperties;
@@ -143,16 +150,23 @@ public class ConsultRagAnswerConfiguration {
             FaqClarificationProperties clarification,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions,
-            QueryRoutingService routing) {
+            QueryRoutingService routing, PlanQuestionClassifier planClassifier, PlanCatalogAnswerer planCatalog,
+            MemberPlanAnswerer memberPlans, MemberRecommendationAnswerer recommendations,
+            ChatSessionRepository chatSessions, SessionRecommendationAnswers recommendationAnswers,
+            PlanQuestionProperties planProperties) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
                 ? null
                 : new FaqClarificationPlanner(new ConditionExtractor(client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
-                new FaqSearchAnswerProvider(searches, answers, trace,
-                        comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
-                        routing::refinedSearchQuery),
+                new PlanAnswerProvider(
+                        new FaqSearchAnswerProvider(searches, answers, trace,
+                                comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
+                                routing::refinedSearchQuery),
+                        planClassifier, planCatalog, memberPlans, recommendations, chatSessions::findUserIdBySessionId,
+                        recommendationAnswers::of,
+                        comparisonEvidence, trace, planProperties.answerEnabled()),
                 storeAnswers::generate);
     }
 }

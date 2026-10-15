@@ -28,7 +28,7 @@ public class UsageGenerator {
         return generate(userId, month, limits, limits);
     }
 
-    // 사용 습관은 가입 당시 요금제로 정하고, 요금제를 바꾸면 그 달 요금제에서 쓸 만한 양을 넘지 않게 맞춘다
+    // 사용 습관은 가입 당시 요금제로 정한 절대량이고, 요금제를 바꿔도 이어진다. 바꾼 요금제 한도의 최대 비율을 넘는 양만 맞춘다
     public GeneratedUsage generate(long userId, LocalDate month, UsageLimits habitLimits, UsageLimits monthLimits) {
         UsageProfile profile = profileOf(userId);
         SplittableRandom habit = new SplittableRandom(mix(userId ^ HABIT_SALT));
@@ -38,15 +38,12 @@ public class UsageGenerator {
 
         double dataMb = fitted(
                 amount(dataLevel, profile.minDataGb() * MB_PER_GB, profile.maxDataGb() * MB_PER_GB, profile, habitLimits.dataMb()),
-                amount(dataLevel, profile.minDataGb() * MB_PER_GB, profile.maxDataGb() * MB_PER_GB, profile, monthLimits.dataMb()),
                 monthLimits.dataMb());
         double voice = fitted(
                 amount(voiceLevel, profile.minVoiceMinutes(), profile.maxVoiceMinutes(), profile, habitLimits.voiceMinutes()),
-                amount(voiceLevel, profile.minVoiceMinutes(), profile.maxVoiceMinutes(), profile, monthLimits.voiceMinutes()),
                 monthLimits.voiceMinutes());
         double sms = fitted(
                 amount(smsLevel, profile.minSmsCount(), profile.maxSmsCount(), profile, habitLimits.smsCount()),
-                amount(smsLevel, profile.minSmsCount(), profile.maxSmsCount(), profile, monthLimits.smsCount()),
                 monthLimits.smsCount());
 
         SplittableRandom monthly = new SplittableRandom(mix(userId ^ MONTH_SALT ^ mix(month.toEpochDay())));
@@ -56,9 +53,9 @@ public class UsageGenerator {
                 (int) Math.round(sms * jitter(monthly)));
     }
 
-    // 그 달 요금제가 무제한이면 습관을 그대로 쓰고, 한도가 있으면 그 한도에서 쓸 만한 양을 넘지 않는다
-    private static double fitted(double habit, double monthAmount, Long monthLimit) {
-        return monthLimit == null ? habit : Math.min(habit, monthAmount);
+    // 그 달 요금제가 무제한이면 습관을 그대로 쓰고, 한도가 있으면 한도의 최대 비율까지만 쓴다
+    private static double fitted(double habit, Long monthLimit) {
+        return monthLimit == null ? habit : Math.min(habit, monthLimit * UsageProfile.HEAVY.maxRatio());
     }
 
     // 한도가 없으면 유형별 절대 범위, 있으면 한도 대비 유형별 비율

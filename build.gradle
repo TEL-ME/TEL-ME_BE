@@ -53,9 +53,10 @@ dependencies {
 	// 모니터링
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-	// 음성 합성 (Amazon Polly)
+	// 음성 합성·인식 (Amazon Polly, Transcribe)
 	implementation platform('software.amazon.awssdk:bom:2.55.6')
 	implementation 'software.amazon.awssdk:polly'
+	implementation 'software.amazon.awssdk:transcribestreaming'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
