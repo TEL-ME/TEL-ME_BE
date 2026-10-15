@@ -159,6 +159,53 @@ class SubscriptionUsageServiceTest {
     }
 
     @Test
+    void 평소_사용량은_이번_달을_포함한_최근_3개월의_한_달_전체_값_평균이다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, LocalDate.of(2026, 7, 1), 99_000, 999, 99);
+        setMonth(subscriptionId, LocalDate.of(2026, 8, 1), 3_000, 100, 30);
+        setMonth(subscriptionId, LocalDate.of(2026, 9, 1), 6_000, 200, 60);
+        setMonth(subscriptionId, OCT, 9_000, 300, 90);
+
+        UsageDemand demand = usageService.getDemand(userId).orElseThrow();
+
+        assertThat(demand).isEqualTo(new UsageDemand(6_000, 200, 60, 3));
+    }
+
+    @Test
+    void 개통한_지_얼마_안_됐으면_있는_달만_평균하고_개통한_달도_한_달_전체_값을_쓴다() {
+        at(Instant.parse("2026-09-05T03:00:00Z")); // 9월 6일 9시 개통
+        Long subscriptionId = subscribe("FIVE_G_STANDARD", false).subscriptionId;
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, LocalDate.of(2026, 9, 1), 4_000, 100, 10);
+        setMonth(subscriptionId, OCT, 8_000, 300, 30);
+
+        assertThat(usageService.getDemand(userId).orElseThrow()).isEqualTo(new UsageDemand(6_000, 200, 20, 2));
+    }
+
+    @Test
+    void 이번_달에_개통했으면_지난_일수로_줄이지_않은_이번_달_값이다() {
+        at(Instant.parse("2026-10-01T03:00:00Z")); // 10월 2일 9시 개통
+        Long subscriptionId = subscribe("FIVE_G_STANDARD", false).subscriptionId;
+        at(OCT_12);
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, OCT, 10_000, 400, 40);
+
+        assertThat(usageService.getDemand(userId).orElseThrow()).isEqualTo(new UsageDemand(10_000, 400, 40, 1));
+    }
+
+    @Test
+    void 가입하지_않았거나_개통_전이면_평소_사용량이_없다() {
+        at(OCT_12);
+        assertThat(usageService.getDemand(userId)).isEmpty();
+
+        subscribe("FIVE_G_STANDARD", false);
+        assertThat(usageService.getDemand(userId)).isEmpty();
+    }
+
+    @Test
     void 지난_달을_고르면_그달_전체_사용량을_주고_이번_달_전용_값은_없다() {
         subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false); // 1.5GB, 통화 300분, 문자 100건
         at(OCT_12);
@@ -454,40 +501,158 @@ class SubscriptionUsageServiceTest {
     @Test
     void 약정이_만료된_달부터는_할인이_빠져_전월보다_오른다() {
         subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", true);
-        at(Instant.parse("2028-02-12T03:00:00Z")); // 가입 25개월째, 지난 1월 1일에는 아직 23개월
+        at(Instant.parse("2028-02-12T03:00:00Z")); // 가입 25개월째, 24개월이 되는 2028년 1월 5일부터 할인 없음
+
+        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
+
+        // 2028년 1월은 1~4일 4일만 할인(48,750원), 5~31일 27일은 정가(65,000원)로 날짜별로 계산한다
+        int january = prorated(31, 4, 48_750, 65_000);
+        assertThat(fee.amount()).isEqualTo(65_000);
+        assertThat(fee.prorated()).isFalse();
+        assertThat(fee.previousAmount()).isEqualTo(january);
+        assertThat(fee.difference()).isEqualTo(65_000 - january);
+    }
+
+    @Test
+    void 약정이_달_중간에_만료되면_조회한_날짜와_상관없이_날짜별로_계산하고_일할_계산이라고_표시한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", true);
+
+        at(Instant.parse("2028-01-02T03:00:00Z")); // 만료 전에 조회
+        ExpectedFee before = usageService.getOverview(userId).usage().expectedFee();
+        at(Instant.parse("2028-01-20T03:00:00Z")); // 만료 후에 조회
+        ExpectedFee after = usageService.getOverview(userId).usage().expectedFee();
+
+        assertThat(before.amount()).isEqualTo(after.amount()).isEqualTo(prorated(31, 4, 48_750, 65_000));
+        assertThat(before.prorated()).isTrue();
+        assertThat(after.prorated()).isTrue();
+        assertThat(before.previousAmount()).isEqualTo(48_750);
+    }
+
+    @Test
+    void 요금제를_바꾼_달의_예상_요금은_바꾼_날부터_새_요금제로_일할_계산하고_전월_대비도_같은_방식이다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 4월 11일부터 49,000원
+
+        // 4월 30일 중 1~10일은 65,000원, 11~30일은 49,000원
+        at(Instant.parse("2026-04-20T03:00:00Z"));
+        ExpectedFee april = usageService.getOverview(userId).usage().expectedFee();
+        assertThat(april.amount()).isEqualTo(prorated(30, 10, 65_000, 49_000));
+        assertThat(april.prorated()).isTrue();
+        assertThat(april.previousAmount()).isEqualTo(65_000);
+
+        at(Instant.parse("2026-05-12T03:00:00Z"));
+        ExpectedFee may = usageService.getOverview(userId).usage().expectedFee();
+        assertThat(may.amount()).isEqualTo(49_000);
+        assertThat(may.prorated()).isFalse();
+        assertThat(may.previousAmount()).isEqualTo(prorated(30, 10, 65_000, 49_000));
+        assertThat(may.difference()).isEqualTo(49_000 - prorated(30, 10, 65_000, 49_000));
+    }
+
+    @Test
+    void 달_중간에_요금제를_올리면_올린_날부터_새_요금제로_예상_요금을_계산한다() {
+        subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
+        at(Instant.parse("2026-10-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 10월 11일부터 85,000원
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+
+        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
+
+        // 31일 중 10일은 15,000원, 21일은 85,000원
+        assertThat(fee.amount()).isEqualTo(prorated(31, 10, 15_000, 85_000)).isEqualTo(62_419);
+        assertThat(fee.prorated()).isTrue();
+        assertThat(fee.previousAmount()).isEqualTo(15_000);
+        assertThat(fee.difference()).isEqualTo(62_419 - 15_000);
+    }
+
+    @Test
+    void 달_중간에_요금제를_내려도_같은_방식으로_일할_계산한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_PREMIUM", false);
+        at(Instant.parse("2026-10-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("BUDGET_MINI"), null);
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+
+        assertThat(usageService.getOverview(userId).usage().expectedFee().amount())
+                .isEqualTo(prorated(31, 10, 85_000, 15_000));
+    }
+
+    @Test
+    void 아직_적용되지_않은_요금제_변경도_바뀔_날부터_예상_요금에_반영한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 10월 21일부터 적용, 아직 적용 전
+
+        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
+
+        assertThat(fee.amount()).isEqualTo(prorated(31, 20, 65_000, 49_000));
+        assertThat(fee.prorated()).isTrue();
+    }
+
+    @Test
+    void 다음_달부터_적용되는_변경은_이번_달_예상_요금에_영향이_없다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-31T03:00:00Z"));
+        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 11월 1일부터 적용
 
         ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
 
         assertThat(fee.amount()).isEqualTo(65_000);
-        assertThat(fee.previousAmount()).isEqualTo(48_750);
-        assertThat(fee.difference()).isEqualTo(16_250);
+        assertThat(fee.prorated()).isFalse();
     }
 
     @Test
-    void 요금제를_바꾸면_전월_대비는_지난달_시작_시점의_요금제와_비교한다() {
-        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", false);
-        at(Instant.parse("2026-04-10T03:00:00Z"));
-        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 4월 11일부터 49,000원
-        at(Instant.parse("2026-05-12T03:00:00Z"));
+    void 약정_할인은_요금제별_월정액에_각각_적용해_일할_계산한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD", true); // 65,000원 - 25% = 48,750원
+        at(Instant.parse("2026-10-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("LTE_PLUS"), null); // 49,000원 - 25% = 36,750원
+        at(Instant.parse("2026-10-20T03:00:00Z"));
 
-        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
-
-        assertThat(fee.amount()).isEqualTo(49_000);
-        assertThat(fee.previousAmount()).isEqualTo(65_000);
-        assertThat(fee.difference()).isEqualTo(-16_000);
+        assertThat(usageService.getOverview(userId).usage().expectedFee().amount())
+                .isEqualTo(prorated(31, 10, 48_750, 36_750));
     }
 
     @Test
-    void 이번_달에_개통했으면_전월_대비가_없다() {
+    void 이번_달에_개통했으면_개통일부터_일할_계산하고_전월_대비가_없다() {
         at(Instant.parse("2026-10-01T03:00:00Z")); // 10월 2일 9시 개통
         subscribe("FIVE_G_STANDARD", false);
         at(OCT_12);
 
         ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
 
-        assertThat(fee.amount()).isEqualTo(65_000);
+        // 10월 31일 중 2~31일 30일만 65,000원, 1일은 개통 전이라 0원
+        assertThat(fee.amount()).isEqualTo(prorated(31, 1, 0, 65_000)).isEqualTo(62_903);
+        assertThat(fee.prorated()).isTrue();
         assertThat(fee.previousAmount()).isNull();
         assertThat(fee.difference()).isNull();
+    }
+
+    @Test
+    void 같은_요금제여도_개통일이_늦으면_그_달_예상_요금이_줄어든다() {
+        at(Instant.parse("2026-10-14T03:00:00Z")); // 10월 15일 9시 개통
+        subscribe("FIVE_G_STANDARD", false);
+        at(Instant.parse("2026-10-20T03:00:00Z"));
+
+        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
+
+        // 10월 31일 중 15~31일 17일만 65,000원
+        assertThat(fee.amount()).isEqualTo(prorated(31, 14, 0, 65_000)).isEqualTo(35_645);
+        assertThat(fee.prorated()).isTrue();
+    }
+
+    @Test
+    void 개통한_다음_달은_정가이고_전월_대비의_지난달은_개통일부터_일할_계산한다() {
+        at(Instant.parse("2026-09-10T03:00:00Z")); // 9월 11일 9시 개통
+        subscribe("FIVE_G_STANDARD", false);
+        at(OCT_12);
+
+        ExpectedFee fee = usageService.getOverview(userId).usage().expectedFee();
+
+        // 9월 30일 중 11~30일 20일만 65,000원
+        int september = prorated(30, 10, 0, 65_000);
+        assertThat(fee.amount()).isEqualTo(65_000);
+        assertThat(fee.prorated()).isFalse();
+        assertThat(fee.previousAmount()).isEqualTo(september).isEqualTo(43_333);
+        assertThat(fee.difference()).isEqualTo(65_000 - september);
     }
 
     @Test
@@ -582,6 +747,16 @@ class SubscriptionUsageServiceTest {
 
     private void at(Instant instant) {
         when(clock.instant()).thenReturn(instant);
+    }
+
+    private int prorated(int monthDays, int daysBefore, int feeBefore, int feeAfter) {
+        return (int) Math.round(((long) daysBefore * feeBefore + (long) (monthDays - daysBefore) * feeAfter) / (double) monthDays);
+    }
+
+    private void setMonth(Long subscriptionId, LocalDate month, long dataMb, int voice, int sms) {
+        jdbc.update("UPDATE subscription_usages SET used_data_mb = ?, used_voice_minutes = ?, used_sms_count = ? "
+                + "WHERE subscription_id = ? AND usage_month = ?", dataMb, voice, sms, subscriptionId, month);
+        entityManager.clear();
     }
 
     private long storedDataMb(Long subscriptionId, LocalDate month) {

@@ -62,6 +62,10 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
             """)
     int succeedGuestSessions(@Param("guestId") UUID guestId, @Param("userId") Long userId);
 
+    // 게스트 세션이거나 없는 세션이면 비어 있다
+    @Query("select session.userId from ChatSession session where session.sessionId = :sessionId")
+    Optional<Long> findUserIdBySessionId(@Param("sessionId") Long sessionId);
+
     boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
 
     boolean existsBySessionIdAndUserIdIsNullAndGuestId(Long sessionId, UUID guestId);

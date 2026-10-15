@@ -77,6 +77,35 @@ class ChatSessionRepositoryTest {
         assertThat(entityManager.find(ChatSession.class, otherSession.getSessionId()).getUserId()).isNull();
     }
 
+    @Test
+    void 회원_세션은_회원_ID를_준다() {
+        User user = createUser();
+        ChatSession session = ChatSession.builder().userId(user.getUserId()).build();
+        entityManager.persist(session);
+        entityManager.flush();
+
+        assertThat(chatSessionRepository.findUserIdBySessionId(session.getSessionId())).contains(user.getUserId());
+    }
+
+    @Test
+    void 게스트_세션과_없는_세션은_회원_ID가_비어_있다() {
+        ChatSession session = createGuestSession(createGuest().getGuestId());
+
+        assertThat(chatSessionRepository.findUserIdBySessionId(session.getSessionId())).isEmpty();
+        assertThat(chatSessionRepository.findUserIdBySessionId(-1L)).isEmpty();
+    }
+
+    @Test
+    void 게스트로_만든_세션도_로그인으로_승계되면_회원_ID를_준다() {
+        Guest guest = createGuest();
+        User user = createUser();
+        ChatSession session = createGuestSession(guest.getGuestId());
+
+        chatSessionRepository.succeedGuestSessions(guest.getGuestId(), user.getUserId());
+
+        assertThat(chatSessionRepository.findUserIdBySessionId(session.getSessionId())).contains(user.getUserId());
+    }
+
     private Guest createGuest() {
         Guest guest = Guest.issue(Duration.ofDays(30), Clock.systemUTC());
         entityManager.persist(guest);
