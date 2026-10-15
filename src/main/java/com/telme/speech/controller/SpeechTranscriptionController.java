@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/chat/speech")
 public class SpeechTranscriptionController {
 
+    // 이보다 많이 넘치는 본문은 읽어 버리지 않고 연결을 끊는다. 정상 녹음은 이 크기에 닿지 않는다
+    private static final long DISCARD_LIMIT = 16L * 1024 * 1024;
+
     private final ChatActorProvider chatActorProvider;
     private final SpeechTranscriptionService speechTranscriptionService;
 
@@ -44,15 +47,29 @@ public class SpeechTranscriptionController {
 
     // multipart 대신 본문을 직접 읽어, 너무 큰 녹음도 공통 500이 아니라 SPEECH400-2로 알린다
     private static byte[] readLimited(HttpServletRequest request, long maxBytes) throws IOException {
-        if (request.getContentLengthLong() > maxBytes) {
-            throw new GeneralException(SpeechErrorCode.INVALID_AUDIO_LENGTH);
-        }
+        long declared = request.getContentLengthLong();
         try (InputStream body = request.getInputStream()) {
+            if (declared > maxBytes) {
+                throw rejectOversized(body, declared - maxBytes);
+            }
             byte[] wav = body.readNBytes((int) maxBytes + 1);
             if (wav.length > maxBytes) {
-                throw new GeneralException(SpeechErrorCode.INVALID_AUDIO_LENGTH);
+                throw rejectOversized(body, -1);
             }
             return wav;
         }
+    }
+
+    // Tomcat은 응답 뒤 남은 본문을 2MB까지만 대신 읽고 그 이상이면 연결을 끊어 오류 JSON이 전달되지 않으므로 남은 본문을 읽어 버린다
+    private static GeneralException rejectOversized(InputStream body, long declaredExcess) throws IOException {
+        if (declaredExcess <= DISCARD_LIMIT) {
+            byte[] buffer = new byte[8192];
+            long discarded = 0;
+            int read;
+            while (discarded < DISCARD_LIMIT && (read = body.read(buffer)) != -1) {
+                discarded += read;
+            }
+        }
+        return new GeneralException(SpeechErrorCode.INVALID_AUDIO_LENGTH);
     }
 }
