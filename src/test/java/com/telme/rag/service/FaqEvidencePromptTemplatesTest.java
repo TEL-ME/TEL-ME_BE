@@ -11,11 +11,11 @@ import org.junit.jupiter.api.Test;
 class FaqEvidencePromptTemplatesTest {
 
     private static final Path EXPERIMENT = Path.of("scripts/gray_zone_upper_band_bedrock.py");
-    private static final String START = "B3_SYSTEM_PROMPT = \"\"\"";
+    private static final String START = "B4_SYSTEM_PROMPT = \"\"\"";
 
     @Test
-    @DisplayName("시스템 프롬프트가 측정에 쓴 B3와 글자까지 같다")
-    void 측정에_쓴_B3와_같다() throws IOException {
+    @DisplayName("시스템 프롬프트가 측정에 쓴 B4와 글자까지 같다")
+    void 측정에_쓴_B4와_같다() throws IOException {
         String source = Files.readString(EXPERIMENT);
         int start = source.indexOf(START) + START.length();
         String experiment = source.substring(start, source.indexOf("\"\"\"", start));

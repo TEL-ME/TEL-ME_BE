@@ -15,6 +15,7 @@
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `simulate_dual_vector.py` | `Q_A`, `QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
 | `gray_zone_upper_band_bedrock.py` | 회색 구간 판정을 Q_A 0.72 위로 넓혔을 때 정답·엉뚱한 근거·holdout 측정 (Bedrock 판정, 기본은 예상 비용만, `--run`으로 실행). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` | 필요 |
+| `judge_stability_bedrock.py` | 판정 시험 25건을 운영 판정 방식(FAQ 하나씩 1회)으로 반복해 회차별 합격 여부를 보거나(`--runs`), 경계 쌍만 쌍마다 여러 번 보내 답 됨 비율을 본다(`--pair-repeat`). 판정 프롬프트 후보 비교(`--prompt`), 운영과 같은 방식(`--served`). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` 5.8절 | 필요 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
 | `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`) | 앱 경유 |
@@ -409,6 +410,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 | `simulate_dual_vector.py` | 29건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 8: 정상, 동점이면 높은 t, 평가셋별 무관 상쇄 제외, ANSWER 포함 합계, 기존 긍정 0건, 무관 0건, ANSWER 수 감소 제외, 잃고 얻으면 수 기준 통과 + 구성 경고 2 + 수집 벡터 확인 4) |
 | `gray_zone_upper_band_bedrock.py` | 27건 (구간 판정 4: 위 선 통과, 아래 선 버림, 경계값 + 합치기 6: 판정 없음 구성, 위로 넓히기 거절, 질문 벡터 우선·중복 제거·3개 컷, 거절 후 빈자리, slot_id 없는 후보는 판정 없이 거부, 같은 slot 1회 판정 + 다수결 2 + 응답 해석 3: fail-open 포함 + 캐시 5: 호출 오류 저장 안 함, 깨진 JSON fail-open, 해시·다수결 저장, FAQ 문장 변경 감지, 바뀐 쌍만 재판정 + 채점 3 + 지연 백분위 2 + 질문 벡터 위 선 2) |
+| `judge_stability_bedrock.py` | 12건 (회차 채점 3: 하나라도 답 됨, 잘못 막음·막음 기준, 근거 없는 케이스 제외 + 회차별로 갈린 케이스 1 + 응답 해석 2: 운영과 같이 해석 실패는 실패 + 운영과 같은 근거 3: 판정 없이 통과·버림, 판정 결과와 실패 시 원래 임계값, 질문 벡터 먼저·3개 + 쌍별 비율 1 + 프롬프트 2: v3는 이전 운영·v4a는 지금 운영, 후보마다 규칙 한 줄씩) |
 
 - 통과만으로는 검사가 실제로 도는지 알 수 없어 일부러 틀린 건을 넣어 검출 여부를 확인
 - 문서 파싱에서 표를 못 찾거나 행 수가 기대와 다르면 0건 처리 대신 `DocumentError` 발생

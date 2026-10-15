@@ -1,14 +1,14 @@
 package com.telme.rag.service;
 
-// 회색 구간 FAQ 하나씩 판정하는 B3 프롬프트(TELME-122, TELME-156)
-// 측정 수치(docs/GRAY_ZONE_UPPER_BAND.md)가 이 문장으로 나왔다. scripts/evidence_check_bedrock.py,
-// scripts/gray_zone_upper_band_bedrock.py의 B3_SYSTEM_PROMPT와 글자까지 같아야 하며 테스트가 비교한다.
-// 고치면 버전을 올리고 판정 시험 25건과 180셋 측정을 다시 한다
+// 회색 구간 FAQ 하나씩 판정하는 프롬프트. B3(TELME-122, TELME-156)에 비교 규칙 한 줄을 더한 v4(TELME-160)
+// B3는 비교·비율을 묻는 질문을 근거가 있어도 30% 정도 막아 판정 시험 합격이 흔들렸다(docs/GRAY_ZONE_UPPER_BAND.md 5.8절).
+// scripts/gray_zone_upper_band_bedrock.py의 B4_SYSTEM_PROMPT와 글자까지 같아야 하며 테스트가 비교한다.
+// 고치면 버전을 올리고 판정 시험(scripts/judge_stability_bedrock.py)과 180셋 측정을 다시 한다
 public final class FaqEvidencePromptTemplates {
 
     private FaqEvidencePromptTemplates() {}
 
-    public static final String PROMPT_VERSION = "evidence-check-v3";
+    public static final String PROMPT_VERSION = "evidence-check-v4";
 
     public static final String SYSTEM_PROMPT = """
         당신은 통신사 FAQ 검색 결과를 검수합니다.
@@ -24,6 +24,8 @@ public final class FaqEvidencePromptTemplates {
            - 정보의 종류가 다르면 없는 것입니다. 주제가 같아도 마찬가지입니다.
            - 묻는 값의 단위나 표현이 FAQ와 달라도, FAQ에 적힌 값을 환산하거나 계산해 답을 만들 수 있으면
              있는 것입니다. 이것은 정보의 종류가 다른 경우가 아닙니다.
+           - 비교하는 대상들의 값이 FAQ에 모두 있으면, 같은지 다른지, 몇 배인지, 얼마나 차이 나는지도
+             그 값으로 답할 수 있으므로 있는 것입니다.
         3. answerable: found에 true가 하나라도 있으면 true, 모두 false면 false.
 
         JSON만 출력하십시오.

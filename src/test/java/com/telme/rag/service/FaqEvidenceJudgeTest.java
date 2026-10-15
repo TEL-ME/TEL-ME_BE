@@ -18,7 +18,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 class FaqEvidenceJudgeTest {
 
     @Test
-    @DisplayName("B3 프롬프트·버전·종류와 FAQ 하나를 담아 temperature 0으로 부른다")
+    @DisplayName("판정 프롬프트(v4)·버전·종류와 FAQ 하나를 담아 temperature 0으로 부른다")
     void 판정_요청을_만든다() {
         StubClient client = new StubClient("{\"answerable\": true}", null);
 
@@ -30,7 +30,7 @@ class FaqEvidenceJudgeTest {
         assertThat(sent.executionId()).isEqualTo(7L);
         assertThat(sent.consultRequestId()).isEqualTo(3L);
         assertThat(sent.taskType()).isEqualTo(TaskType.EVIDENCE_CHECK);
-        assertThat(sent.promptVersion()).isEqualTo("evidence-check-v3");
+        assertThat(sent.promptVersion()).isEqualTo("evidence-check-v4");
         assertThat(sent.systemPrompt()).isEqualTo(FaqEvidencePromptTemplates.SYSTEM_PROMPT);
         assertThat(sent.userPrompt()).isEqualTo(FaqEvidencePromptTemplates.userPrompt(
                 "eSIM은 얼마예요?", "eSIM 발급 비용은 2,750원입니다.", "부가세 포함인가요?"));

@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-// 검색 회색 구간의 FAQ 하나가 고객 질문에 답이 되는지 판정한다(B3, docs/GRAY_ZONE_UPPER_BAND.md)
+// 검색 회색 구간의 FAQ 하나가 고객 질문에 답이 되는지 판정한다(evidence-check-v4, docs/GRAY_ZONE_UPPER_BAND.md)
 // 실패(시간 초과·호출 오류·응답 해석 실패)는 답 됨/안 됨과 구분해 돌려준다. 실패를 어떻게 처리할지는 점수 구간마다
 // 다르므로 호출하는 쪽이 정한다. 판정 LLM은 Bedrock이 켜졌을 때만 있어 이 판정기도 그때만 만든다
 @Slf4j
