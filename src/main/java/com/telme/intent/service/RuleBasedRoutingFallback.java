@@ -4,6 +4,8 @@ import static com.telme.intent.dto.res.FollowUpRouteResponse.LOCATION_KEY;
 import static com.telme.intent.dto.res.FollowUpRouteResponse.SERVICE_TYPE_KEY;
 
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.chat.service.ConsultationQuestion;
+import com.telme.chat.service.ConversationInput;
 import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
@@ -50,7 +52,7 @@ public class RuleBasedRoutingFallback {
     // "네", "음"처럼 호응만 하는 답변이 지역으로 잡히면 되묻기를 유지하지 못한다.
     // "네거리"를 거르지 않도록 답변 전체가 호응일 때만 막는다
     private static final Pattern ACK_ONLY_PATTERN = Pattern.compile(
-        "^(네|넵|예|응|음|어|아|그래|알겠|오케이|ok|okay)[요오은는\\s.!~]*$",
+        "^(네|넵|예|응|음|어|아|그래|알겠|오케이|ok|okay)[요오은는\\s,.!~，:：;；?？]*$",
         Pattern.CASE_INSENSITIVE
     );
 
@@ -179,7 +181,10 @@ public class RuleBasedRoutingFallback {
             return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
         }
 
-        String reply = text.trim();
+        String reply = ConsultationQuestion.extract(text).strip();
+        if (!ConversationInput.hasSemanticContent(reply)) {
+            return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
+        }
 
         if (DECLINE_PATTERN.matcher(reply).find()) {
             Set<String> declinedKeys = (pendingKeys == null || pendingKeys.isEmpty())
@@ -224,7 +229,8 @@ public class RuleBasedRoutingFallback {
             return matcher.group();
         }
         // 길면 지역이 아닌 다른 발화로 보고 되묻기를 유지한다
-        if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
+        if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")
+                || reply.codePoints().noneMatch(Character::isLetter)) {
             return null;
         }
         // 기준점 표현이 있으면 그 앞의 실제 지명만 받는다("판교 근처요" -> 판교, "현재 위치에서 찾아줘" -> 없음)

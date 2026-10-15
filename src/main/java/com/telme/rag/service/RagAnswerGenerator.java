@@ -143,7 +143,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
     // 잘라낸 답변은 문구로 끝난다. 앞에 "죄송합니다." 같은 서두가 남을 수 있어 포함 여부로 본다
     private AnswerBasis toAnswerBasis(String answer) {
-        return answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+        return answer.contains(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE)
                 ? AnswerBasis.NO_EVIDENCE
                 : AnswerBasis.GROUNDED;
     }
@@ -229,7 +229,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(
                         answer.equals(collected.toString()) ? "KEPT"
-                                : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_ANSWER)
+                                : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE)
                                         ? "REPLACED" : "MODIFIED",
                         "EVIDENCE_POLICY_RESULT");
             } catch (AnswerGuardException exception) {

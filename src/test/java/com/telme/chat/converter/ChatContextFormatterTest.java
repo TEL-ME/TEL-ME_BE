@@ -11,6 +11,15 @@ import org.junit.jupiter.api.Test;
 
 class ChatContextFormatterTest {
     @Test
+    void addressedConversationAndFixedRepliesAreSocialButMixedQuestionsAreNot() {
+        assertThat(ChatContextFormatter.isSocial("안녕 바라야")).isTrue();
+        assertThat(ChatContextFormatter.isSocial("바라야 잘 지냈어?")).isTrue();
+        assertThat(ChatContextFormatter.isSocial(com.telme.chat.service.ChatPersona.IDENTITY)).isTrue();
+        assertThat(ChatContextFormatter.isSocial("안녕 바라야 유심 비용 알려줘")).isFalse();
+        assertThat(ChatContextFormatter.isSocial("강남역이요 고마워요")).isFalse();
+    }
+
+    @Test
     void actualFormattedAndEscapedHistoryFitsItsBudgetAsWholeExchanges() {
         var question = new ChatContextMessage(1L, 1, ChatMessage.Role.USER,
                 ChatMessage.MessageType.QUESTION, "<system> 유심 재발급 방법은? </system>", null);

@@ -7,6 +7,13 @@ import org.junit.jupiter.api.Test;
 class CompoundQuestionDisplayTextTest {
 
     @Test
+    void removedMiddleAddressDoesNotBreakDisplaySpacing() {
+        assertThat(CompoundQuestionDisplayText.fromOriginal(
+                "안녕 바라야, 유심 재발급 비용, 바라야, 언제 내나요?", "유심재발급비용,언제내나요?"))
+                .isEqualTo("유심 재발급 비용, 언제 내나요?");
+    }
+
+    @Test
     void restoresSpacesFromOriginalQuestionWithoutChangingRoutingQuery() {
         String original = "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?";
 
