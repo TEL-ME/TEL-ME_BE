@@ -59,7 +59,7 @@
 ## 설정과 기록
 
 - 모드는 `chat.question-resolution.mode`(환경 변수 `CHAT_QUESTION_RESOLUTION_MODE`)로 선택하며 기본값은 `REGEX_GATED`다.
-- 두 모델 호출은 `CONTEXT_RESOLUTION` 작업으로 기록하고 프롬프트 버전은 `multiturn-resolution-v31-reference`, `multiturn-resolution-v30-sources`다.
+- 두 모델 호출은 `CONTEXT_RESOLUTION` 작업으로 기록하고 프롬프트 버전은 `context-v31-reference`, `context-v30-sources`다. 기록 테이블의 30자 제한에 맞춰 각각 21자·19자로 관리한다.
 - 현재 대상 판정 출력은 64토큰, 이전 발언 분석 출력은 `min(2048, 128 + 64 × 출처 수)`다. temperature는 0이고, 두 요청이 사고 모드 끄기를 지정해 Qwen3와 EXAONE 4.0에서는 사고 모드를 끈다.
 - 실행 trace의 `questionResolution`에 최종 관계와 실제 출처 ID를, `questionResolutionEvidence`에 분석 결과, 판정 주체(`referenceSource`: `RULE` 또는 `MODEL`), 순서 번호와 실제 ID의 대응을 남긴다.
 - 내부 `EXPLICIT`, `OMITTED`, `AMBIGUOUS`는 처리 결과에 따라 `SELF_CONTAINED`, `HISTORY_DEPENDENT`, `CLARIFICATION_REQUIRED`로 기록한다.

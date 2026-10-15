@@ -1,5 +1,7 @@
 package com.telme.consult.service;
 
+import static com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,6 +77,53 @@ class FaqSearchAnswerProviderTest {
         verifyNoInteractions(answers);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"바라야 요금제는 언제 변경할 수 있나요?",
+            "안녕 바라야, 요금제는 언제 변경할 수 있나요?",
+            "요금제는 언제 변경할 수 있나요? 고마워 바라야"})
+    void normalizedBodyIsSearchedOnceEvenWhenNoEvidenceIsFound(String original) {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        NO_EVIDENCE_ANSWER, ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)));
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                original, "요금제는 언제 변경할 수 있나요?", Map.of());
+
+        provider.generate(input);
+
+        var request = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches).search(request.capture());
+        assertThat(request.getValue().query()).isEqualTo("요금제는 언제 변경할 수 있나요?");
+        assertThat(input.originalUserQuery()).isEqualTo(original);
+    }
+
+    @Test
+    void comparisonEvidenceReceivesCleanBodyAndOriginalRequestIsPreserved() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        when(searches.search(any())).thenReturn(List.of());
+        String question = "청소년 요금제랑 시니어 요금제 가입 나이가 다른가요";
+        when(evidence.applies(question)).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        NO_EVIDENCE_ANSWER, ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)),
+                ExecutionTrace.noop(), evidence);
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "바라야 " + question, question, Map.of());
+
+        provider.generate(input);
+
+        var request = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches).search(request.capture());
+        assertThat(request.getValue().query()).isEqualTo(question);
+        verify(evidence).resolveDetailed(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.eq(question), any(), any());
+        assertThat(input.originalUserQuery()).startsWith("바라야 ");
+    }
+
     @Test
     void comparisonUsesOnlySourcesApprovedByResolver() {
         FaqSearchService searches = mock(FaqSearchService.class);
@@ -87,7 +136,7 @@ class FaqSearchAnswerProviderTest {
         when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
                 .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
         var expected = GeneratedAnswer.withoutSources(new ChatAnswer(
-                ChatMessage.MessageType.ANSWER, "안내드릴 수 있는 정보가 없습니다.",
+                ChatMessage.MessageType.ANSWER, NO_EVIDENCE_ANSWER,
                 ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null));
         when(answers.generate(any(), any())).thenReturn(expected);
 
@@ -350,7 +399,7 @@ class FaqSearchAnswerProviderTest {
         ChatAnswer noEvidence =
                 new ChatAnswer(
                         ChatMessage.MessageType.ANSWER,
-                        "안내드릴 수 있는 정보가 없습니다.",
+                        NO_EVIDENCE_ANSWER,
                         ChatMessage.AnswerBasis.NO_EVIDENCE,
                         List.of(),
                         null);
@@ -438,6 +487,29 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
+    void addressedQuestionKeepsDevelopRefinedQueryValidationOnCleanBody() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법"))
+                .thenReturn("유심 분실 시 재발급 방법");
+        var provider = refinedProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
+                        ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)), selector);
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "바라야 유심을 잃어버렸어요", "유심 분실 시 재발급 방법", Map.of());
+
+        provider.generate(input);
+
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        var requests = ArgumentCaptor.forClass(FaqSearchRequest.class);
+        verify(searches, times(2)).search(requests.capture());
+        assertThat(requests.getAllValues()).extracting(FaqSearchRequest::query)
+                .containsExactly("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        assertThat(input.originalUserQuery()).isEqualTo("바라야 유심을 잃어버렸어요");
+    }
+
+    @Test
     void refinedSearchUsesQuerySelectedAfterEmptyOriginalSearch() {
         FaqSearchService searches = mock(FaqSearchService.class);
         when(searches.search(any())).thenReturn(List.of());
@@ -511,7 +583,7 @@ class FaqSearchAnswerProviderTest {
         when(searches.search(any())).thenReturn(List.of());
         var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
                 GeneratedAnswer.withoutSources(new ChatAnswer(
-                        ChatMessage.MessageType.ANSWER, "안내드릴 수 있는 정보가 없습니다.",
+                        ChatMessage.MessageType.ANSWER, NO_EVIDENCE_ANSWER,
                         ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)));
 
         provider.generate(new AnswerInput(

@@ -35,7 +35,7 @@ class ChatQuestionResolutionRegressionTest {
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
         assertThat(mapper.readTree(request.getValue().userPrompt()).path("currentQuestion").asText()).isEqualTo(question);
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v31-reference");
     }
 
     @Test

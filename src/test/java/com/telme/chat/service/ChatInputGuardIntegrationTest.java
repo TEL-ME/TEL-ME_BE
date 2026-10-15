@@ -49,6 +49,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,7 +69,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -317,6 +323,34 @@ class ChatInputGuardIntegrationTest {
         assertThat(send(sid, "씨발").at("/result/inputGuard/violationCount").asInt()).isEqualTo(2);
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "시4111111111111111발 | 시***발",
+        "씨990101-1234567발 | 씨***발",
+        "ㅅ4111111111111111ㅂ | ㅅ***ㅂ"
+    })
+    @DisplayName("번호를 끼운 욕설은 상담을 생성하지 않고 같은 요청 재전송도 한 번만 경고한다")
+    void 번호를_끼운_욕설을_차단하고_재전송을_유지한다(String input, String safe) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 200));
+        var repeated = body(request(sid, identity, input, key, 200));
+
+        assertThat(first.at("/result/inputGuard/action").asText()).isEqualTo("WARNED");
+        assertThat(first.at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        assertThat(first.at("/result").hasNonNull("executionId")).isFalse();
+        assertThat(repeated).isEqualTo(first);
+        assertThat(count("chat_executions")).isZero();
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT content FROM chat_messages WHERE session_id=?", String.class, sid))
+                .isEqualTo(safe);
+        assertThat(jdbc.queryForObject(
+                "SELECT message_type FROM chat_messages WHERE session_id=?", String.class, sid))
+                .isEqualTo("BLOCKED");
+        verifyNoInteractions(analyzer, answers);
+    }
+
     @Test
     @DisplayName("한 입력의 여러 욕설 규칙은 기록하되 제재 횟수는 한 번만 증가한다")
     void 여러_욕설이_있어도_한_번_집계한다() throws Exception {
@@ -342,6 +376,279 @@ class ChatInputGuardIntegrationTest {
         assertThat(count("chat_executions")).isEqualTo(1);
         assertThat(count("chat_messages")).isEqualTo(2);
         assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "주민번호 990101-1234567 납부 문의 | 주민번호 [주민등록번호] 납부 문의",
+        "카드 4111111111111111 납부 문의 | 카드 [카드번호] 납부 문의",
+        "990101-1234567 4111111111111111 납부 문의 | [주민등록번호] [카드번호] 납부 문의",
+        "카드 4111111111111111 12개월 약정 문의 | 카드 [카드번호] 12개월 약정 문의",
+        "카드 4111111111111111 18개월 약정 문의 | 카드 [카드번호]개월 약정 문의",
+        "카드 4111-1111-1111-1111-18개월 약정 문의 | 카드 [카드번호]개월 약정 문의"
+    })
+    @DisplayName("유형 문구를 사용하던 배포 전 요청도 같은 요청 ID로 재전송하면 원래 실행을 반환한다")
+    void 기존_마스킹_요청의_해시와_재전송을_유지한다(String input, String legacyContent) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 201));
+        long eid = first.at("/result/executionId").asLong();
+        long messageId = first.at("/result/messageId").asLong();
+        waitCompleted(eid);
+        String legacyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + legacyContent + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        assertThat(jdbc.queryForObject(
+                "SELECT request_fingerprint FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo(legacyHash);
+
+        // 독립 검증 DB에서만 배포 전 저장된 마스킹 문구와 해시를 재현한다.
+        jdbc.update("UPDATE chat_input_guard_events SET sanitized_content=?,request_fingerprint=?"
+                + " WHERE session_id=?", legacyContent, legacyHash, sid);
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", legacyContent, messageId);
+
+        var replay = body(request(sid, identity, input, key, 201));
+        assertThat(replay).isEqualTo(first);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText())
+                .isEqualTo(legacyContent);
+        request(sid, identity, input + " 다른 문의", key, 409);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("새로 저장한 요청은 카드 뒤 기간을 해시에 보존해 같은 요청 ID의 다른 조건을 거절한다")
+    void 새_요청_해시는_마스킹_뒤_정상_조건을_구분한다() throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, "카드 4111111111111111 약정 18개월 문의", key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        request(sid, identity, "카드 4111111111111111 약정 27개월 문의", key, 409);
+        request(session(identity), identity, "카드 4111111111111111 약정 18개월 문의", key, 409);
+        request(sid, identity, "주민번호 990101-1234567 약정 18개월 문의", key, 409);
+        mvc.perform(post("/api/v1/chat/sessions/{id}/messages", sid).session(identity)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsBytes(new ChatMessageSendRequest(
+                                "카드 4111111111111111 약정 18개월 문의", 37.5, 127.0, key))))
+                .andExpect(status().isConflict());
+
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("유효한 19자리 카드 끝자리도 채팅·감지 이력·분석 입력에 남기지 않는다")
+    void 긴_카드의_끝자리를_상담_조건으로_남기지_않는다() throws Exception {
+        long sid = session(identity);
+        var accepted = body(request(sid, identity,
+                "카드 4111111111111111 003 개인정보를 가려주세요", UUID.randomUUID(), 201));
+        waitCompleted(accepted.at("/result/executionId").asLong());
+        assertThat(analyzedContent.get()).isEqualTo("카드 *** 개인정보를 가려주세요");
+        assertThat(history(sid).toString()).doesNotContain("4111", "003");
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo("카드 *** 개인정보를 가려주세요");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 | 개 *** 새끼",
+        "씨 990101-1234567 발 | 씨 *** 발"
+    })
+    @DisplayName("마스킹으로 만들어진 욕설 오탐은 실제 접수에서 경고 횟수를 늘리지 않는다")
+    void 마스킹_오탐으로_제재하지_않는다(String input, String expected) throws Exception {
+        long sid = session(identity);
+        assertThat(send(sid, "씨발").at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        UUID key = UUID.randomUUID();
+        var accepted = body(request(sid, identity, input, key, 201));
+        long eid = accepted.at("/result/executionId").asLong();
+        waitCompleted(eid);
+
+        assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
+        assertThat(accepted.at("/result/inputGuard/message").asText())
+                .isEqualTo("민감정보를 가리고 문의를 처리합니다.");
+        assertThat(accepted.at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        assertThat(analyzedContent.get()).isEqualTo(expected);
+        assertThat(jdbc.queryForObject(
+                "SELECT counted_violation FROM chat_input_guard_events WHERE request_id=?", Boolean.class, key))
+                .isFalse();
+        assertThat(history(sid).at("/result/messages").findValuesAsText("content").toString())
+                .contains(expected).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?", String.class, eid))
+                .doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(send(sid, "개새끼").at("/result/inputGuard/violationCount").asInt()).isEqualTo(2);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("같은 표시의 별표 욕설은 마스킹 요청을 재사용하지 못하며 별도 경고로 한 번 집계한다")
+    void 같은_표시의_별표_욕설을_정상_마스킹_요청으로_재사용하지_않는다(
+            String original, String literal) throws Exception {
+        long sid = session(identity);
+        UUID acceptedKey = UUID.randomUUID();
+        var accepted = body(request(sid, identity, original, acceptedKey, 201));
+        waitCompleted(accepted.at("/result/executionId").asLong());
+
+        assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
+        assertThat(accepted.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(analyzedContent.get()).isEqualTo(literal);
+        request(sid, identity, literal, acceptedKey, 409);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+
+        UUID warnedKey = UUID.randomUUID();
+        var warned = body(request(sid, identity, literal, warnedKey, 200));
+        assertThat(warned.at("/result/inputGuard/action").asText()).isEqualTo("WARNED");
+        assertThat(warned.at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        assertThat(warned.at("/result/executionId").isMissingNode()).isTrue();
+        assertThat(body(request(sid, identity, literal, warnedKey, 200))).isEqualTo(warned);
+        assertThat(count("chat_input_guard_events")).isEqualTo(2);
+        assertThat(count("chat_messages")).isEqualTo(3);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM chat_input_guard_events WHERE session_id=? AND counted_violation",
+                Integer.class, sid)).isEqualTo(1);
+        assertThat(history(sid).toString()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "카드 4111 1111 1111 1111 3번 문의 | 카드 ***번 문의",
+        "카드 4111-1111-1111-1111-18개월 문의 | 카드 ***개월 문의",
+        "카드 4111111111111111 약정 18개월 문의 | 카드 *** 약정 18개월 문의"
+    })
+    @DisplayName("숫자 묶음 전체 보호와 명확한 조건 보존이 접수·저장·상담에서 일치한다")
+    void 숫자_경계_기준을_접수와_저장에_적용한다(String input, String expected) throws Exception {
+        long sid = session(identity);
+        var accepted = send(sid, input);
+        waitCompleted(accepted.at("/result/executionId").asLong());
+
+        assertThat(analyzedContent.get()).isEqualTo(expected);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(expected);
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?", String.class, sid))
+                .isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("표시가 같은 별표여도 서로 다른 개인정보 유형에 요청 ID를 재사용할 수 없다")
+    void 같은_별표_표시로_다른_유형의_요청을_허용하지_않는다() throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        request(sid, identity, "990101-1234567", key, 200);
+        request(sid, identity, "4111111111111111", key, 409);
+
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "990101-1234567", "제 주민번호는 990101-1234567입니다",
+        "4111111111111111", "제 카드번호는 4111111111111111입니다",
+        "4111 1111 1111 1111 3번", "카드 4111-1111-1111-1111-18개월",
+        "카드 4111111111111111 18개월입니다",
+        "주민번호 990101-1234567, 카드번호 4111111111111111"
+    })
+    @DisplayName("번호·소개·단위만 남는 입력은 별표로 저장하고 검색·생성 없이 재입력을 안내한다")
+    void 별표만_남는_요청으로_상담을_시작하지_않는다(String input) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var result = body(request(sid, identity, input, key, 200));
+        assertThat(result.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(result.at("/result/inputGuard/message").asText())
+                .isEqualTo("민감정보를 제외한 문의 내용을 입력해 주세요.");
+        assertThat(result.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(result.at("/result").has("executionId")).isFalse();
+        assertThat(body(request(sid, identity, input, key, 200))).isEqualTo(result);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).contains("***");
+        assertThat(history(sid).toString()).doesNotContain("990101", "1234567", "4111");
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "990101-1234567 유심 재발급 방법 알려주세요 | *** 유심 재발급 방법 알려주세요",
+        "로밍 신청 방법 알려주세요 4111111111111111 | 로밍 신청 방법 알려주세요 ***",
+        "주민번호 990101-1234567 카드 4111111111111111 약정 18개월 문의"
+                + " | 주민번호 *** 카드 *** 약정 18개월 문의"
+    })
+    @DisplayName("주민번호·카드번호와 함께 보낸 문의는 별표 상태로 접수·분석·저장·조회된다")
+    void 별표로_가린_문의가_정상_접수_계약을_유지한다(String input, String expected) throws Exception {
+        long sid = session(identity);
+        var accepted = body(request(sid, identity, input, UUID.randomUUID(), 201));
+        long eid = accepted.at("/result/executionId").asLong();
+        waitCompleted(eid);
+
+        assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
+        assertThat(accepted.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(analyzedContent.get()).isEqualTo(expected);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(expected);
+        assertThat(history(sid).toString()).doesNotContain("990101", "1234567", "4111");
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo(expected);
+        assertThat(jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?",
+                String.class, eid)).doesNotContain("990101", "1234567", "4111", "[주민등록번호]", "[카드번호]");
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("이미 마스킹해 저장된 문의는 다음 턴 문맥과 내부 요약에도 별표 상태로 전달된다")
+    void 문맥과_내부_요약에_마스킹된_문의만_전달한다() throws Exception {
+        long sid = session(identity);
+        waitCompleted(send(sid, "주민번호 990101-1234567 카드 4111111111111111 유심 재발급")
+                .at("/result/executionId").asLong());
+        long eid = send(sid, "로밍 신청 방법").at("/result/executionId").asLong();
+        waitCompleted(eid);
+        long current = message(sid, 5, "USER", "QUESTION", "다음 문의", null);
+        long currentExecution = jdbc.queryForObject(
+                "INSERT INTO chat_executions(session_id,input_message_id,status)"
+                        + " VALUES (?,?,'RUNNING') RETURNING execution_id", Long.class, sid, current);
+        var context = contexts.build(
+                new ChatProcessingCommand(currentExecution, sid, current, "다음 문의"), 2000);
+        assertThat(context.history()).extracting(ChatContextMessage::content)
+                .contains("주민번호 *** 카드 *** 유심 재발급");
+
+        var summary = new ChatSummaryStore(
+                sessionRepository, messageRepository, executionRepository,
+                new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512),
+                tokenEstimator, summaryConverter);
+        var snapshot = new TransactionTemplate(transactions).execute(status ->
+                summary.prepare(new ChatSummaryRequested(eid, sid, 4)).orElseThrow());
+        assertThat(snapshot.messages()).extracting(ChatContextMessage::content)
+                .contains("주민번호 *** 카드 *** 유심 재발급");
+        assertThat(snapshot.messages().toString())
+                .doesNotContain("990101", "1234567", "4111", "[주민등록번호]", "[카드번호]");
+
+        var client = org.mockito.Mockito.mock(com.telme.llm.service.LlmClient.class);
+        when(client.generate(any())).thenReturn("**주민번호 *** 카드 *** 유심 재발급**");
+        var summaryService = new ChatSummaryService(summary, client,
+                new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512), summaryConverter);
+        Boolean saved = new TransactionTemplate(transactions).execute(status ->
+                summaryService.summarizeIfNeeded(new ChatSummaryRequested(eid, sid, 4)));
+        assertThat(saved).isTrue();
+        assertThat(jdbc.queryForObject("SELECT summary FROM chat_sessions WHERE session_id=?", String.class, sid))
+                .isEqualTo("주민번호 *** 카드 *** 유심 재발급");
+        var afterSummary = contexts.build(
+                new ChatProcessingCommand(currentExecution, sid, current, "다음 문의"), 2000);
+        // 자유문장 요약은 원문 출처가 없어 문맥에 재투입하지 않는 기존 정책을 유지한다.
+        assertThat(afterSummary.summary()).isNull();
+        assertThat(afterSummary.history()).extracting(ChatContextMessage::content)
+                .contains("주민번호 *** 카드 *** 유심 재발급");
     }
 
     @Test
@@ -470,7 +777,7 @@ class ChatInputGuardIntegrationTest {
         assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
         long eid = accepted.at("/result/executionId").asLong();
         waitCompleted(eid);
-        assertThat(analyzedContent.get()).isEqualTo("카드 [카드번호] 123원 요금 납부 방법 알려주세요");
+        assertThat(analyzedContent.get()).isEqualTo("카드 *** 123원 요금 납부 방법 알려주세요");
         assertThat(history(sid).toString()).doesNotContain("4111");
         assertThat(
                         jdbc.queryForObject(
@@ -828,6 +1135,34 @@ class ChatInputGuardIntegrationTest {
         var session = new MockHttpSession();
         session.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, id);
         return session;
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("실제 접수의 마스크 출처로 인용 답변을 완료하고 영수증 정리 후 다음 답변에도 유지한다")
+    void 마스크_출처가_실제_답변과_다음_턴까지_유지된다(String original, String visible) throws Exception {
+        doAnswer(invocation -> AnalyzedTurn.direct(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "확인한 문의: " + visible, null, List.of(visible), null)))
+                .when(analyzer).analyze(any());
+        long sid = session(identity);
+        var sent = send(sid, original);
+        waitCompleted(sent.at("/result/executionId").asLong());
+        long mid = sent.at("/result/messageId").asLong();
+        String positions = jdbc.queryForObject("SELECT input_mask_spans::text FROM chat_messages WHERE message_id=?",
+                String.class, mid);
+        assertThat(mapper.readTree(positions)).hasSize(1);
+        assertThat(positions).doesNotContain("4111", "990101", "1234567");
+        jdbc.update("DELETE FROM chat_input_guard_events WHERE session_id=?", sid);
+
+        var next = send(sid, "이전 문의도 확인해 주세요");
+        waitCompleted(next.at("/result/executionId").asLong());
+        assertThat(history(sid).at("/result/messages").findValuesAsText("content").toString())
+                .contains("확인한 문의: " + visible)
+                .doesNotContain("4111", "990101", "1234567", "\uFFFC", "inputMaskSpans", "input_mask_spans");
+        assertThat(count("chat_input_guard_events")).isZero();
     }
 
     private MockHttpSession guestIdentity(UUID id) {

@@ -21,6 +21,9 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -63,6 +66,53 @@ class ChatExecutionServiceIntegrationTest {
         actor = new ChatActor(user.getUserId(), null);
         sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest("실행 테스트"))
                 .sessionId();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("실제 접수의 마스크 출처로 되묻기 질문과 선택지를 저장하고 표시 별표를 유지한다")
+    void 마스크_인용_되묻기를_저장한다(String original, String visible) {
+        var question = send(original);
+        var result = chatExecutionService.askClarification(question.executionId(),
+                visible + "의 조건을 확인해 주세요.", List.of(visible));
+
+        assertThat(result.status()).isEqualTo(ChatExecution.Status.COMPLETED);
+        assertThat(historyItem(2).content()).isEqualTo(visible + "의 조건을 확인해 주세요.");
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(historyItem(2).followUps()).containsExactly(visible);
+        assertThat(historyItem(2).content()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+    }
+
+    @Test
+    @DisplayName("다른 세션의 마스크 출처로 같은 별표 출력 검사를 완화하지 않는다")
+    void 다른_세션의_마스크를_출력_출처로_사용하지_않는다() {
+        var first = send("씨 990101-1234567 발 요금 문의");
+        chatExecutionService.completeAnswer(first.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "정상 안내", null, List.of(), null));
+        sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest("다른 상담")).sessionId();
+        var other = send("요금 문의");
+
+        assertThatThrownBy(() -> chatExecutionService.askClarification(other.executionId(),
+                "씨 *** 발 요금 문의", List.of())).isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("잘못된 마스크 위치는 안전한 검사 실패로 처리하고 답변 후보를 저장하지 않는다")
+    void 저장된_마스크_위치가_틀리면_검사_실패로_처리한다() {
+        var question = send("씨 990101-1234567 발 요금 문의");
+        jdbcTemplate.update("UPDATE chat_messages SET input_mask_spans='[{\"start\":0,\"end\":3}]'::jsonb"
+                + " WHERE message_id=?", question.messageId());
+
+        assertThatThrownBy(() -> chatExecutionService.askClarification(question.executionId(),
+                "씨 *** 발 요금 문의", List.of())).isInstanceOf(GeneralException.class)
+                .extracting(error -> ((GeneralException) error).getErrorCode())
+                .isEqualTo(ChatErrorCode.OUTPUT_CHECK_FAILED);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?",
+                Integer.class, sessionId)).isEqualTo(1);
     }
 
     @Test

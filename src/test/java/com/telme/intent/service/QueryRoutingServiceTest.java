@@ -103,6 +103,77 @@ class QueryRoutingServiceTest {
         }).when(llmClient).generate(any());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"바라야 요금제는 언제 변경할 수 있나요?",
+            "안녕 바라야, 요금제는 언제 변경할 수 있나요?",
+            "요금제는 언제 변경할 수 있나요? 고마워 바라야"})
+    void routesConsultationBodyWithoutChangingMessage(String original) {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"요금제 변경 시기",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"요금제 변경 시기"}]}
+                """);
+        var message = msg(original);
+
+        var result = service.routeSingleConsult(message, null);
+
+        assertThat(message.getContent()).isEqualTo(original);
+        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("요금제 변경 시기");
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().userPrompt()).isEqualTo("요금제는언제변경할수있나요?");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"안녕 바라야, 유심 재발급 비용과 로밍 신청 방법 알려줘",
+            "유심 재발급 비용, 고마워 바라야, 로밍 신청 방법 알려줘"})
+    void socialClausesDoNotBecomeIndependentRequestsOrInvalidateQuotes(String original) {
+        routingJson("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"유심 비용과 로밍 신청",
+                 "subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"유심재발급비용","requestQuote":"유심재발급비용"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍신청방법","requestQuote":"로밍신청방법"}]}
+                """);
+
+        var result = service.routeSingleConsult(msg(original), null);
+
+        assertThat(result.subQueries()).extracting(query -> query.queryText())
+                .containsExactly("유심재발급비용", "로밍신청방법");
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, org.mockito.Mockito.atLeastOnce()).generate(requests.capture());
+        assertThat(requests.getAllValues()).allSatisfy(request ->
+                assertThat(request.userPrompt()).doesNotContain("바라야", "안녕", "고마워"));
+    }
+
+    @Test
+    void cleanedCurrentQuestionRetainsPreviousSubjectAgainstStoredOriginal() {
+        routingJson("""
+                {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 신청 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"로밍 신청 방법"}]}
+                """);
+        String original = "바라야 그럼 신청 방법은?";
+        var previous = new ChatContextMessage(501L, 1, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "로밍 신청은 어디서 해요", null);
+        var context = new ChatContext(1L, 1L, null, List.of(previous), original, 100);
+        String resolved = "[대상을 확인할 이전 고객 발언]\n로밍 신청은 어디서 해요"
+                + "\n[현재 후속 질문]\n그럼 신청 방법은?";
+
+        assertThat(service.routeSingleConsult(msg(original), context, resolved).subQueries().getFirst().queryText())
+                .isEqualTo("로밍 신청 방법");
+    }
+
+    @Test
+    void addressedStoreQuestionUsesOnlyStoreRequestForClassification() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"STORE","confidence":0.98,"refinedQuery":"근처 매장 알려줘",
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"근처 매장 알려줘"}]}
+                """);
+        var result = service.routeSingleConsult(msg("안녕 바라야, 근처 매장 알려줘"), null);
+        assertThat(result.intent()).isEqualTo(QueryRouting.Intent.STORE);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().userPrompt()).isEqualTo("근처매장알려줘");
+    }
+
     @Test
     void usesSameModelInputForKoreanSpacingVariantsWithoutChangingStoredOriginal() {
         given(llmClient.generate(any())).willReturn("""

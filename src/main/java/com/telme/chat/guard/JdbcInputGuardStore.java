@@ -202,6 +202,12 @@ public class JdbcInputGuardStore {
             String policyVersion,
             Instant now,
             ChatMessageSendResponse response) {
+        // 영수증 정리 이후에도 비동기 답변·종료 요약이 실제 마스크 위치를 확인할 수 있어야 한다.
+        if (response.executionId() != null && !inspection.maskSpans().isEmpty()) {
+            jdbc.update(
+                    "UPDATE chat_messages SET input_mask_spans=?::jsonb WHERE message_id=? AND session_id=?",
+                    encode(inspection.maskSpans()), response.messageId(), sessionId);
+        }
         List<String> actions = new java.util.ArrayList<>();
         if (inspection.wasMasked()) {
             actions.add("MASKED");
@@ -212,7 +218,8 @@ public class JdbcInputGuardStore {
         jdbc.update(
                 """
                 INSERT INTO chat_input_guard_events(guard_state_id,detected_at,user_id,guest_id,session_id,message_id,
-                    request_id,request_fingerprint,sanitized_content,detections,actions,counted_violation,violation_count,
+                    request_id,request_fingerprint,sanitized_content,detections,actions,counted_violation,
+                    violation_count,
                     restriction_started_at,restriction_until,policy_version,response_snapshot)
                 VALUES (?,?,?,?,?,?,?,?,?,?::jsonb,?::jsonb,?,?,?,?,?,?::jsonb)
                 """,

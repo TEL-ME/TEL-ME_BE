@@ -42,6 +42,63 @@ class ConsultTurnAnalysisAdapterTest {
     private final ConsultTurnPreparationService preparation =
             mock(ConsultTurnPreparationService.class);
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "유심을 잃어버렸어요", "안녕 바라야, 유심을 잃어버렸어요",
+            "[문의] 안녕 바라야, 유심을 잃어버렸어요 😊"})
+    void standaloneQuestionKeepsOriginalSearchAndRefinementValidation(String raw) {
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var context = new Context(1, 10, raw, List.of());
+        var prepared = mock(ConsultService.PreparationResult.class);
+        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any()))
+                .thenReturn(prepared);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            assertThat(input.historyResolved()).isFalse();
+            assertThat(input.routingContext()).isNull();
+            return new AnalysisResult(new IntentSubQueryResponse(101L, (short) 1,
+                    ConsultRequest.Intent.FAQ, "유심 분실 시 재발급 방법", Map.of()), null, LocationStatus.MISSING);
+        }, preparation, new FollowupConditionConverter(), resolver);
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, raw));
+        assertThat(turn.originalUserQuery()).isEqualTo(raw);
+        assertThat(turn.resolvedUserQuery()).isEqualTo("유심을 잃어버렸어요");
+
+        var searches = mock(com.telme.faq.service.FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법"))
+                .thenReturn("유심을 잃어버렸어요");
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "mock", null, List.of(), null)), ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new com.telme.rag.converter.AnswerContextConverter(), null,
+                RagSearchResultAnswerGenerator.SuggestedQuestions.none(), selector);
+        provider.generate(new ConsultChatProcessingService.AnswerInput(3, 1, 101, Purpose.GENERAL_FAQ,
+                turn.originalUserQuery(), turn.searchQuery(), Map.of(), turn.resolvedUserQuery(), turn.context()));
+        var request = org.mockito.ArgumentCaptor.forClass(com.telme.faq.dto.req.FaqSearchRequest.class);
+        verify(searches).search(request.capture());
+        assertThat(request.getValue().query()).isEqualTo("유심을 잃어버렸어요");
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        verifyNoInteractions(model);
+    }
+
+    @Test
+    void pureConversationBypassesResolutionEvenWhenAllQuestionsUseTheModel() {
+        var context = new Context(1, 10, "안녕 바라야", List.of());
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(),
+                com.telme.chat.config.ChatQuestionResolutionProperties.Mode.LLM_ALL);
+        var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, analysis,
+                preparation, new FollowupConditionConverter(), resolver);
+
+        var answer = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer();
+
+        assertThat(answer.content()).isEqualTo(com.telme.chat.service.ChatPersona.GREETING);
+        verifyNoInteractions(model, analysis, preparation);
+    }
+
     @Test
     void newQuestionWhileWaitingResolvesBeforeRoutingAndDoesNotConsumePendingCandidate() {
         var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
@@ -67,6 +124,7 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(calls.get(1).candidates()).isEmpty();
         assertThat(calls.get(1).resolvedQuestion()).contains(previous.content(), context.message());
         assertThat(calls.get(1).routingContext().history()).containsExactly(previous);
+        assertThat(calls.get(1).historyResolved()).isTrue();
         assertThat(context.candidates()).containsExactly(candidate);
         org.mockito.Mockito.verify(model).generate(any());
         org.mockito.Mockito.verify(preparation).cancelWaiting(1L, java.util.Set.of(101L));

@@ -115,6 +115,19 @@ class CompoundFaqStoreIntegrationTest {
     }
 
     @Test
+    void personaGreetingPreservesDevelopFaqAndStoreCombination() throws Exception {
+        route("강남역 번호이동 매장", Map.of("location", "강남역", "serviceType", "PORT_IN"));
+        String original = "안녕 바라야, 번호이동 방법과 강남역 번호이동 매장 찾아줘";
+        ChatProcessingCommand command = command(original, null);
+
+        processor(false).request(command);
+
+        assertCombined(command, true);
+        assertThat(output(command).path("content").asText()).startsWith("안녕하세요! ");
+        assertThat(messages.findById(command.inputMessageId()).orElseThrow().getContent()).isEqualTo(original);
+    }
+
+    @Test
     void faqAndRealStoreSearchCompleteOneAnswerWithSourcesAndMatchingSse() throws Exception {
         route("강남역 번호이동 매장", Map.of("location", "강남역", "serviceType", "PORT_IN"));
         ChatProcessingCommand command = command("번호이동 방법과 강남역 번호이동 매장 찾아줘", null);
@@ -239,7 +252,7 @@ class CompoundFaqStoreIntegrationTest {
 
         var output = output(command);
         assertThat(statuses()).containsExactly("DONE", "DONE");
-        assertThat(output.path("content").asText()).contains("안내드릴 수 있는 정보가 없습니다", "복합 검증 매장");
+        assertThat(output.path("content").asText()).contains(com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER, "복합 검증 매장");
         assertThat(output.path("store_results").isArray()).isTrue();
         assertThat(output.path("answer_basis").isNull()).isTrue();
         assertThat(events.tokens).containsExactly(output.path("content").asText());

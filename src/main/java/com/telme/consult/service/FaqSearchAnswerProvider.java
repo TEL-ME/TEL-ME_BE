@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -139,7 +140,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         if (input.purpose() != Purpose.GENERAL_FAQ) {
             throw new IllegalArgumentException("FAQ 답변 경로는 일반 FAQ 상담만 처리할 수 있습니다.");
         }
-        if (comparisonEvidence.applies(input.originalUserQuery())) {
+        if (comparisonEvidence.applies(ConsultationQuestion.extract(input.originalUserQuery()))) {
             List<FaqSearchResponse> original = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
             var resolution = resolveComparison(input, original);
             boolean retried = false;
@@ -185,10 +186,12 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             List<FaqSearchResponse> candidates = searchComparisonCandidate(
                     input, input.originalUserQuery(), "FAQ_CANDIDATE");
             FaqSearchResponse verified = candidateEvidence.resolve(
-                    input.executionId(), input.consultRequestId(), input.candidateEvidenceQuery(), candidates,
+                    input.executionId(), input.consultRequestId(),
+                    ConsultationQuestion.extract(input.candidateEvidenceQuery()), candidates,
                     // 복합 질문은 검색용 문장이 공백 없이 정규화된다. 후보 FAQ를 선택한 모델이
                     // 인용문만 형식에 맞추지 못한 경우까지 근거 부족으로 버리지는 않는다.
-                    !input.candidateEvidenceQuery().equals(input.originalUserQuery()));
+                    !ConsultationQuestion.extract(input.candidateEvidenceQuery())
+                            .equals(ConsultationQuestion.extract(input.originalUserQuery())));
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));
@@ -209,7 +212,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         }
         ClarificationPlan plan = planner == null || !plansClarification
                 ? ClarificationPlan.none()
-                : planner.plan(input.executionId(), input.originalUserQuery(), results);
+                : planner.plan(input.executionId(), ConsultationQuestion.extract(input.originalUserQuery()), results);
         return new Prepared(results, plan);
     }
 
@@ -228,27 +231,27 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
 
     private List<FaqSearchResponse> searchWithOriginalAndRefinedQuery(AnswerInput input) {
-        // 지시어만 있는 원문 검색이 엉뚱한 후보를 먼저 찾더라도 복원된 질문을 생략하지 않는다.
-        if (!input.originalUserQuery().equals(input.resolvedUserQuery())) {
-            List<FaqSearchResponse> resolved = search(input, input.resolvedUserQuery(), FaqSearchKind.RESOLVED);
-            return !resolved.isEmpty() || input.resolvedUserQuery().equals(input.searchQuery())
-                    ? resolved : search(input, input.searchQuery(), FaqSearchKind.REFINED);
+        String original = ConsultationQuestion.extract(input.originalUserQuery());
+        String resolved = ConsultationQuestion.extract(input.resolvedUserQuery());
+        String refined = ConsultationQuestion.extract(input.searchQuery());
+        // 호칭 제거는 문맥 복원과 구분한다. 같은 상담 본문이면 임베딩을 한 번만 호출한다.
+        if (!original.equals(resolved)) {
+            List<FaqSearchResponse> results = search(input, resolved, FaqSearchKind.RESOLVED);
+            return !results.isEmpty() || resolved.equals(refined)
+                    ? results : search(input, refined, FaqSearchKind.REFINED);
         }
-        List<FaqSearchResponse> originalResults = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
-        // 원문 검색에서 후보가 나오면 추가 검색을 생략한다. 후보의 적합성은 여기서 판정하지 않는다.
-        if (!originalResults.isEmpty()
-                || input.originalUserQuery().equals(input.searchQuery())) {
-            return originalResults;
+        List<FaqSearchResponse> results = search(input, original, FaqSearchKind.ORIGINAL);
+        if (!results.isEmpty() || original.equals(refined)) {
+            return results;
         }
-        // 검색 문장의 의미 검증은 원문 검색이 0건일 때만 한다. 원문을 돌려받으면 재검색하지 않는다.
-        String refined = Objects.requireNonNull(
-                refinedQueries.select(input.originalUserQuery(), input.searchQuery()), "refinedQuery");
+        // develop의 의미 검증을 유지하되, 호칭만 다른 문장은 같은 상담 본문으로 비교한다.
+        String selected = ConsultationQuestion.extract(Objects.requireNonNull(
+                refinedQueries.select(original, refined), "refinedQuery"));
         trace.append(input.executionId(), "refinedQueryChecks", Map.of(
-                "candidate", input.searchQuery(), "selected", refined,
-                "searched", !refined.equals(input.originalUserQuery()),
+                "candidate", refined, "selected", selected,
+                "searched", !selected.equals(original),
                 "consultRequestId", input.consultRequestId()));
-        return refined.equals(input.originalUserQuery())
-                ? originalResults : search(input, refined, FaqSearchKind.REFINED);
+        return selected.equals(original) ? results : search(input, selected, FaqSearchKind.REFINED);
     }
 
     private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
@@ -263,7 +266,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private ComparisonEvidenceResolver.Resolution resolveComparison(
             AnswerInput input, List<FaqSearchResponse> original) {
         return comparisonEvidence.resolveDetailed(input.executionId(),
-                input.consultRequestId(), input.originalUserQuery(), original,
+                input.consultRequestId(), ConsultationQuestion.extract(input.originalUserQuery()), original,
                 (query, kind) -> searchComparisonCandidate(input, query, kind));
     }
 
@@ -274,6 +277,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     // useGrayZone이 false면 회색 구간이 켜져 있어도 판정을 붙이기 전 임계값으로 검색한다
     private List<FaqSearchResponse> search(AnswerInput input, String query, String kind, int topK,
             boolean unfilteredCandidates, boolean useGrayZone) {
+        query = ConsultationQuestion.extract(query);
         boolean grayZoneSearch = !unfilteredCandidates && grayZone != null && useGrayZone;
         Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", topK,
                 "candidateMode", unfilteredCandidates, "grayZone", grayZoneSearch,
