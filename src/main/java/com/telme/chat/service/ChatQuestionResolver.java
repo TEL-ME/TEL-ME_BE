@@ -74,11 +74,14 @@ public class ChatQuestionResolver {
             '로밍 신청하려는데 그건 얼마예요?'는 로밍이라는 대상이 있으므로 EXPLICIT입니다.
             '컬러링을 해지하고 싶은데 그건 어디서 신청해요?'도 컬러링이라는 대상이 있으므로 EXPLICIT입니다.
             요금 미납, 청구액 불만, 납부 방법, 속도 제한처럼 상황이 드러나도 EXPLICIT입니다. 상품명이나 의문형 어미가 필요하지 않습니다.
+            요금이 청구되는 시점, 요금을 줄이는 방법처럼 통신 요금 자체를 묻는 문장도 EXPLICIT입니다. '요금'은 비용 항목이 아니라 대상입니다.
             FAQ 정답, 신청 조건이나 비교 기준을 모르는 것을 대화 대상 생략으로 취급하지 않습니다.
             과거 시점 표현만 있어도 현재 업무 이름이 명확하면 EXPLICIT입니다.
             3. 현재 문장 안에 실제 대상이 없고 지시어 또는 질문 항목만 있으면 OMITTED입니다.
             나라, 요일, 수령 방법, 가족 관계, 기기 종류, 비용 항목처럼 업무의 조건이나 세부 항목만 있고 업무가 없으면 OMITTED입니다.
             '수수료', '방문비', '할부금', '부가세'는 비용 항목이지 업무가 아닙니다. 지시어와 함께 쓰면 앞 업무의 항목을 묻는 것입니다.
+            장비 반납, 기사 방문, 데이터 소진처럼 어떤 업무에 딸린 절차나 상태만 묻고 그 업무 이름(해지, 이전 설치, 로밍 등)이 없으면 OMITTED입니다.
+            '설치 기사', '장비'처럼 업무를 연상시키는 낱말이 있어도 업무 이름이 아니면 대상이 명시된 것이 아닙니다.
             문의 창구, 상품, 서비스, 할인 제도 자체를 묻는 문장은 대상이 있으므로 EXPLICIT입니다. '도', '에도'가 붙어도 같습니다.
             '그 서비스 해지'에는 어느 서비스인지 없습니다. '해지'라는 행위만으로 지시어의 대상이 정해지지 않습니다.
             '그 상품 변경', '그건 신청', '비용은?', '필요한 서류는?' 역시 실제 대상이 없으면 OMITTED입니다.
@@ -101,6 +104,9 @@ public class ChatQuestionResolver {
             '주말에도 접수돼요?' -> {"reference":"OMITTED"}
             '자녀 명의도 괜찮아요?' -> {"reference":"OMITTED"}
             '그럼 부가세도 따로 내요?' -> {"reference":"OMITTED"}
+            '모뎀은 어디로 보내면 돼요?' -> {"reference":"OMITTED"}
+            '기사님 출장비도 받나요?' -> {"reference":"OMITTED"}
+            '청구서는 매달 언제 와요?' -> {"reference":"EXPLICIT"}
             '고객센터 운영 시간 알려주세요' -> {"reference":"EXPLICIT"}
             '멤버십 포인트는 어디서 확인해요?' -> {"reference":"EXPLICIT"}
             '청소년 요금제도 있나요?' -> {"reference":"EXPLICIT"}
@@ -126,12 +132,15 @@ public class ChatQuestionResolver {
             POSITION: 현재 질문에 '처음 물어본', '첫 번째', '두 번째'처럼 위치를 명시한 경우입니다.
             POSITION일 때만 anchorIndex에 해당 발언의 index를 넣습니다. 위치를 정할 수 없으면 0입니다.
             신청 방법이나 비용의 정답이 발언에 없다는 이유로 업무 자체를 targetCount=0으로 바꾸지 않습니다.
+            '~하려고 합니다', '~를 알아봅니다'처럼 업무를 말한 발언은 현재 질문의 내용과 관계없이 그 업무의 개수만큼 targetCount를 셉니다.
             sources, referenceScope, anchorIndex만 있는 JSON 객체를 출력합니다. 현재 질문의 대상을 새로 만들어 내지 않습니다.
             실제 입력에 제공한 index만 사용합니다. 예시 발언이나 예시의 정정 관계를 실제 입력에 추가하지 않습니다.
 
             이전 1='로밍 요금제는 어떻게 골라요?', 현재 '그럼 신청 방법은?':
             {"sources":[{"index":1,"targetCount":1,"parentIndex":0}],"referenceScope":"RECENT","anchorIndex":0}
             이전 1='일본 로밍을 신청하고 싶어요':
+            {"sources":[{"index":1,"targetCount":1,"parentIndex":0}],"referenceScope":"RECENT","anchorIndex":0}
+            이전 1='태블릿 회선을 정리하려고 합니다', 현재 '그럼 위약금은요?':
             {"sources":[{"index":1,"targetCount":1,"parentIndex":0}],"referenceScope":"RECENT","anchorIndex":0}
             이전 1='인터넷 가입과 번호이동을 알아봅니다':
             {"sources":[{"index":1,"targetCount":2,"parentIndex":0}],"referenceScope":"RECENT","anchorIndex":0}
@@ -240,7 +249,7 @@ public class ChatQuestionResolver {
                         .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SOURCE_PROMPT)
                         .userPrompt(mapper.writeValueAsString(data)).format(ResponseFormat.JSON).temperature(0.0)
                         .maxTokens(Math.min(2048, 128 + 64 * ordered.size()))
-                        .promptVersion("context-v30-sources")
+                        .promptVersion("context-v32-sources")
                         .responseSchema(sourcesSchema(ordered.size())).think(false).build());
                 JsonNode sourcesOutput = readOutput(sourcesRaw);
                 if (sourcesOutput == null || !sourcesOutput.isObject() || sourcesOutput.size() != 3
@@ -286,7 +295,7 @@ public class ChatQuestionResolver {
                 .taskType(TaskType.CONTEXT_RESOLUTION).systemPrompt(SYSTEM_PROMPT)
                 .userPrompt(mapper.writeValueAsString(Map.of("currentQuestion", question)))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(64)
-                .promptVersion("context-v31-reference")
+                .promptVersion("context-v32-reference")
                 .responseSchema(referenceSchema()).think(false).build());
         JsonNode referenceOutput = readOutput(referenceRaw);
         if (referenceOutput == null || !referenceOutput.isObject() || referenceOutput.size() != 1
