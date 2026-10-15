@@ -81,8 +81,9 @@ public final class ChatCommandContextProvider implements ContextProvider {
                     if (!Objects.equals(execution.content(), command.content())) {
                         throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
                     }
-                    return contexts.prepare(
+                    Context prepared = contexts.prepare(
                             execution.actor(), command.sessionId(), command.inputMessageId());
+                    return prepared == null ? null : prepared.withExecutionId(command.executionId());
                 });
         if (verified == null || chatContextBuilder == null) {
             return verified;

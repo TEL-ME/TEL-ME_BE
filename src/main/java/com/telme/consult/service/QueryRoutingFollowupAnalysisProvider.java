@@ -25,7 +25,7 @@ public final class QueryRoutingFollowupAnalysisProvider implements FollowupAnaly
         Objects.requireNonNull(context, "context");
         FollowUpRouteResponse result =
                 Objects.requireNonNull(
-                        routing.analyzeFollowUp(context.sessionId(), context.message()),
+                        routing.analyzeFollowUp(context.sessionId(), context.message(), context.executionId()),
                         "followUpRouteResponse");
         if (!result.hasTarget()) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);

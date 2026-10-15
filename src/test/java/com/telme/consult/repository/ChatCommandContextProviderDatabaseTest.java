@@ -24,6 +24,8 @@ class ChatCommandContextProviderDatabaseTest extends LocalConsultDatabaseTest {
         long memberExecution = execution(session, memberMessage, "RUNNING");
         var member = provider().loadVerified(command(memberExecution, session, memberMessage, "회원 질문"));
         assertEquals(memberMessage, member.userMessageId());
+        // 라우팅 LLM 호출 기록이 이 실행에 연결되도록 실행 ID를 문맥에 싣는다
+        assertEquals(memberExecution, member.executionId());
 
         UUID guestId = UUID.randomUUID();
         long guestSession = session(null, guestId);
@@ -33,6 +35,7 @@ class ChatCommandContextProviderDatabaseTest extends LocalConsultDatabaseTest {
                 provider().loadVerified(
                         command(guestExecution, guestSession, guestMessage, "비회원 질문"));
         assertEquals(guestMessage, guest.userMessageId());
+        assertEquals(guestExecution, guest.executionId());
     }
 
     @Test

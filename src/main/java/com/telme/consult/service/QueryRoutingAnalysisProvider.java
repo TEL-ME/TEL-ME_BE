@@ -76,8 +76,9 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
         IntentRouteResponse result;
         try {
             result = context.historyResolved()
-                    ? routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion())
-                    : routing.routeSingleConsult(message, context.routingContext());
+                    ? routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion(),
+                            context.executionId())
+                    : routing.routeSingleConsult(message, context.routingContext(), context.executionId());
         } catch (UnsupportedCompoundQuestionException exception) {
             // 나눈 질문으로 버튼을 만들지 못하면 기존 고정 버튼을 쓴다
             List<String> buttons = Objects.requireNonNull(

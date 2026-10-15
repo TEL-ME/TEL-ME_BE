@@ -34,7 +34,14 @@ public final class FollowupContextService {
             List<Candidate> candidates,
             ChatContext routingContext,
             String resolvedQuestion,
-            boolean historyResolved) {
+            boolean historyResolved,
+            // LLM 호출 기록을 이 채팅 실행에 연결한다. null이면 기록하지 않는다
+            Long executionId) {
+        public Context(long sessionId, long userMessageId, String message, List<Candidate> candidates,
+                ChatContext routingContext, String resolvedQuestion, boolean historyResolved) {
+            this(sessionId, userMessageId, message, candidates, routingContext, resolvedQuestion, historyResolved,
+                    null);
+        }
         public Context(long sessionId, long userMessageId, String message, List<Candidate> candidates,
                 ChatContext routingContext, String resolvedQuestion) {
             this(sessionId, userMessageId, message, candidates, routingContext, resolvedQuestion, false);
@@ -57,16 +64,24 @@ public final class FollowupContextService {
         }
 
         public Context withRoutingContext(ChatContext value) {
-            return new Context(sessionId, userMessageId, message, candidates, value, resolvedQuestion, historyResolved);
+            return new Context(sessionId, userMessageId, message, candidates, value, resolvedQuestion,
+                    historyResolved, executionId);
         }
 
         public Context withResolution(String value, boolean restored) {
-            return new Context(sessionId, userMessageId, message, candidates, routingContext, value, restored);
+            return new Context(sessionId, userMessageId, message, candidates, routingContext, value, restored,
+                    executionId);
+        }
+
+        public Context withExecutionId(Long value) {
+            return new Context(sessionId, userMessageId, message, candidates, routingContext, resolvedQuestion,
+                    historyResolved, value);
         }
 
         // 새 질문으로 판정된 이번 분석에서만 대기 후보를 제외한다. 저장된 상담 상태는 유지한다.
         public Context forNewQuestion() {
-            return new Context(sessionId, userMessageId, message, List.of(), routingContext, resolvedQuestion, false);
+            return new Context(sessionId, userMessageId, message, List.of(), routingContext, resolvedQuestion, false,
+                    executionId);
         }
     }
 

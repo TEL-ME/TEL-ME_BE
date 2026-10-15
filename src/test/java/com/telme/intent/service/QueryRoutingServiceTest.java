@@ -22,6 +22,7 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,29 @@ class QueryRoutingServiceTest {
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient).generate(request.capture());
         assertThat(request.getValue().userPrompt()).isEqualTo("요금제는언제변경할수있나요?");
+    }
+
+    @Test
+    void attachesExecutionIdToEveryChatRoutingRequest() {
+        routingJson("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"유심 비용과 로밍 신청",
+                 "subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"유심재발급비용","requestQuote":"유심재발급비용"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍신청방법","requestQuote":"로밍신청방법"}]}
+                """);
+
+        service.routeSingleConsult(msg("유심 재발급 비용과 로밍 신청 방법 알려줘"), null, 31L);
+
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(3)).generate(requests.capture());
+        assertThat(requests.getAllValues()).extracting(LlmRequest::systemPrompt).containsExactly(
+                RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT,
+                RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT,
+                RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
+        assertThat(requests.getAllValues()).allSatisfy(request -> {
+            assertThat(request.executionId()).isEqualTo(31L);
+            assertThat(request.taskType()).isEqualTo(TaskType.ROUTING);
+        });
     }
 
     @ParameterizedTest
