@@ -9,11 +9,17 @@ import java.time.DayOfWeek;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 // 관리자·지역 검색·사용자 API가 같은 업무·영업시간 표기를 쓰도록 변환을 한곳에 둔다
 @Component
+@RequiredArgsConstructor
 public class StoreCommonConverter {
+    
+    private final MessageSource messageSource;
 
     // 조회할 때마다 업무 표시 순서가 바뀌지 않도록 id 순으로 고정한다
     public List<StoreServiceTypeResponse> toServiceTypes(Collection<StoreService> services) {
@@ -25,7 +31,11 @@ public class StoreCommonConverter {
     }
 
     public StoreServiceTypeResponse toServiceType(StoreServiceType type) {
-        return new StoreServiceTypeResponse(type.getCode().name(), type.getName());
+        // 업무 종류는 4개로 고정이라 번역 파일로 옮긴다. 번역이 없으면 DB의 한국어 이름이 나간다
+        String code = type.getCode().name();
+        String name = messageSource.getMessage(
+                "store.service-type." + code, null, type.getName(), LocaleContextHolder.getLocale());
+        return new StoreServiceTypeResponse(code, name);
     }
 
     // DB에 있는 요일만 반환한다. 빠진 요일을 휴무로 채우면 실제 휴무와 데이터 없음이 구분되지 않는다.

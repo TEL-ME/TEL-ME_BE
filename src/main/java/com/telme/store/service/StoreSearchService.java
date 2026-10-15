@@ -12,15 +12,18 @@ import com.telme.store.repository.StoreNearbyQueryRepository;
 import com.telme.store.repository.StoreSearchCondition;
 import com.telme.store.repository.StoreTag;
 import com.telme.store.repository.StoreTagCondition;
+import com.telme.store.repository.StoreTranslationRepository;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,7 @@ public class StoreSearchService {
     private final StoreConverter storeConverter;
     private final StoreSearchProperties storeSearchProperties;
     private final Clock clock;
+    private final StoreTranslationRepository storeTranslationRepository;
 
     @Transactional(readOnly = true)
     public StoreNearbySearchResponse findNearbyStores(StoreNearbySearchRequest request) {
@@ -55,9 +59,13 @@ public class StoreSearchService {
                 resolveLimit(request.limit()),
                 toConditions(request));
         if (!isInServiceArea(query.latitude(), query.longitude())) {
-            return storeConverter.toNearbySearchResponse(List.of(), query.radiusMeters());
+            return storeConverter.toNearbySearchResponse(List.of(), query.radiusMeters(), Map.of());
         }
-        return storeConverter.toNearbySearchResponse(search(query), query.radiusMeters());
+        List<StoreNearbyQueryRepository.Row> rows = search(query);
+        List<Long> storeIds =
+                rows.stream().map(StoreNearbyQueryRepository.Row::storeId).toList();
+        return storeConverter.toNearbySearchResponse(rows, query.radiusMeters(),
+                storeTranslationRepository.findByStoreIds(LocaleContextHolder.getLocale(), storeIds));
     }
 
     private double validateLatitude(Double latitude) {
