@@ -22,7 +22,7 @@ final class ConditionGrounding {
     private static final int MIN_SAID_OVERLAP = 5;
     private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
     private static final int MIN_SUBJECTLESS_LENGTH = 6;
-    private static final Pattern SUBJECT = Pattern.compile("[가-힣]{2,}[이가은는]");
+    private static final Pattern EXCLUSIVE_SUBJECT = Pattern.compile("(?:본인|대리인)[이가은는]");
     private static final Pattern QUANTITY_UNIT =
             Pattern.compile("(?:\\d|몇|한|두|세|네)(개월|영업일|시간|년|세|일|회)");
 
@@ -174,7 +174,7 @@ final class ConditionGrounding {
         return commonPrefix(left, right) >= MIN_QUESTION_PREFIX || sameExceptSubject(question, other);
     }
 
-    // 주어만 바꿔 같은 사실을 반대편에서 묻는 질문
+    // 본인과 대리인처럼 서로 배타적인 주어만 바꾼 질문
     private static boolean sameExceptSubject(String question, String other) {
         String left = withoutSubject(question);
         return left != null && left.equals(withoutSubject(other));
@@ -182,7 +182,7 @@ final class ConditionGrounding {
 
     private static String withoutSubject(String question) {
         String[] words = question.strip().split("\\s+", 2);
-        if (words.length < 2 || !SUBJECT.matcher(words[0]).matches()) {
+        if (words.length < 2 || !EXCLUSIVE_SUBJECT.matcher(words[0]).matches()) {
             return null;
         }
         String rest = compact(words[1]);
