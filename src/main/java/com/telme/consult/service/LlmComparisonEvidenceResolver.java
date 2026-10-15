@@ -138,7 +138,7 @@ public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver
         LlmRequest request = LlmRequest.builder()
                 .executionId(executionId)
                 .consultRequestId(consultRequestId)
-                .taskType(TaskType.ROUTING)
+                .taskType(TaskType.EVIDENCE_CHECK)
                 .systemPrompt(PROMPT)
                 .userPrompt("고객 질문: " + question + "\nFAQ 후보:\n" + context)
                 .format(ResponseFormat.JSON)
