@@ -1,13 +1,14 @@
 package com.telme.chat.safety;
 
+import static com.telme.chat.guard.MaskSpan.INSPECTION_BOUNDARY;
+import static com.telme.chat.guard.MaskSpan.MASK;
+
 import com.telme.chat.guard.InputInspection;
 import com.telme.chat.guard.MaskSpan;
 import java.util.List;
 
 /** 서버가 확인한 마스크와 양옆 단어가 함께 인용된 경우에만 검사 경계를 복원한다. */
 public record OutputMaskContext(List<Source> sources) {
-    private static final char BOUNDARY = '\uFFFC';
-
     public OutputMaskContext {
         sources = List.copyOf(sources);
     }
@@ -22,7 +23,7 @@ public record OutputMaskContext(List<Source> sources) {
             int previousEnd = 0;
             for (MaskSpan span : spans) {
                 if (span.start() < previousEnd || span.end() > content.length()
-                        || !content.substring(span.start(), span.end()).equals("***")) {
+                        || !content.substring(span.start(), span.end()).equals(MASK)) {
                     throw new IllegalArgumentException("저장된 마스크 위치가 문구와 일치하지 않습니다.");
                 }
                 previousEnd = span.end();
@@ -40,6 +41,9 @@ public record OutputMaskContext(List<Source> sources) {
     }
 
     String protect(String value) {
+        if (sources.isEmpty() || !value.contains(MASK)) {
+            return value;
+        }
         boolean[] protectedCharacters = new boolean[value.length()];
         for (Source source : sources) {
             for (MaskSpan span : source.spans()) {
@@ -84,7 +88,7 @@ public record OutputMaskContext(List<Source> sources) {
         }
         StringBuilder result = new StringBuilder(value.length());
         for (int index = 0; index < value.length(); index++) {
-            result.append(protectedCharacters[index] ? BOUNDARY : value.charAt(index));
+            result.append(protectedCharacters[index] ? INSPECTION_BOUNDARY : value.charAt(index));
         }
         return result.toString();
     }

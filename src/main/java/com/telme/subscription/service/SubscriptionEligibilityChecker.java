@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class SubscriptionEligibilityChecker {
 
-    static final int YOUTH_MIN_AGE = 14;
-    static final int YOUTH_MAX_AGE = 18;
-    static final int SENIOR_MIN_AGE = 65;
+    public static final int YOUTH_MIN_AGE = 14;
+    public static final int YOUTH_MAX_AGE = 18;
+    public static final int SENIOR_MIN_AGE = 65;
     static final int MAX_PLAUSIBLE_AGE = 120;
 
     // 저장된 생년월일 우선, 자격이 확인된 경우에만 새로 저장

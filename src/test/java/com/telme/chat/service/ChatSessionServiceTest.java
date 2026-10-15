@@ -74,7 +74,7 @@ class ChatSessionServiceTest {
                     ChatMessageSendRequest request = invocation.getArgument(2);
                     return new ChatInputGuardService.Turn(null,
                             new InputInspection(request.content(), java.util.List.of(), true,
-                                    request.content(), java.util.List.of()),
+                                    request.content(), java.util.List.of(), false),
                             null, null, false, false, "", Instant.now());
                 });
     }

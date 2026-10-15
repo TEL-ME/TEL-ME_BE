@@ -11,7 +11,8 @@ public record InputInspection(
         List<Detection> detections,
         boolean hasQuestion,
         String fingerprintContent,
-        List<MaskSpan> maskSpans) {
+        List<MaskSpan> maskSpans,
+        boolean ambiguousCondition) {
 
     public enum Reason {
         PROFANITY,
