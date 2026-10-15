@@ -6,14 +6,15 @@
 | --- | --- | --- | --- |
 | 1 | 의도 분류 (`ROUTING_SYSTEM_PROMPT`) | 새 질문마다 | **gpt-oss 확정** |
 | 2 | 요청 개수 판정 (`REQUEST_INVENTORY_PROMPT`) | 의도 분류가 FAQ 하위 질문을 2개 이상 만들었을 때 | **gpt-oss 확정**, 프롬프트 v4로 수정 |
-| 3 | 검색어 검증 (`FAQ_QUERY_FAITHFULNESS_PROMPT`) | 복합 하위 질문, 원문 검색 결과가 없어 다시 검색할 때 | 남음 |
-| 4 | 후속 분석 (`FOLLOW_UP_SYSTEM_PROMPT`) | 되물은 질문에 고객이 답했을 때 | 남음 |
+| 3 | 검색어 검증 (`FAQ_QUERY_FAITHFULNESS_PROMPT`) | 복합 하위 질문, 원문 검색 결과가 없어 다시 검색할 때 | **gpt-oss 확정**, 단일 검색어용 프롬프트 추가 |
+| 4 | 후속 분석 (`FOLLOW_UP_SYSTEM_PROMPT`) | 되물은 질문에 고객이 답했을 때 | **gpt-oss 확정**, 프롬프트 v2와 규칙 보완 |
 
 판정 기준은 "gpt-oss가 확실히 나쁘지 않으면 gpt-oss"로 잡았다. 이 기준은 팀 확인이 남아 있다.
 
 ## 측정 방식
 
-- 앱 코드의 라우팅 서비스(`QueryRoutingService`)를 그대로 쓰는 프로브([RoutingEvaluationProbe](../src/test/java/com/telme/probe/RoutingEvaluationProbe.java))로 잰다. 호출마다 보낼 주소를 따로 정할 수 있다(`TELME_ROUTING_INTENT_URL`, `TELME_ROUTING_INVENTORY_URL`, `TELME_ROUTING_FAITHFULNESS_URL`, 나머지는 `TELME_ROUTING_BASE_URL`).
+- 앱 코드의 라우팅 서비스(`QueryRoutingService`)를 그대로 쓰는 프로브([RoutingEvaluationProbe](../src/test/java/com/telme/probe/RoutingEvaluationProbe.java))로 잰다. 호출마다 보낼 주소를 따로 정할 수 있다(`TELME_ROUTING_INTENT_URL`, `TELME_ROUTING_INVENTORY_URL`, `TELME_ROUTING_FAITHFULNESS_URL`, `TELME_ROUTING_FOLLOWUP_URL`, 나머지는 `TELME_ROUTING_BASE_URL`). 확정한 호출의 기본 주소는 gpt-oss 라우터다.
+- 2단계부터는 앱의 해당 호출 메서드(`requestInventory`, `findUnsafeFaqQueries`, `requestFollowUpAnalysis`)를 그대로 불러 그 호출만 잰다(`TELME_ROUTING_STEP`). 앱에서 그 호출 앞에 도는 규칙도 같은 순서로 적용한다.
 - EXAONE은 로컬 Ollama, gpt-oss는 평가용 라우터(`scripts/judge-serving-evaluation/judge_router.py --chat bedrock --judge bedrock`, 도쿄)로 보낸다.
 - gpt-oss는 같은 입력에도 결과가 흔들려 3회를 동시에 돌린다(`TELME_ROUTING_REPEATS=3`). EXAONE은 1회다.
 - 1단계 채점은 앱의 UNKNOWN 재확인(#145)을 재현한다. 모델이 UNKNOWN이라 한 질문을 검색 테스트 API로 다시 검색해 걸리면 FAQ로 본다. 검색 임계값은 확정값 0.69/0.80이다.
@@ -108,6 +109,90 @@
 - "각각" 없이 정보 3가지를 나열한 질문("인터넷 이전 설치 비용, 소요 기간, 신청 방법")은 v4에서도 gpt-oss가 대부분 합친다. 원래 틀린 문항에서 나열 유형이 다 맞은 것은 "각각"이 있었기 때문으로, 다른 나열에는 덜 일반화됐다.
 - 같은 업무 이어 묻기는 문항마다 결과가 흔들린다. 모델이 확신하지 못하는 영역이다.
 
+## 3단계: 검색어 검증 → gpt-oss, 단일 검색어용 프롬프트
+
+검색어 검증은 모델이 다듬은 검색어가 고객 원문의 뜻을 바꿨는지(unsafe) 판정한다. 복합 FAQ 하위 질문마다, 그리고 단일 FAQ의 원문 검색이 0건일 때 재검색 후보에 돈다. 뜻이 바뀐 검색어를 통과시키면 다른 FAQ로 답할 수 있고(위험), 멀쩡한 검색어를 막으면 원문으로 검색할 뿐이다(손해가 작다).
+
+### 평가셋 (검색어 301개)
+
+[eval_routing_faithfulness.json](../scripts/data/eval_routing_faithfulness.json), 생성 스크립트 [build_faithfulness_set.py](../scripts/routing-call-comparison/build_faithfulness_set.py).
+
+- 실제 입력 241개: 1단계 gpt-oss 1회차 의도 분류 출력에서 앱 코드로 만든 입력이다(복합 하위 질문 98, 재검색 후보 143). 앱이 모델을 부르지 않는 9건(업무 대상 규칙이 먼저 거절 4, 맥락 복원 경로 3, 원문이 프롬프트 예시 2)은 뺐다.
+- 일부러 뜻을 바꾼 검색어 30개(`SYN`): 실제 입력에는 뜻이 바뀐 검색어가 14개뿐이라 조건·부정 빠뜨리기, 없는 대상 넣기, 상황을 해결책으로 좁히기, 비교를 한쪽으로 바꾸기, 복합 질문에서 앞 대상 붙이기를 만들었다.
+- 확인용 30개(`CHK`): 프롬프트를 고치기 전에 정답을 정해 쓰고 수정에는 쓰지 않았다.
+- 정답은 뜻 바뀜 54, 멀쩡함 239, 판단이 갈림 8(어느 판정이든 맞음)이다. 모델 결과를 보기 전에 붙였고 사람 검토 전이다.
+
+### 프롬프트 수정
+
+조건을 하나씩 대조하는 순서를 넣었다. 원문의 조건(~인데, ~하면, 사람·나이·금액·기간, 경로, 부정)을 찾아 검색어에 남았는지 대조하고, 검색어에만 있는 대상·기준과 좁힌 말을 찾고, 판단이 서지 않으면 unsafe로 본다.
+
+이 순서를 모든 검색어에 쓰면 복합 하위 질문에서 다른 하위 질문의 요청을 빠진 조건으로 읽어 멀쩡한 하위 검색어를 100개 중 13~26개 막았다. 그래서 단일 검색어에만 쓴다(`FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT`, 버전 `routing-faq-faithfulness-single-v3`). 복합 하위 질문은 원래 프롬프트 그대로다.
+
+### 결과
+
+| | 뜻 바뀐 것 잡음 (54) | 멀쩡한 것 통과 (239) | 확인용 뜻 바뀐 것 잡음 (14) |
+| --- | --- | --- | --- |
+| EXAONE 고치기 전 → 후 | 9 → 11 | 237 → 239 | 1 → 2 |
+| gpt-oss 고치기 전 | 26 / 27 / 26 | 237 / 237 / 235 | 4 |
+| **gpt-oss 고친 후** | **43 / 42 / 44** | 235 / 237 / 236 | **12 / 12 / 12** |
+
+| 경로 (gpt-oss) | 뜻 바뀐 것 잡음 | 멀쩡한 것 막음 |
+| --- | --- | --- |
+| 단일 재검색 고치기 전 → 후 | 25~26 → 41~42 / 45 | 2~4 → 2~4 / 139 |
+| 복합 (원래 프롬프트) | 1~3 / 9 | 0 / 100 |
+
+- 실제 입력만 보면 gpt-oss가 뜻 바뀐 14개 중 4개에서 9~10개를 잡게 됐다.
+- 복합 질문에서 앞 대상을 뒤에 붙이는 경우("로밍 신청 방법이랑 해지 위약금" → "로밍 해지 위약금")와 질문 전체 조건이 빠지는 경우는 두 모델 모두 거의 못 잡는다. 이 검사 뒤에 원문에 없는 단어를 빼는 규칙이 걸러 내는지는 채팅 API 확인에서 본다.
+
+## 4단계: 후속 분석 → gpt-oss, 프롬프트 v2
+
+후속 분석은 되묻는 중인 조건 이름(`agent_visiting` 같은 영문 키)과 고객 답변만 받아, 답변 종류(조건 답변·보류·새 질문)와 조건 값(FILLED·DECLINED)을 낸다.
+
+### 평가셋 (68개)
+
+[eval_routing_followup.json](../scripts/data/eval_routing_followup.json), 생성 스크립트 [build_followup_set.py](../scripts/routing-call-comparison/build_followup_set.py).
+
+- 실제 입력 14개: TELME-174 대화 흐름 실행 DB(`consult_conditions`)에 남은 조건 이름과 고객 답변이다.
+- 새로 쓴 34개: 지역·업무·예아니요 조건, 거절, 보류, 새 질문.
+- 확인용 20개: 프롬프트를 고치기 전에 쓴 설명이 붙은 부정 답, 진짜 거절·보류, 유심 새로 받기와 신규 개통 구분.
+- 답변 종류가 맞고 정답에 적힌 조건이 모두 맞아야 정답이다. 정답은 사람 검토 전이다.
+
+### 수정
+
+- `FOLLOW_UP_SYSTEM_PROMPT` v2(`routing-follow-up-v2`): "아니요", "없어요", "아직 안 됐어요"처럼 부정하거나 부정 뒤에 사정을 덧붙인 답도 값(FILLED)이다. DECLINED는 대답 자체를 하지 않겠다고 할 때만이다. 유심이나 eSIM을 새로 받거나 바꾸는 것은 USIM_REISSUE, NEW_LINE은 새 회선을 개통할 때만이다.
+- 규칙(`RuleBasedRoutingFallback.serviceTypeOfShortReply`): 업무를 묻거나 지역을 묻는 중 "명의변경이라고", "유심 재발급이요"처럼 업무 이름에 어미만 붙은 짧은 답은 모델 없이 업무 조건으로 읽는다. 전에는 버튼 문구와 글자가 같을 때만 읽어서, gpt-oss가 이런 답을 새 질문으로 보고 상담을 끊는 경우가 있었다. "하려고요"처럼 동사가 붙거나 다른 말이 섞인 답은 지금처럼 모델이 읽는다.
+
+### 결과
+
+| | 전체 (68) | 실제 입력 (14) | 확인용 (20) | 형식 오류 |
+| --- | --- | --- | --- | --- |
+| EXAONE 고치기 전 → 후 | 44 → 48 | 11 → 12 | 10 → 11 | 2 → 4 |
+| gpt-oss 고치기 전 | 59 / 59 / 57 | 12 / 11 / 12 | 15 / 16 / 14 | 0 |
+| **gpt-oss 고친 후** | **67 / 66 / 67** | 13 / 14 / 14 | **20 / 18 / 19** | 0 |
+
+- 고치기 전 gpt-oss는 "아뇨 제가 직접 갈 거예요", "아니요 둘 다 직접 가요"를 3회 모두 거절로 읽었다. 앱의 `FaqClarificationAnswers`는 "아니요"·"없어요"만 단독으로 올 때만 값으로 바로잡아서, 설명이 붙은 답은 거절로 남았다.
+- 진짜 거절("대답하기 싫어요", "개인정보라 말씀 못 드려요")은 고친 뒤에도 거절로 처리한다.
+- EXAONE은 부정하는 답을 대부분 거절로, "동생이 대신 갈 거예요"처럼 멀쩡한 답을 보류로 읽는다.
+
+### 되묻기 흐름의 다시 묻기 (모델과 무관, 별도 이슈)
+
+TELME-174에서 gpt-oss가 이미 답한 조건을 다시 물은 것은 후속 분석 모델 때문이 아니다. 조건 뽑기가 조건을 2개 만들면 앱은 하나씩 묻고, 후속 분석은 지금 묻는 조건 하나만 받는다. 그래서 같은 답에 들어 있던 두 번째 조건의 답을 버리고 다시 묻는다.
+
+- "두 분이 모두 직접 오실 수 있나요?" → "둘 다 직접 매장에 갈 거예요" → "대리인으로 방문하실 예정인가요?"
+- "개통 후 6개월이 지났나요?" → "1년 넘었고 남은 할부금은 없어요" → "남은 할부금을 모두 결제하셨나요?"
+
+후속 분석에 아직 묻지 않은 조건까지 질문 문장과 함께 넘기거나, 조건 뽑기가 같은 정보를 두 조건으로 나누지 않게 해야 한다.
+
+## 호출당 응답 시간
+
+프로브 기록의 중앙값이다. EXAONE은 로컬 GPU, gpt-oss는 Bedrock 도쿄이고 gpt-oss는 3회를 동시에 돌린 값이라 실제보다 조금 높을 수 있다. 대화 한 턴에서 늘어나는 시간은 채팅 API 확인에서 잰다.
+
+| 호출 | EXAONE | gpt-oss |
+| --- | --- | --- |
+| 요청 개수 판정 | 143ms | 360ms |
+| 검색어 검증 | 97ms | 585ms |
+| 후속 분석 | 398ms | 500ms |
+
 ## 재현
 
 ```bash
@@ -120,17 +205,28 @@ python scripts/routing-call-comparison/score_intent_step.py      # 검색 앱(0.
 bash scripts/routing-call-comparison/run_request_count_step.sh
 python scripts/routing-call-comparison/score_request_count_step.py
 python scripts/routing-call-comparison/score_request_count_step.py exaone-v3 gptoss-1-v3 gptoss-2-v3 gptoss-3-v3
+# 3단계 (평가셋을 다시 만드는 방법은 run_faithfulness_step.sh 머리말)
+bash scripts/routing-call-comparison/run_faithfulness_step.sh
+python scripts/routing-call-comparison/score_faithfulness_step.py
+python scripts/routing-call-comparison/score_faithfulness_step.py exaone-v2 gptoss-1-v2 gptoss-2-v2 gptoss-3-v2
+# 4단계
+python scripts/routing-call-comparison/build_followup_set.py
+bash scripts/routing-call-comparison/run_followup_step.sh
+python scripts/routing-call-comparison/score_followup_step.py
+python scripts/routing-call-comparison/score_followup_step.py exaone-v1 gptoss-1-v1 gptoss-2-v1 gptoss-3-v1
 ```
 
-준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 2단계 결과 파일의 `-v3` 키는 프롬프트를 고치기 전 결과다.
+준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`(4단계) 키는 프롬프트를 고치기 전 결과다.
 
 ## 남은 일과 확인할 것
 
-- 3단계 검색어 검증, 4단계 후속 분석, 마지막으로 실제 채팅 API로 전체 확인. 4단계는 TELME-174에서 gpt-oss가 되물은 뒤 처리(이미 답한 조건을 다시 묻기)에 약했던 부분이라 채팅 API로도 본다.
+- 마지막으로 라우팅 호출 4개를 모두 gpt-oss로 둔 채 실제 채팅 API로 TELME-174 대화 흐름 22개를 돌려 전체를 확인한다. 대화 한 턴의 응답 시간도 함께 잰다.
+- 되묻기 흐름의 다시 묻기는 별도 이슈로 고친다(4단계 마지막 절).
 - 팀 확인
   - 판정 기준 "gpt-oss가 확실히 나쁘지 않으면 gpt-oss".
-  - 새로 쓴 137문항의 라벨.
+  - 새로 쓴 137문항의 라벨, 3단계 검색어 정답, 4단계 케이스 정답.
   - `review_note`가 있는 4문항: 아이폰 케이스·블루투스 이어폰 추천(U+ 매장이 액세서리를 다루면 FAQ), 상담원 채용·대리점 창업(회사 관련이지만 상담 범위 밖으로 UNKNOWN).
 - 별도로 볼 것
   - 대상 업무가 있는 문장 안의 "거기" 같은 지시어는 문맥 해석이 연결하지 않아 라우팅에서 풀리지 않는다(1단계 맥락 문항).
   - 요청 개수 판정에서 "각각" 없는 정보 나열과 같은 업무 이어 묻기는 gpt-oss v4에서도 합치는 경우가 남는다.
+  - 검색어 검증은 복합 하위 질문의 앞 대상 붙이기와 전체 조건 빠뜨리기를 거의 못 잡는다.

@@ -75,8 +75,9 @@ class RoutingEvaluationProbe {
     // 검색어 검증은 3단계 비교로 gpt-oss로 정했다
     private static final String FAITHFULNESS_URL =
             System.getenv().getOrDefault("TELME_ROUTING_FAITHFULNESS_URL", "http://127.0.0.1:11435");
+    // 후속 분석은 4단계 비교로 gpt-oss로 정했다
     private static final String FOLLOWUP_URL =
-            System.getenv().getOrDefault("TELME_ROUTING_FOLLOWUP_URL", BASE_URL);
+            System.getenv().getOrDefault("TELME_ROUTING_FOLLOWUP_URL", "http://127.0.0.1:11435");
     // inventory: 라우팅 흐름 대신 요청 개수 판정 호출만 문항마다 직접 부른다(TELME-175 2단계).
     // 이 호출의 입력은 질문 하나뿐이라, 의도 분류가 나눈 문항에만 도는 앱 흐름보다 넓게 시험할 수 있다
     private static final boolean INVENTORY_STEP =
