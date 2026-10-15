@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -88,7 +87,9 @@ class PiiMaskingBoundaryTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "개월로", "개월동안", "개월짜리", "개월로는", "개월동안만", "개월짜리는",
-        "개월짜리로", "개월짜리로는요"
+        "개월짜리로", "개월짜리로는요",
+        "개월간", "개월째", "개월치", "개월씩", "개월이요",
+        "개월간은", "개월째는", "개월치로", "개월씩만", "개월이요?"
     })
     @DisplayName("모호한 기간의 누락 어미와 조사 결합도 마스킹·해시를 유지하며 재입력으로 분리한다")
     void 모호한_기간의_누락_어미를_재입력으로_분리한다(String ending) {
@@ -103,7 +104,7 @@ class PiiMaskingBoundaryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"개월로", "개월동안", "개월짜리"})
+    @ValueSource(strings = {"개월로", "개월동안", "개월짜리", "개월간", "개월째", "개월치", "개월씩", "개월이요"})
     @DisplayName("주민번호와 겹친 기존 마스크·해시는 유지하고 소실된 조건은 재입력으로 안내한다")
     void 주민번호_겹침의_기존_마스킹과_해시를_변경하지_않는다(String ending) {
         var result = inspector.inspect("주민번호 990101-1234567 4" + ending + " 약정 문의");
@@ -115,13 +116,17 @@ class PiiMaskingBoundaryTest {
         assertThat(result.hasProfanity()).isFalse();
     }
 
-    @Test
-    @DisplayName("모호한 금액의 추가 어미도 기존 전체 번호 보호와 해시 문구를 유지한다")
-    void 모호한_금액의_추가_어미를_재입력으로_분리한다() {
-        var result = inspector.inspect("카드 4111111111111111 003원짜리 납부 문의");
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "003 | 원짜리", "3 | 원씩", "3 | 만원씩", "3 | 년째",
+        "18 | 일간", "18 | 시간째", "18 | 분씩"
+    })
+    @DisplayName("지원하는 금액·기간 단위의 추가 어미도 기존 전체 번호 보호와 해시 문구를 유지한다")
+    void 모호한_금액과_기간의_추가_어미를_재입력으로_분리한다(String number, String ending) {
+        var result = inspector.inspect("카드 4111111111111111 " + number + ending + " 납부 문의");
 
-        assertThat(result.content()).isEqualTo("카드 ***원짜리 납부 문의");
-        assertThat(result.fingerprintContent()).isEqualTo("카드 [카드번호]원짜리 납부 문의");
+        assertThat(result.content()).isEqualTo("카드 ***" + ending + " 납부 문의");
+        assertThat(result.fingerprintContent()).isEqualTo("카드 [카드번호]" + ending + " 납부 문의");
         assertThat(result.maskSpans()).isEqualTo(List.of(new MaskSpan(3, 6)));
         assertThat(result.ambiguousCondition()).isTrue();
         assertThat(result.hasProfanity()).isFalse();
@@ -142,7 +147,21 @@ class PiiMaskingBoundaryTest {
         "주민번호 990101-3234567 100000원으로 납부 문의",
         "요금 7700원과 18개월로 약정 문의",
         "18개월짜리 요금제와 5만원 납부 문의",
-        "제 카드번호는 4111111111111111인데요 재발급 비용이 얼마예요?"
+        "제 카드번호는 4111111111111111인데요 재발급 비용이 얼마예요?",
+        "카드 4111111111111111 12개월간 약정 문의",
+        "카드 4111111111111111 12개월째 납부 문의",
+        "카드 4111111111111111 12개월치 금액 문의",
+        "카드 4111111111111111 12개월씩 납부 문의",
+        "카드 4111111111111111 12개월이요",
+        "카드 4111111111111111 7700원씩 납부 문의",
+        "카드 4111111111111111, 18개월간 약정 문의",
+        "카드 4111111111111111 약정 18개월째 문의",
+        "카드 4111111111111111 / 18개월치 납부 문의",
+        "카드 4111111111111111 기간 18개월씩 납부 문의",
+        "카드 4111111111111111, 18개월이요",
+        "카드 4111111111111111 금액 3만원씩 납부 문의",
+        "18개월간 약정하고 3만원씩 납부할 수 있나요?",
+        "3년째 사용 중인데 18일간 로밍과 18시간째 장애, 18분씩 통화 문의"
     })
     @DisplayName("어미 판정을 추가해도 정상 문의와 분리된 금액·기간 및 해시 문구는 유지한다")
     void 정상_문의와_분리된_조건의_마스킹과_해시를_유지한다(String input) {

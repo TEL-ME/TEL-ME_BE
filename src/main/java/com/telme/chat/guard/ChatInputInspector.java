@@ -40,7 +40,7 @@ public final class ChatInputInspector {
                     + "(?=$|[\\s\\p{Punct}])");
     // 기존 단위 판정은 주민번호 보호 범위에도 쓰이므로, 추가 어미는 재입력 판정에만 적용한다.
     private static final Pattern AMBIGUOUS_CONDITION_UNIT = Pattern.compile(
-            "\\s*(?:만원|개월|시간|원|년|일|분)(?:로|동안|짜리)"
+            "\\s*(?:만원|개월|시간|원|년|일|분)(?:로|동안|짜리|간|째|치|씩|이요)"
                     + "(?:으로|로|은|는|이|가|을|를|에|도|만|요){0,3}"
                     + "(?=$|[\\s\\p{Punct}])");
     // 배포된 v2 영수증 비교에서만 당시 탐색 경계를 재현한다.
