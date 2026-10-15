@@ -21,6 +21,8 @@ final class ConditionGrounding {
     // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
     private static final int MIN_SAID_OVERLAP = 5;
     private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
+    private static final int MIN_SUBJECTLESS_LENGTH = 6;
+    private static final Pattern SUBJECT = Pattern.compile("[가-힣]{2,}[이가은는]");
     private static final Pattern QUANTITY_UNIT =
             Pattern.compile("(?:\\d|몇|한|두|세|네)(개월|영업일|시간|년|세|일|회)");
 
@@ -94,8 +96,16 @@ final class ConditionGrounding {
         return options.stream()
                 .filter(option -> containsValue(sourceText, compact(option))
                         // 한쪽만 근거에 적히기도 한다. "법인인 경우"만 있어도 질문이 개인·법인을 둘 다 물으면 짝이다
-                        || containsValue(compact(question), compact(option)))
+                        || containsValue(compact(question), compact(option))
+                        || everyWordGrounded(option, sourceText + compact(question)))
                 .toList();
+    }
+
+    // "본인 방문"처럼 근거에는 "본인이 방문하시면"으로 흩어져 있는 선택지다. 낱말마다 근거에 있어야 한다
+    private static boolean everyWordGrounded(String option, String text) {
+        String[] words = option.strip().split("\\s+");
+        return words.length >= 2 && Arrays.stream(words)
+                .allMatch(word -> word.length() >= 2 && containsValue(text, compact(word)));
     }
 
     // 11500원 안의 1500원처럼 숫자 중간에 걸린 값은 다른 값이다
@@ -161,7 +171,22 @@ final class ConditionGrounding {
     static boolean asksTheSame(String question, String other) {
         String left = compact(question);
         String right = compact(other);
-        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX;
+        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX || sameExceptSubject(question, other);
+    }
+
+    // 주어만 바꿔 같은 사실을 반대편에서 묻는 경우다. "대리인이 방문하시는 건가요?"와 "본인이 방문하시는 건가요?"가 그 경우다
+    private static boolean sameExceptSubject(String question, String other) {
+        String left = withoutSubject(question);
+        return left != null && left.equals(withoutSubject(other));
+    }
+
+    private static String withoutSubject(String question) {
+        String[] words = question.strip().split("\\s+", 2);
+        if (words.length < 2 || !SUBJECT.matcher(words[0]).matches()) {
+            return null;
+        }
+        String rest = compact(words[1]);
+        return rest.length() >= MIN_SUBJECTLESS_LENGTH ? rest : null;
     }
 
     private static int commonPrefix(String left, String right) {

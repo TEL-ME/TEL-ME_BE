@@ -16,6 +16,13 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
+    @DisplayName("주어만 바꿔 같은 사실을 반대편에서 묻는 질문은 같은 것으로 본다")
+    void 주어만_바꾼_질문은_중복이다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "대리인이 방문하시는 건가요?", "본인이 방문하시는 건가요?")).isTrue();
+    }
+
+    @Test
     @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
     void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(
