@@ -3,7 +3,9 @@ package com.telme.chat.guard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -80,6 +82,96 @@ class PiiMaskingBoundaryTest {
         assertThat(result.ambiguousCondition()).isTrue();
         assertThat(result.content()).doesNotContain("18", "003", "4111");
         assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "개월로", "개월동안", "개월짜리", "개월로는", "개월동안만", "개월짜리는",
+        "개월짜리로", "개월짜리로는요"
+    })
+    @DisplayName("모호한 기간의 누락 어미와 조사 결합도 마스킹·해시를 유지하며 재입력으로 분리한다")
+    void 모호한_기간의_누락_어미를_재입력으로_분리한다(String ending) {
+        var result = inspector.inspect("카드 4111111111111111 18" + ending + " 약정 문의");
+
+        assertThat(result.content()).isEqualTo("카드 ***" + ending + " 약정 문의");
+        assertThat(result.fingerprintContent()).isEqualTo("카드 [카드번호]" + ending + " 약정 문의");
+        assertThat(result.maskSpans()).isEqualTo(List.of(new MaskSpan(3, 6)));
+        assertThat(result.ambiguousCondition()).isTrue();
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"개월로", "개월동안", "개월짜리"})
+    @DisplayName("주민번호와 겹친 기존 마스크·해시는 유지하고 소실된 조건은 재입력으로 안내한다")
+    void 주민번호_겹침의_기존_마스킹과_해시를_변경하지_않는다(String ending) {
+        var result = inspector.inspect("주민번호 990101-1234567 4" + ending + " 약정 문의");
+
+        assertThat(result.content()).isEqualTo("주민번호 ***" + ending + " 약정 문의");
+        assertThat(result.fingerprintContent()).isEqualTo("주민번호 [카드번호]" + ending + " 약정 문의");
+        assertThat(result.maskSpans()).isEqualTo(List.of(new MaskSpan(5, 8)));
+        assertThat(result.ambiguousCondition()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @Test
+    @DisplayName("모호한 금액의 추가 어미도 기존 전체 번호 보호와 해시 문구를 유지한다")
+    void 모호한_금액의_추가_어미를_재입력으로_분리한다() {
+        var result = inspector.inspect("카드 4111111111111111 003원짜리 납부 문의");
+
+        assertThat(result.content()).isEqualTo("카드 ***원짜리 납부 문의");
+        assertThat(result.fingerprintContent()).isEqualTo("카드 [카드번호]원짜리 납부 문의");
+        assertThat(result.maskSpans()).isEqualTo(List.of(new MaskSpan(3, 6)));
+        assertThat(result.ambiguousCondition()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "카드 4111111111111111 12개월로 약정 문의",
+        "카드 4111111111111111 12개월동안 납부 문의",
+        "카드 4111111111111111 12개월짜리는 얼마예요?",
+        "카드 4111111111111111 7700원으로 납부 문의",
+        "카드 4111111111111111, 18개월로 약정 문의",
+        "카드 4111111111111111 약정 18개월동안 납부 문의",
+        "카드 4111111111111111 금액 003원짜리 납부 문의",
+        "카드 4111111111111111 / 18개월짜리 약정 문의",
+        "주민번호 990101-1234567 4개월 약정 문의",
+        "주민번호 990101-1234567 18개월에 걸쳐 납부 문의",
+        "주민번호 990101-3234567 100000원으로 납부 문의",
+        "요금 7700원과 18개월로 약정 문의",
+        "18개월짜리 요금제와 5만원 납부 문의",
+        "제 카드번호는 4111111111111111인데요 재발급 비용이 얼마예요?"
+    })
+    @DisplayName("어미 판정을 추가해도 정상 문의와 분리된 금액·기간 및 해시 문구는 유지한다")
+    void 정상_문의와_분리된_조건의_마스킹과_해시를_유지한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(input.replace("4111111111111111", "***")
+                .replace("990101-1234567", "***").replace("990101-3234567", "***"));
+        assertThat(result.fingerprintContent()).isEqualTo(input.replace("4111111111111111", "[카드번호]")
+                .replace("990101-1234567", "[주민등록번호]")
+                .replace("990101-3234567", "[주민등록번호]"));
+        assertThat(result.ambiguousCondition()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "카드번호 4111111111111111 18분실 신고 | 카드번호 ***분실 신고 | 카드번호 [카드번호]분실 신고",
+        "카드번호 4111111111111111 18일반 문의 | 카드번호 ***일반 문의 | 카드번호 [카드번호]일반 문의",
+        "카드번호 4111111111111111 003원룸 주소 변경 | 카드번호 ***원룸 주소 변경 | 카드번호 [카드번호]원룸 주소 변경"
+    })
+    @DisplayName("분실·일반·원룸의 일부를 조건 단위로 잘라 정상 문의를 재입력으로 보내지 않는다")
+    void 정상_단어를_조건_단위로_오인하지_않는다(String input, String content, String fingerprint) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(content);
+        assertThat(result.fingerprintContent()).isEqualTo(fingerprint);
+        assertThat(result.ambiguousCondition()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
         assertThat(result.hasProfanity()).isFalse();
     }
 

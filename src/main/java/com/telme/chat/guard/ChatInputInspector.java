@@ -38,6 +38,11 @@ public final class ChatInputInspector {
             "\\s*(?:만원|개월|시간|원|년|일|분)"
                     + "(?:입니다|인데요|이고요|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
                     + "(?=$|[\\s\\p{Punct}])");
+    // 기존 단위 판정은 주민번호 보호 범위에도 쓰이므로, 추가 어미는 재입력 판정에만 적용한다.
+    private static final Pattern AMBIGUOUS_CONDITION_UNIT = Pattern.compile(
+            "\\s*(?:만원|개월|시간|원|년|일|분)(?:로|동안|짜리)"
+                    + "(?:으로|로|은|는|이|가|을|를|에|도|만|요){0,3}"
+                    + "(?=$|[\\s\\p{Punct}])");
     // 배포된 v2 영수증 비교에서만 당시 탐색 경계를 재현한다.
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
     // 감지한 번호에 붙은 단위·조사만 제외한다. 일반 단어와 남은 숫자 조건은 문의로 보존한다.
@@ -259,12 +264,17 @@ public final class ChatInputInspector {
 
     private boolean hasAmbiguousCondition(String numeric, List<Span> cards, List<Span> candidates) {
         for (Span card : cards) {
-            if (conditionUnit(numeric, card.end()) && candidates.stream().anyMatch(prefix ->
+            if (ambiguousConditionUnit(numeric, card.end()) && candidates.stream().anyMatch(prefix ->
                     prefix.start() == card.start() && separatedTail(numeric, prefix.end(), card.end()))) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean ambiguousConditionUnit(String numeric, int end) {
+        return conditionUnit(numeric, end)
+                || AMBIGUOUS_CONDITION_UNIT.matcher(numeric).region(end, numeric.length()).lookingAt();
     }
 
     private boolean conditionUnit(String numeric, int end) {
