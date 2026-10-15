@@ -3,7 +3,7 @@ package com.telme.plan.dto.res;
 import java.math.BigDecimal;
 import lombok.Builder;
 
-// dataGb는 무제한이면 null이고 unlimited가 true
+// dataGb·voiceMinutes·smsCount는 무제한이면 null이고 각각 unlimited·voiceUnlimited·smsUnlimited가 true
 @Builder
 public record PlanResponse(
         Long planId,
@@ -13,6 +13,10 @@ public record PlanResponse(
         String targetGroup,
         int monthlyFee,
         BigDecimal dataGb,
-        boolean unlimited
+        boolean unlimited,
+        Integer voiceMinutes,
+        boolean voiceUnlimited,
+        Integer smsCount,
+        boolean smsUnlimited
 ) {
 }

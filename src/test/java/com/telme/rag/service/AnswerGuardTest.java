@@ -11,6 +11,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class AnswerGuardTest {
+    @org.junit.jupiter.api.Test
+    void personaNoEvidenceWithoutPeriodIsCanonicalizedAndDoesNotLeakFollowingClaims() {
+        var guard = new AnswerGuard();
+        String response = AnswerPromptTemplates.NO_EVIDENCE_MESSAGE + " 무료로 발급해 드립니다.";
+
+        assertThat(guard.trimAfterNoEvidence(response)).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(guard.trimAfterNoEvidence("죄송해요. " + response))
+                .isEqualTo("죄송해요. " + AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
 
     private final AnswerGuard guard = new AnswerGuard();
 

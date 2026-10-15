@@ -145,7 +145,7 @@ class OllamaRequestConverterTest {
     void 프롬프트_버전만으로는_응답_형식을_정하지_않는다() {
         OllamaChatRequest request = converter.toChatRequest(LlmRequest.builder()
                 .userPrompt("질문").format(ResponseFormat.JSON)
-                .promptVersion("multiturn-resolution-v30-reference").build(), false);
+                .promptVersion("context-v30-reference").build(), false);
 
         assertThat(request.format()).isEqualTo("json");
         assertThat(request.think()).isNull();

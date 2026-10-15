@@ -26,8 +26,17 @@ import java.util.regex.Pattern;
  */
 @Component
 public final class ChatInputInspector {
+    private static final String MASK = "***";
+    // 욕설 우회 문자에 포함되지 않는 경계다. 저장·상담·해시에는 전달하지 않는다.
+    private static final char PII_BOUNDARY = '\uFFFC';
+    private static final Pattern BRIDGED_MASK = Pattern.compile("(?<=\\S)\\uFFFC(?=\\S)");
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
+    // 감지한 번호에 붙은 단위·조사만 제외한다. 일반 단어와 남은 숫자 조건은 문의로 보존한다.
+    private static final Pattern MASKED_NUMBER_UNIT = Pattern.compile(
+            "\\uFFFC\\s*(?:만원|원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
+                    + "(?:입니다|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
+                    + "(?=$|[\\s\\p{Punct}])", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUOTED = Pattern.compile("['\"‘“]([^'\"’”]{1,60})['\"’”]");
     private static final Pattern MEANING =
             Pattern.compile(
@@ -132,8 +141,28 @@ public final class ChatInputInspector {
             throw new IllegalArgumentException("검사할 입력이 필요합니다.");
         }
         List<Detection> detections = new ArrayList<>();
-        String safe = mask(input, detections);
-        String normalized = normalize(safe);
+        MaskedContent maskedContent = mask(input, detections);
+        String safe = maskedContent.content();
+        String normalized = normalize(maskedContent.inspectionContent());
+        collectProfanity(normalized, detections);
+        // 공백 없이 번호를 끼운 우회만 추가 검사한다. 공백을 둔 마스크 인용 경계는 유지한다.
+        String bridged = BRIDGED_MASK.matcher(normalized).replaceAll("");
+        if (!bridged.equals(normalized)) {
+            collectProfanity(bridged, detections);
+        }
+        String remaining = MASKED_NUMBER_UNIT.matcher(normalized).replaceAll("")
+                .replace(String.valueOf(PII_BOUNDARY), "")
+                .replaceAll("[\\s\\p{Punct}]", "");
+        boolean masked =
+                detections.stream()
+                        .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
+        boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
+        return new InputInspection(
+                safe, detections.stream().distinct().toList(), hasQuestion,
+                maskedContent.fingerprintContent(), maskedContent.maskSpans());
+    }
+
+    private void collectProfanity(String normalized, List<Detection> detections) {
         List<Span> exemptions = exemptions(normalized);
         for (CompiledRule compiled : rules) {
             Matcher matcher = compiled.pattern().matcher(normalized);
@@ -157,15 +186,6 @@ public final class ChatInputInspector {
                 break;
             }
         }
-        String remaining =
-                safe.replace("[주민등록번호]", "")
-                        .replace("[카드번호]", "")
-                        .replaceAll("[\\s\\p{Punct}]", "");
-        boolean masked =
-                detections.stream()
-                        .anyMatch(value -> value.reason() == Reason.SENSITIVE_INFORMATION);
-        boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
-        return new InputInspection(safe, detections.stream().distinct().toList(), hasQuestion);
     }
 
     private boolean hasRemainingQuestion(String remaining) {
@@ -181,7 +201,7 @@ public final class ChatInputInspector {
         return false;
     }
 
-    private String mask(String input, List<Detection> detections) {
+    private MaskedContent mask(String input, List<Detection> detections) {
         List<Span> spans = new ArrayList<>();
         // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문에서 치환할 위치를 보존한다.
         String numeric = numericForm(input);
@@ -194,7 +214,8 @@ public final class ChatInputInspector {
         }
         Matcher card = CARD.matcher(numeric);
         while (card.find()) {
-            // 뒤의 별도 숫자까지 붙은 후보가 검증에 실패해도 원래 번호의 그룹 경계를 확인한다.
+            // 전체 후보가 검증을 통과하면 길이와 단위에 관계없이 전체를 보호한다.
+            // 실패한 경우에만 구분자 경계의 유효한 앞 번호를 찾아 나머지 숫자를 보존한다.
             for (int end = card.end(); end > card.start(); end--) {
                 if (end < card.end() && numeric.charAt(end) != ' ' && numeric.charAt(end) != '-') {
                     continue;
@@ -208,16 +229,27 @@ public final class ChatInputInspector {
             }
         }
         spans.sort(Comparator.comparingInt(Span::start));
+        List<MaskSpan> maskSpans = new ArrayList<>();
         StringBuilder result = new StringBuilder();
+        StringBuilder fingerprintContent = new StringBuilder();
+        StringBuilder inspectionContent = new StringBuilder();
         int cursor = 0;
         for (Span span : spans) {
             if (span.start() < cursor) {
                 continue;
             }
-            result.append(input, cursor, span.start()).append(span.replacement());
+            result.append(input, cursor, span.start());
+            maskSpans.add(new MaskSpan(result.length(), result.length() + MASK.length()));
+            result.append(MASK);
+            inspectionContent.append(input, cursor, span.start()).append(PII_BOUNDARY);
+            // 기존 요청 해시와 호환되는 유형 문구만 유지한다. 원문 번호는 어느 결과에도 넣지 않는다.
+            fingerprintContent.append(input, cursor, span.start()).append(span.replacement());
             cursor = span.end();
         }
-        return result.append(input, cursor, input.length()).toString();
+        return new MaskedContent(
+                result.append(input, cursor, input.length()).toString(),
+                fingerprintContent.append(input, cursor, input.length()).toString(),
+                inspectionContent.append(input, cursor, input.length()).toString(), maskSpans);
     }
 
     private String numericForm(String input) {
@@ -381,4 +413,7 @@ public final class ChatInputInspector {
     private record CompiledRule(Rule rule, Pattern pattern) {}
 
     private record Span(int start, int end, String replacement) {}
+
+    private record MaskedContent(String content, String fingerprintContent, String inspectionContent,
+            List<MaskSpan> maskSpans) {}
 }

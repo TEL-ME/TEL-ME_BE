@@ -2,8 +2,17 @@ package com.telme.chat.guard;
 
 import java.util.List;
 
-/** 저장·상담 전달에 사용할 안전한 입력과 규칙 식별자만 보관한다. */
-public record InputInspection(String content, List<Detection> detections, boolean hasQuestion) {
+/**
+ * 저장·상담에는 content를 사용한다. fingerprintContent는 재전송 비교 전용이며
+ * 표시 문구가 바뀌어도 기존 유형 대체 문구를 유지한다. 두 값 모두 감지한 번호를 포함하지 않는다.
+ */
+public record InputInspection(
+        String content,
+        List<Detection> detections,
+        boolean hasQuestion,
+        String fingerprintContent,
+        List<MaskSpan> maskSpans) {
+
     public enum Reason {
         PROFANITY,
         INITIAL_PROFANITY,
@@ -14,6 +23,7 @@ public record InputInspection(String content, List<Detection> detections, boolea
 
     public InputInspection {
         detections = List.copyOf(detections);
+        maskSpans = List.copyOf(maskSpans);
     }
 
     public boolean hasProfanity() {

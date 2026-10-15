@@ -4,6 +4,7 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -76,6 +77,16 @@ public class ConsultChatPersistenceService {
     @Transactional
     public ChatExecutionState persistDirectAnswer(
             long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, false);
+    }
+
+    @Transactional
+    public ChatExecutionState persistBasicConversation(long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, true);
+    }
+
+    private ChatExecutionState persistDirectAnswer(
+            long executionId, long sessionId, ChatAnswer answer, boolean preserveConsultation) {
         Objects.requireNonNull(answer, "answer");
         var sessions =
                 jdbc.queryForList(
@@ -85,7 +96,9 @@ public class ConsultChatPersistenceService {
         if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
-        ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
+        ChatExecutionState state = preserveConsultation
+                ? chatExecutionService.completeBasicConversation(executionId, answer)
+                : chatExecutionService.completeAnswer(executionId, answer);
         if (state.outputMessage() == null) {
             throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
         }
@@ -212,7 +225,9 @@ public class ConsultChatPersistenceService {
                 jdbc.queryForList(
                         "SELECT content,follow_ups::text AS follow_ups FROM chat_messages WHERE message_id=?",
                         result.pendingMessageId());
-        String question = ClarificationReask.questionOf((String) pending.getFirst().get("content"));
+        // 저장된 되묻기에는 첫 질문의 인사가 붙어 있을 수 있다. 다시 물을 때 인사를 반복하지 않는다
+        String question = ConsultationQuestion.extract(
+                ClarificationReask.questionOf((String) pending.getFirst().get("content")));
         // 조건 변경만 받은 턴은 안내 문구 없이 질문만 재전송
         ChatExecutionState execution =
                 chatExecutionService.askClarification(

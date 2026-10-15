@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatPersona;
 import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
@@ -145,8 +146,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         if (turn.directAnswer() != null) {
             var completed =
-                    persistence.persistDirectAnswer(
-                            command.executionId(), command.sessionId(), turn.directAnswer());
+                    command.coordinates() == null
+                            && BasicConversationAnalysisProvider.preservesWaitingState(command.content())
+                            ? persistence.persistBasicConversation(
+                                    command.executionId(), command.sessionId(), turn.directAnswer())
+                            : persistence.persistDirectAnswer(
+                                    command.executionId(), command.sessionId(), turn.directAnswer());
             events.completed(command.executionId(), completed);
             return;
         }
@@ -263,7 +268,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
             // 추적 기록은 전송 뒤에 남긴다. 기록용 DB 쓰기가 최종 답변 전송을 늦추지 않게 한다.
             try {
-                events.stream(command.executionId()).onToken(generated.answer().content());
+                events.stream(command.executionId()).onToken(
+                        ChatPersona.prependGreeting(command.content(), generated.answer().content()));
                 trace.stage(command.executionId(), "finalTransmission", Map.of(
                         "outputMessageId", completed.outputMessage().messageId(),
                         "status", "DISPATCH_RETURNED"));
@@ -398,7 +404,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 command.executionId(), command.sessionId(), completions, combined, sources);
         // 여러 모델 호출의 중간 토큰은 저장된 최종 답변과 다를 수 있어 완료 후 한 번만 전송한다.
         try {
-            events.stream(command.executionId()).onToken(combined.content());
+            events.stream(command.executionId()).onToken(
+                    ChatPersona.prependGreeting(command.content(), combined.content()));
             trace.stage(command.executionId(), "finalTransmission", Map.of(
                     "outputMessageId", completed.outputMessage().messageId(),
                     "status", "DISPATCH_RETURNED"));

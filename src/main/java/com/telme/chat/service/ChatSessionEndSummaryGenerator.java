@@ -7,6 +7,7 @@ import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.ChatOutputGuard;
+import com.telme.chat.safety.OutputMaskContext;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
@@ -67,6 +68,7 @@ class ChatSessionEndSummaryGenerator {
         // 이 생성 작업 안에서만 재사용해 상담 간 후보·개인정보가 섞이지 않도록 한다.
         GuidanceCatalog catalog = createGuidanceCatalog(input);
         List<List<ChatEndSummaryData.Message>> chunks = split(input, catalog);
+        List<OutputMaskContext.Source> maskSources = new ArrayList<>(input.maskContext().sources());
         List<JsonNode> partials = new ArrayList<>();
         for (var messages : chunks) {
             Set<Long> ids = messages.stream().map(ChatEndSummaryData.Message::id).collect(Collectors.toSet());
@@ -74,7 +76,8 @@ class ChatSessionEndSummaryGenerator {
                     .toList();
             var pending = input.pendingIds().stream().filter(ids::contains).collect(Collectors.toSet());
             String prompt = chunkPrompt(input, messages, catalog);
-            var result = validate(call(input, prompt, deadline, ids, catalog), input, ids, pending, catalog);
+            var result = validate(call(input, prompt, deadline, ids, catalog), input, ids, pending,
+                    catalog, maskSources);
             partials.add(parse(result.json()));
         }
         int mergeCalls = 0;
@@ -101,7 +104,7 @@ class ChatSessionEndSummaryGenerator {
                 Set<Long> ids = referencedIds(group);
                 Set<Long> pending = input.pendingIds().stream().filter(ids::contains).collect(Collectors.toSet());
                 var result = validate(call(input, mergePrompt(input, group, catalog), deadline, ids, catalog),
-                        input, ids, pending, catalog);
+                        input, ids, pending, catalog, maskSources);
                 next.add(parse(result.json()));
             }
             if (next.size() >= partials.size()) {
@@ -109,7 +112,7 @@ class ChatSessionEndSummaryGenerator {
             }
             partials = next;
         }
-        var result = validate(partials.getFirst(), input, allIds(input), input.pendingIds(), catalog);
+        var result = validate(partials.getFirst(), input, allIds(input), input.pendingIds(), catalog, maskSources);
         return labelGuidance(input, result);
     }
 
@@ -431,8 +434,8 @@ class ChatSessionEndSummaryGenerator {
             ((ObjectNode) item).put("text", item.path("text").asText().replaceFirst("^안내받은 내용: ", prefix));
         }
         String serialized = json(root);
-        guard.verifySummary(serialized);
-        return new ChatEndSummaryData.Result(serialized, readContent(serialized));
+        guard.verifySummary(serialized, result.maskContext());
+        return new ChatEndSummaryData.Result(serialized, readContent(serialized), result.maskContext());
     }
 
     private void checkDeadline(Instant deadline) {
@@ -453,7 +456,8 @@ class ChatSessionEndSummaryGenerator {
     }
 
     private ChatEndSummaryData.Result validate(JsonNode root, ChatEndSummaryData.Input input,
-            Set<Long> allowed, Set<Long> requiredPending, GuidanceCatalog catalog) {
+            Set<Long> allowed, Set<Long> requiredPending, GuidanceCatalog catalog,
+            List<OutputMaskContext.Source> maskSources) {
         if (!root.isObject() || root.size() != 3 || FIELDS.stream().anyMatch(field -> !root.has(field))) {
             throw new IllegalArgumentException("INVALID_OUTPUT");
         }
@@ -518,7 +522,11 @@ class ChatSessionEndSummaryGenerator {
                     }
                     original = quote;
                 }
-                String masked = inspector.inspect(original).content().strip();
+                var inspection = inspector.inspect(original);
+                if (!inspection.maskSpans().isEmpty()) {
+                    maskSources.add(OutputMaskContext.Source.from(inspection));
+                }
+                String masked = inspection.content().strip();
                 if (field.equals("guidance")) {
                     masked = prefix + masked;
                 }
@@ -568,7 +576,11 @@ class ChatSessionEndSummaryGenerator {
         otherPending.forEach(pendingItems::add);
         confirmedPending.forEach((origin, labels) -> {
             for (String label : labels) {
-                String text = inspector.inspect(label).content().strip();
+                var inspection = inspector.inspect(label);
+                if (!inspection.maskSpans().isEmpty()) {
+                    maskSources.add(OutputMaskContext.Source.from(inspection));
+                }
+                String text = inspection.content().strip();
                 if (text.length() > 240) {
                     throw new IllegalArgumentException("INPUT_LIMIT");
                 }
@@ -602,8 +614,9 @@ class ChatSessionEndSummaryGenerator {
             ids.stream().sorted().forEach(references::add);
         });
         String serialized = json(safe);
-        guard.verifySummary(serialized);
-        return new ChatEndSummaryData.Result(serialized, readContent(serialized));
+        OutputMaskContext masks = new OutputMaskContext(maskSources);
+        guard.verifySummary(serialized, masks);
+        return new ChatEndSummaryData.Result(serialized, readContent(serialized), masks);
     }
 
     private Map<Long, Set<String>> collectConfirmedPending(ChatEndSummaryData.Input input, Set<Long> requiredPending) {

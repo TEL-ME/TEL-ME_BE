@@ -19,6 +19,10 @@ public class PlanConverter {
                 .monthlyFee(plan.getMonthlyFee())
                 .dataGb(plan.getDataGb())
                 .unlimited(plan.isUnlimited())
+                .voiceMinutes(plan.getVoiceMinutes())
+                .voiceUnlimited(plan.isVoiceUnlimited())
+                .smsCount(plan.getSmsCount())
+                .smsUnlimited(plan.isSmsUnlimited())
                 .build();
     }
 

@@ -58,6 +58,19 @@ public class Plan {
     @Column(name = "is_unlimited", nullable = false)
     private boolean unlimited;
 
+    // 무제한이면 null
+    @Column(name = "voice_minutes")
+    private Integer voiceMinutes;
+
+    @Column(name = "is_voice_unlimited", nullable = false)
+    private boolean voiceUnlimited;
+
+    @Column(name = "sms_count")
+    private Integer smsCount;
+
+    @Column(name = "is_sms_unlimited", nullable = false)
+    private boolean smsUnlimited;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.guard.ChatInputInspector;
+import com.telme.chat.repository.ChatInputMaskRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +23,7 @@ class ChatSessionEndSummaryInputReader {
     private final ChatInputInspector inspector;
     private final ObjectMapper mapper;
     private final ChatEndSummaryProperties properties;
+    private final ChatInputMaskRepository inputMasks;
 
     @Transactional(readOnly = true)
     ChatEndSummaryData.Input read(long sessionId) {
@@ -116,7 +118,8 @@ class ChatSessionEndSummaryInputReader {
                         (Long) rs.getObject("answered_message_id"), (Integer) rs.getObject("sequence_no")),
                 sessionId).stream().filter(condition -> ids.contains(condition.originMessageId())).toList();
         return new ChatEndSummaryData.Input(sessionId, through,
-                executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions);
+                executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions,
+                inputMasks.read(sessionId, through));
     }
 
     private String safe(String text) {
