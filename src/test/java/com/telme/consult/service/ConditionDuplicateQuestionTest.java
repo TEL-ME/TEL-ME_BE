@@ -23,6 +23,17 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
+    @DisplayName("주어가 같거나 나머지 문장이 다르면 남긴다")
+    void 주어_규칙은_나머지가_같을_때만_적용한다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 방문하시는 건가요?", "본인이 신청하시는 건가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 직접 방문하시나요?", "대리인이 방문하시는 건가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 하시나요?", "대리인이 하시나요?")).isFalse();
+    }
+
+    @Test
     @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
     void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(

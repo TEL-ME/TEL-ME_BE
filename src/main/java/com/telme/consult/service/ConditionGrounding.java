@@ -101,7 +101,7 @@ final class ConditionGrounding {
                 .toList();
     }
 
-    // "본인 방문"처럼 근거에는 "본인이 방문하시면"으로 흩어져 있는 선택지다. 낱말마다 근거에 있어야 한다
+    // 근거에 낱말로 흩어진 선택지는 낱말마다 근거에 있어야 한다
     private static boolean everyWordGrounded(String option, String text) {
         String[] words = option.strip().split("\\s+");
         return words.length >= 2 && Arrays.stream(words)
@@ -174,7 +174,7 @@ final class ConditionGrounding {
         return commonPrefix(left, right) >= MIN_QUESTION_PREFIX || sameExceptSubject(question, other);
     }
 
-    // 주어만 바꿔 같은 사실을 반대편에서 묻는 경우다. "대리인이 방문하시는 건가요?"와 "본인이 방문하시는 건가요?"가 그 경우다
+    // 주어만 바꿔 같은 사실을 반대편에서 묻는 질문
     private static boolean sameExceptSubject(String question, String other) {
         String left = withoutSubject(question);
         return left != null && left.equals(withoutSubject(other));
