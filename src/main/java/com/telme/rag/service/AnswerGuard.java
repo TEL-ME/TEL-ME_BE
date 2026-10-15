@@ -102,6 +102,14 @@ public class AnswerGuard {
             "고객센터", "콜센터", "매장", "대리점", "지점"
     );
 
+    private static final Set<String> VISIT_CHANNELS = Set.of("매장", "대리점", "지점");
+    private static final Pattern APPLICATION_ADVICE = Pattern.compile(
+            "(?:신청|접수|가입)하(?:시면|세요|십시오)|(?:신청|접수|처리|진행)해\\s*드리|"
+                    + "(?:신청|접수|가입)(?:을|를)?\\s*도와|(?:신청|접수|가입)해\\s*보(?:세요|시)|"
+                    + "(?:신청|접수|가입)(?:을|를)?\\s*(?:권장|권유|추천)");
+    private static final Pattern UNPROCESSED_RECORD = Pattern.compile(
+            "(?:이번\\s*상담|상담\\s*(?:과정|중)).*(?:신청|접수|처리|완료).*(?:않았|미접수|미처리)");
+
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
     // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
     private static final Map<String, Set<String>> ATTRIBUTE_SYNONYMS = Map.of(
@@ -205,6 +213,7 @@ public class AnswerGuard {
             String answer, String context, String userQuery, String confirmedValues) {
         String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
+        filtered = trimUnsupportedApplicationAdvice(filtered, context);
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
@@ -240,7 +249,52 @@ public class AnswerGuard {
     }
 
     public String trimUngroundedChannels(String answer, String context, String userQuery) {
-        return trimSentences(answer, context, userQuery, CHANNELS, "근거에 없는 안내 창구");
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            Set<String> invented = ungrounded(sentence, context, userQuery, CHANNELS);
+            String grounded = invented.isEmpty() ? sentence : findGroundedVisitProcedure(sentence, context);
+            if (grounded != null) {
+                kept.append(kept.isEmpty() ? "" : " ").append(grounded);
+                continue;
+            }
+            log.warn("[AnswerGuard] 근거에 없는 안내 창구로 문장 제거: {} | {}", invented, sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    public String trimUnsupportedApplicationAdvice(String answer, String context) {
+        if (answer == null || answer.isBlank() || context == null || context.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        var evidence = java.util.Arrays.stream(SENTENCE.split(context.strip())).toList();
+        var instructions = evidence.stream().filter(sentence -> APPLICATION_ADVICE.matcher(sentence).find())
+                .distinct().toList();
+        var kept = new LinkedHashSet<String>();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (!APPLICATION_ADVICE.matcher(sentence).find() || evidence.contains(sentence)) {
+                kept.add(sentence);
+            } else if (instructions.size() == 1) {
+                // 신청 절차를 허용하더라도 근거에 있는 준비물·방문자 조건을 생략하지 않는다.
+                kept.add(instructions.getFirst());
+            } else if (instructions.isEmpty()) {
+                String visit = findGroundedVisitProcedure(sentence, context);
+                if (visit != null) {
+                    kept.add(visit);
+                }
+            }
+        }
+        if (kept.isEmpty()) {
+            return AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        }
+        var records = evidence.stream().filter(sentence -> UNPROCESSED_RECORD.matcher(sentence).find())
+                .distinct().toList();
+        if (records.size() == 1 && kept.stream().noneMatch(sentence -> UNPROCESSED_RECORD.matcher(sentence).find())) {
+            kept.add(records.getFirst());
+        }
+        return String.join(" ", kept);
     }
 
     public String trimUngroundedPolicyAttributes(String answer, String context, String userQuery) {
@@ -391,22 +445,23 @@ public class AnswerGuard {
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
     }
 
-    private String trimSentences(
-            String answer, String context, String userQuery, Set<String> words, String reason) {
-        if (answer == null || answer.isBlank()) {
-            return answer == null ? "" : answer;
+    private String findGroundedVisitProcedure(String sentence, String context) {
+        if (context == null || context.isBlank() || !sentence.contains("신분증") || !sentence.contains("방문")) {
+            return null;
         }
-        StringBuilder kept = new StringBuilder();
-        for (String sentence : SENTENCE.split(answer.strip())) {
-            Set<String> invented = ungrounded(sentence, context, userQuery, words);
-            if (invented.isEmpty()) {
-                kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        Set<String> candidates = new LinkedHashSet<>();
+        for (String evidenceSentence : SENTENCE.split(context.strip())) {
+            if (!evidenceSentence.contains("신분증") || !evidenceSentence.contains("방문")) {
                 continue;
             }
-            log.warn("[AnswerGuard] {}로 문장 제거: {} | {}", reason, invented, sentence);
+            boolean sameChannel = VISIT_CHANNELS.stream()
+                    .anyMatch(channel -> sentence.contains(channel) && evidenceSentence.contains(channel));
+            if (sameChannel) {
+                candidates.add(evidenceSentence.strip());
+            }
         }
-        // 지어낸 문장만 있던 답변이라 근거 없음으로 돌린다
-        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+        // 일부 단어만 지우면 준비물의 조건이나 부정 표현을 손상할 수 있어 단일 근거 문장을 그대로 사용한다.
+        return candidates.size() == 1 ? candidates.iterator().next() : null;
     }
 
     private Set<String> ungrounded(

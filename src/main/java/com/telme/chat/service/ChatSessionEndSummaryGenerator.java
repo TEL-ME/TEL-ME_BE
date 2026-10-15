@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
+import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Remaining;
+import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Inquiry;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.ChatOutputGuard;
 import com.telme.chat.safety.OutputMaskContext;
@@ -26,7 +28,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 class ChatSessionEndSummaryGenerator {
-    static final String VERSION = "consultation-end-summary-v10";
+    static final String VERSION = "consultation-end-summary-v13";
     static final List<String> FIELDS = List.of("topics", "guidance", "pendingItems");
     private static final List<String> MODEL_FIELDS = List.of("topics", "selectedSentenceIds", "pendingItems");
     private static final int MAX_GUIDANCE_LENGTH = 480;
@@ -43,7 +45,7 @@ class ChatSessionEndSummaryGenerator {
             topics는 문의 번호를 키로 하는 객체입니다. 문의 주제만 짧은 명사형으로 씁니다. 정책 답변이나 확인·처리 완료를 넣지 않습니다.
             selectedSentenceIds는 guidanceCandidates의 sentenceId 중 중요한 안내 번호입니다. 안내 문장을 쓰거나 복사하지 않습니다.
             비용, 조건, 예외를 포함한 안내를 고릅니다. 최신 조건에 실제 답한 안내를 우선하고, 되묻기를 안내로 취급하지 않습니다.
-            pendingItems는 남은 문의를 text와 원본 sourceMessageIds로 정리합니다. pendingIds의 문의와 미확인 조건을 빠뜨리지 않습니다.
+            pendingItems는 항상 빈 배열로 반환합니다. 남은 문의와 상태 문구는 서버가 저장된 근거에서 조립합니다.
             현재 조건은 currentConditions와 연결된 conditionSources를 사용합니다. 최신 정정은 이전 부분 요약보다 우선합니다.
             latestUserStatements의 정정도 확인합니다. 같은 문의·대상의 조건만 정정하고, 본인/가족과 서로 다른 상품은 섞지 않습니다.
             정정 전과 후의 상품을 둘 다 신청했다고 하지 않습니다. DONE, COMPLETED, 상담 종료는 실제 신청·변경 완료가 아닙니다.
@@ -113,7 +115,34 @@ class ChatSessionEndSummaryGenerator {
             partials = next;
         }
         var result = validate(partials.getFirst(), input, allIds(input), input.pendingIds(), catalog, maskSources);
+        result = preserveAnsweredGuidance(input, result, catalog);
         return labelGuidance(input, result);
+    }
+
+    private ChatEndSummaryData.Result preserveAnsweredGuidance(ChatEndSummaryData.Input input,
+            ChatEndSummaryData.Result result, GuidanceCatalog catalog) {
+        var answered = answeredGuidance(input, allIds(input));
+        if (answered.isEmpty()) {
+            return result;
+        }
+        ObjectNode root = (ObjectNode) parse(result.json());
+        var selected = mapper.createArrayNode();
+        for (var item : root.path("guidance")) {
+            String text = item.path("text").asText().replaceFirst("^안내받은 내용: ", "");
+            catalog.candidates().stream().filter(candidate -> candidate.text().equals(text)).findFirst()
+                    .ifPresent(candidate -> selected.add(candidate.sentenceId()));
+        }
+        // 병합 입력에 원문을 반복해서 늘리지 않고 최종 단계에서 문의별 원문 출처를 보완한다.
+        var retained = selectGuidance(selected, catalog.candidates(), latestGuidance(input, allIds(input)), answered);
+        var guidance = root.putArray("guidance");
+        for (var candidate : retained) {
+            var item = guidance.addObject();
+            item.put("text", candidate.text());
+            var sources = item.putArray("sourceMessageIds");
+            candidate.sourceMessageIds().forEach(sources::add);
+        }
+        return validate(root, input, allIds(input), input.pendingIds(), catalog,
+                new ArrayList<>(result.maskContext().sources()));
     }
 
     private String mergePrompt(ChatEndSummaryData.Input input, List<JsonNode> partials, GuidanceCatalog catalog) {
@@ -342,7 +371,7 @@ class ChatSessionEndSummaryGenerator {
         }
         result.set("pendingItems", model.get("pendingItems"));
         var guidance = result.putArray("guidance");
-        for (var choice : selectGuidance(selected, choices, latest)) {
+        for (var choice : selectGuidance(selected, choices, latest, Map.of())) {
             var item = guidance.addObject();
             item.put("text", choice.text());
             var sources = item.putArray("sourceMessageIds");
@@ -351,23 +380,40 @@ class ChatSessionEndSummaryGenerator {
         return result;
     }
 
-    private List<Candidate> selectGuidance(JsonNode selected, List<Candidate> choices, Set<Long> latest) {
+    private List<Candidate> selectGuidance(JsonNode selected, List<Candidate> choices, Set<Long> latest,
+            Map<Long, Boolean> answered) {
         List<Candidate> chosen = new ArrayList<>();
         Set<Integer> used = new HashSet<>();
         for (var id : selected) {
-            if (!id.isIntegralNumber() || !id.canConvertToInt() || !used.add(id.intValue())) {
+            if (!id.isIntegralNumber() || !id.canConvertToInt()) {
                 throw new IllegalArgumentException("INVALID_SELECTION");
+            }
+            // 같은 유효 번호의 반복은 새 안내가 아니므로 한 번만 반영한다.
+            if (!used.add(id.intValue())) {
+                continue;
             }
             chosen.add(choices.stream().filter(candidate -> candidate.sentenceId() == id.intValue())
                     .findFirst().orElseThrow(() -> new IllegalArgumentException("INVALID_SELECTION")));
         }
-        var required = choices.stream().filter(candidate ->
-                candidate.sourceMessageIds().stream().anyMatch(latest::contains)).toList();
+        Map<Integer, Candidate> required = new LinkedHashMap<>();
+        choices.stream().filter(candidate -> candidate.sourceMessageIds().stream().anyMatch(latest::contains))
+                .forEach(candidate -> required.put(candidate.sentenceId(), candidate));
+        answered.forEach((messageId, composite) -> {
+            var candidates = choices.stream()
+                    .filter(candidate -> candidate.sourceMessageIds().contains(messageId)).toList();
+            if (composite) {
+                candidates.forEach(candidate -> required.put(candidate.sentenceId(), candidate));
+            } else if (!candidates.isEmpty()) {
+                var retained = chosen.stream().filter(candidate -> candidate.sourceMessageIds().contains(messageId))
+                        .findFirst().orElse(candidates.getFirst());
+                required.put(retained.sentenceId(), retained);
+            }
+        });
         if (required.size() > MAX_GUIDANCE_ITEMS) {
             // 필수 최신 안내 자체가 한도를 넘으면 일부만 성공 결과로 제공하지 않는다.
             throw new IllegalArgumentException("INPUT_LIMIT");
         }
-        Set<Integer> retained = required.stream().map(Candidate::sentenceId).collect(Collectors.toSet());
+        Set<Integer> retained = new HashSet<>(required.keySet());
         for (var candidate : chosen) {
             if (retained.size() < MAX_GUIDANCE_ITEMS) {
                 retained.add(candidate.sentenceId());
@@ -381,12 +427,38 @@ class ChatSessionEndSummaryGenerator {
                 result.add(candidate);
             }
         }
-        for (var candidate : required) {
+        for (var candidate : required.values()) {
             if (emitted.add(candidate.sentenceId())) {
                 result.add(candidate);
             }
         }
         return result;
+    }
+
+    private Map<Long, Boolean> answeredGuidance(ChatEndSummaryData.Input input, Set<Long> allowed) {
+        if (input.requests().size() < 2) {
+            return Map.of();
+        }
+        Set<Long> origins = input.requests().stream().map(ChatEndSummaryData.Request::originMessageId)
+                .collect(Collectors.toSet());
+        Map<Long, Long> latest = new LinkedHashMap<>();
+        for (var message : input.messages()) {
+            if (!allowed.contains(message.id()) || !message.type().equals("ANSWER")
+                    || !"GROUNDED".equals(message.basis()) || message.replyTo() == null) {
+                continue;
+            }
+            long origin = input.conditions().stream()
+                    .filter(condition -> message.replyTo().equals(condition.answeredMessageId()))
+                    .map(ChatEndSummaryData.Condition::originMessageId).findFirst().orElse(message.replyTo());
+            if (origins.contains(origin)) {
+                latest.put(origin, message.id());
+            }
+        }
+        Map<Long, Boolean> answers = new LinkedHashMap<>();
+        latest.forEach((origin, messageId) -> answers.put(messageId, input.requests().stream()
+                .filter(request -> request.originMessageId() == origin && request.status().equals("DONE"))
+                .count() > 1));
+        return answers;
     }
 
     private Set<Long> latestGuidance(ChatEndSummaryData.Input input, Set<Long> allowed) {
@@ -411,6 +483,8 @@ class ChatSessionEndSummaryGenerator {
 
     private ChatEndSummaryData.Result labelGuidance(ChatEndSummaryData.Input input, ChatEndSummaryData.Result result) {
         ObjectNode root = (ObjectNode) parse(result.json());
+        List<OutputMaskContext.Source> maskSources = new ArrayList<>(result.maskContext().sources());
+        appendPeriodQuotes(root, input, maskSources);
         Set<Long> latest = latestGuidance(input, allIds(input));
         for (var item : root.path("guidance")) {
             boolean current = false;
@@ -435,8 +509,35 @@ class ChatSessionEndSummaryGenerator {
             ((ObjectNode) item).put("text", item.path("text").asText().replaceFirst("^안내받은 내용: ", prefix));
         }
         String serialized = json(root);
-        guard.verifySummary(serialized, result.maskContext());
-        return new ChatEndSummaryData.Result(serialized, readContent(serialized), result.maskContext());
+        OutputMaskContext masks = new OutputMaskContext(maskSources);
+        guard.verifySummary(serialized, masks);
+        return new ChatEndSummaryData.Result(serialized, readContent(serialized), masks);
+    }
+
+    private void appendPeriodQuotes(ObjectNode root, ChatEndSummaryData.Input input,
+            List<OutputMaskContext.Source> maskSources) {
+        var topics = root.withArray("topics");
+        Set<String> emitted = new HashSet<>();
+        for (var message : input.messages()) {
+            if (!message.role().equals("USER")) {
+                continue;
+            }
+            var inspection = inspector.inspect(message.content());
+            if (!inspection.maskSpans().isEmpty()) {
+                maskSources.add(OutputMaskContext.Source.from(inspection));
+            }
+            for (String quote : ChatEndSummarySourceText.periodQuotes(inspection.content())) {
+                String text = "고객이 언급한 기간(원문): " + quote;
+                if (text.length() > 240) {
+                    throw new IllegalArgumentException("INPUT_LIMIT");
+                }
+                if (emitted.add(message.id() + ":" + text)) {
+                    var item = topics.addObject();
+                    item.put("text", text);
+                    item.putArray("sourceMessageIds").add(message.id());
+                }
+            }
+        }
     }
 
     private void checkDeadline(Instant deadline) {
@@ -462,6 +563,9 @@ class ChatSessionEndSummaryGenerator {
         if (!root.isObject() || root.size() != 3 || FIELDS.stream().anyMatch(field -> !root.has(field))) {
             throw new IllegalArgumentException("INVALID_OUTPUT");
         }
+        var resolvedPending = ChatEndSummaryPendingResolver.resolve(input, requiredPending);
+        requiredPending = resolvedPending.stream().map(ChatEndSummaryPendingResolver.Pending::originMessageId)
+                .collect(Collectors.toSet());
         ObjectNode safe = mapper.createObjectNode();
         Set<Long> coveredPending = new HashSet<>();
         Set<Long> coveredTopics = new HashSet<>();
@@ -543,53 +647,20 @@ class ChatSessionEndSummaryGenerator {
                 }
             }
         }
-        Map<Long, Set<String>> confirmedPending = collectConfirmedPending(input, requiredPending);
-        for (var message : input.messages()) {
-            if (!message.role().equals("USER") || !requiredPending.contains(message.id())
-                    || !Set.of("FAILED", "CANCELLED").contains(message.executionStatus() == null
-                            ? "" : message.executionStatus()) || confirmedPending.containsKey(message.id())) {
-                continue;
-            }
-            Set<String> labels = new java.util.LinkedHashSet<>();
-            for (var topic : safe.path("topics")) {
-                for (var id : topic.path("sourceMessageIds")) {
-                    if (id.longValue() == message.id()) {
-                        labels.add("답변을 마치지 못한 문의: " + topic.path("text").textValue());
-                    }
-                }
-            }
-            if (labels.isEmpty()) {
-                throw new IllegalArgumentException("INVALID_OUTPUT");
-            }
-            confirmedPending.put(message.id(), labels);
-        }
-        List<JsonNode> otherPending = new ArrayList<>();
-        for (var item : safe.path("pendingItems")) {
-            boolean known = false;
-            for (var id : item.path("sourceMessageIds")) {
-                known |= confirmedPending.containsKey(id.longValue());
-            }
-            if (!known) {
-                otherPending.add(item);
-            }
-        }
         var pendingItems = safe.putArray("pendingItems");
-        otherPending.forEach(pendingItems::add);
-        confirmedPending.forEach((origin, labels) -> {
-            for (String label : labels) {
-                var inspection = inspector.inspect(label);
-                if (!inspection.maskSpans().isEmpty()) {
-                    maskSources.add(OutputMaskContext.Source.from(inspection));
-                }
-                String text = inspection.content().strip();
-                if (text.length() > 240) {
-                    throw new IllegalArgumentException("INPUT_LIMIT");
-                }
-                var item = pendingItems.addObject();
-                item.put("text", text);
-                item.putArray("sourceMessageIds").add(origin);
+        for (var pending : resolvedPending) {
+            var inspection = inspector.inspect(pending.text());
+            if (!inspection.maskSpans().isEmpty()) {
+                maskSources.add(OutputMaskContext.Source.from(inspection));
             }
-        });
+            String text = inspection.content().strip();
+            if (text.length() > 240) {
+                throw new IllegalArgumentException("INPUT_LIMIT");
+            }
+            var item = pendingItems.addObject();
+            item.put("text", text);
+            item.putArray("sourceMessageIds").add(pending.originMessageId());
+        }
         coveredPending.clear();
         pendingItems.forEach(item -> item.path("sourceMessageIds")
                 .forEach(id -> coveredPending.add(id.longValue())));
@@ -620,42 +691,8 @@ class ChatSessionEndSummaryGenerator {
         return new ChatEndSummaryData.Result(serialized, readContent(serialized), masks);
     }
 
-    private Map<Long, Set<String>> collectConfirmedPending(ChatEndSummaryData.Input input, Set<Long> requiredPending) {
-        Map<Long, Set<String>> confirmedPending = new LinkedHashMap<>();
-        for (var request : input.requests()) {
-            if (!requiredPending.contains(request.originMessageId())
-                    || !Set.of("PENDING", "WAITING_CONDITION").contains(request.status())) {
-                continue;
-            }
-            if (request.requestId() == null && request.pendingQuestions().isEmpty()) {
-                continue;
-            }
-            Set<String> labels = confirmedPending.computeIfAbsent(request.originMessageId(),
-                    key -> new java.util.LinkedHashSet<>());
-            Set<String> keys = input.conditions().stream()
-                    .filter(condition -> condition.originMessageId() == request.originMessageId()
-                            && (request.requestId() == null || request.requestId() == condition.requestId())
-                            && condition.status().equals("PENDING"))
-                    .map(ChatEndSummaryData.Condition::key).collect(Collectors.toSet());
-            var display = keys.equals(Set.of("agent_visit", "self_visit"))
-                    ? List.of("방문자 구분(본인/대리인) 확인 필요") : request.pendingQuestions();
-            if (display.isEmpty()) {
-                labels.add("확인 필요: " + request.query());
-            } else {
-                for (String question : display) {
-                    labels.add("미확인 조건: " + (request.requestId() == null ? "" : request.query() + " — ") + question);
-                }
-            }
-        }
-        return confirmedPending;
-    }
-
     private int calculatePendingLimit(ChatEndSummaryData.Input input, Set<Long> requiredPending) {
-        var confirmed = collectConfirmedPending(input, requiredPending);
-        int known = confirmed.values().stream().mapToInt(Set::size).sum();
-        int remaining = (int) requiredPending.stream().filter(origin -> !confirmed.containsKey(origin)).count();
-        // 모델의 자유로운 항목 추가가 아니라 저장된 필수 조건·문의 개수에만 비례해 확장한다.
-        return Math.max(DEFAULT_PENDING_ITEMS, known + remaining);
+        return Math.max(DEFAULT_PENDING_ITEMS, ChatEndSummaryPendingResolver.resolve(input, requiredPending).size());
     }
 
     Content readContent(String serialized) {
@@ -664,8 +701,22 @@ class ChatSessionEndSummaryGenerator {
                 || FIELDS.stream().anyMatch(field -> !root.path(field).isArray())) {
             throw new IllegalArgumentException("INVALID_STORED_RESULT");
         }
+        List<Inquiry> inquiries = new ArrayList<>();
+        for (var item : root.path("guidance")) {
+            if (item.path("title").isTextual()) {
+                inquiries.add(new Inquiry(
+                        item.path("title").asText(), item.path("text").asText()));
+            }
+        }
+        List<Remaining> remaining = new ArrayList<>();
+        for (var item : root.path("pendingItems")) {
+            if (item.path("title").isTextual() && item.path("kind").isTextual()) {
+                remaining.add(new Remaining(
+                        item.path("title").asText(), item.path("text").asText(), item.path("kind").asText()));
+            }
+        }
         return new Content(texts(root.path("topics")), texts(root.path("guidance")),
-                texts(root.path("pendingItems")));
+                texts(root.path("pendingItems")), inquiries, remaining);
     }
 
     private List<String> texts(JsonNode values) {
@@ -716,7 +767,7 @@ class ChatSessionEndSummaryGenerator {
             if (!inspection.maskSpans().isEmpty()) {
                 maskSources.add(OutputMaskContext.Source.from(inspection));
             }
-            for (String paragraph : inspection.content().split("\\n\\s*\\n")) {
+            for (String paragraph : ChatEndSummarySourceText.paragraphs(inspection.content())) {
                 List<String> kept = new ArrayList<>();
                 for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
                     String text = sentence.strip();
@@ -733,11 +784,28 @@ class ChatSessionEndSummaryGenerator {
                 }
             }
         }
+        removeRepeatedClarificationQuotes(input, quotes);
         return quotes;
+    }
+
+    private void removeRepeatedClarificationQuotes(ChatEndSummaryData.Input input, Map<String, Set<Long>> quotes) {
+        List<String> repeated = quotes.entrySet().stream()
+                .filter(entry -> input.messages().stream().filter(message -> entry.getValue().contains(message.id()))
+                        .allMatch(message -> message.type().equals("CLARIFICATION")))
+                .filter(entry -> quotes.entrySet().stream().anyMatch(other -> !other.getKey().equals(entry.getKey())
+                        && ChatEndSummarySourceText.containsSentences(other.getKey(), entry.getKey())
+                        && input.messages().stream().anyMatch(message -> other.getValue().contains(message.id())
+                                && message.type().equals("ANSWER"))))
+                .map(Map.Entry::getKey).toList();
+        repeated.forEach(quotes::remove);
     }
 
     private boolean isClarificationQuestion(ChatEndSummaryData.Message message, String text,
             ChatEndSummaryData.Input input) {
+        if (message.type().equals("CLARIFICATION")
+                && ChatEndSummarySourceText.isTopicClarification(message.content())) {
+            return true;
+        }
         if (text.endsWith("?")) {
             return true;
         }
@@ -786,8 +854,8 @@ class ChatSessionEndSummaryGenerator {
         if (!pendingIds.isEmpty()) {
             reference.put("enum", pendingIds);
         }
-        properties.put("pendingItems", Map.of("type", "array", "minItems", requiresPending ? 1 : 0,
-                "maxItems", requiresPending ? pendingLimit : 0, "items", Map.of("type", "object", "properties", Map.of(
+        properties.put("pendingItems", Map.of("type", "array", "minItems", 0,
+                "maxItems", 0, "items", Map.of("type", "object", "properties", Map.of(
                         "text", Map.of("type", "string", "minLength", 1, "maxLength", 240),
                         "sourceMessageIds", Map.of("type", "array", "minItems", 1, "maxItems", 1,
                                 "uniqueItems", true, "items", reference)),

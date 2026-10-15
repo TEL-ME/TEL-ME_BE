@@ -94,6 +94,19 @@ public class RagAnswerGenerator implements AnswerGenerator {
             return answerWithoutEvidence(request, handler);
         }
 
+        String procedure = ProcedureEvidenceAnswer.select(request);
+        if (procedure != null) {
+            String answer = answerGuard.applyEvidencePolicy(procedure, answerEvidence, request.resolvedQuery());
+            AnswerBasis basis = toAnswerBasis(answer);
+            trace.stage(request.executionId(), "guard", Map.of("outcome",
+                    basis == AnswerBasis.GROUNDED ? "KEPT" : "NO_EVIDENCE",
+                    "reason", "VERIFIED_PROCEDURE_SOURCE_QUOTE"));
+            handler.onToken(answer);
+            handler.onComplete();
+            return AnswerResult.builder().answer(answer).answerBasis(basis)
+                    .sources(contextConverter.toSources(request.searchResults())).build();
+        }
+
         String system = AnswerPromptTemplates.systemPromptFor(request.userQuery())
                 + (request.chatContext() == null ? "" : AnswerPromptTemplates.MULTITURN_RULES);
         ChatTokenEstimator estimator = new ChatTokenEstimator();

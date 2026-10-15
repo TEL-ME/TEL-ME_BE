@@ -77,7 +77,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         service.process(fixture.sessionId());
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.topics[0]").value("로밍 신청 방법 문의"));
+                .andExpect(jsonPath("$.result.summary.topics[0]").value("해외 로밍 문의"));
         close(fixture);
         service.process(fixture.sessionId());
         assertState(fixture, "COMPLETED");
@@ -292,7 +292,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
-                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("확인 필요: 유심 재발급 문의"));
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("추가 확인이 완료되지 않은 문의: ‘유심 재발급 문의’"));
         assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE session_id=?",
                 String.class, fixture.sessionId())).isEqualTo("WAITING_CONDITION");
     }
@@ -327,7 +327,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.result.summary.guidance").isEmpty())
                 .andExpect(jsonPath("$.result.summary.pendingItems[0]")
-                        .value("미확인 조건: 유심 재발급 서류 문의 — 대리인이 방문하시는 건가요?"));
+                        .value("방문자가 본인인지 대리인인지 아직 확인되지 않았습니다."));
         var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(captor.capture());
         assertThat(mapper.readTree(captor.getValue().userPrompt()).path("requests").get(0)
@@ -364,7 +364,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         assertThat(input.path("currentConditions").get(0).path("answeredSequence").intValue()).isEqualTo(3);
         assertThat(input.path("conditionSources").get(0).path("content").asText()).contains("이번 달");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance[0]").value("조건 확인 후 안내: 이번 달 가입 기준 안내"));
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("이번 달 가입 기준 안내"));
     }
 
     @Test
@@ -381,7 +381,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance[0]").value("안내받은 내용: 홈페이지를 확인해 주세요."));
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("홈페이지를 확인해 주세요."));
     }
 
     @Test
@@ -452,15 +452,21 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance.length()").value(8))
-                .andExpect(jsonPath("$.result.summary.guidance[7]")
-                        .value("조건 확인 후 안내: 이번 달 조건 안내입니다."));
+                .andExpect(jsonPath("$.result.summary.guidance.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.guidance[0]")
+                        .value(org.hamcrest.Matchers.containsString("이번 달 조건 안내입니다.")))
+                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1));
         var stored = mapper.readTree(jdbc.queryForObject(
                 "SELECT result::text FROM chat_session_end_summaries WHERE session_id=?",
                 String.class, fixture.sessionId()));
-        assertThat(stored.path("guidance")).hasSize(8);
-        assertThat(stored.path("guidance").get(7).path("sourceMessageIds").get(0).asLong())
-                .isEqualTo(latestAnswer);
+        assertThat(stored.path("guidance")).hasSize(1);
+        for (int index = 1; index <= 7; index++) {
+            assertThat(stored.path("guidance").get(0).path("text").asText())
+                    .contains("이전 조건 안내 " + index + "입니다.");
+        }
+        assertThat(stored.path("guidance").get(0).path("text").asText()).contains("이번 달 조건 안내입니다.");
+        assertThat(stored.path("guidance").get(0).path("sourceMessageIds"))
+                .anySatisfy(id -> assertThat(id.asLong()).isEqualTo(latestAnswer));
     }
 
     @Test
@@ -500,7 +506,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(captor.capture());
         assertThat(mapper.valueToTree(captor.getValue().responseSchema()).path("properties").path("pendingItems")
-                .path("maxItems").asInt()).isEqualTo(9);
+                .path("maxItems").asInt()).isZero();
     }
 
     @Test
@@ -550,7 +556,10 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
-        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(body).doesNotContain("input_mask_spans");
+        // 생성 시각의 소수점 숫자가 카드번호 조각과 우연히 겹칠 수 있어 요약 내용만 검사한다.
+        assertThat(mapper.readTree(body).path("result").path("summary").toString())
                 .contains(visible).doesNotContain("4111", "990101", "1234567", "\uFFFC", "input_mask_spans");
     }
 
@@ -570,7 +579,8 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
-        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(mapper.readTree(body).path("result").path("summary").toString())
                 .contains(expected).doesNotContain("990101", "1234567", "4111", "\\uFFFC");
         var prompt = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(prompt.capture());

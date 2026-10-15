@@ -1,0 +1,115 @@
+{
+  "base": "0730a0d0a59d96f214eb5b96db356da0086cf281",
+  "final": {
+    "cases": 26,
+    "facts": 69,
+    "preserved": 69,
+    "issues": []
+  },
+  "automaticTests": {
+    "tests": 777,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modelDoubles": true,
+    "isolatedDatabase": "telme_summary_170_tests"
+  },
+  "privacy": {
+    "allStages": 545,
+    "finalStages": 185,
+    "sensitiveSpans": 0,
+    "seedOrSuffixHits": [],
+    "positiveDetected": 2
+  },
+  "live": {
+    "sessionId": 33,
+    "turns": 2,
+    "groundedAnswers": 2,
+    "oneParagraph": true,
+    "duplicateFacts": 0,
+    "pendingHidden": true,
+    "reloadSame": true
+  },
+  "runtimeSha256": "03666aec6dc8caec4d1213807d5cf0d01bb68616ed42580d902f583ea77431d8",
+  "noCommit": true,
+  "noPush": true,
+  "screens": [
+    {
+      "caseId": "CORE-01",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "CORE-02",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "CORE-03",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "CORE-04",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "CORE-05",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "CORE-06",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-01",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-02",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-03",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-04",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-05",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-06",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-07",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    },
+    {
+      "caseId": "MIX-08",
+      "storedMatchesFinalModel": true,
+      "screenMatchesStored": true
+    }
+  ],
+  "preservation": {
+    "checkedFiles": 6229,
+    "unchangedFiles": 6227,
+    "changedRuntimeLogs": 2,
+    "frontendChanged": false,
+    "originalDbSessionsUnchanged": true
+  }
+}

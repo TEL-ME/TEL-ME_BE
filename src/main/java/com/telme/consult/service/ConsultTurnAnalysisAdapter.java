@@ -160,8 +160,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
                 result.initialQuery().queryText()).withContext(context.routingContext(),
-                        context.historyResolved()
-                                ? result.initialQuery().queryText() : context.resolvedQuestion());
+                        context.resolvedQuestion());
     }
 
     private Context resolveQuestion(ChatProcessingCommand command, Context context) {

@@ -175,6 +175,11 @@ public class ChatQuestionResolver {
                     "originalQuery", question, "status", "INVALID_CONTEXT"));
             return new Resolution(question, true, List.of());
         }
+        var repeated = ChatRepeatedInquiryResolver.resolve(question, context);
+        if (repeated != null) {
+            recordResolution(command, question, repeated);
+            return repeated;
+        }
         // 소유권은 원문으로 확인하고 상담 본문으로 후보를 고른다. 앞 표시는 모델 판정 입력에서만 뗀다.
         String gated = withoutLeadingTag(question);
         String noWhitespace = gated.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "");

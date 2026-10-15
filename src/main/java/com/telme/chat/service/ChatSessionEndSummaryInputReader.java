@@ -35,11 +35,15 @@ class ChatSessionEndSummaryInputReader {
                 FROM chat_messages m LEFT JOIN chat_executions e ON e.input_message_id=m.message_id
                 WHERE m.session_id=? AND m.status='COMPLETED' AND m.message_type NOT IN ('ERROR','BLOCKED')
                 ORDER BY m.sequence_no LIMIT ?
-                """, (rs, n) -> new ChatEndSummaryData.Message(rs.getLong("message_id"),
-                        rs.getInt("sequence_no"), (Long) rs.getObject("reply_to_id"), rs.getString("role"),
-                        rs.getString("message_type"), safeContent(rs.getString("content"),
-                                rs.getString("store_results"), maskSources), rs.getString("answer_basis"),
-                        rs.getString("execution_status")), sessionId, properties.maxMessages() + 1);
+                """, (rs, n) -> {
+                    String content = safeContent(rs.getString("content"), rs.getString("store_results"), maskSources);
+                    String basis = rs.getString("answer_basis");
+                    String type = ChatEndSummarySourceText.summaryMessageType(
+                            rs.getString("message_type"), basis, content);
+                    return new ChatEndSummaryData.Message(rs.getLong("message_id"), rs.getInt("sequence_no"),
+                            (Long) rs.getObject("reply_to_id"), rs.getString("role"), type, content, basis,
+                            rs.getString("execution_status"));
+                }, sessionId, properties.maxMessages() + 1);
         if (messages.size() > properties.maxMessages()) {
             throw new IllegalArgumentException("INPUT_LIMIT");
         }
@@ -92,6 +96,14 @@ class ChatSessionEndSummaryInputReader {
             if (Set.of("FAILED", "CANCELLED").contains(message.executionStatus() == null
                     ? "" : message.executionStatus())) {
                 pending.add(message.id());
+            }
+            if (message.type().equals("CLARIFICATION") && message.replyTo() != null
+                    && ids.contains(message.replyTo())) {
+                boolean answeredLater = messages.stream().anyMatch(answer -> answer.sequence() > message.sequence()
+                        && message.replyTo().equals(answer.replyTo()) && "GROUNDED".equals(answer.basis()));
+                if (!answeredLater) {
+                    pending.add(message.replyTo());
+                }
             }
             if (Set.of("NO_EVIDENCE", "OUT_OF_SCOPE").contains(message.basis() == null ? "" : message.basis())
                     && message.replyTo() != null && ids.contains(message.replyTo())) {

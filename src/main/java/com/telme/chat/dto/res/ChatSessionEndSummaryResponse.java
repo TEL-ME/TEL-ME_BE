@@ -15,11 +15,22 @@ public record ChatSessionEndSummaryResponse(
         Instant generatedAt,
         String message
 ) {
-    public record Content(List<String> topics, List<String> guidance, List<String> pendingItems) {
+    public record Inquiry(String title, String text) {}
+
+    public record Remaining(String title, String text, String kind) {}
+
+    public record Content(List<String> topics, List<String> guidance, List<String> pendingItems,
+            List<Inquiry> inquiries, List<Remaining> remaining) {
+        public Content(List<String> topics, List<String> guidance, List<String> pendingItems) {
+            this(topics, guidance, pendingItems, List.of(), List.of());
+        }
+
         public Content {
             topics = List.copyOf(topics);
             guidance = List.copyOf(guidance);
             pendingItems = List.copyOf(pendingItems);
+            inquiries = List.copyOf(inquiries);
+            remaining = List.copyOf(remaining);
         }
     }
 }
