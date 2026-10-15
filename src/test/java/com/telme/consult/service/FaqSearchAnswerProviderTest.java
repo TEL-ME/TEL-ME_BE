@@ -736,6 +736,90 @@ class FaqSearchAnswerProviderTest {
         verify(searches, org.mockito.Mockito.never()).search(any());
     }
 
+    @Test
+    @DisplayName("비교 질문은 회색 구간 결과로 답하지 못하면 판정을 붙이기 전 검색 결과로 한 번 더 고른다")
+    void 비교_질문은_판정_전_결과로_한_번_더_고른다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        ExecutionTrace trace = mock(ExecutionTrace.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var judged = comparisonSource(115L);
+        var quoted = comparisonSource(917L);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(judged)));
+        when(searches.search(any())).thenReturn(List.of(quoted, judged));
+        when(evidence.resolveDetailed(any(), any(), any(), org.mockito.ArgumentMatchers.eq(List.of(judged)), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        when(evidence.resolveDetailed(any(), any(), any(), org.mockito.ArgumentMatchers.eq(List.of(quoted, judged)),
+                any())).thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(quoted), "5G 4종, LTE 3종입니다."));
+
+        var result = comparisonProvider(searches, answers, trace, evidence, keepAll())
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, COMPARISON, COMPARISON, Map.of()));
+
+        assertThat(result.answer().content()).isEqualTo("5G 4종, LTE 3종입니다.");
+        assertThat(result.sources()).extracting(source -> source.faqId()).containsExactly(917L);
+        verify(evidence, times(2)).resolveDetailed(any(), any(), any(), any(), any());
+        verify(trace).stage(1L, "comparisonRetry",
+                Map.of("reason", "GRAY_ZONE_CHANGED_ORIGINAL_RESULTS", "answered", true));
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    @DisplayName("비교 질문을 회색 구간 결과로 답했거나 판정 전 결과가 같으면 다시 고르지 않는다")
+    void 비교_질문을_다시_고르지_않는_경우() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var source = comparisonSource(115L);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(source)));
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(source), "답"));
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, COMPARISON, COMPARISON, Map.of());
+
+        comparisonProvider(searches, answers, ExecutionTrace.noop(), evidence, keepAll()).generate(input);
+
+        verify(searches, org.mockito.Mockito.never()).search(any());
+        verify(evidence, times(1)).resolveDetailed(any(), any(), any(), any(), any());
+
+        // 답하지 못했어도 판정 전 결과가 같으면 같은 결과로 다시 고르지 않는다
+        org.mockito.Mockito.reset(evidence, searches);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(source)));
+        when(searches.search(any())).thenReturn(List.of(source));
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "없음", ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)));
+
+        comparisonProvider(searches, answers, ExecutionTrace.noop(), evidence, keepAll()).generate(input);
+
+        verify(searches).search(any());
+        verify(evidence, times(1)).resolveDetailed(any(), any(), any(), any(), any());
+    }
+
+    private static final String COMPARISON = "5G와 LTE 요금제 종류를 비교해줘";
+
+    private static FaqSearchResponse comparisonSource(long faqId) {
+        return new FaqSearchResponse(faqId, "PLAN-" + faqId, "PLAN", "요금제 " + faqId, "요금제 답변 " + faqId,
+                0.8, 1, null, 1, "Q_A");
+    }
+
+    // 회색 구간 후보를 판정 없이 모두 남기는 선택기. 비교 경로만 보려고 쓴다
+    private static FaqGrayZoneSelector keepAll() {
+        return (executionId, consultRequestId, question, candidates, topK) -> new FaqGrayZoneSelector.Selection(
+                candidates.questionAnswer().stream().map(FaqGrayZoneSearchResponse.Candidate::result).toList(),
+                List.of());
+    }
+
+    private static FaqSearchAnswerProvider comparisonProvider(FaqSearchService searches,
+            FaqSearchAnswerProvider.SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver evidence, FaqGrayZoneSelector selector) {
+        return new FaqSearchAnswerProvider(searches, answers, trace, evidence, FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector);
+    }
+
     private AnswerInput input() {
         return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "로밍 신청하고 싶어요", "로밍 신청", Map.of());
     }

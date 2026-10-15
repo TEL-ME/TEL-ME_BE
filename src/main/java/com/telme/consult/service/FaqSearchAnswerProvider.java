@@ -141,13 +141,26 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         }
         if (comparisonEvidence.applies(input.originalUserQuery())) {
             List<FaqSearchResponse> original = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
-            var resolution = comparisonEvidence.resolveDetailed(input.executionId(),
-                    input.consultRequestId(), input.originalUserQuery(), original,
-                    (query, kind) -> searchComparisonCandidate(input, query, kind));
+            var resolution = resolveComparison(input, original);
+            boolean retried = false;
+            // 비교 답변은 원문 검색 결과에서 그대로 인용할 FAQ를 고른다. 회색 구간 판정으로 결과가 바뀌면 인용하던 FAQ가
+            // 빠지거나 뒤로 밀려 답하지 못할 수 있다(docs/GRAY_ZONE_UPPER_BAND.md 5.7절). 그때만 판정을 붙이기 전
+            // 검색 결과로 한 번 더 고른다. 인용문은 비교 답변기가 다시 확인하므로 판정이 뺀 FAQ가 들어와도 그대로 답하지 않는다
+            if (resolution.answer() == null && grayZone != null) {
+                List<FaqSearchResponse> beforeGrayZone = search(input, input.originalUserQuery(),
+                        FaqSearchKind.ORIGINAL.name(), SEARCH_TOP_K, false, false);
+                if (!faqIds(beforeGrayZone).equals(faqIds(original))) {
+                    retried = true;
+                    resolution = resolveComparison(input, beforeGrayZone);
+                }
+            }
+            if (retried) {
+                trace.stage(input.executionId(), "comparisonRetry", Map.of(
+                        "reason", "GRAY_ZONE_CHANGED_ORIGINAL_RESULTS", "answered", resolution.answer() != null));
+            }
             if (resolution.answer() != null) {
                 trace.stage(input.executionId(), "comparisonAnswer", Map.of(
-                        "method", "VERIFIED_FAQ_QUOTE", "faqIds",
-                        resolution.sources().stream().map(FaqSearchResponse::faqId).toList()));
+                        "method", "VERIFIED_FAQ_QUOTE", "faqIds", faqIds(resolution.sources())));
                 // 비교한 두 FAQ가 모두 근거라 FAQ마다 추천 질문을 하나씩 붙인다. 비교한 정책 자체를 가리키는 추천은 뺀다
                 Set<String> answered = Objects.requireNonNull(suggestedQuestions.questionsAbout(
                         resolution.sources().stream().map(FaqSearchResponse::faqId).toList()), "answeredQuestions");
@@ -239,24 +252,38 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
-        return search(input, query, kind.name(), SEARCH_TOP_K, false);
+        return search(input, query, kind.name(), SEARCH_TOP_K, false, true);
     }
 
     private List<FaqSearchResponse> searchComparisonCandidate(
             AnswerInput input, String query, String kind) {
-        return search(input, query, kind, COMPARISON_CANDIDATE_TOP_K, true);
+        return search(input, query, kind, COMPARISON_CANDIDATE_TOP_K, true, true);
     }
 
-    private List<FaqSearchResponse> search(
-            AnswerInput input, String query, String kind, int topK, boolean unfilteredCandidates) {
+    private ComparisonEvidenceResolver.Resolution resolveComparison(
+            AnswerInput input, List<FaqSearchResponse> original) {
+        return comparisonEvidence.resolveDetailed(input.executionId(),
+                input.consultRequestId(), input.originalUserQuery(), original,
+                (query, kind) -> searchComparisonCandidate(input, query, kind));
+    }
+
+    private static List<Long> faqIds(List<FaqSearchResponse> results) {
+        return results.stream().map(FaqSearchResponse::faqId).toList();
+    }
+
+    // useGrayZone이 false면 회색 구간이 켜져 있어도 판정을 붙이기 전 임계값으로 검색한다
+    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind, int topK,
+            boolean unfilteredCandidates, boolean useGrayZone) {
+        boolean grayZoneSearch = !unfilteredCandidates && grayZone != null && useGrayZone;
         Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", topK,
-                "candidateMode", unfilteredCandidates, "consultRequestId", input.consultRequestId());
+                "candidateMode", unfilteredCandidates, "grayZone", grayZoneSearch,
+                "consultRequestId", input.consultRequestId());
         trace.append(input.executionId(), "searchRequests", request);
         try {
             FaqSearchRequest searchRequest = unfilteredCandidates ? new FaqSearchRequest(query, topK)
                                                                   : new FaqSearchRequest(query, topK, FaqSearchKind.valueOf(kind));
             var found = unfilteredCandidates ? searches.searchCandidates(searchRequest)
-                    : grayZone != null ? searchGrayZone(input, searchRequest)
+                    : grayZoneSearch ? searchGrayZone(input, searchRequest)
                     : searches.search(searchRequest);
             var results = List.copyOf(found);
             trace.append(input.executionId(), "searchResults", Map.of(
