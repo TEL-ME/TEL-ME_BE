@@ -1,6 +1,14 @@
 package com.telme.chat.service;
 
+import static com.telme.chat.guard.MaskSpan.MASK;
+
+import com.telme.chat.safety.OutputMaskContext;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -26,16 +34,14 @@ final class ChatSummaryNormalizer {
     private static final Pattern HEADING = Pattern.compile("^#{1,6}\\s+");
     private static final Pattern LIST_MARKER = Pattern.compile("^(?:[-*+]\\s+|\\d+[.)]\\s+|>\\s*)");
     private static final Pattern MARKDOWN_LINK = Pattern.compile("\\[([^]\\r\\n]+)]\\([^)]*\\)");
-    // 고정 민감정보 마스크(***)는 보존하고 일반 강조용 별표 두 개만 제거한다.
-    private static final Pattern BOLD_MARKER = Pattern.compile("(?<!\\*)\\*\\*(?!\\*)");
-    // 마스크에 강조 기호가 붙은 5개·7개 별표를 보존한다. 인접한 두 마스크(6개)는 합치지 않는다.
-    private static final Pattern EMPHASIZED_MASK = Pattern.compile("(?<!\\*)\\*{5}(?:\\*{2})?(?!\\*)");
+    private static final Pattern EMPHASIS_MARKER = Pattern.compile("\\*{2,}");
+    private static final Pattern UNVERIFIED_MASK = Pattern.compile("\\*{3,}");
     private static final Pattern MEANINGFUL_TEXT = Pattern.compile("[\\p{L}\\p{N}]");
 
     private ChatSummaryNormalizer() {
     }
 
-    static String normalize(String value) {
+    static String normalize(String value, OutputMaskContext masks) {
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -44,7 +50,11 @@ final class ChatSummaryNormalizer {
             return null;
         }
 
-        String candidate = extractSummaryBlock(value);
+        // 형식 정리용 인용 확인이며 출력 욕설 검사의 허용 경계와는 별도로 유지한다.
+        String marker = "telmeMask" + UUID.randomUUID().toString().replace("-", "");
+        Map<String, String> unverifiedMasks = new LinkedHashMap<>();
+        String protectedMasks = preserveMasks(value, masks, marker);
+        String candidate = extractSummaryBlock(preserveUnverifiedMasks(protectedMasks, unverifiedMasks, marker));
         String withoutTags = XML_OR_HTML_TAG.matcher(candidate).replaceAll(" ");
         String normalized = Arrays.stream(withoutTags.split("\\R"))
                 .map(String::trim)
@@ -55,8 +65,65 @@ final class ChatSummaryNormalizer {
                 .collect(Collectors.joining(" "))
                 .replaceAll("\\s+", " ")
                 .trim();
+        for (var entry : unverifiedMasks.entrySet()) {
+            normalized = normalized.replace(entry.getKey(), entry.getValue());
+        }
+        normalized = normalized.replace(marker, MASK);
 
         return MEANINGFUL_TEXT.matcher(normalized).find() ? normalized : null;
+    }
+
+    private static String preserveUnverifiedMasks(String value, Map<String, String> preserved, String marker) {
+        // 문구가 바뀐 실제 마스크일 수 있으므로 출처 불일치만으로 별표를 삭제하거나 합치지 않는다.
+        // 표시 보존이며 출력 검사에 사용할 신뢰 출처는 추가하지 않는다.
+        return UNVERIFIED_MASK.matcher(value).replaceAll(match -> {
+            String token = marker + "literal" + preserved.size() + "End";
+            preserved.put(token, match.group());
+            return token;
+        });
+    }
+
+    private static String preserveMasks(String value, OutputMaskContext masks, String marker) {
+        Set<Integer> positions = new TreeSet<>();
+        for (var source : masks.sources()) {
+            for (var span : source.spans()) {
+                int left = span.start();
+                while (left > 0 && whitespace(source.content().charAt(left - 1))) {
+                    left--;
+                }
+                while (left > 0 && !whitespace(source.content().charAt(left - 1))) {
+                    left--;
+                }
+                int right = span.end();
+                while (right < source.content().length() && whitespace(source.content().charAt(right))) {
+                    right++;
+                }
+                while (right < source.content().length() && !whitespace(source.content().charAt(right))) {
+                    right++;
+                }
+                String quote = source.content().substring(left, right);
+                if (quote.replace(MASK, "").isBlank()) {
+                    continue;
+                }
+                for (int offset = value.indexOf(quote); offset >= 0; offset = value.indexOf(quote, offset + 1)) {
+                    positions.add(offset + span.start() - left);
+                }
+            }
+        }
+        StringBuilder protectedValue = new StringBuilder();
+        int cursor = 0;
+        for (int position : positions) {
+            if (position < cursor) {
+                continue;
+            }
+            protectedValue.append(value, cursor, position).append(marker);
+            cursor = position + MASK.length();
+        }
+        return protectedValue.append(value, cursor, value.length()).toString();
+    }
+
+    private static boolean whitespace(char value) {
+        return Character.isWhitespace(value) || Character.isSpaceChar(value);
     }
 
     private static String extractSummaryBlock(String value) {
@@ -68,8 +135,7 @@ final class ChatSummaryNormalizer {
         String normalized = HEADING.matcher(line).replaceFirst("");
         normalized = LIST_MARKER.matcher(normalized).replaceFirst("");
         normalized = MARKDOWN_LINK.matcher(normalized).replaceAll("$1");
-        normalized = EMPHASIZED_MASK.matcher(normalized).replaceAll("***");
-        return BOLD_MARKER.matcher(normalized).replaceAll("")
+        return EMPHASIS_MARKER.matcher(normalized).replaceAll("")
                 .replace("__", "")
                 .replace("`", "")
                 .trim();

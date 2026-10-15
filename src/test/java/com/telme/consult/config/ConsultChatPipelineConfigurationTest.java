@@ -13,6 +13,12 @@ import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.service.MemberPlanAnswerer;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberRecommendationAnswerer;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
 import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatPersistenceService;
@@ -81,6 +87,13 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
+                    .withBean(PlanQuestionClassifier.class, () -> mock(PlanQuestionClassifier.class))
+                    .withBean(PlanCatalogAnswerer.class, () -> mock(PlanCatalogAnswerer.class))
+                    .withBean(MemberPlanAnswerer.class, () -> mock(MemberPlanAnswerer.class))
+                    .withBean(MemberRecommendationAnswerer.class, () -> mock(MemberRecommendationAnswerer.class))
+                    .withBean(SessionRecommendationAnswers.class, () -> mock(SessionRecommendationAnswers.class))
+                    .withBean(ChatSessionRepository.class, () -> mock(ChatSessionRepository.class))
+                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new)
                     .withBean(SearchProperties.class, () -> searchProperties(SearchProperties.GrayZone.DISABLED));
 

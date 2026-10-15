@@ -5,6 +5,7 @@ import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.safety.OutputMaskContext;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +28,7 @@ class ChatSessionEndSummaryInputReader {
 
     @Transactional(readOnly = true)
     ChatEndSummaryData.Input read(long sessionId) {
+        List<OutputMaskContext.Source> maskSources = new ArrayList<>();
         List<ChatEndSummaryData.Message> messages = jdbc.query("""
                 SELECT m.message_id, m.sequence_no, m.reply_to_id, m.role, m.message_type,
                     m.content, m.store_results::text, m.answer_basis, e.status AS execution_status
@@ -36,7 +38,7 @@ class ChatSessionEndSummaryInputReader {
                 """, (rs, n) -> new ChatEndSummaryData.Message(rs.getLong("message_id"),
                         rs.getInt("sequence_no"), (Long) rs.getObject("reply_to_id"), rs.getString("role"),
                         rs.getString("message_type"), safeContent(rs.getString("content"),
-                                rs.getString("store_results")), rs.getString("answer_basis"),
+                                rs.getString("store_results"), maskSources), rs.getString("answer_basis"),
                         rs.getString("execution_status")), sessionId, properties.maxMessages() + 1);
         if (messages.size() > properties.maxMessages()) {
             throw new IllegalArgumentException("INPUT_LIMIT");
@@ -45,7 +47,8 @@ class ChatSessionEndSummaryInputReader {
                 SELECT consult_request_id, origin_message_id, subquery_order, query_text, status
                 FROM consult_requests WHERE session_id=? ORDER BY origin_message_id, subquery_order
                 """, (rs, n) -> new ChatEndSummaryData.Request(rs.getLong("origin_message_id"),
-                        rs.getInt("subquery_order"), safe(rs.getString("query_text")), rs.getString("status"),
+                        rs.getInt("subquery_order"), safe(rs.getString("query_text"), maskSources),
+                        rs.getString("status"),
                         List.of(), rs.getLong("consult_request_id")),
                 sessionId);
         Set<Long> social = new HashSet<>();
@@ -75,7 +78,8 @@ class ChatSessionEndSummaryInputReader {
                 WHERE r.session_id=? AND r.status='WAITING_CONDITION' AND c.status='PENDING'
                     AND coalesce(p.value->>'question', q.content) IS NOT NULL
                 ORDER BY r.consult_request_id, question
-                """, (rs, n) -> Map.entry(rs.getLong("consult_request_id"), safe(rs.getString("question"))),
+                """, (rs, n) -> Map.entry(rs.getLong("consult_request_id"),
+                        safe(rs.getString("question"), maskSources)),
                 sessionId).stream().collect(Collectors.groupingBy(Map.Entry::getKey,
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
         requests = requests.stream().map(request -> new ChatEndSummaryData.Request(request.originMessageId(),
@@ -114,20 +118,29 @@ class ChatSessionEndSummaryInputReader {
                 WHERE r.session_id=? ORDER BY r.consult_request_id, c.condition_key
                 """, (rs, n) -> new ChatEndSummaryData.Condition(rs.getLong("consult_request_id"),
                         rs.getLong("origin_message_id"), rs.getString("condition_key"),
-                        safe(rs.getString("condition_value")), rs.getString("status"), rs.getString("source"),
+                        safe(rs.getString("condition_value"), maskSources), rs.getString("status"),
+                        rs.getString("source"),
                         (Long) rs.getObject("answered_message_id"), (Integer) rs.getObject("sequence_no")),
                 sessionId).stream().filter(condition -> ids.contains(condition.originMessageId())).toList();
+        maskSources.addAll(inputMasks.read(sessionId, through).sources());
         return new ChatEndSummaryData.Input(sessionId, through,
                 executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions,
-                inputMasks.read(sessionId, through));
+                new OutputMaskContext(maskSources));
     }
 
-    private String safe(String text) {
-        return text == null ? "" : inspector.inspect(text).content();
+    private String safe(String text, List<OutputMaskContext.Source> maskSources) {
+        if (text == null) {
+            return "";
+        }
+        var inspection = inspector.inspect(text);
+        if (!inspection.maskSpans().isEmpty()) {
+            maskSources.add(OutputMaskContext.Source.from(inspection));
+        }
+        return inspection.content();
     }
 
-    private String safeContent(String text, String stores) {
-        String result = safe(text);
+    private String safeContent(String text, String stores, List<OutputMaskContext.Source> maskSources) {
+        String result = safe(text, maskSources);
         if (stores == null) {
             return result;
         }
@@ -139,7 +152,7 @@ class ChatSessionEndSummaryInputReader {
                     String name = store.path("name").asText("");
                     String address = store.path("address").asText("");
                     if (!name.isBlank() || !address.isBlank()) {
-                        labels.add(safe(name + " " + address));
+                        labels.add(safe(name + " " + address, maskSources));
                     }
                 }
             }

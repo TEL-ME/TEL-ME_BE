@@ -1,5 +1,8 @@
 package com.telme.chat.guard;
 
+import static com.telme.chat.guard.MaskSpan.INSPECTION_BOUNDARY;
+import static com.telme.chat.guard.MaskSpan.MASK;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.guard.InputInspection.Detection;
 import com.telme.chat.guard.InputInspection.Reason;
@@ -26,15 +29,20 @@ import java.util.regex.Pattern;
  */
 @Component
 public final class ChatInputInspector {
-    private static final String MASK = "***";
-    // 욕설 우회 문자에 포함되지 않는 경계다. 저장·상담·해시에는 전달하지 않는다.
-    private static final char PII_BOUNDARY = '\uFFFC';
-    private static final Pattern BRIDGED_MASK = Pattern.compile("(?<=\\S)\\uFFFC(?=\\S)");
+    private static final Pattern BRIDGED_MASK = Pattern.compile(
+            "(?<=\\S)" + Pattern.quote(String.valueOf(INSPECTION_BOUNDARY)) + "(?=\\S)");
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
+    private static final Pattern DECLARED_RESIDENT = Pattern.compile(
+            "(?:주민등록번호|주민번호)(?:는|은|가|이)?\\s*[:：]?\\s*$");
+    private static final Pattern CONDITION_UNIT = Pattern.compile(
+            "\\s*(?:만원|개월|시간|원|년|일|분)"
+                    + "(?:입니다|인데요|이고요|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
+                    + "(?=$|[\\s\\p{Punct}])");
+    // 배포된 v2 영수증 비교에서만 당시 탐색 경계를 재현한다.
     private static final Pattern CARD = Pattern.compile("(?<!\\d)\\d(?:[ -]?\\d){12,18}(?!\\d)");
     // 감지한 번호에 붙은 단위·조사만 제외한다. 일반 단어와 남은 숫자 조건은 문의로 보존한다.
     private static final Pattern MASKED_NUMBER_UNIT = Pattern.compile(
-            "\\uFFFC\\s*(?:만원|원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
+            Pattern.quote(String.valueOf(INSPECTION_BOUNDARY)) + "\\s*(?:만원|원|개월|일|년|시간|분|개|회|번|세|GB|Gbps|Mbps|%)"
                     + "(?:입니다|이에요|예요|은|는|이|가|을|를|에|도|만|부터|까지|으로|마다)?"
                     + "(?=$|[\\s\\p{Punct}])", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUOTED = Pattern.compile("['\"‘“]([^'\"’”]{1,60})['\"’”]");
@@ -80,7 +88,8 @@ public final class ChatInputInspector {
                     Pattern.DOTALL);
 
     private static final Pattern INTRODUCTION_TOKEN =
-            Pattern.compile("주민등록번호|주민번호|카드번호|카드|번호|입니다|이에요|예요|그리고|제|내|는|이|가|랑|와|과");
+            Pattern.compile("주민등록번호|주민번호|카드번호|카드|번호|입니다|인데요|이고요|이에요|예요|이요"
+                    + "|그리고|제|내|는|이|가|랑|와|과");
 
     private final Policy policy;
     private final List<CompiledRule> rules;
@@ -151,7 +160,7 @@ public final class ChatInputInspector {
             collectProfanity(bridged, detections);
         }
         String remaining = MASKED_NUMBER_UNIT.matcher(normalized).replaceAll("")
-                .replace(String.valueOf(PII_BOUNDARY), "")
+                .replace(String.valueOf(INSPECTION_BOUNDARY), "")
                 .replaceAll("[\\s\\p{Punct}]", "");
         boolean masked =
                 detections.stream()
@@ -159,7 +168,7 @@ public final class ChatInputInspector {
         boolean hasQuestion = masked ? hasRemainingQuestion(remaining) : !safe.isBlank();
         return new InputInspection(
                 safe, detections.stream().distinct().toList(), hasQuestion,
-                maskedContent.fingerprintContent(), maskedContent.maskSpans());
+                maskedContent.fingerprintContent(), maskedContent.maskSpans(), maskedContent.ambiguousCondition());
     }
 
     private void collectProfanity(String normalized, List<Detection> detections) {
@@ -202,16 +211,90 @@ public final class ChatInputInspector {
     }
 
     private MaskedContent mask(String input, List<Detection> detections) {
-        List<Span> spans = new ArrayList<>();
-        // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문에서 치환할 위치를 보존한다.
+        // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문 위치를 보존한다.
         String numeric = numericForm(input);
+        List<Span> residents = findResidentSpans(numeric);
+        var cards = CardCandidateScanner.findCandidates(numeric, this::validCard);
+        List<Span> spans = new ArrayList<>(residents);
+        List<Span> acceptedCards = new ArrayList<>();
+        for (var candidate : cards) {
+            if (covered(residents, candidate.start(), candidate.end())
+                    || declaredResidentCondition(numeric, candidate, residents)) {
+                continue;
+            }
+            Span card = new Span(candidate.start(), candidate.end(), "[카드번호]");
+            spans.add(card);
+            acceptedCards.add(card);
+        }
+        boolean ambiguous = hasAmbiguousCondition(numeric, acceptedCards, spans);
+        List<Span> protectedSpans = selectProtectedSpans(spans);
+        for (Span span : protectedSpans) {
+            String rule = span.replacement().equals("[주민등록번호]")
+                    ? "PII_RESIDENT_NUMBER" : "PII_PAYMENT_CARD";
+            detections.add(new Detection(Reason.SENSITIVE_INFORMATION, rule));
+        }
+        return render(input, protectedSpans, ambiguous);
+    }
+
+    private List<Span> findResidentSpans(String numeric) {
+        List<Span> spans = new ArrayList<>();
         Matcher resident = RESIDENT.matcher(numeric);
         while (resident.find()) {
             if (residentDate(resident.group(1), resident.group(2).charAt(0))) {
                 spans.add(new Span(resident.start(), resident.end(), "[주민등록번호]"));
-                detections.add(new Detection(Reason.SENSITIVE_INFORMATION, "PII_RESIDENT_NUMBER"));
             }
         }
+        return spans;
+    }
+
+    private boolean declaredResidentCondition(String numeric, CardCandidateScanner.Candidate card,
+            List<Span> residents) {
+        if (!conditionUnit(numeric, card.end())) {
+            return false;
+        }
+        return residents.stream().anyMatch(resident -> card.start() >= resident.start()
+                && card.start() < resident.end() && separatedTail(numeric, resident.end(), card.end())
+                && DECLARED_RESIDENT.matcher(numeric.substring(0, resident.start())).find());
+    }
+
+    private boolean hasAmbiguousCondition(String numeric, List<Span> cards, List<Span> candidates) {
+        for (Span card : cards) {
+            if (conditionUnit(numeric, card.end()) && candidates.stream().anyMatch(prefix ->
+                    prefix.start() == card.start() && separatedTail(numeric, prefix.end(), card.end()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean conditionUnit(String numeric, int end) {
+        return CONDITION_UNIT.matcher(numeric).region(end, numeric.length()).lookingAt();
+    }
+
+    private boolean separatedTail(String numeric, int prefixEnd, int end) {
+        return prefixEnd < end && (numeric.charAt(prefixEnd) == ' ' || numeric.charAt(prefixEnd) == '-');
+    }
+
+    private List<Span> selectProtectedSpans(List<Span> candidates) {
+        List<Span> ordered = candidates.stream().sorted(Comparator.comparingInt(Span::start)
+                .thenComparing(Comparator.comparingInt(Span::end).reversed())).toList();
+        List<Span> selected = new ArrayList<>();
+        for (Span span : ordered) {
+            if (selected.isEmpty() || span.start() >= selected.getLast().end()) {
+                selected.add(span);
+                continue;
+            }
+            Span previous = selected.getLast();
+            if (span.end() > previous.end()) {
+                selected.set(selected.size() - 1, new Span(previous.start(), span.end(), "[카드번호]"));
+            }
+        }
+        return selected;
+    }
+
+    String previousFingerprintContent(String input) {
+        String numeric = numericForm(input);
+        List<Span> spans = findResidentSpans(numeric);
         Matcher card = CARD.matcher(numeric);
         while (card.find()) {
             // 전체 후보가 검증을 통과하면 길이와 단위에 관계없이 전체를 보호한다.
@@ -223,12 +306,15 @@ public final class ChatInputInspector {
                 String digits = numeric.substring(card.start(), end).replaceAll("[ -]", "");
                 if (!covered(spans, card.start(), end) && validCard(digits)) {
                     spans.add(new Span(card.start(), end, "[카드번호]"));
-                    detections.add(new Detection(Reason.SENSITIVE_INFORMATION, "PII_PAYMENT_CARD"));
                     break;
                 }
             }
         }
         spans.sort(Comparator.comparingInt(Span::start));
+        return render(input, spans, false).fingerprintContent();
+    }
+
+    private MaskedContent render(String input, List<Span> spans, boolean ambiguous) {
         List<MaskSpan> maskSpans = new ArrayList<>();
         StringBuilder result = new StringBuilder();
         StringBuilder fingerprintContent = new StringBuilder();
@@ -241,7 +327,7 @@ public final class ChatInputInspector {
             result.append(input, cursor, span.start());
             maskSpans.add(new MaskSpan(result.length(), result.length() + MASK.length()));
             result.append(MASK);
-            inspectionContent.append(input, cursor, span.start()).append(PII_BOUNDARY);
+            inspectionContent.append(input, cursor, span.start()).append(INSPECTION_BOUNDARY);
             // 기존 요청 해시와 호환되는 유형 문구만 유지한다. 원문 번호는 어느 결과에도 넣지 않는다.
             fingerprintContent.append(input, cursor, span.start()).append(span.replacement());
             cursor = span.end();
@@ -249,7 +335,7 @@ public final class ChatInputInspector {
         return new MaskedContent(
                 result.append(input, cursor, input.length()).toString(),
                 fingerprintContent.append(input, cursor, input.length()).toString(),
-                inspectionContent.append(input, cursor, input.length()).toString(), maskSpans);
+                inspectionContent.append(input, cursor, input.length()).toString(), maskSpans, ambiguous);
     }
 
     private String numericForm(String input) {
@@ -415,5 +501,5 @@ public final class ChatInputInspector {
     private record Span(int start, int end, String replacement) {}
 
     private record MaskedContent(String content, String fingerprintContent, String inspectionContent,
-            List<MaskSpan> maskSpans) {}
+            List<MaskSpan> maskSpans, boolean ambiguousCondition) {}
 }

@@ -193,6 +193,11 @@ telme:
     # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
     faq-clarification:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
+    # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
+    plan-question:
+      enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
+      # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
+      answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
       # 독립 검증(7절)과 실제 채팅 경로 확인(7.2절)을 마쳐 기본으로 켠다. 환경변수에 false를 넣으면 끈다

@@ -5,6 +5,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.safety.OutputMaskContext;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.config.ChatSummaryProperties;
@@ -112,7 +115,7 @@ class ChatSummaryLiveEvaluationTest {
             var request = LlmRequest.builder().taskType(TaskType.SUMMARY)
                     .systemPrompt(baseline).userPrompt(ChatSummaryPrompt.buildUserPrompt(previous, messages))
                     .temperature(0.0).maxTokens(512).promptVersion("summary-baseline-3516b24").build();
-            return ChatSummaryNormalizer.normalize(observed.generate(request));
+            return ChatSummaryNormalizer.normalize(observed.generate(request), OutputMaskContext.empty());
         }
         boolean grounded = mode.equals("GROUNDED_MEMORY");
         var settings = new ChatSummaryProperties(16, 2048, 8, 1024, 16, 3072, 512, grounded);
@@ -123,7 +126,10 @@ class ChatSummaryLiveEvaluationTest {
             row.put("storedSummary", call.getArgument(1));
             return true;
         });
-        new ChatSummaryService(store, observed, settings, converter)
+        ChatInputMaskRepository inputMasks = mock(ChatInputMaskRepository.class);
+        when(inputMasks.read(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(OutputMaskContext.empty());
+        new ChatSummaryService(store, observed, settings, converter, inputMasks)
                 .summarizeIfNeeded(new ChatSummaryRequested(1L, 1L, messages.getLast().sequenceNo()));
         return (String) row.get("storedSummary");
     }
