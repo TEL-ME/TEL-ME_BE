@@ -1,7 +1,7 @@
 {
  "description": "라우팅 의도·요청 개수 통합 평가셋(TELME-175). 기존 라우팅 관련 평가 자료를 모으고 모델 입력이 같은 문장과 프롬프트 예시와 같은 문장을 뺐다. split: tuning(라우팅 프롬프트를 고칠 때 본 문장), holdout(보지 않은 문장), general(검색 평가용으로 만든 문장). 의도별·오류 유형별로 나눠 집계한다.",
  "counts": {
-  "FAQ": 159,
+  "FAQ": 189,
   "UNKNOWN": 52,
   "STORE": 52,
   "BOTH": 51
@@ -5799,6 +5799,606 @@
    ],
    "acceptable_request_counts": [
     0
+   ]
+  },
+  {
+   "eval_id": "RU-315",
+   "question": "데이터 쉐어링 신청 방법과 소액결제 차단 방법 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-01",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "와/과 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-316",
+   "question": "일시정지 기간이랑 분실 신고 절차 알려주세요",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-02",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "랑 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-317",
+   "question": "eSIM 발급 비용하고 멤버십 등급 기준 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-03",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "하고 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-318",
+   "question": "가족결합 할인 조건, 청소년 요금제 가입 나이 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-04",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "쉼표 나열",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-319",
+   "question": "인터넷 이전 설치는 어떻게 신청해요? 자동이체 계좌 변경은요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-05",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장 + 생략형",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-320",
+   "question": "요금 청구서 재발행 방법 알려주고 미납 요금 납부 방법도 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-06",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "~고 ~도",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-321",
+   "question": "개통 취소 가능 기간이 언제까지예요? 그리고 취소하면 위약금 있어요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-07",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장 + 같은 업무",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-322",
+   "question": "기기변경할 때 선택약정이랑 공시지원금 중 뭐가 나은지, 그리고 쓰던 폰 보상 판매 방법",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-08",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "비교 + 독립 질문",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-323",
+   "question": "약정 중에 해지하면 위약금 얼마나 나와요? 번호 변경 수수료도 궁금해요",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-09",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-324",
+   "question": "데이터선물하기방법이랑로밍패스요금알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-10",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "띄어쓰기 없음",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-325",
+   "question": "컬러링 해지 방법, 번호 변경 방법, 명의도용 신고 방법 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-11",
+   "split": "holdout",
+   "expected_request_count": 3,
+   "tags": [
+    "쉼표 나열 3개",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    3
+   ]
+  },
+  {
+   "eval_id": "RU-326",
+   "question": "납부일 변경이랑 청구서 이메일 신청이랑 자동이체 해지 어떻게 해요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-12",
+   "split": "holdout",
+   "expected_request_count": 3,
+   "tags": [
+    "랑 나열 3개",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    3
+   ]
+  },
+  {
+   "eval_id": "RU-327",
+   "question": "휴대폰 보험 가입 조건 알려주고 보험금 청구는 어떻게 하는지도 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-13",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "같은 업무 두 요청",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-328",
+   "question": "TV 셋톱박스 반납 방법이랑 인터넷 해지 신청 방법",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-14",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "명사형 끝",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-329",
+   "question": "출국 전에 로밍 패스 가입하는 법이랑 현지 유심 쓸 때 주의할 점 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-15",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "랑 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-330",
+   "question": "유심 분실했을 때 정지하는 방법 알려줘. 재발급 받으려면 신분증 꼭 있어야 해?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-16",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "상황 + 두 문장",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-331",
+   "question": "5G 요금제 중 제일 싼 거 알려주고 그 요금제 데이터 다 쓰면 속도 제한이 어떻게 되는지도",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-17",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "앞 답에 이어지는 요청",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-332",
+   "question": "알뜰 요금제랑 무제한 요금제 차이 비교해 주고 가족결합 신청 방법도 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-18",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "비교 + 독립 질문",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-333",
+   "question": "멤버십 VIP 혜택 뭐 있어요? 등급 올리는 방법도 알려주세요",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-19",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장 + 같은 업무",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-334",
+   "question": "소액결제 한도 올리는 법이랑 결제 내역 확인하는 법",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-20",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "명사형 끝",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-335",
+   "question": "번호이동 할 때 위약금, 남은 할부금, 멤버십 포인트는 각각 어떻게 돼요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-21",
+   "split": "holdout",
+   "expected_request_count": 3,
+   "tags": [
+    "각각 + 3개",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    3
+   ]
+  },
+  {
+   "eval_id": "RU-336",
+   "question": "배우자 명의로 회선 넘기는 방법이랑 그 회선 가족결합에 넣는 방법 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-22",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "앞 대상 이어받기",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-337",
+   "question": "인터넷 속도가 느린데 장애 신고는 어디서 해요? 그리고 요금제 속도 올리는 방법도요",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-23",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "상황 + 두 요청",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-338",
+   "question": "외국인 개통에 필요한 서류랑 외국인 선불폰 충전 방법 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-24",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "랑 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-339",
+   "question": "자녀 폰 유해차단 서비스 가입 방법이랑 데이터 사용량 확인하는 법 알려주세요",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-25",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "랑 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-340",
+   "question": "일시정지 중에도 요금 나오나요? 정지 해제는 어떻게 해요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-26",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장 + 같은 업무",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-341",
+   "question": "eSIM 발급 비용이랑 발급 가능 기종, 그리고 기존 유심 처리 방법까지 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-27",
+   "split": "holdout",
+   "expected_request_count": 3,
+   "tags": [
+    "3개 + 그리고",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    3
+   ]
+  },
+  {
+   "eval_id": "RU-342",
+   "question": "분실한 폰 위치 찾는 서비스 있나요? 분실폰 할부금은 계속 내야 해요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-28",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-343",
+   "question": "기기변경하면 쓰던 요금제 유지돼요? 그리고 데이터 이월도 그대로 되나요?",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-29",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "두 문장 + 같은 업무",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
+   ]
+  },
+  {
+   "eval_id": "RU-344",
+   "question": "로밍 중에 받은 문자 요금이랑 귀국 후 로밍 자동 해제 여부 알려줘",
+   "expected_intent": "FAQ",
+   "source": "new175",
+   "source_id": "NEW-MULTI-30",
+   "split": "holdout",
+   "expected_request_count": 2,
+   "tags": [
+    "랑 + 술어 공유",
+    "여러 요청",
+    "TELME-175 신규(사람 검토 전)"
+   ],
+   "acceptable_intents": [
+    "FAQ"
+   ],
+   "acceptable_request_counts": [
+    2
    ]
   }
  ],
