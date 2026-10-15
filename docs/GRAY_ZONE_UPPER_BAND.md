@@ -227,7 +227,7 @@ Q_A는 0.69 ~ 0.80 판정으로 두고, 질문 벡터의 통과 선만 기존 �
 
 | 항목 | 내용 |
 | --- | --- |
-| 설정 | `search.gray-zone`(기본 꺼짐, Q_A 통과 0.80 / 아래 0.69, 질문 통과 0.90 / 아래 0.80), `llm.bedrock`(기본 꺼짐, us-east-1, `openai.gpt-oss-120b-1:0`, 호출 제한 8초, 동시 연결 50, 연결 대기 1초). 회색 구간을 켰는데 `llm.bedrock`이 꺼져 있으면 앱이 뜨지 않는다 |
+| 설정 | `search.gray-zone`(기본 켜짐, Q_A 통과 0.80 / 아래 0.69, 질문 통과 0.90 / 아래 0.80), `llm.bedrock`(기본 켜짐, us-east-1, `openai.gpt-oss-120b-1:0`, 호출 제한 8초, 동시 연결 50, 연결 대기 1초). 회색 구간을 켰는데 `llm.bedrock`이 꺼져 있으면 앱이 뜨지 않는다. 테스트(`src/test/resources/application.properties`)는 둘 다 끈다 |
 | 검색 | 벡터별 상위 3개를 점수로 나눈다(통과 / 판정 필요 / 버림). 기존 `search()`와 후보 검색(`searchCandidates`)은 바꾸지 않았다 |
 | 판정 | 판정 필요 후보를 FAQ 하나씩 v4(`evidence-check-v4`, B3에 비교 규칙 한 줄, 5.8절)로 1회 판정한다. 한 질문의 후보는 동시에 보내고, 두 벡터에 같은 FAQ가 나오면 한 번만 판정한다. 판정 질문은 검색 문장이 아니라 고객 질문(문맥 복원 질문 포함)이다 |
 | 합치기 | 남은 후보를 질문 벡터 우선, 중복 제거, 상위 3개로 합친다. 측정 기준 함수 `served()`와 같은 순서다 |
@@ -427,6 +427,25 @@ develop 머지(#145 UNKNOWN 재확인, TELME-148 등) 뒤라 끔도 다시 쟀�
 - 이번 측정은 #145(UNKNOWN 재확인)가 들어간 코드로 쟀다. 재확인으로 FAQ에 간 문항은 EVAL-147 하나이고, 답변 가능한데 UNKNOWN으로 끝난 문항은 EVAL-049, 056, 070으로 8.2절에 적은 대로다
 - 판정 호출 459회: 1회 p50 1.5초 / p95 3.0초, 시간 초과(8초) 3회(0.7%)
 
+**#151(요금제 챗봇) 머지 뒤 (10-15)**
+
+#151은 요금제 목록·내 정보·추천 질문을 FAQ 검색 없이 요금제 데이터로 답한다. 이 질문들은 FAQ 근거가 붙지 않아 정답 근거 수가 끔·켬 모두 줄어든다.
+
+| 항목 | 끔 | 켬 v4 |
+| --- | ---: | ---: |
+| 정답 근거 공식 / 다중 (/110) | 57 / 61 | **68 / 76** |
+| 근거 있는 답변 GROUNDED (/110) | 42 | 49 |
+| 엉뚱한 근거 (/68) / 엉뚱한 근거로 나간 답변 | 10 / 7 | **2 / 2** |
+| holdout 엉뚱한 근거 (원문 / 재검색 포함) | - | 8 / 10 |
+| 비교 질문 GROUNDED (/17) | 6 | 7 |
+| 되묻기 (/180) | 29 | 36 |
+| 처리 시간 중앙값 / p95 | 4.1초 / 7.8초 | 4.9초 / 10.3초 |
+
+- 끔 → 켬: 정답 근거 새로 찾은 문항 16, 잃은 문항 1(EVAL-149). EVAL-149는 #151 전 켬 측정에서는 근거가 남았고 이번에는 판정기가 근거 2개를 모두 막았다. 1회 판정의 흔들림이다
+- 켬의 엉뚱한 답변 2건 중 EVAL-113(아이 워치용 요금제)은 회색 구간이 아니라 #151의 요금제 목록 답변이다
+- 바로 답하던 EVAL-002, 010, 137, 146이 되묻기로 바뀌는 현상은 #151 전과 같다
+- 판정 호출 460회, 실패 1회
+
 ## 6. 해 봤지만 효과 없던 것
 
 | 시도 | 결과 |
@@ -460,14 +479,15 @@ TELME-122의 예상 질문 생성, 쌍둥이 FAQ 정리도 효과가 없었다. 
 | 덩어리 | 상태 |
 | --- | --- |
 | Bedrock 연결 | 완료 (TELME-160). 판정 전용 빈, 답변 생성은 그대로 |
-| 검색 구간 나누기 | 완료. `search.gray-zone` 기본 꺼짐 |
+| 검색 구간 나누기 | 완료. `search.gray-zone` 기본 켜짐(10-15 팀 결정, 리전 us-east-1). 로컬은 Bedrock 키(`AWS_BEARER_TOKEN_BEDROCK`)를 넣거나 `SEARCH_GRAY_ZONE_ENABLED=false`로 끈다 |
 | 회색 구간 판정 | 완료. 재검색 결과 포함. 판정 프롬프트 v4(5.8절) |
 | 테스트 | 완료. 경계값, 판정 통과·거절·실패, 플래그 꺼짐 동일, 재검색, slot 없는 후보, 비교 질문 다시 고르기 |
 | 구현 후 측정 | 180셋 끔·켬, holdout 90 켬, 판정 시험(v4 3회), 지연, 비교 질문 17개, #145와 함께 켠 180셋(5절). 환각률은 남음 |
 
-### 8.1 플래그를 켜기 전에 할 것
+### 8.1 켠 뒤 확인할 것
 
 - 환각률: develop 기준선과 켠 뒤 비교
+- 되묻기 증가: 근거가 늘면서 바로 답하던 EVAL-002, 010, 137, 146이 되묻기로 바뀐다(5.2절, 5.8절 #151 이후). 되묻기 문구가 질문과 맞지 않는 경우도 있다("요금을 납부하셨나요?"). 되묻기 판단 단계의 원인을 확인한다
 - 판정 없이 통과하는 선: 질문 벡터 0.90 이상에서 질문 문장만 닮은 FAQ가 판정 없이 통과한다(5.8절 H-129, BX-002). 선을 올릴지, 운영 방식 판정 시험의 기준을 무엇으로 할지 정한다
 - 판정 호출 제한: **8초**(5.5절). 켠 뒤 `llm_generations`의 실패 비율과 걸린 시간을 보고 다시 맞춘다
 - 동시 연결 수(`llm.bedrock.max-connections`, 기본 50): 앱 전체에서 동시에 진행되는 Bedrock 호출 수 상한이다. 연결을 1초 안에 못 얻으면 판정 실패로 처리한다
@@ -486,6 +506,7 @@ TELME-122의 예상 질문 생성, 쌍둥이 FAQ 정리도 효과가 없었다. 
 - [x] 완화안(0.69) + 위로 넓히기(0.80)로 간다 (2026-10-13 채택, 상한은 4.1절에서 0.80 유지)
 - [ ] 판정 실패 시 처리: 아래쪽 버림 / 위쪽 통과로 구현했다(4.3절). 팀 확인 필요
 - [ ] 판정 붙는 질문(약 60%)의 처리 시간 추가 허용 여부 (채팅 기준 중앙값 3.3 → 5.0초, 5.8절)
+- [x] 기본 켜짐으로 머지, 리전 us-east-1 유지 (10-15)
 - [ ] 상담 내용을 Bedrock(us-east-1)으로 보내도 되는지
 - [ ] Bedrock 자격 증명: 팀 AWS 키(현재 음성 전용 IAM)에 Bedrock 호출 권한을 붙여 하나로 쓸지
 
@@ -512,7 +533,8 @@ TELME-122의 예상 질문 생성, 쌍둥이 FAQ 정리도 효과가 없었다. 
 | 판정 시험 v4 5분 간격 3회 (10-15) | 195 | 약 47원 |
 | 180셋·holdout·비교 질문 채팅 API, 켬 v4 (10-15) | 459 | 약 106원 |
 | 판정 시험 운영과 같은 방식 v4 5분 간격 3회 (10-15) | 294 | 약 71원 |
-| **합계** | | **약 851원** |
+| #151 머지 뒤 180셋·holdout·비교 질문 채팅 API, 켬 v4 (10-15) | 461 | 약 106원 |
+| **합계** | | **약 957원** |
 
 운영 추정 (채택안 0.69 ~ 0.80)
 
@@ -551,14 +573,13 @@ python3 scripts/gray_zone_upper_band_bedrock.py --qa-floors 0.69 --qa-tops 0.80 
 # 개발 DB 복사본
 docker exec telme-postgres sh -c "createdb -U telme telme_eval160 && pg_dump -U telme telme | psql -U telme -q -d telme_eval160"
 
-# 끔: 앱을 복사본 DB로 띄운 뒤
-POSTGRES_DB=telme_eval160 ./gradlew bootRun
+# 끔: 앱을 복사본 DB로 띄운 뒤 (기본 켜짐이라 끄는 값을 준다)
+POSTGRES_DB=telme_eval160 SEARCH_GRAY_ZONE_ENABLED=false ./gradlew bootRun
 python3 scripts/single-faq-search-evaluation/run_chat_eval.py --base-url http://localhost:8080 \
     --database telme_eval160 --container telme-postgres --output .measure/telme160/chat-off.json
 
-# 켬: 플래그와 Bedrock 키를 주고 앱을 다시 띄운 뒤 같은 명령(출력만 다르게). holdout은 --eval-set으로
-POSTGRES_DB=telme_eval160 SEARCH_GRAY_ZONE_ENABLED=true LLM_BEDROCK_ENABLED=true \
-    AWS_BEARER_TOKEN_BEDROCK=... ./gradlew bootRun
+# 켬: Bedrock 키를 주고 앱을 다시 띄운 뒤 같은 명령(출력만 다르게). holdout은 --eval-set으로
+POSTGRES_DB=telme_eval160 AWS_BEARER_TOKEN_BEDROCK=... ./gradlew bootRun
 python3 scripts/single-faq-search-evaluation/run_chat_eval.py ... --eval-set scripts/data/eval_questions_holdout_90.json
 
 # 비교
