@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.IntentRouteResponse;
@@ -50,6 +51,12 @@ class RoutingEvaluationProbe {
     private static final Path OUTPUT = Path.of(
             System.getenv().getOrDefault("TELME_ROUTING_OUT", "build/tmp/routing-eval-180.json"));
     private static final String MODEL = "exaone3.5:7.8b";
+    // 의도 분류 호출만 따로 보낼 주소. 요청 개수 판정·검색어 검증 등 나머지 라우팅 호출은 BASE_URL로 보낸다.
+    // 의도 분류만 다른 모델(예: Bedrock 라우터)로 바꿔 비교할 때 쓴다. 둘 다 Ollama API 형식이어야 한다
+    private static final String BASE_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_BASE_URL", "http://localhost:11434");
+    private static final String INTENT_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_INTENT_URL", BASE_URL);
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -95,6 +102,21 @@ class RoutingEvaluationProbe {
                     .build();
             ChatContext context = summary == null ? null
                     : new ChatContext(1L, message.getMessageId(), summary, List.of(), question, 0);
+            // 앱은 문맥 해석이 이전 고객 발언을 연결했을 때만 그 발언(history)과 복원 질문을 라우팅에 넘긴다.
+            // previous_questions + context_linked=true면 그 경로를, false면 질문만 넘기는 경로를 그대로 재현한다
+            String resolvedQuestion = null;
+            List<String> previous = new ArrayList<>();
+            item.path("previous_questions").forEach(node -> previous.add(node.asText()));
+            if (!previous.isEmpty() && item.path("context_linked").asBoolean(false)) {
+                List<ChatContextMessage> history = new ArrayList<>();
+                for (int index = 0; index < previous.size(); index++) {
+                    history.add(new ChatContextMessage(100_000L + index, index + 1, ChatMessage.Role.USER,
+                            ChatMessage.MessageType.QUESTION, previous.get(index), null));
+                }
+                context = new ChatContext(1L, message.getMessageId(), null, history, question, 0);
+                resolvedQuestion = "[대상을 확인할 이전 고객 발언]\n" + String.join("\n", previous)
+                        + "\n[현재 후속 질문]\n" + question;
+            }
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("eval_id", id);
             row.put("type", type);
@@ -103,12 +125,18 @@ class RoutingEvaluationProbe {
             if (summary != null) {
                 row.put("summary", summary);
             }
+            if (resolvedQuestion != null) {
+                row.put("resolved_question", resolvedQuestion);
+            }
             row.put("user_prompt", RoutingPromptTemplates.routingUserPrompt(context, question));
             String expectedIntent = expectedIntents.get(id);
             row.put("expected_intent", expectedIntent);
             long started = System.nanoTime();
             try {
-                IntentRouteResponse route = service.routeSingleConsult(message, context);
+                client.intentResponse = null;
+                IntentRouteResponse route = resolvedQuestion == null
+                        ? service.routeSingleConsult(message, context)
+                        : service.routeSingleConsult(message, context, resolvedQuestion);
                 row.put("intent", route.intent().name());
                 row.put("intent_matches", route.intent().name().equals(expectedIntent));
                 row.put("compound_guidance", false);
@@ -120,11 +148,11 @@ class RoutingEvaluationProbe {
             } catch (UnsupportedCompoundQuestionException exception) {
                 // 복합 질문 안내는 BOTH뿐 아니라 하위 질문 intent가 섞인 경우에도 나온다.
                 // 안내 여부와 분류 정확도를 섞지 않도록, 채점은 모델이 실제로 낸 intent로 한다
-                String modelIntent = modelIntent(client.lastResponse);
+                String modelIntent = modelIntent(client.intentResponse);
                 row.put("intent", modelIntent);
                 row.put("intent_matches", modelIntent.equals(expectedIntent));
                 row.put("compound_guidance", true);
-                row.put("sub_intents", modelSubIntents(client.lastResponse));
+                row.put("sub_intents", modelSubIntents(client.intentResponse));
             } catch (RuntimeException exception) {
                 row.put("intent", "ERROR");
                 row.put("intent_matches", false);
@@ -132,7 +160,9 @@ class RoutingEvaluationProbe {
                 row.put("error", exception.getClass().getSimpleName() + ": " + exception.getMessage());
             }
             row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
-            row.put("model_response", client.lastResponse);
+            row.put("model_response", client.intentResponse);
+            // 보정(규칙·검색 재확인) 전 모델이 직접 낸 의도
+            row.put("model_intent", modelIntent(client.intentResponse));
             records.add(row);
             writeResult(records);
             if (records.size() % 10 == 0) {
@@ -248,6 +278,7 @@ class RoutingEvaluationProbe {
         private final Map<String, String> replay;
         private final HttpClient http = HttpClient.newHttpClient();
         private String lastResponse;
+        private String intentResponse;
 
         private LocalOllamaClient(ObjectMapper mapper, Map<String, String> replay) {
             this.mapper = mapper;
@@ -261,6 +292,9 @@ class RoutingEvaluationProbe {
                 lastResponse = replay.get(request.userPrompt());
                 if (lastResponse == null) {
                     throw new IllegalStateException("Missing replay response: " + request.userPrompt());
+                }
+                if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt())) {
+                    intentResponse = lastResponse;
                 }
                 return lastResponse;
             }
@@ -276,7 +310,8 @@ class RoutingEvaluationProbe {
                         "temperature", request.temperature(),
                         "num_predict", request.maxTokens(),
                         "num_ctx", 8192));
-                HttpRequest httpRequest = HttpRequest.newBuilder(URI.create("http://localhost:11434/api/chat"))
+                boolean intentCall = RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt());
+                HttpRequest httpRequest = HttpRequest.newBuilder(URI.create((intentCall ? INTENT_URL : BASE_URL) + "/api/chat"))
                         .header("Content-Type", "application/json")
                         .timeout(Duration.ofMinutes(3))
                         .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
@@ -286,6 +321,9 @@ class RoutingEvaluationProbe {
                     throw new IllegalStateException("Ollama HTTP " + response.statusCode());
                 }
                 lastResponse = mapper.readTree(response.body()).path("message").path("content").asText();
+                if (intentCall) {
+                    intentResponse = lastResponse;
+                }
                 return lastResponse;
             } catch (Exception exception) {
                 throw new IllegalStateException("Ollama routing probe failed", exception);
