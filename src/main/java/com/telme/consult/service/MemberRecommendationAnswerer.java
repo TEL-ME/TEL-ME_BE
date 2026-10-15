@@ -204,15 +204,17 @@ public class MemberRecommendationAnswerer {
         int currentFee = afterDiscount(current.getMonthlyFee(), discountPercent);
         int gap = Math.abs(afterDiscount(plan.getMonthlyFee(), discountPercent) - currentFee);
         Outcome outcome = switch (recommendation.kind()) {
-            case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요."
-                    .formatted(use, current.getName(), summary(current)), List.of(CATALOG_QUESTION), null);
+            case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요.%s"
+                    .formatted(use, current.getName(), summary(current, discountPercent), discountNote(discountPercent)),
+                    List.of(CATALOG_QUESTION), null);
             case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요.%s"
-                    .formatted(use, plan.getName(), summary(plan), PlanFormat.money(gap), current.getName(),
-                            PlanFormat.money(currentFee), discountNote(discountPercent)),
+                    .formatted(use, plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
+                            current.getName(), PlanFormat.money(currentFee), discountNote(discountPercent)),
                     List.of(CHANGE_QUESTION), null);
             case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요.%s"
-                    .formatted(use, current.getName(), summary(current), shortage(current, demand), plan.getName(),
-                            summary(plan), PlanFormat.money(gap), discountNote(discountPercent)),
+                    .formatted(use, current.getName(), summary(current, discountPercent), shortage(current, demand),
+                            plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
+                            discountNote(discountPercent)),
                     List.of(CHANGE_QUESTION), null);
         };
         return note.isEmpty() ? outcome : new Outcome(outcome.content() + note, outcome.followUps(), null);
@@ -229,7 +231,7 @@ public class MemberRecommendationAnswerer {
     }
 
     private static String discountNote(int discountPercent) {
-        return discountPercent == 0 ? "" : " 월 금액 차이와 지금 요금은 약정 할인 %d%%를 적용한 금액이에요.".formatted(discountPercent);
+        return discountPercent == 0 ? "" : " 월 금액은 모두 약정 할인 %d%%를 적용한 금액이에요.".formatted(discountPercent);
     }
 
     private static String shortage(Plan current, Demand demand) {
@@ -248,7 +250,13 @@ public class MemberRecommendationAnswerer {
     }
 
     private static String summary(Plan plan) {
-        return "월 %s, 데이터 %s".formatted(PlanFormat.money(plan.getMonthlyFee()), PlanFormat.data(plan.isUnlimited(), plan.getDataGb()));
+        return summary(plan, 0);
+    }
+
+    // 약정 중이면 비교하는 금액과 같은 기준으로 할인 후 월정액을 보여준다
+    private static String summary(Plan plan, int discountPercent) {
+        return "월 %s, 데이터 %s".formatted(PlanFormat.money(afterDiscount(plan.getMonthlyFee(), discountPercent)),
+                PlanFormat.data(plan.isUnlimited(), plan.getDataGb()));
     }
 
     private static String gb(long mb) {

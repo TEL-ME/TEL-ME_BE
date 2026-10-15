@@ -185,7 +185,20 @@ class MemberRecommendationAnswererTest {
 
         // 5G 스탠다드 65,000원 - 25% = 48,750원이라 차이는 정가 기준 20,000원이 아니라 15,000원
         assertThat(outcome.content()).contains("월 15,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 63,750원이에요",
-                "약정 할인 25%를 적용한 금액이에요").doesNotContain("월 20,000원 아낄");
+                "월 금액은 모두 약정 할인 25%를 적용한 금액이에요").doesNotContain("월 20,000원 아낄");
+        // 괄호 안 요약도 같은 기준의 할인가라서 정가(65,000원)와 섞이지 않는다
+        assertThat(outcome.content()).contains("5G 스탠다드(월 48,750원, 데이터 50GB)으로 바꾸면")
+                .doesNotContain("월 65,000원");
+    }
+
+    @Test
+    void 약정_중에_그대로_쓰라고_할_때도_현재_요금제를_할인가로_보여준다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50, true);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains("지금 쓰는 5G 스탠다드(월 48,750원, 데이터 50GB)이 사용량에 알맞아요",
+                "월 금액은 모두 약정 할인 25%를 적용한 금액이에요").doesNotContain("월 65,000원");
     }
 
     @Test
@@ -195,8 +208,9 @@ class MemberRecommendationAnswererTest {
         Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
 
         // 5G 라이트 45,000원 → 5G 스탠다드 65,000원은 정가 차이 20,000원이고 약정 할인 후에는 15,000원
-        assertThat(outcome.content()).contains("월 15,000원이 더 들어요", "약정 할인 25%를 적용한 금액이에요")
-                .doesNotContain("월 20,000원이 더");
+        assertThat(outcome.content()).contains("월 15,000원이 더 들어요", "월 금액은 모두 약정 할인 25%를 적용한 금액이에요",
+                "지금 쓰는 5G 라이트(월 33,750원, 데이터 8GB)", "5G 스탠다드(월 48,750원, 데이터 50GB)을 추천해요")
+                .doesNotContain("월 20,000원이 더", "월 65,000원", "월 45,000원");
     }
 
     @Test
