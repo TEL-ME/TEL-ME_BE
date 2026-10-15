@@ -270,6 +270,7 @@ public final class RoutingPromptTemplates {
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
           "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+          유심이나 eSIM을 새로 받거나 바꾸는 것은 USIM_REISSUE다. NEW_LINE은 새 회선(새 번호)을 개통하는 것만이다.
         - 그 밖의 키는 "되묻는 중인 조건"에 적힌 이름을 그대로 쓰고, 값은 고객 답변의 표현을 그대로 담는다.
 
         [상태 판정 기준]
@@ -278,7 +279,10 @@ public final class RoutingPromptTemplates {
         - NEW_QUESTION: 되묻기 조건과 관계없는 별개의 질문을 새로 함
         - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
           ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
+        - 예·아니요로 답하는 조건에 "아니요", "없어요", "안 했어요", "아직 안 됐어요"처럼 부정하거나
+          부정 뒤에 사정을 덧붙여 답한 것도 값을 준 것이다. FILLED로 두고 value에는 고객 답변을 담는다.
         - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
+          부정하는 답은 거부가 아니다. 대답 자체를 하지 않겠다고 할 때만 DECLINED다.
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
 
         [예시]

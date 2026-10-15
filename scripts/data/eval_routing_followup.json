@@ -1,0 +1,1245 @@
+{
+ "description": "TELME-175 4단계 후속 분석 평가셋. 실제 입력은 TELME-174 대화 흐름 DB의 조건 이름과 답변, 나머지는 새로 썼다. 정답은 사람 검토 전이다.",
+ "counts": {
+  "cases": 68,
+  "flow_db": 14,
+  "by_response_type": {
+   "CONDITION_RESPONSE": 58,
+   "DEFERRED": 6,
+   "NEW_QUESTION": 4
+  }
+ },
+ "cases": [
+  {
+   "case_id": "FU-01",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "강남역",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "강남역",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-02",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "agent_presents"
+   ],
+   "reply": "아니요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "agent_presents": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-03",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "visit_together"
+   ],
+   "reply": "예",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "visit_together": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-04",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "명의변경이라고",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "ABSENT"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NAME_CHANGE",
+     "match": "exact"
+    }
+   },
+   "note": "지역을 물었는데 업무로 답함. 실제 실행에서 '명의변경이라고'가 지역 값으로 들어갔다"
+  },
+  {
+   "case_id": "FU-05",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "six_months_passed"
+   ],
+   "reply": "개통한 지 1년 넘었고 남은 할부금은 없어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "six_months_passed": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-06",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "미납 요금은 없고 개통한 지 2년 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-07",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "over_12_months"
+   ],
+   "reply": "24개월 약정 중에 10개월 썼어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "over_12_months": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-08",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "self_pickup"
+   ],
+   "reply": "유심을 잃어버렸고 제가 직접 매장에 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "self_pickup": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-09",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "age_at_least_14"
+   ],
+   "reply": "만 15세이고 부모님이랑 같이 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "age_at_least_14": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-10",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "both_present"
+   ],
+   "reply": "양도인이랑 양수인 둘 다 직접 매장에 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-11",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "both_present"
+   ],
+   "reply": "직접 매장에 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "FILLED"
+    }
+   },
+   "note": "실제 실행 한 번은 DECLINED로 처리됨. 직접 간다는 답이라 거절이 아니다"
+  },
+  {
+   "case_id": "FU-12",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "past_due"
+   ],
+   "reply": "납부일이 지난 지 20일 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "past_due": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-13",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "contract_less_12"
+   ],
+   "reply": "24개월 약정 중에 10개월 썼어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "contract_less_12": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-14",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "both_parties_present"
+   ],
+   "reply": "둘 다 직접 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_parties_present": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-15",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "서초동 쪽이요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "서초동",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-16",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "부산 해운대 근처요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "해운대",
+     "match": "contains"
+    }
+   }
+  },
+  {
+   "case_id": "FU-17",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "그건 알려드리기 곤란해요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "DECLINED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-18",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "잠깐만요 주소 좀 볼게요",
+   "response_types": [
+    "DEFERRED"
+   ],
+   "conditions": {
+    "location": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-19",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "지금 있는 곳 기준으로 찾아줘",
+   "response_types": [
+    "CONDITION_RESPONSE",
+    "DEFERRED"
+   ],
+   "conditions": {
+    "location": {
+     "status": "ABSENT"
+    }
+   },
+   "note": "기준점만 가리키는 말은 지역 값이 아니다"
+  },
+  {
+   "case_id": "FU-20",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "요금제 변경은 어떻게 해요?",
+   "response_types": [
+    "NEW_QUESTION"
+   ],
+   "conditions": {
+    "location": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-21",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "신촌에서 번호이동 하려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "신촌",
+     "match": "exact"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "PORT_IN",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-22",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "합정역 근처 매장에서 유심 새로 받으려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "합정역",
+     "match": "exact"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-23",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "유심 재발급이요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "ABSENT"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   },
+   "note": "지역을 물었는데 업무로 답함"
+  },
+  {
+   "case_id": "FU-24",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "유심이 망가져서 새로 받으려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-25",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "다른 통신사에서 옮겨 오려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "PORT_IN",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-26",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "폰을 처음 새로 만들려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NEW_LINE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-27",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "엄마 폰을 제 명의로 돌리려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NAME_CHANGE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-28",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "로밍 요금은 얼마예요?",
+   "response_types": [
+    "NEW_QUESTION"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-29",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "없어요 다 냈어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-30",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "조금 밀린 게 있긴 해요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-31",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "번호이동 수수료는 얼마예요?",
+   "response_types": [
+    "NEW_QUESTION"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-32",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "그건 왜 물어보시는 거예요?",
+   "response_types": [
+    "DEFERRED"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "ABSENT"
+    }
+   },
+   "note": "답하지 않고 이유를 물음"
+  },
+  {
+   "case_id": "FU-33",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "six_months_passed"
+   ],
+   "reply": "3개월밖에 안 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "six_months_passed": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-34",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "six_months_passed"
+   ],
+   "reply": "고마워요",
+   "response_types": [
+    "DEFERRED"
+   ],
+   "conditions": {
+    "six_months_passed": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-35",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "self_pickup"
+   ],
+   "reply": "동생이 대신 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "self_pickup": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-36",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "self_pickup"
+   ],
+   "reply": "잠시만요 확인해 볼게요",
+   "response_types": [
+    "DEFERRED"
+   ],
+   "conditions": {
+    "self_pickup": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-37",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "age_at_least_14"
+   ],
+   "reply": "중학교 1학년이에요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "age_at_least_14": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-38",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "age_at_least_14"
+   ],
+   "reply": "나이는 말하고 싶지 않아요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "age_at_least_14": {
+     "status": "DECLINED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-39",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "both_present"
+   ],
+   "reply": "저만 가고 아버지는 못 가세요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-40",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "both_present"
+   ],
+   "reply": "아직 정하지 못했어요",
+   "response_types": [
+    "DEFERRED",
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "ABSENT"
+    }
+   },
+   "note": "정하지 못했다는 보류"
+  },
+  {
+   "case_id": "FU-41",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "agent_visiting"
+   ],
+   "reply": "아니요 둘 다 직접 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "agent_visiting": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-42",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "agent_visiting"
+   ],
+   "reply": "네 아내가 대신 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "agent_visiting": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-43",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "joined_this_month"
+   ],
+   "reply": "아니요 작년에 가입했어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "joined_this_month": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-44",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "changed_this_month"
+   ],
+   "reply": "이번 달엔 안 바꿨어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "changed_this_month": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-45",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "travel_days"
+   ],
+   "reply": "일본에 5일 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "travel_days": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-46",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "travel_days"
+   ],
+   "reply": "그런데 해외에서 데이터 차단은 어떻게 해요?",
+   "response_types": [
+    "NEW_QUESTION"
+   ],
+   "conditions": {
+    "travel_days": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-47",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "installment_settled"
+   ],
+   "reply": "할부는 지난달에 다 갚았어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "installment_settled": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-48",
+   "expected_intent": "FAQ",
+   "source": "written",
+   "pending_keys": [
+    "over_12_months"
+   ],
+   "reply": "아직 1년 안 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "over_12_months": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-49",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "agent_visiting"
+   ],
+   "reply": "아뇨 제가 직접 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "agent_visiting": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-50",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "없어요 지난달에 다 냈어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-51",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "six_months_passed"
+   ],
+   "reply": "아니요 이제 두 달 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "six_months_passed": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-52",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "over_12_months"
+   ],
+   "reply": "아뇨 아직 반년밖에 안 됐어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "over_12_months": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-53",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "joined_this_month"
+   ],
+   "reply": "아니요 이번 달 아니에요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "joined_this_month": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-54",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "self_pickup"
+   ],
+   "reply": "아니요 남편이 받으러 갈 거예요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "self_pickup": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-55",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "age_at_least_14"
+   ],
+   "reply": "아니요 열두 살이에요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "age_at_least_14": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-56",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "both_present"
+   ],
+   "reply": "아니요 한 명만 갈 수 있어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-57",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "installment_settled"
+   ],
+   "reply": "아뇨 아직 할부 남았어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "installment_settled": {
+     "status": "FILLED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-58",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "unpaid_bill"
+   ],
+   "reply": "그런 건 대답하기 싫어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "unpaid_bill": {
+     "status": "DECLINED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-59",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "age_at_least_14"
+   ],
+   "reply": "개인정보라 말씀 못 드려요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "age_at_least_14": {
+     "status": "DECLINED"
+    }
+   }
+  },
+  {
+   "case_id": "FU-60",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "agent_visiting"
+   ],
+   "reply": "그건 나중에 말씀드릴게요",
+   "response_types": [
+    "DEFERRED"
+   ],
+   "conditions": {
+    "agent_visiting": {
+     "status": "ABSENT"
+    }
+   }
+  },
+  {
+   "case_id": "FU-61",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "유심을 새 걸로 바꾸고 싶어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-62",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "eSIM으로 새로 발급받으려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-63",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "번호 하나 새로 개통하려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NEW_LINE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-64",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "serviceType"
+   ],
+   "reply": "아이 폰을 새로 하나 만들어 주려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NEW_LINE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-65",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "여의도역 근처에서 유심 새로 받을래요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "여의도역",
+     "match": "exact"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-66",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "목동에서 새 회선 하나 만들려고요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "목동",
+     "match": "exact"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "NEW_LINE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-67",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "location"
+   ],
+   "reply": "망원동에서 유심만 바꾸면 돼요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "location": {
+     "status": "FILLED",
+     "value": "망원동",
+     "match": "exact"
+    },
+    "serviceType": {
+     "status": "FILLED",
+     "value": "USIM_REISSUE",
+     "match": "exact"
+    }
+   }
+  },
+  {
+   "case_id": "FU-68",
+   "expected_intent": "FAQ",
+   "source": "prompt-check",
+   "pending_keys": [
+    "past_due"
+   ],
+   "reply": "아니요 아직 납부일 안 지났어요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "past_due": {
+     "status": "FILLED"
+    }
+   }
+  }
+ ]
+}

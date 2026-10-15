@@ -1007,8 +1007,8 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
-        // 버튼을 그대로 누른 업무 답은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
-        String pickedServiceType = ruleBasedFallback.serviceTypeOfOption(reply);
+        // 버튼을 그대로 누르거나 업무 이름만 짧게 답한 것은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
+        String pickedServiceType = ruleBasedFallback.serviceTypeOfShortReply(reply);
         if (pickedServiceType != null
                 && waiting.pendingKeys().contains(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
             log.info("[후속분석] 업무 선택지를 코드로 읽었습니다: consultRequestId={}, serviceType={}",
@@ -1141,6 +1141,8 @@ public class QueryRoutingService {
             .format(ResponseFormat.JSON)
             .temperature(0.0)
             .maxTokens(300)
+            // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽도록 고친 판(TELME-175 4단계)
+            .promptVersion("routing-follow-up-v2")
             .build();
 
         String json = llmClient.generate(request);

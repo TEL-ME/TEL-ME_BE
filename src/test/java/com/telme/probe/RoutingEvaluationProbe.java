@@ -72,8 +72,11 @@ class RoutingEvaluationProbe {
     // 요청 개수 판정은 2단계 비교로 gpt-oss로 정했다
     private static final String INVENTORY_URL =
             System.getenv().getOrDefault("TELME_ROUTING_INVENTORY_URL", "http://127.0.0.1:11435");
+    // 검색어 검증은 3단계 비교로 gpt-oss로 정했다
     private static final String FAITHFULNESS_URL =
-            System.getenv().getOrDefault("TELME_ROUTING_FAITHFULNESS_URL", BASE_URL);
+            System.getenv().getOrDefault("TELME_ROUTING_FAITHFULNESS_URL", "http://127.0.0.1:11435");
+    private static final String FOLLOWUP_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_FOLLOWUP_URL", BASE_URL);
     // inventory: 라우팅 흐름 대신 요청 개수 판정 호출만 문항마다 직접 부른다(TELME-175 2단계).
     // 이 호출의 입력은 질문 하나뿐이라, 의도 분류가 나눈 문항에만 도는 앱 흐름보다 넓게 시험할 수 있다
     private static final boolean INVENTORY_STEP =
@@ -110,6 +113,10 @@ class RoutingEvaluationProbe {
         if ("faithfulness-cases".equals(STEP)) {
             writeJson(buildFaithfulnessCases(cases));
             System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+            return;
+        }
+        if ("followup".equals(STEP)) {
+            runRepeated(repeats, name -> buildFollowupResult(runFollowupOnce(cases, name)));
             return;
         }
         if ("faithfulness".equals(STEP)) {
@@ -413,6 +420,70 @@ class RoutingEvaluationProbe {
         return result;
     }
 
+    // 되묻기 답변의 후속 분석 호출(앱의 requestFollowUpAnalysis)만 부른다(TELME-175 4단계).
+    // 앱은 이 결과를 되묻는 중인 조건으로 거르고, 조건이 하나도 없으면 규칙으로 한 번 더 읽는다. 여기서는 모델 출력 자체를 남기고
+    // 채점은 score_followup_step.py가 한다. 응답을 읽지 못하면 앱은 규칙 분석으로 넘어가므로 failed로 남긴다
+    private List<Map<String, Object>> runFollowupOnce(List<JsonNode> cases, String runName) throws Exception {
+        var client = new LocalOllamaClient(mapper, null);
+        var service = routingService(client);
+        Method analyze = accessible(QueryRoutingService.class, "requestFollowUpAnalysis", String.class, java.util.Set.class);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JsonNode item : cases) {
+            java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+            item.path("pending_keys").forEach(node -> keys.add(node.asText()));
+            String reply = item.path("reply").asText();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("case_id", item.path("case_id").asText());
+            row.put("pending_keys", new ArrayList<>(keys));
+            row.put("reply", reply);
+            row.put("user_prompt", RoutingPromptTemplates.followUpUserPrompt(keys, reply));
+            long started = System.nanoTime();
+            client.lastResponse = null;
+            // 앱은 업무를 묻거나 지역을 묻는 중 업무 이름만 짧게 답하면 모델을 부르지 않고 규칙으로 읽는다
+            String ruleServiceType = new RuleBasedRoutingFallback().serviceTypeOfShortReply(reply);
+            if (ruleServiceType != null && (keys.contains("serviceType") || keys.contains("location"))) {
+                row.put("method", "RULE");
+                row.put("response_type", "CONDITION_RESPONSE");
+                row.put("conditions", List.of(Map.of("key", "serviceType", "status", "FILLED", "value", ruleServiceType)));
+                row.put("failed", false);
+                row.put("elapsed_ms", 0L);
+                row.put("model_response", null);
+                records.add(row);
+                continue;
+            }
+            row.put("method", "LLM");
+            try {
+                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, keys);
+                row.put("response_type", payload.responseType().name());
+                row.put("conditions", mapper.convertValue(payload.conditions(), List.class));
+                row.put("failed", false);
+            } catch (InvocationTargetException exception) {
+                row.put("response_type", null);
+                row.put("conditions", List.of());
+                row.put("failed", true);
+                row.put("error", exception.getCause().getClass().getSimpleName() + ": " + exception.getCause().getMessage());
+            }
+            row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
+            row.put("model_response", client.lastResponse);
+            records.add(row);
+            if (records.size() % 20 == 0) {
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
+            }
+        }
+        return records;
+    }
+
+    private Map<String, Object> buildFollowupResult(List<Map<String, Object>> records) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("cases", records.size());
+        summary.put("failed_cases", records.stream().filter(row -> Boolean.TRUE.equals(row.get("failed"))).count());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("records", records);
+        return result;
+    }
+
     private interface RecordsListener {
         void onRecord(List<Map<String, Object>> records) throws Exception;
     }
@@ -709,6 +780,9 @@ class RoutingEvaluationProbe {
             if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)
                     || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)) {
                 return FAITHFULNESS_URL;
+            }
+            if (RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return FOLLOWUP_URL;
             }
             return BASE_URL;
         }

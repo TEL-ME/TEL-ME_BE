@@ -265,6 +265,19 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("지역을 묻는 중 업무 이름에 어미만 붙여 답해도 모델 없이 업무 조건으로 받는다")
+    void analyzeFollowUp_acceptsShortServiceReplyWhileAskingLocation() {
+        givenWaitingConsultExists();
+
+        // TELME-174 대화 흐름에서 지역 값으로 잘못 들어갔던 실제 답변
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "명의변경이라고");
+
+        assertThat(response.conditions()).containsExactly(Map.entry("serviceType", "NAME_CHANGE"));
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
     @DisplayName("지역을 묻는 중이라도 업무가 들어간 문장형 질문은 업무 조건으로 가로채지 않는다")
     void analyzeFollowUp_doesNotHijackSentenceQuestionWithServiceWords() {
         givenWaitingConsultExists();
