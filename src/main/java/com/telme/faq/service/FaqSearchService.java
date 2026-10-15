@@ -1,6 +1,7 @@
 package com.telme.faq.service;
 
 import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import java.util.List;
 
@@ -16,5 +17,11 @@ public interface FaqSearchService {
     // 호출자는 후보가 질문의 근거인지 별도로 확인한 뒤 답변 생성에 사용해야 한다.
     default List<FaqSearchResponse> searchCandidates(FaqSearchRequest request) {
         return search(request);
+    }
+
+    // 회색 구간(search.gray-zone)으로 나눈 벡터별 결과. 판정과 합치기는 호출하는 쪽이 한다.
+    // 회색 구간을 지원하지 않는 구현은 기존 검색 결과를 모두 통과로 돌려준다
+    default FaqGrayZoneSearchResponse searchGrayZone(FaqSearchRequest request) {
+        return FaqGrayZoneSearchResponse.allPassed(search(request));
     }
 }

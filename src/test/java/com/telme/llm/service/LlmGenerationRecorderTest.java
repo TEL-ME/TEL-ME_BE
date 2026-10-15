@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +39,23 @@ class LlmGenerationRecorderTest {
         assertThat(saved.getValue().getStatus()).isEqualTo(Status.TIMEOUT);
         assertThat(saved.getValue().getModel()).isEqualTo("exaone3.5:7.8b");
         assertThat(saved.getValue().getRequestOptions()).isNull();
+    }
+
+    @Test
+    @DisplayName("Bedrock 호출은 provider와 요청값을 기록하고 Ollama 옵션 변환을 쓰지 않는다")
+    void Bedrock_호출은_provider를_남긴다() throws Exception {
+        recorder.record(LlmRequest.builder().executionId(42L).taskType(TaskType.ROUTING).userPrompt("질문")
+                        .maxTokens(1000).build(),
+                "openai.gpt-oss-120b-1:0", "bedrock",
+                new LlmGenerationRecorder.Result(1, Status.SUCCESS, null, 1600, null));
+
+        ArgumentCaptor<LlmGeneration> saved = ArgumentCaptor.forClass(LlmGeneration.class);
+        verify(generations).save(saved.capture());
+        var options = new ObjectMapper().readTree(saved.getValue().getRequestOptions());
+        assertThat(options.path("provider").asText()).isEqualTo("bedrock");
+        assertThat(options.path("maxTokens").asInt()).isEqualTo(1000);
+        assertThat(options.has("options")).isFalse();
+        verify(converter, never()).toChatRequest(any(), anyBoolean());
     }
 
     private LlmRequest request() {

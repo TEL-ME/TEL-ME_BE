@@ -153,6 +153,24 @@ class RecordingLlmClientTest {
         assertThat(recorder.results.getFirst().attempt()).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("provider를 주면 provider를 함께 기록한다")
+    void provider를_함께_기록한다() {
+        List<String> providers = new ArrayList<>();
+        LlmGenerationRecorder capturing = new LlmGenerationRecorder(null, null, null, null) {
+
+            @Override
+            public void record(LlmRequest request, String model, String provider, Result result) {
+                providers.add(provider);
+            }
+        };
+
+        new RecordingLlmClient(new StubClient(null), capturing, "openai.gpt-oss-120b-1:0", "bedrock")
+                .generate(request(42L));
+
+        assertThat(providers).containsExactly("bedrock");
+    }
+
     private RecordingLlmClient client(LlmClient delegate) {
         return new RecordingLlmClient(delegate, recorder, "exaone3.5:7.8b");
     }

@@ -39,7 +39,7 @@ def run(args):
         return subprocess.run(["docker", "exec", args.container, "psql", "-U", "telme", "-d", args.database,
                                "-Atc", query], capture_output=True, text=True, encoding="utf-8").stdout.strip()
 
-    items = json.loads(EVAL_SET.read_text(encoding="utf-8"))
+    items = json.loads(args.eval_set.read_text(encoding="utf-8"))
     rows = json.loads(args.output.read_text(encoding="utf-8")) if args.output.exists() else []
     done = {row["id"] for row in rows}
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -125,6 +125,8 @@ def main():
     parser.add_argument("--database")
     parser.add_argument("--container", default="telme-flow-postgres")
     parser.add_argument("--output", type=Path)
+    # 기본은 개선용 180건. holdout처럼 형식이 같은 다른 평가셋을 돌릴 때 지정한다
+    parser.add_argument("--eval-set", type=Path, default=EVAL_SET)
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"))
     args = parser.parse_args()
     if args.compare:

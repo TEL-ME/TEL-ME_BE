@@ -27,7 +27,9 @@ evidence_check_bedrock.py와 같다. #139와 독립적으로 돌도록 필요한
 import argparse
 import hashlib
 import json
+import math
 import os
+import random
 import subprocess
 import sys
 import time
@@ -75,6 +77,29 @@ JSON만 출력하십시오.
 {"asked": ["..."], "found": [true 또는 false], "answerable": true 또는 false}
 """
 
+# 운영 판정 프롬프트(evidence-check-v4, FaqEvidencePromptTemplates)와 같은 문자열이다. B3에 비교 규칙 한 줄을 더했다
+# (judge_stability_bedrock.py의 v4a, docs/GRAY_ZONE_UPPER_BAND.md 5.8절). 이 파일의 측정(3·4절)은 B3로 했다
+B4_SYSTEM_PROMPT = """당신은 통신사 FAQ 검색 결과를 검수합니다.
+고객 질문에 답할 정보가 FAQ에 있는지 아래 순서대로 판단하십시오.
+
+1. asked: 고객이 알고 싶어 하는 것을 항목별로 짧게 적습니다.
+   질문에 나온 행위(신청, 해지, 변경 등)와 알고 싶은 정보의 종류(비용, 소요 시간, 마감 기한,
+   방법, 장소, 가능 여부, 혜택, 기준 등)를 바꾸지 말고 그대로 적습니다.
+   질문 문장을 통째로 옮기지 말고, 항목마다 무엇에 대한 것인지(상품, 서비스, 상태, 상황)를 함께 적습니다.
+2. found: asked의 각 항목이 FAQ에 있으면 true, 없으면 false를 같은 순서로 적습니다.
+   - 행위가 다르면 없는 것입니다.
+   - 대상(상품, 서비스, 상태, 상황)이 다르면 없는 것입니다. 이름이나 주제가 비슷해도 마찬가지입니다.
+   - 정보의 종류가 다르면 없는 것입니다. 주제가 같아도 마찬가지입니다.
+   - 묻는 값의 단위나 표현이 FAQ와 달라도, FAQ에 적힌 값을 환산하거나 계산해 답을 만들 수 있으면
+     있는 것입니다. 이것은 정보의 종류가 다른 경우가 아닙니다.
+   - 비교하는 대상들의 값이 FAQ에 모두 있으면, 같은지 다른지, 몇 배인지, 얼마나 차이 나는지도
+     그 값으로 답할 수 있으므로 있는 것입니다.
+3. answerable: found에 true가 하나라도 있으면 true, 모두 false면 false.
+
+JSON만 출력하십시오.
+{"asked": ["..."], "found": [true 또는 false], "answerable": true 또는 false}
+"""
+
 
 # ---------- 순수 계산 (단위 테스트 대상) ----------
 
@@ -87,15 +112,16 @@ def keep(score, upper, floor, verdict):
     return bool(verdict)
 
 
-def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
+def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of, qo_top=QO_UPPER):
     """앱처럼 질문 벡터 결과를 먼저 합치고 중복을 빼 상위 3개를 근거로 쓴다.
 
     qo_results, qa_results: [(slot_id, score)] 벡터별 상위 결과. slot_id가 없는 시드 FAQ는 None
     verdict_of: slot_id -> 판정(True/False). 판정 구간 밖이면 부르지 않는다
     slot_id가 없으면 본문을 특정할 수 없어 판정 구간에서는 판정 없이 거부한다(#139와 같음)
+    qo_top: 질문 벡터 위 선. 기본은 지금 임계값 0.88이고, 올리면 그 아래까지 판정한다(질문 벡터 위로 넓히기)
     """
     picked = []
-    for results, upper, floor in ((qo_results, QO_UPPER, qo_floor), (qa_results, qa_top, qa_floor)):
+    for results, upper, floor in ((qo_results, qo_top, qo_floor), (qa_results, qa_top, qa_floor)):
         for slot, score in results:
             if slot in picked:
                 continue
@@ -105,9 +131,9 @@ def served(qo_results, qa_results, qo_floor, qa_floor, qa_top, verdict_of):
     return picked[:TOP_K]
 
 
-def needs_judgment(qo_results, qa_results, qo_floor, qa_floor, qa_top):
+def needs_judgment(qo_results, qa_results, qo_floor, qa_floor, qa_top, qo_top=QO_UPPER):
     """판정 구간에 든 slot 목록(중복 제거). slot_id 없는 후보는 판정하지 않으므로 뺀다."""
-    slots = [s for s, v in qo_results if qo_floor <= v < QO_UPPER and s is not None]
+    slots = [s for s, v in qo_results if qo_floor <= v < qo_top and s is not None]
     slots += [s for s, v in qa_results if qa_floor <= v < qa_top and s is not None]
     return list(dict.fromkeys(slots))
 
@@ -134,6 +160,14 @@ def parse_answerable(text):
     return True
 
 
+def percentile(values, p):
+    """가장 가까운 순위 방식의 백분위수. 값이 없으면 None."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(p / 100 * len(ordered)) - 1)]
+
+
 def input_hash(prompt):
     """판정에 실제로 보내는 입력(모델, 시스템 프롬프트, 사용자 프롬프트). 하나라도 바뀌면 다시 판정한다."""
     text = json.dumps([MODEL, B3_SYSTEM_PROMPT, prompt], ensure_ascii=False)
@@ -155,13 +189,13 @@ def cache_entry(runs, prompt_hash):
 
 def score_eval(rows, official, multi, unrelated_ids, config, verdicts):
     """개선용 180: 정답(공식/다중), 무관 통과(기존 EVAL-081~130 / 보강 EVAL-161~180), 판정 붙는 질문 수."""
-    qo_floor, qa_floor, qa_top = config
+    qo_floor, qa_floor, qa_top, qo_top = unpack(config)
     answered_official = answered_multi = unrelated_old = unrelated_supplement = judged_questions = 0
     for row in rows:
         eval_id = row["id"]
-        judged_questions += bool(needs_judgment(row["qo"], row["qa"], qo_floor, qa_floor, qa_top))
+        judged_questions += bool(needs_judgment(row["qo"], row["qa"], qo_floor, qa_floor, qa_top, qo_top))
         picked = set(served(row["qo"], row["qa"], qo_floor, qa_floor, qa_top,
-                            lambda slot: verdicts[f"{eval_id}|{slot}"]))
+                            lambda slot: verdicts[f"{eval_id}|{slot}"], qo_top))
         if eval_id in unrelated_ids:
             if picked:
                 number = int(eval_id.split("-")[1])
@@ -175,9 +209,14 @@ def score_eval(rows, official, multi, unrelated_ids, config, verdicts):
 
 
 def score_holdout(rows, config, verdicts):
-    qo_floor, qa_floor, qa_top = config
+    qo_floor, qa_floor, qa_top, qo_top = unpack(config)
     return sum(1 for row in rows if served(row["qo"], row["qa"], qo_floor, qa_floor, qa_top,
-                                          lambda slot, i=row["id"]: verdicts[f"{i}|{slot}"]))
+                                          lambda slot, i=row["id"]: verdicts[f"{i}|{slot}"], qo_top))
+
+
+def unpack(config):
+    """(질문 아래 선, Q_A 아래 선, Q_A 위 선[, 질문 위 선]). 질문 위 선이 없으면 지금 임계값 0.88."""
+    return (*config, QO_UPPER) if len(config) == 3 else tuple(config)
 
 
 # ---------- 입출력 ----------
@@ -217,11 +256,12 @@ def search_rows(items, container, ollama_url):
     return rows
 
 
-def call_model(api_key, region, prompt, retries=3):
+def call_model(api_key, region, prompt, retries=3, system=B3_SYSTEM_PROMPT):
+    """system은 판정 프롬프트 후보를 비교할 때만 바꾼다(judge_stability_bedrock.py)."""
     url = (f"https://bedrock-runtime.{region}.amazonaws.com/model/"
            f"{urllib.parse.quote(MODEL, safe='')}/converse")
     body = json.dumps({
-        "system": [{"text": B3_SYSTEM_PROMPT}],
+        "system": [{"text": system}],
         "messages": [{"role": "user", "content": [{"text": prompt}]}],
         "inferenceConfig": {"maxTokens": MAX_TOKENS, "temperature": 0},
         "additionalModelRequestFields": {"reasoning_effort": "low"},
@@ -256,12 +296,17 @@ def main():
     parser.add_argument("--qo-floor", type=float, default=0.80)
     parser.add_argument("--qa-floors", type=float, nargs="+", default=[0.71, 0.70, 0.69])
     parser.add_argument("--qa-tops", type=float, nargs="+", default=[0.72, 0.74, 0.76, 0.78, 0.80])
+    parser.add_argument("--qo-tops", type=float, nargs="+", default=[QO_UPPER],
+                        help="질문 벡터 위 선. 0.88보다 높이면 그 아래까지 판정한다(질문 벡터 위로 넓히기)")
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--container", default="telme-postgres")
     parser.add_argument("--ollama-url", default="http://localhost:11434")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--krw-per-usd", type=float, default=1450.0)
     parser.add_argument("--run", action="store_true", help="없으면 예상 비용만 출력하고 끝낸다")
+    parser.add_argument("--latency-sample", type=int, default=0,
+                        help="--run과 함께 쓰면 판정 붙는 질문 N개를 골라 질문마다 판정을 1회씩 병렬로 보내 지연을 잰다")
+    parser.add_argument("--latency-top", type=float, default=0.80, help="지연 측정에 쓸 Q_A 위 선")
     args = parser.parse_args()
 
     eval_items = json.loads(DEFAULT_EVAL.read_text())
@@ -275,7 +320,7 @@ def main():
     rows = search_rows(eval_items, args.container, args.ollama_url)
     holdout_rows = search_rows(holdout_items, args.container, args.ollama_url)
 
-    widest = (args.qo_floor, min(args.qa_floors), max(args.qa_tops))
+    widest = (args.qo_floor, min(args.qa_floors), max(args.qa_tops), max(args.qo_tops))
     questions = {row["id"]: row["question"] for row in rows + holdout_rows}
     pairs = {f"{row['id']}|{slot}" for row in rows + holdout_rows
              for slot in needs_judgment(row["qo"], row["qa"], *widest)}
@@ -300,19 +345,19 @@ def main():
         if not args.run:
             print("예상만 출력했습니다. 실제로 돌리려면 --run 을 붙이세요.")
             return
-        api_key = os.environ.get("BEDROCK_API_KEY")
-        if not api_key:
-            sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
-        region = os.environ.get("AWS_REGION", "us-east-1")
+        api_key, region = bedrock_credentials()
         tokens = [0, 0]
 
         def judge(key):
             runs = []
             for _ in range(REPEAT):
+                start = time.monotonic()
                 text, error, usage = call_model(api_key, region, prompts[key])
+                elapsed_ms = int((time.monotonic() - start) * 1000)
                 if error and error.startswith("HTTP 4"):
                     raise SystemExit(f"요청 오류로 중단: {error}")
-                runs.append({"answerable": parse_answerable(text), "error": error, "raw": text})
+                runs.append({"answerable": parse_answerable(text), "error": error, "raw": text,
+                             "elapsedMs": elapsed_ms})
                 tokens[0] += usage.get("inputTokens", 0)
                 tokens[1] += usage.get("outputTokens", 0)
             return key, runs
@@ -332,6 +377,10 @@ def main():
                     print(f"  {done} / {len(todo)}", flush=True)
         spent = (tokens[0] * PRICE_IN + tokens[1] * PRICE_OUT) / 1_000_000
         print(f"토큰 입력 {tokens[0]:,} / 출력 {tokens[1]:,} | 실제 ${spent:.4f} ≈ {spent * args.krw_per_usd:,.0f}원")
+        elapsed = [r["elapsedMs"] for key in todo if key in verdicts for r in verdicts[key]["runs"]]
+        if elapsed:
+            print(f"이번 판정 호출 1회 지연: p50 {percentile(elapsed, 50):,}ms / p95 {percentile(elapsed, 95):,}ms "
+                  f"({len(elapsed)}회, 3회 반복을 쌍마다 4개씩 동시에 보낸 값)")
         if failed:
             sys.exit(f"호출 오류로 {len(failed)}쌍을 저장하지 않았습니다(예: {failed[0]}). "
                      "--run 을 다시 하면 그 쌍만 다시 판정합니다.")
@@ -339,20 +388,77 @@ def main():
     judged = {key: value["answerable"] for key, value in verdicts.items()}
     flips = sum(1 for key in pairs if len({r["answerable"] for r in verdicts[key]["runs"]}) > 1)
     print(f"\n판정 {len(pairs)}쌍 중 3회 안에서 갈린 쌍 {flips}")
-    print(f"\n질문 벡터 아래 선 {args.qo_floor:.2f} 고정 (위 선 {QO_UPPER})")
-    print("Q_A 아래 선 ~ 위 선 | 정답 공식 / 다중 (110) | 무관 기존 / 보강 (70) | holdout (90) | 판정 붙는 질문")
+    print(f"\n질문 벡터 아래 선 {args.qo_floor:.2f} 고정")
+    print("질문 위 선 | Q_A 아래 선 ~ 위 선 | 정답 공식 / 다중 (110) | 무관 기존 / 보강 (70) | holdout (90) | 판정 붙는 질문")
     baseline = score_eval(rows, official, multi, unrelated_ids, (QO_UPPER, QA_UPPER, QA_UPPER), judged)
     print(f"  현행 (판정 없음)      | {baseline['official']} / {baseline['multi']} | "
           f"{baseline['unrelatedOld']} / {baseline['unrelatedSupplement']} | "
           f"{score_holdout(holdout_rows, (QO_UPPER, QA_UPPER, QA_UPPER), judged)} | 0")
-    for qa_floor in sorted(args.qa_floors, reverse=True):
-        for qa_top in sorted(args.qa_tops):
-            config = (args.qo_floor, qa_floor, qa_top)
-            result = score_eval(rows, official, multi, unrelated_ids, config, judged)
-            print(f"  {qa_floor:.2f} ~ {qa_top:.2f}        | {result['official']} / {result['multi']} | "
-                  f"{result['unrelatedOld']} / {result['unrelatedSupplement']} | "
-                  f"{score_holdout(holdout_rows, config, judged)} | "
-                  f"{result['judgedQuestions'] / len(rows):.0%}")
+    for qo_top in sorted(args.qo_tops):
+        for qa_floor in sorted(args.qa_floors, reverse=True):
+            for qa_top in sorted(args.qa_tops):
+                config = (args.qo_floor, qa_floor, qa_top, qo_top)
+                result = score_eval(rows, official, multi, unrelated_ids, config, judged)
+                print(f"  {qo_top:.2f} | {qa_floor:.2f} ~ {qa_top:.2f} | {result['official']} / {result['multi']} | "
+                      f"{result['unrelatedOld']} / {result['unrelatedSupplement']} | "
+                      f"{score_holdout(holdout_rows, config, judged)} | "
+                      f"{result['judgedQuestions'] / len(rows):.0%}")
+
+    if args.latency_sample:
+        if not args.run:
+            print("\n지연 측정은 --run 일 때만 합니다.")
+            return
+        measure_latency(rows, prompts, (args.qo_floor, min(args.qa_floors), args.latency_top),
+                        args.latency_sample, args.krw_per_usd)
+
+
+def bedrock_credentials():
+    api_key = os.environ.get("BEDROCK_API_KEY")
+    if not api_key:
+        sys.exit("BEDROCK_API_KEY가 없습니다. .env를 읽고 실행하세요.")
+    return api_key, os.environ.get("AWS_REGION", "us-east-1")
+
+
+def measure_latency(rows, prompts, config, sample_size, krw_per_usd):
+    """운영처럼 질문의 판정 후보를 한 번씩 동시에 보내, 질문 하나에 판정이 더하는 시간을 잰다.
+    3회 다수결 캐시와 섞이지 않게 결과는 저장하지 않는다."""
+    candidates = [row for row in rows if needs_judgment(row["qo"], row["qa"], *config)]
+    missing = [f"{row['id']}|{slot}" for row in candidates for slot in needs_judgment(row["qo"], row["qa"], *config)
+               if f"{row['id']}|{slot}" not in prompts]
+    if missing:
+        sys.exit(f"--latency-top {config[2]}이 --qa-tops 범위 밖입니다(예: {missing[0]}). --qa-tops에 포함하세요")
+    sample = random.Random(0).sample(candidates, min(sample_size, len(candidates)))
+    api_key, region = bedrock_credentials()
+    call_ms, question_ms, pair_counts, errors, tokens = [], [], [], 0, [0, 0]
+
+    def timed(key):
+        start = time.monotonic()
+        _, error, usage = call_model(api_key, region, prompts[key])
+        return int((time.monotonic() - start) * 1000), error, usage
+
+    print(f"\n지연 측정: Q_A {config[1]:.2f} ~ {config[2]:.2f}, 판정 붙는 질문 {len(candidates)}개 중 {len(sample)}개, "
+          "질문마다 후보를 1회씩 동시에 보냄", flush=True)
+    for row in sample:
+        keys = [f"{row['id']}|{slot}" for slot in needs_judgment(row["qo"], row["qa"], *config)]
+        start = time.monotonic()
+        with ThreadPoolExecutor(max_workers=len(keys)) as pool:
+            results = list(pool.map(timed, keys))
+        wall_ms = int((time.monotonic() - start) * 1000)
+        for _, _, usage in results:
+            tokens[0] += usage.get("inputTokens", 0)
+            tokens[1] += usage.get("outputTokens", 0)
+        if any(error for _, error, _ in results):
+            errors += 1
+            continue
+        call_ms += [ms for ms, _, _ in results]
+        question_ms.append(wall_ms)
+        pair_counts.append(len(keys))
+    spent = (tokens[0] * PRICE_IN + tokens[1] * PRICE_OUT) / 1_000_000
+    print(f"  호출 1회: p50 {percentile(call_ms, 50):,}ms / p95 {percentile(call_ms, 95):,}ms ({len(call_ms)}회)")
+    print(f"  질문당 추가 시간(병렬): p50 {percentile(question_ms, 50):,}ms / p95 {percentile(question_ms, 95):,}ms / "
+          f"최대 {max(question_ms):,}ms ({len(question_ms)}개 질문, 질문당 후보 평균 "
+          f"{sum(pair_counts) / len(pair_counts):.1f}개)")
+    print(f"  오류로 뺀 질문 {errors}개 | 비용 ${spent:.4f} ≈ {spent * krw_per_usd:,.0f}원")
 
 
 if __name__ == "__main__":
