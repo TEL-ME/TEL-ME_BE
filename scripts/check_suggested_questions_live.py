@@ -63,7 +63,13 @@ class Client:
             raise SystemExit(f"{self.base_url}: 앱에 연결할 수 없습니다: {exc.reason}") from None
 
     def ask(self, title: str, question: str) -> dict:
-        session = self.call("POST", "/api/v1/chat/sessions", {"title": title[:100]})["sessionId"]
+        return self.send(self.open_session(title), question)
+
+    def open_session(self, title: str) -> int:
+        return self.call("POST", "/api/v1/chat/sessions", {"title": title[:100]})["sessionId"]
+
+    # 같은 채팅방에 이어서 보낸다. 되묻기에 답할 때 쓴다
+    def send(self, session: int, question: str) -> dict:
         sent = self.call("POST", f"/api/v1/chat/sessions/{session}/messages", {"content": question})
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
