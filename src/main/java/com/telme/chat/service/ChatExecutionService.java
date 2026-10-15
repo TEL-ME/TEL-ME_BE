@@ -14,6 +14,7 @@ import com.telme.chat.safety.ChatOutputGuard;
 import com.telme.global.common.exception.GeneralException;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class ChatExecutionService {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         ChatAnswer answer = ChatPersona.decorate(execution.getInputMessage().getContent(), original);
-        OutputMaskContext masks = readMasks(execution);
+        OutputMaskContext masks = readMasks(execution, () -> outputGuard.needsMaskContext(answer));
         verifyOutput(() -> outputGuard.verify(answer, masks));
         String followUps = chatMessageConverter.toJson(answer.followUps());
         String stores = chatMessageConverter.toJson(answer.storeResults());
@@ -96,7 +97,8 @@ public class ChatExecutionService {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
         String question = ChatPersona.prependGreeting(execution.getInputMessage().getContent(), originalQuestion);
-        OutputMaskContext masks = readMasks(execution);
+        OutputMaskContext masks = readMasks(execution,
+                () -> outputGuard.needsClarificationMaskContext(question, options));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
         Instant completedAt = Instant.now();
 
@@ -145,8 +147,11 @@ public class ChatExecutionService {
         return flushed(execution);
     }
 
-    private OutputMaskContext readMasks(ChatExecution execution) {
+    private OutputMaskContext readMasks(ChatExecution execution, BooleanSupplier needed) {
         try {
+            if (!needed.getAsBoolean()) {
+                return OutputMaskContext.empty();
+            }
             return inputMasks.read(execution.getSession().getSessionId(), execution.getInputMessage().getSequenceNo());
         } catch (RuntimeException inspectionFailure) {
             throw new GeneralException(ChatErrorCode.OUTPUT_CHECK_FAILED);

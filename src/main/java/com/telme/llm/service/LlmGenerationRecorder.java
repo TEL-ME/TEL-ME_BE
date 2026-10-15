@@ -11,7 +11,6 @@ import com.telme.llm.repository.LlmGenerationRepository;
 import com.telme.llm.converter.OllamaRequestConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import java.util.Map;
 import java.util.LinkedHashMap;
 
 import lombok.RequiredArgsConstructor;
@@ -31,13 +30,21 @@ public class LlmGenerationRecorder {
     private final OllamaRequestConverter requestConverter;
     private final ObjectMapper mapper;
 
+    private static final String OLLAMA = "ollama";
+
     // 기록 실패가 LLM 응답을 막지 않도록 별도 트랜잭션으로 저장하고 예외를 삼킨다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(LlmRequest request, String model, Result result) {
+        record(request, model, OLLAMA, result);
+    }
+
+    // Ollama가 아닌 호출(Bedrock 판정 등)은 provider를 같이 남긴다
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void record(LlmRequest request, String model, String provider, Result result) {
         if (request.executionId() == null) {
             return;
         }
-        String options = requestOptions(request, model);
+        String options = requestOptions(request, model, provider);
         try {
             llmGenerationRepository.save(LlmGeneration.builder()
                     .execution(chatExecutionRepository.getReferenceById(request.executionId()))
@@ -58,14 +65,21 @@ public class LlmGenerationRecorder {
     }
 
     // 요청 옵션은 부가 정보다. 만들지 못해도 호출 기록 행은 옵션 없이(null) 남긴다
-    private String requestOptions(LlmRequest request, String model) {
+    private String requestOptions(LlmRequest request, String model, String provider) {
         if (model == null) {
             return null;
         }
         try {
-            var metadata = new LinkedHashMap<String, Object>(Map.of("provider", "ollama",
-                    "options", requestConverter.toChatRequest(request, false).options(),
-                    "format", request.format().name()));
+            var metadata = new LinkedHashMap<String, Object>();
+            metadata.put("provider", provider);
+            if (OLLAMA.equals(provider)) {
+                metadata.put("options", requestConverter.toChatRequest(request, false).options());
+            } else {
+                // null이면 클라이언트 기본값(Bedrock은 llm.bedrock.max-tokens, temperature 0)을 썼다는 뜻
+                metadata.put("temperature", request.temperature());
+                metadata.put("maxTokens", request.maxTokens());
+            }
+            metadata.put("format", request.format().name());
             metadata.put("consultRequestId", request.consultRequestId());
             return mapper.writeValueAsString(metadata);
         } catch (RuntimeException | JsonProcessingException e) {

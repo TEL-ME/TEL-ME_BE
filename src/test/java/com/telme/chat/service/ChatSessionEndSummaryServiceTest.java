@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.telme.chat.safety.OutputMaskContext;
+
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -33,7 +35,7 @@ class ChatSessionEndSummaryServiceTest {
     private final ListAppender<ILoggingEvent> logs = new ListAppender<>();
     private final ChatEndSummaryData.Input input = new ChatEndSummaryData.Input(1, 1, 10L, List.of(
             new ChatEndSummaryData.Message(1, 1, null, "USER", "QUESTION", "합성 상담 문의", null, "COMPLETED")),
-            List.of(), Set.of());
+            List.of(), Set.of(), List.of(), OutputMaskContext.empty());
     private final ChatEndSummaryData.Lease lease = new ChatEndSummaryData.Lease(1, UUID.randomUUID(),
             Instant.parse("2026-10-13T08:00:00Z"));
     private ChatSessionEndSummaryService service;

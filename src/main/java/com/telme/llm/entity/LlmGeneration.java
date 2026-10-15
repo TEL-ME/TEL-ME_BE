@@ -32,7 +32,11 @@ import lombok.NoArgsConstructor;
 public class LlmGeneration {
 
     public enum TaskType {
-        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE, TRANSLATION
+        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE,
+        // 검색 회색 구간 FAQ 근거 판정(FaqEvidenceJudge)
+        EVIDENCE_CHECK,
+        // 한국어가 아닌 질문을 상담 전에 한국어로 옮김(ChatQuestionTranslator)
+        TRANSLATION
     }
 
     public enum Status {

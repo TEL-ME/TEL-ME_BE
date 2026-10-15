@@ -1,7 +1,11 @@
 package com.telme.chat.service;
 
+import static com.telme.chat.guard.MaskSpan.MASK;
+
 import com.telme.chat.config.ChatSummaryProperties;
 import com.telme.chat.converter.ChatSummaryConverter;
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.safety.OutputMaskContext;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.dto.req.ResponseFormat;
 import com.telme.llm.entity.LlmGeneration.TaskType;
@@ -20,18 +24,16 @@ public class ChatSummaryService {
     private final LlmClient llmClient;
     private final ChatSummaryProperties properties;
     private final ChatSummaryConverter converter;
+    private final ChatInputMaskRepository inputMasks;
 
     @Autowired
     public ChatSummaryService(ChatSummaryStore store, LlmClient client, ChatSummaryProperties properties,
-            ChatSummaryConverter converter) {
+            ChatSummaryConverter converter, ChatInputMaskRepository inputMasks) {
         this.chatSummaryStore = store;
         this.llmClient = client;
         this.properties = properties;
         this.converter = converter;
-    }
-
-    public ChatSummaryService(ChatSummaryStore store, LlmClient client, ChatSummaryProperties properties) {
-        this(store, client, properties, new ChatSummaryConverter(new com.fasterxml.jackson.databind.ObjectMapper()));
+        this.inputMasks = inputMasks;
     }
 
     public boolean summarizeIfNeeded(ChatSummaryRequested request) {
@@ -72,7 +74,9 @@ public class ChatSummaryService {
         String summary = properties.groundedOutput()
                 ? converter.validateAndStore(generated, snapshot.previousSummary(), snapshot.messages(),
                         properties.maxOutputTokens(), estimator)
-                : ChatSummaryNormalizer.normalize(generated);
+                : ChatSummaryNormalizer.normalize(generated, generated != null && generated.contains(MASK)
+                        ? inputMasks.read(snapshot.sessionId(), snapshot.throughSequenceNo())
+                        : OutputMaskContext.empty());
         if (summary == null) {
             throw new GeneralException(LlmErrorCode.INVALID_RESPONSE);
         }

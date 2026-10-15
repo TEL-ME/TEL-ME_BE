@@ -1,6 +1,7 @@
 package com.telme.chat.guard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -10,9 +11,11 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.res.ChatMessageSendResponse;
+import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.guard.JdbcInputGuardStore.Cached;
 import com.telme.chat.guard.JdbcInputGuardStore.State;
 import com.telme.chat.service.ChatActor;
+import com.telme.global.common.exception.GeneralException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,6 +42,7 @@ class ChatInputGuardServiceTest {
 
     @BeforeEach
     void 준비한다() {
+        when(inspector.policyVersion()).thenReturn("chat-input-guard-v3");
         when(clock.instant()).thenAnswer(invocation -> current.get());
         when(store.cached(any(State.class), any())).thenReturn(Optional.empty());
         when(store.resetExpiredAndInherit(any(State.class), any(Instant.class)))
@@ -65,7 +69,7 @@ class ChatInputGuardServiceTest {
         Instant acquired = START.plusSeconds(2);
         잠금_획득_시각을_설정한다(state, acquired);
         when(inspector.inspect("문의"))
-                .thenReturn(new InputInspection("문의", List.of(), true, "문의", List.of()));
+                .thenReturn(new InputInspection("문의", List.of(), true, "문의", List.of(), false));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("문의"));
 
@@ -83,7 +87,7 @@ class ChatInputGuardServiceTest {
         State state = 제한_상태(until);
         잠금_획득_시각을_설정한다(state, START.plusSeconds(20));
         when(inspector.inspect("문의"))
-                .thenReturn(new InputInspection("문의", List.of(), true, "문의", List.of()));
+                .thenReturn(new InputInspection("문의", List.of(), true, "문의", List.of(), false));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("문의"));
 
@@ -103,13 +107,13 @@ class ChatInputGuardServiceTest {
                         "ㅅㅂ",
                         List.of(new InputInspection.Detection(
                                 InputInspection.Reason.INITIAL_PROFANITY, "INITIAL_SB")),
-                        true, "ㅅㅂ", List.of()));
+                        true, "ㅅㅂ", List.of(), false));
         var request = new ChatMessageSendRequest("ㅅㅂ", null, null, UUID.randomUUID());
         var original = service.begin(ACTOR, 3L, request);
         var response = new ChatMessageSendResponse(
                 3L, 4L, 1, null, null, START, original.notice());
         when(store.cached(state, request.requestId()))
-                .thenReturn(Optional.of(new Cached(original.fingerprint(), response)));
+                .thenReturn(Optional.of(new Cached(original.fingerprint(), "chat-input-guard-v3", response)));
         잠금_획득_시각을_설정한다(state, START.plusSeconds(20));
 
         var replay = service.begin(ACTOR, 3L, request).cached();
@@ -136,7 +140,7 @@ class ChatInputGuardServiceTest {
                         "ㅅㅂ",
                         List.of(new InputInspection.Detection(
                                 InputInspection.Reason.INITIAL_PROFANITY, "INITIAL_SB")),
-                        true, "ㅅㅂ", List.of()));
+                        true, "ㅅㅂ", List.of(), false));
 
         var turn = service.begin(ACTOR, 3L, new ChatMessageSendRequest("ㅅㅂ"));
 
@@ -144,6 +148,25 @@ class ChatInputGuardServiceTest {
         assertThat(turn.notice().restrictionUntil()).isEqualTo(acquired.plusSeconds(60));
         assertThat(turn.notice().retryAfterSeconds()).isEqualTo(60);
         verify(store).restrict(state, acquired, acquired.plusSeconds(60));
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 영수증 정책은 현재 해시와 같아도 요청 충돌로 거절한다")
+    void 미배포_초안_정책의_호환을_추가하지_않는다() {
+        State state = new State(1L, 1L, null, Instant.EPOCH, null, null);
+        when(store.lock(any(ChatActor.class), any(Instant.class))).thenReturn(state);
+        when(inspector.inspect("문의"))
+                .thenReturn(new InputInspection("문의", List.of(), true, "문의", List.of(), false));
+        var request = new ChatMessageSendRequest("문의", null, null, UUID.randomUUID());
+        var original = service.begin(ACTOR, 3L, request);
+        var response = new ChatMessageSendResponse(3L, 4L, 1, null, null, START, original.notice());
+        when(store.cached(state, request.requestId()))
+                .thenReturn(Optional.of(new Cached(original.fingerprint(), "chat-input-guard-v1", response)));
+
+        assertThatThrownBy(() -> service.begin(ACTOR, 3L, request))
+                .isInstanceOf(GeneralException.class)
+                .extracting(error -> ((GeneralException) error).getErrorCode())
+                .isEqualTo(ChatErrorCode.INPUT_REQUEST_CONFLICT);
     }
 
     private State 제한_상태(Instant until) {

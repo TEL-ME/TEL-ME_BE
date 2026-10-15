@@ -66,9 +66,9 @@ class ChatSessionEndSummaryGenerator {
         }
         checkDeadline(deadline);
         // 이 생성 작업 안에서만 재사용해 상담 간 후보·개인정보가 섞이지 않도록 한다.
-        GuidanceCatalog catalog = createGuidanceCatalog(input);
-        List<List<ChatEndSummaryData.Message>> chunks = split(input, catalog);
         List<OutputMaskContext.Source> maskSources = new ArrayList<>(input.maskContext().sources());
+        GuidanceCatalog catalog = createGuidanceCatalog(input, maskSources);
+        List<List<ChatEndSummaryData.Message>> chunks = split(input, catalog);
         List<JsonNode> partials = new ArrayList<>();
         for (var messages : chunks) {
             Set<Long> ids = messages.stream().map(ChatEndSummaryData.Message::id).collect(Collectors.toSet());
@@ -175,11 +175,12 @@ class ChatSessionEndSummaryGenerator {
         return body;
     }
 
-    private GuidanceCatalog createGuidanceCatalog(ChatEndSummaryData.Input input) {
+    private GuidanceCatalog createGuidanceCatalog(ChatEndSummaryData.Input input,
+            List<OutputMaskContext.Source> maskSources) {
         List<Candidate> candidates = new ArrayList<>();
         int index = 0;
         // 분할 전 전체 후보에서 번호를 정해 각 호출에서도 같은 번호를 사용한다.
-        for (var entry : guidanceQuotes(input, allIds(input)).entrySet()) {
+        for (var entry : guidanceQuotes(input, allIds(input), maskSources).entrySet()) {
             int id = ++index;
             candidates.add(new Candidate(id, entry.getKey(), entry.getValue().stream().sorted().toList()));
         }
@@ -513,20 +514,20 @@ class ChatSessionEndSummaryGenerator {
                 }
                 String original = text.textValue().strip();
                 String prefix = "안내받은 내용: ";
-                if (field.equals("guidance")) {
-                    String quote = original.startsWith(prefix) ? original.substring(prefix.length()) : original;
-                    quote = inspector.inspect(quote).content().strip();
-                    Set<Long> sources = availableGuidance.get(quote);
-                    if (quote.isBlank() || sources == null || !sources.containsAll(ids)) {
-                        throw new IllegalArgumentException("INVALID_GUIDANCE");
-                    }
-                    original = quote;
+                if (field.equals("guidance") && original.startsWith(prefix)) {
+                    original = original.substring(prefix.length());
                 }
                 var inspection = inspector.inspect(original);
+                String masked = inspection.content().strip();
+                if (field.equals("guidance")) {
+                    Set<Long> sources = availableGuidance.get(masked);
+                    if (masked.isBlank() || sources == null || !sources.containsAll(ids)) {
+                        throw new IllegalArgumentException("INVALID_GUIDANCE");
+                    }
+                }
                 if (!inspection.maskSpans().isEmpty()) {
                     maskSources.add(OutputMaskContext.Source.from(inspection));
                 }
-                String masked = inspection.content().strip();
                 if (field.equals("guidance")) {
                     masked = prefix + masked;
                 }
@@ -703,15 +704,19 @@ class ChatSessionEndSummaryGenerator {
         }
     }
 
-    private Map<String, Set<Long>> guidanceQuotes(ChatEndSummaryData.Input input, Set<Long> allowed) {
+    private Map<String, Set<Long>> guidanceQuotes(ChatEndSummaryData.Input input, Set<Long> allowed,
+            List<OutputMaskContext.Source> maskSources) {
         Map<String, Set<Long>> quotes = new LinkedHashMap<>();
         for (var message : input.messages()) {
             if (!allowed.contains(message.id()) || !message.role().equals("ASSISTANT")
                     || "NO_EVIDENCE".equals(message.basis()) || "OUT_OF_SCOPE".equals(message.basis())) {
                 continue;
             }
-            String safe = inspector.inspect(message.content()).content();
-            for (String paragraph : safe.split("\\n\\s*\\n")) {
+            var inspection = inspector.inspect(message.content());
+            if (!inspection.maskSpans().isEmpty()) {
+                maskSources.add(OutputMaskContext.Source.from(inspection));
+            }
+            for (String paragraph : inspection.content().split("\\n\\s*\\n")) {
                 List<String> kept = new ArrayList<>();
                 for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
                     String text = sentence.strip();

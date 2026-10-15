@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.telme.chat.safety.OutputMaskContext;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import com.telme.chat.entity.ChatMessage;
@@ -35,7 +37,7 @@ class ChatOutputGuardTest {
     @DisplayName("최종 출력의 명확한 욕설·초성·검증한 결합과 원문 인용을 차단한다")
     void 욕설이_포함된_최종_출력을_차단한다(String content) {
         ChatOutputBlockedException error = assertThrows(
-                ChatOutputBlockedException.class, () -> guard.verify(answer(content)));
+                ChatOutputBlockedException.class, () -> guard.verify(answer(content), OutputMaskContext.empty()));
         assertThat(error.getErrorCode()).isEqualTo(ChatErrorCode.OUTPUT_POLICY_BLOCKED);
         assertThat(error.policyVersion()).isEqualTo("chat-output-guard-v1");
         assertThat(error.field()).isEqualTo("content");
@@ -55,7 +57,7 @@ class ChatOutputGuardTest {
     @DisplayName("정상 단어·금액·조건·기본 대화는 바꾸거나 차단하지 않는다")
     void 정상_문구와_근거_안내는_보존한다(String content) {
         ChatAnswer answer = answer(content);
-        assertThatCode(() -> guard.verify(answer)).doesNotThrowAnyException();
+        assertThatCode(() -> guard.verify(answer, OutputMaskContext.empty())).doesNotThrowAnyException();
         assertThat(answer.content()).isEqualTo(content);
     }
 
@@ -66,17 +68,28 @@ class ChatOutputGuardTest {
                 ChatMessage.MessageType.ANSWER, "정상 안내", ChatMessage.AnswerBasis.GROUNDED,
                 List.of("씨발 비용은?"), null);
         ChatOutputBlockedException error = assertThrows(
-                ChatOutputBlockedException.class, () -> guard.verify(answer));
+                ChatOutputBlockedException.class, () -> guard.verify(answer, OutputMaskContext.empty()));
         assertThat(error.field()).isEqualTo("followUps");
+    }
+
+    @Test
+    @DisplayName("되묻기 질문이나 선택지에 마스크가 있을 때만 출처 조회를 요청한다")
+    void 되묻기의_마스크_조회_필요성을_판단한다() {
+        assertThat(guard.needsClarificationMaskContext("카드 *** 문의인가요?", null)).isTrue();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", List.of("카드 *** 문의"))).isTrue();
+        assertThat(guard.needsClarificationMaskContext("7700원, 18개월 조건인가요?", List.of("네", "아니요")))
+                .isFalse();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", List.of())).isFalse();
+        assertThat(guard.needsClarificationMaskContext("어떤 문의인가요?", null)).isFalse();
     }
 
     @Test
     @DisplayName("되묻기 질문과 선택지에도 같은 출력 정책을 적용한다")
     void 되묻기와_선택지를_검사한다() {
-        assertThatThrownBy(() -> guard.verifyClarification("씨발 가입하셨나요?", List.of()))
+        assertThatThrownBy(() -> guard.verifyClarification("씨발 가입하셨나요?", List.of(), OutputMaskContext.empty()))
                 .isInstanceOf(ChatOutputBlockedException.class);
         ChatOutputBlockedException error = assertThrows(ChatOutputBlockedException.class,
-                () -> guard.verifyClarification("어떻게 받으시나요?", List.of("이메일", "병신")));
+                () -> guard.verifyClarification("어떻게 받으시나요?", List.of("이메일", "병신"), OutputMaskContext.empty()));
         assertThat(error.field()).isEqualTo("clarificationOptions");
     }
 
@@ -86,13 +99,15 @@ class ChatOutputGuardTest {
         Map<String, Object> store = Map.of("storeId", 4, "name", "씨발");
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.STORE_RESULT, null, null, List.of(), List.of(store));
-        assertThatThrownBy(() -> guard.verify(answer)).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verify(answer,
+                OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
         assertThat(store).containsEntry("storeId", 4).containsEntry("name", "씨발");
         ChatAnswer unsafeLabel = new ChatAnswer(
                 ChatMessage.MessageType.STORE_RESULT, "정상 안내", null, List.of(),
                 List.of(Map.of("storeId", 4, "name", "정상 매장")),
                 new ChatStoreSearchContextResponse(ChatStoreSearchContextResponse.Type.PLACE, "씨발", null));
-        assertThatThrownBy(() -> guard.verify(unsafeLabel)).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verify(unsafeLabel,
+                OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
     }
 
     @Test
@@ -102,7 +117,8 @@ class ChatOutputGuardTest {
         cycle.put("self", cycle);
         ChatAnswer answer = new ChatAnswer(
                 ChatMessage.MessageType.STORE_RESULT, "정상 안내", null, List.of(), List.of(cycle));
-        assertThatThrownBy(() -> guard.verify(answer)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> guard.verify(answer,
+                OutputMaskContext.empty())).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
@@ -138,10 +154,12 @@ class ChatOutputGuardTest {
         paths.forEach(path -> assertThatCode(path::run).doesNotThrowAnyException());
         assertThat(content.content()).isEqualTo(visible);
         assertThat(masks.toString()).doesNotContain(visible);
-        assertThatThrownBy(() -> guard.verify(content)).isInstanceOf(ChatOutputBlockedException.class);
-        assertThatThrownBy(() -> guard.verifyClarification(visible, List.of()))
+        assertThatThrownBy(() -> guard.verify(content,
+                OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifyClarification(visible, List.of(), OutputMaskContext.empty()))
                 .isInstanceOf(ChatOutputBlockedException.class);
-        assertThatThrownBy(() -> guard.verifySummary(strings)).isInstanceOf(ChatOutputBlockedException.class);
+        assertThatThrownBy(() -> guard.verifySummary(strings,
+                OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
         assertThatThrownBy(() -> guard.verify(answer(visible + " 씨***발"), masks))
                 .isInstanceOf(ChatOutputBlockedException.class);
     }

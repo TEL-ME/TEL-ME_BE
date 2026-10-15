@@ -20,6 +20,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.faq.dto.req.FaqSearchRequest;
+import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.consult.exception.FaqAnswerSearchException;
@@ -691,6 +692,204 @@ class FaqSearchAnswerProviderTest {
         provider.generate(input(), prepared);
 
         verify(searches, times(1)).search(any());
+    }
+
+    @Test
+    @DisplayName("회색 구간이 켜지면 회색 구간 검색 결과를 판정으로 고른 근거로 답하고, 판정 질문은 고객 질문이다")
+    void 회색_구간이_켜지면_판정으로_고른_근거로_답한다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var grayCandidates = FaqGrayZoneSearchResponse.allPassed(List.of(source()));
+        var selected = new FaqSearchResponse(9L, "USIM-0001", "USIM", "유심 재발급 비용", "7,700원입니다.",
+                0.75, 1, null, 1, "Q_A");
+        when(searches.searchGrayZone(any())).thenReturn(grayCandidates);
+        List<String> judgedQuestions = new ArrayList<>();
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) -> {
+            judgedQuestions.add(question);
+            assertThat(candidates).isSameAs(grayCandidates);
+            assertThat(topK).isEqualTo(3);
+            return new FaqGrayZoneSelector.Selection(List.of(selected), List.of());
+        };
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED, List.of(), null)));
+
+        // 문맥을 복원한 질문이 있으면 그 질문으로 검색하고 판정한다
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그거 얼마예요", "유심 재발급 비용",
+                        Map.of(), "유심 재발급 비용 얼마예요", null, true, null, Map.of()));
+
+        assertThat(judgedQuestions).containsExactly("유심 재발급 비용 얼마예요");
+        verify(answers).generate(any(), org.mockito.ArgumentMatchers.eq(List.of(selected)));
+        verify(searches, org.mockito.Mockito.never()).search(any());
+    }
+
+    @Test
+    @DisplayName("회색 구간 검색마다 판정 결과와 걸린 시간을 실행 기록에 남긴다")
+    @SuppressWarnings("unchecked")
+    void 회색_구간_판정을_실행_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ExecutionTrace trace = mock(ExecutionTrace.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of()));
+        var judgment = new FaqGrayZoneSelector.Judgment(9L, "USIM-0001", "Q_A", 0.75, true,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, trace,
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 두 번 남는다
+        ArgumentCaptor<Object> recorded = ArgumentCaptor.forClass(Object.class);
+        verify(trace, times(2)).append(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("grayZoneJudgments"), recorded.capture());
+        Map<String, Object> original = (Map<String, Object>) recorded.getAllValues().get(0);
+        assertThat(original).containsEntry("query", "로밍 신청하고 싶어요").containsEntry("kind", "ORIGINAL")
+                .containsEntry("judgments", List.of(judgment)).containsEntry("consultRequestId", 3L)
+                .containsKey("elapsedMs");
+        assertThat((Map<String, Object>) recorded.getAllValues().get(1))
+                .containsEntry("query", "로밍 신청").containsEntry("kind", "REFINED");
+    }
+
+    @Test
+    @DisplayName("재검색 후보는 통과 선 이상이어도 모두 판정하고, 원문 검색 후보는 점수대로 둔다")
+    void 재검색_후보는_모두_판정한다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var high = new FaqSearchResponse(5L, "ROAMING-0036", "ROAMING", "로밍 요금", "9,900원입니다.",
+                0.85, 1, null, 1, "Q_A");
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(high)));
+        List<FaqGrayZoneSearchResponse> seen = new ArrayList<>();
+        // 원문 검색에서 모두 걸러져 재검색까지 가게 한다
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) -> {
+            seen.add(candidates);
+            return new FaqGrayZoneSelector.Selection(List.of(), List.of());
+        };
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        assertThat(seen).hasSize(2);
+        assertThat(seen.get(0).questionAnswer()).singleElement()
+                .satisfies(candidate -> assertThat(candidate.needsJudgment()).isFalse());
+        assertThat(seen.get(1).questionAnswer()).singleElement().satisfies(candidate -> {
+            assertThat(candidate.needsJudgment()).isTrue();
+            assertThat(candidate.result()).isSameAs(high);
+        });
+    }
+
+    @Test
+    @DisplayName("회색 구간이 켜져 있어도 후보 검색(searchCandidates)은 그대로 쓴다")
+    void 후보_검색은_회색_구간을_쓰지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of()));
+        when(searches.searchCandidates(any())).thenReturn(List.of());
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of());
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "로밍 신청하고 싶어요", "로밍 신청하고 싶어요",
+                        Map.of(), false), false);
+
+        verify(searches).searchCandidates(any());
+        verify(searches, org.mockito.Mockito.never()).search(any());
+    }
+
+    @Test
+    @DisplayName("비교 질문은 회색 구간 결과로 답하지 못하면 판정을 붙이기 전 검색 결과로 한 번 더 고른다")
+    void 비교_질문은_판정_전_결과로_한_번_더_고른다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        ExecutionTrace trace = mock(ExecutionTrace.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var judged = comparisonSource(115L);
+        var quoted = comparisonSource(917L);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(judged)));
+        when(searches.search(any())).thenReturn(List.of(quoted, judged));
+        when(evidence.resolveDetailed(any(), any(), any(), org.mockito.ArgumentMatchers.eq(List.of(judged)), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        when(evidence.resolveDetailed(any(), any(), any(), org.mockito.ArgumentMatchers.eq(List.of(quoted, judged)),
+                any())).thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(quoted), "5G 4종, LTE 3종입니다."));
+
+        var result = comparisonProvider(searches, answers, trace, evidence, keepAll())
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, COMPARISON, COMPARISON, Map.of()));
+
+        assertThat(result.answer().content()).isEqualTo("5G 4종, LTE 3종입니다.");
+        assertThat(result.sources()).extracting(source -> source.faqId()).containsExactly(917L);
+        verify(evidence, times(2)).resolveDetailed(any(), any(), any(), any(), any());
+        verify(trace).stage(1L, "comparisonRetry",
+                Map.of("reason", "GRAY_ZONE_CHANGED_ORIGINAL_RESULTS", "answered", true));
+        verifyNoInteractions(answers);
+    }
+
+    @Test
+    @DisplayName("비교 질문을 회색 구간 결과로 답했거나 판정 전 결과가 같으면 다시 고르지 않는다")
+    void 비교_질문을_다시_고르지_않는_경우() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var source = comparisonSource(115L);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(source)));
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(source), "답"));
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, COMPARISON, COMPARISON, Map.of());
+
+        comparisonProvider(searches, answers, ExecutionTrace.noop(), evidence, keepAll()).generate(input);
+
+        verify(searches, org.mockito.Mockito.never()).search(any());
+        verify(evidence, times(1)).resolveDetailed(any(), any(), any(), any(), any());
+
+        // 답하지 못했어도 판정 전 결과가 같으면 같은 결과로 다시 고르지 않는다
+        org.mockito.Mockito.reset(evidence, searches);
+        when(evidence.applies(COMPARISON)).thenReturn(true);
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(source)));
+        when(searches.search(any())).thenReturn(List.of(source));
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "없음", ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)));
+
+        comparisonProvider(searches, answers, ExecutionTrace.noop(), evidence, keepAll()).generate(input);
+
+        verify(searches).search(any());
+        verify(evidence, times(1)).resolveDetailed(any(), any(), any(), any(), any());
+    }
+
+    private static final String COMPARISON = "5G와 LTE 요금제 종류를 비교해줘";
+
+    private static FaqSearchResponse comparisonSource(long faqId) {
+        return new FaqSearchResponse(faqId, "PLAN-" + faqId, "PLAN", "요금제 " + faqId, "요금제 답변 " + faqId,
+                0.8, 1, null, 1, "Q_A");
+    }
+
+    // 회색 구간 후보를 판정 없이 모두 남기는 선택기. 비교 경로만 보려고 쓴다
+    private static FaqGrayZoneSelector keepAll() {
+        return (executionId, consultRequestId, question, candidates, topK) -> new FaqGrayZoneSelector.Selection(
+                candidates.questionAnswer().stream().map(FaqGrayZoneSearchResponse.Candidate::result).toList(),
+                List.of());
+    }
+
+    private static FaqSearchAnswerProvider comparisonProvider(FaqSearchService searches,
+            FaqSearchAnswerProvider.SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver evidence, FaqGrayZoneSelector selector) {
+        return new FaqSearchAnswerProvider(searches, answers, trace, evidence, FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector);
     }
 
     private AnswerInput input() {

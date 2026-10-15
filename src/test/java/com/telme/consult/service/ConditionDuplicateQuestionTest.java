@@ -16,6 +16,35 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
+    @DisplayName("주어만 바꿔 같은 사실을 반대편에서 묻는 질문은 같은 것으로 본다")
+    void 주어만_바꾼_질문은_중복이다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "대리인이 방문하시는 건가요?", "본인이 방문하시는 건가요?")).isTrue();
+    }
+
+    @Test
+    @DisplayName("주어가 같거나 나머지 문장이 다르면 남긴다")
+    void 주어_규칙은_나머지가_같을_때만_적용한다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 방문하시는 건가요?", "본인이 신청하시는 건가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 직접 방문하시나요?", "대리인이 방문하시는 건가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 하시나요?", "대리인이 하시나요?")).isFalse();
+    }
+
+    @Test
+    @DisplayName("본인과 대리인이 아닌 주어만 다른 질문은 서로 다른 조건으로 남긴다")
+    void 배타적_짝이_아니면_남긴다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "양도인이 신분증을 지참하실 수 있나요?", "양수인이 신분증을 지참하실 수 있나요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "양도인이 미납 요금이 있나요?", "양수인이 미납 요금이 있나요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "할부금이 아직 남아 있나요?", "위약금이 아직 남아 있나요?")).isFalse();
+    }
+
+    @Test
     @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
     void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(

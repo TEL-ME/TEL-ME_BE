@@ -96,6 +96,21 @@ llm:
     # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
     max-attempts: 2
     wait-duration: 1s
+  # 검색 근거 판정용 Bedrock(답변 생성은 위 provider 그대로). 회색 구간(search.gray-zone)과 함께 기본 켜짐
+  # 키는 설정에 두지 않는다. AWS_BEARER_TOKEN_BEDROCK(Bedrock API 키) 또는 AWS 기본 자격 증명을 SDK가 찾는다.
+  # 음성용 AWS 키(AWS_ACCESS_KEY_ID)만 있으면 그 키로 부르다 권한이 없어 판정이 모두 실패하므로 Bedrock 키를 함께 넣는다
+  bedrock:
+    enabled: ${LLM_BEDROCK_ENABLED:true}
+    region: ${LLM_BEDROCK_REGION:us-east-1}
+    model: ${LLM_BEDROCK_MODEL:openai.gpt-oss-120b-1:0}
+    # 넘으면 판정 실패로 처리한다. 5초 초과 호출도 대부분 9초 안에 끝나 8초(docs/GRAY_ZONE_UPPER_BAND.md 5.5절)
+    timeout: ${LLM_BEDROCK_TIMEOUT:8s}
+    reasoning-effort: low
+    max-tokens: 1000
+    # 동시에 진행되는 Bedrock 호출 수 상한과 연결 대기 시간. 넘치면 판정 실패로 처리한다
+    # 분당 호출 수 한도는 아니다(평균 1.5초면 분당 약 max-connections × 40회 정도)
+    max-connections: ${LLM_BEDROCK_MAX_CONNECTIONS:50}
+    connection-acquire-timeout: 1s
 
 embedding:
   model: ${EMBEDDING_MODEL:bge-m3}
@@ -121,6 +136,17 @@ search:
     enabled: ${SEARCH_SCORE_RECORDING_ENABLED:true}
     # 이 기간이 지난 기록은 매일 새벽에 지운다. 분포 화면은 최근 기간만 본다
     retention: ${SEARCH_SCORE_RECORDING_RETENTION:90d}
+  gray-zone:
+    # 채팅 답변용 검색에서 점수 구간 일부를 판정기(llm.bedrock)로 한 번 더 확인한다. 기본 켜짐(TELME-160)
+    # pass 이상은 판정 없이 통과, floor ~ pass는 판정기가 통과시켜야 근거, floor 미만은 버린다
+    # 채팅 API 측정: 정답 근거 61 → 74, 엉뚱한 근거 10 → 2, holdout 9 (docs/GRAY_ZONE_UPPER_BAND.md 5.8절)
+    # 로컬에서 Bedrock 키 없이 쓰려면 SEARCH_GRAY_ZONE_ENABLED=false로 끈다. llm.bedrock만 끄면 기동하지 않는다
+    enabled: ${SEARCH_GRAY_ZONE_ENABLED:true}
+    qa-pass: 0.80
+    qa-floor: 0.69
+    # 기존 질문 임계값(0.88)보다 높여 0.88 ~ 0.90도 판정한다. 0.92와 결과가 같아 0.90 (docs 4.5절)
+    question-pass: 0.90
+    question-floor: 0.80
 
 member:
   guest:
@@ -175,6 +201,11 @@ telme:
     # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
     faq-clarification:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
+    # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
+    plan-question:
+      enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
+      # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
+      answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:
       # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
       # 독립 검증(7절)과 실제 채팅 경로 확인(7.2절)을 마쳐 기본으로 켠다. 환경변수에 false를 넣으면 끈다

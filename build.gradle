@@ -56,6 +56,10 @@ dependencies {
 	// 음성 합성·인식 (Amazon Polly, Transcribe)
 	implementation platform('software.amazon.awssdk:bom:2.55.6')
 	implementation 'software.amazon.awssdk:polly'
+	// 검색 근거 판정 (Amazon Bedrock)
+	implementation 'software.amazon.awssdk:bedrockruntime'
+	// Bedrock 호출용 HTTP 클라이언트. 동시 연결 수·연결 대기 시간을 설정하려고 직접 둔다
+	implementation 'software.amazon.awssdk:apache5-client'
 	implementation 'software.amazon.awssdk:transcribestreaming'
 
 	// Lombok
@@ -73,4 +77,6 @@ tasks.named('test') {
 	// @SpringBootTest 설정 조합마다 컨텍스트·HikariCP 풀이 따로 뜨는데, 기본 풀 크기(10)로는
 	// 컨텍스트 수만 늘어도 Postgres max_connections(기본 100)를 넘을 수 있어 테스트 한정으로 줄인다
 	systemProperty 'spring.datasource.hikari.maximum-pool-size', '3'
+	// 컨텍스트 캐시가 쌓여 기본 힙을 넘으면 컨텍스트 로딩이 실패하고 뒤 테스트가 연쇄로 실패한다
+	maxHeapSize = '2g'
 }

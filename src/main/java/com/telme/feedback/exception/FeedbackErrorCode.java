@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum FeedbackErrorCode implements BaseErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "FEEDBACK400-0", "피드백 요청값이 올바르지 않습니다."),
+    // 비회원은 평가를 남길 수 없다. 로그인하면 남길 수 있으므로 화면에서 로그인 안내로 연결한다
+    MEMBER_ONLY(HttpStatus.FORBIDDEN, "FEEDBACK403-0", "로그인한 회원만 평가할 수 있습니다."),
     TARGET_UNAVAILABLE(HttpStatus.NOT_FOUND, "FEEDBACK404-0", "평가할 수 있는 메시지를 찾을 수 없습니다."),
     TARGET_NOT_READY(HttpStatus.CONFLICT, "FEEDBACK409-0", "완료된 상담 답변과 매장 추천만 평가할 수 있습니다."),
     // 관리자 화면은 싫어요만 다루므로 좋아요 id로 조회해도 없는 것으로 본다

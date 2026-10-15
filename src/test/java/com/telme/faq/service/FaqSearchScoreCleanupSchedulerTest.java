@@ -21,7 +21,8 @@ class FaqSearchScoreCleanupSchedulerTest {
     void 보존_기간_이전을_지운다() {
         FaqSearchScoreRepository repository = mock(FaqSearchScoreRepository.class);
         SearchProperties properties = new SearchProperties(0.72, new SearchProperties.DualVector(false, 0.88),
-                                      new SearchProperties.ScoreRecording(true, Duration.ofDays(90)));
+                                      new SearchProperties.ScoreRecording(true, Duration.ofDays(90)),
+                                      SearchProperties.GrayZone.DISABLED);
         FaqSearchScoreCleanupScheduler scheduler =
                 new FaqSearchScoreCleanupScheduler(repository, properties, Clock.fixed(NOW, ZoneOffset.UTC));
         
