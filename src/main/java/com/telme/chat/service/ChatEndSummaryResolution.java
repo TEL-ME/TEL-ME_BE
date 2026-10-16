@@ -15,7 +15,8 @@ final class ChatEndSummaryResolution {
                 || conditions(input, request).stream()
                         .anyMatch(condition -> isLinkedMessage(input, condition, messageId)))
                 .toList();
-        return !requests.isEmpty() && requests.stream().allMatch(request -> isResolvedRequest(input, request));
+        return requests.isEmpty() ? ChatEndSummaryTopicResolution.isResolved(input, messageId)
+                : requests.stream().allMatch(request -> isResolvedRequest(input, request));
     }
 
     static Set<Long> findPendingOrigins(ChatEndSummaryData.Input input, Set<Long> pendingIds) {
@@ -95,9 +96,7 @@ final class ChatEndSummaryResolution {
         questions.add(request.originMessageId());
         replies.forEach(condition -> questions.add(condition.answeredMessageId()));
         var outcome = findLatestReply(input, questions);
-        return hasGroundedAnswer(input, last.answeredMessageId()) && outcome != null
-                && Set.of("ANSWER", "STORE_RESULT").contains(outcome.type())
-                && "GROUNDED".equals(outcome.basis());
+        return hasGroundedAnswer(input, last.answeredMessageId()) && outcome != null && isSuccessfulAnswer(outcome);
     }
 
     private static List<ChatEndSummaryData.Condition> conditions(ChatEndSummaryData.Input input,
@@ -156,8 +155,18 @@ final class ChatEndSummaryResolution {
         }
         var last = findLatestReply(input, Set.of(userMessageId));
         return last != null && last.sequence() > user.sequence()
-                && Set.of("ANSWER", "STORE_RESULT").contains(last.type())
-                && "GROUNDED".equals(last.basis()) && !last.content().isBlank();
+                && isSuccessfulAnswer(last);
+    }
+
+    private static boolean isSuccessfulAnswer(ChatEndSummaryData.Message message) {
+        if (message.content().isBlank() || Set.of("FAILED", "CANCELLED")
+                .contains(message.executionStatus() == null ? "" : message.executionStatus())) {
+            return false;
+        }
+        // 매장 결과는 일반 FAQ와 달리 근거 표시가 비어 있으므로 실제 저장된 목록을 함께 확인한다.
+        return message.type().equals("ANSWER") && "GROUNDED".equals(message.basis())
+                || message.type().equals("STORE_RESULT") && message.hasStoreResults()
+                        && (message.basis() == null || message.basis().equals("GROUNDED"));
     }
 
     private static ChatEndSummaryData.Message findLatestReply(ChatEndSummaryData.Input input, Set<Long> questions) {

@@ -1,5 +1,6 @@
 package com.telme.chat.service;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
 import com.telme.chat.repository.ChatEndSummaryInquiryRepository.Classification;
 import com.telme.chat.safety.OutputMaskContext;
@@ -15,7 +16,12 @@ final class ChatEndSummaryData {
     record Lease(long sessionId, UUID token, Instant deadline) {}
 
     record Message(long id, int sequence, Long replyTo, String role, String type,
-            String content, String basis, String executionStatus) {}
+            String content, String basis, String executionStatus, @JsonIgnore boolean hasStoreResults) {
+        Message(long id, int sequence, Long replyTo, String role, String type,
+                String content, String basis, String executionStatus) {
+            this(id, sequence, replyTo, role, type, content, basis, executionStatus, false);
+        }
+    }
 
     record Request(long originMessageId, int order, String query, String status,
             List<String> pendingQuestions, Long requestId) {

@@ -15,6 +15,9 @@ final class ChatEndSummaryInquiryLinker {
             "다른회선|다른번호|다른사람|별도(?:의)?(?:회선|신청|문의)|새(?:로운)?문의|새신청건|별개|다른질문|다른유심|다른기기");
     private static final Pattern BACK_REFERENCE = Pattern.compile(
             "그건|그거|그유심|그재발급|그교체|그회선|아까.*(?:유심|회선)|앞서.*(?:유심|회선)");
+    private static final Pattern UNSPECIFIED_PERSON = Pattern.compile(
+            "부모님|친구|동생|누나|언니|오빠|형님|할머니|할아버지|대리인|가족(?:의|회선|요금)"
+                    + "|(?:아들|딸)(?:의|이|은|한테|에게|을|회선|요금|유심|로밍|[0-9a-z])");
 
     private ChatEndSummaryInquiryLinker() {}
 
@@ -126,6 +129,20 @@ final class ChatEndSummaryInquiryLinker {
     static String normalizeText(String text) {
         return text.replaceAll("\\s+", "").toLowerCase(java.util.Locale.ROOT)
                 .replace("엄마", "어머니").replace("아빠", "아버지");
+    }
+
+    static boolean hasSameClarificationScope(String original, String followup) {
+        String before = normalizeText(original);
+        String after = normalizeText(followup);
+        if (RESET.matcher(after).find() || UNSPECIFIED_PERSON.matcher(after).find()) {
+            return false;
+        }
+        String person = extractPerson(before);
+        String line = extractLine(before);
+        var source = new Episode(0, "UNKNOWN", person.isBlank() ? "SELF" : person, identifyProduct(before),
+                line.isBlank() ? "DEFAULT" : line, identifyOperation(before));
+        return !source.person.equals("MULTIPLE") && isCompatible(source, extractPerson(after),
+                identifyProduct(after), extractLine(after), identifyOperation(after), false);
     }
 
     private static boolean isCompatible(Episode episode, String person, String product, String line,

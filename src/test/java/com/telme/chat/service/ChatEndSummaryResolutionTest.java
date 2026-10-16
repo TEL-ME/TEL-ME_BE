@@ -9,6 +9,7 @@ import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ChatEndSummaryResolutionTest {
@@ -208,6 +209,57 @@ class ChatEndSummaryResolutionTest {
         assertThat(resolve(input).getFirst().kind()).isEqualTo(ChatEndSummaryPendingResolver.Kind.WAITING_RESPONSE);
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "유심 재발급 비용을 알려주세요 | 유심 재발급 준비물을 알려주세요",
+        "요금제 변경 횟수를 알려주세요 | 요금제 변경 적용 시점을 알려주세요",
+        "로밍 해지 비용을 알려주세요 | 로밍 해지 방법을 알려주세요"
+    })
+    @DisplayName("주제 확인 뒤 같은 대분류의 다른 세부 질문에 답했어도 원래 질문을 해결 처리하지 않는다")
+    void 같은_대분류의_다른_세부_질문으로_해결하지_않는다(String original, String followup) {
+        var input = topicInput(original, followup, 2);
+
+        assertThat(ChatEndSummaryResolution.isResolved(input, 1)).isFalse();
+        assertThat(resolve(input)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("원래 질문보다 뒤에 있지 않은 주제 확인 문구는 후속 답변 연결에 사용하지 않는다")
+    void 주제_확인과_원래_질문의_순서를_검증한다() {
+        var input = topicInput("요금 알려줘", "5G 요금제 알려줘", 1);
+
+        assertThat(ChatEndSummaryResolution.isResolved(input, 1)).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "요금 알려줘 | 5G 요금제 알려줘",
+        "요금 좀 알려주실래요? | 5G 요금제 알려줘",
+        "요금제에 대해서 알려주세요 | 5G 요금제 알려줘",
+        "유심 알려줘 | 유심 재발급 비용 알려줘",
+        "로밍 알려줘 | 로밍 요금 알려줘",
+        "해지 알려줘 | 해지 방법 알려줘",
+        "매장 알려줘 | 가까운 매장 위치 알려줘",
+        "요금 알려줘 | 5G 요금제의 가족 할인 알려줘",
+        "요금 알려줘 | 5G 요금제에 딸려오는 혜택 알려줘"
+    })
+    @DisplayName("구체적인 조건이 없는 일반 주제 확인은 같은 주제의 정상 답변으로 해소한다")
+    void 일반_주제를_구체화한_정상_답변으로_해결한다(String original, String followup) {
+        var input = topicInput(original, followup, 2);
+
+        assertThat(ChatEndSummaryResolution.isResolved(input, 1)).isTrue();
+        assertThat(resolve(input)).isEmpty();
+    }
+
+    private ChatEndSummaryData.Input topicInput(String original, String followup, int askedSequence) {
+        return input(List.of(message(1, null, "USER", "QUESTION", original, null),
+                new ChatEndSummaryData.Message(2, askedSequence, 1L, "ASSISTANT", "CLARIFICATION",
+                        ChatTopicClarification.MESSAGE, null, "COMPLETED"),
+                message(3, null, "USER", "QUESTION", followup, null),
+                message(4, 3L, "ASSISTANT", "ANSWER", "해당 문의의 안내입니다.", "GROUNDED")),
+                List.of(request(101, 3, followup, "DONE")), List.of(), Set.of(1L));
+    }
+
     private List<ChatEndSummaryData.Message> messages(String type, String basis) {
         return List.of(message(1, null, "USER", "QUESTION", "요금제 변경 가능 횟수와 적용 시점을 알려주세요.", null),
                 message(2, 1L, "ASSISTANT", "CLARIFICATION", "이번 달 처음 가입하셨나요?", null),
@@ -218,7 +270,8 @@ class ChatEndSummaryResolutionTest {
 
     private ChatEndSummaryData.Message message(long id, Long reply, String role, String type,
             String text, String basis) {
-        return new ChatEndSummaryData.Message(id, (int) id, reply, role, type, text, basis, "COMPLETED");
+        return new ChatEndSummaryData.Message(id, (int) id, reply, role, type, text, basis, "COMPLETED",
+                type.equals("STORE_RESULT"));
     }
 
     private ChatEndSummaryData.Request request(long id, long origin, String query, String status) {

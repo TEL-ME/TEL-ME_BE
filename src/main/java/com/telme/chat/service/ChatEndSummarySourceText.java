@@ -23,8 +23,7 @@ final class ChatEndSummarySourceText {
     }
 
     static boolean isTopicClarification(String content) {
-        return ("어떤 내용에 대한 질문인지 확인이 필요합니다. "
-                + "상품이나 상담 주제를 조금 더 구체적으로 알려주세요.").equals(content);
+        return ChatTopicClarification.isMessage(content);
     }
 
     static List<String> splitParagraphs(String text) {

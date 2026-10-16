@@ -40,13 +40,13 @@ class ChatSessionEndSummaryInputReader {
                 WHERE m.session_id=? AND m.status='COMPLETED' AND m.message_type NOT IN ('ERROR','BLOCKED')
                 ORDER BY m.sequence_no LIMIT ?
                 """, (rs, n) -> {
-                    String content = safeContent(rs.getString("content"), rs.getString("store_results"), maskSources);
+                    var content = safeContent(rs.getString("content"), rs.getString("store_results"), maskSources);
                     String basis = rs.getString("answer_basis");
                     String type = ChatEndSummarySourceText.resolveSummaryMessageType(
-                            rs.getString("message_type"), basis, content);
+                            rs.getString("message_type"), basis, content.text());
                     return new ChatEndSummaryData.Message(rs.getLong("message_id"), rs.getInt("sequence_no"),
-                            (Long) rs.getObject("reply_to_id"), rs.getString("role"), type, content, basis,
-                            rs.getString("execution_status"));
+                            (Long) rs.getObject("reply_to_id"), rs.getString("role"), type, content.text(), basis,
+                            rs.getString("execution_status"), content.hasStoreResults());
                 }, sessionId, properties.maxMessages() + 1);
         if (messages.size() > properties.maxMessages()) {
             throw new IllegalArgumentException("INPUT_LIMIT");
@@ -153,10 +153,10 @@ class ChatSessionEndSummaryInputReader {
         return inspection.content();
     }
 
-    private String safeContent(String text, String stores, List<OutputMaskContext.Source> maskSources) {
+    private SafeContent safeContent(String text, String stores, List<OutputMaskContext.Source> maskSources) {
         String result = safe(text, maskSources);
         if (stores == null) {
-            return result;
+            return new SafeContent(result, false);
         }
         try {
             var root = mapper.readTree(stores);
@@ -170,11 +170,14 @@ class ChatSessionEndSummaryInputReader {
                     }
                 }
             }
-            return result + (labels.isEmpty() ? "" : "\n안내한 매장: " + String.join(", ", labels));
+            return new SafeContent(result + (labels.isEmpty() ? "" : "\n안내한 매장: " + String.join(", ", labels)),
+                    !labels.isEmpty());
         } catch (java.io.IOException exception) {
             throw new IllegalArgumentException("INVALID_INPUT");
         }
     }
+
+    private record SafeContent(String text, boolean hasStoreResults) {}
 
     private boolean isFixedSocial(String value) {
         return Set.of("안녕하세요. 무엇을 도와드릴까요?",
