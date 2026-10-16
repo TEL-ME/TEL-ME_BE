@@ -41,18 +41,18 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
     // 저장했으면 수정 시각을 올린다. 대기 중인 변경을 먼저 반영하고, 끝나면 영속성 컨텍스트를 비운다
     // 그 사이 다른 관리자가 저장해 번호가 달라졌으면 0을 반환한다
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE stores SET updated_at = now(), lock_version = lock_version + 1 "
+    @Query(value = "UPDATE stores SET updated_at = now(), lock_version = lock_version + 1, updated_by = :adminId "
             + "WHERE store_id = :storeId AND lock_version = :lockVersion", nativeQuery = true)
-    int touch(@Param("storeId") Long storeId, @Param("lockVersion") int lockVersion);
+    int touch(@Param("storeId") Long storeId, @Param("lockVersion") int lockVersion, @Param("adminId") Long adminId);
     
     // 폐점도 잠금 번호를 올려야, 그 전에 매장을 읽은 수정 요청의 touch가 0행이 된다.
     // 엔티티로 바꾸면 읽어 둔 다른 칸까지 옛 값으로 다시 쓰므로 상태만 바꾼다.
     // 이미 폐점이면 바꾸지 않는다. UPDATE가 나가면 트리거가 수정 시각을 올려 목록 맨 위로 올라온다.
     // 없는 매장과 이미 폐점한 매장 모두 0을 반환한다
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE stores SET status = 'CLOSED_DOWN', updated_at = now(), lock_version = lock_version + 1 "
-            + "WHERE store_id = :storeId AND status <> 'CLOSED_DOWN'", nativeQuery = true)
-    int close(@Param("storeId") Long storeId);
+    @Query(value = "UPDATE stores SET status = 'CLOSED_DOWN', updated_at = now(), lock_version = lock_version + 1, "
+            + "updated_by = :adminId WHERE store_id = :storeId AND status <> 'CLOSED_DOWN'", nativeQuery = true)
+    int close(@Param("storeId") Long storeId, @Param("adminId") Long adminId);
 
     // 사용자 상세는 폐점 매장을 없는 매장처럼 다룬다. 업무와 영업시간은 둘 다 List라 한 번에 fetch join하면
     // MultipleBagFetchException이 나므로 업무만 여기서 함께 읽고 영업시간은 findHoursByStoreId로 따로 읽는다
