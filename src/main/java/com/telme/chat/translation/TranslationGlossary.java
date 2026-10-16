@@ -45,4 +45,11 @@ public final class TranslationGlossary {
                 .map(term -> String.join(", ", term.english()) + " → " + term.korean())
                 .collect(Collectors.joining("\n"));
     }
+    
+    // 한국어 → 영어 번역 프롬프트에 넣는다. 예: "요금제 → plan"
+    static String toEnglishLines() {
+        return TERMS.stream()
+                .map(term -> term.korean() + " → " + term.english().get(0))
+                .collect(Collectors.joining("\n"));
+    }
 }
