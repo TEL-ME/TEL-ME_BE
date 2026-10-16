@@ -5,6 +5,7 @@ import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.repository.ChatEndSummaryInquiryRepository;
 import com.telme.chat.safety.OutputMaskContext;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ class ChatSessionEndSummaryInputReader {
     private final ObjectMapper mapper;
     private final ChatEndSummaryProperties properties;
     private final ChatInputMaskRepository inputMasks;
+    private final ChatEndSummaryInquiryRepository inquiryRepository;
 
     @Transactional(readOnly = true)
     ChatEndSummaryData.Input read(long sessionId) {
@@ -137,7 +139,7 @@ class ChatSessionEndSummaryInputReader {
         maskSources.addAll(inputMasks.read(sessionId, through).sources());
         return new ChatEndSummaryData.Input(sessionId, through,
                 executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions,
-                new OutputMaskContext(maskSources));
+                new OutputMaskContext(maskSources), inquiryRepository.findBySessionId(sessionId));
     }
 
     private String safe(String text, List<OutputMaskContext.Source> maskSources) {

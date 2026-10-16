@@ -1,9 +1,11 @@
 package com.telme.chat.service;
 
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
+import com.telme.chat.repository.ChatEndSummaryInquiryRepository.Classification;
 import com.telme.chat.safety.OutputMaskContext;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,12 +37,20 @@ final class ChatEndSummaryData {
 
     record Input(long sessionId, int throughSequence, Long executionId,
             List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions,
-            OutputMaskContext maskContext) {
+            OutputMaskContext maskContext, Map<Long, Classification> inquiryClassifications) {
+        Input(long sessionId, int throughSequence, Long executionId,
+                List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions,
+                OutputMaskContext maskContext) {
+            this(sessionId, throughSequence, executionId, messages, requests, pendingIds, conditions,
+                    maskContext, Map.of());
+        }
+
         Input {
             messages = List.copyOf(messages);
             requests = List.copyOf(requests);
             pendingIds = Set.copyOf(pendingIds);
             conditions = List.copyOf(conditions);
+            inquiryClassifications = Map.copyOf(inquiryClassifications);
         }
     }
 

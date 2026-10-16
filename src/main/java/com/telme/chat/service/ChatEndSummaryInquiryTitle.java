@@ -13,8 +13,14 @@ final class ChatEndSummaryInquiryTitle {
             case "ROAMING" -> text.contains("기간") && (text.contains("금액") || text.contains("요금"))
                     ? "해외 로밍 기간·요금" : "해외 로밍 문의";
             case "CANCELLATION" -> text.contains("비용") ? "해지 예상 비용" : "해지 문의";
-            case "STORE" -> "방문 매장 위치";
+            case "STORE" -> text.matches(".*(?:위치|어디|근처|지역|가까운).*") ? "방문 매장 위치" : "매장 문의";
             case "PLAN" -> text.contains("변경") ? "요금제 변경 문의" : "요금제 문의";
+            case "PORTING" -> "번호이동 문의";
+            case "NAME_CHANGE" -> "명의변경 문의";
+            case "SUBSCRIBE" -> "가입·개통 문의";
+            case "BILLING" -> text.contains("요금제변경") ? "요금제 변경 문의" : "요금·청구 문의";
+            case "DEVICE" -> "단말·할부 문의";
+            case "SERVICE" -> "부가서비스·기타 문의";
             default -> "추가 문의";
         };
     }

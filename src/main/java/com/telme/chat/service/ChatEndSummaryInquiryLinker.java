@@ -29,7 +29,10 @@ final class ChatEndSummaryInquiryLinker {
             String text = normalizeText(message.content());
             String queries = input.requests().stream().filter(r -> r.originMessageId() == message.id())
                     .map(ChatEndSummaryData.Request::query).reduce("", (a, b) -> a + " " + b);
-            String domain = identifyPurpose(message.content());
+            String domain = ChatEndSummaryInquiryClassifier.classifyMessage(input, message.id());
+            if (domain.equals("UNKNOWN")) {
+                domain = identifyPurpose(message.content());
+            }
             if (domain.equals("UNKNOWN")) {
                 domain = identifyPurpose(queries);
             }

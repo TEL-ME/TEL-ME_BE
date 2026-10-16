@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.telme.rag.exception.AnswerGuardException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class AnswerGuardVisitProcedureTest {
 
@@ -18,6 +20,52 @@ class AnswerGuardVisitProcedureTest {
             + "또는 지정된 매장을 방문하시면 됩니다.";
 
     private final AnswerGuard guard = new AnswerGuard();
+
+    @ParameterizedTest
+    @CsvSource({
+            "eSIM 발급, 로밍 변경",
+            "유심 해지, 유심 재발급",
+            "어머니 유심 재발급, 아버지 유심 재발급",
+            "5G 요금제 변경, LTE 요금제 변경",
+            "유심 재발급, 로밍 변경과 유심 재발급"
+    })
+    @DisplayName("신청 권유가 없는 방문 안내도 대상과 업무가 다르면 복원하지 않는다")
+    void 일반_방문의_다른_대상과_업무를_복원하지_않는다(String business, String otherBusiness) {
+        String answer = business + " 시 신분증을 가지고 홈페이지 또는 매장을 방문하세요.";
+        String evidence = otherBusiness + " 시 신분증을 가지고 매장을 방문해야 합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, business + " 절차를 알려주세요."))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("생략된 방문 대상에 명시된 다른 업무를 임의로 연결하지 않는다")
+    void 생략된_대상에_다른_업무를_연결하지_않는다() {
+        String answer = "신분증을 가지고 홈페이지 또는 매장을 방문하세요.";
+        String evidence = "로밍 변경 시 신분증을 가지고 매장을 방문해야 합니다.";
+
+        assertThat(guard.trimUngroundedChannels(answer, evidence, QUESTION))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("같은 업무의 일반 방문 안내에서도 대리인과 위임장 조건을 복원한다")
+    void 일반_방문의_같은_업무와_방문자_조건을_복원한다() {
+        String answer = "유심 재발급 시 신분증을 가지고 홈페이지 또는 매장을 방문하세요.";
+        String evidence = "대리인은 유심 재발급 시 위임장과 신분증을 가지고 매장을 방문해야 합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, QUESTION)).isEqualTo(evidence);
+    }
+
+    @Test
+    @DisplayName("본인 방문 안내에 대리인 전용 방문 절차를 가져오지 않는다")
+    void 일반_방문의_서로_다른_방문자_조건을_복원하지_않는다() {
+        String answer = "본인은 유심 재발급 시 신분증을 가지고 홈페이지 또는 매장을 방문하세요.";
+        String evidence = "대리인은 유심 재발급 시 위임장과 신분증을 가지고 매장을 방문해야 합니다.";
+
+        assertThat(guard.applyEvidencePolicy(answer, evidence, QUESTION))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
 
     @Test
     @DisplayName("실제 유심 생성 원문에서 잘못된 창구를 제거하고 방문 근거를 보존한다")

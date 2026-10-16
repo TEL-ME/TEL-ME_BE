@@ -121,6 +121,10 @@ public class AnswerGuard {
             "가지고", "방문", "방문하는", "방문하여", "방문하시어", "방문해야", "절차", "안내했습니다",
             "시", "경우", "조건", "필요", "해야", "합니다", "됩니다", "입니다", "그것", "해당", "상품", "서비스");
 
+    private static final Pattern VISIT_PROCEDURE_WORD = Pattern.compile(
+            "방문(?:하세요|하시면|하면|하는|하여|하시어|해야)?|절차로는|가까운|지정된|또는|lg샵|이벤트|페이지|"
+                    + "홈페이지|없이|할|수|없습니다|가능합니다|경우에만");
+
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
     // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
     private static final Map<String, Set<String>> ATTRIBUTE_SYNONYMS = Map.of(
@@ -521,8 +525,7 @@ public class AnswerGuard {
             if (!evidenceSentence.contains("신분증") || !evidenceSentence.contains("방문")) {
                 continue;
             }
-            if (APPLICATION_ADVICE.matcher(sentence).find()
-                    && !hasMatchingApplicationBusiness(sentence, evidenceSentence)) {
+            if (!hasMatchingVisitBusiness(sentence, evidenceSentence)) {
                 continue;
             }
             boolean sameChannel = VISIT_CHANNELS.stream()
@@ -533,6 +536,42 @@ public class AnswerGuard {
         }
         // 일부 단어만 지우면 준비물의 조건이나 부정 표현을 손상할 수 있어 단일 근거 문장을 그대로 사용한다.
         return candidates.size() == 1 ? candidates.iterator().next() : null;
+    }
+
+    private boolean hasMatchingVisitBusiness(String sentence, String evidenceSentence) {
+        if (APPLICATION_ADVICE.matcher(sentence).find()) {
+            return hasMatchingApplicationBusiness(sentence, evidenceSentence);
+        }
+        List<String> subjects = extractVisitSubjects(sentence);
+        List<String> evidenceSubjects = extractVisitSubjects(evidenceSentence);
+        Set<String> tasks = extractApplicationTasks(sentence);
+        Set<String> evidenceTasks = extractApplicationTasks(evidenceSentence);
+        Set<String> visitors = extractApplicationTerms(sentence, APPLICATION_VISITOR);
+        boolean sameVisitor = visitors.isEmpty()
+                || visitors.equals(extractApplicationTerms(evidenceSentence, APPLICATION_VISITOR));
+        if (!subjects.equals(evidenceSubjects) || tasks.size() > 1 || evidenceTasks.size() > 1 || !sameVisitor) {
+            return false;
+        }
+        if (!subjects.isEmpty()) {
+            return tasks.size() == 1 && tasks.equals(evidenceTasks);
+        }
+        // 양쪽 모두 대상이 없는 공통 방문 문구만 복구하며, 명시된 다른 업무나 신청 권유를 연결하지 않는다.
+        return !APPLICATION_ADVICE.matcher(evidenceSentence).find()
+                && (tasks.isEmpty() || evidenceTasks.isEmpty() || tasks.equals(evidenceTasks));
+    }
+
+    private List<String> extractVisitSubjects(String sentence) {
+        List<String> words = new ArrayList<>();
+        Matcher matcher = APPLICATION_WORD.matcher(sentence);
+        while (matcher.find()) {
+            String word = matcher.group().toLowerCase(Locale.ROOT);
+            if (!VISIT_PROCEDURE_WORD.matcher(word).matches()) {
+                words.add(word);
+            }
+        }
+        return extractApplicationSubjects(String.join(" ", words)).stream()
+                .filter(word -> !VISIT_PROCEDURE_WORD.matcher(word).matches())
+                .toList();
     }
 
     private Set<String> ungrounded(

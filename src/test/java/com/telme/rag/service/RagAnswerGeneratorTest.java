@@ -567,6 +567,43 @@ class RagAnswerGeneratorTest {
         assertThat(handler.error).isNull();
     }
 
+    @Test
+    @DisplayName("일반 방문 안내도 로밍 근거로 이심 절차를 복원하지 않고 정상 비용만 전달한다")
+    void 일반_방문에서_다른_업무의_절차를_최종_전달하지_않는다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        StubClient client = new StubClient(List.of(cost,
+                " eSIM 발급은 신분증을 가지고 홈페이지 또는 매장을 방문하세요."));
+        AnswerRequest request = request("eSIM 발급 비용과 절차를 알려주세요.",
+                List.of(faq(1L, "로밍 변경 시 신분증을 가지고 매장을 방문해야 합니다."), faq(2L, cost)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(cost);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일반 방문 복원 후에도 같은 유심 업무의 방문자와 준비물을 최종 전달한다")
+    void 일반_방문의_같은_업무_조건을_최종_전달한다() {
+        String evidence = "대리인은 유심 재발급 시 위임장과 신분증을 가지고 매장을 방문해야 합니다.";
+        StubClient client = new StubClient(List.of(
+                "유심 재발급 시 신분증을 가지고 홈페이지 또는 매장을 방문하세요."));
+        AnswerRequest request = request("유심 재발급 절차를 알려주세요.", List.of(faq(1L, evidence)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(evidence);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(evidence);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
     private RagAnswerGenerator generator(LlmClient client) {
         return generator(client, ExecutionTrace.noop());
     }

@@ -15,15 +15,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.llm.service.LlmClient;
 import com.telme.chat.guard.ChatInputInspector;
+import com.telme.chat.repository.ChatEndSummaryInquiryRepository;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,11 +56,23 @@ class ChatSessionEndSummaryApiIntegrationTest {
     private ChatSessionEndSummaryService service;
     @Autowired
     private ChatSessionEndSummaryStore store;
+    @Autowired
+    private ChatEndSummaryInquiryRepository inquiryRepository;
     @MockitoBean
     private LlmClient client;
     @MockitoBean
     private Clock clock;
     private AtomicReference<Instant> time;
+    private final List<Long> createdCategoryFaqs = new ArrayList<>();
+
+    @AfterEach
+    void 분류_검증에서_생성한_근거만_정리한다() {
+        // 다른 FAQ 테스트의 검색·집계에 이번 테스트의 합성 근거가 섞이지 않도록 한다.
+        for (long faq : createdCategoryFaqs) {
+            jdbc.update("DELETE FROM message_sources WHERE faq_id=?", faq);
+            jdbc.update("DELETE FROM faqs WHERE faq_id=?", faq);
+        }
+    }
 
     @BeforeEach
     void 시각과_모델을_준비한다() {
@@ -585,6 +601,96 @@ class ChatSessionEndSummaryApiIntegrationTest {
         var prompt = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(prompt.capture());
         assertThat(prompt.getValue().userPrompt()).contains(expected).doesNotContain("990101", "1234567", "4111");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "PORTING | 번호이동 문의", "NAME_CHANGE | 명의변경 문의", "SUBSCRIBE | 가입·개통 문의",
+        "BILLING | 요금·청구 문의", "DEVICE | 단말·할부 문의", "SERVICE | 부가서비스·기타 문의",
+        "PLAN | 요금제 문의", "USIM | 유심 문의", "ROAMING | 해외 로밍 문의", "TERMINATE | 해지 문의"
+    })
+    @DisplayName("실제 저장된 FAQ 분류로 두 안내 문단을 묶어 종료 요약 저장과 재조회에 보존한다")
+    void 저장된_근거_분류로_종료_요약을_묶어_조회한다(String category, String title) throws Exception {
+        String question = "준비 서류와 처리 시간을 알려주세요.";
+        String documents = "본인 신분증이 필요합니다.";
+        String duration = "처리에는 2영업일이 걸립니다.";
+        var fixture = fixture(false, question, documents + "\n\n" + duration);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
+                VALUES (?, ?, 1, 'FAQ', ?, 'DONE')
+                """, fixture.sessionId(), fixture.questionId(), question);
+        addFaqSource(fixture, category, 1);
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(
+                fixture.questionId(), 1, 2));
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        for (int read = 0; read < 2; read++) {
+            mvc.perform(get(path(fixture)).session(fixture.actor()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1))
+                    .andExpect(jsonPath("$.result.summary.inquiries[0].title").value(title))
+                    .andExpect(jsonPath("$.result.summary.inquiries[0].text").value(documents + " " + duration))
+                    .andExpect(jsonPath("$.result.summary.guidance.length()").value(1));
+        }
+        verify(client).generate(any());
+    }
+
+    @Test
+    @DisplayName("단일 STORE 요청의 저장된 의도를 읽어 문의 분류에 사용한다")
+    void 저장된_매장_요청_의도를_읽는다() throws Exception {
+        var fixture = fixture(false, "안내를 부탁드립니다.", "방문 가능한 곳을 안내했습니다.");
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
+                VALUES (?, ?, 1, 'STORE', '안내를 부탁드립니다.', 'DONE')
+                """, fixture.sessionId(), fixture.questionId());
+        mockResult(fixture);
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        mvc.perform(get(path(fixture)).session(fixture.actor()))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].title").value("매장 문의"));
+    }
+
+    @Test
+    @DisplayName("상담 세션이 다른 FAQ 분류는 함께 읽지 않는다")
+    void 다른_세션의_분류를_읽지_않는다() throws Exception {
+        var first = fixture(false, "진행 방법 문의", "서류 안내입니다.");
+        var second = fixture(false, "진행 방법 문의", "시간 안내입니다.");
+        addFaqSource(first, "PORTING", 1);
+        addFaqSource(second, "NAME_CHANGE", 1);
+
+        var metadata = inquiryRepository.findBySessionId(first.sessionId());
+
+        assertThat(metadata.keySet()).containsExactlyInAnyOrder(first.questionId(), first.answerId());
+        assertThat(metadata.get(first.answerId()).faqCategories()).containsExactly("PORTING");
+    }
+
+    @Test
+    @DisplayName("답변 당시 버전과 다른 FAQ의 현재 분류를 과거 상담에 적용하지 않는다")
+    void 버전이_달라진_근거_분류는_추정하지_않는다() throws Exception {
+        var fixture = fixture(false, "진행 방법 문의", "서류 안내입니다.");
+        addFaqSource(fixture, "NAME_CHANGE", 2);
+
+        var metadata = inquiryRepository.findBySessionId(fixture.sessionId());
+
+        assertThat(metadata.get(fixture.answerId()).faqCategories()).isEmpty();
+    }
+
+    private void addFaqSource(Fixture fixture, String category, int citedVersion) {
+        long faq = jdbc.queryForObject("""
+                INSERT INTO faqs(category,question,answer,version)
+                VALUES (?, ?, ?, 1) RETURNING faq_id
+                """, Long.class, category, "합성 분류 검증 질문 " + fixture.sessionId(),
+                "합성 분류 검증 답변 " + fixture.answerId());
+        createdCategoryFaqs.add(faq);
+        jdbc.update("INSERT INTO message_sources(message_id,faq_id,faq_version) VALUES (?,?,?)",
+                fixture.answerId(), faq, citedVersion);
     }
 
     private Fixture fixture(boolean running, String question, String answer) throws Exception {

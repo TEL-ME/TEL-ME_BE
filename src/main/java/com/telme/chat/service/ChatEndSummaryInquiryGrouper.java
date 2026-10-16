@@ -90,7 +90,13 @@ final class ChatEndSummaryInquiryGrouper {
             Map<Long, ChatEndSummaryData.Message> messages, Map<Long, Long> roots, Map<String, Builder> groups,
             String text, List<Long> ids, Long origin, int unknown) {
         long root = origin == null ? -1 : roots.getOrDefault(origin, origin);
-        String purpose = ChatEndSummaryInquiryLinker.identifyPurpose(text);
+        String purpose = ChatEndSummaryInquiryClassifier.classifySources(input, ids);
+        if (purpose.equals("UNKNOWN") && root >= 0) {
+            purpose = ChatEndSummaryInquiryClassifier.classifySources(input, List.of(root));
+        }
+        if (purpose.equals("UNKNOWN")) {
+            purpose = ChatEndSummaryInquiryLinker.identifyPurpose(text);
+        }
         if (purpose.equals("UNKNOWN") && origin != null) {
             purpose = input.requests().stream().filter(request -> request.originMessageId() == origin)
                     .map(ChatEndSummaryData.Request::query).map(ChatEndSummaryInquiryLinker::identifyPurpose)
@@ -101,7 +107,7 @@ final class ChatEndSummaryInquiryGrouper {
             purpose = ChatEndSummaryInquiryLinker.identifyPurpose(messages.get(root).content());
         }
         String key = root + ":" + purpose;
-        if (root < 0 || purpose.equals("UNKNOWN")) {
+        if (root < 0 || purpose.equals("UNKNOWN") && !hasSingleRequest(input, origin, root, ids)) {
             key += ":" + unknown;
         }
         var group = groups.computeIfAbsent(key, ignored -> new Builder());
@@ -111,6 +117,18 @@ final class ChatEndSummaryInquiryGrouper {
         group.origins.add(origin == null ? root : origin);
         group.texts.add(text);
         group.sources.addAll(ids);
+    }
+
+    private static boolean hasSingleRequest(ChatEndSummaryData.Input input, Long origin, long root, List<Long> ids) {
+        if (ChatEndSummaryInquiryClassifier.hasAmbiguousCategories(input, ids)) {
+            return false;
+        }
+        var requests = input.requests().stream().filter(request -> origin != null
+                && request.originMessageId() == origin).toList();
+        if (requests.isEmpty()) {
+            requests = input.requests().stream().filter(request -> request.originMessageId() == root).toList();
+        }
+        return requests.size() == 1;
     }
 
     static String stripLabel(String text) {
@@ -135,7 +153,7 @@ final class ChatEndSummaryInquiryGrouper {
 
         private Inquiry build() {
             String last = texts.getLast();
-            boolean supersedes = purpose.equals("PLAN") && texts.size() > 1 && last.matches(
+            boolean supersedes = Set.of("PLAN", "BILLING").contains(purpose) && texts.size() > 1 && last.matches(
                     "(?s).*이전 안내.*(?:적용되지 않|적용할 수 없|취소).*");
             // 문단 일부만 달라도 동일 문장은 반복하지 않는다. 조건이 다른 문장은 그대로 남긴다.
             String source = supersedes ? last : ChatEndSummarySourceText.deduplicate(texts);
