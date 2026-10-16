@@ -130,7 +130,8 @@ ANSWERABLE_BEHAVIORS = {"ANSWER", "PARTIAL_ANSWER", "ANSWER_OR_CLARIFY"}
 # 모델을 부르지 않고 정한 질문 충족도 규칙. 이 규칙의 NOT_APPLICABLE은 요청을 정상 처리한 것으로 본다
 HANDLED_QUALITY_RULES = {"OUT_OF_SCOPE_QUESTION", "CLARIFICATION_ACCEPTED", "LOGIN_GUIDANCE_ACCEPTED"}
 # 매장 조회는 보여 준 매장 목록으로 코드가 판정한다
-STORE_QUALITY_RULES = {"STORE_RESULTS_RETURNED", "STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED"}
+STORE_QUALITY_RULES = {"STORE_RESULTS_RETURNED", "STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED",
+                       "STORE_LOCATION_MISMATCH"}
 
 
 def reference_groups(fixture):
@@ -187,11 +188,17 @@ def rule_quality(turn):
 
 
 def store_quality(turn):
-    """매장 조회 질문의 충족도. 매장 목록을 보여 줬는지, 고객이 말한 업무를 하는 매장만 보여 줬는지 본다."""
+    """매장 조회 질문의 충족도. 매장 목록을 보여 줬는지, 고객이 말한 위치 기준인지, 고객이 말한 업무를 하는 매장만인지 본다."""
     output = turn.get("outputMessage") or {}
     stores = output.get("storeResults") or []
     if output.get("messageType") != "STORE_RESULT" or not stores:
         return "MISSED", "STORE_NOT_RETURNED", "매장 목록을 보여 주지 않았다."
+    # 고객이 '현재 위치 사용'으로 답했으면 현재 위치 기준, 지명을 말했으면 그 지명 기준으로 찾아야 한다
+    sent_coordinates = any((exchange.get("customerReply") or {}).get("coordinates")
+                           for exchange in turn.get("clarificationExchanges") or [])
+    basis = (output.get("storeSearchContext") or {}).get("type")
+    if sent_coordinates != (basis == "CURRENT_LOCATION"):
+        return "MISSED", "STORE_LOCATION_MISMATCH", f"고객이 말한 위치와 다른 기준({basis})으로 찾았다."
     wanted = turn["fixture"].get("expectedServiceType")
     services = {row["storeId"]: row.get("services", []) for row in turn.get("storeDetails", [])}
     if wanted and any(wanted not in services.get(store.get("storeId"), []) for store in stores):
@@ -267,6 +274,15 @@ def enrich_rag_sources(capture, catalog):
     return service_data.attach_service_sources(enriched)
 
 
+def required_facts(turn):
+    """판정에 쓸 필수 사실. 고객 조건에 따라 답이 갈리는 질문은 앱이 되물어 고객이 조건을 말했으면 그 상황의 사실을,
+    되묻지 않고 바로 답했으면 갈리는 경우를 모두 안내하는 사실(requiredFactsIfAnsweredDirectly)을 쓴다."""
+    fixture = turn["fixture"]
+    if "requiredFactsIfAnsweredDirectly" in fixture and not turn.get("clarificationExchanges"):
+        return fixture["requiredFactsIfAnsweredDirectly"]
+    return fixture.get("requiredFacts", [])
+
+
 def quality_request(model, turn, previous):
     fixture = turn["fixture"]
     previous, question = judge.judged_dialogue(turn, previous)
@@ -274,7 +290,7 @@ def quality_request(model, turn, previous):
             "assistantAnswer": (turn.get("outputMessage") or {}).get("content", ""),
             "expectedBehavior": fixture["expectedBehavior"],
             "referenceGroups": reference_groups(fixture),
-            "requiredFacts": fixture.get("requiredFacts", [])}
+            "requiredFacts": required_facts(turn)}
     data["allowedAnswerQuotes"] = list(dict.fromkeys(
         line.strip() for line in (data["assistantAnswer"] or "").splitlines() if line.strip()))
     schema = copy.deepcopy(QUALITY_SCHEMA)
@@ -528,7 +544,10 @@ def finalize_turn(turn, item):
         item["findings"].append("UNNECESSARY_CLARIFICATION")
     if (item.get("quality") or {}).get("rule") == "SYSTEM_FALLBACK":
         item["findings"].append("SYSTEM_FALLBACK")
-    if (item.get("quality") or {}).get("rule") in {"STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED"}:
+    if expected == "ABSTAIN" and service_data.is_no_search_result((turn.get("outputMessage") or {}).get("content")):
+        item["findings"].append("NO_SEARCH_RESULT_FALLBACK")
+    if (item.get("quality") or {}).get("rule") in {"STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED",
+                                                   "STORE_LOCATION_MISMATCH"}:
         item["findings"].append((item["quality"]["rule"]))
     # 이미 답한 조건을 다시 물었다. 고객이 같은 답을 두 번 해야 했으므로 최종 답이 맞아도 통과로 보지 않는다
     asked = [key for exchange in turn.get("clarificationExchanges") or [] for key in exchange.get("askedKeys", [])]

@@ -74,6 +74,15 @@ def build():
     plan_source = service_data.plan_table_source(plans["plans"], plans["planEligibility"])
     plan_alternative = {key: plan_source[key] for key in ("sourceId", "answer")}
     written = json.loads((SOURCES / "flows_written.json").read_text(encoding="utf-8"))
+    # 앱이 되묻지 않고 바로 답했을 때의 필수 사실(갈리는 경우를 모두 안내). 별도 작성자가 FAQ 본문으로 썼다
+    direct_path = SOURCES / "direct_answer_facts.json"
+    direct = ({row["id"]: row["factsIfAnsweredDirectly"]
+               for row in json.loads(direct_path.read_text(encoding="utf-8"))["clarificationCases"]}
+              if direct_path.exists() else {})
+    # 사람 검토로 바꾼 필수 사실(review_decisions.json). 원본 시나리오는 그대로 둔다
+    decisions_path = SOURCES / "review_decisions.json"
+    overrides = (json.loads(decisions_path.read_text(encoding="utf-8"))["requiredFactsOverrides"]
+                 if decisions_path.exists() else {})
     cases = []
     for case in written["cases"]:
         turns = []
@@ -87,7 +96,10 @@ def build():
                 "question": turn["question"],
                 "expectedIntent": "STORE" if turn["expectedBehavior"] == "STORE_LOOKUP" else "FAQ",
                 "expectedBehavior": turn["expectedBehavior"],
-                "goldSourceGroups": gold, "requiredFacts": turn.get("requiredFacts", []),
+                "goldSourceGroups": gold,
+                "requiredFacts": overrides[case["id"]]["requiredFacts"] if case["id"] in overrides
+                else turn.get("requiredFacts", []),
+                **({"requiredFactsIfAnsweredDirectly": direct[case["id"]]} if case["id"] in direct else {}),
                 "qualityReferenceGroups": quality,
                 "clarificationReplies": replies,
                 "expectedServiceType": turn.get("expectedServiceType"),

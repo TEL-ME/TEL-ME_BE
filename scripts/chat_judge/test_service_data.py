@@ -40,8 +40,25 @@ def plan_capture(content="일반 요금제 중 가장 저렴한 요금제예요.
 class AppMessageTest(unittest.TestCase):
     def test_every_fixed_message_exists_verbatim_in_java_source(self):
         java = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src/main/java").rglob("*.java"))
-        for sentence in service_data.SERVICE_GUIDANCE + service_data.SYSTEM_FALLBACKS:
+        for sentence in service_data.SERVICE_GUIDANCE + service_data.SYSTEM_FALLBACKS + (service_data.NO_SEARCH_RESULT,):
             self.assertIn(sentence, java)
+
+    def test_recommendation_rule_matches_java_constants(self):
+        recommender = (ROOT / "src/main/java/com/telme/consult/service/PlanRecommender.java").read_text(encoding="utf-8")
+        answerer = (ROOT / "src/main/java/com/telme/consult/service/MemberRecommendationAnswerer.java").read_text(
+            encoding="utf-8")
+        self.assertIn(f"MARGIN = {service_data.RECOMMENDATION_MARGIN};", recommender)
+        self.assertIn(f"DOWNGRADE_MARGIN = {service_data.DOWNGRADE_MARGIN};", recommender)
+        self.assertIn(f"HEAVY_DATA_MB = {service_data.HEAVY_DATA_GB}L * MB_PER_GB;", answerer)
+        self.assertIn(f"LIGHT_DATA_MB = {service_data.LIGHT_DATA_GB}L * MB_PER_GB;", answerer)
+
+    def test_recommendation_rule_states_whether_the_current_plan_fits(self):
+        member = {"subscription": {"subscription": {"currentPlan": {
+            "name": "5G 스탠다드", "dataGb": 50.0, "unlimited": False, "voiceUnlimited": True, "smsUnlimited": True}}},
+            "usageDemand": {"dataMb": 29209, "voiceMinutes": 370, "smsCount": 241, "months": 3}}
+        self.assertTrue(service_data.recommendation_rule_source(member)["answer"].endswith("평균 사용량에 알맞다."))
+        member["usageDemand"]["dataMb"] = 45000
+        self.assertIn("알맞지 않다(데이터 부족)", service_data.recommendation_rule_source(member)["answer"])
 
     def test_service_guidance_matches_whole_template_sentences_only(self):
         self.assertTrue(service_data.is_service_guidance("로그인하시면 이번 달 사용량과 예상 요금을 확인해 드릴 수 있어요."))
@@ -288,6 +305,24 @@ class FlowTest(unittest.TestCase):
             {"questionPart": "내 요금제", "alternatives": [{"sourceId": service_data.MEMBER_SOURCE_ID}]}]
         with self.assertRaises(ValueError):  # 회원 데이터 없이 회원 라벨을 판정하지 않는다
             pipeline.enrich_rag_sources(guest, CATALOG)
+
+    def test_store_results_must_use_the_location_the_customer_gave(self):
+        turn = self.store_turn(["USIM_REISSUE"])
+        turn["clarificationExchanges"] = [{"askedKeys": ["location"], "outputMessage": {"content": "어디세요?"},
+                                           "customerReply": {"content": "현재 위치로", "coordinates": {"latitude": 37.5,
+                                                                                                    "longitude": 127.0}}}]
+        self.assertEqual("STORE_LOCATION_MISMATCH", pipeline.rule_quality(turn)["rule"])
+        turn["outputMessage"]["storeSearchContext"] = {"type": "CURRENT_LOCATION", "label": "현재 위치"}
+        self.assertEqual("STORE_RESULTS_RETURNED", pipeline.rule_quality(turn)["rule"])
+
+    def test_direct_answer_facts_apply_only_when_the_app_did_not_ask(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"].update(requiredFacts=["대리인은 위임장이 필요하다"],
+                               requiredFactsIfAnsweredDirectly=["본인은 신분증만", "대리인은 위임장이 필요하다"])
+        self.assertEqual(["본인은 신분증만", "대리인은 위임장이 필요하다"], pipeline.required_facts(turn))
+        turn["clarificationExchanges"] = [{"outputMessage": {"content": "누가 가세요?"},
+                                           "customerReply": {"content": "딸이 가요"}}]
+        self.assertEqual(["대리인은 위임장이 필요하다"], pipeline.required_facts(turn))
 
     def test_asking_an_answered_condition_again_fails_even_with_a_good_final_answer(self):
         turn = self.store_turn(["USIM_REISSUE"])

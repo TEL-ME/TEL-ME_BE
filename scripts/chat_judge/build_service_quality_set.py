@@ -8,11 +8,15 @@
 - FAQ로 답할 수 없는 질문: 별도 작성자가 쓰고, 다른 검수자가 가까운 FAQ 답변과 대조해 답이 없다고 본 것만 쓴다(unanswerable_*.json)
 - 흐름 회귀 9개 대화: v1의 flow_regression을 그대로 둔다
 답변 가능 질문의 정답 묶음은 별도 검수자가 정했다. 후보는 v1의 대체 FAQ 묶음, 첫 실행의 실제 검색 결과, 임베딩으로
-가까운 FAQ 6개이고(equivalence_candidates.json), 답변 본문에 필수 사실이 모두 있는 FAQ만 인정했다(equivalence_labels.json).
+가까운 FAQ 6개이고(review_candidates.tar.xz의 equivalence_candidates.json), 답변 본문에 필수 사실이 모두 있는 FAQ만 인정했다(equivalence_labels.json).
 질문을 쓸 때 쓴 FAQ는 모두 인정됐고, v1 대체 FAQ 중 필수 사실이 빠진 24개는 빠졌다.
 v2.1은 v2에 서비스 데이터 라벨(service_data_labels.json)을 더한다. 턴마다 답의 출처(answerSources: FAQ, PLAN_TABLE,
 MEMBER, STORE)를 적고, 요금제 표로 답이 정해지는 질문 부분에는 요금제 표(plans_snapshot.json)를 인정 근거로 더한다.
 FAQ에 답이 없지만 요금제 표로 답할 수 있는 질문은 답변 질문으로 바꾼다. v2 파일은 고정해 두고 build(service_labels=False)로 다시 만들 수 있다.
+v2.1은 정답 FAQ 검수 메모(equivalence_labels.json의 note)를 턴의 reviewNotes로 옮기고, 필수 사실이 질문을 다 덮지 못한다고
+표시된 질문 부분은 별도 작성자가 FAQ 본문으로 보완한 필수 사실(required_facts_fixes.json)로 바꾼다.
+복합 질문의 질문 부분 이름은 v2에서 원래 단일 질문 문장이었다. v2.1은 고객 문장에서 나눈 부분 질문(compound_parts.json,
+별도 작성자)을 쓴다. 같은 파일의 필수 사실 축소 제안(proposedRequiredFacts)은 사람이 적용하기로 한 곳(decision: APPLY)만 쓴다.
 사용: python -X utf8 -m scripts.chat_judge.build_service_quality_set
 """
 import json
@@ -100,10 +104,42 @@ def apply_service_labels(cases):
     return cases
 
 
+def fix_required_facts(written):
+    """질문 부분 단위로 보완한 필수 사실을 원본에 적용한다. 키는 '사례ID:턴:질문부분'이다."""
+    fixes = {row["unit"]: row["requiredFactsForPart"] for row in load("required_facts_fixes.json")["factGaps"]}
+    used = set()
+    for item in written["single"]:
+        unit = f"V2-SINGLE-{item['key']}:0:0"
+        if unit in fixes:
+            item["requiredFacts"] = fixes[unit]
+            used.add(unit)
+    for item in written["compound"]:
+        for index, part in enumerate(item["parts"]):
+            unit = f"V2-COMPOUND-{item['id']}:0:{index}"
+            if unit in fixes:
+                part["requiredFacts"] = fixes[unit]
+                used.add(unit)
+    if used != set(fixes):
+        raise ValueError(f"평가셋에 없는 보완 대상: {sorted(set(fixes) - used)}")
+    return written
+
+
+def apply_review_notes(cases):
+    """정답 FAQ 검수 때 남긴 메모를 해당 턴에 옮긴다. 사람 검토 때 먼저 볼 대상이다."""
+    by_id = {case["caseId"]: case for case in cases}
+    for row in load("equivalence_labels.json"):
+        if row.get("note"):
+            case_id, turn_index, part_index = row["unit"].rsplit(":", 2)
+            by_id[case_id]["turns"][int(turn_index)].setdefault("reviewNotes", []).append(
+                {"questionPart": int(part_index), "note": row["note"]})
+
+
 def build(service_labels=True):
     catalog = {faq["slot_id"]: faq for faq in json.loads(CATALOG.read_text(encoding="utf-8"))}
     seeds = {seed["key"]: seed for seed in load("answerable_seed.json")}
     written = load("answerable_written.json")
+    if service_labels:
+        written = fix_required_facts(written)
     cases = []
     for item in written["single"]:
         seed = seeds[item["key"]]
@@ -112,8 +148,17 @@ def build(service_labels=True):
                           item["userQuestion"], item["expectedBehavior"],
                           [(item["userQuestion"], seed["goldGroup"])], item["requiredFacts"], catalog)]})
     singles = {item["key"]: item for item in written["single"]}
+    compound_parts = ({row["id"]: row["parts"] for row in load("compound_parts.json")["items"]}
+                      if service_labels else {})
     for item in written["compound"]:
-        parts = [(singles[part["key"]]["userQuestion"], seeds[part["key"]]["goldGroup"]) for part in item["parts"]]
+        split = compound_parts.get(item["id"])
+        if split:
+            for part, labeled in zip(item["parts"], split, strict=True):
+                part["subQuestion"] = labeled["subQuestion"]
+                if labeled.get("decision") == "APPLY":
+                    part["requiredFacts"] = labeled["proposedRequiredFacts"]
+        parts = [(part.get("subQuestion") or singles[part["key"]]["userQuestion"], seeds[part["key"]]["goldGroup"])
+                 for part in item["parts"]]
         facts = [fact for part in item["parts"] for fact in part["requiredFacts"]]
         cases.append({"caseId": f"V2-COMPOUND-{item['id']}", "category": "COMPOUND", "questionType": "COMPOUND",
                       "suite": "paraphrased_compound",
@@ -160,6 +205,7 @@ def build(service_labels=True):
         raise ValueError("Duplicate case ID")
     if service_labels:
         apply_service_labels(cases)
+        apply_review_notes(cases)
     return cases, excluded
 
 

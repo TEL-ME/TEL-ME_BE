@@ -12,6 +12,12 @@ import re
 PLAN_SOURCE_ID = "SERVICE:PLAN_TABLE"
 MEMBER_SOURCE_ID = "SERVICE:MEMBER_DATA"
 STORE_SOURCE_ID = "SERVICE:STORE_RESULTS"
+RULE_SOURCE_ID = "SERVICE:RECOMMENDATION_RULE"
+# 요금제 추천 규칙(PlanRecommender, MemberRecommendationAnswerer). 바뀌면 test_service_data가 Java 상수와 대조한다
+RECOMMENDATION_MARGIN = 1.2
+DOWNGRADE_MARGIN = 1.4
+HEAVY_DATA_GB = 50
+LIGHT_DATA_GB = 3
 # 회원 정보로 답하는 요금제 답변 유형(PlanAnswerProvider). 추천은 요금제 표와 회원 사용량을 함께 쓴다
 MEMBER_ANSWER_TYPES = {"MY_SUBSCRIPTION", "MY_PENALTY", "MY_USAGE", "RECOMMENDATION"}
 PLAN_TABLE_ANSWER_TYPES = {"PLAN_CATALOG", "RECOMMENDATION"}
@@ -33,6 +39,10 @@ SERVICE_GUIDANCE = (
     "저는 LG U+ 통신 고객센터 AI 상담사 무러바라예요 😊 통신 서비스와 매장 정보를 안내해 드려요.",  # ChatPersona
     "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요 😊 궁금한 내용을 말씀해 주세요.",
 )
+
+# FAQ 검색 결과가 하나도 없을 때의 고정 안내(RagSearchResultAnswerGenerator). 답이 없는 질문에서는 지어내지 않았으므로
+# 보류로 인정하고(LABEL_REVIEW.md D1), 그렇게 통과한 턴은 발견 사항(NO_SEARCH_RESULT_FALLBACK)으로 따로 센다
+NO_SEARCH_RESULT = "관련 안내 정보를 찾지 못했습니다. 통신 서비스나 매장 관련 질문이라면 조금 더 구체적으로 알려주세요."
 
 # 질문을 처리하지 못했을 때 앱이 내보내는 대체 문구. 보류나 범위 밖 안내가 아니라 처리 실패다
 SYSTEM_FALLBACKS = (
@@ -69,6 +79,33 @@ def login_guidance_only(content):
     sentences = [part for part in re.split(r"(?<=[.?!])\s+", (content or "").strip()) if part]
     return bool(sentences) and all(is_service_guidance(part) for part in sentences) and any(
         "로그인" in part for part in sentences)
+
+
+def is_no_search_result(content):
+    return compact(content) == compact(NO_SEARCH_RESULT)
+
+
+def _limit(unlimited, value, scale=1):
+    return None if unlimited or value is None else value * scale
+
+
+def recommendation_rule_source(member_data):
+    """앱의 요금제 추천 규칙. '사용량에 알맞다' 같은 결론은 이 규칙으로 정해져 FAQ나 계정 데이터만으로는 판정할 수 없다.
+    로그인 회원이면 지금 요금제가 지난 달 평균 사용량에 알맞은지도 규칙대로 계산해 적는다."""
+    lines = ["앱의 요금제 추천 규칙",
+             f"요금제가 사용량에 알맞다는 것은 데이터·통화·문자 제공량이 각각 평균 사용량의 {RECOMMENDATION_MARGIN}배 이상(무제한 포함)이라는 뜻이다.",
+             f"추천은 알맞은 요금제 중 가장 싼 요금제다. 지금 요금제가 알맞으면 그대로 쓰라고 권하고, 더 싼 요금제는 {DOWNGRADE_MARGIN}배 여유가 있을 때만 권한다.",
+             f"사용량을 모르면 데이터를 많이 쓰는 고객은 {HEAVY_DATA_GB}GB, 적게 쓰는 고객은 {LIGHT_DATA_GB}GB 이상 주는 가장 싼 요금제를 추천한다(나이에 맞는 요금제 중)."]
+    plan = (((member_data or {}).get("subscription") or {}).get("subscription") or {}).get("currentPlan")
+    demand = (member_data or {}).get("usageDemand")
+    if plan and isinstance(demand, dict) and "dataMb" in demand:
+        limits = {"데이터": (_limit(plan.get("unlimited"), plan.get("dataGb"), MB_PER_GB), demand["dataMb"]),
+                  "통화": (_limit(plan.get("voiceUnlimited"), plan.get("voiceMinutes")), demand["voiceMinutes"]),
+                  "문자": (_limit(plan.get("smsUnlimited"), plan.get("smsCount")), demand["smsCount"])}
+        short = [name for name, (limit, used) in limits.items() if limit is not None and limit < used * RECOMMENDATION_MARGIN]
+        lines.append(f"이 회원의 지금 요금제({plan.get('name')})는 지난 {demand.get('months')}개월 평균 사용량에 "
+                     + ("알맞다." if not short else f"알맞지 않다({', '.join(short)} 부족)."))
+    return {"sourceId": RULE_SOURCE_ID, "kind": "SERVICE_DATA", "answer": "\n".join(lines)}
 
 
 def plan_answer_type(turn):
@@ -199,6 +236,8 @@ def attach_service_sources(capture):
                 sources.append(available[PLAN_SOURCE_ID])
             if answer_type in MEMBER_ANSWER_TYPES and member:
                 sources.append(available[MEMBER_SOURCE_ID])
+            if answer_type == "RECOMMENDATION":
+                sources.append(recommendation_rule_source(member))
             if (turn.get("outputMessage") or {}).get("storeResults"):
                 sources.append(store_results_source(turn))
             if sources:

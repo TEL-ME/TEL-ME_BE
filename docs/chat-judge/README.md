@@ -11,6 +11,7 @@ docs/chat-judge/
   CHAT_PIPELINE_QUALITY_CRITERIA.md  판정 기준과 보고 지표
   SERVICE_EVALUATION.md              실제 파이프라인 평가 실행, 점수 계산, 코드가 정하는 판정
   judge-validation-v1-review-form.md Judge 검증셋 판정자 B용 판정표
+  LABEL_REVIEW.md                    평가셋 라벨·판정 기준 중 사람이 정할 항목
 scripts/chat_judge/
   judge_chat_flow.py                 주장 추출과 근거성 판정, 출력 검증, 보류 판정 결합
   build_service_quality_set.py       서비스 품질 평가셋 v2.1 생성(v2는 서비스 데이터 라벨 없이 같은 빌더로 재현)
@@ -52,7 +53,7 @@ src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java  채팅 실행 기록 �
 | `flow_regression` | 9 | v1의 흐름 회귀 대화 그대로 |
 
 카탈로그에는 문구만 다르고 같은 내용을 답하는 FAQ가 많다. 그래서 답변 가능 질문의 질문 부분 200개마다 인정할 FAQ를 별도 검수자가 다시 정했다.
-- 후보: v1의 대체 FAQ 묶음, 첫 실행에서 실제로 검색된 FAQ, 질문과 임베딩으로 가까운 FAQ 6개(`equivalence_candidates.json`)
+- 후보: v1의 대체 FAQ 묶음, 첫 실행에서 실제로 검색된 FAQ, 질문과 임베딩으로 가까운 FAQ 6개(`equivalence_candidates.json`). 답이 없는 질문의 검수 후보(`unanswerable_candidates.json`)와 함께 [`review_candidates.tar.xz`](../../scripts/chat_judge/data/quality_v2_sources/review_candidates.tar.xz)로 묶었다. 코드는 읽지 않는 검수 자료다
 - 기준: FAQ 답변 본문에 필수 사실이 모두 있는 FAQ만 인정(`equivalence_labels.json`)
 - 결과: 질문을 쓸 때 쓴 FAQ는 모두 인정됐다. v1 대체 FAQ 중 필수 사실이 빠진 24개는 빠지고, 427개가 새로 인정됐다(질문 부분당 평균 3.5개).
 - 검수 중 필수 사실이 질문을 다 덮지 못한다고 표시된 문항(예: 토요일 영업을 묻는데 평일 시간만 적힘)은 `note`에 남겼다. 사람 검토 때 먼저 볼 대상이다.
@@ -62,9 +63,11 @@ v2.1은 v2에 [`service_data_labels.json`](../../scripts/chat_judge/data/quality
 - 요금제 목록·최저가처럼 요금제 표로도 답이 정해지는 질문 부분 10개는 요금제 표(`plans_snapshot.json`)도 인정 근거로 더했다.
 - FAQ에는 답이 없지만 요금제 표로 답이 정해지는 질문 5개를 답변 질문으로 바꿨다. 시니어 요금제 가격(U018), 판매하지 않는 요금제(U023 5G 프리미엄 플러스, U024 LTE 슬림, U025 군인 전용, U030 키즈워치 전용)는 "판매 중인 요금제에 없다"가 정답이다.
 - 내 요금·사용량·위약금 질문 3개(U049–U051)는 비로그인 실행에서는 로그인 안내가 정답(보류)이고, 로그인 실행에서는 회원 데이터로 답해야 한다(`memberExpectedBehavior`). 로그인 실행은 아직 없다.
+- 복합 질문 20개의 질문 부분 이름은 v2에서 원래 단일 질문 문장이었다(예: 고객은 평일 마감을 묻는데 질문 부분은 토·일요일 영업). 고객 문장에서 나눈 부분 질문으로 바꿨다([`compound_parts.json`](../../scripts/chat_judge/data/quality_v2_sources/compound_parts.json), 별도 작성자).
+- 정답 FAQ 검수 메모 37건은 턴의 `reviewNotes`에 있다. 복합 질문의 필수 사실 중 부분 질문이 묻지 않는 사실 9곳은 뺐고(검토 목록 D2), 단일 질문 보완 제안 3곳은 정할 때까지 적용하지 않았다([라벨 검토 목록](LABEL_REVIEW.md)).
 - 이전 캡처의 답변을 새 라벨로 채점할 때는 `relabel_capture.py`로 라벨만 바꾼다.
 
-흐름 평가셋 v1은 앱이 조건을 되묻는 대화를 고객 답변까지 이어서 본다. 시나리오는 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다([`flow_v1_sources/`](../../scripts/chat_judge/data/flow_v1_sources)).
+흐름 평가셋 v1은 앱이 조건을 되묻는 대화를 고객 답변까지 이어서 본다. 고객 조건에 따라 답이 갈리는 되묻기 8개는 앱이 되묻지 않고 바로 답했을 때의 필수 사실도 둔다([`direct_answer_facts.json`](../../scripts/chat_judge/data/flow_v1_sources/direct_answer_facts.json), 별도 작성자). 시나리오는 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다([`flow_v1_sources/`](../../scripts/chat_judge/data/flow_v1_sources)).
 - `store_flow` 12: 매장 찾기. 앱이 업무와 지역을 되물으면 답한다. 8개는 '현재 위치 사용'(좌표), 4개는 지명으로 답한다. 지명 검색은 카카오 로컬 API가 필요해 키가 없으면 실행기가 빼고 `manifest.json`의 `skippedCases`에 남긴다. 질문에 업무를 말했어도 앱이 업무를 되물을 수 있어, 시나리오에 업무 답변이 없으면 기대 업무로 만든 답변을 넣고 `auto`로 표시했다.
 - `clarification_flow` 12: FAQ 답이 고객 조건에 따라 갈리는 질문 8(고객이 모른다고 답하는 2개 포함)과 비회원 요금제 추천 4.
 - `member_data` 12: 로그인한 테스트 회원의 내 요금제·사용량·예상 요금·약정·위약금·사용량 기반 추천 9(2턴 대화 2개 포함)과 회원 데이터가 없는 질문 3. 프로브가 평가 DB에 테스트 회원(`judge-member@telme.test`, 5G 스탠다드, 24개월 약정, 8개월 전 가입)이 없을 때만 만들고, 대화 직전 계정 데이터를 `memberData`로 남긴다.

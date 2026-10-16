@@ -5,7 +5,8 @@
 여러 모델을 합치는 것은 combine_judges.py가 판정 뒤에 한다. 유료 호출이라 --allow-bedrock-call이 필요하다.
 --prior에 같은 모델의 이전 결과를 주면 판정 입력(답변, 근거, 평가 라벨, 이전 턴)이 그대로인 턴은 그 판정을 재사용하고
 (코드 규칙은 지금 기준으로 다시 적용), 바뀐 턴만 모델을 부른다. 근거 정의나 라벨이 바뀐 턴만 다시 판정하는 용도다.
-판정 입력 해시가 없는 예전 결과는 그 결과를 만든 캡처를 --prior-capture로 함께 준다.
+판정 입력 해시가 없는 예전 결과는 그 결과를 만든 캡처를 --prior-capture로 함께 준다. 이때 이전 입력은 지금 코드로
+다시 계산하므로, 그 사이 근거를 만드는 코드가 바뀌었으면 바뀐 턴을 놓친다. 결과에 저장된 해시(judgeInputSha256)가 우선이다.
 사용: python -X utf8 -m scripts.chat_judge.run_bedrock_judge <capture.json(.gz)> --model deepseek-v3.2 --allow-bedrock-call --out <결과.json.gz>
 """
 import argparse
@@ -24,11 +25,14 @@ AXES = ("grounding", "quality", "abstention")
 
 # 판정 모델 요청에 들어가는 라벨 필드. 출처 표시(answerSources)나 검수 기록처럼 요청에 안 들어가는 필드는 뺀다
 JUDGED_FIXTURE_FIELDS = ("question", "expectedBehavior", "requiredFacts", "qualityReferenceGroups", "missingFact")
+# 나중에 생긴 라벨 필드는 있을 때만 넣는다. 없는 턴의 해시가 바뀌어 이전 판정을 못 쓰게 되지 않도록
+OPTIONAL_JUDGED_FIXTURE_FIELDS = ("requiredFactsIfAnsweredDirectly",)
 
 
 def input_key(turn, previous, item):
     """모델 판정에 들어가는 입력의 해시. 같으면 이전 판정을 그대로 쓸 수 있다."""
     fixture = {key: turn["fixture"].get(key) for key in JUDGED_FIXTURE_FIELDS}
+    fixture |= {key: turn["fixture"][key] for key in OPTIONAL_JUDGED_FIXTURE_FIELDS if key in turn["fixture"]}
     return judge.sha256({"answer": item["answer"], "sources": item["sources"], "fixture": fixture,
                          "previous": previous})
 
