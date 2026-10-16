@@ -9,7 +9,7 @@ public final class ConditionPromptTemplates {
     private ConditionPromptTemplates() {}
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "condition-extract-v1.8";
+    public static final String PROMPT_VERSION = "condition-extract-v1.9";
 
     public static final String CONDITION_SYSTEM_PROMPT = """
         당신은 LG U+ 통신 고객센터 상담의 질문 분석기입니다.
@@ -26,6 +26,8 @@ public final class ConditionPromptTemplates {
            - 누가 오는지: "본인이", "대리인이 오는 경우라면", "양수인의"
            - 지금 상태: "이미 정지됐으면", "아직 끊기지 않았다면"
            이런 말이 있는데 고객이 자기 상황을 말하지 않았다면 그것을 조건으로 적으십시오.
+           답변(A)이 경우별로 다른 내용을 나열하면(기간별, 대상별, 요금제별 가격이나 절차), 고객이 어느 경우인지 말하지 않았을 때 그 구분을 조건으로 적으십시오.
+           모든 경우를 나열해 답할 수 있다는 이유로 적지 않는 것은 잘못입니다.
         2. 적기 전에 고객 질문을 다시 읽고, 그 조건의 답이 질문에 이미 있는지 보십시오.
            있으면 적지 마십시오. 고객이 방금 말한 것을 되묻는 것은 잘못입니다.
            - "유심 잃어버렸는데 어떻게 해요" → 잃어버렸는지 묻지 마십시오

@@ -24,10 +24,17 @@ public class ConditionExtractor {
     private static final int MAX_CONDITIONS = 2;
 
     private final LlmClient llmClient;
+    private final LlmClient parseFallback;
     private final ObjectMapper objectMapper;
 
     public ConditionExtractor(LlmClient llmClient, ObjectMapper objectMapper) {
+        this(llmClient, null, objectMapper);
+    }
+
+    // 응답을 읽지 못하면 parseFallback으로 생성과 파싱을 다시 한다
+    public ConditionExtractor(LlmClient llmClient, LlmClient parseFallback, ObjectMapper objectMapper) {
         this.llmClient = Objects.requireNonNull(llmClient);
+        this.parseFallback = parseFallback;
         this.objectMapper = Objects.requireNonNull(objectMapper);
     }
 
@@ -48,7 +55,7 @@ public class ConditionExtractor {
                     .filter(condition -> notSaidByUser(userQuery, condition))
                     .filter(condition -> notKnown(payload.known(), condition))
                     .filter(condition -> notAskedAlready(conditions, condition))
-                    .ifPresent(conditions::add);
+                    .ifPresent(condition -> addOrMergeAge(conditions, condition));
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
             }
@@ -67,18 +74,27 @@ public class ConditionExtractor {
                 .maxTokens(MAX_TOKENS)
                 .promptVersion(ConditionPromptTemplates.PROMPT_VERSION)
                 .build();
+        LlmConditionPayload payload = generateWith(llmClient, request, executionId);
+        if (payload == null && parseFallback != null) {
+            log.info("[조건 뽑기] 대체 모델로 다시 뽑습니다. executionId={}", executionId);
+            payload = generateWith(parseFallback, request, executionId);
+        }
+        return payload;
+    }
+
+    private LlmConditionPayload generateWith(LlmClient client, LlmRequest request, Long executionId) {
         try {
-            String json = llmClient.generate(request);
+            String json = client.generate(request);
             if (json == null || json.isBlank()) {
                 return null;
             }
             return objectMapper.readValue(json, LlmConditionPayload.class);
         } catch (JsonProcessingException exception) {
-            log.info("[조건 뽑기] 응답을 읽지 못해 되묻지 않습니다. executionId={}", executionId);
+            log.info("[조건 뽑기] 응답을 읽지 못했습니다. executionId={}", executionId);
             return null;
         } catch (RuntimeException exception) {
             // 되묻기를 못 해도 답변은 나가야 한다
-            log.warn("[조건 뽑기] 모델 호출에 실패해 되묻지 않습니다. executionId={}", executionId, exception);
+            log.warn("[조건 뽑기] 모델 호출에 실패했습니다. executionId={}", executionId, exception);
             return null;
         }
     }
@@ -124,6 +140,21 @@ public class ConditionExtractor {
             log.info("[조건 뽑기] 같은 내용을 다시 묻는 조건을 버립니다. key={}", condition.key());
         }
         return !duplicate;
+    }
+
+    // 같은 대상의 나이 기준이 여럿이면 나이 하나로 묻는다. 하나를 버리면 남은 기준이 확인되지 않는다
+    private void addOrMergeAge(List<MissingCondition> kept, MissingCondition condition) {
+        String subject = ConditionGrounding.ageSubject(condition.question());
+        for (int i = 0; subject != null && i < kept.size(); i++) {
+            MissingCondition each = kept.get(i);
+            if (subject.equals(ConditionGrounding.ageSubject(each.question()))) {
+                log.info("[조건 뽑기] 같은 대상의 나이 기준을 한 질문으로 합칩니다. key={}", condition.key());
+                kept.set(i, new MissingCondition(
+                        each.key(), ConditionGrounding.mergedAgeQuestion(each.question()), List.of(), each.evidence()));
+                return;
+            }
+        }
+        kept.add(condition);
     }
 
     private boolean notSaidByUser(String userQuery, MissingCondition condition) {

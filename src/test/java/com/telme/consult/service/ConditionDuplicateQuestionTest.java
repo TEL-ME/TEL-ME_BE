@@ -45,6 +45,27 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
+    @DisplayName("나이 기준 질문의 대상을 구하고 합친 질문을 만든다")
+    void 나이_기준_질문을_합친다() {
+        assertThat(ConditionGrounding.ageSubject("만 14세 이상이신가요?")).isEqualTo("");
+        assertThat(ConditionGrounding.ageSubject("본인이 만 65세 이상이신가요?")).isEqualTo("본인이");
+        assertThat(ConditionGrounding.ageSubject("약정이 남아 있으신가요?")).isNull();
+        assertThat(ConditionGrounding.mergedAgeQuestion("만 14세 이상이신가요?"))
+                .isEqualTo("나이가 어떻게 되시나요?");
+        assertThat(ConditionGrounding.mergedAgeQuestion("가입하려는 분의 나이가 만 18세 이하인가요?"))
+                .isEqualTo("가입하려는 분의 나이가 어떻게 되시나요?");
+        assertThat(ConditionGrounding.mergedAgeQuestion("본인이 만 65세 이상이신가요?"))
+                .isEqualTo("본인의 나이가 어떻게 되시나요?");
+    }
+
+    @Test
+    @DisplayName("나이 기준만 다른 질문은 중복으로 버리지 않는다")
+    void 나이_기준만_다르면_버리지_않는다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "만 14세 이상이신가요?", "만 65세 이상이신가요?")).isFalse();
+    }
+
+    @Test
     @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
     void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(

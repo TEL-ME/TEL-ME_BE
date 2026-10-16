@@ -195,6 +195,8 @@ telme:
     # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
     faq-clarification:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
+      # 조건 뽑기 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
+      bedrock-extraction: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:false}
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}

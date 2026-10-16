@@ -263,6 +263,66 @@ class ConditionExtractorTest {
         assertThat(request.userPrompt()).contains(ROAMING_ANSWER).contains("로밍 신청하고 싶어요");
     }
 
+    @Test
+    @DisplayName("같은 대상의 나이 기준이 여럿이면 나이 하나로 묻는다")
+    void 나이_기준은_하나로_합친다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[
+                 {"key":"age_14","question":"만 14세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 미만은 가입할 수 없습니다."},
+                 {"key":"age_18","question":"만 18세 이하이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 이상 18세 이하는 동의서가 필요합니다."}]}""");
+
+        List<MissingCondition> conditions = extractor.extract(1L, "가입하고 싶어요", List.of(ageSource()));
+
+        assertThat(conditions).singleElement().satisfies(condition -> {
+            assertThat(condition.key()).isEqualTo("age_14");
+            assertThat(condition.question()).isEqualTo("나이가 어떻게 되시나요?");
+            assertThat(condition.selectable()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("대상이 다른 나이 기준은 따로 묻는다")
+    void 대상이_다른_나이는_따로_묻는다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[
+                 {"key":"age_14","question":"가입하시는 분이 만 14세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 미만은 가입할 수 없습니다."},
+                 {"key":"age_18","question":"동의하시는 분이 만 19세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 이상 18세 이하는 동의서가 필요합니다."}]}""");
+
+        assertThat(extractor.extract(1L, "가입하고 싶어요", List.of(ageSource())))
+                .extracting(MissingCondition::key).containsExactly("age_14", "age_18");
+    }
+
+    @Test
+    @DisplayName("주 모델 응답을 읽지 못하면 대체 모델로 다시 뽑는다")
+    void 응답을_읽지_못하면_대체_모델로_뽑는다() {
+        LlmClient fallback = mock(LlmClient.class);
+        when(client.generate(any())).thenReturn("조건은 다음과 같습니다: plan_type");
+        when(fallback.generate(any())).thenReturn("""
+                {"conditions":[{"key":"plan_type","question":"어떤 요금제를 쓰고 계신가요?",
+                 "options":["5G","LTE"],"evidence":"5G 요금제는 앱에서, LTE 요금제는 고객센터에서"}]}""");
+
+        var withFallback = new ConditionExtractor(client, fallback, new ObjectMapper());
+
+        assertThat(withFallback.extract(1L, "로밍 신청하고 싶어요", List.of(source())))
+                .extracting(MissingCondition::key).containsExactly("plan_type");
+    }
+
+    @Test
+    @DisplayName("대체 모델 응답도 읽지 못하면 빈 목록을 돌려준다")
+    void 둘_다_읽지_못하면_비운다() {
+        LlmClient fallback = mock(LlmClient.class);
+        when(client.generate(any())).thenReturn("not json");
+        when(fallback.generate(any())).thenReturn("not json");
+
+        var withFallback = new ConditionExtractor(client, fallback, new ObjectMapper());
+
+        assertThat(withFallback.extract(1L, "로밍 신청하고 싶어요", List.of(source()))).isEmpty();
+    }
+
     private List<MissingCondition> extract() {
         return extractor.extract(1L, "로밍 신청하고 싶어요", List.of(source()));
     }
