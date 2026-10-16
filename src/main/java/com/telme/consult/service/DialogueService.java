@@ -33,14 +33,20 @@ public class DialogueService {
 
     /** 모델 호출 없이 되물을지 판단한다. */
     public DialogueDecision assess(DialogueInput input) {
-        return decide(input, false);
+        return decide(input, false, null);
     }
 
+    /** 채팅 실행 밖(테스트 등)에서 판단할 때 쓴다. 되묻기 문장 생성 호출은 기록되지 않는다. */
     public DialogueDecision decide(DialogueInput input) {
-        return decide(input, true);
+        return decide(input, null);
     }
 
-    private DialogueDecision decide(DialogueInput input, boolean generateText) {
+    // executionId는 되묻기 문장 생성 호출을 채팅 실행에 기록하기 위한 값이다
+    public DialogueDecision decide(DialogueInput input, Long executionId) {
+        return decide(input, true, executionId);
+    }
+
+    private DialogueDecision decide(DialogueInput input, boolean generateText, Long executionId) {
         Objects.requireNonNull(input, "input");
         var conditions = new HashMap<>(input.previousConditions());
         // 정정·거절은 updates로 전달한다.
@@ -118,7 +124,8 @@ public class DialogueService {
                                 + (input.locationStatus() == LocationStatus.DECLINED
                                         ? "사용자가 거절함"
                                         : "미제공"),
-                        FALLBACK);
+                        FALLBACK,
+                        executionId);
         String text = FALLBACK;
         var origin = MessageOrigin.TEMPLATE;
         try {

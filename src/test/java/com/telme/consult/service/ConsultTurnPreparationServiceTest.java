@@ -42,7 +42,7 @@ class ConsultTurnPreparationServiceTest {
                         ConsultRequest.Intent.STORE,
                         "유심 매장",
                         Map.of("location", " 강남역 ", "serviceType", "USIM_REISSUE"));
-        service.prepareAnalysis(1L, analysis, LocationStatus.MISSING);
+        service.prepareAnalysis(1L, analysis, LocationStatus.MISSING, 9L);
         verify(consult)
                 .prepareTurn(
                         1L,
@@ -53,15 +53,16 @@ class ConsultTurnPreparationServiceTest {
                                 Condition.filled("강남역"),
                                 "serviceType",
                                 Condition.filled("USIM_REISSUE")),
-                        LocationStatus.MISSING);
+                        LocationStatus.MISSING, 9L);
     }
 
     @Test
     void followupKeepsQuestionAndUserMessageReferences() {
-        var context = context("STORE");
+        // 되묻기 문장 생성 호출을 이 채팅 실행에 기록하도록 문맥의 실행 ID를 넘긴다
+        var context = context("STORE").withExecutionId(8L);
         var updates = Map.of("location", Condition.filled("강남역"));
         var prepared = result(Action.PROCEED, updates);
-        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING))
+        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING, 8L))
                 .thenReturn(prepared);
         var value =
                 service.prepareFollowup(
@@ -79,7 +80,7 @@ class ConsultTurnPreparationServiceTest {
     @Test
     void refusalRemainsDeclinedInsteadOfInventedLocation() {
         var updates = Map.of("location", Condition.declined());
-        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING))
+        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING, null))
                 .thenReturn(result(Action.ALTERNATIVE_GUIDANCE, updates));
         var value =
                 service.prepareFollowup(
@@ -93,7 +94,7 @@ class ConsultTurnPreparationServiceTest {
 
     @Test
     void correctionWhileWaitingUpdatesConditionWithoutAnsweringQuestion() {
-        var context = context("STORE");
+        var context = context("STORE").withExecutionId(8L);
         var candidate = context.candidates().getFirst();
         var updates = Map.of("serviceType", Condition.filled("USIM_REISSUE"));
         var pending =
@@ -104,7 +105,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         updates,
-                        LocationStatus.MISSING))
+                        LocationStatus.MISSING, 8L))
                 .thenReturn(pending);
 
         var value =
@@ -120,7 +121,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         updates,
-                        LocationStatus.MISSING);
+                        LocationStatus.MISSING, 8L);
     }
 
     @Test
@@ -133,7 +134,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         Map.of(),
-                        LocationStatus.MISSING))
+                        LocationStatus.MISSING, null))
                 .thenReturn(pending);
 
         var value =
