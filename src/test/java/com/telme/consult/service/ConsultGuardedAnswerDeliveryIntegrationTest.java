@@ -754,6 +754,29 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
         CompletableFuture.allOf(first, second).get(10, TimeUnit.SECONDS);
         assertThat(traceFromApi().at("/steps/parallel")).hasSize(16);
         assertThat(traceFromApi().at("/steps/anotherStage/status").asText()).isEqualTo("PRESENT");
+        // 병렬 기록 timeline 유실 없음
+        assertThat(traceFromApi().at("/steps/timeline")).hasSize(17);
+    }
+
+    @Test
+    void stageWritesAppendTimelineInOrderWithoutChangingStageValues() throws Exception {
+        traces.stage(executionId, "analysis", Map.of("action", "PROCEED"));
+        traces.append(executionId, "searchResults", Map.of("status", "FOUND"));
+        traces.append(executionId, "searchResults", Map.of("status", "EMPTY"));
+        traces.stage(executionId, "guard", Map.of("outcome", "KEPT"));
+
+        var steps = traceFromApi().at("/steps");
+        assertThat(steps.at("/analysis/action").asText()).isEqualTo("PROCEED");
+        assertThat(steps.at("/searchResults")).hasSize(2);
+        assertThat(steps.at("/guard/outcome").asText()).isEqualTo("KEPT");
+        var timeline = steps.at("/timeline");
+        assertThat(timeline).hasSize(4);
+        assertThat(java.util.stream.StreamSupport.stream(timeline.spliterator(), false)
+                .map(entry -> entry.path("stage").asText()).toList())
+                .containsExactly("analysis", "searchResults", "searchResults", "guard");
+        var times = java.util.stream.StreamSupport.stream(timeline.spliterator(), false)
+                .map(entry -> java.time.OffsetDateTime.parse(entry.path("at").asText()).toInstant()).toList();
+        assertThat(times).isSorted();
     }
 
     @Test
