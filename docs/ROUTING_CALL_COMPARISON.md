@@ -313,7 +313,7 @@ RUNNER=<run_flow_scenarios.py 경로> bash scripts/routing-call-comparison/run_c
 ROUTING_REQUEST_INVENTORY_ENABLED=false RUNNER=<같은 경로> bash scripts/routing-call-comparison/run_chat_flows.sh   # 요청 개수 판정 끔
 ```
 
-준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다. 2단계의 `exaone-full`, `route-*` 키는 판정 호출 켬/끔을 라우팅 전체 경로로 잰 결과, 마지막 확인의 `inventory-off-*` 키는 판정 호출을 끈 대화 흐름이다.
+준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 1~4단계 채점 스크립트는 모두 결과 파일에 저장된 모델 판정을 지금 평가셋의 정답과 대조해 다시 계산한다. 라벨 검토로 정답을 고치면 평가셋만 다시 만들고(`build_*.py`) 채점 스크립트를 다시 돌리면 되며, 모델을 다시 부를 필요는 없다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다. 2단계의 `exaone-full`, `route-*` 키는 판정 호출 켬/끔을 라우팅 전체 경로로 잰 결과, 마지막 확인의 `inventory-off-*` 키는 판정 호출을 끈 대화 흐름이다.
 
 ## 남은 일과 확인할 것
 

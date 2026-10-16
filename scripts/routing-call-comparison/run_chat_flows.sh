@@ -22,11 +22,14 @@ OUT=scripts/routing-call-comparison/results/step5-chat-flows
 PORTS=(18175 18176 18177)
 mkdir -p "$OUT"
 
-stop_port() {
-  local pid
-  pid=$(netstat -ano | grep -E ":$1 .*LISTEN" | awk '{print $NF}' | head -1)
-  [ -n "$pid" ] && taskkill //PID "$pid" //F > /dev/null 2>&1
+APP_PIDS=()
+PIDS=()
+# 이번 실행이 띄운 앱과 실행기만 끈다. 실패하거나 중단돼도 EXIT에서 정리된다
+cleanup() {
+  for pid in ${APP_PIDS[*]:-} ${PIDS[*]:-}; do kill "$pid" 2> /dev/null; done
+  wait 2> /dev/null
 }
+trap cleanup EXIT
 
 for n in 1 2 3; do
   db=telme_flow175_$n
@@ -34,6 +37,7 @@ for n in 1 2 3; do
     -c "CREATE DATABASE $db TEMPLATE telme" 2>&1 | grep -v NOTICE
   LLM_BEDROCK_REGION=${LLM_BEDROCK_REGION:-ap-northeast-1} OLLAMA_URL="$ROUTER_URL" LLM_PROVIDER=ollama \
     POSTGRES_PORT="$PG_PORT" POSTGRES_DB=$db SERVER_PORT=${PORTS[$((n-1))]} java -jar "$JAR" > "$OUT/app-$n.log" 2>&1 &
+  APP_PIDS+=($!)
 done
 for _ in $(seq 1 120); do
   [ "$(grep -alc 'Started TelmeApplication' "$OUT"/app-1.log "$OUT"/app-2.log "$OUT"/app-3.log 2>/dev/null | wc -l)" = 3 ] && break
@@ -41,10 +45,9 @@ for _ in $(seq 1 120); do
   sleep 2
 done
 if grep -aql "APPLICATION FAILED" "$OUT"/app-*.log 2>/dev/null; then
-  echo "기동 실패"; for p in "${PORTS[@]}"; do stop_port "$p"; done; exit 1
+  echo "기동 실패"; exit 1
 fi
 
-PIDS=()
 # 이전 실행 결과를 이번 결과로 착각하지 않도록 먼저 지운다
 rm -f "$OUT"/flows-gptoss-*.json
 for n in 1 2 3; do
@@ -61,7 +64,7 @@ for i in "${!PIDS[@]}"; do
     echo "결과 없음: $OUT/flows-gptoss-$((i+1)).json"; FAILED=1
   fi
 done
-for p in "${PORTS[@]}"; do stop_port "$p"; done
+cleanup
 # 실패하면 앱·실행기 로그를 남기고 비정상 종료한다
 if [ "$FAILED" -ne 0 ]; then
   echo "실패. 로그를 남겼습니다: $OUT/app-*.log, $OUT/flows-*.txt"
