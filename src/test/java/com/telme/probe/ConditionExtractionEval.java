@@ -16,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
@@ -30,12 +31,13 @@ class ConditionExtractionEval {
 
     @Autowired private FaqSearchService searches;
     @Autowired private LlmClient llmClient;
+    @Autowired(required = false) @Qualifier("judgeLlmClient") private LlmClient judgeClient;
 
     @Test
     @DisplayName("평가셋으로 조건 뽑기를 채점한다")
     void 채점한다() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        ConditionExtractor extractor = new ConditionExtractor(llmClient, objectMapper);
+        ConditionExtractor extractor = new ConditionExtractor(extractionClient(), objectMapper);
         JsonNode cases;
         try (InputStream stream = getClass().getResourceAsStream(CASES)) {
             cases = objectMapper.readTree(stream).get("cases");
@@ -52,6 +54,10 @@ class ConditionExtractionEval {
 
         for (JsonNode each : cases) {
             String question = each.get("question").asText();
+            String only = System.getenv("EVAL_ONLY");
+            if (only != null && java.util.Arrays.stream(only.split("\\|")).noneMatch(question::startsWith)) {
+                continue;
+            }
             int expected = each.get("expect").asInt();
             var sources = searches.search(new FaqSearchRequest(question, 3));
             if (sources.isEmpty()) {
@@ -94,6 +100,9 @@ class ConditionExtractionEval {
         System.out.printf("EVAL_SUM|맞음 %d|놓침 %d|부족 %d|초과 %d|헛짚음 %d|검색없음 %d|정확도 %.0f%%|평균 %dms%n",
                 hit, missed, lacking, excess, invented, noSource,
                 scored == 0 ? 0 : hit * 100.0 / scored, scored == 0 ? 0 : elapsed / scored);
+        if (counted != null) {
+            System.out.println("BEDROCK_CALLS|" + counted.calls());
+        }
         assertThat(scored + noSource).isEqualTo(cases.size());
     }
 
@@ -102,4 +111,17 @@ class ConditionExtractionEval {
         return condition.question()
                 + (condition.options().isEmpty() ? " [직접입력]" : " " + condition.options());
     }
+
+    private CountingLlmClient counted;
+
+
+    // EVAL_EXTRACTOR=bedrock이면 조건 뽑기를 Bedrock으로(LLM_BEDROCK_ENABLED=true 필요, 유료)
+    private LlmClient extractionClient() {
+        if ("bedrock".equals(System.getenv("EVAL_EXTRACTOR")) && judgeClient != null) {
+            counted = new CountingLlmClient(judgeClient);
+            return counted;
+        }
+        return llmClient;
+    }
+
 }

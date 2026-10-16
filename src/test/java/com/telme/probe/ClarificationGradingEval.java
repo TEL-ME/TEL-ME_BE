@@ -15,12 +15,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 
-/**
- * 정답 근거를 찾고도 되묻기로 끝난 질문(팀 채점)을 근거를 직접 넣어 채점한다.
- * 검색과 판정기를 거치지 않아 조건 뽑기와 걸러내기만 본다.
- */
+// 정답 근거를 찾고도 되묻기로 끝난 질문을 근거 직접 입력으로 채점(검색·판정기 제외)
 @SpringBootTest
 @EnabledIfEnvironmentVariable(named = "LLM_PROVIDER", matches = "ollama")
 class ClarificationGradingEval {
@@ -28,12 +26,13 @@ class ClarificationGradingEval {
     private static final String CASES = "/condition-eval/grading-cases.json";
 
     @Autowired private LlmClient llmClient;
+    @Autowired(required = false) @Qualifier("judgeLlmClient") private LlmClient judgeClient;
 
     @Test
     @DisplayName("채점 문항으로 불필요한 되묻기를 채점한다")
     void 채점한다() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        ConditionExtractor extractor = new ConditionExtractor(llmClient, objectMapper);
+        ConditionExtractor extractor = new ConditionExtractor(extractionClient(), objectMapper);
         JsonNode cases;
         try (InputStream stream = getClass().getResourceAsStream(CASES)) {
             cases = objectMapper.readTree(stream).get("cases");
@@ -81,6 +80,22 @@ class ClarificationGradingEval {
         int scored = ok + unnecessary + missed;
         System.out.printf("GRADE_SUM|맞음 %d|불필요 %d|놓침 %d|참고 %d|정확도 %.0f%%%n",
                 ok, unnecessary, missed, reference, scored == 0 ? 0 : ok * 100.0 / scored);
+        if (counted != null) {
+            System.out.println("BEDROCK_CALLS|" + counted.calls());
+        }
         assertThat(scored + reference).isEqualTo(cases.size());
     }
+
+    private CountingLlmClient counted;
+
+
+    // EVAL_EXTRACTOR=bedrock이면 조건 뽑기를 Bedrock으로(LLM_BEDROCK_ENABLED=true 필요, 유료)
+    private LlmClient extractionClient() {
+        if ("bedrock".equals(System.getenv("EVAL_EXTRACTOR")) && judgeClient != null) {
+            counted = new CountingLlmClient(judgeClient);
+            return counted;
+        }
+        return llmClient;
+    }
+
 }
