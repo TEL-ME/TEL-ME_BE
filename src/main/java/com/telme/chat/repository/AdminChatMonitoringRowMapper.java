@@ -40,6 +40,7 @@ public class AdminChatMonitoringRowMapper implements RowMapper<AdminChatMonitori
                 .executionStatus(rs.getString("execution_status"))
                 .startedAt(instant(rs, "started_at"))
                 .endedAt(instant(rs, "ended_at"))
+                .totalMs(rs.getObject("total_ms", Integer.class))
                 .errorCode(rs.getString("error_code"))
                 .answerType(rs.getString("answer_type"))
                 .answerBasis(rs.getString("answer_basis"))
