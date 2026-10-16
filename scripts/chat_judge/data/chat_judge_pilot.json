@@ -1,0 +1,190 @@
+[
+  {
+    "caseId": "FAQ_FACT",
+    "category": "일반 FAQ",
+    "turns": [
+      {
+        "question": "가상계좌가 무엇인가요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ANSWER",
+        "goldSourceSlotIds": [
+          "BILLING-0026"
+        ],
+        "requiredFacts": [
+          "가상계좌는 요금 납부를 위해 사용자에게 부여되는 입금 전용 계좌다"
+        ],
+        "goldSourceGroups": [
+          [
+            "BILLING-0026"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "caseId": "FAQ_CONDITION",
+    "category": "조건 누락 위험",
+    "turns": [
+      {
+        "question": "소액결제 한도 얼마까지 돼요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ANSWER",
+        "goldSourceSlotIds": [
+          "BILLING-0004",
+          "BILLING-0067"
+        ],
+        "requiredFacts": [
+          "기본 한도는 월 30만 원이다",
+          "본인 인증을 하면 월 100만 원까지 올릴 수 있다"
+        ],
+        "goldSourceGroups": [
+          [
+            "BILLING-0004",
+            "BILLING-0067"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "caseId": "NO_EVIDENCE",
+    "category": "근거 부족",
+    "turns": [
+      {
+        "question": "유심 재발급하면 택배비는 따로 내나요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ABSTAIN",
+        "goldSourceSlotIds": [
+          "USIM-0001",
+          "USIM-0009",
+          "USIM-0029"
+        ],
+        "requiredFacts": [],
+        "missingFact": "배송비 부과 또는 포함 여부",
+        "goldSourceGroups": []
+      }
+    ]
+  },
+  {
+    "caseId": "MIXED",
+    "category": "답할 수 있는 내용과 없는 내용",
+    "turns": [
+      {
+        "question": "유심 재발급 비용은 얼마고 배송비도 내야 하나요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "PARTIAL_ANSWER",
+        "goldSourceSlotIds": [
+          "USIM-0001",
+          "USIM-0009"
+        ],
+        "requiredFacts": [
+          "유심 재발급 비용은 7,700원이다",
+          "배송비 부과 여부는 제공된 FAQ에서 확인할 수 없다"
+        ],
+        "goldSourceGroups": [
+          [
+            "USIM-0001",
+            "USIM-0009"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "caseId": "UNRELATED",
+    "category": "서비스 외 질문",
+    "turns": [
+      {
+        "question": "오늘 서울 날씨 어때?",
+        "expectedIntent": "UNKNOWN",
+        "expectedBehavior": "OUT_OF_SCOPE",
+        "goldSourceSlotIds": [],
+        "requiredFacts": [],
+        "goldSourceGroups": []
+      }
+    ]
+  },
+  {
+    "caseId": "MULTI_TURN",
+    "category": "이전 대화 후속 질문",
+    "turns": [
+      {
+        "question": "요금제는 한 달에 몇 번 바꿀 수 있어요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ANSWER",
+        "goldSourceSlotIds": [
+          "BILLING-0001"
+        ],
+        "requiredFacts": [
+          "요금제는 한 달에 한 번 변경할 수 있다"
+        ],
+        "goldSourceGroups": [
+          [
+            "BILLING-0001"
+          ]
+        ]
+      },
+      {
+        "question": "가입한 달에도 돼요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ANSWER",
+        "goldSourceSlotIds": [
+          "BILLING-0001",
+          "BILLING-0078",
+          "BILLING-0022"
+        ],
+        "requiredFacts": [
+          "가입한 달에는 요금제를 변경할 수 없고 다음 달부터 가능하다"
+        ],
+        "goldSourceGroups": [
+          [
+            "BILLING-0001",
+            "BILLING-0078",
+            "BILLING-0022"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "caseId": "FAQ_COMPOUND",
+    "category": "FAQ 두 질문",
+    "turns": [
+      {
+        "question": "요금제는 한 달에 몇 번 바꿀 수 있고 가상계좌는 뭐예요?",
+        "expectedIntent": "FAQ",
+        "expectedBehavior": "ANSWER",
+        "goldSourceSlotIds": [
+          "BILLING-0001",
+          "BILLING-0026"
+        ],
+        "requiredFacts": [
+          "요금제는 한 달에 한 번 변경할 수 있다",
+          "가상계좌는 요금 납부용 입금 전용 계좌다"
+        ],
+        "goldSourceGroups": [
+          [
+            "BILLING-0001"
+          ],
+          [
+            "BILLING-0026"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "caseId": "STORE",
+    "category": "매장 질문",
+    "turns": [
+      {
+        "question": "강남역 근처 유플러스 매장 알려줘",
+        "expectedIntent": "STORE",
+        "expectedBehavior": "STORE_LOOKUP",
+        "goldSourceSlotIds": [],
+        "requiredFacts": [],
+        "goldSourceGroups": []
+      }
+    ]
+  }
+]
