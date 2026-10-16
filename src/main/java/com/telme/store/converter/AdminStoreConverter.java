@@ -36,6 +36,8 @@ public class AdminStoreConverter {
                 store.getStatus().name(),
                 storeCommonConverter.toHours(store.getHours()),
                 storeCommonConverter.toServiceTypes(store.getServices()),
+                store.getCreatedBy(),
+                store.getUpdatedBy(),
                 store.getCreatedAt(),
                 store.getUpdatedAt(),
                 store.getLockVersion());

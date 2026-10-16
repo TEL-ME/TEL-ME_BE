@@ -216,6 +216,10 @@ telme:
     # 시연용. 켜면 가입·변경이 즉시 적용되고 가입 당월·월 1회 변경 제한도 생략한다.
     # 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용(FAQ와 같은 동작)
     demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
+  routing:
+    # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
+    # 의도 분류를 gpt-oss로 바꾸면 끈다. 켜 두면 맞게 나뉜 질문을 다시 합친다(docs/ROUTING_CALL_COMPARISON.md 2단계)
+    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:true}
 
 speech:
   tts:
