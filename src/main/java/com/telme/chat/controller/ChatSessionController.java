@@ -10,6 +10,7 @@ import com.telme.chat.dto.res.ChatSessionListResponse;
 import com.telme.chat.dto.res.ChatSessionUpdateResponse;
 import com.telme.chat.service.ChatActor;
 import com.telme.chat.service.ChatActorProvider;
+import com.telme.chat.service.ChatResponseStopwatch;
 import com.telme.chat.service.ChatSessionService;
 import com.telme.global.common.CustomResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -312,8 +313,10 @@ public class ChatSessionController {
             @PathVariable Long sessionId,
             @Valid @RequestBody ChatMessageSendRequest request
     ) {
+        // 전체 응답 시간의 시작점. 인증 필터·본문 변환·입력 검증을 마치고 컨트롤러에 들어온 시점이다.
+        ChatResponseStopwatch stopwatch = ChatResponseStopwatch.start();
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
-        ChatMessageSendResponse response = chatSessionService.sendMessage(actor, sessionId, request);
+        ChatMessageSendResponse response = chatSessionService.sendMessage(actor, sessionId, request, stopwatch);
         HttpStatus status = response.accepted() ? HttpStatus.CREATED : HttpStatus.OK;
         var result = ResponseEntity.status(status);
         if (response.inputGuard() != null && response.inputGuard().retryAfterSeconds() > 0) {
