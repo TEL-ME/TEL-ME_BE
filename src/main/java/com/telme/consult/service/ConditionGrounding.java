@@ -23,6 +23,7 @@ final class ConditionGrounding {
     private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
     private static final int MIN_SUBJECTLESS_LENGTH = 6;
     private static final Pattern EXCLUSIVE_SUBJECT = Pattern.compile("(?:본인|대리인)[이가은는]");
+    private static final Pattern AGE_THRESHOLD = Pattern.compile("(.*?)만\\d+세");
     private static final Pattern QUANTITY_UNIT =
             Pattern.compile("(?:\\d|몇|한|두|세|네)(개월|영업일|시간|년|세|일|회)");
 
@@ -171,7 +172,16 @@ final class ConditionGrounding {
     static boolean asksTheSame(String question, String other) {
         String left = compact(question);
         String right = compact(other);
-        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX || sameExceptSubject(question, other);
+        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX
+                || sameExceptSubject(question, other)
+                || sameAgeSubject(left, right);
+    }
+
+    // 같은 대상의 나이 기준을 이상·이하로 나눠 두 번 묻는 질문
+    private static boolean sameAgeSubject(String left, String right) {
+        var leftMatch = AGE_THRESHOLD.matcher(left);
+        var rightMatch = AGE_THRESHOLD.matcher(right);
+        return leftMatch.find() && rightMatch.find() && leftMatch.group(1).equals(rightMatch.group(1));
     }
 
     // 본인과 대리인처럼 서로 배타적인 주어만 바꾼 질문

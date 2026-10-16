@@ -45,6 +45,24 @@ class ConditionDuplicateQuestionTest {
     }
 
     @Test
+    @DisplayName("같은 대상의 나이 기준을 나눠 묻는 질문은 같은 것으로 본다")
+    void 같은_대상의_나이_기준은_중복이다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "만 14세 이상이신가요?", "만 18세 이하이신가요?")).isTrue();
+        assertThat(ConditionGrounding.asksTheSame(
+                "가입하려는 분의 나이가 만 14세 이상인가요?", "가입하려는 분의 나이가 만 18세 이하인가요?")).isTrue();
+    }
+
+    @Test
+    @DisplayName("대상이 다른 나이 질문은 남긴다")
+    void 대상이_다른_나이는_남긴다() {
+        assertThat(ConditionGrounding.asksTheSame(
+                "본인이 만 65세 이상이신가요?", "가입하실 분의 나이가 만 18세 이하인가요?")).isFalse();
+        assertThat(ConditionGrounding.asksTheSame(
+                "양도인이 만 19세 이상이신가요?", "양수인이 만 19세 이상이신가요?")).isFalse();
+    }
+
+    @Test
     @DisplayName("어미만 바꿔 묻는 질문도 같은 것으로 본다")
     void 어미만_바꾼_질문도_중복이다() {
         assertThat(ConditionGrounding.asksTheSame(
