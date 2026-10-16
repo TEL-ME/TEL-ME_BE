@@ -2,8 +2,8 @@ package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -16,8 +16,8 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
-import com.telme.chat.repository.ChatInputMaskRepository;
 import com.telme.chat.repository.ChatExecutionRepository;
+import com.telme.chat.repository.ChatInputMaskRepository;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.OutputMaskContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,10 +26,11 @@ import com.telme.global.common.code.BaseErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
-import java.util.List;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -67,6 +68,9 @@ class ChatExecutionServiceIntegrationTest {
     @Autowired
     private ApplicationEvents applicationEvents;
 
+    @Autowired
+    private ChatResponseTimer responseTimer;
+
     private ChatActor actor;
     private Long sessionId;
 
@@ -86,40 +90,91 @@ class ChatExecutionServiceIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"answer", "basic", "clarification", "withoutOutput", "failed", "cancelled"})
-    @DisplayName("모든 종료 경로는 시작 시각과 같은 DB 시계로 종료 시각을 남긴다")
+    @DisplayName("모든 종료 경로는 접수 때 시작한 측정값으로 처리 시간을 남긴다")
+    void 모든_종료_경로가_접수부터의_처리_시간을_남긴다(String path) {
+        var question = send("유심 재발급 비용 알려줘");
+        // 이 테스트는 커밋하지 않아 디스패처가 돌지 않는다. 디스패처가 하는 등록을 직접 한다
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(1_500));
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "유심 재발급 비용 알려줘", null, stopwatch));
+        try {
+            finish(path, question.executionId());
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getTotalMs()).isBetween(1_500, 60_000);
+        assertThat(execution.getEndedAt()).isNotNull();
+        if (execution.getOutputMessage() != null) {
+            assertThat(execution.getOutputMessage().getCompletedAt()).isEqualTo(execution.getEndedAt());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"answer", "basic", "clarification", "withoutOutput", "failed", "cancelled"})
+    @DisplayName("모든 종료 경로는 시작 시각과 같은 DB 시계로 종료·답변 완료·마지막 활동 시각을 남긴다")
     void 모든_종료_경로가_DB_시계로_종료_시각을_남긴다(String path) {
         var question = send("유심 재발급 비용 알려줘");
         Instant databaseTime = findExecution(question.executionId()).getStartedAt().plusSeconds(2);
         doReturn(databaseTime).when(executions).currentDatabaseTime();
-        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null);
 
-        switch (path) {
-            case "answer" -> chatExecutionService.completeAnswer(question.executionId(), answer);
-            case "basic" -> chatExecutionService.completeBasicConversation(question.executionId(), answer);
-            case "clarification" -> chatExecutionService.askClarification(question.executionId(), "어느 지역인가요?");
-            case "withoutOutput" -> chatExecutionService.completeWithoutOutput(question.executionId());
-            case "failed" -> chatExecutionService.fail(question.executionId(),
-                    new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
-            case "cancelled" -> chatExecutionService.fail(question.executionId(),
-                    new ChatFailure(ChatMessage.Status.CANCELLED, "CANCELLED"));
-            default -> throw new IllegalArgumentException(path);
-        }
+        finish(path, question.executionId());
 
         var execution = findExecution(question.executionId());
         assertThat(execution.getEndedAt()).isEqualTo(databaseTime);
         if (execution.getOutputMessage() != null) {
             assertThat(execution.getOutputMessage().getCompletedAt()).isEqualTo(databaseTime);
         }
+        assertThat(findSession().getLastActiveAt()).isEqualTo(databaseTime);
     }
 
     @Test
-    @DisplayName("종료 시각은 트랜잭션 시작 시각이 아니라 호출 시점의 DB 시계다")
+    @DisplayName("종료 시각은 트랜잭션 시작 시각이 아니라 호출한 순간의 DB 시계다")
     void 종료_시각은_호출_시점의_DB_시계다() {
         Instant transactionStart = jdbcTemplate.queryForObject(
                 "SELECT CURRENT_TIMESTAMP", (rs, row) -> rs.getTimestamp(1).toInstant());
         jdbcTemplate.execute("SELECT pg_sleep(0.02)");
 
         assertThat(executions.currentDatabaseTime()).isAfter(transactionStart);
+    }
+
+    @Test
+    @DisplayName("시작 측정값이 없는 실행은 0ms가 아니라 측정 불가(null)로 끝낸다")
+    void 시작_측정값이_없으면_처리_시간을_비운다() {
+        var question = send("유심 재발급 비용 알려줘");
+
+        chatExecutionService.fail(question.executionId(),
+                new ChatFailure(ChatMessage.Status.TIMEOUT, "EXECUTION_TIMEOUT"));
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getEndedAt()).isNotNull();
+        assertThat(execution.getTotalMs()).isNull();
+    }
+
+    @Test
+    @DisplayName("이미 끝난 실행을 다시 완료하려 하면 거부하고 처음 기록한 처리 시간을 유지한다")
+    void 중복_완료는_처음_처리_시간을_바꾸지_않는다() {
+        var question = send("유심 재발급 비용 알려줘");
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime());
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "유심 재발급 비용 알려줘", null, stopwatch));
+        try {
+            chatExecutionService.completeAnswer(question.executionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null));
+            Integer first = findExecution(question.executionId()).getTotalMs();
+
+            assertErrorCode(() -> chatExecutionService.fail(question.executionId(),
+                    new ChatFailure(ChatMessage.Status.TIMEOUT, "EXECUTION_TIMEOUT")),
+                    ChatErrorCode.EXECUTION_NOT_RUNNING);
+
+            var execution = findExecution(question.executionId());
+            assertThat(first).isNotNull();
+            assertThat(execution.getTotalMs()).isEqualTo(first);
+            assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
     }
 
     @ParameterizedTest
@@ -578,6 +633,21 @@ class ChatExecutionServiceIntegrationTest {
         assertErrorCode(
                 () -> chatSessionService.getExecution(new ChatActor(null, UUID.randomUUID()), question.executionId()),
                 ChatErrorCode.EXECUTION_NOT_FOUND);
+    }
+
+    private void finish(String path, Long executionId) {
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null);
+        switch (path) {
+            case "answer" -> chatExecutionService.completeAnswer(executionId, answer);
+            case "basic" -> chatExecutionService.completeBasicConversation(executionId, answer);
+            case "clarification" -> chatExecutionService.askClarification(executionId, "어느 지역인가요?");
+            case "withoutOutput" -> chatExecutionService.completeWithoutOutput(executionId);
+            case "failed" -> chatExecutionService.fail(executionId,
+                    new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
+            case "cancelled" -> chatExecutionService.fail(executionId,
+                    new ChatFailure(ChatMessage.Status.CANCELLED, "CANCELLED"));
+            default -> throw new IllegalArgumentException(path);
+        }
     }
 
     private ChatMessageSendResponse send(String content) {
