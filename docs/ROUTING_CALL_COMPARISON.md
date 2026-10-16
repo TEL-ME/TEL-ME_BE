@@ -235,14 +235,14 @@ TELME-174에서 gpt-oss가 이미 답한 조건을 다시 물은 것은 후속 �
 
 | 묶음 | TELME-174 EXAONE (1회) | TELME-174 gpt-oss (3회) | TELME-175 v2 (3회) | TELME-175 v3 (3회) | **TELME-175 v4 (3회)** | v4, 요청 개수 판정 끔 (3회) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 되묻기 완주 (8) | 6 | 6 / 5 / 7 | 6 / 6 / 4 | 5 / 5 / 7 | 6 / 6 / 5 | 7 (7) / 4 / 7 |
+| 되묻기 완주 (8) | 6 | 6 / 5 / 7 | 6 / 6 / 4 | 5 / 5 / 7 | 6 / 6 / 5 | 7 / 4 / 7 |
 | 복합 FAQ·비교 (5) | 4 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 4 | 3 / 3 / 3 |
 | FAQ+매장 복합 (4) | 4 | 2 / 3 / 2 | 3 / 3 / 3 | 4 / 2 / 3 | 3 / 4 / 3 | 3 / 3 / 2 |
 | 멀티턴 (5) | 2 | 2 / 2 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 2 / 3 / 2 | 3 / 3 / 3 |
-| 합계 (22) | 16 | 13 / 13 / 15 | 15 / 15 / 13 | 15 / 13 / 16 | **14 / 16 / 14** | 16 (21) / 13 / 15 |
+| 합계 (22) | 16 | 13 / 13 / 15 | 15 / 15 / 13 | 15 / 13 / 16 | **14 / 16 / 14** | 16 / 13 / 15 |
 
 - 합계 차이는 실행 간 흔들림 범위다.
-- 요청 개수 판정을 끈 실행(`inventory-off-*` 키, `ROUTING_REQUEST_INVENTORY_ENABLED=false`)도 같은 범위다. 복합 FAQ 5개는 켠 실행과 같은 결과이고, 실패 원인도 켠 실행과 같은 되묻기 흐름·문맥 해석·검색 문제다. 1회차 CL-01은 실행기가 실행 시작 전에 상태를 읽어 첫 답변을 기다리지 않고 끝나 판정에서 뺐다(괄호는 판정한 수).
+- 요청 개수 판정을 끈 실행(`inventory-off-*` 키, `ROUTING_REQUEST_INVENTORY_ENABLED=false`)도 같은 범위다. 복합 FAQ 5개는 켠 실행과 같은 결과이고, 실패 원인도 켠 실행과 같은 되묻기 흐름·문맥 해석·검색 문제다.
 - MT-01(인터넷 해지·장비 반납)과 MT-02(번호이동 수수료)는 FAQ에 답이 없어 정답을 근거 없음으로 고쳤다(TELME-174 판정도 같이 고침). 모든 구성이 매번 근거 없음으로 답했다.
 - TELME-174 대비 좋아진 것: "유심 재발급 비용 알려주고 근처 매장도 찾아줘"(ST-01)는 TELME-174에서 3회 중 2회 FAQ 쪽을 정보 부족으로 답했는데 TELME-175에서는 9회 중 8회 7,700원과 매장을 안내했다.
 - 라우팅 호출이 원인인 실패
@@ -253,7 +253,6 @@ TELME-174에서 gpt-oss가 이미 답한 조건을 다시 물은 것은 후속 �
   - 되묻기 흐름(실행마다 4~5건, 남은 실패의 대부분): 같은 답에 들어 있던 다음 조건을 다시 묻거나(CO-01, CL-01, CL-06, ST-03), 답한 뒤에도 두 번째 조건을 더 물어 답변 없이 끝난다(CL-07 위임장, CL-02 신분증, CO-02). 4단계 마지막 절의 별도 이슈로 고친다.
   - 문맥 해석: MT-03 "그럼 데이터 다 쓰면 어떻게 돼요?"(앞 질문 로밍)는 9회 모두 "데이터"를 대상으로 보고 앞 발언과 연결하지 않아 국내 요금제 FAQ(400kbps)로 답했다. 로밍 데이터 소진 FAQ는 없다. MT-04 "택배로도 받을 수 있나요?"(앞 질문 유심 재발급 비용)는 v4 3회 중 2회 문맥 해석이 앞 발언과 연결하지 않아 라우팅 전에 주제 확인으로 끝났다(v2·v3 6회는 모두 맞음).
   - 검색·근거 판정: MT-05 "미성년자 자녀한테도 돼요?"는 v4 3회 중 2회 검색이 "미성년자 사이 명의변경 불가" 쪽 FAQ를 가져와 "미성년자와는 명의변경이 안 된다"고 답했다. FAQ에는 어른이 미성년자에게 넘기는 건 된다는 답(NAME_CHANGE-0036, 0024)이 있어 사실과 반대다. 나머지는 되물음으로 끝났다.
-- v3 3회차 MT-01 첫 턴과 MT-04 마지막 턴은 실행기가 답변이 끝나기 전에 메시지를 읽어 본문이 비어 기록됐다. DB에 저장된 최종 답변으로 판정했다.
 - 대화 한 턴의 응답 시간(중앙값)은 v4에서 첫 턴 3.8초, 이어지는 턴 2.5초다. TELME-174 gpt-oss(3.8초, 2.7초)와 EXAONE(4.3초, 2.5초)보다 길지 않다.
 
 ## 앱 클라이언트 재확인
@@ -309,7 +308,7 @@ python scripts/routing-call-comparison/score_followup_step.py exaone-v3 gptoss-1
 # 앱 클라이언트 재확인 (1~4단계 gpt-oss 3회를 앱의 BedrockClient로)
 bash scripts/routing-call-comparison/run_app_client_check.sh
 python scripts/routing-call-comparison/score_request_count_step.py step2-gptoss-1 step2-gptoss-2 step2-gptoss-3   --results scripts/routing-call-comparison/results/app-client-check/results.json.gz
-# 마지막 확인 (bootJar 후, 판정은 사람이 붙인다. 실행기는 TELME-174 #159에 있어 없으면 RUNNER로 경로를 준다)
+# 마지막 확인 (bootJar 후, 판정은 사람이 붙인다. 대화 흐름 실행기는 #159에 있어 RUNNER로 경로를 준다)
 RUNNER=<run_flow_scenarios.py 경로> bash scripts/routing-call-comparison/run_chat_flows.sh
 ROUTING_REQUEST_INVENTORY_ENABLED=false RUNNER=<같은 경로> bash scripts/routing-call-comparison/run_chat_flows.sh   # 요청 개수 판정 끔
 ```
