@@ -25,6 +25,8 @@ public class AdminChatMonitoringRepository {
                         CROSS JOIN LATERAL jsonb_array_elements_text(g.actions) a
                      WHERE g.message_id = m.message_id) AS input_actions,
                    t -> 'analysis' ->> 'action' AS analysis_action,
+                   (jsonb_path_query_first(t, '$.searchRequests.size()'))::int AS search_request_count,
+                   (t -> 'searchRequests' -> -1 ->> 'grayZone')::boolean AS last_search_gray_zone,
                    jsonb_path_query_array(t, '$.searchResults[*].status') AS search_statuses,
                    jsonb_path_query_array(t, '$.searchResults[*].sources[*].faqId') AS source_faq_ids,
                    jsonb_path_query_array(t, '$.refinedQueryChecks[*].searched') AS refined_searched,

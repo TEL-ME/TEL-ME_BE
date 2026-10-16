@@ -46,6 +46,8 @@ public class AdminChatMonitoringRowMapper implements RowMapper<AdminChatMonitori
                 .intent(rs.getString("intent"))
                 .inputActions(actions == null ? List.of() : Arrays.asList(actions.split(",")))
                 .analysisAction(rs.getString("analysis_action"))
+                .searchRequestCount(rs.getInt("search_request_count"))
+                .lastSearchGrayZone(rs.getBoolean("last_search_gray_zone"))
                 .searchStatuses(list(rs, "search_statuses", STRINGS))
                 .sourceFaqIds(list(rs, "source_faq_ids", LONGS))
                 .refinedSearched(list(rs, "refined_searched", BOOLEANS))

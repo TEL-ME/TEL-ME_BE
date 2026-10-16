@@ -18,6 +18,8 @@ public class AdminChatMonitoringStageSummarizer {
     public static final String RUNNING = "RUNNING";
 
     private static final AdminChatMonitoringStageResponse SKIP = stage(SKIPPED, null);
+    // flow 배열에서 판정 칸 위치(빈 칸 채우기에서 건너뜀)
+    private static final int JUDGMENT = 2;
 
     public AdminChatMonitoringStagesResponse summarize(AdminChatMonitoringRow row) {
         if (row.blocked()) {
@@ -29,32 +31,43 @@ public class AdminChatMonitoringStageSummarizer {
         }
         // 기록 없는 칸은 null → fillMissing에서 채움
         AdminChatMonitoringStageResponse[] flow = {
-                routing(row), search(row), generation(row), outputCheck(row)};
+                routing(row), search(row), judgment(row), generation(row), outputCheck(row)};
         fillMissing(flow, row.running());
         return AdminChatMonitoringStagesResponse.builder()
                 .inputCheck(inputCheck(row))
                 .routing(flow[0])
                 .search(flow[1])
-                // 판정은 RUNNING 없음
-                .judgment(judgment(row))
-                .generation(flow[2])
-                .outputCheck(flow[3])
+                .judgment(flow[JUDGMENT])
+                .generation(flow[3])
+                .outputCheck(flow[4])
                 .result(result(row))
                 .build();
     }
 
+    // 진행 중이면 기록된 마지막 칸 다음을 RUNNING으로. 판정은 안 하는 검색도 있어 기록으로만 RUNNING
     private void fillMissing(AdminChatMonitoringStageResponse[] flow, boolean running) {
         int last = -1;
         for (int i = 0; i < flow.length; i++) {
-            if (flow[i] != null) last = i;
+            if (flow[i] != null && i != JUDGMENT) last = i;
             // 이미 RUNNING 칸 있으면 추가 안 함
             if (flow[i] != null && RUNNING.equals(flow[i].state())) running = false;
         }
+        int next = last + 1 == JUDGMENT ? last + 2 : last + 1;
         for (int i = 0; i < flow.length; i++) {
             if (flow[i] == null) {
-                flow[i] = running && i == last + 1 ? stage(RUNNING, null) : SKIP;
+                flow[i] = running && i == next ? stage(RUNNING, null) : SKIP;
             }
         }
+    }
+
+    // 검색 요청이 결과보다 많으면 아직 끝나지 않은 검색이 있다
+    private boolean searching(AdminChatMonitoringRow row) {
+        return row.running() && row.searchRequestCount() > row.searchStatuses().size();
+    }
+
+    // 판정은 검색 결과 기록 전에 grayZoneJudgments로 남는다. 그 전이면 판정 중
+    private boolean judging(AdminChatMonitoringRow row) {
+        return searching(row) && row.lastSearchGrayZone() && !"grayZoneJudgments".equals(row.lastStage());
     }
 
     private AdminChatMonitoringStageResponse inputCheck(AdminChatMonitoringRow row) {
@@ -78,6 +91,8 @@ public class AdminChatMonitoringStageSummarizer {
 
     private AdminChatMonitoringStageResponse search(AdminChatMonitoringRow row) {
         List<String> statuses = row.searchStatuses();
+        // 판정 중이면 판정 칸이 RUNNING. 앞선 검색 결과가 있으면 그 요약을 보여 준다
+        if (searching(row) && (!judging(row) || statuses.isEmpty())) return stage(RUNNING, null);
         if (statuses.isEmpty()) {
             if (row.planAnswer()) return stage(PASSED, "요금제");
             if (row.comparisonAnswer()) return stage(PASSED, "비교");
@@ -95,14 +110,16 @@ public class AdminChatMonitoringStageSummarizer {
                 : stage(PASSED, count);
     }
 
+    // 판정기 장애(verdict FAILED)는 빨강, 정상 판정으로 걸러진 건 노랑. 전부 걸러져 0건이면 검색 칸이 빨강이다
     private AdminChatMonitoringStageResponse judgment(AdminChatMonitoringRow row) {
+        if (judging(row)) return stage(RUNNING, null);
         int total = row.judgmentKept().size();
-        if (total == 0) return SKIP;
+        if (total == 0) return null;
+        long failed = row.judgmentVerdicts().stream().filter("FAILED"::equals).count();
+        if (failed > 0) return stage(FAILED, "판정 실패 " + failed + "건");
         long kept = row.judgmentKept().stream().filter(Boolean.TRUE::equals).count();
         String label = kept + "/" + total;
-        if (kept == 0) return stage(FAILED, label);
-        if (row.judgmentVerdicts().contains("FAILED") || kept < total) return stage(PARTIAL, label);
-        return stage(PASSED, label);
+        return kept < total ? stage(PARTIAL, label) : stage(PASSED, label);
     }
 
     private AdminChatMonitoringStageResponse generation(AdminChatMonitoringRow row) {

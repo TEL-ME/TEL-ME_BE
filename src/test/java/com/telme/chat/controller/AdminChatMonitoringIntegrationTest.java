@@ -117,6 +117,8 @@ class AdminChatMonitoringIntegrationTest {
                 RETURNING execution_id
                 """, Long.class, sessionId, runningMessageId);
         traceRepository.updateStage(runningExecutionId, "analysis", "{\"action\":\"PROCEED\"}", false);
+        // 판정이 붙는 검색을 요청했고 아직 판정, 결과 기록 전
+        traceRepository.updateStage(runningExecutionId, "searchRequests", "{\"grayZone\":true}", true);
         insertGuardEvent(sessionId, runningMessageId, "[\"MASKED\"]");
     }
 
@@ -135,13 +137,15 @@ class AdminChatMonitoringIntegrationTest {
         mockMvc.perform(admin(get(URL).param("beforeId", String.valueOf(runningMessageId + 1)).param("size", "3")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.items", hasSize(3)))
-                // 진행 중: 라우팅까지 기록, 검색 칸이 진행 중
+                // 진행 중: 판정 붙는 검색 요청까지 기록 → 검색, 판정 칸 진행 중, 생성은 아직
                 .andExpect(jsonPath("$.result.items[0].messageId").value(runningMessageId))
                 .andExpect(jsonPath("$.result.items[0].status").value("RUNNING"))
-                .andExpect(jsonPath("$.result.items[0].lastStage").value("analysis"))
+                .andExpect(jsonPath("$.result.items[0].lastStage").value("searchRequests"))
                 .andExpect(jsonPath("$.result.items[0].stages.inputCheck.state").value("PARTIAL"))
                 .andExpect(jsonPath("$.result.items[0].stages.inputCheck.label").value("마스킹"))
                 .andExpect(jsonPath("$.result.items[0].stages.search.state").value("RUNNING"))
+                .andExpect(jsonPath("$.result.items[0].stages.judgment.state").value("RUNNING"))
+                .andExpect(jsonPath("$.result.items[0].stages.generation.state").value("SKIPPED"))
                 .andExpect(jsonPath("$.result.items[0].stages.result.state").value("RUNNING"))
                 // 차단: 실행 없음
                 .andExpect(jsonPath("$.result.items[1].messageId").value(blockedMessageId))
@@ -190,7 +194,7 @@ class AdminChatMonitoringIntegrationTest {
     }
 
     @Test
-    @DisplayName("실패 행: JSONPath 요약이 겹친 FAQ는 한 번만 세고 verdict null 원소도 처리한다")
+    @DisplayName("실패 행: 겹친 FAQ는 한 번만 세고, verdict null이 섞여도 판정 실패를 FAILED로 본다")
     void 실패_행_요약() throws Exception {
         mockMvc.perform(admin(get(URL).param("beforeId", String.valueOf(completedMessageId)).param("size", "1")))
                 .andExpect(jsonPath("$.result.items[0].messageId").value(failedMessageId))
@@ -198,8 +202,8 @@ class AdminChatMonitoringIntegrationTest {
                 .andExpect(jsonPath("$.result.items[0].errorCode").value("CHAT500-0"))
                 .andExpect(jsonPath("$.result.items[0].stages.search.state").value("PARTIAL"))
                 .andExpect(jsonPath("$.result.items[0].stages.search.label").value("재검색 2건"))
-                .andExpect(jsonPath("$.result.items[0].stages.judgment.state").value("PARTIAL"))
-                .andExpect(jsonPath("$.result.items[0].stages.judgment.label").value("1/2"))
+                .andExpect(jsonPath("$.result.items[0].stages.judgment.state").value("FAILED"))
+                .andExpect(jsonPath("$.result.items[0].stages.judgment.label").value("판정 실패 1건"))
                 .andExpect(jsonPath("$.result.items[0].stages.outputCheck.state").value("FAILED"))
                 .andExpect(jsonPath("$.result.items[0].stages.outputCheck.label").value("차단"))
                 .andExpect(jsonPath("$.result.items[0].stages.result.label").value("실패"));
@@ -264,7 +268,7 @@ class AdminChatMonitoringIntegrationTest {
         mockMvc.perform(admin(get(URL + "/{id}", runningExecutionId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.status").value("RUNNING"))
-                .andExpect(jsonPath("$.result.timeline", hasSize(1)))
+                .andExpect(jsonPath("$.result.timeline", hasSize(2)))
                 .andExpect(jsonPath("$.result.inputCheckActions[0]").value("MASKED"));
     }
 

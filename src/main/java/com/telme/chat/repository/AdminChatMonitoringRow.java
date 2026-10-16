@@ -27,6 +27,9 @@ public record AdminChatMonitoringRow(
         String intent,
         List<String> inputActions,
         String analysisAction,
+        // searchRequests 개수와 마지막 요청의 grayZone(판정 붙는 검색인지)
+        int searchRequestCount,
+        boolean lastSearchGrayZone,
         // searchResults[*].status
         List<String> searchStatuses,
         // searchResults[*].sources[*].faqId
