@@ -55,7 +55,7 @@ public class ConditionExtractor {
                     .filter(condition -> notSaidByUser(userQuery, condition))
                     .filter(condition -> notKnown(payload.known(), condition))
                     .filter(condition -> notAskedAlready(conditions, condition))
-                    .ifPresent(conditions::add);
+                    .ifPresent(condition -> addOrMergeAge(conditions, condition));
             if (conditions.size() == MAX_CONDITIONS) {
                 break;
             }
@@ -140,6 +140,21 @@ public class ConditionExtractor {
             log.info("[조건 뽑기] 같은 내용을 다시 묻는 조건을 버립니다. key={}", condition.key());
         }
         return !duplicate;
+    }
+
+    // 같은 대상의 나이 기준이 여럿이면 나이 하나로 묻는다. 하나를 버리면 남은 기준이 확인되지 않는다
+    private void addOrMergeAge(List<MissingCondition> kept, MissingCondition condition) {
+        String subject = ConditionGrounding.ageSubject(condition.question());
+        for (int i = 0; subject != null && i < kept.size(); i++) {
+            MissingCondition each = kept.get(i);
+            if (subject.equals(ConditionGrounding.ageSubject(each.question()))) {
+                log.info("[조건 뽑기] 같은 대상의 나이 기준을 한 질문으로 합칩니다. key={}", condition.key());
+                kept.set(i, new MissingCondition(
+                        each.key(), ConditionGrounding.mergedAgeQuestion(each.question()), List.of(), each.evidence()));
+                return;
+            }
+        }
+        kept.add(condition);
     }
 
     private boolean notSaidByUser(String userQuery, MissingCondition condition) {

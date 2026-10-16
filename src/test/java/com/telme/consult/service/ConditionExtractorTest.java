@@ -264,6 +264,39 @@ class ConditionExtractorTest {
     }
 
     @Test
+    @DisplayName("같은 대상의 나이 기준이 여럿이면 나이 하나로 묻는다")
+    void 나이_기준은_하나로_합친다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[
+                 {"key":"age_14","question":"만 14세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 미만은 가입할 수 없습니다."},
+                 {"key":"age_18","question":"만 18세 이하이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 이상 18세 이하는 동의서가 필요합니다."}]}""");
+
+        List<MissingCondition> conditions = extractor.extract(1L, "가입하고 싶어요", List.of(ageSource()));
+
+        assertThat(conditions).singleElement().satisfies(condition -> {
+            assertThat(condition.key()).isEqualTo("age_14");
+            assertThat(condition.question()).isEqualTo("나이가 어떻게 되시나요?");
+            assertThat(condition.selectable()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("대상이 다른 나이 기준은 따로 묻는다")
+    void 대상이_다른_나이는_따로_묻는다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[
+                 {"key":"age_14","question":"가입하시는 분이 만 14세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 미만은 가입할 수 없습니다."},
+                 {"key":"age_18","question":"동의하시는 분이 만 19세 이상이신가요?","options":["예","아니요"],
+                  "evidence":"만 14세 이상 18세 이하는 동의서가 필요합니다."}]}""");
+
+        assertThat(extractor.extract(1L, "가입하고 싶어요", List.of(ageSource())))
+                .extracting(MissingCondition::key).containsExactly("age_14", "age_18");
+    }
+
+    @Test
     @DisplayName("주 모델 응답을 읽지 못하면 대체 모델로 다시 뽑는다")
     void 응답을_읽지_못하면_대체_모델로_뽑는다() {
         LlmClient fallback = mock(LlmClient.class);
