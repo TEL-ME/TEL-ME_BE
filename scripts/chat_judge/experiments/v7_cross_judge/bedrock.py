@@ -48,18 +48,8 @@ def bedrock_schema(schema):
 
 
 def v7_quality_request(model, turn, previous):
-    payload = v6.quality_request(model, turn, previous)
-    data = json.loads(payload["messages"][1]["content"])
-    data["referenceGroups"] = copy.deepcopy(turn["fixture"].get("qualityReferenceGroups", []))
-    payload["messages"][0]["content"] += (
-        "\nEach referenceGroups entry has questionPart and alternatives. Assess the questionPart "
-        "using every validated alternative in that same group; never borrow another group's facts. "
-        "questionPart labels identify what to assess and are not policy evidence. Only FAQ answer "
-        "text is reference policy evidence. Alternatives may differ in extra details; require only "
-        "facts responsive to the user's question."
-    )
-    payload["messages"][1]["content"] = judge.canonical(data)
-    return payload
+    # 정답 묶음 형식과 지시는 V6 충족도 판정과 같다
+    return v6.quality_request(model, turn, previous)
 
 
 class BedrockJudge:
@@ -205,6 +195,9 @@ class BedrockJudge:
         return record
 
     def quality(self, turn, previous):
+        rule = v6.rule_quality(turn)
+        if rule:
+            return rule
         stage = self.stage("question_resolution", v7_quality_request(self.config["modelId"], turn, previous))
         if "result" in stage:
             try:
@@ -239,8 +232,8 @@ class BedrockJudge:
                 citation["properties"]["quote"]["enum"] = allowed_quotes
         evidence_rubric = (v6.EVIDENCE_RUBRIC + "\nIf a part is ENOUGH, provide at least one exact "
                            "FAQ answer quote. If no exact supporting quote can be selected, use UNCERTAIN.")
-        evidence = self.stage("faq_answerability", payload("faq_answerability", evidence_rubric,
-                               evidence_schema, evidence_input))
+        evidence = v6.rule_evidence(evidence_input) or self.stage(
+            "faq_answerability", payload("faq_answerability", evidence_rubric, evidence_schema, evidence_input))
         record = {"stages": {"refusal": refusal, "evidence": evidence}}
         if "result" not in refusal or "result" not in evidence:
             record["error"] = "; ".join(stage.get("error", "") for stage in (refusal, evidence) if "error" in stage)

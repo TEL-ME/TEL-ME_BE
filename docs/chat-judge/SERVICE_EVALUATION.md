@@ -17,7 +17,7 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_chat_pipeline_eval --capture .measure/기존실행/capture.json
 ```
 
-`--limit`은 대화 수다. 기본 입력은 [`chat_pipeline_quality_v1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v1.json)이며 500개의 카탈로그 질문과 8개 흐름 회귀 대화로 구성된다. 기대 동작과 복수 정답은 평가용으로만 사용하며 답변 생성 모델에 전달하지 않는다.
+`--limit`은 대화 수다. 기본 입력은 [`chat_pipeline_quality_v1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v1.json)이며 500개의 카탈로그 질문과 8개 흐름 회귀 대화로 구성된다. 고객 말투 질문, FAQ로 답할 수 없는 질문, 멀티턴을 담은 [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json)은 `--fixture`로 지정한다(구성은 [README](README.md#평가셋)). 기대 동작과 복수 정답은 평가용으로만 사용하며 답변 생성 모델에 전달하지 않는다.
 
 로컬의 `telme-postgres`, `telme-ollama`, `telme-judge-vllm-bounded` 컨테이너와 모델이 필요하다. 평가 DB는 `telme_judge_eval`로 고정하며 개발 DB에 쓰지 않는다. 생성과 채점 모델을 동시에 GPU에 올리지 않는다. Docker가 꺼져 있으면 시작을 시도하며 vLLM 대신 Ollama로 채점하는 대체 경로는 없다.
 
@@ -37,6 +37,21 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 주장 추출에는 답변 원문만 제공한다. 추출한 원문 구간을 검증한 뒤 별도 호출에서 FAQ와 의미를 비교한다. 조건이나 부정을 지운 문장으로 바꾸거나 질문의 내용을 답변 주장으로 넣으면 미채점이다. 애매한 근거 관계는 `REVIEW`이며 억지로 성공이나 환각으로 확정하지 않는다.
 
 질문 충족도에는 정답 FAQ를 제공한다. 이는 검색에 실패해 답변을 보류한 경우도 미답으로 찾기 위해서다. 반면 근거성과 답변 불가 판단에는 정답 라벨을 제공하지 않는다. 복합 질문의 정답 묶음은 `[[첫 질문의 대체 FAQ들], [둘째 질문의 대체 FAQ들]]`이다. 묶음 내부는 OR, 묶음 사이는 AND다.
+
+충족도 판정의 정답은 질문 부분마다 `{"questionPart", "alternatives": [{"sourceId", "answer"}]}`로 넘긴다. FAQ 질문 문구는 넣지 않는다. 예전 형식(`question`, `sourceId`, `answer` 한 개)도 같은 형식으로 바꿔 읽는다. vLLM 실행기와 Bedrock 재채점은 같은 충족도 프롬프트와 입력을 쓴다.
+
+## 코드가 정하는 판정
+
+기대 동작과 실제 응답 유형만으로 정해지는 판정은 모델을 부르지 않고 코드가 정한다. 원시 기록에는 `rule`로 남는다.
+
+| 규칙 | 조건 | 판정 |
+| --- | --- | --- |
+| `EMPTY_SOURCES` | 생성에 전달된 FAQ 근거가 없음 | 근거 충분성은 모든 질문 부분이 `INSUFFICIENT`. 답변이 거절이면 보류는 `APPROPRIATE` |
+| `OUT_OF_SCOPE_QUESTION` | 기대 동작이 `OUT_OF_SCOPE` | 충족도 `NOT_APPLICABLE`. 범위 밖 질문에 사실을 지어내면 근거성과 보류 축에서 걸린다 |
+| `CLARIFICATION_ACCEPTED` | 기대 동작이 `ANSWER_OR_CLARIFY`이고 응답이 되묻기 | 충족도 `NOT_APPLICABLE`, 정상 처리 |
+| `UNNECESSARY_CLARIFICATION` | 그 밖의 기대 동작에서 응답이 되묻기 | 충족도 `MISSED`, 발견 사항 `UNNECESSARY_CLARIFICATION` |
+
+`ANSWER_OR_CLARIFY`는 FAQ 답이 고객 조건(약정 개월, 나이, 본인·대리인 등)에 따라 갈리는데 질문에 그 조건이 없는 경우다. 경우별로 모두 답하면 `ANSWER`와 같이 판정한다. 되물은 조건이 질문과 맞는지, 이미 답한 조건을 다시 묻는지는 아직 사람이 판정한다.
 
 ## 점수 해석
 

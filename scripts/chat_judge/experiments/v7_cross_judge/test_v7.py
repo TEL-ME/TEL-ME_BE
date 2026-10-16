@@ -176,5 +176,20 @@ class V7Test(unittest.TestCase):
         self.assertEqual(["grounding"], row["consensus"]["regressionMismatches"])
 
 
+
+class V7RuleTest(unittest.TestCase):
+    def test_bedrock_judge_uses_the_same_rules_without_calling_the_model(self):
+        fake = FakeClient({"answerIsRefusal": True, "reason": "거절"})
+        client = bedrock.BedrockJudge("qwen", client=fake)
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"]["expectedBehavior"] = "OUT_OF_SCOPE"
+        self.assertEqual("OUT_OF_SCOPE_QUESTION", client.quality(turn, [])["rule"])
+        self.assertEqual([], fake.requests)
+        record = client.abstention({"question": "내 이번 달 요금 얼마야?", "answer": "확인할 수 없어요.", "sources": []})
+        self.assertEqual(1, len(fake.requests))
+        self.assertEqual("EMPTY_SOURCES", record["stages"]["evidence"]["rule"])
+        self.assertEqual("INSUFFICIENT", record["result"]["evidenceAnswerability"])
+
+
 if __name__ == "__main__":
     unittest.main()

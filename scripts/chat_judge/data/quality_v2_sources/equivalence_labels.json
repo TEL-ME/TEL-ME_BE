@@ -1,0 +1,1744 @@
+[
+ {
+  "unit": "V2-SINGLE-A001:0:0",
+  "accepted": [
+   "BILLING-0052",
+   "BILLING-0094"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A002:0:0",
+  "accepted": [
+   "BILLING-0032",
+   "BILLING-0004",
+   "BILLING-0053",
+   "BILLING-0123",
+   "BILLING-0046"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A003:0:0",
+  "accepted": [
+   "BILLING-0014",
+   "BILLING-0049",
+   "BILLING-0063",
+   "BILLING-0035",
+   "BILLING-0042",
+   "BILLING-0119"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A004:0:0",
+  "accepted": [
+   "BILLING-0097",
+   "BILLING-0069"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A005:0:0",
+  "accepted": [
+   "BILLING-0007",
+   "BILLING-0133",
+   "BILLING-0140",
+   "BILLING-0021",
+   "BILLING-0028"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A006:0:0",
+  "accepted": [
+   "BILLING-0147",
+   "BILLING-0154",
+   "BILLING-0140",
+   "BILLING-0042"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A007:0:0",
+  "accepted": [
+   "BILLING-0115",
+   "BILLING-0059"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A008:0:0",
+  "accepted": [
+   "BILLING-0053",
+   "BILLING-0088"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A009:0:0",
+  "accepted": [
+   "BILLING-0016",
+   "BILLING-0023",
+   "BILLING-0121",
+   "BILLING-0135",
+   "BILLING-0002",
+   "BILLING-0107",
+   "BILLING-0128"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A010:0:0",
+  "accepted": [
+   "BILLING-0003",
+   "BILLING-0094"
+  ],
+  "note": "currentGold BILLING-0024 답변에 60일 직권 해지가 없어 REJECT"
+ },
+ {
+  "unit": "V2-SINGLE-A011:0:0",
+  "accepted": [
+   "BILLING-0020",
+   "BILLING-0139",
+   "BILLING-0146",
+   "BILLING-0076",
+   "BILLING-0041",
+   "BILLING-0062"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A012:0:0",
+  "accepted": [
+   "BILLING-0008",
+   "BILLING-0071",
+   "BILLING-0148",
+   "BILLING-0001",
+   "BILLING-0127"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A013:0:0",
+  "accepted": [
+   "DEVICE-0016"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A014:0:0",
+  "accepted": [
+   "DEVICE-0028",
+   "DEVICE-0032",
+   "DEVICE-0044"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A015:0:0",
+  "accepted": [
+   "DEVICE-0028",
+   "DEVICE-0040"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A016:0:0",
+  "accepted": [
+   "DEVICE-0012",
+   "DEVICE-0032",
+   "DEVICE-0056",
+   "DEVICE-0052"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A017:0:0",
+  "accepted": [
+   "DEVICE-0013",
+   "DEVICE-0033",
+   "DEVICE-0029",
+   "DEVICE-0049",
+   "DEVICE-0053",
+   "DEVICE-0061"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A018:0:0",
+  "accepted": [
+   "DEVICE-0020",
+   "DEVICE-0084",
+   "DEVICE-0052",
+   "DEVICE-0024"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A019:0:0",
+  "accepted": [
+   "DEVICE-0119"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A020:0:0",
+  "accepted": [
+   "DEVICE-0096"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A021:0:0",
+  "accepted": [
+   "DEVICE-0116",
+   "DEVICE-0124",
+   "DEVICE-0108"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A022:0:0",
+  "accepted": [
+   "DEVICE-0006",
+   "DEVICE-0110",
+   "DEVICE-0026",
+   "DEVICE-0054",
+   "DEVICE-0050"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A023:0:0",
+  "accepted": [
+   "DEVICE-0048",
+   "DEVICE-0128",
+   "DEVICE-0008"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A024:0:0",
+  "accepted": [
+   "DEVICE-0025",
+   "DEVICE-0105",
+   "DEVICE-0029",
+   "DEVICE-0033",
+   "DEVICE-0049",
+   "DEVICE-0057",
+   "DEVICE-0005",
+   "DEVICE-0101"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A025:0:0",
+  "accepted": [
+   "NAME_CHANGE-0021"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A026:0:0",
+  "accepted": [
+   "NAME_CHANGE-0007",
+   "NAME_CHANGE-0025"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A027:0:0",
+  "accepted": [
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0086",
+   "NAME_CHANGE-0017",
+   "NAME_CHANGE-0026",
+   "NAME_CHANGE-0080",
+   "NAME_CHANGE-0074",
+   "NAME_CHANGE-0089"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A028:0:0",
+  "accepted": [
+   "NAME_CHANGE-0063",
+   "NAME_CHANGE-0057"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A029:0:0",
+  "accepted": [
+   "NAME_CHANGE-0038",
+   "NAME_CHANGE-0059",
+   "NAME_CHANGE-0011",
+   "NAME_CHANGE-0056",
+   "NAME_CHANGE-0035"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A030:0:0",
+  "accepted": [
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0086",
+   "NAME_CHANGE-0047",
+   "NAME_CHANGE-0026",
+   "NAME_CHANGE-0071",
+   "NAME_CHANGE-0050",
+   "NAME_CHANGE-0032"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A031:0:0",
+  "accepted": [
+   "NAME_CHANGE-0058"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A032:0:0",
+  "accepted": [
+   "NAME_CHANGE-0057"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A033:0:0",
+  "accepted": [
+   "NAME_CHANGE-0039",
+   "NAME_CHANGE-0051",
+   "NAME_CHANGE-0063",
+   "NAME_CHANGE-0006",
+   "NAME_CHANGE-0066"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A034:0:0",
+  "accepted": [
+   "NAME_CHANGE-0061"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A035:0:0",
+  "accepted": [
+   "NAME_CHANGE-0005"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A036:0:0",
+  "accepted": [
+   "NAME_CHANGE-0008",
+   "NAME_CHANGE-0020"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A037:0:0",
+  "accepted": [
+   "PLAN-0081",
+   "PLAN-0026"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A038:0:0",
+  "accepted": [
+   "PLAN-0036"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A039:0:0",
+  "accepted": [
+   "PLAN-0047",
+   "PLAN-0107"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A040:0:0",
+  "accepted": [
+   "PLAN-0066",
+   "PLAN-0041",
+   "PLAN-0036",
+   "PLAN-0126"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A041:0:0",
+  "accepted": [
+   "PLAN-0003",
+   "PLAN-0103",
+   "PLAN-0023",
+   "PLAN-0043",
+   "PLAN-0038",
+   "PLAN-0063"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A042:0:0",
+  "accepted": [
+   "PLAN-0091",
+   "PLAN-0106",
+   "PLAN-0041"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A043:0:0",
+  "accepted": [
+   "PLAN-0127",
+   "PLAN-0122",
+   "PLAN-0132",
+   "PLAN-0042"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A044:0:0",
+  "accepted": [
+   "PLAN-0058"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A045:0:0",
+  "accepted": [
+   "PLAN-0140",
+   "PLAN-0145"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A046:0:0",
+  "accepted": [
+   "PLAN-0026"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A047:0:0",
+  "accepted": [
+   "PLAN-0136"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A048:0:0",
+  "accepted": [
+   "PLAN-0065",
+   "PLAN-0115",
+   "PLAN-0145",
+   "PLAN-0140"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A049:0:0",
+  "accepted": [
+   "PORTING-0073",
+   "PORTING-0081"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A050:0:0",
+  "accepted": [
+   "PORTING-0091",
+   "PORTING-0111",
+   "PORTING-0075",
+   "PORTING-0087"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A051:0:0",
+  "accepted": [
+   "PORTING-0073",
+   "PORTING-0081",
+   "PORTING-0001",
+   "PORTING-0017",
+   "PORTING-0025",
+   "PORTING-0029",
+   "PORTING-0037"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A052:0:0",
+  "accepted": [
+   "PORTING-0034",
+   "PORTING-0074",
+   "PORTING-0042",
+   "PORTING-0026",
+   "PORTING-0082"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A053:0:0",
+  "accepted": [
+   "PORTING-0005",
+   "PORTING-0085",
+   "PORTING-0049"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A054:0:0",
+  "accepted": [
+   "PORTING-0053"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A055:0:0",
+  "accepted": [
+   "PORTING-0097"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A056:0:0",
+  "accepted": [
+   "PORTING-0058",
+   "PORTING-0026",
+   "PORTING-0082",
+   "PORTING-0002",
+   "PORTING-0078"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A057:0:0",
+  "accepted": [
+   "PORTING-0071",
+   "PORTING-0111",
+   "PORTING-0091",
+   "PORTING-0011",
+   "PORTING-0007"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A058:0:0",
+  "accepted": [
+   "PORTING-0044"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A059:0:0",
+  "accepted": [
+   "PORTING-0012",
+   "PORTING-0060",
+   "PORTING-0040",
+   "PORTING-0104"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A060:0:0",
+  "accepted": [
+   "PORTING-0074",
+   "PORTING-0078",
+   "PORTING-0082",
+   "PORTING-0034"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A061:0:0",
+  "accepted": [
+   "ROAMING-0014",
+   "ROAMING-0034",
+   "ROAMING-0069",
+   "ROAMING-0074",
+   "ROAMING-0064"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A062:0:0",
+  "accepted": [
+   "ROAMING-0077",
+   "ROAMING-0017",
+   "ROAMING-0007"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A063:0:0",
+  "accepted": [
+   "ROAMING-0062",
+   "ROAMING-0057"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A064:0:0",
+  "accepted": [
+   "ROAMING-0046",
+   "ROAMING-0066",
+   "ROAMING-0061"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A065:0:0",
+  "accepted": [
+   "ROAMING-0045"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A066:0:0",
+  "accepted": [
+   "ROAMING-0037",
+   "ROAMING-0042",
+   "ROAMING-0007",
+   "ROAMING-0017"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A067:0:0",
+  "accepted": [
+   "ROAMING-0018",
+   "ROAMING-0028",
+   "ROAMING-0033",
+   "ROAMING-0023",
+   "ROAMING-0053",
+   "ROAMING-0058"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A068:0:0",
+  "accepted": [
+   "ROAMING-0006",
+   "ROAMING-0031",
+   "ROAMING-0051",
+   "ROAMING-0066",
+   "ROAMING-0061",
+   "ROAMING-0026"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A069:0:0",
+  "accepted": [
+   "ROAMING-0051",
+   "ROAMING-0061",
+   "ROAMING-0026",
+   "ROAMING-0021"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A070:0:0",
+  "accepted": [
+   "ROAMING-0031",
+   "ROAMING-0066",
+   "ROAMING-0051",
+   "ROAMING-0021"
+  ],
+  "note": "requiredFacts가 가격 두 개뿐이라 한 달 체류에 어떤 상품이 나은지라는 질문의 결론은 담지 않음"
+ },
+ {
+  "unit": "V2-SINGLE-A071:0:0",
+  "accepted": [
+   "ROAMING-0011",
+   "ROAMING-0001",
+   "ROAMING-0061",
+   "ROAMING-0056",
+   "ROAMING-0021",
+   "ROAMING-0026"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A072:0:0",
+  "accepted": [
+   "ROAMING-0044",
+   "ROAMING-0029",
+   "ROAMING-0079",
+   "ROAMING-0004",
+   "ROAMING-0019",
+   "ROAMING-0054"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A073:0:0",
+  "accepted": [
+   "SERVICE-0036",
+   "SERVICE-0016",
+   "SERVICE-0031",
+   "SERVICE-0051",
+   "SERVICE-0056"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A074:0:0",
+  "accepted": [
+   "SERVICE-0031",
+   "SERVICE-0016",
+   "SERVICE-0056",
+   "SERVICE-0021"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A075:0:0",
+  "accepted": [
+   "SERVICE-0032",
+   "SERVICE-0042",
+   "SERVICE-0047",
+   "SERVICE-0052",
+   "SERVICE-0027"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A076:0:0",
+  "accepted": [
+   "SERVICE-0052",
+   "SERVICE-0042",
+   "SERVICE-0047",
+   "SERVICE-0002",
+   "SERVICE-0022",
+   "SERVICE-0017"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A077:0:0",
+  "accepted": [
+   "SERVICE-0004",
+   "SERVICE-0029",
+   "SERVICE-0019"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A078:0:0",
+  "accepted": [
+   "SERVICE-0006",
+   "SERVICE-0001",
+   "SERVICE-0041",
+   "SERVICE-0056",
+   "SERVICE-0016"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A079:0:0",
+  "accepted": [
+   "SERVICE-0003",
+   "SERVICE-0023",
+   "SERVICE-0063",
+   "SERVICE-0018"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A080:0:0",
+  "accepted": [
+   "SERVICE-0051"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A081:0:0",
+  "accepted": [
+   "SERVICE-0034",
+   "SERVICE-0019",
+   "SERVICE-0059",
+   "SERVICE-0049",
+   "SERVICE-0029",
+   "SERVICE-0004"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A082:0:0",
+  "accepted": [
+   "SERVICE-0065",
+   "SERVICE-0005",
+   "SERVICE-0010",
+   "SERVICE-0020",
+   "SERVICE-0055"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A083:0:0",
+  "accepted": [
+   "SERVICE-0055",
+   "SERVICE-0010"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A084:0:0",
+  "accepted": [
+   "SERVICE-0035",
+   "SERVICE-0040",
+   "SERVICE-0025"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A085:0:0",
+  "accepted": [
+   "SUBSCRIBE-0110"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A086:0:0",
+  "accepted": [
+   "SUBSCRIBE-0079",
+   "SUBSCRIBE-0059",
+   "SUBSCRIBE-0039",
+   "SUBSCRIBE-0055",
+   "SUBSCRIBE-0119"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A087:0:0",
+  "accepted": [
+   "SUBSCRIBE-0013",
+   "SUBSCRIBE-0073",
+   "SUBSCRIBE-0069",
+   "SUBSCRIBE-0033"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A088:0:0",
+  "accepted": [
+   "SUBSCRIBE-0088"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A089:0:0",
+  "accepted": [
+   "SUBSCRIBE-0123",
+   "SUBSCRIBE-0127",
+   "SUBSCRIBE-0011",
+   "SUBSCRIBE-0115",
+   "SUBSCRIBE-0119",
+   "SUBSCRIBE-0031",
+   "SUBSCRIBE-0111",
+   "SUBSCRIBE-0071"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A090:0:0",
+  "accepted": [
+   "SUBSCRIBE-0127",
+   "SUBSCRIBE-0007",
+   "SUBSCRIBE-0067",
+   "SUBSCRIBE-0103",
+   "SUBSCRIBE-0011",
+   "SUBSCRIBE-0027"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A091:0:0",
+  "accepted": [
+   "SUBSCRIBE-0001",
+   "SUBSCRIBE-0109",
+   "SUBSCRIBE-0029"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A092:0:0",
+  "accepted": [
+   "SUBSCRIBE-0051",
+   "SUBSCRIBE-0079",
+   "SUBSCRIBE-0055",
+   "SUBSCRIBE-0075",
+   "SUBSCRIBE-0103"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A093:0:0",
+  "accepted": [
+   "SUBSCRIBE-0112",
+   "SUBSCRIBE-0056",
+   "SUBSCRIBE-0116",
+   "SUBSCRIBE-0044",
+   "SUBSCRIBE-0124",
+   "SUBSCRIBE-0100"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A094:0:0",
+  "accepted": [
+   "SUBSCRIBE-0096"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A095:0:0",
+  "accepted": [
+   "SUBSCRIBE-0122",
+   "SUBSCRIBE-0110"
+  ],
+  "note": "초등학생 자녀 명의 가능 여부(연령 조건)는 requiredFacts에 없음"
+ },
+ {
+  "unit": "V2-SINGLE-A096:0:0",
+  "accepted": [
+   "SUBSCRIBE-0033",
+   "SUBSCRIBE-0038",
+   "SUBSCRIBE-0001"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A097:0:0",
+  "accepted": [
+   "TERMINATE-0084"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A098:0:0",
+  "accepted": [
+   "TERMINATE-0058",
+   "TERMINATE-0110",
+   "TERMINATE-0114",
+   "TERMINATE-0006",
+   "TERMINATE-0042",
+   "TERMINATE-0102"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A099:0:0",
+  "accepted": [
+   "TERMINATE-0095"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A100:0:0",
+  "accepted": [
+   "TERMINATE-0112",
+   "TERMINATE-0104"
+  ],
+  "note": "반년 체류인데 정지는 연 90일 한도라 전 기간을 덮지 못한다는 점은 requiredFacts에 없음"
+ },
+ {
+  "unit": "V2-SINGLE-A101:0:0",
+  "accepted": [
+   "TERMINATE-0009",
+   "TERMINATE-0025"
+  ],
+  "note": "0081/0029/0097 매장 채널 누락"
+ },
+ {
+  "unit": "V2-SINGLE-A102:0:0",
+  "accepted": [
+   "TERMINATE-0025",
+   "TERMINATE-0033",
+   "TERMINATE-0045"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A103:0:0",
+  "accepted": [
+   "TERMINATE-0004",
+   "TERMINATE-0020",
+   "TERMINATE-0008",
+   "TERMINATE-0028",
+   "TERMINATE-0024",
+   "TERMINATE-0048"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A104:0:0",
+  "accepted": [
+   "TERMINATE-0049",
+   "TERMINATE-0081",
+   "TERMINATE-0077",
+   "TERMINATE-0001",
+   "TERMINATE-0073"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A105:0:0",
+  "accepted": [
+   "TERMINATE-0047",
+   "TERMINATE-0007",
+   "TERMINATE-0003",
+   "TERMINATE-0027",
+   "TERMINATE-0019"
+  ],
+  "note": "0079는 이미 해지 후 청구 문의 상황이라 REJECT"
+ },
+ {
+  "unit": "V2-SINGLE-A106:0:0",
+  "accepted": [
+   "TERMINATE-0071",
+   "TERMINATE-0031",
+   "TERMINATE-0023",
+   "TERMINATE-0043",
+   "TERMINATE-0047"
+  ],
+  "note": "0091은 이미 해지 후 청구 문의 상황이라 REJECT"
+ },
+ {
+  "unit": "V2-SINGLE-A107:0:0",
+  "accepted": [
+   "TERMINATE-0001",
+   "TERMINATE-0073"
+  ],
+  "note": "0041은 일할 계산 누락"
+ },
+ {
+  "unit": "V2-SINGLE-A108:0:0",
+  "accepted": [
+   "TERMINATE-0096"
+  ],
+  "note": "0100은 '계약이 없어진다' 누락, 0104는 해지 시 요금 없음 누락"
+ },
+ {
+  "unit": "V2-SINGLE-A109:0:0",
+  "accepted": [
+   "USIM-0018",
+   "USIM-0054",
+   "USIM-0074"
+  ],
+  "note": "'신분증만 있으면 된다'(충분조건)형 0002/0026/0094/0034는 필요성(없으면 안 됨)을 말하지 않아 REJECT"
+ },
+ {
+  "unit": "V2-SINGLE-A110:0:0",
+  "accepted": [
+   "USIM-0060",
+   "USIM-0028",
+   "USIM-0076",
+   "USIM-0040",
+   "USIM-0012",
+   "USIM-0080",
+   "USIM-0036"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A111:0:0",
+  "accepted": [
+   "USIM-0012",
+   "USIM-0056",
+   "USIM-0076",
+   "USIM-0036"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A112:0:0",
+  "accepted": [
+   "USIM-0033"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A113:0:0",
+  "accepted": [
+   "USIM-0037",
+   "USIM-0077",
+   "USIM-0093"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A114:0:0",
+  "accepted": [
+   "USIM-0027",
+   "USIM-0035"
+  ],
+  "note": "0031/0039는 '새 단말' 기준 답이라 REJECT, 0047은 온라인 누락"
+ },
+ {
+  "unit": "V2-SINGLE-A115:0:0",
+  "accepted": [
+   "USIM-0030",
+   "USIM-0050"
+  ],
+  "note": "0090/0046은 화자 시점(딸·아들)이 이 고객 상황과 맞지 않아 REJECT"
+ },
+ {
+  "unit": "V2-SINGLE-A116:0:0",
+  "accepted": [
+   "USIM-0072",
+   "USIM-0032",
+   "USIM-0104"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A117:0:0",
+  "accepted": [
+   "USIM-0106",
+   "USIM-0010",
+   "USIM-0034",
+   "USIM-0058",
+   "USIM-0074"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A118:0:0",
+  "accepted": [
+   "USIM-0112",
+   "USIM-0104",
+   "USIM-0032",
+   "USIM-0108",
+   "USIM-0072"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A119:0:0",
+  "accepted": [
+   "USIM-0016",
+   "USIM-0024",
+   "USIM-0088",
+   "USIM-0092",
+   "USIM-0064",
+   "USIM-0084",
+   "USIM-0004"
+  ]
+ },
+ {
+  "unit": "V2-SINGLE-A120:0:0",
+  "accepted": [
+   "USIM-0114",
+   "USIM-0034",
+   "USIM-0026"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C001:0:0",
+  "accepted": [
+   "ROAMING-0011",
+   "ROAMING-0061",
+   "ROAMING-0001",
+   "ROAMING-0056",
+   "ROAMING-0021",
+   "ROAMING-0026"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C001:0:1",
+  "accepted": [
+   "USIM-0060",
+   "USIM-0012",
+   "USIM-0040",
+   "USIM-0080",
+   "USIM-0028",
+   "USIM-0076",
+   "USIM-0036"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C002:0:0",
+  "accepted": [
+   "PORTING-0071",
+   "PORTING-0111",
+   "PORTING-0091",
+   "PORTING-0011",
+   "PORTING-0007"
+  ],
+  "note": "0063은 '가능합니다'로 시작하는 다른 상황 답이라 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C002:0:1",
+  "accepted": [
+   "DEVICE-0006",
+   "DEVICE-0110",
+   "DEVICE-0010",
+   "DEVICE-0026",
+   "DEVICE-0054",
+   "DEVICE-0050"
+  ],
+  "note": "질문이 할부 처리도 묻는데 requiredFacts에 '완납 또는 승계'가 없음(ACCEPT한 답은 모두 포함)"
+ },
+ {
+  "unit": "V2-COMPOUND-C003:0:0",
+  "accepted": [
+   "NAME_CHANGE-0038",
+   "NAME_CHANGE-0059",
+   "NAME_CHANGE-0011",
+   "NAME_CHANGE-0056"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C003:0:1",
+  "accepted": [
+   "PORTING-0058",
+   "PORTING-0082",
+   "PORTING-0026",
+   "PORTING-0002"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C004:0:0",
+  "accepted": [
+   "BILLING-0007",
+   "BILLING-0133",
+   "BILLING-0021",
+   "BILLING-0028"
+  ],
+  "note": "0140은 무료 대상(이메일·모바일)을 본문에 명시하지 않아 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C004:0:1",
+  "accepted": [
+   "SERVICE-0055",
+   "SERVICE-0020",
+   "SERVICE-0010"
+  ],
+  "note": "질문이 해지확인서와의 비교라 두 증명서를 함께 다룬 답만 ACCEPT"
+ },
+ {
+  "unit": "V2-COMPOUND-C005:0:0",
+  "accepted": [
+   "TERMINATE-0058",
+   "TERMINATE-0110",
+   "TERMINATE-0114",
+   "TERMINATE-0006",
+   "TERMINATE-0042",
+   "TERMINATE-0102"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C005:0:1",
+  "accepted": [
+   "DEVICE-0025",
+   "DEVICE-0029",
+   "DEVICE-0033",
+   "DEVICE-0049",
+   "DEVICE-0057",
+   "DEVICE-0005",
+   "DEVICE-0101"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C006:0:0",
+  "accepted": [
+   "TERMINATE-0004",
+   "TERMINATE-0020",
+   "TERMINATE-0008",
+   "TERMINATE-0028",
+   "TERMINATE-0024",
+   "TERMINATE-0048"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C006:0:1",
+  "accepted": [
+   "ROAMING-0051",
+   "ROAMING-0061",
+   "ROAMING-0026",
+   "ROAMING-0021",
+   "ROAMING-0001"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C007:0:0",
+  "accepted": [
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0026",
+   "NAME_CHANGE-0074"
+  ],
+  "note": "requiredFacts에 질문이 묻는 '수수료 없음'이 없음; '매장에서'가 빠진 0086/0017/0080/0089는 엄격 기준으로 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C007:0:1",
+  "accepted": [
+   "SUBSCRIBE-0051",
+   "SUBSCRIBE-0079",
+   "SUBSCRIBE-0055",
+   "SUBSCRIBE-0075",
+   "SUBSCRIBE-0103"
+  ],
+  "note": "0027은 첫 문장 '다음 날 됩니다'가 매장 질문에 오답처럼 읽혀 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C008:0:0",
+  "accepted": [
+   "DEVICE-0119"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C008:0:1",
+  "accepted": [
+   "USIM-0037",
+   "USIM-0077",
+   "USIM-0093"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C009:0:0",
+  "accepted": [
+   "PLAN-0003",
+   "PLAN-0063",
+   "PLAN-0103",
+   "PLAN-0023",
+   "PLAN-0043",
+   "PLAN-0038"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C009:0:1",
+  "accepted": [
+   "BILLING-0032",
+   "BILLING-0053",
+   "BILLING-0123",
+   "BILLING-0004",
+   "BILLING-0046"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C010:0:0",
+  "accepted": [
+   "SUBSCRIBE-0013",
+   "SUBSCRIBE-0073",
+   "SUBSCRIBE-0069",
+   "SUBSCRIBE-0033"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C010:0:1",
+  "accepted": [
+   "PLAN-0065",
+   "PLAN-0115",
+   "PLAN-0145",
+   "PLAN-0140"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C011:0:0",
+  "accepted": [
+   "SERVICE-0032"
+  ],
+  "note": "나머지는 1월 갱신만 말하고 '바로 반영되지 않는다'를 명시하지 않음"
+ },
+ {
+  "unit": "V2-COMPOUND-C011:0:1",
+  "accepted": [
+   "BILLING-0008",
+   "BILLING-0071",
+   "BILLING-0148",
+   "BILLING-0001",
+   "BILLING-0127"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C012:0:0",
+  "accepted": [
+   "DEVICE-0013",
+   "DEVICE-0033",
+   "DEVICE-0029",
+   "DEVICE-0057",
+   "DEVICE-0053",
+   "DEVICE-0061"
+  ],
+  "note": "질문이 수수료도 묻는데 requiredFacts에 연 5.9%가 없음(ACCEPT한 답은 모두 포함)"
+ },
+ {
+  "unit": "V2-COMPOUND-C012:0:1",
+  "accepted": [
+   "USIM-0027",
+   "USIM-0035",
+   "USIM-0047",
+   "USIM-0091"
+  ],
+  "note": "0031/0039는 '새 단말' 기준 답이라 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C013:0:0",
+  "accepted": [
+   "USIM-0012",
+   "USIM-0056",
+   "USIM-0076",
+   "USIM-0036"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C013:0:1",
+  "accepted": [
+   "SERVICE-0004",
+   "SERVICE-0029",
+   "SERVICE-0019"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C014:0:0",
+  "accepted": [
+   "TERMINATE-0001",
+   "TERMINATE-0073",
+   "TERMINATE-0041"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C014:0:1",
+  "accepted": [
+   "SERVICE-0035",
+   "SERVICE-0040",
+   "SERVICE-0025"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C015:0:0",
+  "accepted": [
+   "PORTING-0005",
+   "PORTING-0085",
+   "PORTING-0049",
+   "PORTING-0025"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C015:0:1",
+  "accepted": [
+   "SERVICE-0003",
+   "SERVICE-0023",
+   "SERVICE-0028",
+   "SERVICE-0063",
+   "SERVICE-0018"
+  ],
+  "note": "requiredFacts가 질문과 어긋남: 질문은 토요일 마감(17:00)·일요일 휴무를 묻는데 사실은 평일 시간만 있음"
+ },
+ {
+  "unit": "V2-COMPOUND-C016:0:0",
+  "accepted": [
+   "NAME_CHANGE-0007",
+   "NAME_CHANGE-0025",
+   "NAME_CHANGE-0004"
+  ],
+  "note": "0022는 회사 양도인 대상 답이라 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C016:0:1",
+  "accepted": [
+   "USIM-0106",
+   "USIM-0010",
+   "USIM-0034",
+   "USIM-0058",
+   "USIM-0074"
+  ],
+  "note": "질문이 본인 방문과의 차이도 묻는데 requiredFacts에 '본인은 신분증만'이 없음; 0078은 본인 서류를 다루지 않아 REJECT"
+ },
+ {
+  "unit": "V2-COMPOUND-C017:0:0",
+  "accepted": [
+   "PLAN-0081",
+   "PLAN-0026"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C017:0:1",
+  "accepted": [
+   "SUBSCRIBE-0123",
+   "SUBSCRIBE-0127",
+   "SUBSCRIBE-0115",
+   "SUBSCRIBE-0011",
+   "SUBSCRIBE-0119",
+   "SUBSCRIBE-0031",
+   "SUBSCRIBE-0111",
+   "SUBSCRIBE-0071"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C018:0:0",
+  "accepted": [
+   "PORTING-0044"
+  ],
+  "note": "나머지는 신청 창구(고객센터·매장) 누락"
+ },
+ {
+  "unit": "V2-COMPOUND-C018:0:1",
+  "accepted": [
+   "DEVICE-0028",
+   "DEVICE-0032",
+   "DEVICE-0044"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C019:0:0",
+  "accepted": [
+   "BILLING-0020",
+   "BILLING-0139",
+   "BILLING-0146",
+   "BILLING-0041",
+   "BILLING-0076",
+   "BILLING-0062"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C019:0:1",
+  "accepted": [
+   "SERVICE-0036",
+   "SERVICE-0051",
+   "SERVICE-0031",
+   "SERVICE-0016",
+   "SERVICE-0056"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C020:0:0",
+  "accepted": [
+   "SUBSCRIBE-0096"
+  ]
+ },
+ {
+  "unit": "V2-COMPOUND-C020:0:1",
+  "accepted": [
+   "TERMINATE-0025",
+   "TERMINATE-0033",
+   "TERMINATE-0045"
+  ],
+  "note": "질문이 이번 달 요금도 묻는데 requiredFacts에 일할 계산이 없음(ACCEPT한 답은 모두 포함)"
+ },
+ {
+  "unit": "V2-MULTI-M001:0:0",
+  "accepted": [
+   "BILLING-0117"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M001:1:0",
+  "accepted": [
+   "BILLING-0087",
+   "BILLING-0003",
+   "BILLING-0094",
+   "BILLING-0045"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M002:0:0",
+  "accepted": [
+   "BILLING-0123"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M002:1:0",
+  "accepted": [
+   "BILLING-0074",
+   "BILLING-0060",
+   "BILLING-0137",
+   "BILLING-0144",
+   "BILLING-0151"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M003:0:0",
+  "accepted": [
+   "DEVICE-0070",
+   "DEVICE-0090",
+   "DEVICE-0050",
+   "DEVICE-0054",
+   "DEVICE-0106",
+   "DEVICE-0026",
+   "DEVICE-0002"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M003:1:0",
+  "accepted": [
+   "DEVICE-0004",
+   "DEVICE-0060"
+  ],
+  "note": "질문은 반품(무르기)인데 0024/0084/0104/0052는 교환 답이라 REJECT"
+ },
+ {
+  "unit": "V2-MULTI-M004:0:0",
+  "accepted": [
+   "DEVICE-0090",
+   "DEVICE-0098",
+   "DEVICE-0070",
+   "DEVICE-0046",
+   "DEVICE-0010"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M004:1:0",
+  "accepted": [
+   "DEVICE-0024",
+   "DEVICE-0084",
+   "DEVICE-0032"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M005:0:0",
+  "accepted": [
+   "NAME_CHANGE-0003",
+   "NAME_CHANGE-0012",
+   "NAME_CHANGE-0054",
+   "NAME_CHANGE-0060",
+   "NAME_CHANGE-0072"
+  ],
+  "note": "0052는 '네'로 시작해 질문에 반대로 읽혀 REJECT"
+ },
+ {
+  "unit": "V2-MULTI-M005:1:0",
+  "accepted": [
+   "NAME_CHANGE-0048",
+   "NAME_CHANGE-0052",
+   "NAME_CHANGE-0036",
+   "NAME_CHANGE-0084"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M006:0:0",
+  "accepted": [
+   "NAME_CHANGE-0088"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M006:1:0",
+  "accepted": [
+   "NAME_CHANGE-0085",
+   "NAME_CHANGE-0073"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M007:0:0",
+  "accepted": [
+   "PLAN-0060",
+   "PLAN-0005",
+   "PLAN-0040",
+   "PLAN-0095"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M007:1:0",
+  "accepted": [
+   "PLAN-0037"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M008:0:0",
+  "accepted": [
+   "PLAN-0137"
+  ],
+  "note": "나머지는 '대용량 이용이 어렵다'는 실사용 차이 누락"
+ },
+ {
+  "unit": "V2-MULTI-M008:1:0",
+  "accepted": [
+   "PLAN-0135"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M009:0:0",
+  "accepted": [
+   "PORTING-0014",
+   "PORTING-0034",
+   "PORTING-0082",
+   "PORTING-0026",
+   "PORTING-0002"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M009:1:0",
+  "accepted": [
+   "PORTING-0023",
+   "PORTING-0031",
+   "PORTING-0027",
+   "PORTING-0039"
+  ],
+  "note": "0111은 '두 달째' 상황 답이라 REJECT"
+ },
+ {
+  "unit": "V2-MULTI-M010:0:0",
+  "accepted": [
+   "PORTING-0102",
+   "PORTING-0002"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M010:1:0",
+  "accepted": [
+   "PORTING-0065",
+   "PORTING-0105",
+   "PORTING-0085"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M011:0:0",
+  "accepted": [
+   "ROAMING-0060",
+   "ROAMING-0055",
+   "ROAMING-0030"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M011:1:0",
+  "accepted": [
+   "ROAMING-0024"
+  ],
+  "note": "0039는 '나눠쓰기 신청' 누락"
+ },
+ {
+  "unit": "V2-MULTI-M012:0:0",
+  "accepted": [
+   "ROAMING-0056",
+   "ROAMING-0061"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M012:1:0",
+  "accepted": [
+   "ROAMING-0025"
+  ],
+  "note": "0045는 가입 상태 확인 채널에 홈페이지 누락"
+ },
+ {
+  "unit": "V2-MULTI-M013:0:0",
+  "accepted": [
+   "SERVICE-0014",
+   "SERVICE-0029",
+   "SERVICE-0019",
+   "SERVICE-0004"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M013:1:0",
+  "accepted": [
+   "SERVICE-0033"
+  ],
+  "note": "0018/0023/0028은 운영시간만 말하고 '19시 이후 방문 어렵다'를 명시하지 않음"
+ },
+ {
+  "unit": "V2-MULTI-M014:0:0",
+  "accepted": [
+   "SERVICE-0008"
+  ],
+  "note": "0063은 '방문 전 확인 권장' 누락"
+ },
+ {
+  "unit": "V2-MULTI-M014:1:0",
+  "accepted": [
+   "SERVICE-0042"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M015:0:0",
+  "accepted": [
+   "SUBSCRIBE-0011",
+   "SUBSCRIBE-0119"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M015:1:0",
+  "accepted": [
+   "SUBSCRIBE-0099",
+   "SUBSCRIBE-0087"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M016:0:0",
+  "accepted": [
+   "SUBSCRIBE-0020",
+   "SUBSCRIBE-0056",
+   "SUBSCRIBE-0028",
+   "SUBSCRIBE-0092",
+   "SUBSCRIBE-0100"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M016:1:0",
+  "accepted": [
+   "SUBSCRIBE-0084"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M017:0:0",
+  "accepted": [
+   "TERMINATE-0021",
+   "TERMINATE-0073",
+   "TERMINATE-0041"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M017:1:0",
+  "accepted": [
+   "TERMINATE-0003",
+   "TERMINATE-0007",
+   "TERMINATE-0011",
+   "TERMINATE-0015",
+   "TERMINATE-0019"
+  ],
+  "note": "0031/0043은 '일시 납부가 원칙' 누락"
+ },
+ {
+  "unit": "V2-MULTI-M018:0:0",
+  "accepted": [
+   "TERMINATE-0069",
+   "TERMINATE-0081",
+   "TERMINATE-0009",
+   "TERMINATE-0029",
+   "TERMINATE-0077"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M018:1:0",
+  "accepted": [
+   "TERMINATE-0011",
+   "TERMINATE-0015",
+   "TERMINATE-0075",
+   "TERMINATE-0083",
+   "TERMINATE-0007"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M019:0:0",
+  "accepted": [
+   "USIM-0027",
+   "USIM-0035"
+  ],
+  "note": "0039/0031은 '새 단말' 기준, 0083/0047은 온라인 누락"
+ },
+ {
+  "unit": "V2-MULTI-M019:1:0",
+  "accepted": [
+   "USIM-0007",
+   "USIM-0059"
+  ]
+ },
+ {
+  "unit": "V2-MULTI-M020:0:0",
+  "accepted": [
+   "USIM-0097"
+  ],
+  "note": "0005/0009는 7,700원이 둘 다 같다는 점이 명시되지 않음"
+ },
+ {
+  "unit": "V2-MULTI-M020:1:0",
+  "accepted": [
+   "USIM-0092",
+   "USIM-0072",
+   "USIM-0032"
+  ]
+ }
+]

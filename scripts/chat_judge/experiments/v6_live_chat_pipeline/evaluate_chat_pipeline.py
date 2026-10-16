@@ -30,6 +30,7 @@ PARTIAL: at least one requested fact is accurately conveyed, but another is miss
 MISSED: no substantive requested fact is answered, the answer refuses, or it gives a wrong core answer.
 NOT_APPLICABLE: a refusal is appropriate for an out-of-scope question; this is not an answered fact.
 REVIEW: the reference itself cannot resolve what the question requires, or references conflict.
+For expectedBehavior ANSWER_OR_CLARIFY, judge an actual answer exactly like ANSWER.
 For expectedBehavior ABSTAIN, a clear no-information response satisfies the requested safe behavior;
 for PARTIAL_ANSWER, accurate answerable facts plus explicit withholding of unavailable facts are required.
 For STORE_LOOKUP, generic 'not connected' guidance is MISSED, not COMPLETE or NOT_APPLICABLE.
@@ -50,6 +51,11 @@ PARTIAL_ANSWER, credit the accurately answered part and record the withheld part
 When checking a requested document list, compare each returned item with the reference. Do not
 credit a related but different document or invent a missing requirement from the answer itself.
 Do not judge grounding in this step. Judge only question resolution and reference correctness.
+Each referenceGroups entry has questionPart and alternatives. Assess the questionPart
+using every validated alternative in that same group; never borrow another group's facts.
+questionPart labels identify what to assess and are not policy evidence. Only FAQ answer
+text is reference policy evidence. Alternatives may differ in extra details; require only
+facts responsive to the user's question.
 Return JSON only."""
 
 REFUSAL_RUBRIC = """Determine whether the TEL-ME answer refuses the user's question.
@@ -116,6 +122,63 @@ QUALITY_SCHEMA = {
 }
 
 
+# 질문 충족도에서 답변 가능한 질문으로 보는 기대 동작
+ANSWERABLE_BEHAVIORS = {"ANSWER", "PARTIAL_ANSWER", "ANSWER_OR_CLARIFY"}
+# 모델을 부르지 않고 정한 질문 충족도 규칙. 이 규칙의 NOT_APPLICABLE은 요청을 정상 처리한 것으로 본다
+HANDLED_QUALITY_RULES = {"OUT_OF_SCOPE_QUESTION", "CLARIFICATION_ACCEPTED"}
+
+
+def reference_groups(fixture):
+    """질문 부분마다 인정하는 대체 FAQ 답변 묶음. 예전 형식(question, sourceId, answer 한 개)도 같은 형식으로 바꾼다.
+    예전 형식의 question은 FAQ 질문 문구라 정책 근거로 넘기지 않는다. 단일 질문은 고객 원문을,
+    복합 질문은 정리해 둔 하위 질문을 질문 부분 이름으로 쓴다(V7과 같은 기준)."""
+    references = fixture.get("qualityReferenceGroups", [])
+    groups = []
+    for group in references:
+        if "alternatives" in group:
+            alternatives = group["alternatives"]
+            part = group["questionPart"]
+        else:
+            alternatives = [group]
+            part = fixture["question"] if len(references) == 1 else group.get("question", fixture["question"])
+        groups.append({"questionPart": part, "alternatives": [
+            {key: alternative[key] for key in ("sourceId", "answer") if key in alternative}
+            for alternative in alternatives]})
+    return groups
+
+
+def is_clarification(turn):
+    return (turn.get("outputMessage") or {}).get("messageType") == "CLARIFICATION"
+
+
+def rule_quality(turn):
+    """기대 동작과 응답 유형만으로 정해지는 질문 충족도. 해당하지 않으면 None이고 모델이 판정한다."""
+    expected = turn["fixture"]["expectedBehavior"]
+    if expected == "OUT_OF_SCOPE":
+        outcome, rule, reason = "NOT_APPLICABLE", "OUT_OF_SCOPE_QUESTION", "서비스 범위 밖 질문이라 답변 충족도를 따지지 않는다."
+    elif is_clarification(turn) and expected == "ANSWER_OR_CLARIFY":
+        outcome, rule, reason = "NOT_APPLICABLE", "CLARIFICATION_ACCEPTED", "고객 조건에 따라 답이 갈리는 질문이라 조건을 되물은 것을 정상 처리로 본다."
+    elif is_clarification(turn):
+        outcome, rule, reason = "MISSED", "UNNECESSARY_CLARIFICATION", "조건 없이 답할 수 있는 질문인데 되물어 이 턴에서 답하지 않았다."
+    else:
+        return None
+    count = max(1, len(turn["fixture"].get("qualityReferenceGroups", [])))
+    result = {"groups": [{"groupIndex": index, "outcome": outcome, "answerQuotes": [], "reason": reason}
+                         for index in range(count)]}
+    return {"rule": rule, "result": validate_quality(result, turn), "durationMs": 0}
+
+
+def rule_evidence(evidence_input):
+    """생성에 전달된 FAQ 근거가 없으면 모델 없이 모든 질문 부분을 근거 부족으로 본다. 근거가 있으면 None."""
+    if evidence_input.get("sources"):
+        return None
+    reason = "생성에 전달된 FAQ 근거가 없다."
+    return {"rule": "EMPTY_SOURCES", "durationMs": 0, "result": {
+        "parts": [{"partIndex": index, "evidenceAnswerability": "INSUFFICIENT", "evidenceQuotes": [], "reason": reason}
+                  for index in range(len(evidence_input["questionParts"]))],
+        "reason": reason}}
+
+
 def load_json(path):
     if str(path).endswith(".gz"):
         with gzip.open(path, "rt", encoding="utf-8") as stream:
@@ -176,10 +239,7 @@ def quality_request(model, turn, previous):
     data = {"question": fixture["question"], "previousTurns": previous,
             "assistantAnswer": (turn.get("outputMessage") or {}).get("content", ""),
             "expectedBehavior": fixture["expectedBehavior"],
-            "referenceGroups": [
-                {key: group[key] for key in ("sourceId", "answer") if key in group}
-                for group in fixture.get("qualityReferenceGroups", [])
-            ],
+            "referenceGroups": reference_groups(fixture),
             "requiredFacts": fixture.get("requiredFacts", [])}
     data["allowedAnswerQuotes"] = list(dict.fromkeys(
         line.strip() for line in (data["assistantAnswer"] or "").splitlines() if line.strip()))
@@ -296,11 +356,11 @@ def abstention_chat(url, model, data, timeout):
         quote_items["maxItems"] = 0
     refusal = abstention_stage(url, model, "answer_refusal", REFUSAL_RUBRIC,
                                REFUSAL_SCHEMA, refusal_input, timeout)
-    evidence = abstention_stage(url, model, "faq_answerability", EVIDENCE_RUBRIC,
-                                schema, evidence_input, timeout)
+    evidence = rule_evidence(evidence_input) or abstention_stage(url, model, "faq_answerability", EVIDENCE_RUBRIC,
+                                                                 schema, evidence_input, timeout)
     record = {"stages": {"refusal": refusal, "evidence": evidence},
-              "request": {"refusal": refusal["request"], "evidence": evidence["request"]},
-              "inputSha256": judge.sha256([refusal["request"], evidence["request"]]),
+              "request": {"refusal": refusal["request"], "evidence": evidence.get("request")},
+              "inputSha256": judge.sha256([refusal["request"], evidence.get("request") or evidence["rule"]]),
               "durationMs": round((time.monotonic() - started) * 1000),
               "promptTokens": sum(stage.get("promptTokens") or 0 for stage in (refusal, evidence)),
               "outputTokens": sum(stage.get("outputTokens") or 0 for stage in (refusal, evidence))}
@@ -381,10 +441,12 @@ def finalize_turn(turn, item):
     item["hasUnsupportedClaim"] = grounding["overall"] == "UNSUPPORTED" if grounding else None
     expected = turn["fixture"]["expectedBehavior"]
     item["resolutionComplete"] = all(group["outcome"] == "COMPLETE" for group in groups) if groups else None
-    if expected == "OUT_OF_SCOPE" and groups:
+    # 범위 밖 질문과 답이 없는 질문은 Judge가 안전한 안내를 NOT_APPLICABLE로 판정하면 요청을 처리한 것이다
+    if (expected in {"OUT_OF_SCOPE", "ABSTAIN"} or item.get("quality", {}).get("rule") in HANDLED_QUALITY_RULES) and groups:
         item["resolutionComplete"] = all(group["outcome"] == "NOT_APPLICABLE" for group in groups)
     if (grounding and grounding["overall"] == "NOT_APPLICABLE"
-            and expected in {"ANSWER", "PARTIAL_ANSWER"}
+            and expected in ANSWERABLE_BEHAVIORS
+            and item.get("quality", {}).get("rule") not in HANDLED_QUALITY_RULES
             and any(group["outcome"] in {"COMPLETE", "PARTIAL"} for group in groups)):
         item["requiresReview"] = True
     decision = (item["abstentionDecision"] or {}).get("label")
@@ -405,6 +467,9 @@ def finalize_turn(turn, item):
         item["findings"].append(decision)
     if item["requiresReview"]:
         item["findings"].append("HUMAN_REVIEW")
+    # 되묻기는 기대 동작과 실제 응답 유형으로 판정한다. 되물은 조건이 적절한지는 사람이 본다
+    if is_clarification(turn) and expected != "ANSWER_OR_CLARIFY":
+        item["findings"].append("UNNECESSARY_CLARIFICATION")
     retrieval = item["retrieval"]
     if retrieval["applicable"] and retrieval["candidateHits"] < retrieval["groupCount"]:
         item["findings"].append("RETRIEVAL_MISS")
@@ -443,7 +508,7 @@ def summarize(items, planned=None):
         "axisScored": {axis: sum(item.get(axis, {}).get("result") is not None for item in items)
                        for axis in ("grounding", "quality", "abstention")},
     }
-    behavior_answers = [item for item in items if item.get("expectedBehavior") in {"ANSWER", "PARTIAL_ANSWER"}]
+    behavior_answers = [item for item in items if item.get("expectedBehavior") in ANSWERABLE_BEHAVIORS]
     judged_answers = [item for item in behavior_answers if item.get("quality", {}).get("result")
                      and not any(group["outcome"] == "REVIEW" for group in item["quality"]["result"]["groups"])]
     metrics["completeAnswerRate"] = rate(sum(item["resolutionComplete"] for item in judged_answers), len(judged_answers))
@@ -465,6 +530,21 @@ def summarize(items, planned=None):
     metrics["pipelineP50Ms"] = numeric[math.ceil(len(numeric) * .5) - 1] if numeric else None
     metrics["pipelineP95Ms"] = numeric[math.ceil(len(numeric) * .95) - 1] if numeric else None
     return metrics
+
+
+def rescore(evaluation, capture):
+    """저장한 Judge 판정을 모델 호출 없이 지금 채점 규칙으로 다시 집계한다."""
+    turns = {(case["caseId"], index): turn for case in capture["cases"] for index, turn in enumerate(case["turns"])}
+    for item in evaluation["turns"]:
+        finalize_turn(turns[(item["caseId"], item["turnIndex"])], item)
+    planned = capture.get("plannedTurnCount", len(evaluation["turns"]))
+    evaluation["summary"] = summarize(evaluation["turns"], planned)
+    evaluation["byCategory"] = {category: summarize([item for item in evaluation["turns"] if item["category"] == category])
+        for category in sorted({item["category"] for item in evaluation["turns"] if item["category"]})}
+    evaluation["bySuite"] = {suite: summarize([item for item in evaluation["turns"] if item["suite"] == suite])
+                             for suite in sorted({item["suite"] for item in evaluation["turns"]})}
+    evaluation["rescoredWithEvaluatorSha256"] = judge.sha256(Path(__file__).read_bytes())
+    return evaluation
 
 
 def report(evaluation):
@@ -553,13 +633,12 @@ def evaluate(capture, catalog, url, model, workers=8, timeout=240, retries=1, on
         attempts = []
         for attempt in range(retries + 1):
             if axis == "quality":
-                record = quality_chat(url, model, turn, previous, timeout)
+                record = rule_quality(turn) or quality_chat(url, model, turn, previous, timeout)
             else:
                 data = judge.prompt_data(turn, previous, "grounding" if axis == "grounding" else "adequacy")
                 data["sources"] = item["sources"]
                 if axis == "abstention":
-                    data["questionParts"] = [part["question"] for part in
-                                             turn["fixture"].get("qualityReferenceGroups", [])]
+                    data["questionParts"] = [group["questionPart"] for group in reference_groups(turn["fixture"])]
                     record = abstention_chat(url, model, data, timeout)
                 else:
                     try:

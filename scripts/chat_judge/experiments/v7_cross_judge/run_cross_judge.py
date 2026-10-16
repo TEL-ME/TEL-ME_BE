@@ -146,7 +146,7 @@ def evaluate(capture, catalog, clients, *, workers=3, prior=None, on_checkpoint=
                 abstention_data = judge.prompt_data(turn, previous, "adequacy")
                 abstention_data["sources"] = base["sources"]
                 abstention_data["questionParts"] = [group["questionPart"] for group in
-                                                   turn["fixture"].get("qualityReferenceGroups", [])]
+                                                   v6.reference_groups(turn["fixture"])]
                 item["abstention"] = client.abstention(abstention_data)
                 row["models"][name] = v6.finalize_turn(turn, item)
                 row["consensus"] = consensus(row["models"])

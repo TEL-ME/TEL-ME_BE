@@ -178,9 +178,9 @@ class PipelineEvaluationTest(unittest.TestCase):
         }]
         request = pipeline.quality_request("qwen", turn, [])
         data = json.loads(request["messages"][1]["content"])
-        self.assertEqual([{"sourceId": "BILLING-0001", "answer": "policy text lives here"}],
-                         data["referenceGroups"])
-        self.assertNotIn("question", data["referenceGroups"][0])
+        self.assertEqual([{"questionPart": turn["fixture"]["question"], "alternatives": [
+            {"sourceId": "BILLING-0001", "answer": "policy text lives here"}]}], data["referenceGroups"])
+        self.assertNotIn("faq question is metadata", request["messages"][1]["content"])
 
     def test_abstention_schema_binds_each_quote_to_its_actual_source(self):
         data = {"sources": [{"sourceId": "A", "answer": "월 1회 가능합니다."},
@@ -347,6 +347,72 @@ class PipelineEvaluationTest(unittest.TestCase):
         self.assertEqual("original", evaluation["turns"][0]["grounding"]["evaluationAttempts"][0]["rawResponse"])
         self.assertEqual(100, evaluation["summary"]["qualitySuccess"]["percent"])
         self.assertTrue(checkpoints)
+
+
+
+class RuleBasedJudgmentTest(unittest.TestCase):
+    """모델 없이 정할 수 있는 판정은 코드가 정하고 모델을 부르지 않는다."""
+
+    def turn(self, behavior="ANSWER", message_type="ANSWER", content="월 1회 바꿀 수 있습니다."):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"]["expectedBehavior"] = behavior
+        turn["outputMessage"] = {"content": content, "messageType": message_type}
+        return turn
+
+    @patch.object(pipeline, "abstention_stage")
+    def test_empty_sources_are_insufficient_without_calling_the_evidence_model(self, stage):
+        stage.return_value = {"request": {"stage": "refusal"}, "result": {"answerIsRefusal": True, "reason": "거절"}}
+        record = pipeline.abstention_chat("http://unused", "judge", {
+            "question": "너겟 요금제 혜택이 뭐예요?", "answer": "확인할 수 있는 정보가 없어요.", "sources": []}, 5)
+        self.assertEqual(1, stage.call_count)
+        self.assertEqual("answer_refusal", stage.call_args.args[2])
+        self.assertEqual("EMPTY_SOURCES", record["stages"]["evidence"]["rule"])
+        self.assertEqual("INSUFFICIENT", record["result"]["evidenceAnswerability"])
+        grounding = {"overall": "NOT_APPLICABLE", "claims": []}
+        self.assertEqual("APPROPRIATE", judge.decide_abstention(grounding, record["result"])["label"])
+
+    @patch.object(pipeline, "quality_chat")
+    def test_out_of_scope_quality_is_not_applicable_without_a_model_call(self, quality_chat):
+        turn = self.turn("OUT_OF_SCOPE", content="통신 서비스 관련 질문을 알려 주세요.")
+        record = pipeline.rule_quality(turn)
+        self.assertEqual("OUT_OF_SCOPE_QUESTION", record["rule"])
+        item = scored_item(turn, overall="NOT_APPLICABLE", refusal=True, enough="INSUFFICIENT")
+        item["quality"] = record
+        pipeline.finalize_turn(turn, item)
+        self.assertTrue(item["resolutionComplete"])
+        quality_chat.assert_not_called()
+
+    def test_clarification_is_accepted_only_when_the_answer_depends_on_a_customer_condition(self):
+        accepted = self.turn("ANSWER_OR_CLARIFY", "CLARIFICATION", "약정 기간이 얼마나 남으셨나요?")
+        record = pipeline.rule_quality(accepted)
+        self.assertEqual("CLARIFICATION_ACCEPTED", record["rule"])
+        item = scored_item(accepted, overall="NOT_APPLICABLE")
+        item["quality"] = record
+        pipeline.finalize_turn(accepted, item)
+        self.assertTrue(item["resolutionComplete"])
+        self.assertNotIn("UNNECESSARY_CLARIFICATION", item["findings"])
+        self.assertTrue(item["answerQualityPass"])
+
+        needless = self.turn("ANSWER", "CLARIFICATION", "어떤 요금제를 쓰고 계신가요?")
+        record = pipeline.rule_quality(needless)
+        self.assertEqual("MISSED", record["result"]["groups"][0]["outcome"])
+        item = scored_item(needless, overall="NOT_APPLICABLE")
+        item["quality"] = record
+        pipeline.finalize_turn(needless, item)
+        self.assertIn("UNNECESSARY_CLARIFICATION", item["findings"])
+        self.assertFalse(item["answerQualityPass"])
+
+    def test_safe_no_information_reply_satisfies_an_unanswerable_question(self):
+        turn = self.turn("ABSTAIN", content="관련 안내 정보를 찾지 못했습니다.")
+        item = scored_item(turn, overall="NOT_APPLICABLE", quality="NOT_APPLICABLE", refusal=True, enough="INSUFFICIENT")
+        self.assertTrue(item["resolutionComplete"])
+        self.assertTrue(item["answerQualityPass"])
+        missed = scored_item(turn, overall="NOT_APPLICABLE", quality="MISSED", refusal=True, enough="INSUFFICIENT")
+        self.assertFalse(missed["answerQualityPass"])
+
+    def test_an_actual_answer_is_still_judged_by_the_model(self):
+        self.assertIsNone(pipeline.rule_quality(self.turn("ANSWER_OR_CLARIFY")))
+        self.assertIsNone(pipeline.rule_quality(self.turn("ANSWER")))
 
 
 if __name__ == "__main__":

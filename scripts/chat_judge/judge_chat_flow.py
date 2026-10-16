@@ -236,7 +236,7 @@ def validate_capture(capture):
             if not isinstance(fixture, dict) or not fixture.get("question"):
                 raise ValueError("질문이 없는 평가 턴이 있습니다.")
             if fixture.get("expectedBehavior") not in {
-                "ANSWER", "PARTIAL_ANSWER", "ABSTAIN", "OUT_OF_SCOPE", "STORE_LOOKUP"
+                "ANSWER", "PARTIAL_ANSWER", "ABSTAIN", "OUT_OF_SCOPE", "STORE_LOOKUP", "ANSWER_OR_CLARIFY"
             }:
                 raise ValueError("알 수 없는 기대 동작입니다.")
             if fixture.get("expectedIntent") not in {"FAQ", "STORE", "BOTH", "UNKNOWN"}:

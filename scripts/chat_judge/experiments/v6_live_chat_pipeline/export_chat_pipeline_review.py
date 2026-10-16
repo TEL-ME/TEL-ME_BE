@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from scripts.chat_judge.experiments.v6_live_chat_pipeline.evaluate_chat_pipeline import load_json
+from scripts.chat_judge.experiments.v6_live_chat_pipeline.evaluate_chat_pipeline import load_json, reference_groups
 
 
 def review_report(result, capture):
@@ -50,8 +50,10 @@ def review_report(result, capture):
                 lines.extend([f"- {source['sourceId']}: {source.get('question', '')}", "", source["answer"], ""])
         if turn["fixture"].get("qualityReferenceGroups"):
             lines.extend(["**질문 충족도 비교용 정답 FAQ (생성 모델에 제공하지 않음)**", ""])
-            for reference in turn["fixture"]["qualityReferenceGroups"]:
-                lines.extend([f"- {reference['sourceId']}: {reference['question']}", "", reference["answer"], ""])
+            for group in reference_groups(turn["fixture"]):
+                lines.append(f"- 질문 부분: {group['questionPart']}")
+                for alternative in group["alternatives"]:
+                    lines.extend([f"  - {alternative['sourceId']}", "", alternative["answer"], ""])
     return "\n".join(lines) + "\n"
 
 
