@@ -24,7 +24,8 @@ public interface ClarificationTextGenerator {
         };
     }
 
-    record ClarificationPrompt(String systemPrompt, String userPrompt, String fallbackText) {}
+    // executionId는 모델 호출을 채팅 실행에 기록하기 위한 값이다. null이면 기록하지 않는다
+    record ClarificationPrompt(String systemPrompt, String userPrompt, String fallbackText, Long executionId) {}
 
     /** 고정 질문으로 전환할 수 있는 모델 오류. */
     class GenerationUnavailableException extends RuntimeException {

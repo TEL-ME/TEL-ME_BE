@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmErrorCode;
 import java.util.ArrayList;
@@ -390,6 +391,7 @@ class LlmComparisonEvidenceResolverTest {
         var requests = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llm).generate(requests.capture());
         assertThat(requests.getValue().consultRequestId()).isEqualTo(11L);
+        assertThat(requests.getValue().taskType()).isEqualTo(TaskType.EVIDENCE_CHECK);
     }
 
     private static FaqSearchResponse source(long id, String answer) {

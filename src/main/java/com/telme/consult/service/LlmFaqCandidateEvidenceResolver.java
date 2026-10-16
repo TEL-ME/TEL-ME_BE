@@ -63,7 +63,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                     .append(candidate.question()).append("\nA: ").append(candidate.answer()).append('\n');
         }
         var request = LlmRequest.builder()
-                .executionId(executionId).taskType(TaskType.ROUTING)
+                .executionId(executionId).taskType(TaskType.EVIDENCE_CHECK)
                 .consultRequestId(consultRequestId)
                 .systemPrompt(PROMPT)
                 .userPrompt("고객 질문: " + question + "\nFAQ 후보:\n" + context)
@@ -100,7 +100,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
             }
             // 모델이 ID는 맞게 찾고도 인용문을 의역할 수 있다. 원문 복사만 한 번 재시도한다.
             var retry = LlmRequest.builder()
-                    .executionId(executionId).taskType(TaskType.ROUTING)
+                    .executionId(executionId).taskType(TaskType.EVIDENCE_CHECK)
                     .consultRequestId(consultRequestId)
                     .systemPrompt("FAQ 답변(A)에서 고객 질문에 답하는 연속된 문구를 한 글자도 바꾸지 말고 "
                             + "복사하세요. 의역하거나 새 사실을 넣지 마세요. JSON만 출력하세요. "

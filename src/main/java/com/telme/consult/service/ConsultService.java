@@ -82,16 +82,27 @@ public class ConsultService {
         }
     }
 
-    // 대기 중인 질문은 다시 만들지 않는다.
+    /** 채팅 실행 밖(테스트 등)에서 준비할 때 쓴다. 되묻기 문장 생성 호출은 기록되지 않는다. */
     public PreparationResult prepareTurn(
             long sessionId,
             long requestId,
             Purpose purpose,
             Map<String, Condition> updates,
             LocationStatus locationStatus) {
+        return prepareTurn(sessionId, requestId, purpose, updates, locationStatus, null);
+    }
+
+    // 대기 중인 질문은 다시 만들지 않는다. executionId는 되묻기 문장 생성 호출 기록에 쓴다.
+    public PreparationResult prepareTurn(
+            long sessionId,
+            long requestId,
+            Purpose purpose,
+            Map<String, Condition> updates,
+            LocationStatus locationStatus,
+            Long executionId) {
         try {
             return new PreparationResult(
-                    prepare(sessionId, requestId, purpose, updates, locationStatus), null);
+                    prepare(sessionId, requestId, purpose, updates, locationStatus, executionId), null);
         } catch (ClarificationAlreadyPending pending) {
             if (updates.isEmpty()) {
                 return new PreparationResult(null, pending.messageId());
@@ -119,13 +130,24 @@ public class ConsultService {
         }
     }
 
-    // Chat에서 소유권 확인 후, 메시지 저장 트랜잭션 밖에서 호출한다.
+    /** 채팅 실행 밖(테스트 등)에서 준비할 때 쓴다. 되묻기 문장 생성 호출은 기록되지 않는다. */
     public PreparedTurn prepare(
             long sessionId,
             long requestId,
             Purpose purpose,
             Map<String, Condition> updates,
             LocationStatus locationStatus) {
+        return prepare(sessionId, requestId, purpose, updates, locationStatus, null);
+    }
+
+    // Chat에서 소유권 확인 후, 메시지 저장 트랜잭션 밖에서 호출한다.
+    public PreparedTurn prepare(
+            long sessionId,
+            long requestId,
+            Purpose purpose,
+            Map<String, Condition> updates,
+            LocationStatus locationStatus,
+            Long executionId) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("상담 준비는 메시지 저장 트랜잭션이 끝난 뒤 호출해야 합니다.");
         }
@@ -150,7 +172,7 @@ public class ConsultService {
             return new PreparedTurn(
                     sessionId,
                     snapshot.version(),
-                    dialogueService.decide(input),
+                    dialogueService.decide(input, executionId),
                     snapshot.clarificationPlan());
         }
         return new PreparedTurn(

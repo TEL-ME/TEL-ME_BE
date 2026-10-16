@@ -42,6 +42,8 @@ public class LlmGenerationRecorder {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(LlmRequest request, String model, String provider, Result result) {
         if (request.executionId() == null) {
+            // 채팅 실행 밖의 호출(관리자 테스트 API 등)은 의도적으로 남기지 않는다. 누락을 찾을 수 있게 흔적만 둔다
+            log.debug("[LlmGenerationRecorder] 실행 ID가 없어 호출 기록 생략 taskType={}", request.taskType());
             return;
         }
         String options = requestOptions(request, model, provider);
