@@ -74,6 +74,13 @@ public class Store {
     @Generated(event = {EventType.INSERT, EventType.UPDATE})
     private Instant updatedAt;
     
+    @Column(name = "created_by", updatable = false)
+    private Long createdBy;
+
+    // 수정·폐점은 잠금 번호를 올리는 touch·close 쿼리가 함께 바꾼다. 엔티티 저장이 옛 값으로 덮지 않도록 수정에서 뺀다
+    @Column(name = "updated_by", updatable = false)
+    private Long updatedBy;
+
     // 영업시간·업무만 바뀌면 stores 행이 그대로라 @Version은 오르지 않는다.
     @Column(name = "lock_version", nullable = false, insertable = false, updatable = false)
     @Generated(event = EventType.INSERT)

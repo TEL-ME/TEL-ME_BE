@@ -24,7 +24,7 @@ class FaqResolvedQuerySearchTest {
         var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
         String resolved = "[이전 발언] 분실 유심 재발급 [현재 질문] 가입 기간은 18개월입니다. 절차는요?";
         when(searches.search(any())).thenReturn(List.of());
-        when(selector.select(resolved, "유심 재발급 절차")).thenReturn(resolved);
+        when(selector.select(resolved, "유심 재발급 절차", 1L)).thenReturn(resolved);
         var provider = new FaqSearchAnswerProvider(searches, (input, results) -> null, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
                 new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(), selector);
@@ -33,7 +33,7 @@ class FaqResolvedQuerySearchTest {
 
         provider.prepare(input, false);
 
-        verify(selector).select(resolved, "유심 재발급 절차");
+        verify(selector).select(resolved, "유심 재발급 절차", 1L);
         verify(searches).search(any());
         assertThat(input.resolvedUserQuery()).contains("18개월");
     }

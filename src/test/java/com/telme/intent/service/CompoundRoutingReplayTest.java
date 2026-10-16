@@ -67,7 +67,8 @@ class CompoundRoutingReplayTest {
         String output = fixture.path("modelOutput").asText();
         Mockito.lenient().doAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+            if ((RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())
+                || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt()))) {
                 int count = MAPPER.readTree(request.userPrompt()).path("subQueries").size();
                 return MAPPER.writeValueAsString(Map.of("unsafe", java.util.Collections.nCopies(count, false)));
             }

@@ -15,6 +15,8 @@ public record AdminStoreDetailResponse(
         String status,
         List<StoreHoursResponse> hours,
         List<StoreServiceTypeResponse> services,
+        Long createdBy,
+        Long updatedBy,
         Instant createdAt,
         Instant updatedAt,
         Integer lockVersion

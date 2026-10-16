@@ -33,7 +33,12 @@ final class ChatEndSummaryData {
     }
 
     record Condition(long requestId, long originMessageId, String key, String value, String status,
-            String source, Long answeredMessageId, Integer answeredSequence) {}
+            String source, Long answeredMessageId, Integer answeredSequence, Long askedMessageId) {
+        Condition(long requestId, long originMessageId, String key, String value, String status,
+                String source, Long answeredMessageId, Integer answeredSequence) {
+            this(requestId, originMessageId, key, value, status, source, answeredMessageId, answeredSequence, null);
+        }
+    }
 
     record Input(long sessionId, int throughSequence, Long executionId,
             List<Message> messages, List<Request> requests, Set<Long> pendingIds, List<Condition> conditions,

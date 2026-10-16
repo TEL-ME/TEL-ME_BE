@@ -231,7 +231,8 @@ class MultiturnChatIntegrationTest {
     private void scriptSingleFaqRewrite(String refined, boolean unsafe) {
         doAnswer(call -> {
             LlmRequest request = call.getArgument(0);
-            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+            if ((RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())
+                || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt()))) {
                 meaningChecks.incrementAndGet();
                 return mapper.writeValueAsString(Map.of("unsafe", List.of(unsafe)));
             }

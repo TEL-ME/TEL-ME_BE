@@ -26,7 +26,7 @@ class QueryRoutingFollowupAnalysisProviderTest {
 
     @Test
     void convertsFilledLocationAndKeepsExistingConsultRequest() {
-        when(routing.analyzeFollowUp(3L, "강남역이요"))
+        when(routing.analyzeFollowUp(3L, "강남역이요", 21L))
                 .thenReturn(
                         new FollowUpRouteResponse(
                                 11L,
@@ -44,7 +44,7 @@ class QueryRoutingFollowupAnalysisProviderTest {
 
     @Test
     void preservesExplicitLocationDecline() {
-        when(routing.analyzeFollowUp(3L, "말하고 싶지 않아요"))
+        when(routing.analyzeFollowUp(3L, "말하고 싶지 않아요", 21L))
                 .thenReturn(
                         new FollowUpRouteResponse(
                                 11L,
@@ -60,7 +60,7 @@ class QueryRoutingFollowupAnalysisProviderTest {
 
     @Test
     void staleWaitingContextDoesNotCreateOrSelectAnotherConsultation() {
-        when(routing.analyzeFollowUp(3L, "강남역이요"))
+        when(routing.analyzeFollowUp(3L, "강남역이요", 21L))
                 .thenReturn(FollowUpRouteResponse.noTarget());
 
         assertThatThrownBy(() -> provider.analyze(context("강남역이요")))
@@ -69,7 +69,7 @@ class QueryRoutingFollowupAnalysisProviderTest {
 
     @Test
     void newQuestionRequestsInitialRouting() {
-        when(routing.analyzeFollowUp(3L, "5G 요금제는 얼마예요?"))
+        when(routing.analyzeFollowUp(3L, "5G 요금제는 얼마예요?", 21L))
                 .thenReturn(
                         new FollowUpRouteResponse(
                                 11L,
@@ -96,6 +96,7 @@ class QueryRoutingFollowupAnalysisProviderTest {
                                 "어느 지역인가요?",
                                 "가까운 매장 알려줘",
                                 "가까운 매장",
-                                "STORE")));
+                                "STORE")))
+                .withExecutionId(21L);
     }
 }

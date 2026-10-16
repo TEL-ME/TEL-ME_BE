@@ -6,6 +6,7 @@ import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.repository.ChatInputMaskRepository;
 import com.telme.chat.repository.ChatEndSummaryInquiryRepository;
+import com.telme.chat.repository.ChatEndSummaryConditionRepository;
 import com.telme.chat.safety.OutputMaskContext;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ class ChatSessionEndSummaryInputReader {
     private final ChatEndSummaryProperties properties;
     private final ChatInputMaskRepository inputMasks;
     private final ChatEndSummaryInquiryRepository inquiryRepository;
+    private final ChatEndSummaryConditionRepository conditionRepository;
 
     @Transactional(readOnly = true)
     ChatEndSummaryData.Input read(long sessionId) {
@@ -124,22 +126,20 @@ class ChatSessionEndSummaryInputReader {
         var executions = jdbc.queryForList("""
                 SELECT execution_id FROM chat_executions WHERE session_id=? ORDER BY execution_id DESC LIMIT 1
                 """, Long.class, sessionId);
-        var conditions = jdbc.query("""
-                SELECT r.consult_request_id, r.origin_message_id, c.condition_key, c.condition_value,
-                    c.status, c.source, c.answered_message_id, a.sequence_no
-                FROM consult_requests r JOIN consult_conditions c USING (consult_request_id)
-                LEFT JOIN chat_messages a ON a.message_id=c.answered_message_id
-                WHERE r.session_id=? ORDER BY r.consult_request_id, c.condition_key
-                """, (rs, n) -> new ChatEndSummaryData.Condition(rs.getLong("consult_request_id"),
-                        rs.getLong("origin_message_id"), rs.getString("condition_key"),
-                        safe(rs.getString("condition_value"), maskSources), rs.getString("status"),
-                        rs.getString("source"),
-                        (Long) rs.getObject("answered_message_id"), (Integer) rs.getObject("sequence_no")),
-                sessionId).stream().filter(condition -> ids.contains(condition.originMessageId())).toList();
+        var conditions = conditionRepository.findBySessionId(sessionId).stream()
+                .filter(condition -> ids.contains(condition.originMessageId()))
+                .map(condition -> new ChatEndSummaryData.Condition(condition.requestId(), condition.originMessageId(),
+                        condition.key(), safe(condition.value(), maskSources), condition.status(), condition.source(),
+                        condition.answeredMessageId(), condition.answeredSequence(), condition.askedMessageId()))
+                .toList();
         maskSources.addAll(inputMasks.read(sessionId, through).sources());
-        return new ChatEndSummaryData.Input(sessionId, through,
+        var input = new ChatEndSummaryData.Input(sessionId, through,
                 executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions,
                 new OutputMaskContext(maskSources), inquiryRepository.findBySessionId(sessionId));
+        Set<Long> unresolved = pending.stream().filter(id -> !ChatEndSummaryResolution.isResolved(input, id))
+                .collect(Collectors.toSet());
+        return new ChatEndSummaryData.Input(sessionId, through, input.executionId(), messages, requests,
+                unresolved, conditions, input.maskContext(), input.inquiryClassifications());
     }
 
     private String safe(String text, List<OutputMaskContext.Source> maskSources) {

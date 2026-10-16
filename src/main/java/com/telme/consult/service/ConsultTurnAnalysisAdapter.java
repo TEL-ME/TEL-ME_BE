@@ -98,7 +98,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                     ? LocationStatus.MISSING : LocationStatus.COORDINATES_AVAILABLE;
             List<ConsultChatProcessingService.ConsultTurn> consultTurns = result.compoundQueries().stream()
                     .map(query -> new ConsultChatProcessingService.ConsultTurn(
-                            preparation.prepareAnalysis(sessionId, query, compoundLocation),
+                            preparation.prepareAnalysis(sessionId, query, compoundLocation, command.executionId()),
                             purpose(query.intent().name()), query.queryText(), null))
                     .toList();
             return AnalyzedTurn.compound(consultTurns)
@@ -155,7 +155,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         }
         return new AnalyzedTurn(
                 preparation.prepareAnalysis(
-                        context.sessionId(), result.initialQuery(), locationStatus),
+                        context.sessionId(), result.initialQuery(), locationStatus, command.executionId()),
                 null,
                 purpose(result.initialQuery().intent().name()),
                 context.message(),

@@ -15,8 +15,12 @@ final class ChatEndSummaryPendingResolver {
 
     static List<Pending> resolve(ChatEndSummaryData.Input input, Set<Long> pendingIds) {
         List<Pending> result = new ArrayList<>();
+        var origins = ChatEndSummaryResolution.findPendingOrigins(input, pendingIds);
         for (var message : input.messages()) {
-            if (!message.role().equals("USER") || !pendingIds.contains(message.id())) {
+            if (!message.role().equals("USER") || !origins.contains(message.id())) {
+                continue;
+            }
+            if (ChatEndSummaryResolution.isResolved(input, message.id())) {
                 continue;
             }
             var requests = input.requests().stream()
@@ -28,34 +32,20 @@ final class ChatEndSummaryPendingResolver {
                 addConditions(input, request, result);
             }
             String title = createTitle(message.content());
-            var replies = input.messages().stream()
-                    .filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo()))
-                    .filter(answer -> answer.role().equals("ASSISTANT") && answer.type().equals("ANSWER"))
-                    .sorted(java.util.Comparator.comparingInt(ChatEndSummaryData.Message::sequence)).toList();
-            // 한 하위 문의의 근거 없음 안내가 이후 정상 답변으로 대체된 경우만 확정적으로 해소한다.
-            boolean recovered = requests.size() == 1 && requests.getFirst().status().equals("DONE")
-                    && result.size() == start && !replies.isEmpty()
-                    && "GROUNDED".equals(replies.getLast().basis())
-                    && replies.stream().anyMatch(answer -> "NO_EVIDENCE".equals(answer.basis()))
-                    && "COMPLETED".equals(message.executionStatus());
-            if (recovered) {
-                continue;
-            }
             if (Set.of("FAILED", "CANCELLED").contains(normalizeNullable(message.executionStatus()))) {
                 result.add(createPending(message, title, "답변을 마치지 못한 문의: ", Kind.INTERRUPTED));
                 continue;
             }
             Set<String> bases = new LinkedHashSet<>();
-            input.messages().stream().filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo()))
+            var replies = ChatEndSummaryResolution.findLatestReplies(input, message.id());
+            replies.stream()
                     .map(ChatEndSummaryData.Message::basis).filter(java.util.Objects::nonNull).forEach(bases::add);
             if (bases.contains("NO_EVIDENCE")) {
                 result.add(createPending(message, title, "근거 있는 답변을 확인하지 못한 문의: ", Kind.UNANSWERED));
             } else if (bases.contains("OUT_OF_SCOPE")) {
                 result.add(createPending(message, title, "상담 범위에 해당하는 안내를 받지 못한 문의: ", Kind.OUT_OF_SCOPE));
             } else if (result.size() == start) {
-                var clarification = input.messages().stream()
-                        .filter(answer -> Long.valueOf(message.id()).equals(answer.replyTo())
-                                && answer.type().equals("CLARIFICATION"))
+                var clarification = replies.stream().filter(answer -> answer.type().equals("CLARIFICATION"))
                         .max(java.util.Comparator.comparingInt(ChatEndSummaryData.Message::sequence));
                 if (clarification.isPresent()) {
                     result.add(new Pending(message.id() + ":clarification", message.id(), title,

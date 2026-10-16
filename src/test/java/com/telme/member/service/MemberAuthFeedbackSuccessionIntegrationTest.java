@@ -5,9 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.service.HttpSessionChatActorProvider;
-import com.telme.feedback.dto.FeedbackModels.Actor;
-import com.telme.feedback.dto.FeedbackModels.Input;
-import com.telme.feedback.dto.FeedbackModels.Rating;
 import com.telme.feedback.service.FeedbackService;
 import com.telme.member.dto.req.LoginRequest;
 import com.telme.member.entity.Guest;
@@ -82,10 +79,9 @@ class MemberAuthFeedbackSuccessionIntegrationTest {
         entityManager.persist(answer);
         entityManager.flush();
 
-        feedbackService.save(
-                answer.getMessageId(),
-                new Actor(null, guest.getGuestId()),
-                new Input(Rating.LIKE, null, null));
+        // 비회원은 이제 평가를 남길 수 없다. 차단 전에 쌓인 비회원 평가가 승계되는지를 본다
+        jdbc.update("INSERT INTO message_feedback(message_id, guest_id, rating) VALUES (?, ?, 'LIKE')",
+                answer.getMessageId(), guest.getGuestId());
 
         MockHttpSession httpSession = new MockHttpSession();
         httpSession.setAttribute(HttpSessionChatActorProvider.GUEST_ID_ATTRIBUTE, guest.getGuestId());

@@ -16,6 +16,7 @@
 | `simulate_dual_vector.py` | `Q_A`, `QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
 | `gray_zone_upper_band_bedrock.py` | 회색 구간 판정을 Q_A 0.72 위로 넓혔을 때 정답·엉뚱한 근거·holdout 측정 (Bedrock 판정, 기본은 예상 비용만, `--run`으로 실행). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` | 필요 |
 | `judge_stability_bedrock.py` | 판정 시험 25건을 운영 판정 방식(FAQ 하나씩 1회)으로 반복해 회차별 합격 여부를 보거나(`--runs`), 경계 쌍만 쌍마다 여러 번 보내 답 됨 비율을 본다(`--pair-repeat`). 판정 프롬프트 후보 비교(`--prompt`), 운영과 같은 방식(`--served`). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` 5.8절 | 필요 |
+| `bedrock-switch-evaluation/run_flow_scenarios.py` | 되묻기 완주·복합·FAQ+매장 복합·멀티턴 22개 대화를 실제 채팅 API로 끝까지 진행해 턴별 답변과 근거 FAQ 기록 (채점은 사람이 원문 대조). 결과: `docs/BEDROCK_SWITCH_EVALUATION.md` | 앱 경유 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
 | `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`) | 앱 경유 |
