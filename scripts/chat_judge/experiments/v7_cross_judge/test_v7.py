@@ -5,6 +5,7 @@ import json
 import unittest
 
 from scripts.chat_judge import judge_chat_flow as judge
+from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as v6
 from scripts.chat_judge.experiments.v7_cross_judge import bedrock
 from scripts.chat_judge.experiments.v7_cross_judge import build_v7_capture as builder
 from scripts.chat_judge.experiments.v7_cross_judge import run_cross_judge as runner
@@ -76,7 +77,8 @@ class V7Test(unittest.TestCase):
             self.assertEqual({"ok": True}, result["result"])
             request = fake.requests[0]
             self.assertEqual(bedrock.MODELS[alias]["modelId"], request["modelId"])
-            self.assertEqual(alias != "gpt-oss-120b", "outputConfig" in request)
+            prompt_json = alias == "gpt-oss-120b" or bedrock.MODELS[alias].get("format") == "prompt_json"
+            self.assertEqual(not prompt_json, "outputConfig" in request)
             self.assertEqual(alias in {"luna", "gpt-oss-120b", "sonnet-4-6"},
                              "additionalModelRequestFields" in request)
 
@@ -189,6 +191,26 @@ class V7RuleTest(unittest.TestCase):
         self.assertEqual(1, len(fake.requests))
         self.assertEqual("EMPTY_SOURCES", record["stages"]["evidence"]["rule"])
         self.assertEqual("INSUFFICIENT", record["result"]["evidenceAnswerability"])
+
+
+class V7PromptJsonCandidateTest(unittest.TestCase):
+    def test_prompt_json_candidates_ask_for_json_and_strip_code_fences(self):
+        class Fenced(FakeClient):
+            def converse(self, **request):
+                self.requests.append(request)
+                return {"stopReason": "end_turn", "output": {"message": {"content": [
+                    {"text": "```json\n" + json.dumps(self.result) + "\n```"}]}},
+                    "usage": {"inputTokens": 3, "outputTokens": 2}}
+        for alias in ("mistral-large-3", "deepseek-v3.2", "deepseek-v3.2-usw2", "qwen3-next-80b"):
+            fake = Fenced({"answerIsRefusal": False, "reason": "답함"})
+            payload = {"messages": [{"role": "system", "content": "rubric"}, {"role": "user", "content": "{}"}],
+                       "response_format": {"json_schema": {"schema": v6.REFUSAL_SCHEMA}}}
+            record = bedrock.BedrockJudge(alias, client=fake).stage("answer_refusal", payload)
+            self.assertEqual({"answerIsRefusal": False, "reason": "답함"}, record["result"])
+            self.assertNotIn("outputConfig", fake.requests[0])
+            self.assertIn("JSON Schema", fake.requests[0]["system"][0]["text"])
+            self.assertEqual(bedrock.MODELS[alias]["modelId"], fake.requests[0]["modelId"])
+            self.assertIn(alias, bedrock.PRICES)
 
 
 if __name__ == "__main__":

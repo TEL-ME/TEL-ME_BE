@@ -14,9 +14,34 @@ MODELS = {
     "sonnet-4-6": {"region": "ap-northeast-1", "modelId": "jp.anthropic.claude-sonnet-4-6"},
     "luna": {"region": "ap-northeast-1", "modelId": "global.openai.gpt-5.6-luna"},
     "gpt-oss-120b": {"region": "ap-northeast-1", "modelId": "openai.gpt-oss-120b-1:0"},
+    # TELME-180 후보. 스키마 강제 출력 대신 JSON을 프롬프트로 요청하고 로컬에서 검증한다(TELME-179와 같은 방식)
+    "qwen3-next-80b": {"region": "ap-northeast-1", "modelId": "qwen.qwen3-next-80b-a3b", "format": "prompt_json"},
+    "mistral-large-3": {"region": "ap-northeast-1", "modelId": "mistral.mistral-large-3-675b-instruct",
+                        "format": "prompt_json"},
+    "deepseek-v3.2": {"region": "ap-northeast-1", "modelId": "deepseek.v3.2", "format": "prompt_json"},
+    # 도쿄는 동시 호출을 늘리면 호출당 시간이 같이 늘어 처리량이 막힌다(동시 16건에 초당 0.44건, 오레곤은 2.83건)
+    "deepseek-v3.2-usw2": {"region": "us-west-2", "modelId": "deepseek.v3.2", "format": "prompt_json"},
+}
+
+# USD / 100만 토큰(입력, 출력). AWS Bedrock 요금표의 Tokyo 값이고, Tokyo 표기가 없는 Qwen3 235B는 Sydney 값에
+# Tokyo/Sydney 비율(Qwen3 Next 80B 기준 약 1.17)을 곱한 추정치다. 실제 청구액과 다를 수 있다
+PRICES = {
+    "qwen": (0.2651, 1.0605),
+    "qwen3-next-80b": (0.18, 1.45),
+    "mistral-large-3": (0.61, 1.82),
+    "deepseek-v3.2": (0.74, 2.22),
+    "deepseek-v3.2-usw2": (0.62, 1.85),
 }
 
 DEFAULT_MODELS = ("qwen", "sonnet", "luna")
+
+
+def strip_code_fence(text):
+    """```json 코드 블록으로 감싼 JSON은 감싼 부분만 벗긴다. 내용은 바꾸지 않는다."""
+    text = text.strip()
+    if text.startswith("```") and text.endswith("```"):
+        return text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+    return text
 
 
 def bedrock_schema(schema):
@@ -123,6 +148,14 @@ class BedrockJudge:
                 "Do not include markdown, analysis, or text outside the JSON object. Schema: "
                 + judge.canonical(bedrock_schema(schema))
             )
+        if self.config.get("format") == "prompt_json":
+            request.pop("outputConfig")
+            request["inferenceConfig"].update(maxTokens=2048, temperature=0)
+            request["system"][0]["text"] += (
+                "\nReturn exactly one compact JSON object matching this JSON Schema. "
+                "Do not include markdown, analysis, or text outside the JSON object. Schema: "
+                + judge.canonical(bedrock_schema(schema))
+            )
         if self.alias == "sonnet-4-6":
             # Explicitly disable Claude extended thinking as requested.
             request["additionalModelRequestFields"] = {"thinking": {"type": "disabled"}}
@@ -157,6 +190,8 @@ class BedrockJudge:
             if raw.get("stopReason") != "end_turn":
                 raise ValueError(f"Incomplete Bedrock output: {raw.get('stopReason')}")
             content = "".join(block.get("text", "") for block in raw["output"]["message"]["content"])
+            if self.config.get("format") == "prompt_json":
+                content = strip_code_fence(content)
             record["result"] = json.loads(content)
             usage = raw.get("usage") or {}
             record["promptTokens"] = usage.get("inputTokens")

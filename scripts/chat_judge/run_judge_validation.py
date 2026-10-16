@@ -3,7 +3,9 @@
 
 답변은 다시 만들지 않는다. 판정은 실제 파이프라인 평가와 같은 evaluate()를 쓴다. 판정자 B의 판정표가 채워지면
 --review-b로 넘겨 A·B 간 일치도와 B 기준 일치율도 함께 낸다.
+Bedrock 모델은 --bedrock-model로 고른다(유료 호출이라 --allow-bedrock-call이 필요하다). 판정 경로와 코드 규칙은 vLLM과 같다.
 사용: python -X utf8 -m scripts.chat_judge.run_judge_validation --out .measure/judge-validation-<날짜>.json.gz
+      python -X utf8 -m scripts.chat_judge.run_judge_validation --bedrock-model deepseek-v3.2 --allow-bedrock-call --out <결과>
       python -X utf8 -m scripts.chat_judge.run_judge_validation --judged <기존 결과> --review-b docs/chat-judge/judge-validation-v1-review-form.md
 """
 import argparse
@@ -34,7 +36,8 @@ def to_capture(items):
                    for source in item["deliveredSources"]]
         turns.append({"fixture": {"question": item["question"], "expectedIntent": "FAQ",
                                   "expectedBehavior": item["expectedBehavior"], "goldSourceGroups": [],
-                                  "requiredFacts": [], "qualityReferenceGroups": item["referenceGroups"]},
+                                  "requiredFacts": item.get("requiredFacts", []),
+                                  "qualityReferenceGroups": item["referenceGroups"]},
                       "executionStatus": "COMPLETED", "searches": [{"query": item["question"], "results": results}],
                       "ragInputs": [{"searchResults": results}],
                       "outputMessage": {"content": item["answer"], "messageType": item["messageType"]}})
@@ -99,6 +102,10 @@ def main():
     parser.add_argument("--url", default="http://localhost:8001")
     parser.add_argument("--model", default="qwen3-14b-awq")
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--bedrock-model", help="Bedrock 판정 모델 별칭(experiments/v7_cross_judge/bedrock.py MODELS)")
+    parser.add_argument("--profile", default="telme-bedrock-eval")
+    parser.add_argument("--limit", type=int, default=0, help="앞에서부터 N건만(연결 확인용)")
+    parser.add_argument("--allow-bedrock-call", action="store_true", help="유료 Bedrock 호출 허가")
     args = parser.parse_args()
     data = json.loads(DATASET.read_text(encoding="utf-8"))
     items = data["items"]
@@ -108,14 +115,24 @@ def main():
         if not args.out or args.out.exists():
             parser.error("새 결과 경로 --out이 필요하고 기존 파일을 덮어쓰지 않는다")
         catalog = json.loads(judge.DEFAULT_CATALOG.read_text(encoding="utf-8"))
-        evaluation = pipeline.evaluate(to_capture(items), catalog, args.url, args.model, workers=args.workers,
-                                       on_checkpoint=lambda value: pipeline.checkpoint(args.out, value))
+        if args.bedrock_model:
+            if not args.allow_bedrock_call:
+                parser.error("Bedrock 호출은 유료라 --allow-bedrock-call이 필요하다")
+            from scripts.chat_judge import run_bedrock_judge
+            evaluation = run_bedrock_judge.evaluate(to_capture(items), catalog, args.bedrock_model, args.profile,
+                                                    args.workers, args.limit)
+        else:
+            evaluation = pipeline.evaluate(to_capture(items), catalog, args.url, args.model, workers=args.workers,
+                                           on_checkpoint=lambda value: pipeline.checkpoint(args.out, value))
         evaluation["datasetSha256"] = judge.sha256(data)
         pipeline.checkpoint(args.out, evaluation)
-    ids = [item["id"] for item in items]
-    human_a = {item["id"]: item["labels"]["A"] for item in items}
     model = judge_labels(evaluation)
+    ids = [item["id"] for item in items if item["id"] in model]
+    human_a = {item["id"]: item["labels"]["A"] for item in items}
     result = {"items": len(ids), "judgeVsA": compare(human_a, model, ids)}
+    for key in ("alias", "usage", "estimatedCostUsd", "wallSeconds"):
+        if key in evaluation:
+            result[key] = evaluation[key]
     if args.review_b:
         human_b = review_b(args.review_b)
         result["reviewedByB"] = len(human_b)

@@ -15,7 +15,9 @@ scripts/chat_judge/
   judge_chat_flow.py                 주장 추출과 근거성 판정, 출력 검증, 보류 판정 결합
   build_service_quality_set.py       서비스 품질 평가셋 v2 생성
   build_judge_validation_set.py      Judge 검증셋 v1 생성(TELME-100 V7 사람 판정에서 층화 추출)
-  run_judge_validation.py            Judge 검증셋을 판정하고 사람 판정과 축별 비교
+  run_judge_validation.py            Judge 검증셋을 판정하고 사람 판정과 축별 비교(vLLM 또는 Bedrock)
+  run_bedrock_judge.py               저장한 캡처를 Bedrock 모델 하나로 판정(Qwen3 235B, DeepSeek V3.2, Mistral Large 3)
+  combine_judges.py                  모델별 판정을 판정 뒤에 결합(하나라도 실패면 실패, 다수결)
   data/                              평가셋, 평가셋 원본(quality_v2_sources/), 테스트용 파일럿 기록(fixtures/)
   experiments/v6_live_chat_pipeline/ 실제 Spring 채팅 API로 답변을 만들고 vLLM Judge로 채점(충족도·보류 프롬프트)
   experiments/v7_cross_judge/        저장한 답변을 Bedrock 모델로 다시 채점(V6와 같은 프롬프트와 규칙)

@@ -18,6 +18,8 @@ from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_p
 ROOT = Path(__file__).resolve().parents[2]
 DATA_OUT = ROOT / "scripts/chat_judge/data/judge_validation_v1.json"
 FORM_OUT = ROOT / "docs/chat-judge/judge-validation-v1-review-form.md"
+# 질문과 정답 FAQ만 보고 별도 작성자가 쓴 필수 사실. 답변과 판정은 보지 않았다
+REQUIRED_FACTS = ROOT / "scripts/chat_judge/data/judge_validation_required_facts.json"
 HUMAN_FILE = "v7-three-model-full-302-human-review-lyj.md"
 CAPTURE_FILE = "v7-capture.json.gz"
 SEED = 180
@@ -122,6 +124,9 @@ def main():
     with gzip.open(args.v7_dir / CAPTURE_FILE, "rt", encoding="utf-8") as stream:
         capture = json.load(stream)
     selected = select(items(capture, labels))
+    facts = {row["id"]: row["requiredFacts"] for row in json.loads(REQUIRED_FACTS.read_text(encoding="utf-8"))}         if REQUIRED_FACTS.exists() else {}
+    for item in selected:
+        item["requiredFacts"] = facts.get(item["id"], [])
     data = {"version": 1, "seed": SEED,
             "source": {"humanFile": HUMAN_FILE, "humanSha256": judge.sha256((args.v7_dir / HUMAN_FILE).read_bytes()),
                        "captureFile": CAPTURE_FILE, "captureSha256": judge.sha256(capture),
