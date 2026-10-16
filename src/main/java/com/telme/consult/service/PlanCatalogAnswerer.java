@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +33,8 @@ public class PlanCatalogAnswerer {
         if (plans.isEmpty()) {
             return null;
         }
-        String text = question.replaceAll("\\s+", "");
+        // 영문 대소문자 구분 없이 망 이름(5G, LTE)을 찾는다
+        String text = question.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
         List<Plan> named = namedPlans(text, plans);
         if (!named.isEmpty()) {
             return detail(named);
@@ -53,9 +55,9 @@ public class PlanCatalogAnswerer {
     private List<Plan> namedPlans(String text, List<Plan> plans) {
         List<Plan> named = new ArrayList<>();
         for (Plan plan : plans) {
-            String name = plan.getName().replaceAll("\\s+", "");
+            String name = plan.getName().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
             String alias = alias(plan, plans);
-            if (text.contains(name) || alias != null && text.contains(alias)) {
+            if (text.contains(name) || alias != null && text.contains(alias.toUpperCase(Locale.ROOT))) {
                 named.add(plan);
             }
         }
@@ -75,7 +77,7 @@ public class PlanCatalogAnswerer {
     private List<Plan> filter(String text, List<Plan> plans, boolean generalOnly) {
         List<Plan.NetworkType> networks = new ArrayList<>();
         if (text.contains("5G")) networks.add(Plan.NetworkType.FIVE_G);
-        if (text.toUpperCase().contains("LTE")) networks.add(Plan.NetworkType.LTE);
+        if (text.contains("LTE")) networks.add(Plan.NetworkType.LTE);
         if (text.contains("알뜰")) networks.add(Plan.NetworkType.BUDGET);
         List<Plan.TargetGroup> groups = new ArrayList<>();
         if (text.contains("청소년")) groups.add(Plan.TargetGroup.YOUTH);
