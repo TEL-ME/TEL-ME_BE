@@ -14,12 +14,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceResolver {
+    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 250이면 JSON이 끊긴 사례가 있다(docs/EVIDENCE_RESOLVER_COMPARISON.md)
+    private static final int MAX_OUTPUT_TOKENS = 512;
     private static final Pattern FAQ_ID = Pattern.compile("(?:ID\\s*)?(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUESTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]{2,}");
     private static final Set<String> QUESTION_FILLERS = Set.of(
@@ -67,7 +67,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                 .consultRequestId(consultRequestId)
                 .systemPrompt(PROMPT)
                 .userPrompt("고객 질문: " + question + "\nFAQ 후보:\n" + context)
-                .format(ResponseFormat.JSON).temperature(0.0).maxTokens(250)
+                .format(ResponseFormat.JSON).temperature(0.0).maxTokens(MAX_OUTPUT_TOKENS)
                 .contextCount(candidates.size()).promptVersion("faq-candidate-evidence-v2")
                 .build();
         try {
@@ -107,7 +107,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                             + "{\"answerable\":false,\"faqId\":null,\"quote\":null}")
                     .userPrompt("고객 질문: " + question + "\nID " + selected.faqId()
                             + " Q: " + selected.question() + "\nA: " + selected.answer())
-                    .format(ResponseFormat.JSON).temperature(0.0).maxTokens(250)
+                    .format(ResponseFormat.JSON).temperature(0.0).maxTokens(MAX_OUTPUT_TOKENS)
                     .contextCount(1).promptVersion("faq-candidate-quote-retry-v2")
                     .build();
             String retryOutput = llmClient.generate(retry);
