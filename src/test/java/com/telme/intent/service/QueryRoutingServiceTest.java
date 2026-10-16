@@ -145,6 +145,43 @@ class QueryRoutingServiceTest {
                 assertThat(request.userPrompt()).doesNotContain("바라야", "안녕", "고마워"));
     }
 
+    // 의도 분류가 gpt-oss면 요청 개수 판정을 끈다. 나눈 개수를 그대로 쓰고 판정 호출은 보내지 않는다
+    @Test
+    void disabledRequestInventoryKeepsIntentSplitWithoutRecheck() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "requestInventoryEnabled", false);
+        routingJson("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"유심 비용과 로밍 신청",
+                 "subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"유심재발급비용","requestQuote":"유심재발급비용"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍신청방법","requestQuote":"로밍신청방법"}]}
+                """);
+
+        var result = service.routeSingleConsult(msg("유심 재발급 비용과 로밍 신청 방법 알려줘"), null);
+
+        assertThat(result.subQueries()).extracting(query -> query.queryText())
+                .containsExactly("유심재발급비용", "로밍신청방법");
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, org.mockito.Mockito.atLeastOnce()).generate(requests.capture());
+        assertThat(requests.getAllValues()).extracting(LlmRequest::systemPrompt)
+                .doesNotContain(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT);
+    }
+
+    // 판정 호출을 꺼도 하위 질문마다 서로 다른 원문 근거가 있어야 나눈다
+    @Test
+    void disabledRequestInventoryStillRejectsSplitWithoutDistinctQuotes() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "requestInventoryEnabled", false);
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동","requestQuote":"번호이동"},
+                  {"order":2,"intent":"FAQ","queryText":"요금제","requestQuote":"번호이동"}]}
+                """);
+
+        assertThatThrownBy(() -> service.routeSingleConsult(msg("번호이동과 요금제 알려줘"), null))
+                .isInstanceOf(UnsupportedCompoundQuestionException.class);
+        verify(llmClient, times(1)).generate(any());
+        verify(queryRoutingRepository, never()).saveAndFlush(any());
+    }
+
     @Test
     void cleanedCurrentQuestionRetainsPreviousSubjectAgainstStoredOriginal() {
         routingJson("""

@@ -5,16 +5,16 @@
 | 단계 | 호출 | 언제 도는가 | 상태 |
 | --- | --- | --- | --- |
 | 1 | 의도 분류 (`ROUTING_SYSTEM_PROMPT`) | 새 질문마다 | **gpt-oss 확정** |
-| 2 | 요청 개수 판정 (`REQUEST_INVENTORY_PROMPT`) | 의도 분류가 FAQ 하위 질문을 2개 이상 만들었을 때 | gpt-oss·프롬프트 v4로 두고 **재검토 중**(앱 흐름 기준은 EXAONE이 나음) |
+| 2 | 요청 개수 판정 (`REQUEST_INVENTORY_PROMPT`) | 의도 분류가 FAQ 하위 질문을 2개 이상 만들었을 때 | **의도 분류가 gpt-oss면 끔**(`telme.routing.request-inventory-enabled`), 켤 때는 프롬프트 v4 |
 | 3 | 검색어 검증 (`FAQ_QUERY_FAITHFULNESS_PROMPT`) | 복합 하위 질문, 원문 검색 결과가 없어 다시 검색할 때, 문맥 복원 단일 질문 | **gpt-oss 확정**, 재검색 후보에만 단일 검색어용 프롬프트 |
 | 4 | 후속 분석 (`FOLLOW_UP_SYSTEM_PROMPT`) | 되물은 질문에 고객이 답했을 때 | **gpt-oss 확정**, 프롬프트 v4(되물은 질문 함께 전달, 상황으로 답한 것도 답)와 규칙 보완 |
 
-판정 기준은 호출마다 더 나은 쪽이다. 호출마다 다른 모델을 써도 된다. 차이가 실행 간 흔들림 범위 안이면 서빙을 하나로 줄일 수 있는 gpt-oss를 고른다. 이 기준은 팀 확인이 남아 있다. 1·3·4단계는 gpt-oss가 분명히 낫고, 2단계는 앱 흐름 기준으로 EXAONE이 낫다(2단계 결과 참고).
+판정 기준은 호출마다 더 나은 쪽이다. 호출마다 다른 모델을 써도 된다. 차이가 실행 간 흔들림 범위 안이면 서빙을 하나로 줄일 수 있는 gpt-oss를 고른다. 이 기준은 팀 확인이 남아 있다. 1·3·4단계는 gpt-oss가 분명히 낫다. 2단계는 호출만 따로 떼면 앱 흐름 기준으로 EXAONE이 낫지만, 의도 분류가 gpt-oss면 이 호출을 끄는 쪽이 둘보다 낫다(2단계 마지막 절).
 
 ## 측정 방식
 
 - 앱 코드의 라우팅 서비스(`QueryRoutingService`)를 그대로 쓰는 프로브([RoutingEvaluationProbe](../src/test/java/com/telme/probe/RoutingEvaluationProbe.java))로 잰다. 호출마다 보낼 주소를 따로 정할 수 있다(`TELME_ROUTING_INTENT_URL`, `TELME_ROUTING_INVENTORY_URL`, `TELME_ROUTING_FAITHFULNESS_URL`, `TELME_ROUTING_FOLLOWUP_URL`, 나머지는 `TELME_ROUTING_BASE_URL`). 확정한 호출의 기본 주소는 gpt-oss 라우터다.
-- 2단계부터는 앱의 해당 호출 메서드(`requestInventory`, `findUnsafeFaqQueries`, `requestFollowUpAnalysis`)를 그대로 불러 그 호출만 잰다(`TELME_ROUTING_STEP`). 앱에서 그 호출 앞에 도는 규칙도 같은 순서로 적용한다.
+- 2단계부터는 앱의 해당 호출 메서드(`requestInventory`, `findUnsafeFaqQueries`, `requestFollowUpAnalysis`)를 그대로 불러 그 호출만 잰다(`TELME_ROUTING_STEP`). 앱에서 그 호출 앞에 도는 규칙도 같은 순서로 적용한다. 요청 개수 판정을 끈 라우팅 전체 경로는 `TELME_ROUTING_SKIP_INVENTORY=true`로 잰다.
 - EXAONE은 로컬 Ollama, gpt-oss는 평가용 라우터(`scripts/judge-serving-evaluation/judge_router.py --chat bedrock --judge bedrock`, 도쿄)로 보낸다.
 - gpt-oss 요청 조건(라우터): 추론 강도 low, 온도는 요청 값(라우팅 호출은 0). 라우터는 앱의 Ollama 형식 요청을 Bedrock Converse로 바꾸면서 두 가지를 더한다. 사용자 메시지 끝에 "응답은 유효한 JSON 객체 하나만 출력하세요."를 붙이고, 출력 한도를 최소 512로 올린다(gpt-oss는 내부 추론도 출력 한도를 쓴다).
 - 앱의 Bedrock 클라이언트(`BedrockClient`, `BedrockRequestConverter`)는 추론 강도 low로 같지만 JSON 지시를 붙이지 않고 요청의 출력 한도를 그대로 쓴다(요청 개수 판정·검색어 검증 256, 후속 분석 300, 의도 분류 768). 그래서 1~4단계의 gpt-oss 3회를 앱 클라이언트로 한 번 더 돌렸다(아래 "앱 클라이언트 재확인").
@@ -97,7 +97,26 @@
 - 앱 흐름 대상은 1단계에서 gpt-oss가 FAQ 하위 질문을 2개 이상 만든 문항이다.
 - gpt-oss v4는 한 요청을 잘못 나눈 경우가 3회 모두 0건이다. 남은 오류는 전부 여러 요청을 합친 것이다.
 - EXAONE v4는 여러 요청은 잘 나누지만 한 요청을 잘못 나누는 경우가 7건으로 늘었다.
-- 앱 흐름 대상(51문항, 그중 50이 여러 요청)에서는 EXAONE v4가 51로 gpt-oss v4(46~47)보다 낫다. gpt-oss는 의도 분류가 맞게 나눈 질문을 10%쯤 다시 하나로 합친다. gpt-oss의 전체 우세는 한 요청을 잘못 나누지 않는 데서 나오는데, 앱에서 이 호출은 의도 분류가 이미 나눈 질문에만 돌아 그런 문항이 거의 들어오지 않는다. 그래서 이 호출은 재검토 중이다. EXAONE 유지와 함께, 의도 분류가 gpt-oss면 이 호출 없이 의도 분류가 나눈 개수를 쓰는 방법을 따로 재고 있다.
+- 앱 흐름 대상(51문항, 그중 50이 여러 요청)에서는 EXAONE v4가 51로 gpt-oss v4(46~47)보다 낫다. gpt-oss는 의도 분류가 맞게 나눈 질문을 10%쯤 다시 하나로 합친다. gpt-oss의 전체 우세는 한 요청을 잘못 나누지 않는 데서 나오는데, 앱에서 이 호출은 의도 분류가 이미 나눈 질문에만 돌아 그런 문항이 거의 들어오지 않는다. 그래서 이 호출을 끄는 경우를 따로 쟀다(아래).
+
+### 판정 호출을 끄면 (앱 라우팅 전체 경로)
+
+요청 개수 판정은 #120에서 EXAONE 의도 분류가 너무 자주 나누던 것을 막으려고 넣은 장치다(1단계에서 EXAONE은 94번 나눴고 그중 61번이 잘못 나눈 것). 의도 분류가 gpt-oss면 이 역할이 거의 필요 없어, 호출을 끄고 의도 분류가 나눈 개수를 그대로 쓰는 경우를 쟀다. 끄더라도 하위 질문마다 서로 다른 원문 근거가 있는지 보는 확인(`IndependentQuestionPolicy`), 비교 질문 규칙, 3단계 검색어 검증은 그대로 돈다.
+
+FAQ 210문항을 앱의 `routeSingleConsult`로 끝까지 돌려 최종 하위 질문 개수를 채점했다([run_request_count_skip_check.sh](../scripts/routing-call-comparison/run_request_count_skip_check.sh), [score_request_count_skip.py](../scripts/routing-call-comparison/score_request_count_skip.py)). 응답 시간은 모델이 하위 질문을 나눈 문항의 라우팅 전체 시간 중앙값이다.
+
+| 구성 | 여러 요청 맞음 (57) | 합침 | 복합 질문 안내 | 한 요청 잘못 나눔 (153) | 응답 시간 |
+| --- | --- | --- | --- | --- | --- |
+| EXAONE 전체, 판정 켬 (지금 develop) | 51 | 2 | 4 (+ 한 요청 2) | 2 | 1.80초 |
+| gpt-oss, 판정 켬 (라우터) | 45 / 48 / 47 | 12 / 8 / 10 | 0 | 0 | 1.85~2.09초 |
+| **gpt-oss, 판정 끔 (라우터)** | **52 / 52 / 53** | 4 / 5 / 3 | 0 / 0 / 1 (+ 한 요청 1 / 0 / 0) | **0** | **1.41~1.61초** |
+| gpt-oss, 판정 켬 (앱 클라이언트) | 47 / 48 / 48 | 8 / 8 / 8 | 1 / 1 / 1 | 0 | 1.78~1.86초 |
+| **gpt-oss, 판정 끔 (앱 클라이언트)** | **52 / 53 / 53** | 3 / 2 / 4 | 1 / 1 / 0 | 0 / 2 / 1 | **1.57~1.73초** |
+
+- 판정을 끄면 맞게 나뉜 질문을 다시 합치는 일이 3회 합계 24~30건에서 9~12건으로 준다. 남은 합침은 의도 분류가 처음부터 하나로 낸 것이다("7,700원 내면 택배로도 받을 수 있어요? 며칠 걸려요?" 등).
+- 끄면 한 요청을 잘못 나누는 경우가 앱 클라이언트 3회에서 3건 생겼다. "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘"(2회)와 "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘"(1회)로, v4 판정 규칙(처리 경로, 목록 소개는 한 요청)이 잡던 유형이다. 나뉘어도 답이 두 부분으로 나올 뿐 내용이 빠지지는 않는다. 합침은 한쪽 질문에 맞는 FAQ가 답에서 빠질 수 있다.
+- EXAONE 전체 구성은 나누기 정확도는 비슷하지만, 하위 질문의 원문 근거가 맞지 않아 복합 질문 안내로 끝나는 경우가 6건이다(고객이 다시 물어야 한다). EXAONE도 "저가형, 무제한형으로 나눠서 각각 소개해줘"를 판정 호출이 있는데도 나눴다.
+- 결론: 의도 분류가 gpt-oss면 판정 호출을 끈다. 지금 develop은 의도 분류가 EXAONE이라 설정 기본값은 켬(`ROUTING_REQUEST_INVENTORY_ENABLED=true`)으로 두고, Bedrock 전환 때 끈다.
 
 ### 과적합 확인 (새 21문항)
 
@@ -214,15 +233,16 @@ TELME-174에서 gpt-oss가 이미 답한 조건을 다시 물은 것은 후속 �
 
 라우팅 호출 4개를 포함한 모든 LLM 호출을 gpt-oss로 두고, 이 브랜치 코드로 TELME-174의 대화 흐름 22개를 실제 채팅 API로 끝까지 진행했다. 마지막 답변을 근거 FAQ 원문과 대조해 판정했다(판정과 이유는 `results/step5-chat-flows/results.json.gz`의 `verdicts`). 앞서 판정한 실행과 턴별 응답 종류·근거 FAQ가 같은 대화는 그 판정을 쓰고, 처음 나온 결과만 새로 판정했다. 검색 임계값은 TELME-174와 같은 앱 기본값(0.72/0.88)이다. 후속 분석 v4와 검색어 검증 경로 분리를 넣은 코드로 돌린 결과가 기본이고, 그 전 코드는 `-v3`(후속 분석 v3)와 `-v2` 키에 있다.
 
-| 묶음 | TELME-174 EXAONE (1회) | TELME-174 gpt-oss (3회) | TELME-175 v2 (3회) | TELME-175 v3 (3회) | **TELME-175 v4 (3회)** |
-| --- | --- | --- | --- | --- | --- |
-| 되묻기 완주 (8) | 6 | 6 / 5 / 7 | 6 / 6 / 4 | 5 / 5 / 7 | 6 / 6 / 5 |
-| 복합 FAQ·비교 (5) | 4 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 4 |
-| FAQ+매장 복합 (4) | 4 | 2 / 3 / 2 | 3 / 3 / 3 | 4 / 2 / 3 | 3 / 4 / 3 |
-| 멀티턴 (5) | 2 | 2 / 2 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 2 / 3 / 2 |
-| 합계 (22) | 16 | 13 / 13 / 15 | 15 / 15 / 13 | 15 / 13 / 16 | **14 / 16 / 14** |
+| 묶음 | TELME-174 EXAONE (1회) | TELME-174 gpt-oss (3회) | TELME-175 v2 (3회) | TELME-175 v3 (3회) | **TELME-175 v4 (3회)** | v4, 요청 개수 판정 끔 (3회) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 되묻기 완주 (8) | 6 | 6 / 5 / 7 | 6 / 6 / 4 | 5 / 5 / 7 | 6 / 6 / 5 | 7 (7) / 4 / 7 |
+| 복합 FAQ·비교 (5) | 4 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 3 / 3 / 4 | 3 / 3 / 3 |
+| FAQ+매장 복합 (4) | 4 | 2 / 3 / 2 | 3 / 3 / 3 | 4 / 2 / 3 | 3 / 4 / 3 | 3 / 3 / 2 |
+| 멀티턴 (5) | 2 | 2 / 2 / 3 | 3 / 3 / 3 | 3 / 3 / 3 | 2 / 3 / 2 | 3 / 3 / 3 |
+| 합계 (22) | 16 | 13 / 13 / 15 | 15 / 15 / 13 | 15 / 13 / 16 | **14 / 16 / 14** | 16 (21) / 13 / 15 |
 
 - 합계 차이는 실행 간 흔들림 범위다.
+- 요청 개수 판정을 끈 실행(`inventory-off-*` 키, `ROUTING_REQUEST_INVENTORY_ENABLED=false`)도 같은 범위다. 복합 FAQ 5개는 켠 실행과 같은 결과이고, 실패 원인도 켠 실행과 같은 되묻기 흐름·문맥 해석·검색 문제다. 1회차 CL-01은 실행기가 실행 시작 전에 상태를 읽어 첫 답변을 기다리지 않고 끝나 판정에서 뺐다(괄호는 판정한 수).
 - MT-01(인터넷 해지·장비 반납)과 MT-02(번호이동 수수료)는 FAQ에 답이 없어 정답을 근거 없음으로 고쳤다(TELME-174 판정도 같이 고침). 모든 구성이 매번 근거 없음으로 답했다.
 - TELME-174 대비 좋아진 것: "유심 재발급 비용 알려주고 근처 매장도 찾아줘"(ST-01)는 TELME-174에서 3회 중 2회 FAQ 쪽을 정보 부족으로 답했는데 TELME-175에서는 9회 중 8회 7,700원과 매장을 안내했다.
 - 라우팅 호출이 원인인 실패
@@ -275,6 +295,8 @@ python scripts/routing-call-comparison/score_intent_step.py      # 검색 앱(0.
 bash scripts/routing-call-comparison/run_request_count_step.sh
 python scripts/routing-call-comparison/score_request_count_step.py
 python scripts/routing-call-comparison/score_request_count_step.py exaone-v3 gptoss-1-v3 gptoss-2-v3 gptoss-3-v3
+bash scripts/routing-call-comparison/run_request_count_skip_check.sh   # 판정 호출 켬/끔, 라우팅 전체 경로
+python scripts/routing-call-comparison/score_request_count_skip.py
 # 3단계 (평가셋을 다시 만드는 방법은 run_faithfulness_step.sh 머리말)
 bash scripts/routing-call-comparison/run_faithfulness_step.sh
 python scripts/routing-call-comparison/score_faithfulness_step.py
@@ -289,14 +311,15 @@ bash scripts/routing-call-comparison/run_app_client_check.sh
 python scripts/routing-call-comparison/score_request_count_step.py step2-gptoss-1 step2-gptoss-2 step2-gptoss-3   --results scripts/routing-call-comparison/results/app-client-check/results.json.gz
 # 마지막 확인 (bootJar 후, 판정은 사람이 붙인다. 실행기는 TELME-174 #159에 있어 없으면 RUNNER로 경로를 준다)
 RUNNER=<run_flow_scenarios.py 경로> bash scripts/routing-call-comparison/run_chat_flows.sh
+ROUTING_REQUEST_INVENTORY_ENABLED=false RUNNER=<같은 경로> bash scripts/routing-call-comparison/run_chat_flows.sh   # 요청 개수 판정 끔
 ```
 
-준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다.
+준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다. 2단계의 `exaone-full`, `route-*` 키는 판정 호출 켬/끔을 라우팅 전체 경로로 잰 결과, 마지막 확인의 `inventory-off-*` 키는 판정 호출을 끈 대화 흐름이다.
 
 ## 남은 일과 확인할 것
 
 - 되묻기 흐름의 다시 묻기는 별도 이슈로 고친다(4단계 마지막 절). 마지막 확인에서 남은 실패의 대부분이 이것이다(CO-02 포함).
-- 2단계 요청 개수 판정은 앱 흐름 기준으로 다시 정한다(2단계 결과 마지막 항목).
+- Bedrock 전환 때 `ROUTING_REQUEST_INVENTORY_ENABLED=false`로 요청 개수 판정을 끈다(2단계 마지막 절). 의도 분류를 EXAONE으로 되돌리면 다시 켠다.
 - 마지막 확인은 #156(문맥 해석 보강) 없이 돌렸다. #156은 MT-03("데이터 다 쓰면", 업무에 딸린 상태만 물으면 앞 발언과 연결)과 MT-02·MT-05("~하려고 합니다" 발언의 업무 세기)에 영향을 준다. 이 PR이 머지된 뒤 #156을 최신 develop으로 맞추고 대화 흐름 22개를 다시 돌린다.
 - 라우팅과 별개로 볼 것: MT-05처럼 반대 뜻의 FAQ로 답하는 검색·근거 판정 문제, 대상 같은 단어("데이터", "거기")가 있으면 앞 발언을 연결하지 않는 문맥 해석 문제, MT-04처럼 문맥 해석이 실행마다 연결 여부가 흔들리는 문제.
 - 팀 확인

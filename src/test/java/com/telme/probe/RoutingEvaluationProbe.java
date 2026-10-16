@@ -527,6 +527,12 @@ class RoutingEvaluationProbe {
         var service = new QueryRoutingService(
                 client, mapper, routings, requests, new RuleBasedRoutingFallback(),
                 new IntentConverter(mapper), transaction);
+        // TELME_ROUTING_SKIP_INVENTORY=true면 요청 개수 판정 없이 의도 분류가 나눈 개수를 쓰는 경로를 잰다
+        if (Boolean.parseBoolean(System.getenv("TELME_ROUTING_SKIP_INVENTORY"))) {
+            var enabled = QueryRoutingService.class.getDeclaredField("requestInventoryEnabled");
+            enabled.setAccessible(true);
+            enabled.setBoolean(service, false);
+        }
 
         List<Map<String, Object>> records = new ArrayList<>();
         for (JsonNode item : cases) {
@@ -586,6 +592,7 @@ class RoutingEvaluationProbe {
                 row.put("search_query", route.subQueries().isEmpty()
                         ? null : route.subQueries().getFirst().queryText());
                 row.put("refined_query", route.refinedQuery());
+                row.put("sub_query_count", route.subQueries().size());
             } catch (UnsupportedCompoundQuestionException exception) {
                 // 복합 질문 안내는 BOTH뿐 아니라 하위 질문 intent가 섞인 경우에도 나온다.
                 // 안내 여부와 분류 정확도를 섞지 않도록, 채점은 모델이 실제로 낸 intent로 한다

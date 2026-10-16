@@ -5,6 +5,7 @@
 # 준비
 #   - bootJar로 만든 이 브랜치 jar (기본 build/libs/telme-0.0.1-SNAPSHOT.jar)
 #   - Bedrock 라우터(기본 http://127.0.0.1:11435), 회색 구간 판정용 AWS 자격 증명(AWS_PROFILE)
+#   - 요청 개수 판정을 끈 구성은 ROUTING_REQUEST_INVENTORY_ENABLED=false를 붙여 실행한다(앱에 그대로 넘어간다)
 #   - PostgreSQL(기본 5440)의 telme DB를 템플릿으로 복사한다. 컨테이너 이름은 PG_CONTAINER
 #   - 대화 흐름 실행기 scripts/bedrock-switch-evaluation/run_flow_scenarios.py (TELME-174, #159). 이 브랜치에 없으면 RUNNER로 경로를 준다
 # 결과: scripts/routing-call-comparison/results/step5-chat-flows/flows-gptoss-{1,2,3}.json

@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -95,6 +96,9 @@ public class QueryRoutingService {
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
     private final UnknownFaqRecheck unknownFaqRecheck;
+    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다
+    @Value("${telme.routing.request-inventory-enabled:true}")
+    private boolean requestInventoryEnabled = true;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -304,7 +308,10 @@ public class QueryRoutingService {
         }
 
         LlmRequestInventoryPayload inventory = null;
-        if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
+        boolean trustSplit = llmRouting && !requestInventoryEnabled
+                && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1;
+        if (requestInventoryEnabled && llmRouting
+                && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
             inventory = requestInventory(analysisQuestion);
             if (inventory.decision() != Decision.MULTIPLE) {
                 String wholeQuery = restored
@@ -343,6 +350,8 @@ public class QueryRoutingService {
             if (inventory.requestCount() != payload.subQueries().size()) {
                 throw new UnsupportedCompoundQuestionException("질문 분해와 독립 요청 개수가 일치하지 않습니다.");
             }
+            IndependentQuestionPolicy.validate(payload, analysisQuestion);
+        } else if (trustSplit) {
             IndependentQuestionPolicy.validate(payload, analysisQuestion);
         }
         validateFaqSearchQueries(payload, question, analysisQuestion);
