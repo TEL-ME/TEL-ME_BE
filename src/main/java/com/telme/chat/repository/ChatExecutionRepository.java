@@ -14,6 +14,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Long> {
 
+    // now()는 트랜잭션 시작 시각이라 락 대기·처리 시간이 빠진다. 호출한 순간의 DB 시계를 읽는다.
+    @Query(value = "select clock_timestamp()", nativeQuery = true)
+    Instant currentDatabaseTime();
+
     @Query("""
             select execution
             from ChatExecution execution

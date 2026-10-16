@@ -64,7 +64,7 @@ public class ChatExecutionService {
         String stores = chatMessageConverter.toJson(answer.storeResults());
         String searchContext = chatMessageConverter.toContextJson(answer.storeSearchContext());
         verifyOutput(() -> outputGuard.verifySerialized(answer.content(), followUps, stores, searchContext, masks));
-        Instant completedAt = Instant.now();
+        Instant completedAt = completionTime();
 
         ChatMessage message = outputMessage(session, execution, answer.messageType());
         message.complete(
@@ -100,7 +100,7 @@ public class ChatExecutionService {
         OutputMaskContext masks = readMasks(execution,
                 () -> outputGuard.needsClarificationMaskContext(question, options));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
-        Instant completedAt = Instant.now();
+        Instant completedAt = completionTime();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
         // 선택지가 있으면 후속 질문 자리에 실어 보낸다. 화면이 버튼으로 그려 눌러서 답할 수 있다
@@ -121,7 +121,7 @@ public class ChatExecutionService {
             throw new GeneralException(ChatErrorCode.ANSWER_ALREADY_STARTED);
         }
         ChatSession session = lockSession(execution);
-        Instant endedAt = Instant.now();
+        Instant endedAt = completionTime();
 
         execution.completeWithoutOutput(endedAt);
         session.touch(endedAt);
@@ -134,7 +134,7 @@ public class ChatExecutionService {
     public ChatExecutionState fail(Long executionId, ChatFailure failure) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        Instant endedAt = Instant.now();
+        Instant endedAt = completionTime();
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.ERROR);
         if (failure.isOutputSafetyFailure()) {
@@ -145,6 +145,11 @@ public class ChatExecutionService {
         execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
         session.touch(endedAt);
         return flushed(execution);
+    }
+
+    // started_at은 DB 기본값이다. 처리 이력의 시작·종료 시각이 앱 서버와 DB의 시계 차이로 뒤집히지 않게 같은 시계를 쓴다.
+    private Instant completionTime() {
+        return chatExecutionRepository.currentDatabaseTime();
     }
 
     private OutputMaskContext readMasks(ChatExecution execution, BooleanSupplier needed) {

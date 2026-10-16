@@ -3,6 +3,7 @@ package com.telme.chat.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -16,6 +17,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.OutputMaskContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +27,7 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +48,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RecordApplicationEvents
 class ChatExecutionServiceIntegrationTest {
+    @MockitoSpyBean private ChatExecutionRepository executions;
+
     @MockitoSpyBean private ChatInputMaskRepository inputMasks;
 
     @Autowired
@@ -77,6 +82,44 @@ class ChatExecutionServiceIntegrationTest {
         actor = new ChatActor(user.getUserId(), null);
         sessionId = chatSessionService.createSession(actor, new ChatSessionCreateRequest("실행 테스트"))
                 .sessionId();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"answer", "basic", "clarification", "withoutOutput", "failed", "cancelled"})
+    @DisplayName("모든 종료 경로는 시작 시각과 같은 DB 시계로 종료 시각을 남긴다")
+    void 모든_종료_경로가_DB_시계로_종료_시각을_남긴다(String path) {
+        var question = send("유심 재발급 비용 알려줘");
+        Instant databaseTime = findExecution(question.executionId()).getStartedAt().plusSeconds(2);
+        doReturn(databaseTime).when(executions).currentDatabaseTime();
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null);
+
+        switch (path) {
+            case "answer" -> chatExecutionService.completeAnswer(question.executionId(), answer);
+            case "basic" -> chatExecutionService.completeBasicConversation(question.executionId(), answer);
+            case "clarification" -> chatExecutionService.askClarification(question.executionId(), "어느 지역인가요?");
+            case "withoutOutput" -> chatExecutionService.completeWithoutOutput(question.executionId());
+            case "failed" -> chatExecutionService.fail(question.executionId(),
+                    new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
+            case "cancelled" -> chatExecutionService.fail(question.executionId(),
+                    new ChatFailure(ChatMessage.Status.CANCELLED, "CANCELLED"));
+            default -> throw new IllegalArgumentException(path);
+        }
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getEndedAt()).isEqualTo(databaseTime);
+        if (execution.getOutputMessage() != null) {
+            assertThat(execution.getOutputMessage().getCompletedAt()).isEqualTo(databaseTime);
+        }
+    }
+
+    @Test
+    @DisplayName("종료 시각은 트랜잭션 시작 시각이 아니라 호출 시점의 DB 시계다")
+    void 종료_시각은_호출_시점의_DB_시계다() {
+        Instant transactionStart = jdbcTemplate.queryForObject(
+                "SELECT CURRENT_TIMESTAMP", (rs, row) -> rs.getTimestamp(1).toInstant());
+        jdbcTemplate.execute("SELECT pg_sleep(0.02)");
+
+        assertThat(executions.currentDatabaseTime()).isAfter(transactionStart);
     }
 
     @ParameterizedTest
