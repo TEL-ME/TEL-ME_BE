@@ -263,6 +263,33 @@ class ConditionExtractorTest {
         assertThat(request.userPrompt()).contains(ROAMING_ANSWER).contains("로밍 신청하고 싶어요");
     }
 
+    @Test
+    @DisplayName("주 모델 응답을 읽지 못하면 대체 모델로 다시 뽑는다")
+    void 응답을_읽지_못하면_대체_모델로_뽑는다() {
+        LlmClient fallback = mock(LlmClient.class);
+        when(client.generate(any())).thenReturn("조건은 다음과 같습니다: plan_type");
+        when(fallback.generate(any())).thenReturn("""
+                {"conditions":[{"key":"plan_type","question":"어떤 요금제를 쓰고 계신가요?",
+                 "options":["5G","LTE"],"evidence":"5G 요금제는 앱에서, LTE 요금제는 고객센터에서"}]}""");
+
+        var withFallback = new ConditionExtractor(client, fallback, new ObjectMapper());
+
+        assertThat(withFallback.extract(1L, "로밍 신청하고 싶어요", List.of(source())))
+                .extracting(MissingCondition::key).containsExactly("plan_type");
+    }
+
+    @Test
+    @DisplayName("대체 모델 응답도 읽지 못하면 빈 목록을 돌려준다")
+    void 둘_다_읽지_못하면_비운다() {
+        LlmClient fallback = mock(LlmClient.class);
+        when(client.generate(any())).thenReturn("not json");
+        when(fallback.generate(any())).thenReturn("not json");
+
+        var withFallback = new ConditionExtractor(client, fallback, new ObjectMapper());
+
+        assertThat(withFallback.extract(1L, "로밍 신청하고 싶어요", List.of(source()))).isEmpty();
+    }
+
     private List<MissingCondition> extract() {
         return extractor.extract(1L, "로밍 신청하고 싶어요", List.of(source()));
     }

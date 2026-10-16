@@ -168,10 +168,13 @@ public class ConsultRagAnswerConfiguration {
             @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrockClient) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
+        LlmClient extraction = client == null
+                ? null
+                : extractionClient(clarification, client, bedrockClient.getIfAvailable());
         FaqClarificationPlanner planner = client == null
                 ? null
                 : new FaqClarificationPlanner(new ConditionExtractor(
-                        extractionClient(clarification, client, bedrockClient.getIfAvailable()), new ObjectMapper()));
+                        extraction, extraction == client ? null : client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
                 new PlanAnswerProvider(
                         new FaqSearchAnswerProvider(searches, answers, trace,
