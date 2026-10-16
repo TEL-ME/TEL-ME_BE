@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 
 from scripts.chat_judge import judge_chat_flow as judge
+from scripts.chat_judge import service_data
 
 
 QUALITY_RUBRIC = """Evaluate how completely the actual TEL-ME answer resolves the user's question.
@@ -70,6 +71,8 @@ EVIDENCE_RUBRIC = """Determine whether the supplied FAQ evidence can answer the 
 The input contains the original question, its questionParts, previous turns, confirmed conditions,
 and sources. It does not contain the assistant's answer or gold FAQ answers. Use only FAQ answer
 text and confirmed conditions as policy evidence. FAQ question text is not evidence and is omitted.
+A source whose sourceId starts with SERVICE: is service data such as the plan table; treat its answer
+text exactly like FAQ answer text.
 Return exactly one judgment per questionPart in order. Judge that part independently, even when
 sources directly answer another part. ENOUGH requires direct evidence for the full requested fact,
 including procedure, list items, conditions, amounts, and exceptions. Partial evidence is
@@ -125,7 +128,7 @@ QUALITY_SCHEMA = {
 # 질문 충족도에서 답변 가능한 질문으로 보는 기대 동작
 ANSWERABLE_BEHAVIORS = {"ANSWER", "PARTIAL_ANSWER", "ANSWER_OR_CLARIFY"}
 # 모델을 부르지 않고 정한 질문 충족도 규칙. 이 규칙의 NOT_APPLICABLE은 요청을 정상 처리한 것으로 본다
-HANDLED_QUALITY_RULES = {"OUT_OF_SCOPE_QUESTION", "CLARIFICATION_ACCEPTED"}
+HANDLED_QUALITY_RULES = {"OUT_OF_SCOPE_QUESTION", "CLARIFICATION_ACCEPTED", "LOGIN_GUIDANCE_ACCEPTED"}
 
 
 def reference_groups(fixture):
@@ -154,7 +157,15 @@ def is_clarification(turn):
 def rule_quality(turn):
     """기대 동작과 응답 유형만으로 정해지는 질문 충족도. 해당하지 않으면 None이고 모델이 판정한다."""
     expected = turn["fixture"]["expectedBehavior"]
-    if expected == "OUT_OF_SCOPE":
+    if service_data.system_fallback((turn.get("outputMessage") or {}).get("content")):
+        # 분리 실패 같은 대체 문구는 보류나 범위 밖 안내가 아니다. 어떤 기대 동작이든 처리하지 못한 것이다
+        outcome, rule, reason = "MISSED", "SYSTEM_FALLBACK", "질문을 처리하지 못했을 때 나가는 대체 문구라 질문을 처리하지 않았다."
+    elif (turn["fixture"].get("answerSources") == ["MEMBER"] and expected == "ABSTAIN"
+          and service_data.login_guidance_only((turn.get("outputMessage") or {}).get("content"))):
+        # 회원 정보로만 답할 수 있는 질문에 비로그인 사용자가 받은 로그인 안내는 라벨이 정한 정상 처리다
+        outcome, rule, reason = ("NOT_APPLICABLE", "LOGIN_GUIDANCE_ACCEPTED",
+                                 "회원 정보가 필요한 질문이라 비로그인 사용자에게 로그인을 안내한 것을 정상 처리로 본다.")
+    elif expected == "OUT_OF_SCOPE":
         outcome, rule, reason = "NOT_APPLICABLE", "OUT_OF_SCOPE_QUESTION", "서비스 범위 밖 질문이라 답변 충족도를 따지지 않는다."
     elif is_clarification(turn) and expected == "ANSWER_OR_CLARIFY":
         outcome, rule, reason = "NOT_APPLICABLE", "CLARIFICATION_ACCEPTED", "고객 조건에 따라 답이 갈리는 질문이라 조건을 되물은 것을 정상 처리로 본다."
@@ -207,16 +218,18 @@ def checkpoint(path, value):
 
 
 def generation_sources(turn):
-    """Keep generation context distinct from search candidates and stored citations."""
+    """Keep generation context distinct from search candidates and stored citations.
+    요금제 표처럼 FAQ 밖의 서비스 데이터로 만든 답변은 그 데이터(serviceSources)도 근거로 넘긴다."""
+    service = turn.get("serviceSources", [])
     if "ragInputs" not in turn:
-        return judge.actual_sources(turn), "legacy_saved_sources"
+        return judge.actual_sources(turn) + service, "legacy_saved_sources"
     result = {}
     for request in turn["ragInputs"]:
         for source in request.get("searchResults", []):
             sid = source.get("slotId") or f"faqId:{source['faqId']}"
             result[sid] = {"sourceId": sid, "faqId": source["faqId"],
                            "question": source["question"], "answer": source["answer"]}
-    return list(result.values()), "captured_rag_input"
+    return list(result.values()) + service, "captured_rag_input" + ("+service_data" if service else "")
 
 
 def enrich_rag_sources(capture, catalog):
@@ -231,7 +244,7 @@ def enrich_rag_sources(capture, catalog):
                         if sid:
                             source["slotId"] = sid
                             source["slotIdProvenance"] = "catalog_exact_match"
-    return enriched
+    return service_data.attach_service_sources(enriched)
 
 
 def quality_request(model, turn, previous):
@@ -424,7 +437,28 @@ def retrieval_stages(turn):
             "savedSourceHits": sum(bool(set(group) & saved) for group in groups)}
 
 
+def apply_code_rules(turn, item):
+    """저장한 모델 판정에 지금 코드 규칙을 적용한다. 모델 원래 판정은 지우지 않고 옆에 남긴다.
+    - 앱 고정 안내 문장만으로 된 주장은 정책 주장이 아니라 근거성에서 뺀다(SERVICE_GUIDANCE)
+    - 코드가 정하는 충족도 규칙이 생기거나 바뀌면 그 규칙 판정으로 바꾼다"""
+    grounding = (item.get("grounding") or {}).get("result")
+    if grounding and isinstance(grounding.get("claims"), list):
+        for claim in grounding["claims"]:
+            if claim.get("rule") != "SERVICE_GUIDANCE" and service_data.is_service_guidance(claim.get("claim")):
+                claim["modelVerdict"] = claim.get("verdict")
+                claim["verdict"] = "IRRELEVANT"
+                claim["rule"] = "SERVICE_GUIDANCE"
+        judge.normalize_grounding_overall(grounding)
+    rule = rule_quality(turn)
+    current = item.get("quality") or {}
+    if rule and current.get("rule") != rule["rule"]:
+        if current:
+            item["modelQuality"] = current
+        item["quality"] = rule
+
+
 def finalize_turn(turn, item):
+    apply_code_rules(turn, item)
     item["retrieval"] = retrieval_stages(turn)
     grounding = item.get("grounding", {}).get("result")
     quality = item.get("quality", {}).get("result")
@@ -470,6 +504,8 @@ def finalize_turn(turn, item):
     # 되묻기는 기대 동작과 실제 응답 유형으로 판정한다. 되물은 조건이 적절한지는 사람이 본다
     if is_clarification(turn) and expected != "ANSWER_OR_CLARIFY":
         item["findings"].append("UNNECESSARY_CLARIFICATION")
+    if (item.get("quality") or {}).get("rule") == "SYSTEM_FALLBACK":
+        item["findings"].append("SYSTEM_FALLBACK")
     retrieval = item["retrieval"]
     if retrieval["applicable"] and retrieval["candidateHits"] < retrieval["groupCount"]:
         item["findings"].append("RETRIEVAL_MISS")

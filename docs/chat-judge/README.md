@@ -13,11 +13,14 @@ docs/chat-judge/
   judge-validation-v1-review-form.md Judge 검증셋 판정자 B용 판정표
 scripts/chat_judge/
   judge_chat_flow.py                 주장 추출과 근거성 판정, 출력 검증, 보류 판정 결합
-  build_service_quality_set.py       서비스 품질 평가셋 v2 생성
+  build_service_quality_set.py       서비스 품질 평가셋 v2.1 생성(v2는 서비스 데이터 라벨 없이 같은 빌더로 재현)
+  relabel_capture.py                 저장한 캡처의 평가 라벨을 새 평가셋 버전으로 교체
   build_judge_validation_set.py      Judge 검증셋 v1 생성(TELME-100 V7 사람 판정에서 층화 추출)
   run_judge_validation.py            Judge 검증셋을 판정하고 사람 판정과 축별 비교(vLLM 또는 Bedrock)
   run_bedrock_judge.py               저장한 캡처를 Bedrock 모델 하나로 판정(Qwen3 235B, DeepSeek V3.2, Mistral Large 3)
   combine_judges.py                  모델별 판정을 판정 뒤에 결합(하나라도 실패면 실패, 다수결)
+  service_data.py                    요금제 표 근거, 앱 고정 안내·대체 문구(코드 규칙)
+  backfill_capture_service_data.py   예전 캡처에 실행 단계 기록과 요금제 표를 평가 DB에서 채움
   data/                              평가셋, 평가셋 원본(quality_v2_sources/), 테스트용 파일럿 기록(fixtures/)
   experiments/v6_live_chat_pipeline/ 실제 Spring 채팅 API로 답변을 만들고 vLLM Judge로 채점(충족도·보류 프롬프트)
   experiments/v7_cross_judge/        저장한 답변을 Bedrock 모델로 다시 채점(V6와 같은 프롬프트와 규칙)
@@ -31,7 +34,8 @@ src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java  채팅 실행 기록 �
 | 평가셋 | 용도 | 구성 |
 | --- | --- | --- |
 | [`chat_pipeline_quality_v1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v1.json) | 이전 기준(TELME-100) | 카탈로그 질문 500(400개가 FAQ 질문 문구 그대로), 흐름 회귀 9턴 |
-| [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json) | 서비스 답변 품질 측정 | 아래 표 |
+| [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json) | 서비스 답변 품질 측정(고정) | 아래 표 |
+| [`chat_pipeline_quality_v2_1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2_1.json) | 서비스 답변 품질 측정 | v2와 같은 질문에 서비스 데이터 라벨을 더했다(아래) |
 | [`judge_validation_v1.json`](../../scripts/chat_judge/data/judge_validation_v1.json) | Judge 자체의 정확도 측정 | TELME-100 V7 실제 답변 116건과 사람 판정 |
 
 서비스 품질셋 v2는 238개 대화, 259턴이다. 질문과 필수 사실은 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼고, 원본은 [`quality_v2_sources/`](../../scripts/chat_judge/data/quality_v2_sources)에 있다. 사람 검토 전이다.
@@ -51,6 +55,13 @@ src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java  채팅 실행 기록 �
 - 결과: 질문을 쓸 때 쓴 FAQ는 모두 인정됐다. v1 대체 FAQ 중 필수 사실이 빠진 24개는 빠지고, 427개가 새로 인정됐다(질문 부분당 평균 3.5개).
 - 검수 중 필수 사실이 질문을 다 덮지 못한다고 표시된 문항(예: 토요일 영업을 묻는데 평일 시간만 적힘)은 `note`에 남겼다. 사람 검토 때 먼저 볼 대상이다.
 
+v2.1은 v2에 [`service_data_labels.json`](../../scripts/chat_judge/data/quality_v2_sources/service_data_labels.json)을 더한 라벨이다. v2는 FAQ 답변 본문만 보고 답의 유무를 정했지만 채팅은 요금제 표와 회원 정보로도 답한다.
+- 턴마다 답의 출처(`answerSources`: `FAQ`, `PLAN_TABLE`, `MEMBER`, `STORE`)를 적었다.
+- 요금제 목록·최저가처럼 요금제 표로도 답이 정해지는 질문 부분 10개는 요금제 표(`plans_snapshot.json`)도 인정 근거로 더했다.
+- FAQ에는 답이 없지만 요금제 표로 답이 정해지는 질문 5개를 답변 질문으로 바꿨다. 시니어 요금제 가격(U018), 판매하지 않는 요금제(U023 5G 프리미엄 플러스, U024 LTE 슬림, U025 군인 전용, U030 키즈워치 전용)는 "판매 중인 요금제에 없다"가 정답이다.
+- 내 요금·사용량·위약금 질문 3개(U049–U051)는 비로그인 실행에서는 로그인 안내가 정답(보류)이고, 로그인 실행에서는 회원 데이터로 답해야 한다(`memberExpectedBehavior`). 로그인 실행은 아직 없다.
+- 이전 캡처의 답변을 새 라벨로 채점할 때는 `relabel_capture.py`로 라벨만 바꾼다.
+
 Judge 검증셋 v1은 TELME-100 V7의 사람 판정 302건 중 단일 질문 답변에서 근거 없는 답 39, 과도한 거절 7, 근거는 맞지만 부분·미답 25, 정상 20, 근거 없어 보류 15, 기타 10건을 골랐다. 지금 라벨은 판정자 한 명(A)의 것이다. 두 번째 판정자(B)가 [판정표](judge-validation-v1-review-form.md)를 A와 모델 판정을 보지 않고 채운 뒤 `run_judge_validation.py --review-b`로 A·B 일치도와 Judge 일치율을 낸다.
 
 ## 실행
@@ -68,12 +79,22 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 python -X utf8 -m scripts.chat_judge.run_judge_validation --out .measure/judge-validation.json.gz
 python -X utf8 -m scripts.chat_judge.run_judge_validation --judged .measure/judge-validation.json.gz --review-b docs/chat-judge/judge-validation-v1-review-form.md
 
+# 근거가 바뀐 턴만 다시 판정(답변·근거가 같은 턴은 이전 판정 재사용, 코드 규칙은 지금 기준)
+python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model qwen --prior <이전 결과> [--prior-capture <이전 결과의 캡처>] --allow-bedrock-call --out <새 결과>
+
+# 예전 캡처에 실행 단계 기록·요금제 표를 채우고 새 라벨을 입힘(답변은 그대로)
+python -X utf8 -m scripts.chat_judge.backfill_capture_service_data <캡처> --out <보강 캡처>
+python -X utf8 -m scripts.chat_judge.relabel_capture <보강 캡처> --fixture scripts/chat_judge/data/chat_pipeline_quality_v2_1.json --out <새 라벨 캡처>
+
+# 저장한 판정에 지금 코드 규칙을 다시 적용해 결합(모델 호출 없음)
+python -X utf8 -m scripts.chat_judge.combine_judges <결과...> --capture <캡처>
+
 # 평가셋 다시 만들기
 python -X utf8 -m scripts.chat_judge.build_service_quality_set
 python -X utf8 -m scripts.chat_judge.build_judge_validation_set --v7-dir <TELME-100 체크아웃>/docs/chat-judge/experiments/V7-bedrock-cross-judge
 
 # 테스트
-python -X utf8 -m unittest scripts.chat_judge.test_judge_chat_flow scripts.chat_judge.test_judge_validation scripts.chat_judge.experiments.v6_live_chat_pipeline.test_chat_pipeline_evaluation scripts.chat_judge.experiments.v7_cross_judge.test_v7
+python -X utf8 -m unittest scripts.chat_judge.test_judge_chat_flow scripts.chat_judge.test_judge_validation scripts.chat_judge.test_combine_judges scripts.chat_judge.test_service_data scripts.chat_judge.experiments.v6_live_chat_pipeline.test_chat_pipeline_evaluation scripts.chat_judge.experiments.v7_cross_judge.test_v7
 ```
 
 - `telme-ollama`, `telme-judge-vllm-bounded` 컨테이너와 모델, FAQ가 있는 PostgreSQL이 필요하다. 평가 DB는 `telme_judge_eval`만 쓴다(없으면 `--postgres-container`의 `telme` DB를 복제). 16GB GPU에서는 생성이 끝난 뒤 Ollama를 내리고 vLLM을 올린다.

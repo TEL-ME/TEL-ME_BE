@@ -6,6 +6,7 @@
   보류는 한쪽이라도 지어낸 답·과도한 거절을 잡으면 그 판정. 판정하지 못한 모델이 있고 나머지가 모두 통과면 미확정
 - majority: 판정한 모델의 과반이 실패면 실패, 과반이 통과면 통과, 같으면 미확정
 --validation을 주면 Judge 검증셋의 사람 판정(판정자 A)과 비교한다.
+--capture를 주면 저장한 판정에 지금 코드 규칙을 다시 적용한 뒤(모델 호출 없음) 합친다.
 사용: python -X utf8 -m scripts.chat_judge.combine_judges qwen.json.gz deepseek.json.gz [--rule any-fail] [--validation]
 """
 import argparse
@@ -62,9 +63,11 @@ def combine_majority(labels):
     return combined
 
 
-def load_turns(path):
+def load_turns(path, capture=None):
     """완료된 턴만 (사례, 턴) 키로 읽는다. 검증셋 결과의 맥락용 이전 턴은 판정 대상이 아니다."""
     result = pipeline.load_json(path)
+    if capture is not None:
+        result = pipeline.rescore(result, capture)
     return {(item["caseId"], item["turnIndex"]): item for item in result["turns"]
             if item.get("executionStatus") == "COMPLETED"}, result
 
@@ -119,8 +122,10 @@ def main():
     parser.add_argument("--rule", choices=("any-fail", "majority"), default="any-fail")
     parser.add_argument("--validation", action="store_true", help="검증셋 결과일 때 사람 판정과 비교")
     parser.add_argument("--out", type=Path, help="턴별 결합 판정을 저장할 경로")
+    parser.add_argument("--capture", type=Path, help="판정한 캡처. 주면 지금 코드 규칙으로 다시 집계한다")
     args = parser.parse_args()
-    loaded = [load_turns(path) for path in args.results]
+    capture = pipeline.load_json(args.capture) if args.capture else None
+    loaded = [load_turns(path, capture) for path in args.results]
     keys = set.intersection(*(set(turns) for turns, _ in loaded))
     rule = combine_any_fail if args.rule == "any-fail" else combine_majority
     combined = {key: rule([turn_labels(turns[key]) for turns, _ in loaded]) for key in sorted(keys)}

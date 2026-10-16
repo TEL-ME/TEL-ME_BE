@@ -17,6 +17,7 @@ import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.service.RagAnswerGenerator;
+import com.telme.subscription.service.SubscriptionEligibilityChecker;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -36,13 +37,18 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
@@ -64,6 +70,13 @@ import org.springframework.test.web.servlet.MockMvc;
 @EnabledIfEnvironmentVariable(named = "TELME_CHAT_JUDGE_PROBE", matches = "true")
 class ChatJudgeCaptureProbe {
     private static final Duration EXECUTION_TIMEOUT = Duration.ofMinutes(4);
+    // 답변에 영향을 주는 설정만 남긴다. 키·계정 설정(kakao, member.oauth2 등)은 넣지 않는다
+    private static final List<String> CONFIG_PREFIXES = List.of("llm", "search", "rag", "embedding", "chat.",
+            "telme.consult", "store.search");
+    private static final List<String> CONFIG_KEYS = List.of("llm.provider", "llm.model",
+            "telme.consult.persistence-enabled", "telme.consult.llm-enabled",
+            "telme.consult.chat-integration-enabled", "telme.consult.rag-integration-enabled",
+            "telme.routing.request-inventory-enabled");
     private static final DateTimeFormatter FILE_TIME =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
 
@@ -74,6 +87,8 @@ class ChatJudgeCaptureProbe {
     @MockitoSpyBean(name = "baseLlmClient") private LlmClient baseLlmClient;
     @MockitoSpyBean private RagAnswerGenerator ragAnswerGenerator;
     @Autowired private List<ChatProcessingPort> processingPorts;
+    @Autowired private ApplicationContext context;
+    @Autowired private Environment environment;
     @Value("${ollama.url}") private String ollamaUrl;
     @Value("${llm.model}") private String generatorModel;
 
@@ -161,6 +176,8 @@ class ChatJudgeCaptureProbe {
         run.put("faqSnapshotHash", jdbc.queryForObject(
                 "SELECT md5(string_agg(faq_id::text || ':' || question || ':' || answer, '' ORDER BY faq_id)) "
                         + "FROM faqs", String.class));
+        run.put("appConfig", appConfig());
+        run.put("serviceData", serviceData());
         run.put("cases", new ArrayList<>());
         write(output, run);
 
@@ -283,7 +300,58 @@ class ChatJudgeCaptureProbe {
         result.put("generatorCallRecords", generations);
         result.put("outputMessage", outputMessage);
         result.put("savedSources", savedSources);
+        // 요금제 답변(planAnswer)처럼 FAQ 밖 데이터로 답한 경로를 Judge가 알 수 있게 실행 기록을 남긴다
+        String trace = jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id = ?", String.class, executionId);
+        result.put("pipelineTrace", trace == null ? null : mapper.readTree(trace));
         return result;
+    }
+
+    // 요금제 답변의 근거가 되는 판매 요금제 표와 가입 연령 기준
+    private Map<String, Object> serviceData() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("plans", jdbc.queryForList(
+                "SELECT code, name, network_type, target_group, monthly_fee, data_gb, is_unlimited, voice_minutes, "
+                        + "is_voice_unlimited, sms_count, is_sms_unlimited, status, sort_order "
+                        + "FROM plans ORDER BY sort_order, plan_id"));
+        data.put("planEligibility", Map.of(
+                "youthMinAge", SubscriptionEligibilityChecker.YOUTH_MIN_AGE,
+                "youthMaxAge", SubscriptionEligibilityChecker.YOUTH_MAX_AGE,
+                "seniorMinAge", SubscriptionEligibilityChecker.SENIOR_MIN_AGE));
+        return data;
+    }
+
+    // 실제 적용된 설정 값. 기본값이 코드(@DefaultValue)에 있는 설정도 남도록 설정 객체를 그대로 기록한다
+    private Map<String, Object> appConfig() {
+        Map<String, Object> config = new TreeMap<>();
+        for (Object bean : context.getBeansWithAnnotation(ConfigurationProperties.class).values()) {
+            Class<?> type = AopUtils.getTargetClass(bean);
+            ConfigurationProperties annotation = AnnotationUtils.findAnnotation(type, ConfigurationProperties.class);
+            String prefix = annotation == null ? "" : annotation.prefix().isBlank() ? annotation.value() : annotation.prefix();
+            if (CONFIG_PREFIXES.stream().anyMatch(prefix::startsWith)) {
+                try {
+                    config.put(prefix, withoutSecrets(mapper.valueToTree(bean)));
+                } catch (IllegalArgumentException unserializable) {
+                    config.put(prefix, type.getName());
+                }
+            }
+        }
+        for (String key : CONFIG_KEYS) {
+            config.put(key, environment.getProperty(key));
+        }
+        return config;
+    }
+
+    private static JsonNode withoutSecrets(JsonNode node) {
+        if (node instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
+            List<String> secrets = new ArrayList<>();
+            object.fieldNames().forEachRemaining(name -> {
+                if (name.toLowerCase().matches(".*(key|secret|token|password).*")) secrets.add(name);
+            });
+            object.remove(secrets);
+            object.forEach(ChatJudgeCaptureProbe::withoutSecrets);
+        }
+        return node;
     }
 
     private long createSession(MockHttpSession session, String caseId) throws Exception {

@@ -1,6 +1,6 @@
 # 실제 채팅 답변의 품질 평가
 
-현재 실행 도구는 `scripts/chat_judge/experiments/v6_live_chat_pipeline/run_chat_pipeline_eval.py`다. 실제 Spring 채팅 API가 만든 EXAONE 답변을 저장한 뒤 vLLM Qwen3-14B-AWQ로 병렬 채점한다. 기존의 사람이 작성한 답변 500건은 Judge 자체의 검증 자료이며 서비스 품질 점수로 사용하지 않는다.
+현재 실행 도구는 `scripts/chat_judge/experiments/v6_live_chat_pipeline/run_chat_pipeline_eval.py`다. 실제 Spring 채팅 API가 만든 답변을 저장한 뒤 vLLM Qwen3-14B-AWQ로 병렬 채점한다. 저장한 답변을 Bedrock 모델로 판정할 때는 `scripts/chat_judge/run_bedrock_judge.py`를 쓴다(같은 프롬프트와 코드 규칙). 기존의 사람이 작성한 답변 500건은 Judge 자체의 검증 자료이며 서비스 품질 점수로 사용하지 않는다.
 
 ## 실행
 
@@ -46,10 +46,15 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 
 | 규칙 | 조건 | 판정 |
 | --- | --- | --- |
-| `EMPTY_SOURCES` | 생성에 전달된 FAQ 근거가 없음 | 근거 충분성은 모든 질문 부분이 `INSUFFICIENT`. 답변이 거절이면 보류는 `APPROPRIATE` |
+| `EMPTY_SOURCES` | 생성에 전달된 FAQ 근거와 서비스 데이터 근거가 모두 없음 | 근거 충분성은 모든 질문 부분이 `INSUFFICIENT`. 답변이 거절이면 보류는 `APPROPRIATE` |
+| `SYSTEM_FALLBACK` | 답변 전체가 처리 실패 대체 문구(질문 분리 실패 등) | 기대 동작과 상관없이 충족도 `MISSED`, 발견 사항 `SYSTEM_FALLBACK`. 보류·범위 밖 질문에서도 통과하지 않는다 |
 | `OUT_OF_SCOPE_QUESTION` | 기대 동작이 `OUT_OF_SCOPE` | 충족도 `NOT_APPLICABLE`. 범위 밖 질문에 사실을 지어내면 근거성과 보류 축에서 걸린다 |
 | `CLARIFICATION_ACCEPTED` | 기대 동작이 `ANSWER_OR_CLARIFY`이고 응답이 되묻기 | 충족도 `NOT_APPLICABLE`, 정상 처리 |
 | `UNNECESSARY_CLARIFICATION` | 그 밖의 기대 동작에서 응답이 되묻기 | 충족도 `MISSED`, 발견 사항 `UNNECESSARY_CLARIFICATION` |
+| `LOGIN_GUIDANCE_ACCEPTED` | 답의 출처가 회원 정보뿐인 보류 질문(`answerSources: ["MEMBER"]`)에 답변 전체가 로그인 안내 | 충족도 `NOT_APPLICABLE`, 정상 처리(비로그인 실행) |
+| `SERVICE_GUIDANCE` | 근거성 주장 전체가 앱 고정 안내 문장 안에 있음 | 그 주장은 정책 주장에서 뺀다(`IRRELEVANT`, 모델 판정은 `modelVerdict`) |
+
+요금제 답변 경로를 탄 턴에는 요금제 표가 근거 `SERVICE:PLAN_TABLE`로 함께 들어간다([평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md#faq-밖-데이터로-만든-답변과-앱-고정-문구)). 코드 규칙은 저장한 판정을 다시 집계할 때(`rescore`, `combine_judges.py --capture`)도 지금 기준으로 다시 적용한다.
 
 `ANSWER_OR_CLARIFY`는 FAQ 답이 고객 조건(약정 개월, 나이, 본인·대리인 등)에 따라 갈리는데 질문에 그 조건이 없는 경우다. 경우별로 모두 답하면 `ANSWER`와 같이 판정한다. 되물은 조건이 질문과 맞는지, 이미 답한 조건을 다시 묻는지는 아직 사람이 판정한다.
 
@@ -72,7 +77,7 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 
 각 실행은 새 `.measure/chat-pipeline-날짜-시간/`에 아래 파일을 보존한다.
 
-- `questions.json`, `capture.json`: 질문, 실제 라우팅, 검색 결과, RAG 입력, 생성 프롬프트, 저장 답변과 실행 상태
+- `questions.json`, `capture.json`: 질문, 실제 라우팅, 검색 결과, RAG 입력, 생성 프롬프트, 저장 답변과 실행 상태, 실행 단계 기록(`pipelineTrace`), 요금제 표(`serviceData`), 적용된 설정(`appConfig`). 이 기록이 없는 예전 캡처는 평가 DB가 남아 있으면 `backfill_capture_service_data.py`로 채운다
 - `manifest.json`, `capture-gradle.log`: 코드 및 입력 해시, 모델과 실행 환경, 수집 로그
 - `judged-raw.json.gz`: Judge의 모든 요청, 응답, 인용, 재시도와 검증 오류
 - `scores.json`, `category-scores.json`, `report.md`: 전체 및 유형별 점수

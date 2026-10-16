@@ -10,15 +10,21 @@
 답변 가능 질문의 정답 묶음은 별도 검수자가 정했다. 후보는 v1의 대체 FAQ 묶음, 첫 실행의 실제 검색 결과, 임베딩으로
 가까운 FAQ 6개이고(equivalence_candidates.json), 답변 본문에 필수 사실이 모두 있는 FAQ만 인정했다(equivalence_labels.json).
 질문을 쓸 때 쓴 FAQ는 모두 인정됐고, v1 대체 FAQ 중 필수 사실이 빠진 24개는 빠졌다.
+v2.1은 v2에 서비스 데이터 라벨(service_data_labels.json)을 더한다. 턴마다 답의 출처(answerSources: FAQ, PLAN_TABLE,
+MEMBER, STORE)를 적고, 요금제 표로 답이 정해지는 질문 부분에는 요금제 표(plans_snapshot.json)를 인정 근거로 더한다.
+FAQ에 답이 없지만 요금제 표로 답할 수 있는 질문은 답변 질문으로 바꾼다. v2 파일은 고정해 두고 build(service_labels=False)로 다시 만들 수 있다.
 사용: python -X utf8 -m scripts.chat_judge.build_service_quality_set
 """
 import json
 from pathlib import Path
 
+from scripts.chat_judge import service_data
+
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES = ROOT / "scripts/chat_judge/data/quality_v2_sources"
 V1 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v1.json"
-OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2.json"
+OUTPUT_V2 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2.json"
+OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_1.json"
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
 PROVENANCE = "v2_agent_written_question_and_required_facts; human_review_pending"
 
@@ -58,7 +64,43 @@ def widen(case, accepted):
     return case
 
 
-def build():
+def answer_sources(turn):
+    if turn["expectedBehavior"] == "STORE_LOOKUP":
+        return ["STORE"]
+    return ["FAQ"] if turn.get("qualityReferenceGroups") else []
+
+
+def apply_service_labels(cases):
+    """요금제 표와 회원 정보로 답할 수 있는 질문의 라벨을 더한다(v2.1)."""
+    labels = load("service_data_labels.json")
+    snapshot = load("plans_snapshot.json")
+    plan_source = service_data.plan_table_source(snapshot["plans"], snapshot["planEligibility"])
+    plan_alternative = {key: plan_source[key] for key in ("sourceId", "answer")}
+    by_id = {case["caseId"]: case for case in cases}
+    for case in cases:
+        for turn in case["turns"]:
+            turn["answerSources"] = answer_sources(turn)
+    marked = "; v2.1_service_data_labels"
+    for row in labels["planTableParts"]:
+        case_id, turn_index, part_index = row["unit"].rsplit(":", 2)
+        turn = by_id[case_id]["turns"][int(turn_index)]
+        turn["qualityReferenceGroups"][int(part_index)]["alternatives"].append(dict(plan_alternative))
+        turn["answerSources"] = ["FAQ", "PLAN_TABLE"]
+        turn["labelProvenance"] += marked
+    for row in labels["planTableAnswers"]:
+        turn = by_id[f"V2-NOANSWER-{row['id']}"]["turns"][0]
+        turn.update(expectedBehavior="ANSWER", requiredFacts=row["requiredFacts"], answerSources=["PLAN_TABLE"],
+                    qualityReferenceGroups=[{"questionPart": turn["question"], "alternatives": [dict(plan_alternative)]}])
+        turn["labelProvenance"] += marked
+    for row in labels["memberData"]:
+        # 비로그인 실행은 로그인 안내가 정답(ABSTAIN). 로그인 실행에서는 회원 데이터로 답해야 한다
+        turn = by_id[f"V2-NOANSWER-{row['id']}"]["turns"][0]
+        turn.update(answerSources=["MEMBER"], memberExpectedBehavior="ANSWER")
+        turn["labelProvenance"] += marked
+    return cases
+
+
+def build(service_labels=True):
     catalog = {faq["slot_id"]: faq for faq in json.loads(CATALOG.read_text(encoding="utf-8"))}
     seeds = {seed["key"]: seed for seed in load("answerable_seed.json")}
     written = load("answerable_written.json")
@@ -116,6 +158,8 @@ def build():
             cases.append(case)
     if len({case["caseId"] for case in cases}) != len(cases):
         raise ValueError("Duplicate case ID")
+    if service_labels:
+        apply_service_labels(cases)
     return cases, excluded
 
 

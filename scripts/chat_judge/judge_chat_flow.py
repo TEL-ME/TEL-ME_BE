@@ -41,6 +41,8 @@ from questionContext into assistant claims. Use only FAQ answer text as policy e
 Confirmed conditions describe the user's situation and cannot establish a service policy.
 A FAQ source supports a claim only when its answer text directly supports the claim's meaning.
 Ignore FAQ question text; it is not policy evidence.
+A source whose sourceId starts with SERVICE: is service data the app used to build the answer, such as
+the plan table. Treat its answer text exactly like FAQ answer text.
 Different wording may still be supported when the meanings match.
 If a condition, negation, entity, amount, duration, or exception differs or is omitted, mark UNSUPPORTED.
 Preserve numeric boundaries exactly: a rule for people aged 18 or younger includes someone who is
