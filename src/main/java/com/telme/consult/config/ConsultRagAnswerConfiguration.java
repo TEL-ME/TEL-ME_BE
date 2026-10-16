@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.service.ConditionExtractor;
 import com.telme.consult.service.FaqClarificationPlanner;
 import com.telme.consult.service.FaqSearchAnswerProvider;
+import com.telme.consult.service.JudgingFaqGrayZoneSelector;
 import com.telme.llm.service.LlmClient;
 import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
 import com.telme.consult.service.RagSearchResultAnswerGenerator;
@@ -38,6 +39,8 @@ import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
 
+import com.telme.faq.config.SearchProperties;
+import com.telme.rag.service.FaqEvidenceJudge;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -150,10 +153,11 @@ public class ConsultRagAnswerConfiguration {
             FaqClarificationProperties clarification,
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions,
-            QueryRoutingService routing, PlanQuestionClassifier planClassifier, PlanCatalogAnswerer planCatalog,
-            MemberPlanAnswerer memberPlans, MemberRecommendationAnswerer recommendations,
-            ChatSessionRepository chatSessions, SessionRecommendationAnswers recommendationAnswers,
-            PlanQuestionProperties planProperties) {
+            QueryRoutingService routing, SearchProperties searchProperties,
+            ObjectProvider<FaqEvidenceJudge> evidenceJudge, PlanQuestionClassifier planClassifier,
+            PlanCatalogAnswerer planCatalog, MemberPlanAnswerer memberPlans,
+            MemberRecommendationAnswerer recommendations, ChatSessionRepository chatSessions,
+            SessionRecommendationAnswers recommendationAnswers, PlanQuestionProperties planProperties) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
@@ -163,7 +167,9 @@ public class ConsultRagAnswerConfiguration {
                 new PlanAnswerProvider(
                         new FaqSearchAnswerProvider(searches, answers, trace,
                                 comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
-                                routing::refinedSearchQuery),
+                                routing::refinedSearchQuery,
+                                // 꺼져 있으면 null이라 기존 검색을 그대로 쓴다
+                                JudgingFaqGrayZoneSelector.fromSettings(searchProperties, evidenceJudge.getIfAvailable())),
                         planClassifier, planCatalog, memberPlans, recommendations, chatSessions::findUserIdBySessionId,
                         recommendationAnswers::of,
                         comparisonEvidence, trace, planProperties.answerEnabled()),

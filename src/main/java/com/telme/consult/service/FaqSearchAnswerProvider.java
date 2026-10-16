@@ -37,6 +37,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final FaqClarificationPlanner planner;
     private final SuggestedQuestions suggestedQuestions;
     private final RefinedQuerySelector refinedQueries;
+    // null이면 회색 구간 판정을 쓰지 않는 기존 검색이다
+    private final FaqGrayZoneSelector grayZone;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -98,6 +100,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
             AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
             SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter, planner,
+                suggestedQuestions, refinedQueries, null);
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
+            SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries,
+            FaqGrayZoneSelector grayZone) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
@@ -107,6 +119,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         this.planner = planner;
         this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
         this.refinedQueries = Objects.requireNonNull(refinedQueries);
+        this.grayZone = grayZone;
     }
 
     @Override
@@ -129,13 +142,26 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         }
         if (comparisonEvidence.applies(ConsultationQuestion.extract(input.originalUserQuery()))) {
             List<FaqSearchResponse> original = search(input, input.originalUserQuery(), FaqSearchKind.ORIGINAL);
-            var resolution = comparisonEvidence.resolveDetailed(input.executionId(),
-                    input.consultRequestId(), ConsultationQuestion.extract(input.originalUserQuery()), original,
-                    (query, kind) -> searchComparisonCandidate(input, query, kind));
+            var resolution = resolveComparison(input, original);
+            boolean retried = false;
+            // 비교 답변은 원문 검색 결과에서 그대로 인용할 FAQ를 고른다. 회색 구간 판정으로 결과가 바뀌면 인용하던 FAQ가
+            // 빠지거나 뒤로 밀려 답하지 못할 수 있다(docs/GRAY_ZONE_UPPER_BAND.md 5.7절). 그때만 판정을 붙이기 전
+            // 검색 결과로 한 번 더 고른다. 인용문은 비교 답변기가 다시 확인하므로 판정이 뺀 FAQ가 들어와도 그대로 답하지 않는다
+            if (resolution.answer() == null && grayZone != null) {
+                List<FaqSearchResponse> beforeGrayZone = search(input, input.originalUserQuery(),
+                        FaqSearchKind.ORIGINAL.name(), SEARCH_TOP_K, false, false);
+                if (!faqIds(beforeGrayZone).equals(faqIds(original))) {
+                    retried = true;
+                    resolution = resolveComparison(input, beforeGrayZone);
+                }
+            }
+            if (retried) {
+                trace.stage(input.executionId(), "comparisonRetry", Map.of(
+                        "reason", "GRAY_ZONE_CHANGED_ORIGINAL_RESULTS", "answered", resolution.answer() != null));
+            }
             if (resolution.answer() != null) {
                 trace.stage(input.executionId(), "comparisonAnswer", Map.of(
-                        "method", "VERIFIED_FAQ_QUOTE", "faqIds",
-                        resolution.sources().stream().map(FaqSearchResponse::faqId).toList()));
+                        "method", "VERIFIED_FAQ_QUOTE", "faqIds", faqIds(resolution.sources())));
                 // 비교한 두 FAQ가 모두 근거라 FAQ마다 추천 질문을 하나씩 붙인다. 비교한 정책 자체를 가리키는 추천은 뺀다
                 Set<String> answered = Objects.requireNonNull(suggestedQuestions.questionsAbout(
                         resolution.sources().stream().map(FaqSearchResponse::faqId).toList()), "answeredQuestions");
@@ -229,25 +255,39 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     }
 
     private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
-        return search(input, query, kind.name(), SEARCH_TOP_K, false);
+        return search(input, query, kind.name(), SEARCH_TOP_K, false, true);
     }
 
     private List<FaqSearchResponse> searchComparisonCandidate(
             AnswerInput input, String query, String kind) {
-        return search(input, query, kind, COMPARISON_CANDIDATE_TOP_K, true);
+        return search(input, query, kind, COMPARISON_CANDIDATE_TOP_K, true, true);
     }
 
-    private List<FaqSearchResponse> search(
-            AnswerInput input, String query, String kind, int topK, boolean unfilteredCandidates) {
+    private ComparisonEvidenceResolver.Resolution resolveComparison(
+            AnswerInput input, List<FaqSearchResponse> original) {
+        return comparisonEvidence.resolveDetailed(input.executionId(),
+                input.consultRequestId(), ConsultationQuestion.extract(input.originalUserQuery()), original,
+                (query, kind) -> searchComparisonCandidate(input, query, kind));
+    }
+
+    private static List<Long> faqIds(List<FaqSearchResponse> results) {
+        return results.stream().map(FaqSearchResponse::faqId).toList();
+    }
+
+    // useGrayZone이 false면 회색 구간이 켜져 있어도 판정을 붙이기 전 임계값으로 검색한다
+    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind, int topK,
+            boolean unfilteredCandidates, boolean useGrayZone) {
         query = ConsultationQuestion.extract(query);
+        boolean grayZoneSearch = !unfilteredCandidates && grayZone != null && useGrayZone;
         Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", topK,
-                "candidateMode", unfilteredCandidates, "consultRequestId", input.consultRequestId());
+                "candidateMode", unfilteredCandidates, "grayZone", grayZoneSearch,
+                "consultRequestId", input.consultRequestId());
         trace.append(input.executionId(), "searchRequests", request);
         try {
             FaqSearchRequest searchRequest = unfilteredCandidates ? new FaqSearchRequest(query, topK)
                                                                   : new FaqSearchRequest(query, topK, FaqSearchKind.valueOf(kind));
-            var found = unfilteredCandidates
-                    ? searches.searchCandidates(searchRequest)
+            var found = unfilteredCandidates ? searches.searchCandidates(searchRequest)
+                    : grayZoneSearch ? searchGrayZone(input, searchRequest)
                     : searches.search(searchRequest);
             var results = List.copyOf(found);
             trace.append(input.executionId(), "searchResults", Map.of(
@@ -267,6 +307,26 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             // 빈 목록은 근거 없음이다. 호출·응답 계약 실패는 원인을 보존해 별도로 종료한다.
             throw new FaqAnswerSearchException(failure);
         }
+    }
+
+    // 판정은 검색 문장이 아니라 고객이 실제로 물은 질문으로 한다. 원문·문맥 복원·재검색 어느 경로든 같다
+    // 어떤 후보를 왜 남기고 뺐는지(판정 결과·위쪽 구간 여부·지연)를 검색마다 실행 기록에 남긴다. 모델이 쓴 문장은 넣지 않는다
+    private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest) {
+        var candidates = searches.searchGrayZone(searchRequest);
+        // 재검색 문장은 FAQ 말투로 다듬어져 점수가 높게 나온다. 원문 검색에서 판정기가 막은 FAQ가 통과 선을 넘어
+        // 판정 없이 들어오지 않게 재검색 후보는 모두 판정한다. 원문에서 받은 판정은 같은 실행 안에서 다시 쓴다
+        if (searchRequest.kind() == FaqSearchKind.REFINED) {
+            candidates = candidates.judgingAll();
+        }
+        long started = System.nanoTime();
+        var selection = grayZone.select(input.executionId(), input.consultRequestId(), input.resolvedUserQuery(),
+                candidates, searchRequest.topK());
+        trace.append(input.executionId(), "grayZoneJudgments", Map.of(
+                "query", searchRequest.query(), "kind", String.valueOf(searchRequest.kind()),
+                "judgments", selection.judgments(),
+                "elapsedMs", (System.nanoTime() - started) / 1_000_000,
+                "consultRequestId", input.consultRequestId()));
+        return selection.results();
     }
 
     /** 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문을 돌려주면 재검색하지 않는다. */

@@ -145,6 +145,41 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("되물은 질문과 선택지를 조건 이름과 함께 LLM에 넘긴다")
+    void analyzeFollowUp_passesAskedQuestionAndOptions() {
+        // 복합 질문의 되묻기 메시지는 앞부분에 답변이 있고 마지막 줄이 질문이다
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L)
+                .content("1. 유심 재발급 비용\n7,700원입니다.\n\n2. 유심 재발급 서류\n대리인이 대신 받으러 오실 예정이신가요?")
+                .followUps("[\"예\", \"아니요\"]")
+                .build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("agent_collecting")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":"
+                        + "[{\"key\":\"agent_collecting\",\"status\":\"FILLED\",\"value\":\"직접 갈 거예요\"}]}");
+
+        service.analyzeFollowUp(SESSION_ID, "유심을 잃어버렸고 제가 직접 매장에 갈 거예요");
+
+        ArgumentCaptor<LlmRequest> request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().userPrompt())
+                .contains("되묻는 중인 조건: agent_collecting")
+                .contains("- agent_collecting: \"대리인이 대신 받으러 오실 예정이신가요?\" (선택지: 예, 아니요)")
+                .doesNotContain("7,700원");
+    }
+
+    @Test
     @DisplayName("업무 선택지를 그대로 누르면 모델을 부르지 않고 코드로 읽는다")
     void analyzeFollowUp_readsServiceTypeOptionWithoutLlm() {
         ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
@@ -260,6 +295,19 @@ class QueryRoutingServiceFollowUpTest {
 
         assertThat(response.consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
         assertThat(response.conditions()).containsExactly(Map.entry("serviceType", "USIM_REISSUE"));
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("지역을 묻는 중 업무 이름에 어미만 붙여 답해도 모델 없이 업무 조건으로 받는다")
+    void analyzeFollowUp_acceptsShortServiceReplyWhileAskingLocation() {
+        givenWaitingConsultExists();
+
+        // TELME-174 대화 흐름에서 지역 값으로 잘못 들어갔던 실제 답변
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "명의변경이라고");
+
+        assertThat(response.conditions()).containsExactly(Map.entry("serviceType", "NAME_CHANGE"));
         assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
         verify(llmClient, never()).generate(any());
     }

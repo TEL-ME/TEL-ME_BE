@@ -3,16 +3,27 @@ package com.telme.llm.service;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmGenerationRecorder.Result;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
 public class RecordingLlmClient implements LlmAttemptClient {
 
     private final LlmClient delegate;
     private final LlmGenerationRecorder recorder;
     private final String model;
+    // null이면 기존 Ollama 기록 경로를 쓴다
+    private final String provider;
+
+    public RecordingLlmClient(LlmClient delegate, LlmGenerationRecorder recorder, String model) {
+        this(delegate, recorder, model, null);
+    }
+
+    public RecordingLlmClient(LlmClient delegate, LlmGenerationRecorder recorder, String model, String provider) {
+        this.delegate = delegate;
+        this.recorder = recorder;
+        this.model = model;
+        this.provider = provider;
+    }
 
     @Override
     public String generate(LlmRequest request, int attempt) {
@@ -49,7 +60,11 @@ public class RecordingLlmClient implements LlmAttemptClient {
     // 기록 저장 실패가 LLM 결과나 원래 예외를 덮지 않도록 여기서 막는다
     private void safeRecord(LlmRequest request, Result result) {
         try {
-            recorder.record(request, model, result);
+            if (provider == null) {
+                recorder.record(request, model, result);
+            } else {
+                recorder.record(request, model, provider, result);
+            }
         } catch (RuntimeException e) {
             log.warn("[RecordingLlmClient] 호출 기록 저장 실패 executionId={}", request.executionId(), e);
         }

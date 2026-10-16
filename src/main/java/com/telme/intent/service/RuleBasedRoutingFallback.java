@@ -89,6 +89,14 @@ public class RuleBasedRoutingFallback {
         "5G", "LTE", "USIM", "이심", "유플러스", "U+"
     );
 
+    // 업무 이름 뒤에 붙는 서술·인용 어미. 동사 어미("하려고요")는 넣지 않는다
+    private static final Pattern SHORT_REPLY_ENDING = Pattern.compile(
+        "\\s*(?:이라고요|라고요|이라고|라고|이에요|예요|입니다|이요|요)?[\\s.!~]*$");
+    // 업무 이름만으로 된 말. 띄어쓰기는 달라도 된다
+    private static final Pattern SERVICE_NAME_ONLY = Pattern.compile(
+        "(?:유심|USIM|이심|eSIM)\\s*(?:재발급|교체|변경)?|명의\\s*변경|번호\\s*이동|신규\\s*개통",
+        Pattern.CASE_INSENSITIVE);
+
     private record ServiceTypeRule(String code, Pattern pattern) {}
 
     private record ServiceTypeOption(String label, String code) {}
@@ -285,6 +293,20 @@ public class RuleBasedRoutingFallback {
                 .map(ServiceTypeOption::code)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 업무 이름에 "이요", "이라고", "입니다" 같은 어미만 붙은 짧은 답이면 그 업무 코드, 아니면 null.
+     * 버튼 문구와 글자가 조금 달라도 같은 답이다("명의변경이라고", "유심 재발급이요"). 모델은 이런 답을
+     * 새 질문으로 읽는 경우가 있다(TELME-175 4단계). "하려고요"처럼 동사가 붙은 답과 다른 말이 섞인 답은 모델이 읽는다
+     */
+    public String serviceTypeOfShortReply(String reply) {
+        String option = serviceTypeOfOption(reply);
+        if (option != null || reply == null) {
+            return option;
+        }
+        String core = SHORT_REPLY_ENDING.matcher(reply.strip()).replaceFirst("").strip();
+        return SERVICE_NAME_ONLY.matcher(core).matches() ? serviceTypeOf(core) : null;
     }
 
     boolean hasServiceTypeMention(String text) {

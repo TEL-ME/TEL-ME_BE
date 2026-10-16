@@ -54,6 +54,29 @@ class SearchPropertiesTest {
     }
 
     @Test
+    @DisplayName("회색 구간은 기본 꺼짐이고, 선은 측정으로 고른 Q_A 0.69 ~ 0.80, 질문 0.80 ~ 0.90이다")
+    void 회색_구간_기본값() {
+        runner.withPropertyValues("search.similarity-threshold=0.72")
+                .run(context -> {
+                    SearchProperties.GrayZone zone = context.getBean(SearchProperties.class).grayZone();
+                    assertThat(zone.enabled()).isFalse();
+                    assertThat(zone.qaPass()).isEqualTo(0.80);
+                    assertThat(zone.qaFloor()).isEqualTo(0.69);
+                    assertThat(zone.questionPass()).isEqualTo(0.90);
+                    assertThat(zone.questionFloor()).isEqualTo(0.80);
+                });
+    }
+
+    @Test
+    @DisplayName("회색 구간 아래 선이 통과 선보다 크거나 0~1 밖이면 기동에 실패한다")
+    void 회색_구간_선_검증() {
+        runner.withPropertyValues("search.similarity-threshold=0.72", "search.gray-zone.qa-floor=0.85")
+                .run(context -> assertThat(context).hasFailed());
+        runner.withPropertyValues("search.similarity-threshold=0.72", "search.gray-zone.question-pass=1.2")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
     @DisplayName("측정용으로 임계값을 0으로 풀 수 있다")
     void 임계값_0을_허용한다() {
         runner.withPropertyValues("search.similarity-threshold=0", "search.dual-vector.question-threshold=0")

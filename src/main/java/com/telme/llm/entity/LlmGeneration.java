@@ -32,7 +32,9 @@ import lombok.NoArgsConstructor;
 public class LlmGeneration {
 
     public enum TaskType {
-        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE
+        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE,
+        // 검색 회색 구간 FAQ 근거 판정(FaqEvidenceJudge)
+        EVIDENCE_CHECK
     }
 
     public enum Status {

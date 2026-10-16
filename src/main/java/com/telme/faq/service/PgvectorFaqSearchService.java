@@ -6,6 +6,7 @@ import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.req.FaqSearchVector;
+import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.repository.FaqEmbeddingRepository;
@@ -56,19 +57,49 @@ public class PgvectorFaqSearchService implements FaqSearchService {
             case QUESTION -> searchQuestion(queryVector, topK);
             case DUAL -> DualVectorMerger.merge(searchQuestion(queryVector, topK), qa.results(), topK);
         };
-        recordScore(request.kind(), qa, results);
+        recordScore(request.kind(), qa == null ? null : qa.topScore(), !results.isEmpty());
         return results;
+    }
+
+    // 벡터별 상위 topK를 회색 구간 선으로 나눈다. 아래 선 미만은 빼고, 통과 선 미만은 판정 필요로 표시한다
+    @Override
+    public FaqGrayZoneSearchResponse searchGrayZone(FaqSearchRequest request) {
+        SearchProperties.GrayZone zone = searchProperties.grayZone();
+        float[] queryVector = embeddingClient.embed(request.query());
+        int topK = request.topK();
+        FaqSearchVector vector = vectorOf(request);
+        List<FaqNearestMatch> qa = vector == FaqSearchVector.QUESTION
+                ? List.of() : repository.findNearest(queryVector, topK, embeddingProperties.model());
+        List<FaqNearestMatch> question = vector == FaqSearchVector.QA
+                ? List.of() : repository.findNearestByQuestionVector(queryVector, topK, embeddingProperties.model());
+        // 관리자 점수 분포는 판정 전 기존 임계값 기준으로 남겨 켜기 전과 같은 지표로 비교한다
+        boolean passedBefore = passes(qa, searchProperties.similarityThreshold())
+                || passes(question, searchProperties.dualVector().questionThreshold());
+        recordScore(request.kind(), topScore(qa), passedBefore);
+        return new FaqGrayZoneSearchResponse(
+                toCandidates(question, zone.questionPass(), zone.questionFloor(), FaqEmbeddingTextVariant.QUESTION_ONLY),
+                toCandidates(qa, zone.qaPass(), zone.qaFloor(), embeddingTextProperties.variant()));
+    }
+
+    private List<FaqGrayZoneSearchResponse.Candidate> toCandidates(
+            List<FaqNearestMatch> matches, double pass, double floor, FaqEmbeddingTextVariant variant) {
+        return toResponses(matches, floor, variant).stream()
+                .map(result -> new FaqGrayZoneSearchResponse.Candidate(result, result.score() < pass))
+                .toList();
+    }
+
+    private boolean passes(List<FaqNearestMatch> matches, double threshold) {
+        return !matches.isEmpty() && 1 - matches.get(0).distance() >= threshold;
     }
     
     // 임계값 미달 후보는 결과에서 잘려 남지 않아, 자르기 전 1위 점수를 관리자 분포용으로 남긴다.
     // 기록 실패가 검색을 막지 않도록 여기서 삼킨다
-    private void recordScore(FaqSearchKind kind, Searched qa, List<FaqSearchResponse> results) {
+    private void recordScore(FaqSearchKind kind, Double qaTopScore, boolean passed) {
         if (kind == null || !searchProperties.scoreRecording().enabled()) {
             return;
         }
         try {
-            scoreRepository.save(kind, qa == null ? null : qa.topScore(), !results.isEmpty(), 
-                    searchProperties.similarityThreshold());
+            scoreRepository.save(kind, qaTopScore, passed, searchProperties.similarityThreshold());
         } catch (RuntimeException e) {
             log.warn("[PgvectorFaqSearchService] 검색 점수 기록 실패", e);
         }
