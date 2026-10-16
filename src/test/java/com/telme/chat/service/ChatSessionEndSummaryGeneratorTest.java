@@ -487,29 +487,32 @@ class ChatSessionEndSummaryGeneratorTest {
     @Test
     @DisplayName("모델이 8개를 골라도 최신 안내의 자리를 먼저 확보해 정상 요약한다")
     void 여덟_선택과_최신_안내_보정이_충돌하지_않는다() {
-        when(client.generate(any())).thenReturn(selection(1, IntStream.rangeClosed(1, 8).toArray()));
+        selectOfferedGuidance();
 
         var result = generate(latestInput(1));
 
-        assertThat(result.content().guidance()).hasSize(8);
+        assertThat(result.content().guidance()).hasSize(9);
         assertThat(result.content().guidance()).contains("조건 확인 후 안내: 최신 조건 안내 1입니다.");
-        assertThat(result.content().guidance()).doesNotContain("조건 확인 전 안내: 이전 조건 안내 8입니다.");
-        verify(client, times(1)).generate(any());
+        for (int index = 1; index <= 8; index++) {
+            assertThat(result.content().guidance()).contains("조건 확인 전 안내: 이전 조건 안내 " + index + "입니다.");
+        }
+        verify(client, times(2)).generate(any());
     }
 
     @ParameterizedTest
     @ValueSource(ints = {8, 9})
-    @DisplayName("최신 필수 안내 자체가 8개면 모두 보존하고 9개면 일부 성공으로 제공하지 않는다")
+    @DisplayName("최신 필수 안내가 8개와 9개여도 호출을 나눠 모두 보존한다")
     void 최신_필수_안내_자체의_한도를_지킨다(int count) {
-        when(client.generate(any())).thenReturn(selection(1, IntStream.rangeClosed(1, 8).toArray()));
+        selectOfferedGuidance();
         var target = generator(20000);
+        var guidance = target.generate(latestInput(count), now.plusSeconds(300)).content().guidance();
 
-        if (count == 8) {
-            assertThat(target.generate(latestInput(count), now.plusSeconds(300)).content().guidance())
-                    .hasSize(8).allSatisfy(text -> assertThat(text).startsWith("조건 확인 후 안내:"));
-        } else {
-            assertThatThrownBy(() -> target.generate(latestInput(count), now.plusSeconds(300)))
-                    .hasMessage("INPUT_LIMIT");
+        assertThat(guidance).hasSize(8 + count);
+        for (int index = 1; index <= count; index++) {
+            assertThat(guidance).contains("조건 확인 후 안내: 최신 조건 안내 " + index + "입니다.");
+        }
+        for (int index = 1; index <= 8; index++) {
+            assertThat(guidance).contains("조건 확인 전 안내: 이전 조건 안내 " + index + "입니다.");
         }
     }
 
@@ -610,11 +613,9 @@ class ChatSessionEndSummaryGeneratorTest {
 
         var input = new ChatEndSummaryData.Input(1, exchanges * 2, 10L,
                 messages, requests, Set.of(), List.of(), OutputMaskContext.empty());
-        if (exchanges > 8) {
-            assertThatThrownBy(() -> target.generate(input, now.plusSeconds(300))).hasMessage("INPUT_LIMIT");
-        } else {
-            assertThat(target.generate(input, now.plusSeconds(300)).content().topics()).hasSize(exchanges);
-        }
+        var result = target.generate(input, now.plusSeconds(300));
+        assertThat(result.content().topics()).hasSize(exchanges);
+        assertThat(result.content().guidance()).hasSize(exchanges * 2);
         long inspections = mockingDetails(inspector).getInvocations().stream()
                 .filter(call -> call.getMethod().getName().equals("inspect"))
                 .filter(call -> originals.contains((String) call.getArgument(0))).count();
@@ -690,6 +691,21 @@ class ChatSessionEndSummaryGeneratorTest {
             assertThat(source.spans()).hasSize(1);
         });
         assertThat(request().userPrompt()).doesNotContain("990101", "1234567", "4111");
+    }
+
+    private void selectOfferedGuidance() {
+        when(client.generate(any())).thenAnswer(invocation -> {
+            LlmRequest request = invocation.getArgument(0);
+            var body = mapper.readTree(request.userPrompt());
+            var output = mapper.createObjectNode();
+            var topics = output.putObject("topics");
+            mapper.valueToTree(request.responseSchema()).path("properties").path("topics").path("required")
+                    .forEach(id -> topics.put(id.asText(), "요금제 문의"));
+            var ids = output.putArray("selectedSentenceIds");
+            body.path("guidanceCandidates").forEach(candidate -> ids.add(candidate.path("sentenceId").asInt()));
+            output.putArray("pendingItems");
+            return output.toString();
+        });
     }
 
     private ChatEndSummaryData.Input latestInput(int count) {
