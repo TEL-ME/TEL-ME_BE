@@ -313,13 +313,14 @@ RUNNER=<run_flow_scenarios.py 경로> bash scripts/routing-call-comparison/run_c
 ROUTING_REQUEST_INVENTORY_ENABLED=false RUNNER=<같은 경로> bash scripts/routing-call-comparison/run_chat_flows.sh   # 요청 개수 판정 끔
 ```
 
-준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 1~4단계 채점 스크립트는 모두 결과 파일에 저장된 모델 판정을 지금 평가셋의 정답과 대조해 다시 계산한다. 라벨 검토로 정답을 고치면 평가셋만 다시 만들고(`build_*.py`) 채점 스크립트를 다시 돌리면 되며, 모델을 다시 부를 필요는 없다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다. 2단계의 `exaone-full`, `route-*` 키는 판정 호출 켬/끔을 라우팅 전체 경로로 잰 결과, 마지막 확인의 `inventory-off-*` 키는 판정 호출을 끈 대화 흐름이다.
+준비물(Ollama EXAONE, Bedrock 라우터, 검색 앱 실행 방법)은 각 스크립트 머리말에 있다. 1~4단계 채점 스크립트는 모두 결과 파일에 저장된 모델 판정을 지금 평가셋의 정답과 대조해 다시 계산한다. 라벨 검토로 정답을 고치면 평가셋만 다시 만들고(`build_*.py`) 채점 스크립트를 다시 돌리면 되며, 모델을 다시 부를 필요는 없다. 결과 파일의 `-v3`(2단계), `-v2`(3단계), `-v1`·`-v2`·`-v3`(4단계), `-v2`·`-v3`(마지막 확인) 키는 프롬프트를 고치기 전 결과다. 3단계의 `-grounded-single-prompt` 키는 문맥 복원 20개를 단일 검색어 프롬프트로 판정한 비교(앱 클라이언트, `TELME_ROUTING_GROUNDED_PROMPT=single`), 4단계의 `co02-repeat-*` 키는 CO-02 입력 90번 반복이다. 2단계의 `exaone-full`, `route-*` 키는 판정 호출 켬/끔을 라우팅 전체 경로로 잰 결과, 마지막 확인의 `inventory-off-*` 키는 판정 호출을 끈 대화 흐름, `context-v32-inventory-off-*`·`context-v32-rules-inventory-off-*` 키는 여기에 #156의 1차·2차 보완을 넣은 대화 흐름이다.
 
 ## 남은 일과 확인할 것
 
 - 되묻기 흐름의 다시 묻기는 별도 이슈로 고친다(4단계 마지막 절). 마지막 확인에서 남은 실패의 대부분이 이것이다(CO-02 포함).
 - Bedrock 전환 때 `ROUTING_REQUEST_INVENTORY_ENABLED=false`로 요청 개수 판정을 끈다(2단계 마지막 절). 의도 분류를 EXAONE으로 되돌리면 다시 켠다.
-- 마지막 확인은 #156(문맥 해석 보강) 없이 돌렸다. #156은 MT-03("데이터 다 쓰면", 업무에 딸린 상태만 물으면 앞 발언과 연결)과 MT-02·MT-05("~하려고 합니다" 발언의 업무 세기)에 영향을 준다. 이 PR이 머지된 뒤 #156을 최신 develop으로 맞추고 대화 흐름 22개를 다시 돌린다.
+- 문맥 판정도 gpt-oss로 바꾸면 `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS=true`로 흔들림 보완을 켠다([CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md)). 끈 채로 바꾸면 출력 한도가 작아 답이 잘린다.
+- 마지막 확인은 #156(문맥 해석 보강, TELME-165) 없이 돌렸다. #156을 넣고 요청 개수 판정을 끈 구성으로 다시 돌린 결과는 1차 보완(`context-v32-inventory-off-*` 키) 16 / 15 / 15, 2차 보완(`context-v32-rules-inventory-off-*` 키) 14 / 15 / 15로, 넣기 전(16 / 13 / 15)과 흔들림 범위 안에서 같다. 멀티턴은 모두 3 / 3 / 3이다. MT-03 "데이터 다 쓰면"은 여전히 앞 발언과 연결하지 않고, MT-05는 검색 문제라 그대로다(자세한 내용은 [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md)).
 - 라우팅과 별개로 볼 것: MT-05처럼 반대 뜻의 FAQ로 답하는 검색·근거 판정 문제, 대상 같은 단어("데이터", "거기")가 있으면 앞 발언을 연결하지 않는 문맥 해석 문제, MT-04처럼 문맥 해석이 실행마다 연결 여부가 흔들리는 문제.
 - 팀 확인
   - 판정 기준 "호출마다 더 나은 쪽, 흔들림 범위 안이면 gpt-oss".

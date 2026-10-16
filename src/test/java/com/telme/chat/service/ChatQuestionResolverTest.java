@@ -27,6 +27,9 @@ class ChatQuestionResolverTest {
     private final LlmClient model = mock(LlmClient.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final ChatQuestionResolver resolver = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop());
+    // 흔들림 보완(chat.question-resolution.stability-guards)을 켠 판정기
+    private final ChatQuestionResolver guarded = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop(),
+            Mode.REGEX_GATED, true);
     private final ChatContextMessage source = customer(501L, 1, "해외 로밍 신청을 알아보고 있어요.");
 
     @ParameterizedTest
@@ -387,7 +390,8 @@ class ChatQuestionResolverTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"요금 안 내면 언제 정지되나요?", "요금 너무 많이 나왔어요", "요금제 변경은 어떻게 해요?",
-            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?"})
+            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?",
+            "위약금 얼마나 나와요?", "수수료는 얼마예요?"})
     void anyBusinessWordLeavesTheTargetDecisionToTheModel(String question) {
         assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
     }
@@ -524,6 +528,77 @@ class ChatQuestionResolverTest {
         assertThat(resolver.resolve(command(longQuestion),
                 new ChatContext(1L, 5L, null, List.of(source), longQuestion, 100)).sourceMessageIds()).isEmpty();
         org.mockito.Mockito.verifyNoInteractions(model);
+    }
+
+    // 흔들림 보완을 켜면 비용 항목만 묻는 후속 질문은 길어도 이전 고객 발언이 있을 때 모델이 판정한다.
+    // 이전 발언이 없거나 보완을 끄면 지금처럼 모델 없이 독립 질문이다.
+    @Test
+    void longCostItemQuestionWithCustomerHistoryIsJudgedByTheModelWhenGuarded() throws Exception {
+        String question = "설치 기사님 방문비용은 따로 청구되는 건가요?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        assertThat(guarded.resolve(command(question), null).sourceMessageIds()).isEmpty();
+        assertThat(resolver.resolve(command(question), context).sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        assertThat(guarded.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
+    }
+
+    // 흔들림 보완을 켜면 고객 발언이 하나뿐일 때 모델이 그 발언의 업무를 0개로 세도 그 발언에 연결한다.
+    // 업무를 둘로 세면 그대로 확인 안내이고, 보완을 끄면 지금처럼 확인 안내다.
+    @Test
+    void onlyCustomerStatementIsLinkedEvenWhenModelCountsNoBusinessWhenGuarded() throws Exception {
+        String none = omitted("[{\"index\":1,\"targetCount\":0,\"parentIndex\":0}]");
+        assertThat(guarded.validateResolution("가족이 대신 가도 되나요?", none, Map.of(501L, source))
+                .sourceMessageIds()).containsExactly(501L);
+        assertThat(resolver.validateResolution("가족이 대신 가도 되나요?", none, Map.of(501L, source))
+                .needsClarification()).isTrue();
+        assertThat(guarded.validateResolution("가족이 대신 가도 되나요?",
+                omitted("[{\"index\":1,\"targetCount\":2,\"parentIndex\":0}]"), Map.of(501L, source))
+                .needsClarification()).isTrue();
+    }
+
+    // 흔들림 보완을 켜면 이전 발언 분석 응답이 틀릴 때 한 번만 다시 묻고, 다시 틀리면 확인 안내로 끝낸다. 끄면 다시 묻지 않는다.
+    @Test
+    void invalidSourceAnalysisIsAskedOnceMoreWhenGuarded() {
+        String question = "그건 얼마야?";
+        String invalid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+        String valid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        when(model.generate(any())).thenReturn(invalid, valid);
+        assertThat(guarded.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
+
+        for (boolean guards : List.of(true, false)) {
+            var retried = mock(LlmClient.class);
+            when(retried.generate(any())).thenReturn(invalid);
+            var result = new ChatQuestionResolver(retried, mapper, ExecutionTrace.noop(), Mode.REGEX_GATED, guards)
+                    .resolve(command(question), context);
+            assertThat(result.needsClarification()).isTrue();
+            verify(retried, org.mockito.Mockito.times(guards ? 2 : 1)).generate(any());
+        }
+    }
+
+    // 흔들림 보완을 켜면 '그 상품'처럼 지시어가 붙은 일반 명사도 지시어로 본다
+    @Test
+    void demonstrativeProductPhraseIsGenericOnlyWhenGuarded() {
+        assertThat(ChatQuestionResolver.isGenericFollowUp("그 상품의 이용 기간은요?", true)).isTrue();
+        assertThat(ChatQuestionResolver.isGenericFollowUp("그 상품의 이용 기간은요?")).isFalse();
+    }
+
+    // gpt-oss는 내부 추론도 출력 한도를 써서 한도가 작으면 답이 비거나 잘린다. 흔들림 보완을 켜면 두 요청 모두 512 이상이다
+    @Test
+    void outputTokenLimitIsRaisedOnlyWhenGuarded() throws Exception {
+        String question = "그 서비스 해지는 어떻게 해요?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        guarded.resolve(command(question), context);
+        resolver.resolve(command(question), context);
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model, org.mockito.Mockito.times(4)).generate(requests.capture());
+        var all = requests.getAllValues();
+        assertThat(all.subList(0, 2)).allSatisfy(request -> assertThat(request.maxTokens()).isGreaterThanOrEqualTo(512));
+        assertThat(all.get(2).maxTokens()).isEqualTo(64);
+        assertThat(all.get(3).maxTokens()).isEqualTo(192);
     }
 
     // 짧아도 상품이나 업무가 있으면 모델이 EXPLICIT으로 판정해 이전 주제를 붙이지 않는다.

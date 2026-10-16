@@ -2477,5 +2477,668 @@
     "transition-04",
     "transition-05",
     "transition-10"
+  ],
+  "holdoutCases": [
+    {
+      "id": "hold-link-1",
+      "group": "link",
+      "split": "holdout165",
+      "question": "주말에도 처리돼요?",
+      "history": [
+        "요금제 변경을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-link-2",
+      "group": "link",
+      "split": "holdout165",
+      "question": "가족이 대신 신청해도 되나요?",
+      "history": [
+        "해외 로밍을 신청하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-link-3",
+      "group": "link",
+      "split": "holdout165",
+      "question": "그럼 기존 유심은 어떻게 해요?",
+      "history": [
+        "eSIM으로 바꾸려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-link-4",
+      "group": "link",
+      "split": "holdout165",
+      "question": "외국인도 되나요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-link-5",
+      "group": "link",
+      "split": "holdout165",
+      "question": "그때 인감도 필요해요?",
+      "history": [
+        "명의 변경을 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-link-6",
+      "group": "link",
+      "split": "holdout165",
+      "question": "이전에 말한 거 온라인으로도 돼요?",
+      "history": [
+        "인터넷 해지를 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-indep-1",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "번호를 잠깐 정지하는 것과 아예 해지하는 것 중 뭐가 저렴해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-2",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "처음 가입하는 고객도 사은품 받을 수 있나요?",
+      "history": [
+        "인터넷 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-3",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "해지할 때 매장이랑 온라인 중 어디가 편해요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-4",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "해지 위약금은 어떻게 계산해요?",
+      "history": [
+        "로밍 요금제를 알아보고 있어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-5",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "데이터 다 쓰면 속도가 어떻게 돼요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-6",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "위약금 얼마나 나와요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-7",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "요금 납부일을 바꿀 수 있나요?",
+      "history": [
+        "유심 재발급을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-indep-8",
+      "group": "independent",
+      "split": "holdout165",
+      "question": "처음 개통한 날부터 요금이 나가나요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-omit-1",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "기사님 출장비는 설치 당일에 따로 내는 건가요?",
+      "history": [
+        "인터넷 이전 설치를 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-2",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "그 요금제의 약정 기간은요?",
+      "history": [
+        "5G 요금제로 바꾸려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-3",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "그 서비스의 해지 방법은요?",
+      "history": [
+        "컬러링 서비스를 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-4",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "그럼 현지에서 데이터 다 쓰면 어떻게 돼요?",
+      "history": [
+        "해외 로밍을 신청하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-5",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "설치 날짜는 언제로 잡을 수 있어요?",
+      "history": [
+        "인터넷 신규 설치를 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-6",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "그거 할부 남은 건 한 번에 내야 해요?",
+      "history": [
+        "휴대폰 해지를 알아보고 있어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-7",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "수수료는 매장에서 내나요, 다음 달 요금에 붙나요?",
+      "history": [
+        "번호이동을 하려고 합니다"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ]
+    },
+    {
+      "id": "hold-omit-8",
+      "group": "omitted",
+      "split": "holdout165",
+      "question": "그럼 설치비는 얼마예요?",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-amb-1",
+      "group": "ambiguous",
+      "split": "holdout165",
+      "question": "그건 설치비가 얼마예요?",
+      "history": [
+        "인터넷 가입과 IPTV 가입을 같이 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    },
+    {
+      "id": "hold-amb-2",
+      "group": "ambiguous",
+      "split": "holdout165",
+      "question": "그럼 수수료는 얼마죠?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": []
+    }
+  ],
+  "blindCases": [
+    {
+      "id": "blind-01",
+      "group": "blind",
+      "split": "blind165",
+      "question": "그거 바꾸면 언제부터 적용돼요?",
+      "history": [
+        "요금제를 5G 슬림으로 바꾸고 싶어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "'그거'가 직전 발언의 요금제 변경을 가리킴"
+    },
+    {
+      "id": "blind-02",
+      "group": "blind",
+      "split": "blind165",
+      "question": "로밍 하루 요금 얼마예요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "이전 발언 없이 로밍 요금이라는 대상이 분명함"
+    },
+    {
+      "id": "blind-03",
+      "group": "blind",
+      "split": "blind165",
+      "question": "하루에 얼마예요?",
+      "history": [
+        "다음 주에 일본 여행 가는데 로밍 신청하려고요",
+        "아 일본 말고 미국이에요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ],
+      "note": "로밍(1)과 국가 정정(2)이 함께 있어야 미국 로밍 일 요금으로 특정됨"
+    },
+    {
+      "id": "blind-04",
+      "group": "blind",
+      "split": "blind165",
+      "question": "그거 오늘 바로 처리돼요?",
+      "history": [
+        "요금제 변경이랑 부가서비스 해지 둘 다 하려고요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "한 발언에 업무가 둘인데 '그거'가 어느 쪽인지 알 수 없음"
+    },
+    {
+      "id": "blind-05",
+      "group": "blind",
+      "split": "blind165",
+      "question": "재발급 받으려면 매장 꼭 가야 하나요?",
+      "history": [
+        "유심을 잃어버렸어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "무엇을 재발급하는지는 이전 발언의 유심에서 가져와야 함"
+    },
+    {
+      "id": "blind-06",
+      "group": "blind",
+      "split": "blind165",
+      "question": "근데 소액결제 차단은 어떻게 해요?",
+      "history": [
+        "요금제 바꾸려고요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "이전 발언과 다른 새 주제(소액결제 차단)로 넘어감"
+    },
+    {
+      "id": "blind-07",
+      "group": "blind",
+      "split": "blind165",
+      "question": "기사님 방문비 따로 내나요?",
+      "history": [
+        "이사 가는데 인터넷도 같이 옮겨야 돼요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "비용 항목만 물음, 대상은 인터넷 이전 설치"
+    },
+    {
+      "id": "blind-08",
+      "group": "blind",
+      "split": "blind165",
+      "question": "유심 재발급 비용 얼마예요",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "짧지만 유심 재발급 비용으로 대상이 분명함"
+    },
+    {
+      "id": "blind-09",
+      "group": "blind",
+      "split": "blind165",
+      "question": "신청하려면 어떻게 해야 돼요?",
+      "history": [
+        "안녕하세요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "인사만 있고 업무 발언이 없어 무엇을 신청하는지 알 수 없음"
+    },
+    {
+      "id": "blind-10",
+      "group": "blind",
+      "split": "blind165",
+      "question": "주말에도 돼요?",
+      "history": [
+        "번호이동 하려고 하는데요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "조건만 묻는 질문, 대상은 번호이동"
+    },
+    {
+      "id": "blind-11",
+      "group": "blind",
+      "split": "blind165",
+      "question": "번호이동이랑 기기변경 중에 뭐가 더 싸요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "두 업무를 직접 명시해 비교하는 독립 질문"
+    },
+    {
+      "id": "blind-12",
+      "group": "blind",
+      "split": "blind165",
+      "question": "필요한 서류가 뭐예요",
+      "history": [
+        "아버지 명의로 된 폰을 제 명의로 바꾸려고요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "절차(서류)만 묻고 업무는 이전 발언의 명의 변경"
+    },
+    {
+      "id": "blind-13",
+      "group": "blind",
+      "split": "blind165",
+      "question": "비용 얼마나 들어요?",
+      "history": [
+        "인터넷 이전 설치하고 TV 채널 추가도 하려고요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "이전 발언에 업무가 둘인데 어느 쪽 비용인지 말하지 않음"
+    },
+    {
+      "id": "blind-14",
+      "group": "blind",
+      "split": "blind165",
+      "question": "앱에서도할수있어요?",
+      "history": [
+        "소액결제 한도 좀 줄이고 싶은데요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "붙여 쓴 질문, 대상은 소액결제 한도 변경"
+    },
+    {
+      "id": "blind-15",
+      "group": "blind",
+      "split": "blind165",
+      "question": "멤버십 포인트로 영화 예매도 되나요?",
+      "history": [
+        "번호이동 하면 위약금 나와요?"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "이전 번호이동 위약금과 무관한 멤버십 새 주제"
+    },
+    {
+      "id": "blind-16",
+      "group": "blind",
+      "split": "blind165",
+      "question": "그건 어디서 확인해요?",
+      "history": [
+        "휴대폰 할부 남은 거 한 번에 다 갚고 싶어요",
+        "그리고 멤버십 등급도 궁금해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ],
+      "note": "업무가 순서대로 둘, 지시어는 가장 최근인 멤버십 등급을 가리킴"
+    },
+    {
+      "id": "blind-17",
+      "group": "blind",
+      "split": "blind165",
+      "question": "이거 취소하고 싶어요",
+      "history": [],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "이전 발언이 없어 '이거'가 무엇인지 알 수 없음"
+    },
+    {
+      "id": "blind-18",
+      "group": "blind",
+      "split": "blind165",
+      "question": "위약금은대충얼마나와요",
+      "history": [
+        "약정 끝나기 전에 해지하면 어떻게 돼요?"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "붙여 쓴 비용 질문, 대상은 약정 중 해지"
+    },
+    {
+      "id": "blind-19",
+      "group": "blind",
+      "split": "blind165",
+      "question": "데이터쉐어링신청은어디서해요",
+      "history": [
+        "로밍 신청했어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "붙여 썼지만 데이터쉐어링이라는 새 대상을 명시함"
+    },
+    {
+      "id": "blind-20",
+      "group": "blind",
+      "split": "blind165",
+      "question": "아이폰도 되는 거죠?",
+      "history": [
+        "안녕하세요",
+        "eSIM으로 바꾸려고 하는데요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        2
+      ],
+      "note": "인사는 제외, 대상은 eSIM 전환"
+    },
+    {
+      "id": "blind-21",
+      "group": "blind",
+      "split": "blind165",
+      "question": "인터넷 설치 기사님 주말에도 오시나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "인터넷 설치라는 대상과 조건이 모두 질문 안에 있음"
+    },
+    {
+      "id": "blind-22",
+      "group": "blind",
+      "split": "blind165",
+      "question": "그거 신청하면 종이 청구서는 자동으로 끊기는 건가요? 아니면 따로 해지 신청을 또 해야 하는 건가요?",
+      "history": [
+        "청구서를 이메일로 받고 싶어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "긴 질문, '그거'는 이메일 청구서 신청을 가리킴"
+    },
+    {
+      "id": "blind-23",
+      "group": "blind",
+      "split": "blind165",
+      "question": "둘 중에 어떤 게 더 나아요?",
+      "history": [
+        "5G 요금제 알아보고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "'둘'이 어떤 두 요금제인지 이전 발언에도 없음"
+    },
+    {
+      "id": "blind-24",
+      "group": "blind",
+      "split": "blind165",
+      "question": "해지하면 바로 요금 안 나가요?",
+      "history": [
+        "부가서비스 V컬러링 해지하려는데요",
+        "아니다 V컬러링 말고 안심옵션이요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1,
+        2
+      ],
+      "note": "부가서비스 해지(1)와 대상 정정(2)이 함께 필요"
+    },
+    {
+      "id": "blind-25",
+      "group": "blind",
+      "split": "blind165",
+      "question": "명의 변경 할 때 양쪽 다 매장 가야 되나요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "명의 변경 절차를 직접 명시함"
+    },
+    {
+      "id": "blind-26",
+      "group": "blind",
+      "split": "blind165",
+      "question": "찾으면 그건 어떻게 풀어요?",
+      "history": [
+        "폰 잃어버려서 분실신고 하려고요",
+        "아 그리고 다음 달에 로밍도 쓸 거예요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "최근 업무는 로밍이지만 '찾으면 푼다'는 명백히 분실 정지를 가리킴"
+    },
+    {
+      "id": "blind-27",
+      "group": "blind",
+      "split": "blind165",
+      "question": "그 회선 정지해 주세요",
+      "history": [
+        "제 명의로 회선이 세 개 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "회선이 셋인데 '그 회선'이 어느 것인지 정할 수 없음"
+    },
+    {
+      "id": "blind-28",
+      "group": "blind",
+      "split": "blind165",
+      "question": "이번 달 요금 자동이체 계좌를 다른 은행으로 바꾸고 싶은데 앱에서 바로 되나요?",
+      "history": [
+        "휴대폰 할부 기간이 얼마나 남았는지 알고 싶어요"
+      ],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "긴 질문, 할부 조회와 무관한 자동이체 계좌 변경 새 주제"
+    },
+    {
+      "id": "blind-29",
+      "group": "blind",
+      "split": "blind165",
+      "question": "주말에도 되나요?",
+      "history": [
+        "감사합니다"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "감사 인사는 업무 발언이 아니어서 대상을 알 수 없음"
+    },
+    {
+      "id": "blind-30",
+      "group": "blind",
+      "split": "blind165",
+      "question": "데이터 다 쓰면 속도 얼마나 느려져요?",
+      "history": [],
+      "expectedRelation": "SELF_CONTAINED",
+      "expectedSourceIndexes": [],
+      "note": "데이터 소진 후 속도 제한으로 대상이 분명함"
+    }
   ]
 }
