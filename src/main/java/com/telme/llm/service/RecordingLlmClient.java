@@ -4,6 +4,8 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmGenerationRecorder.Result;
 
 import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 @Slf4j
 public class RecordingLlmClient implements LlmAttemptClient {
@@ -13,21 +15,28 @@ public class RecordingLlmClient implements LlmAttemptClient {
     private final String model;
     // null이면 기존 Ollama 기록 경로를 쓴다
     private final String provider;
+    private final LongSupplier nanoTime;
 
     public RecordingLlmClient(LlmClient delegate, LlmGenerationRecorder recorder, String model) {
         this(delegate, recorder, model, null);
     }
 
     public RecordingLlmClient(LlmClient delegate, LlmGenerationRecorder recorder, String model, String provider) {
+        this(delegate, recorder, model, provider, System::nanoTime);
+    }
+
+    RecordingLlmClient(LlmClient delegate, LlmGenerationRecorder recorder, String model,
+            String provider, LongSupplier nanoTime) {
         this.delegate = delegate;
         this.recorder = recorder;
         this.model = model;
         this.provider = provider;
+        this.nanoTime = nanoTime;
     }
 
     @Override
     public String generate(LlmRequest request, int attempt) {
-        long startedAt = System.currentTimeMillis();
+        long startedAt = nanoTime.getAsLong();
         try {
             String result = delegate.generate(request);
             safeRecord(request, Result.success(attempt, null, elapsed(startedAt)));
@@ -40,7 +49,7 @@ public class RecordingLlmClient implements LlmAttemptClient {
 
     @Override
     public void stream(LlmRequest request, LlmStreamHandler handler, int attempt) {
-        long startedAt = System.currentTimeMillis();
+        long startedAt = nanoTime.getAsLong();
         RecordingHandler wrapper = new RecordingHandler(handler, startedAt);
 
         try {
@@ -71,11 +80,12 @@ public class RecordingLlmClient implements LlmAttemptClient {
     }
 
     private long elapsed(long startedAt) {
-        return System.currentTimeMillis() - startedAt;
+        // 경과 시간은 시스템 시계 보정과 무관한 단조 시계로 측정한다.
+        return TimeUnit.NANOSECONDS.toMillis(nanoTime.getAsLong() - startedAt);
     }
 
     // 첫 토큰 시각과 최종 결과를 기록용으로 관찰한다. 전달은 그대로 한다
-    private static final class RecordingHandler implements LlmStreamHandler {
+    private final class RecordingHandler implements LlmStreamHandler {
 
         private final LlmStreamHandler delegate;
         private final long startedAt;
@@ -90,7 +100,7 @@ public class RecordingLlmClient implements LlmAttemptClient {
         @Override
         public void onToken(String token) {
             if (firstTokenMs == null) {
-                firstTokenMs = (int) (System.currentTimeMillis() - startedAt);
+                firstTokenMs = Result.recordableMillis(elapsed(startedAt));
             }
             delegate.onToken(token);
         }

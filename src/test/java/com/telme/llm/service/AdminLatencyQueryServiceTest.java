@@ -134,7 +134,25 @@ class AdminLatencyQueryServiceTest {
         assertThat(response.firstToken().p95Ms()).isNull();
     }
 
-    
+    @Test
+    @DisplayName("LLM 호출의 음수 측정값은 빼고 0ms는 유효한 값으로 센다")
+    void LLM_음수_측정값은_빼고_0ms는_센다() {
+        generation("RAG_ANSWER", "SUCCESS", -100, -1000, 60);
+        generation("RAG_ANSWER", "SUCCESS", 0, 0, 60);
+        generation("SUMMARY", "SUCCESS", -1, -1, 60);
+        var response = service.getLatency(new AdminLatencySearchRequest(FROM, TO));
+        var tasks = response.tasks().stream().collect(Collectors.toMap(
+                AdminLatencyResponse.TaskStats::taskType, Function.identity()));
+
+        assertThat(response.firstToken().count()).isEqualTo(5);
+        assertThat(response.firstToken().avgMs()).isEqualTo(200);
+        assertThat(response.firstToken().p50Ms()).isEqualTo(200);
+        assertThat(tasks.get("RAG_ANSWER").count()).isEqualTo(5);
+        assertThat(tasks.get("RAG_ANSWER").avgMs()).isEqualTo(2000);
+        assertThat(tasks.get("SUMMARY").count()).isZero();
+        assertThat(tasks.get("SUMMARY").p50Ms()).isNull();
+    }
+
     private void generation(String taskType, String status, Integer firstTokenMs, int totalMs, int secondsAfterFrom) {
         jdbcTemplate.update("""
                 INSERT INTO llm_generations (execution_id, task_type, attempt, status, first_token_ms, total_ms, created_at)
