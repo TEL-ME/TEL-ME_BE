@@ -92,6 +92,8 @@ class AnswerGenerationProbe {
         row.put("model", model);
         row.put("run", run);
         row.put("userQuery", input.path("userQuery").asText());
+        // 입력에 붙은 평가 정보(출처, 정답 FAQ, 위험 설명)를 그대로 남겨 나중에 채점할 때 쓴다
+        row.put("meta", mapper.convertValue(input.path("meta"), Object.class));
         try {
             AnswerResult result = generator.generate(request(input), new LlmStreamHandler() {
                 @Override
