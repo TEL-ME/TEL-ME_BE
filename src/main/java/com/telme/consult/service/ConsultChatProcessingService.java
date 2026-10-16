@@ -131,7 +131,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     private void process(ChatProcessingCommand command) {
         trace.stage(command.executionId(), "processing", Map.of(
-                "handler", "ConsultChatProcessingService", "traceVersion", 1));
+                "handler", "ConsultChatProcessingService", "traceVersion", 2));
         AnalyzedTurn turn = analyzer.analyze(command);
         if (turn.directAnswer() == null && turn.preparation() != null) {
             trace.stage(command.executionId(), "analysis", Map.of(

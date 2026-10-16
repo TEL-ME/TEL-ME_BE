@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ConsultationQuestion;
+import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -94,6 +96,9 @@ public class QueryRoutingService {
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
     private final UnknownFaqRecheck unknownFaqRecheck;
+    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다
+    @Value("${telme.routing.request-inventory-enabled:true}")
+    private boolean requestInventoryEnabled = true;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -303,7 +308,10 @@ public class QueryRoutingService {
         }
 
         LlmRequestInventoryPayload inventory = null;
-        if (llmRouting && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
+        boolean trustSplit = llmRouting && !requestInventoryEnabled
+                && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1;
+        if (requestInventoryEnabled && llmRouting
+                && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
             inventory = requestInventory(analysisQuestion);
             if (inventory.decision() != Decision.MULTIPLE) {
                 String wholeQuery = restored
@@ -342,6 +350,8 @@ public class QueryRoutingService {
             if (inventory.requestCount() != payload.subQueries().size()) {
                 throw new UnsupportedCompoundQuestionException("질문 분해와 독립 요청 개수가 일치하지 않습니다.");
             }
+            IndependentQuestionPolicy.validate(payload, analysisQuestion);
+        } else if (trustSplit) {
             IndependentQuestionPolicy.validate(payload, analysisQuestion);
         }
         validateFaqSearchQueries(payload, question, analysisQuestion);
@@ -417,7 +427,7 @@ public class QueryRoutingService {
                 .systemPrompt(RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT)
                 .userPrompt(RoutingQuestionNormalizer.normalize(question))
                 .format(ResponseFormat.JSON).temperature(0.0).maxTokens(256)
-                .promptVersion("routing-request-inventory-v3").build();
+                .promptVersion("routing-request-inventory-v4").build();
         try {
             String response = llmClient.generate(request);
             if (response == null || response.isBlank()) {
@@ -469,7 +479,7 @@ public class QueryRoutingService {
         if (!removeUngroundedQueryWords(single, sub, current, previousSubject).equals(candidate)) {
             return current;
         }
-        return findUnsafeFaqQueries(single, current, previousSubject).getFirst() ? current : candidate;
+        return findUnsafeFaqQueries(single, current, previousSubject, false).getFirst() ? current : candidate;
     }
 
     /**
@@ -492,7 +502,7 @@ public class QueryRoutingService {
         var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate.strip(),
                 Collections.emptyMap(), List.of(sub));
         // 동의어는 원문의 단어 포함 여부로 검사하지 않는다. 업무와 조건의 의미를 검증한다.
-        if (!findUnsafeFaqQueries(single, question, "").getFirst()) {
+        if (!findUnsafeFaqQueries(single, question, "", true).getFirst()) {
             return candidate.strip();
         }
         if (!ACTION_REQUEST.matcher(question).find()) {
@@ -508,7 +518,7 @@ public class QueryRoutingService {
                 (short) 1, ConsultRequest.Intent.FAQ, grounded, Collections.emptyMap(), question);
         var groundedSingle = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, grounded,
                 Collections.emptyMap(), List.of(groundedSub));
-        return findUnsafeFaqQueries(groundedSingle, question, "").getFirst() ? question : grounded;
+        return findUnsafeFaqQueries(groundedSingle, question, "", true).getFirst() ? question : grounded;
     }
 
     // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.
@@ -543,7 +553,7 @@ public class QueryRoutingService {
         payload = new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
                 payload.extractedConditions(), groundedQuotes);
 
-        List<Boolean> unsafe = findUnsafeFaqQueries(payload, current, previousSubject);
+        List<Boolean> unsafe = findUnsafeFaqQueries(payload, current, previousSubject, false);
         List<LlmRoutingPayload.SubQueryPayload> safe = new ArrayList<>();
         for (int index = 0; index < payload.subQueries().size(); index++) {
             var sub = payload.subQueries().get(index);
@@ -642,8 +652,10 @@ public class QueryRoutingService {
         return unclaimed.toString().contains(word);
     }
 
+    // searchCandidate는 원문 검색 0건 뒤 재검색 후보 검증이다. 이때만 조건을 하나씩 대조하는 단일 검색어 프롬프트를 쓴다.
+    // 복합 하위 질문과 문맥 복원 단일 질문(groundedSingleFaqQuery)은 기존 프롬프트를 그대로 쓴다(PR #160 리뷰)
     private List<Boolean> findUnsafeFaqQueries(
-            LlmRoutingPayload payload, String current, String previousSubject) {
+            LlmRoutingPayload payload, String current, String previousSubject, boolean searchCandidate) {
         String prompt;
         try {
             // Map.of는 JVM마다 키 순서가 달라 같은 입력에도 판정이 바뀐다. 키 순서를 고정한다
@@ -657,11 +669,15 @@ public class QueryRoutingService {
                 return item;
             }).toList());
             prompt = objectMapper.writeValueAsString(input);
+            // 복합 하위 질문에 쓰면 멀쩡한 검색어까지 막는다. 재검색 후보는 항상 한 건이다
+            boolean single = searchCandidate && payload.subQueries().size() == 1;
             LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
-                    .systemPrompt(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
+                    .systemPrompt(single ? RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT
+                            : RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
                     .userPrompt(prompt).format(ResponseFormat.JSON)
                     .temperature(0.0).maxTokens(256)
-                    .promptVersion("routing-faq-faithfulness-v2-single-search").build();
+                    .promptVersion(single ? "routing-faq-faithfulness-single-v3"
+                            : "routing-faq-faithfulness-v2-single-search").build();
             String response = llmClient.generate(request);
             var root = objectMapper.readTree(response);
             var results = root == null ? null : root.path("unsafe");
@@ -1003,8 +1019,8 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
-        // 버튼을 그대로 누른 업무 답은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
-        String pickedServiceType = ruleBasedFallback.serviceTypeOfOption(reply);
+        // 버튼을 그대로 누르거나 업무 이름만 짧게 답한 것은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
+        String pickedServiceType = ruleBasedFallback.serviceTypeOfShortReply(reply);
         if (pickedServiceType != null
                 && waiting.pendingKeys().contains(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
             log.info("[후속분석] 업무 선택지를 코드로 읽었습니다: consultRequestId={}, serviceType={}",
@@ -1032,7 +1048,7 @@ public class QueryRoutingService {
         QueryRouting.Method method;
 
         try {
-            payload = requestFollowUpAnalysis(reply, waiting.pendingKeys());
+            payload = requestFollowUpAnalysis(reply, waiting.pendingKeys(), waiting.askedConditions());
             method = QueryRouting.Method.LLM;
             log.info("[후속분석] LLM 조건 추출 완료: consultRequestId={}, 추출 건수={}",
                     waiting.consultRequestId(), payload.conditions().size());
@@ -1129,14 +1145,17 @@ public class QueryRoutingService {
         }
     }
 
-    private LlmFollowUpPayload requestFollowUpAnalysis(String reply, Set<String> pendingKeys) {
+    private LlmFollowUpPayload requestFollowUpAnalysis(
+            String reply, Set<String> pendingKeys, Map<String, RoutingPromptTemplates.AskedCondition> asked) {
         LlmRequest request = LlmRequest.builder()
             .taskType(TaskType.ROUTING)
             .systemPrompt(RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT)
-            .userPrompt(RoutingPromptTemplates.followUpUserPrompt(pendingKeys, reply))
+            .userPrompt(RoutingPromptTemplates.followUpUserPrompt(pendingKeys, asked, reply))
             .format(ResponseFormat.JSON)
             .temperature(0.0)
             .maxTokens(300)
+            // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
+            .promptVersion("routing-follow-up-v4")
             .build();
 
         String json = llmClient.generate(request);
@@ -1160,8 +1179,42 @@ public class QueryRoutingService {
             .findByLatestAskedQuestion(sessionId, ConsultRequest.Status.WAITING_CONDITION)
             .stream()
             .findFirst()
-            .map(request -> new WaitingConsult(request.getConsultRequestId(), pendingKeysOf(request)))
+            .map(request -> new WaitingConsult(
+                request.getConsultRequestId(), pendingKeysOf(request), askedConditionsOf(request)))
             .orElse(null);
+    }
+
+    // 지금 답을 기다리는 조건마다 고객에게 실제로 보낸 질문과 선택지. 복합 질문의 되묻기 메시지는 앞부분에 답변이 있고 질문은 마지막 줄이다
+    private Map<String, RoutingPromptTemplates.AskedCondition> askedConditionsOf(ConsultRequest request) {
+        Map<String, RoutingPromptTemplates.AskedCondition> asked = new LinkedHashMap<>();
+        List<ConsultCondition> conditions = request.getConditions();
+        if (conditions == null) {
+            return asked;
+        }
+        for (ConsultCondition condition : conditions) {
+            ChatMessage message = condition.getAskedMessage();
+            if (condition.getStatus() != ConsultCondition.Status.PENDING || message == null
+                    || condition.getAnsweredMessage() != null || condition.getConditionKey() == null
+                    || message.getContent() == null || message.getContent().isBlank()) {
+                continue;
+            }
+            String question = ConsultationQuestion.extract(ClarificationReask.questionOf(message.getContent()));
+            asked.put(condition.getConditionKey(),
+                    new RoutingPromptTemplates.AskedCondition(question, optionsOf(message.getFollowUps())));
+        }
+        return asked;
+    }
+
+    private List<String> optionsOf(String followUps) {
+        if (followUps == null || followUps.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(followUps,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            return List.of();
+        }
     }
 
     // 되묻는 조건을 알 수 없으면 지역으로 본다(현재 DialogueService는 지역만 묻는다)
@@ -1260,7 +1313,8 @@ public class QueryRoutingService {
         }
     }
 
-    private record WaitingConsult(Long consultRequestId, Set<String> pendingKeys) {}
+    private record WaitingConsult(Long consultRequestId, Set<String> pendingKeys,
+            Map<String, RoutingPromptTemplates.AskedCondition> askedConditions) {}
 
     private <T> T runInTransaction(Supplier<T> action) {
         return transactionTemplate.execute(status -> action.get());
