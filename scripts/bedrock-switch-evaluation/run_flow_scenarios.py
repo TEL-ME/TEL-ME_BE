@@ -38,8 +38,8 @@ SCENARIOS = [
     ("ST-02", "store", "번호이동 필요 서류랑 가까운 대리점 알려줘", ["번호이동이요"], True, "서류 + 매장"),
     ("ST-03", "store", "명의변경 서류 알려주고 근처에서 명의변경 되는 매장 찾아줘", ["둘 다 직접 가요"], True, "서류 + 명의변경 매장"),
     ("ST-04", "store", "근처에 유심 재발급 되는 매장 알려줘", [], True, "유심 재발급 가능 매장"),
-    ("MT-01", "multiturn", "인터넷 해지를 하려고 합니다", ["장비는 어떻게 반납해요?"], False, "해지 장비 반납"),
-    ("MT-02", "multiturn", "번호이동을 하려고 합니다", ["수수료는 얼마나 나와요?"], False, "번호이동 수수료"),
+    ("MT-01", "multiturn", "인터넷 해지를 하려고 합니다", ["장비는 어떻게 반납해요?"], False, "근거 없음이어야 함(인터넷 해지·장비 반납 FAQ 없음)"),
+    ("MT-02", "multiturn", "번호이동을 하려고 합니다", ["수수료는 얼마나 나와요?"], False, "근거 없음이어야 함(번호이동 수수료 FAQ 없음)"),
     ("MT-03", "multiturn", "로밍 요금제를 신청하려고 합니다", ["그럼 데이터 다 쓰면 어떻게 돼요?"], False, "로밍 데이터 소진 후 속도"),
     ("MT-04", "multiturn", "유심 재발급 비용은 얼마예요?", ["택배로도 받을 수 있나요?"], False, "유심 택배 수령"),
     ("MT-05", "multiturn", "명의변경을 하려고 해요", ["미성년자 자녀한테도 돼요?"], False, "미성년자 명의변경"),
@@ -52,6 +52,7 @@ def main():
     parser.add_argument("--database", required=True, help="근거 FAQ를 조회할 앱 DB 이름")
     parser.add_argument("--postgres-container", default="telme-flow-postgres")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--only", nargs="+", help="이 시나리오만 돈다(예: --only CL-01 MT-04)")
     args = parser.parse_args()
 
     def sql(query):
@@ -60,15 +61,24 @@ def main():
 
     def send(call, session_id, text, gps):
         sent = call("POST", f"/api/v1/chat/sessions/{session_id}/messages", {"content": text, **(GPS if gps else {})})
+        user_id = (sent.get("result") or {}).get("messageId")
         started = time.time()
         history = {}
+        no_reply_since = None
+        # 실행 종료 표시와 답변 저장 사이에 읽으면 답변이 비거나 없다. 실행이 끝나고 이 질문의 답변이 내용과 함께
+        # 저장될 때까지 기다린다. 실행이 끝났는데 답변이 15초 동안 없으면 답변 없이 넘어간다
         while time.time() - started < 180:
             history = call("GET", f"/api/v1/chat/sessions/{session_id}/messages?size=50")["result"]
             if history.get("runningExecutionId") is None:
-                break
+                answered = [m for m in history.get("messages", [])
+                            if m["role"] == "ASSISTANT" and m.get("replyToMessageId") == user_id]
+                if answered and all((m.get("content") or "").strip() or m.get("storeResults") for m in answered):
+                    break
+                no_reply_since = no_reply_since or time.time()
+                if time.time() - no_reply_since > 15:
+                    break
             time.sleep(0.5)
         # FAQ+매장 복합은 FAQ 답변과 매장 결과가 따로 올 수 있어 이 질문에 대한 답변을 모두 모은다
-        user_id = (sent.get("result") or {}).get("messageId")
         messages = history.get("messages", [])
         replies = [m for m in messages if m["role"] == "ASSISTANT" and m.get("replyToMessageId") == user_id] \
             or ([m for m in messages if m["role"] == "ASSISTANT"] or [{}])[-1:]
@@ -84,6 +94,8 @@ def main():
 
     rows = []
     for scenario_id, group, first, replies, gps, fact in SCENARIOS:
+        if args.only and scenario_id not in args.only:
+            continue
         call = client(args.base_url)
         session_id = call("POST", "/api/v1/chat/sessions", {})["result"]["sessionId"]
         turns = [send(call, session_id, first, gps)]
