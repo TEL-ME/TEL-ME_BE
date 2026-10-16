@@ -489,7 +489,8 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
     // 재검색 직전의 검색 문장 의미 검증을 통과시킨다. 이 테스트들은 재검색 이후의 처리를 본다.
     private void allowRefinedQuery() {
         when(model.generate(argThat(request -> request != null
-                && RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt()))))
+                && (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())
+                || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())))))
                 .thenReturn("{\"unsafe\":[false]}");
     }
 
