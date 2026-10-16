@@ -58,13 +58,52 @@ class AdminLatencyQueryServiceTest {
     }
     
     @Test
-    @DisplayName("전체는 답변을 저장하고 완료된 실행만, 질문부터 답변 저장까지 시간으로 센다")
+    @DisplayName("전체는 답변을 저장하고 완료된 실행만, 서버가 잰 처리 시간으로 센다")
     void 전체는_완료된_실행만_센다() {
         AdminLatencyResponse.Stats overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
 
         assertThat(overall.count()).isEqualTo(2);
         assertThat(overall.avgMs()).isEqualTo(3000);
         assertThat(overall.p50Ms()).isEqualTo(3000);
+    }
+
+    @Test
+    @DisplayName("처리 시간이 없는 과거 실행은 시각 차이로 채우지 않고 집계에서 뺀다")
+    void 처리_시간이_없는_과거_실행은_시각_차이로_채우지_않는다() {
+        String start = FROM.plusSeconds(60).toString();
+        legacyExecution(start, FROM.plusSeconds(61).toString());
+        legacyExecution(start, FROM.plusSeconds(59).toString());
+
+        AdminLatencyResponse.Stats overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
+
+        assertThat(overall.count()).isEqualTo(2);
+        assertThat(overall.avgMs()).isEqualTo(3000);
+    }
+
+    @Test
+    @DisplayName("과거 실행만 있는 기간은 0ms가 아니라 0건과 null을 반환한다")
+    void 과거_실행만_있으면_0건이다() {
+        Instant from = Instant.parse("2200-01-01T00:00:00Z");
+        legacyExecution(from.plusSeconds(60).toString(), from.plusSeconds(61).toString());
+
+        AdminLatencyResponse.Stats overall = service.getLatency(
+                new AdminLatencySearchRequest(from, from.plusSeconds(3600))).overall();
+
+        assertThat(overall.count()).isZero();
+        assertThat(overall.avgMs()).isNull();
+        assertThat(overall.p50Ms()).isNull();
+    }
+
+    @Test
+    @DisplayName("0ms 처리 시간은 유효한 측정값으로 센다")
+    void 영_ms_처리_시간도_센다() {
+        execution("COMPLETED", 0, ANSWER_MESSAGE_ID);
+
+        AdminLatencyResponse.Stats overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
+
+        assertThat(overall.count()).isEqualTo(3);
+        assertThat(overall.avgMs()).isEqualTo(2000);
+        assertThat(overall.p50Ms()).isEqualTo(2000);
     }
 
     @Test
@@ -160,11 +199,20 @@ class AdminLatencyQueryServiceTest {
                 """, taskType, status, firstTokenMs, totalMs, FROM.toString(), secondsAfterFrom);
     }
     
-    private void execution(String status, int elapsedMs, Long outputMessageId) {
+    private void execution(String status, int totalMs, Long outputMessageId) {
+        jdbcTemplate.update("""
+                INSERT INTO chat_executions
+                    (session_id, input_message_id, output_message_id, status, started_at, ended_at, total_ms)
+                VALUES (1, 1, ?, ?, ?::timestamptz + interval '1 hour',
+                        ?::timestamptz + interval '1 hour' + make_interval(secs => ? / 1000.0), ?)
+                """, outputMessageId, status, FROM.toString(), FROM.toString(), totalMs, totalMs);
+    }
+
+    // total_ms 도입 전 기록: 시각만 있고 처리 시간은 없다
+    private void legacyExecution(String startedAt, String endedAt) {
         jdbcTemplate.update("""
                 INSERT INTO chat_executions (session_id, input_message_id, output_message_id, status, started_at, ended_at)
-                VALUES (1, 1, ?, ?, ?::timestamptz + interval '1 hour',
-                        ?::timestamptz + interval '1 hour' + make_interval(secs => ? / 1000.0))
-                """, outputMessageId, status, FROM.toString(), FROM.toString(), elapsedMs);
+                VALUES (1, 1, ?, 'COMPLETED', ?::timestamptz, ?::timestamptz)
+                """, ANSWER_MESSAGE_ID, startedAt, endedAt);
     }
 }
