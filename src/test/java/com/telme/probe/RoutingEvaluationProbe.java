@@ -5,17 +5,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.intent.converter.IntentConverter;
+import com.telme.intent.dto.res.LlmRequestInventoryPayload;
+import com.telme.intent.dto.res.LlmRoutingPayload;
+import com.telme.intent.entity.QueryRouting;
+import com.telme.consult.entity.ConsultRequest;
 import com.telme.intent.dto.res.IntentRouteResponse;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.intent.service.RuleBasedRoutingFallback;
 import com.telme.intent.service.RoutingPromptTemplates;
+import com.telme.intent.service.RoutingQuestionNormalizer;
 import com.telme.intent.service.UnsupportedCompoundQuestionException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -28,10 +37,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import com.telme.global.common.exception.GeneralException;
+import com.telme.llm.config.BedrockProperties;
+import com.telme.llm.converter.BedrockRequestConverter;
+import com.telme.llm.service.BedrockClient;
+import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
+import software.amazon.awssdk.http.apache5.Apache5HttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -50,6 +71,29 @@ class RoutingEvaluationProbe {
     private static final Path OUTPUT = Path.of(
             System.getenv().getOrDefault("TELME_ROUTING_OUT", "build/tmp/routing-eval-180.json"));
     private static final String MODEL = "exaone3.5:7.8b";
+    // 라우팅 호출별로 보낼 주소. 호출 하나씩 모델을 바꿔 비교할 때 쓴다(TELME-175). 모두 Ollama API 형식이어야 한다.
+    // 지정하지 않은 호출은 BASE_URL로 보낸다
+    private static final String BASE_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_BASE_URL", "http://localhost:11434");
+    // 의도 분류는 1단계 비교로 gpt-oss(Bedrock 라우터)로 정했다
+    private static final String INTENT_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_INTENT_URL", "http://127.0.0.1:11435");
+    // 요청 개수 판정은 2단계 비교로 gpt-oss로 정했다
+    private static final String INVENTORY_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_INVENTORY_URL", "http://127.0.0.1:11435");
+    // 검색어 검증은 3단계 비교로 gpt-oss로 정했다
+    private static final String FAITHFULNESS_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_FAITHFULNESS_URL", "http://127.0.0.1:11435");
+    // 후속 분석은 4단계 비교로 gpt-oss로 정했다
+    private static final String FOLLOWUP_URL =
+            System.getenv().getOrDefault("TELME_ROUTING_FOLLOWUP_URL", "http://127.0.0.1:11435");
+    // inventory: 라우팅 흐름 대신 요청 개수 판정 호출만 문항마다 직접 부른다(TELME-175 2단계).
+    // 이 호출의 입력은 질문 하나뿐이라, 의도 분류가 나눈 문항에만 도는 앱 흐름보다 넓게 시험할 수 있다
+    private static final boolean INVENTORY_STEP =
+            "inventory".equals(System.getenv().getOrDefault("TELME_ROUTING_STEP", "intent"));
+    // faithfulness-cases: 1단계 의도 분류 출력(고정 입력)에서 검색어 검증 호출이 받을 입력을 앱 코드로 만든다.
+    // faithfulness: 그 입력(정답 라벨을 붙인 파일)으로 검색어 검증 호출만 부른다(TELME-175 3단계)
+    private static final String STEP = System.getenv().getOrDefault("TELME_ROUTING_STEP", "intent");
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -65,7 +109,413 @@ class RoutingEvaluationProbe {
                         row.path("model_response").asText());
             }
         }
-        var client = new LocalOllamaClient(mapper, replayFile == null ? null : replay);
+        Map<String, String> replayResponses = replayFile == null ? null : replay;
+        List<JsonNode> cases = loadCases();
+        Map<String, String> expectedIntents = loadExpectedIntents(cases);
+
+        // 같은 평가셋을 여러 회 돈다. 회차마다 클라이언트·서비스를 따로 만들어 동시에 돌리고,
+        // 결과는 {"<접두어>-1": 결과, "<접두어>-2": ...} 파일 하나로 쓴다(1회면 기존 형식 그대로)
+        int repeats = Integer.parseInt(System.getenv().getOrDefault("TELME_ROUTING_REPEATS", "1"));
+        if (INVENTORY_STEP) {
+            runRepeated(repeats, name -> buildInventoryResult(runInventoryOnce(cases, name)));
+            return;
+        }
+        if ("faithfulness-cases".equals(STEP)) {
+            writeJson(buildFaithfulnessCases(cases));
+            System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+            return;
+        }
+        if ("followup".equals(STEP)) {
+            runRepeated(repeats, name -> buildFollowupResult(runFollowupOnce(cases, name)));
+            return;
+        }
+        if ("faithfulness".equals(STEP)) {
+            runRepeated(repeats, name -> buildFaithfulnessResult(runFaithfulnessOnce(cases, name)));
+            return;
+        }
+        if (repeats <= 1) {
+            runOnce(cases, expectedIntents, replayResponses, "", records -> writeJson(buildResult(records)));
+            System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+            return;
+        }
+        runRepeated(repeats, name -> buildResult(runOnce(cases, expectedIntents, replayResponses, name, records -> { })));
+    }
+
+    private interface RunTask {
+        Map<String, Object> run(String runName) throws Exception;
+    }
+
+    private void runRepeated(int repeats, RunTask task) throws Exception {
+        if (repeats <= 1) {
+            writeJson(task.run(""));
+            System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+            return;
+        }
+        String prefix = System.getenv().getOrDefault("TELME_ROUTING_RUN_PREFIX", "run");
+        ExecutorService executor = Executors.newFixedThreadPool(repeats);
+        try {
+            List<Future<Map<String, Object>>> futures = new ArrayList<>();
+            for (int run = 1; run <= repeats; run++) {
+                String name = prefix + "-" + run;
+                futures.add(executor.submit(() -> task.run(name)));
+            }
+            Map<String, Object> combined = new LinkedHashMap<>();
+            for (int run = 1; run <= repeats; run++) {
+                combined.put(prefix + "-" + run, futures.get(run - 1).get());
+            }
+            writeJson(combined);
+        } finally {
+            executor.shutdownNow();
+        }
+        System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+    }
+
+    // 앱의 requestInventory를 그대로 불러 같은 요청·응답 검증·개수 보정(SINGLE·COMPARISON은 1)을 거친다.
+    // 판정 실패는 앱에서 질문 분해 보류(복합 질문 안내)가 되므로 FAILED로 남긴다
+    private List<Map<String, Object>> runInventoryOnce(List<JsonNode> cases, String runName) throws Exception {
+        var client = new LocalOllamaClient(mapper, null);
+        var service = new QueryRoutingService(
+                client, mapper, mock(QueryRoutingRepository.class), mock(ConsultRequestRepository.class),
+                new RuleBasedRoutingFallback(), new IntentConverter(mapper), mock(TransactionTemplate.class));
+        Method inventory = QueryRoutingService.class.getDeclaredMethod("requestInventory", String.class);
+        inventory.setAccessible(true);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JsonNode item : cases) {
+            String question = item.path("question").asText();
+            List<Integer> acceptable = new ArrayList<>();
+            item.path("acceptable_request_counts").forEach(node -> acceptable.add(node.asInt()));
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("eval_id", item.path("eval_id").asText());
+            row.put("question", question);
+            row.put("user_prompt", RoutingQuestionNormalizer.normalize(question));
+            row.put("expected_request_count", item.path("expected_request_count").asInt());
+            row.put("acceptable_request_counts", acceptable);
+            long started = System.nanoTime();
+            client.lastResponse = null;
+            try {
+                var payload = (LlmRequestInventoryPayload) inventory.invoke(service, question);
+                row.put("decision", payload.decision().name());
+                row.put("request_count", payload.requestCount());
+                row.put("count_matches", acceptable.contains(payload.requestCount()));
+            } catch (InvocationTargetException exception) {
+                row.put("decision", "FAILED");
+                row.put("request_count", null);
+                row.put("count_matches", false);
+                row.put("error", exception.getCause().getClass().getSimpleName() + ": "
+                        + exception.getCause().getMessage());
+            }
+            row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
+            row.put("model_response", client.lastResponse);
+            records.add(row);
+            if (records.size() % 20 == 0) {
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
+            }
+        }
+        return records;
+    }
+
+    private Map<String, Object> buildInventoryResult(List<Map<String, Object>> records) {
+        Map<String, Map<String, Integer>> byExpected = new LinkedHashMap<>();
+        Map<String, Integer> decisions = new LinkedHashMap<>();
+        int matches = 0;
+        for (Map<String, Object> row : records) {
+            boolean matched = Boolean.TRUE.equals(row.get("count_matches"));
+            matches += matched ? 1 : 0;
+            String group = (Integer) row.get("expected_request_count") > 1 ? "multiple" : "single";
+            Map<String, Integer> counts = byExpected.computeIfAbsent(group, ignored -> new LinkedHashMap<>(
+                    Map.of("total", 0, "matches", 0)));
+            counts.merge("total", 1, Integer::sum);
+            counts.merge("matches", matched ? 1 : 0, Integer::sum);
+            decisions.merge(row.get("decision").toString(), 1, Integer::sum);
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("total", records.size());
+        summary.put("matches", matches);
+        summary.put("by_expected_request_count", byExpected);
+        summary.put("decisions", decisions);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("records", records);
+        return result;
+    }
+
+    private QueryRoutingService routingService(LocalOllamaClient client) {
+        return new QueryRoutingService(
+                client, mapper, mock(QueryRoutingRepository.class), mock(ConsultRequestRepository.class),
+                new RuleBasedRoutingFallback(), new IntentConverter(mapper), mock(TransactionTemplate.class));
+    }
+
+    private static Method accessible(Class<?> type, String name, Class<?>... parameters) throws Exception {
+        Method method = type.getDeclaredMethod(name, parameters);
+        method.setAccessible(true);
+        return method;
+    }
+
+    // 1단계 기록의 의도 분류 응답에서 앱과 같은 방식으로 검색어 검증 입력을 만든다.
+    // 복합 FAQ는 인용구를 IndependentQuestionPolicy.verifiedQuote로 확인한 하위 질문 묶음,
+    // 단일 FAQ는 원문과 다른 검색어 후보(원문 검색 0건일 때의 재검색 후보)다.
+    // 업무 대상 규칙(SearchTopicPolicy)이 먼저 거절하거나 인용 근거가 없어 복합 안내로 끝나면 모델을 부르지 않으므로 skipped로 남긴다
+    private List<Map<String, Object>> buildFaithfulnessCases(List<JsonNode> records) throws Exception {
+        var service = routingService(new LocalOllamaClient(mapper, null));
+        Class<?> quotePolicy = Class.forName("com.telme.intent.service.IndependentQuestionPolicy");
+        Method verifiedQuote = accessible(quotePolicy, "verifiedQuote", LlmRoutingPayload.SubQueryPayload.class, String.class);
+        Method newTopic = accessible(Class.forName("com.telme.intent.service.SearchTopicPolicy"),
+                "introducesNewTopic", String.class, String.class);
+        Method quoteKey = accessible(RoutingQuestionNormalizer.class, "quoteKey", String.class);
+        Method previousSubject = accessible(QueryRoutingService.class, "previousSubject", String.class, String.class);
+        List<Map<String, Object>> cases = new ArrayList<>();
+        for (JsonNode record : records) {
+            JsonNode response;
+            try {
+                response = mapper.readTree(record.path("model_response").asText());
+            } catch (Exception exception) {
+                continue;
+            }
+            List<JsonNode> subs = new ArrayList<>();
+            response.path("subQueries").forEach(subs::add);
+            if (!"FAQ".equals(response.path("intent").asText()) || subs.isEmpty()) {
+                continue;
+            }
+            String question = record.path("question").asText();
+            String resolved = record.path("resolved_question").asText(null);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("eval_id", record.path("eval_id").asText());
+            item.put("expected_intent", "FAQ");
+            item.put("question", question);
+            item.put("previous_subject", resolved == null ? "" : previousSubject.invoke(service, resolved, question));
+            List<Map<String, Object>> queries = new ArrayList<>();
+            if (subs.size() > 1) {
+                item.put("path", "compound");
+                try {
+                    for (JsonNode node : subs) {
+                        var sub = new LlmRoutingPayload.SubQueryPayload((short) node.path("order").asInt(),
+                                ConsultRequest.Intent.FAQ, node.path("queryText").asText(), Map.of(),
+                                node.path("requestQuote").asText(null));
+                        Map<String, Object> query = new LinkedHashMap<>();
+                        query.put("quote", verifiedQuote.invoke(null, sub, question));
+                        query.put("query", sub.queryText());
+                        queries.add(query);
+                    }
+                } catch (InvocationTargetException exception) {
+                    item.put("skipped", "인용 근거 없음(복합 질문 안내로 끝남)");
+                    queries.clear();
+                }
+            } else {
+                String candidate = subs.getFirst().path("queryText").asText();
+                if (quoteKey.invoke(null, candidate).equals(quoteKey.invoke(null, question))) {
+                    continue;
+                }
+                item.put("path", resolved == null ? "refined" : "restored");
+                if (resolved != null) {
+                    // 이전 발언을 복원한 단일 질문은 재검색 후보 검증과 입력이 달라 여기서 재지 않는다.
+                    // 문맥 복원 경로(groundedSingleFaqQuery)의 검증은 평가셋의 GROUNDED 케이스(path=grounded)로 따로 잰다
+                    item.put("skipped", "맥락 복원 단일 질문(재검색 검증과 경로가 다름)");
+                } else if ((boolean) newTopic.invoke(null, question, candidate)) {
+                    item.put("skipped", "업무 대상 규칙이 먼저 거절(모델 호출 없음)");
+                }
+                Map<String, Object> query = new LinkedHashMap<>();
+                query.put("quote", question);
+                query.put("query", candidate);
+                queries.add(query);
+            }
+            item.put("sub_queries", queries);
+            cases.add(item);
+        }
+        return cases;
+    }
+
+    // 앱의 findUnsafeFaqQueries를 그대로 부른다. 앱은 응답 형식이 틀리면 모두 unsafe로 보므로,
+    // 실패 여부는 원 응답을 따로 확인해 failed로 남긴다
+    private List<Map<String, Object>> runFaithfulnessOnce(List<JsonNode> cases, String runName) throws Exception {
+        var client = new LocalOllamaClient(mapper, null);
+        var service = routingService(client);
+        Method findUnsafe = accessible(QueryRoutingService.class, "findUnsafeFaqQueries",
+                LlmRoutingPayload.class, String.class, String.class, boolean.class);
+        // 앱은 재검색 후보(path=refined)에만 단일 검색어 프롬프트를 쓴다. 문맥 복원 경로(grounded)를 단일 검색어 프롬프트로
+        // 판정하면 어떻게 되는지 비교할 때만 TELME_ROUTING_GROUNDED_PROMPT=single로 바꾼다
+        boolean groundedAsCandidate = "single".equals(System.getenv("TELME_ROUTING_GROUNDED_PROMPT"));
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JsonNode item : cases) {
+            if (item.hasNonNull("skipped") || item.path("sub_queries").isEmpty()) {
+                continue;
+            }
+            String question = item.path("question").asText();
+            List<LlmRoutingPayload.SubQueryPayload> subs = new ArrayList<>();
+            List<Boolean> gold = new ArrayList<>();
+            short order = 1;
+            for (JsonNode node : item.path("sub_queries")) {
+                subs.add(new LlmRoutingPayload.SubQueryPayload(order++, ConsultRequest.Intent.FAQ,
+                        node.path("query").asText(), Map.of(), node.path("quote").asText()));
+                // gold_unsafe가 null이면 판단이 갈리는 검색어라 어느 판정이든 맞은 것으로 본다
+                JsonNode label = node.path("gold_unsafe");
+                gold.add(label.isBoolean() ? label.booleanValue() : null);
+            }
+            var payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, question, Map.of(), subs);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("case_id", item.path("case_id").asText(item.path("eval_id").asText()));
+            row.put("eval_id", item.path("eval_id").asText());
+            row.put("path", item.path("path").asText());
+            row.put("question", question);
+            row.put("previous_subject", item.path("previous_subject").asText(""));
+            row.put("sub_queries", mapper.convertValue(item.path("sub_queries"), List.class));
+            row.put("gold_unsafe", gold);
+            long started = System.nanoTime();
+            client.lastResponse = null;
+            @SuppressWarnings("unchecked")
+            String path = item.path("path").asText();
+            List<Boolean> unsafe = (List<Boolean>) findUnsafe.invoke(service, payload, question,
+                    item.path("previous_subject").asText(""),
+                    "refined".equals(path) || ("grounded".equals(path) && groundedAsCandidate));
+            row.put("unsafe", unsafe);
+            row.put("failed", !validFaithfulnessResponse(client.lastResponse, subs.size()));
+            List<Boolean> matches = new ArrayList<>();
+            for (int index = 0; index < gold.size(); index++) {
+                matches.add(gold.get(index) == null || gold.get(index).equals(unsafe.get(index)));
+            }
+            row.put("matches", matches);
+            row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
+            row.put("model_response", client.lastResponse);
+            records.add(row);
+            if (records.size() % 20 == 0) {
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
+            }
+        }
+        return records;
+    }
+
+    private boolean validFaithfulnessResponse(String response, int size) {
+        try {
+            JsonNode root = mapper.readTree(response);
+            JsonNode unsafe = root.path("unsafe");
+            if (!root.isObject() || root.size() != 1 || !unsafe.isArray() || unsafe.size() != size) {
+                return false;
+            }
+            for (JsonNode value : unsafe) {
+                if (!value.isBoolean()) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private Map<String, Object> buildFaithfulnessResult(List<Map<String, Object>> records) {
+        Map<String, Map<String, Integer>> byGold = new LinkedHashMap<>();
+        int queries = 0;
+        int matches = 0;
+        int failed = 0;
+        for (Map<String, Object> row : records) {
+            failed += Boolean.TRUE.equals(row.get("failed")) ? 1 : 0;
+            @SuppressWarnings("unchecked")
+            List<Boolean> gold = (List<Boolean>) row.get("gold_unsafe");
+            @SuppressWarnings("unchecked")
+            List<Boolean> matched = (List<Boolean>) row.get("matches");
+            for (int index = 0; index < gold.size(); index++) {
+                queries++;
+                matches += matched.get(index) ? 1 : 0;
+                String group = gold.get(index) == null ? "gold_either" : gold.get(index) ? "gold_unsafe" : "gold_safe";
+                Map<String, Integer> counts = byGold.computeIfAbsent(group,
+                        ignored -> new LinkedHashMap<>(Map.of("total", 0, "matches", 0)));
+                counts.merge("total", 1, Integer::sum);
+                counts.merge("matches", matched.get(index) ? 1 : 0, Integer::sum);
+            }
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("cases", records.size());
+        summary.put("queries", queries);
+        summary.put("matches", matches);
+        summary.put("by_gold", byGold);
+        summary.put("failed_cases", failed);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("records", records);
+        return result;
+    }
+
+    // 되묻기 답변의 후속 분석 호출(앱의 requestFollowUpAnalysis)만 부른다(TELME-175 4단계).
+    // 앱은 이 결과를 되묻는 중인 조건으로 거르고, 조건이 하나도 없으면 규칙으로 한 번 더 읽는다. 여기서는 모델 출력 자체를 남기고
+    // 채점은 score_followup_step.py가 한다. 응답을 읽지 못하면 앱은 규칙 분석으로 넘어가므로 failed로 남긴다
+    private List<Map<String, Object>> runFollowupOnce(List<JsonNode> cases, String runName) throws Exception {
+        var client = new LocalOllamaClient(mapper, null);
+        var service = routingService(client);
+        Method analyze = accessible(QueryRoutingService.class, "requestFollowUpAnalysis",
+                String.class, java.util.Set.class, Map.class);
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JsonNode item : cases) {
+            java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+            item.path("pending_keys").forEach(node -> keys.add(node.asText()));
+            String reply = item.path("reply").asText();
+            // 앱이 되물은 질문과 선택지(평가셋 asked_questions). 앱은 되물은 메시지에서 읽어 함께 넘긴다
+            Map<String, RoutingPromptTemplates.AskedCondition> asked = new LinkedHashMap<>();
+            item.path("asked_questions").fields().forEachRemaining(entry -> {
+                List<String> options = new ArrayList<>();
+                entry.getValue().path("options").forEach(option -> options.add(option.asText()));
+                asked.put(entry.getKey(), new RoutingPromptTemplates.AskedCondition(
+                        entry.getValue().path("question").asText(), options));
+            });
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("case_id", item.path("case_id").asText());
+            row.put("pending_keys", new ArrayList<>(keys));
+            row.put("reply", reply);
+            row.put("user_prompt", RoutingPromptTemplates.followUpUserPrompt(keys, asked, reply));
+            long started = System.nanoTime();
+            client.lastResponse = null;
+            // 앱은 업무를 묻거나 지역을 묻는 중 업무 이름만 짧게 답하면 모델을 부르지 않고 규칙으로 읽는다
+            String ruleServiceType = new RuleBasedRoutingFallback().serviceTypeOfShortReply(reply);
+            if (ruleServiceType != null && (keys.contains("serviceType") || keys.contains("location"))) {
+                row.put("method", "RULE");
+                row.put("response_type", "CONDITION_RESPONSE");
+                row.put("conditions", List.of(Map.of("key", "serviceType", "status", "FILLED", "value", ruleServiceType)));
+                row.put("failed", false);
+                row.put("elapsed_ms", 0L);
+                row.put("model_response", null);
+                records.add(row);
+                continue;
+            }
+            row.put("method", "LLM");
+            try {
+                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, keys, asked);
+                row.put("response_type", payload.responseType().name());
+                row.put("conditions", mapper.convertValue(payload.conditions(), List.class));
+                row.put("failed", false);
+            } catch (InvocationTargetException exception) {
+                row.put("response_type", null);
+                row.put("conditions", List.of());
+                row.put("failed", true);
+                row.put("error", exception.getCause().getClass().getSimpleName() + ": " + exception.getCause().getMessage());
+            }
+            row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
+            row.put("model_response", client.lastResponse);
+            records.add(row);
+            if (records.size() % 20 == 0) {
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
+            }
+        }
+        return records;
+    }
+
+    private Map<String, Object> buildFollowupResult(List<Map<String, Object>> records) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("cases", records.size());
+        summary.put("failed_cases", records.stream().filter(row -> Boolean.TRUE.equals(row.get("failed"))).count());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("records", records);
+        return result;
+    }
+
+    private interface RecordsListener {
+        void onRecord(List<Map<String, Object>> records) throws Exception;
+    }
+
+    private List<Map<String, Object>> runOnce(List<JsonNode> cases, Map<String, String> expectedIntents,
+            Map<String, String> replay, String runName, RecordsListener listener) throws Exception {
+        var client = new LocalOllamaClient(mapper, replay);
         var routings = mock(QueryRoutingRepository.class);
         var requests = mock(ConsultRequestRepository.class);
         var transaction = mock(TransactionTemplate.class);
@@ -77,9 +527,13 @@ class RoutingEvaluationProbe {
         var service = new QueryRoutingService(
                 client, mapper, routings, requests, new RuleBasedRoutingFallback(),
                 new IntentConverter(mapper), transaction);
+        // TELME_ROUTING_SKIP_INVENTORY=true면 요청 개수 판정 없이 의도 분류가 나눈 개수를 쓰는 경로를 잰다
+        if (Boolean.parseBoolean(System.getenv("TELME_ROUTING_SKIP_INVENTORY"))) {
+            var enabled = QueryRoutingService.class.getDeclaredField("requestInventoryEnabled");
+            enabled.setAccessible(true);
+            enabled.setBoolean(service, false);
+        }
 
-        List<JsonNode> cases = loadCases();
-        Map<String, String> expectedIntents = loadExpectedIntents(cases);
         List<Map<String, Object>> records = new ArrayList<>();
         for (JsonNode item : cases) {
             String id = item.path("eval_id").asText();
@@ -95,6 +549,21 @@ class RoutingEvaluationProbe {
                     .build();
             ChatContext context = summary == null ? null
                     : new ChatContext(1L, message.getMessageId(), summary, List.of(), question, 0);
+            // 앱은 문맥 해석이 이전 고객 발언을 연결했을 때만 그 발언(history)과 복원 질문을 라우팅에 넘긴다.
+            // previous_questions + context_linked=true면 그 경로를, false면 질문만 넘기는 경로를 그대로 재현한다
+            String resolvedQuestion = null;
+            List<String> previous = new ArrayList<>();
+            item.path("previous_questions").forEach(node -> previous.add(node.asText()));
+            if (!previous.isEmpty() && item.path("context_linked").asBoolean(false)) {
+                List<ChatContextMessage> history = new ArrayList<>();
+                for (int index = 0; index < previous.size(); index++) {
+                    history.add(new ChatContextMessage(100_000L + index, index + 1, ChatMessage.Role.USER,
+                            ChatMessage.MessageType.QUESTION, previous.get(index), null));
+                }
+                context = new ChatContext(1L, message.getMessageId(), null, history, question, 0);
+                resolvedQuestion = "[대상을 확인할 이전 고객 발언]\n" + String.join("\n", previous)
+                        + "\n[현재 후속 질문]\n" + question;
+            }
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("eval_id", id);
             row.put("type", type);
@@ -103,12 +572,18 @@ class RoutingEvaluationProbe {
             if (summary != null) {
                 row.put("summary", summary);
             }
+            if (resolvedQuestion != null) {
+                row.put("resolved_question", resolvedQuestion);
+            }
             row.put("user_prompt", RoutingPromptTemplates.routingUserPrompt(context, question));
             String expectedIntent = expectedIntents.get(id);
             row.put("expected_intent", expectedIntent);
             long started = System.nanoTime();
             try {
-                IntentRouteResponse route = service.routeSingleConsult(message, context);
+                client.intentResponse = null;
+                IntentRouteResponse route = resolvedQuestion == null
+                        ? service.routeSingleConsult(message, context)
+                        : service.routeSingleConsult(message, context, resolvedQuestion);
                 row.put("intent", route.intent().name());
                 row.put("intent_matches", route.intent().name().equals(expectedIntent));
                 row.put("compound_guidance", false);
@@ -117,14 +592,15 @@ class RoutingEvaluationProbe {
                 row.put("search_query", route.subQueries().isEmpty()
                         ? null : route.subQueries().getFirst().queryText());
                 row.put("refined_query", route.refinedQuery());
+                row.put("sub_query_count", route.subQueries().size());
             } catch (UnsupportedCompoundQuestionException exception) {
                 // 복합 질문 안내는 BOTH뿐 아니라 하위 질문 intent가 섞인 경우에도 나온다.
                 // 안내 여부와 분류 정확도를 섞지 않도록, 채점은 모델이 실제로 낸 intent로 한다
-                String modelIntent = modelIntent(client.lastResponse);
+                String modelIntent = modelIntent(client.intentResponse);
                 row.put("intent", modelIntent);
                 row.put("intent_matches", modelIntent.equals(expectedIntent));
                 row.put("compound_guidance", true);
-                row.put("sub_intents", modelSubIntents(client.lastResponse));
+                row.put("sub_intents", modelSubIntents(client.intentResponse));
             } catch (RuntimeException exception) {
                 row.put("intent", "ERROR");
                 row.put("intent_matches", false);
@@ -132,14 +608,17 @@ class RoutingEvaluationProbe {
                 row.put("error", exception.getClass().getSimpleName() + ": " + exception.getMessage());
             }
             row.put("elapsed_ms", (System.nanoTime() - started) / 1_000_000);
-            row.put("model_response", client.lastResponse);
+            row.put("model_response", client.intentResponse);
+            // 보정(규칙·검색 재확인) 전 모델이 직접 낸 의도
+            row.put("model_intent", modelIntent(client.intentResponse));
             records.add(row);
-            writeResult(records);
+            listener.onRecord(records);
             if (records.size() % 10 == 0) {
-                System.out.println("[RoutingEval] " + records.size() + "/" + cases.size());
+                System.out.println("[RoutingEval]" + (runName.isEmpty() ? "" : " " + runName) + " "
+                        + records.size() + "/" + cases.size());
             }
         }
-        System.out.println("[RoutingEval] saved " + OUTPUT.toAbsolutePath());
+        return records;
     }
 
     private List<JsonNode> loadCases() throws Exception {
@@ -182,7 +661,18 @@ class RoutingEvaluationProbe {
         return Integer.parseInt(evalId.substring("EVAL-".length()));
     }
 
-    private void writeResult(List<Map<String, Object>> records) throws Exception {
+    private void writeJson(Object result) throws Exception {
+        Files.createDirectories(OUTPUT.getParent());
+        mapper.writerWithDefaultPrettyPrinter().writeValue(OUTPUT.toFile(), result);
+        if (APP_BEDROCK_CLIENT) {
+            // 호출 종류별 클라이언트 오류 수(빈 응답 INVALID_RESPONSE, 시간 초과 등)
+            mapper.writerWithDefaultPrettyPrinter().writeValue(
+                    OUTPUT.resolveSibling(OUTPUT.getFileName() + ".client-errors.json").toFile(),
+                    new java.util.TreeMap<>(CLIENT_ERRORS));
+        }
+    }
+
+    private Map<String, Object> buildResult(List<Map<String, Object>> records) {
         Map<String, Map<String, Integer>> byExpectedIntent = new LinkedHashMap<>();
         Map<String, Map<String, Integer>> confusion = new LinkedHashMap<>();
         Map<String, Integer> compoundGuidance = new LinkedHashMap<>();
@@ -218,8 +708,7 @@ class RoutingEvaluationProbe {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summary", summary);
         result.put("records", records);
-        Files.createDirectories(OUTPUT.getParent());
-        mapper.writerWithDefaultPrettyPrinter().writeValue(OUTPUT.toFile(), result);
+        return result;
     }
 
     // 복합 질문 안내로 끝나면 라우팅 결과가 없으므로 모델 원 응답에서 intent를 읽는다
@@ -243,11 +732,41 @@ class RoutingEvaluationProbe {
         return intents;
     }
 
+    // TELME_ROUTING_GPTOSS_CLIENT=bedrock이면 gpt-oss 라우터로 갈 호출을 앱의 BedrockClient로 직접 보낸다.
+    // 라우터와 달리 JSON 출력 지시를 덧붙이지 않고 요청의 출력 한도(maxTokens)를 그대로 쓴다(PR #160 리뷰)
+    private static final boolean APP_BEDROCK_CLIENT =
+            "bedrock".equals(System.getenv("TELME_ROUTING_GPTOSS_CLIENT"));
+    private static final java.util.concurrent.ConcurrentMap<String, Integer> CLIENT_ERRORS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static BedrockClient appBedrockClient;
+
+    private static synchronized BedrockClient appBedrockClient() {
+        if (appBedrockClient == null) {
+            // 운영 설정(BedrockConfig·application.yml llm.bedrock)과 같은 값. 지역만 평가 계정에 맞춘다
+            var properties = new BedrockProperties(true,
+                    System.getenv().getOrDefault("LLM_BEDROCK_REGION", "ap-northeast-1"),
+                    "openai.gpt-oss-120b-1:0", Duration.ofSeconds(8), "low", 1000, 50, Duration.ofSeconds(1));
+            var runtime = BedrockRuntimeClient.builder()
+                    .region(Region.of(properties.region()))
+                    .httpClientBuilder(Apache5HttpClient.builder()
+                            .maxConnections(properties.maxConnections())
+                            .connectionAcquisitionTimeout(properties.connectionAcquireTimeout()))
+                    .overrideConfiguration(config -> config
+                            .apiCallTimeout(properties.timeout())
+                            .retryStrategy(AwsRetryStrategy.doNotRetry()))
+                    .build();
+            appBedrockClient = new BedrockClient(runtime, new BedrockRequestConverter(properties));
+        }
+        return appBedrockClient;
+    }
+
     private static final class LocalOllamaClient implements LlmClient {
         private final ObjectMapper mapper;
         private final Map<String, String> replay;
-        private final HttpClient http = HttpClient.newHttpClient();
+        // 비교용 라우터(judge_router.py)는 HTTP/1.0 서버라 HTTP/2 업그레이드 시도 없이 HTTP/1.1로 보낸다
+        private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
         private String lastResponse;
+        private String intentResponse;
 
         private LocalOllamaClient(ObjectMapper mapper, Map<String, String> replay) {
             this.mapper = mapper;
@@ -261,6 +780,24 @@ class RoutingEvaluationProbe {
                 lastResponse = replay.get(request.userPrompt());
                 if (lastResponse == null) {
                     throw new IllegalStateException("Missing replay response: " + request.userPrompt());
+                }
+                if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt())) {
+                    intentResponse = lastResponse;
+                }
+                return lastResponse;
+            }
+            String target = urlFor(request.systemPrompt());
+            if (APP_BEDROCK_CLIENT && !target.equals(BASE_URL)) {
+                boolean intentCall = RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt());
+                try {
+                    lastResponse = appBedrockClient().generate(request);
+                } catch (GeneralException failed) {
+                    // 앱과 같은 예외를 그대로 던져 호출하는 쪽의 실패 처리를 거치게 한다
+                    CLIENT_ERRORS.merge(callName(request.systemPrompt()) + ":" + failed.getErrorCode(), 1, Integer::sum);
+                    throw failed;
+                }
+                if (intentCall) {
+                    intentResponse = lastResponse;
                 }
                 return lastResponse;
             }
@@ -276,20 +813,73 @@ class RoutingEvaluationProbe {
                         "temperature", request.temperature(),
                         "num_predict", request.maxTokens(),
                         "num_ctx", 8192));
-                HttpRequest httpRequest = HttpRequest.newBuilder(URI.create("http://localhost:11434/api/chat"))
+                boolean intentCall = RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt());
+                HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(urlFor(request.systemPrompt()) + "/api/chat"))
                         .header("Content-Type", "application/json")
                         .timeout(Duration.ofMinutes(3))
                         .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)))
                         .build();
-                HttpResponse<String> response = http.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = send(httpRequest);
                 if (response.statusCode() != 200) {
-                    throw new IllegalStateException("Ollama HTTP " + response.statusCode());
+                    throw new IllegalStateException("Ollama HTTP " + response.statusCode() + ": " + response.body());
                 }
                 lastResponse = mapper.readTree(response.body()).path("message").path("content").asText();
+                if (intentCall) {
+                    intentResponse = lastResponse;
+                }
                 return lastResponse;
             } catch (Exception exception) {
-                throw new IllegalStateException("Ollama routing probe failed", exception);
+                Throwable root = exception;
+                while (root.getCause() != null) {
+                    root = root.getCause();
+                }
+                throw new IllegalStateException("Ollama routing probe failed: "
+                        + root.getClass().getSimpleName() + ": " + root.getMessage(), exception);
             }
+        }
+
+        // 연결이 끊겨 요청이 모델까지 가지 못한 경우(IOException)만 다시 보낸다. 모델 응답은 다시 받지 않는다
+        private HttpResponse<String> send(HttpRequest request) throws Exception {
+            for (int attempt = 1; ; attempt++) {
+                try {
+                    return http.send(request, HttpResponse.BodyHandlers.ofString());
+                } catch (java.io.IOException exception) {
+                    if (attempt == 3) {
+                        throw exception;
+                    }
+                }
+            }
+        }
+
+        private static String callName(String systemPrompt) {
+            if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return "intent";
+            }
+            if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(systemPrompt)) {
+                return "inventory";
+            }
+            if (RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return "followup";
+            }
+            return RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)
+                    ? "faithfulness-single" : "faithfulness";
+        }
+
+        private static String urlFor(String systemPrompt) {
+            if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return INTENT_URL;
+            }
+            if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(systemPrompt)) {
+                return INVENTORY_URL;
+            }
+            if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)
+                    || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)) {
+                return FAITHFULNESS_URL;
+            }
+            if (RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return FOLLOWUP_URL;
+            }
+            return BASE_URL;
         }
 
         @Override

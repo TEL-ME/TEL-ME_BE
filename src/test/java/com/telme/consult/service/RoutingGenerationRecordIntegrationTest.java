@@ -96,7 +96,7 @@ class RoutingGenerationRecordIntegrationTest {
         assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
         assertThat(rows).extracting(row -> row.get("prompt_version")).containsExactly(
                 "routing-request-v4-single-search",
-                "routing-request-inventory-v3",
+                "routing-request-inventory-v4",
                 "routing-faq-faithfulness-v2-single-search");
     }
 
@@ -116,7 +116,7 @@ class RoutingGenerationRecordIntegrationTest {
         assertThat(rows).extracting(row -> row.get("task_type")).containsExactly("ROUTING", "ROUTING");
         assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
         assertThat(rows).extracting(row -> row.get("prompt_version"))
-                .containsOnly("routing-faq-faithfulness-v2-single-search");
+                .containsOnly("routing-faq-faithfulness-single-v3");
     }
 
     // 매장 지역 되묻기 문장 생성도 의도 분류와 같은 채팅 실행에 기록돼야 한다
