@@ -176,6 +176,23 @@ public class AnswerGuard {
     private static final Pattern ACTION_POSITIVE = Pattern.compile(
             "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요))");
 
+    // "오후 7시 30분", "19시", "7시 반"처럼 한글로 적은 시각. 콜론 표기와 같은 값으로 비교한다. '시간'은 시각이 아니다
+    private static final Pattern KOREAN_CLOCK = Pattern.compile(
+            "(오전|오후|새벽|아침|낮|저녁|밤)?\\s*(\\d{1,2})\\s*시(?!간)(?:\\s*(?:(\\d{1,2})\\s*분|(반)))?");
+    // 시각 이후와 시각까지. 둘 다 있으면 범위나 두 조건이라 방향을 정하지 않는다
+    private static final Pattern TIME_AFTER = Pattern.compile("이후|부터|넘어|지나서|지난\\s*후");
+    private static final Pattern TIME_BEFORE = Pattern.compile("이전|까지|전에|이내");
+
+    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다"는 단정이 아니다
+    private static final Pattern FREE_CLAIM = Pattern.compile(
+            "무료|무상|공짜|(?:비용|요금|수수료|금액)(?:이|은|는|도)?\\s*(?:전혀\\s*|따로\\s*|별도로\\s*)?"
+                    + "(?:없|들지\\s*않|발생하지\\s*않|부과되지\\s*않|청구되지\\s*않)");
+    private static final Pattern FREE_NEGATED = Pattern.compile(
+            "(?:무료|무상|공짜)(?:는|가|로는|로도|로)?\\s*(?:아니|아닙|아님|제공(?:되|하)지\\s*않|적용(?:되|하)지\\s*않)");
+    private static final Pattern FREE_EVIDENCE = Pattern.compile(
+            "무료|무상|공짜|면제|(?:비용|요금|수수료)(?:이|은|는)?\\s*(?:전혀\\s*)?(?:없|들지\\s*않|발생하지\\s*않)"
+                    + "|부과(?:되)?지\\s*않|청구되지\\s*않|발생하지\\s*않");
+
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
     private static final Set<String> GENERIC_CHARGE_WORDS = Set.of(
             "수수료", "위약금", "발생", "부과", "무료", "면제", "없습니다", "없어요", "있습니다", "있어요");
@@ -209,6 +226,8 @@ public class AnswerGuard {
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
+        filtered = trimContradictedFreeClaims(filtered, context);
+        filtered = trimContradictedTimeClaims(filtered, context);
         String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
                 ? context : context + "\n" + confirmedValues;
         verifyAmounts(filtered, numericEvidence, userQuery);
@@ -350,6 +369,72 @@ public class AnswerGuard {
             previousRemoved = true;
         }
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    // 근거에 금액이 있는데 근거에 무료 표현이 하나도 없으면 "무료"라는 단정은 근거와 반대다
+    public String trimContradictedFreeClaims(String answer, String context) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        boolean evidenceHasPrice = !amountsIn(context).isEmpty() && !FREE_EVIDENCE.matcher(context).find();
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (evidenceHasPrice && claimsFree(sentence)) {
+                log.warn("[AnswerGuard] 근거의 금액과 반대로 무료라고 단정해 문장 제거: {}", sentence);
+                continue;
+            }
+            kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private static boolean claimsFree(String sentence) {
+        return FREE_CLAIM.matcher(FREE_NEGATED.matcher(sentence).replaceAll("")).find();
+    }
+
+    // 같은 시각에 대해 근거와 가능 여부가 반대인 문장을 제거한다. "19:30 이후 불가"를 "이후에도 가능"으로 바꾼 경우다
+    public String trimContradictedTimeClaims(String answer, String context) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (contradictsTimeEvidence(sentence, context)) {
+                log.warn("[AnswerGuard] 근거와 반대인 시각 조건으로 문장 제거: {}", sentence);
+                continue;
+            }
+            kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private boolean contradictsTimeEvidence(String sentence, String context) {
+        Set<String> times = timeKeys(sentence);
+        Boolean claimed = availableAfter(sentence);
+        if (context == null || times.size() != 1 || claimed == null) {
+            return false;
+        }
+        for (String evidence : SENTENCE.split(context)) {
+            Boolean stated = timeKeys(evidence).equals(times) ? availableAfter(evidence) : null;
+            if (stated != null && !stated.equals(claimed)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 문장이 말하는 "그 시각 이후에 가능한가". 이후/부터는 가능 여부 그대로, 이전/까지는 반대다. 알 수 없으면 null
+    private static Boolean availableAfter(String sentence) {
+        boolean after = TIME_AFTER.matcher(sentence).find();
+        if (after == TIME_BEFORE.matcher(sentence).find()) {
+            return null;
+        }
+        boolean negative = ACTION_NEGATIVE.matcher(sentence).find();
+        boolean positive = !negative && ACTION_POSITIVE.matcher(sentence).find();
+        if (!negative && !positive) {
+            return null;
+        }
+        return after ? positive : negative;
     }
 
     public String trimContradictedChargeClaims(String answer, String context) {
@@ -905,7 +990,9 @@ public class AnswerGuard {
         if (text == null) {
             return measures;
         }
-        Matcher matcher = MEASURE.matcher(text);
+        ClockScan clocks = scanClocks(text);
+        // 한글 시각은 값으로 바꾸고 문장에서 뺀다. "7시 30분"의 30분을 시간 수치로 세지 않기 위해서다
+        Matcher matcher = MEASURE.matcher(clocks.rest());
         while (matcher.find()) {
             String unit = matcher.group(3);
             if (matcher.group(1) != null) {
@@ -913,13 +1000,74 @@ public class AnswerGuard {
             }
             measures.add(normalizeMeasureNumber(matcher.group(2)) + unit);
         }
-        Matcher clockMatcher = CLOCK_TIME.matcher(text);
+        Matcher clockMatcher = CLOCK_TIME.matcher(clocks.rest());
         while (clockMatcher.find()) {
-            measures.add("%02d:%02d".formatted(
-                    Integer.parseInt(clockMatcher.group(1)),
-                    Integer.parseInt(clockMatcher.group(2))));
+            addClock(measures, Integer.parseInt(clockMatcher.group(1)), Integer.parseInt(clockMatcher.group(2)), true);
         }
+        measures.addAll(clocks.keys());
         return measures;
+    }
+
+    private record ClockScan(Set<String> keys, String rest) {}
+
+    // 시각은 24시간 값("19:30")과 12시간 값("~07:30")으로 함께 적는다. 오전·오후를 말하지 않은 1~12시는 12시간 값만 적어
+    // 근거가 오전이든 오후든 같은 시각이면 통과하고, 오전·오후를 말했는데 다르면 24시간 값이 달라 차단한다
+    private ClockScan scanClocks(String text) {
+        Set<String> keys = new LinkedHashSet<>();
+        StringBuilder rest = new StringBuilder();
+        Matcher matcher = KOREAN_CLOCK.matcher(text);
+        int last = 0;
+        while (matcher.find()) {
+            int hour = Integer.parseInt(matcher.group(2));
+            int minute = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : matcher.group(4) != null ? 30 : 0;
+            if (hour > 24 || minute > 59) {
+                continue;
+            }
+            rest.append(text, last, matcher.start()).append(' ');
+            last = matcher.end();
+            Integer exact = exactHour(matcher.group(1), hour);
+            addClock(keys, exact != null ? exact : hour, minute, exact != null);
+        }
+        rest.append(text.substring(last));
+        return new ClockScan(keys, rest.toString());
+    }
+
+    private static Integer exactHour(String marker, int hour) {
+        if (hour >= 13) {
+            return hour % 24;
+        }
+        if (marker == null) {
+            return hour == 0 ? 0 : null;
+        }
+        return switch (marker) {
+            case "오전", "새벽", "아침" -> hour % 12;
+            case "오후" -> hour < 12 ? hour + 12 : 12;
+            case "낮" -> hour >= 1 && hour <= 5 ? hour + 12 : hour;
+            case "저녁" -> hour < 12 ? hour + 12 : hour;
+            default -> hour == 12 ? 0 : hour >= 6 ? hour + 12 : hour;
+        };
+    }
+
+    private static void addClock(Set<String> keys, int hour, int minute, boolean exact) {
+        if (exact) {
+            keys.add("%02d:%02d".formatted(hour % 24, minute));
+        }
+        keys.add("~%02d:%02d".formatted(hour % 12, minute));
+    }
+
+    // 문장 속 시각을 12시간 값으로 모은다. 두 문장이 같은 시각을 말하는지 비교하는 데 쓴다
+    private Set<String> timeKeys(String text) {
+        Set<String> keys = new LinkedHashSet<>();
+        if (text == null) {
+            return keys;
+        }
+        ClockScan clocks = scanClocks(text);
+        Matcher clockMatcher = CLOCK_TIME.matcher(clocks.rest());
+        while (clockMatcher.find()) {
+            addClock(keys, Integer.parseInt(clockMatcher.group(1)), Integer.parseInt(clockMatcher.group(2)), false);
+        }
+        clocks.keys().stream().filter(key -> key.startsWith("~")).forEach(keys::add);
+        return keys;
     }
 
     private String normalizeMeasureNumber(String number) {
