@@ -7,15 +7,10 @@ import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
-import com.telme.llm.config.BedrockProperties;
-import com.telme.llm.config.LlmProperties;
-import com.telme.llm.converter.BedrockRequestConverter;
-import com.telme.llm.converter.OllamaRequestConverter;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
-import com.telme.llm.service.OllamaClient;
 import com.telme.rag.config.EvidenceCheckProperties;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
@@ -26,7 +21,6 @@ import com.telme.rag.service.EvidenceRelevanceChecker;
 import com.telme.rag.service.RagAnswerGenerator;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,14 +31,6 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.mockito.Mockito;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
-import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
-import software.amazon.awssdk.http.apache5.Apache5HttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
-import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock;
-import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
 
 /**
  * TELME-178 답변 생성 모델 비교. 저장해 둔 답변 생성 직전 입력을 엑사원(Ollama)과 gpt-oss(Bedrock)에 똑같이 넣어
@@ -192,59 +178,10 @@ class AnswerGenerationProbe {
 
     private LlmClient clientFor(String model, List<Map<String, Object>> calls, JsonNode input) {
         return switch (model) {
-            case "exaone" -> exaoneClient();
-            case "gptoss" -> new RecordingBedrockClient(bedrockRuntime(), bedrockConverter(), calls);
+            case "exaone", "gptoss" -> ProbeModelClients.create(model, mapper, calls, false);
             case "fake" -> new FakeClient(input.path("searchResults").path(0).path("answer").asText("확인할 수 없습니다."));
             default -> throw new IllegalArgumentException("알 수 없는 모델: " + model);
         };
-    }
-
-    private LlmClient exaoneClient() {
-        var properties = new LlmProperties(System.getenv().getOrDefault("ANSWER_PROBE_OLLAMA_MODEL", "exaone3.5:7.8b"),
-                Duration.ofSeconds(5), Duration.ofSeconds(180), 8192);
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(properties.connectTimeout());
-        factory.setReadTimeout(properties.readTimeout());
-        var rest = RestClient.builder()
-                .baseUrl(System.getenv().getOrDefault("ANSWER_PROBE_OLLAMA_URL", "http://127.0.0.1:11434"))
-                .requestFactory(factory).build();
-        return new OllamaClient(rest, new OllamaRequestConverter(properties), mapper);
-    }
-
-    // 운영 설정(BedrockConfig·application.yml llm.bedrock)과 같은 값. 지역과 시간 제한은 평가용으로 바꾼다.
-    // 운영 시간 제한 8초는 긴 답변 생성에 짧을 수 있어 호출마다 걸린 시간을 결과에 남긴다
-    private static BedrockProperties bedrockProperties() {
-        return new BedrockProperties(true, System.getenv().getOrDefault("LLM_BEDROCK_REGION", "ap-northeast-1"),
-                "openai.gpt-oss-120b-1:0",
-                Duration.ofSeconds(Long.parseLong(System.getenv().getOrDefault("ANSWER_PROBE_TIMEOUT_SECONDS", "60"))),
-                "low", Integer.parseInt(System.getenv().getOrDefault("ANSWER_PROBE_MAX_TOKENS", "1000")), 50,
-                Duration.ofSeconds(1));
-    }
-
-    private static BedrockRequestConverter bedrockConverter() {
-        return new BedrockRequestConverter(bedrockProperties());
-    }
-
-    private static volatile BedrockRuntimeClient sharedRuntime;
-
-    private static BedrockRuntimeClient bedrockRuntime() {
-        if (sharedRuntime == null) {
-            synchronized (AnswerGenerationProbe.class) {
-                if (sharedRuntime == null) {
-                    var properties = bedrockProperties();
-                    sharedRuntime = BedrockRuntimeClient.builder()
-                            .region(Region.of(properties.region()))
-                            .httpClientBuilder(Apache5HttpClient.builder()
-                                    .maxConnections(properties.maxConnections())
-                                    .connectionAcquisitionTimeout(properties.connectionAcquireTimeout()))
-                            .overrideConfiguration(config -> config
-                                    .apiCallTimeout(properties.timeout())
-                                    .retryStrategy(AwsRetryStrategy.doNotRetry()))
-                            .build();
-                }
-            }
-        }
-        return sharedRuntime;
     }
 
     private static Map<String, String> map(JsonNode node) {
@@ -320,59 +257,6 @@ class AnswerGenerationProbe {
 
         private String raw() {
             return raw.toString();
-        }
-    }
-
-    /** 앱의 BedrockClient와 같은 요청 변환과 응답 처리에, 종료 사유·토큰·걸린 시간 기록을 더했다. */
-    private static final class RecordingBedrockClient implements LlmClient {
-        private final BedrockRuntimeClient runtime;
-        private final BedrockRequestConverter converter;
-        private final List<Map<String, Object>> calls;
-
-        private RecordingBedrockClient(BedrockRuntimeClient runtime, BedrockRequestConverter converter,
-                List<Map<String, Object>> calls) {
-            this.runtime = runtime;
-            this.converter = converter;
-            this.calls = calls;
-        }
-
-        @Override
-        public String generate(LlmRequest request) {
-            Map<String, Object> call = new LinkedHashMap<>();
-            call.put("promptVersion", request.promptVersion());
-            long started = System.nanoTime();
-            try {
-                var converseRequest = converter.toConverseRequest(request);
-                call.put("maxTokens", converseRequest.inferenceConfig().maxTokens());
-                ConverseResponse response = runtime.converse(converseRequest);
-                call.put("stopReason", String.valueOf(response.stopReason()));
-                call.put("promptTokens", response.usage().inputTokens());
-                call.put("outputTokens", response.usage().outputTokens());
-                return response.output().message().content().stream().map(ContentBlock::text)
-                        .filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.joining()).strip();
-            } catch (RuntimeException failure) {
-                call.put("error", failure.toString());
-                throw failure;
-            } finally {
-                call.put("ms", (System.nanoTime() - started) / 1_000_000);
-                synchronized (calls) {
-                    calls.add(call);
-                }
-            }
-        }
-
-        // 앱의 BedrockClient처럼 다 받은 뒤 한 번에 넘긴다
-        @Override
-        public void stream(LlmRequest request, LlmStreamHandler handler) {
-            String text;
-            try {
-                text = generate(request);
-            } catch (RuntimeException failure) {
-                handler.onError(failure);
-                return;
-            }
-            handler.onToken(text);
-            handler.onComplete();
         }
     }
 
