@@ -543,8 +543,8 @@ class ChatQuestionResolverTest {
         assertThat(guarded.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
     }
 
-    // 흔들림 보완을 켜면 고객 발언이 하나뿐일 때 모델이 그 발언의 업무를 0개로 세도 그 발언에 연결한다.
-    // 업무를 둘로 세면 그대로 확인 안내이고, 보완을 끄면 지금처럼 확인 안내다.
+    // 흔들림 보완을 켜면 고객 발언이 하나뿐이고 하려는 일을 말했을 때 모델이 그 발언의 업무를 0개로 세도 그 발언에 연결한다.
+    // 사실만 말한 발언, 업무를 둘로 센 발언은 그대로 확인 안내이고, 보완을 끄면 지금처럼 확인 안내다.
     @Test
     void onlyCustomerStatementIsLinkedEvenWhenModelCountsNoBusinessWhenGuarded() throws Exception {
         String none = omitted("[{\"index\":1,\"targetCount\":0,\"parentIndex\":0}]");
@@ -555,6 +555,11 @@ class ChatQuestionResolverTest {
         assertThat(guarded.validateResolution("가족이 대신 가도 되나요?",
                 omitted("[{\"index\":1,\"targetCount\":2,\"parentIndex\":0}]"), Map.of(501L, source))
                 .needsClarification()).isTrue();
+        for (String fact : List.of("회선이 세 개 있어요", "폰을 바꾼 지 한 달 됐어요")) {
+            var statement = customer(502L, 1, fact);
+            assertThat(guarded.validateResolution("그거 어떻게 해요?", none, Map.of(502L, statement))
+                    .needsClarification()).isTrue();
+        }
     }
 
     // 흔들림 보완을 켜면 이전 발언 분석 응답이 틀릴 때 한 번만 다시 묻고, 다시 틀리면 확인 안내로 끝낸다. 끄면 다시 묻지 않는다.
@@ -585,9 +590,9 @@ class ChatQuestionResolverTest {
         assertThat(ChatQuestionResolver.isGenericFollowUp("그 상품의 이용 기간은요?")).isFalse();
     }
 
-    // gpt-oss는 내부 추론도 출력 한도를 써서 한도가 작으면 답이 비거나 잘린다. 흔들림 보완을 켜면 두 요청 모두 512 이상이다
+    // gpt-oss는 내부 추론도 출력 한도를 써서 한도가 작으면 답이 비거나 잘린다. 흔들림 보완과 관계없이 두 요청 모두 512 이상이다
     @Test
-    void outputTokenLimitIsRaisedOnlyWhenGuarded() throws Exception {
+    void outputTokenLimitIsAtLeast512WithOrWithoutGuards() throws Exception {
         String question = "그 서비스 해지는 어떻게 해요?";
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
@@ -596,9 +601,7 @@ class ChatQuestionResolverTest {
         var requests = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model, org.mockito.Mockito.times(4)).generate(requests.capture());
         var all = requests.getAllValues();
-        assertThat(all.subList(0, 2)).allSatisfy(request -> assertThat(request.maxTokens()).isGreaterThanOrEqualTo(512));
-        assertThat(all.get(2).maxTokens()).isEqualTo(64);
-        assertThat(all.get(3).maxTokens()).isEqualTo(192);
+        assertThat(all).allSatisfy(request -> assertThat(request.maxTokens()).isGreaterThanOrEqualTo(512));
     }
 
     // 짧아도 상품이나 업무가 있으면 모델이 EXPLICIT으로 판정해 이전 주제를 붙이지 않는다.

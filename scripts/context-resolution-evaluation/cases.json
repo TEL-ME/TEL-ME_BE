@@ -3140,5 +3140,521 @@
       "expectedSourceIndexes": [],
       "note": "데이터 소진 후 속도 제한으로 대상이 분명함"
     }
+  ],
+  "singleStatementCases": [
+    {
+      "id": "single-01",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그 회선 정지해 주세요",
+      "history": [
+        "회선이 세 개 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "회선이 셋이라 어느 회선을 정지할지 정할 수 없음"
+    },
+    {
+      "id": "single-02",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그거 어떻게 해요?",
+      "history": [
+        "폰을 바꾼 지 한 달 됐어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "기기 변경 사실만 말했고 '그거'가 가리키는 업무가 없음"
+    },
+    {
+      "id": "single-03",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "비용은 얼마예요?",
+      "history": [
+        "음 뭐부터 물어봐야 할지 모르겠네요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "이전 발언이 망설임뿐이라 무엇의 비용인지 알 수 없음"
+    },
+    {
+      "id": "single-04",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그거 해지하려면 뭐 필요해요?",
+      "history": [
+        "남편 명의로 된 폰이랑 제 명의 폰이 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "명의가 다른 두 회선 중 어느 것을 해지할지 모름(필요 서류도 달라짐)"
+    },
+    {
+      "id": "single-05",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "아 네 그래서요, 그거 지금 신청하면 이번 달부터 바로 적용되는 건지 아니면 다음 달부터인지 알려주실 수 있어요?",
+      "history": [
+        "아 잠깐만요 지금 밖이라 좀 시끄럽네요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "잡담뿐이라 무엇을 신청하는지 알 수 없음"
+    },
+    {
+      "id": "single-06",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그거 대신 처리해 주실 수 있어요?",
+      "history": [
+        "요즘 너무 바빠서 정신이 없네요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "감정·상황 표현에 상담 대상이 없어 처리할 업무를 정할 수 없음"
+    },
+    {
+      "id": "single-07",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "거기서 말한 거 취소되나요?",
+      "history": [
+        "어제 대리점 갔다 왔는데요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "대리점 방문 사실만 있고 무엇을 했는지(가입·변경 등) 모름"
+    },
+    {
+      "id": "single-08",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그거 지금 바로 되나요?",
+      "history": [
+        "아이가 이번에 중학교 들어가요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "자녀 입학 사실만으로는 개통·요금제 변경·유해차단 등 무엇인지 하나로 못 정함"
+    },
+    {
+      "id": "single-09",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그 번호로 변경해 주세요",
+      "history": [
+        "부모님 폰도 제가 관리하고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "어떤 번호인지, 무엇을(번호·연락처·청구지 등) 변경할지 모름"
+    },
+    {
+      "id": "single-10",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "얼마나걸려요?",
+      "history": [
+        "음.. 그냥 이것저것 궁금한 게 좀 있어서요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "구체적 업무가 없어 무엇의 소요 시간인지 알 수 없음(띄어쓰기 없음)"
+    },
+    {
+      "id": "single-11",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "그거 요금제 제일 싼 걸로 바꿔 주세요",
+      "history": [
+        "회사 폰이랑 개인 폰 두 개 쓰고 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "요금제 변경이라는 업무는 있으나 두 회선 중 어느 것인지 모름"
+    },
+    {
+      "id": "single-12",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "이거 제가 뭘 해야 돼요?",
+      "history": [
+        "아까 문자 하나 받았는데 잘 모르겠어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "문자 내용을 말하지 않아 무엇에 대한 조치인지 알 수 없음"
+    },
+    {
+      "id": "single-13",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "왜 그런 거예요?",
+      "history": [
+        "이번 달 요금이 평소보다 3만 원이나 더 나왔어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "요금 증가 상황 자체가 대상(청구 요금 증가 원인 문의)"
+    },
+    {
+      "id": "single-14",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "언제 고쳐 주실 수 있어요?",
+      "history": [
+        "어제부터 인터넷이 계속 끊겨요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "인터넷 끊김 장애가 대상(장애 수리 일정 문의)"
+    },
+    {
+      "id": "single-15",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "지금 바로 막을 수 있나요?",
+      "history": [
+        "휴대폰을 지하철에서 잃어버렸어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "분실 상황이 대상(분실 정지 요청)"
+    },
+    {
+      "id": "single-16",
+      "group": "single_statement",
+      "split": "single165",
+      "question": "어떻게하면좀줄일수있어요",
+      "history": [
+        "요금이 너무 많이 나와서 속상해요ㅠ"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "감정 표현이지만 요금 과다가 대상(요금 절감 방법 문의, 띄어쓰기 없음)"
+    }
+  ],
+  "singleStatementBlindCases": [
+    {
+      "id": "single2-01",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "주말에도 돼요?",
+      "history": [
+        "번호이동 하려고 해요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "주말 가능 여부의 대상인 번호이동이 이전 발언에만 있음"
+    },
+    {
+      "id": "single2-02",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "바꾸면 위약금 같은 거 생기나요?",
+      "history": [
+        "요금제를 좀 더 싼 걸로 바꾸고 싶은데요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "무엇을 바꾸는지(요금제 변경)는 이전 발언에서 가져와야 함"
+    },
+    {
+      "id": "single2-03",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "하루에 얼마예요?",
+      "history": [
+        "해외 로밍 알아보는 중이에요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "하루 요금의 대상인 해외 로밍이 이전 발언에 있음"
+    },
+    {
+      "id": "single2-04",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "가족이 대신 가도 돼요?",
+      "history": [
+        "명의변경 문의드려요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "대리 방문 가능 여부의 업무(명의변경)가 이전 발언에 있음"
+    },
+    {
+      "id": "single2-05",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "비용은요?",
+      "history": [
+        "유심 재발급은 어떻게 해요?"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "비용의 대상인 유심 재발급이 이전 발언에 있음"
+    },
+    {
+      "id": "single2-06",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "약정 남아 있으면 얼마나 물어야 돼요?",
+      "history": [
+        "인터넷 해지할까 고민 중이에요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "약정 잔여 위약금의 대상인 인터넷 해지가 이전 발언에 있음"
+    },
+    {
+      "id": "single2-07",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "며칠 걸려요?",
+      "history": [
+        "번호이동 건으로요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "명사만 말한 이전 발언의 번호이동이 소요 기간 질문의 대상"
+    },
+    {
+      "id": "single2-08",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "최대 몇 달까지 됨?",
+      "history": [
+        "폰 일시정지 좀 하려는데"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "구어체 이전 발언의 일시정지가 기간 질문의 대상"
+    },
+    {
+      "id": "single2-09",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "본인이 직접 매장에 가야 하나요?",
+      "history": [
+        "부모님 폰을 효도 요금제로 가입시켜 드리고 싶어요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "본인 방문 필요 여부의 업무(부모님 요금제 가입)가 이전 발언에 있음"
+    },
+    {
+      "id": "single2-10",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "그거 온라인으로도 신청돼요?",
+      "history": [
+        "기기변경 알아보고 있는데요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "지시어 '그거'가 이전 발언의 기기변경을 가리킴"
+    },
+    {
+      "id": "single2-11",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "설치기사방문비따로나와요?",
+      "history": [
+        "인터넷 이전 설치 신청하려고요"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "띄어쓰기 없는 비용 질문, 대상은 이전 발언의 인터넷 이전 설치"
+    },
+    {
+      "id": "single2-12",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "몇개까지돼요",
+      "history": [
+        "데이터 쉐어링 추가하고 싶은데 어떻게 해요?"
+      ],
+      "expectedRelation": "HISTORY_DEPENDENT",
+      "expectedSourceIndexes": [
+        1
+      ],
+      "note": "띄어쓰기 없는 개수 질문, 대상은 이전 발언의 데이터 쉐어링"
+    },
+    {
+      "id": "single2-13",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "그거 어떻게 해요?",
+      "history": [
+        "저희 집에 휴대폰이 세 대 있어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "기기 수만 말했을 뿐 무엇을 하려는지(결합·해지·변경 등) 정할 수 없음"
+    },
+    {
+      "id": "single2-14",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "주말에도 되나요?",
+      "history": [
+        "지난주에 새 아파트로 이사 왔어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "이사 사실만 있고 인터넷 이전·신규 설치·주소 변경 중 무엇인지 정할 수 없음"
+    },
+    {
+      "id": "single2-15",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "대리점 안 가고 할 수 있나요?",
+      "history": [
+        "요즘 회사 일 때문에 너무 바빠서요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "바쁜 사정만 말해 어떤 업무를 비대면으로 하려는지 알 수 없음"
+    },
+    {
+      "id": "single2-16",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "그럼 비용은 얼마예요?",
+      "history": [
+        "제가 이 통신사 쓴 지 10년 넘었어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "가입 기간 사실만 있고 무엇의 비용인지 정할 수 없음"
+    },
+    {
+      "id": "single2-17",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "비용은요?",
+      "history": [
+        "아직 할지 말지 잘 모르겠어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "망설임만 표현하고 무엇을 할지는 말하지 않음"
+    },
+    {
+      "id": "single2-18",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "가족이 대신 신청해도 되나요?",
+      "history": [
+        "딸이 이번에 대학교 들어갔어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "가족 이야기뿐이라 신청하려는 업무(가입·요금제 변경·명의 등)를 정할 수 없음"
+    },
+    {
+      "id": "single2-19",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "서류는 뭐 필요해요?",
+      "history": [
+        "얼마 전에 회사를 옮겼어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "이직 사실만 있고 어떤 업무의 서류인지 알 수 없음"
+    },
+    {
+      "id": "single2-20",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "그거 지금 바로 돼요?",
+      "history": [
+        "남편이랑 저랑 둘 다 이 통신사 써요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "'그거'가 가리킬 업무가 이전 발언에 없음(가족결합 등은 추측일 뿐)"
+    },
+    {
+      "id": "single2-21",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "하나만 할 수도 있나요?",
+      "history": [
+        "회선이 두 개 있는데요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "회선 수만 말해 하나만 무엇을 하려는지(해지·정지·변경) 정할 수 없음"
+    },
+    {
+      "id": "single2-22",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "다시가야돼요?",
+      "history": [
+        "어제 매장에 다녀왔어요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "매장 방문 사실만 있고 무슨 업무로 갔는지 알 수 없음"
+    },
+    {
+      "id": "single2-23",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "온라인으로해도되나요",
+      "history": [
+        "주말엔 시간이 좀 나요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "시간 사정만 말해 온라인으로 할 업무를 정할 수 없음"
+    },
+    {
+      "id": "single2-24",
+      "group": "single_statement",
+      "split": "single165b",
+      "question": "본인이 꼭 가야 하나요?",
+      "history": [
+        "어머니가 연세가 많으세요"
+      ],
+      "expectedRelation": "CLARIFICATION_REQUIRED",
+      "expectedSourceIndexes": [],
+      "note": "가족 사정만 있고 어떤 업무에 본인 방문이 필요한지 정할 수 없음"
+    }
   ]
 }
