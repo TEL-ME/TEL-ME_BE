@@ -114,6 +114,11 @@ def main():
         if not args.fixture.exists():
             command([sys.executable, "-X", "utf8", "-m", "scripts.chat_judge.experiments.v6_live_chat_pipeline.build_chat_pipeline_eval"])
         fixtures = select_cases(load_json(args.fixture), args.limit)
+        # 지명으로 찾는 매장 검색은 카카오 로컬 API가 있어야 한다. 키가 없으면 그 대화는 빼고 기록한다
+        if not (os.environ.get("KAKAO_REST_API_KEY") or os.environ.get("KAKAO_CLIENT_ID")):
+            manifest["skippedCases"] = [{"caseId": case["caseId"], "reason": "KAKAO_NOT_CONFIGURED"}
+                                        for case in fixtures if case.get("requiresKakao")]
+            fixtures = [case for case in fixtures if not case.get("requiresKakao")]
         fixture_path = args.out / "questions.json"
         checkpoint(fixture_path, fixtures)
         manifest["fixtureSha256"] = judge.sha256(fixtures)

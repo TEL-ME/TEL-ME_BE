@@ -15,6 +15,9 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.HttpSessionChatActorProvider;
+import com.telme.subscription.service.SubscriptionQueryService;
+import com.telme.usage.service.SubscriptionUsageService;
 import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.service.RagAnswerGenerator;
 import com.telme.subscription.service.SubscriptionEligibilityChecker;
@@ -77,6 +80,10 @@ class ChatJudgeCaptureProbe {
             "telme.consult.persistence-enabled", "telme.consult.llm-enabled",
             "telme.consult.chat-integration-enabled", "telme.consult.rag-integration-enabled",
             "telme.routing.request-inventory-enabled");
+    // 되묻기에 고객 답변을 보내는 최대 횟수. 같은 조건을 계속 되물으면 멈춘다
+    private static final int MAX_CLARIFICATION_REPLIES = 4;
+    // 회원 질문용 테스트 회원. 평가 DB에 없을 때만 만든다(5G 스탠다드, 24개월 약정, 8개월 전 가입)
+    private static final String TEST_MEMBER_EMAIL = "judge-member@telme.test";
     private static final DateTimeFormatter FILE_TIME =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
 
@@ -89,6 +96,8 @@ class ChatJudgeCaptureProbe {
     @Autowired private List<ChatProcessingPort> processingPorts;
     @Autowired private ApplicationContext context;
     @Autowired private Environment environment;
+    @Autowired private SubscriptionQueryService subscriptionQueries;
+    @Autowired private SubscriptionUsageService usageService;
     @Value("${ollama.url}") private String ollamaUrl;
     @Value("${llm.model}") private String generatorModel;
 
@@ -178,6 +187,8 @@ class ChatJudgeCaptureProbe {
                         + "FROM faqs", String.class));
         run.put("appConfig", appConfig());
         run.put("serviceData", serviceData());
+        // 지명으로 찾는 매장 검색은 카카오 로컬 API가 필요하다. 키 값은 남기지 않고 설정 여부만 남긴다
+        run.put("kakaoConfigured", !environment.getProperty("kakao.local.rest-api-key", "").startsWith("dummy"));
         run.put("cases", new ArrayList<>());
         write(output, run);
 
@@ -185,10 +196,17 @@ class ChatJudgeCaptureProbe {
         List<Map<String, Object>> cases = (List<Map<String, Object>>) run.get("cases");
         for (JsonNode fixture : fixtures) {
             MockHttpSession session = new MockHttpSession();
+            Map<String, Object> caseResult = new LinkedHashMap<>();
+            String actor = fixture.path("actor").asText("GUEST");
+            if ("MEMBER".equals(actor)) {
+                long userId = ensureTestMember();
+                session.setAttribute(HttpSessionChatActorProvider.USER_ID_ATTRIBUTE, userId);
+                caseResult.put("memberData", memberData(userId));
+            }
             long sessionId = createSession(session, fixture.path("caseId").asText());
             List<Map<String, Object>> turns = new ArrayList<>();
-            Map<String, Object> caseResult = new LinkedHashMap<>();
             caseResult.put("caseId", fixture.path("caseId").asText());
+            caseResult.put("actor", actor);
             caseResult.put("category", fixture.path("category").asText());
             caseResult.put("suite", fixture.path("suite").asText("flow_regression"));
             caseResult.put("questionType", fixture.path("questionType").asText());
@@ -197,16 +215,7 @@ class ChatJudgeCaptureProbe {
             cases.add(caseResult);
 
             for (JsonNode turn : fixture.path("turns")) {
-                synchronized (searchTraces) {
-                    searchTraces.clear();
-                }
-                synchronized (llmRequests) {
-                    llmRequests.clear();
-                }
-                synchronized (ragInputs) {
-                    ragInputs.clear();
-                }
-                Map<String, Object> result = captureTurn(session, sessionId, turn);
+                Map<String, Object> result = captureConversationTurn(session, sessionId, turn);
                 turns.add(result);
                 write(output, run);
                 System.out.printf("[Chat Judge] %s %s -> %s, %d searches%n",
@@ -220,14 +229,84 @@ class ChatJudgeCaptureProbe {
         System.out.println("[Chat Judge] 생성 결과: " + output.toAbsolutePath());
     }
 
-    private Map<String, Object> captureTurn(MockHttpSession session, long sessionId, JsonNode fixture)
+    // 질문을 보내고, 앱이 되물으면 평가셋에 적힌 고객 답변을 보내 최종 응답까지 받는다.
+    // 마지막 응답이 판정 대상이고, 앞선 되묻기 단계는 clarificationExchanges에 그대로 남긴다
+    private Map<String, Object> captureConversationTurn(MockHttpSession session, long sessionId, JsonNode fixture)
             throws Exception {
-        String question = fixture.path("question").asText();
+        Map<String, Object> result = captureTurn(session, sessionId, fixture, fixture.path("question").asText(), null);
+        List<JsonNode> replies = new ArrayList<>();
+        fixture.path("clarificationReplies").forEach(replies::add);
+        List<Map<String, Object>> exchanges = new ArrayList<>();
+        while (exchanges.size() < MAX_CLARIFICATION_REPLIES && isClarification(result)) {
+            List<String> askedKeys = askedKeys(result);
+            JsonNode reply = pickReply(replies, askedKeys);
+            if (reply == null) {
+                result.put("unansweredClarificationKeys", askedKeys);
+                break;
+            }
+            // 조건을 정한 답변은 앱이 같은 조건을 다시 물으면 한 번 더 쓴다(고객이 같은 답을 다시 하는 것). 재질문은 Judge가 따로 잡는다
+            if (reply.path("whenKey").isMissingNode() || reply.path("whenKey").isNull()) {
+                replies.remove(reply);
+            }
+            Map<String, Object> exchange = new LinkedHashMap<>(result);
+            exchange.remove("fixture");
+            exchange.put("askedKeys", askedKeys);
+            exchange.put("customerReply", reply);
+            exchanges.add(exchange);
+            JsonNode coordinates = reply.path("coordinates");
+            result = captureTurn(session, sessionId, fixture, reply.path("content").asText(),
+                    coordinates.isObject() ? coordinates : null);
+        }
+        result.put("clarificationExchanges", exchanges);
+        return result;
+    }
+
+    private static boolean isClarification(Map<String, Object> result) {
+        return result.get("outputMessage") instanceof JsonNode output
+                && "CLARIFICATION".equals(output.path("messageType").asText());
+    }
+
+    // 되묻기 메시지가 기다리는 조건 이름(매장은 serviceType, location. FAQ 조건 이름은 질문마다 정해진다)
+    private List<String> askedKeys(Map<String, Object> result) {
+        JsonNode output = (JsonNode) result.get("outputMessage");
+        return jdbc.queryForList("SELECT condition_key FROM consult_conditions WHERE asked_message_id = ? "
+                + "AND status = 'PENDING' ORDER BY condition_key", String.class, output.path("messageId").asLong());
+    }
+
+    // 묻는 조건에 맞춘 답변(whenKey)을 먼저, 없으면 조건을 정하지 않은 답변을 순서대로 쓴다.
+    // 되묻기 횟수는 MAX_CLARIFICATION_REPLIES로 막는다
+    private static JsonNode pickReply(List<JsonNode> replies, List<String> askedKeys) {
+        for (JsonNode reply : replies) {
+            if (askedKeys.contains(reply.path("whenKey").asText(""))) return reply;
+        }
+        for (JsonNode reply : replies) {
+            if (reply.path("whenKey").isMissingNode() || reply.path("whenKey").isNull()) return reply;
+        }
+        return null;
+    }
+
+    private Map<String, Object> captureTurn(MockHttpSession session, long sessionId, JsonNode fixture, String content,
+            JsonNode coordinates) throws Exception {
+        synchronized (searchTraces) {
+            searchTraces.clear();
+        }
+        synchronized (llmRequests) {
+            llmRequests.clear();
+        }
+        synchronized (ragInputs) {
+            ragInputs.clear();
+        }
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("content", content);
+        if (coordinates != null) {
+            request.put("latitude", coordinates.path("latitude").asDouble());
+            request.put("longitude", coordinates.path("longitude").asDouble());
+        }
         long started = System.nanoTime();
         JsonNode sent = body(mvc.perform(post("/api/v1/chat/sessions/{sessionId}/messages", sessionId)
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("content", question))))
+                        .content(mapper.writeValueAsBytes(request)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsByteArray());
         long inputMessageId = sent.path("result").path("messageId").asLong();
         long executionId = sent.path("result").path("executionId").asLong();
@@ -284,6 +363,8 @@ class ChatJudgeCaptureProbe {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("fixture", fixture);
+        result.put("sentContent", content);
+        result.put("sentCoordinates", coordinates);
         result.put("inputMessageId", inputMessageId);
         result.put("executionId", executionId);
         result.put("executionStatus", execution.get("status"));
@@ -304,7 +385,70 @@ class ChatJudgeCaptureProbe {
         String trace = jdbc.queryForObject(
                 "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id = ?", String.class, executionId);
         result.put("pipelineTrace", trace == null ? null : mapper.readTree(trace));
+        if (outputMessage != null && outputMessage.path("storeResults").isArray()
+                && !outputMessage.path("storeResults").isEmpty()) {
+            result.put("storeDetails", storeDetails(outputMessage.path("storeResults")));
+        }
         return result;
+    }
+
+    // 매장 결과에 없는 취급 업무와 영업시간. 업무 조건에 맞는 매장을 보여 줬는지 판정할 때 쓴다
+    private List<Map<String, Object>> storeDetails(JsonNode stores) {
+        List<Map<String, Object>> details = new ArrayList<>();
+        for (JsonNode store : stores) {
+            long storeId = store.path("storeId").asLong();
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("storeId", storeId);
+            detail.put("services", jdbc.queryForList("SELECT t.code FROM store_services s JOIN store_service_types t "
+                    + "ON t.service_type_id = s.service_type_id WHERE s.store_id = ? ORDER BY t.code", String.class, storeId));
+            detail.put("hours", jdbc.queryForList("SELECT day_of_week, open_time::text AS open_time, "
+                    + "close_time::text AS close_time, is_closed AS closed FROM store_hours WHERE store_id = ? ORDER BY day_of_week",
+                    storeId));
+            details.add(detail);
+        }
+        return details;
+    }
+
+    private long ensureTestMember() {
+        List<Long> found = jdbc.queryForList("SELECT user_id FROM users WHERE email = ?", Long.class, TEST_MEMBER_EMAIL);
+        long userId = found.isEmpty()
+                ? jdbc.queryForObject("INSERT INTO users (email, name, role, status, birth_date) "
+                        + "VALUES (?, '평가 회원', 'USER', 'ACTIVE', DATE '1990-05-01') RETURNING user_id",
+                        Long.class, TEST_MEMBER_EMAIL)
+                : found.getFirst();
+        Integer active = jdbc.queryForObject(
+                "SELECT count(*) FROM user_subscriptions WHERE user_id = ? AND status = 'ACTIVE'", Integer.class, userId);
+        if (active == null || active == 0) {
+            Long subscriptionId = jdbc.queryForObject("INSERT INTO user_subscriptions (user_id, status, subscribed_at, "
+                    + "created_at, updated_at, contract_months, contract_discount_percent) VALUES (?, 'ACTIVE', "
+                    + "date_trunc('day', now() - interval '8 months') + interval '9 hours', now(), now(), 24, 25) "
+                    + "RETURNING subscription_id", Long.class, userId);
+            jdbc.update("INSERT INTO subscription_histories (subscription_id, type, to_plan_id, effective_from, created_at) "
+                    + "SELECT s.subscription_id, 'SUBSCRIBE', p.plan_id, s.subscribed_at, now() "
+                    + "FROM user_subscriptions s, plans p WHERE s.subscription_id = ? AND p.code = 'FIVE_G_STANDARD'",
+                    subscriptionId);
+        }
+        return userId;
+    }
+
+    // 회원 질문 답변의 근거. 앱이 회원 답변을 만들 때 부르는 서비스를 그대로 불러 대화 직전 값을 남긴다
+    private Map<String, Object> memberData(long userId) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("userId", userId);
+        data.put("subscription", call(() -> subscriptionQueries.getMine(userId)));
+        data.put("terminationPenalty", call(() -> subscriptionQueries.getTerminationPenalty(userId)));
+        data.put("usage", call(() -> usageService.getOverview(userId)));
+        // 사용량 기반 추천이 쓰는 지난 달 평균 사용량
+        data.put("usageDemand", call(() -> usageService.getDemand(userId).orElse(null)));
+        return data;
+    }
+
+    private Object call(java.util.function.Supplier<Object> supplier) {
+        try {
+            return mapper.valueToTree(supplier.get());
+        } catch (RuntimeException failure) {
+            return Map.of("error", failure.getClass().getSimpleName() + ": " + failure.getMessage());
+        }
     }
 
     // 요금제 답변의 근거가 되는 판매 요금제 표와 가입 연령 기준

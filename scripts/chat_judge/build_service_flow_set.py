@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""매장 찾기·되묻기·로그인 회원 흐름 평가셋 v1을 만든다. 모델 답변이나 Judge 판정은 넣지 않는다.
+
+원본은 flow_v1_sources/flows_written.json이고, Judge 프롬프트·평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다.
+- store_flow: 매장 찾기. 앱이 업무(serviceType)와 지역(location)을 되물으면 고객 답변을 보낸다. 지역은 '현재 위치 사용'
+  (좌표)이나 지명으로 답한다. 지명 검색은 카카오 로컬 API가 필요해 requiresKakao로 표시한다.
+- clarification_flow: FAQ 답이 고객 조건에 따라 갈리는 질문과 요금제 추천. 앱이 조건을 되물으면 고객 답변을 보낸다.
+- member_data: 로그인한 테스트 회원(actor=MEMBER)의 내 요금제·사용량·약정·위약금 질문과 회원 데이터가 없는 질문.
+되묻기 답변(clarificationReplies)은 앱이 되물을 때만 쓰고, 마지막 응답을 판정한다. 회원 답변의 인정 근거는 캡처할 때
+남긴 회원 계정 데이터라 라벨에는 sourceId만 적고 판정할 때 채운다.
+사용: python -X utf8 -m scripts.chat_judge.build_service_flow_set
+"""
+import json
+from pathlib import Path
+
+from scripts.chat_judge import service_data
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCES = ROOT / "scripts/chat_judge/data/flow_v1_sources"
+CATALOG = ROOT / "scripts/data/faq_full_1150.json"
+PLANS = ROOT / "scripts/chat_judge/data/quality_v2_sources/plans_snapshot.json"
+OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_flows_v1.json"
+PROVENANCE = "flow_v1_agent_written_scenario; human_review_pending"
+# '현재 위치 사용' 프리셋. 평가 DB(telme_judge_eval)에서 그 지역 매장 좌표의 평균이다
+CURRENT_LOCATIONS = {
+    "강남구": (37.5081, 127.0359), "영등포구": (37.5050, 126.9015), "해운대구": (35.1919, 129.1434),
+    "의정부시": (37.7453, 127.0506), "대전 중구": (36.3228, 127.4175), "양천구": (37.5199, 126.8563),
+}
+# 질문에 업무를 말했어도 앱이 업무를 되물으면 고객은 다시 답한다. 시나리오에 그 답변이 없으면 기대 업무로 채운다(auto)
+SERVICE_TYPE_REPLIES = {"NEW_LINE": "신규가입이요", "PORT_IN": "번호이동이요", "NAME_CHANGE": "명의변경이요",
+                        "USIM_REISSUE": "유심 재발급이요", None: "특별한 업무는 없어요"}
+SUITE_CATEGORY = {"store_flow": "STORE_FLOW", "clarification_flow": "CLARIFICATION_FLOW", "member_data": "MEMBER_DATA"}
+
+
+def reply(row):
+    result = {"whenKey": row.get("whenKey"), "content": row["content"]}
+    if row.get("currentLocation"):
+        latitude, longitude = CURRENT_LOCATIONS[row["currentLocation"]]
+        result.update(currentLocation=row["currentLocation"],
+                      coordinates={"latitude": latitude, "longitude": longitude})
+    return result
+
+
+def references(case, turn, catalog, plan_alternative):
+    question = turn["question"]
+    behavior = turn["expectedBehavior"]
+    if behavior in {"STORE_LOOKUP", "ABSTAIN"}:
+        return [], []
+    if case["suite"] == "member_data":
+        return [], [{"questionPart": question, "alternatives": [{"sourceId": service_data.MEMBER_SOURCE_ID}]}]
+    slots = turn.get("faqSlotIds") or []
+    if not slots:  # 요금제 추천
+        return [], [{"questionPart": question, "alternatives": [dict(plan_alternative)]}]
+    unknown = [slot for slot in slots if slot not in catalog]
+    if unknown:
+        raise ValueError(f"{case['id']}: 카탈로그에 없는 FAQ {unknown}")
+    return [slots], [{"questionPart": question,
+                      "alternatives": [{"sourceId": slot, "answer": catalog[slot]["answer"]} for slot in slots]}]
+
+
+def answer_sources(case, turn):
+    if turn["expectedBehavior"] == "STORE_LOOKUP":
+        return ["STORE"]
+    if turn["expectedBehavior"] == "ABSTAIN":
+        return []
+    if case["suite"] == "member_data":
+        return ["MEMBER"]
+    return ["FAQ"] if turn.get("faqSlotIds") else ["PLAN_TABLE"]
+
+
+def build():
+    catalog = {faq["slot_id"]: faq for faq in json.loads(CATALOG.read_text(encoding="utf-8"))}
+    plans = json.loads(PLANS.read_text(encoding="utf-8"))
+    plan_source = service_data.plan_table_source(plans["plans"], plans["planEligibility"])
+    plan_alternative = {key: plan_source[key] for key in ("sourceId", "answer")}
+    written = json.loads((SOURCES / "flows_written.json").read_text(encoding="utf-8"))
+    cases = []
+    for case in written["cases"]:
+        turns = []
+        for turn in case["turns"]:
+            gold, quality = references(case, turn, catalog, plan_alternative)
+            replies = [reply(row) for row in turn.get("clarificationReplies", [])]
+            if case["suite"] == "store_flow" and not any(row["whenKey"] == "serviceType" for row in replies):
+                replies.append({"whenKey": "serviceType", "content": SERVICE_TYPE_REPLIES[turn.get("expectedServiceType")],
+                                "auto": True})
+            turns.append({
+                "question": turn["question"],
+                "expectedIntent": "STORE" if turn["expectedBehavior"] == "STORE_LOOKUP" else "FAQ",
+                "expectedBehavior": turn["expectedBehavior"],
+                "goldSourceGroups": gold, "requiredFacts": turn.get("requiredFacts", []),
+                "qualityReferenceGroups": quality,
+                "clarificationReplies": replies,
+                "expectedServiceType": turn.get("expectedServiceType"),
+                "answerSources": answer_sources(case, turn),
+                "labelProvenance": PROVENANCE,
+                **({"note": turn["note"]} if turn.get("note") else {})})
+        cases.append({"caseId": f"FLOW-{case['id']}", "category": SUITE_CATEGORY[case["suite"]],
+                      "questionType": case["suite"].upper(), "suite": case["suite"],
+                      "actor": case.get("actor", "GUEST"), "requiresKakao": bool(case.get("requiresKakao")),
+                      "scenario": case.get("scenario"), "turns": turns})
+    if len({case["caseId"] for case in cases}) != len(cases):
+        raise ValueError("Duplicate case ID")
+    return cases
+
+
+def main():
+    cases = build()
+    OUTPUT.write_text(json.dumps(cases, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    suites = {}
+    for case in cases:
+        suites[case["suite"]] = suites.get(case["suite"], 0) + len(case["turns"])
+    print(json.dumps({"cases": len(cases), "turnsBySuite": suites,
+                      "requiresKakao": sum(case["requiresKakao"] for case in cases)}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

@@ -374,11 +374,36 @@ def retrieval_coverage(turn):
             "coveredGroupCount": covered, "complete": covered == len(groups), "groups": details}
 
 
+def clarification_dialogue(turn):
+    """되묻기가 있었던 턴의 대화. 고객 첫 질문, 앱의 되묻기, 고객 답변을 (질문, 답) 쌍으로 만들고
+    판정 대상인 마지막 고객 발화를 돌려준다. 되묻기가 없으면 쌍은 비고 마지막 발화는 평가 질문이다."""
+    exchanges = turn.get("clarificationExchanges") or []
+    asked = turn["fixture"]["question"]
+    pairs = []
+    for exchange in exchanges:
+        pairs.append({"question": asked, "answer": (exchange.get("outputMessage") or {}).get("content") or ""})
+        asked = exchange["customerReply"]["content"]
+    return pairs, asked
+
+
+def judged_dialogue(turn, previous):
+    """판정에 넘길 (이전 대화, 현재 고객 발화)."""
+    pairs, question = clarification_dialogue(turn)
+    return previous + pairs, question
+
+
+def completed_dialogue(turn, answer):
+    """이 턴이 끝난 뒤 다음 턴의 이전 대화에 더할 (질문, 답) 쌍들."""
+    pairs, question = clarification_dialogue(turn)
+    return pairs + [{"question": question, "answer": answer or ""}]
+
+
 def prompt_data(turn, previous, kind):
     fixture = turn["fixture"]
     output = turn.get("outputMessage") or {}
+    previous, question = judged_dialogue(turn, previous)
     common = {
-        "question": fixture["question"],
+        "question": question,
         "previousTurns": previous,
         "answer": output.get("content") or "",
         "answerBasis": output.get("answerBasis"),
@@ -1099,7 +1124,7 @@ def evaluate(capture, url, model, catalog, caller=ollama_chat, on_turn=None, few
                 )
             item["findings"] = stage_findings(turn, grounding, coverage, item.get("abstentionDecision"))
             output = turn.get("outputMessage") or {}
-            previous.append({"question": turn["fixture"]["question"], "answer": output.get("content") or ""})
+            previous.extend(completed_dialogue(turn, output.get("content")))
             if on_turn is not None:
                 on_turn(result)
     return result

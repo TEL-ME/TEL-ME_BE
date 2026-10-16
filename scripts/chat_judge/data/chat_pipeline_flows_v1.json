@@ -1,0 +1,1658 @@
+[
+ {
+  "caseId": "FLOW-SF01",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "유심을 잃어버려 재발급받으러 갈 매장을 찾는 고객, 위치는 말하지 않음",
+  "turns": [
+   {
+    "question": "유심을 잃어버렸는데 재발급 받을 수 있는 대리점 근처에 있을까요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "현재 위치로 찾아주세요",
+      "currentLocation": "강남구",
+      "coordinates": {
+       "latitude": 37.5081,
+       "longitude": 127.0359
+      }
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "유심 재발급이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "USIM_REISSUE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF02",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "업무도 위치도 말하지 않고 짧게 매장을 찾는 고객, 되물으면 번호이동이라고 답함",
+  "turns": [
+   {
+    "question": "근처 매장 알려줘",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "번호이동 하려고요"
+     },
+     {
+      "whenKey": "location",
+      "content": "지금 있는 데서 가까운 곳으로요",
+      "currentLocation": "영등포구",
+      "coordinates": {
+       "latitude": 37.505,
+       "longitude": 126.9015
+      }
+     }
+    ],
+    "expectedServiceType": "PORT_IN",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF03",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "아버지 명의 회선을 넘겨받으러 매장에 가야 하는 고객",
+  "turns": [
+   {
+    "question": "아빠 명의로 된 폰을 제 앞으로 돌리려고 하는데 그거 처리해주는 매장 가까운 데가 어디예요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "현재 위치 기준으로 봐주세요",
+      "currentLocation": "의정부시",
+      "coordinates": {
+       "latitude": 37.7453,
+       "longitude": 127.0506
+      }
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "명의변경이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "NAME_CHANGE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "'명의변경'이라는 단어 없이 '명의를 제 앞으로 돌린다'고 표현"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF04",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "휴대폰을 처음 개통하려는 고객이 지금 있는 곳 근처 매장을 찾음",
+  "turns": [
+   {
+    "question": "휴대폰 새로 하나 개통하려는데 지금 있는 곳 근처에 매장 있나요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "현재 위치로 찾아주세요",
+      "currentLocation": "대전 중구",
+      "coordinates": {
+       "latitude": 36.3228,
+       "longitude": 127.4175
+      }
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "신규가입이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "NEW_LINE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "'지금 있는 곳'이라고 했으므로 위치를 물으면 현재 위치 버튼으로 답함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF05",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "특정 업무 없이 매장에서 상담만 받아보고 싶은 고객",
+  "turns": [
+   {
+    "question": "그냥 매장 가서 직원분이랑 상담 좀 해보고 싶은데 가까운 데 있어요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "딱히 정해진 업무는 없어요. 그냥 이것저것 물어보려고요"
+     },
+     {
+      "whenKey": "location",
+      "content": "현재 위치로 해주세요",
+      "currentLocation": "양천구",
+      "coordinates": {
+       "latitude": 37.5199,
+       "longitude": 126.8563
+      }
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "업무 없음 선택"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF06",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "유심이 깨져서 반말로 짧게 대리점을 찾는 고객",
+  "turns": [
+   {
+    "question": "유심 깨짐 ㅠ 대리점 어디있음?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "내 위치로 ㄱㄱ",
+      "currentLocation": "해운대구",
+      "coordinates": {
+       "latitude": 35.1919,
+       "longitude": 129.1434
+      }
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "유심 재발급이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "USIM_REISSUE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "유심 파손이므로 유심 재발급 업무"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF07",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "다른 안내는 필요 없고 매장 위치만 원하는 고객, 업무는 가서 얘기하겠다고 함",
+  "turns": [
+   {
+    "question": "다른 건 됐고요, 제일 가까운 매장 위치만 좀 알려주세요",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "업무는 가서 말할게요. 위치만 알면 돼요"
+     },
+     {
+      "whenKey": "location",
+      "content": "현재 위치로 찾아주세요",
+      "currentLocation": "강남구",
+      "coordinates": {
+       "latitude": 37.5081,
+       "longitude": 127.0359
+      }
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "업무를 말하지 않고 매장 위치만 요구. 업무를 되물으면 특정 업무 없음으로 답함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF08",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "다른 통신사에서 번호를 옮겨오려는 고객이 갈 매장을 찾음",
+  "turns": [
+   {
+    "question": "타사에서 쓰던 번호 그대로 가지고 넘어오려는데 어느 매장으로 가면 되나요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "현재 위치 사용할게요",
+      "currentLocation": "영등포구",
+      "coordinates": {
+       "latitude": 37.505,
+       "longitude": 126.9015
+      }
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "번호이동이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "PORT_IN",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "'번호이동'이라는 단어 없이 번호를 가지고 넘어온다고 표현"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF09",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": true,
+  "scenario": "업무와 장소를 모두 말하며 신규가입 매장을 찾는 고객",
+  "turns": [
+   {
+    "question": "강남역 근처에 신규가입 되는 대리점 있어요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "강남역이요"
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "신규가입이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "NEW_LINE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "질문에 업무와 장소가 모두 있어 되묻지 않아도 됨. 위치를 다시 물으면 강남역으로 답함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF10",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": true,
+  "scenario": "여의도 쪽 매장을 찾는데 업무는 말하지 않은 고객, 되물으면 유심 재발급이라고 답함",
+  "turns": [
+   {
+    "question": "여의도 쪽에 매장 있으면 좀 찾아줘요",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "유심 재발급 받으려고요"
+     },
+     {
+      "whenKey": "location",
+      "content": "여의도역 근처요"
+     }
+    ],
+    "expectedServiceType": "USIM_REISSUE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF11",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": true,
+  "scenario": "명의변경하러 갈 매장을 찾으며 장소를 직접 입력하는 고객",
+  "turns": [
+   {
+    "question": "명의변경 하러 매장 가야 하는데 어디로 가면 될까요?",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "location",
+      "content": "대전 중구청 근처로 찾아주세요"
+     },
+     {
+      "whenKey": "serviceType",
+      "content": "명의변경이요",
+      "auto": true
+     }
+    ],
+    "expectedServiceType": "NAME_CHANGE",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-SF12",
+  "category": "STORE_FLOW",
+  "questionType": "STORE_FLOW",
+  "suite": "store_flow",
+  "actor": "GUEST",
+  "requiresKakao": true,
+  "scenario": "여행 중인 고객이 아무 정보 없이 매장을 찾고, 되물으면 번호이동과 장소를 말함",
+  "turns": [
+   {
+    "question": "매장 좀 찾고 있는데요",
+    "expectedIntent": "STORE",
+    "expectedBehavior": "STORE_LOOKUP",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "다른 통신사에서 번호 그대로 옮겨오려고요"
+     },
+     {
+      "whenKey": "location",
+      "content": "해운대해수욕장 근처요"
+     }
+    ],
+    "expectedServiceType": "PORT_IN",
+    "answerSources": [
+     "STORE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF01",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "유심 재발급 준비물을 묻는데 누가 방문하는지 말하지 않음. 되물으면 딸이 대신 간다고 답함",
+  "turns": [
+   {
+    "question": "유심 재발급 받으려면 뭐 챙겨가야 돼요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "USIM-0010",
+      "USIM-0026",
+      "USIM-0002",
+      "USIM-0102",
+      "USIM-0110"
+     ]
+    ],
+    "requiredFacts": [
+     "대리인이 방문하면 위임장이 필요하다",
+     "대리인(딸)의 신분증이 필요하다",
+     "가입자 신분증 사본이 필요하다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "유심 재발급 받으려면 뭐 챙겨가야 돼요?",
+      "alternatives": [
+       {
+        "sourceId": "USIM-0010",
+        "answer": "재발급은 신분증만 있으면 본인이 바로 받으실 수 있습니다. 다른 사람이 대신 받으러 오는 경우라면 위임장, 그 사람의 신분증, 가입자 신분증 사본까지 추가로 필요합니다."
+       },
+       {
+        "sourceId": "USIM-0026",
+        "answer": "본인이 가시면 신분증만 챙기시면 됩니다. 대신 가시는 분은 위임장과 대리인 신분증, 가입자 신분증 사본을 준비하셔야 합니다."
+       },
+       {
+        "sourceId": "USIM-0002",
+        "answer": "본인이 가시면 신분증만 있으면 됩니다. 대신 가는 분은 위임장, 대리인 신분증, 가입자 신분증 사본이 필요합니다."
+       },
+       {
+        "sourceId": "USIM-0102",
+        "answer": "본인 방문은 신분증만 있으면 됩니다. 대리인 방문은 위임장, 대리인 신분증, 가입자 신분증 사본까지 추가로 필요합니다."
+       },
+       {
+        "sourceId": "USIM-0110",
+        "answer": "본인이 가시면 신분증만 있으면 되고, 다른 분이 대신 가시면 위임장과 대리인 신분증, 가입자 신분증 사본이 추가로 필요합니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "제가 못 가고 딸이 대신 갈 거예요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "본인 방문이면 신분증만 있으면 되므로 방문자에 따라 답이 갈림"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF02",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "개통할 때 가져갈 신분증을 묻는 고객, 되물으면 외국인이라고 답함",
+  "turns": [
+   {
+    "question": "폰 개통하러 가려는데 신분증은 어떤 거 들고 가면 돼요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "SUBSCRIBE-0001",
+      "SUBSCRIBE-0029",
+      "SUBSCRIBE-0037",
+      "SUBSCRIBE-0113",
+      "SUBSCRIBE-0073"
+     ]
+    ],
+    "requiredFacts": [
+     "외국인은 외국인등록증과 여권을 함께 지참해야 한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "폰 개통하러 가려는데 신분증은 어떤 거 들고 가면 돼요?",
+      "alternatives": [
+       {
+        "sourceId": "SUBSCRIBE-0001",
+        "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 아무거나 가져오시면 됩니다. 외국인이시면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0029",
+        "answer": "본인 명의 신분증만 있으면 됩니다. 주민등록증, 운전면허증, 여권 중 하나를 지참하시면 되고, 외국인이신 경우에는 외국인등록증과 여권을 함께 준비하시면 됩니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0037",
+        "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 어느 것이든 가능합니다. 외국인은 외국인등록증과 여권을 함께 지참해야 합니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0113",
+        "answer": "내국인은 주민등록증, 운전면허증, 여권 중 하나면 되고, 외국인은 외국인등록증과 여권 두 가지가 필요합니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0073",
+        "answer": "외국인이신 경우에는 외국인등록증과 여권을 함께 가져오셔야 개통이 가능합니다. 외국인등록증만으로는 어렵습니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "저 한국 사람 아니고 외국인이에요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "내국인은 주민등록증·운전면허증·여권 중 하나면 되므로 국적에 따라 답이 갈림"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF03",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "자녀 명의로 휴대폰을 만들려는 부모, 나이를 말하지 않음. 되물으면 만 16살이라고 답함",
+  "turns": [
+   {
+    "question": "딸 이름으로 휴대폰 하나 만들어주려고 하는데 어떻게 해야 하나요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "SUBSCRIBE-0002",
+      "SUBSCRIBE-0010",
+      "SUBSCRIBE-0030",
+      "SUBSCRIBE-0042"
+     ]
+    ],
+    "requiredFacts": [
+     "만 16세는 자녀 명의로 가입할 수 있다",
+     "법정대리인 동의서가 필요하다",
+     "가족관계증명서가 필요하다",
+     "법정대리인 신분증이 필요하다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "딸 이름으로 휴대폰 하나 만들어주려고 하는데 어떻게 해야 하나요?",
+      "alternatives": [
+       {
+        "sourceId": "SUBSCRIBE-0002",
+        "answer": "만 14세 미만은 가입할 수 없습니다. 만 14세 이상 18세 이하라면 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다. 미성년자 명의로는 최대 3회선까지 개통할 수 있습니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0010",
+        "answer": "만 14세 미만은 가입하실 수 없습니다. 만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다. 미성년자 명의로는 최대 3회선까지 개통할 수 있습니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0030",
+        "answer": "만 14세 이상 18세 이하라면 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증을 준비해 매장을 방문하시면 됩니다. 미성년자 명의는 최대 3회선까지입니다."
+       },
+       {
+        "sourceId": "SUBSCRIBE-0042",
+        "answer": "만 14세 이상 18세 이하인지 확인한 뒤 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증을 준비해 매장에서 신청하시면 됩니다. 미성년자 명의는 최대 3회선입니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "딸은 만 16살이에요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "만 14세 미만이면 가입 불가, 14~18세면 법정대리인 서류 필요로 나이에 따라 답이 갈림. 미성년자 최대 3회선은 덧붙여도 되지만 필수는 아님"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF04",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "비로그인 고객이 약정 중 해지 위약금을 묻고, 되물으면 가입한 지 15개월이라고 답함",
+  "turns": [
+   {
+    "question": "약정 걸려 있는데 지금 해지하면 위약금 많이 나오나요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "TERMINATE-0010",
+      "TERMINATE-0026",
+      "TERMINATE-0054",
+      "TERMINATE-0014",
+      "TERMINATE-0042"
+     ]
+    ],
+    "requiredFacts": [
+     "12개월 이상 24개월 미만이라 받은 할인액의 50%를 반환한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "약정 걸려 있는데 지금 해지하면 위약금 많이 나오나요?",
+      "alternatives": [
+       {
+        "sourceId": "TERMINATE-0010",
+        "answer": "약정은 24개월이며, 12개월 미만에 해지하면 할인 반환금의 100%, 12개월 이상 24개월 미만이면 50%를 반환합니다."
+       },
+       {
+        "sourceId": "TERMINATE-0026",
+        "answer": "24개월 약정 기준으로, 12개월이 되기 전에 해지하면 할인 반환금 100%, 12개월 이상 24개월 미만이면 50%를 내시면 됩니다."
+       },
+       {
+        "sourceId": "TERMINATE-0054",
+        "answer": "네, 12개월 이상 24개월 미만이면 할인 반환금의 50%만 반환하시면 됩니다."
+       },
+       {
+        "sourceId": "TERMINATE-0014",
+        "answer": "12개월 이상 24개월 미만이면 받으신 할인액의 50%를 반환합니다."
+       },
+       {
+        "sourceId": "TERMINATE-0042",
+        "answer": "가입하고 12개월이 안 됐으면 할인받은 금액 전부(100%)를, 12개월이 넘었으면 절반(50%)을 내시면 됩니다. 약정은 24개월입니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "가입한 지 한 15개월 정도 됐어요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "12개월 미만이면 100%, 이상이면 50%로 경과 개월에 따라 답이 갈림. 비회원이라 계정 데이터로 금액을 계산할 수 없음"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF05",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "기기변경이 바로 되는지 묻는 고객, 되물으면 개통 4개월째라고 답함",
+  "turns": [
+   {
+    "question": "폰이 맘에 안 들어서 기기변경 하고 싶은데 지금 바로 돼요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "DEVICE-0002",
+      "DEVICE-0066",
+      "DEVICE-0074",
+      "DEVICE-0010",
+      "DEVICE-0022"
+     ]
+    ],
+    "requiredFacts": [
+     "기기변경은 개통 후 6개월이 지나야 가능하다",
+     "개통 4개월째라 지금은 기기변경을 신청할 수 없다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "폰이 맘에 안 들어서 기기변경 하고 싶은데 지금 바로 돼요?",
+      "alternatives": [
+       {
+        "sourceId": "DEVICE-0002",
+        "answer": "기기 변경은 개통 후 6개월이 지나야 가능합니다. 기존 단말 할부금은 완납하시거나 새 할부에 승계하셔야 합니다."
+       },
+       {
+        "sourceId": "DEVICE-0066",
+        "answer": "기기 변경은 개통 후 6개월이 지나야 가능합니다. 아직 6개월이 지나지 않으셨다면 신청하실 수 없습니다. 기기 변경 시 기존 단말 할부금은 완납하시거나 새 할부에 승계하셔야 합니다."
+       },
+       {
+        "sourceId": "DEVICE-0074",
+        "answer": "기기 변경은 개통 후 6개월이 지나야 가능해, 아직 6개월이 안 되셨다면 지금은 어렵습니다."
+       },
+       {
+        "sourceId": "DEVICE-0010",
+        "answer": "개통일로부터 6개월이 지나야 기기변경을 신청할 수 있습니다. 기존 할부금은 완납하거나 새 할부에 승계하는 방식으로 처리됩니다."
+       },
+       {
+        "sourceId": "DEVICE-0022",
+        "answer": "개통하고 6개월 지나야 됩니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "개통한 지 4개월 됐어요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "기존 할부금 완납 또는 승계 안내는 덧붙여도 됨"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF06",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "엄마 명의 회선을 본인 명의로 바꾸려는 성인 자녀, 되물으면 혼자 방문한다고 답함",
+  "turns": [
+   {
+    "question": "엄마 명의로 된 폰을 제 명의로 바꾸려면 뭐가 필요해요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0037",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0085"
+     ]
+    ],
+    "requiredFacts": [
+     "한 사람만 방문하려면 위임장을 준비해야 한다",
+     "양도인(엄마)과 양수인(본인)의 신분증이 필요하다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "엄마 명의로 된 폰을 제 명의로 바꾸려면 뭐가 필요해요?",
+      "alternatives": [
+       {
+        "sourceId": "NAME_CHANGE-0019",
+        "answer": "양도인과 양수인이 각자 신분증을 지참하고 함께 매장을 방문하시면 접수가 진행됩니다. 두 분 중 한 분이 오시기 어려우면 위임장을 준비해 대리 방문하실 수 있습니다."
+       },
+       {
+        "sourceId": "NAME_CHANGE-0037",
+        "answer": "위임장을 받아 오시면 혼자 가셔도 됩니다. 아버지 신분증(사본 포함)과 본인 신분증은 지참하셔야 합니다."
+       },
+       {
+        "sourceId": "NAME_CHANGE-0043",
+        "answer": "위임장을 준비하시면 대리로 진행하실 수 있습니다. 양수인 신분증과 양도인 신분증은 그대로 필요합니다."
+       },
+       {
+        "sourceId": "NAME_CHANGE-0013",
+        "answer": "두 분 신분증을 각각 가져오시고 함께 매장에 오셔야 합니다. 못 오시면 위임장이 필요합니다."
+       },
+       {
+        "sourceId": "NAME_CHANGE-0085",
+        "answer": "같이 가시면 신분증만 있으면 됩니다. 혼자 보내시려면 위임장을 써 주셔야 합니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "엄마는 지방에 계셔서 저 혼자 가야 돼요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "두 사람이 함께 가면 신분증만으로 되고, 한 사람만 가면 위임장이 추가됨. NAME_CHANGE-0001은 인감증명서도 언급하지만 다른 FAQ에는 없어 필수 사실에서 뺌"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF07",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "액정이 깨져 수리비를 묻는 고객, 보험 가입 여부를 되물으면 모르겠다고 답함",
+  "turns": [
+   {
+    "question": "폰 떨어뜨려서 액정 박살났는데 수리비 얼마나 내야 돼요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "DEVICE-0047",
+      "DEVICE-0115",
+      "DEVICE-0107",
+      "DEVICE-0019",
+      "DEVICE-0123"
+     ]
+    ],
+    "requiredFacts": [
+     "수리는 제조사 서비스센터에서 받는다",
+     "단말 보험에 가입했다면 수리비의 30%만 자기부담금으로 낸다",
+     "보험에 가입하지 않았다면 수리비 전액을 부담한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "폰 떨어뜨려서 액정 박살났는데 수리비 얼마나 내야 돼요?",
+      "alternatives": [
+       {
+        "sourceId": "DEVICE-0047",
+        "answer": "제조사 서비스센터를 방문하시면 됩니다. 단말 보험에 가입되어 있으면 수리비의 30%만 자기부담금으로 부담하시면 됩니다."
+       },
+       {
+        "sourceId": "DEVICE-0115",
+        "answer": "보험에 가입한 경우 수리비의 30%만 자기부담금으로 부담하시면 됩니다. 미가입 시에는 수리비 전액을 부담하셔야 합니다."
+       },
+       {
+        "sourceId": "DEVICE-0107",
+        "answer": "보험에 가입하셨다면 수리비의 30%만 자기부담금으로 내시면 됩니다. 보험이 없으면 수리비 전액을 부담하셔야 합니다."
+       },
+       {
+        "sourceId": "DEVICE-0019",
+        "answer": "파손 수리는 제조사 서비스센터에서 진행합니다. 보험에 가입하셨으면 수리비의 30%만 내시면 됩니다."
+       },
+       {
+        "sourceId": "DEVICE-0123",
+        "answer": "보험이 있으면 수리비의 30%만 내시면 됩니다. 없으면 전부 다 내셔야 합니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "보험 들었는지 잘 모르겠어요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "모름 응답: 가입·미가입 두 경우를 모두 안내해야 함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF08",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "개통한 지 얼마 안 된 회선의 번호이동 가능 여부를 묻는 고객, 개통 시점을 되물으면 모르겠다고 답함",
+  "turns": [
+   {
+    "question": "이 번호 만든 지 얼마 안 된 거 같은데 다른 통신사로 옮길 수 있나요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [
+     [
+      "PORTING-0011",
+      "PORTING-0027",
+      "PORTING-0019",
+      "PORTING-0015",
+      "PORTING-0043"
+     ]
+    ],
+    "requiredFacts": [
+     "개통 후 3개월이 지나야 번호이동이 가능하다",
+     "명의변경을 했다면 변경일로부터 1개월이 지나야 한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "이 번호 만든 지 얼마 안 된 거 같은데 다른 통신사로 옮길 수 있나요?",
+      "alternatives": [
+       {
+        "sourceId": "PORTING-0011",
+        "answer": "개통 후 3개월이 지나야 가능합니다. 명의를 변경하셨다면 변경일로부터 1개월이 지나야 합니다."
+       },
+       {
+        "sourceId": "PORTING-0027",
+        "answer": "개통일로부터 3개월이 지났는지 확인하시면 됩니다. 명의변경을 하신 적이 있다면 변경일로부터 1개월이 지났는지도 함께 확인하셔야 합니다."
+       },
+       {
+        "sourceId": "PORTING-0019",
+        "answer": "3개월 지나야 됩니다. 명의를 바꾸셨으면 1개월입니다."
+       },
+       {
+        "sourceId": "PORTING-0015",
+        "answer": "둘 다 봅니다. 개통일로부터 3개월, 명의변경을 했다면 변경일로부터 1개월이 지나야 합니다."
+       },
+       {
+        "sourceId": "PORTING-0043",
+        "answer": "개통일 기준 3개월이 지나면 자격이 생깁니다. 중간에 명의를 바꾸신 적이 있다면 그 변경일로부터 1개월을 추가로 채우셔야 합니다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "언제 개통했는지 정확히는 기억 안 나요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "FAQ"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "모름 응답: 개통일 기준 조건을 안내하고 확인하도록 해야 함. 명의변경 조건은 해당될 수 있어 함께 안내"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF09",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "20대 고객이 요금제 추천을 요청, 데이터를 많이 씀",
+  "turns": [
+   {
+    "question": "요금제 추천 좀 해주세요",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "판매 중인 요금제 하나를 추천한다",
+     "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+     "청소년·시니어 전용이 아닌 일반 요금제를 추천한다",
+     "데이터 제공량이 50GB 이상이거나 무제한인 요금제를 추천한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "요금제 추천 좀 해주세요",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:PLAN_TABLE",
+        "answer": "판매 중인 요금제 표(요금제 데이터)\n5G 언리미티드: 5G 요금제, 일반 대상, 월정액 105,000원, 데이터 무제한, 통화 무제한, 문자 무제한\n5G 프리미엄: 5G 요금제, 일반 대상, 월정액 85,000원, 데이터 150GB, 통화 무제한, 문자 무제한\n5G 스탠다드: 5G 요금제, 일반 대상, 월정액 65,000원, 데이터 50GB, 통화 무제한, 문자 무제한\n5G 라이트: 5G 요금제, 일반 대상, 월정액 45,000원, 데이터 8GB, 통화 무제한, 문자 무제한\nLTE 맥스: LTE 요금제, 일반 대상, 월정액 69,000원, 데이터 100GB, 통화 무제한, 문자 무제한\nLTE 플러스: LTE 요금제, 일반 대상, 월정액 49,000원, 데이터 15GB, 통화 무제한, 문자 무제한\nLTE 베이직: LTE 요금제, 일반 대상, 월정액 33,000원, 데이터 4GB, 통화 700분, 문자 무제한\n알뜰 세이브: 알뜰 요금제, 일반 대상, 월정액 25,000원, 데이터 3GB, 통화 500분, 문자 300건\n알뜰 미니: 알뜰 요금제, 일반 대상, 월정액 15,000원, 데이터 1.5GB, 통화 300분, 문자 100건\n5G 청소년: 5G 요금제, 청소년 대상, 월정액 55,000원, 데이터 80GB, 통화 무제한, 문자 무제한\nLTE 청소년: LTE 요금제, 청소년 대상, 월정액 39,000원, 데이터 20GB, 통화 1000분, 문자 무제한\n알뜰 청소년: 알뜰 요금제, 청소년 대상, 월정액 20,000원, 데이터 5GB, 통화 300분, 문자 무제한\n5G 시니어: 5G 요금제, 시니어 대상, 월정액 49,000원, 데이터 20GB, 통화 무제한, 문자 무제한\nLTE 시니어: LTE 요금제, 시니어 대상, 월정액 29,000원, 데이터 8GB, 통화 무제한, 문자 300건\n알뜰 시니어: 알뜰 요금제, 시니어 대상, 월정액 18,000원, 데이터 3GB, 통화 700분, 문자 100건\n위 15종이 판매 중인 요금제 전부다. 목록에 없는 요금제는 판매하지 않는다.\n판매 중인 요금제는 총 15종이다(5G 6종, LTE 5종, 알뜰 4종).\n일반 요금제(청소년·시니어 제외)는 9종이다(5G 4종, LTE 3종, 알뜰 2종).\n청소년 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n시니어 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n일반 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n전체 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n청소년 요금제는 만 14~18세만 가입할 수 있다.\n시니어 요금제는 만 65세 이상만 가입할 수 있다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "20대예요"
+     },
+     {
+      "whenKey": null,
+      "content": "네 영상 많이 봐서 한 달에 50기가는 넘게 써요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "PLAN_TABLE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "표 기준 조건을 만족하는 일반 요금제: 5G 언리미티드, 5G 프리미엄, 5G 스탠다드, LTE 맥스"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF10",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "70세 어머니가 쓰실 요금제를 대신 묻는 자녀, 데이터는 거의 안 씀",
+  "turns": [
+   {
+    "question": "저희 어머니 쓰실 요금제 하나만 골라주세요",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "판매 중인 요금제 하나를 추천한다",
+     "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+     "청소년 전용 요금제(만 14~18세)는 추천하지 않는다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "저희 어머니 쓰실 요금제 하나만 골라주세요",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:PLAN_TABLE",
+        "answer": "판매 중인 요금제 표(요금제 데이터)\n5G 언리미티드: 5G 요금제, 일반 대상, 월정액 105,000원, 데이터 무제한, 통화 무제한, 문자 무제한\n5G 프리미엄: 5G 요금제, 일반 대상, 월정액 85,000원, 데이터 150GB, 통화 무제한, 문자 무제한\n5G 스탠다드: 5G 요금제, 일반 대상, 월정액 65,000원, 데이터 50GB, 통화 무제한, 문자 무제한\n5G 라이트: 5G 요금제, 일반 대상, 월정액 45,000원, 데이터 8GB, 통화 무제한, 문자 무제한\nLTE 맥스: LTE 요금제, 일반 대상, 월정액 69,000원, 데이터 100GB, 통화 무제한, 문자 무제한\nLTE 플러스: LTE 요금제, 일반 대상, 월정액 49,000원, 데이터 15GB, 통화 무제한, 문자 무제한\nLTE 베이직: LTE 요금제, 일반 대상, 월정액 33,000원, 데이터 4GB, 통화 700분, 문자 무제한\n알뜰 세이브: 알뜰 요금제, 일반 대상, 월정액 25,000원, 데이터 3GB, 통화 500분, 문자 300건\n알뜰 미니: 알뜰 요금제, 일반 대상, 월정액 15,000원, 데이터 1.5GB, 통화 300분, 문자 100건\n5G 청소년: 5G 요금제, 청소년 대상, 월정액 55,000원, 데이터 80GB, 통화 무제한, 문자 무제한\nLTE 청소년: LTE 요금제, 청소년 대상, 월정액 39,000원, 데이터 20GB, 통화 1000분, 문자 무제한\n알뜰 청소년: 알뜰 요금제, 청소년 대상, 월정액 20,000원, 데이터 5GB, 통화 300분, 문자 무제한\n5G 시니어: 5G 요금제, 시니어 대상, 월정액 49,000원, 데이터 20GB, 통화 무제한, 문자 무제한\nLTE 시니어: LTE 요금제, 시니어 대상, 월정액 29,000원, 데이터 8GB, 통화 무제한, 문자 300건\n알뜰 시니어: 알뜰 요금제, 시니어 대상, 월정액 18,000원, 데이터 3GB, 통화 700분, 문자 100건\n위 15종이 판매 중인 요금제 전부다. 목록에 없는 요금제는 판매하지 않는다.\n판매 중인 요금제는 총 15종이다(5G 6종, LTE 5종, 알뜰 4종).\n일반 요금제(청소년·시니어 제외)는 9종이다(5G 4종, LTE 3종, 알뜰 2종).\n청소년 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n시니어 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n일반 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n전체 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n청소년 요금제는 만 14~18세만 가입할 수 있다.\n시니어 요금제는 만 65세 이상만 가입할 수 있다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "어머니 연세가 일흔이세요"
+     },
+     {
+      "whenKey": null,
+      "content": "아뇨, 카톡이랑 전화 정도만 하셔서 데이터는 거의 안 쓰세요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "PLAN_TABLE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "만 65세 이상이라 시니어 요금제와 일반 요금제 모두 가입 가능. 시니어 요금제를 권하는 것이 자연스럽지만 필수로 두지 않음"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF11",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "고등학생이 반말로 요금제를 묻고, 데이터는 많이 쓰지 않는다고 답함",
+  "turns": [
+   {
+    "question": "고딩인데 요금제 뭐 쓰는 게 나음?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "판매 중인 요금제 하나를 추천한다",
+     "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+     "시니어 전용 요금제(만 65세 이상)는 추천하지 않는다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "고딩인데 요금제 뭐 쓰는 게 나음?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:PLAN_TABLE",
+        "answer": "판매 중인 요금제 표(요금제 데이터)\n5G 언리미티드: 5G 요금제, 일반 대상, 월정액 105,000원, 데이터 무제한, 통화 무제한, 문자 무제한\n5G 프리미엄: 5G 요금제, 일반 대상, 월정액 85,000원, 데이터 150GB, 통화 무제한, 문자 무제한\n5G 스탠다드: 5G 요금제, 일반 대상, 월정액 65,000원, 데이터 50GB, 통화 무제한, 문자 무제한\n5G 라이트: 5G 요금제, 일반 대상, 월정액 45,000원, 데이터 8GB, 통화 무제한, 문자 무제한\nLTE 맥스: LTE 요금제, 일반 대상, 월정액 69,000원, 데이터 100GB, 통화 무제한, 문자 무제한\nLTE 플러스: LTE 요금제, 일반 대상, 월정액 49,000원, 데이터 15GB, 통화 무제한, 문자 무제한\nLTE 베이직: LTE 요금제, 일반 대상, 월정액 33,000원, 데이터 4GB, 통화 700분, 문자 무제한\n알뜰 세이브: 알뜰 요금제, 일반 대상, 월정액 25,000원, 데이터 3GB, 통화 500분, 문자 300건\n알뜰 미니: 알뜰 요금제, 일반 대상, 월정액 15,000원, 데이터 1.5GB, 통화 300분, 문자 100건\n5G 청소년: 5G 요금제, 청소년 대상, 월정액 55,000원, 데이터 80GB, 통화 무제한, 문자 무제한\nLTE 청소년: LTE 요금제, 청소년 대상, 월정액 39,000원, 데이터 20GB, 통화 1000분, 문자 무제한\n알뜰 청소년: 알뜰 요금제, 청소년 대상, 월정액 20,000원, 데이터 5GB, 통화 300분, 문자 무제한\n5G 시니어: 5G 요금제, 시니어 대상, 월정액 49,000원, 데이터 20GB, 통화 무제한, 문자 무제한\nLTE 시니어: LTE 요금제, 시니어 대상, 월정액 29,000원, 데이터 8GB, 통화 무제한, 문자 300건\n알뜰 시니어: 알뜰 요금제, 시니어 대상, 월정액 18,000원, 데이터 3GB, 통화 700분, 문자 100건\n위 15종이 판매 중인 요금제 전부다. 목록에 없는 요금제는 판매하지 않는다.\n판매 중인 요금제는 총 15종이다(5G 6종, LTE 5종, 알뜰 4종).\n일반 요금제(청소년·시니어 제외)는 9종이다(5G 4종, LTE 3종, 알뜰 2종).\n청소년 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n시니어 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n일반 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n전체 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n청소년 요금제는 만 14~18세만 가입할 수 있다.\n시니어 요금제는 만 65세 이상만 가입할 수 있다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "17살이요"
+     },
+     {
+      "whenKey": null,
+      "content": "유튜브 좀 보긴 하는데 50기가까진 안 써요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "PLAN_TABLE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "만 17세라 청소년 요금제(만 14~18세) 가입 대상. 일반 요금제도 막혀 있지 않아 청소년 요금제를 필수로 두지 않음"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-CF12",
+  "category": "CLARIFICATION_FLOW",
+  "questionType": "CLARIFICATION_FLOW",
+  "suite": "clarification_flow",
+  "actor": "GUEST",
+  "requiresKakao": false,
+  "scenario": "요금을 아끼고 싶은 30대 고객, 와이파이 위주라 데이터를 적게 씀",
+  "turns": [
+   {
+    "question": "통신비 좀 줄이고 싶은데 저한테 맞는 요금제 있을까요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "판매 중인 요금제 하나를 추천한다",
+     "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+     "청소년·시니어 전용이 아닌 일반 요금제를 추천한다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "통신비 좀 줄이고 싶은데 저한테 맞는 요금제 있을까요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:PLAN_TABLE",
+        "answer": "판매 중인 요금제 표(요금제 데이터)\n5G 언리미티드: 5G 요금제, 일반 대상, 월정액 105,000원, 데이터 무제한, 통화 무제한, 문자 무제한\n5G 프리미엄: 5G 요금제, 일반 대상, 월정액 85,000원, 데이터 150GB, 통화 무제한, 문자 무제한\n5G 스탠다드: 5G 요금제, 일반 대상, 월정액 65,000원, 데이터 50GB, 통화 무제한, 문자 무제한\n5G 라이트: 5G 요금제, 일반 대상, 월정액 45,000원, 데이터 8GB, 통화 무제한, 문자 무제한\nLTE 맥스: LTE 요금제, 일반 대상, 월정액 69,000원, 데이터 100GB, 통화 무제한, 문자 무제한\nLTE 플러스: LTE 요금제, 일반 대상, 월정액 49,000원, 데이터 15GB, 통화 무제한, 문자 무제한\nLTE 베이직: LTE 요금제, 일반 대상, 월정액 33,000원, 데이터 4GB, 통화 700분, 문자 무제한\n알뜰 세이브: 알뜰 요금제, 일반 대상, 월정액 25,000원, 데이터 3GB, 통화 500분, 문자 300건\n알뜰 미니: 알뜰 요금제, 일반 대상, 월정액 15,000원, 데이터 1.5GB, 통화 300분, 문자 100건\n5G 청소년: 5G 요금제, 청소년 대상, 월정액 55,000원, 데이터 80GB, 통화 무제한, 문자 무제한\nLTE 청소년: LTE 요금제, 청소년 대상, 월정액 39,000원, 데이터 20GB, 통화 1000분, 문자 무제한\n알뜰 청소년: 알뜰 요금제, 청소년 대상, 월정액 20,000원, 데이터 5GB, 통화 300분, 문자 무제한\n5G 시니어: 5G 요금제, 시니어 대상, 월정액 49,000원, 데이터 20GB, 통화 무제한, 문자 무제한\nLTE 시니어: LTE 요금제, 시니어 대상, 월정액 29,000원, 데이터 8GB, 통화 무제한, 문자 300건\n알뜰 시니어: 알뜰 요금제, 시니어 대상, 월정액 18,000원, 데이터 3GB, 통화 700분, 문자 100건\n위 15종이 판매 중인 요금제 전부다. 목록에 없는 요금제는 판매하지 않는다.\n판매 중인 요금제는 총 15종이다(5G 6종, LTE 5종, 알뜰 4종).\n일반 요금제(청소년·시니어 제외)는 9종이다(5G 4종, LTE 3종, 알뜰 2종).\n청소년 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n시니어 요금제는 3종이다(5G 1종, LTE 1종, 알뜰 1종).\n일반 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n전체 요금제 중 가장 저렴한 요금제는 알뜰 미니(월 15,000원)이고, 가장 비싼 요금제는 5G 언리미티드(월 105,000원)이다.\n청소년 요금제는 만 14~18세만 가입할 수 있다.\n시니어 요금제는 만 65세 이상만 가입할 수 있다."
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [
+     {
+      "whenKey": null,
+      "content": "30대 중반이에요"
+     },
+     {
+      "whenKey": null,
+      "content": "아니요, 집이랑 회사에서 와이파이 써서 데이터는 별로 안 써요"
+     }
+    ],
+    "expectedServiceType": null,
+    "answerSources": [
+     "PLAN_TABLE"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "'요금제 추천'이라는 표현 없이 통신비를 줄이고 싶다고 함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD01",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "로그인한 회원이 자기가 가입한 요금제를 물음",
+  "turns": [
+   {
+    "question": "제가 지금 무슨 요금제 쓰고 있는 거죠?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "가입한 요금제 이름을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "제가 지금 무슨 요금제 쓰고 있는 거죠?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD02",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 이번 달 데이터 사용량을 물음",
+  "turns": [
+   {
+    "question": "이번 달에 데이터 얼마나 썼어요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "이번 달 데이터 사용량을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "이번 달에 데이터 얼마나 썼어요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "요금제 제공량 대비 잔여량을 덧붙여도 됨"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD03",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 이번 달 예상 요금을 물음",
+  "turns": [
+   {
+    "question": "이번 달 폰 요금 대충 얼마 나올 것 같아?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "이번 달 예상 요금 금액을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "이번 달 폰 요금 대충 얼마 나올 것 같아?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD04",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 약정이 언제 끝나는지, 몇 달 남았는지 물음",
+  "turns": [
+   {
+    "question": "약정 언제 끝나요? 몇 달 남았는지 궁금해서요",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "남은 약정 개월 수를 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "약정 언제 끝나요? 몇 달 남았는지 궁금해서요",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "약정 종료일을 함께 알려주면 더 좋음"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD05",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 지금 해지하면 위약금이 얼마인지 물음",
+  "turns": [
+   {
+    "question": "지금 당장 해지하면 위약금 얼마 물어야 돼?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "지금 해지할 때 위약금 금액을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "지금 당장 해지하면 위약금 얼마 물어야 돼?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "일반 규정(12개월 기준 100%/50%)만 말하고 금액을 안 주면 부족함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD06",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 자기 사용량을 보고 더 맞는 요금제가 있는지 추천을 요청",
+  "turns": [
+   {
+    "question": "제가 쓰는 거 보면 지금 요금제가 맞는 건지 모르겠어요. 제 사용량 기준으로 추천 좀 해주실래요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "회원 본인의 사용량을 근거로 요금제를 추천한다",
+     "추천 요금제 이름과 월정액을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "제가 쓰는 거 보면 지금 요금제가 맞는 건지 모르겠어요. 제 사용량 기준으로 추천 좀 해주실래요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "현재 요금제 유지가 맞다고 판단해 그렇게 권해도 됨. 사용량 근거가 답변에 드러나야 함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD07",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 이번 달 통화와 문자 사용량을 물음",
+  "turns": [
+   {
+    "question": "이번 달 통화랑 문자는 얼마나 썼는지 알 수 있을까요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "이번 달 통화 사용량을 알려준다",
+     "이번 달 문자 사용량을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "이번 달 통화랑 문자는 얼마나 썼는지 알 수 있을까요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "가입 요금제가 통화·문자 무제한이라는 점을 덧붙여도 됨"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD08",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 약정 기간을 묻고, 이어서 주어 없이 위약금을 물음",
+  "turns": [
+   {
+    "question": "내 약정 몇 개월짜리였지?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "약정 기간(전체 개월 수)을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "내 약정 몇 개월짜리였지?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "남은 기간을 함께 알려줘도 됨"
+   },
+   {
+    "question": "그럼 위약금은요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "지금 해지할 때 위약금 금액을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "그럼 위약금은요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "앞 턴의 약정 맥락을 이어받아 회원 본인의 위약금을 답해야 함"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD09",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 이번 달 데이터 사용량을 확인한 뒤, 그걸 기준으로 요금제를 바꿀지 물음",
+  "turns": [
+   {
+    "question": "이번 달 데이터 사용량 좀 보여주세요",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "이번 달 데이터 사용량을 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "이번 달 데이터 사용량 좀 보여주세요",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending"
+   },
+   {
+    "question": "그거 보면 요금제 바꾸는 게 나을까요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ANSWER",
+    "goldSourceGroups": [],
+    "requiredFacts": [
+     "회원 본인의 사용량을 근거로 요금제 변경 여부나 추천 요금제를 알려준다"
+    ],
+    "qualityReferenceGroups": [
+     {
+      "questionPart": "그거 보면 요금제 바꾸는 게 나을까요?",
+      "alternatives": [
+       {
+        "sourceId": "SERVICE:MEMBER_DATA"
+       }
+      ]
+     }
+    ],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [
+     "MEMBER"
+    ],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "주어 생략. '그거'는 앞 턴의 데이터 사용량"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD10",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 자기 멤버십 등급을 물음(봇에 데이터 없음)",
+  "turns": [
+   {
+    "question": "제 멤버십 등급이 뭐예요? VIP는 되나요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ABSTAIN",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "등급 산정 기준(일반 FAQ)은 안내해도 되지만 회원의 실제 등급을 지어내면 안 됨"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD11",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 단말 할부금 잔액을 물음(봇에 데이터 없음)",
+  "turns": [
+   {
+    "question": "폰 할부금 아직 얼마나 남았어요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ABSTAIN",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "약정 남은 기간과 혼동해 할부 잔액을 지어내면 안 됨"
+   }
+  ]
+ },
+ {
+  "caseId": "FLOW-MD12",
+  "category": "MEMBER_DATA",
+  "questionType": "MEMBER_DATA",
+  "suite": "member_data",
+  "actor": "MEMBER",
+  "requiresKakao": false,
+  "scenario": "회원이 이번 달 소액결제 내역을 물음(봇에 데이터 없음)",
+  "turns": [
+   {
+    "question": "이번 달에 소액결제 뭐뭐 했는지 내역 확인할 수 있나요?",
+    "expectedIntent": "FAQ",
+    "expectedBehavior": "ABSTAIN",
+    "goldSourceGroups": [],
+    "requiredFacts": [],
+    "qualityReferenceGroups": [],
+    "clarificationReplies": [],
+    "expectedServiceType": null,
+    "answerSources": [],
+    "labelProvenance": "flow_v1_agent_written_scenario; human_review_pending",
+    "note": "예상 요금 데이터에 있는 금액을 소액결제 내역처럼 꾸며내면 안 됨"
+   }
+  ]
+ }
+]

@@ -52,6 +52,9 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 | `CLARIFICATION_ACCEPTED` | 기대 동작이 `ANSWER_OR_CLARIFY`이고 응답이 되묻기 | 충족도 `NOT_APPLICABLE`, 정상 처리 |
 | `UNNECESSARY_CLARIFICATION` | 그 밖의 기대 동작에서 응답이 되묻기 | 충족도 `MISSED`, 발견 사항 `UNNECESSARY_CLARIFICATION` |
 | `LOGIN_GUIDANCE_ACCEPTED` | 답의 출처가 회원 정보뿐인 보류 질문(`answerSources: ["MEMBER"]`)에 답변 전체가 로그인 안내 | 충족도 `NOT_APPLICABLE`, 정상 처리(비로그인 실행) |
+| `STORE_RESULTS_RETURNED` / `STORE_SERVICE_MISMATCH` / `STORE_NOT_RETURNED` | 기대 동작이 `STORE_LOOKUP` | 매장 목록을 보여 줬고 고객이 말한 업무(`expectedServiceType`)를 하는 매장만 있으면 `COMPLETE`, 아니면 `MISSED` |
+| `REASKED_CONDITION` | 한 턴 안에서 이미 답한 조건을 다시 되물음 | 발견 사항으로 남기고 통과로 보지 않는다(고객이 같은 답을 두 번 했다) |
+| `UNSCRIPTED_CLARIFICATION` | 앱이 평가셋에 고객 답변이 없는 조건을 되물음 | 발견 사항으로 남기고 사람 검토(품질 미확정) |
 | `SERVICE_GUIDANCE` | 근거성 주장 전체가 앱 고정 안내 문장 안에 있음 | 그 주장은 정책 주장에서 뺀다(`IRRELEVANT`, 모델 판정은 `modelVerdict`) |
 
 요금제 답변 경로를 탄 턴에는 요금제 표가 근거 `SERVICE:PLAN_TABLE`로 함께 들어간다([평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md#faq-밖-데이터로-만든-답변과-앱-고정-문구)). 코드 규칙은 저장한 판정을 다시 집계할 때(`rescore`, `combine_judges.py --capture`)도 지금 기준으로 다시 적용한다.

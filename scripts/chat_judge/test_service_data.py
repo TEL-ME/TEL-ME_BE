@@ -6,6 +6,7 @@ from pathlib import Path
 import unittest
 
 from scripts.chat_judge import backfill_capture_service_data as backfill
+from scripts.chat_judge import judge_chat_flow as judge
 from scripts.chat_judge import run_bedrock_judge
 from scripts.chat_judge import service_data
 from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
@@ -217,6 +218,122 @@ class ServiceLabelSetTest(unittest.TestCase):
         member = v21["V2-NOANSWER-U050"]["turns"][0]
         self.assertEqual(("ABSTAIN", "ANSWER"), (member["expectedBehavior"], member["memberExpectedBehavior"]))
         self.assertEqual(json.loads(builder.OUTPUT.read_text(encoding="utf-8")), list(v21.values()))
+
+
+class FlowTest(unittest.TestCase):
+    def clarified_turn(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["clarificationExchanges"] = [
+            {"outputMessage": {"content": "어떤 업무로 매장을 찾으시나요?", "messageType": "CLARIFICATION"},
+             "customerReply": {"whenKey": "serviceType", "content": "유심 재발급이요"}},
+            {"outputMessage": {"content": "어느 지역의 매장을 찾으시나요?", "messageType": "CLARIFICATION"},
+             "customerReply": {"whenKey": "location", "content": "현재 위치로 찾아주세요"}}]
+        return turn
+
+    def test_judge_sees_the_clarification_dialogue_and_the_last_customer_reply(self):
+        turn = self.clarified_turn()
+        earlier = [{"question": "앞 질문", "answer": "앞 답"}]
+        data = judge.prompt_data(turn, earlier, "grounding")
+        self.assertEqual("현재 위치로 찾아주세요", data["question"])
+        self.assertEqual(["앞 질문", turn["fixture"]["question"], "유심 재발급이요"],
+                         [row["question"] for row in data["previousTurns"]])
+        self.assertEqual("어느 지역의 매장을 찾으시나요?", data["previousTurns"][-1]["answer"])
+        following = judge.completed_dialogue(turn, "최종 답")
+        self.assertEqual(("현재 위치로 찾아주세요", "최종 답"), (following[-1]["question"], following[-1]["answer"]))
+        plain = sample_capture()["cases"][0]["turns"][0]
+        self.assertEqual([], judge.clarification_dialogue(plain)[0])
+
+    def store_turn(self, services):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"].update(expectedBehavior="STORE_LOOKUP", expectedServiceType="USIM_REISSUE")
+        turn["outputMessage"] = {"messageType": "STORE_RESULT", "content": "현재 위치 기준으로 찾은 매장이에요.",
+                                 "storeResults": [{"storeId": 1, "name": "텔미 강남점", "address": "서울 강남구",
+                                                   "phone": "02", "distanceMeters": 300}],
+                                 "storeSearchContext": {"label": "현재 위치"}}
+        turn["storeDetails"] = [{"storeId": 1, "services": services,
+                                 "hours": [{"day_of_week": 6, "open_time": "10:00:00", "close_time": "15:00:00",
+                                            "closed": False}]}]
+        return turn
+
+    def test_store_lookup_is_judged_by_the_returned_stores(self):
+        self.assertEqual("STORE_RESULTS_RETURNED", pipeline.rule_quality(self.store_turn(["USIM_REISSUE"]))["rule"])
+        mismatch = pipeline.rule_quality(self.store_turn(["NEW_LINE"]))
+        self.assertEqual(("STORE_SERVICE_MISMATCH", "MISSED"), (mismatch["rule"], mismatch["result"]["groups"][0]["outcome"]))
+        missing = self.store_turn([])
+        missing["outputMessage"] = {"messageType": "CLARIFICATION", "content": "어느 지역이세요?"}
+        self.assertEqual("STORE_NOT_RETURNED", pipeline.rule_quality(missing)["rule"])
+        capture = sample_capture()
+        capture["cases"][0]["turns"][0] = self.store_turn(["USIM_REISSUE"])
+        source = service_data.attach_service_sources(capture)["cases"][0]["turns"][0]["serviceSources"][0]
+        self.assertEqual(service_data.STORE_SOURCE_ID, source["sourceId"])
+        self.assertIn("텔미 강남점: 주소 서울 강남구, 전화 02, 거리 300m, 취급 업무 USIM_REISSUE, 영업시간 토 10:00~15:00",
+                      source["answer"])
+
+    def test_member_answers_get_account_data_and_reference_placeholders_are_filled(self):
+        capture = plan_capture("가입하신 요금제는 5G 스탠다드예요.")
+        case = capture["cases"][0]
+        turn = case["turns"][0]
+        turn["pipelineTrace"] = {"planAnswer": {"type": "MY_SUBSCRIPTION"}}
+        turn["fixture"]["qualityReferenceGroups"] = [{"questionPart": "내 요금제", "alternatives": [
+            {"sourceId": service_data.MEMBER_SOURCE_ID}]}]
+        case.update(actor="MEMBER", memberData={"subscription": {"subscribed": True, "subscription": {
+            "plan": {"name": "5G 스탠다드"}}}, "terminationPenalty": {"penalty": 120000}, "usage": None})
+        enriched = pipeline.enrich_rag_sources(capture, CATALOG)["cases"][0]["turns"][0]
+        self.assertEqual([service_data.MEMBER_SOURCE_ID], [row["sourceId"] for row in enriched["serviceSources"]])
+        self.assertIn("subscription.subscription.plan.name: 5G 스탠다드", enriched["serviceSources"][0]["answer"])
+        self.assertIn("terminationPenalty.penalty: 120000",
+                      pipeline.reference_groups(enriched["fixture"])[0]["alternatives"][0]["answer"])
+        guest = plan_capture("로그인하시면 가입하신 요금제를 확인해 드릴 수 있어요.")
+        guest["cases"][0]["turns"][0]["fixture"]["qualityReferenceGroups"] = [
+            {"questionPart": "내 요금제", "alternatives": [{"sourceId": service_data.MEMBER_SOURCE_ID}]}]
+        with self.assertRaises(ValueError):  # 회원 데이터 없이 회원 라벨을 판정하지 않는다
+            pipeline.enrich_rag_sources(guest, CATALOG)
+
+    def test_asking_an_answered_condition_again_fails_even_with_a_good_final_answer(self):
+        turn = self.store_turn(["USIM_REISSUE"])
+        turn["clarificationExchanges"] = [
+            {"askedKeys": ["location"], "outputMessage": {"content": "어느 지역이세요?"},
+             "customerReply": {"whenKey": "location", "content": "현재 위치로"}},
+            {"askedKeys": ["serviceType"], "outputMessage": {"content": "어떤 업무세요?"},
+             "customerReply": {"whenKey": "serviceType", "content": "유심 재발급"}},
+            {"askedKeys": ["location"], "outputMessage": {"content": "어느 지역이세요?"},
+             "customerReply": {"whenKey": "location", "content": "현재 위치로"}}]
+        item = {"grounding": {"result": {"overall": "NOT_APPLICABLE", "claims": []}},
+                "quality": pipeline.rule_quality(turn),
+                "abstention": {"result": {"answerIsRefusal": False, "evidenceAnswerability": "INSUFFICIENT"}}}
+        pipeline.finalize_turn(turn, item)
+        self.assertIs(False, item["answerQualityPass"])
+        self.assertIn("REASKED_CONDITION", item["findings"])
+
+    def test_unscripted_clarification_goes_to_human_review(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["outputMessage"] = {"messageType": "CLARIFICATION", "content": "약정 개월 수가 어떻게 되세요?"}
+        turn["unansweredClarificationKeys"] = ["contract_months"]
+        item = {"grounding": {"result": {"overall": "NOT_APPLICABLE", "claims": []}},
+                "quality": pipeline.rule_quality(turn),
+                "abstention": {"result": {"answerIsRefusal": False, "evidenceAnswerability": "INSUFFICIENT"}}}
+        pipeline.finalize_turn(turn, item)
+        self.assertIsNone(item["answerQualityPass"])
+        self.assertIn("UNSCRIPTED_CLARIFICATION", item["findings"])
+
+    def test_flow_set_maps_current_location_to_coordinates_and_labels_references(self):
+        from scripts.chat_judge import build_service_flow_set as builder
+        cases = {case["caseId"]: case for case in builder.build()}
+        self.assertEqual(json.loads(builder.OUTPUT.read_text(encoding="utf-8")), list(cases.values()))
+        for case in cases.values():
+            for turn in case["turns"]:
+                for reply in turn["clarificationReplies"]:
+                    if reply.get("currentLocation"):
+                        self.assertEqual(builder.CURRENT_LOCATIONS[reply["currentLocation"]],
+                                         (reply["coordinates"]["latitude"], reply["coordinates"]["longitude"]))
+                if case["suite"] == "member_data" and turn["expectedBehavior"] == "ANSWER":
+                    self.assertEqual([{"sourceId": service_data.MEMBER_SOURCE_ID}],
+                                     turn["qualityReferenceGroups"][0]["alternatives"])
+                    self.assertEqual("MEMBER", case["actor"])
+                if turn["expectedBehavior"] == "STORE_LOOKUP":
+                    self.assertEqual(([], ["STORE"]), (turn["qualityReferenceGroups"], turn["answerSources"]))
+                    # 앱이 업무를 되물으면 답할 말이 늘 있다(시나리오에 없으면 기대 업무로 채운 auto 답변)
+                    self.assertTrue(any(reply["whenKey"] == "serviceType" for reply in turn["clarificationReplies"]))
 
 
 if __name__ == "__main__":

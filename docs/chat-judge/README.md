@@ -15,6 +15,7 @@ scripts/chat_judge/
   judge_chat_flow.py                 주장 추출과 근거성 판정, 출력 검증, 보류 판정 결합
   build_service_quality_set.py       서비스 품질 평가셋 v2.1 생성(v2는 서비스 데이터 라벨 없이 같은 빌더로 재현)
   relabel_capture.py                 저장한 캡처의 평가 라벨을 새 평가셋 버전으로 교체
+  build_service_flow_set.py          되묻기·매장·로그인 회원 흐름 평가셋 v1 생성
   build_judge_validation_set.py      Judge 검증셋 v1 생성(TELME-100 V7 사람 판정에서 층화 추출)
   run_judge_validation.py            Judge 검증셋을 판정하고 사람 판정과 축별 비교(vLLM 또는 Bedrock)
   run_bedrock_judge.py               저장한 캡처를 Bedrock 모델 하나로 판정(Qwen3 235B, DeepSeek V3.2, Mistral Large 3)
@@ -36,6 +37,7 @@ src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java  채팅 실행 기록 �
 | [`chat_pipeline_quality_v1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v1.json) | 이전 기준(TELME-100) | 카탈로그 질문 500(400개가 FAQ 질문 문구 그대로), 흐름 회귀 9턴 |
 | [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json) | 서비스 답변 품질 측정(고정) | 아래 표 |
 | [`chat_pipeline_quality_v2_1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2_1.json) | 서비스 답변 품질 측정 | v2와 같은 질문에 서비스 데이터 라벨을 더했다(아래) |
+| [`chat_pipeline_flows_v1.json`](../../scripts/chat_judge/data/chat_pipeline_flows_v1.json) | 되묻기·매장·로그인 회원 흐름 | 매장 찾기 12, 되묻기 12, 로그인 회원 12개 대화(아래) |
 | [`judge_validation_v1.json`](../../scripts/chat_judge/data/judge_validation_v1.json) | Judge 자체의 정확도 측정 | TELME-100 V7 실제 답변 116건과 사람 판정 |
 
 서비스 품질셋 v2는 238개 대화, 259턴이다. 질문과 필수 사실은 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼고, 원본은 [`quality_v2_sources/`](../../scripts/chat_judge/data/quality_v2_sources)에 있다. 사람 검토 전이다.
@@ -61,6 +63,11 @@ v2.1은 v2에 [`service_data_labels.json`](../../scripts/chat_judge/data/quality
 - FAQ에는 답이 없지만 요금제 표로 답이 정해지는 질문 5개를 답변 질문으로 바꿨다. 시니어 요금제 가격(U018), 판매하지 않는 요금제(U023 5G 프리미엄 플러스, U024 LTE 슬림, U025 군인 전용, U030 키즈워치 전용)는 "판매 중인 요금제에 없다"가 정답이다.
 - 내 요금·사용량·위약금 질문 3개(U049–U051)는 비로그인 실행에서는 로그인 안내가 정답(보류)이고, 로그인 실행에서는 회원 데이터로 답해야 한다(`memberExpectedBehavior`). 로그인 실행은 아직 없다.
 - 이전 캡처의 답변을 새 라벨로 채점할 때는 `relabel_capture.py`로 라벨만 바꾼다.
+
+흐름 평가셋 v1은 앱이 조건을 되묻는 대화를 고객 답변까지 이어서 본다. 시나리오는 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다([`flow_v1_sources/`](../../scripts/chat_judge/data/flow_v1_sources)).
+- `store_flow` 12: 매장 찾기. 앱이 업무와 지역을 되물으면 답한다. 8개는 '현재 위치 사용'(좌표), 4개는 지명으로 답한다. 지명 검색은 카카오 로컬 API가 필요해 키가 없으면 실행기가 빼고 `manifest.json`의 `skippedCases`에 남긴다. 질문에 업무를 말했어도 앱이 업무를 되물을 수 있어, 시나리오에 업무 답변이 없으면 기대 업무로 만든 답변을 넣고 `auto`로 표시했다.
+- `clarification_flow` 12: FAQ 답이 고객 조건에 따라 갈리는 질문 8(고객이 모른다고 답하는 2개 포함)과 비회원 요금제 추천 4.
+- `member_data` 12: 로그인한 테스트 회원의 내 요금제·사용량·예상 요금·약정·위약금·사용량 기반 추천 9(2턴 대화 2개 포함)과 회원 데이터가 없는 질문 3. 프로브가 평가 DB에 테스트 회원(`judge-member@telme.test`, 5G 스탠다드, 24개월 약정, 8개월 전 가입)이 없을 때만 만들고, 대화 직전 계정 데이터를 `memberData`로 남긴다.
 
 Judge 검증셋 v1은 TELME-100 V7의 사람 판정 302건 중 단일 질문 답변에서 근거 없는 답 39, 과도한 거절 7, 근거는 맞지만 부분·미답 25, 정상 20, 근거 없어 보류 15, 기타 10건을 골랐다. 지금 라벨은 판정자 한 명(A)의 것이다. 두 번째 판정자(B)가 [판정표](judge-validation-v1-review-form.md)를 A와 모델 판정을 보지 않고 채운 뒤 `run_judge_validation.py --review-b`로 A·B 일치도와 Judge 일치율을 낸다.
 

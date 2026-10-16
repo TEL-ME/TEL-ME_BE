@@ -6,9 +6,16 @@ planAnswer 단계가 있는 턴에는 캡처 당시 요금제 표를 근거로 �
 FAQ 정책 주장이 아니라서 근거성에서 빼고, 처리 실패 대체 문구는 질문을 처리한 것으로 보지 않는다.
 문구는 Java 소스와 글자 그대로 같아야 하고, 테스트가 소스에 그대로 있는지 확인한다.
 """
+from datetime import datetime, timedelta, timezone
 import re
 
 PLAN_SOURCE_ID = "SERVICE:PLAN_TABLE"
+MEMBER_SOURCE_ID = "SERVICE:MEMBER_DATA"
+STORE_SOURCE_ID = "SERVICE:STORE_RESULTS"
+# 회원 정보로 답하는 요금제 답변 유형(PlanAnswerProvider). 추천은 요금제 표와 회원 사용량을 함께 쓴다
+MEMBER_ANSWER_TYPES = {"MY_SUBSCRIPTION", "MY_PENALTY", "MY_USAGE", "RECOMMENDATION"}
+PLAN_TABLE_ANSWER_TYPES = {"PLAN_CATALOG", "RECOMMENDATION"}
+DAY_NAMES = {1: "월", 2: "화", 3: "수", 4: "목", 5: "금", 6: "토", 7: "일"}
 NETWORK_LABELS = {"FIVE_G": "5G", "LTE": "LTE", "BUDGET": "알뜰"}
 TARGET_LABELS = {"GENERAL": "일반", "YOUTH": "청소년", "SENIOR": "시니어"}
 
@@ -113,16 +120,93 @@ def plan_table_source(plans, eligibility):
     return {"sourceId": PLAN_SOURCE_ID, "kind": "SERVICE_DATA", "answer": "\n".join(lines)}
 
 
+KST = timezone(timedelta(hours=9))
+MB_PER_GB = 1024  # 앱(PlanFormat, UsageGenerator)과 같은 환산
+_INSTANT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z")
+_MEGABYTE_KEYS = ("used", "limit", "remaining", "dataMb")
+
+
+def _readable(path, value):
+    """UTC 시각은 한국 시간으로, MB 값은 GB를 함께 적는다. 앱이 고객에게 보여 주는 단위와 맞춘다."""
+    if isinstance(value, str) and _INSTANT.fullmatch(value):
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(KST)
+        return f"{value} (한국 시간 {moment:%Y-%m-%d %H:%M})"
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and (
+            ".data." in f".{path}." and path.rsplit(".", 1)[-1] in _MEGABYTE_KEYS or path.endswith("dataMb")):
+        return f"{value}MB ({value / MB_PER_GB:.1f}GB)"
+    return value
+
+
+def _flatten(value, path=""):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from _flatten(child, f"{path}.{key}" if path else key)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _flatten(child, f"{path}[{index}]")
+    elif value is not None:
+        yield f"{path}: {_readable(path, value)}"
+
+
+def member_data_source(member_data):
+    """로그인 회원의 계정 데이터(가입 요금제, 약정·위약금, 이번 달 사용량과 예상 요금)를 한 줄에 값 하나씩 적은 근거.
+    프로브가 대화 직전에 앱이 회원 답변에 쓰는 서비스를 불러 남긴 값이다."""
+    lines = ["로그인한 회원의 계정 데이터(대화 직전 조회, 금액은 원, 시각은 UTC와 한국 시간, 데이터는 MB와 GB(1GB=1024MB)). "
+             "usageDemand는 지난 달들의 한 달 평균 사용량이다"]
+    for section in ("subscription", "terminationPenalty", "usage", "usageDemand"):
+        lines.extend(f"{section}.{line}" for line in _flatten(member_data.get(section)))
+    return {"sourceId": MEMBER_SOURCE_ID, "kind": "SERVICE_DATA", "answer": "\n".join(lines)}
+
+
+def store_results_source(turn):
+    """사용자에게 보여 준 매장 목록과 각 매장의 취급 업무·영업시간."""
+    output = turn.get("outputMessage") or {}
+    details = {row["storeId"]: row for row in turn.get("storeDetails", [])}
+    context = output.get("storeSearchContext") or {}
+    lines = [f"매장 검색 결과(검색 기준: {context.get('label') or '알 수 없음'})"]
+    for store in output.get("storeResults") or []:
+        detail = details.get(store.get("storeId"), {})
+        hours = ", ".join(
+            f"{DAY_NAMES.get(row['day_of_week'], row['day_of_week'])} "
+            + ("휴무" if row.get("closed") else f"{str(row['open_time'])[:5]}~{str(row['close_time'])[:5]}")
+            for row in detail.get("hours", []))
+        lines.append(f"{store.get('name')}: 주소 {store.get('address')}, 전화 {store.get('phone')}, "
+                     f"거리 {store.get('distanceMeters')}m, 취급 업무 {', '.join(detail.get('services', [])) or '없음'}, "
+                     f"영업시간 {hours or '정보 없음'}")
+    return {"sourceId": STORE_SOURCE_ID, "kind": "SERVICE_DATA", "answer": "\n".join(lines)}
+
+
 def attach_service_sources(capture):
-    """요금제 답변 경로를 탄 턴에 요금제 표 근거를 붙인다(capture를 바꾼다).
+    """FAQ 밖 데이터로 만든 답변에 그 데이터를 근거로 붙인다(capture를 바꾼다).
+    - 요금제 목록·추천: 요금제 표 / 로그인 회원의 내 정보·추천: 회원 계정 데이터 / 매장 결과: 보여 준 매장 목록
+    평가 라벨의 서비스 데이터 인정 근거(답변 본문 없이 sourceId만 적은 것)도 같은 데이터로 채운다.
     실행 기록이 없는 예전 캡처는 그대로 두고, 기록은 있는데 요금제 표가 없으면 판정이 틀어지므로 멈춘다."""
     data = capture.get("serviceData") or {}
     for case in capture["cases"]:
+        member = case.get("memberData") if case.get("actor") == "MEMBER" else None
         for turn in case["turns"]:
-            if not plan_answer_type(turn):
-                continue
-            if not data.get("plans"):
-                raise ValueError("요금제 답변 턴이 있는데 캡처에 요금제 표(serviceData.plans)가 없다. "
-                                 "backfill_capture_service_data로 채운다")
-            turn["serviceSources"] = [plan_table_source(data["plans"], data.get("planEligibility"))]
+            available = {}
+            if data.get("plans"):
+                available[PLAN_SOURCE_ID] = plan_table_source(data["plans"], data.get("planEligibility"))
+            if member:
+                available[MEMBER_SOURCE_ID] = member_data_source(member)
+            sources = []
+            answer_type = plan_answer_type(turn)
+            if answer_type in PLAN_TABLE_ANSWER_TYPES or answer_type and not member:
+                if PLAN_SOURCE_ID not in available:
+                    raise ValueError("요금제 답변 턴이 있는데 캡처에 요금제 표(serviceData.plans)가 없다. "
+                                     "backfill_capture_service_data로 채운다")
+                sources.append(available[PLAN_SOURCE_ID])
+            if answer_type in MEMBER_ANSWER_TYPES and member:
+                sources.append(available[MEMBER_SOURCE_ID])
+            if (turn.get("outputMessage") or {}).get("storeResults"):
+                sources.append(store_results_source(turn))
+            if sources:
+                turn["serviceSources"] = sources
+            for group in turn["fixture"].get("qualityReferenceGroups", []):
+                for alternative in group.get("alternatives", []):
+                    if str(alternative.get("sourceId", "")).startswith("SERVICE:") and "answer" not in alternative:
+                        if alternative["sourceId"] not in available:
+                            raise ValueError(f"{case['caseId']}: 평가 라벨이 쓰는 {alternative['sourceId']}가 캡처에 없다")
+                        alternative["answer"] = available[alternative["sourceId"]]["answer"]
     return capture

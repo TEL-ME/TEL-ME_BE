@@ -129,6 +129,8 @@ QUALITY_SCHEMA = {
 ANSWERABLE_BEHAVIORS = {"ANSWER", "PARTIAL_ANSWER", "ANSWER_OR_CLARIFY"}
 # 모델을 부르지 않고 정한 질문 충족도 규칙. 이 규칙의 NOT_APPLICABLE은 요청을 정상 처리한 것으로 본다
 HANDLED_QUALITY_RULES = {"OUT_OF_SCOPE_QUESTION", "CLARIFICATION_ACCEPTED", "LOGIN_GUIDANCE_ACCEPTED"}
+# 매장 조회는 보여 준 매장 목록으로 코드가 판정한다
+STORE_QUALITY_RULES = {"STORE_RESULTS_RETURNED", "STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED"}
 
 
 def reference_groups(fixture):
@@ -165,6 +167,8 @@ def rule_quality(turn):
         # 회원 정보로만 답할 수 있는 질문에 비로그인 사용자가 받은 로그인 안내는 라벨이 정한 정상 처리다
         outcome, rule, reason = ("NOT_APPLICABLE", "LOGIN_GUIDANCE_ACCEPTED",
                                  "회원 정보가 필요한 질문이라 비로그인 사용자에게 로그인을 안내한 것을 정상 처리로 본다.")
+    elif expected == "STORE_LOOKUP":
+        outcome, rule, reason = store_quality(turn)
     elif expected == "OUT_OF_SCOPE":
         outcome, rule, reason = "NOT_APPLICABLE", "OUT_OF_SCOPE_QUESTION", "서비스 범위 밖 질문이라 답변 충족도를 따지지 않는다."
     elif is_clarification(turn) and expected == "ANSWER_OR_CLARIFY":
@@ -174,9 +178,25 @@ def rule_quality(turn):
     else:
         return None
     count = max(1, len(turn["fixture"].get("qualityReferenceGroups", [])))
-    result = {"groups": [{"groupIndex": index, "outcome": outcome, "answerQuotes": [], "reason": reason}
+    # 답한 것으로 보는 판정은 인용이 필요하다(매장 목록 안내 문장)
+    content = (turn.get("outputMessage") or {}).get("content") or ""
+    quotes = [line.strip() for line in content.splitlines() if line.strip()][:1] if outcome == "COMPLETE" else []
+    result = {"groups": [{"groupIndex": index, "outcome": outcome, "answerQuotes": quotes, "reason": reason}
                          for index in range(count)]}
     return {"rule": rule, "result": validate_quality(result, turn), "durationMs": 0}
+
+
+def store_quality(turn):
+    """매장 조회 질문의 충족도. 매장 목록을 보여 줬는지, 고객이 말한 업무를 하는 매장만 보여 줬는지 본다."""
+    output = turn.get("outputMessage") or {}
+    stores = output.get("storeResults") or []
+    if output.get("messageType") != "STORE_RESULT" or not stores:
+        return "MISSED", "STORE_NOT_RETURNED", "매장 목록을 보여 주지 않았다."
+    wanted = turn["fixture"].get("expectedServiceType")
+    services = {row["storeId"]: row.get("services", []) for row in turn.get("storeDetails", [])}
+    if wanted and any(wanted not in services.get(store.get("storeId"), []) for store in stores):
+        return "MISSED", "STORE_SERVICE_MISMATCH", f"고객이 말한 업무({wanted})를 하지 않는 매장이 목록에 있다."
+    return "COMPLETE", "STORE_RESULTS_RETURNED", "고객이 원한 조건으로 찾은 매장 목록을 보여 줬다."
 
 
 def rule_evidence(evidence_input):
@@ -249,7 +269,8 @@ def enrich_rag_sources(capture, catalog):
 
 def quality_request(model, turn, previous):
     fixture = turn["fixture"]
-    data = {"question": fixture["question"], "previousTurns": previous,
+    previous, question = judge.judged_dialogue(turn, previous)
+    data = {"question": question, "previousTurns": previous,
             "assistantAnswer": (turn.get("outputMessage") or {}).get("content", ""),
             "expectedBehavior": fixture["expectedBehavior"],
             "referenceGroups": reference_groups(fixture),
@@ -502,14 +523,31 @@ def finalize_turn(turn, item):
     if item["requiresReview"]:
         item["findings"].append("HUMAN_REVIEW")
     # 되묻기는 기대 동작과 실제 응답 유형으로 판정한다. 되물은 조건이 적절한지는 사람이 본다
-    if is_clarification(turn) and expected != "ANSWER_OR_CLARIFY":
+    # 매장 조회는 업무·지역을 되묻는 것이 정상 흐름이고, 매장을 끝내 못 보여 준 것은 STORE_NOT_RETURNED로 남는다
+    if is_clarification(turn) and expected not in {"ANSWER_OR_CLARIFY", "STORE_LOOKUP"}:
         item["findings"].append("UNNECESSARY_CLARIFICATION")
     if (item.get("quality") or {}).get("rule") == "SYSTEM_FALLBACK":
         item["findings"].append("SYSTEM_FALLBACK")
+    if (item.get("quality") or {}).get("rule") in {"STORE_SERVICE_MISMATCH", "STORE_NOT_RETURNED"}:
+        item["findings"].append((item["quality"]["rule"]))
+    # 이미 답한 조건을 다시 물었다. 고객이 같은 답을 두 번 해야 했으므로 최종 답이 맞아도 통과로 보지 않는다
+    asked = [key for exchange in turn.get("clarificationExchanges") or [] for key in exchange.get("askedKeys", [])]
+    if len(asked) != len(set(asked)):
+        item["findings"].append("REASKED_CONDITION")
+        if item["answerQualityPass"] is True:
+            item["answerQualityPass"] = False
+    # 앱이 평가셋에 없는 조건을 되물어 고객 답변을 이어 가지 못했다. 앱 실패인지 시나리오 누락인지 사람이 본다
+    if turn.get("unansweredClarificationKeys"):
+        item["findings"].append("UNSCRIPTED_CLARIFICATION")
+        item["requiresReview"] = True
+        item["answerQualityPass"] = None
     retrieval = item["retrieval"]
     if retrieval["applicable"] and retrieval["candidateHits"] < retrieval["groupCount"]:
         item["findings"].append("RETRIEVAL_MISS")
-    if (turn.get("route") or {}).get("intent") != turn["fixture"]["expectedIntent"]:
+    # 의도 분류는 고객의 첫 질문에서 본다. 되묻기 답변은 후속 분석으로 처리돼 라우팅 기록이 없다
+    exchanges = turn.get("clarificationExchanges") or []
+    route = (exchanges[0] if exchanges else turn).get("route") or {}
+    if route.get("intent") != turn["fixture"]["expectedIntent"]:
         item["findings"].append("ROUTING_MISMATCH")
     if turn["fixture"]["expectedBehavior"] == "STORE_LOOKUP" and not (turn.get("outputMessage") or {}).get("storeResults"):
         item["findings"].append("STORE_NOT_CONNECTED")
@@ -658,7 +696,7 @@ def evaluate(capture, catalog, url, model, workers=8, timeout=240, retries=1, on
                     if axis not in item:  # Failed completed calls remain preserved on resume too.
                         pending.append((turn, copy.deepcopy(previous), item, axis))
             finalize_turn(turn, item)
-            previous.append({"question": turn["fixture"]["question"], "answer": item["answer"] or ""})
+            previous.extend(judge.completed_dialogue(turn, item["answer"]))
     planned = capture.get("plannedTurnCount", len(result["turns"]))
     result["summary"] = summarize(result["turns"], planned)
     if on_checkpoint:

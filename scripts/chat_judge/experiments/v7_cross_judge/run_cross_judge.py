@@ -94,7 +94,7 @@ def build_jobs(capture, catalog):
                     "answer": (turn.get("outputMessage") or {}).get("content"), "sources": sources,
                     "sourceProvenance": provenance, "savedSources": turn.get("savedSources", [])}
             jobs.append((turn, copy.deepcopy(previous), item))
-            previous.append({"question": item["question"], "answer": item["answer"] or ""})
+            previous.extend(judge.completed_dialogue(turn, item["answer"]))
     return jobs
 
 
