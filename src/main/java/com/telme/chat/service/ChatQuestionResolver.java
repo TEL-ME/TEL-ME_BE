@@ -495,9 +495,9 @@ public class ChatQuestionResolver {
         }
         // 생략된 대상을 찾는 중이고 인사를 뺀 고객 발언이 하나뿐이며 그 발언이 하려는 일을 말했으면 대상은 그 발언이다.
         // 모델이 그 발언의 업무를 0개로 세도 한 업무로 본다. "회선이 세 개 있어요"처럼 사실만 말한 발언은 모델 판정대로 확인 안내이고,
-        // 두 개 이상으로 센 발언도 그대로 확인 안내다.
+        // 두 개 이상으로 센 발언도 그대로 확인 안내다. 모델 입력과 같이 앞 표시([문의] 등)를 뗀 상담 본문으로 본다.
         if (stabilityGuards && parsed.size() == 1 && parsed.getFirst().targetCount() == 0
-                && INTENT_STATEMENT.matcher(compact(ordered.getFirst().content())).find()) {
+                && INTENT_STATEMENT.matcher(compact(ConsultationQuestion.extract(ordered.getFirst().content()))).find()) {
             parsed.set(0, new SourceAssessment(1, 0));
         }
         Integer ordinal = ordinalReference(question);

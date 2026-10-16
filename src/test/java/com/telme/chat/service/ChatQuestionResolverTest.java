@@ -555,7 +555,8 @@ class ChatQuestionResolverTest {
         assertThat(guarded.validateResolution("가족이 대신 가도 되나요?",
                 omitted("[{\"index\":1,\"targetCount\":2,\"parentIndex\":0}]"), Map.of(501L, source))
                 .needsClarification()).isTrue();
-        for (String fact : List.of("회선이 세 개 있어요", "폰을 바꾼 지 한 달 됐어요")) {
+        // 앞 표시 [문의]의 '문의'는 하려는 일을 말한 것으로 보지 않는다
+        for (String fact : List.of("회선이 세 개 있어요", "폰을 바꾼 지 한 달 됐어요", "[문의] 회선이 세 개 있어요")) {
             var statement = customer(502L, 1, fact);
             assertThat(guarded.validateResolution("그거 어떻게 해요?", none, Map.of(502L, statement))
                     .needsClarification()).isTrue();
