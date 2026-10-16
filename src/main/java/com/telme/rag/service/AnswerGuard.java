@@ -526,7 +526,8 @@ public class AnswerGuard {
                 answer, context, userQuery, this::measuresIn,
                 (value, sentence) -> isSafeUserReference(sentence)
                         || isOutsideSupportedUpperBound(value, sentence, context)
-                        || isCustomerElapsed(value, sentence));
+                        || isCustomerElapsed(value, sentence)
+                        || isClockContrast(value, sentence, context));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
             throw new AnswerGuardException("근거에 없는 수치: " + invented);
@@ -557,6 +558,17 @@ public class AnswerGuard {
             invented.addAll(sentenceValues);
         }
         return invented;
+    }
+
+    // 고객이 말한 시각을 근거의 시각과 견주는 문장이다. "저녁 8시는 마감 시간인 19:30 이후라 불가합니다"처럼
+    // 같은 문장에 근거에 있는 시각이 함께 있으면 고객 시각을 사실로 단정한 것이 아니다
+    private boolean isClockContrast(String userMeasure, String sentence, String context) {
+        if (!userMeasure.contains(":")) {
+            return false;
+        }
+        Set<String> grounded = measuresIn(context);
+        return measuresIn(sentence).stream()
+                .anyMatch(value -> value.contains(":") && !value.equals(userMeasure) && grounded.contains(value));
     }
 
     // 고객이 자기 경과 기간을 말한 것을 받아 적는 문장이다. "개통한 지 4개월이 되셨으므로", "2개월밖에 지나지 않으셨기 때문에"가 그 경우다

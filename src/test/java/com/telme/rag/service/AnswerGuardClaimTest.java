@@ -115,4 +115,16 @@ class AnswerGuardClaimTest {
         assertThat(apply("19:30까지 접수가 가능합니다.", context, "몇 시까지 접수돼요?"))
                 .isEqualTo("19:30까지 접수가 가능합니다.");
     }
+
+    @Test
+    @DisplayName("고객이 말한 시각을 근거의 시각과 견주는 문장은 통과시키고, 고객 시각을 사실로 단정하면 차단한다")
+    void 고객이_말한_시각은_근거_시각과_견줄_때만_통과시킨다() {
+        String context = "개통 접수는 19:30까지 가능합니다. 19:30 이후에는 접수가 불가합니다.";
+        String query = "저녁 8시에 개통 접수 되나요?";
+
+        assertThatCode(() -> apply("저녁 8시는 접수 마감 시간인 19:30 이후이므로 접수가 불가능합니다.", context, query))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> apply("저녁 8시에도 접수할 수 있습니다.", context, query))
+                .isInstanceOf(AnswerGuardException.class);
+    }
 }
