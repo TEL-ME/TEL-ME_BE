@@ -4461,15 +4461,19 @@
    "split": "holdout",
    "tags": [
     "통신 단어 있는 무관",
-    "TELME-175 신규(사람 검토 전)"
+    "TELME-175 신규(사람 검토 전)",
+    "복수 정답"
    ],
    "expected_request_count": 0,
    "acceptable_intents": [
-    "UNKNOWN"
+    "UNKNOWN",
+    "FAQ"
    ],
    "acceptable_request_counts": [
-    0
-   ]
+    0,
+    1
+   ],
+   "answer_note": "액세서리 추천. FAQ에 다루는 내용이 없어 FAQ로 보내도 근거 없음 안내로 끝난다"
   },
   {
    "eval_id": "RU-248",
@@ -5435,15 +5439,19 @@
    "split": "holdout",
    "tags": [
     "통신 단어 있는 무관",
-    "TELME-175 신규(사람 검토 전)"
+    "TELME-175 신규(사람 검토 전)",
+    "복수 정답"
    ],
    "expected_request_count": 0,
    "acceptable_intents": [
-    "UNKNOWN"
+    "UNKNOWN",
+    "FAQ"
    ],
    "acceptable_request_counts": [
-    0
-   ]
+    0,
+    1
+   ],
+   "answer_note": "액세서리 추천. FAQ에 다루는 내용이 없어 FAQ로 보내도 근거 없음 안내로 끝난다"
   },
   {
    "eval_id": "RU-299",

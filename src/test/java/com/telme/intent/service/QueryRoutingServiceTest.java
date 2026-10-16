@@ -2007,6 +2007,40 @@ class QueryRoutingServiceTest {
                     .doesNotContain("[대상을 확인할 이전 고객 발언]", "[현재 후속 질문]");
         }
 
+        // 문맥 복원 단일 질문은 이전 발언에서 복원한 대상이 질의에 들어가므로 재검색 후보용 프롬프트로 검증하지 않는다(PR #160 리뷰)
+        @Test
+        void groundedSingleQueryUsesOriginalFaithfulnessPrompt() {
+            String question = "그럼 신청 방법은?";
+            String previous = "로밍 요금제는 어떻게 골라요?";
+            String resolved = "[대상을 확인할 이전 고객 발언]\n" + previous + "\n[현재 후속 질문]\n" + question;
+            org.mockito.Mockito.doAnswer(call -> {
+                LlmRequest request = call.getArgument(0);
+                if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"decision\":\"SINGLE\",\"requestCount\":1}";
+                }
+                if (RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())
+                        || RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(request.systemPrompt())) {
+                    return "{\"unsafe\":[false]}";
+                }
+                return """
+                    {"intent":"FAQ","confidence":0.95,"refinedQuery":"로밍 요금제 신청 방법",
+                     "subQueries":[
+                       {"order":1,"intent":"FAQ","queryText":"로밍 요금제 신청 방법","requestQuote":"신청 방법"},
+                       {"order":2,"intent":"FAQ","queryText":"로밍 요금제 선택 방법","requestQuote":"그럼"}]}
+                    """;
+            }).when(llmClient).generate(any());
+
+            var result = service.routeSingleConsult(msg(question), context(question, previous), resolved);
+
+            assertThat(result.subQueries()).singleElement().extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                    .isEqualTo("로밍 요금제 신청 방법");
+            var requests = ArgumentCaptor.forClass(LlmRequest.class);
+            verify(llmClient, times(3)).generate(requests.capture());
+            assertThat(requests.getAllValues()).extracting(LlmRequest::systemPrompt)
+                    .contains(RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
+                    .doesNotContain(RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT);
+        }
+
         @Test
         void restoredCompoundQuestionDoesNotKeepPreviousActionWhenJudgeRejectsIt() {
             String current = "그럼 신청 방법이랑 준비물 알려줘";

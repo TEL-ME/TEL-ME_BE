@@ -45,6 +45,15 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.telme.global.common.exception.GeneralException;
+import com.telme.llm.config.BedrockProperties;
+import com.telme.llm.converter.BedrockRequestConverter;
+import com.telme.llm.service.BedrockClient;
+import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
+import software.amazon.awssdk.http.apache5.Apache5HttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -299,7 +308,8 @@ class RoutingEvaluationProbe {
                 }
                 item.put("path", resolved == null ? "refined" : "restored");
                 if (resolved != null) {
-                    // 이전 발언을 복원한 단일 질문은 재검색 검증과 경로가 달라(groundedSingleFaqQuery) 여기서 재지 않는다
+                    // 이전 발언을 복원한 단일 질문은 재검색 후보 검증과 입력이 달라 여기서 재지 않는다.
+                    // 문맥 복원 경로(groundedSingleFaqQuery)의 검증은 평가셋의 GROUNDED 케이스(path=grounded)로 따로 잰다
                     item.put("skipped", "맥락 복원 단일 질문(재검색 검증과 경로가 다름)");
                 } else if ((boolean) newTopic.invoke(null, question, candidate)) {
                     item.put("skipped", "업무 대상 규칙이 먼저 거절(모델 호출 없음)");
@@ -321,7 +331,10 @@ class RoutingEvaluationProbe {
         var client = new LocalOllamaClient(mapper, null);
         var service = routingService(client);
         Method findUnsafe = accessible(QueryRoutingService.class, "findUnsafeFaqQueries",
-                LlmRoutingPayload.class, String.class, String.class);
+                LlmRoutingPayload.class, String.class, String.class, boolean.class);
+        // 앱은 재검색 후보(path=refined)에만 단일 검색어 프롬프트를 쓴다. 문맥 복원 경로(grounded)를 단일 검색어 프롬프트로
+        // 판정하면 어떻게 되는지 비교할 때만 TELME_ROUTING_GROUNDED_PROMPT=single로 바꾼다
+        boolean groundedAsCandidate = "single".equals(System.getenv("TELME_ROUTING_GROUNDED_PROMPT"));
         List<Map<String, Object>> records = new ArrayList<>();
         for (JsonNode item : cases) {
             if (item.hasNonNull("skipped") || item.path("sub_queries").isEmpty()) {
@@ -350,8 +363,10 @@ class RoutingEvaluationProbe {
             long started = System.nanoTime();
             client.lastResponse = null;
             @SuppressWarnings("unchecked")
+            String path = item.path("path").asText();
             List<Boolean> unsafe = (List<Boolean>) findUnsafe.invoke(service, payload, question,
-                    item.path("previous_subject").asText(""));
+                    item.path("previous_subject").asText(""),
+                    "refined".equals(path) || ("grounded".equals(path) && groundedAsCandidate));
             row.put("unsafe", unsafe);
             row.put("failed", !validFaithfulnessResponse(client.lastResponse, subs.size()));
             List<Boolean> matches = new ArrayList<>();
@@ -642,6 +657,12 @@ class RoutingEvaluationProbe {
     private void writeJson(Object result) throws Exception {
         Files.createDirectories(OUTPUT.getParent());
         mapper.writerWithDefaultPrettyPrinter().writeValue(OUTPUT.toFile(), result);
+        if (APP_BEDROCK_CLIENT) {
+            // 호출 종류별 클라이언트 오류 수(빈 응답 INVALID_RESPONSE, 시간 초과 등)
+            mapper.writerWithDefaultPrettyPrinter().writeValue(
+                    OUTPUT.resolveSibling(OUTPUT.getFileName() + ".client-errors.json").toFile(),
+                    new java.util.TreeMap<>(CLIENT_ERRORS));
+        }
     }
 
     private Map<String, Object> buildResult(List<Map<String, Object>> records) {
@@ -704,6 +725,34 @@ class RoutingEvaluationProbe {
         return intents;
     }
 
+    // TELME_ROUTING_GPTOSS_CLIENT=bedrock이면 gpt-oss 라우터로 갈 호출을 앱의 BedrockClient로 직접 보낸다.
+    // 라우터와 달리 JSON 출력 지시를 덧붙이지 않고 요청의 출력 한도(maxTokens)를 그대로 쓴다(PR #160 리뷰)
+    private static final boolean APP_BEDROCK_CLIENT =
+            "bedrock".equals(System.getenv("TELME_ROUTING_GPTOSS_CLIENT"));
+    private static final java.util.concurrent.ConcurrentMap<String, Integer> CLIENT_ERRORS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static BedrockClient appBedrockClient;
+
+    private static synchronized BedrockClient appBedrockClient() {
+        if (appBedrockClient == null) {
+            // 운영 설정(BedrockConfig·application.yml llm.bedrock)과 같은 값. 지역만 평가 계정에 맞춘다
+            var properties = new BedrockProperties(true,
+                    System.getenv().getOrDefault("LLM_BEDROCK_REGION", "ap-northeast-1"),
+                    "openai.gpt-oss-120b-1:0", Duration.ofSeconds(8), "low", 1000, 50, Duration.ofSeconds(1));
+            var runtime = BedrockRuntimeClient.builder()
+                    .region(Region.of(properties.region()))
+                    .httpClientBuilder(Apache5HttpClient.builder()
+                            .maxConnections(properties.maxConnections())
+                            .connectionAcquisitionTimeout(properties.connectionAcquireTimeout()))
+                    .overrideConfiguration(config -> config
+                            .apiCallTimeout(properties.timeout())
+                            .retryStrategy(AwsRetryStrategy.doNotRetry()))
+                    .build();
+            appBedrockClient = new BedrockClient(runtime, new BedrockRequestConverter(properties));
+        }
+        return appBedrockClient;
+    }
+
     private static final class LocalOllamaClient implements LlmClient {
         private final ObjectMapper mapper;
         private final Map<String, String> replay;
@@ -726,6 +775,21 @@ class RoutingEvaluationProbe {
                     throw new IllegalStateException("Missing replay response: " + request.userPrompt());
                 }
                 if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt())) {
+                    intentResponse = lastResponse;
+                }
+                return lastResponse;
+            }
+            String target = urlFor(request.systemPrompt());
+            if (APP_BEDROCK_CLIENT && !target.equals(BASE_URL)) {
+                boolean intentCall = RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(request.systemPrompt());
+                try {
+                    lastResponse = appBedrockClient().generate(request);
+                } catch (GeneralException failed) {
+                    // 앱과 같은 예외를 그대로 던져 호출하는 쪽의 실패 처리를 거치게 한다
+                    CLIENT_ERRORS.merge(callName(request.systemPrompt()) + ":" + failed.getErrorCode(), 1, Integer::sum);
+                    throw failed;
+                }
+                if (intentCall) {
                     intentResponse = lastResponse;
                 }
                 return lastResponse;
@@ -778,6 +842,20 @@ class RoutingEvaluationProbe {
                     }
                 }
             }
+        }
+
+        private static String callName(String systemPrompt) {
+            if (RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return "intent";
+            }
+            if (RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT.equals(systemPrompt)) {
+                return "inventory";
+            }
+            if (RoutingPromptTemplates.FOLLOW_UP_SYSTEM_PROMPT.equals(systemPrompt)) {
+                return "followup";
+            }
+            return RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT.equals(systemPrompt)
+                    ? "faithfulness-single" : "faithfulness";
         }
 
         private static String urlFor(String systemPrompt) {

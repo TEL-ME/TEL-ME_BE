@@ -1,8 +1,10 @@
 """TELME-175 1단계 채점: 의도 분류 결과를 복수 정답(acceptable_intents)과 UNKNOWN 재확인 보정으로 채점한다.
 
 앱(#145)은 모델이 UNKNOWN이라 한 질문을 일반 FAQ 검색으로 다시 보고, 걸리면 FAQ로 바꾼다. 프로브는 이 보정을 하지 않으므로
-여기서 검색 테스트 API로 재현한다. 검색 앱은 확정한 임계값으로 띄운다:
-  FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_GRAY_ZONE_ENABLED=false LLM_PROVIDER=fake SERVER_PORT=8083
+여기서 검색 테스트 API로 재현한다. 검색 앱은 확정한 임계값으로, 현재 FAQ 데이터가 들어 있는 DB에 붙여 띄운다
+(FAQ가 예전 것인 DB에 붙이면 재확인 결과가 달라진다):
+  FAQ_SEARCH_TEST_API_ENABLED=true SEARCH_GRAY_ZONE_ENABLED=false LLM_BEDROCK_ENABLED=false LLM_PROVIDER=fake SERVER_PORT=8083
+  POSTGRES_PORT=<포트> POSTGRES_DB=<현재 FAQ DB>
   SEARCH_SIMILARITY_THRESHOLD=0.69 SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD=0.80 java -jar build/libs/telme-0.0.1-SNAPSHOT.jar
 
 사용: python scripts/routing-call-comparison/score_intent_step.py [--search-url URL] [이름...]

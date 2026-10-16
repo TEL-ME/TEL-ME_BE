@@ -276,7 +276,8 @@ public final class RoutingPromptTemplates {
 
         [상태 판정 기준]
         - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
-        - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요"처럼 답을 보류하거나 호응만 함
+        - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요", "아직 못 정했어요"처럼 답을 보류하거나 호응만 함.
+          왜 묻는지 되묻는 것도 보류다
         - NEW_QUESTION: 되묻기 조건과 관계없는 별개의 질문을 새로 함
         - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
           ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
@@ -287,6 +288,9 @@ public final class RoutingPromptTemplates {
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
         - 입력에 되물은 질문이 있으면 고객 답변이 그 질문에 답하는지로 판단한다. 고객이 다른 사정을 덧붙여도
           질문에 대한 답이 들어 있으면 CONDITION_RESPONSE이고 그 조건은 FILLED다.
+        - 되물은 질문에 예·아니요로 딱 맞게 답하지 않고 그 질문에 관한 자기 계획이나 상황(누가 가는지, 무엇이 있는지)을
+          말한 것도 답이다. FILLED로 두고 value에는 고객 답변을 담는다(location과 serviceType은 위 정의대로). 답이 질문의 일부만 말해도 같다.
+        - 자기 계획이나 상황을 말한 답은 DEFERRED가 아니다.
 
         [예시]
         되묻는 중인 조건: location
@@ -312,6 +316,12 @@ public final class RoutingPromptTemplates {
         되묻는 중인 조건: unpaid_bill
         고객 답변: "없어요"
         응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"unpaid_bill","status":"FILLED","value":"없어요"}]}
+
+        되묻는 중인 조건: family_visit
+        되물은 질문:
+        - family_visit: "가족분들이 모두 함께 방문하실 수 있나요?" (선택지: 예, 아니요)
+        고객 답변: "저 혼자 갈 거예요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"family_visit","status":"FILLED","value":"저 혼자 갈 거예요"}]}
 
         [응답 형식 - 반드시 아래 JSON만 출력]
         {

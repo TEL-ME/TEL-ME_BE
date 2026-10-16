@@ -470,7 +470,7 @@ public class QueryRoutingService {
         if (!removeUngroundedQueryWords(single, sub, current, previousSubject).equals(candidate)) {
             return current;
         }
-        return findUnsafeFaqQueries(single, current, previousSubject).getFirst() ? current : candidate;
+        return findUnsafeFaqQueries(single, current, previousSubject, false).getFirst() ? current : candidate;
     }
 
     /**
@@ -493,7 +493,7 @@ public class QueryRoutingService {
         var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate.strip(),
                 Collections.emptyMap(), List.of(sub));
         // 동의어는 원문의 단어 포함 여부로 검사하지 않는다. 업무와 조건의 의미를 검증한다.
-        if (!findUnsafeFaqQueries(single, question, "").getFirst()) {
+        if (!findUnsafeFaqQueries(single, question, "", true).getFirst()) {
             return candidate.strip();
         }
         if (!ACTION_REQUEST.matcher(question).find()) {
@@ -509,7 +509,7 @@ public class QueryRoutingService {
                 (short) 1, ConsultRequest.Intent.FAQ, grounded, Collections.emptyMap(), question);
         var groundedSingle = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, grounded,
                 Collections.emptyMap(), List.of(groundedSub));
-        return findUnsafeFaqQueries(groundedSingle, question, "").getFirst() ? question : grounded;
+        return findUnsafeFaqQueries(groundedSingle, question, "", true).getFirst() ? question : grounded;
     }
 
     // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.
@@ -544,7 +544,7 @@ public class QueryRoutingService {
         payload = new LlmRoutingPayload(payload.intent(), payload.confidence(), payload.refinedQuery(),
                 payload.extractedConditions(), groundedQuotes);
 
-        List<Boolean> unsafe = findUnsafeFaqQueries(payload, current, previousSubject);
+        List<Boolean> unsafe = findUnsafeFaqQueries(payload, current, previousSubject, false);
         List<LlmRoutingPayload.SubQueryPayload> safe = new ArrayList<>();
         for (int index = 0; index < payload.subQueries().size(); index++) {
             var sub = payload.subQueries().get(index);
@@ -643,8 +643,10 @@ public class QueryRoutingService {
         return unclaimed.toString().contains(word);
     }
 
+    // searchCandidate는 원문 검색 0건 뒤 재검색 후보 검증이다. 이때만 조건을 하나씩 대조하는 단일 검색어 프롬프트를 쓴다.
+    // 복합 하위 질문과 문맥 복원 단일 질문(groundedSingleFaqQuery)은 기존 프롬프트를 그대로 쓴다(PR #160 리뷰)
     private List<Boolean> findUnsafeFaqQueries(
-            LlmRoutingPayload payload, String current, String previousSubject) {
+            LlmRoutingPayload payload, String current, String previousSubject, boolean searchCandidate) {
         String prompt;
         try {
             // Map.of는 JVM마다 키 순서가 달라 같은 입력에도 판정이 바뀐다. 키 순서를 고정한다
@@ -658,8 +660,8 @@ public class QueryRoutingService {
                 return item;
             }).toList());
             prompt = objectMapper.writeValueAsString(input);
-            // 단일 검색어는 조건을 하나씩 대조하는 프롬프트로 검증한다. 복합 하위 질문에 쓰면 멀쩡한 검색어까지 막는다
-            boolean single = payload.subQueries().size() == 1;
+            // 복합 하위 질문에 쓰면 멀쩡한 검색어까지 막는다. 재검색 후보는 항상 한 건이다
+            boolean single = searchCandidate && payload.subQueries().size() == 1;
             LlmRequest request = LlmRequest.builder().taskType(TaskType.ROUTING)
                     .systemPrompt(single ? RoutingPromptTemplates.FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT
                             : RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT)
@@ -1144,7 +1146,7 @@ public class QueryRoutingService {
             .temperature(0.0)
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v3")
+            .promptVersion("routing-follow-up-v4")
             .build();
 
         String json = llmClient.generate(request);

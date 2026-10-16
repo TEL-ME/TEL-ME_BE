@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TELME-175 3단계: 검색어 검증 호출(FAQ_QUERY_FAITHFULNESS_PROMPT)만 EXAONE / gpt-oss로 바꿔 비교한다.
 # 입력은 scripts/data/eval_routing_faithfulness.json이다(1단계 gpt-oss 1회차 의도 분류 출력에서 앱 코드로 만든
-# 실제 입력 + 뜻을 일부러 바꾼 검색어, 정답 포함). 앱이 모델을 부르지 않는 경우(skipped)는 건너뛴다.
+# 실제 입력 + 뜻을 일부러 바꾼 검색어 + 문맥 복원 검증 문장(path=grounded), 정답 포함). 앱이 모델을 부르지 않는 경우(skipped)는 건너뛴다.
 # 평가셋을 다시 만들려면:
 #   TELME_ROUTING_EVAL=true TELME_ROUTING_STEP=faithfulness-cases \
 #     TELME_ROUTING_INPUT=<1단계 results.json.gz의 gptoss-1 records를 풀어 쓴 파일> \

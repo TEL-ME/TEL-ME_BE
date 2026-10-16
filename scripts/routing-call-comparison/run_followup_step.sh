@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TELME-175 4단계: 후속 분석 호출(FOLLOW_UP_SYSTEM_PROMPT)만 EXAONE / gpt-oss로 바꿔 비교한다.
-# 되물은 조건에 고객이 답했을 때 도는 호출이다. 입력은 되묻는 중인 조건 이름과 고객 답변뿐이다.
+# 되물은 조건에 고객이 답했을 때 도는 호출이다. 입력은 되묻는 중인 조건 이름, 앱이 되물은 질문과 선택지, 고객 답변이다.
 # 평가셋: scripts/data/eval_routing_followup.json (build_followup_set.py로 만든다)
 #
 # 준비: run_intent_step.sh와 같다(Ollama EXAONE, Bedrock 라우터)

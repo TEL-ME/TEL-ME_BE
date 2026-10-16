@@ -6,7 +6,7 @@
 #   - bootJar로 만든 이 브랜치 jar (기본 build/libs/telme-0.0.1-SNAPSHOT.jar)
 #   - Bedrock 라우터(기본 http://127.0.0.1:11435), 회색 구간 판정용 AWS 자격 증명(AWS_PROFILE)
 #   - PostgreSQL(기본 5440)의 telme DB를 템플릿으로 복사한다. 컨테이너 이름은 PG_CONTAINER
-#   - 대화 흐름 실행기 scripts/bedrock-switch-evaluation/run_flow_scenarios.py (TELME-174)
+#   - 대화 흐름 실행기 scripts/bedrock-switch-evaluation/run_flow_scenarios.py (TELME-174, #159). 이 브랜치에 없으면 RUNNER로 경로를 준다
 # 결과: scripts/routing-call-comparison/results/step5-chat-flows/flows-gptoss-{1,2,3}.json
 #       판정(맞음·틀림과 이유)은 사람이 붙여 results.json.gz에 담는다
 set -uo pipefail
@@ -16,7 +16,7 @@ JAR=${JAR:-build/libs/telme-0.0.1-SNAPSHOT.jar}
 ROUTER_URL=${ROUTER_URL:-http://127.0.0.1:11435}
 PG_CONTAINER=${PG_CONTAINER:-telme-flow-postgres}
 PG_PORT=${PG_PORT:-5440}
-RUNNER=scripts/bedrock-switch-evaluation/run_flow_scenarios.py
+RUNNER=${RUNNER:-scripts/bedrock-switch-evaluation/run_flow_scenarios.py}
 OUT=scripts/routing-call-comparison/results/step5-chat-flows
 PORTS=(18175 18176 18177)
 mkdir -p "$OUT"
@@ -44,12 +44,27 @@ if grep -aql "APPLICATION FAILED" "$OUT"/app-*.log 2>/dev/null; then
 fi
 
 PIDS=()
+# 이전 실행 결과를 이번 결과로 착각하지 않도록 먼저 지운다
+rm -f "$OUT"/flows-gptoss-*.json
 for n in 1 2 3; do
   python -X utf8 "$RUNNER" --base-url http://localhost:${PORTS[$((n-1))]} --database telme_flow175_$n \
     --output "$OUT/flows-gptoss-$n.json" > "$OUT/flows-$n.txt" 2>&1 &
   PIDS+=($!)
 done
-for p in "${PIDS[@]}"; do wait "$p"; done
+FAILED=0
+for i in "${!PIDS[@]}"; do
+  if ! wait "${PIDS[$i]}"; then
+    echo "실행기 $((i+1)) 실패: $OUT/flows-$((i+1)).txt"; FAILED=1
+  fi
+  if [ ! -s "$OUT/flows-gptoss-$((i+1)).json" ]; then
+    echo "결과 없음: $OUT/flows-gptoss-$((i+1)).json"; FAILED=1
+  fi
+done
 for p in "${PORTS[@]}"; do stop_port "$p"; done
+# 실패하면 앱·실행기 로그를 남기고 비정상 종료한다
+if [ "$FAILED" -ne 0 ]; then
+  echo "실패. 로그를 남겼습니다: $OUT/app-*.log, $OUT/flows-*.txt"
+  exit 1
+fi
 rm -f "$OUT"/app-*.log "$OUT"/flows-*.txt
 echo "완료"

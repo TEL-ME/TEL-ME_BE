@@ -2,6 +2,7 @@
 
 입력은 프로브의 faithfulness-cases 모드가 1단계 gpt-oss 1회차 의도 분류 출력에서 만든 검색어 검증 입력이다
 (복합 FAQ 하위 질문 묶음, 원문 검색 0건일 때의 재검색 후보). 여기에 정답(gold_unsafe)을 붙이고,
+문맥 복원 경로(path=grounded) 검증 문장을 새로 쓰고,
 gpt-oss가 만든 검색어에는 뜻이 바뀐 경우가 적어 뜻을 일부러 바꾼 검색어를 더한다.
 정답은 모델 결과를 보기 전에 정했다. 기준은 FAQ_QUERY_FAITHFULNESS_PROMPT와 같다:
 원문에 없는 조건·대상·순서를 넣거나, 조건·부정·비교 대상을 빠뜨리거나, 상황을 특정 해결책으로 좁히면 unsafe.
@@ -148,6 +149,32 @@ for case in cases:
 missing = (set(UNSAFE) | set(EITHER)) - used
 assert not missing, missing
 
+# 문맥 복원 경로(groundedSingleFaqQuery). 의도 분류가 이전 발언을 복원해 하위 질문을 나눴는데 요청 개수 판정이 한 요청으로
+# 본 경우, 복원한 한 문장을 검증한다. 앱은 이 문장의 단어가 모두 현재 발화나 이전 발언에 있을 때만 모델을 부르므로
+# 그런 문장만 썼다. (이전 발언, 현재 발화, 검색어, unsafe, 이유). PR #160 리뷰로 추가
+GROUNDED = [
+    ("로밍 요금제는 어떻게 골라요?", "그럼 신청 방법은?", "로밍 요금제 신청 방법", False, "리뷰 예시"),
+    ("유심 재발급 비용 얼마예요?", "그럼 재발급 기간은요?", "유심 재발급 기간", False, ""),
+    ("번호이동 하려면 서류 뭐 필요해요?", "수수료도 있어요?", "번호이동 수수료", False, ""),
+    ("데이터 쉐어링 신청하고 싶어요", "요금은 얼마예요?", "데이터 쉐어링 요금", False, ""),
+    ("해외 로밍 패스 가입 방법 알려줘", "해지는 어떻게 해요?", "해외 로밍 패스 해지 방법", False, ""),
+    ("명의변경 하려면 뭐가 필요해요?", "대리인이 가도 돼요?", "명의변경 대리인이 가도 돼요", False, ""),
+    ("소액결제 차단하고 싶어요", "다시 풀려면요?", "소액결제 차단 다시 풀려면", False, ""),
+    ("인터넷 이전 설치 비용 알려주세요", "기간은 얼마나 걸려요?", "인터넷 이전 설치 기간 얼마나 걸려요", False, ""),
+    ("일시정지 신청하려고요", "최대 기간이 얼마예요?", "일시정지 최대 기간", False, ""),
+    ("가족결합 할인 받으려면 어떻게 해요?", "몇 명까지 돼요?", "가족결합 몇 명까지", False, ""),
+    ("유심 분실했는데 정지는 어떻게 해요?", "재발급은요?", "유심 분실 정지 재발급", True, "이전 발언의 별도 요청 '정지'를 넣음"),
+    ("로밍 요금제는 어떻게 골라요?", "가입은 안 하고 요금만 알고 싶어요", "로밍 요금제 가입", True, "부정 '가입은 안 하고'를 뒤집음"),
+    ("해지하면 위약금 있어요?", "일시정지는 위약금 없어요?", "해지 위약금", True, "현재 업무 '일시정지'를 이전 업무 '해지'로 바꿈"),
+    ("유심 재발급 비용 얼마예요?", "택배로도 받을 수 있나요?", "유심 재발급 비용", True, "현재 요청 '택배 수령'을 빠뜨림"),
+    ("번호이동 서류 알려주세요", "외국인은요?", "번호이동 서류", True, "조건 '외국인'을 빠뜨림"),
+    ("5G 요금제 중에 제일 싼 거 뭐예요?", "데이터 다 쓰면 속도는요?", "5G 요금제 속도", True, "조건 '데이터 다 쓰면'을 빠뜨림"),
+    ("인터넷 해지하려고요", "TV만 해지하면요?", "인터넷 해지", True, "현재 대상 'TV'를 이전 대상 '인터넷'으로 바꿈"),
+    ("가족결합 할인 받으려면 어떻게 해요?", "해지하면 할인 어떻게 돼요?", "가족결합 할인 받으려면", True, "조건 '해지하면'을 빠뜨림"),
+    ("기기변경 하면 요금제 유지돼요?", "번호이동하면요?", "기기변경 요금제 유지", True, "현재 업무 '번호이동'을 이전 업무로 바꿈"),
+    ("유심 재발급 비용 얼마예요?", "eSIM은요?", "유심 재발급 비용", True, "현재 대상 'eSIM'을 빠뜨림"),
+]
+
 for number, (question, query, note) in enumerate(SYNTHETIC_REFINED, 1):
     cases.append({"case_id": f"SYN-R{number:02d}", "eval_id": None, "expected_intent": "FAQ", "question": question,
                   "previous_subject": "", "path": "refined", "source": "synthetic",
@@ -167,6 +194,11 @@ for number, (question, parts) in enumerate(CHECK_COMPOUND, 1):
                   "previous_subject": "", "path": "compound", "source": "prompt-check",
                   "sub_queries": [{"quote": quote, "query": query, "gold_unsafe": unsafe, **({"note": note} if note else {})}
                                   for quote, query, unsafe, note in parts]})
+
+for number, (previous, question, query, unsafe, note) in enumerate(GROUNDED, 1):
+    cases.append({"case_id": f"GRD-{number:02d}", "eval_id": None, "expected_intent": "FAQ", "question": question,
+                  "previous_subject": previous, "path": "grounded", "source": "synthetic",
+                  "sub_queries": [{"quote": question, "query": query, "gold_unsafe": unsafe, **({"note": note} if note else {})}]})
 
 scored = [q for c in cases if not c.get("skipped") for q in c["sub_queries"]]
 result = {

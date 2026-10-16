@@ -123,6 +123,13 @@ CASES += [
      "대리인 수령 질문에 분실 사정을 덧붙여 직접 간다고 답함"),
 ]
 
+# PR #160 리뷰로 확인한 대화 흐름 CO-02의 실제 입력. 복합 질문 되묻기라 질문 문장이 위 both_present와 다르다(ASKED_BY_CASE).
+# 프롬프트 v3는 같은 입력을 90번 넣어 7번만 조건 답변으로 봤다(DEFERRED 66, NEW_QUESTION 16)
+CASES += [
+    ("flow-db", ["both_present"], "직접 매장에 가요", [CR], {"both_present": filled()},
+     "두 분이 함께 오는지 묻는 질문에 직접 간다고만 답함"),
+]
+
 # 조건마다 앱이 되물은 질문과 선택지(chat_messages.content의 마지막 줄, follow_ups). 실제 입력은 대화 흐름 DB에 남은 문장이다
 YES_NO = ["예", "아니요"]
 ASKED = {
@@ -147,10 +154,16 @@ ASKED = {
     "installment_settled": ("남은 할부금을 모두 납부하셨나요?", YES_NO),
 }
 
+# 조건 이름은 같아도 앱이 실제로 보낸 질문 문장이 다른 케이스
+ASKED_BY_CASE = {
+    "FU-70": {"both_present": ("양도인과 양수인이 함께 매장에 오실 수 있나요?", YES_NO)},
+}
+
 items = []
 for number, (source, keys, reply, types, conditions, note) in enumerate(CASES, 1):
     item = {"case_id": f"FU-{number:02d}", "expected_intent": "FAQ", "source": source, "pending_keys": keys,
-            "asked_questions": {key: {"question": ASKED[key][0], "options": ASKED[key][1]} for key in keys},
+            "asked_questions": {key: {"question": asked[0], "options": asked[1]} for key in keys
+                                for asked in [ASKED_BY_CASE.get(f"FU-{number:02d}", {}).get(key, ASKED[key])]},
             "reply": reply, "response_types": types, "conditions": conditions}
     if note:
         item["note"] = note

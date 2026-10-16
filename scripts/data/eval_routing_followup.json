@@ -1,10 +1,10 @@
 {
  "description": "TELME-175 4단계 후속 분석 평가셋. 실제 입력은 TELME-174 대화 흐름 DB의 조건 이름과 답변, 나머지는 새로 썼다. 정답은 사람 검토 전이다.",
  "counts": {
-  "cases": 69,
-  "flow_db": 15,
+  "cases": 70,
+  "flow_db": 16,
   "by_response_type": {
-   "CONDITION_RESPONSE": 59,
+   "CONDITION_RESPONSE": 60,
    "DEFERRED": 6,
    "NEW_QUESTION": 4
   }
@@ -1849,6 +1849,33 @@
     }
    },
    "note": "대리인 수령 질문에 분실 사정을 덧붙여 직접 간다고 답함"
+  },
+  {
+   "case_id": "FU-70",
+   "expected_intent": "FAQ",
+   "source": "flow-db",
+   "pending_keys": [
+    "both_present"
+   ],
+   "asked_questions": {
+    "both_present": {
+     "question": "양도인과 양수인이 함께 매장에 오실 수 있나요?",
+     "options": [
+      "예",
+      "아니요"
+     ]
+    }
+   },
+   "reply": "직접 매장에 가요",
+   "response_types": [
+    "CONDITION_RESPONSE"
+   ],
+   "conditions": {
+    "both_present": {
+     "status": "FILLED"
+    }
+   },
+   "note": "두 분이 함께 오는지 묻는 질문에 직접 간다고만 답함"
   }
  ]
 }
