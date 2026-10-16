@@ -491,7 +491,7 @@ class FaqSearchAnswerProviderTest {
         FaqSearchService searches = mock(FaqSearchService.class);
         when(searches.search(any())).thenReturn(List.of());
         var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
-        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법"))
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 1L))
                 .thenReturn("유심 분실 시 재발급 방법");
         var provider = refinedProvider(searches, (input, results) ->
                 GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
@@ -501,7 +501,7 @@ class FaqSearchAnswerProviderTest {
 
         provider.generate(input);
 
-        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 1L);
         var requests = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(searches, times(2)).search(requests.capture());
         assertThat(requests.getAllValues()).extracting(FaqSearchRequest::query)
@@ -517,7 +517,7 @@ class FaqSearchAnswerProviderTest {
                 GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
                         ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
         List<String> selected = new ArrayList<>();
-        var provider = refinedProvider(searches, answers, (original, candidate) -> {
+        var provider = refinedProvider(searches, answers, (original, candidate, executionId) -> {
             selected.add(candidate);
             return "번호이동 방법";
         });
@@ -539,7 +539,7 @@ class FaqSearchAnswerProviderTest {
         FaqSearchAnswerProvider.SearchResultAnswerGenerator answers = (input, results) ->
                 GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
                         ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
-        var provider = refinedProvider(searches, answers, (original, candidate) -> original);
+        var provider = refinedProvider(searches, answers, (original, candidate, executionId) -> original);
 
         provider.generate(new AnswerInput(
                 1L, 2L, 3L, Purpose.GENERAL_FAQ, "유심을 잃어버렸어요", "유심 분실 시 재발급 방법", Map.of()));
@@ -558,7 +558,7 @@ class FaqSearchAnswerProviderTest {
         FaqSearchAnswerProvider.SearchResultAnswerGenerator answers = (input, results) ->
                 GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변",
                         ChatMessage.AnswerBasis.GROUNDED, List.of(), null));
-        var provider = refinedProvider(searches, answers, (original, candidate) -> {
+        var provider = refinedProvider(searches, answers, (original, candidate, executionId) -> {
             throw new AssertionError("원문 검색이 성공하면 검색 문장을 검증하지 않는다.");
         });
 

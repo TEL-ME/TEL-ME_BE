@@ -66,7 +66,7 @@ class ConsultTurnAnalysisAdapterTest {
         var searches = mock(com.telme.faq.service.FaqSearchService.class);
         when(searches.search(any())).thenReturn(List.of());
         var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
-        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법"))
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L))
                 .thenReturn("유심을 잃어버렸어요");
         var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
                 ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
@@ -79,7 +79,7 @@ class ConsultTurnAnalysisAdapterTest {
         var request = org.mockito.ArgumentCaptor.forClass(com.telme.faq.dto.req.FaqSearchRequest.class);
         verify(searches).search(request.capture());
         assertThat(request.getValue().query()).isEqualTo("유심을 잃어버렸어요");
-        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L);
         verifyNoInteractions(model);
     }
 

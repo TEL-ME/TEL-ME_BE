@@ -246,7 +246,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         }
         // develop의 의미 검증을 유지하되, 호칭만 다른 문장은 같은 상담 본문으로 비교한다.
         String selected = ConsultationQuestion.extract(Objects.requireNonNull(
-                refinedQueries.select(original, refined), "refinedQuery"));
+                refinedQueries.select(original, refined, input.executionId()), "refinedQuery"));
         trace.append(input.executionId(), "refinedQueryChecks", Map.of(
                 "candidate", refined, "selected", selected,
                 "searched", !selected.equals(original),
@@ -331,11 +331,11 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     /** 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문을 돌려주면 재검색하지 않는다. */
     public interface RefinedQuerySelector {
-        String select(String originalUserQuery, String searchQuery);
+        String select(String originalUserQuery, String searchQuery, Long executionId);
 
         /** 검색 문장을 검증 없이 쓴다. 이미 검증된 문장만 넘기는 경로와 테스트에서 쓴다. */
         static RefinedQuerySelector unchecked() {
-            return (originalUserQuery, searchQuery) -> searchQuery;
+            return (originalUserQuery, searchQuery, executionId) -> searchQuery;
         }
     }
 

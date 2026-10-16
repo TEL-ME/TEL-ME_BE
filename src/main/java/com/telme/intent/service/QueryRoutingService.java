@@ -490,8 +490,9 @@ public class QueryRoutingService {
      * 단일 FAQ의 원문 검색이 0건일 때 재검색에 쓸 문장을 고른다. 원문 검색이 성공하면 부르지 않아 검증 비용이 없다.
      * 의미가 같으면 후보를, 업무 수행 의사를 밝힌 질문은 원문 근거가 있는 단어만 남긴 문장을 돌려준다.
      * 쓸 문장이 없으면 원문을 그대로 돌려주며, 호출자는 이때 재검색하지 않는다.
+     * executionId는 검증 모델 호출을 채팅 실행에 기록하기 위한 값이다.
      */
-    public String refinedSearchQuery(String question, String candidate) {
+    public String refinedSearchQuery(String question, String candidate, Long executionId) {
         if (question == null || question.isBlank() || candidate == null || candidate.isBlank()
                 || RoutingQuestionNormalizer.quoteKey(candidate).equals(RoutingQuestionNormalizer.quoteKey(question))) {
             return question;
@@ -506,7 +507,7 @@ public class QueryRoutingService {
         var single = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, candidate.strip(),
                 Collections.emptyMap(), List.of(sub));
         // 동의어는 원문의 단어 포함 여부로 검사하지 않는다. 업무와 조건의 의미를 검증한다.
-        if (!findUnsafeFaqQueries(single, question, "", null).getFirst()) {
+        if (!findUnsafeFaqQueries(single, question, "", executionId).getFirst()) {
             return candidate.strip();
         }
         if (!ACTION_REQUEST.matcher(question).find()) {
@@ -522,7 +523,7 @@ public class QueryRoutingService {
                 (short) 1, ConsultRequest.Intent.FAQ, grounded, Collections.emptyMap(), question);
         var groundedSingle = new LlmRoutingPayload(QueryRouting.Intent.FAQ, BigDecimal.ONE, grounded,
                 Collections.emptyMap(), List.of(groundedSub));
-        return findUnsafeFaqQueries(groundedSingle, question, "", null).getFirst() ? question : grounded;
+        return findUnsafeFaqQueries(groundedSingle, question, "", executionId).getFirst() ? question : grounded;
     }
 
     // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.

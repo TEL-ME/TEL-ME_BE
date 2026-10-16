@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.telme.chat.repository.ChatMessageRepository;
@@ -91,6 +92,25 @@ class RoutingGenerationRecordIntegrationTest {
                 "routing-request-v4-single-search",
                 "routing-request-inventory-v3",
                 "routing-faq-faithfulness-v2-single-search");
+    }
+
+    // 원문 검색이 0건이면 FaqSearchAnswerProvider가 재검색 문장 검증을 부른다. 이 호출도 같은 실행에 남아야 한다
+    @Test
+    void recordsRefinedSearchVerificationCallsAsRouting() {
+        doReturn("{\"unsafe\":[true]}").when(model).generate(any());
+        ChatProcessingCommand command = createCommand("미납 요금이 있는데 번호이동하고 싶어요");
+
+        routing.refinedSearchQuery(command.content(), "번호이동 신청 방법", command.executionId());
+
+        // 후보가 탈락하면 원문 근거 단어만 남긴 문장을 한 번 더 검증하므로 두 건이 남는다
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT task_type, prompt_version, status FROM llm_generations
+                WHERE execution_id=? ORDER BY generation_id
+                """, command.executionId());
+        assertThat(rows).extracting(row -> row.get("task_type")).containsExactly("ROUTING", "ROUTING");
+        assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
+        assertThat(rows).extracting(row -> row.get("prompt_version"))
+                .containsOnly("routing-faq-faithfulness-v2-single-search");
     }
 
     private ChatProcessingCommand createCommand(String content) {
