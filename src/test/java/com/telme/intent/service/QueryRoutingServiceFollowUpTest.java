@@ -21,6 +21,7 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.exception.IntentErrorCode;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import java.util.List;
 import java.util.Map;
@@ -108,6 +109,22 @@ class QueryRoutingServiceFollowUpTest {
         // 조건은 Map<String, String>으로만 전달한다(상태 변환은 상담 도메인 담당)
         assertThat(response.conditions()).containsExactly(entry("location", "강남역"));
         assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("채팅 실행에서 부른 후속 분석은 실행 ID와 상담 요청 ID를 LLM 요청에 담는다")
+    void analyzeFollowUp_carriesExecutionIdForGenerationRecord() {
+        givenWaitingConsultExists();
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+
+        service.analyzeFollowUp(SESSION_ID, "강남역이요", 77L);
+
+        ArgumentCaptor<LlmRequest> request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(request.capture());
+        assertThat(request.getValue().executionId()).isEqualTo(77L);
+        assertThat(request.getValue().consultRequestId()).isEqualTo(WAITING_CONSULT_REQUEST_ID);
+        assertThat(request.getValue().taskType()).isEqualTo(TaskType.ROUTING);
     }
 
     @Test

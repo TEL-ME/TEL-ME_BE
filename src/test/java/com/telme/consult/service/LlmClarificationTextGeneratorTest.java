@@ -112,6 +112,19 @@ class LlmClarificationTextGeneratorTest {
                 .hasMessage("잘못된 클라이언트 설정");
     }
 
+    // 되묻기 문장 생성 호출도 채팅 실행에 기록돼야 하므로 요청에 실행 ID가 실려야 한다
+    @Test
+    void generationRequestCarriesExecutionId() {
+        when(client.generate(any())).thenReturn("어느 지역의 매장을 찾으시나요?");
+
+        service.decide(input(Map.of(), Map.of()), 42L);
+
+        var captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(client).generate(captor.capture());
+        assertThat(captor.getValue().executionId()).isEqualTo(42L);
+        assertThat(captor.getValue().taskType()).isEqualTo(TaskType.CLARIFICATION);
+    }
+
     private DialogueInput input(Map<String, Condition> previous, Map<String, Condition> updates) {
         // 지역 질문 생성만 보는 테스트라 업무는 묻지 않도록 거절로 둔다
         var conditions = new java.util.HashMap<>(previous);

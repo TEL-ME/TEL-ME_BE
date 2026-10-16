@@ -22,6 +22,7 @@ import com.telme.intent.entity.QueryRouting;
 import com.telme.intent.repository.QueryRoutingRepository;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +123,29 @@ class QueryRoutingServiceTest {
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient).generate(request.capture());
         assertThat(request.getValue().userPrompt()).isEqualTo("요금제는언제변경할수있나요?");
+    }
+
+    @Test
+    void attachesExecutionIdToEveryChatRoutingRequest() {
+        routingJson("""
+                {"intent":"FAQ","confidence":0.98,"refinedQuery":"유심 비용과 로밍 신청",
+                 "subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"유심재발급비용","requestQuote":"유심재발급비용"},
+                  {"order":2,"intent":"FAQ","queryText":"로밍신청방법","requestQuote":"로밍신청방법"}]}
+                """);
+
+        service.routeSingleConsult(msg("유심 재발급 비용과 로밍 신청 방법 알려줘"), null, 31L);
+
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(3)).generate(requests.capture());
+        assertThat(requests.getAllValues()).extracting(LlmRequest::systemPrompt).containsExactly(
+                RoutingPromptTemplates.ROUTING_SYSTEM_PROMPT,
+                RoutingPromptTemplates.REQUEST_INVENTORY_PROMPT,
+                RoutingPromptTemplates.FAQ_QUERY_FAITHFULNESS_PROMPT);
+        assertThat(requests.getAllValues()).allSatisfy(request -> {
+            assertThat(request.executionId()).isEqualTo(31L);
+            assertThat(request.taskType()).isEqualTo(TaskType.ROUTING);
+        });
     }
 
     @ParameterizedTest
@@ -509,7 +533,7 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().queryText()).isEqualTo(entry.getValue());
 
             given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}");
-            assertThat(service.refinedSearchQuery(entry.getKey(), entry.getValue())).isEqualTo(entry.getKey());
+            assertThat(service.refinedSearchQuery(entry.getKey(), entry.getValue(), null)).isEqualTo(entry.getKey());
         }
     }
 
@@ -556,7 +580,7 @@ class QueryRoutingServiceTest {
     void refinedSearchQueryKeepsSemanticallyVerifiedRewrite(String question, String refined) {
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[false]}");
 
-        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(refined);
+        assertThat(service.refinedSearchQuery(question, refined, null)).isEqualTo(refined);
 
         var call = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient).generate(call.capture());
@@ -570,7 +594,7 @@ class QueryRoutingServiceTest {
     void faithfulnessPromptKeepsFixedKeyOrder() {
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[false]}");
 
-        service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내");
+        service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내", null);
 
         var call = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient).generate(call.capture());
@@ -588,7 +612,7 @@ class QueryRoutingServiceTest {
     void refinedSearchQueryReturnsOriginalWhenRewriteChangesMeaning(String question, String refined) {
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}");
 
-        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+        assertThat(service.refinedSearchQuery(question, refined, null)).isEqualTo(question);
     }
 
     // 원문에 없는 업무 대상을 만든 문장은 모델 의미 검증 없이 거절한다. 모델 검증이 이런 문장을 통과시킨 사례가 있다.
@@ -598,7 +622,7 @@ class QueryRoutingServiceTest {
             "유심이 망가졌어요 | 유심 분실 신고 방법"
     })
     void refinedSearchQueryRejectsInventedTopicWithoutModelCall(String question, String refined) {
-        assertThat(service.refinedSearchQuery(question, refined)).isEqualTo(question);
+        assertThat(service.refinedSearchQuery(question, refined, null)).isEqualTo(question);
         verify(llmClient, never()).generate(any());
     }
 
@@ -606,7 +630,7 @@ class QueryRoutingServiceTest {
     void explicitActionFallsBackToVerifiedGroundedWordsWhenRewriteIsUnsafe() {
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}", "{\"unsafe\":[false]}");
 
-        assertThat(service.refinedSearchQuery("번호이동하고싶어요", "번호이동 방법 및 필요 절차"))
+        assertThat(service.refinedSearchQuery("번호이동하고싶어요", "번호이동 방법 및 필요 절차", null))
                 .isEqualTo("번호이동 방법");
 
         var calls = ArgumentCaptor.forClass(LlmRequest.class);
@@ -619,9 +643,34 @@ class QueryRoutingServiceTest {
         // 단어만 남긴 "번호이동 방법"도 미납 조건을 빠뜨리므로 원문을 유지해 재검색하지 않는다.
         given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}", "{\"unsafe\":[true]}");
 
-        assertThat(service.refinedSearchQuery("미납 요금이 있는데 번호이동하고 싶어요", "번호이동 신청 방법"))
+        assertThat(service.refinedSearchQuery("미납 요금이 있는데 번호이동하고 싶어요", "번호이동 신청 방법", null))
                 .isEqualTo("미납 요금이 있는데 번호이동하고 싶어요");
         verify(llmClient, times(2)).generate(any());
+    }
+
+    // 재검색 문장 검증도 채팅 실행에 기록돼야 하므로 호출마다 실행 ID가 요청에 실려야 한다
+    @Test
+    void refinedSearchQueryCarriesExecutionIdToRoutingRequest() {
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[false]}");
+
+        service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내", 77L);
+
+        var call = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient).generate(call.capture());
+        assertThat(call.getValue().executionId()).isEqualTo(77L);
+        assertThat(call.getValue().taskType()).isEqualTo(TaskType.ROUTING);
+    }
+
+    @Test
+    void refinedSearchQueryCarriesExecutionIdToBothVerificationCalls() {
+        // 첫 후보가 탈락해 원문 근거 단어만 남긴 문장까지 검증하면 모델 호출이 두 번 나간다
+        given(llmClient.generate(any())).willReturn("{\"unsafe\":[true]}", "{\"unsafe\":[true]}");
+
+        service.refinedSearchQuery("미납 요금이 있는데 번호이동하고 싶어요", "번호이동 신청 방법", 77L);
+
+        var calls = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llmClient, times(2)).generate(calls.capture());
+        assertThat(calls.getAllValues()).extracting(LlmRequest::executionId).containsExactly(77L, 77L);
     }
 
     @ParameterizedTest
@@ -630,7 +679,7 @@ class QueryRoutingServiceTest {
     void refinedSearchQueryValidationFailureKeepsOriginal(String validation) {
         given(llmClient.generate(any())).willReturn(validation);
 
-        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내"))
+        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내", null))
                 .isEqualTo("유심을 잃어버렸어요");
     }
 
@@ -638,7 +687,7 @@ class QueryRoutingServiceTest {
     void refinedSearchQueryCallFailureKeepsOriginal() {
         given(llmClient.generate(any())).willThrow(new RestClientException("timeout"));
 
-        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내"))
+        assertThat(service.refinedSearchQuery("유심을 잃어버렸어요", "유심 분실 처리 안내", null))
                 .isEqualTo("유심을 잃어버렸어요");
     }
 
@@ -649,7 +698,7 @@ class QueryRoutingServiceTest {
         var result = service.routeSingleConsult(msg("유심재발급 비용"), null);
 
         assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심재발급 비용");
-        assertThat(service.refinedSearchQuery("유심재발급 비용", "유심 재발급 비용")).isEqualTo("유심재발급 비용");
+        assertThat(service.refinedSearchQuery("유심재발급 비용", "유심 재발급 비용", null)).isEqualTo("유심재발급 비용");
         verify(llmClient).generate(any());
     }
 

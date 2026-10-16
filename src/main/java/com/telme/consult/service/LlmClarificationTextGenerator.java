@@ -20,6 +20,7 @@ public class LlmClarificationTextGenerator implements ClarificationTextGenerator
     public String generate(ClarificationPrompt prompt) {
         var request =
                 LlmRequest.builder()
+                        .executionId(prompt.executionId())
                         .taskType(TaskType.CLARIFICATION)
                         .systemPrompt(prompt.systemPrompt())
                         .userPrompt(prompt.userPrompt())

@@ -20,7 +20,7 @@ class ClarificationConfigurationTest {
                     assertThat(context).hasSingleBean(ClarificationTextGenerator.class);
                     assertThat(context).hasSingleBean(DialogueService.class);
                     var prompt =
-                            new ClarificationTextGenerator.ClarificationPrompt("", "", "기본 질문");
+                            new ClarificationTextGenerator.ClarificationPrompt("", "", "기본 질문", null);
                     assertThat(context.getBean(ClarificationTextGenerator.class).generate(prompt))
                             .isEqualTo("기본 질문");
                 });
@@ -37,7 +37,7 @@ class ClarificationConfigurationTest {
                                                     .generate(
                                                             new ClarificationTextGenerator
                                                                     .ClarificationPrompt(
-                                                                    "", "", "기본")))
+                                                                    "", "", "기본", null)))
                                     .isEqualTo("모델 질문");
                         });
     }
@@ -56,7 +56,7 @@ class ClarificationConfigurationTest {
                                                     .generate(
                                                             new ClarificationTextGenerator
                                                                     .ClarificationPrompt(
-                                                                    "", "", "어느 지역인가요?")))
+                                                                    "", "", "어느 지역인가요?", null)))
                                     .isEqualTo("어느 지역인가요?");
                         });
     }

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
@@ -141,6 +142,7 @@ class LlmFaqCandidateEvidenceResolverTest {
         verify(llm, times(2)).generate(requests.capture());
         assertThat(requests.getAllValues()).allSatisfy(request -> {
             assertThat(request.consultRequestId()).isEqualTo(11L);
+            assertThat(request.taskType()).isEqualTo(TaskType.EVIDENCE_CHECK);
             // llm_generations.prompt_version은 varchar(30)이다.
             assertThat(request.promptVersion().length()).isLessThanOrEqualTo(30);
         });

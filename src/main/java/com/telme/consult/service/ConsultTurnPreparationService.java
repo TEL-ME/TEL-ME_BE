@@ -28,15 +28,17 @@ public class ConsultTurnPreparationService {
     private final ConsultService consultService;
 
     // 분석에서 이미 저장한 상담 ID를 사용한다. 여기서 새 상담을 만들지 않는다.
+    // executionId는 되묻기 문장 생성 호출을 채팅 실행에 기록하기 위한 값이다
     public ConsultService.PreparationResult prepareAnalysis(
-            long sessionId, IntentSubQueryResponse analysis, LocationStatus locationStatus) {
+            long sessionId, IntentSubQueryResponse analysis, LocationStatus locationStatus, Long executionId) {
         var input = analysisConverter.toDialogueInput(analysis, Map.of(), locationStatus);
         return consultService.prepareTurn(
                 sessionId,
                 input.consultRequestId(),
                 input.purpose(),
                 input.updates(),
-                input.locationStatus());
+                input.locationStatus(),
+                executionId);
     }
 
     public void cancelWaiting(long sessionId, java.util.Collection<Long> consultRequestIds) {
@@ -65,7 +67,8 @@ public class ConsultTurnPreparationService {
                         followup.consultRequestId(),
                         purpose,
                         followup.updates(),
-                        locationStatus);
+                        locationStatus,
+                        context.executionId());
         return new PreparedFollowup(
                 result,
                 followup,
@@ -99,7 +102,8 @@ public class ConsultTurnPreparationService {
                         candidate.consultRequestId(),
                         purpose,
                         resolution.updates(),
-                        locationStatus);
+                        locationStatus,
+                        context.executionId());
         return new PreparedWaitingUpdate(
                 keepWaiting(result, resolution, candidate),
                 purpose, candidate.originalUserQuery(), candidate.queryText());

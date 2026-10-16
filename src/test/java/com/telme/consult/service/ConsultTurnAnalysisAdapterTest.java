@@ -51,7 +51,7 @@ class ConsultTurnAnalysisAdapterTest {
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
         var context = new Context(1, 10, raw, List.of());
         var prepared = mock(ConsultService.PreparationResult.class);
-        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any()))
+        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any(), any()))
                 .thenReturn(prepared);
         var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
             assertThat(input.historyResolved()).isFalse();
@@ -66,7 +66,7 @@ class ConsultTurnAnalysisAdapterTest {
         var searches = mock(com.telme.faq.service.FaqSearchService.class);
         when(searches.search(any())).thenReturn(List.of());
         var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
-        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법"))
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L))
                 .thenReturn("유심을 잃어버렸어요");
         var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
                 ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
@@ -79,7 +79,7 @@ class ConsultTurnAnalysisAdapterTest {
         var request = org.mockito.ArgumentCaptor.forClass(com.telme.faq.dto.req.FaqSearchRequest.class);
         verify(searches).search(request.capture());
         assertThat(request.getValue().query()).isEqualTo("유심을 잃어버렸어요");
-        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법");
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L);
         verifyNoInteractions(model);
     }
 
@@ -291,7 +291,7 @@ class ConsultTurnAnalysisAdapterTest {
                 new IntentSubQueryResponse(
                         101L, (short) 1, ConsultRequest.Intent.FAQ, "요금 납부 방법", Map.of());
         var result = new ConsultService.PreparationResult(null, 9L);
-        when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING)).thenReturn(result);
+        when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING, 3L)).thenReturn(result);
         var adapter =
                 new ConsultTurnAnalysisAdapter(
                         command -> context,
@@ -313,7 +313,7 @@ class ConsultTurnAnalysisAdapterTest {
         var second = new IntentSubQueryResponse(
                 102L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
         for (var query : List.of(first, second)) {
-            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING))
+            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING, 3L))
                     .thenReturn(new ConsultService.PreparationResult(
                             new ConsultService.PreparedTurn(1, 1,
                                     new DialogueDecision(query.consultRequestId(), Action.PROCEED,

@@ -3,6 +3,7 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -207,7 +208,7 @@ class BasicConversationChatIntegrationTest {
             "유심 재발급 비용, 안녕하세요 바라야, 알려주세요"})
     @DisplayName("앞·중간 인사가 섞인 FAQ도 원문 저장과 상담 본문 검색을 함께 유지한다")
     void 인사가_섞여도_실제_질문에_답한다(String input) throws Exception {
-        when(routing.routeSingleConsult(any(), any()))
+        when(routing.routeSingleConsult(any(), any(), any(Long.class)))
                 .thenAnswer(
                         invocation -> {
                             ChatMessage message = invocation.getArgument(0);
@@ -245,7 +246,7 @@ class BasicConversationChatIntegrationTest {
         assertThat(이력을_조회한다().path("messages").get(1).path("answerBasis").asText())
                 .isEqualTo("GROUNDED");
         assertThat(이력을_조회한다().path("messages").get(0).path("content").asText()).isEqualTo(input);
-        verify(routing).routeSingleConsult(any(), any());
+        verify(routing).routeSingleConsult(any(), any(), any(Long.class));
         var request = org.mockito.ArgumentCaptor.forClass(com.telme.faq.dto.req.FaqSearchRequest.class);
         verify(search).search(request.capture());
         assertThat(request.getValue().query()).doesNotContain("안녕하세요", "바라야");
@@ -257,14 +258,14 @@ class BasicConversationChatIntegrationTest {
     @Test
     @DisplayName("대기 중 감사는 재질문 없이 응답하고 원래 지역 질문에 후속 답변을 연결한다")
     void 대기_중_감사가_상담_조건을_지우지_않는다() throws Exception {
-        when(routing.routeSingleConsult(any(), any()))
+        when(routing.routeSingleConsult(any(), any(), any(Long.class)))
                 .thenAnswer(invocation -> 라우팅_결과(invocation.getArgument(0), Intent.STORE));
         processor.request(입력을_준비한다("매장 알려줘"));
         var before = states.load(sessionId, requestId);
         long questionId =
                 states.findPendingClarificationMessageId(sessionId, requestId, "location")
                         .orElseThrow();
-        when(routing.analyzeFollowUp(sessionId, "감사합니다"))
+        when(routing.analyzeFollowUp(eq(sessionId), eq("감사합니다"), any(Long.class)))
                 .thenReturn(
                         new FollowUpRouteResponse(
                                 requestId, Map.of(), Set.of(), Method.RULE, Disposition.DEFERRED));
@@ -290,7 +291,7 @@ class BasicConversationChatIntegrationTest {
                                 String.class,
                                 sessionId))
                 .isEqualTo("NEED_CLARIFICATION");
-        when(routing.analyzeFollowUp(sessionId, "강남역이요, 고마워요"))
+        when(routing.analyzeFollowUp(eq(sessionId), eq("강남역이요, 고마워요"), any(Long.class)))
                 .thenReturn(
                         new FollowUpRouteResponse(
                                 requestId,
@@ -309,19 +310,19 @@ class BasicConversationChatIntegrationTest {
                                 sessionId))
                 .isEqualTo(1);
         org.mockito.Mockito.verify(routing, org.mockito.Mockito.never())
-                .analyzeFollowUp(sessionId, "감사합니다");
-        verify(routing).analyzeFollowUp(sessionId, "강남역이요, 고마워요");
+                .analyzeFollowUp(eq(sessionId), eq("감사합니다"), any());
+        verify(routing).analyzeFollowUp(eq(sessionId), eq("강남역이요, 고마워요"), any(Long.class));
         verifyNoInteractions(search, model);
     }
 
     @Test
     @DisplayName("인사가 붙은 되묻기를 다시 물을 때 인사를 반복하지 않는다")
     void 재질문에_인사를_반복하지_않는다() throws Exception {
-        when(routing.routeSingleConsult(any(), any()))
+        when(routing.routeSingleConsult(any(), any(), any(Long.class)))
                 .thenAnswer(invocation -> 라우팅_결과(invocation.getArgument(0), Intent.STORE));
         processor.request(입력을_준비한다("안녕 바라야, 근처 매장 알려줘"));
         assertThat(이력을_조회한다().path("messages").get(1).path("content").asText()).startsWith("안녕하세요!");
-        when(routing.analyzeFollowUp(sessionId, "음"))
+        when(routing.analyzeFollowUp(eq(sessionId), eq("음"), any(Long.class)))
                 .thenReturn(new FollowUpRouteResponse(requestId, Map.of(), Set.of(), Method.RULE));
 
         processor.request(입력을_준비한다("음"));
@@ -336,7 +337,7 @@ class BasicConversationChatIntegrationTest {
     @ValueSource(strings = {"고마워 바라야", "고마워 바라야 😊", "안녕 무러바라야 👋",
             "😊", "?!", "[문의] 고마워 바라야 😊", "바라야 뭐 하고 있어?", "잘 가 바라야"})
     void 기본_대화는_재질문_상한에서도_조건을_거절하지_않는다(String input) throws Exception {
-        when(routing.routeSingleConsult(any(), any()))
+        when(routing.routeSingleConsult(any(), any(), any(Long.class)))
                 .thenAnswer(invocation -> 라우팅_결과(invocation.getArgument(0), Intent.STORE));
         processor.request(입력을_준비한다("매장 알려줘"));
         long questionId = states.findPendingClarificationMessageId(sessionId, requestId, "location").orElseThrow();

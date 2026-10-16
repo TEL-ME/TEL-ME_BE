@@ -203,7 +203,7 @@ class EvidenceCheckProbe {
             return checker.canAnswer(null, question, context);
         }
         LlmRequest request = LlmRequest.builder()
-                .taskType(TaskType.ROUTING)
+                .taskType(TaskType.EVIDENCE_CHECK)
                 .systemPrompt(systemPrompt())
                 .userPrompt(EvidenceRelevancePromptTemplates.userPrompt(context, question))
                 .format(ResponseFormat.JSON)
