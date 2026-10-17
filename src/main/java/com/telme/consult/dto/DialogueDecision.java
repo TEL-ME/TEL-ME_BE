@@ -38,8 +38,7 @@ public record DialogueDecision(
 
     public enum MessageOrigin {
         NONE,
-        TEMPLATE,
-        MODEL
+        TEMPLATE
     }
 
     public DialogueDecision {

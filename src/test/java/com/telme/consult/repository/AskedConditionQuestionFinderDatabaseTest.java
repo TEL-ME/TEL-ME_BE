@@ -18,7 +18,7 @@ class AskedConditionQuestionFinderDatabaseTest extends LocalConsultDatabaseTest 
     void labelsConditionWithQuestionWithoutStoredGreeting() {
         long rid = request(session);
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
-        var decision = new DialogueService(p -> p.fallbackText())
+        var decision = new DialogueService()
                 .decide(new DialogueInput(rid, Purpose.NEARBY_STORE, Map.of(), Map.of(), LocationStatus.MISSING));
         states.save(session, states.load(session, rid).version(), decision, new MessageLinks(question, null, null));
         jdbc.update("UPDATE chat_messages SET content='안녕하세요! 어느 지역의 매장을 찾으시나요?' WHERE message_id=?",

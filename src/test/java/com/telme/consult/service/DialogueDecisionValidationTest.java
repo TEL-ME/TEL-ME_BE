@@ -6,10 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueDecision.MessageOrigin;
-import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.Condition;
-import com.telme.consult.dto.DialogueInput.LocationStatus;
-import com.telme.consult.dto.DialogueInput.Purpose;
 
 import org.junit.jupiter.api.Test;
 
@@ -75,7 +72,7 @@ class DialogueDecisionValidationTest {
                 IllegalArgumentException.class,
                 () ->
                         new DialogueDecision(
-                                1L, Action.PROCEED, Map.of(), null, "질문", MessageOrigin.MODEL));
+                                1L, Action.PROCEED, Map.of(), null, "질문", MessageOrigin.TEMPLATE));
     }
 
     @Test
@@ -122,20 +119,5 @@ class DialogueDecisionValidationTest {
     private DialogueDecision clarificationWithOptions(List<String> options) {
         return new DialogueDecision(
                 1L, Action.ASK, Map.of(), "unpaid_bill", "질문", MessageOrigin.TEMPLATE, options);
-    }
-
-    @Test
-    void modelMatchingFallbackStillHasModelOrigin() {
-        var input =
-                new DialogueInput(
-                        1L, Purpose.NEARBY_STORE, Map.of(), Map.of(), LocationStatus.MISSING);
-        assertEquals(
-                MessageOrigin.MODEL,
-                new DialogueService(p -> p.fallbackText()).decide(input).messageOrigin());
-        assertEquals(
-                MessageOrigin.TEMPLATE,
-                new DialogueService(ClarificationTextGenerator.template())
-                        .decide(input)
-                        .messageOrigin());
     }
 }

@@ -17,7 +17,7 @@ import java.util.Map;
 
 class ConsultAnalysisConverterTest {
     private final ConsultAnalysisConverter converter = new ConsultAnalysisConverter();
-    private final DialogueService dialogue = new DialogueService(prompt -> "어느 지역인가요?");
+    private final DialogueService dialogue = new DialogueService();
 
     @Test
     void storeWithoutLocationNeedsClarification() {

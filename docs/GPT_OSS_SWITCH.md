@@ -12,8 +12,8 @@
 | 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 3단계 |
 | 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 4단계 |
 | 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | 미측정 | 없음 (라우팅 클라이언트를 쓰지 않음) | answerSources 라벨로 잴 예정 |
-| 7 | 조건 뽑기 | `ConditionExtractor` | gpt-oss로 결론, 기본값 전환 남음 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (false) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md) |
-| 8 | 되묻기 문장 | `LlmClarificationTextGenerator` (`DialogueService`) | 고정 문구로 바꿀 예정 | 없음 | 매장 위치 질문 하나에만 쓰이고, 프롬프트에 대체 문구가 그대로 있다 |
+| 7 | 조건 뽑기 | `ConditionExtractor` | **gpt-oss 확정**, 기본값 켜짐 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (true) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md) |
+| 8 | 되묻기 문장 | `DialogueService` | **호출 없앰**, 고정 문구 | — | 매장 위치 질문 하나에만 쓰였고 프롬프트가 대체 문구를 그대로 예시로 줬다. 지금은 "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."를 바로 쓴다 |
 | 9 | 회색 구간 근거 판정 | `FaqEvidenceJudge` | 이미 Bedrock | — | [GRAY_ZONE_UPPER_BAND.md](GRAY_ZONE_UPPER_BAND.md) |
 | 10, 11 | 비교·후보 근거 해석 | 근거 해석기 | 미정 | `CONSULT_EVIDENCE_RESOLVER_BEDROCK` (false) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | 꺼짐, 삭제 또는 재측정 검토 | `RAG_EVIDENCE_CHECK_ENABLED` (false) | TELME-54에서 AWS 의존을 이유로 껐다. 9·10·11과 겹치는지 먼저 본다 |
@@ -33,5 +33,5 @@ ROUTING_REQUEST_INVENTORY_ENABLED=false
 
 ## 남은 일
 
-- 미정 호출(1, 10·11, 13) 결정, 6 측정, 7 기본값 전환, 8 고정 문구 교체, 12 정리.
+- 미정 호출(1, 10·11, 13) 결정, 6 측정, 12 정리.
 - 전환을 모두 켠 구성으로 평가셋 v2.2와 대화 흐름 v2를 세 모델 Judge로 2~3회 잰다.
