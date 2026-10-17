@@ -439,7 +439,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 part.purpose(), part.queryText(), part.queryText(),
                 conditionConverter.convert(conditions),
                 part.queryText(), context, false, coordinates, asked,
-                displayText(command.content(), part));
+                displayText(command.content(), part), command.content());
     }
 
     // 검색어는 라우팅 정규화 값을 유지하고, 복합 응답 제목만 이번 고객 원문의 띄어쓰기로 복원한다.
@@ -801,7 +801,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             boolean streamTokens,
             ChatCoordinates coordinates,
             Map<String, String> askedQuestions,
-            String candidateEvidenceQuery) {
+            String candidateEvidenceQuery,
+            // 복합 질문에서 하위 질문으로 나누기 전 고객 원문. 하위 질문이 조각이라 빠진 대상·조건을 근거 검증이 찾는 데 쓴다
+            String customerMessage) {
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, boolean streamTokens,
+                ChatCoordinates coordinates, Map<String, String> askedQuestions, String candidateEvidenceQuery) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, streamTokens, coordinates,
+                    askedQuestions, candidateEvidenceQuery, null);
+        }
+
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
                 String resolvedUserQuery, ChatContext context, boolean streamTokens,
@@ -886,6 +897,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
             candidateEvidenceQuery = candidateEvidenceQuery == null || candidateEvidenceQuery.isBlank()
                     ? originalUserQuery : candidateEvidenceQuery.strip();
+            customerMessage = customerMessage == null || customerMessage.isBlank() ? null : customerMessage.strip();
         }
     }
 

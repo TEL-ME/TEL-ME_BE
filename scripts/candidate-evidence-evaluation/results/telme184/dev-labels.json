@@ -1,0 +1,535 @@
+[
+  {
+    "id": "V2-SINGLE-A001#0#0",
+    "partAsked": "요금 미납이 계속되면 어떻게 되는지 묻는다.",
+    "answeringFaqIds": [
+      20
+    ],
+    "unsure": false,
+    "note": "20은 30일 수신정지, 60일 직권해지까지 단계를 설명. 1070은 15일 발신정지만 있어 부분적."
+  },
+  {
+    "id": "V2-SINGLE-A017#0#0",
+    "partAsked": "침수로 새 폰을 할부로 살 때 할부 수수료가 얼마인지 묻는다.",
+    "answeringFaqIds": [
+      821
+    ],
+    "unsure": false,
+    "note": "821이 할부 이자 연 5.9%를 명시. 827은 후보에 없음."
+  },
+  {
+    "id": "V2-SINGLE-A022#0#0",
+    "partAsked": "폰 분실로 기기변경할 때 기존 폰의 남은 할부금은 어떻게 되는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": true,
+    "note": "후보 634/648/619는 분실 후 해지 시 할부 처리라 행위(해지 vs 기기변경)가 다름. 634 답변은 분실 일반으로도 읽힐 여지가 있어 불확실."
+  },
+  {
+    "id": "V2-SINGLE-A027#0#0",
+    "partAsked": "명의변경 처리에 시간이 얼마나 걸리는지 묻는다.",
+    "answeringFaqIds": [
+      434
+    ],
+    "unsure": false,
+    "note": "434가 명의변경은 보통 30분이라고 명시. 나머지는 번호이동/매장 운영시간."
+  },
+  {
+    "id": "V2-SINGLE-A046#0#0",
+    "partAsked": "알뜰요금제 종류가 몇 개인지 묻는다.",
+    "answeringFaqIds": [
+      919,
+      95,
+      111,
+      903
+    ],
+    "unsure": false,
+    "note": "모두 알뜰 2종을 명시."
+  },
+  {
+    "id": "V2-SINGLE-A059#0#0",
+    "partAsked": "번호이동 철회 시 회선이 어떻게 되는지 묻는다.",
+    "answeringFaqIds": [
+      540,
+      608,
+      562,
+      148,
+      576,
+      594
+    ],
+    "unsure": false,
+    "note": "모두 원래 통신사로 자동 복원된다고 명시."
+  },
+  {
+    "id": "V2-SINGLE-A059#0#1",
+    "partAsked": "번호이동 철회에 기한이 있는지 묻는다.",
+    "answeringFaqIds": [
+      544
+    ],
+    "unsure": false,
+    "note": "544가 개통일로부터 14일 이내 명시. 다른 후보는 철회와 무관."
+  },
+  {
+    "id": "V2-SINGLE-A064#0#0",
+    "partAsked": "베트남 7일 여행 시 데이터 무제한 로밍이 되는지 묻는다.",
+    "answeringFaqIds": [
+      344
+    ],
+    "unsure": false,
+    "note": "344가 데이터 무제한 로밍 하루 12,100원으로 존재를 명시. 110은 국내 요금제."
+  },
+  {
+    "id": "V2-SINGLE-A064#0#1",
+    "partAsked": "데이터 무제한 로밍 요금이 얼마인지 묻는다.",
+    "answeringFaqIds": [
+      338
+    ],
+    "unsure": false,
+    "note": "338이 데이터 무제한 하루 12,100원 명시. 346은 차단 한도."
+  },
+  {
+    "id": "V2-SINGLE-A074#0#0",
+    "partAsked": "부가서비스를 해지하면 이번 달 부가서비스 요금이 빠지는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "후보 620/630은 회선 해지 시 일할 계산이라 대상이 다름. 부가서비스 해지 월 요금 FAQ가 후보에 없음."
+  },
+  {
+    "id": "V2-SINGLE-A074#0#1",
+    "partAsked": "부가서비스를 해지하면 바로 이용이 중단되는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "325는 재가입 즉시 적용, 266/650/253은 회선 해지. 부가서비스 해지 후 이용 시점 FAQ 없음."
+  },
+  {
+    "id": "V2-SINGLE-A082#0#0",
+    "partAsked": "가입사실확인서를 받으려면 매장에 꼭 가야 하는지 묻는다.",
+    "answeringFaqIds": [
+      184,
+      335
+    ],
+    "unsure": false,
+    "note": "184/335가 가입사실확인서를 홈페이지에서 즉시 발급 가능하다고 명시해 매장 방문이 불필요함을 답함."
+  },
+  {
+    "id": "V2-SINGLE-A082#0#1",
+    "partAsked": "가입사실확인서를 홈페이지에서 발급하면 비용이 드는지 묻는다.",
+    "answeringFaqIds": [
+      195,
+      337
+    ],
+    "unsure": false,
+    "note": "195/337이 홈페이지 증명서 발급 무료 명시."
+  },
+  {
+    "id": "V2-SINGLE-A112#0#0",
+    "partAsked": "유심 재발급을 매장에 가야만 하는지, 온라인으로도 되는지 묻는다.",
+    "answeringFaqIds": [
+      301
+    ],
+    "unsure": false,
+    "note": "301은 제목에 유심이 없지만 답변의 택배 2~3영업일·7,700원이 유심 재발급 조건이며 매장/온라인 양쪽을 설명. 나머지는 개통 관련."
+  },
+  {
+    "id": "V2-SINGLE-A112#0#1",
+    "partAsked": "유심 재발급 비용이 얼마인지 묻는다.",
+    "answeringFaqIds": [
+      291,
+      273
+    ],
+    "unsure": false,
+    "note": "둘 다 7,700원 명시."
+  },
+  {
+    "id": "V2-SINGLE-A114#0#0",
+    "partAsked": "유심이 깨져 eSIM으로 바꾸려면 어떻게 하는지 묻는다.",
+    "answeringFaqIds": [
+      466,
+      482
+    ],
+    "unsure": false,
+    "note": "466/482가 유심 파손 시 eSIM 전환 방법 명시. 470은 분실 상황, 512는 미지원 단말 경우만."
+  },
+  {
+    "id": "V2-SINGLE-A114#0#1",
+    "partAsked": "eSIM 전환 비용이 얼마인지 묻는다.",
+    "answeringFaqIds": [
+      449
+    ],
+    "unsure": false,
+    "note": "449가 eSIM 발급 2,750원 명시."
+  },
+  {
+    "id": "V2-SINGLE-A117#0#0",
+    "partAsked": "유심 재발급을 남편(가족)이 대신 받아도 되는지 묻는다.",
+    "answeringFaqIds": [
+      485
+    ],
+    "unsure": false,
+    "note": "485가 가족 대리 수령 가능(위임장 등) 명시. 제목은 해외 상황이지만 답변은 일반 조건."
+  },
+  {
+    "id": "V2-SINGLE-A117#0#1",
+    "partAsked": "유심 재발급 시 본인이 갈 때와 대리인이 갈 때 서류가 어떻게 다른지 묻는다.",
+    "answeringFaqIds": [
+      280,
+      299,
+      302
+    ],
+    "unsure": false,
+    "note": "280은 유심 명시, 299/302는 상품명이 없지만 같은 유심 재발급 서류 규칙. 531은 '사본'만 언급해 대리인 신분증 누락으로 제외."
+  },
+  {
+    "id": "V2-COMPOUND-C003#0#0",
+    "partAsked": "요금 미납이 있는 상태에서 번호이동이 되는지 묻는다.",
+    "answeringFaqIds": [
+      129,
+      143,
+      572
+    ],
+    "unsure": false,
+    "note": "모두 기존 통신사 미납 요금 완납해야 진행된다고 명시. 569는 결합 상황으로 부분적."
+  },
+  {
+    "id": "V2-COMPOUND-C007#0#0",
+    "partAsked": "엄마 폰 명의를 내 명의로 바꾸는 데 매장에서 얼마나 걸리는지 묻는다.",
+    "answeringFaqIds": [
+      390
+    ],
+    "unsure": false,
+    "note": "390이 30분 이내 명시. 다른 명의변경 후보는 시간 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C007#0#1",
+    "partAsked": "내 폰을 새로 개통할 때 매장에서 얼마나 걸리는지 묻는다.",
+    "answeringFaqIds": [
+      713
+    ],
+    "unsure": false,
+    "note": "713이 매장 개통 30분 이내 명시."
+  },
+  {
+    "id": "V2-COMPOUND-C012#0#0",
+    "partAsked": "새 폰 구매 시 eSIM으로 바꾸면 비용이 얼마인지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "eSIM 비용 FAQ가 후보에 없음. 277은 유심 재발급 비용이라 대상이 다름."
+  },
+  {
+    "id": "V2-COMPOUND-C013#0#0",
+    "partAsked": "유심을 잃어버렸을 때 분실신고를 어디서 하는지 묻는다.",
+    "answeringFaqIds": [
+      467,
+      292,
+      282,
+      489
+    ],
+    "unsure": true,
+    "note": "조각문이라 전체 문장의 '분실신고는 어디서'로 해석. 해당 후보들이 고객센터/홈페이지 명시. 507은 해외 상황, 278/286은 장소 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C016#0#0",
+    "partAsked": "아빠 폰을 내 명의로 바꾸려면 어떤 서류가 필요한지 묻는다.",
+    "answeringFaqIds": [
+      63,
+      389,
+      67,
+      413
+    ],
+    "unsure": false,
+    "note": "모두 양측 신분증·동반 방문 또는 위임장 명시. 401은 회사폰으로 대상이 다름."
+  },
+  {
+    "id": "V2-COMPOUND-C016#0#1",
+    "partAsked": "아빠가 잃어버린 유심 재발급을 내가 대리로 받을 때 무엇을 챙겨야 하는지 묻는다.",
+    "answeringFaqIds": [
+      481,
+      451,
+      280,
+      275,
+      475
+    ],
+    "unsure": false,
+    "note": "분실/일반 유심 재발급 대리 서류 명시. 288(파손), 473(기기변경), 502(새 폰)는 상황이 달라 제외."
+  },
+  {
+    "id": "V2-COMPOUND-C020#0#0",
+    "partAsked": "1인당 회선을 몇 개까지 개통할 수 있는지 묻는다.",
+    "answeringFaqIds": [
+      760,
+      748,
+      742,
+      764,
+      704
+    ],
+    "unsure": false,
+    "note": "모두 개인 5회선 명시. 720은 법인만."
+  },
+  {
+    "id": "V2-COMPOUND-C020#0#1",
+    "partAsked": "안 쓰는 회선 하나를 해지하려면 어떻게 하는지 묻는다.",
+    "answeringFaqIds": [
+      249,
+      243,
+      253,
+      650,
+      642
+    ],
+    "unsure": false,
+    "note": "매장/고객센터/홈페이지 해지 절차 명시. 642/650은 제목 상황이 다르나 답변은 일반 절차. 636/646/660은 할부 처리."
+  },
+  {
+    "id": "V2-NOANSWER-U006#0#0",
+    "partAsked": "단말 보험 월 보험료가 얼마인지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "보험료 FAQ 없음. 59는 자기부담금만."
+  },
+  {
+    "id": "V2-NOANSWER-U006#0#1",
+    "partAsked": "단말 보험은 개통 후 며칠 안에 가입해야 하는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "보험 가입 기한 FAQ 없음."
+  },
+  {
+    "id": "V2-NOANSWER-U030#0#0",
+    "partAsked": "초등학생 키즈워치 전용 요금제가 월 얼마인지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "키즈워치 요금제 FAQ 없음."
+  },
+  {
+    "id": "V2-NOANSWER-U035#0#0",
+    "partAsked": "전화번호만 다른 번호로 바꾸는(번호 변경) 방법을 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "후보는 모두 번호이동(통신사 이동)이라 행위가 다름."
+  },
+  {
+    "id": "REG-MIXED#0#0",
+    "partAsked": "유심 재발급을 택배로 받을 때 배송비를 내야 하는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "484/498은 택배 수령 가능·기간만 있고 배송비 언급 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C021#0#0",
+    "partAsked": "이중 납부 환불을 딸 명의 통장으로 받아도 되는지 묻는다.",
+    "answeringFaqIds": [
+      1101,
+      1077
+    ],
+    "unsure": false,
+    "note": "1101(자식 계좌 불가), 1077(본인 명의 계좌로만) 명시. 9/1038은 본인 계좌 환불만 언급하고 '만'이 없어 제외."
+  },
+  {
+    "id": "V2-COMPOUND-C022#0#0",
+    "partAsked": "몇 달 번호를 안 쓰지만 번호를 남기고 싶을 때 정지와 해지 중 무엇이 나은지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "정지 vs 해지 비교 FAQ(699 등)가 후보에 없음. 653/623은 분실 시 일시정지, 261은 해지 방법만."
+  },
+  {
+    "id": "V2-COMPOUND-C023#0#0",
+    "partAsked": "회사 제출용 가입 증명서를 홈페이지에서 발급하면 비용이 드는지 묻는다.",
+    "answeringFaqIds": [
+      308,
+      337,
+      195,
+      184,
+      190,
+      335
+    ],
+    "unsure": false,
+    "note": "모두 홈페이지 무료 발급 명시."
+  },
+  {
+    "id": "V2-COMPOUND-C024#0#0",
+    "partAsked": "해외에서 예전 회선을 홈페이지로 해지 신청하면 바로 처리되는지 묻는다.",
+    "answeringFaqIds": [
+      654,
+      644,
+      688,
+      624
+    ],
+    "unsure": false,
+    "note": "해외/어디서든 홈페이지 해지 즉시 처리 명시. 249는 해외 조건 없음, 257은 즉시 여부 없음, 668은 전화."
+  },
+  {
+    "id": "V2-COMPOUND-C026#0#0",
+    "partAsked": "가족 회선 중 누가 속도 제한에 걸렸는지 어디서 확인하는지 묻는다.",
+    "answeringFaqIds": [
+      939,
+      987
+    ],
+    "unsure": false,
+    "note": "둘 다 앱에서 회선별 잔여량 확인 명시. 971/1019는 확인 장소 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C028#0#0",
+    "partAsked": "아빠 신분증만 가져가 명의변경을 못 했을 때 무엇이 더 필요한지 묻는다.",
+    "answeringFaqIds": [
+      67
+    ],
+    "unsure": false,
+    "note": "67이 두 분 신분증 각각과 동반 방문, 불가 시 위임장 명시. 다른 후보는 개통/유심."
+  },
+  {
+    "id": "V2-COMPOUND-C032#0#0",
+    "partAsked": "해외에 있는 나 대신 엄마가 유심을 받으러 갈 때 무엇을 챙겨야 하는지 묻는다.",
+    "answeringFaqIds": [
+      469,
+      280,
+      284,
+      481
+    ],
+    "unsure": false,
+    "note": "대리인 위임장·대리인 신분증·가입자 신분증 사본 명시. 405/437/429는 명의변경."
+  },
+  {
+    "id": "V2-COMPOUND-C034#0#0",
+    "partAsked": "외국인(베트남) 친구가 휴대폰을 새로 개통할 때 어떤 서류가 필요한지 묻는다.",
+    "answeringFaqIds": [
+      220,
+      743,
+      213
+    ],
+    "unsure": false,
+    "note": "외국인등록증과 여권 명시. 739/517은 외국인 조건 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C035#0#0",
+    "partAsked": "한 달 정도 해외 체류 시 어떤 로밍 상품이 좋은지 묻는다.",
+    "answeringFaqIds": [
+      358
+    ],
+    "unsure": false,
+    "note": "358이 장기 체류 시 7일 기간권 반복 사용 안내. 159/177은 일주일 이하 기준."
+  },
+  {
+    "id": "V2-COMPOUND-C035#0#1",
+    "partAsked": "부가서비스를 가입하면 바로 쓸 수 있는지 묻는다.",
+    "answeringFaqIds": [
+      185,
+      189,
+      325
+    ],
+    "unsure": false,
+    "note": "모두 부가서비스 가입 즉시 적용 명시."
+  },
+  {
+    "id": "V2-COMPOUND-C040#0#0",
+    "partAsked": "나이가 바뀌어 요금제를 바꾸려 할 때 고를 수 있는 요금제가 무엇인지 묻는다.",
+    "answeringFaqIds": [
+      930
+    ],
+    "unsure": false,
+    "note": "930이 나이 변경 상황에서 9종 목록 명시. 100은 범위만 있고 목록 없음."
+  },
+  {
+    "id": "V2-COMPOUND-C040#0#1",
+    "partAsked": "지난주 산 폰이 마음에 안 들어 교환하려면 어디로 신청하는지 묻는다.",
+    "answeringFaqIds": [
+      39
+    ],
+    "unsure": false,
+    "note": "39가 매장이나 고객센터 신청 명시. 826은 액정 불량 상황이라 제외, 38/46/830은 신청처 없음."
+  },
+  {
+    "id": "V2-PARTIAL-P001#0#0",
+    "partAsked": "소액결제 한도를 0원으로 해서 아예 막을 수 있는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "0원 설정/차단 FAQ 없음. 1065/1099는 한도 변경 즉시 적용만."
+  },
+  {
+    "id": "V2-PARTIAL-P007#0#0",
+    "partAsked": "언리미티드와 스탠다드가 기본 데이터 소진 후 무엇이 다른지 묻는다.",
+    "answeringFaqIds": [
+      119,
+      1003,
+      907,
+      102,
+      904,
+      118
+    ],
+    "unsure": false,
+    "note": "일반 요금제는 400kbps 제한, 언리미티드는 제한 없음 명시."
+  },
+  {
+    "id": "V2-PARTIAL-P007#0#1",
+    "partAsked": "언리미티드 요금제에서 핫스팟(테더링) 사용도 무제한인지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "핫스팟 언급 FAQ 없음."
+  },
+  {
+    "id": "V2-PARTIAL-P008#0#0",
+    "partAsked": "가족 결합 상태에서 알뜰 요금제로 바꿔도 결합 할인이 유지되는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "결합 할인 유지 FAQ 없음."
+  },
+  {
+    "id": "V2-PARTIAL-P010#0#0",
+    "partAsked": "번호이동 처리 중 기존 폰으로 오는 전화를 계속 받을 수 있는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "번호이동 처리 중 수신 FAQ 없음. 169는 로밍 차단."
+  },
+  {
+    "id": "V2-PARTIAL-P011#0#0",
+    "partAsked": "환승지 두바이 공항에서 쓴 데이터가 같은 로밍으로 잡히는지, 요금이 따로 나오는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "경유국/다국가 로밍 과금 FAQ 없음."
+  },
+  {
+    "id": "V2-PARTIAL-P012#0#0",
+    "partAsked": "로밍을 미리 신청하고 시작일을 출국일로 지정할 수 있는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "시작일 지정 FAQ 없음. 후보는 신청 후 1시간 이내 적용만."
+  },
+  {
+    "id": "V2-PARTIAL-P013#0#0",
+    "partAsked": "멤버십 등급이 VIP에서 골드로 바뀐 이유를 묻는다.",
+    "answeringFaqIds": [
+      206,
+      204,
+      201,
+      304,
+      333
+    ],
+    "unsure": false,
+    "note": "직전 1년 납부액 기준 매년 1월 갱신 명시."
+  },
+  {
+    "id": "V2-PARTIAL-P013#0#1",
+    "partAsked": "골드로 내려가면 VIP 때 받던 영화 예매 할인 등 혜택이 구체적으로 어떻게 달라지는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "등급별 혜택 내용 FAQ 없음. 333은 등급 서열만."
+  },
+  {
+    "id": "V2-PARTIAL-P014#0#0",
+    "partAsked": "부가서비스 해지를 앱에서 바로 할 수 있는지, 고객센터에 전화해야 하는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "189/193은 신청 채널 없음, 257/656은 회선 해지 채널."
+  },
+  {
+    "id": "V2-PARTIAL-P017#0#0",
+    "partAsked": "일시 정지 중 내 번호로 오는 전화·문자를 받을 수 있는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "일시정지 중 수신 여부 FAQ 없음. 169/352는 로밍 차단, 1093은 미납 정지."
+  },
+  {
+    "id": "V2-PARTIAL-P018#0#0",
+    "partAsked": "아들 회선 해지 후 남은 할부금을 아들 통장 대신 내(부모) 카드로 납부하도록 바꿀 수 있는지 묻는다.",
+    "answeringFaqIds": [],
+    "unsure": false,
+    "note": "16/1054는 납부 수단 변경 일반만 있고 해지 후 할부금·타인 명의 카드 납부는 언급 없음."
+  }
+]

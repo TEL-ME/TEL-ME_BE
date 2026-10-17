@@ -241,7 +241,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), candidateEvidence);
 
@@ -264,7 +264,7 @@ class FaqSearchAnswerProviderTest {
                 "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), candidateEvidence);
 
@@ -277,7 +277,7 @@ class FaqSearchAnswerProviderTest {
         assertThat(search.getValue().query()).isEqualTo("번호이동서류는뭐고");
         var evidenceQuestion = ArgumentCaptor.forClass(String.class);
         var quoteRepairFailure = ArgumentCaptor.forClass(Boolean.class);
-        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), quoteRepairFailure.capture());
+        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), any(), quoteRepairFailure.capture());
         assertThat(evidenceQuestion.getValue()).isEqualTo("번호 이동 서류는 뭐고");
         assertThat(quoteRepairFailure.getValue()).isTrue();
     }
@@ -295,7 +295,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(other, source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source)))
                 .thenReturn(List.of("명의변경 수수료가 있나요?"));
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),

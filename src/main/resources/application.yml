@@ -200,6 +200,8 @@ telme:
     # 비교·FAQ 후보 근거 검증 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
     evidence-resolver:
       bedrock: ${CONSULT_EVIDENCE_RESOLVER_BEDROCK:false}
+      # 후보 근거 검증에서 단어 검사 대신 원문과 회색 구간 판정기로 확인한다(TELME-184). 켜면 bedrock도 켠다. 기본 꺼짐
+      candidate-judge: ${CONSULT_CANDIDATE_EVIDENCE_JUDGE:false}
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}

@@ -3,9 +3,11 @@ package com.telme.consult.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.service.LlmComparisonEvidenceResolver;
 import com.telme.consult.service.LlmFaqCandidateEvidenceResolver;
+import com.telme.consult.service.LlmFaqCandidateEvidenceResolver.Options;
 import com.telme.llm.config.BedrockConfig;
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
+import com.telme.rag.service.FaqEvidenceJudge;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -29,11 +31,32 @@ public class EvidenceResolverConfiguration {
                 evidenceClient(properties, llmClient, bedrock.getIfAvailable()), objectMapper);
     }
 
+    // 후보 근거 검증(TELME-184): candidateJudge를 켜면 단어 검사 대신 고객 원문을 함께 주고, 고른 FAQ를 회색 구간 판정기(v4)로
+    // 다시 판정한다. 판정기는 Bedrock이 켜졌을 때만 있다. 꺼져 있거나 판정기가 없으면 예전처럼 단어 검사로 막는다
+    static Options candidateOptions(EvidenceResolverProperties properties, FaqEvidenceJudge judge) {
+        if (!properties.candidateJudge() || judge == null) {
+            return Options.CURRENT;
+        }
+        return new Options(false, true, (executionId, consultRequestId, question, customerMessage, candidate) ->
+                judge.judge(executionId, consultRequestId, judgeQuestion(question, customerMessage),
+                        candidate.question(), candidate.answer()) == FaqEvidenceJudge.Verdict.ANSWERABLE);
+    }
+
+    // 판정기는 질문 하나를 받는다. 하위 질문이 조각이면 원문을 앞에 두고 판단할 부분을 밝힌다
+    public static String judgeQuestion(String question, String customerMessage) {
+        if (customerMessage == null || customerMessage.isBlank() || customerMessage.strip().equals(question.strip())) {
+            return question;
+        }
+        return "고객 원문: " + customerMessage.strip() + "\n이 중 판단할 질문: " + question;
+    }
+
     @Bean
     LlmFaqCandidateEvidenceResolver faqCandidateEvidenceResolver(
             LlmClient llmClient, ObjectMapper objectMapper, EvidenceResolverProperties properties,
-            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock,
+            ObjectProvider<FaqEvidenceJudge> judge) {
         return new LlmFaqCandidateEvidenceResolver(
-                evidenceClient(properties, llmClient, bedrock.getIfAvailable()), objectMapper);
+                evidenceClient(properties, llmClient, bedrock.getIfAvailable()), objectMapper,
+                candidateOptions(properties, judge.getIfAvailable()));
     }
 }

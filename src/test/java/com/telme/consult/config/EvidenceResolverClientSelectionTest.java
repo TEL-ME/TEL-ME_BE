@@ -21,21 +21,21 @@ class EvidenceResolverClientSelectionTest {
     @Test
     @DisplayName("플래그가 꺼져 있으면 엑사원으로 근거를 검증한다")
     void 꺼져_있으면_엑사원이다() {
-        assertThat(EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(false), exaone, bedrock))
+        assertThat(EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(false, false), exaone, bedrock))
                 .isSameAs(exaone);
     }
 
     @Test
     @DisplayName("플래그가 켜져 있어도 Bedrock을 쓸 수 없으면 엑사원으로 검증한다")
     void bedrock이_없으면_엑사원이다() {
-        assertThat(EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(true), exaone, null))
+        assertThat(EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(true, false), exaone, null))
                 .isSameAs(exaone);
     }
 
     @Test
     @DisplayName("플래그가 켜져 있고 Bedrock을 쓸 수 있으면 Bedrock으로 검증하고 실패하면 엑사원으로 대체한다")
     void 켜져_있으면_bedrock이고_실패하면_엑사원이다() {
-        var client = EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(true), exaone, bedrock);
+        var client = EvidenceResolverConfiguration.evidenceClient(new EvidenceResolverProperties(true, false), exaone, bedrock);
 
         assertThat(client).isInstanceOf(FallbackLlmClient.class);
         org.mockito.Mockito.when(bedrock.generate(org.mockito.ArgumentMatchers.any()))
