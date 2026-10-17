@@ -221,6 +221,24 @@ class RelabelTest(unittest.TestCase):
 
 
 class ServiceLabelSetTest(unittest.TestCase):
+    def test_v2_2_adds_verified_expansion_on_top_of_v2_1(self):
+        from scripts.chat_judge import build_service_quality_set as builder
+        v21 = builder.build()[0]
+        v22, excluded = builder.build(expansion=True)
+        self.assertEqual(json.loads(builder.OUTPUT.read_text(encoding="utf-8")), v22)
+        self.assertEqual(v21, v22[:len(v21)])
+        added = v22[len(v21):]
+        partial = [case for case in added if case["suite"] == "paraphrased_partial"]
+        for case in partial:
+            turn = case["turns"][0]
+            self.assertEqual("PARTIAL_ANSWER", turn["expectedBehavior"])
+            self.assertTrue(turn["requiredFacts"][-1].endswith("확인할 수 없다"))
+            self.assertIn(turn["qualityReferenceGroups"][0]["questionPart"], turn["question"])
+        for case in added:
+            for group in case["turns"][0]["qualityReferenceGroups"]:
+                self.assertIn(group["questionPart"], case["turns"][0]["question"])
+                self.assertTrue(group["alternatives"])
+
     def test_v2_1_adds_plan_table_labels_and_keeps_v2_reproducible(self):
         from scripts.chat_judge import build_service_quality_set as builder
         v2, _ = builder.build(service_labels=False)
@@ -235,7 +253,7 @@ class ServiceLabelSetTest(unittest.TestCase):
         self.assertNotIn(service_data.PLAN_SOURCE_ID, [alt["sourceId"] for alt in cheapest[0]["alternatives"]])
         member = v21["V2-NOANSWER-U050"]["turns"][0]
         self.assertEqual(("ABSTAIN", "ANSWER"), (member["expectedBehavior"], member["memberExpectedBehavior"]))
-        self.assertEqual(json.loads(builder.OUTPUT.read_text(encoding="utf-8")), list(v21.values()))
+        self.assertEqual(json.loads(builder.OUTPUT_V21.read_text(encoding="utf-8")), list(v21.values()))
 
 
 class FlowTest(unittest.TestCase):

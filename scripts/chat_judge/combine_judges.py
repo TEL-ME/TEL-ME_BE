@@ -12,6 +12,7 @@
 import argparse
 import collections
 import json
+import math
 from pathlib import Path
 
 from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
@@ -79,9 +80,25 @@ def human_pass(label, behavior):
         "SHOULD_ABSTAIN", "OVER_REFUSAL"}
 
 
+# 회귀 확인용 묶음은 품질 통과율 평균에서 뺀다
+MACRO_EXCLUDED_SUITES = {"flow_regression"}
+
+
+def wilson(numerator, denominator, z=1.96):
+    """비율의 95% 신뢰구간(Wilson). 묶음 표본이 작아 정규 근사 대신 쓴다."""
+    if not denominator:
+        return None
+    p = numerator / denominator
+    center = p + z * z / (2 * denominator)
+    half = z * math.sqrt(p * (1 - p) / denominator + z * z / (4 * denominator * denominator))
+    scale = 1 + z * z / denominator
+    return [round(100 * (center - half) / scale, 1), round(100 * (center + half) / scale, 1)]
+
+
 def rate(numerator, denominator):
     return {"numerator": numerator, "denominator": denominator,
-            "percent": round(100 * numerator / denominator, 1) if denominator else None}
+            "percent": round(100 * numerator / denominator, 1) if denominator else None,
+            "ci95": wilson(numerator, denominator)}
 
 
 def service_summary(combined, items):
@@ -95,8 +112,12 @@ def service_summary(combined, items):
         return {"turns": len(labels), "pass": rate(sum(label["pass"] is True for label in resolved), len(resolved)),
                 "unresolved": len(labels) - len(resolved),
                 "unsupportedAnswers": rate(sum(label["grounding"] == "UNSUPPORTED" for label in factual), len(factual))}
-    return {"all": summary(list(combined.values())),
-            "bySuite": {suite: summary(labels) for suite, labels in sorted(by_suite.items())}}
+    by = {suite: summary(labels) for suite, labels in sorted(by_suite.items())}
+    # 묶음마다 같은 비중으로 평균한 통과율. 평가셋의 묶음 크기 비율에 따라 전체 수치가 흔들리지 않게 한다
+    percents = [row["pass"]["percent"] for suite, row in by.items()
+                if suite not in MACRO_EXCLUDED_SUITES and row["pass"]["percent"] is not None]
+    return {"all": summary(list(combined.values())), "suiteMacroPassPercent":
+            round(sum(percents) / len(percents), 1) if percents else None, "bySuite": by}
 
 
 def validation_summary(combined):

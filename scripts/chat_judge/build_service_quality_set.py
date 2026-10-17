@@ -17,6 +17,14 @@ v2.1은 정답 FAQ 검수 메모(equivalence_labels.json의 note)를 턴의 revi
 표시된 질문 부분은 별도 작성자가 FAQ 본문으로 보완한 필수 사실(required_facts_fixes.json)로 바꾼다.
 복합 질문의 질문 부분 이름은 v2에서 원래 단일 질문 문장이었다. v2.1은 고객 문장에서 나눈 부분 질문(compound_parts.json,
 별도 작성자)을 쓴다. 같은 파일의 필수 사실 축소 제안(proposedRequiredFacts)은 사람이 적용하기로 한 곳(decision: APPLY)만 쓴다.
+v2.2는 v2.1에 묶음 표본을 늘린 문항을 더한다(v22_seed.json, v22_written.json, v22_verified.json). 시드는 복합 질문에 쓰지
+않은 단일 질문에서 고정 난수로 뽑았고, 질문과 필수 사실은 별도 작성자가, 확인은 또 다른 검수자가 FAQ 전체와 대조해 했다.
+- 복합 질문 20개(C021–C040): 질문 부분 이름은 처음부터 고객 문장에서 나눈 부분 질문이다
+- 부분 답 20개(P001–P020): 한 부분은 FAQ로 답할 수 있고 다른 부분은 FAQ 어디에도 답이 없다. 필수 사실은 답할 수 있는
+  사실과 "…은 제공된 FAQ에서 확인할 수 없다"는 보류 사실이다(PARTIAL_ANSWER)
+- 범위 밖 질문 10개(O001–O010)
+검수자가 답이 있다고 본 부분 답과 범위 안이라고 본 질문, 버리라고 한 문항은 넣지 않는다.
+정답 FAQ 묶음은 시드 단일 질문의 검수 결과(equivalence_labels.json)를 그대로 쓴다.
 사용: python -X utf8 -m scripts.chat_judge.build_service_quality_set
 """
 import json
@@ -28,7 +36,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCES = ROOT / "scripts/chat_judge/data/quality_v2_sources"
 V1 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v1.json"
 OUTPUT_V2 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2.json"
-OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_1.json"
+OUTPUT_V21 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_1.json"
+OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_2.json"
+PROVENANCE_V22 = "v2.2_agent_written_question; v2.2_independent_verification; human_review_pending"
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
 PROVENANCE = "v2_agent_written_question_and_required_facts; human_review_pending"
 
@@ -134,7 +144,54 @@ def apply_review_notes(cases):
                 {"questionPart": int(part_index), "note": row["note"]})
 
 
-def build(service_labels=True):
+def expansion_cases(catalog, seeds, accepted):
+    """v2.2에 더하는 복합·부분 답·범위 밖 문항. 검수 결과가 OK나 FIX인 것만 넣는다."""
+    written, verified = load("v22_written.json"), load("v22_verified.json")
+    checks = {kind: {row["id"]: row for row in verified[kind]} for kind in ("compound", "partial", "outOfScope")}
+    excluded = []
+
+    def gold(key):
+        # 시드 단일 질문의 정답 FAQ 검수 결과. 원래 묶음에서 인정된 것을 앞에 둔다
+        group, labels = seeds[key]["goldGroup"], accepted.get(f"V2-SINGLE-{key}:0:0")
+        return [slot for slot in group if slot in labels] + [slot for slot in labels if slot not in group] if labels else group
+
+    cases = []
+    for item in written["compound"]:
+        check = checks["compound"][item["id"]]
+        if check["verdict"] not in {"OK", "FIX"}:
+            excluded.append({"id": item["id"], "verdict": check["verdict"]})
+            continue
+        parts = [(part["subQuestion"], gold(part["key"])) for part in item["parts"]]
+        facts = [fact for labeled in check["parts"] for fact in labeled["requiredFacts"]]
+        turn = answer_turn(item["userQuestion"], "ANSWER", parts, facts, catalog)
+        turn.update(labelProvenance=PROVENANCE_V22, answerSources=["FAQ"])
+        cases.append({"caseId": f"V2-COMPOUND-{item['id']}", "category": "COMPOUND", "questionType": "COMPOUND",
+                      "suite": "paraphrased_compound", "turns": [turn]})
+    for item in written["partial"]:
+        check = checks["partial"][item["id"]]
+        if check["verdict"] not in {"OK", "FIX"}:
+            excluded.append({"id": item["id"], "verdict": check["verdict"]})
+            continue
+        turn = answer_turn(item["userQuestion"], "PARTIAL_ANSWER", [(item["answerableSubQuestion"], gold(item["key"]))],
+                           check["requiredFacts"] + [item["withheldFact"]], catalog)
+        turn.update(unanswerableSubQuestion=item["unanswerableSubQuestion"], labelProvenance=PROVENANCE_V22,
+                    answerSources=["FAQ"])
+        cases.append({"caseId": f"V2-PARTIAL-{item['id']}", "category": seeds[item["key"]]["category"],
+                      "questionType": "PARTIAL", "suite": "paraphrased_partial", "turns": [turn]})
+    for item in written["outOfScope"]:
+        check = checks["outOfScope"][item["id"]]
+        if check["verdict"] != "OK":
+            excluded.append({"id": item["id"], "verdict": check["verdict"]})
+            continue
+        cases.append({"caseId": f"V2-OOS-{item['id']}", "category": "OUT_OF_SCOPE", "questionType": "ADJACENT_OUT_OF_SCOPE",
+                      "suite": "adjacent_out_of_scope", "turns": [{
+                          "question": item["userQuestion"], "expectedIntent": "UNKNOWN", "expectedBehavior": "OUT_OF_SCOPE",
+                          "goldSourceGroups": [], "requiredFacts": [], "qualityReferenceGroups": [], "answerSources": [],
+                          "labelProvenance": PROVENANCE_V22}]})
+    return cases, excluded
+
+
+def build(service_labels=True, expansion=False):
     catalog = {faq["slot_id"]: faq for faq in json.loads(CATALOG.read_text(encoding="utf-8"))}
     seeds = {seed["key"]: seed for seed in load("answerable_seed.json")}
     written = load("answerable_written.json")
@@ -206,11 +263,18 @@ def build(service_labels=True):
     if service_labels:
         apply_service_labels(cases)
         apply_review_notes(cases)
+    if expansion:
+        added, dropped = expansion_cases(catalog, seeds, accepted)
+        cases.extend(added)
+        excluded.extend(dropped)
+        if len({case["caseId"] for case in cases}) != len(cases):
+            raise ValueError("Duplicate case ID")
     return cases, excluded
 
 
 def main():
-    cases, excluded = build()
+    OUTPUT_V21.write_text(json.dumps(build()[0], ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    cases, excluded = build(expansion=True)
     OUTPUT.write_text(json.dumps(cases, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     suites = {}
     for case in cases:

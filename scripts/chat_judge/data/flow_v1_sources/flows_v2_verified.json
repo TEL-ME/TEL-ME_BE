@@ -1,0 +1,208 @@
+{
+ "note": "flows_v2_written.json을 별도 검수자가 FAQ와 대조한 결과(quality_v2_sources/v22_verified.json과 같은 검수에서 나왔다).",
+ "flowFaq": [
+  {
+   "id": "CF13",
+   "verdict": "OK",
+   "requiredFacts": [
+    "개통 후 14일이 지나 반품·교환이 어렵다고 안내한다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개통 후 14일 이내여야 반품·교환이 가능하다",
+    "미개봉이거나 사용 흔적이 없는 상태여야 한다",
+    "반품·교환은 1회에 한해 가능하다"
+   ],
+   "reason": "20일 경과로 14일 기준을 넘어 반품·교환 불가라는 사실은 DEVICE-0020/0028 등에 명시돼 있다. 직접 답 사실 3개도 목록 FAQ와 일치. 케이스 끼워 사용한 점(사용 흔적)도 불가 사유지만 필수로 둘 필요는 없다."
+  },
+  {
+   "id": "CF14",
+   "verdict": "OK",
+   "requiredFacts": [
+    "개통 후 14일 이내라 철회할 수 있다",
+    "철회하면 원래 통신사로 자동 복원된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개통 후 14일 이내면 철회할 수 있고 원래 통신사로 자동 복원된다",
+    "14일이 지났으면 철회가 아니라 새로 번호이동을 신청해야 한다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF15",
+   "verdict": "OK",
+   "requiredFacts": [
+    "납부 기한 후 15일이 지나면 발신이 정지된다",
+    "30일이 지나면 수신까지 정지된다",
+    "60일이 지나면 직권 해지될 수 있다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "납부 기한 후 15일이 지나면 발신이 정지된다",
+    "30일이 지나면 수신까지 정지된다",
+    "60일이 지나면 직권 해지될 수 있다"
+   ],
+   "reason": "모든 사실이 BILLING-0094/0045에 명시. 참고: 고객이 '기한을 모른다'고 했으니 납부 기한 매월 25일(BILLING-0016)이 도움이 되지만, 목록 FAQ에 없어 필수에 넣지 않았다."
+  },
+  {
+   "id": "CF16",
+   "verdict": "OK",
+   "requiredFacts": [
+    "단말 할부금이 없으므로 신용 심사 없이 명의변경이 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "단말 할부금이 없으면 신용 심사 없이 진행된다",
+    "할부금이 남아 있으면 양수인이 신용 심사를 통과해야 한다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF17",
+   "verdict": "OK",
+   "requiredFacts": [
+    "두 사람 모두 미성년자라 명의변경이 불가능하다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "양도인과 양수인이 모두 미성년자이면 명의변경이 불가능하다",
+    "넘기는 사람이 성인이면 미성년자에게 넘길 수 있다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF18",
+   "verdict": "OK",
+   "requiredFacts": [
+    "6일 일정이면 7일 기간권(39,000원)이 하루 9,900원인 일 단위보다 저렴하다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "하루씩 쓰면 일 단위 9,900원이다",
+    "일주일 정도면 7일 기간권 39,000원이다",
+    "데이터를 많이 쓰면 무제한이 하루 12,100원이다"
+   ],
+   "reason": "'6일이면 7일권이 더 싸다'는 ROAMING-0066/0076(며칠 이상이면 일주일권이 쌈)과 가격에서 바로 나온다. 직접 답 3개는 ROAMING-0021 답변 그대로."
+  },
+  {
+   "id": "CF19",
+   "verdict": "OK",
+   "requiredFacts": [
+    "매장에서 개통하면 30분 이내에 완료된다",
+    "온라인으로 신청하면 다음 날 개통된다",
+    "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "매장에서 개통하면 30분 이내에 완료된다",
+    "온라인으로 신청하면 다음 날 개통된다",
+    "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF20",
+   "verdict": "OK",
+   "requiredFacts": [
+    "요금제 변경은 월 1회만 가능하다",
+    "이번 달에 이미 변경했으므로 다음 달에 변경할 수 있다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "요금제 변경은 월 1회만 가능하다",
+    "가입한 달에는 변경할 수 없다",
+    "변경하면 신청일 다음 날 00:00부터 적용된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF21",
+   "verdict": "OK",
+   "requiredFacts": [
+    "법인 명의는 개인 5회선 한도 대신 별도 심사를 거쳐 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개인(성인)은 1인당 최대 5회선까지 개통할 수 있다",
+    "법인 명의는 별도 심사를 거쳐 진행된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF22",
+   "verdict": "OK",
+   "requiredFacts": [
+    "온라인으로 신청하면 택배로 2~3 영업일 안에 받는다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "매장을 방문하면 즉시 발급받을 수 있다",
+    "온라인으로 신청하면 택배로 2~3 영업일이 걸린다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF23",
+   "verdict": "OK",
+   "requiredFacts": [
+    "번호이동 처리는 09:00부터 20:00까지라 밤 10시 신청은 당일 처리되지 않는다",
+    "다음 날 09:00부터 처리되며 처리 시작 후 평균 2시간 이내에 완료된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "번호이동 처리는 매일 09:00부터 20:00까지만 진행된다",
+    "처리 시간 안에 신청하면 평균 2시간 이내에 완료된다",
+    "20:00 이후 신청은 다음 날 09:00부터 처리된다"
+   ],
+   "reason": "PORTING-0053/0005/0049에 명시. '20:00 이후 신청은 다음 날 09:00부터 처리'는 PORTING-0005(20:00~09:00 처리 안 함)와 0053(09:00부터 시작)을 합친 표현이다."
+  },
+  {
+   "id": "CF24",
+   "verdict": "OK",
+   "requiredFacts": [
+    "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+    "소진 후 추가 요금은 없다",
+    "언리미티드 요금제는 속도 제한이 없다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+    "소진 후 추가 요금은 없다",
+    "언리미티드 요금제는 속도 제한이 없다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  }
+ ],
+ "memberNoData": [
+  {
+   "id": "MD24",
+   "verdict": "FAQ_PARTLY",
+   "answeringSlotIds": [
+    "PORTING-0001",
+    "PORTING-0033",
+    "PORTING-0049",
+    "PORTING-0077",
+    "PORTING-0085"
+   ],
+   "reason": "개인 진행 상태 데이터는 없다. 다만 일반 처리 기준(매일 09:00~20:00 처리, 평균 2시간, 최대 24시간, 24시간이 지나면 고객센터 확인)은 FAQ에 있어 봇이 일반 정책으로 안내할 수 있다."
+  },
+  {
+   "id": "MD25",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "가족 결합 할인 정책 답변이 카탈로그에 없다('결합'은 PORTING-0050 번호이동, PLAN-0067 속도 제한에만 나옴)."
+  },
+  {
+   "id": "MD26",
+   "verdict": "FAQ_PARTLY",
+   "answeringSlotIds": [
+    "SERVICE-0050",
+    "SERVICE-0045",
+    "SERVICE-0060",
+    "BILLING-0128"
+   ],
+   "reason": "작년 청구액 데이터는 없다. 다만 요금납부확인서를 홈페이지에서 무료로 바로 발급받을 수 있고(최근 3년분), 청구 내역은 고객센터에서 확인해 준다는 경로가 FAQ에 있다."
+  },
+  {
+   "id": "MD27",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "로밍 사용량 조회 FAQ가 없다. ROAMING-0005/0020/0040은 '가입 상태' 조회만 안내하고 사용량은 아니다."
+  },
+  {
+   "id": "MD28",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "카탈로그에 '포인트'가 없다. SERVICE-0027은 등급 확인(앱·홈페이지)만 다루고 포인트 잔액은 아니다."
+  }
+ ]
+}

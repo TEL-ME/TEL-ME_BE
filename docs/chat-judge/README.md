@@ -39,6 +39,8 @@ src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java  채팅 실행 기록 �
 | [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json) | 서비스 답변 품질 측정(고정) | 아래 표 |
 | [`chat_pipeline_quality_v2_1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2_1.json) | 서비스 답변 품질 측정 | v2와 같은 질문에 서비스 데이터 라벨을 더했다(아래) |
 | [`chat_pipeline_flows_v1.json`](../../scripts/chat_judge/data/chat_pipeline_flows_v1.json) | 되묻기·매장·로그인 회원 흐름 | 매장 찾기 12, 되묻기 12, 로그인 회원 12개 대화(아래) |
+| [`chat_pipeline_quality_v2_2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2_2.json) | 서비스 답변 품질 측정(묶음 표본 확대) | v2.1 + 복합 20, 부분 답 19, 범위 밖 9. 286개 대화 |
+| [`chat_pipeline_flows_v2.json`](../../scripts/chat_judge/data/chat_pipeline_flows_v2.json) | 되묻기·매장·로그인 회원 흐름(표본 확대) | v1 + 52개. 매장 30, 되묻기 30, 회원 28개 대화(33턴) |
 | [`judge_validation_v1.json`](../../scripts/chat_judge/data/judge_validation_v1.json) | Judge 자체의 정확도 측정 | TELME-100 V7 실제 답변 116건과 사람 판정 |
 
 서비스 품질셋 v2는 238개 대화, 259턴이다. 질문과 필수 사실은 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼고, 원본은 [`quality_v2_sources/`](../../scripts/chat_judge/data/quality_v2_sources)에 있다. 사람 검토 전이다.
@@ -66,6 +68,11 @@ v2.1은 v2에 [`service_data_labels.json`](../../scripts/chat_judge/data/quality
 - 복합 질문 20개의 질문 부분 이름은 v2에서 원래 단일 질문 문장이었다(예: 고객은 평일 마감을 묻는데 질문 부분은 토·일요일 영업). 고객 문장에서 나눈 부분 질문으로 바꿨다([`compound_parts.json`](../../scripts/chat_judge/data/quality_v2_sources/compound_parts.json), 별도 작성자).
 - 정답 FAQ 검수 메모 37건은 턴의 `reviewNotes`에 있다. 복합 질문의 필수 사실 중 부분 질문이 묻지 않는 사실 9곳은 뺐고(검토 목록 D2), 단일 질문 보완 제안 3곳은 정할 때까지 적용하지 않았다([라벨 검토 목록](LABEL_REVIEW.md)).
 - 이전 캡처의 답변을 새 라벨로 채점할 때는 `relabel_capture.py`로 라벨만 바꾼다.
+
+v2.2와 흐름 평가셋 v2는 묶음별 표본을 30~40개로 늘렸다. 시드는 아직 복합 질문에 쓰지 않은 단일 질문에서 고정 난수로 뽑았고(`v22_seed.json`), 질문과 필수 사실은 별도 작성자가, 확인은 또 다른 검수자가 FAQ 전체와 대조해 했다(`v22_verified.json`, `flows_v2_verified.json`).
+- 부분 답(`paraphrased_partial`): 한 부분은 FAQ로 답할 수 있고 다른 부분은 FAQ 어디에도 답이 없다. 답할 수 있는 부분은 정답 FAQ 묶음으로, 답이 없는 부분은 "…은 제공된 FAQ에서 확인할 수 없다"는 필수 사실로 판정한다. 검수자가 시드 FAQ와 임베딩으로 가까운 FAQ 10개, 카탈로그 전체를 찾아 답이 없음을 확인했다.
+- 검수에서 뺀 것: P016(FAQ끼리 모순), O008(배터리 부풀음, 수리 경로 FAQ가 있어 범위 안).
+- 요금제 추천 시나리오의 고객 답변은 앱의 조건 이름(`age_group`, `heavy_data`)에 연결해 앱이 묻는 순서가 달라도 맞는 답을 보낸다.
 
 흐름 평가셋 v1은 앱이 조건을 되묻는 대화를 고객 답변까지 이어서 본다. 고객 조건에 따라 답이 갈리는 되묻기 8개는 앱이 되묻지 않고 바로 답했을 때의 필수 사실도 둔다([`direct_answer_facts.json`](../../scripts/chat_judge/data/flow_v1_sources/direct_answer_facts.json), 별도 작성자). 시나리오는 Judge 프롬프트와 평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다([`flow_v1_sources/`](../../scripts/chat_judge/data/flow_v1_sources)).
 - `store_flow` 12: 매장 찾기. 앱이 업무와 지역을 되물으면 답한다. 8개는 '현재 위치 사용'(좌표), 4개는 지명으로 답한다. 지명 검색은 카카오 로컬 API가 필요해 키가 없으면 실행기가 빼고 `manifest.json`의 `skippedCases`에 남긴다. 질문에 업무를 말했어도 앱이 업무를 되물을 수 있어, 시나리오에 업무 답변이 없으면 기대 업무로 만든 답변을 넣고 `auto`로 표시했다.
