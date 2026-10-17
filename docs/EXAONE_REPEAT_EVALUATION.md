@@ -36,7 +36,7 @@
 - Inventory: 200/210.
 - Full-route multiple: 51/57.
 
-문항별 결과·시간·오류·회차 간 변화·검색 보정 응답·평가용 코드 변경 내역은 보존 ZIP의 `results/`에 있습니다.
+문항별 결과·시간·오류·회차 간 변화·검색 보정 응답·평가용 코드 변경 내역은 아래 단계별 ZIP의 `results/`에 있습니다.
 원본 인계 자료는 `reproduction-handoff/`이며 Git에는 포함하지 않았습니다.
 독립 평가 DB는 telme_repro_156_160_20261017이며 기존 개발 DB는 변경하지 않았습니다.
 
@@ -153,34 +153,32 @@
 
 ## 보존 자료
 
-- results/scores.json: 문항별 채점·회차 비교·시간
-- results/search-corrections.json: 실제 검색 보정 응답
-- results/fixtures/: 고정 입력·원본 EXAONE 결과
-- results/context-replay-audit.json: 486개 문항 결과를 저장된 모델 응답으로 mock 재검증
-- results/context-original-request-audit.json: 문맥 모델 요청 568건의 원본 입력 조건 대조
-- results/database-verification.json: FAQ·벡터 전체 컬럼 일치 검증
-- results/manifest.json 및 adaptations/: 실행 조건·알려진 차이·코드 변경
-- logs/: 빌드·실행·채점 로그
+세 호출에 맞춰 원시 결과를 분리했습니다. 기존 비교 결과는 덮어쓰지 않고 TELME-183 측정 디렉터리에 보존합니다.
 
+| 단계 | 호출 | 결과 위치 |
+| --- | --- | --- |
+| 1 | 문맥 해석 (`ChatQuestionResolver`) | [문맥 평가 자료](../scripts/context-resolution-evaluation/results/TELME-183-20261017/README.md) |
+| 2 | 의도 분류 (`QueryRoutingService`) | [의도 분류 평가 자료](../scripts/routing-intent-evaluation/results/TELME-183-20261017/README.md) |
+| 3 | 요청 개수 판정 (`QueryRoutingService`) | [요청 개수 평가 자료](../scripts/request-inventory-evaluation/results/TELME-183-20261017/README.md) |
 
-### 원시 기록의 인계와 재검증
+각 디렉터리의 `metrics.json`은 회차별 채점 요약, `results.zip`은 원시 응답과 실행 근거입니다.
+전체 FAQ 라우팅의 분해 결과(`route-full`)는 3단계 ZIP에 보조 결과로 보존하며, 요청 개수 단독 호출 결과와 구분합니다.
 
-저장소의 `.measure/` 및 문맥 실행 기록 제외 정책에 따라 원시 응답·DB 덤프·실행 로그는 커밋하지 않습니다.
-원시 결과 ZIP은 TELME-183 첨부 대상으로 별도 보관합니다. 이 문서 작성 시 Jira 업로드는 수행하지 않았습니다.
+- 모든 단계: `results/*-execution.json`, `results/manifest.json`, 모델·서버 관측 자료, 해당 단계 실행 로그
+- 문맥: 고정 평가셋, 원본 집계, `context-replay-audit.json`, `context-original-request-audit.json`, 평가용 코드 변경
+- 의도 분류: 고정 평가셋·원본 응답, `search-corrections.json`, `database-verification.json`, 프롬프트 대조 자료
+- 요청 개수: 고정 평가셋·원본 응답, 요청 개수 단독 호출과 전체 FAQ 라우팅의 분해 결과
 
-- 파일명: `exaone-native-034-20261017.zip`
-- SHA-256: `909d390f8cde235ca00ff3b9946e99dd5e02d2cc6f457e09025d07dc53c2a7a2`
-- 로컬 보관 위치(저장소 루트 기준): `.measure/exaone-native-034-20261017.zip`
-- ZIP 내부 경로는 아래 명령을 실행하는 압축 해제 디렉터리를 기준으로 합니다.
+### 무결성과 재검증
 
-```bash
-shasum -a 256 exaone-native-034-20261017.zip
-unzip exaone-native-034-20261017.zip
-cd exaone-native-034-20261017
-shasum -a 256 -c checksums.sha256
-```
+각 README에 ZIP SHA-256과 압축 해제 후 `checksums.sha256` 확인 방법을 기록했습니다.
+신규 모델 원시 응답은 원본 보관 파일과 바이트 단위로 동일하며, `results/scores.json`은 해당 단계만 추출했습니다.
+공통 환경 정보와 당시 실행·채점 스크립트는 각 ZIP에 함께 보존하므로 전체 실험 설정도 포함합니다.
 
-실행별 명령과 환경 변수는 `results/*-execution.json`, 평가용 변경은 `results/adaptations/`,
+`.measure/`와 `scripts/context-resolution-evaluation/runs/`는 계속 Git에서 제외합니다.
+이번에 보존할 확정 결과만 위 `results/` 경로에 추가했으며, DB 덤프·모델 바이너리는 포함하지 않습니다.
+
+실행별 명령과 환경 변수는 ZIP 내부 `results/*-execution.json`, 평가용 변경은 `results/adaptations/`,
 채점 로직은 `score_results.py`에 보존했습니다. 실행 스크립트에는 당시 로컬 경로 의존성이 있으므로
 새 장비에서 즉시 실행하는 범용 재현 도구로 간주하지 않습니다.
 완전 재실행에는 과거 코드·모델·인계 DB 덤프·로컬 런타임을 다시 준비해야 합니다.
