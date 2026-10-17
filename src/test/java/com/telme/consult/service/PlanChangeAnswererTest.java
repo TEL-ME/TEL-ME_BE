@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -10,9 +11,13 @@ import com.telme.plan.repository.PlanRepository;
 import com.telme.subscription.config.SubscriptionProperties;
 import com.telme.subscription.dto.res.SubscriptionMeResponse;
 import com.telme.subscription.dto.res.SubscriptionResponse;
+import com.telme.subscription.repository.SubscriptionHistoryRepository;
+import com.telme.subscription.service.SubscriptionCalendar;
 import com.telme.subscription.service.SubscriptionQueryService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,16 +31,22 @@ class PlanChangeAnswererTest {
     private static final Plan SENIOR = plan(13L, "5G 시니어", 39_000, "10", Plan.TargetGroup.SENIOR);
     private static final Plan PREMIUM = plan(6L, "5G 프리미엄", 75_000, "150", Plan.TargetGroup.GENERAL);
 
+    // 한국 시각 10월 17일 12시. 기본 가입일(8월 1일)과 달이 달라 가입 당월 제한에 걸리지 않는다
+    private static final Instant NOW = Instant.parse("2026-10-17T03:00:00Z");
+
+    private PlanRepository plans;
     private SubscriptionQueryService queries;
+    private SubscriptionHistoryRepository histories;
     private PlanChangeAnswerer answerer;
 
     @BeforeEach
     void setUp() {
-        PlanRepository plans = mock(PlanRepository.class);
+        plans = mock(PlanRepository.class);
+        histories = mock(SubscriptionHistoryRepository.class);
         queries = mock(SubscriptionQueryService.class);
         when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(LITE, MAX, SENIOR, PREMIUM));
         when(queries.getMine(USER_ID)).thenReturn(SubscriptionMeResponse.of(subscription(MAX).build()));
-        answerer = new PlanChangeAnswerer(plans, queries, new SubscriptionProperties(false));
+        answerer = answerer(false);
     }
 
     @Test
@@ -117,6 +128,48 @@ class PlanChangeAnswererTest {
         when(queries.getMine(USER_ID)).thenReturn(SubscriptionMeResponse.of(subscription(PREMIUM).build()));
 
         assertThat(answerer.answer(USER_ID, "5G 프리미엄으로 바꿔줘", null).content()).isEqualTo("5G 프리미엄은 지금 쓰고 계신 요금제예요.");
+    }
+
+    @Test
+    @DisplayName("가입한 달이면 변경 화면 링크 없이 다음 달부터 바꿀 수 있다고 알려준다")
+    void 가입_당월() {
+        when(queries.getMine(USER_ID)).thenReturn(SubscriptionMeResponse.of(subscription(MAX)
+                .subscribedAt(Instant.parse("2026-10-05T00:00:00Z")).build()));
+
+        var outcome = answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null);
+
+        assertThat(outcome.content()).isEqualTo("가입한 달에는 요금제를 바꿀 수 없어요. 다음 달 1일부터 바꿀 수 있어요.");
+        assertThat(outcome.followUps()).doesNotContain(PlanTaskLinks.CHANGE);
+    }
+
+    @Test
+    @DisplayName("이번 달에 이미 바꿔서 적용까지 끝났으면 변경 대기가 없어도 이력으로 월 1회 제한을 알려준다")
+    void 월_1회_제한() {
+        when(histories.existsChangeRequestedBetween(1L, Instant.parse("2026-09-30T15:00:00Z"),
+                Instant.parse("2026-10-31T15:00:00Z"))).thenReturn(true);
+
+        var outcome = answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null);
+
+        assertThat(outcome.content()).startsWith("요금제는 한 달에 한 번만 바꿀 수 있어요. 이번 달에는 이미 바꾸셨어서");
+        assertThat(outcome.followUps()).doesNotContain(PlanTaskLinks.CHANGE);
+    }
+
+    @Test
+    @DisplayName("시연 모드에서는 기존 변경 규칙처럼 가입 당월·월 1회 제한을 생략하고 변경 화면으로 안내한다")
+    void 시연_모드() {
+        when(queries.getMine(USER_ID)).thenReturn(SubscriptionMeResponse.of(subscription(MAX)
+                .subscribedAt(Instant.parse("2026-10-05T00:00:00Z")).build()));
+        when(histories.existsChangeRequestedBetween(any(), any(), any())).thenReturn(true);
+
+        var outcome = answerer(true).answer(USER_ID, "5G 라이트로 바꿔줘", null);
+
+        assertThat(outcome.content()).contains("요금제 변경 화면에서 5G 라이트를 골라 주세요", "변경은 바로 적용되고");
+        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.CHANGE);
+    }
+
+    private PlanChangeAnswerer answerer(boolean demoMode) {
+        return new PlanChangeAnswerer(plans, queries, new SubscriptionProperties(demoMode), histories,
+                new SubscriptionCalendar(Clock.fixed(NOW, ZoneOffset.UTC)));
     }
 
     private static SubscriptionResponse.SubscriptionResponseBuilder subscription(Plan current) {

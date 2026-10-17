@@ -32,6 +32,8 @@ public final class PlanTaskRules {
     // "디즈니 플러스", "유튜브 프리미엄"처럼 요금제 이름 조각이 든 서비스 이름도 여기서 거른다
     private static final Pattern NOT_PLAN_TASK = Pattern.compile(
             "(?i)ott|넷플릭스|유튜브|디즈니|티빙|웨이브|왓챠|쿠팡|멜론|지니|스포티파이|알뜰폰|휴대폰|핸드폰|스마트폰|기기|단말|번호|유심|이심|통신사|명의|주소|카드|결제|비밀번호|분실|도난|부가|자동이체|탈퇴|회원");
+    // "요금제 변경 신청 취소해줘"처럼 이미 한 신청을 거두는 말은 그 업무를 하려는 것이 아니라 FAQ가 답한다
+    private static final Pattern WITHDRAW = Pattern.compile("취소|철회");
     // 어떤 요금제로 할지 아직 고르는 중이면 추천 경로가 답한다
     private static final Pattern STILL_CHOOSING = Pattern.compile(
             "(뭐|뭘|어떤|어느|무슨)(가|로|요금제|걸|거)|좋을까|나을까|좋은지|추천해(줘|주세요|주실|줄래)|추천좀");
@@ -52,7 +54,8 @@ public final class PlanTaskRules {
         String text = question.replaceAll("\\s+", "");
         // 방법·가능 여부·비교 판단은 요금제 답변 규칙(PlanQuestionRules)을 그대로 따른다. 요금제 목록 질문이 아니라 NONE을 넘긴다
         if (PlanQuestionRules.asksOtherService(text) || PlanQuestionRules.asksProcedure(PlanQuestionType.NONE, text)
-                || STILL_CHOOSING.matcher(text).find() || NOT_PLAN_TASK.matcher(text).find()) {
+                || STILL_CHOOSING.matcher(text).find() || NOT_PLAN_TASK.matcher(text).find()
+                || WITHDRAW.matcher(text).find()) {
             return Optional.empty();
         }
         boolean choose = CHOOSE.matcher(text).find();
