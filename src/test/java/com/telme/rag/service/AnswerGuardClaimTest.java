@@ -127,4 +127,56 @@ class AnswerGuardClaimTest {
         assertThatThrownBy(() -> apply("저녁 8시에도 접수할 수 있습니다.", context, query))
                 .isInstanceOf(AnswerGuardException.class);
     }
+
+    @Test
+    @DisplayName("고객이 고르라는 뜻의 '편하신 방법'은 비교 표현으로 보지 않는다")
+    void 고객이_고르는_편한_방법은_통과시킨다() {
+        String context = "매장에 가시거나 고객센터에 전화하시거나 홈페이지로 신청하시면 됩니다.";
+
+        assertThat(apply("고객센터 전화, 홈페이지, 또는 매장 방문 중 편하신 방법으로 신청하시면 됩니다.", context, "인터넷 해지 신청 방법"))
+                .contains("편하신 방법");
+        assertThat(apply("홈페이지로 신청하는 것이 더 편리합니다.", context, "인터넷 해지 신청 방법"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @Test
+    @DisplayName("근거의 상한을 넘는 기간을 '범위에 포함되지 않는다'고 한 답변은 통과시킨다")
+    void 범위에_포함되지_않는다는_표현을_범위_밖으로_본다() {
+        String context = "요금납부확인서는 최근 3년분까지만 발급됩니다.";
+        String answer = "요금납부확인서는 최근 3년분까지만 발급되며, 4년 전 기록은 발급 범위에 포함되지 않습니다.";
+
+        assertThat(apply(answer, context, "4년 전 요금 납부 기록을 발급받을 수 있나요?")).isEqualTo(answer);
+        assertThatThrownBy(() -> apply("4년 전 기록도 발급됩니다.", context, "4년 전 요금 납부 기록을 발급받을 수 있나요?"))
+                .isInstanceOf(AnswerGuardException.class);
+    }
+
+    @Test
+    @DisplayName("근거의 '하루'와 답변의 '1일'은 같은 기간으로 본다")
+    void 하루와_1일을_같은_기간으로_본다() {
+        String context = "일주일씩 쓰시면 7일 기간권 39,000원이 있습니다. 하루짜리는 9,900원입니다.";
+
+        assertThat(apply("일일권은 1일짜리이며, 7일 기간권도 제공됩니다.", context, "해외로밍패스는 며칠짜리까지 있어요?"))
+                .contains("1일짜리");
+        assertThatThrownBy(() -> apply("3일짜리도 있습니다.", context, "해외로밍패스는 며칠짜리까지 있어요?"))
+                .isInstanceOf(AnswerGuardException.class);
+    }
+
+    @Test
+    @DisplayName("근거에 없는 '하루'를 답변이 쓰면 새 수치로 세지 않는다")
+    void 답변의_하루는_수치로_세지_않는다() {
+        String context = "일 단위로는 9,900원입니다.";
+
+        assertThat(apply("일 단위로는 9,900원이고 하루만 써도 됩니다.", context, "일본 로밍 요금")).contains("하루만");
+    }
+
+    @Test
+    @DisplayName("'차이점'은 장점을 말한 비교 표현으로 보지 않는다")
+    void 차이점은_장점이_아니다() {
+        String context = "eSIM은 2,750원에 새로 발급받고 지원 단말이어야 합니다. 듀얼심으로 최대 2개 회선을 함께 쓸 수 있는 점이 다릅니다.";
+        String answer = "eSIM은 듀얼심 기능이 있다는 점이 차이점입니다.";
+
+        assertThat(apply(answer, context, "유심과 eSIM은 뭐가 달라요?")).isEqualTo(answer);
+        assertThat(apply("eSIM은 듀얼심이라는 이점이 있습니다.", context, "유심과 eSIM은 뭐가 달라요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
 }

@@ -34,6 +34,9 @@ public class AnswerGuard {
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
                     + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)");
 
+    private static final Pattern SAME_PERIOD_DAY = Pattern.compile("하루(?!하루)");
+    private static final Pattern SAME_PERIOD_WEEK = Pattern.compile("일주일");
+
     // 운영 시간처럼 시각 자체가 정책인 경우도 숫자 근거로 검사한다. 9:00과 09:00은 같은 값이다
     private static final Pattern CLOCK_TIME = Pattern.compile(
             "(?<!\\d)([01]?\\d|2[0-3]):([0-5]\\d)(?!\\d)");
@@ -143,7 +146,7 @@ public class AnswerGuard {
                     + "(?:확인|안내|답변)(?:하기|드리기)?\\s*(?:어렵(?:습니다|어요)?|어려워요))");
     private static final Pattern NEGATIVE_SCOPE = Pattern.compile(
             "(?:(?:발급|제공|지원|이용|적용|조회)(?:되지|할 수 없)|"
-                    + "범위\\s*밖|대상이\\s*아니|불가)");
+                    + "범위\\s*밖|범위에\\s*(?:포함되지|들지|해당되지)|대상이\\s*아니|불가)");
     private static final Pattern UPPER_BOUND = Pattern.compile(
             "(?:까지|이내|이하|최대|최근|범위\\s*밖|이전)");
     private static final Pattern DEPENDENT_EXPLANATION = Pattern.compile(
@@ -523,7 +526,7 @@ public class AnswerGuard {
 
     public void verifyMeasures(String answer, String context, String userQuery) {
         Set<String> invented = ungroundedValues(
-                answer, context, userQuery, this::measuresIn,
+                answer, context, userQuery, this::measuresIn, this::groundedMeasuresIn,
                 (value, sentence) -> isSafeUserReference(sentence)
                         || isOutsideSupportedUpperBound(value, sentence, context)
                         || isCustomerElapsed(value, sentence)
@@ -540,7 +543,17 @@ public class AnswerGuard {
             String userQuery,
             Function<String, Set<T>> extractor,
             BiPredicate<T, String> safeUserValue) {
-        Set<T> grounded = extractor.apply(context);
+        return ungroundedValues(answer, context, userQuery, extractor, extractor, safeUserValue);
+    }
+
+    private <T> Set<T> ungroundedValues(
+            String answer,
+            String context,
+            String userQuery,
+            Function<String, Set<T>> extractor,
+            Function<String, Set<T>> groundedExtractor,
+            BiPredicate<T, String> safeUserValue) {
+        Set<T> grounded = groundedExtractor.apply(context);
         Set<T> userValues = extractor.apply(userQuery);
         Set<T> invented = new LinkedHashSet<>();
 
@@ -963,8 +976,11 @@ public class AnswerGuard {
         patterns.put(ComparisonClaim.CHEAPER, Pattern.compile("(?:저렴|(?<!비)(?:싸|싼|쌉))"));
         patterns.put(ComparisonClaim.EXPENSIVE, Pattern.compile("(?:비싸|비싼|비쌉)"));
         patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리|시간.{0,4}절약)"));
-        patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile("(?:편리|간편|편의|편한|편하)"));
-        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:이점|장점)"));
+        // "편하신 방법으로 신청하세요"는 고객이 고르라는 안내이지 방법끼리 견준 말이 아니다
+        patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile(
+                "(?:편리|간편|편의|편한(?!\\s*(?:방법|방식|시간|곳|채널|쪽))|편하(?!신\\s*(?:방법|방식|시간|곳|채널|쪽)))"));
+        // "차이점"의 "이점"은 장점이 아니다
+        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:(?<!차)이점|장점)"));
         patterns.put(ComparisonClaim.STABLE, Pattern.compile("안정"));
         patterns.put(ComparisonClaim.SIMPLE, Pattern.compile("(?:간단|수월|복잡하지\\s*않)"));
         patterns.put(ComparisonClaim.BETTER, Pattern.compile("(?:나은|낫(?:다|습|아요|습니다)|더\\s*좋)"));
@@ -995,6 +1011,18 @@ public class AnswerGuard {
         patterns.put(PolicyClaim.COMPLETE_COST,
                 Pattern.compile("(?:총\\s*비용|전체\\s*비용|총액).{0,20}(?:은|이)?\\s*(?:\\d|별도|포함|추가|없|발생|입니다|이에요|예요)"));
         return Map.copyOf(patterns);
+    }
+
+    // 근거가 "하루짜리"인데 답변이 "1일"이라고 쓴 것은 새 수치가 아니다. 근거에만 적용해 답변의 "하루"를 새 수치로 만들지 않는다
+    private Set<String> groundedMeasuresIn(String text) {
+        Set<String> measures = measuresIn(text);
+        if (text != null && SAME_PERIOD_DAY.matcher(text).find()) {
+            measures.add("1일");
+        }
+        if (text != null && SAME_PERIOD_WEEK.matcher(text).find()) {
+            measures.add("7일");
+        }
+        return measures;
     }
 
     private Set<String> measuresIn(String text) {
