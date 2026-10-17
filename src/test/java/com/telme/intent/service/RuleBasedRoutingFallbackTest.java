@@ -244,4 +244,18 @@ class RuleBasedRoutingFallbackTest {
     void serviceTypeOfShortReply_leavesSentencesToModel(String reply) {
         assertThat(fallback.serviceTypeOfShortReply(reply)).isNull();
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"telme 가입 방법 알려줘", "Telme 가입 방법 알려줘", "TELME 가입 방법 알려줘", "텔미 가입 방법 알려줘"})
+    @DisplayName("영문 키워드는 대소문자와 상관없이 FAQ 질문으로 읽는다")
+    void classify_matchesFaqKeywordsRegardlessOfCase(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5g 알려줘", "lte 알려줘", "esim 알려줘", "usim 알려줘"})
+    @DisplayName("소문자로 쓴 망·유심 이름도 FAQ 질문으로 읽는다")
+    void classify_matchesLowercaseNetworkNames(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
+    }
 }

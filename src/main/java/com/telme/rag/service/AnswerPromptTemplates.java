@@ -16,7 +16,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = NO_EVIDENCE_MESSAGE + ".";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.7";
+    public static final String PROMPT_VERSION = "rag-answer-v4.8";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 TELME 통신 고객센터 AI 상담사입니다.

@@ -237,7 +237,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v4-single-search")
+                .promptVersion("routing-request-v5-single-search")
                 .build();
 
             String json = llmClient.generate(request);
@@ -1178,7 +1178,7 @@ public class QueryRoutingService {
             .temperature(0.0)
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v4")
+            .promptVersion("routing-follow-up-v5")
             .build();
 
         String json = llmClient.generate(request);

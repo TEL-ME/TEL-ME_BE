@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -147,7 +148,8 @@ public class RuleBasedRoutingFallback {
             && STORE_LOOKUP_PATTERN.matcher(text).find()
             && (!STORE_VISIT_POLICY_PATTERN.matcher(text).find()
                 || STORE_RESULT_REQUEST_PATTERN.matcher(text).find());
-        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains)
+        String upperText = text.toUpperCase(Locale.ROOT);
+        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(keyword -> upperText.contains(keyword.toUpperCase(Locale.ROOT)))
             || CANCEL_SERVICE_PATTERN.matcher(text).find()
             || (!hasStore && STORE_ENTITY_PATTERN.matcher(text).find()
                 && (text.contains("방문") || text.contains("처리") || text.contains("가능")));

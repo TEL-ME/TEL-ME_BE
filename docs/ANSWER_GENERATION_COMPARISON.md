@@ -16,6 +16,7 @@ TELME-178. FAQ 근거로 답변을 쓰는 `RagAnswerGenerator`를 엑사원과 g
 | 리전·설정 | Bedrock **Tokyo**(`ap-northeast-1`), 출력 한도 1,000(앱 설정과 같음), 시간 제한은 평가용으로 60초 |
 | 호출 경로 | 앱의 `RagAnswerGenerator`(프롬프트, 입력 예산, 가드)를 그대로 거친다. 가드는 이 이슈에서 보강한 버전이다. gpt-oss는 앱의 Bedrock 요청 변환을 쓰고 종료 사유와 토큰을 기록한다 |
 | 측정 프로그램 | `AnswerGenerationProbe`: 입력을 읽어 모델별로 답을 만들고 가드 전 원본, 최종 답변, 호출별 한도·종료 사유·토큰을 저장한다. 집계는 `score_answers.py` |
+| 프롬프트 | 이 문서의 측정은 통신사 이름이 `LG U+`인 프롬프트로 했다(답변 `rag-answer-v4.7`, B-1 앞단 `routing-request-v4-single-search`, `routing-follow-up-v4`, `condition-extract-v1.9`). 이후 이름을 `TELME`로 바꾸고 버전을 올렸으므로(`rag-answer-v4.8`, `routing-request-v5-single-search`, `routing-follow-up-v5`, `condition-extract-v1.10`) 호출 기록의 `prompt_version`으로 구분된다. 보정 후 B 재실행도 `v4.7` 프롬프트로 돌렸다 |
 
 ## 입력
 
