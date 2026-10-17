@@ -15,7 +15,8 @@
 | 7 | 조건 뽑기 | `ConditionExtractor` | **gpt-oss 확정**, 기본값 켜짐 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (true) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md) |
 | 8 | 되묻기 문장 | `DialogueService` | **호출 없앰**, 고정 문구 | — | 매장 위치 질문 하나에만 쓰였고 프롬프트가 대체 문구를 그대로 예시로 줬다. 지금은 "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."를 바로 쓴다 |
 | 9 | 회색 구간 근거 판정 | `FaqEvidenceJudge` | 이미 Bedrock | — | [GRAY_ZONE_UPPER_BAND.md](GRAY_ZONE_UPPER_BAND.md) |
-| 10, 11 | 비교·후보 근거 해석 | 근거 해석기 | 미정 | `CONSULT_EVIDENCE_RESOLVER_BEDROCK` (false) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) |
+| 10 | 비교 근거 검증 | `LlmComparisonEvidenceResolver` | 미정(gpt-oss가 앞섬, 남은 확인 없음) | `CONSULT_EVIDENCE_RESOLVER_BEDROCK` (false, 11과 같이 씀) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) |
+| 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **모델 유지**, TELME-184에서 수정 | 같음 | 실제 복합 입력 58개에서 두 모델 모두 앱 채택 0건(핵심 단어 검사, 조각 입력). 같은 문서 "복합 질문 입력 확인" 절 |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
 | 13 | 답변 생성 | `RagAnswerGenerator` | 미정 | 없음 | #167 결과를 TELME-180 Judge로 채점할 예정 |
 
@@ -36,6 +37,6 @@ CONSULT_PLAN_QUESTION_BEDROCK=true
 
 ## 남은 일
 
-- 미정 호출(10·11, 13) 결정.
+- 미정 호출(10, 13) 결정. 11은 TELME-184.
 - 요금제 질문 분류에서 두 모델이 같이 놓치는 내 정보 질문(28개 중 9개, [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md)).
 - 전환을 모두 켠 구성으로 평가셋 v2.2와 대화 흐름 v2를 세 모델 Judge로 2~3회 잰다.
