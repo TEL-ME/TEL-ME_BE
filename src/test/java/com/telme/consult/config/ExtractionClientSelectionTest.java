@@ -5,8 +5,11 @@ import static org.mockito.Mockito.mock;
 
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
 class ExtractionClientSelectionTest {
 
@@ -41,6 +44,10 @@ class ExtractionClientSelectionTest {
     @Test
     @DisplayName("설정을 주지 않으면 조건 뽑기는 엑사원이다")
     void 기본값은_엑사원이다() {
-        assertThat(new FaqClarificationProperties(true, false).bedrockExtraction()).isFalse();
+        var binder = new Binder(new MapConfigurationPropertySource(Map.of()));
+        var defaults = binder.bindOrCreate("telme.consult.faq-clarification", FaqClarificationProperties.class);
+
+        assertThat(defaults.bedrockExtraction()).isFalse();
+        assertThat(ConsultRagAnswerConfiguration.extractionClient(defaults, exaone, bedrock)).isSameAs(exaone);
     }
 }
