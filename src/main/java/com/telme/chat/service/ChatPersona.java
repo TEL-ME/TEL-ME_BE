@@ -7,7 +7,7 @@ public final class ChatPersona {
     public static final String THANKS = "천만에요 😊 더 궁금한 점이 있으면 말씀해 주세요.";
     public static final String FAREWELL = "이용해 주셔서 감사해요 😊 궁금한 점이 생기면 다시 찾아주세요.";
     public static final String IDENTITY =
-            "저는 LG U+ 통신 고객센터 AI 상담사 무러바라예요 😊 통신 서비스와 매장 정보를 안내해 드려요.";
+            "저는 TELME 통신 고객센터 AI 상담사 무러바라예요 😊 통신 서비스와 매장 정보를 안내해 드려요.";
     public static final String HELP =
             "요금제, 청구·납부, 유심, 로밍 등 통신 서비스와 매장 관련 질문을 도와드려요 😊 궁금한 내용을 말씀해 주세요.";
     public static final String WELLBEING =

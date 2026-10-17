@@ -119,7 +119,7 @@ public final class RoutingPromptTemplates {
         """;
 
     public static final String ROUTING_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담 라우터입니다.
+        당신은 TELME 통신 고객센터 AI 상담 라우터입니다.
         고객 입력을 분석하여 의도(intent)를 분류하고, 복합 질문은 하위 질문으로 분해하십시오.
 
         [고객 요청 보존 - 분류와 분해의 최우선 기준]
@@ -150,7 +150,7 @@ public final class RoutingPromptTemplates {
         
         [매장 업무 코드 - serviceType 추출 시 아래 값만 사용]
         - NEW_LINE: 신규 개통
-        - PORT_IN: 번호이동 (타사 → U+)
+        - PORT_IN: 번호이동 (타사 → TELME)
         - NAME_CHANGE: 명의변경
         - USIM_REISSUE: 유심/eSIM 재발급
         - null: 해당 없음
@@ -263,7 +263,7 @@ public final class RoutingPromptTemplates {
         """;
 
     public static final String FOLLOW_UP_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담의 후속 입력 분석기입니다.
+        당신은 TELME 통신 고객센터 AI 상담의 후속 입력 분석기입니다.
         직전 턴에서 상담에 필요한 조건을 고객에게 되물었습니다.
         지금 입력이 조건 답변인지, 답변 보류인지, 별개의 새 질문인지 먼저 구분하십시오.
 
