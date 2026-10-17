@@ -207,6 +207,8 @@ telme:
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
+      # 분류를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. 기본 꺼짐
+      bedrock: ${CONSULT_PLAN_QUESTION_BEDROCK:false}
       # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
       answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:

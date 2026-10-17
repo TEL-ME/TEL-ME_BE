@@ -86,6 +86,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
         }
     }
 
+    // 분류에 넣은 문장과 결과를 남겨, 같은 입력으로 분류 모델을 다시 비교할 수 있게 한다
+    private PlanQuestionType classify(Long executionId, String question) {
+        PlanQuestionType type = classifier.classify(executionId, question);
+        trace.append(executionId, "planQuestionClassifications", Map.of("question", question, "type", type.name()));
+        return type;
+    }
+
     private Outcome planOutcome(AnswerInput input, boolean mayAsk) {
         // 비교 질문은 기존 비교 답변 경로가 양쪽 FAQ 근거를 확인해 답한다
         if (!enabled || comparisonEvidence.applies(input.originalUserQuery())) {
@@ -94,9 +101,9 @@ public final class PlanAnswerProvider implements AnswerProvider {
         String question = input.resolvedUserQuery() == null || input.resolvedUserQuery().isBlank()
                 ? input.originalUserQuery() : input.resolvedUserQuery();
         // 문맥으로 풀어쓴 문장은 "나", "내" 같은 본인 표현이 사라질 수 있어 사용자가 쓴 원문으로 먼저 분류한다
-        PlanQuestionType type = classifier.classify(input.executionId(), input.originalUserQuery());
+        PlanQuestionType type = classify(input.executionId(), input.originalUserQuery());
         if (type == PlanQuestionType.NONE && !question.equals(input.originalUserQuery())) {
-            type = classifier.classify(input.executionId(), question);
+            type = classify(input.executionId(), question);
         }
         // 후속 질문 버튼의 문구에는 이전 답을 되풀이하는 추천·내 정보 답변을 하지 않는다. 요금제 표 안내는 FAQ 대신 쓴다
         if (type != PlanQuestionType.PLAN_CATALOG && FaqButtonQuestions.contains(input.originalUserQuery())) {
