@@ -1,4 +1,4 @@
-"""TELME-184 개발용: 하위 질문 단위 라벨로 판정 방식(P0~P6)별 앱 채택 결과를 센다(docs/EVIDENCE_RESOLVER_COMPARISON.md).
+"""TELME-184 개발용: 하위 질문 단위 라벨로 판정 방식(P0~P7)별 앱 채택 결과를 센다(docs/EVIDENCE_RESOLVER_COMPARISON.md).
 
 사용: score_dev.py <라벨 json> <결과 jsonl ...> <출력 md>. .gz 파일은 압축을 풀지 않고 읽는다.
 """

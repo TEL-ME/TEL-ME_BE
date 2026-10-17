@@ -1,6 +1,8 @@
-"""TELME-184 비교 근거 검증 재확인 채점(docs/EVIDENCE_RESOLVER_COMPARISON.md "비교 근거 검증 재확인" 절).
+"""TELME-184 비교 근거 검증 재확인(docs/EVIDENCE_RESOLVER_COMPARISON.md "비교 근거 검증 재확인" 절).
 
-score: 재생 결과를 채점한다.
+extract: 캡처의 실행 기록에서 비교 근거 검증 입력(comparisonEvidenceInputs의 첫 시도 문장, 원문 검색 결과)을 꺼내
+         턴의 정답(goldFaqIds, comparison)과 묶는다. 사용: comparison_replay.py extract <캡처> <입력 json>
+score: 재생 결과를 채점한다. 사용: comparison_replay.py <입력 json> <결과 jsonl ...> <출력 md>
   블라인드(BLIND-CMP): 양쪽 답 있음이면 답에 쓴 FAQ가 양쪽 정답(FAQ 원본 slot_id, 문답 완전 일치로 보충)을 모두 덮고
                        정답 밖의 FAQ가 없어야 맞음(FAQ 하나가 양쪽을 함께 답하기도 한다).
                        한쪽만 답 있음, 둘 다 없음은 답하지 않아야 맞음.
@@ -25,6 +27,28 @@ def open_text(path):
 def load(path):
     with open_text(path) as source:
         return json.load(source)
+
+
+def extract(capture_path, out_path):
+    rows = []
+    for case in load(capture_path)["cases"]:
+        for turn in case["turns"]:
+            trace = turn.get("pipelineTrace") or {}
+            attempts = trace.get("comparisonEvidenceInputs") or []
+            if not attempts:
+                continue
+            fixture = turn.get("fixture") or {}
+            # 회색 구간 때문에 다시 고르는 두 번째 시도는 다시 만들지 않고 첫 시도 입력만 쓴다
+            rows.append({
+                "id": case["caseId"], "suite": case["suite"], "type": case["questionType"],
+                "question": attempts[0]["question"], "customerQuestion": turn["sentContent"],
+                "originalSources": attempts[0]["originalSources"],
+                "goldFaqIds": fixture.get("goldFaqIds") or [], "comparison": fixture.get("comparison"),
+                "attempts": len(attempts), "captureAnswered": trace.get("comparisonAnswer") is not None,
+            })
+    with io.open(out_path, "w", encoding="utf-8") as out:
+        json.dump(rows, out, ensure_ascii=False, indent=1)
+    print(json.dumps(collections.Counter(r["suite"] + "/" + r["type"] for r in rows), ensure_ascii=False))
 
 
 def outcome(item, row, pairs):
@@ -86,4 +110,7 @@ def score(inputs_path, replay_paths, out_path):
 
 
 if __name__ == "__main__":
-    score(sys.argv[1], sys.argv[2:-1], sys.argv[-1])
+    if sys.argv[1] == "extract":
+        extract(sys.argv[2], sys.argv[3])
+    else:
+        score(sys.argv[1], sys.argv[2:-1], sys.argv[-1])

@@ -3,6 +3,7 @@
 extract: 블라인드 캡처에서 근거 검증 입력과 후보를 꺼내고, 하위 질문을 고객 문장의 어느 부분인지(글자 2-gram 겹침) 맞춘다.
 score:   판정 방식·모델별 앱 채택 결과를 부분별 정답 FAQ(FAQ 원본 전체 기준 slot_id)로 센다.
          P5가 고객 원문으로 더 붙인 후보(addedCandidates)도 원본 FAQ의 문답 완전 일치로 slot_id를 찾아 대조한다.
+fixture: 캡처에서 캡처에 넣은 대화(--fixture 파일)를 되살린다. 비교 캡처에도 쓴다.
 .gz 파일은 압축을 풀지 않고 읽는다.
 """
 
@@ -44,6 +45,16 @@ def match_part(question, parts):
     best, index = scores[0]
     second = scores[1][0] if len(scores) > 1 else 0
     return index, round(best, 2), round(best - second, 2)
+
+
+def fixture(capture_path, out_path):
+    # 캡처에 넣은 대화(--fixture)를 캡처에서 그대로 되살린다. 캡처는 턴마다 받은 fixture를 남긴다
+    keys = ["caseId", "category", "suite", "questionType", "actor"]
+    cases = [{**{key: case[key] for key in keys}, "turns": [turn["fixture"] for turn in case["turns"]]}
+             for case in load(capture_path)["cases"]]
+    with io.open(out_path, "w", encoding="utf-8") as out:
+        json.dump(cases, out, ensure_ascii=False, indent=1)
+    print(json.dumps({"cases": len(cases)}))
 
 
 def extract(capture_path, out_path):
@@ -142,5 +153,7 @@ def score(inputs_path, replay_paths, out_path):
 if __name__ == "__main__":
     if sys.argv[1] == "extract":
         extract(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "fixture":
+        fixture(sys.argv[2], sys.argv[3])
     else:
         score(sys.argv[2], sys.argv[3:-1], sys.argv[-1])

@@ -1,6 +1,6 @@
 # 근거 검증 두 호출의 모델 비교 (엑사원 vs gpt-oss)
 
-TELME-178. 답변 생성 전에 쓰이는 두 근거 검증 호출을 엑사원과 gpt-oss-120b로 같은 질문에 돌려 비교했다. 채점 모델은 쓰지 않고, 모델이 고른 FAQ와 인용문을 정답 FAQ 및 FAQ 원문과 대조했다. 비교 결과 gpt-oss가 앞서고 출력 한도가 작으면 잘리는 문제가 확인되어, 출력 한도를 올리고 gpt-oss를 켜는 플래그(`CONSULT_EVIDENCE_RESOLVER_BEDROCK`, 기본 꺼짐)를 추가했다.
+TELME-178. 답변 생성 전에 쓰이는 두 근거 검증 호출을 엑사원과 gpt-oss-120b로 같은 질문에 돌려 비교했다. 채점 모델은 쓰지 않고, 모델이 고른 FAQ와 인용문을 정답 FAQ 및 FAQ 원문과 대조했다. 비교 결과 gpt-oss가 앞서고 출력 한도가 작으면 잘리는 문제가 확인되어, 출력 한도를 올리고 gpt-oss를 켜는 플래그(`CONSULT_EVIDENCE_RESOLVER_BEDROCK`)를 추가했다. 처음에는 기본 꺼짐이었고 TELME-184에서 기본 켬으로 바꾸고 호출마다 따로 끌 수 있게 했다(아래 적용 절).
 
 ## 비교한 호출
 
@@ -160,33 +160,37 @@ P7은 P4에 모델을 부르지 않는 낱말 규칙을 더한 것이라 따로 
 
 ### 재현
 
-캡처 실행기(`ChatJudgeCaptureProbe`, `scripts/chat_judge`)와 평가셋은 TELME-180 브랜치, 앞단 gpt-oss 설정은 TELME-182 브랜치에 있다. 캡처는 TELME-182 브랜치 앱으로 `docs/PLAN_QUESTION_MODEL.md`(TELME-182)의 캡처 명령에 `CONSULT_PLAN_QUESTION_BEDROCK=true`를 더해 돌렸다. 블라인드 문장은 `blind-fixture.json.gz`를 `--fixture`로 준다.
+캡처 실행기(`ChatJudgeCaptureProbe`, `scripts/chat_judge`)와 평가셋은 TELME-180 브랜치, 앞단 gpt-oss 설정은 TELME-182 브랜치에 있다. 캡처는 TELME-182 브랜치 앱으로 `docs/PLAN_QUESTION_MODEL.md`(TELME-182)의 캡처 명령에 `CONSULT_PLAN_QUESTION_BEDROCK=true`를 더해 돌렸다. 블라인드 캡처에 넣은 대화 파일은 저장된 캡처에서 되살려 `--fixture`로 준다.
+
+캡처에 넣은 대화와 재생 입력은 저장하지 않는다. 둘 다 캡처에서 아래 명령으로 똑같이 다시 만들어진다(저장했던 파일과 같은지 확인했다).
 
 ```bash
 # 측정 DB 확인: 1152가 아니면 멈춘다
 docker exec telme-flow-postgres psql -U telme -d telme_judge_eval -Atc "select count(embedding_question) from faq_embeddings"
 R=scripts/candidate-evidence-evaluation/results/telme184
-# 입력 꺼내기 (개발용, 블라인드)
-python -I scripts/candidate-evidence-evaluation/candidate_replay.py extract <개발용 캡처>/capture.json dev-inputs.json
-python -I scripts/candidate-evidence-evaluation/blind_replay.py extract <블라인드 캡처>/capture.json blind-inputs.json
+# 블라인드 캡처에 넣은 대화(40개) 되살리기
+python -I scripts/candidate-evidence-evaluation/blind_replay.py fixture $R/blind-capture.json.gz blind-fixture.json
+# 입력 꺼내기 (개발용 57개, 블라인드 26개). 새로 캡처했으면 그 capture.json을 준다
+python -I scripts/candidate-evidence-evaluation/candidate_replay.py extract $R/dev-capture.json.gz dev-inputs.json
+python -I scripts/candidate-evidence-evaluation/blind_replay.py extract $R/blind-capture.json.gz blind-inputs.json
 # 비교: gpt-oss는 동시에, 엑사원은 안·회차마다 따로 (P5는 앱 검색을 불러 측정 DB가 필요하다)
 POSTGRES_PORT=5440 CANDIDATE_REPLAY_PROBE=true CANDIDATE_REPLAY_INPUT=<절대 경로>/dev-inputs.json CANDIDATE_REPLAY_OUT=<절대 경로>/replay.jsonl \
 CANDIDATE_REPLAY_VARIANTS=P0,P1,P2,P3,P4,P5,P7 CANDIDATE_REPLAY_MODELS=gptoss:3 \
 LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval \
   ./gradlew test --tests 'com.telme.probe.CandidateEvidenceReplayProbe' --rerun-tasks
 # 채점 (저장된 결과로 다시 계산)
-python -I scripts/candidate-evidence-evaluation/score_dev.py $R/dev-labels.json $R/dev-replay.jsonl.gz dev-score.md
-python -I scripts/candidate-evidence-evaluation/blind_replay.py score $R/blind-inputs.json.gz $R/blind-replay.jsonl.gz blind-score.md
+python -I scripts/candidate-evidence-evaluation/score_dev.py $R/dev-labels.json.gz $R/dev-replay.jsonl.gz dev-score.md
+python -I scripts/candidate-evidence-evaluation/blind_replay.py score blind-inputs.json $R/blind-replay.jsonl.gz blind-score.md
 # 응답 시간: 안·모델 하나씩 CANDIDATE_REPLAY_LIMIT=30, CANDIDATE_REPLAY_MODELS=gptoss:1 등으로 따로
 ```
 
 | 파일 (`scripts/candidate-evidence-evaluation/`) | 내용 |
 |---|---|
 | `candidate_replay.py` | 캡처에서 근거 검증 입력과 후보 꺼내기, 턴 정답 기준 채점 |
-| `blind_replay.py` | 블라인드 입력 꺼내기(하위 질문을 고객 문장의 부분에 맞춤), 부분 정답 기준 채점 |
+| `blind_replay.py` | 블라인드 입력 꺼내기(하위 질문을 고객 문장의 부분에 맞춤), 부분 정답 기준 채점, 캡처에서 넣은 대화 되살리기 |
 | `score_dev.py` | 개발용 하위 질문 라벨로 안별 채점 |
-| `results/telme184/dev-*` | 개발용 캡처, 입력 57개, 라벨, 안별 결과(P0~P7, 엑사원은 P0·P7 3회와 P1~P5 1회) |
-| `results/telme184/blind-*` | 블라인드 문장 40개와 정답, 캡처 입력, 캡처, 입력 26개, 안별 결과 |
+| `results/telme184/dev-*` | 개발용 캡처(`dev-capture`), 하위 질문 라벨(`dev-labels`), 안별 결과(`dev-replay`, P0~P7, 엑사원은 P0·P7 3회와 P1~P5 1회) |
+| `results/telme184/blind-*` | 블라인드 문장 40개와 정답(`blind-questions`), 캡처(`blind-capture`), 안별 결과(`blind-replay`) |
 | `results/telme184/latency.jsonl.gz` | 응답 시간 측정(호출별 시간 `callMs`, `judgeMs`) |
 | `src/test/java/com/telme/probe/CandidateEvidenceReplayProbe.java` | 같은 입력을 안·모델·회차별로 돌리는 측정 프로그램 |
 
@@ -219,16 +223,19 @@ python -I scripts/candidate-evidence-evaluation/blind_replay.py score $R/blind-i
 
 ```bash
 R=scripts/candidate-evidence-evaluation/results/telme184
-# 1단계: 캡처 앱에 comparisonEvidenceInputs 기록을 더하고 comparison-fixture.json.gz로 캡처(DB는 5440)
+# 1단계: 캡처 앱에 comparisonEvidenceInputs 기록을 더하고, 저장된 캡처에서 되살린 대화(49개)로 캡처(DB는 5440)
+python -I scripts/candidate-evidence-evaluation/blind_replay.py fixture $R/comparison-capture.json.gz comparison-fixture.json
+# 비교 경로 입력(45개) 꺼내기. 새로 캡처했으면 그 capture.json을 준다
+python -I scripts/candidate-evidence-evaluation/comparison_replay.py extract $R/comparison-capture.json.gz comparison-inputs.json
 # 2단계: gpt-oss 3회는 동시에, 엑사원은 회차마다 따로 (COMPARISON_REPLAY_MODELS=모델:회차)
 POSTGRES_PORT=5440 COMPARISON_REPLAY_PROBE=true COMPARISON_REPLAY_INPUT=<절대 경로>/comparison-inputs.json COMPARISON_REPLAY_OUT=<절대 경로>/replay.jsonl \
 COMPARISON_REPLAY_MODELS=gptoss:3 LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval \
   ./gradlew test --tests 'com.telme.consult.service.ComparisonEvidenceReplayProbe' --rerun-tasks
 # 채점 (저장된 결과로 다시 계산)
-python -I scripts/candidate-evidence-evaluation/comparison_replay.py $R/comparison-inputs.json.gz $R/comparison-replay.jsonl.gz score.md
+python -I scripts/candidate-evidence-evaluation/comparison_replay.py comparison-inputs.json $R/comparison-replay.jsonl.gz score.md
 ```
 
-결과 파일: `results/telme184/comparison-blind-questions.json`(블라인드 비교 질문 30개와 정답), `comparison-fixture.json.gz`(캡처 입력 49개), `comparison-capture.json.gz`(캡처), `comparison-inputs.json.gz`(비교 경로 입력 45개), `comparison-replay.jsonl.gz`(모델별 결과). 측정 프로그램은 `src/test/java/com/telme/consult/service/ComparisonEvidenceReplayProbe.java`(비교 검색기 인터페이스가 패키지 안에서만 보여 이 패키지에 둔다), 채점은 `scripts/candidate-evidence-evaluation/comparison_replay.py`다.
+결과 파일: `results/telme184/comparison-blind-questions.json.gz`(블라인드 비교 질문 30개와 정답), `comparison-capture.json.gz`(캡처, 넣은 대화 49개와 비교 경로 입력 45개를 여기서 꺼낸다), `comparison-replay.jsonl.gz`(모델별 결과). 측정 프로그램은 `src/test/java/com/telme/consult/service/ComparisonEvidenceReplayProbe.java`(비교 검색기 인터페이스가 패키지 안에서만 보여 이 패키지에 둔다), 채점은 `scripts/candidate-evidence-evaluation/comparison_replay.py`다.
 
 ## 적용
 
