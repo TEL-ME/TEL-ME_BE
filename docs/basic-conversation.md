@@ -2,7 +2,7 @@
 
 ## 지원 범위
 
-- 이름은 무러바라이며 LG U+ 통신 고객센터 AI 상담사로 소개한다. 친근한 존댓말을 사용한다.
+- 이름은 무러바라이며 TELME 통신 고객센터 AI 상담사로 소개한다. 친근한 존댓말을 사용한다.
 - 순수 인사·감사·작별·호출·자기소개·도움말·안부는 규칙으로 처리하며 분류/답변 모델 호출을 하지 않는다.
 - 이름/호칭과 표현 목록은 `BasicConversationClassifier`, 고정 응답은 `ChatPersona`에서 관리한다.
 - 무러바라, 무러봐라, 물어바라, 물어봐라, 무러바, 바라, mureobara 및 야/님/씨 호칭을 지원한다.
@@ -47,7 +47,7 @@
 
 - FAQ 답변 생성 프롬프트에는 정체성·말투 지침을 넣지 않는다. 이름 소개와 인사는 서버 고정 응답과 `ChatPersona.prependGreeting`이 처리한다.
   - 평가 질문 180개 측정(로컬 exaone3.5)에서 지침이 있을 때만 무관 질문의 GROUNDED 답변이 늘었다(develop 3, 지침 포함 4, 지침 제거 2).
-- 프롬프트 버전은 `rag-answer-v4.7`이다. 비교 질문 버전(`-comparison-v2`)까지 `llm_generations.prompt_version` 30자 안에 들어간다.
+- 프롬프트 버전은 `rag-answer-v4.8`이다. 비교 질문 버전(`-comparison-v2`)까지 `llm_generations.prompt_version` 30자 안에 들어간다.
 - 새 근거 부족 문구는 `AnswerPromptTemplates.NO_EVIDENCE_ANSWER`에서 관리한다.
 - 마침표 없는 근거 부족 출력도 Guard가 정규 문구로 정리한다. 답변 근거는 인사를 붙이기 전에 판정한다.
 - 과거 저장 메시지를 새 문구로 일괄 변경하지 않는다.

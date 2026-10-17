@@ -197,6 +197,9 @@ telme:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
       # 조건 뽑기 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
       bedrock-extraction: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:false}
+    # 비교·FAQ 후보 근거 검증 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
+    evidence-resolver:
+      bedrock: ${CONSULT_EVIDENCE_RESOLVER_BEDROCK:false}
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
