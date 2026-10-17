@@ -40,7 +40,8 @@ def plan_capture(content="일반 요금제 중 가장 저렴한 요금제예요.
 class AppMessageTest(unittest.TestCase):
     def test_every_fixed_message_exists_verbatim_in_java_source(self):
         java = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src/main/java").rglob("*.java"))
-        for sentence in service_data.SERVICE_GUIDANCE + service_data.SYSTEM_FALLBACKS + (service_data.NO_SEARCH_RESULT,):
+        for sentence in service_data.SERVICE_GUIDANCE + service_data.SYSTEM_FALLBACKS + (
+                service_data.NO_SEARCH_RESULT, service_data.NO_EVIDENCE):
             self.assertIn(sentence, java)
 
     def test_recommendation_rule_matches_java_constants(self):
@@ -315,6 +316,20 @@ class FlowTest(unittest.TestCase):
         turn["outputMessage"]["storeSearchContext"] = {"type": "CURRENT_LOCATION", "label": "현재 위치"}
         self.assertEqual("STORE_RESULTS_RETURNED", pipeline.rule_quality(turn)["rule"])
 
+    def test_refusal_template_on_unanswerable_question_is_decided_by_code(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        turn["fixture"]["expectedBehavior"] = "ABSTAIN"
+        for content in (service_data.NO_SEARCH_RESULT, service_data.NO_EVIDENCE + "."):
+            turn["outputMessage"] = {"messageType": "ANSWER", "content": content}
+            rule = pipeline.rule_quality(turn)
+            self.assertEqual(("ABSTAIN_REFUSAL_TEMPLATE", "NOT_APPLICABLE"),
+                             (rule["rule"], rule["result"]["groups"][0]["outcome"]))
+        turn["outputMessage"]["content"] = "1. 첫 질문은 " + service_data.NO_EVIDENCE + ". 2. 둘째는 가능합니다."
+        self.assertIsNone(pipeline.rule_quality(turn))  # 일부만 거절한 답은 모델이 본다
+        turn["fixture"]["expectedBehavior"] = "ANSWER"
+        turn["outputMessage"]["content"] = service_data.NO_EVIDENCE
+        self.assertIsNone(pipeline.rule_quality(turn))  # 답이 있는 질문의 거절은 모델이 미답으로 본다
+
     def test_direct_answer_facts_apply_only_when_the_app_did_not_ask(self):
         turn = sample_capture()["cases"][0]["turns"][0]
         turn["fixture"].update(requiredFacts=["대리인은 위임장이 필요하다"],
@@ -369,6 +384,36 @@ class FlowTest(unittest.TestCase):
                     self.assertEqual(([], ["STORE"]), (turn["qualityReferenceGroups"], turn["answerSources"]))
                     # 앱이 업무를 되물으면 답할 말이 늘 있다(시나리오에 없으면 기대 업무로 채운 auto 답변)
                     self.assertTrue(any(reply["whenKey"] == "serviceType" for reply in turn["clarificationReplies"]))
+
+
+class SituationContextTest(unittest.TestCase):
+    def test_faq_question_goes_to_the_judge_as_situation_not_evidence(self):
+        source = {"sourceId": "TERMINATE-0115", "faqId": 1, "question": "해지하는데 할부 한 번에 내는 게 나아요",
+                  "answer": "원칙은 한 번에 내는 겁니다. 부담되시면 계속 나눠 내는 것도 됩니다."}
+        view = judge.judge_source(source)
+        self.assertEqual(["sourceId", "situation", "answer"], list(view))
+        self.assertEqual({"sourceId": "SERVICE:PLAN_TABLE", "answer": "표"},
+                         judge.judge_source({"sourceId": "SERVICE:PLAN_TABLE", "answer": "표"}))
+        data = judge.grounding_claim_data({"question": "요금 나눠 내도 돼요?", "sources": [source]}, ["나눠 내도 됩니다."])
+        self.assertEqual(view, data["sources"][0])
+        self.assertIn("situation", judge.GROUNDING_RUBRIC)
+        self.assertIn("situation", pipeline.EVIDENCE_RUBRIC)
+        # 근거 인용은 답 원문만 된다. 상황 문장을 인용하면 판정 결과가 거부된다
+        def merged(quote):
+            return {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH", "reason": "",
+                    "evidenceQuotes": [{"sourceId": "TERMINATE-0115", "quote": quote}]}
+        judge.validate_result("abstention", merged("부담되시면 계속 나눠 내는 것도 됩니다."), {"TERMINATE-0115"},
+                              sources=[view])
+        with self.assertRaises(ValueError):
+            judge.validate_result("abstention", merged(source["question"]), {"TERMINATE-0115"}, sources=[view])
+
+    def test_validation_capture_fills_faq_question_from_catalog(self):
+        from scripts.chat_judge import run_judge_validation as validation
+        item = {"id": "X", "category": "c", "stratum": "s", "question": "q", "previousTurns": [], "answer": "a",
+                "messageType": "ANSWER", "expectedBehavior": "ANSWER", "referenceGroups": [],
+                "deliveredSources": [{"sourceId": "BILLING-0001", "answer": "월 1회 바꿀 수 있습니다."}]}
+        capture = validation.to_capture([item], CATALOG)
+        self.assertEqual(CATALOG[0]["question"], capture["cases"][0]["turns"][0]["ragInputs"][0]["searchResults"][0]["question"])
 
 
 if __name__ == "__main__":

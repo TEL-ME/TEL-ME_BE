@@ -22,7 +22,7 @@ DATASET = ROOT / "scripts/chat_judge/data/judge_validation_v1.json"
 AXES = ("grounding", "quality", "abstention")
 
 
-def to_capture(items):
+def to_capture(items, catalog=None):
     """검증 항목을 Judge 입력 형식으로 바꾼다. 생성에 전달된 FAQ 답변만 근거로 넣고 FAQ 질문 문구는 비운다.
     이전 턴은 질문과 답변만 판정 맥락으로 남기고 판정하지 않는다."""
     cases = []
@@ -32,8 +32,10 @@ def to_capture(items):
                   "executionStatus": "CANCELLED", "searches": [],
                   "outputMessage": {"content": previous["answer"], "messageType": "ANSWER"}}
                  for previous in item["previousTurns"]]
-        results = [{"faqId": 0, "slotId": source["sourceId"], "question": "", "answer": source["answer"]}
-                   for source in item["deliveredSources"]]
+        # FAQ 질문 문장은 근거가 아니라 그 답이 어떤 상황에 대한 것인지 알려 주는 맥락으로 판정 모델에 넘어간다
+        questions = {row["slot_id"]: row["question"] for row in catalog or []}
+        results = [{"faqId": 0, "slotId": source["sourceId"], "question": questions.get(source["sourceId"], ""),
+                    "answer": source["answer"]} for source in item["deliveredSources"]]
         turns.append({"fixture": {"question": item["question"], "expectedIntent": "FAQ",
                                   "expectedBehavior": item["expectedBehavior"], "goldSourceGroups": [],
                                   "requiredFacts": item.get("requiredFacts", []),
@@ -119,10 +121,10 @@ def main():
             if not args.allow_bedrock_call:
                 parser.error("Bedrock 호출은 유료라 --allow-bedrock-call이 필요하다")
             from scripts.chat_judge import run_bedrock_judge
-            evaluation = run_bedrock_judge.evaluate(to_capture(items), catalog, args.bedrock_model, args.profile,
+            evaluation = run_bedrock_judge.evaluate(to_capture(items, catalog), catalog, args.bedrock_model, args.profile,
                                                     args.workers, args.limit)
         else:
-            evaluation = pipeline.evaluate(to_capture(items), catalog, args.url, args.model, workers=args.workers,
+            evaluation = pipeline.evaluate(to_capture(items, catalog), catalog, args.url, args.model, workers=args.workers,
                                            on_checkpoint=lambda value: pipeline.checkpoint(args.out, value))
         evaluation["datasetSha256"] = judge.sha256(data)
         pipeline.checkpoint(args.out, evaluation)

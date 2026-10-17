@@ -248,8 +248,7 @@ class BedrockJudge:
                           ("question", "questionParts", "previousTurns", "sources", "confirmedConditions")
                           if key in data}
         evidence_input["questionParts"] = evidence_input.get("questionParts") or [data["question"]]
-        evidence_input["sources"] = [{key: source[key] for key in ("sourceId", "answer") if key in source}
-                                     for source in evidence_input.get("sources", [])]
+        evidence_input["sources"] = [judge.judge_source(source) for source in evidence_input.get("sources", [])]
         def payload(name, rubric, schema, value):
             return {"model": self.config["modelId"], "messages": [
                 {"role": "system", "content": rubric}, {"role": "user", "content": judge.canonical(value)}],

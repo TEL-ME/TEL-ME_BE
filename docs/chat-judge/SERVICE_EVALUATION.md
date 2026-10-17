@@ -53,6 +53,7 @@ python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_ch
 | `UNNECESSARY_CLARIFICATION` | 그 밖의 기대 동작에서 응답이 되묻기 | 충족도 `MISSED`, 발견 사항 `UNNECESSARY_CLARIFICATION` |
 | `LOGIN_GUIDANCE_ACCEPTED` | 답의 출처가 회원 정보뿐인 보류 질문(`answerSources: ["MEMBER"]`)에 답변 전체가 로그인 안내 | 충족도 `NOT_APPLICABLE`, 정상 처리(비로그인 실행) |
 | `STORE_RESULTS_RETURNED` / `STORE_SERVICE_MISMATCH` / `STORE_LOCATION_MISMATCH` / `STORE_NOT_RETURNED` | 기대 동작이 `STORE_LOOKUP` | 매장 목록을 보여 줬고, 고객이 말한 위치 기준(현재 위치 버튼이면 현재 위치, 지명이면 지명)이며, 고객이 말한 업무(`expectedServiceType`)를 하는 매장만 있으면 `COMPLETE`, 아니면 `MISSED` |
+| `ABSTAIN_REFUSAL_TEMPLATE` | 답이 없는 질문(`ABSTAIN`)에 답변 전체가 앱의 거절 고정 문장(검색 결과 0건 안내, "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요") | 충족도 `NOT_APPLICABLE`(정상 보류). 모델에 맡기면 같은 문장을 턴마다 다르게 판정했다 |
 | `NO_SEARCH_RESULT_FALLBACK` | 답이 없는 질문(`ABSTAIN`)에 검색 결과 0건 고정 문구로 답함 | 보류로 인정하고 발견 사항으로 따로 센다([라벨 검토 목록](LABEL_REVIEW.md) D1). 정답이 있는 질문에서 이 문구로 끝나면 충족도 실패다 |
 | `REASKED_CONDITION` | 한 턴 안에서 이미 답한 조건을 다시 되물음 | 발견 사항으로 남기고 통과로 보지 않는다(고객이 같은 답을 두 번 했다) |
 | `UNSCRIPTED_CLARIFICATION` | 앱이 평가셋에 고객 답변이 없는 조건을 되물음 | 발견 사항으로 남기고 사람 검토(품질 미확정) |

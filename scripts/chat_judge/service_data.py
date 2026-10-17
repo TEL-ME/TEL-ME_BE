@@ -44,6 +44,9 @@ SERVICE_GUIDANCE = (
 # 보류로 인정하고(LABEL_REVIEW.md D1), 그렇게 통과한 턴은 발견 사항(NO_SEARCH_RESULT_FALLBACK)으로 따로 센다
 NO_SEARCH_RESULT = "관련 안내 정보를 찾지 못했습니다. 통신 서비스나 매장 관련 질문이라면 조금 더 구체적으로 알려주세요."
 
+# 생성 모델이 근거로 답할 수 없을 때 그대로 내보내는 한 문장(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE)
+NO_EVIDENCE = "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요"
+
 # 질문을 처리하지 못했을 때 앱이 내보내는 대체 문구. 보류나 범위 밖 안내가 아니라 처리 실패다
 SYSTEM_FALLBACKS = (
     "현재 질문을 안전하게 나누어 처리하기 어려워요. 궁금한 내용을 하나씩 알려주세요.",  # QueryRoutingAnalysisProvider
@@ -83,6 +86,12 @@ def login_guidance_only(content):
 
 def is_no_search_result(content):
     return compact(content) == compact(NO_SEARCH_RESULT)
+
+
+def is_refusal_template(content):
+    """답변 전체가 앱의 거절 고정 문장(검색 결과 0건 안내, 근거 부족 한 문장)인지. 끝 마침표는 보지 않는다."""
+    text = compact(content).rstrip(".")
+    return text in {compact(NO_SEARCH_RESULT).rstrip("."), compact(NO_EVIDENCE).rstrip(".")}
 
 
 def _limit(unlimited, value, scale=1):
