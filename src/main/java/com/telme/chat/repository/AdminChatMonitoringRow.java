@@ -21,6 +21,8 @@ public record AdminChatMonitoringRow(
         String executionStatus,
         Instant startedAt,
         Instant endedAt,
+        // 서버가 잰 처리 시간. 진행 중·측정 전 실행은 null
+        Integer totalMs,
         String errorCode,
         String answerType,
         String answerBasis,

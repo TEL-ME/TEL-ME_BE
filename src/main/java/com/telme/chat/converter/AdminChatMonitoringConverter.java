@@ -10,7 +10,6 @@ import com.telme.chat.dto.res.ChatExecutionTraceResponse;
 import com.telme.chat.repository.AdminChatMonitoringRow;
 import com.telme.chat.repository.ChatExecutionTraceRepository;
 import java.sql.Timestamp;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -27,16 +26,6 @@ public class AdminChatMonitoringConverter {
     // 목록 질문 미리보기 길이
     private static final int QUESTION_PREVIEW_LENGTH = 40;
     private static final String BLOCKED = "BLOCKED";
-
-    private final Clock clock;
-
-    public AdminChatMonitoringConverter() {
-        this(Clock.systemUTC());
-    }
-
-    AdminChatMonitoringConverter(Clock clock) {
-        this.clock = clock;
-    }
 
     public AdminChatMonitoringListResponse toListResponse(
             List<AdminChatMonitoringListItemResponse> items, boolean hasNext) {
@@ -130,11 +119,15 @@ public class AdminChatMonitoringConverter {
         return row.startedAt() != null ? row.startedAt() : row.messageCreatedAt();
     }
 
-    // 소요 시간(진행 중이면 현재까지)
+    // 측정값이 있으면 시각 차이와 관계없이 우선한다. 과거 기록의 음수 시간은 표시하지 않는다.
     private Long elapsedMs(AdminChatMonitoringRow row) {
-        if (row.startedAt() == null) return null;
-        Instant end = row.endedAt() != null ? row.endedAt() : row.running() ? clock.instant() : null;
-        return end == null ? null : Duration.between(row.startedAt(), end).toMillis();
+        if (row.totalMs() != null) {
+            return row.totalMs() >= 0 ? row.totalMs().longValue() : null;
+        }
+        if (row.startedAt() == null || row.endedAt() == null || row.endedAt().isBefore(row.startedAt())) {
+            return null;
+        }
+        return Duration.between(row.startedAt(), row.endedAt()).toMillis();
     }
 
     private String preview(String text) {
