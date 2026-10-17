@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -280,6 +281,38 @@ class FaqSearchAnswerProviderTest {
         verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), any(), quoteRepairFailure.capture());
         assertThat(evidenceQuestion.getValue()).isEqualTo("번호 이동 서류는 뭐고");
         assertThat(quoteRepairFailure.getValue()).isTrue();
+    }
+
+    // TELME-184: 복합 하위 질문이면 나누기 전 고객 원문을 근거 검증에 넘기고 실행 기록에도 남긴다
+    @Test
+    void candidateValidationReceivesCustomerMessageAndTracesIt() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var trace = mock(ExecutionTrace.class);
+        var source = new FaqSearchResponse(65L, null, "PORTING", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        var provider = new FaqSearchAnswerProvider(searches, answers, trace,
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "번호이동서류는뭐고", "번호이동서류는뭐고", Map.of(),
+                "번호이동서류는뭐고", null, false, null, Map.of(), "번호이동 서류는 뭐고",
+                "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?"));
+
+        var customerMessage = ArgumentCaptor.forClass(String.class);
+        verify(candidateEvidence).resolve(any(), any(), any(), customerMessage.capture(), any(), anyBoolean());
+        assertThat(customerMessage.getValue()).isEqualTo("번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Object> traced = ArgumentCaptor.forClass(Object.class);
+        verify(trace).append(eq(1L), eq("faqCandidateEvidenceInputs"), traced.capture());
+        assertThat((Map<String, Object>) traced.getValue())
+                .containsEntry("question", "번호이동 서류는 뭐고")
+                .containsEntry("customerMessage", "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?")
+                .containsEntry("allowQuoteRepairFailure", true);
     }
 
     // 후보 확인으로 답한 경우도 일반 답변과 같이 근거 FAQ로 추천 질문을 붙인다

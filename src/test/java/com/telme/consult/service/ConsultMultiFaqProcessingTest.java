@@ -145,6 +145,9 @@ class ConsultMultiFaqProcessingTest {
                 .containsExactly("번호이동서류는뭐고", "요금제변경은어떻게해");
         assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::candidateEvidenceQuery)
                 .containsExactly("번호이동 서류는 뭐고", "요금제 변경은 어떻게 해");
+        // 하위 질문이 조각이라 근거 검증이 빠진 대상·조건을 찾도록 나누기 전 고객 원문을 함께 넘긴다(TELME-184)
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::customerMessage)
+                .containsOnly("번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
     }
 
     @Test

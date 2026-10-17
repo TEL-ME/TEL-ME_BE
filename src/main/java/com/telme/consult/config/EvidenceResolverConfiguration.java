@@ -1,6 +1,7 @@
 package com.telme.consult.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.service.CandidateSubjectRule;
 import com.telme.consult.service.LlmComparisonEvidenceResolver;
 import com.telme.consult.service.LlmFaqCandidateEvidenceResolver;
 import com.telme.consult.service.LlmFaqCandidateEvidenceResolver.Options;
@@ -8,6 +9,7 @@ import com.telme.llm.config.BedrockConfig;
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
 import com.telme.rag.service.FaqEvidenceJudge;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -15,12 +17,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /** 두 근거 검증 호출이 쓸 모델을 고른다. 상담 연동 설정과 별개로 항상 만든다. */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(EvidenceResolverProperties.class)
 public class EvidenceResolverConfiguration {
 
-    static LlmClient evidenceClient(EvidenceResolverProperties properties, LlmClient exaone, LlmClient bedrock) {
-        return properties.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
+    static LlmClient evidenceClient(boolean useBedrock, LlmClient exaone, LlmClient bedrock) {
+        return useBedrock && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
     }
 
     @Bean
@@ -28,18 +31,24 @@ public class EvidenceResolverConfiguration {
             LlmClient llmClient, ObjectMapper objectMapper, EvidenceResolverProperties properties,
             @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {
         return new LlmComparisonEvidenceResolver(
-                evidenceClient(properties, llmClient, bedrock.getIfAvailable()), objectMapper);
+                evidenceClient(properties.comparisonBedrock(), llmClient, bedrock.getIfAvailable()), objectMapper);
     }
 
-    // 후보 근거 검증(TELME-184): candidateJudge를 켜면 단어 검사 대신 고객 원문을 함께 주고, 고른 FAQ를 회색 구간 판정기(v4)로
-    // 다시 판정한다. 판정기는 Bedrock이 켜졌을 때만 있다. 꺼져 있거나 판정기가 없으면 예전처럼 단어 검사로 막는다
+    // 후보 근거 검증(TELME-184): candidateJudge를 켜면 단어 검사 대신 고객 원문을 함께 주고, 고른 FAQ가 질문과 같은 대상인지
+    // 낱말로 먼저 확인한 뒤(CandidateSubjectRule) 회색 구간 판정기(v4)로 다시 판정한다. 판정기는 Bedrock이 켜졌을 때만 있다.
+    // 꺼져 있거나 판정기가 없으면 예전처럼 단어 검사로 막는다
     static Options candidateOptions(EvidenceResolverProperties properties, FaqEvidenceJudge judge) {
-        if (!properties.candidateJudge() || judge == null) {
+        if (!properties.candidateJudge()) {
+            return Options.CURRENT;
+        }
+        if (judge == null) {
+            log.warn("후보 근거 검증 판정(candidate-judge)을 켰지만 Bedrock 판정기가 없어 단어 검사로 막는다(llm.bedrock.enabled 확인)");
             return Options.CURRENT;
         }
         return new Options(false, true, (executionId, consultRequestId, question, customerMessage, candidate) ->
-                judge.judge(executionId, consultRequestId, judgeQuestion(question, customerMessage),
-                        candidate.question(), candidate.answer()) == FaqEvidenceJudge.Verdict.ANSWERABLE);
+                CandidateSubjectRule.passes(question, customerMessage, candidate.question(), candidate.answer())
+                        && judge.judge(executionId, consultRequestId, judgeQuestion(question, customerMessage),
+                                candidate.question(), candidate.answer()) == FaqEvidenceJudge.Verdict.ANSWERABLE);
     }
 
     // 판정기는 질문 하나를 받는다. 하위 질문이 조각이면 원문을 앞에 두고 판단할 부분을 밝힌다
@@ -56,7 +65,7 @@ public class EvidenceResolverConfiguration {
             @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock,
             ObjectProvider<FaqEvidenceJudge> judge) {
         return new LlmFaqCandidateEvidenceResolver(
-                evidenceClient(properties, llmClient, bedrock.getIfAvailable()), objectMapper,
+                evidenceClient(properties.candidateBedrock(), llmClient, bedrock.getIfAvailable()), objectMapper,
                 candidateOptions(properties, judge.getIfAvailable()));
     }
 }

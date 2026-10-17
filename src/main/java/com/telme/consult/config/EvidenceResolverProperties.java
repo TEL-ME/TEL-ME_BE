@@ -3,11 +3,14 @@ package com.telme.consult.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-// 비교 근거 검증과 FAQ 후보 근거 검증. bedrock을 켜면 gpt-oss(Bedrock)를 먼저 쓰고 실패하면 엑사원으로 대체한다
-// candidateJudge: 후보 근거 검증에서 단어 검사 대신 고객 원문을 함께 주고 고른 FAQ를 회색 구간 판정기로 다시 판정한다(TELME-184).
-// 답하는 질문이 크게 늘지만 대상이 다른 FAQ로 틀린 사실을 답하는 경우가 남아 기본은 끈다. 켤 때는 bedrock도 켠다
+// 비교 근거 검증과 FAQ 후보 근거 검증(docs/EVIDENCE_RESOLVER_COMPARISON.md).
+// comparisonBedrock, candidateBedrock: 켜면 그 호출이 gpt-oss(Bedrock)를 먼저 쓰고 실패하면 엑사원으로 대체한다. 끄면 엑사원이다.
+// 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK(application.yml)이고 호출마다 따로 엑사원으로 되돌릴 수 있다.
+// candidateJudge: 후보 근거 검증에서 단어 검사 대신 고객 원문을 함께 주고, 고른 FAQ를 대상 낱말 규칙과 회색 구간 판정기로
+// 다시 확인한다(TELME-184). 끄면 예전처럼 단어 검사로 막는다
 @ConfigurationProperties(prefix = "telme.consult.evidence-resolver")
 public record EvidenceResolverProperties(
-        @DefaultValue("false") boolean bedrock,
-        @DefaultValue("false") boolean candidateJudge) {
+        @DefaultValue("true") boolean comparisonBedrock,
+        @DefaultValue("true") boolean candidateBedrock,
+        @DefaultValue("true") boolean candidateJudge) {
 }

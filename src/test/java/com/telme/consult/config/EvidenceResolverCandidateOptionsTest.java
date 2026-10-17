@@ -18,22 +18,22 @@ class EvidenceResolverCandidateOptionsTest {
     private final FaqSearchResponse faq = new FaqSearchResponse(65L, null, "NAME_CHANGE",
             "명의변경 시 필요한 서류", "양도인과 양수인의 신분증이 각각 필요합니다.", 0.6, 1, null, 1, null);
 
-    private static final EvidenceResolverProperties ON = new EvidenceResolverProperties(true, true);
+    private static final EvidenceResolverProperties ON = new EvidenceResolverProperties(true, true, true);
 
     @Test
     @DisplayName("설정이 꺼져 있거나 판정기가 없으면 예전처럼 단어 검사로 막는다")
     void 꺼져_있거나_판정기가_없으면_단어_검사를_유지한다() {
         assertThat(EvidenceResolverConfiguration.candidateOptions(ON, null)).isSameAs(Options.CURRENT);
-        assertThat(EvidenceResolverConfiguration.candidateOptions(new EvidenceResolverProperties(true, false),
+        assertThat(EvidenceResolverConfiguration.candidateOptions(new EvidenceResolverProperties(true, true, false),
                 mock(FaqEvidenceJudge.class))).isSameAs(Options.CURRENT);
     }
 
     @Test
-    @DisplayName("설정을 주지 않으면 꺼져 있고, 설정 이름으로 켠다")
-    void 기본은_꺼져_있고_설정으로_켠다() {
-        assertThat(bind(java.util.Map.of()).candidateJudge()).isFalse();
-        assertThat(bind(java.util.Map.of("telme.consult.evidence-resolver.candidate-judge", "true")).candidateJudge())
-                .isTrue();
+    @DisplayName("설정을 주지 않으면 켜져 있고, 설정 이름으로 끈다")
+    void 기본은_켜져_있고_설정으로_끈다() {
+        assertThat(bind(java.util.Map.of()).candidateJudge()).isTrue();
+        assertThat(bind(java.util.Map.of("telme.consult.evidence-resolver.candidate-judge", "false")).candidateJudge())
+                .isFalse();
     }
 
     private static EvidenceResolverProperties bind(java.util.Map<String, Object> values) {

@@ -3,6 +3,7 @@ package com.telme.probe;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.consult.config.EvidenceResolverConfiguration;
+import com.telme.consult.service.CandidateSubjectRule;
 import com.telme.consult.service.LlmFaqCandidateEvidenceResolver;
 import com.telme.consult.service.LlmFaqCandidateEvidenceResolver.Options;
 import com.telme.faq.dto.req.FaqSearchRequest;
@@ -38,7 +39,8 @@ import org.springframework.boot.test.context.SpringBootTest;
  *   P0 지금 방식(단어 검사, 하위 질문만) / P1 단어 검사 없음 / P2 P1 + 고객 원문 /
  *   P3 P2 + 고른 FAQ를 회색 구간 판정기(v4)로 하위 질문만 다시 판정 / P4 P2 + 같은 판정에 고객 원문을 함께 줌 /
  *   P5 P4 + 고객 원문으로도 후보를 검색해 하위 질문 후보 뒤에 붙임(앱 검색을 부르므로 측정 DB가 필요하다, POSTGRES_PORT=5440)
- *   (P6 "모델이 다시 쓴 하위 질문만 판정기에 줌"은 TELME-184에서 재 본 뒤 효과가 흔들림 범위라 코드에서 뺐다)
+ *   (P6 "모델이 다시 쓴 하위 질문만 판정기에 줌"은 TELME-184에서 재 본 뒤 효과가 흔들림 범위라 코드에서 뺐다) /
+ *   P7 P4 + 대상 낱말 규칙(CandidateSubjectRule)을 판정기 앞에 둠. 운영의 candidate-judge 설정과 같다
  * 모델(CANDIDATE_REPLAY_MODELS, 기본 exaone:1,gptoss:3)은 모델:회차 수다. CANDIDATE_REPLAY_LIMIT을 주면 앞에서 그 수만큼만 돈다.
  * 응답 시간은 호출마다(callMs: 고르기와 인용문 재시도, judgeMs: 판정기) 남긴다. 시간을 잴 때는 방식·모델·회차를 하나만 준다.
  * 실행: CANDIDATE_REPLAY_PROBE=true CANDIDATE_REPLAY_INPUT=<입력 json> CANDIDATE_REPLAY_OUT=<결과 jsonl> LLM_PROVIDER=ollama
@@ -104,6 +106,13 @@ class CandidateEvidenceReplayProbe {
             case "P2" -> new Options(false, true, null);
             case "P3" -> new Options(false, true, partOnly);
             case "P4", "P5" -> new Options(false, true, withMessage);
+            case "P7" -> new Options(false, true, (executionId, consultRequestId, question, customerMessage, candidate) -> {
+                if (!CandidateSubjectRule.passes(question, customerMessage, candidate.question(), candidate.answer())) {
+                    verdicts.add("SUBJECT_RULE_REJECTED:0");
+                    return false;
+                }
+                return withMessage.answers(executionId, consultRequestId, question, customerMessage, candidate);
+            });
             default -> throw new IllegalArgumentException(variant);
         };
     }
