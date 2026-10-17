@@ -119,10 +119,15 @@ public class AdminChatMonitoringConverter {
         return row.startedAt() != null ? row.startedAt() : row.messageCreatedAt();
     }
 
-    // 소요 시간은 관리자 응답 속도와 같은 total_ms를 쓴다. 시작·종료 시각 차이는 시계가 달라 틀릴 수 있다.
-    // 진행 중이거나 측정 전 실행은 0으로 꾸미지 않고 null로 둔다
+    // 측정값이 있으면 시각 차이와 관계없이 우선한다. 과거 기록의 음수 시간은 표시하지 않는다.
     private Long elapsedMs(AdminChatMonitoringRow row) {
-        return row.totalMs() == null ? null : row.totalMs().longValue();
+        if (row.totalMs() != null) {
+            return row.totalMs() >= 0 ? row.totalMs().longValue() : null;
+        }
+        if (row.startedAt() == null || row.endedAt() == null || row.endedAt().isBefore(row.startedAt())) {
+            return null;
+        }
+        return Duration.between(row.startedAt(), row.endedAt()).toMillis();
     }
 
     private String preview(String text) {

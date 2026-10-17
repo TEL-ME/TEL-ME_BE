@@ -68,30 +68,56 @@ class AdminLatencyQueryServiceTest {
     }
 
     @Test
-    @DisplayName("처리 시간이 없는 과거 실행은 시각 차이로 채우지 않고 집계에서 뺀다")
-    void 처리_시간이_없는_과거_실행은_시각_차이로_채우지_않는다() {
+    @DisplayName("처리 시간이 없는 과거 실행은 시각 차이로 계산하고 음수는 뺀다")
+    void 처리_시간이_없는_과거_실행은_시각_차이로_계산한다() {
         String start = FROM.plusSeconds(60).toString();
         legacyExecution(start, FROM.plusSeconds(61).toString());
         legacyExecution(start, FROM.plusSeconds(59).toString());
 
         AdminLatencyResponse.Stats overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
 
-        assertThat(overall.count()).isEqualTo(2);
-        assertThat(overall.avgMs()).isEqualTo(3000);
+        assertThat(overall.count()).isEqualTo(3);
+        assertThat(overall.avgMs()).isEqualTo(2333);
     }
 
     @Test
-    @DisplayName("과거 실행만 있는 기간은 0ms가 아니라 0건과 null을 반환한다")
-    void 과거_실행만_있으면_0건이다() {
+    @DisplayName("과거 실행만 있는 기간도 시각 차이로 집계한다")
+    void 과거_실행만_있어도_집계한다() {
         Instant from = Instant.parse("2200-01-01T00:00:00Z");
         legacyExecution(from.plusSeconds(60).toString(), from.plusSeconds(61).toString());
 
         AdminLatencyResponse.Stats overall = service.getLatency(
                 new AdminLatencySearchRequest(from, from.plusSeconds(3600))).overall();
 
-        assertThat(overall.count()).isZero();
-        assertThat(overall.avgMs()).isNull();
-        assertThat(overall.p50Ms()).isNull();
+        assertThat(overall.count()).isEqualTo(1);
+        assertThat(overall.avgMs()).isEqualTo(1000);
+        assertThat(overall.p50Ms()).isEqualTo(1000);
+    }
+
+    @Test
+    @DisplayName("측정값이 있으면 시각 차이가 음수여도 측정값만 집계한다")
+    void 측정값을_시각_차이보다_우선한다() {
+        jdbcTemplate.update("UPDATE chat_executions SET ended_at=started_at - interval '1 second'"
+                + " WHERE started_at >= ?::timestamptz AND started_at < ?::timestamptz",
+                FROM.toString(), TO.toString());
+
+        var overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
+
+        assertThat(overall.count()).isEqualTo(2);
+        assertThat(overall.avgMs()).isEqualTo(3000);
+    }
+
+    @Test
+    @DisplayName("과거 기록의 종료 시각 누락은 제외하고 시각 차이가 0이면 포함한다")
+    void 과거_기록의_종료_누락과_영_ms를_구분한다() {
+        String start = FROM.plusSeconds(60).toString();
+        legacyExecution(start, null);
+        legacyExecution(start, start);
+
+        var overall = service.getLatency(new AdminLatencySearchRequest(FROM, TO)).overall();
+
+        assertThat(overall.count()).isEqualTo(3);
+        assertThat(overall.avgMs()).isEqualTo(2000);
     }
 
     @Test
