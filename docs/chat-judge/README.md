@@ -13,11 +13,34 @@ TELME-100에서 만든 Judge를 TELME-180에서 최신 develop으로 옮겼고, 
 
 ## 판정 구성
 
-- **판정 모델:** Bedrock의 Qwen3 235B A22B 2507과 DeepSeek V3.2(오레곤)로 따로 판정하고, 하나라도 실패면 실패로 결합한 값을 대표 수치로 쓴다. Mistral Large 3도 같은 경로로 돌릴 수 있다. 로컬 vLLM(Qwen3-14B-AWQ)도 같은 프롬프트로 판정한다.
+- **판정 모델:** Bedrock의 Qwen3 235B A22B 2507, DeepSeek V3.2(오레곤), Mistral Large 3로 따로 판정하고, 하나라도 실패면 실패로 결합한 값을 대표 수치로 쓴다([판정 모델 선정](#판정-모델-선정)). 로컬 vLLM(Qwen3-14B-AWQ)도 같은 프롬프트로 판정할 수 있다.
 - **근거성:** 답변에서 사실 주장을 원문 그대로 뽑은 뒤 주장마다 실제로 생성에 전달된 근거로 판정한다. 근거는 FAQ 답변 본문과, 앱이 FAQ 밖 데이터로 답했으면 그 데이터(요금제 표, 회원 계정 데이터, 매장 목록, 추천 규칙)다.
 - **충족도:** 질문 부분마다 정답 FAQ 묶음과 필수 사실을 주고 답변이 그것을 담았는지 판정한다.
 - **보류:** 답변이 거절인지와 전달된 근거로 답할 수 있었는지를 따로 판정해 합친다.
 - **코드 규칙:** 기대 동작과 응답 유형만으로 정해지는 판정(범위 밖 질문, 거절 고정 문장, 매장 결과, 되묻기 재질문 등)은 모델을 부르지 않는다.
+
+## 판정 모델 선정
+
+2026-10-17에 **세 모델(Qwen3 235B, DeepSeek V3.2, Mistral Large 3)을 따로 판정하고 하나라도 실패면 실패로 결합**하기로 했다.
+
+| 후보 | 결과 |
+| --- | --- |
+| Qwen3 235B A22B 2507 | 채택. 가장 싸고 빠르다(서비스 품질셋 259턴 $0.32, 4분) |
+| DeepSeek V3.2 | 채택. 근거성 일치가 가장 높다. 도쿄 리전은 처리량이 막혀 오레곤을 쓴다(259턴 35분 → 3분, $0.78) |
+| Mistral Large 3 | 채택. 혼자서는 미확정이 많지만(인용 문장을 원문과 다르게 옮김) 결합하면 잘못 통과시키는 답을 줄인다($0.74, 6분) |
+| Qwen3 Next 80B | 제외. 검증셋에서 충족도 일치가 낮았다(66/116) |
+| Claude Sonnet | 제외. 비용 |
+| gpt-oss-120b | 제외. 채팅 답변 생성에 쓰는 모델이라 자기 답을 채점하지 않게 한다 |
+
+Judge 검증셋 116건(필수 사실 포함, 판정자 A 기준)의 결합 방식 비교([후보 비교](results/20261016-judge-candidates/README.md)):
+
+| 결합 | 최종 판정 일치 | 사람은 실패인데 통과 | 사람은 통과인데 실패 | 미확정 |
+| --- | ---: | ---: | ---: | ---: |
+| 세 모델, 하나라도 실패면 실패(채택) | 97 | 6 | 6 | 7 |
+| Qwen3 235B + DeepSeek V3.2, 하나라도 실패면 실패 | 97 | 10 | 6 | 3 |
+| 세 모델, 다수결 | 96 | 14 | 3 | 3 |
+
+일치율은 두 모델 결합과 같지만, Judge가 가장 피해야 할 오류인 "사람은 실패로 본 답을 통과시킴"이 10건에서 6건으로 준다. 대가로 미확정이 늘고(사람 검토로 넘어간다) 판정 1회 비용이 서비스 품질셋 259턴 기준 약 $1.1에서 $1.8로 는다. 단일 모델은 사람이 실패로 본 답을 15–21건 통과시켰다. 같은 모델을 다시 돌려도 최종 판정이 약 5% 바뀌므로 최종 수치는 반복해 범위로 낸다.
 
 ## 코드와 데이터
 
@@ -111,12 +134,13 @@ python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --fixture scripts
 # Bedrock 판정(모델마다 따로, 유료 호출이라 --allow-bedrock-call 필요)
 python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model qwen --allow-bedrock-call --out <결과.json.gz>
 python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model deepseek-v3.2-usw2 --workers 16 --allow-bedrock-call --out <결과.json.gz>
+python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model mistral-large-3 --allow-bedrock-call --out <결과.json.gz>
 
 # 판정 입력이 바뀐 턴만 다시 판정(답변·근거·라벨이 같은 턴은 이전 판정 재사용)
 python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model qwen --prior <이전 결과> --allow-bedrock-call --out <새 결과>
 
 # 결합과 집계(모델 호출 없음). --capture를 주면 지금 코드 규칙으로 다시 집계한다
-python -X utf8 -m scripts.chat_judge.combine_judges <qwen 결과> <deepseek 결과> --capture <캡처> --out <결합.json>
+python -X utf8 -m scripts.chat_judge.combine_judges <qwen 결과> <deepseek 결과> <mistral 결과> --capture <캡처> --out <결합.json>
 
 # 저장한 캡처에 새 라벨 입히기(답변은 그대로)
 python -X utf8 -m scripts.chat_judge.relabel_capture <캡처> --fixture scripts/chat_judge/data/chat_pipeline_quality_v2_2.json --out <새 캡처>
@@ -144,3 +168,4 @@ python -X utf8 -m unittest discover -s scripts/chat_judge -p "test_*.py" -t .
 | [20261016-v2_1-service-data](results/20261016-v2_1-service-data/README.md) | 요금제 표 근거와 앱 고정 문구 규칙 반영 |
 | [20261016-flows-v1](results/20261016-flows-v1/README.md) | 흐름 평가셋 v1 첫 캡처와 판정(드러난 앱 문제) |
 | [20261017-label-fixes](results/20261017-label-fixes/README.md) | 라벨 수정과 기준 보완 뒤 재판정. **가장 최근 수치** |
+| [20261017-situation-context](results/20261017-situation-context/README.md) | FAQ 질문 문장을 상황 맥락으로 넘기는 시험. 나빠지거나 같아서 되돌렸다 |

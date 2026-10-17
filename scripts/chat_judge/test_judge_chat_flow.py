@@ -191,8 +191,8 @@ class ChatJudgeTest(unittest.TestCase):
         self.assertEqual([{"claim": answer}], semantic_input["claims"])
         self.assertNotIn("question", semantic_input)
         self.assertNotIn("assistantAnswer", semantic_input)
-        # FAQ 질문 문장은 근거가 아니라 상황(situation)으로만 넘어간다
-        self.assertEqual({"sourceId": "FAQ-1", "situation": "변경 주기", "answer": "한 달에 한 번 변경 가능합니다."},
+        # 근거성 판정에는 FAQ 질문 문장을 넘기지 않는다
+        self.assertEqual({"sourceId": "FAQ-1", "answer": "한 달에 한 번 변경 가능합니다."},
                          semantic_input["faqSources"][0])
         self.assertEqual(semantic, record["result"])
 

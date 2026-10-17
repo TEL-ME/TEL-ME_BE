@@ -28,9 +28,10 @@ python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --limit 40 --capt
 ```powershell
 python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model qwen --allow-bedrock-call --out <qwen.json.gz>
 python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model deepseek-v3.2-usw2 --workers 16 --allow-bedrock-call --out <deepseek.json.gz>
+python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model mistral-large-3 --allow-bedrock-call --out <mistral.json.gz>
 ```
 
-- 모델은 하나씩 따로 돌린다. 별칭과 요금은 `bedrock.py`의 `MODELS`, `PRICES`에 있다. DeepSeek V3.2는 도쿄 리전의 처리량이 막혀 오레곤(`deepseek-v3.2-usw2`)을 쓴다.
+- 대표 수치는 세 모델 결합이다([판정 모델 선정](README.md#판정-모델-선정)). 모델은 하나씩 따로 돌리고, 서로 기다릴 필요가 없어 동시에 돌린다. 별칭과 요금은 `bedrock.py`의 `MODELS`, `PRICES`에 있다. DeepSeek V3.2는 도쿄 리전의 처리량이 막혀 오레곤(`deepseek-v3.2-usw2`)을 쓴다.
 - 유료 호출이라 `--allow-bedrock-call`을 줘야 하고, 기존 결과를 덮어쓰지 않는다.
 - `--prior <이전 결과>`를 주면 판정 입력(답변, 근거, 판정에 쓰는 라벨, 이전 대화)이 같은 턴은 이전 판정을 재사용하고 바뀐 턴만 부른다. 결과에 판정 입력 해시(`judgeInputSha256`)가 남는다.
 - 같은 모델을 다시 돌려도 최종 판정의 약 5%가 바뀐다. 최종 수치는 2~3회 반복해 범위로 보고한다.
@@ -46,7 +47,7 @@ python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --capture .measur
 ## 3. 결합과 집계
 
 ```powershell
-python -X utf8 -m scripts.chat_judge.combine_judges <qwen.json.gz> <deepseek.json.gz> --capture <캡처> --out <결합.json>
+python -X utf8 -m scripts.chat_judge.combine_judges <qwen.json.gz> <deepseek.json.gz> <mistral.json.gz> --capture <캡처> --out <결합.json>
 ```
 
 - 기본 규칙은 하나라도 실패면 실패다(`--rule majority`는 다수결). 근거성은 한쪽이라도 근거 없음이면 근거 없음, 충족도는 가장 낮은 판정, 보류는 한쪽이라도 지어낸 답이나 과도한 거절을 잡으면 그 판정이다. 판정하지 못한 모델이 있고 나머지가 모두 통과면 미확정이다.

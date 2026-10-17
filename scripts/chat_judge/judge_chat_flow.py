@@ -42,10 +42,7 @@ user-specific circumstances. It is not evidence. Judge only the supplied claims;
 from questionContext into assistant claims. Use only FAQ answer text as policy evidence.
 Confirmed conditions describe the user's situation and cannot establish a service policy.
 A FAQ source supports a claim only when its answer text directly supports the claim's meaning.
-A source may include situation: the customer question that FAQ answer was written for. It only tells you
-which situation the answer text addresses. It is not policy evidence and never supports a claim by itself.
-If the answer text addresses a different situation from the claim (a different product, fee, target,
-procedure, or time), it does not support the claim, even when the wording overlaps.
+Ignore FAQ question text; it is not policy evidence.
 A source whose sourceId starts with SERVICE: is service data the app used to build the answer, such as
 the plan table. Treat its answer text exactly like FAQ answer text.
 Different wording may still be supported when the meanings match.
@@ -371,16 +368,6 @@ class ClaimTextMismatch(ValueError):
     """An extracted or adjudicated claim does not match the source answer text."""
 
 
-def judge_source(source):
-    """판정 모델에 넘기는 근거 하나. 정책 근거는 answer뿐이고, FAQ 질문 문장은 그 답이 어떤 상황에 대한 것인지
-    알려 주는 situation으로만 넘긴다(인용 검증은 answer 원문만 받는다). 질문 문장이 없는 근거는 answer만 넘긴다."""
-    view = {"sourceId": source["sourceId"]}
-    if source.get("question"):
-        view["situation"] = source["question"]
-    view["answer"] = source.get("answer", "")
-    return view
-
-
 def grounding_claim_data(data, claims):
     return {
         "claims": [{"claim": claim} for claim in claims],
@@ -389,7 +376,10 @@ def grounding_claim_data(data, claims):
             "previousUserQuestions": [turn.get("question", "") for turn in data.get("previousTurns", [])
                                       if isinstance(turn, dict) and turn.get("question")],
         },
-        "sources": [judge_source(source) for source in data.get("sources", [])],
+        # FAQ 질문 문장은 넘기지 않는다. 상황 맥락으로 넘겨 봤더니 모델이 질문 문장을 정책 근거처럼 써서
+        # 사람 판정과의 일치가 떨어졌다(results/20261017-situation-context)
+        "sources": [{key: source[key] for key in ("sourceId", "answer") if key in source}
+                    for source in data.get("sources", [])],
         "confirmedConditions": data.get("confirmedConditions", []),
     }
 

@@ -4,6 +4,7 @@ import copy
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from scripts.chat_judge import backfill_capture_service_data as backfill
 from scripts.chat_judge import judge_chat_flow as judge
@@ -405,26 +406,23 @@ class FlowTest(unittest.TestCase):
                     self.assertTrue(any(reply["whenKey"] == "serviceType" for reply in turn["clarificationReplies"]))
 
 
-class SituationContextTest(unittest.TestCase):
-    def test_faq_question_goes_to_the_judge_as_situation_not_evidence(self):
+class FaqQuestionTextTest(unittest.TestCase):
+    def test_judge_never_receives_faq_question_text(self):
+        # FAQ 질문 문장은 정책 근거가 아니다. 상황 맥락으로 넘겨 봤더니 근거로 새어 들어가 되돌렸다
         source = {"sourceId": "TERMINATE-0115", "faqId": 1, "question": "해지하는데 할부 한 번에 내는 게 나아요",
                   "answer": "원칙은 한 번에 내는 겁니다. 부담되시면 계속 나눠 내는 것도 됩니다."}
-        view = judge.judge_source(source)
-        self.assertEqual(["sourceId", "situation", "answer"], list(view))
-        self.assertEqual({"sourceId": "SERVICE:PLAN_TABLE", "answer": "표"},
-                         judge.judge_source({"sourceId": "SERVICE:PLAN_TABLE", "answer": "표"}))
         data = judge.grounding_claim_data({"question": "요금 나눠 내도 돼요?", "sources": [source]}, ["나눠 내도 됩니다."])
-        self.assertEqual(view, data["sources"][0])
-        self.assertIn("situation", judge.GROUNDING_RUBRIC)
-        self.assertIn("situation", pipeline.EVIDENCE_RUBRIC)
-        # 근거 인용은 답 원문만 된다. 상황 문장을 인용하면 판정 결과가 거부된다
-        def merged(quote):
-            return {"answerIsRefusal": True, "evidenceAnswerability": "ENOUGH", "reason": "",
-                    "evidenceQuotes": [{"sourceId": "TERMINATE-0115", "quote": quote}]}
-        judge.validate_result("abstention", merged("부담되시면 계속 나눠 내는 것도 됩니다."), {"TERMINATE-0115"},
-                              sources=[view])
-        with self.assertRaises(ValueError):
-            judge.validate_result("abstention", merged(source["question"]), {"TERMINATE-0115"}, sources=[view])
+        self.assertEqual({"sourceId": "TERMINATE-0115", "answer": source["answer"]}, data["sources"][0])
+        self.assertNotIn("situation", judge.judge_request("m", "grounding", data)["messages"][-1]["content"])
+        seen = {}
+
+        def stage(url, model, name, rubric, schema, value, timeout):
+            seen[name] = value
+            return {"request": {"name": name}, "error": "not needed"}
+        with patch.object(pipeline, "abstention_stage", side_effect=stage):
+            pipeline.abstention_chat("http://unused", "m", {"question": "q", "answer": "a", "sources": [source]}, 5)
+        self.assertEqual([{"sourceId": "TERMINATE-0115", "answer": source["answer"]}],
+                         seen["faq_answerability"]["sources"])
 
     def test_validation_capture_fills_faq_question_from_catalog(self):
         from scripts.chat_judge import run_judge_validation as validation
