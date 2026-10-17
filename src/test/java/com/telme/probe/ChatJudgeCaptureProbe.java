@@ -74,7 +74,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class ChatJudgeCaptureProbe {
     private static final Duration EXECUTION_TIMEOUT = Duration.ofMinutes(4);
     // 답변에 영향을 주는 설정만 남긴다. 키·계정 설정(kakao, member.oauth2 등)은 넣지 않는다
-    private static final List<String> CONFIG_PREFIXES = List.of("llm", "search", "rag", "embedding", "chat.",
+    private static final List<String> CONFIG_PREFIXES = List.of("llm", "search", "rag", "embedding", "chat.", "telme.routing",
             "telme.consult", "store.search");
     private static final List<String> CONFIG_KEYS = List.of("llm.provider", "llm.model",
             "telme.consult.persistence-enabled", "telme.consult.llm-enabled",
