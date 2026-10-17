@@ -51,7 +51,7 @@ class AnswerPromptTemplatesTest {
         String channelAddition =
                 "   신청하거나 처리하는 곳은 근거에 적힌 단어를 그대로 쓰고, 브랜드나 페이지 이름을 덧붙이지 마십시오.\n"
                 + "   - 근거가 \"홈페이지로 신청하시면 됩니다\"이면 \"홈페이지\"라고만 쓰십시오.\n"
-                + "   \"LG U+샵\", \"유플러스샵\", \"이벤트 페이지\", \"공식 사이트\"는 어떤 경우에도 쓰지 마십시오.\n"
+                + "   \"TELME샵\", \"유플러스샵\", \"이벤트 페이지\", \"공식 사이트\"는 어떤 경우에도 쓰지 마십시오.\n"
                 + "   근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.\n";
 
         // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
@@ -64,7 +64,7 @@ class AnswerPromptTemplatesTest {
                         "안내드릴 수 있는 정보가 없습니다")).isEqualTo(baseline);
         // 정체성 지침이 붙으면 무관 질문에 근거 없는 GROUNDED 답변이 늘어 FAQ 답변 프롬프트에는 넣지 않는다.
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).doesNotContain("무러바라", "[정체성과 말투]");
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.7");
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.8");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요.");
     }
 
@@ -98,7 +98,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.7");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.8");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");

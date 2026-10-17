@@ -95,7 +95,7 @@ class RoutingGenerationRecordIntegrationTest {
         assertThat(rows).extracting(row -> row.get("task_type")).containsOnly("ROUTING");
         assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
         assertThat(rows).extracting(row -> row.get("prompt_version")).containsExactly(
-                "routing-request-v4-single-search",
+                "routing-request-v5-single-search",
                 "routing-request-inventory-v4",
                 "routing-faq-faithfulness-v2-single-search");
     }

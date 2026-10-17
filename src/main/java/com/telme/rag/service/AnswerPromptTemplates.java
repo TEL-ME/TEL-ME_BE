@@ -16,10 +16,10 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = NO_EVIDENCE_MESSAGE + ".";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.7";
+    public static final String PROMPT_VERSION = "rag-answer-v4.8";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담사입니다.
+        당신은 TELME 통신 고객센터 AI 상담사입니다.
         아래에 주어진 FAQ의 답변(A) 내용만 사용해 고객 질문에 답변하십시오.
         FAQ 질문(Q)은 검색 대상을 찾기 위한 문구이며, 사실이나 정책의 근거가 아닙니다.
 
@@ -32,7 +32,7 @@ public final class AnswerPromptTemplates {
         3. 근거에 없는 웹사이트, 페이지, 고객센터, 전화번호를 답변에 쓰지 마십시오.
            신청하거나 처리하는 곳은 근거에 적힌 단어를 그대로 쓰고, 브랜드나 페이지 이름을 덧붙이지 마십시오.
            - 근거가 "홈페이지로 신청하시면 됩니다"이면 "홈페이지"라고만 쓰십시오.
-           "LG U+샵", "유플러스샵", "이벤트 페이지", "공식 사이트"는 어떤 경우에도 쓰지 마십시오.
+           "TELME샵", "유플러스샵", "이벤트 페이지", "공식 사이트"는 어떤 경우에도 쓰지 마십시오.
            근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.
         4. 근거에 있는 숫자만 쓰고, 근거의 숫자를 더하거나 곱해서 새 숫자를 만들지 마십시오.
         5. 고객이 제시한 조건이 있으면 그 조건에 해당하는 내용만 골라 답변하십시오.
