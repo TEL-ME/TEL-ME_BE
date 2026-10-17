@@ -179,4 +179,40 @@ class AnswerGuardClaimTest {
         assertThat(apply("eSIM은 듀얼심이라는 이점이 있습니다.", context, "유심과 eSIM은 뭐가 달라요?"))
                 .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
     }
+
+    @Test
+    @DisplayName("요금이 없다는 조건·주의 문장은 무료 단정으로 보지 않는다")
+    void 조건_문장의_없다는_무료_단정이_아니다() {
+        String fee = "번호 변경 수수료는 2,200원입니다.";
+
+        assertThat(apply("밀린 요금이 없다면 번호 변경이 가능합니다.", fee, "번호 변경 수수료가 얼마예요?"))
+                .isEqualTo("밀린 요금이 없다면 번호 변경이 가능합니다.");
+        assertThat(apply("미납 요금이 없으면 신청할 수 있습니다.", fee, "번호 변경 수수료가 얼마예요?"))
+                .isEqualTo("미납 요금이 없으면 신청할 수 있습니다.");
+        assertThat(apply("추가 요금이 없도록 데이터 사용량을 확인하세요.", "로밍 하루 9,900원입니다.", "로밍 요금 알려줘"))
+                .isEqualTo("추가 요금이 없도록 데이터 사용량을 확인하세요.");
+        assertThat(apply("번호 변경 수수료는 없습니다.", fee, "번호 변경 수수료가 얼마예요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(apply("번호 변경 수수료가 없어요.", fee, "번호 변경 수수료가 얼마예요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"부가서비스는 3 시설에서 이용 가능합니다.", "2024시즌 요금제는 아래와 같습니다.",
+            "5 시니어 요금제가 있습니다.", "2 시행일 이후 적용됩니다."})
+    @DisplayName("시각이 아닌 '숫자 + 시…' 낱말은 시각으로 읽지 않는다")
+    void 시각이_아닌_시_낱말은_통과시킨다(String answer) {
+        assertThat(apply(answer, "부가서비스는 매장과 온라인에서 가입할 수 있습니다.", "요금제 알려줘")).isEqualTo(answer);
+    }
+
+    @Test
+    @DisplayName("24시 고객센터는 시각으로 읽지 않고 한글 시각은 그대로 비교한다")
+    void 이십사시_고객센터는_통과시키고_시각은_유지한다() {
+        assertThat(apply("분실 신고는 24시 고객센터에서 할 수 있습니다.", "고객센터는 24시간 운영합니다.", "분실 신고 어디서 해요?"))
+                .isEqualTo("분실 신고는 24시 고객센터에서 할 수 있습니다.");
+        assertThat(apply("7시가 마감입니다.", "마감은 19:00입니다.", "마감이 몇 시예요?")).isEqualTo("7시가 마감입니다.");
+        assertThat(apply("7시 반까지 운영합니다.", "운영 시간은 19:30까지입니다.", "몇 시까지예요?")).isEqualTo("7시 반까지 운영합니다.");
+        assertThatThrownBy(() -> apply("8시까지 운영합니다.", "운영 시간은 19:30까지입니다.", "몇 시까지예요?"))
+                .isInstanceOf(AnswerGuardException.class);
+    }
 }

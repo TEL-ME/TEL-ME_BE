@@ -180,16 +180,19 @@ public class AnswerGuard {
             "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요))");
 
     // "오후 7시 30분", "19시", "7시 반"처럼 한글로 적은 시각. 콜론 표기와 같은 값으로 비교한다. '시간'은 시각이 아니다
+    // 숫자 앞에 숫자·소수점이 있거나(2024시즌), 시 뒤에 낱말이 이어지면(3 시설, 5 시니어, 2 시행일) 시각이 아니다
     private static final Pattern KOREAN_CLOCK = Pattern.compile(
-            "(오전|오후|새벽|아침|낮|저녁|밤)?\\s*(\\d{1,2})\\s*시(?!간)(?:\\s*(?:(\\d{1,2})\\s*분|(반)))?");
+            "(오전|오후|새벽|아침|낮|저녁|밤)?\\s*(?<![\\d.])(\\d{1,2})\\s*시(?!간)(?=[^가-힣]|$|"
+                    + "(?:가|는|은|를|을|에|부터|까지|이후|이전|전|후|쯤|경|정|마다|이|도|와|과|로|만|반))"
+                    + "(?:\\s*(?:(\\d{1,2})\\s*분|(반)))?");
     // 시각 이후와 시각까지. 둘 다 있으면 범위나 두 조건이라 방향을 정하지 않는다
     private static final Pattern TIME_AFTER = Pattern.compile("이후|부터|넘어|지나서|지난\\s*후");
     private static final Pattern TIME_BEFORE = Pattern.compile("이전|까지|전에|이내");
 
-    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다"는 단정이 아니다
+    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다", "요금이 없다면·없으면·없도록"은 단정이 아니다
     private static final Pattern FREE_CLAIM = Pattern.compile(
-            "무료|무상|공짜|(?:비용|요금|수수료|금액)(?:이|은|는|도)?\\s*(?:전혀\\s*|따로\\s*|별도로\\s*)?"
-                    + "(?:없|들지\\s*않|발생하지\\s*않|부과되지\\s*않|청구되지\\s*않)");
+            "무료|무상|공짜|(?:비용|요금|수수료|금액)(?:이|가|은|는|도)?\\s*(?:전혀\\s*|따로\\s*|별도로\\s*)?"
+                    + "(?:없(?!다면|으면|어야|는\\s*경우|도록)|들지\\s*않|발생하지\\s*않|부과되지\\s*않|청구되지\\s*않)");
     private static final Pattern FREE_NEGATED = Pattern.compile(
             "(?:무료|무상|공짜)(?:는|가|로는|로도|로)?\\s*(?:아니|아닙|아님|제공(?:되|하)지\\s*않|적용(?:되|하)지\\s*않)");
     private static final Pattern FREE_EVIDENCE = Pattern.compile(
@@ -1060,7 +1063,8 @@ public class AnswerGuard {
         while (matcher.find()) {
             int hour = Integer.parseInt(matcher.group(2));
             int minute = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : matcher.group(4) != null ? 30 : 0;
-            if (hour > 24 || minute > 59) {
+            // 24시는 "24시 고객센터"처럼 운영 방식을 말하는 경우가 많아 시각으로 읽지 않는다
+            if (hour >= 24 || minute > 59) {
                 continue;
             }
             rest.append(text, last, matcher.start()).append(' ');
