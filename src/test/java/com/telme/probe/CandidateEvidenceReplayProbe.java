@@ -209,7 +209,10 @@ class CandidateEvidenceReplayProbe {
                 raws.add(raw);
                 return raw;
             } catch (RuntimeException exception) {
-                errors.add(exception.getClass().getSimpleName() + ": " + exception.getMessage());
+                // GeneralException은 메시지가 비어 있어 오류 코드를 함께 남긴다
+                String code = exception instanceof com.telme.global.common.exception.GeneralException general
+                        ? " [" + general.getErrorCode() + "]" : "";
+                errors.add(exception.getClass().getSimpleName() + code + ": " + exception.getMessage());
                 throw exception;
             } finally {
                 callMs.add((System.nanoTime() - startedAt) / 1_000_000);
