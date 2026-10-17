@@ -28,7 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * TELME-182 요금제 질문 분류 비교. 결정된 앞단으로 캡처한 실제 분류 입력(planQuestionClassifications)을
- * 앱의 분류기에 그대로 넣고 엑사원 1회, gpt-oss 3회를 동시에 돌린다. 분류기의 보정 규칙과 규칙 대체도 그대로 탄다.
+ * 앱의 분류기에 그대로 넣고 모델·회차(PLAN_REPLAY_MODELS)를 동시에 돌린다. 엑사원이 끼면 다른 측정과 겹치지 않게 따로 돌린다. 분류기의 보정 규칙과 규칙 대체도 그대로 탄다.
  * gpt-oss는 엑사원 대체 없이 Bedrock만 불러, 호출 실패는 규칙 대체로 기록된다.
  * 실행: PLAN_REPLAY_PROBE=true PLAN_REPLAY_INPUT=<입력 json> PLAN_REPLAY_OUT=<결과 jsonl> LLM_PROVIDER=ollama
  *       LLM_BEDROCK_ENABLED=true AWS_PROFILE=... ./gradlew test --tests '*PlanQuestionReplayProbe'
@@ -45,9 +45,14 @@ class PlanQuestionReplayProbe {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode inputs = mapper.readTree(new File(System.getenv("PLAN_REPLAY_INPUT")));
         Path out = Path.of(System.getenv("PLAN_REPLAY_OUT"));
-        List<Map<String, Object>> runs = List.of(
-                Map.of("model", "exaone", "run", 1), Map.of("model", "gptoss", "run", 1),
-                Map.of("model", "gptoss", "run", 2), Map.of("model", "gptoss", "run", 3));
+        // 모델:회차 수(PLAN_REPLAY_MODELS, 기본 exaone:1,gptoss:3). 로컬 엑사원은 다른 실행과 겹치지 않게 따로 돌릴 수 있다
+        List<Map<String, Object>> runs = new ArrayList<>();
+        for (String model : System.getenv().getOrDefault("PLAN_REPLAY_MODELS", "exaone:1,gptoss:3").split(",")) {
+            String[] parts = model.split(":");
+            for (int run = 1; run <= Integer.parseInt(parts[1]); run++) {
+                runs.add(Map.of("model", parts[0], "run", run));
+            }
+        }
         ExecutorService pool = Executors.newFixedThreadPool(runs.size());
         List<Future<List<String>>> futures = new ArrayList<>();
         for (Map<String, Object> run : runs) {

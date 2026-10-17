@@ -1,12 +1,7 @@
 [
  {
   "id": "V2-SINGLE-A001#0#0",
-  "question": "요금밀려서발신막혔는데지금다내면언제다시전화걸수있어요?",
-  "captureType": "NONE"
- },
- {
-  "id": "V2-SINGLE-A001#0#1",
-  "question": "계속못내면어떻게되는지도알려주세요",
+  "question": "요금 밀려서 발신 막혔는데 지금 다 내면 언제 다시 전화 걸 수 있어요? 계속 못 내면 어떻게 되는지도 알려주세요",
   "captureType": "NONE"
  },
  {
@@ -61,7 +56,12 @@
  },
  {
   "id": "V2-SINGLE-A042#0#0",
-  "question": "LTE 요금제는 몇 개 있어요? 헷갈려서 그런데 5G랑 알뜰도 같이 정리해 주세요",
+  "question": "LTE요금제는몇개있어요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A042#0#1",
+  "question": "5G랑알뜰도같이정리해주세요",
   "captureType": "PLAN_CATALOG"
  },
  {
@@ -76,8 +76,13 @@
  },
  {
   "id": "V2-SINGLE-A046#0#0",
-  "question": "알뜰요금제가 정확히 뭐예요? 종류는 몇 개?",
+  "question": "알뜰요금제가정확히뭐예요?",
   "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A046#0#1",
+  "question": "종류는몇개?",
+  "captureType": "NONE"
  },
  {
   "id": "V2-SINGLE-A047#0#0",
@@ -196,12 +201,12 @@
  },
  {
   "id": "V2-SINGLE-A102#0#0",
-  "question": "해지신청어떻게함?",
+  "question": "해지신청어떻게함",
   "captureType": "NONE"
  },
  {
   "id": "V2-SINGLE-A102#0#1",
-  "question": "이번달요금은한달치다나가?",
+  "question": "이번달요금은한달치다나가",
   "captureType": "MY_USAGE"
  },
  {
@@ -266,12 +271,12 @@
  },
  {
   "id": "V2-COMPOUND-C003#0#1",
-  "question": "번호이동각각되나요",
+  "question": "번호이동각각",
   "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C004#0#0",
-  "question": "종이청구서받으면돈나가요",
+  "question": "종이청구서받으면돈나가요?",
   "captureType": "NONE"
  },
  {
@@ -281,8 +286,8 @@
  },
  {
   "id": "V2-COMPOUND-C005#0#0",
-  "question": "지금약정11개월째인데해지하면위약금얼마나물어야돼요?",
-  "captureType": "MY_PENALTY"
+  "question": "해지하면위약금얼마나물어야돼요",
+  "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C005#0#1",
@@ -306,7 +311,7 @@
  },
  {
   "id": "V2-COMPOUND-C009#0#1",
-  "question": "소액결제한달한도도알려줘",
+  "question": "그리고소액결제한달한도도알려줘",
   "captureType": "NONE"
  },
  {
@@ -336,7 +341,7 @@
  },
  {
   "id": "V2-COMPOUND-C012#0#1",
-  "question": "이심으로바꾸면비용은얼마",
+  "question": "그김에이심으로바꾸면비용은얼마예요",
   "captureType": "NONE"
  },
  {
@@ -361,27 +366,27 @@
  },
  {
   "id": "V2-COMPOUND-C017#0#0",
-  "question": "데이터별로안쓰는데싼요금제뭐있어요",
+  "question": "데이터별로안쓰는데싼요금제뭐있어요?",
   "captureType": "PLAN_CATALOG"
  },
  {
   "id": "V2-COMPOUND-C017#0#1",
-  "question": "개통은매장이랑인터넷중어디가빨라요",
+  "question": "개통은매장이랑인터넷중어디가빨라요?",
   "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C019#0#0",
-  "question": "요금이두번빠져나갔는데환불대신다음달요금에서빼줄수있어요",
+  "question": "요금이두번빠져나갔는데환불대신다음달요금에서빼줄수있어요?",
   "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C019#0#1",
-  "question": "오늘가입한부가서비스바로해지하면이번달요금안나오죠",
+  "question": "그리고오늘가입한부가서비스바로해지하면이번달요금안나오죠?",
   "captureType": "MY_PENALTY"
  },
  {
   "id": "V2-COMPOUND-C020#0#0",
-  "question": "몇 개까지 되는거예요?",
+  "question": "회선한도초과라서새로개통이안된대요.몇개까지되는거예요",
   "captureType": "NONE"
  },
  {
@@ -451,7 +456,7 @@
  },
  {
   "id": "V2-MULTI-M010#1#1",
-  "question": "토요일에도 번호이동 처리 여부",
+  "question": "번호이동 토요일에도 처리되는지 여부",
   "captureType": "NONE"
  },
  {
@@ -481,7 +486,7 @@
  },
  {
   "id": "V2-MULTI-M018#1#1",
-  "question": "해지 시 남은 할부금을 한 번에 내야 하는지 여부",
+  "question": "해지 시 남은 할부금 납부 방법",
   "captureType": "NONE"
  },
  {
@@ -601,7 +606,7 @@
  },
  {
   "id": "V2-NOANSWER-U035#0#0",
-  "question": "전화번호만다른번호로바꾸고싶은데번호변경은어떻게",
+  "question": "번호변경은어떻게하고",
   "captureType": "NONE"
  },
  {
@@ -637,6 +642,11 @@
  {
   "id": "V2-NOANSWER-U045#0#0",
   "question": "법인 명의로 회선 10개 쓰고 있는데 통신요금 세금계산서 매달 받을 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U048#0#0",
+  "question": "매장에서 개통할 때 설명도 없이 부가서비스 세 개를 넣어놨더라고요. 석 달 동안 낸 요금 다 환불받을 수 있나요?",
   "captureType": "NONE"
  },
  {
@@ -681,7 +691,7 @@
  },
  {
   "id": "REG-MULTI_TURN#1#1",
-  "question": "가입한 달에도 요금제 변경 가능 여부",
+  "question": "한 달에 몇 번 요금제 변경이 가능한가요",
   "captureType": "NONE"
  },
  {
@@ -711,22 +721,17 @@
  },
  {
   "id": "V2-COMPOUND-C022#0#1",
-  "question": "정지랑해지중에뭐가나아?",
+  "question": "그리고한국돌아가면몇달은이번호안쓸건데번호는남겨두고싶거든.정지랑해지중에뭐가나아?",
   "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C023#0#0",
-  "question": "매장가면바로주나요",
+  "question": "유심이갑자기인식이안돼서새로받아야할것같은데요,매장가면바로주나요?비용도궁금하고요.",
   "captureType": "NONE"
  },
  {
   "id": "V2-COMPOUND-C023#0#1",
-  "question": "유심 비용",
-  "captureType": "NONE"
- },
- {
-  "id": "V2-COMPOUND-C023#0#2",
-  "question": "홈페이지에서떼면돈들어요",
+  "question": "회사에낼가입증명서가필요한데홈페이지에서떼면돈들어요?",
   "captureType": "NONE"
  },
  {
@@ -741,7 +746,7 @@
  },
  {
   "id": "V2-COMPOUND-C028#0#0",
-  "question": "뭐가더있어야하나요?",
+  "question": "아빠신분증만들고명의바꾸러갔다가그냥돌아왔어요.뭐가더있어야하나요?",
   "captureType": "NONE"
  },
  {
@@ -756,7 +761,7 @@
  },
  {
   "id": "V2-COMPOUND-C031#0#0",
-  "question": "내일아침비행기로출장가는데로밍을당일아침에공항가는길에신청해도괜찮을까요?",
+  "question": "로밍을당일아침에공항가는길에신청해도괜찮을까요?",
   "captureType": "NONE"
  },
  {
@@ -771,7 +776,7 @@
  },
  {
   "id": "V2-COMPOUND-C034#0#1",
-  "question": "그리고같이사는베트남친구가휴대폰을새로만들려고하는데어떤서류들고가면되나요?",
+  "question": "같이사는베트남친구가휴대폰을새로만들려고하는데어떤서류들고가면되나요?",
   "captureType": "NONE"
  },
  {
@@ -786,12 +791,12 @@
  },
  {
   "id": "V2-COMPOUND-C037#0#0",
-  "question": "알뜰요금제가정확히어떤건지잘몰라서요,간단히설명좀해주세요.",
+  "question": "알뜰요금제가정확히어떤건지잘몰라서요,간단히설명좀해주세요",
   "captureType": "PLAN_CATALOG"
  },
  {
   "id": "V2-COMPOUND-C037#0#1",
-  "question": "세컨폰을하나만들려는데제이름으로하는거랑중학생아들이름으로하는거랑챙길서류가다른가요?",
+  "question": "세컨폰을하나만들려는데제이름으로하는거랑중학생아들이름으로하는거랑챙길서류가다른가요",
   "captureType": "NONE"
  },
  {
@@ -826,17 +831,17 @@
  },
  {
   "id": "V2-PARTIAL-P003#0#0",
-  "question": "산지열흘된폰인데다른기종으로바꿀수있나요",
-  "captureType": "NONE"
- },
- {
-  "id": "V2-PARTIAL-P003#0#1",
-  "question": "그차액은어떻게정산하는지도궁금해요",
+  "question": "산 지 열흘 된 폰인데 다른 기종으로 바꿀 수 있나요? 바꾸게 되면 좀 더 비싼 모델로 가고 싶은데, 그 차액은 어떻게 정산하는지도 궁금해요.",
   "captureType": "NONE"
  },
  {
   "id": "V2-PARTIAL-P005#0#0",
-  "question": "엄마가 쓰시던 폰을 제 명의로 돌리려고 하는데요, 매장 가면 시간이 얼마나 걸리고 수수료는 있나요? 그리고 엄마가 VIP 등급이었는데 명의를 바꾸면 그 멤버십 등급도 저한테 그대로 넘어오나요?",
+  "question": "엄마가쓰시던폰을제명의로돌리려고하는데요,매장가면시간이얼마나걸리고수수료는있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P005#0#1",
+  "question": "그리고엄마가VIP등급이었는데명의를바꾸면그멤버십등급도저한테그대로넘어오나요?",
   "captureType": "NONE"
  },
  {
@@ -846,12 +851,12 @@
  },
  {
   "id": "V2-PARTIAL-P007#0#0",
-  "question": "남편은언리미티드쓰고나는스탠다드인데,둘다기본데이터다쓰고나면뭐가달라?",
+  "question": "둘다기본데이터다쓰고나면뭐가달라?",
   "captureType": "NONE"
  },
  {
   "id": "V2-PARTIAL-P007#0#1",
-  "question": "그리고언리미티드면핫스팟켜서노트북연결해쓰는것도무제한이야?",
+  "question": "언리미티드면핫스팟켜서노트북연결해쓰는것도무제한이야?",
   "captureType": "NONE"
  },
  {
@@ -861,17 +866,32 @@
  },
  {
   "id": "V2-PARTIAL-P008#0#1",
-  "question": "저희집이가족결합으로묶여있는데,알뜰요금제로바꿔도결합할인은계속받을수있는지알고싶어요.",
+  "question": "그리고저희집이가족결합으로묶여있는데,알뜰요금제로바꿔도결합할인은계속받을수있는지알고싶어요.",
   "captureType": "NONE"
  },
  {
   "id": "V2-PARTIAL-P009#0#0",
-  "question": "철회하면제회선은원래쓰던통신사로돌아가는건가요?",
+  "question": "TELME로번호이동한지5일됐는데통화품질이별로라철회할까해요.",
   "captureType": "NONE"
  },
  {
   "id": "V2-PARTIAL-P009#0#1",
+  "question": "철회하면제회선은원래쓰던통신사로돌아가는건가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P009#0#2",
   "question": "철회할때따로내야하는수수료가있는지도알려주세요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P011#0#0",
+  "question": "비행기내리자마자데이터쓰려면뭘해두면되고연결까지얼마나걸려요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P011#0#1",
+  "question": "환승하는두바이공항에서잠깐데이터쓰면그것도같은로밍으로잡히는건지,요금이따로나오는건지궁금해요.",
   "captureType": "NONE"
  },
  {
@@ -901,7 +921,7 @@
  },
  {
   "id": "V2-PARTIAL-P018#0#1",
-  "question": "그할부금을아들통장말고내카드에서빠져나가게바꿀수있는지도좀알려줘요",
+  "question": "그할부금을아들통장말고내카드에서빠져나가게바꿀수있는지도",
   "captureType": "NONE"
  },
  {
@@ -942,11 +962,6 @@
  {
   "id": "FLOW-MD02#0#0",
   "question": "이번 달에 데이터 얼마나 썼어요?",
-  "captureType": "MY_USAGE"
- },
- {
-  "id": "FLOW-MD03#0#0",
-  "question": "이번 달 폰 요금 대충 얼마 나올 것 같아?",
   "captureType": "MY_USAGE"
  },
  {
@@ -1002,6 +1017,11 @@
  {
   "id": "FLOW-CF15#0#0",
   "question": "요금을 좀 밀렸는데 이러다 폰 끊기나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF20#0#0",
+  "question": "요금제 지금 다른 걸로 바꿀 수 있어요?",
   "captureType": "NONE"
  },
  {
@@ -1076,7 +1096,12 @@
  },
  {
   "id": "FLOW-MD20#0#0",
-  "question": "제 요금제 통화 무제한 맞아요? 이번 달 통화 얼마나 했는지도 알려주세요",
+  "question": "제요금제통화무제한맞아요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD20#0#1",
+  "question": "이번달통화얼마나했는지도알려주세요",
   "captureType": "MY_USAGE"
  },
  {
@@ -1091,7 +1116,7 @@
  },
  {
   "id": "FLOW-MD21#1#1",
-  "question": "이번 달 데이터 사용량",
+  "question": "이번 달 데이터 사용량은 얼마인가요",
   "captureType": "MY_USAGE"
  },
  {
@@ -1111,7 +1136,7 @@
  },
  {
   "id": "FLOW-MD23#1#1",
-  "question": "계약이 언제 끝나는지",
+  "question": "약정이 언제 끝나는지",
   "captureType": "NONE"
  },
  {

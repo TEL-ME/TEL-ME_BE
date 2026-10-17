@@ -77,35 +77,44 @@ TELME-178. 답변 생성 전에 쓰이는 두 근거 검증 호출을 엑사원�
 
 | 항목 | 내용 |
 |---|---|
-| 1단계 입력 캡처 | 브랜치 앱으로 Judge 평가셋 v2.2 전체(286 대화, 307턴)를 실제 채팅 API로 1회 실행. 실행 기록 `faqCandidateEvidenceInputs`(검증에 넣은 문장, 인용문 재시도 허용)와 `searchResults`의 `FAQ_CANDIDATE` 후보 10개를 묶었다 |
-| 입력 | 58개(복합 28, 부분 답 13, 단일 14, 답 없음 3). 그중 후보에 턴의 정답 FAQ가 있는 것 38개 |
-| 2단계 비교 | 같은 입력을 앱의 후보 근거 검증(핵심 단어 검사, 인용문 재시도 포함)에 넣고 엑사원 1회, gpt-oss 3회를 동시에 실행. gpt-oss는 엑사원 대체 없이 Bedrock만 불렀다 |
+| DB | 측정용 `telme-flow-postgres`(포트 5440)의 `telme_judge_eval`. FAQ 1,152건, 질문 벡터 1,152개를 실행 전에 확인했다 |
+| 1단계 입력 캡처 | 브랜치 앱(`5635840b`)으로 Judge 평가셋 v2.2 전체(286 대화, 307턴)를 실제 채팅 API로 1회 실행. 실행 기록 `faqCandidateEvidenceInputs`(검증에 넣은 문장, 인용문 재시도 허용)와 `searchResults`의 `FAQ_CANDIDATE` 후보 10개를 묶었다 |
+| 입력 | 57개(복합 21, 부분 답 12, 단일 19, 답 없음 4, 흐름 1) |
+| 2단계 비교 | 같은 입력을 앱의 후보 근거 검증(핵심 단어 검사, 인용문 재시도 포함)에 넣었다. gpt-oss 3회는 동시에, 엑사원 1회는 다른 실행이 없을 때 따로 돌렸다. gpt-oss는 엑사원 대체 없이 Bedrock만 불렀다 |
+| 채점 | 하위 질문 단위 라벨(별도 에이전트가 후보 10개 중 답이 되는 FAQ를 고름, 답 있음 37 / 없음 20, TELME-184에서 만들었다) |
 
-| | 엑사원 | gpt-oss (3회 합계) |
+처음 잰 결과(`5635840b`의 이 절)는 앱 기본 포트 5432의 `telme-postgres`로 캡처했다. 이 DB는 질문 벡터가 1,152개 중 2개뿐이라 후보 경로에 들어오는 하위 질문과 후보 10개가 운영과 달랐다. 위 DB로 다시 캡처해 이 절과 결과 파일을 모두 바꿨다.
+
+| | 엑사원 | gpt-oss 1 / 2 / 3 |
 |---|---|---|
-| 모델이 턴의 정답 FAQ를 고름 | 9 / 58 | 66 / 174 |
-| 모델이 그 밖의 FAQ를 고름 | 43 | 63 |
-| 모델이 답할 수 없다고 함 | 6 | 45 |
-| **앱에서 채택** | **0** | **0 / 0 / 0** |
+| **앱에서 채택** | **1** | **1 / 1 / 1** |
+| 모델이 고른 것(단어 검사 전): 답 있는 부분에 맞는 FAQ | 24 | 25 / 26 / 23 |
+| 모델이 고른 것: 답 있는 부분에 다른 FAQ | 7 | 7 / 7 / 9 |
+| 모델이 고른 것: 답 없는 부분에 FAQ | 9 | 8 / 8 / 7 |
 
-- **두 모델 모두 앱 채택이 0건이다.** 모델이 FAQ를 골라도 핵심 단어 검사(`coversQuestionTerms`)가 모두 막는다. 이 검사는 질문의 2글자 이상 낱말이 FAQ 문답에 모두 있어야 통과시켜, "정확히", "같이", "궁금해요" 같은 낱말 하나로도 막힌다. 예: "알뜰요금제가 정확히 뭐예요?"에서 gpt-oss는 정답 FAQ(PLAN-0026)를 3회 모두 골랐지만 FAQ에 "정확히"가 없어 막혔다.
-- **위 표의 정답 기준은 턴 전체다.** 평가셋에 하위 질문 단위 정답이 없어 턴의 정답 FAQ로 셌다. 정답 후보가 있는 38개에서 gpt-oss 1회차가 고른 것을 하나씩 보면 정답 22, 답이 되지만 라벨에 없는 FAQ 약 6(예: "언제까지 내야 되는지도요" → "요금 며칠까지 내야 해요 → 매월 25일까지입니다"), 답할 FAQ가 없는 쪽을 맞게 거절 6, 틀림 약 4다.
-- **틀린 것은 대부분 조각 입력 때문이다.** 검증에는 라우팅이 나눈 하위 질문 원문만 넘어간다. "번호이동 각각"(조건 "요금 밀린 상태" 빠짐), "제 폰도 하나 새로 개통하려는데"("얼마나 걸려요" 빠짐), "엄마가 뭘 챙겨 가셔야 해요"("유심" 빠짐)처럼 조건이나 대상이 빠져 다른 FAQ를 골랐다.
-- 호출 실패, 빈 응답은 두 모델 모두 0건이다. 입력당 중앙값은 엑사원 0.54초, gpt-oss 약 1초다. 같은 입력의 gpt-oss 3회 선택은 58개 모두 같았다.
-- **결론**: 지금 코드에서는 모델과 관계없이 이 단계가 결과를 내지 못해 모델을 바꾸지 않는다. 핵심 단어 검사와 조각 입력은 TELME-184에서 고친다. 비용은 Bedrock 약 2,000회(캡처)와 174회(비교), 약 $0.45 추정이다.
+- **두 모델 모두 앱 채택이 1건(같은 입력)이다.** "데이터 무제한 로밍 되나요?" 한 건만 통과했고, 하위 질문 라벨로는 맞는 FAQ다(턴 정답에는 없어 채점 스크립트의 턴 기준 표에서는 '다른 FAQ'로 나온다). 모델이 FAQ를 골라도 핵심 단어 검사(`coversQuestionTerms`)가 거의 모두 막는다. 이 검사는 질문의 2글자 이상 낱말이 FAQ 문답에 모두 있어야 통과시켜, "정확히", "같이", "궁금해요" 같은 낱말 하나로도 막힌다.
+- **단어 검사 전 모델의 선택도 두 모델이 비슷하다.** 맞는 FAQ를 고른 수와 틀리게 고른 수가 흔들림 범위 안이다.
+- **틀린 선택은 조각 입력과 대상 차이에서 나온다.** 검증에는 라우팅이 나눈 하위 질문 원문만 넘어가 "그 김에 이심으로 바꾸면 비용은 얼마예요?"(eSIM), "해지하면 바로 못 쓰게 되는 거예요"(부가서비스)처럼 대상이 원문 앞쪽에만 있는 경우가 많다.
+- **결론**: 지금 코드에서는 모델과 관계없이 이 단계가 거의 결과를 내지 못해 모델을 바꾸지 않는다. 단어 검사와 조각 입력은 TELME-184에서 고친다.
 
-재현(캡처 실행기와 평가셋은 TELME-180 브랜치, `docs/PLAN_QUESTION_MODEL.md` 재현 절과 같은 방식):
+응답 시간(입력 30개, 다른 측정 없이 모델 하나씩 한 줄로): 입력당 엑사원 p50 0.51초 · p95 0.82초, gpt-oss p50 1.16초 · p95 2.36초다. 위 비교는 여러 실행을 동시에 돌려 시간에 쓰지 않는다.
+
+재현(캡처 실행기와 평가셋은 TELME-180 브랜치, `docs/PLAN_QUESTION_MODEL.md` 재현 절과 같은 방식, DB는 5440):
 
 ```bash
 # 1단계: PLAN_QUESTION_MODEL.md의 캡처 명령에 CONSULT_PLAN_QUESTION_BEDROCK=true를 더하고 평가셋 v2.2 전체로
 python -I scripts/candidate-evidence-evaluation/candidate_replay.py extract <캡처>/capture.json replay-inputs.json
-# 2단계: 엑사원 1회, gpt-oss 3회 동시
-CANDIDATE_REPLAY_PROBE=true CANDIDATE_REPLAY_INPUT=<절대 경로>/replay-inputs.json CANDIDATE_REPLAY_OUT=<절대 경로>/replay.jsonl LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval   ./gradlew test --tests 'com.telme.probe.CandidateEvidenceReplayProbe' --rerun-tasks
-# 채점 (저장된 결과로 다시 계산)
-python -I scripts/candidate-evidence-evaluation/candidate_replay.py score   scripts/candidate-evidence-evaluation/results/replay-inputs.json.gz   scripts/candidate-evidence-evaluation/results/replay.jsonl.gz score.md
+# 2단계: gpt-oss 3회는 동시에, 엑사원 1회는 따로 (CANDIDATE_REPLAY_MODELS=모델:회차)
+POSTGRES_PORT=5440 CANDIDATE_REPLAY_PROBE=true CANDIDATE_REPLAY_INPUT=<절대 경로>/replay-inputs.json CANDIDATE_REPLAY_OUT=<절대 경로>/replay.jsonl \
+CANDIDATE_REPLAY_MODELS=gptoss:3 LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval \
+  ./gradlew test --tests 'com.telme.probe.CandidateEvidenceReplayProbe' --rerun-tasks
+# 채점 (저장된 결과로 다시 계산, 턴 정답 기준)
+python -I scripts/candidate-evidence-evaluation/candidate_replay.py score \
+  scripts/candidate-evidence-evaluation/results/replay-inputs.json.gz \
+  scripts/candidate-evidence-evaluation/results/replay.jsonl.gz score.md
 ```
 
-결과 파일: `scripts/candidate-evidence-evaluation/results/`의 `capture.json.gz`(캡처), `replay-inputs.json.gz`(입력 58개와 후보), `replay.jsonl.gz`(모델별 원문 응답과 선택).
+결과 파일: `scripts/candidate-evidence-evaluation/results/`의 `capture.json.gz`(캡처), `replay-inputs.json.gz`(입력 57개와 후보), `replay.jsonl.gz`(모델별 원문 응답과 선택).
 
 ## 후보 근거 검증 수정 (TELME-184)
 
