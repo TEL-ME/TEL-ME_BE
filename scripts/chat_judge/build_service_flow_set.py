@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """매장 찾기·되묻기·로그인 회원 흐름 평가셋 v1을 만든다. 모델 답변이나 Judge 판정은 넣지 않는다.
 
-원본은 flow_v1_sources/flows_written.json이고, Judge 프롬프트·평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다.
+원본은 flow_sources/flows_written.json이고, Judge 프롬프트·평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다.
 - store_flow: 매장 찾기. 앱이 업무(serviceType)와 지역(location)을 되물으면 고객 답변을 보낸다. 지역은 '현재 위치 사용'
   (좌표)이나 지명으로 답한다. 지명 검색은 카카오 로컬 API가 필요해 requiresKakao로 표시한다.
 - clarification_flow: FAQ 답이 고객 조건에 따라 갈리는 질문과 요금제 추천. 앱이 조건을 되물으면 고객 답변을 보낸다.
@@ -19,10 +19,9 @@ from pathlib import Path
 from scripts.chat_judge import service_data
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCES = ROOT / "scripts/chat_judge/data/flow_v1_sources"
+SOURCES = ROOT / "scripts/chat_judge/data/flow_sources"
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
-PLANS = ROOT / "scripts/chat_judge/data/quality_v2_sources/plans_snapshot.json"
-OUTPUT_V1 = ROOT / "scripts/chat_judge/data/chat_pipeline_flows_v1.json"
+PLANS = ROOT / "scripts/chat_judge/data/quality_sources/plans_snapshot.json"
 OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_flows_v2.json"
 PROVENANCE = {"flows_written.json": "flow_v1_agent_written_scenario; human_review_pending",
               "flows_v2_written.json": "flow_v2_agent_written_scenario; human_review_pending"}
@@ -149,8 +148,6 @@ def build(version=2):
 
 
 def main():
-    OUTPUT_V1.write_text(json.dumps(build(version=1), ensure_ascii=False, indent=1) + "\n", encoding="utf-8",
-                         newline="\n")
     cases = build()
     OUTPUT.write_text(json.dumps(cases, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     suites = {}

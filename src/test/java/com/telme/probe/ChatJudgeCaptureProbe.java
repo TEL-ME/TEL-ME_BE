@@ -144,7 +144,7 @@ class ChatJudgeCaptureProbe {
 
         String configuredFixture = System.getenv("TELME_CHAT_JUDGE_FIXTURE");
         Path fixturePath = configuredFixture == null || configuredFixture.isBlank()
-                ? Path.of("scripts/chat_judge/data/chat_judge_pilot.json") : Path.of(configuredFixture);
+                ? Path.of("scripts/chat_judge/data/chat_pipeline_quality_v2_2.json") : Path.of(configuredFixture);
         JsonNode fixtures = mapper.readTree(fixturePath.toFile());
         if (!fixtures.isArray() || fixtures.isEmpty()) {
             throw new IllegalArgumentException("평가 시나리오는 비어 있지 않은 배열이어야 합니다.");

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """서비스 답변 품질 평가셋 v2를 만든다. 모델 답변이나 Judge 판정은 넣지 않는다.
 
-원본은 quality_v2_sources/에 있다. 질문과 필수 사실은 Judge 프롬프트·평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다.
+원본은 quality_sources/에 있다. 질문과 필수 사실은 Judge 프롬프트·평가 기준을 보지 않은 별도 작성자(에이전트)가 썼다.
 - 답변 가능 질문 120개: 분야마다 FAQ 12개를 골라 고객 말투로 다시 쓴 질문과 필수 사실(answerable_*.json)
 - 복합 질문 20개: 위 질문 중 서로 다른 분야 두 개를 한 문장으로 묻는 질문
 - 멀티턴 20개: 같은 분야 FAQ 두 개로 만든 2턴 대화, 15개는 둘째 턴이 대상을 생략(multiturn_*.json)
@@ -33,10 +33,9 @@ from pathlib import Path
 from scripts.chat_judge import service_data
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCES = ROOT / "scripts/chat_judge/data/quality_v2_sources"
-V1 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v1.json"
-OUTPUT_V2 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2.json"
-OUTPUT_V21 = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_1.json"
+SOURCES = ROOT / "scripts/chat_judge/data/quality_sources"
+# v1(TELME-100)의 흐름 회귀 대화 8개. v2부터 그대로 넣는다
+FLOW_REGRESSION = SOURCES / "flow_regression.json"
 OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_2.json"
 PROVENANCE_V22 = "v2.2_agent_written_question; v2.2_independent_verification; human_review_pending"
 CATALOG = ROOT / "scripts/data/faq_full_1150.json"
@@ -255,9 +254,7 @@ def build(service_labels=True, expansion=False):
         for turn in case["turns"]:
             for group, reference in zip(turn["goldSourceGroups"], turn["qualityReferenceGroups"]):
                 reference["alternatives"] = [{"sourceId": slot, "answer": catalog[slot]["answer"]} for slot in group]
-    for case in json.loads(V1.read_text(encoding="utf-8")):
-        if case.get("suite") == "flow_regression":
-            cases.append(case)
+    cases.extend(json.loads(FLOW_REGRESSION.read_text(encoding="utf-8")))
     if len({case["caseId"] for case in cases}) != len(cases):
         raise ValueError("Duplicate case ID")
     if service_labels:
@@ -273,7 +270,6 @@ def build(service_labels=True, expansion=False):
 
 
 def main():
-    OUTPUT_V21.write_text(json.dumps(build()[0], ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     cases, excluded = build(expansion=True)
     OUTPUT.write_text(json.dumps(cases, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     suites = {}

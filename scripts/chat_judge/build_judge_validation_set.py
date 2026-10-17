@@ -13,13 +13,13 @@ import re
 from pathlib import Path
 
 from scripts.chat_judge import judge_chat_flow as judge
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge import evaluate_chat_pipeline as pipeline
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_OUT = ROOT / "scripts/chat_judge/data/judge_validation_v1.json"
 FORM_OUT = ROOT / "docs/chat-judge/judge-validation-v1-review-form.md"
 # 질문과 정답 FAQ만 보고 별도 작성자가 쓴 필수 사실. 답변과 판정은 보지 않았다
-REQUIRED_FACTS = ROOT / "scripts/chat_judge/data/judge_validation_required_facts.json"
+REQUIRED_FACTS = ROOT / "scripts/chat_judge/data/validation_sources/required_facts.json"
 HUMAN_FILE = "v7-three-model-full-302-human-review-lyj.md"
 CAPTURE_FILE = "v7-capture.json.gz"
 SEED = 180
@@ -99,7 +99,7 @@ def select(candidates):
 def review_form(selected):
     lines = ["# Judge 검증셋 v1 판정표 (판정자 B)", "",
              "답변과 실제로 생성에 전달된 FAQ 답변만 보고 판정한다. 다른 판정자나 모델의 판정은 보지 않는다.",
-             "판정 기준은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md) 3절의 세 축을 따른다. FAQ 질문 문구는 정책 근거가 아니다.", "",
+             "판정 기준은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md) 2절의 세 축을 따른다. FAQ 질문 문구는 정책 근거가 아니다.", "",
              "- 근거성: `SUPPORTED` / `UNSUPPORTED` / `NOT_APPLICABLE`(사실 주장 없음) / `REVIEW`",
              "- 충족도: `COMPLETE` / `PARTIAL` / `MISSED` / `NOT_APPLICABLE`(범위 밖) / `REVIEW` — 정답 FAQ와 비교",
              "- 보류: `NOT_APPLICABLE` / `SHOULD_ABSTAIN` / `OVER_REFUSAL` / `APPROPRIATE` / `REVIEW`", ""]

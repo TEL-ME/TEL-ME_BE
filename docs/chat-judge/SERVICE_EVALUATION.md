@@ -1,97 +1,70 @@
-# 실제 채팅 답변의 품질 평가
+# 측정 절차
 
-현재 실행 도구는 `scripts/chat_judge/experiments/v6_live_chat_pipeline/run_chat_pipeline_eval.py`다. 실제 Spring 채팅 API가 만든 답변을 저장한 뒤 vLLM Qwen3-14B-AWQ로 병렬 채점한다. 저장한 답변을 Bedrock 모델로 판정할 때는 `scripts/chat_judge/run_bedrock_judge.py`를 쓴다(같은 프롬프트와 코드 규칙). 기존의 사람이 작성한 답변 500건은 Judge 자체의 검증 자료이며 서비스 품질 점수로 사용하지 않는다.
+실제 채팅 API로 평가셋 질문의 답변을 모으고(캡처), 저장한 답변을 Judge로 판정한 뒤 모델별 판정을 결합한다. 판정 기준과 코드 규칙은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md)에 있다.
 
-## 실행
-
-저장소 루트에서 실행한다.
+## 1. 캡처
 
 ```powershell
-# 508개 대화에 포함된 509개 질문 전체 실행
-python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_chat_pipeline_eval
-
-# 58개 대화, 59개 질문으로 먼저 확인
-python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_chat_pipeline_eval --limit 58
-
-# 저장된 실제 답변을 다시 채점할 때는 생성 모델을 호출하지 않는다.
-python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.run_chat_pipeline_eval --capture .measure/기존실행/capture.json
+python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --capture-only --out .measure/<실행 이름>
+python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --fixture scripts/chat_judge/data/chat_pipeline_flows_v2.json --capture-only --out .measure/<실행 이름>
+python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --limit 40 --capture-only --out .measure/<실행 이름>   # 짧은 확인
 ```
 
-`--limit`은 대화 수다. 기본 입력은 [`chat_pipeline_quality_v1.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v1.json)이며 500개의 카탈로그 질문과 8개 흐름 회귀 대화로 구성된다. 고객 말투 질문, FAQ로 답할 수 없는 질문, 멀티턴을 담은 [`chat_pipeline_quality_v2.json`](../../scripts/chat_judge/data/chat_pipeline_quality_v2.json)은 `--fixture`로 지정한다(구성은 [README](README.md#평가셋)). 기대 동작과 복수 정답은 평가용으로만 사용하며 답변 생성 모델에 전달하지 않는다.
+- 기본 입력은 서비스 품질셋 v2.2다. `--limit`은 대화 수이고, 흐름 회귀 대화는 모두 넣은 뒤 분야·질문 유형을 돌아가며 고른다.
+- 캡처 프로브(`ChatJudgeCaptureProbe`)가 Spring 채팅 API로 질문을 보내고 실행 기록을 모은다. 기대 동작, 필수 사실, 정답 FAQ는 평가용으로만 쓰고 앱에 전달하지 않는다.
+  - 앱이 조건을 되물으면 평가셋의 고객 답변을 보낸다. '현재 위치 사용'은 좌표로 보낸다. 같은 조건을 다시 물으면 같은 답을 한 번 더 하고, 평가셋에 없는 조건을 물으면 멈춘다.
+  - `actor`가 `MEMBER`인 대화는 테스트 회원(`judge-member@telme.test`) 세션으로 보낸다. 평가 DB에 없으면 만든다.
+- **평가 DB는 `telme_judge_eval`만 쓴다.** 없으면 `--postgres-container`의 `telme` DB를 복제한다. 다른 컨테이너의 DB를 쓰려면 `POSTGRES_PORT`를 맞춘다(예: `telme-flow-postgres`는 5440).
+- 앱 설정은 환경 변수 그대로 쓰고, 실제 적용된 값을 캡처의 `appConfig`에 남긴다. 회색 구간 근거 판정이 앱 쪽에서 Bedrock을 부르므로, 그 호출을 막으려면 `SEARCH_GRAY_ZONE_ENABLED=false`로 끈다.
+- 지명으로 찾는 매장 대화는 `KAKAO_REST_API_KEY`가 있어야 한다. 없으면 실행기가 빼고 `manifest.json`의 `skippedCases`에 남긴다.
+- 로컬 생성 모델(EXAONE, `telme-ollama`)로 돌릴 때 16GB GPU에서는 생성이 끝난 뒤 Ollama를 내리고 판정용 vLLM을 올린다. 실행기가 그 순서로 컨테이너를 켜고 끈다.
 
-로컬의 `telme-postgres`, `telme-ollama`, `telme-judge-vllm-bounded` 컨테이너와 모델이 필요하다. 평가 DB는 `telme_judge_eval`로 고정하며 개발 DB에 쓰지 않는다. 생성과 채점 모델을 동시에 GPU에 올리지 않는다. Docker가 꺼져 있으면 시작을 시도하며 vLLM 대신 Ollama로 채점하는 대체 경로는 없다.
+캡처 파일(`capture.json`)에는 턴마다 질문과 라벨, 라우팅, 검색 결과, 실제 RAG 입력(`ragInputs`), 생성 호출 기록, 저장 답변, 저장 근거, 실행 단계 기록(`pipelineTrace`), 되묻기 대화(`clarificationExchanges`), 매장 상세(`storeDetails`)가 있다. 실행 전체에는 요금제 표(`serviceData`), 적용된 설정(`appConfig`), 회원 대화의 계정 데이터(`memberData`)가 있다. 실행 단계 기록이 없는 예전 캡처는 평가 DB가 남아 있으면 `backfill_capture_service_data.py`로 채운다.
 
-현재 판정 환경은 vLLM 0.29.0, `Qwen/Qwen3-14B-AWQ`, FP16 연산, 문맥 길이 4096, 동시 작업 8개다. KV 캐시는 2GiB이며 긴 요청은 엔진이 대기 또는 선점할 수 있다. 출력은 temperature 0, thinking 비활성화, 최대 2048토큰이다. 모델과 Docker 이미지 및 실제 실행 인자는 원시 기록에 남긴다. Windows/WSL 환경은 이전 실험의 `buffer_utils.py` 호환 패치를 사용한다. 상세 환경은 [실행 안내](README.md#실행)를 참고한다.
+## 2. 판정
 
-## 채점 기준
-
-| 항목 | 비교 기준 | 실패로 보는 경우 |
-| --- | --- | --- |
-| 근거성 | 답변의 사실 주장과 실제 RAG 입력의 FAQ 답변 본문 | 근거에 없는 사실 추가, 조건 제거, 부정이나 금액 및 기간 변경 |
-| 질문 충족도와 정확성 | 사용자 질문 및 해당 질문의 정답 FAQ | 틀린 핵심 답변, 필요한 조건 누락, 복합 질문의 일부만 답변 |
-| 답변 불가 판단 | 질문 및 실제 RAG 입력의 근거 | 충분한 근거가 있는데 거절하거나 근거 없이 단정 |
-| 실행 | 실제 API 처리 및 최종 저장 상태 | 처리 실패, 답변 미저장 |
-
-단어가 달라도 의미와 조건이 같으면 지지된 주장으로 평가한다. 코드의 문자열 검사는 **Judge가 인용한 문구가 실제 답변이나 FAQ에 있는지**만 확인한다. 답변과 FAQ 문장이 똑같아야 한다는 검사는 아니다.
-
-주장 추출에는 답변 원문만 제공한다. 추출한 원문 구간을 검증한 뒤 별도 호출에서 FAQ와 의미를 비교한다. 조건이나 부정을 지운 문장으로 바꾸거나 질문의 내용을 답변 주장으로 넣으면 미채점이다. 애매한 근거 관계는 `REVIEW`이며 억지로 성공이나 환각으로 확정하지 않는다.
-
-질문 충족도에는 정답 FAQ를 제공한다. 이는 검색에 실패해 답변을 보류한 경우도 미답으로 찾기 위해서다. 반면 근거성과 답변 불가 판단에는 정답 라벨을 제공하지 않는다. 복합 질문의 정답 묶음은 `[[첫 질문의 대체 FAQ들], [둘째 질문의 대체 FAQ들]]`이다. 묶음 내부는 OR, 묶음 사이는 AND다.
-
-충족도 판정의 정답은 질문 부분마다 `{"questionPart", "alternatives": [{"sourceId", "answer"}]}`로 넘긴다. FAQ 질문 문구는 넣지 않는다. 예전 형식(`question`, `sourceId`, `answer` 한 개)도 같은 형식으로 바꿔 읽는다. vLLM 실행기와 Bedrock 재채점은 같은 충족도 프롬프트와 입력을 쓴다.
-
-## 코드가 정하는 판정
-
-기대 동작과 실제 응답 유형만으로 정해지는 판정은 모델을 부르지 않고 코드가 정한다. 원시 기록에는 `rule`로 남는다.
-
-| 규칙 | 조건 | 판정 |
-| --- | --- | --- |
-| `EMPTY_SOURCES` | 생성에 전달된 FAQ 근거와 서비스 데이터 근거가 모두 없음 | 근거 충분성은 모든 질문 부분이 `INSUFFICIENT`. 답변이 거절이면 보류는 `APPROPRIATE` |
-| `SYSTEM_FALLBACK` | 답변 전체가 처리 실패 대체 문구(질문 분리 실패 등) | 기대 동작과 상관없이 충족도 `MISSED`, 발견 사항 `SYSTEM_FALLBACK`. 보류·범위 밖 질문에서도 통과하지 않는다 |
-| `OUT_OF_SCOPE_QUESTION` | 기대 동작이 `OUT_OF_SCOPE` | 충족도 `NOT_APPLICABLE`. 범위 밖 질문에 사실을 지어내면 근거성과 보류 축에서 걸린다 |
-| `CLARIFICATION_ACCEPTED` | 기대 동작이 `ANSWER_OR_CLARIFY`이고 응답이 되묻기 | 충족도 `NOT_APPLICABLE`, 정상 처리 |
-| `UNNECESSARY_CLARIFICATION` | 그 밖의 기대 동작에서 응답이 되묻기 | 충족도 `MISSED`, 발견 사항 `UNNECESSARY_CLARIFICATION` |
-| `LOGIN_GUIDANCE_ACCEPTED` | 답의 출처가 회원 정보뿐인 보류 질문(`answerSources: ["MEMBER"]`)에 답변 전체가 로그인 안내 | 충족도 `NOT_APPLICABLE`, 정상 처리(비로그인 실행) |
-| `STORE_RESULTS_RETURNED` / `STORE_SERVICE_MISMATCH` / `STORE_LOCATION_MISMATCH` / `STORE_NOT_RETURNED` | 기대 동작이 `STORE_LOOKUP` | 매장 목록을 보여 줬고, 고객이 말한 위치 기준(현재 위치 버튼이면 현재 위치, 지명이면 지명)이며, 고객이 말한 업무(`expectedServiceType`)를 하는 매장만 있으면 `COMPLETE`, 아니면 `MISSED` |
-| `ABSTAIN_REFUSAL_TEMPLATE` | 답이 없는 질문(`ABSTAIN`)에 답변 전체가 앱의 거절 고정 문장(검색 결과 0건 안내, "지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요") | 충족도 `NOT_APPLICABLE`(정상 보류). 모델에 맡기면 같은 문장을 턴마다 다르게 판정했다 |
-| `NO_SEARCH_RESULT_FALLBACK` | 답이 없는 질문(`ABSTAIN`)에 검색 결과 0건 고정 문구로 답함 | 보류로 인정하고 발견 사항으로 따로 센다([라벨 검토 목록](LABEL_REVIEW.md) D1). 정답이 있는 질문에서 이 문구로 끝나면 충족도 실패다 |
-| `REASKED_CONDITION` | 한 턴 안에서 이미 답한 조건을 다시 되물음 | 발견 사항으로 남기고 통과로 보지 않는다(고객이 같은 답을 두 번 했다) |
-| `UNSCRIPTED_CLARIFICATION` | 앱이 평가셋에 고객 답변이 없는 조건을 되물음 | 발견 사항으로 남기고 사람 검토(품질 미확정) |
-| `SERVICE_GUIDANCE` | 근거성 주장 전체가 앱 고정 안내 문장 안에 있음 | 그 주장은 정책 주장에서 뺀다(`IRRELEVANT`, 모델 판정은 `modelVerdict`) |
-
-요금제 답변 경로를 탄 턴에는 요금제 표가 근거 `SERVICE:PLAN_TABLE`로 함께 들어간다([평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md#faq-밖-데이터로-만든-답변과-앱-고정-문구)). 코드 규칙은 저장한 판정을 다시 집계할 때(`rescore`, `combine_judges.py --capture`)도 지금 기준으로 다시 적용한다.
-
-`ANSWER_OR_CLARIFY`는 FAQ 답이 고객 조건(약정 개월, 나이, 본인·대리인 등)에 따라 갈리는데 질문에 그 조건이 없는 경우다. 경우별로 모두 답하면 `ANSWER`와 같이 판정한다. 되물은 조건이 질문과 맞는지, 이미 답한 조건을 다시 묻는지는 아직 사람이 판정한다.
-
-## 점수 해석
-
-| 지표 | 분자 / 분모 |
-| --- | --- |
-| 답변 품질 통과율 | 실행 완료, 질문 충족, 근거성, 적절한 보류를 모두 만족한 질문 / 품질이 확정된 질문. 실행 실패는 실패로 포함 |
-| 근거 없는 답변 발생률 | 지지되지 않은 사실이 하나 이상 있는 답변 / 근거 판정이 가능한 사실 답변 |
-| 주장 단위 근거 부족률 | 지지되지 않은 사실 주장 / 지지 또는 근거 부족으로 확정된 사실 주장 |
-| 완전 답변율 | 질문에 필요한 사실을 모두 답한 질문 / 충족도 판정이 가능한 답변 가능 질문 |
-| 과도한 거절률 | 충분한 근거가 있는데 거절한 질문 / 보류 판정이 가능한 답변 가능 질문 |
-| 검색 적중률 | 정답 묶음 중 하나 이상 찾은 하위 질문 / 정답 묶음이 있는 하위 질문 |
-
-미채점과 사람 검토는 성공으로 넣지 않는다. 품질 통과율은 전체 질문을 기준으로 한 최저 및 최고 범위도 함께 표시한다. 거절 답변을 사실 답변의 환각률 분모에 넣어 수치를 낮추지 않는다. 검색 후보, 실제 RAG 입력, 저장된 근거의 적중률은 각각 계산한다.
-
-이 점수는 고정 질문에서 자동 Judge가 추정한 서비스 답변 품질이다. 실제 이용자 전체의 환각률이나 사람이 확정한 점수로 표현하지 않는다. 최종 저장 답변을 평가하며 최종 SSE 전송 내용의 일치 여부는 이 점수에 포함하지 않는다. 매장 미연결은 별도 흐름 회귀 결과로 구분한다.
-
-## 원시 자료와 검토
-
-각 실행은 새 `.measure/chat-pipeline-날짜-시간/`에 아래 파일을 보존한다.
-
-- `questions.json`, `capture.json`: 질문, 실제 라우팅, 검색 결과, RAG 입력, 생성 프롬프트, 저장 답변과 실행 상태, 실행 단계 기록(`pipelineTrace`), 요금제 표(`serviceData`), 적용된 설정(`appConfig`). 이 기록이 없는 예전 캡처는 평가 DB가 남아 있으면 `backfill_capture_service_data.py`로 채운다
-- `manifest.json`, `capture-gradle.log`: 코드 및 입력 해시, 모델과 실행 환경, 수집 로그
-- `judged-raw.json.gz`: Judge의 모든 요청, 응답, 인용, 재시도와 검증 오류
-- `scores.json`, `category-scores.json`, `report.md`: 전체 및 유형별 점수
-- `review.md`: 실제 답변, 근거와 함께 읽을 수 있는 실행 실패, 미채점, 모호한 판정 및 근거 없는 주장
-
-중단된 채점은 동일한 코드, 입력과 설정일 때만 재개한다. 완료된 오류 판정도 보존하며 재개하면서 조용히 정상 판정으로 바꾸지 않는다.
+**Bedrock(대표 수치)**
 
 ```powershell
-python -u -X utf8 -m scripts.chat_judge.experiments.v6_live_chat_pipeline.evaluate_chat_pipeline .measure/기존실행/capture.json --out .measure/기존실행/judged-raw.json.gz --resume
+python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model qwen --allow-bedrock-call --out <qwen.json.gz>
+python -X utf8 -m scripts.chat_judge.run_bedrock_judge <캡처> --model deepseek-v3.2-usw2 --workers 16 --allow-bedrock-call --out <deepseek.json.gz>
 ```
 
-2026-10-02의 실제 실행 결과와 원시 자료는 [509개 질문 결과](https://github.com/TEL-ME/TEL-ME_BE/blob/ae637974770f03fa8620c6b5540877becf1ff0c5/docs/chat-judge/experiments/V6-live-chat-pipeline/20261002-service-pipeline-results.md)에 정리했다. 보다 상세한 정책은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md)을 참고한다.
+- 모델은 하나씩 따로 돌린다. 별칭과 요금은 `bedrock.py`의 `MODELS`, `PRICES`에 있다. DeepSeek V3.2는 도쿄 리전의 처리량이 막혀 오레곤(`deepseek-v3.2-usw2`)을 쓴다.
+- 유료 호출이라 `--allow-bedrock-call`을 줘야 하고, 기존 결과를 덮어쓰지 않는다.
+- `--prior <이전 결과>`를 주면 판정 입력(답변, 근거, 판정에 쓰는 라벨, 이전 대화)이 같은 턴은 이전 판정을 재사용하고 바뀐 턴만 부른다. 결과에 판정 입력 해시(`judgeInputSha256`)가 남는다.
+- 같은 모델을 다시 돌려도 최종 판정의 약 5%가 바뀐다. 최종 수치는 2~3회 반복해 범위로 보고한다.
+
+**vLLM(로컬)**
+
+```powershell
+python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --capture .measure/<실행 이름>/capture.json
+```
+
+`telme-judge-vllm-bounded` 컨테이너의 Qwen3-14B-AWQ(vLLM 0.29.0, 문맥 4096, 동시 8)로 같은 프롬프트와 코드 규칙을 쓴다. 중단된 판정은 같은 코드, 입력, 설정일 때만 이어서 한다(`evaluate_chat_pipeline.py --resume`). 완료된 오류 판정도 보존한다.
+
+## 3. 결합과 집계
+
+```powershell
+python -X utf8 -m scripts.chat_judge.combine_judges <qwen.json.gz> <deepseek.json.gz> --capture <캡처> --out <결합.json>
+```
+
+- 기본 규칙은 하나라도 실패면 실패다(`--rule majority`는 다수결). 근거성은 한쪽이라도 근거 없음이면 근거 없음, 충족도는 가장 낮은 판정, 보류는 한쪽이라도 지어낸 답이나 과도한 거절을 잡으면 그 판정이다. 판정하지 못한 모델이 있고 나머지가 모두 통과면 미확정이다.
+- `--capture`를 주면 저장된 판정에 지금 코드 규칙을 다시 적용한 뒤 합친다(모델 호출 없음).
+- 출력에는 전체·묶음별 통과율, 95% 신뢰구간, 근거 없는 답 비율, 묶음 평균 통과율(`suiteMacroPassPercent`)이 있다. `--validation`은 Judge 검증셋 결과를 사람 판정과 비교한다.
+
+## 4. 결과 남기기
+
+측정 결과는 `docs/chat-judge/results/<날짜>-<이름>/`에 `README.md`와 원시 파일 묶음 `raw.tar.xz` 하나로 남긴다. 모델끼리 겹치는 요청 본문이 많아 묶어서 압축하면 1/10로 준다. README에는 실행 조건(코드 커밋, 생성 모델, 평가 DB, 앱 설정), 비용, 결과 표, 해석, 다시 집계하는 명령을 적는다.
+
+```powershell
+mkdir .measure/<이름>
+tar -xf docs/chat-judge/results/<폴더>/raw.tar.xz -C .measure/<이름>
+```
+
+## 5. 해석할 때 주의할 것
+
+- 고정 평가셋에서 자동 Judge가 추정한 품질이다. 실제 이용자 전체의 환각률이나 사람이 확정한 점수로 표현하지 않는다.
+- 묶음 표본이 19~120개라 묶음 수치의 신뢰구간이 넓다. 같은 질문으로 전후를 비교한다.
+- 최종 저장 답변을 판정하며, 사용자가 받은 최종 SSE 내용과의 일치는 점수에 넣지 않는다.
+- 라벨을 바꾸면 이전 캡처에 `relabel_capture.py`로 새 라벨을 입히고 같은 답변으로 다시 판정해 비교한다.

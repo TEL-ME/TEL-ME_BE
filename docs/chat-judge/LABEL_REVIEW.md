@@ -33,7 +33,7 @@
 
 ## D2. 복합 질문 필수 사실 축소 제안
 
-복합 질문 20개의 질문 부분 이름을 실제 고객 문장으로 고치면서([compound_parts.json](../../scripts/chat_judge/data/quality_v2_sources/compound_parts.json)), 별도 작성자가 "그 부분 질문이 묻지 않는 사실"을 빼자고 제안했다. 지금은 적용하지 않았다. 빼면 그 사실을 빠뜨린 답도 충족이 된다.
+복합 질문 20개의 질문 부분 이름을 실제 고객 문장으로 고치면서([compound_parts.json](../../scripts/chat_judge/data/quality_sources/compound_parts.json)), 별도 작성자가 "그 부분 질문이 묻지 않는 사실"을 빼자고 제안했다. 지금은 적용하지 않았다. 빼면 그 사실을 빠뜨린 답도 충족이 된다.
 
 | 문항 | 부분 질문 | 빼자는 사실 | 제안 |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@
 
 ## D3. 필수 사실 보완 제안 3곳
 
-검수 메모가 "필수 사실이 질문을 다 덮지 못한다"고 표시했고 별도 작성자가 보완안을 썼지만, 보완 사실이 인정 FAQ 답변에 없다. 적용하면 정답 FAQ로 답해도 실패가 된다([required_facts_fixes.json](../../scripts/chat_judge/data/quality_v2_sources/required_facts_fixes.json)의 `pendingReview`).
+검수 메모가 "필수 사실이 질문을 다 덮지 못한다"고 표시했고 별도 작성자가 보완안을 썼지만, 보완 사실이 인정 FAQ 답변에 없다. 적용하면 정답 FAQ로 답해도 실패가 된다([required_facts_fixes.json](../../scripts/chat_judge/data/quality_sources/required_facts_fixes.json)의 `pendingReview`).
 
 | 문항 | 질문 | 지금 필수 사실 | 더하자는 사실 | 그 사실이 없는 인정 FAQ |
 | --- | --- | --- | --- | --- |
@@ -70,7 +70,7 @@
 
 ## D4. 되묻기 흐름 "바로 답했을 때" 필수 사실 (적용함)
 
-앱이 조건을 되묻지 않고 바로 답하면 고객 조건을 모르므로 갈리는 경우를 모두 안내해야 통과로 본다([direct_answer_facts.json](../../scripts/chat_judge/data/flow_v1_sources/direct_answer_facts.json)). 이번 앱은 한 번도 되묻지 않아 8개 모두 오른쪽 열로 판정했다.
+앱이 조건을 되묻지 않고 바로 답하면 고객 조건을 모르므로 갈리는 경우를 모두 안내해야 통과로 본다([direct_answer_facts.json](../../scripts/chat_judge/data/flow_sources/direct_answer_facts.json)). 이번 앱은 한 번도 되묻지 않아 8개 모두 오른쪽 열로 판정했다.
 
 | 문항 | 질문 | 바로 답했을 때 필수 사실 |
 | --- | --- | --- |
@@ -85,14 +85,14 @@
 
 - CF07의 "고객이 조건을 말했을 때" 사실에는 "수리는 제조사 서비스센터에서 받는다"가 있는데, 질문은 비용만 묻는다. **제안: 그쪽에서도 빼기.**
 
-결정: **표 그대로, CF07은 제안대로 뺐다(2026-10-17, `flow_v1_sources/review_decisions.json`).** 이번 앱은 되묻지 않아 CF07은 오른쪽 열로 판정되므로 결과는 같다.
+결정: **표 그대로, CF07은 제안대로 뺐다(2026-10-17, `flow_sources/review_decisions.json`).** 이번 앱은 되묻지 않아 CF07은 오른쪽 열로 판정되므로 결과는 같다.
 
 ## D5. 제가 정한 판정 기준
 
 검증된 기준이 아니라 제가 정했다. 다르게 생각하는 것만 알려 주면 된다.
 
 1. 판매하지 않는 요금제(5G 프리미엄 플러스, LTE 슬림, 군인 전용, 키즈워치 전용)를 물으면 정답은 "판매 중인 요금제에 없다"다. 요금제 표가 판매 중 전체 목록이라는 전제다.
-2. 요금제 목록·최저가처럼 요금제 표로도 답이 정해지는 질문 부분 10곳은 FAQ와 요금제 표 둘 다 정답 근거로 인정한다([service_data_labels.json](../../scripts/chat_judge/data/quality_v2_sources/service_data_labels.json)).
+2. 요금제 목록·최저가처럼 요금제 표로도 답이 정해지는 질문 부분 10곳은 FAQ와 요금제 표 둘 다 정답 근거로 인정한다([service_data_labels.json](../../scripts/chat_judge/data/quality_sources/service_data_labels.json)).
 3. 비로그인 사용자가 내 요금·사용량·위약금을 물으면 로그인 안내가 정답이다.
 4. 한 턴 안에서 이미 답한 조건(지역, 업무)을 다시 물으면 최종 답이 맞아도 실패다.
 5. 매장 찾기는 목록을 보여 주고, 고객이 말한 위치 기준이며, 고객이 말한 업무를 하는 매장만이어야 통과다. 거리나 영업 중 여부는 보지 않는다.

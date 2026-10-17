@@ -1,21 +1,46 @@
-"""Collect real Spring chat answers, then evaluate them on parallel vLLM."""
+"""실제 Spring 채팅 API로 평가셋 질문의 답변을 모으고(캡처), 로컬 vLLM으로 판정한다. Bedrock 판정은 run_bedrock_judge.py로 한다."""
 
 import argparse
+import copy
 import http.client
 from datetime import datetime
 import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.request
 
-from scripts.chat_judge.experiments.v6_live_chat_pipeline.build_chat_pipeline_eval import DEFAULT_OUTPUT, ROOT, select_cases
-from scripts.chat_judge.experiments.v6_live_chat_pipeline.evaluate_chat_pipeline import checkpoint, evaluate, load_json, report
-from scripts.chat_judge.experiments.v6_live_chat_pipeline.export_chat_pipeline_review import review_report
+from scripts.chat_judge.evaluate_chat_pipeline import checkpoint, evaluate, load_json, report
+from scripts.chat_judge.export_chat_pipeline_review import review_report
 from scripts.chat_judge import judge_chat_flow as judge
+
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_FIXTURE = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_2.json"
+
+
+def select_cases(cases, limit=0):
+    """흐름 회귀 대화는 모두 두고, 나머지는 분야·질문 유형을 돌아가며 limit개까지 고른다(짧은 확인 실행용)."""
+    if limit <= 0 or limit >= len(cases):
+        return copy.deepcopy(cases)
+    regression = [case for case in cases if case.get("suite") == "flow_regression"]
+    if limit < len(regression):
+        raise ValueError(f"limit must be at least {len(regression)} to preserve flow scenarios")
+    selected = list(regression)
+    buckets = {}
+    for case in cases:
+        if case.get("suite") != "flow_regression":
+            buckets.setdefault((case["category"], case["questionType"]), []).append(case)
+    while len(selected) < limit and buckets:
+        for key in list(buckets):
+            if len(selected) >= limit:
+                break
+            selected.append(buckets[key].pop(0))
+            if not buckets[key]:
+                del buckets[key]
+    return copy.deepcopy(selected)
 
 
 def command(args, **kwargs):
@@ -78,7 +103,7 @@ def ensure_database(container):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fixture", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE)
     parser.add_argument("--limit", type=int, default=0, help="0: full suite; >=8: stratified smaller run")
     parser.add_argument("--out", type=Path, default=ROOT / ".measure" / ("chat-pipeline-" + datetime.now().strftime("%Y%m%d-%H%M%S")))
     parser.add_argument("--capture", type=Path, help="Judge an existing actual API capture instead of regenerating")
@@ -102,8 +127,8 @@ def main():
                 "datasetScope": "fixed_challenge_set_not_live_user_distribution",
                 "judgeBackend": "vllm", "judgeModel": args.model, "workers": args.workers}
     manifest["evaluationSourceFiles"] = {}
-    for relative in ("scripts/chat_judge/experiments/v6_live_chat_pipeline/run_chat_pipeline_eval.py", "scripts/chat_judge/experiments/v6_live_chat_pipeline/evaluate_chat_pipeline.py",
-                     "scripts/chat_judge/judge_chat_flow.py", "scripts/chat_judge/experiments/v6_live_chat_pipeline/build_chat_pipeline_eval.py",
+    for relative in ("scripts/chat_judge/run_chat_pipeline_eval.py", "scripts/chat_judge/evaluate_chat_pipeline.py",
+                     "scripts/chat_judge/judge_chat_flow.py", "scripts/chat_judge/service_data.py",
                      "src/test/java/com/telme/probe/ChatJudgeCaptureProbe.java"):
         data = (ROOT / relative).read_bytes()
         snapshot = args.out / "source" / relative
@@ -112,7 +137,7 @@ def main():
         manifest["evaluationSourceFiles"][relative] = judge.sha256(data)
     if not args.capture:
         if not args.fixture.exists():
-            command([sys.executable, "-X", "utf8", "-m", "scripts.chat_judge.experiments.v6_live_chat_pipeline.build_chat_pipeline_eval"])
+            raise SystemExit(f"평가셋이 없다: {args.fixture}. build_service_quality_set이나 build_service_flow_set으로 만든다")
         fixtures = select_cases(load_json(args.fixture), args.limit)
         # 지명으로 찾는 매장 검색은 카카오 로컬 API가 있어야 한다. 키가 없으면 그 대화는 빼고 기록한다
         if not (os.environ.get("KAKAO_REST_API_KEY") or os.environ.get("KAKAO_CLIENT_ID")):

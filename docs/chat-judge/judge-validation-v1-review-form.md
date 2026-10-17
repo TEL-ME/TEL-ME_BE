@@ -1,7 +1,7 @@
 # Judge 검증셋 v1 판정표 (판정자 B)
 
 답변과 실제로 생성에 전달된 FAQ 답변만 보고 판정한다. 다른 판정자나 모델의 판정은 보지 않는다.
-판정 기준은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md) 3절의 세 축을 따른다. FAQ 질문 문구는 정책 근거가 아니다.
+판정 기준은 [평가 기준](CHAT_PIPELINE_QUALITY_CRITERIA.md) 2절의 세 축을 따른다. FAQ 질문 문구는 정책 근거가 아니다.
 
 - 근거성: `SUPPORTED` / `UNSUPPORTED` / `NOT_APPLICABLE`(사실 주장 없음) / `REVIEW`
 - 충족도: `COMPLETE` / `PARTIAL` / `MISSED` / `NOT_APPLICABLE`(범위 밖) / `REVIEW` — 정답 FAQ와 비교

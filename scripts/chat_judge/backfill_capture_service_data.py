@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge import evaluate_chat_pipeline as pipeline
 
 ROOT = Path(__file__).resolve().parents[2]
 ELIGIBILITY = ROOT / "src/main/java/com/telme/subscription/service/SubscriptionEligibilityChecker.java"

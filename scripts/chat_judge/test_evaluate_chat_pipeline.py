@@ -10,9 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import build_chat_pipeline_eval as builder
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import compare_human_review as human_compare
+from scripts.chat_judge import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge import run_chat_pipeline_eval as runner
 from scripts.chat_judge import judge_chat_flow as judge
 from scripts.chat_judge.test_judge_chat_flow import sample_capture, CATALOG
 
@@ -28,39 +27,6 @@ def scored_item(turn, overall="SUPPORTED", quality="COMPLETE", refusal=False, en
 
 
 class PipelineEvaluationTest(unittest.TestCase):
-    def test_human_pipeline_failure_is_reported_separately_from_routing_mismatch(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "human.md"
-            path.write_text("""## V6H-026
-- 별도 파이프라인 실패 유형: `MISROUTED_CLARIFICATION`
-- 근거성 전체 판정: `NOT_APPLICABLE`
-  - 기준 1: `MISSED`
-- 답변 불가 판정: `NOT_APPLICABLE`
-- 실제 전달 근거 충분성: `INSUFFICIENT`
-""", encoding="utf-8")
-            human, _ = human_compare.load_human_review(path, {"cases": [
-                {"reviewId": "V6H-026", "caseId": "ROAMING", "turnIndex": 0}]})
-        evaluation = {"turns": [{"caseId": "ROAMING", "turnIndex": 0,
-                                  "findings": ["ROUTING_MISMATCH"]}]}
-        result = human_compare.compare_pipeline_failures(human, evaluation)
-        self.assertEqual(1, result["humanCounts"]["MISROUTED_CLARIFICATION"])
-        self.assertEqual(1, result["routingMismatchCount"])
-        self.assertEqual({"reviewId": "V6H-026", "humanLabel": "MISROUTED_CLARIFICATION",
-                          "routingMismatch": True}, result["rows"][0])
-
-    def test_unscored_abstention_is_not_counted_as_not_applicable(self):
-        human = {"H-001": {"caseId": "CASE", "turnIndex": 0, "grounding": "SUPPORTED",
-                           "quality": ["COMPLETE"], "abstention": "NOT_APPLICABLE",
-                           "answerability": "ENOUGH"}}
-        evaluation = {"turns": [{"caseId": "CASE", "turnIndex": 0,
-                                  "grounding": {"result": {"overall": "SUPPORTED"}},
-                                  "quality": {"result": {"groups": [{"outcome": "COMPLETE"}]}},
-                                  "abstention": {"result": {"evidenceAnswerability": "ENOUGH"}},
-                                  "abstentionDecision": None}]}
-        counts, _ = human_compare.compare(human, evaluation)
-        self.assertEqual(1, counts["abstention"]["unresolved"])
-        self.assertEqual(0, counts["abstention"]["match"])
-
     @patch.object(pipeline.urllib.request, "urlopen")
     @patch.object(pipeline, "abstention_chat")
     @patch.object(pipeline.judge, "vllm_chat")
@@ -103,32 +69,14 @@ class PipelineEvaluationTest(unittest.TestCase):
                 pipeline.checkpoint(target, {"rawResponse": "preserved"})
             self.assertEqual(3, len(attempts))
             self.assertEqual({"rawResponse": "preserved"}, pipeline.load_json(target))
-    def test_generated_suite_contains_questions_not_fake_answers_or_fixed_judge_labels(self):
-        def load(name):
-            directory = "scripts/chat_judge/data" if name.startswith("chat_judge_") else "scripts/data"
-            return json.loads((builder.ROOT / directory / name).read_text(encoding="utf-8"))
-        cases = builder.build_cases(load("chat_judge_validation_v2.json"), load("chat_judge_pilot.json"),
-                                    load("faq_full_1150.json"))
-        self.assertEqual(508, len(cases))
-        self.assertEqual(509, sum(len(case["turns"]) for case in cases))
-        self.assertEqual(50, sum(case["category"] == "COMPOUND" for case in cases))
-        for case in cases:
-            for turn in case["turns"]:
-                self.assertNotIn("answer", turn)
-                self.assertNotIn("expected", turn)
-                self.assertNotIn("groundingInput", turn)
-        no_evidence_question = next(case for case in cases if case["caseId"] == "PIPE-BILLING-0097")
-        self.assertEqual("ANSWER", no_evidence_question["turns"][0]["expectedBehavior"])
-        self.assertTrue(no_evidence_question["turns"][0]["qualityReferenceGroups"])
-
     def test_smaller_run_keeps_all_flow_scenarios_and_spans_categories(self):
-        cases = json.loads(builder.DEFAULT_OUTPUT.read_text(encoding="utf-8"))
-        chosen = builder.select_cases(cases, 58)
-        self.assertEqual(58, len(chosen))
+        cases = json.loads(runner.DEFAULT_FIXTURE.read_text(encoding="utf-8"))
+        chosen = runner.select_cases(cases, 40)
+        self.assertEqual(40, len(chosen))
         self.assertEqual(8, sum(case["suite"] == "flow_regression" for case in chosen))
-        self.assertEqual(10, len({case["category"] for case in chosen if case["suite"] == "catalog_questions"}))
+        self.assertGreaterEqual(len({case["category"] for case in chosen}), 10)
         with self.assertRaises(ValueError):
-            builder.select_cases(cases, 3)
+            runner.select_cases(cases, 3)
 
     def test_generation_context_is_not_replaced_with_saved_citations(self):
         turn = sample_capture()["cases"][0]["turns"][0]
@@ -182,11 +130,20 @@ class PipelineEvaluationTest(unittest.TestCase):
             {"sourceId": "BILLING-0001", "answer": "policy text lives here"}]}], data["referenceGroups"])
         self.assertNotIn("faq question is metadata", request["messages"][1]["content"])
 
-    def test_abstention_schema_binds_each_quote_to_its_actual_source(self):
-        data = {"sources": [{"sourceId": "A", "answer": "월 1회 가능합니다."},
+    @patch.object(pipeline, "abstention_stage")
+    def test_evidence_schema_binds_each_quote_to_its_actual_source(self, stage):
+        schemas = {}
+
+        def respond(url, model, name, rubric, schema, data, timeout):
+            schemas[name] = schema
+            return {"request": {"name": name}, "error": "not needed"}
+        stage.side_effect = respond
+        data = {"question": "언제 바꿔요?", "answer": "답", "previousTurns": [], "confirmedConditions": [],
+                "sources": [{"sourceId": "A", "answer": "월 1회 가능합니다."},
                             {"sourceId": "B", "answer": "다음 달부터 가능합니다."}]}
-        schema = judge.judge_request("qwen", "abstention", data)["format"]
-        branches = schema["properties"]["evidenceQuotes"]["items"]["oneOf"]
+        pipeline.abstention_chat("http://unused", "qwen", data, 5)
+        quotes = schemas["faq_answerability"]["properties"]["parts"]["items"]["properties"]["evidenceQuotes"]
+        branches = quotes["items"]["oneOf"]
         self.assertEqual("A", branches[0]["properties"]["sourceId"]["const"])
         self.assertEqual(["월 1회 가능합니다."], branches[0]["properties"]["quote"]["enum"])
         self.assertEqual("B", branches[1]["properties"]["sourceId"]["const"])

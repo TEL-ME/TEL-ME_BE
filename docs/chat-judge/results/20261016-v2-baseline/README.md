@@ -60,7 +60,7 @@ Qwen3-14B-AWQ와 판정자 A(TELME-100 V7)의 축별 일치다. 검증셋은 Jud
 
 ```powershell
 # 같은 답변을 모델 호출 없이 지금 채점 규칙으로 다시 집계
-python -X utf8 -c "from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as p; r=p.rescore(p.load_json('docs/chat-judge/results/20261016-v2-baseline/judged-raw.json.gz'), p.load_json('docs/chat-judge/results/20261016-v2-baseline/capture.json.gz')); print(r['summary']['qualitySuccess'])"
+python -X utf8 -c "from scripts.chat_judge import evaluate_chat_pipeline as p; r=p.rescore(p.load_json('docs/chat-judge/results/20261016-v2-baseline/judged-raw.json.gz'), p.load_json('docs/chat-judge/results/20261016-v2-baseline/capture.json.gz')); print(r['summary']['qualitySuccess'])"
 # Judge 검증셋 비교 다시 계산
 python -X utf8 -m scripts.chat_judge.run_judge_validation --judged docs/chat-judge/results/20261016-v2-baseline/judge-validation-qwen14b.json.gz
 ```

@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 from scripts.chat_judge import judge_chat_flow as judge
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge import evaluate_chat_pipeline as pipeline
 
 AXES = ("grounding", "quality", "abstention")
 
@@ -27,6 +27,26 @@ AXES = ("grounding", "quality", "abstention")
 JUDGED_FIXTURE_FIELDS = ("question", "expectedBehavior", "requiredFacts", "qualityReferenceGroups", "missingFact")
 # 나중에 생긴 라벨 필드는 있을 때만 넣는다. 없는 턴의 해시가 바뀌어 이전 판정을 못 쓰게 되지 않도록
 OPTIONAL_JUDGED_FIXTURE_FIELDS = ("requiredFactsIfAnsweredDirectly",)
+
+
+def build_jobs(capture, catalog):
+    """턴마다 (캡처 턴, 이전 대화, 판정 기록 틀)을 만든다. 근거는 실제로 생성에 전달된 것(서비스 데이터 포함)이다."""
+    judge.validate_capture(capture)
+    enriched = pipeline.enrich_rag_sources(capture, catalog)
+    jobs = []
+    for case in enriched["cases"]:
+        previous = []
+        for index, turn in enumerate(case["turns"]):
+            sources, provenance = pipeline.generation_sources(turn)
+            item = {"caseId": case["caseId"], "turnIndex": index, "category": case.get("category"),
+                    "suite": case.get("suite", "legacy_capture"), "question": turn["fixture"]["question"],
+                    "expectedBehavior": turn["fixture"]["expectedBehavior"],
+                    "executionStatus": turn["executionStatus"], "pipelineDurationMs": turn.get("durationMs"),
+                    "answer": (turn.get("outputMessage") or {}).get("content"), "sources": sources,
+                    "sourceProvenance": provenance, "savedSources": turn.get("savedSources", [])}
+            jobs.append((turn, copy.deepcopy(previous), item))
+            previous.extend(judge.completed_dialogue(turn, item["answer"]))
+    return jobs
 
 
 def input_key(turn, previous, item):
@@ -38,11 +58,10 @@ def input_key(turn, previous, item):
 
 
 def prior_input_keys(prior, prior_capture, catalog):
-    from scripts.chat_judge.experiments.v7_cross_judge import run_cross_judge
     keys = {(row["caseId"], row["turnIndex"]): row["judgeInputSha256"]
             for row in prior.get("turns", []) if "judgeInputSha256" in row}
     if prior_capture is not None:
-        for turn, previous, item in run_cross_judge.build_jobs(prior_capture, catalog):
+        for turn, previous, item in build_jobs(prior_capture, catalog):
             keys.setdefault((item["caseId"], item["turnIndex"]), input_key(turn, previous, item))
     missing = [row for row in prior.get("turns", []) if (row["caseId"], row["turnIndex"]) not in keys]
     if missing:
@@ -53,9 +72,9 @@ def prior_input_keys(prior, prior_capture, catalog):
 def evaluate(capture, catalog, alias, profile="telme-bedrock-eval", workers=6, limit=0, client=None, prior=None,
              prior_capture=None):
     """완료된 턴마다 세 축을 판정하고 실행기와 같은 규칙으로 집계한다. 실행 실패 턴도 분모에 남긴다."""
-    from scripts.chat_judge.experiments.v7_cross_judge import bedrock, run_cross_judge
+    from scripts.chat_judge import bedrock
     judge_client = bedrock.BedrockJudge(alias, profile, client=client)
-    jobs = run_cross_judge.build_jobs(capture, catalog)
+    jobs = build_jobs(capture, catalog)
     if limit:
         jobs = jobs[:limit]
     if prior is not None and prior.get("alias") != alias:

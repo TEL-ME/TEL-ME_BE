@@ -9,8 +9,8 @@ from scripts.chat_judge import backfill_capture_service_data as backfill
 from scripts.chat_judge import judge_chat_flow as judge
 from scripts.chat_judge import run_bedrock_judge
 from scripts.chat_judge import service_data
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as pipeline
-from scripts.chat_judge.experiments.v7_cross_judge.test_v7 import FakeClient
+from scripts.chat_judge import evaluate_chat_pipeline as pipeline
+from scripts.chat_judge.test_bedrock import FakeClient
 from scripts.chat_judge.test_judge_chat_flow import CATALOG, sample_capture
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -197,8 +197,7 @@ class PriorReuseTest(unittest.TestCase):
         relabeled = copy.deepcopy(capture)
         relabeled["cases"][0]["turns"][0]["fixture"]["requiredFacts"] = ["월 1회", "다음 날 적용"]
         keys = run_bedrock_judge.prior_input_keys(self.prior(capture), capture, CATALOG)
-        from scripts.chat_judge.experiments.v7_cross_judge import run_cross_judge
-        turn, previous, item = run_cross_judge.build_jobs(relabeled, CATALOG)[0]
+        turn, previous, item = run_bedrock_judge.build_jobs(relabeled, CATALOG)[0]
         self.assertNotEqual(keys[("FAQ_TEST", 0)], run_bedrock_judge.input_key(turn, previous, item))
         with self.assertRaises(ValueError):  # 해시도 캡처도 없으면 재사용 여부를 알 수 없다
             run_bedrock_judge.prior_input_keys(self.prior(capture), None, CATALOG)
@@ -241,8 +240,10 @@ class ServiceLabelSetTest(unittest.TestCase):
 
     def test_v2_1_adds_plan_table_labels_and_keeps_v2_reproducible(self):
         from scripts.chat_judge import build_service_quality_set as builder
+        # 이전 완성본 파일은 두지 않는다. v2는 서비스 데이터 라벨이 없고, v2.2는 v2.1 뒤에 문항을 더한다
         v2, _ = builder.build(service_labels=False)
-        self.assertEqual(json.loads(builder.OUTPUT_V2.read_text(encoding="utf-8")), v2)
+        self.assertEqual(238, len(v2))
+        self.assertFalse(any("answerSources" in turn for case in v2 for turn in case["turns"]))
         v21 = {case["caseId"]: case for case in builder.build()[0]}
         senior = v21["V2-NOANSWER-U018"]["turns"][0]
         self.assertEqual(("ANSWER", ["PLAN_TABLE"]), (senior["expectedBehavior"], senior["answerSources"]))
@@ -253,7 +254,7 @@ class ServiceLabelSetTest(unittest.TestCase):
         self.assertNotIn(service_data.PLAN_SOURCE_ID, [alt["sourceId"] for alt in cheapest[0]["alternatives"]])
         member = v21["V2-NOANSWER-U050"]["turns"][0]
         self.assertEqual(("ABSTAIN", "ANSWER"), (member["expectedBehavior"], member["memberExpectedBehavior"]))
-        self.assertEqual(json.loads(builder.OUTPUT_V21.read_text(encoding="utf-8")), list(v21.values()))
+        self.assertEqual(list(v21.values()), builder.build(expansion=True)[0][:len(v21)])
 
 
 class FlowTest(unittest.TestCase):

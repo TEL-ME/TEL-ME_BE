@@ -5,7 +5,7 @@ import json
 import time
 
 from scripts.chat_judge import judge_chat_flow as judge
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as v6
+from scripts.chat_judge import evaluate_chat_pipeline as v6
 
 
 MODELS = {

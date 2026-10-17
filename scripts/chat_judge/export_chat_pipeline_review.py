@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from scripts.chat_judge.experiments.v6_live_chat_pipeline.evaluate_chat_pipeline import load_json, reference_groups
+from scripts.chat_judge.evaluate_chat_pipeline import load_json, reference_groups
 
 
 def review_report(result, capture):

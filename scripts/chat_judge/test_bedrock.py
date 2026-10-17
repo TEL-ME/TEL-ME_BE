@@ -5,10 +5,8 @@ import json
 import unittest
 
 from scripts.chat_judge import judge_chat_flow as judge
-from scripts.chat_judge.experiments.v6_live_chat_pipeline import evaluate_chat_pipeline as v6
-from scripts.chat_judge.experiments.v7_cross_judge import bedrock
-from scripts.chat_judge.experiments.v7_cross_judge import build_v7_capture as builder
-from scripts.chat_judge.experiments.v7_cross_judge import run_cross_judge as runner
+from scripts.chat_judge import evaluate_chat_pipeline as v6
+from scripts.chat_judge import bedrock
 from scripts.chat_judge.test_judge_chat_flow import sample_capture, CATALOG
 
 
@@ -30,24 +28,6 @@ class V7Test(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "FAQ 근거 ID"):
             judge.validate_result("grounding", {"claims": [claim], "overall": "SUPPORTED"}, set(),
                                   {"region": "서울"}, answer=claim["claim"])
-
-    def test_fixture_maps_two_questions_to_all_approved_alternatives(self):
-        capture = sample_capture()
-        turn = capture["cases"][0]["turns"][0]
-        turn["fixture"]["goldSourceGroups"] = [["BILLING-0001", "BILLING-0002"], ["BILLING-0003"]]
-        turn["fixture"]["qualityReferenceGroups"] = [
-            {"question": "첫 질문?", "sourceId": "BILLING-0001", "answer": "기본 답변"},
-            {"question": "둘째 질문?", "sourceId": "BILLING-0003", "answer": "별도 답변"}]
-        catalog = CATALOG + [
-            {"slot_id": "BILLING-0002", "question": "대체", "answer": "같은 뜻의 대체 답변"},
-            {"slot_id": "BILLING-0003", "question": "둘째", "answer": "별도 답변"}]
-        built = builder.build_capture(capture, catalog)
-        groups = built["cases"][0]["turns"][0]["fixture"]["qualityReferenceGroups"]
-        self.assertEqual(["첫 질문?", "둘째 질문?"], [group["questionPart"] for group in groups])
-        self.assertEqual(["BILLING-0001", "BILLING-0002"],
-                         [row["sourceId"] for row in groups[0]["alternatives"]])
-        self.assertEqual(["BILLING-0003"], [row["sourceId"] for row in groups[1]["alternatives"]])
-        self.assertEqual("기본 답변", capture["cases"][0]["turns"][0]["fixture"]["qualityReferenceGroups"][0]["answer"])
 
     def test_v7_quality_prompt_preserves_question_parts_and_alternatives(self):
         turn = sample_capture()["cases"][0]["turns"][0]
@@ -135,47 +115,6 @@ class V7Test(unittest.TestCase):
             "previousTurns": [], "sources": [], "confirmedConditions": []})
         self.assertEqual("INSUFFICIENT", result["result"]["evidenceAnswerability"])
         self.assertEqual([], result["stages"]["evidence"]["result"]["parts"][0].get("evidenceQuotes", []))
-
-    def test_consensus_requires_all_three_models_and_same_axis_decisions(self):
-        item = {"grounding": {"result": {"overall": "SUPPORTED", "claims": []}},
-                "quality": {"result": {"groups": [{"outcome": "COMPLETE"}]}},
-                "abstention": {"result": {"evidenceAnswerability": "ENOUGH"},
-                               "questionParts": [{"evidenceAnswerability": "ENOUGH"}]},
-                "abstentionDecision": {"label": "NOT_APPLICABLE"}, "requiresReview": False}
-        models = {name: copy.deepcopy(item) for name in bedrock.MODELS}
-        self.assertEqual("AGREED", runner.consensus(models)["status"])
-        models["luna"]["quality"]["result"]["groups"][0]["outcome"] = "PARTIAL"
-        self.assertEqual("HUMAN_REVIEW", runner.consensus(models)["status"])
-        self.assertEqual("disagreement", runner.consensus(models)["axes"]["quality"]["reason"])
-        models.pop("sonnet")
-        self.assertEqual("missing_model", runner.consensus(models)["reason"])
-
-    def test_missing_abstention_decision_requires_human_review(self):
-        item = {"grounding": {"result": {"overall": "SUPPORTED", "claims": []}},
-                "quality": {"result": {"groups": [{"outcome": "COMPLETE"}]}},
-                "abstention": {"result": {"evidenceAnswerability": "ENOUGH"},
-                               "questionParts": [{"evidenceAnswerability": "ENOUGH"}]},
-                "requiresReview": False}
-        models = {name: copy.deepcopy(item) for name in bedrock.MODELS}
-        result = runner.consensus(models)
-        self.assertEqual("HUMAN_REVIEW", result["status"])
-        self.assertEqual("unscored", result["axes"]["abstention"]["reason"])
-
-    def test_unexpected_model_cannot_satisfy_three_model_consensus(self):
-        self.assertEqual("missing_model", runner.consensus({name: {} for name in
-            ("qwen", "sonnet", "unexpected")})["reason"])
-
-    def test_known_human_false_support_cannot_be_automatically_confirmed(self):
-        item = {"grounding": {"result": {"overall": "SUPPORTED", "claims": []}},
-                "quality": {"result": {"groups": [{"outcome": "COMPLETE"}]}},
-                "abstention": {"result": {"evidenceAnswerability": "ENOUGH"}},
-                "abstentionDecision": {"label": "NOT_APPLICABLE"}, "requiresReview": False}
-        row = {"models": {name: copy.deepcopy(item) for name in bedrock.MODELS}}
-        row["consensus"] = runner.consensus(row["models"])
-        runner.apply_regression_gate(row, {"grounding": "UNSUPPORTED", "quality": ["COMPLETE"],
-                                          "abstention": "NOT_APPLICABLE", "answerability": "ENOUGH"})
-        self.assertEqual("HUMAN_REVIEW", row["consensus"]["status"])
-        self.assertEqual(["grounding"], row["consensus"]["regressionMismatches"])
 
 
 
