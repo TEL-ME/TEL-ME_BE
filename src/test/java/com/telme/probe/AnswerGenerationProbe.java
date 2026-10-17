@@ -21,6 +21,8 @@ import com.telme.rag.service.EvidenceRelevanceChecker;
 import com.telme.rag.service.RagAnswerGenerator;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.mockito.Mockito;
@@ -46,15 +49,20 @@ import org.mockito.Mockito;
  *       [LLM_BEDROCK_REGION=ap-northeast-1] [ANSWER_PROBE_MAX_TOKENS=1000] [ANSWER_PROBE_TIMEOUT_SECONDS=60]
  *       ./gradlew test --tests '*AnswerGenerationProbe'
  * 모델 이름 fake는 호출 없이 입력의 첫 FAQ 답변을 그대로 돌려주는 점검용이다(비용 없음).
+ * ANSWER_PROBE_REPLAY=<이전 결과 jsonl(.gz), 쉼표로 여러 개>를 주면 모델을 부르지 않고 그 결과의 가드 전 원본 답변
+ * (rawAnswer)을 같은 모델·같은 회차로 현재 가드에 다시 통과시킨다. 가드를 고친 뒤 호출 없이(비용 없음) 비교할 때 쓴다.
  * Bedrock 자격 증명은 AWS 기본 자격 증명을 쓴다. Bedrock API 키는 환경 변수 AWS_BEARER_TOKEN_BEDROCK로 준다.
  */
 @EnabledIfEnvironmentVariable(named = "ANSWER_PROBE", matches = "true")
 class AnswerGenerationProbe {
     private static final long INPUT_MESSAGE_ID = 9_999L;
     private final ObjectMapper mapper = new ObjectMapper();
+    // 재생 모드에서 id|모델|회차별로 저장된 이전 결과 행
+    private final Map<String, JsonNode> replay = new LinkedHashMap<>();
 
     @Test
     void generateAnswers() throws Exception {
+        loadReplay();
         JsonNode inputs = mapper.readTree(Files.readString(Path.of(required("ANSWER_PROBE_INPUT"))));
         List<String> models = list("ANSWER_PROBE_MODELS", List.of("exaone", "gptoss"));
         Map<String, ExecutorService> pools = new LinkedHashMap<>();
@@ -81,9 +89,48 @@ class AnswerGenerationProbe {
         Files.write(out, lines);
     }
 
+    private void loadReplay() throws Exception {
+        String files = System.getenv("ANSWER_PROBE_REPLAY");
+        if (files == null || files.isBlank()) {
+            return;
+        }
+        for (String file : files.split(",")) {
+            var raw = Files.newInputStream(Path.of(file.strip()));
+            var stream = file.endsWith(".gz") ? new GZIPInputStream(raw) : raw;
+            try (var reader = new BufferedReader(new InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.isBlank()) {
+                        JsonNode row = mapper.readTree(line);
+                        replay.put(row.path("id").asText() + "|" + row.path("model").asText() + "|" + row.path("run").asText(), row);
+                    }
+                }
+            }
+        }
+    }
+
     private Map<String, Object> generate(String model, int run, JsonNode input) {
         List<Map<String, Object>> calls = new ArrayList<>();
-        CapturingClient client = new CapturingClient(clientFor(model, calls, input));
+        JsonNode stored = replay.isEmpty() ? null
+                : replay.get(input.path("id").asText() + "|" + model + "|" + run);
+        if (!replay.isEmpty() && (stored == null || stored.path("rawAnswer").asText().isBlank())) {
+            // 이전에 모델을 부르지 않은 입력이거나 이전 결과에 없는 회차. 재생할 원본이 없다
+            Map<String, Object> skipped = new LinkedHashMap<>();
+            skipped.put("id", input.path("id").asText());
+            skipped.put("model", model);
+            skipped.put("run", run);
+            skipped.put("userQuery", input.path("userQuery").asText());
+            skipped.put("meta", mapper.convertValue(input.path("meta"), Object.class));
+            skipped.put("answer", stored == null ? null : stored.path("answer").asText());
+            skipped.put("answerBasis", stored == null ? null : stored.path("answerBasis").asText());
+            skipped.put("rawAnswer", "");
+            skipped.put("guardOutcome", "NO_CALL");
+            skipped.put("truncationSuspected", false);
+            skipped.put("calls", calls);
+            return skipped;
+        }
+        CapturingClient client = new CapturingClient(stored != null
+                ? new FakeClient(stored.path("rawAnswer").asText()) : clientFor(model, calls, input));
         var generator = new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(),
                 new EvidenceRelevanceChecker(client, mapper, new EvidenceCheckProperties(false, 300)),
                 Mockito.mock(LlmGenerationRecorder.class), ExecutionTrace.noop());
@@ -115,7 +162,8 @@ class AnswerGenerationProbe {
             // 근거가 없으면 모델을 부르지 않고 고정 문구로 답한다
             boolean called = !raw.isBlank();
             row.put("guardOutcome", called ? guardOutcome(raw, result.answer()) : "NO_CALL");
-            row.put("truncationSuspected", called && truncationSuspected(raw, calls));
+            row.put("truncationSuspected", stored != null ? stored.path("truncationSuspected").asBoolean()
+                    : called && truncationSuspected(raw, calls));
         } catch (RuntimeException failure) {
             row.put("error", failure.toString());
             row.put("rawAnswer", client.raw());
