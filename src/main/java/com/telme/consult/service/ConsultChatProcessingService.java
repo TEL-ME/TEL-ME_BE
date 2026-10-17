@@ -156,7 +156,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             return;
         }
         if (turn.consultTurns() != null) {
-            processCompound(command, turn.consultTurns(), turn.context());
+            processCompound(command, turn.consultTurns(), turn.context(), turn.resolvedUserQuery());
             return;
         }
         var result = turn.preparation();
@@ -289,7 +289,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
     }
 
-    private void processCompound(ChatProcessingCommand command, List<ConsultTurn> consultTurns, ChatContext context) {
+    // resolvedQuestion: 문맥 해석을 거친 이번 턴 전체 질문. 이전 대화로 복원하지 않은 턴은 이번 턴 원문과 같다
+    private void processCompound(ChatProcessingCommand command, List<ConsultTurn> consultTurns, ChatContext context,
+            String resolvedQuestion) {
+        // 하위 질문을 나누기 전 고객 문장. 후속 질문("그럼 비용은? 택배로도 돼?")은 원문에 대상이 없어 복원된 문장을 쓴다
+        String customerMessage = resolvedQuestion == null || resolvedQuestion.isBlank()
+                ? command.content() : resolvedQuestion;
         for (ConsultTurn turn : consultTurns) {
             if (turn.preparation().waitingForReply()) {
                 var completed = persistence.persistWaiting(command.executionId(), command.sessionId(),
@@ -316,7 +321,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<AnswerInput> inputs = new ArrayList<>();
         List<Prepared> prepareds = new ArrayList<>();
         for (int i = 0; i < consultTurns.size(); i++) {
-            AnswerInput input = compoundInput(command, consultTurns.get(i), preparedTurns.get(i), context);
+            AnswerInput input = compoundInput(command, consultTurns.get(i), preparedTurns.get(i), context,
+                    customerMessage);
             inputs.add(input);
             boolean faq = consultTurns.get(i).purpose() == Purpose.GENERAL_FAQ;
             prepareds.add(faq && answers.clarifies() ? answers.prepare(input, true) : Prepared.none());
@@ -425,7 +431,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private AnswerInput compoundInput(ChatProcessingCommand command, ConsultTurn part,
-            ConsultService.PreparedTurn prepared, ChatContext context) {
+            ConsultService.PreparedTurn prepared, ChatContext context, String customerMessage) {
         var conditions = prepared.decision().conditions();
         boolean namedLocation = conditions.containsKey("location")
                 && conditions.get("location").status() == ConditionStatus.FILLED;
@@ -439,7 +445,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 part.purpose(), part.queryText(), part.queryText(),
                 conditionConverter.convert(conditions),
                 part.queryText(), context, false, coordinates, asked,
-                displayText(command.content(), part), command.content());
+                displayText(command.content(), part), customerMessage);
     }
 
     // 검색어는 라우팅 정규화 값을 유지하고, 복합 응답 제목만 이번 고객 원문의 띄어쓰기로 복원한다.

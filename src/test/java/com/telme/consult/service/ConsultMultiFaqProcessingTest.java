@@ -150,6 +150,27 @@ class ConsultMultiFaqProcessingTest {
                 .containsOnly("번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
     }
 
+    // 이전 대화로 복원한 후속 질문은 이번 턴 원문("그럼 비용은? 택배로도 돼?")에 대상이 없어 복원된 문장을 넘긴다
+    @Test
+    void restoredFollowUpPassesResolvedQuestionAsCustomerMessage() {
+        prepareEvents();
+        var followUp = new ChatProcessingCommand(EXECUTION_ID, SESSION_ID, 9L, "그럼 비용은? 택배로도 돼?");
+        List<ConsultChatProcessingService.AnswerInput> inputs = new java.util.ArrayList<>();
+        var processor = new ConsultChatProcessingService(
+                ignored -> ConsultChatProcessingService.AnalyzedTurn.compound(List.of(
+                        faqTurn(11L, "유심재발급비용은"), faqTurn(12L, "유심택배로도돼")))
+                        .withContext(null, "유심 재발급 비용은? 유심 택배로도 돼?"),
+                input -> {
+                    inputs.add(input);
+                    return generated("답변", ChatMessage.AnswerBasis.GROUNDED, List.of());
+                }, persistence, new ConfirmedConditionConverter(), events, trace);
+
+        processor.request(followUp);
+
+        assertThat(inputs).extracting(ConsultChatProcessingService.AnswerInput::customerMessage)
+                .containsOnly("유심 재발급 비용은? 유심 택배로도 돼?");
+    }
+
     @Test
     void eachQuestionKeepsPreviousConversationContext() {
         prepareEvents();

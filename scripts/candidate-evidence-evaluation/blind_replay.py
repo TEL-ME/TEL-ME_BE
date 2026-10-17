@@ -57,7 +57,9 @@ def fixture(capture_path, out_path):
     print(json.dumps({"cases": len(cases)}))
 
 
-def extract(capture_path, out_path):
+def extract(capture_path, out_path, message="raw"):
+    # message: 근거 검증에 줄 고객 원문. raw는 이번 턴에 보낸 문장, resolved는 앱이 넘긴 문장(실행 기록의 customerMessage,
+    # 후속 질문이면 문맥 해석으로 복원된 문장)이다. 부분 정답(parts)이 없는 턴(후속 대화의 첫 턴)은 건너뛴다
     capture = load(capture_path)
     pairs = slot_pairs()
     rows = []
@@ -68,7 +70,9 @@ def extract(capture_path, out_path):
             for result in trace.get("searchResults") or []:
                 if result.get("kind") == "FAQ_CANDIDATE":
                     candidates[result.get("consultRequestId")] = result.get("sources") or []
-            parts = turn["fixture"]["parts"]
+            parts = turn["fixture"].get("parts")
+            if not parts:
+                continue
             for order, item in enumerate(trace.get("faqCandidateEvidenceInputs") or []):
                 sources = []
                 for source in candidates.get(item.get("consultRequestId"), []):
@@ -79,7 +83,8 @@ def extract(capture_path, out_path):
                 part, overlap, margin = match_part(item["question"], parts)
                 rows.append({"id": f"{case['caseId']}#{index}#{order}", "type": case["questionType"],
                              "question": item["question"], "allowQuoteRepairFailure": item["allowQuoteRepairFailure"],
-                             "customerQuestion": turn["fixture"]["question"], "part": part,
+                             "customerQuestion": turn["fixture"]["question"] if message == "raw"
+                             else item.get("customerMessage"), "part": part,
                              "partOverlap": overlap, "partMargin": margin,
                              "partGold": parts[part]["goldSlotIds"],
                              "otherGold": sorted({s for i, p in enumerate(parts) if i != part for s in p["goldSlotIds"]}),
@@ -152,7 +157,7 @@ def score(inputs_path, replay_paths, out_path):
 
 if __name__ == "__main__":
     if sys.argv[1] == "extract":
-        extract(sys.argv[2], sys.argv[3])
+        extract(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "raw")
     elif sys.argv[1] == "fixture":
         fixture(sys.argv[2], sys.argv[3])
     else:

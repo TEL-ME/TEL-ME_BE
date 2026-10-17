@@ -143,6 +143,35 @@ TELME-178. 답변 생성 전에 쓰이는 두 근거 검증 호출을 엑사원�
 
 이 브랜치 앱(develop 앞단, 엑사원 라우팅)을 측정 DB로 띄우고 판정(P4)과 gpt-oss를 켠 상태로 블라인드 문장 중 후보 경로를 탔던 20개를 실제 채팅 API로 보냈다(대상 낱말 규칙을 넣기 전). 후보 근거 검증 입력 12개(실행 기록 `faqCandidateEvidenceInputs`에 고객 원문 포함)에서 근거 검증 호출(`faq-candidate-evidence-v3`, gpt-oss) 12회가 모두 성공했고, 4턴이 FAQ 원문으로 답했다. 그중 2건("번호이동 후 무를 수 있는 기간" → 14일, "밀린 요금 다 내면" → 2시간 이내 재개)은 맞고, 2건은 위의 오답과 같았다. 대상 낱말 규칙의 판단은 재생 비교에서 판정기 앞까지 온 176건이 파이썬으로 계산한 값과 모두 같았다.
 
+### 후속 질문 확인
+
+위 개발용·블라인드 입력은 모두 대화의 첫 턴이었다. 앞 대화에 기대는 후속 질문("그럼 비용은? 택배로도 돼?")은 확인하지 않아 따로 쟀다.
+
+- **고친 것**: 복합 질문의 고객 원문으로 이번 턴에 보낸 문장 대신 문맥 해석을 거친 문장(`resolvedUserQuery`)을 넘긴다. 이전 대화로 복원한 턴이면 "[대상을 확인할 이전 고객 발언] … [현재 후속 질문] …" 형식으로 앞 발언이 함께 들어가고, 복원하지 않은 턴은 이번 턴 문장과 같다. 단일 질문 경로는 원래 고객 원문을 넘기지 않아 바뀌지 않는다.
+- **입력**: 별도 에이전트가 FAQ 원본만 보고 쓴 두 턴짜리 대화 30개. 첫 턴에 대상을 말하고 둘째 턴은 대상을 생략한 두 부분 질문이다(둘 다 답 있음 20, 한쪽만 6, 둘 다 없음 4, 부분마다 정답 slot_id). 위와 같은 앞단(TELME-182 결정)에 이 수정과 P7을 더한 앱으로 측정 DB(5440)에서 캡처했고, 둘째 턴의 후보 근거 검증 입력 23개를 썼다.
+- **비교**: gpt-oss 3회 동시. 복원된 턴은 같은 입력에 고객 원문만 이번 턴 문장(수정 전)과 복원된 문장(수정 후)으로 바꿔 P7로 돌렸다.
+
+**복원된 턴 (3개 대화, 입력 5개)**
+
+| 결과 (회차별) | 수정 전 (이번 턴 문장) | 수정 후 (복원된 문장) |
+|---|---|---|
+| 정답 FAQ로 답함 | 1 / 1 / 1 | **2 / 2 / 2** |
+| 엉뚱한 FAQ로 답함 | 2 / 2 / 2 | **0 / 0 / 0** |
+
+수정 전에는 대상이 빠진 조각으로 다른 업무의 FAQ를 골랐다. 유심 재발급 뒤의 "매장 가면 그 자리에서 바로 받을 수 있나요"에 신규 개통 30분 FAQ를, 미성년 자녀 개통 뒤의 "부모가 챙겨갈 서류는 뭐예요?"에 일반 가입 서류(신분증 하나) FAQ를 골랐다. 수정 후에는 둘 다 답하지 않았고 명의변경 뒤의 "그거 하는 데 돈 들어요?"에 명의변경 수수료로 맞게 답했다.
+
+**둘째 턴 전체 (입력 23개, 답 있는 부분 15)**
+
+| 결과 (회차별) | P0 (이전) | P7 |
+|---|---|---|
+| 정답 FAQ로 답함 | 0 / 0 / 0 | 8 / 8 / 8 |
+| 엉뚱한 FAQ로 답함 | 0 / 0 / 0 | 1 / 2 / 2 |
+| 답 없는 부분에 FAQ로 답함 | 0 / 0 / 0 | 2 / 2 / 2 |
+
+- **문맥 해석이 30개 중 27개를 복원하지 않았다.** 24개는 모델을 부르지 않고 앞단 규칙(`REGEX_GATED`)이 바로 "혼자 완결된 질문"으로 넘겼다("그 기간에도 요금이 나와요?", "그동안 문자는 받을 수 있어요?", "올리면 바로 적용되나요?" 등). 이 경우 이 수정은 아무것도 바꾸지 못하고, 대상이 없는 조각이 그대로 근거 검증에 들어간다.
+- **그 조각에서 P7이 틀린 답을 낸다.** 일시정지 뒤의 "중간에 다시 쓰고 싶으면 바로 풀 수 있나요"에 번호이동 14일 되돌리기 FAQ를, eSIM 뒤의 "신청하고 실제로 쓰기까지 얼마나 걸려요?"에 일반 가입(매장 30분) FAQ를 3회 모두 골랐다. 질문과 고객 문장 어디에도 대상 낱말이 없어 대상 낱말 규칙이 막지 못한다. 개통 뒤의 "매장 가서 하면 당일에 바로 되나요"에 명의변경 당일 처리 FAQ(블라인드 C012의 틀린 답과 같은 FAQ)를, 기기변경 뒤의 할부 질문에 해지 때의 할부 FAQ를 고른 회차도 있다.
+- **원인은 근거 검증보다 앞의 문맥 해석이다.** 후속 질문을 복원하면 위 표처럼 막힌다. 앞단 규칙이 지시 표현("그 기간", "그동안", "그거", "올리면")을 후보로 보지 않는 문제는 문맥 해석의 별도 과제로 남긴다. 그때까지 후속 질문에서는 P7이 맞는 답 8건과 함께 틀린 답 3~4건을 낸다(이전 방식은 둘 다 0건).
+
 ### 응답 시간
 
 입력 30개를 다른 측정 없이 안 하나씩 한 줄로 돌린 gpt-oss 값이다(위 비교는 동시에 돌려 시간에 쓰지 않는다). 엑사원 시간은 배포 환경(vLLM)에서 따로 잰다.
@@ -156,7 +185,7 @@ TELME-178. 답변 생성 전에 쓰이는 두 근거 검증 호출을 엑사원�
 
 P7은 P4에 모델을 부르지 않는 낱말 규칙을 더한 것이라 따로 재지 않았다. 규칙에 걸리면 판정기를 부르지 않아 그만큼 짧아진다.
 
-비용은 캡처 2번과 비교·응답 시간 측정을 합쳐 Bedrock 약 4,500회, 약 $1로 추정한다(실제 청구액 미확인).
+비용은 캡처 2번과 비교·응답 시간 측정을 합쳐 Bedrock 약 4,500회, 약 $1로 추정한다(실제 청구액 미확인). 후속 질문 확인은 캡처에 기록된 gpt-oss 호출 356회와 재생 215회를 더해 약 570회다.
 
 ### 재현
 
@@ -182,6 +211,12 @@ LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval \
 python -I scripts/candidate-evidence-evaluation/score_dev.py $R/dev-labels.json.gz $R/dev-replay.jsonl.gz dev-score.md
 python -I scripts/candidate-evidence-evaluation/blind_replay.py score blind-inputs.json $R/blind-replay.jsonl.gz blind-score.md
 # 응답 시간: 안·모델 하나씩 CANDIDATE_REPLAY_LIMIT=30, CANDIDATE_REPLAY_MODELS=gptoss:1 등으로 따로
+# 후속 질문: 넣은 대화는 blind_replay.py fixture로 followup-capture에서 되살린다. 입력은 고객 원문을 고르는 세 번째 인자로 꺼낸다
+python -I scripts/candidate-evidence-evaluation/blind_replay.py extract $R/followup-capture.json.gz followup-inputs-resolved.json resolved
+python -I scripts/candidate-evidence-evaluation/blind_replay.py extract $R/followup-capture.json.gz followup-inputs-raw.json raw
+# 재생: resolved 입력은 CANDIDATE_REPLAY_VARIANTS=P0,P7, raw 입력은 복원된 턴 5개만 P7 (gptoss:3)
+python -I scripts/candidate-evidence-evaluation/blind_replay.py score followup-inputs-resolved.json $R/followup-replay-resolved.jsonl.gz followup-resolved.md
+python -I scripts/candidate-evidence-evaluation/blind_replay.py score followup-inputs-raw.json $R/followup-replay-raw.jsonl.gz followup-raw.md
 ```
 
 | 파일 (`scripts/candidate-evidence-evaluation/`) | 내용 |
@@ -192,6 +227,7 @@ python -I scripts/candidate-evidence-evaluation/blind_replay.py score blind-inpu
 | `results/telme184/dev-*` | 개발용 캡처(`dev-capture`), 하위 질문 라벨(`dev-labels`), 안별 결과(`dev-replay`, P0~P7, 엑사원은 P0·P7 3회와 P1~P5 1회) |
 | `results/telme184/blind-*` | 블라인드 문장 40개와 정답(`blind-questions`), 캡처(`blind-capture`), 안별 결과(`blind-replay`) |
 | `results/telme184/latency.jsonl.gz` | 응답 시간 측정(호출별 시간 `callMs`, `judgeMs`) |
+| `results/telme184/followup-*` | 후속 질문 대화 30개와 정답(`followup-questions`), 캡처(`followup-capture`), 재생 결과(`followup-replay-resolved` P0·P7, `followup-replay-raw` 복원된 턴 5개의 수정 전) |
 | `src/test/java/com/telme/probe/CandidateEvidenceReplayProbe.java` | 같은 입력을 안·모델·회차별로 돌리는 측정 프로그램 |
 
 ## 비교 근거 검증 재확인 (TELME-184)
@@ -243,6 +279,7 @@ python -I scripts/candidate-evidence-evaluation/comparison_replay.py comparison-
 - Bedrock을 쓸 수 없으면(`llm.bedrock.enabled=false` 등) 켜도 엑사원이다.
 - 후보 근거 검증의 판정 방식: `telme.consult.evidence-resolver.candidate-judge`(환경 변수 `CONSULT_CANDIDATE_EVIDENCE_JUDGE`). **기본 켜짐**이다. 켜면 단어 검사 대신 고객 원문을 함께 주고, 고른 FAQ를 대상 낱말 규칙과 회색 구간 판정기로 다시 확인한다(위 TELME-184 절의 P7). false면 예전처럼 단어 검사로 막는다. 판정기는 Bedrock이 켜졌을 때만 있어, Bedrock이 꺼져 있으면 켜도 단어 검사로 막고 시작할 때 경고를 남긴다.
 - 판정기 호출이 실패하면(Bedrock 오류, 응답을 읽지 못함) 그 후보만 예전 단어 검사로 판단한다. 회색 구간 판정이 실패하면 예전 기준으로 두는 것과 같다. 판정기에는 엑사원 대체가 없어, 이렇게 하지 않으면 Bedrock 장애 중에는 엑사원이 고른 후보까지 모두 버려진다.
+- 복합 질문의 고객 원문은 문맥 해석을 거친 문장이다. 이전 대화로 복원한 후속 질문이면 앞 발언이 함께 들어간다(위 "후속 질문 확인"). 문맥 해석이 후속 질문을 복원하지 못하면 대상 없는 조각으로 판정해 틀린 답이 날 수 있다.
 - 후보마다 확인 결과를 실행 기록 `faqCandidateVerifications`에 남긴다(FAQ id, 대상 낱말 규칙 `PASSED`/`REJECTED`, 판정 `ANSWERABLE`/`NOT_ANSWERABLE`/`FAILED`/`NOT_CALLED`, 채택 여부). 규칙의 상품 이름 목록이 맞는 후보를 막는지 운영 기록으로 볼 수 있다.
 - 두 호출은 `EvidenceResolverConfiguration`에서 만든다. 두 호출만 켜고 끌 뿐 다른 호출(문맥 판정, 라우팅 등)의 모델은 바꾸지 않는다.
 - 출력 한도는 설정과 관계없이 올라간 값(비교 800, 후보 512)을 쓴다. 엑사원은 같은 결과였다.
