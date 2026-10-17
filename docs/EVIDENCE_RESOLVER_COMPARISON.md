@@ -190,6 +190,46 @@ python -I scripts/candidate-evidence-evaluation/blind_replay.py score $R/blind-i
 | `results/telme184/latency.jsonl.gz` | 응답 시간 측정(호출별 시간 `callMs`, `judgeMs`) |
 | `src/test/java/com/telme/probe/CandidateEvidenceReplayProbe.java` | 같은 입력을 안·모델·회차별로 돌리는 측정 프로그램 |
 
+## 비교 근거 검증 재확인 (TELME-184)
+
+비교 근거 검증의 gpt-oss 기본값을 정하기 전에, #167의 결론을 지금 방식(결정된 앞단, 측정 DB)으로 다시 확인했다.
+
+| 항목 | 내용 |
+|---|---|
+| 질문 | #167 비교 질문 19개(`comparison-cases.json`, 정답 FAQ가 있는 것 8개) + 별도 에이전트가 FAQ 원본만 보고 새로 쓴 블라인드 비교 질문 30개(양쪽 답 있음 20, 한쪽만 6, 둘 다 없음 4, 양쪽마다 정답 slot_id). 모두 비교 경로를 타는 끝맺음("…비교해줘", "…차이점")으로 썼다 |
+| 1단계 입력 캡처 | TELME-182 브랜치 앱(`4e05d8c4`, 라우팅·문맥 판정·요금제 분류 gpt-oss)에 실행 기록 `comparisonEvidenceInputs`(검증에 넣은 문장, 원문 검색 결과)를 더해 측정 DB(5440)로 49개를 실제 채팅 API로 보냈다. 비교 경로를 탄 것 45개(#167 17, 블라인드 28) |
+| 2단계 비교 | 같은 입력을 앱의 비교 근거 검증에 넣고 대상별 추가 검색은 앱 검색(후보 10개)을 그대로 불렀다. gpt-oss 3회는 동시에, 엑사원 3회는 하나씩 돌렸다. 회색 구간 때문에 다시 고르는 두 번째 시도는 다시 만들지 않고 첫 시도 입력만 썼다 |
+| 채점 | 블라인드 양쪽 답 있음은 답에 쓴 FAQ가 양쪽 정답을 모두 덮고 정답 밖의 FAQ가 없으면 맞음(FAQ 하나가 양쪽을 함께 답하기도 한다). 한쪽만·둘 다 없음은 답하지 않아야 맞음. #167은 정답 FAQ가 있는 8개만 채점 |
+
+| 결과 (회차별) | 엑사원 | gpt-oss |
+|---|---|---|
+| 블라인드 양쪽 답 있음 (19): 맞는 FAQ로 답함 | 1 / 1 / 1 | **5 / 6 / 6** |
+| 블라인드 양쪽 답 있음: 다른 FAQ로 답함 | 0 / 0 / 0 | 0 / 0 / 0 |
+| 블라인드 한쪽만·둘 다 없음 (9): 답함(틀림) | 0 / 0 / 0 | 0 / 0 / 0 |
+| #167 정답 있음 (8): 정답 FAQ로 답함 | 5 / 5 / 5 | 6 / 6 / 6 |
+| #167 정답 있음: 다른 FAQ로 답함 | 1 / 1 / 1 | 2 / 2 / 2 |
+| #167 정답 있음: 답 안 함 | 2 / 2 / 2 | 0 / 0 / 0 |
+
+- **gpt-oss가 낫다(#167 결론과 같다).** 블라인드에서 맞게 답한 비교가 엑사원 1건, gpt-oss 5~6건이고 두 모델 모두 틀린 답은 없었다. 답이 없는 쪽이 있는 비교는 두 모델 모두 답하지 않았다.
+- #167의 "다른 FAQ로 답함"을 직접 보면 gpt-oss의 CMP-011("eSIM 발급은 2,750원, 물리 유심 재발급은 7,700원으로 eSIM이 저렴합니다")과 엑사원의 CMP-001(5G·LTE 요금제 종류, 알뜰 요금제 설명이 덧붙음)은 정답 목록에 없을 뿐 맞는 답이다. gpt-oss의 CMP-010("분실 신고와 일시 정지")은 분실 신고 쪽에 재발급 FAQ가 섞인 경계 사례이고 틀린 사실은 없다.
+- 두 모델 모두 답하는 비교가 적다(블라인드 양쪽 답 있음 19개 중 gpt-oss 5~6개). 대상 확인과 인용문 원문 대조가 엄격해서이며 별도 과제로 남긴다.
+- 호출 오류는 두 모델 모두 0건이다. 엑사원 시간은 배포 환경에서 따로 잰다.
+
+재현:
+
+```bash
+R=scripts/candidate-evidence-evaluation/results/telme184
+# 1단계: 캡처 앱에 comparisonEvidenceInputs 기록을 더하고 comparison-fixture.json.gz로 캡처(DB는 5440)
+# 2단계: gpt-oss 3회는 동시에, 엑사원은 회차마다 따로 (COMPARISON_REPLAY_MODELS=모델:회차)
+POSTGRES_PORT=5440 COMPARISON_REPLAY_PROBE=true COMPARISON_REPLAY_INPUT=<절대 경로>/comparison-inputs.json COMPARISON_REPLAY_OUT=<절대 경로>/replay.jsonl \
+COMPARISON_REPLAY_MODELS=gptoss:3 LLM_PROVIDER=ollama LLM_BEDROCK_ENABLED=true AWS_PROFILE=telme-bedrock-eval \
+  ./gradlew test --tests 'com.telme.consult.service.ComparisonEvidenceReplayProbe' --rerun-tasks
+# 채점 (저장된 결과로 다시 계산)
+python -I scripts/candidate-evidence-evaluation/comparison_replay.py $R/comparison-inputs.json.gz $R/comparison-replay.jsonl.gz score.md
+```
+
+결과 파일: `results/telme184/comparison-blind-questions.json`(블라인드 비교 질문 30개와 정답), `comparison-fixture.json.gz`(캡처 입력 49개), `comparison-capture.json.gz`(캡처), `comparison-inputs.json.gz`(비교 경로 입력 45개), `comparison-replay.jsonl.gz`(모델별 결과). 측정 프로그램은 `src/test/java/com/telme/consult/service/ComparisonEvidenceReplayProbe.java`(비교 검색기 인터페이스가 패키지 안에서만 보여 이 패키지에 둔다), 채점은 `scripts/candidate-evidence-evaluation/comparison_replay.py`다.
+
 ## 적용
 
 - 모델: 비교 근거 검증은 `telme.consult.evidence-resolver.comparison-bedrock`(환경 변수 `CONSULT_COMPARISON_EVIDENCE_BEDROCK`), 후보 근거 검증은 `candidate-bedrock`(`CONSULT_CANDIDATE_EVIDENCE_BEDROCK`)이다. 둘 다 **기본 켜짐**(gpt-oss)이고, 주지 않으면 공통 환경 변수 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`(기본 true)을 따른다. 켜면 gpt-oss(Bedrock)를 먼저 쓰고 호출이 실패하면 엑사원으로 대체한다. 호출마다 따로 false로 두면 엑사원이다. 되묻기 조건 뽑기(`CONSULT_FAQ_CLARIFICATION_BEDROCK`)와 같은 방식이다.
