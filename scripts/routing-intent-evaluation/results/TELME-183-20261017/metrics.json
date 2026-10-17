@@ -1,0 +1,35 @@
+{
+  "issue": "TELME-183",
+  "measuredAt": "2026-10-17",
+  "scope": "의도 분류",
+  "runs": {
+    "intent-1": {
+      "total": 365,
+      "correct": 334,
+      "correctBeforeSearch": 333,
+      "latency": {
+        "count": 365,
+        "medianMs": 6370,
+        "p95Ms": 9681
+      }
+    },
+    "intent-2": {
+      "total": 365,
+      "correct": 334,
+      "correctBeforeSearch": 333,
+      "latency": {
+        "count": 365,
+        "medianMs": 6007,
+        "p95Ms": 9901
+      }
+    }
+  },
+  "comparisons": {
+    "intent": {
+      "bothCorrect": 334,
+      "bothWrong": 31,
+      "decisionChanged": [],
+      "recordedModelResponseChanged": []
+    }
+  }
+}
