@@ -16,7 +16,7 @@
 | 8 | 되묻기 문장 | `DialogueService` | **호출 없앰**, 고정 문구 | — | 매장 위치 질문 하나에만 쓰였고 프롬프트가 대체 문구를 그대로 예시로 줬다. 지금은 "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."를 바로 쓴다 |
 | 9 | 회색 구간 근거 판정 | `FaqEvidenceJudge` | 이미 Bedrock | — | [GRAY_ZONE_UPPER_BAND.md](GRAY_ZONE_UPPER_BAND.md) |
 | 10, 11 | 비교·후보 근거 해석 | 근거 해석기 | 미정 | `CONSULT_EVIDENCE_RESOLVER_BEDROCK` (false) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) |
-| 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | 꺼짐, 삭제 또는 재측정 검토 | `RAG_EVIDENCE_CHECK_ENABLED` (false) | TELME-54에서 AWS 의존을 이유로 껐다. 9·10·11과 겹치는지 먼저 본다 |
+| 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
 | 13 | 답변 생성 | `RagAnswerGenerator` | 미정 | 없음 | #167 결과를 TELME-180 Judge로 채점할 예정 |
 
 대화 요약, 세션 제목, 상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나왔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)).
@@ -33,5 +33,5 @@ ROUTING_REQUEST_INVENTORY_ENABLED=false
 
 ## 남은 일
 
-- 미정 호출(1, 10·11, 13) 결정, 6 측정, 12 정리.
+- 미정 호출(1, 10·11, 13) 결정, 6 측정.
 - 전환을 모두 켠 구성으로 평가셋 v2.2와 대화 흐름 v2를 세 모델 Judge로 2~3회 잰다.
