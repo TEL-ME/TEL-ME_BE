@@ -198,6 +198,22 @@ class AnswerGuardClaimTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"미납 요금이 없을 때 번호 변경을 신청할 수 있습니다.", "미납 요금이 없는지 먼저 확인해 주세요.",
+            "추가 비용이 들지 않도록 요금제를 확인하세요.", "추가 요금이 부과되지 않도록 확인하세요."})
+    @DisplayName("조건·확인 표현의 '없을 때·없는지·들지 않도록'은 무료 단정으로 보지 않는다")
+    void 조건_확인_표현은_통과시킨다(String answer) {
+        assertThat(apply(answer, "번호 변경 수수료는 2,200원입니다.", "번호 변경 수수료가 얼마예요?")).isEqualTo(answer);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"번호 변경 시 추가 비용이 들지 않습니다.", "번호 변경은 무료입니다.", "번호 변경 수수료는 부과되지 않습니다."})
+    @DisplayName("근거의 금액과 반대로 무료라고 단정한 문장은 계속 제거한다")
+    void 무료_단정은_계속_제거한다(String answer) {
+        assertThat(apply(answer, "번호 변경 수수료는 2,200원입니다.", "번호 변경 수수료가 얼마예요?"))
+                .isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"부가서비스는 3 시설에서 이용 가능합니다.", "2024시즌 요금제는 아래와 같습니다.",
             "5 시니어 요금제가 있습니다.", "2 시행일 이후 적용됩니다."})
     @DisplayName("시각이 아닌 '숫자 + 시…' 낱말은 시각으로 읽지 않는다")

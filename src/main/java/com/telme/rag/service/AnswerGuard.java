@@ -189,10 +189,10 @@ public class AnswerGuard {
     private static final Pattern TIME_AFTER = Pattern.compile("이후|부터|넘어|지나서|지난\\s*후");
     private static final Pattern TIME_BEFORE = Pattern.compile("이전|까지|전에|이내");
 
-    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다", "요금이 없다면·없으면·없도록"은 단정이 아니다
+    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다", "요금이 없다면·없으면·없을 때·없는지·없도록·들지 않도록"은 단정이 아니다
     private static final Pattern FREE_CLAIM = Pattern.compile(
             "무료|무상|공짜|(?:비용|요금|수수료|금액)(?:이|가|은|는|도)?\\s*(?:전혀\\s*|따로\\s*|별도로\\s*)?"
-                    + "(?:없(?!다면|으면|어야|는\\s*경우|도록)|들지\\s*않|발생하지\\s*않|부과되지\\s*않|청구되지\\s*않)");
+                    + "(?:없(?!다면|으면|어야|는\\s*경우|도록|을\\s*때|는지)|들지\\s*않(?!도록)|발생하지\\s*않(?!도록)|부과되지\\s*않(?!도록)|청구되지\\s*않(?!도록))");
     private static final Pattern FREE_NEGATED = Pattern.compile(
             "(?:무료|무상|공짜)(?:는|가|로는|로도|로)?\\s*(?:아니|아닙|아님|제공(?:되|하)지\\s*않|적용(?:되|하)지\\s*않)");
     private static final Pattern FREE_EVIDENCE = Pattern.compile(
