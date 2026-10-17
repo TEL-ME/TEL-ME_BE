@@ -39,14 +39,11 @@ TELME-182. 요금제·내 정보 질문 분류(`PlanQuestionClassifier`)를 엑�
 
 ## 응답 시간
 
-모델을 부르는 분류 입력 50개를 골라, 다른 측정이 없을 때 모델 하나씩 한 줄로(동시 실행 없이) 돌렸다. 앞 표의 비교는 여러 실행을 동시에 돌려 시간에 쓰지 않는다.
+모델을 부르는 분류 입력 50개를 골라, 다른 측정이 없을 때 한 줄로(동시 실행 없이) 돌린 gpt-oss 값이다. 앞 표의 비교는 여러 실행을 동시에 돌려 시간에 쓰지 않는다. 엑사원 시간은 배포 환경(vLLM)에서 따로 잰다.
 
 | 모델 | p50 | p95 | 최대 |
 |---|---|---|---|
-| 엑사원 (로컬 Ollama) | 0.11초 | 0.14초 | 5.8초 (첫 호출, 모델 적재) |
 | gpt-oss (Bedrock `us-east-1`) | 0.60초 | 0.99초 | 2.4초 (첫 호출) |
-
-gpt-oss로 바꾸면 요금제 낱말이 든 질문마다 p50 기준 약 0.5초, p95 기준 약 0.85초가 늘어난다.
 
 ## 두 모델이 같이 틀리는 것 (모델과 별개 과제)
 
@@ -91,7 +88,7 @@ python -I scripts/plan-question-evaluation/plan_replay.py score \
   scripts/plan-question-evaluation/results/capture.json.gz scripts/plan-question-evaluation/results/replay.jsonl.gz score.md
 ```
 
-응답 시간은 모델을 부른 입력 50개만 골라 `PLAN_REPLAY_MODELS=exaone:1`, `gptoss:1`로 하나씩 돌린 결과(`latency.jsonl.gz`)다.
+응답 시간은 모델을 부른 입력 50개만 골라 `PLAN_REPLAY_MODELS=gptoss:1`로 돌린 결과(`latency.jsonl.gz`, 로컬 엑사원 값도 들어 있지만 쓰지 않는다)다.
 
 ## 파일
 

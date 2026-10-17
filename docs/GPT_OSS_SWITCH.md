@@ -11,7 +11,7 @@
 | 3 | 요청 개수 판정 | `QueryRoutingService` | **gpt-oss 전환 시 끔** | `ROUTING_REQUEST_INVENTORY_ENABLED` (true) | 같은 문서 2단계. `ROUTING_BEDROCK=true`면 false로 둔다 |
 | 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 3단계 |
 | 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 4단계 |
-| 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (false) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154, gpt-oss 164~166. 호출당 p50 0.11초 → 0.60초. 출력 한도를 30에서 512로 올렸다 |
+| 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (false) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154, gpt-oss 164~166. gpt-oss 호출당 p50 0.60초(엑사원 시간은 배포 환경에서 잰다). 출력 한도를 30에서 512로 올렸다 |
 | 7 | 조건 뽑기 | `ConditionExtractor` | **gpt-oss 확정**, 기본값 켜짐 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (true) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md) |
 | 8 | 되묻기 문장 | `DialogueService` | **호출 없앰**, 고정 문구 | — | 매장 위치 질문 하나에만 쓰였고 프롬프트가 대체 문구를 그대로 예시로 줬다. 지금은 "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."를 바로 쓴다 |
 | 9 | 회색 구간 근거 판정 | `FaqEvidenceJudge` | 이미 Bedrock | — | [GRAY_ZONE_UPPER_BAND.md](GRAY_ZONE_UPPER_BAND.md) |
