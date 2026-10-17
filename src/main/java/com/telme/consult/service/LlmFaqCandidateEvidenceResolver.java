@@ -188,7 +188,8 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
         return quote.length() >= 8 && candidate.answer().contains(quote);
     }
 
-    private boolean coversQuestionTerms(String question, FaqSearchResponse candidate) {
+    // 질문 낱말이 FAQ 문답에 모두 있어야 통과(TELME-87). 후보 판정기가 실패했을 때도 이 검사로 돌아간다
+    public static boolean coversQuestionTerms(String question, FaqSearchResponse candidate) {
         String source = (candidate.question() + candidate.answer())
                 .replaceAll("\\s+", "").toLowerCase(java.util.Locale.ROOT);
         Matcher words = QUESTION_WORD.matcher(question);

@@ -125,6 +125,35 @@ class FaqSearchAnswerProviderTest {
         assertThat(input.originalUserQuery()).startsWith("바라야 ");
     }
 
+    // 비교 근거 검증 입력 기록에는 FAQ 본문 없이 원문 검색 결과의 FAQ id 순서만 남긴다. 본문은 searchResults에 있다
+    @Test
+    @SuppressWarnings("unchecked")
+    void comparisonEvidenceInputTracesOnlyFaqIds() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var trace = mock(ExecutionTrace.class);
+        var first = new FaqSearchResponse(10L, null, "PLAN", "청소년 요금제 나이", "만 18세 이하입니다.", 0.8, 1, null, 1, null);
+        var second = new FaqSearchResponse(11L, null, "PLAN", "시니어 요금제 나이", "만 65세 이상입니다.", 0.7, 1, null, 2, null);
+        String question = "청소년 요금제랑 시니어 요금제 가입 나이가 다른가요";
+        when(searches.search(any())).thenReturn(List.of(first, second));
+        when(evidence.applies(question)).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        NO_EVIDENCE_ANSWER, ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)),
+                trace, evidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()));
+
+        ArgumentCaptor<Object> traced = ArgumentCaptor.forClass(Object.class);
+        verify(trace).append(eq(1L), eq("comparisonEvidenceInputs"), traced.capture());
+        assertThat((Map<String, Object>) traced.getValue())
+                .containsEntry("question", question)
+                .containsEntry("originalFaqIds", List.of(10L, 11L))
+                .doesNotContainKey("originalSources");
+    }
+
     @Test
     void comparisonUsesOnlySourcesApprovedByResolver() {
         FaqSearchService searches = mock(FaqSearchService.class);

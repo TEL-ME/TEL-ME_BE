@@ -277,11 +277,12 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private ComparisonEvidenceResolver.Resolution resolveComparison(
             AnswerInput input, List<FaqSearchResponse> original) {
         String question = ConsultationQuestion.extract(input.originalUserQuery());
-        // 비교 근거 검증에 넣은 문장과 원문 검색 결과를 남겨, 같은 입력으로 모델을 다시 비교할 수 있게 한다
+        // 비교 근거 검증에 넣은 문장과 원문 검색 결과의 FAQ 순서를 남겨, 같은 입력으로 모델을 다시 비교할 수 있게 한다.
+        // 검색 결과 본문은 같은 상담의 searchResults에 이미 있어 FAQ id만 남긴다
         Map<String, Object> evidenceInput = new LinkedHashMap<>();
         evidenceInput.put("consultRequestId", input.consultRequestId());
         evidenceInput.put("question", question);
-        evidenceInput.put("originalSources", original);
+        evidenceInput.put("originalFaqIds", original.stream().map(FaqSearchResponse::faqId).toList());
         trace.append(input.executionId(), "comparisonEvidenceInputs", evidenceInput);
         return comparisonEvidence.resolveDetailed(input.executionId(),
                 input.consultRequestId(), question, original,

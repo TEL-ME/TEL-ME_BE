@@ -1,6 +1,7 @@
 """TELME-184 비교 근거 검증 재확인(docs/EVIDENCE_RESOLVER_COMPARISON.md "비교 근거 검증 재확인" 절).
 
-extract: 캡처의 실행 기록에서 비교 근거 검증 입력(comparisonEvidenceInputs의 첫 시도 문장, 원문 검색 결과)을 꺼내
+extract: 캡처의 실행 기록에서 비교 근거 검증 입력(comparisonEvidenceInputs의 첫 시도 문장, 원문 검색 결과는
+         originalFaqIds 순서대로 같은 상담의 searchResults에서)을 꺼내
          턴의 정답(goldFaqIds, comparison)과 묶는다. 사용: comparison_replay.py extract <캡처> <입력 json>
 score: 재생 결과를 채점한다. 사용: comparison_replay.py <입력 json> <결과 jsonl ...> <출력 md>
   블라인드(BLIND-CMP): 양쪽 답 있음이면 답에 쓴 FAQ가 양쪽 정답(FAQ 원본 slot_id, 문답 완전 일치로 보충)을 모두 덮고
@@ -29,6 +30,19 @@ def load(path):
         return json.load(source)
 
 
+def original_sources(trace, attempt):
+    # 앱은 원문 검색 결과의 FAQ id 순서(originalFaqIds)만 남긴다. 본문은 같은 상담의 searchResults에서 찾는다.
+    # TELME-184 캡처는 본문(originalSources)을 직접 남겼다
+    if "originalSources" in attempt:
+        return attempt["originalSources"]
+    for result in trace.get("searchResults") or []:
+        sources = result.get("sources") or []
+        if (result.get("consultRequestId") == attempt["consultRequestId"]
+                and [s["faqId"] for s in sources] == attempt["originalFaqIds"]):
+            return sources
+    raise ValueError(f"원문 검색 결과를 찾지 못함: consultRequestId={attempt['consultRequestId']}")
+
+
 def extract(capture_path, out_path):
     rows = []
     for case in load(capture_path)["cases"]:
@@ -42,7 +56,7 @@ def extract(capture_path, out_path):
             rows.append({
                 "id": case["caseId"], "suite": case["suite"], "type": case["questionType"],
                 "question": attempts[0]["question"], "customerQuestion": turn["sentContent"],
-                "originalSources": attempts[0]["originalSources"],
+                "originalSources": original_sources(trace, attempts[0]),
                 "goldFaqIds": fixture.get("goldFaqIds") or [], "comparison": fixture.get("comparison"),
                 "attempts": len(attempts), "captureAnswered": trace.get("comparisonAnswer") is not None,
             })

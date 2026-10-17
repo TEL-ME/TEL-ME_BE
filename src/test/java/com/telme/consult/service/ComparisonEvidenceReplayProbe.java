@@ -27,7 +27,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * TELME-184 비교 근거 검증 재확인. 결정된 앞단으로 캡처한 실제 입력(comparisonEvidenceInputs의 문장과 원문 검색 결과)을
+ * TELME-184 비교 근거 검증 재확인. 결정된 앞단으로 캡처한 실제 입력(comparison_replay.py extract로 꺼낸 문장과 원문 검색 결과)을
  * 앱의 비교 근거 검증에 그대로 넣고, 대상별 추가 검색은 앱 검색(FAQ_CANDIDATE와 같은 후보 10개)을 그대로 부른다.
  * 앱의 대상 확인과 인용문 원문 대조도 그대로 탄다. gpt-oss는 엑사원 대체 없이 Bedrock만 부른다.
  * 회색 구간 때문에 다시 고르는 두 번째 시도는 다시 만들지 않고 첫 시도 입력만 쓴다.
