@@ -18,7 +18,7 @@ public class ChatInputMaskRepository {
 
     public OutputMaskContext read(long sessionId, int throughSequence) {
         List<OutputMaskContext.Source> sources = jdbc.query("""
-                SELECT content, input_mask_spans::text FROM chat_messages
+                SELECT COALESCE(original_content, content), input_mask_spans::text FROM chat_messages
                 WHERE session_id=? AND sequence_no<=? AND role='USER' AND message_type='QUESTION'
                     AND status='COMPLETED' AND input_mask_spans IS NOT NULL
                 ORDER BY sequence_no

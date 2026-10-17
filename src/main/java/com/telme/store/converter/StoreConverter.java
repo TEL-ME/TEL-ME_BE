@@ -8,7 +8,9 @@ import com.telme.store.entity.Store;
 import com.telme.store.entity.StoreHours;
 import com.telme.store.entity.StoreServiceType;
 import com.telme.store.repository.StoreNearbyQueryRepository;
+import com.telme.store.repository.StoreTranslationRepository.Text;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,18 +21,18 @@ public class StoreConverter {
     private final StoreCommonConverter storeCommonConverter;
 
     public StoreNearbySearchResponse toNearbySearchResponse(List<StoreNearbyQueryRepository.Row> rows,
-            int radiusMeters) {
+            int radiusMeters, Map<Long, Text> translations) {
         return StoreNearbySearchResponse.builder()
-                .stores(rows.stream().map(this::toNearbyResponse).toList())
+                .stores(rows.stream().map(row -> toNearbyResponse(row, translations.get(row.storeId()))).toList())
                 .radiusMeters(radiusMeters)
                 .build();
     }
 
-    public StoreNearbyResponse toNearbyResponse(StoreNearbyQueryRepository.Row row) {
+    public StoreNearbyResponse toNearbyResponse(StoreNearbyQueryRepository.Row row, Text translation) {
         return StoreNearbyResponse.builder()
                 .storeId(row.storeId())
-                .name(row.name())
-                .address(row.address())
+                .name(translation == null ? row.name() : translation.name())
+                .address(translation == null ? row.address() : translation.address())
                 .phone(row.phone())
                 .latitude(row.latitude())
                 .longitude(row.longitude())
@@ -39,11 +41,12 @@ public class StoreConverter {
                 .build();
     }
 
-    public StoreDetailResponse toDetailResponse(Store store, List<StoreHours> hours) {
+    public StoreDetailResponse toDetailResponse(Store store, List<StoreHours> hours, Text translation) {
         return StoreDetailResponse.builder()
                 .storeId(store.getStoreId())
-                .name(store.getName())
-                .address(store.getAddress())
+                .name(translation == null ? store.getName() : translation.name())
+                .address(translation == null ? store.getAddress() : translation.address())
+                .addressKo(store.getAddress())
                 .phone(store.getPhone())
                 .latitude(store.getLatitude())
                 .longitude(store.getLongitude())

@@ -59,7 +59,7 @@ public class StoreController {
     })
     @GetMapping("/{storeId}")
     public CustomResponse<StoreDetailResponse> getStore(
-            @Parameter(description = "조회할 매장 ID") @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId) {
+            @Parameter(description = "조회할 매장 ID") @PathVariable @Positive(message = "{store.id.positive}") long storeId) {
         return CustomResponse.onSuccess(storeQueryService.getStore(storeId));
     }
 

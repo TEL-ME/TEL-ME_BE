@@ -16,18 +16,18 @@ import lombok.Builder;
 // StoreSearchProperties로 default확인
 @Builder
 public record StoreNearbySearchRequest(
-                @NotNull(message = "위도를 입력해 주세요.")
-                @DecimalMin(value = "-90", message = "위도는 -90에서 90 사이의 올바른 숫자여야 합니다.")
-                @DecimalMax(value = "90", message = "위도는 -90에서 90 사이의 올바른 숫자여야 합니다.")
+                @NotNull(message = "{store.latitude.required}")
+                @DecimalMin(value = "-90", message = "{store.latitude.range}")
+                @DecimalMax(value = "90", message = "{store.latitude.range}")
                 Double latitude,
-                @NotNull(message = "경도를 입력해 주세요.")
-                @DecimalMin(value = "-180", message = "경도는 -180에서 180 사이의 올바른 숫자여야 합니다.")
-                @DecimalMax(value = "180", message = "경도는 -180에서 180 사이의 올바른 숫자여야 합니다.")
+                @NotNull(message = "{store.longitude.required}")
+                @DecimalMin(value = "-180", message = "{store.longitude.range}")
+                @DecimalMax(value = "180", message = "{store.longitude.range}")
                 Double longitude,
-                @Min(value = 1, message = "검색 반경은 1m 이상이어야 합니다.")
+                @Min(value = 1, message = "{store.radius.min}")
                 Integer radiusMeters, // 검색반경(미터)
-                @Min(value = StoreSearchProperties.MIN_LIMIT, message = "매장 개수는 {value} 이상이어야 합니다.")
-                @Max(value = StoreSearchProperties.MAX_LIMIT, message = "매장 개수는 {value} 이하여야 합니다.")
+                @Min(value = StoreSearchProperties.MIN_LIMIT, message = "{store.limit.min}")
+                @Max(value = StoreSearchProperties.MAX_LIMIT, message = "{store.limit.max}")
                 Integer limit, // 표시할 매장갯수
                 Set<StoreServiceType.Code> serviceTypes, // 업무종류 필터
                 @Nullable Boolean openNow // 영업중 필터(설정으로 켜기전에는 무시됨)

@@ -46,7 +46,7 @@ public class ChatMessageConverter {
                 message.getReplyTo() == null ? null : message.getReplyTo().getMessageId(),
                 message.getRole().name(),
                 message.getMessageType().name(),
-                message.getContent(),
+                message.getOriginalContent() != null ? message.getOriginalContent() : message.getContent(),
                 message.getStatus() == null ? null : message.getStatus().name(),
                 message.getAnswerBasis() == null ? null : message.getAnswerBasis().name(),
                 parseFollowUps(message),

@@ -6,12 +6,14 @@ import com.telme.store.dto.res.StoreRegionSearchResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.repository.StoreRepository;
 import com.telme.store.repository.StoreSpecifications;
+import com.telme.store.repository.StoreTranslationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,6 +28,7 @@ public class StoreRegionSearchService {
 
     private final StoreRepository storeRepository;
     private final StoreRegionSearchConverter storeRegionSearchConverter;
+    private final StoreTranslationRepository storeTranslationRepository;
 
     public StoreRegionSearchResponse search(StoreRegionSearchRequest request) {
         Specification<Store> condition = StoreSpecifications.hasStatus(Store.Status.OPEN)
@@ -34,7 +37,10 @@ public class StoreRegionSearchService {
 
         Page<Store> page = storeRepository.findAll(
                 condition, PageRequest.of(request.page(), request.size(), Sort.by("storeId")));
-        return storeRegionSearchConverter.toResponse(page, withServices(page.getContent()));
+        List<Store> stores = withServices(page.getContent());
+        List<Long> storeIds = stores.stream().map(Store::getStoreId).toList();
+        return storeRegionSearchConverter.toResponse(page, stores,
+                storeTranslationRepository.findByStoreIds(LocaleContextHolder.getLocale(), storeIds));
     }
 
     private List<Store> withServices(List<Store> stores) {

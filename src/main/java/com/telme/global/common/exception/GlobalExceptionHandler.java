@@ -1,10 +1,16 @@
 package com.telme.global.common.exception;
 
+import com.telme.global.common.CustomResponse;
+import com.telme.global.common.code.BaseErrorCode;
+import com.telme.global.common.code.CommonErrorCode;
+import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
-
-import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanInstantiationException;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,17 +19,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.telme.global.common.CustomResponse;
-import com.telme.global.common.code.BaseErrorCode;
-import com.telme.global.common.code.CommonErrorCode;
-
-import lombok.extern.slf4j.Slf4j;
-
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private static final String INVALID_FORMAT_MESSAGE = "요청 값의 형식이 올바르지 않습니다.";
+    
+    private final MessageSource messageSource;
 
 	// 커스텀 예외 처리
     @ExceptionHandler(GeneralException.class)
@@ -35,7 +38,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(errorCode.getErrorResponse());
+                .body(CustomResponse.onFailure(errorCode.getCode(), message(errorCode)));
     }
 
     // 생성자 예외가 BeanInstantiationException으로 감싸진 경우 처리
@@ -59,7 +62,7 @@ public class GlobalExceptionHandler {
         		.forEach(error ->
         			errors.putIfAbsent(
         					error.getField(),
-        					error.isBindingFailure() ? INVALID_FORMAT_MESSAGE : error.getDefaultMessage()
+        					error.isBindingFailure() ? invalidFormatMessage() : error.getDefaultMessage()
         			)
         );
 
@@ -98,7 +101,7 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException ex
     ) {
         Map<String, String> errors = new HashMap<>();
-        errors.put(ex.getName(), INVALID_FORMAT_MESSAGE);
+        errors.put(ex.getName(), invalidFormatMessage());
 
         return invalidRequestResponse(errors);
     }
@@ -115,7 +118,7 @@ public class GlobalExceptionHandler {
 
         CustomResponse<Void> errorResponse = CustomResponse.onFailure(
         		errorCode.getCode(),
-        		errorCode.getMessage()
+        		message(errorCode)
         );
 
         return ResponseEntity
@@ -133,7 +136,7 @@ public class GlobalExceptionHandler {
 
         CustomResponse<Void> errorResponse = CustomResponse.onFailure(
         		errorCode.getCode(),
-        		errorCode.getMessage()
+        		message(errorCode)
         );
 
         return ResponseEntity
@@ -145,12 +148,23 @@ public class GlobalExceptionHandler {
         BaseErrorCode errorCode = CommonErrorCode.NOT_VALID_ERROR;
         CustomResponse<Map<String, String>> errorResponse = CustomResponse.onFailure(
                 errorCode.getCode(),
-                errorCode.getMessage(),
+                message(errorCode),
                 errors
         );
 
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(errorResponse);
+    }
+    
+    // 에러 코드를 번역 키로 쓴다. 번역이 없으면 enum의 한국어 메시지가 그대로 나간다
+    private String message(BaseErrorCode errorCode) {
+        return messageSource.getMessage(
+                errorCode.getCode(), null, errorCode.getMessage(), LocaleContextHolder.getLocale());
+    }
+
+    private String invalidFormatMessage() {
+        return messageSource.getMessage(
+                "common.invalid-format", null, INVALID_FORMAT_MESSAGE, LocaleContextHolder.getLocale());
     }
 }

@@ -1,7 +1,7 @@
 package com.telme.feedback;
 
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -20,14 +20,13 @@ import com.telme.feedback.dto.FeedbackModels.Feedback;
 import com.telme.feedback.repository.FeedbackStore;
 import com.telme.feedback.service.FeedbackService;
 import com.telme.global.common.exception.GlobalExceptionHandler;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
 import java.time.Instant;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 /** HTTP 계약 테스트. 실제 회원 인증 필터 검증은 통합 시 추가한다. */
 class FeedbackControllerTest {
@@ -45,7 +44,7 @@ class FeedbackControllerTest {
         mvc =
                 MockMvcBuilders.standaloneSetup(
                                 new FeedbackController(service, resolver, new FeedbackConverter()))
-                        .setControllerAdvice(new GlobalExceptionHandler())
+                        .setControllerAdvice(new GlobalExceptionHandler(new StaticMessageSource()))
                         .build();
     }
 

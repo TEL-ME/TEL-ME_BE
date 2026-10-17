@@ -189,6 +189,7 @@ class NamedLocationStoreSearchAdapterTest {
 
     private static StoreRegionSearchResponse.Store regionStore(long storeId) {
         return new StoreRegionSearchResponse.Store(storeId, "텔미 " + storeId + "호점", "서울 강남구 테헤란로 " + storeId,
+                "서울 강남구 테헤란로 " + storeId,
                 "02-000-000" + storeId, "1168010100", new BigDecimal("37.500000"), new BigDecimal("127.030000"),
                 List.of(new StoreServiceTypeResponse("USIM_REISSUE", "유심재발급")));
     }

@@ -33,8 +33,10 @@ public class LlmGeneration {
 
     public enum TaskType {
         ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE,
-        // FAQ 근거 선택·판정(회색 구간 및 후보 판정). 의도 분류(ROUTING)와 호출 수와 처리 시간을 나눠 보기 위해 분리
-        EVIDENCE_CHECK
+        // 검색 회색 구간 FAQ 근거 판정(FaqEvidenceJudge)
+        EVIDENCE_CHECK,
+        // 한국어가 아닌 질문을 상담 전에 한국어로 옮김(ChatQuestionTranslator)
+        TRANSLATION
     }
 
     public enum Status {

@@ -9,15 +9,17 @@ import com.telme.store.entity.StoreService;
 import com.telme.store.entity.StoreServiceType;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.StaticMessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 class StoreRegionSearchConverterTest {
 
-    private final StoreRegionSearchConverter converter = new StoreRegionSearchConverter(new StoreCommonConverter());
+    private final StoreRegionSearchConverter converter = new StoreRegionSearchConverter(new StoreCommonConverter(new StaticMessageSource()));
 
     @Test
     @DisplayName("가능 업무를 업무 ID 순으로 정렬하고 매장 필드를 그대로 옮긴다")
@@ -35,7 +37,7 @@ class StoreRegionSearchConverterTest {
                 service(store, StoreServiceType.Code.NEW_LINE, "신규가입")));
 
         StoreRegionSearchResponse response = converter.toResponse(
-                new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1), List.of(store));
+                new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1), List.of(store), Map.of());
 
         StoreRegionSearchResponse.Store card = response.stores().get(0);
         assertThat(card.storeId()).isEqualTo(101L);
@@ -56,7 +58,7 @@ class StoreRegionSearchConverterTest {
                 service(store, StoreServiceType.Code.USIM_REISSUE, "유심재발급", 1L)));
 
         StoreRegionSearchResponse response = converter.toResponse(
-                new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1), List.of(store));
+                new PageImpl<>(List.of(store), PageRequest.of(0, 20), 1), List.of(store), Map.of());
 
         assertThat(response.stores().get(0).services()).extracting(StoreServiceTypeResponse::code)
                 .containsExactly("USIM_REISSUE", "NEW_LINE");
@@ -65,7 +67,7 @@ class StoreRegionSearchConverterTest {
     @Test
     @DisplayName("결과가 없으면 빈 목록")
     void 빈_결과() {
-        StoreRegionSearchResponse response = converter.toResponse(Page.empty(PageRequest.of(0, 20)), List.of());
+        StoreRegionSearchResponse response = converter.toResponse(Page.empty(PageRequest.of(0, 20)), List.of(), Map.of());
 
         assertThat(response.stores()).isEmpty();
         assertThat(response.totalElements()).isZero();
@@ -75,7 +77,7 @@ class StoreRegionSearchConverterTest {
     @DisplayName("페이지 정보를 응답에 담는다")
     void 페이지_정보() {
         StoreRegionSearchResponse response = converter.toResponse(
-                new PageImpl<>(List.of(), PageRequest.of(1, 10), 25), List.of());
+                new PageImpl<>(List.of(), PageRequest.of(1, 10), 25), List.of(), Map.of());
 
         assertThat(response.page()).isEqualTo(1);
         assertThat(response.size()).isEqualTo(10);

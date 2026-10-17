@@ -23,6 +23,7 @@ import com.telme.store.repository.OpenNowCondition;
 import com.telme.store.repository.StoreNearbyQueryRepository;
 import com.telme.store.repository.StoreTag;
 import com.telme.store.repository.StoreTagCondition;
+import com.telme.store.repository.StoreTranslationRepository;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -40,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.support.StaticMessageSource;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.QueryTimeoutException;
 
@@ -56,7 +58,7 @@ class StoreSearchServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(StoreNearbyQueryRepository.class);
-        service = new StoreSearchService(repository, converter(), properties(false), WEDNESDAY_3PM_KST);
+        service = new StoreSearchService(repository, converter(), properties(false), WEDNESDAY_3PM_KST, mock(StoreTranslationRepository.class));
     }
 
     @Test
@@ -325,11 +327,11 @@ class StoreSearchServiceTest {
     }
 
     private StoreSearchService enabledService(Clock clock) {
-        return new StoreSearchService(repository, converter(), properties(true), clock);
+        return new StoreSearchService(repository, converter(), properties(true), clock, mock(StoreTranslationRepository.class));
     }
 
     private StoreConverter converter() {
-        return new StoreConverter(new StoreCommonConverter());
+        return new StoreConverter(new StoreCommonConverter((new StaticMessageSource())));
     }
 
     // 필터가 없으면 저장소의 KNN으로, 있으면 필터 전략으로 간다

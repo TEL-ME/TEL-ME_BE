@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.StaticMessageSource;
 
 class ChatInputGuardServiceTest {
 
@@ -57,7 +58,8 @@ class ChatInputGuardServiceTest {
                 store,
                 new InputGuardProperties(
                         Duration.ofMinutes(10), 3, Duration.ofMinutes(1), Duration.ofDays(30)),
-                clock);
+                clock,
+                codeAsMessage());
     }
 
     @Test
@@ -177,5 +179,11 @@ class ChatInputGuardServiceTest {
             current.set(acquired);
             return state;
         });
+    }
+    
+    private static StaticMessageSource codeAsMessage() {
+        StaticMessageSource messages = new StaticMessageSource();
+        messages.setUseCodeAsDefaultMessage(true);
+        return messages;
     }
 }

@@ -69,8 +69,8 @@ public class ChatSessionController {
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20")
-            @Min(value = 1, message = "조회 개수는 1 이상이어야 합니다.")
-            @Max(value = 50, message = "조회 개수는 50 이하여야 합니다.")
+            @Min(value = 1, message = "{chat.size.min}")
+            @Max(value = 50, message = "{chat.size.max}")
             int size
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
@@ -91,12 +91,12 @@ public class ChatSessionController {
                             + "첫 조회에서는 생략합니다."
             )
             @RequestParam(required = false)
-            @Positive(message = "메시지 커서는 1 이상이어야 합니다.")
+            @Positive(message = "{chat.cursor.positive}")
             Integer beforeSequenceNo,
             @Parameter(description = "조회할 메시지 수 (1~50)")
             @RequestParam(defaultValue = "20")
-            @Min(value = 1, message = "조회 개수는 1 이상이어야 합니다.")
-            @Max(value = 50, message = "조회 개수는 50 이하여야 합니다.")
+            @Min(value = 1, message = "{chat.size.min}")
+            @Max(value = 50, message = "{chat.size.max}")
             int size
     ) {
         ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);

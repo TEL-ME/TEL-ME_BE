@@ -65,6 +65,8 @@ public class OllamaRequestConverter {
             case CONDITION_EXTRACT -> new Defaults(0.0, 500);
             case SUMMARY -> new Defaults(0.3, 512);
             case SESSION_TITLE -> new Defaults(0.2, 32);
+            case TRANSLATION -> new Defaults(0.0, 1024);
+            // 지금은 Bedrock으로만 부른다. Ollama로 돌릴 때는 기존 묶음 판정(rag.evidence-check)과 같은 값
             // 근거 판정(rag.evidence-check) 기본값
             case EVIDENCE_CHECK -> new Defaults(0.0, 300);
         };

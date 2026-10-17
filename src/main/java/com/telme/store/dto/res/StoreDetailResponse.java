@@ -10,6 +10,7 @@ public record StoreDetailResponse(
         Long storeId,
         String name,
         String address,
+        String addressKo,
         String phone,
         BigDecimal latitude,
         BigDecimal longitude,

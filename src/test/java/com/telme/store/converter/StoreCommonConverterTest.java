@@ -13,10 +13,11 @@ import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.StaticMessageSource;
 
 class StoreCommonConverterTest {
 
-    private final StoreCommonConverter converter = new StoreCommonConverter();
+    private final StoreCommonConverter converter = new StoreCommonConverter(new StaticMessageSource());
     private final Store store = Store.builder().storeId(101L).build();
 
     @Test

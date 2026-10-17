@@ -15,6 +15,7 @@ public record StoreRegionSearchResponse(
             Long storeId,
             String name,
             String address,
+            String addressKo,
             String phone,
             String regionCode,
             BigDecimal latitude,
