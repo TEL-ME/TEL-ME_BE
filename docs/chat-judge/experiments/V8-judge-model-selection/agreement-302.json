@@ -1,0 +1,68 @@
+{
+  "qwen": {
+    "grounding": {
+      "resolved": 290,
+      "match": 242,
+      "unresolved": 12,
+      "mismatch": 48,
+      "falseAlarm": 30,
+      "missedUnsupported": 9
+    },
+    "qualitySingleQuestion": {
+      "resolved": 254,
+      "match": 204,
+      "mismatch": 50,
+      "unresolved": 1
+    },
+    "abstention": {
+      "resolved": 289,
+      "match": 235,
+      "unresolved": 13,
+      "mismatch": 54
+    }
+  },
+  "sonnet-4-6": {
+    "grounding": {
+      "resolved": 282,
+      "match": 250,
+      "mismatch": 32,
+      "missedUnsupported": 14,
+      "falseAlarm": 11,
+      "unresolved": 20
+    },
+    "qualitySingleQuestion": {
+      "resolved": 254,
+      "match": 219,
+      "mismatch": 35,
+      "unresolved": 1
+    },
+    "abstention": {
+      "resolved": 282,
+      "match": 246,
+      "mismatch": 36,
+      "unresolved": 20
+    }
+  },
+  "mistral": {
+    "grounding": {
+      "resolved": 277,
+      "mismatch": 43,
+      "missedUnsupported": 14,
+      "match": 234,
+      "unresolved": 25,
+      "falseAlarm": 21
+    },
+    "qualitySingleQuestion": {
+      "resolved": 254,
+      "match": 212,
+      "mismatch": 42,
+      "unresolved": 1
+    },
+    "abstention": {
+      "resolved": 275,
+      "mismatch": 43,
+      "match": 232,
+      "unresolved": 27
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "note": "단가는 AWS Bedrock 요금표 Tokyo 표기 기준 추정치이며 실제 청구액과 다를 수 있다",
+  "pricePerMillionTokensUsd": {
+    "mistral": {
+      "input": 0.61,
+      "output": 1.82
+    },
+    "deepseek": {
+      "input": 0.74,
+      "output": 2.22
+    }
+  },
+  "runs": [
+    {
+      "model": "mistral",
+      "run": "3턴 시험 1차 (코드 블록 파싱 실패)",
+      "calls": 13,
+      "failedCalls": 0,
+      "promptTokens": 8571,
+      "outputTokens": 1446,
+      "costUsd": 0.0079
+    },
+    {
+      "model": "mistral",
+      "run": "3턴 시험 2차",
+      "calls": 16,
+      "failedCalls": 0,
+      "promptTokens": 11455,
+      "outputTokens": 2260,
+      "costUsd": 0.0111
+    },
+    {
+      "model": "mistral",
+      "run": "302건 본 실행",
+      "calls": 1477,
+      "failedCalls": 0,
+      "promptTokens": 1049889,
+      "outputTokens": 174669,
+      "costUsd": 0.9583
+    },
+    {
+      "model": "mistral",
+      "run": "미채점 40건 재시도 (원문 인용 지시 추가)",
+      "calls": 176,
+      "failedCalls": 0,
+      "promptTokens": 134754,
+      "outputTokens": 27381,
+      "costUsd": 0.132
+    },
+    {
+      "model": "deepseek",
+      "run": "3턴 시험",
+      "calls": 16,
+      "failedCalls": 0,
+      "promptTokens": 11374,
+      "outputTokens": 1965,
+      "costUsd": 0.0128
+    }
+  ],
+  "total": {
+    "mistral": {
+      "calls": 1682,
+      "costUsd": 1.1093
+    },
+    "deepseek": {
+      "calls": 16,
+      "costUsd": 0.0128
+    }
+  }
+}
