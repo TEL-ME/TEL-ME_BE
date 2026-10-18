@@ -82,27 +82,16 @@ public class ConsultService {
         }
     }
 
-    /** 채팅 실행 밖(테스트 등)에서 준비할 때 쓴다. 되묻기 문장 생성 호출은 기록되지 않는다. */
+    // 대기 중인 질문은 다시 만들지 않는다.
     public PreparationResult prepareTurn(
             long sessionId,
             long requestId,
             Purpose purpose,
             Map<String, Condition> updates,
             LocationStatus locationStatus) {
-        return prepareTurn(sessionId, requestId, purpose, updates, locationStatus, null);
-    }
-
-    // 대기 중인 질문은 다시 만들지 않는다. executionId는 되묻기 문장 생성 호출 기록에 쓴다.
-    public PreparationResult prepareTurn(
-            long sessionId,
-            long requestId,
-            Purpose purpose,
-            Map<String, Condition> updates,
-            LocationStatus locationStatus,
-            Long executionId) {
         try {
             return new PreparationResult(
-                    prepare(sessionId, requestId, purpose, updates, locationStatus, executionId), null);
+                    prepare(sessionId, requestId, purpose, updates, locationStatus), null);
         } catch (ClarificationAlreadyPending pending) {
             if (updates.isEmpty()) {
                 return new PreparationResult(null, pending.messageId());
@@ -110,7 +99,7 @@ public class ConsultService {
             // 질문은 유지하고, 정정된 조건만 저장하도록 반환한다.
             var snapshot = stateStore.load(sessionId, requestId);
             var decision =
-                    dialogueService.assess(
+                    dialogueService.decide(
                             new DialogueInput(
                                     requestId,
                                     purpose,
@@ -130,24 +119,13 @@ public class ConsultService {
         }
     }
 
-    /** 채팅 실행 밖(테스트 등)에서 준비할 때 쓴다. 되묻기 문장 생성 호출은 기록되지 않는다. */
-    public PreparedTurn prepare(
-            long sessionId,
-            long requestId,
-            Purpose purpose,
-            Map<String, Condition> updates,
-            LocationStatus locationStatus) {
-        return prepare(sessionId, requestId, purpose, updates, locationStatus, null);
-    }
-
     // Chat에서 소유권 확인 후, 메시지 저장 트랜잭션 밖에서 호출한다.
     public PreparedTurn prepare(
             long sessionId,
             long requestId,
             Purpose purpose,
             Map<String, Condition> updates,
-            LocationStatus locationStatus,
-            Long executionId) {
+            LocationStatus locationStatus) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("상담 준비는 메시지 저장 트랜잭션이 끝난 뒤 호출해야 합니다.");
         }
@@ -155,13 +133,12 @@ public class ConsultService {
         if (Set.of("DONE", "CANCELLED").contains(snapshot.status())) {
             throw new GeneralException(ConsultErrorCode.REQUEST_CLOSED);
         }
-        // 상태를 읽는 트랜잭션은 모델 호출 전에 끝난다.
         var input =
                 new DialogueInput(
                         requestId, purpose, snapshot.conditions(), updates, locationStatus);
-        var assessment = dialogueService.assess(input);
+        var assessment = dialogueService.decide(input);
         if (assessment.action() == Action.ASK) {
-            // 답을 기다리는 질문이 있으면 모델을 다시 호출하지 않는다.
+            // 답을 기다리는 질문이 있으면 새 질문을 만들지 않는다.
             stateStore
                     .findPendingClarificationMessageId(
                             sessionId, requestId, assessment.waitingField())
@@ -169,11 +146,6 @@ public class ConsultService {
                             messageId -> {
                                 throw new ClarificationAlreadyPending(messageId);
                             });
-            return new PreparedTurn(
-                    sessionId,
-                    snapshot.version(),
-                    dialogueService.decide(input, executionId),
-                    snapshot.clarificationPlan());
         }
         return new PreparedTurn(
                 sessionId, snapshot.version(), assessment, snapshot.clarificationPlan());

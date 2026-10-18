@@ -19,17 +19,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class CompoundDialoguePlannerTest {
-    private final AtomicInteger calls = new AtomicInteger();
-    private final CompoundDialoguePlanner planner =
-            new CompoundDialoguePlanner(
-                    new DialogueService(
-                            p -> {
-                                calls.incrementAndGet();
-                                return p.fallbackText();
-                            }));
+    private final CompoundDialoguePlanner planner = new CompoundDialoguePlanner(new DialogueService());
 
     private Request request(
             long id, Purpose purpose, Status status, Long pending, Map<String, Condition> updates) {
@@ -52,7 +44,6 @@ class CompoundDialoguePlannerTest {
                                 store(2)));
         assertEquals(1L, result.ready().getFirst().consultRequestId());
         assertEquals(2L, result.clarification().consultRequestId());
-        assertEquals(1, calls.get());
     }
 
     @Test
@@ -60,7 +51,6 @@ class CompoundDialoguePlannerTest {
         var result = planner.plan(List.of(store(2), store(3)));
         assertEquals(2L, result.clarification().consultRequestId());
         assertEquals(List.of(3L), result.deferred());
-        assertEquals(1, calls.get());
     }
 
     @Test
@@ -68,17 +58,15 @@ class CompoundDialoguePlannerTest {
         var result = planner.plan(List.of(store(30), store(10), store(20)));
         assertEquals(30L, result.clarification().consultRequestId());
         assertEquals(List.of(10L, 20L), result.deferred());
-        assertEquals(1, calls.get());
     }
 
     @Test
-    void existingUnansweredQuestionPreventsDuplicateAndNewModelCalls() {
+    void existingUnansweredQuestionPreventsDuplicateQuestion() {
         var waiting = request(2, Purpose.NEARBY_STORE, Status.WAITING_CONDITION, 99L, Map.of());
         var result = planner.plan(List.of(store(3), waiting));
         assertNull(result.clarification());
         assertEquals(List.of(new Waiting(2, 99)), result.awaiting());
         assertEquals(List.of(3L), result.deferred());
-        assertEquals(0, calls.get());
     }
 
     @Test
@@ -118,11 +106,10 @@ class CompoundDialoguePlannerTest {
         assertEquals(Action.ALTERNATIVE_GUIDANCE, result.guidance().getFirst().action());
         assertEquals(1, result.ready().size());
         assertNull(result.clarification());
-        assertEquals(0, calls.get());
     }
 
     @Test
-    void duplicateAndClosedUpdatesAreRejectedBeforeModelCall() {
+    void duplicateAndClosedUpdatesAreRejected() {
         assertThrows(
                 IllegalArgumentException.class, () -> planner.plan(List.of(store(2), store(2))));
         var invalid =
@@ -134,21 +121,6 @@ class CompoundDialoguePlannerTest {
                         Map.of("location", Condition.filled("부산")));
         assertThrows(
                 IllegalArgumentException.class, () -> planner.plan(List.of(store(2), invalid)));
-        assertEquals(0, calls.get());
-    }
-
-    @Test
-    void modelFailureStillProducesSingleTemplateQuestion() {
-        var broken =
-                new CompoundDialoguePlanner(
-                        new DialogueService(
-                                p -> {
-                                    throw new ClarificationTextGenerator
-                                            .GenerationUnavailableException("timeout");
-                                }));
-        var result = broken.plan(List.of(store(1), store(2)));
-        assertEquals(Action.ASK, result.clarification().action());
-        assertEquals(List.of(2L), result.deferred());
     }
 
     @Test

@@ -1,0 +1,1152 @@
+[
+ {
+  "id": "V2-SINGLE-A001#0#0",
+  "question": "요금 밀려서 발신 막혔는데 지금 다 내면 언제 다시 전화 걸 수 있어요? 계속 못 내면 어떻게 되는지도 알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A004#0#0",
+  "question": "실수로 요금을 두 번 냈는데 환불을 대학생 딸 계좌로 받아도 되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A010#0#0",
+  "question": "이번 달 요금 깜빡하고 못 냈는데 얼마나 지나면 폰 끊겨요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-SINGLE-A011#0#0",
+  "question": "요금이 이중으로 빠져나갔던데 환불 말고 담달 요금에서 빼주는 것도 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A012#0#0",
+  "question": "이번 달 중간에 요금제 바꾸면 요금은 어떻게 나와요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-SINGLE-A029#0#0",
+  "question": "요금 두 달 밀려 있는데 그 상태로 명의 넘길 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A034#0#0",
+  "question": "어제 아빠 폰 제 명의로 바꾸러 아빠 신분증만 들고 갔는데 안 해주더라구요. 뭐가 문제였어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A037#0#0",
+  "question": "데이터 거의 안 쓰는 편인데 저렴한 요금제 추천 좀",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "V2-SINGLE-A038#0#0",
+  "question": "생일 지나서 요금제 다시 고르려는데 5G LTE 다 포함해서 어떤 거 있는지 전부 알려줘요",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A040#0#0",
+  "question": "알뜰 요금제 중에 5G 되는 것도 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A041#0#0",
+  "question": "엄마한테 데이터 선물하려는데 한 번에 몇 기가까지 돼?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A042#0#0",
+  "question": "LTE요금제는몇개있어요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A042#0#1",
+  "question": "5G랑알뜰도같이정리해주세요",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A043#0#0",
+  "question": "언리미티드랑 다른 요금제 차이가 데이터 다 쓰고 나서 속도 차이인 거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A044#0#0",
+  "question": "데이터 남는 거 손녀한테 주고 싶은데 어떻게 하는 거예요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A046#0#0",
+  "question": "알뜰요금제가정확히뭐예요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A046#0#1",
+  "question": "종류는몇개?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A047#0#0",
+  "question": "청소년이나 시니어 요금제 말고 일반 요금제는 몇 종류예요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A048#0#0",
+  "question": "제일저렴한요금제얼마예요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-SINGLE-A048#0#1",
+  "question": "데이터는얼마나줘요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A052#0#0",
+  "question": "지금 쓰는 통신사에 밀린 요금이 좀 있는데 번호이동 하려면 순서가 어떻게 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A056#0#0",
+  "question": "예전 통신사에 요금 좀 남아 있는데 그래도 번호이동 신청 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A064#0#0",
+  "question": "다음 주에 7일 동안 베트남 가는데 데이터 무제한 로밍 되나요? 얼마예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A065#0#0",
+  "question": "비행기 내리자마자 데이터 쓸 수 있나요? 공항에서 바로 택시 앱 불러야 해서요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A069#0#0",
+  "question": "해외 처음 나가는데 로밍 요금 폭탄 맞을까 봐 무서워요. 종류별로 가격 좀 알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A073#0#0",
+  "question": "부가서비스 잘못 눌러서 오늘 가입됐는데 바로 해지하면 요금 안 나오죠?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A074#0#0",
+  "question": "이번달요금은빠지나요",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "V2-SINGLE-A074#0#1",
+  "question": "해지하면바로못쓰게되는거예요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A075#0#0",
+  "question": "올해 요금 많이 냈는데 멤버십 등급 바로 올라가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A080#0#0",
+  "question": "부가서비스 해지했는데 청구서에 또 찍혀 있네요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A081#0#0",
+  "question": "명의도용 신고하면 그동안 나간 요금 전부 안 내도 되는 거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A082#0#0",
+  "question": "가입사실확인서필요한데매장꼭가야돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A082#0#1",
+  "question": "홈페이지로떼면돈들어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A083#0#0",
+  "question": "요금납부확인서랑 해지확인서 발급 방법 다른가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A084#0#0",
+  "question": "재작년에 해지한 번호인데 해지확인서 아직 뽑을 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A087#0#0",
+  "question": "I'm foreigner. 여권만 있으면 가입 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A098#0#0",
+  "question": "약정 11개월차인데 지금 해지하면 위약금 전부 내야 돼요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-SINGLE-A099#0#0",
+  "question": "해지할 때 남은 기계값 한방에 내는 게 나아요 그냥 나눠 내는 게 나아요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A100#0#0",
+  "question": "반년 정도 해외 나가 있을 건데 번호는 살리고 싶어요. 정지랑 해지 중 뭐가 나음?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A101#0#0",
+  "question": "이민 가게 돼서 폰 해지하려는데 어디서 신청하고 언제 끊겨요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A102#0#0",
+  "question": "해지신청어떻게함",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A102#0#1",
+  "question": "이번달요금은한달치다나가",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "V2-SINGLE-A103#0#0",
+  "question": "일시정지가능해요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A103#0#1",
+  "question": "정지중에도요금나가요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A104#0#0",
+  "question": "지금 미국에 있는데 한국 번호 홈페이지에서 해지 가능?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A105#0#0",
+  "question": "안 쓰는 세컨폰 해지하려는데 할부금 남은 건 어떻게 처리돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A106#0#0",
+  "question": "아들 다음 달에 입대해서 폰 해지하려는데 할부 남은 거 계속 매달 나눠서 내도 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A107#0#0",
+  "question": "폰 번호 없애고 싶은데 해지 방법?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A108#0#0",
+  "question": "한동안 폰 안 쓸 건데 그냥 해지할까 정지할까 고민돼요. 차이가 뭐예요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A114#0#0",
+  "question": "유심깨진김에이심으로갈아타고싶은데어떻게해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A114#0#1",
+  "question": "얼마예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A119#0#0",
+  "question": "잃어버린 유심 누가 주워서 쓸까 봐 걱정인데 재발급 받으면 옛날 유심은 자동으로 해지돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-SINGLE-A120#0#0",
+  "question": "유심 바꾸러 제가 직접 가는 거랑 딸 보내는 거랑 챙길 서류 다른가요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C003#0#0",
+  "question": "명의변경이랑",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C003#0#1",
+  "question": "번호이동각각",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C004#0#0",
+  "question": "종이청구서받으면돈나가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C004#0#1",
+  "question": "요금납부확인서는어디서떼는지도알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C005#0#0",
+  "question": "해지하면위약금얼마나물어야돼요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C005#0#1",
+  "question": "새폰할부로사면이자몇프로인지도요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C006#0#0",
+  "question": "두달해외가는데폰일시정지하면요금얼마나나와요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C006#0#1",
+  "question": "로밍켜고쓰면하루에얼마인지도같이알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C009#0#0",
+  "question": "가족한테데이터한번에얼마나보낼수있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C009#0#1",
+  "question": "그리고소액결제한달한도도알려줘",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C010#0#0",
+  "question": "외국인친구가가입하려는데여권말고뭐필요해요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C010#0#1",
+  "question": "제일싼요금제얼마인지도알려주세요",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-COMPOUND-C011#0#0",
+  "question": "요금제비싼걸로올리면멤버십등급도바로올라가나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C011#0#1",
+  "question": "이번달중간에바꾸면요금계산은어떻게돼요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-COMPOUND-C012#0#0",
+  "question": "몇개월할부돼요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C012#0#1",
+  "question": "그김에이심으로바꾸면비용은얼마예요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C014#0#0",
+  "question": "번호해지는어디서해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C014#0#1",
+  "question": "해지하고나서해지확인서는언제까지뗄수있는지도요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C016#0#0",
+  "question": "아빠폰을제명의로바꾸려면서류뭐필요해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C016#0#1",
+  "question": "그리고아빠가잃어버린유심재발급을제가대신받으러가면뭐챙겨야하는지도요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C017#0#0",
+  "question": "데이터별로안쓰는데싼요금제뭐있어요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-COMPOUND-C017#0#1",
+  "question": "개통은매장이랑인터넷중어디가빨라요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C019#0#0",
+  "question": "요금이두번빠져나갔는데환불대신다음달요금에서빼줄수있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C019#0#1",
+  "question": "그리고오늘가입한부가서비스바로해지하면이번달요금안나오죠?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-COMPOUND-C020#0#0",
+  "question": "회선한도초과라서새로개통이안된대요.몇개까지되는거예요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C020#0#1",
+  "question": "안쓰는회선하나해지하려면어떻게하는지도알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M001#0#0",
+  "question": "이번 달 요금이 계좌 자동이체로도 빠지고 카드로도 결제됐어요. 왜 두 번이나 나간 거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M001#1#0",
+  "question": "그런데 혹시 요금을 납부 기한까지 못 내면 회선 정지는 언제부터 걸리나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M003#0#0",
+  "question": "폰을 바꾸고 싶은데 지금 쓰는 폰 할부가 아직 남아 있어요. 그래도 바꿀 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M003#1#0",
+  "question": "그렇게 바꾼 폰이 배터리가 이상하면요? 며칠 안에 말해야 무를 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M007#0#0",
+  "question": "지금 가입할 수 있는 요금제가 몇 개나 되고 가격대는 어느 정도예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M007#1#0",
+  "question": "제 건 중간 정도라 매달 말쯤 다 썼다고 알림이 오던데, 그 뒤엔 어떻게 해야 해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M008#0#0",
+  "question": "데이터 다 쓰고 400kbps로 느려진 상태랑 언리미티드 요금제랑 실제로 써 보면 차이가 많이 나나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M008#1#0",
+  "question": "가족 네 명이 5G 프리미엄이랑 LTE 맥스로 나눠서 가입하려는데, 두 요금제 가격이랑 데이터가 각각 어떻게 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M009#0#0",
+  "question": "다른 통신사에서 번호 그대로 옮겨 오려는데, 예전 통신사 요금이 좀 밀려 있어요. 그래도 신청돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M009#1#0",
+  "question": "그 회선 명의를 얼마 전에 제 앞으로 바꿨는데, 그래도 바로 할 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M010#0#0",
+  "question": "번호이동 하려는데 이전 통신사에 밀린 요금이 있는지 없는지에 따라 절차가 달라지나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M010#1#0",
+  "question": "그거 토요일에도 처리돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M010#1#1",
+  "question": "번호이동 토요일에도 처리되는지 여부",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M012#0#0",
+  "question": "해외에 보름 있으면서 로밍을 썼는데 요금이 예상보다 훨씬 많이 나왔어요. 왜 이렇게 나온 거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M017#0#0",
+  "question": "아들이 곧 입대해서 쓰던 폰을 해지하려는데 어디서 하면 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M017#1#0",
+  "question": "그 폰 할부가 아직 꽤 남았는데 그건 어떻게 되는 거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M018#0#0",
+  "question": "지금 해외에 나와 있는데 여기서 전화로 회선 해지 신청할 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M018#1#0",
+  "question": "그럼 남은 할부금은 그때 한 번에 다 내야 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M018#1#1",
+  "question": "해지 시 남은 할부금 납부 방법",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M019#0#0",
+  "question": "유심 카드가 깨져 버렸는데 이참에 eSIM으로 바꾸고 싶어요. 어떻게 하면 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-MULTI-M019#1#0",
+  "question": "듀얼심이라는 게 정확히 어떤 기능인가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U003#0#0",
+  "question": "일시 정지 해놓으면 문자는 받을 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U004#0#0",
+  "question": "로밍 7일 기간권 39,000원짜리는 데이터 몇 GB까지 주고, 다 쓰면 속도 제한 걸려요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U005#0#0",
+  "question": "동생한테 선물받은 데이터 이번 달에 다 못 쓰면 그것도 다음 달로 이월돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U006#0#0",
+  "question": "단말보험월보험료는얼마고",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U006#0#1",
+  "question": "개통하고며칠안에가입해야하나요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U008#0#0",
+  "question": "요금 두 번 빠져나간 거 환불받을 때 그 기간 이자도 붙여서 주나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U009#0#0",
+  "question": "eSIM 발급비 2,750원은 그 자리에서 결제해야 해요, 아니면 다음 달 요금에 같이 청구돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U012#0#0",
+  "question": "요금 못 내서 직권 해지됐으면 예전 번호 다시 살릴 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U015#0#0",
+  "question": "해지하면 이월돼서 남아 있던 데이터는 돈으로 환산해서 돌려주나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U016#0#0",
+  "question": "아버지 명의 폰을 제 명의로 바꾸면 아버지가 걸어둔 24개월 약정도 저한테 그대로 넘어오나요, 아니면 위약금 정산하고 새로 시작해요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-NOANSWER-U018#0#0",
+  "question": "시니어 요금제는 한 달에 얼마고 데이터는 몇 기가 줘요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-NOANSWER-U019#0#0",
+  "question": "가입사실확인서 영문으로도 발급돼요? 해외 비자 신청에 내야 해서요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U022#0#0",
+  "question": "5G 언리미티드 쓰는데 노트북에 핫스팟(테더링)으로 연결해서 쓰는 것도 무제한이에요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U023#0#0",
+  "question": "5G 프리미엄 플러스 요금제는 월 얼마예요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-NOANSWER-U024#0#0",
+  "question": "LTE 슬림 요금제로 바꾸고 싶은데 데이터 얼마나 줘요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U025#0#0",
+  "question": "군인 전용 요금제 있나요? 아들이 다음 달 입대해요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U026#0#0",
+  "question": "넷플릭스나 유튜브 프리미엄 포함된 요금제 있어요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-NOANSWER-U028#0#0",
+  "question": "통화연결음 바꾸는 컬러링 서비스 월 이용료 얼마예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U030#0#0",
+  "question": "초등학생키즈워치전용요금제있어요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-NOANSWER-U030#0#1",
+  "question": "월얼마예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U032#0#0",
+  "question": "선택약정 25% 할인 받으려면 어떻게 신청해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U035#0#0",
+  "question": "번호변경은어떻게하고",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U035#0#1",
+  "question": "수수료있어요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U036#0#0",
+  "question": "해외 나가서 해지하려는데, 돌아와서 같은 번호 다시 쓰고 싶거든요. 해지한 번호를 몇 달 보관해 두는 제도 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U037#0#0",
+  "question": "어제 저녁에 통신 장애로 세 시간 넘게 전화가 안 됐는데 이런 건 요금 보상 받을 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U040#0#0",
+  "question": "아버지가 돌아가셨는데 아버지 명의 폰을 해지만 하려면 사망진단서나 가족관계증명서 같은 거 필요한가요? 명의변경은 안 할 거예요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U041#0#0",
+  "question": "이번 달 요금이 너무 많이 나와서 그러는데 두세 번에 나눠서 내도 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U044#0#0",
+  "question": "휴대폰 요금도 현금영수증 발급되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U045#0#0",
+  "question": "법인 명의로 회선 10개 쓰고 있는데 통신요금 세금계산서 매달 받을 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U048#0#0",
+  "question": "매장에서 개통할 때 설명도 없이 부가서비스 세 개를 넣어놨더라고요. 석 달 동안 낸 요금 다 환불받을 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U049#0#0",
+  "question": "제 이번 달 요금 얼마 나왔어요?",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "V2-NOANSWER-U050#0#0",
+  "question": "저 지금 데이터 몇 기가 남았어요?",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "V2-NOANSWER-U051#0#0",
+  "question": "제약정몇개월남았는지",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-NOANSWER-U051#0#1",
+  "question": "지금해지하면위약금정확히얼마인지계산해주세요",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-NOANSWER-U058#0#0",
+  "question": "LG유플러스 로밍이 더 싸다던데 거기는 하루 요금이 얼마예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-NOANSWER-U062#0#0",
+  "question": "갤럭시에서 아이폰으로 바꾸는데 사진이랑 연락처 옮기는 방법 알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "REG-MULTI_TURN#0#0",
+  "question": "요금제는 한 달에 몇 번 바꿀 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "REG-MULTI_TURN#1#0",
+  "question": "가입한 달에도 돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "REG-MULTI_TURN#1#1",
+  "question": "한 달에 몇 번 요금제 변경이 가능한가요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "REG-FAQ_COMPOUND#0#0",
+  "question": "요금제는한달에몇번바꿀수있고",
+  "captureType": "NONE"
+ },
+ {
+  "id": "REG-FAQ_COMPOUND#0#1",
+  "question": "가상계좌는뭐예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C021#0#0",
+  "question": "요금이두번빠져나갔는데환불을우리딸통장으로받아도되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C021#0#1",
+  "question": "그리고해외가서듀얼번호쓰면한달에얼마더붙는지도알려주세요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C022#0#0",
+  "question": "로밍신청한지얼마안됐는데아직안터지네.원래얼마나걸려?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C022#0#1",
+  "question": "그리고한국돌아가면몇달은이번호안쓸건데번호는남겨두고싶거든.정지랑해지중에뭐가나아?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C023#0#0",
+  "question": "유심이갑자기인식이안돼서새로받아야할것같은데요,매장가면바로주나요?비용도궁금하고요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C023#0#1",
+  "question": "회사에낼가입증명서가필요한데홈페이지에서떼면돈들어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C024#0#0",
+  "question": "아버지폰을제명의로가져오려는데아직할부가남아있어요.이상태로도명의변경이되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C024#0#1",
+  "question": "제가지금해외에있는데예전에쓰던다른회선은홈페이지로해지신청하면바로처리되는지도궁금합니다.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C028#0#0",
+  "question": "아빠신분증만들고명의바꾸러갔다가그냥돌아왔어요.뭐가더있어야하나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C029#0#0",
+  "question": "일반요금제는종류가몇개씩있는지,청소년이나시니어처럼나이제한있는요금제도거기포함되는건지궁금하고요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C029#0#1",
+  "question": "또새로산폰을돌려보내는거랑다른걸로바꾸는거랑조건이따로있는거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C031#0#0",
+  "question": "로밍을당일아침에공항가는길에신청해도괜찮을까요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C031#0#1",
+  "question": "청구서를못받아서요금을못냈더니전화거는게막혔어요.청구서도안왔는데왜막힌건지,지금내면언제풀리는지알려주세요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C034#0#0",
+  "question": "해외에서로밍데이터가막혔는데다시쓰려면뭘해야돼요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C034#0#1",
+  "question": "같이사는베트남친구가휴대폰을새로만들려고하는데어떤서류들고가면되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C035#0#0",
+  "question": "한 달 정도 해외에 머물 예정인데 로밍은 어떤 상품으로 하면 좋을까요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C035#0#1",
+  "question": "그리고출국전에부가서비스하나추가하려는데,가입하면바로쓸수있는건가요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C037#0#0",
+  "question": "알뜰요금제가정확히어떤건지잘몰라서요,간단히설명좀해주세요",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-COMPOUND-C037#0#1",
+  "question": "세컨폰을하나만들려는데제이름으로하는거랑중학생아들이름으로하는거랑챙길서류가다른가요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C039#0#0",
+  "question": "한도초과라고나오네요.한사람당몇개까지되는거예요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C039#0#1",
+  "question": "이번에해지하는폰에할부가남았는데한번에갚는거랑계속나눠내는거중에뭐가나을까요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C040#0#0",
+  "question": "생일지나서요금제를바꿔보려는데지금고를수있는요금제가뭐뭐있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-COMPOUND-C040#0#1",
+  "question": "그리고저번주에산폰이맘에안들어서교환하고싶은데어디로신청하면되나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P002#0#0",
+  "question": "이번달요금좀늦게낼것같은데,안내고있으면며칠지나서전화막히고해지까지가?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-PARTIAL-P002#0#1",
+  "question": "그리고늦게내면연체료같은것도따로붙어?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P003#0#0",
+  "question": "산 지 열흘 된 폰인데 다른 기종으로 바꿀 수 있나요? 바꾸게 되면 좀 더 비싼 모델로 가고 싶은데, 그 차액은 어떻게 정산하는지도 궁금해요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P005#0#0",
+  "question": "엄마가쓰시던폰을제명의로돌리려고하는데요,매장가면시간이얼마나걸리고수수료는있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P005#0#1",
+  "question": "그리고엄마가VIP등급이었는데명의를바꾸면그멤버십등급도저한테그대로넘어오나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P006#0#0",
+  "question": "딸이 올해 스무 살이 돼서, 제 명의로 개통해 줬던 딸 폰을 이제 딸 앞으로 넘기려고 합니다. 처리 시간과 비용이 어느 정도인지요? 아직 약정이 1년쯤 남아 있는데, 명의를 넘기면 남은 약정 기간도 딸에게 그대로 이어지나요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "V2-PARTIAL-P007#0#0",
+  "question": "둘다기본데이터다쓰고나면뭐가달라?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P007#0#1",
+  "question": "언리미티드면핫스팟켜서노트북연결해쓰는것도무제한이야?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P008#0#0",
+  "question": "요금좀줄이려고알뜰요금제보는중인데,이걸로5G도쓸수있는건가요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "V2-PARTIAL-P008#0#1",
+  "question": "그리고저희집이가족결합으로묶여있는데,알뜰요금제로바꿔도결합할인은계속받을수있는지알고싶어요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P009#0#0",
+  "question": "TELME로번호이동한지5일됐는데통화품질이별로라철회할까해요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P009#0#1",
+  "question": "철회하면제회선은원래쓰던통신사로돌아가는건가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P009#0#2",
+  "question": "철회할때따로내야하는수수료가있는지도알려주세요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P011#0#0",
+  "question": "비행기내리자마자데이터쓰려면뭘해두면되고연결까지얼마나걸려요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P011#0#1",
+  "question": "환승하는두바이공항에서잠깐데이터쓰면그것도같은로밍으로잡히는건지,요금이따로나오는건지궁금해요.",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P014#0#0",
+  "question": "지난달중순에부가서비스하나를해지했는데청구서에그달이용료가다찍혀있네요.왜그런건지,다음달에도또나오는건아니죠?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P014#0#1",
+  "question": "그리고다른부가서비스도정리하려는데,해지는앱에서바로할수있나요아니면고객센터에전화해야하나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P017#0#0",
+  "question": "정지해두는거랑아예해지하는거랑뭐가더나은지알려주세요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P017#0#1",
+  "question": "정지해둔동안누가제번호로전화하거나문자보내면받을수는있나요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P018#0#0",
+  "question": "해지해도남은할부는지금처럼나눠서낼수있나",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P018#0#1",
+  "question": "그할부금을아들통장말고내카드에서빠져나가게바꿀수있는지도",
+  "captureType": "NONE"
+ },
+ {
+  "id": "V2-PARTIAL-P020#0#0",
+  "question": "유심 바꾸러 내가 직접 가는 거랑 딸 보내는 거랑 챙길 서류가 달라? 딸 보내면 위임장 써야 한다던데 정해진 양식 같은 게 있어, 아니면 그냥 종이에 손으로 써도 돼?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF04#0#0",
+  "question": "약정 걸려 있는데 지금 해지하면 위약금 많이 나오나요?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "FLOW-CF09#0#0",
+  "question": "요금제 추천 좀 해주세요",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF10#0#0",
+  "question": "저희 어머니 쓰실 요금제 하나만 골라주세요",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF11#0#0",
+  "question": "고딩인데 요금제 뭐 쓰는 게 나음?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF12#0#0",
+  "question": "통신비 좀 줄이고 싶은데 저한테 맞는 요금제 있을까요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-MD01#0#0",
+  "question": "제가 지금 무슨 요금제 쓰고 있는 거죠?",
+  "captureType": "MY_SUBSCRIPTION"
+ },
+ {
+  "id": "FLOW-MD02#0#0",
+  "question": "이번 달에 데이터 얼마나 썼어요?",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD04#0#0",
+  "question": "약정 언제 끝나요? 몇 달 남았는지 궁금해서요",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "FLOW-MD05#0#0",
+  "question": "지금 당장 해지하면 위약금 얼마 물어야 돼?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "FLOW-MD06#0#0",
+  "question": "제가 쓰는 거 보면 지금 요금제가 맞는 건지 모르겠어요. 제 사용량 기준으로 추천 좀 해주실래요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD07#0#0",
+  "question": "이번 달 통화랑 문자는 얼마나 썼는지 알 수 있을까요?",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD08#0#0",
+  "question": "내 약정 몇 개월짜리였지?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "FLOW-MD08#1#0",
+  "question": "그럼 위약금은요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD08#1#1",
+  "question": "위약금은 어떻게 되나요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD09#0#0",
+  "question": "이번 달 데이터 사용량 좀 보여주세요",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD09#1#0",
+  "question": "그거 보면 요금제 바꾸는 게 나을까요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF14#0#0",
+  "question": "TELME로 번호이동 했는데 통화 품질이 별로라 원래 쓰던 데로 되돌리고 싶어요. 가능한가요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF15#0#0",
+  "question": "요금을 좀 밀렸는데 이러다 폰 끊기나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF20#0#0",
+  "question": "요금제 지금 다른 걸로 바꿀 수 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF24#0#0",
+  "question": "데이터 다 쓰면 어떻게 돼요? 돈이 더 나오나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-CF25#0#0",
+  "question": "할아버지 폰 바꿔드리려는데 요금제는 뭐가 좋을까요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF26#0#0",
+  "question": "중2 아들 첫 폰인데 요금제 어떤 걸로 해야 돼요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF27#0#0",
+  "question": "대학생인데 넷플릭스를 맨날 봐서 데이터가 엄청 필요해요. 뭐 쓰면 돼요?",
+  "captureType": "PLAN_CATALOG"
+ },
+ {
+  "id": "FLOW-CF28#0#0",
+  "question": "직장인인데 거의 와이파이만 써서 데이터를 별로 안 써요. 싼 요금제 있을까요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF29#0#0",
+  "question": "곧 대학 가는 동생 요금제 하나 추천해 줄래요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-CF30#0#0",
+  "question": "60대 초반이신 아버지 요금제 고르는 중인데, 시니어 요금제 되면 그걸로 하고 아니면 다른 걸로 추천해 주세요",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-MD13#0#0",
+  "question": "제 폰 요금제 한 달 기본료가 얼마짜리예요?",
+  "captureType": "MY_SUBSCRIPTION"
+ },
+ {
+  "id": "FLOW-MD14#0#0",
+  "question": "이번 달 데이터 아직 얼마 남았는지 알 수 있나요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD15#0#0",
+  "question": "저 약정 할인 몇 프로 받고 있죠?",
+  "captureType": "MY_PENALTY"
+ },
+ {
+  "id": "FLOW-MD16#0#0",
+  "question": "약정 걸고 쓴 지 몇 달째인지 궁금해요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD17#0#0",
+  "question": "이번 달 청구될 요금 미리 좀 알 수 있어요? 할인 들어간 금액으로요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD18#0#0",
+  "question": "데이터를 생각보다 적게 쓰는 것 같아서 요금제를 낮출까 하는데, 제 사용량이면 어떤 게 맞을까요?",
+  "captureType": "RECOMMENDATION"
+ },
+ {
+  "id": "FLOW-MD19#0#0",
+  "question": "위약금 하나도 안 내고 해지하려면 몇 달 더 써야 해요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD20#0#0",
+  "question": "제요금제통화무제한맞아요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD20#0#1",
+  "question": "이번달통화얼마나했는지도알려주세요",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD21#0#0",
+  "question": "제 요금제는 데이터 몇 기가 주는 거예요?",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD21#1#0",
+  "question": "이번 달은 그중에 얼마나 썼어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD21#1#1",
+  "question": "이번 달 데이터 사용량은 얼마인가요",
+  "captureType": "MY_USAGE"
+ },
+ {
+  "id": "FLOW-MD22#0#0",
+  "question": "이번 달 전화 몇 분 했어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD23#0#0",
+  "question": "제 폰 약정 걸려 있어요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD23#1#0",
+  "question": "그럼 끝나는 건 언제쯤이에요?",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD23#1#1",
+  "question": "약정이 언제 끝나는지",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD26#0#0",
+  "question": "작년 이맘때 요금 얼마 나왔는지 보고 싶어요",
+  "captureType": "NONE"
+ },
+ {
+  "id": "FLOW-MD27#0#0",
+  "question": "지난주에 일본 다녀왔는데 거기서 로밍 데이터 얼마나 썼는지 나와요?",
+  "captureType": "NONE"
+ }
+]

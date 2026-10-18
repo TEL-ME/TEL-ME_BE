@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.telme.chat.config.ChatQuestionResolutionLlmConfiguration;
 import com.telme.chat.config.ChatQuestionResolutionProperties;
 import com.telme.chat.config.ChatQuestionResolutionProperties.Mode;
 import com.telme.llm.dto.req.LlmRequest;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 // 모델은 대상 개수와 이전 발언의 연결을 판정한다. 사용할 문맥은 코드가 결정한다.
@@ -175,10 +177,12 @@ public class ChatQuestionResolver {
         this(client, mapper, trace, Mode.REGEX_GATED);
     }
 
+    // 문맥 판정의 모델은 ChatQuestionResolutionLlmConfiguration이 고른다(chat.question-resolution.bedrock)
     @Autowired
-    public ChatQuestionResolver(LlmClient client, ObjectMapper mapper, ExecutionTrace trace,
-            ChatQuestionResolutionProperties properties) {
-        this(client, mapper, trace, properties.mode(), properties.stabilityGuards());
+    public ChatQuestionResolver(
+            @Qualifier(ChatQuestionResolutionLlmConfiguration.CONTEXT_RESOLUTION_LLM_CLIENT) LlmClient client,
+            ObjectMapper mapper, ExecutionTrace trace, ChatQuestionResolutionProperties properties) {
+        this(client, mapper, trace, properties.mode(), properties.guardsEnabled());
     }
 
     public ChatQuestionResolver(LlmClient client, ObjectMapper mapper, ExecutionTrace trace, Mode mode) {

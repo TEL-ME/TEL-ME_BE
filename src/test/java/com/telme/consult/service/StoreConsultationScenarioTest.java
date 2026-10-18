@@ -19,7 +19,7 @@ import java.util.Map;
 
 /** 다른 팀의 검색 구현 없이 실행하는 상담 연결 시나리오. 실제 지도 API 통합 테스트는 아니다. */
 class StoreConsultationScenarioTest {
-    private final DialogueService dialogue = new DialogueService(p -> p.fallbackText());
+    private final DialogueService dialogue = new DialogueService();
     private final StoreSearchAssessment assessment = new StoreSearchAssessment();
 
     @Test
