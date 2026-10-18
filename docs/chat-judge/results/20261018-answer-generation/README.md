@@ -173,7 +173,7 @@ Judge 세 모델의 판정이 갈렸거나 미확정인 답을 사람이 통과�
   - Judge만으로는 any-fail 6~7%p 차이, 다수결은 같았다. Judge가 갈린 답을 사람이 판정하면 8~10%p 차이다(67.2% 대 75.6~77.1%).
   - 근거 없는 주장은 엑사원의 절반 이하다. 사람 판정에서도 실패는 대부분 엑사원이 덧붙인 근거 없는 말이었다.
   - gpt-oss의 약점은 두 가지다. `7,800원`처럼 근거 숫자를 바꿔 쓰는 실수가 있고, 답이 짧아 필수 사실을 빠뜨리는 경우가 있다. 숫자 실수는 가드가 막아 거절로 끝난다.
-- **13번은 gpt-oss로 정한다.** 남은 일은 TELME-182에서 답변 생성용 Bedrock 설정을 넣는 것과, 짧은 `유심 재발급 비용` 질문의 `7,800원` 문제다.
+- **13번은 gpt-oss로 정한다.** 이 이슈에서 설정(`RAG_ANSWER_BEDROCK`, 기본 꺼짐)을 넣었다. 남은 일은 짧은 `유심 재발급 비용` 질문의 `7,800원` 문제다.
 
 ## 재현
 
@@ -185,7 +185,7 @@ O=docs/chat-judge/results/20261018-answer-generation
 python -I -X utf8 $J/prep_label_inputs.py <작업 폴더> <inputs-a.json> <inputs-b182.json> <capture-b182.jsonl>
 python -I -X utf8 $J/merge_labels.py <작업 폴더>
 
-# Judge 입력(호출 없음). 답변 파일은 TELME-186(A), TELME-182(B)의 results에 있다
+# Judge 입력(호출 없음). 답변 파일은 scripts/answer-generation-evaluation/results/의 TELME-186-20261018(A, #173)과 TELME-182(B, #174)에 있다
 python -I -X utf8 $J/to_capture.py A <inputs-a.json> $J/labels/labels-A.jsonl capture-A.json.gz <answers-a-exaone.jsonl.gz> <answers-a-gptoss.jsonl.gz>
 python -I -X utf8 $J/to_capture.py B <inputs-b182.json> $J/labels/labels-B.jsonl capture-B.json.gz <answers-b182-exaone.jsonl.gz> <answers-b182-gptoss.jsonl.gz> --capture <capture-b182.jsonl.gz>
 

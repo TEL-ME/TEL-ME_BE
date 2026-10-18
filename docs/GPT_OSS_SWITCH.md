@@ -18,7 +18,7 @@
 | 10 | 비교 근거 검증 | `LlmComparisonEvidenceResolver` | **gpt-oss 확정**, 기본 켜짐(TELME-184) | `CONSULT_COMPARISON_EVIDENCE_BEDROCK` (주지 않으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`, true) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) "비교 근거 검증 재확인". 블라인드 양쪽 답 있음 19개에서 맞는 답 엑사원 1, gpt-oss 5~6, 틀린 답 0 |
 | 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **gpt-oss 확정**, TELME-184에서 수정(P7), 기본 켜짐 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK` (위와 같음, true), `CONSULT_CANDIDATE_EVIDENCE_JUDGE` (true) | 같은 문서 "복합 질문 입력 확인"(TELME-182, 수정 전 채택 1건)과 "후보 근거 검증 수정"(TELME-184). 수정 후 개발용 맞는 답 30 / 31 / 30, 블라인드 12 / 12 / 10. 문맥 해석이 후속 질문을 복원하지 못하면 틀린 답이 날 수 있다("후속 질문 확인") |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
-| 13 | 답변 생성 | `RagAnswerGenerator` | 미정, **TELME-180 Judge 채점으로 정함** | 없음 | 이 브랜치는 위 1~11번 결정으로 앞단을 통과한 입력과 두 모델 답변(각 3회)까지 만든다(아래 "답변 생성 입력과 답변"). 채점과 결정은 TELME-180 `docs/chat-judge/results/20261018-answer-generation` |
+| 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (false) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) |
 
 대화 요약, 세션 제목, 상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나왔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)).
 
@@ -30,15 +30,17 @@ ROUTING_REQUEST_INVENTORY_ENABLED=false
 CHAT_QUESTION_RESOLUTION_BEDROCK=true
 CONSULT_PLAN_QUESTION_BEDROCK=true
 CONSULT_FAQ_CLARIFICATION_BEDROCK=true
+RAG_ANSWER_BEDROCK=true
 ```
 
-- `QueryRoutingService`는 `routingLlmClient`(`RoutingLlmConfiguration`)를, `ChatQuestionResolver`는 `contextResolutionLlmClient`(`ChatQuestionResolutionLlmConfiguration`)를, `PlanQuestionClassifier`는 `planQuestionLlmClient`(`PlanQuestionConfiguration`)를 이름으로 주입받는다. 다른 호출의 기본 모델은 그대로 EXAONE이다.
+- `QueryRoutingService`는 `routingLlmClient`(`RoutingLlmConfiguration`)를, `ChatQuestionResolver`는 `contextResolutionLlmClient`(`ChatQuestionResolutionLlmConfiguration`)를, `PlanQuestionClassifier`는 `planQuestionLlmClient`(`PlanQuestionConfiguration`)를, `RagAnswerGenerator`는 `ragAnswerLlmClient`(`RagAnswerLlmConfiguration`)를 이름으로 주입받는다. 다른 호출의 기본 모델은 그대로 EXAONE이다.
 - `LLM_BEDROCK_ENABLED=false`로 Bedrock 빈이 없으면 플래그를 켜도 EXAONE을 쓴다.
-- 1~7번은 아직 기본 꺼짐이다. 아래 마지막 측정 뒤에 한 번에 켠다. 10·11번(근거 검증)은 TELME-184에서 기본 켜짐으로 들어갔다.
+- 답변 생성은 스트리밍이다. Bedrock 클라이언트는 답을 다 받은 뒤 한 번에 보내므로(TELME-182 B 입력에서 gpt-oss 호출 중앙값 0.44초) 글자가 나눠서 나오지 않는다. 첫 글자를 보내기 전에 Bedrock이 실패하면 같은 요청을 엑사원 스트리밍으로 다시 부른다(`FallbackLlmClient`). 글자가 나간 뒤에는 대체하지 않는다.
+- 1~7번과 13번은 아직 기본 꺼짐이다. 아래 마지막 측정 뒤에 한 번에 켠다. 10·11번(근거 검증)은 TELME-184에서 기본 켜짐으로 들어갔다.
 
 ## 답변 생성 입력과 답변 (13번)
 
-13번 모델은 품질 채점으로 정해야 해서 TELME-180으로 넘긴다. 이 브랜치에서는 위 결정으로 앞단을 통과한 입력을 저장하고, 두 모델로 답을 만들었다. 답변 생성 B 입력은 [ANSWER_GENERATION_COMPARISON.md](ANSWER_GENERATION_COMPARISON.md)(TELME-178)에 처음 만든 것이 있고, 그 입력으로 엑사원·gpt-oss를 각 3회 돌린 결과는 [ANSWER_GENERATION_EXAONE_REPEAT.md](ANSWER_GENERATION_EXAONE_REPEAT.md)(TELME-186)에 있다. 그 입력은 앞단 전체를 측정용 중계기로 gpt-oss에 보내 만든 것이라, 이번에는 앱 설정으로 결정된 구성만 켜고 다시 캡처했다.
+13번 모델은 품질 채점으로 정해야 해서 TELME-180에서 정했다(gpt-oss). TELME-182에서는 위 결정으로 앞단을 통과한 입력을 저장하고, 두 모델로 답을 만들었다. 답변 생성 B 입력은 [ANSWER_GENERATION_COMPARISON.md](ANSWER_GENERATION_COMPARISON.md)(TELME-178)에 처음 만든 것이 있고, 그 입력으로 엑사원·gpt-oss를 각 3회 돌린 결과는 [ANSWER_GENERATION_EXAONE_REPEAT.md](ANSWER_GENERATION_EXAONE_REPEAT.md)(TELME-186)에 있다. 그 입력은 앞단 전체를 측정용 중계기로 gpt-oss에 보내 만든 것이라, 이번에는 앱 설정으로 결정된 구성만 켜고 다시 캡처했다.
 
 | 항목 | 내용 |
 |---|---|
@@ -81,7 +83,7 @@ python3 -I scripts/answer-generation-evaluation/score_answers.py build/answers-b
 
 ## 남은 일
 
-- 13번은 TELME-180에서 Judge 채점으로 정한다. 정하면 답변 생성용 Bedrock 설정을 추가한다.
+- 13번(답변 생성): 짧은 `유심 재발급 비용` 질문에 gpt-oss가 근거(7,700원)와 다른 `7,800원`을 써서 가드가 거절로 바꾸는 문제(TELME-182 B 입력에서 가드가 대체한 31건 중 26건).
 - 문맥 해석의 앞단 규칙(`REGEX_GATED`)이 대상이 빠진 후속 질문("그 기간에도 요금이 나와요?", "그동안 문자는 받을 수 있어요?")을 모델 없이 혼자 완결된 질문으로 넘긴다. 후속 질문 블라인드 30개 중 24개가 그랬다([EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) "후속 질문 확인").
 - 요금제 질문 분류에서 두 모델이 같이 놓치는 내 정보 질문(28개 중 9개, [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md)).
 - 전환을 모두 켠 구성으로 평가셋 v2.2와 대화 흐름 v2를 세 모델 Judge로 2~3회 잰다.
