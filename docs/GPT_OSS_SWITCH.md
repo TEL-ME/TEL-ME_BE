@@ -38,7 +38,7 @@ CONSULT_FAQ_CLARIFICATION_BEDROCK=true
 
 ## 답변 생성 입력과 답변 (13번)
 
-13번 모델은 품질 채점으로 정해야 해서 TELME-180으로 넘긴다. 이 브랜치에서는 위 결정으로 앞단을 통과한 입력을 저장하고, 두 모델로 답을 만들었다. 답변 생성 B 입력은 [ANSWER_GENERATION_COMPARISON.md](ANSWER_GENERATION_COMPARISON.md)에 처음 만든 것이 있는데, 그때는 앞단 전체를 측정용 중계기로 gpt-oss에 보냈다. 이번에는 앱 설정으로 결정된 구성만 켜고 다시 캡처했다.
+13번 모델은 품질 채점으로 정해야 해서 TELME-180으로 넘긴다. 이 브랜치에서는 위 결정으로 앞단을 통과한 입력을 저장하고, 두 모델로 답을 만들었다. 답변 생성 B 입력은 [ANSWER_GENERATION_COMPARISON.md](ANSWER_GENERATION_COMPARISON.md)(TELME-178)에 처음 만든 것이 있고, 그 입력으로 엑사원·gpt-oss를 각 3회 돌린 결과는 [ANSWER_GENERATION_EXAONE_REPEAT.md](ANSWER_GENERATION_EXAONE_REPEAT.md)(TELME-186)에 있다. 그 입력은 앞단 전체를 측정용 중계기로 gpt-oss에 보내 만든 것이라, 이번에는 앱 설정으로 결정된 구성만 켜고 다시 캡처했다.
 
 | 항목 | 내용 |
 |---|---|
