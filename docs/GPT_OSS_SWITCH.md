@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | 문맥 해석 | `ChatQuestionResolver` | **gpt-oss 확정**, 설정 추가 | `CHAT_QUESTION_RESOLUTION_BEDROCK` (false) | [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md). 켜면 흔들림 보완도 함께 켜진다. 비용 항목 목록의 `위약금` 누락은 프롬프트를 고치면 재측정이 필요해 아직 손대지 않았다 |
 | 2 | 의도 분류 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | [ROUTING_CALL_COMPARISON.md](ROUTING_CALL_COMPARISON.md) 1단계 |
-| 3 | 요청 개수 판정 | `QueryRoutingService` | **gpt-oss 전환 시 끔** | `ROUTING_REQUEST_INVENTORY_ENABLED` (true) | 같은 문서 2단계. `ROUTING_BEDROCK=true`면 false로 둔다 |
+| 3 | 요청 개수 판정 | `QueryRoutingService` | **gpt-oss 전환 시 끔** | `ROUTING_REQUEST_INVENTORY_ENABLED` (true) | 같은 문서 2단계. `ROUTING_BEDROCK=true`면 false로 둔다. 켜 둔 채 Bedrock으로 라우팅하면 시작할 때 경고 로그를 남긴다 |
 | 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 3단계 |
 | 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 4단계 |
 | 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (false) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154(3회 같음), gpt-oss 164~166. gpt-oss 호출당 p50 0.60초(엑사원 시간은 배포 환경에서 잰다). 출력 한도를 30에서 512로 올렸다 |
