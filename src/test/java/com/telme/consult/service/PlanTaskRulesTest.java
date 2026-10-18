@@ -20,7 +20,7 @@ class PlanTaskRulesTest {
     @DisplayName("요금제 이름이나 \"그걸로\"와 함께 바꿔 달라는 말, \"요금제 바꿔줘\"처럼 분명히 맡기는 말은 변경 요청이다")
     @ValueSource(strings = {
             "5G 라이트로 바꿔줘", "LTE 맥스로 변경해 주세요", "5G 프리미엄으로 바꿔줘", "알뜰 미니로 갈아탈래요",
-            "5G 스탠다드로 변경 신청할게요", "요금제 바꿔줘", "그걸로 바꿔줘", "추천해준 요금제로 변경해주세요",
+            "5G 스탠다드로 변경 신청할게요", "요금제 바꿔줘", "그걸로 바꿔줘", "추천해준 요금제로 변경해주세요", "휴대폰 요금제 바꿔줘", "요금제 변경 부탁드려요",
             "오지 라이트로 바꿔 주세요", "5G 라이트로 바꾸고 싶어요", "lte 베이직으로 할게요"})
     void 변경(String question) {
         assertThat(PlanTaskRules.detect(question)).contains(PlanTask.CHANGE);
@@ -64,7 +64,9 @@ class PlanTaskRulesTest {
             "회원 탈퇴해줘", "회원가입 하고 싶어요",
             "디즈니 플러스 해지해줘", "유튜브 프리미엄 가입해줘", "넷플릭스 베이직으로 바꿔줘", "티빙 해지할게요",
             "요금제 변경 신청 취소해줘", "요금제 가입 신청 취소해줘", "요금제 해지 신청 취소해줘", "5G 라이트로 바꾼 거 취소해줘",
-            "일시 정지 신청 철회할게요"})
+            "일시 정지 신청 철회할게요",
+            "5G 라이트 가입 혜택 정리해줘", "요금제 변경 이유 설명해줘", "요금제 변경 가능한지 확인해줘", "해지 위약금 계산해줘",
+            "인터넷 해지해줘", "IPTV 해지해줘", "휴대폰 바꿔줘", "핸드폰 5G로 바꾸고 싶어요"})
     void 업무_요청_아님(String question) {
         assertThat(PlanTaskRules.detect(question)).isEmpty();
     }
@@ -105,6 +107,12 @@ class PlanTaskRulesTest {
         assertThat(PlanTaskRules.pauseDays("한 달 일시정지해줘")).hasValue(30);
         assertThat(PlanTaskRules.pauseDays("두 달 일시정지해줘")).hasValue(60);
         assertThat(PlanTaskRules.pauseDays("일시정지해줘")).isEqualTo(OptionalInt.empty());
+        // 범위로 말하면 첫 숫자를 기간으로 읽지 않고 화면에서 고르게 한다. 정지 요청으로는 받는다
+        assertThat(PlanTaskRules.pauseDays("3일부터 7일까지 일시정지해줘")).isEqualTo(OptionalInt.empty());
+        assertThat(PlanTaskRules.pauseDays("3~7일 일시정지해줘")).isEqualTo(OptionalInt.empty());
+        assertThat(PlanTaskRules.pauseDays("10월 20일부터 25일까지 일시정지해줘")).isEqualTo(OptionalInt.empty());
+        assertThat(PlanTaskRules.pauseDays("오늘부터 7일 일시정지해줘")).hasValue(7);
+        assertThat(PlanTaskRules.detect("3일부터 7일까지 일시정지해줘")).contains(PlanTask.PAUSE);
     }
 
     @Test

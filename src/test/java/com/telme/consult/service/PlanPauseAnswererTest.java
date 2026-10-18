@@ -47,6 +47,8 @@ class PlanPauseAnswererTest {
     void 기간() {
         assertThat(answerer.answer(USER_ID, "7일 일시 정지해줘", null).content()).contains("오늘 7일 정지하면 10월 24일까지예요.");
         assertThat(answerer.answer(USER_ID, "두 달 일시정지해줘", null).content()).contains("60일은 한 번에 정지할 수 있는 기간을 넘어요.");
+        assertThat(answerer.answer(USER_ID, "3일부터 7일까지 일시정지해줘", null).content())
+                .doesNotContain("오늘 3일").startsWith("일시 정지는 내 요금제 화면에서 신청할 수 있어요. 한 번에");
     }
 
     @Test

@@ -71,6 +71,32 @@ class PlanTaskAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("업무 판정은 이번 원문으로만 한다. 문맥으로 풀어쓴 문장에 섞인 이전 변경 요청은 다시 잡지 않는다")
+    void 이전_발언의_요청() {
+        Prepared searched = Prepared.none();
+        when(faq.prepare(any(), anyBoolean())).thenReturn(searched);
+        String resolved = "[대상을 확인할 이전 고객 발언]\n5G 라이트로 바꿔줘\n[현재 후속 질문]\n그건 데이터 몇 기가예요?";
+        AnswerInput input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그건 데이터 몇 기가예요?",
+                "그건 데이터 몇 기가예요?", Map.of(), resolved, null);
+
+        assertThat(provider.prepare(input, true)).isSameAs(searched);
+        verify(changes, never()).answer(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("이번 원문이 업무 요청이면 풀어쓴 문장은 처리기가 대상 요금제를 보충하는 데 넘긴다")
+    void 대상_보충() {
+        String resolved = "[대상을 확인할 이전 고객 발언]\n5G 라이트 얼마예요?\n[현재 후속 질문]\n그걸로 바꿔줘";
+        when(changes.answer(USER_ID, "그걸로 바꿔줘", resolved))
+                .thenReturn(PlanTaskOutcome.reply("5G 라이트로 바꾸려면 변경 화면에서 골라 주세요.", PlanTaskLinks.CHANGE));
+
+        GeneratedAnswer answer = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그걸로 바꿔줘",
+                "그걸로 바꿔줘", Map.of(), resolved, null), true).answer();
+
+        assertThat(answer.answer().content()).startsWith("5G 라이트로 바꾸려면");
+    }
+
+    @Test
     @DisplayName("업무마다 맡은 처리기로 보낸다. 해지 요청은 변경 처리기를 부르지 않는다")
     void 업무별_처리기() {
         when(cancels.answer(any(), any(), any())).thenReturn(PlanTaskOutcome.reply("해지하면 바로 끊겨요.", PlanTaskLinks.CANCEL));

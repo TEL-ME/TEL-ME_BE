@@ -71,7 +71,9 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
         return taskAnswer(input).orElseGet(() -> withChangeLink(delegate.generate(input)));
     }
 
-    // 업무 요청이 아니면 비어 있다. 사용자가 쓴 원문을 먼저 보고, 업무 요청이 아니면 문맥으로 풀어쓴 문장을 본다
+    // 업무 요청이 아니면 비어 있다. 업무 판정은 사용자가 이번에 쓴 원문으로만 한다. 문맥으로 풀어쓴 문장에는
+    // "[대상을 확인할 이전 고객 발언] 5G 라이트로 바꿔줘 [현재 후속 질문] 그건 데이터 몇 기가예요?"처럼 이전 요청이 섞여 있어,
+    // 처리기가 대상 요금제를 보충할 때만 쓴다
     private Optional<GeneratedAnswer> taskAnswer(AnswerInput input) {
         if (!enabled || input == null || input.purpose() != Purpose.GENERAL_FAQ) {
             return Optional.empty();
@@ -80,9 +82,7 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
         if (linkGuide.isPresent()) {
             return Optional.of(answered(input, "link", new PlanTaskOutcome(linkGuide.get(), List.of())));
         }
-        Optional<PlanTaskHandler> handler = PlanTaskRules.detect(input.originalUserQuery())
-                .or(() -> PlanTaskRules.detect(input.resolvedUserQuery()))
-                .map(handlers::get);
+        Optional<PlanTaskHandler> handler = PlanTaskRules.detect(input.originalUserQuery()).map(handlers::get);
         return handler.map(task -> answered(input, task.task().name(), handle(task, input)));
     }
 
