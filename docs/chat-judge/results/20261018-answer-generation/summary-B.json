@@ -12,9 +12,9 @@
     "exaone-r1": {
      "turns": 131,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 114,
-      "pct": 61.4
+      "pct": 60.5
      },
      "undecided": 17,
      "unsupported": {
@@ -23,9 +23,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -41,9 +41,9 @@
     "exaone-r2": {
      "turns": 131,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 114,
-      "pct": 61.4
+      "pct": 60.5
      },
      "undecided": 17,
      "unsupported": {
@@ -52,9 +52,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -70,9 +70,9 @@
     "exaone-r3": {
      "turns": 131,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 114,
-      "pct": 61.4
+      "pct": 60.5
      },
      "undecided": 17,
      "unsupported": {
@@ -81,9 +81,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -100,19 +100,19 @@
      "turns": 131,
      "pass": {
       "n": 72,
-      "d": 107,
-      "pct": 67.3
+      "d": 106,
+      "pct": 67.9
      },
-     "undecided": 24,
+     "undecided": 25,
      "unsupported": {
       "n": 9,
       "d": 131,
       "pct": 6.9
      },
      "qualityComplete": {
-      "n": 103,
+      "n": 104,
       "d": 131,
-      "pct": 78.6
+      "pct": 79.4
      },
      "overRefusal": {
       "n": 10,
@@ -129,19 +129,19 @@
      "turns": 131,
      "pass": {
       "n": 72,
-      "d": 110,
-      "pct": 65.5
+      "d": 109,
+      "pct": 66.1
      },
-     "undecided": 21,
+     "undecided": 22,
      "unsupported": {
       "n": 12,
       "d": 131,
       "pct": 9.2
      },
      "qualityComplete": {
-      "n": 102,
+      "n": 103,
       "d": 131,
-      "pct": 77.9
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 12,
@@ -158,19 +158,19 @@
      "turns": 131,
      "pass": {
       "n": 74,
-      "d": 110,
-      "pct": 67.3
+      "d": 109,
+      "pct": 67.9
      },
-     "undecided": 21,
+     "undecided": 22,
      "unsupported": {
       "n": 10,
       "d": 131,
       "pct": 7.6
      },
      "qualityComplete": {
-      "n": 102,
+      "n": 103,
       "d": 131,
-      "pct": 77.9
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 10,
@@ -188,9 +188,9 @@
     "exaone-r1": {
      "turns": 131,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 122,
-      "pct": 79.5
+      "pct": 78.7
      },
      "undecided": 9,
      "unsupported": {
@@ -199,9 +199,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -217,9 +217,9 @@
     "exaone-r2": {
      "turns": 131,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 122,
-      "pct": 79.5
+      "pct": 78.7
      },
      "undecided": 9,
      "unsupported": {
@@ -228,9 +228,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -246,9 +246,9 @@
     "exaone-r3": {
      "turns": 131,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 122,
-      "pct": 79.5
+      "pct": 78.7
      },
      "undecided": 9,
      "unsupported": {
@@ -257,9 +257,9 @@
       "pct": 18.3
      },
      "qualityComplete": {
-      "n": 108,
+      "n": 107,
       "d": 131,
-      "pct": 82.4
+      "pct": 81.7
      },
      "overRefusal": {
       "n": 4,
@@ -275,20 +275,20 @@
     "gptoss-r1": {
      "turns": 131,
      "pass": {
-      "n": 102,
-      "d": 129,
-      "pct": 79.1
+      "n": 103,
+      "d": 130,
+      "pct": 79.2
      },
-     "undecided": 2,
+     "undecided": 1,
      "unsupported": {
       "n": 9,
       "d": 131,
       "pct": 6.9
      },
      "qualityComplete": {
-      "n": 103,
+      "n": 104,
       "d": 131,
-      "pct": 78.6
+      "pct": 79.4
      },
      "overRefusal": {
       "n": 10,
@@ -304,9 +304,9 @@
     "gptoss-r2": {
      "turns": 131,
      "pass": {
-      "n": 100,
+      "n": 101,
       "d": 130,
-      "pct": 76.9
+      "pct": 77.7
      },
      "undecided": 1,
      "unsupported": {
@@ -315,9 +315,9 @@
       "pct": 9.2
      },
      "qualityComplete": {
-      "n": 102,
+      "n": 103,
       "d": 131,
-      "pct": 77.9
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 12,
@@ -333,9 +333,9 @@
     "gptoss-r3": {
      "turns": 131,
      "pass": {
-      "n": 100,
+      "n": 101,
       "d": 128,
-      "pct": 78.1
+      "pct": 78.9
      },
      "undecided": 3,
      "unsupported": {
@@ -344,9 +344,9 @@
       "pct": 7.6
      },
      "qualityComplete": {
-      "n": 102,
+      "n": 103,
       "d": 131,
-      "pct": 77.9
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 10,
@@ -363,23 +363,23 @@
    "pairs": {
     "r1": {
      "둘 다 통과": 45,
-     "엑사원만": 12,
+     "엑사원만": 11,
      "둘 다 실패": 20,
-     "미확정 포함": 34,
+     "미확정 포함": 35,
      "gpt-oss만": 20
     },
     "r2": {
      "둘 다 통과": 46,
-     "엑사원만": 13,
+     "엑사원만": 12,
      "둘 다 실패": 21,
-     "미확정 포함": 32,
+     "미확정 포함": 33,
      "gpt-oss만": 19
     },
     "r3": {
      "둘 다 통과": 47,
-     "엑사원만": 12,
+     "엑사원만": 11,
      "둘 다 실패": 20,
-     "미확정 포함": 32,
+     "미확정 포함": 33,
      "gpt-oss만": 20
     }
    }
@@ -390,9 +390,9 @@
     "exaone-r1": {
      "turns": 126,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 109,
-      "pct": 64.2
+      "pct": 63.3
      },
      "undecided": 17,
      "unsupported": {
@@ -401,9 +401,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -419,9 +419,9 @@
     "exaone-r2": {
      "turns": 126,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 109,
-      "pct": 64.2
+      "pct": 63.3
      },
      "undecided": 17,
      "unsupported": {
@@ -430,9 +430,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -448,9 +448,9 @@
     "exaone-r3": {
      "turns": 126,
      "pass": {
-      "n": 70,
+      "n": 69,
       "d": 109,
-      "pct": 64.2
+      "pct": 63.3
      },
      "undecided": 17,
      "unsupported": {
@@ -459,9 +459,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -478,19 +478,19 @@
      "turns": 126,
      "pass": {
       "n": 72,
-      "d": 102,
-      "pct": 70.6
+      "d": 101,
+      "pct": 71.3
      },
-     "undecided": 24,
+     "undecided": 25,
      "unsupported": {
       "n": 7,
       "d": 126,
       "pct": 5.6
      },
      "qualityComplete": {
-      "n": 100,
+      "n": 101,
       "d": 126,
-      "pct": 79.4
+      "pct": 80.2
      },
      "overRefusal": {
       "n": 10,
@@ -507,19 +507,19 @@
      "turns": 126,
      "pass": {
       "n": 72,
-      "d": 105,
-      "pct": 68.6
+      "d": 104,
+      "pct": 69.2
      },
-     "undecided": 21,
+     "undecided": 22,
      "unsupported": {
       "n": 10,
       "d": 126,
       "pct": 7.9
      },
      "qualityComplete": {
-      "n": 99,
+      "n": 100,
       "d": 126,
-      "pct": 78.6
+      "pct": 79.4
      },
      "overRefusal": {
       "n": 12,
@@ -536,19 +536,19 @@
      "turns": 126,
      "pass": {
       "n": 74,
-      "d": 105,
-      "pct": 70.5
+      "d": 104,
+      "pct": 71.2
      },
-     "undecided": 21,
+     "undecided": 22,
      "unsupported": {
       "n": 8,
       "d": 126,
       "pct": 6.3
      },
      "qualityComplete": {
-      "n": 98,
+      "n": 99,
       "d": 126,
-      "pct": 77.8
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 10,
@@ -566,9 +566,9 @@
     "exaone-r1": {
      "turns": 126,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 120,
-      "pct": 80.8
+      "pct": 80.0
      },
      "undecided": 6,
      "unsupported": {
@@ -577,9 +577,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -595,9 +595,9 @@
     "exaone-r2": {
      "turns": 126,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 120,
-      "pct": 80.8
+      "pct": 80.0
      },
      "undecided": 6,
      "unsupported": {
@@ -606,9 +606,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -624,9 +624,9 @@
     "exaone-r3": {
      "turns": 126,
      "pass": {
-      "n": 97,
+      "n": 96,
       "d": 120,
-      "pct": 80.8
+      "pct": 80.0
      },
      "undecided": 6,
      "unsupported": {
@@ -635,9 +635,9 @@
       "pct": 17.5
      },
      "qualityComplete": {
-      "n": 105,
+      "n": 104,
       "d": 126,
-      "pct": 83.3
+      "pct": 82.5
      },
      "overRefusal": {
       "n": 4,
@@ -653,20 +653,20 @@
     "gptoss-r1": {
      "turns": 126,
      "pass": {
-      "n": 102,
-      "d": 125,
-      "pct": 81.6
+      "n": 103,
+      "d": 126,
+      "pct": 81.7
      },
-     "undecided": 1,
+     "undecided": 0,
      "unsupported": {
       "n": 7,
       "d": 126,
       "pct": 5.6
      },
      "qualityComplete": {
-      "n": 100,
+      "n": 101,
       "d": 126,
-      "pct": 79.4
+      "pct": 80.2
      },
      "overRefusal": {
       "n": 10,
@@ -682,9 +682,9 @@
     "gptoss-r2": {
      "turns": 126,
      "pass": {
-      "n": 100,
+      "n": 101,
       "d": 125,
-      "pct": 80.0
+      "pct": 80.8
      },
      "undecided": 1,
      "unsupported": {
@@ -693,9 +693,9 @@
       "pct": 7.9
      },
      "qualityComplete": {
-      "n": 99,
+      "n": 100,
       "d": 126,
-      "pct": 78.6
+      "pct": 79.4
      },
      "overRefusal": {
       "n": 12,
@@ -711,9 +711,9 @@
     "gptoss-r3": {
      "turns": 126,
      "pass": {
-      "n": 99,
+      "n": 100,
       "d": 124,
-      "pct": 79.8
+      "pct": 80.6
      },
      "undecided": 2,
      "unsupported": {
@@ -722,9 +722,9 @@
       "pct": 6.3
      },
      "qualityComplete": {
-      "n": 98,
+      "n": 99,
       "d": 126,
-      "pct": 77.8
+      "pct": 78.6
      },
      "overRefusal": {
       "n": 10,
@@ -741,23 +741,23 @@
    "pairs": {
     "r1": {
      "둘 다 통과": 45,
-     "엑사원만": 12,
+     "엑사원만": 11,
      "둘 다 실패": 15,
-     "미확정 포함": 34,
+     "미확정 포함": 35,
      "gpt-oss만": 20
     },
     "r2": {
      "둘 다 통과": 46,
-     "엑사원만": 13,
+     "엑사원만": 12,
      "둘 다 실패": 16,
-     "미확정 포함": 32,
+     "미확정 포함": 33,
      "gpt-oss만": 19
     },
     "r3": {
      "둘 다 통과": 47,
-     "엑사원만": 12,
+     "엑사원만": 11,
      "둘 다 실패": 15,
-     "미확정 포함": 32,
+     "미확정 포함": 33,
      "gpt-oss만": 20
     }
    }
@@ -1129,356 +1129,356 @@
    }
   },
   "근거 충분(엑사원 턴 기준)": {
-   "inputs": 119,
+   "inputs": 118,
    "anyFail": {
     "exaone-r1": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 68,
-      "d": 104,
-      "pct": 65.4
+      "d": 103,
+      "pct": 66.0
      },
      "undecided": 15,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "exaone-r2": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 68,
-      "d": 104,
-      "pct": 65.4
+      "d": 103,
+      "pct": 66.0
      },
      "undecided": 15,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "exaone-r3": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 68,
-      "d": 104,
-      "pct": 65.4
+      "d": 103,
+      "pct": 66.0
      },
      "undecided": 15,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "gptoss-r1": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 70,
-      "d": 96,
-      "pct": 72.9
+      "d": 95,
+      "pct": 73.7
      },
      "undecided": 23,
      "unsupported": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      },
      "qualityComplete": {
       "n": 98,
-      "d": 119,
-      "pct": 82.4
+      "d": 118,
+      "pct": 83.1
      },
      "overRefusal": {
       "n": 10,
-      "d": 119,
-      "pct": 8.4
+      "d": 118,
+      "pct": 8.5
      },
      "shouldAbstain": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      }
     },
     "gptoss-r2": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 69,
-      "d": 98,
-      "pct": 70.4
+      "d": 97,
+      "pct": 71.1
      },
      "undecided": 21,
      "unsupported": {
       "n": 8,
-      "d": 119,
-      "pct": 6.7
+      "d": 118,
+      "pct": 6.8
      },
      "qualityComplete": {
       "n": 96,
-      "d": 119,
-      "pct": 80.7
+      "d": 118,
+      "pct": 81.4
      },
      "overRefusal": {
       "n": 11,
-      "d": 119,
-      "pct": 9.2
+      "d": 118,
+      "pct": 9.3
      },
      "shouldAbstain": {
       "n": 8,
-      "d": 119,
-      "pct": 6.7
+      "d": 118,
+      "pct": 6.8
      }
     },
     "gptoss-r3": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 71,
-      "d": 98,
-      "pct": 72.4
+      "d": 97,
+      "pct": 73.2
      },
      "undecided": 21,
      "unsupported": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      },
      "qualityComplete": {
       "n": 96,
-      "d": 119,
-      "pct": 80.7
+      "d": 118,
+      "pct": 81.4
      },
      "overRefusal": {
       "n": 10,
-      "d": 119,
-      "pct": 8.4
+      "d": 118,
+      "pct": 8.5
      },
      "shouldAbstain": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      }
     }
    },
    "majority": {
     "exaone-r1": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 92,
-      "d": 112,
-      "pct": 82.1
+      "d": 111,
+      "pct": 82.9
      },
      "undecided": 7,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "exaone-r2": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 92,
-      "d": 112,
-      "pct": 82.1
+      "d": 111,
+      "pct": 82.9
      },
      "undecided": 7,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "exaone-r3": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 92,
-      "d": 112,
-      "pct": 82.1
+      "d": 111,
+      "pct": 82.9
      },
      "undecided": 7,
      "unsupported": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      },
      "qualityComplete": {
       "n": 102,
-      "d": 119,
-      "pct": 85.7
+      "d": 118,
+      "pct": 86.4
      },
      "overRefusal": {
       "n": 3,
-      "d": 119,
+      "d": 118,
       "pct": 2.5
      },
      "shouldAbstain": {
       "n": 20,
-      "d": 119,
-      "pct": 16.8
+      "d": 118,
+      "pct": 16.9
      }
     },
     "gptoss-r1": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 98,
       "d": 117,
       "pct": 83.8
      },
-     "undecided": 2,
+     "undecided": 1,
      "unsupported": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      },
      "qualityComplete": {
       "n": 98,
-      "d": 119,
-      "pct": 82.4
+      "d": 118,
+      "pct": 83.1
      },
      "overRefusal": {
       "n": 10,
-      "d": 119,
-      "pct": 8.4
+      "d": 118,
+      "pct": 8.5
      },
      "shouldAbstain": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      }
     },
     "gptoss-r2": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 95,
-      "d": 119,
-      "pct": 79.8
+      "d": 118,
+      "pct": 80.5
      },
      "undecided": 0,
      "unsupported": {
       "n": 8,
-      "d": 119,
-      "pct": 6.7
+      "d": 118,
+      "pct": 6.8
      },
      "qualityComplete": {
       "n": 96,
-      "d": 119,
-      "pct": 80.7
+      "d": 118,
+      "pct": 81.4
      },
      "overRefusal": {
       "n": 11,
-      "d": 119,
-      "pct": 9.2
+      "d": 118,
+      "pct": 9.3
      },
      "shouldAbstain": {
       "n": 8,
-      "d": 119,
-      "pct": 6.7
+      "d": 118,
+      "pct": 6.8
      }
     },
     "gptoss-r3": {
-     "turns": 119,
+     "turns": 118,
      "pass": {
       "n": 95,
-      "d": 117,
-      "pct": 81.2
+      "d": 116,
+      "pct": 81.9
      },
      "undecided": 2,
      "unsupported": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      },
      "qualityComplete": {
       "n": 96,
-      "d": 119,
-      "pct": 80.7
+      "d": 118,
+      "pct": 81.4
      },
      "overRefusal": {
       "n": 10,
-      "d": 119,
-      "pct": 8.4
+      "d": 118,
+      "pct": 8.5
      },
      "shouldAbstain": {
       "n": 6,
-      "d": 119,
-      "pct": 5.0
+      "d": 118,
+      "pct": 5.1
      }
     }
    },
@@ -1487,21 +1487,21 @@
      "둘 다 통과": 44,
      "엑사원만": 11,
      "미확정 포함": 31,
-     "둘 다 실패": 14,
+     "둘 다 실패": 13,
      "gpt-oss만": 19
     },
     "r2": {
      "둘 다 통과": 45,
      "엑사원만": 12,
      "미확정 포함": 30,
-     "둘 다 실패": 15,
+     "둘 다 실패": 14,
      "gpt-oss만": 17
     },
     "r3": {
      "둘 다 통과": 46,
      "엑사원만": 11,
      "미확정 포함": 30,
-     "둘 다 실패": 14,
+     "둘 다 실패": 13,
      "gpt-oss만": 18
     }
    }
@@ -2355,19 +2355,19 @@
      "turns": 15,
      "pass": {
       "n": 6,
-      "d": 11,
-      "pct": 54.5
+      "d": 10,
+      "pct": 60.0
      },
-     "undecided": 4,
+     "undecided": 5,
      "unsupported": {
       "n": 3,
       "d": 15,
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 1,
@@ -2384,19 +2384,19 @@
      "turns": 15,
      "pass": {
       "n": 6,
-      "d": 11,
-      "pct": 54.5
+      "d": 10,
+      "pct": 60.0
      },
-     "undecided": 4,
+     "undecided": 5,
      "unsupported": {
       "n": 3,
       "d": 15,
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 1,
@@ -2413,19 +2413,19 @@
      "turns": 15,
      "pass": {
       "n": 6,
-      "d": 11,
-      "pct": 54.5
+      "d": 10,
+      "pct": 60.0
      },
-     "undecided": 4,
+     "undecided": 5,
      "unsupported": {
       "n": 3,
       "d": 15,
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 0,
@@ -2530,20 +2530,20 @@
     "gptoss-r1": {
      "turns": 15,
      "pass": {
-      "n": 12,
-      "d": 14,
-      "pct": 85.7
+      "n": 13,
+      "d": 15,
+      "pct": 86.7
      },
-     "undecided": 1,
+     "undecided": 0,
      "unsupported": {
       "n": 3,
       "d": 15,
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 1,
@@ -2559,9 +2559,9 @@
     "gptoss-r2": {
      "turns": 15,
      "pass": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "undecided": 0,
      "unsupported": {
@@ -2570,9 +2570,9 @@
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 1,
@@ -2588,9 +2588,9 @@
     "gptoss-r3": {
      "turns": 15,
      "pass": {
-      "n": 12,
+      "n": 13,
       "d": 14,
-      "pct": 85.7
+      "pct": 92.9
      },
      "undecided": 1,
      "unsupported": {
@@ -2599,9 +2599,9 @@
       "pct": 20.0
      },
      "qualityComplete": {
-      "n": 13,
+      "n": 14,
       "d": 15,
-      "pct": 86.7
+      "pct": 93.3
      },
      "overRefusal": {
       "n": 0,
@@ -2617,20 +2617,20 @@
    },
    "pairs": {
     "r1": {
-     "미확정 포함": 6,
-     "둘 다 실패": 4,
+     "미확정 포함": 7,
+     "둘 다 실패": 3,
      "둘 다 통과": 4,
      "gpt-oss만": 1
     },
     "r2": {
-     "미확정 포함": 6,
-     "둘 다 실패": 4,
+     "미확정 포함": 7,
+     "둘 다 실패": 3,
      "둘 다 통과": 4,
      "gpt-oss만": 1
     },
     "r3": {
-     "미확정 포함": 6,
-     "둘 다 실패": 4,
+     "미확정 포함": 7,
+     "둘 다 실패": 3,
      "둘 다 통과": 4,
      "gpt-oss만": 1
     }
@@ -3773,9 +3773,9 @@
     "exaone-r1": {
      "turns": 31,
      "pass": {
-      "n": 19,
+      "n": 18,
       "d": 27,
-      "pct": 70.4
+      "pct": 66.7
      },
      "undecided": 4,
      "unsupported": {
@@ -3784,9 +3784,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -3802,9 +3802,9 @@
     "exaone-r2": {
      "turns": 31,
      "pass": {
-      "n": 19,
+      "n": 18,
       "d": 27,
-      "pct": 70.4
+      "pct": 66.7
      },
      "undecided": 4,
      "unsupported": {
@@ -3813,9 +3813,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -3831,9 +3831,9 @@
     "exaone-r3": {
      "turns": 31,
      "pass": {
-      "n": 19,
+      "n": 18,
       "d": 27,
-      "pct": 70.4
+      "pct": 66.7
      },
      "undecided": 4,
      "unsupported": {
@@ -3842,9 +3842,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -3949,9 +3949,9 @@
     "exaone-r1": {
      "turns": 31,
      "pass": {
-      "n": 23,
+      "n": 22,
       "d": 27,
-      "pct": 85.2
+      "pct": 81.5
      },
      "undecided": 4,
      "unsupported": {
@@ -3960,9 +3960,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -3978,9 +3978,9 @@
     "exaone-r2": {
      "turns": 31,
      "pass": {
-      "n": 23,
+      "n": 22,
       "d": 27,
-      "pct": 85.2
+      "pct": 81.5
      },
      "undecided": 4,
      "unsupported": {
@@ -3989,9 +3989,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -4007,9 +4007,9 @@
     "exaone-r3": {
      "turns": 31,
      "pass": {
-      "n": 23,
+      "n": 22,
       "d": 27,
-      "pct": 85.2
+      "pct": 81.5
      },
      "undecided": 4,
      "unsupported": {
@@ -4018,9 +4018,9 @@
       "pct": 12.9
      },
      "qualityComplete": {
-      "n": 29,
+      "n": 28,
       "d": 31,
-      "pct": 93.5
+      "pct": 90.3
      },
      "overRefusal": {
       "n": 1,
@@ -4123,32 +4123,32 @@
    },
    "pairs": {
     "r1": {
-     "엑사원만": 7,
+     "엑사원만": 6,
      "둘 다 통과": 8,
      "미확정 포함": 9,
-     "둘 다 실패": 4,
+     "둘 다 실패": 5,
      "gpt-oss만": 3
     },
     "r2": {
-     "엑사원만": 7,
+     "엑사원만": 6,
      "둘 다 통과": 8,
      "미확정 포함": 9,
-     "둘 다 실패": 4,
+     "둘 다 실패": 5,
      "gpt-oss만": 3
     },
     "r3": {
-     "엑사원만": 7,
+     "엑사원만": 6,
      "둘 다 통과": 9,
      "미확정 포함": 9,
-     "둘 다 실패": 4,
+     "둘 다 실패": 5,
      "gpt-oss만": 2
     }
    }
   }
  },
  "reviewCounts": {
-  "Judge 모델끼리 갈림": 60,
+  "Judge 모델끼리 갈림": 59,
   "라벨 검토 대상": 100,
-  "결합 판정 미확정": 54
+  "결합 판정 미확정": 57
  }
 }

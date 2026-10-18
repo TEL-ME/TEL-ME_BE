@@ -1,0 +1,105 @@
+{
+ "review": "1차 사람 검토(2026-10-18)",
+ "document": "docs/chat-judge/results/20261018-answer-generation/LABEL_REVIEW.md",
+ "items": {
+  "HALLU-009": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "HALLU-012": {
+   "decision": "기대 동작 변경 → PARTIAL_ANSWER"
+  },
+  "HALLU-017": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "EVAL-070": {
+   "decision": "기대 동작 변경 → ANSWER"
+  },
+  "H-083": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "H-086": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "H-112": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "H-114": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "H-121": {
+   "decision": "기대 동작 변경 → ABSTAIN"
+  },
+  "RU-212-t0-r0": {
+   "decision": "기대 동작 변경 → ANSWER"
+  },
+  "RU-319-t0-r1": {
+   "decision": "기대 동작 변경 → PARTIAL_ANSWER"
+  },
+  "HALLU-001": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "HALLU-002": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "HALLU-016": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "EVAL-073": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "EVAL-131": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "H-111": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "RU-342-t0-r1": {
+   "decision": "필수 사실·근거만 변경"
+  },
+  "EVAL-019": {
+   "decision": "유지"
+  },
+  "EVAL-059": {
+   "decision": "유지"
+  },
+  "EVAL-074": {
+   "decision": "유지"
+  },
+  "H-085": {
+   "decision": "유지"
+  },
+  "RU-283-t0-r0": {
+   "decision": "유지"
+  },
+  "FLOW-MT-03-t1-r0": {
+   "decision": "유지"
+  },
+  "RU-116-t0-r0": {
+   "decision": "유지"
+  },
+  "RU-132-t0-r0": {
+   "decision": "유지"
+  },
+  "RU-276-t0-r0": {
+   "decision": "유지"
+  },
+  "RU-291-t0-r0": {
+   "decision": "유지"
+  },
+  "EVAL-148": {
+   "decision": "유지"
+  },
+  "CLAR-faq-bill-vague-twice-t2-r0": {
+   "decision": "유지"
+  },
+  "CLAR-faq-bill-dont-know-t1-r0": {
+   "decision": "유지"
+  },
+  "CLAR-faq-bill-hmm-twice-t2-r0": {
+   "decision": "유지"
+  },
+  "CLAR-faq-bill-unsure-immediate-t1-r0": {
+   "decision": "유지"
+  }
+ }
+}

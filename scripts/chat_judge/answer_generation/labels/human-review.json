@@ -1,692 +1,5 @@
 {
- "priority1_labels": [
-  {
-   "id": "EVAL-019",
-   "set": "A",
-   "question": "철회 기간 14일은 영업일 기준인가요?",
-   "conversation": [],
-   "label": {
-    "id": "EVAL-019",
-    "expectedBehavior": "ABSTAIN",
-    "answerSources": [],
-    "parts": [],
-    "requiredFacts": [],
-    "missingFact": null,
-    "confidence": "high",
-    "note": "철회 기간 14일이 영업일인지 달력일인지는 카탈로그에 없다. 같은 질문인 PORTING-0108의 answer는 '개통 후 14일 이내로 안내됩니다'로 기준을 말하지 않고, PORTING-0016은 기산일(개통일)만 말한다. '개통일로부터 14일'은 말해도 되지만 영업일·달력일을 단정하면 근거 부족."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자 정답은 PORTING-0108(같은 질문 '철회 기간 14일은 영업일인가요, 달력일인가요?')·0008·0064·0080이지만 PORTING-0108 answer는 '개통 후 14일 이내로 안내됩니다. 기한이 임박했다면 서둘러 신청하시는 것이 안전합니다'로 영업일·달력일 기준을 말하지 않는다. PORTING-0016은 기산일(번호이동 개통일)만 말한다. 카탈로그 기준으로는 ABSTAIN이 맞다고 보아 라벨을 유지했으나, 설계자는 0108로 답하는 것(개통일로부터 14일 이내 + 서둘러 신청)을 정답으로 본 것으로 보여 ABSTAIN과 ANSWER(기준 미명시 안내) 중 어느 쪽으로 채점할지 사람이 정해야 한다."
-   ]
-  },
-  {
-   "id": "EVAL-059",
-   "set": "A",
-   "question": "개통 취소할 수 있는 기간이 주말 빼고 세는 건지 그냥 날짜로 세는 건지 헷갈려요",
-   "conversation": [],
-   "label": {
-    "id": "EVAL-059",
-    "expectedBehavior": "ABSTAIN",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [],
-    "requiredFacts": [],
-    "missingFact": "개통 취소(철회) 14일을 주말 포함 달력일로 세는지 영업일로 세는지",
-    "confidence": "low",
-    "note": "번호이동 철회(PORTING-04)와 단말 반품(DEVICE-04)은 '개통 후 14일 이내'라고만 하고 영업일/달력일 여부를 말하지 않음. 다른 정책은 '영업일'을 명시하므로 달력일로 추정할 수는 있으나 근거 없음. 기간(14일)만 안내하고 세는 방식은 확인 불가로 보는 답도 적절. 신규 개통 자체의 취소 정책은 카탈로그에 없음."
-   },
-   "reasons": [
-    "검증 판단 불가: 카탈로그는 철회·반품 기간을 \"개통 후 14일 이내\"라고만 하고 영업일/달력일 여부는 어디에도 없음(PORTING-0108도 같은 질문에 \"14일 이내로 안내됩니다\"로만 답함). 설계자 정답은 PORTING-0108 등을 답 근거로 보지만 세는 방식은 확인되지 않음. ABSTAIN(세는 방식은 확인 불가)으로 둘지, 14일 이내 사실을 요구하는 PARTIAL_ANSWER로 둘지 사람이 정해야 함. \"개통 취소\"가 번호이동 철회인지 단말 반품인지도 불명확(둘 다 14일).",
-    "작성자 확신 낮음: 번호이동 철회(PORTING-04)와 단말 반품(DEVICE-04)은 '개통 후 14일 이내'라고만 하고 영업일/달력일 여부를 말하지 않음. 다른 정책은 '영업일'을 명시하므로 달력일로 추정할 수는 있으나 근거 없음. 기간(14일)만 안내하고 세는 방식은 확인 불가로 보는 답도 적절. 신규 개통 자체의 취소 정책은 카탈로그에 없음."
-   ]
-  },
-  {
-   "id": "EVAL-070",
-   "set": "A",
-   "question": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
-   "conversation": [],
-   "label": {
-    "id": "EVAL-070",
-    "expectedBehavior": "PARTIAL_ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "회사 업무로 매장에 갔을 때 본인 주민등록증만으로는 안 되는 이유",
-      "sourceIds": [
-       "SUBSCRIBE-0089"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "본인 명의 신분증은 본인 명의 개통에만 쓰이고 법인 명의는 별도 심사 절차로 진행된다",
-     "법인 명의 업무에 무엇을 더 가져가야 하는지는 FAQ에서 확인할 수 없다"
-    ],
-    "missingFact": "법인(회사) 명의 업무를 대신 처리할 때 필요한 서류",
-    "confidence": "low",
-    "note": "무슨 업무(법인 개통, 명의변경, 유심 재발급 등)인지 모름. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 설명하나 필요 서류는 카탈로그에 없음. 명의변경이면 회사 측 위임장(NAME_CHANGE-0022·0034), 유심 대리면 위임장·가입자 신분증 사본(USIM-02)으로 답이 달라져 되묻기도 적절할 수 있음. 또한 SUBSCRIBE-0009(법인 담당자가 개통하러 갈 때 본인 명의 신분증이면 됨)·0049·0069·0129(회사 폰도 본인 신분증이면 됨)는 질문 맥락상 담당자 본인 신분증으로 된다고 읽혀 SUBSCRIBE-0089와 충돌할 수 있음(answer 본문만 보면 일반 신분증 안내)."
-   },
-   "reasons": [
-    "검증 판단 불가: 무슨 업무(법인 개통, 명의변경, 유심 대리 등)인지 질문에서 알 수 없고, 고객 발화가 불만 진술이라 \"무엇을 더 가져가야 하는지\"까지 묻는 것으로 볼지도 갈림. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 주지만, SUBSCRIBE-0009·0049·0069·0129는 법인 담당자·회사 폰도 본인 신분증이면 된다는 맥락이라 0089와 충돌 소지가 있음. PARTIAL_ANSWER 유지가 맞는지, 되묻기(ANSWER_OR_CLARIFY)가 맞는지 사람 검토 필요.",
-    "작성자 확신 낮음: 무슨 업무(법인 개통, 명의변경, 유심 재발급 등)인지 모름. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 설명하나 필요 서류는 카탈로그에 없음. 명의변경이면 회사 측 위임장(NAME_CHANGE-0022·0034), 유심 대리면 위임장·가입자 신분증 사본(USIM-02)으로 답이 달라져 되묻기도 적절할 수 있음."
-   ]
-  },
-  {
-   "id": "EVAL-074",
-   "set": "A",
-   "question": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
-   "conversation": [],
-   "label": {
-    "id": "EVAL-074",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "남은 단말 할부금을 한꺼번에 내는 것과 나눠 내는 것 중 어느 쪽이 손해인지",
-      "sourceIds": [
-       "TERMINATE-0103"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "남은 할부금 총액은 같고 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "직접 답하는 것은 해지 시 잔여 할부금 FAQ(TERMINATE-0103)뿐이고 질문에는 해지 상황이 없음. 할부 수수료 연 5.9%(DEVICE-01)가 남은 기간 분에도 붙는지, 일시 납부 시 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황이 아니면 ABSTAIN일 수 있어 사람 검토 필요."
-   },
-   "reasons": [
-    "검증 판단 불가: 질문에 해지 상황이 없음. 직접 답하는 FAQ는 분실 해지 상황의 TERMINATE-0103(잔여 할부금 총액은 같음)뿐이고, 해지 없이 남은 할부금을 일찍 갚는 경우 연 5.9% 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황으로 보면 ANSWER, 일반 중도 상환으로 보면 ABSTAIN 또는 PARTIAL_ANSWER라 해석이 갈림. 설계자 정답(TERMINATE-0103)과 라벨은 같은 쪽.",
-    "작성자 확신 낮음: 직접 답하는 것은 해지 시 잔여 할부금 FAQ(TERMINATE-0103)뿐이고 질문에는 해지 상황이 없음. 할부 수수료 연 5.9%(DEVICE-01)가 남은 기간 분에도 붙는지, 일시 납부 시 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황이 아니면 ABSTAIN일 수 있어 사람 검토 필요."
-   ]
-  },
-  {
-   "id": "HALLU-012",
-   "set": "A",
-   "question": "번호이동은 얼마나 걸려요? 새로 가입하는 것보다 빠른가요?",
-   "conversation": [],
-   "label": {
-    "id": "HALLU-012",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "번호이동이 얼마나 걸리는지",
-      "sourceIds": [
-       "PORTING-0001",
-       "PORTING-0009",
-       "PORTING-0017",
-       "PORTING-0025",
-       "PORTING-0029",
-       "PORTING-0033",
-       "PORTING-0037",
-       "PORTING-0049",
-       "PORTING-0073",
-       "PORTING-0081",
-       "PORTING-0089",
-       "PORTING-0093",
-       "PORTING-0101",
-       "PORTING-0109",
-       "PORTING-0113"
-      ]
-     },
-     {
-      "questionPart": "번호이동이 신규 가입보다 빠른지",
-      "sourceIds": [
-       "SUBSCRIBE-0003",
-       "SUBSCRIBE-0007",
-       "SUBSCRIBE-0011",
-       "SUBSCRIBE-0019",
-       "SUBSCRIBE-0027",
-       "SUBSCRIBE-0031",
-       "SUBSCRIBE-0039",
-       "SUBSCRIBE-0043",
-       "SUBSCRIBE-0047",
-       "SUBSCRIBE-0067",
-       "SUBSCRIBE-0071",
-       "SUBSCRIBE-0099",
-       "SUBSCRIBE-0103",
-       "SUBSCRIBE-0107",
-       "SUBSCRIBE-0111",
-       "SUBSCRIBE-0115",
-       "SUBSCRIBE-0119",
-       "SUBSCRIBE-0123",
-       "SUBSCRIBE-0127"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "번호이동은 평균 2시간 이내에 완료되고 늦어도 24시간 안에 처리된다",
-     "신규 가입은 매장에서 30분 이내에 개통되고 온라인 신청은 다음 날 개통된다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "번호이동과 신규 가입을 직접 비교한 FAQ는 없다. 두 FAQ 사실로 비교하면 매장 신규 개통(30분)보다는 느리고 온라인 신규 개통(다음 날)보다는 빠를 수 있다는 정도만 말할 수 있다. 번호이동 처리 시간(09:00~20:00)은 묻지 않아 필수 사실에서 뺐다. 비교 부분을 답할 수 있다고 볼지 사람 확인이 필요하다."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자 정보는 '신규 가입과의 비교는 근거에 없음'으로 보는데, 라벨은 PORTING-0001 등(평균 2시간, 최대 24시간)과 SUBSCRIBE-0011 등(매장 30분, 온라인 다음 날)의 사실을 나란히 놓으면 비교할 수 있다고 보고 ANSWER로 두었다. 카탈로그에 두 절차를 직접 비교한 FAQ는 없어서(번호이동+신규 함께 검색 0건) 비교 부분을 PARTIAL_ANSWER(missingFact: 번호이동과 신규 가입의 직접 비교)로 볼지 사람이 정해야 한다. 라벨은 그대로 두었다. 어느 쪽이든 '번호이동이 더 빠르다/느리다'고 잘라 말하면 근거가 없다.",
-    "작성자 확신 낮음: 번호이동과 신규 가입을 직접 비교한 FAQ는 없다. 두 FAQ 사실로 비교하면 매장 신규 개통(30분)보다는 느리고 온라인 신규 개통(다음 날)보다는 빠를 수 있다는 정도만 말할 수 있다. 번호이동 처리 시간(09:00~20:00)은 묻지 않아 필수 사실에서 뺐다. 비교 부분을 답할 수 있다고 볼지 사람 확인이 필요하다."
-   ]
-  },
-  {
-   "id": "HALLU-016",
-   "set": "A",
-   "question": "로밍 요금제 얼마고 현지에서 끊을 수 있어요?",
-   "conversation": [],
-   "label": {
-    "id": "HALLU-016",
-    "expectedBehavior": "PARTIAL_ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "로밍 요금제가 얼마인지",
-      "sourceIds": [
-       "ROAMING-0016",
-       "ROAMING-0021",
-       "ROAMING-0026",
-       "ROAMING-0051",
-       "ROAMING-0066"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "일 단위 로밍 요금제는 9,900원이다",
-     "7일 기간권은 39,000원이다",
-     "데이터 무제한 로밍은 하루 12,100원이다",
-     "현지에서 로밍 요금제를 해지할 수 있는지는 FAQ에서 확인할 수 없다"
-    ],
-    "missingFact": "현지에서 로밍 요금제 해지(중단) 가능 여부",
-    "confidence": "low",
-    "note": "\"끊다\"를 해지로 읽었다. \"표를 끊다\"처럼 현지에서 신청(가입)한다는 뜻이면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 해석을 사람이 확인해야 한다. 요금 불만 상황 FAQ(ROAMING-0056, 0061)는 뺐다."
-   },
-   "reasons": [
-    "검증 판단 불가: '현지에서 끊을 수 있어요'가 해지(중단)인지 구매(신청)인지 해석이 둘로 갈린다. 해지로 읽으면 로밍 해지·중단을 다루는 FAQ가 없어(로밍+해지/중단/취소 검색 0건) PARTIAL_ANSWER가 맞고(설계자 정보도 이 해석), 신청으로 읽으면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 라벨(해지 해석, PARTIAL_ANSWER)은 그대로 두었다. 가격 부분 근거와 사실은 카탈로그와 맞다.",
-    "작성자 확신 낮음: \"끊다\"를 해지로 읽었다. \"표를 끊다\"처럼 현지에서 신청(가입)한다는 뜻이면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 해석을 사람이 확인해야 한다. 요금 불만 상황 FAQ(ROAMING-0056, 0061)는 뺐다."
-   ]
-  },
-  {
-   "id": "H-083",
-   "set": "A",
-   "question": "청소년 요금제를 쓰다가 만 18세가 지나면 자동으로 다른 요금제로 바뀌나요?",
-   "conversation": [],
-   "label": {
-    "id": "H-083",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "청소년 요금제를 쓰다가 만 18세가 지나면 자동으로 다른 요금제로 바뀌는지",
-      "sourceIds": [
-       "PLAN-0094"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "PLAN-0094만 나이가 지난 뒤 전환을 말하는데 \"전환될 수 있다\"로 자동 여부를 확정하지 않는다. PLAN-0104의 \"자동 전환되지 않고 신청이 필요\"는 만 65세 시니어 전환 상황이라 넣지 않았다. PLAN-0049는 일반 요금제로 바꾸려면 변경 신청이라고만 한다. 자동 전환 여부는 카탈로그가 분명히 말하지 않아 ABSTAIN으로 볼 여지도 있다."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자는 답 없음(expectNoAnswer)으로 봤지만 PLAN-0094 answer가 '청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있습니다'라고 연령 경과 뒤 전환을 직접 말한다. 다만 '자동으로' 바뀌는지는 확정하지 않는다('전환될 수 있다', 매장에서 확인). PLAN-0064도 '만 18세 이하만 가입 대상'만 말한다. PLAN-0094를 근거로 '전환될 수 있다'로 답하면 ANSWER, 자동 여부를 묻는 핵심에 답이 없다고 보면 ABSTAIN이다. 라벨(ANSWER, PLAN-0094)을 유지하되 사람이 정해야 한다.",
-    "작성자 확신 낮음: PLAN-0094만 나이가 지난 뒤 전환을 말하는데 \"전환될 수 있다\"로 자동 여부를 확정하지 않는다. PLAN-0104의 \"자동 전환되지 않고 신청이 필요\"는 만 65세 시니어 전환 상황이라 넣지 않았다. PLAN-0049는 일반 요금제로 바꾸려면 변경 신청이라고만 한다. 자동 전환 여부는 카탈로그가 분명히 말하지 않아 ABSTAIN으로 볼 여지도 있다."
-   ]
-  },
-  {
-   "id": "H-085",
-   "set": "A",
-   "question": "남은 할부금을 한꺼번에 갚으면 남은 수수료는 빼주나요?",
-   "conversation": [],
-   "label": {
-    "id": "H-085",
-    "expectedBehavior": "ABSTAIN",
-    "answerSources": [],
-    "parts": [],
-    "requiredFacts": [],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "할부 수수료 연 5.9%, 해지 시 잔여 할부금 일시 납부 원칙만 있고 중도 일시 상환 시 남은 수수료 감면 여부는 없다. TERMINATE-0103(해지 시 일시 납부와 할부 유지는 잔여 할부금 총액이 같다)은 해지 상황이라 넣지 않았으나, 일시 상환해도 총액이 줄지 않는다고 읽힐 여지가 있어 low."
-   },
-   "reasons": [
-    "검증 판단 불가: 라벨과 설계자 모두 ABSTAIN이고 중도 상환 시 수수료 감면을 직접 말하는 FAQ는 없다. 다만 TERMINATE-0103 answer가 '잔여 할부금 총액은 같고, 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이'라고 해, 해지 상황에서는 일시 납부해도 총액이 줄지 않는다(=남은 수수료를 빼 주지 않는다)고 읽힐 수 있다. 질문에는 해지 전제가 없어 다른 상황으로 보고 ABSTAIN을 유지했지만, 챗봇이 TERMINATE-0103을 들어 답했을 때 감점할지 사람이 정해야 한다. 라벨 confidence를 low로 낮추고 note에 이 점을 더했다."
-   ]
-  },
-  {
-   "id": "H-112",
-   "set": "A",
-   "question": "자녀 명의로 가입할 때 법정대리인이 조부모여도 되나요?",
-   "conversation": [],
-   "label": {
-    "id": "H-112",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "자녀(손주) 명의로 가입할 때 조부모가 법정대리인 역할을 할 수 있는지",
-      "sourceIds": [
-       "SUBSCRIBE-0050",
-       "SUBSCRIBE-0130"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "손주(미성년자) 명의로 개통할 때는 부모 동의서, 가족관계증명서, 부모 신분증이 필요하다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "SUBSCRIBE-0050·0130은 조부모가 손주 폰을 만드는 상황에서 부모 서류가 필요하다고 해 조부모 단독으로는 안 된다고 읽힌다. 다만 조부모가 실제 법정대리인(후견인)인 경우는 카탈로그가 말하지 않아 ABSTAIN으로 볼 여지가 있다. 일반 FAQ는 \"법정대리인 동의서·가족관계증명서·법정대리인 신분증\"이라고만 한다."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자는 답 없음으로 봤지만 SUBSCRIBE-0050·0130 answer가 손주 명의 개통 시 '부모 동의서, 가족관계증명서, 부모 신분증'이 필요하다고 해 조부모 단독으로는 법정대리인 서류를 대신할 수 없다고 읽힌다. 그러나 조부모가 실제 법정대리인(후견인)인 경우의 자격 범위는 카탈로그가 말하지 않는다(일반 FAQ는 '법정대리인 동의서·가족관계증명서·법정대리인 신분증'만). 질문을 '조부모가 대신 해 줄 수 있나'로 읽으면 ANSWER, '조부모가 법정대리인 자격이 되나'로 읽으면 ABSTAIN이라 해석이 갈린다. 라벨(ANSWER)을 유지한다.",
-    "작성자 확신 낮음: SUBSCRIBE-0050·0130은 조부모가 손주 폰을 만드는 상황에서 부모 서류가 필요하다고 해 조부모 단독으로는 안 된다고 읽힌다. 다만 조부모가 실제 법정대리인(후견인)인 경우는 카탈로그가 말하지 않아 ABSTAIN으로 볼 여지가 있다. 일반 FAQ는 \"법정대리인 동의서·가족관계증명서·법정대리인 신분증\"이라고만 한다."
-   ]
-  },
-  {
-   "id": "H-114",
-   "set": "A",
-   "question": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하나요?",
-   "conversation": [],
-   "label": {
-    "id": "H-114",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하는지",
-      "sourceIds": [
-       "PORTING-0002",
-       "PORTING-0006",
-       "PORTING-0010",
-       "PORTING-0014",
-       "PORTING-0018",
-       "PORTING-0026",
-       "PORTING-0030",
-       "PORTING-0034",
-       "PORTING-0038",
-       "PORTING-0042",
-       "PORTING-0045",
-       "PORTING-0046",
-       "PORTING-0050",
-       "PORTING-0074",
-       "PORTING-0078",
-       "PORTING-0082",
-       "PORTING-0098",
-       "PORTING-0102",
-       "PORTING-0106",
-       "PORTING-0110"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "번호이동은 본인 신분증을 지참해 신청하면 된다",
-     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행된다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "카탈로그는 기존 통신사에 따로 연락할 필요가 없다고 직접 말하지 않고 준비물(본인 신분증, 기존 통신사 미납 완납)만 말한다. PORTING-0045 \"신분증 가지고 가서 옮긴다고 하시면 됩니다\"가 가장 가깝다. 결합 상품이면 해지 조건은 기존 통신사에 확인해야 한다(PORTING-0050)는 조건부 사실이 있다. 직접 답이 아니라 ABSTAIN으로 볼 여지가 있어 low."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자는 답 없음으로 봤다. 카탈로그 어디에도 '기존 통신사에 먼저 연락할 필요 없다'는 문장은 없고, 번호이동 준비물이 본인 신분증과 기존 통신사 미납 완납뿐이라는 FAQ(PORTING-02 다수, PORTING-0045 '신분증 가지고 가서 옮긴다고 하시면 됩니다')에서 추론해야 한다. PORTING-0050은 결합 해지 조건은 기존 통신사에 확인하라고 해 조건부로는 연락이 필요하다. 준비물 안내로 답한 것을 ANSWER로 볼지, 연락 필요 여부 자체가 없으니 ABSTAIN으로 볼지 사람이 정해야 한다. 라벨(ANSWER, 준비물 사실)을 유지한다.",
-    "작성자 확신 낮음: 카탈로그는 기존 통신사에 따로 연락할 필요가 없다고 직접 말하지 않고 준비물(본인 신분증, 기존 통신사 미납 완납)만 말한다. PORTING-0045 \"신분증 가지고 가서 옮긴다고 하시면 됩니다\"가 가장 가깝다. 결합 상품이면 해지 조건은 기존 통신사에 확인해야 한다(PORTING-0050)는 조건부 사실이 있다. 직접 답이 아니라 ABSTAIN으로 볼 여지가 있어 low."
-   ]
-  },
-  {
-   "id": "H-121",
-   "set": "A",
-   "question": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있나요?",
-   "conversation": [],
-   "label": {
-    "id": "H-121",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있는지",
-      "sourceIds": [
-       "DEVICE-0071"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "분실 신고로 정지된 회선은 고객센터에서 정지 해제를 요청할 수 있다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "DEVICE-0071은 단말 분실 신고 뒤 다시 찾은 상황의 답이라 유심 분실 신고에 그대로 적용되는지 확실하지 않다. 새 유심을 이미 재발급받았다면 기존 유심은 자동 해지된다(USIM-0004 등)는 조건이 있으나 고객이 재발급 여부를 말하지 않았고 원래 유심을 쓰려는 상황이라 필수 사실에서 뺐다."
-   },
-   "reasons": [
-    "검증 판단 불가: 설계자는 답 없음(신고 취소는 다루지 않음)으로 봤다. DEVICE-0071 answer '분실 신고로 즉시 정지된 회선은 고객센터에서 정지 해제를 요청하실 수 있습니다'는 단말 분실 정책(DEVICE-03)이지만 '분실 신고로 정지된 회선' 일반을 말해, 유심 분실 신고(USIM-0004 '분실 신고를 하시면 즉시 이용 정지')에도 적용된다고 볼 수 있다. 재발급 전이라면 원래 유심을 다시 쓸 수 있다는 추론은 USIM-0096('신고만 하시면 즉시 이용 정지만 되고')과도 맞는다. 다른 정책 FAQ를 끌어온 답을 ANSWER로 인정할지 사람이 정해야 한다. 라벨(ANSWER, DEVICE-0071)을 유지한다.",
-    "작성자 확신 낮음: DEVICE-0071은 단말 분실 신고 뒤 다시 찾은 상황의 답이라 유심 분실 신고에 그대로 적용되는지 확실하지 않다. 새 유심을 이미 재발급받았다면 기존 유심은 자동 해지된다(USIM-0004 등)는 조건이 있으나 고객이 재발급 여부를 말하지 않았고 원래 유심을 쓰려는 상황이라 필수 사실에서 뺐다."
-   ]
-  },
-  {
-   "id": "RU-283-t0-r0",
-   "set": "B",
-   "question": "개통 취소 기간",
-   "conversation": [],
-   "label": {
-    "id": "RU-283-t0-r0",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "개통 취소 가능 기간",
-      "sourceIds": [
-       "DEVICE-0020",
-       "DEVICE-0028",
-       "DEVICE-0100",
-       "DEVICE-0116",
-       "DEVICE-0004",
-       "DEVICE-0060",
-       "DEVICE-0120",
-       "DEVICE-0036",
-       "DEVICE-0124",
-       "PORTING-0004",
-       "PORTING-0008",
-       "PORTING-0012",
-       "PORTING-0016",
-       "PORTING-0020",
-       "PORTING-0024",
-       "PORTING-0036",
-       "PORTING-0040",
-       "PORTING-0104",
-       "DEVICE-0044",
-       "DEVICE-0076",
-       "DEVICE-0096",
-       "DEVICE-0108",
-       "PORTING-0052",
-       "PORTING-0056",
-       "PORTING-0068",
-       "PORTING-0080",
-       "PORTING-0108"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "개통 후 14일 이내에 취소(단말 반품 또는 번호이동 철회)할 수 있다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "평택역 대리점은 따로 처리됨. 카탈로그에 '개통 취소'라는 정책은 없다. 가장 가까운 것은 단말 반품(DEVICE-04: 개통 후 14일 이내, 미개봉·사용 흔적 없음, 1회)과 번호이동 철회(PORTING-04: 개통 후 14일 이내)로, 둘 다 14일이라 함께 묶었다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요. 단말 반품으로 답하면 미개봉·1회 조건도 함께 말해야 정확하다."
-   },
-   "reasons": [
-    "검증 판단 불가: 카탈로그에 \"개통 취소\" 정책이 따로 없다. 단말 반품(DEVICE-04, 개통 후 14일·미개봉·1회)과 번호이동 철회(PORTING-04, 개통 후 14일)로 풀면 ANSWER지만, 신규 개통(단말 구매 없이 유심만 개통 등)의 취소는 어느 FAQ도 다루지 않아 ABSTAIN으로 볼 수도 있다. 둘 다 14일이라 라벨 쪽을 택했지만 해석을 사람이 정해야 한다.",
-    "작성자 확신 낮음: 평택역 대리점은 따로 처리됨. 카탈로그에 '개통 취소'라는 정책은 없다. 가장 가까운 것은 단말 반품(DEVICE-04: 개통 후 14일 이내, 미개봉·사용 흔적 없음, 1회)과 번호이동 철회(PORTING-04: 개통 후 14일 이내)로, 둘 다 14일이라 함께 묶었다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요. 단말 반품으로 답하면 미개봉·1회 조건도 함께 말해야 정확하다."
-   ]
-  },
-  {
-   "id": "RU-319-t0-r1",
-   "set": "B",
-   "question": "자동이체계좌변경은요?",
-   "conversation": [],
-   "label": {
-    "id": "RU-319-t0-r1",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "자동이체 계좌 변경 방법",
-      "sourceIds": [
-       "BILLING-0068",
-       "BILLING-0145",
-       "BILLING-0040",
-       "BILLING-0152"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "납부 수단 변경은 신청은 바로 되지만 다음 달 청구분부터 적용된다",
-     "자동이체는 등록에 3영업일이 걸린다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "인터넷 이전 설치는 따로 처리됨. 자동이체 '계좌' 변경을 직접 다룬 FAQ는 없고 납부 수단 변경·자동이체 등록 FAQ(BILLING-0068·0145)가 가장 가깝다. 변경 채널(앱·고객센터 등)은 FAQ에 없다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요."
-   },
-   "reasons": [
-    "검증 판단 불가: 고객은 자동이체 계좌 변경을 \"어떻게 신청하는지\" 묻는데, 카탈로그에는 신청 채널·절차가 없고 납부 수단 변경의 적용 시점(다음 달 청구분)과 자동이체 등록 3영업일만 있다. 계좌 변경을 납부 수단 변경으로 볼지, 신청 방법이 없으니 PARTIAL_ANSWER(방법은 확인 불가)나 ABSTAIN으로 볼지 사람이 정해야 한다. 자동이체 계좌만 바꿀 때도 3영업일 등록이 걸린다는 것은 카탈로그가 직접 말하지 않는 추론이다.",
-    "작성자 확신 낮음: 인터넷 이전 설치는 따로 처리됨. 자동이체 '계좌' 변경을 직접 다룬 FAQ는 없고 납부 수단 변경·자동이체 등록 FAQ(BILLING-0068·0145)가 가장 가깝다. 변경 채널(앱·고객센터 등)은 FAQ에 없다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요."
-   ]
-  },
-  {
-   "id": "RU-342-t0-r1",
-   "set": "B",
-   "question": "분실폰할부금은계속내야해요?",
-   "conversation": [],
-   "label": {
-    "id": "RU-342-t0-r1",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "분실한 폰의 할부금을 계속 내야 하는지",
-      "sourceIds": [
-       "TERMINATE-0003",
-       "TERMINATE-0023",
-       "TERMINATE-0043",
-       "TERMINATE-0063",
-       "TERMINATE-0103",
-       "TERMINATE-0011",
-       "TERMINATE-0019",
-       "TERMINATE-0035",
-       "TERMINATE-0051",
-       "TERMINATE-0067",
-       "TERMINATE-0083",
-       "TERMINATE-0007",
-       "TERMINATE-0015",
-       "TERMINATE-0027",
-       "TERMINATE-0031",
-       "TERMINATE-0047",
-       "TERMINATE-0055",
-       "TERMINATE-0075",
-       "TERMINATE-0099",
-       "TERMINATE-0111",
-       "TERMINATE-0115",
-       "TERMINATE-0039",
-       "TERMINATE-0095",
-       "TERMINATE-0107"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "분실해도 남은 단말 할부금은 정리해야 하며, 해지 시 일시 납부가 원칙이다",
-     "원하면 해지 후에도 기존 할부 일정을 유지해 나눠 낼 수 있다"
-    ],
-    "missingFact": null,
-    "confidence": "low",
-    "note": "카탈로그에 '분실해도 할부금이 면제되지 않는다'는 직접 문장은 없고, 해지 시 잔여 할부금 처리(TERMINATE-03)와 기기변경 시 완납·승계(DEVICE-02, 예: DEVICE-0026)만 있다. 고객이 해지할지 회선을 유지·기기변경할지에 따라 답이 갈려 ABSTAIN이나 ANSWER_OR_CLARIFY로 볼 여지도 있다. 해지 기준으로 정리했으며 사람 확인 필요."
-   },
-   "reasons": [
-    "검증 판단 불가: 고객이 해지할지 회선을 유지(기기변경 등)할지 말하지 않았다. 카탈로그에는 분실 후 해지 시 잔여 할부금 처리(TERMINATE-03: 일시 납부 원칙, 할부 유지 선택 가능)와 분실 후 새 폰으로 기기변경 시 처리(DEVICE-0026: 남은 할부는 다 내거나 새 할부로 넘김, DEVICE-0006 등 DEVICE-02)가 따로 있고, 분실 자체로 할부금이 면제되지 않는다는 직접 문장은 없다. 현재 라벨(해지 기준 ANSWER)이면 DEVICE-0026으로 답한 응답이 불충족이 된다. 해지 기준 ANSWER로 둘지, 해지·기기변경 두 경우를 안내하는 ANSWER_OR_CLARIFY로 바꿀지 사람 확인 필요. 또 TERMINATE-0043, 0035, 0051, 0067, 0063, 0103, 0027, 0031, 0095, 0107은 '일시 납부가 원칙'을 말하지 않아 첫 필수 사실을 다 담지 않는다.",
-    "작성자 확신 낮음: 카탈로그에 '분실해도 할부금이 면제되지 않는다'는 직접 문장은 없고, 해지 시 잔여 할부금 처리(TERMINATE-03)와 기기변경 시 완납·승계(DEVICE-02, 예: DEVICE-0026)만 있다. 고객이 해지할지 회선을 유지·기기변경할지에 따라 답이 갈려 ABSTAIN이나 ANSWER_OR_CLARIFY로 볼 여지도 있다. 해지 기준으로 정리했으며 사람 확인 필요."
-   ]
-  },
-  {
-   "id": "RU-212-t0-r0",
-   "set": "B",
-   "question": "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?",
-   "conversation": [],
-   "label": {
-    "id": "RU-212-t0-r0",
-    "expectedBehavior": "PARTIAL_ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "성인이 된 자녀 명의로 바꾸는(명의변경) 비용",
-      "sourceIds": [
-       "NAME_CHANGE-0080",
-       "NAME_CHANGE-0002",
-       "NAME_CHANGE-0014",
-       "NAME_CHANGE-0026",
-       "NAME_CHANGE-0044",
-       "NAME_CHANGE-0068",
-       "NAME_CHANGE-0074",
-       "NAME_CHANGE-0086",
-       "NAME_CHANGE-0005",
-       "NAME_CHANGE-0008",
-       "NAME_CHANGE-0011",
-       "NAME_CHANGE-0017",
-       "NAME_CHANGE-0020",
-       "NAME_CHANGE-0029",
-       "NAME_CHANGE-0041",
-       "NAME_CHANGE-0053",
-       "NAME_CHANGE-0062",
-       "NAME_CHANGE-0089"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "명의변경은 수수료가 없다",
-     "신규 개통 비용은 FAQ에서 확인할 수 없다"
-    ],
-    "missingFact": "신규 개통 시 드는 비용(가입비 등)",
-    "confidence": "low",
-    "note": "카탈로그에 신규 개통 비용이 없어 두 방법의 비용을 비교할 수 없다. NAME_CHANGE-0080은 '명의변경은 수수료가 없고, 기존 번호를 그대로 쓰려면 명의변경이 유리'라고 하지만 신규 개통 비용은 말하지 않는다. 이 FAQ를 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
-   },
-   "reasons": [
-    "검증 판단 불가: NAME_CHANGE-0080 답 본문은 명의변경 수수료 없음과 '기존 번호를 그대로 쓰려면 명의변경이 유리'만 말하고 신규 개통 비용은 카탈로그 어디에도 없다(가입비·개통 비용 검색 결과 없음). PARTIAL_ANSWER(신규 개통 비용 확인 불가)로 둘지, NAME_CHANGE-0080을 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요.",
-    "작성자 확신 낮음: 카탈로그에 신규 개통 비용이 없어 두 방법의 비용을 비교할 수 없다. NAME_CHANGE-0080은 '명의변경은 수수료가 없고, 기존 번호를 그대로 쓰려면 명의변경이 유리'라고 하지만 신규 개통 비용은 말하지 않는다. 이 FAQ를 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
-   ]
-  },
-  {
-   "id": "FLOW-MT-03-t1-r0",
-   "set": "B",
-   "question": "그럼 데이터 다 쓰면 어떻게 돼요?",
-   "conversation": [
-    {
-     "customer": "로밍 요금제를 신청하려고 합니다",
-     "app": "로밍 요금제 신청은 홈페이지나 고객센터를 통해 가능합니다. 출국 전에 신청하시면 더욱 원활하게 이용하실 수 있습니다. 접수 후 약 1시간 이내에 적용되니 참고해 주세요. 직접 신청하시려면 홈페이지를 이용해 주세요."
-    }
-   ],
-   "label": {
-    "id": "FLOW-MT-03-t1-r0",
-    "expectedBehavior": "ABSTAIN",
-    "answerSources": [],
-    "parts": [],
-    "requiredFacts": [],
-    "missingFact": "로밍 요금제의 데이터를 다 쓴 뒤 어떻게 되는지",
-    "confidence": "low",
-    "note": "문맥상 '로밍 요금제 데이터를 다 쓰면 어떻게 되나'이다. 앱이 푼 '로밍 데이터 사용 시 요금'은 질문을 바꿔 쓴 것이다. 카탈로그에는 로밍 요금제의 데이터 제공량이나 소진 후 처리가 없다. 국내 요금제 소진 후 400kbps 제한(PLAN-0012 등)과 로밍 요금 20만 원 도달 시 데이터 자동 차단(ROAMING-0008 등)은 다른 상황이다. 차단 FAQ를 답으로 인정할지는 사람 검토 필요."
-   },
-   "reasons": [
-    "검증 판단 불가: '데이터 다 쓰면'을 로밍 요금제 데이터 소진으로 보면 카탈로그에 답이 없다(ABSTAIN). 로밍 요금 20만 원 도달 시 데이터 자동 차단·본인 인증으로 해제(ROAMING-0008·0013·0033·0058 등)를 답으로 인정하면 ANSWER 또는 PARTIAL_ANSWER가 된다. 국내 요금제 소진 후 400kbps(PLAN-0012 등)는 로밍이 아닌 다른 상황. 질문 해석이 둘로 갈려 사람이 정해야 한다. 라벨은 ABSTAIN 유지.",
-    "작성자 확신 낮음: 문맥상 '로밍 요금제 데이터를 다 쓰면 어떻게 되나'이다. 앱이 푼 '로밍 데이터 사용 시 요금'은 질문을 바꿔 쓴 것이다. 카탈로그에는 로밍 요금제의 데이터 제공량이나 소진 후 처리가 없다. 국내 요금제 소진 후 400kbps 제한(PLAN-0012 등)과 로밍 요금 20만 원 도달 시 데이터 자동 차단(ROAMING-0008 등)은 다른 상황이다. 차단 FAQ를 답으로 인정할지는 사람 검토 필요."
-   ]
-  },
-  {
-   "id": "HALLU-001",
-   "set": "A",
-   "question": "데이터 무제한 로밍으로 5일 쓰면 총 얼마예요?",
-   "conversation": [],
-   "label": {
-    "id": "HALLU-001",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "데이터 무제한 로밍을 5일 쓰면 총 얼마인지",
-      "sourceIds": [
-       "ROAMING-0021",
-       "ROAMING-0026",
-       "ROAMING-0051",
-       "ROAMING-0066",
-       "ROAMING-0071",
-       "ROAMING-0001",
-       "ROAMING-0011",
-       "ROAMING-0016",
-       "ROAMING-0046",
-       "ROAMING-0056",
-       "ROAMING-0061"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "데이터 무제한 로밍은 하루 12,100원이다",
-     "5일 쓰면 12,100원 × 5 = 60,500원이다"
-    ],
-    "missingFact": null,
-    "confidence": "high",
-    "note": "매일 부과된다는 합산 전제는 ROAMING-0056·0061에 직접 있음. 나머지는 '하루 12,100원'에서 계산. 7일 기간권 39,000원은 무제한 상품이 아니라 비교 대상이 아님.",
-    "provenance": "agent_written+agent_verified:AGREE"
-   },
-   "reasons": [
-    "설계 의도와 라벨 충돌: 설계자는 계산 값을 만들어 내는 위험을 보려 했는데 라벨은 계산 값을 필수 사실로 둠",
-    "답변 프롬프트 4번 규칙(근거 숫자를 더하거나 곱하지 말 것)과 충돌"
-   ]
-  },
-  {
-   "id": "HALLU-002",
-   "set": "A",
-   "question": "우편으로 청구서 받으면 1년에 얼마 내는 거예요?",
-   "conversation": [],
-   "label": {
-    "id": "HALLU-002",
-    "expectedBehavior": "ANSWER",
-    "answerSources": [
-     "FAQ"
-    ],
-    "parts": [
-     {
-      "questionPart": "우편 청구서를 받으면 1년에 얼마를 내는지",
-      "sourceIds": [
-       "BILLING-0028",
-       "BILLING-0035",
-       "BILLING-0133",
-       "BILLING-0007",
-       "BILLING-0021",
-       "BILLING-0042",
-       "BILLING-0056",
-       "BILLING-0077",
-       "BILLING-0084",
-       "BILLING-0091",
-       "BILLING-0119",
-       "BILLING-0126",
-       "BILLING-0140",
-       "BILLING-0147"
-      ]
-     }
-    ],
-    "requiredFacts": [
-     "우편 청구서는 월 500원이 부과된다",
-     "1년(12개월)이면 500원 × 12 = 6,000원이다"
-    ],
-    "missingFact": null,
-    "confidence": "high",
-    "note": "연 금액은 FAQ에 직접 없고 '월 500원'에서 계산. '월'이 빠진 BILLING-0154('종이는 500원')는 제외.",
-    "provenance": "agent_written+agent_verified:AGREE"
-   },
-   "reasons": [
-    "설계 의도와 라벨 충돌: 설계자는 계산 값을 만들어 내는 위험을 보려 했는데 라벨은 계산 값을 필수 사실로 둠",
-    "답변 프롬프트 4번 규칙(근거 숫자를 더하거나 곱하지 말 것)과 충돌"
-   ]
-  }
- ],
+ "priority1_labels": [],
  "priority2_verdicts": [
   {
    "inputId": "EVAL-001",
@@ -698,6 +11,7 @@
     "청구서가 중복 발송된 경우 고객센터에 확인한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-001|exaone|u0",
@@ -831,6 +145,7 @@
     "납부 기한이 지나고 30일이 지나면 수신까지 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-002|exaone|u0",
@@ -916,6 +231,7 @@
     "반품·교환은 1회에 한해 가능해 이미 한 번 교환했다면 다시 교환할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-005|exaone|u0",
@@ -1003,6 +319,7 @@
     "가장 먼저 분실 신고(이용 정지 신청)를 해야 하며 신청하면 즉시 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-006|exaone|u0",
@@ -1073,6 +390,7 @@
     "기존 할부금은 완납하거나 새 할부에 승계해야 한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-008|exaone|u0",
@@ -1187,6 +505,7 @@
     "직접 방문하면 위임장이 필요 없어 서류가 하나 덜 필요하다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-009|exaone|u0",
@@ -1254,6 +573,7 @@
     "명의변경 수수료는 가족 여부와 관계없이 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-011|exaone|u0",
@@ -1319,6 +639,7 @@
     "400kbps 속도 제한 상태에서는 고화질 영상 시청이 어렵다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-016|exaone|u0",
@@ -1404,6 +725,7 @@
     "미납 요금이 금액과 관계없이 조금이라도 있으면 번호이동이 진행되지 않으며 완납 후 신청해야 한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-017|exaone|u0",
@@ -1467,6 +789,7 @@
     "개통 후 3개월이 지나야 번호이동이 가능해 두 달째에는 아직 할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-018|exaone|u0",
@@ -1552,6 +875,7 @@
     "로밍 가입 상태는 앱이나 홈페이지에서 언제든 확인할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-022|exaone|u0",
@@ -1617,6 +941,7 @@
     "태블릿은 휴대폰과 별도 회선이라 로밍을 따로 신청해야 한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-024|exaone|u0",
@@ -1681,6 +1006,7 @@
     "등급은 매년 1월에 갱신되어 납부 금액이 줄면 등급이 낮아질 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-025|exaone|u0",
@@ -1766,6 +1092,7 @@
     "매장은 평일 19:00까지 운영해 그 이후에는 방문이 어렵다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-027|exaone|u0",
@@ -1829,6 +1156,7 @@
     "요금납부확인서는 최근 3년분까지만 발급되어 4년 전 기록은 발급 범위 밖이다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-028|exaone|u0",
@@ -1893,6 +1221,7 @@
     "법인 명의 개통은 별도 심사 절차로 진행된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-030|exaone|u0",
@@ -1958,6 +1287,7 @@
     "법인 명의 가입은 별도 심사를 거치며 심사 결과가 나와야 개통된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-032|exaone|u0",
@@ -2021,6 +1351,7 @@
     "매장 방문과 고객센터 전화 모두 신청 즉시 처리되어 속도 차이가 없다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-033|exaone|u0",
@@ -2096,6 +1427,7 @@
     "청구서가 중복 발송된 경우 고객센터에 확인한다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-041|exaone|u0",
@@ -2231,6 +1563,7 @@
     "납부 기한이 지나고 30일이 지나면 수신까지 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-042|exaone|u0",
@@ -2294,6 +1627,7 @@
     "가상계좌는 요금을 낼 때 쓰는 입금 전용 계좌다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-044|exaone|u0",
@@ -2391,6 +1725,7 @@
     "가장 먼저 분실 신고(이용 정지 신청)를 해야 하며 신청하면 즉시 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-046|exaone|u0",
@@ -2461,6 +1796,7 @@
     "대리 방문에는 위임장이 추가로 필요하다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-049|exaone|u0",
@@ -2581,6 +1917,7 @@
     "단말 할부금이 없으면 신용 심사 없이 명의변경이 진행된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-052|exaone|u0",
@@ -2689,6 +2026,7 @@
     "속도 제한 상태에서는 고화질 영상 시청이 어렵다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-056|exaone|u0",
@@ -2775,6 +2113,7 @@
     "미납 요금을 완납한 뒤 신청해야 한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-057|exaone|u0",
@@ -2839,6 +2178,7 @@
     "개통 후 3개월이 지나지 않았으면 아직 번호이동을 할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-058|exaone|u0",
@@ -2948,6 +2288,7 @@
     "본인 인증을 하면 데이터 차단이 해제되어 데이터를 다시 쓸 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-063|exaone|u0",
@@ -3034,6 +2375,7 @@
     "직전 1년 납부 금액이 줄면 등급이 낮아질 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-065|exaone|u0",
@@ -3125,6 +2467,7 @@
     "신고 접수 후 3영업일 이내에 조사가 진행된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-066|exaone|u0",
@@ -3215,6 +2558,7 @@
     "매장은 평일 19:00(토요일 17:00)까지 운영해 저녁 8시에는 열지 않는다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-067|exaone|u0",
@@ -3317,6 +2661,7 @@
     "요금납부확인서는 최근 3년분까지만 발급되고 그 이전 기록은 발급 범위 밖이다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-068|exaone|u0",
@@ -3374,6 +2719,75 @@
    ]
   },
   {
+   "inputId": "EVAL-070",
+   "set": "A",
+   "question": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
+   "previousTurns": [],
+   "expectedBehavior": "ANSWER",
+   "requiredFacts": [
+    "본인 명의 신분증은 본인 명의 개통에만 쓰이고, 법인 명의는 별도 심사 절차로 진행된다"
+   ],
+   "labelReview": true,
+   "labelHumanReviewed": "기대 동작 변경 → ANSWER",
+   "answers": [
+    {
+     "caseId": "EVAL-070|exaone|u0",
+     "model": "exaone",
+     "runs": [
+      1,
+      2,
+      3
+     ],
+     "answer": "회사 명의로 개통을 위해서는 법인 담당자님께서 해당 법인 명의의 신분증이나 관련 서류를 준비하셔야 합니다. 개인 신분증으로는 법인 개통이 제한되어 있습니다.",
+     "combined": false,
+     "byJudge": {
+      "qwen": {
+       "pass": false,
+       "findings": [
+        "UNSUPPORTED_CLAIM",
+        "SHOULD_ABSTAIN"
+       ]
+      },
+      "deepseek": {
+       "pass": true,
+       "findings": []
+      },
+      "mistral-": {
+       "pass": null,
+       "findings": [
+        "HUMAN_REVIEW"
+       ]
+      }
+     }
+    },
+    {
+     "caseId": "EVAL-070|gptoss|u0",
+     "model": "gptoss",
+     "runs": [
+      1,
+      2,
+      3
+     ],
+     "answer": "본인 명의 주민등록증은 개인 명의 개통에만 사용됩니다. 법인 명의는 별도의 심사 절차가 필요합니다.",
+     "combined": true,
+     "byJudge": {
+      "qwen": {
+       "pass": true,
+       "findings": []
+      },
+      "deepseek": {
+       "pass": true,
+       "findings": []
+      },
+      "mistral-": {
+       "pass": true,
+       "findings": []
+      }
+     }
+    }
+   ]
+  },
+  {
    "inputId": "EVAL-072",
    "set": "A",
    "question": "회사 이름으로 신청했더니 결과를 기다리라고만 하는데 왜 바로 안 되나요",
@@ -3383,6 +2797,7 @@
     "법인 명의 가입은 별도 심사를 거치므로 심사 결과가 나와야 개통된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-072|exaone|u0",
@@ -3465,111 +2880,6 @@
    ]
   },
   {
-   "inputId": "EVAL-073",
-   "set": "A",
-   "question": "폰을 잃어버렸습니다. 지금 전화로 정지하는 게 빠른가요 매장이 빠른가요",
-   "previousTurns": [],
-   "expectedBehavior": "ANSWER",
-   "requiredFacts": [
-    "고객센터에 전화(또는 홈페이지)로 분실 신고를 하면 즉시 이용 정지된다"
-   ],
-   "labelReview": false,
-   "answers": [
-    {
-     "caseId": "EVAL-073|exaone|u0",
-     "model": "exaone",
-     "runs": [
-      1,
-      2,
-      3
-     ],
-     "answer": "폰을 잃어버리셨군요. 매장 방문보다는 즉시 연락 주시는 게 시간적으로 더 효율적입니다. 전화로 신청하시면 바로 처리될 수 있습니다.",
-     "combined": null,
-     "byJudge": {
-      "qwen": {
-       "pass": null,
-       "findings": [
-        "HUMAN_REVIEW",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": null,
-       "findings": [
-        "HUMAN_REVIEW",
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "EVAL-073|gptoss|u0",
-     "model": "gptoss",
-     "runs": [
-      1
-     ],
-     "answer": "전화로 바로 정지하시면 됩니다. 매장에 가시든 전화하시든 처리 속도는 동일합니다.",
-     "combined": true,
-     "byJudge": {
-      "qwen": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "EVAL-073|gptoss|u1",
-     "model": "gptoss",
-     "runs": [
-      2,
-      3
-     ],
-     "answer": "전화로 바로 정지하시면 됩니다. 매장에 가시든 전화로 하시든 처리 속도는 동일합니다.",
-     "combined": true,
-     "byJudge": {
-      "qwen": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    }
-   ]
-  },
-  {
    "inputId": "EVAL-074",
    "set": "A",
    "question": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
@@ -3579,6 +2889,7 @@
     "남은 할부금 총액은 같고 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "EVAL-074|exaone|u0",
@@ -3669,6 +2980,7 @@
     "일시 정지는 1회 최대 30일, 연간 최대 90일까지 가능해 몇 달 전체를 한 번에 정지할 수는 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-076|exaone|u0",
@@ -3778,6 +3090,7 @@
     "eSIM은 eSIM을 지원하는 단말에서만 이용할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-077|exaone|u0",
@@ -3885,6 +3198,7 @@
     "유심 발급에는 본인 신분증이 필요해 신분증 없이는 발급이 어렵다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-078|exaone|u0",
@@ -3980,6 +3294,7 @@
     "새 유심을 재발급받으면 기존 유심은 자동으로 해지되어 예비로 쓸 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-079|exaone|u0",
@@ -4090,88 +3405,6 @@
    ]
   },
   {
-   "inputId": "EVAL-131",
-   "set": "A",
-   "question": "이중으로 낸 요금 환불이 5영업일 걸린다던데, 가족 계좌로 받을 수 있나요?",
-   "previousTurns": [],
-   "expectedBehavior": "ANSWER",
-   "requiredFacts": [
-    "이중 납부 환불은 가입자 본인 명의 계좌로만 가능해 가족 계좌로는 받을 수 없다"
-   ],
-   "labelReview": false,
-   "answers": [
-    {
-     "caseId": "EVAL-131|exaone|u0",
-     "model": "exaone",
-     "runs": [
-      1,
-      2,
-      3
-     ],
-     "answer": "이중 납부로 인한 환불은 본인 명의 계좌로만 이루어집니다. 가족 계좌로는 환불이 불가능합니다. 확인 및 환불 절차는 접수 후 3영업일 이내 확인 후 5영업일 이내에 본인 계좌로 진행됩니다.",
-     "combined": false,
-     "byJudge": {
-      "qwen": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "EVAL-131|gptoss|u0",
-     "model": "gptoss",
-     "runs": [
-      1,
-      2,
-      3
-     ],
-     "answer": "환불은 가입자 본인 명의 계좌로만 입금됩니다. 가족 계좌로는 받을 수 없습니다.",
-     "combined": null,
-     "byJudge": {
-      "qwen": {
-       "pass": null,
-       "findings": [
-        "HUMAN_REVIEW",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    }
-   ]
-  },
-  {
    "inputId": "EVAL-132",
    "set": "A",
    "question": "요금 밀리고 60일 지나면 번호가 아예 없어지는 건가요?",
@@ -4181,6 +3414,7 @@
     "납부 기한 후 60일이 지나면 직권 해지될 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-132|exaone|u0",
@@ -4303,6 +3537,7 @@
     "언리미티드 요금제는 기본 데이터 소진 후 400kbps 속도 제한이 적용되지 않는다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-134|exaone|u0",
@@ -4388,6 +3623,7 @@
     "월 85,000원 요금제는 5G 프리미엄이며 기본 데이터 150GB를 제공한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-136|exaone|u0",
@@ -4498,6 +3734,7 @@
     "택배 수령은 2~3 영업일이 걸린다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-137|exaone|u0",
@@ -4593,6 +3830,7 @@
     "eSIM은 eSIM을 지원하는 단말에서만 발급·이용할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-138|exaone|u0",
@@ -4656,6 +3894,7 @@
     "만 14세 미만은 부모(법정대리인) 동의가 있어도 가입할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-140|exaone|u0",
@@ -4744,6 +3983,7 @@
     "번호이동 처리는 매일 09:00부터 20:00까지만 진행되어 밤 10시 신청은 다음 날 09:00 이후에 처리된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-144|exaone|u0",
@@ -4861,6 +4101,7 @@
     "명의변경을 했다면 명의변경일로부터 1개월이 지나야 하는 조건도 함께 적용된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-145|exaone|u0",
@@ -4927,6 +4168,7 @@
     "명의변경은 매장에서 30분 이내에 처리된다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-146|exaone|u0",
@@ -4992,6 +4234,7 @@
     "24개월 약정에서 12개월 이상 24개월 미만에 해지하면 할인 반환금의 50%를 반환한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-149|exaone|u0",
@@ -5099,6 +4342,7 @@
     "부가서비스 월 이용료는 일할 계산되지 않아 해지한 달 요금은 전액 청구되고 돌려받지 못한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "EVAL-158|exaone|u0",
@@ -5185,6 +4429,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-005|exaone|u0",
@@ -5254,6 +4499,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-009|exaone|u0",
@@ -5319,6 +4565,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-010|exaone|u0",
@@ -5415,6 +4662,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-011|exaone|u0",
@@ -5480,6 +4728,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-013|exaone|u0",
@@ -5542,143 +4791,6 @@
    ]
   },
   {
-   "inputId": "H-086",
-   "set": "A",
-   "question": "미성년자 명의 3회선은 부모 명의 5회선과 따로 계산되나요?",
-   "previousTurns": [],
-   "expectedBehavior": "ANSWER",
-   "requiredFacts": [
-    "본인 명의로 개통한 회선만 성인 1인 최대 5회선에 포함된다(자녀 명의 회선은 부모 회선 수에 들어가지 않는다)"
-   ],
-   "labelReview": false,
-   "answers": [
-    {
-     "caseId": "H-086|exaone|u0",
-     "model": "exaone",
-     "runs": [
-      1,
-      2,
-      3
-     ],
-     "answer": "미성년자 명의 개통 횟수와 성인 명의 개통 횟수는 별도로 계산됩니다. 따라서 부모 명의로 개통한 횟수와 상관없이 미성년자 명의로는 최대 3회선까지 추가로 개통이 가능합니다.",
-     "combined": false,
-     "byJudge": {
-      "qwen": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "H-086|gptoss|u0",
-     "model": "gptoss",
-     "runs": [
-      1
-     ],
-     "answer": "네, 미성년자 명의는 최대 3회선까지, 부모님의 성인 명의는 별도로 최대 5회선까지 개통하실 수 있습니다. 각각의 명의에 적용되는 회선 수 제한이 따로 계산됩니다.",
-     "combined": true,
-     "byJudge": {
-      "qwen": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "H-086|gptoss|u1",
-     "model": "gptoss",
-     "runs": [
-      2
-     ],
-     "answer": "네, 미성년자 명의는 최대 3회선까지, 부모 명의는 성인 기준으로 최대 5회선까지 각각 따로 적용됩니다.",
-     "combined": false,
-     "byJudge": {
-      "qwen": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": false,
-       "findings": [
-        "UNSUPPORTED_CLAIM",
-        "SHOULD_ABSTAIN",
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    },
-    {
-     "caseId": "H-086|gptoss|u2",
-     "model": "gptoss",
-     "runs": [
-      3
-     ],
-     "answer": "네, 미성년자 명의는 최대 3회선까지, 성인 명의는 한 분당 최대 5회선까지 각각 별도로 적용됩니다.",
-     "combined": true,
-     "byJudge": {
-      "qwen": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "deepseek": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      },
-      "mistral-": {
-       "pass": true,
-       "findings": [
-        "RETRIEVAL_MISS"
-       ]
-      }
-     }
-    }
-   ]
-  },
-  {
    "inputId": "H-088",
    "set": "A",
    "question": "번호이동을 처리하는 동안에도 기존 번호로 전화와 문자를 계속 쓸 수 있나요?",
@@ -5686,6 +4798,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-088|exaone|u0",
@@ -5751,6 +4864,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-090|exaone|u0",
@@ -5816,6 +4930,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-097|exaone|u0",
@@ -5885,6 +5000,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-099|exaone|u0",
@@ -5952,6 +5068,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-101|exaone|u0",
@@ -6015,6 +5132,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-116|exaone|u0",
@@ -6080,6 +5198,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-125|exaone|u0",
@@ -6145,6 +5264,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "H-127|exaone|u0",
@@ -6211,6 +5331,7 @@
     "본인 인증을 하면 최대 월 100만 원까지 올릴 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-005|exaone|u0",
@@ -6276,6 +5397,7 @@
     "반품·교환은 1회에 한해 가능하다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-007|exaone|u0",
@@ -6362,6 +5484,7 @@
     "확인 후 5영업일 이내에 본인 명의 계좌로 환불된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-008|exaone|u0",
@@ -6426,6 +5549,7 @@
     "유심 재발급 비용을 카드 할부로 낼 수 있는지는 FAQ에서 확인할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-013|exaone|u0",
@@ -6554,6 +5678,7 @@
     "출국 전 신청을 권장하지만 현지에 도착한 뒤에도 신청할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-019|exaone|u0",
@@ -6675,6 +5800,7 @@
    "expectedBehavior": "ABSTAIN",
    "requiredFacts": [],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "HALLU-020|exaone|u0",
@@ -6748,6 +5874,7 @@
     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 번호이동이 진행된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CLAR-compound-docs-and-cost-t1-r0|exaone|u0",
@@ -6845,6 +5972,7 @@
     "본인이 직접 방문하면 신분증만 있으면 유심을 재발급받을 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CLAR-dup-docs-after-lost-t2-r0|exaone|u0",
@@ -6915,6 +6043,7 @@
     "번호이동에는 본인 신분증이 필요하다(미납 요금이 없으면 신분증만으로 신청된다)"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CLAR-faq-bill-eopseoyo-t1-r0|exaone|u0",
@@ -6991,6 +6120,7 @@
     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "CLAR-faq-bill-hmm-twice-t2-r0|exaone|u0",
@@ -7064,6 +6194,7 @@
     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "CLAR-faq-bill-vague-twice-t2-r0|exaone|u0",
@@ -7154,6 +6285,7 @@
     "만 14세 미만은 가입할 수 없으므로 만 12세는 가입할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CLAR-faq-minor-no-t1-r0|exaone|u0",
@@ -7219,6 +6351,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-acc-implicit-07-t0-r0|exaone|u0",
@@ -7282,6 +6415,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-blind-03-t0-r0|exaone|u0",
@@ -7358,6 +6492,7 @@
     "eSIM은 eSIM을 지원하는 단말에서만 이용할 수 있다(아이폰도 기종이 eSIM을 지원하면 가능하다)"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-blind-20-t2-r0|exaone|u0",
@@ -7450,6 +6585,7 @@
     "변경은 다음 달 청구분부터 적용된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-blind-22-t0-r0|exaone|u0",
@@ -7543,6 +6679,7 @@
     "데이터를 많이 쓰면 무제한 요금제(일 12,100원)를 고른다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-followup-01-compact-t0-r0|exaone|u0",
@@ -7636,6 +6773,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-followup-01-compact-t1-r0|exaone|u0",
@@ -7701,6 +6839,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-followup-05-t0-r0|exaone|u0",
@@ -7808,6 +6947,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-review-ordinal-01-t0-r0|exaone|u0",
@@ -7901,6 +7041,7 @@
     "늦어도 24시간 이내에 처리된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-unseen-followup-5-t1-r0|exaone|u0",
@@ -7989,6 +7130,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-unseen-implicit-1-t0-r0|exaone|u0",
@@ -8074,6 +7216,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-unseen-independent-1-t0-r0|exaone|u0",
@@ -8164,6 +7307,7 @@
     "고객센터나 홈페이지에서 분실 신고(이용 정지 신청)를 하면 즉시 이용이 정지된다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "CTX-unseen-independent-4-t1-r0|exaone|u0",
@@ -8277,6 +7421,7 @@
     "기기변경은 개통 후 6개월이 지나야 가능하므로 개통 1년이 지난 고객은 기기변경할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "FLOW-CL-01-t1-r0|exaone|u0",
@@ -8404,6 +7549,7 @@
     "본인이 직접 방문하면 신분증만 있으면 유심을 재발급받을 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "FLOW-CL-04-t1-r0|exaone|u0",
@@ -8490,6 +7636,7 @@
     "30일이 지나면 수신까지 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "FLOW-CL-08-t0-r0|exaone|u0",
@@ -8553,6 +7700,7 @@
     "로밍은 홈페이지나 고객센터에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "FLOW-MT-03-t0-r0|exaone|u0",
@@ -8619,6 +7767,7 @@
     "반품·교환은 1회에 한해 가능하므로 이미 교환했다면 다시 교환할 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-002-t0-r0|exaone|u0",
@@ -8683,6 +7832,7 @@
     "4년 전 기록은 발급 범위 밖이라 발급받을 수 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-010-t0-r0|exaone|u0",
@@ -8768,6 +7918,7 @@
     "일시 정지는 1회 최대 30일까지 가능하다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-065-t0-r0|exaone|u0",
@@ -8832,6 +7983,7 @@
     "12개월 이상 24개월 미만에 해지하면 50%를 반환한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-093-t0-r0|exaone|u0",
@@ -8940,6 +8092,7 @@
     "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "RU-116-t0-r0|exaone|u0",
@@ -9006,6 +8159,7 @@
     "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "RU-132-t0-r0|exaone|u0",
@@ -9071,6 +8225,7 @@
     "일시정지는 고객센터나 매장에서 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-140-t0-r0|exaone|u0",
@@ -9134,6 +8289,7 @@
     "명의변경 수수료는 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-141-t0-r0|exaone|u0",
@@ -9242,6 +8398,7 @@
     "온라인으로 신청하면 택배로 받으며 2~3 영업일이 걸린다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-143-t0-r0|exaone|u0",
@@ -9359,6 +8516,7 @@
     "온라인으로 신청하면 택배로 받으며 2~3 영업일이 걸린다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-170-t0-r0|exaone|u0",
@@ -9453,6 +8611,7 @@
     "매장 방문, 고객센터 전화, 홈페이지 중 한 곳에서 해지를 신청할 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-172-t0-r0|exaone|u0",
@@ -9538,6 +8697,7 @@
     "홈페이지나 고객센터에서 로밍을 신청한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-175-t0-r0|exaone|u0",
@@ -9624,6 +8784,7 @@
     "등급은 직전 1년간 납부 금액을 기준으로 정해진다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-205-t0-r0|exaone|u0",
@@ -9687,6 +8848,7 @@
     "어떤 업무인지에 따라 다르며, 해지라면 매장·고객센터 전화·홈페이지 모두 신청 즉시 처리되어 속도가 같다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-208-t0-r0|exaone|u0",
@@ -9769,6 +8931,121 @@
    ]
   },
   {
+   "inputId": "RU-212-t0-r0",
+   "set": "B",
+   "question": "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?",
+   "previousTurns": [],
+   "expectedBehavior": "ANSWER",
+   "requiredFacts": [
+    "명의변경은 수수료가 없다",
+    "기존 번호를 그대로 쓰려면 명의변경이 유리하다"
+   ],
+   "labelReview": true,
+   "labelHumanReviewed": "기대 동작 변경 → ANSWER",
+   "answers": [
+    {
+     "caseId": "RU-212-t0-r0|exaone|u0",
+     "model": "exaone",
+     "runs": [
+      1,
+      2,
+      3
+     ],
+     "answer": "기존 번호를 유지하시려면 명의 변경을 추천드립니다.",
+     "combined": false,
+     "byJudge": {
+      "qwen": {
+       "pass": false,
+       "findings": [
+        "INCOMPLETE_ANSWER"
+       ]
+      },
+      "deepseek": {
+       "pass": false,
+       "findings": [
+        "INCOMPLETE_ANSWER"
+       ]
+      },
+      "mistral-": {
+       "pass": null,
+       "findings": [
+        "HUMAN_REVIEW"
+       ]
+      }
+     }
+    },
+    {
+     "caseId": "RU-212-t0-r0|gptoss|u0",
+     "model": "gptoss",
+     "runs": [
+      1
+     ],
+     "answer": "명의변경은 수수료가 없고 처리 시간도 30분 이내이므로, 비용 면에서는 새로 개통하는 것보다 명의변경이 더 유리합니다.",
+     "combined": null,
+     "byJudge": {
+      "qwen": {
+       "pass": true,
+       "findings": []
+      },
+      "deepseek": {
+       "pass": true,
+       "findings": []
+      },
+      "mistral-": {
+       "pass": null,
+       "findings": []
+      }
+     }
+    },
+    {
+     "caseId": "RU-212-t0-r0|gptoss|u1",
+     "model": "gptoss",
+     "runs": [
+      2
+     ],
+     "answer": "명의변경은 수수료가 없고 30분 이내에 처리되므로, 비용 면에서는 명의변경이 더 유리합니다.",
+     "combined": null,
+     "byJudge": {
+      "qwen": {
+       "pass": true,
+       "findings": []
+      },
+      "deepseek": {
+       "pass": true,
+       "findings": []
+      },
+      "mistral-": {
+       "pass": null,
+       "findings": []
+      }
+     }
+    },
+    {
+     "caseId": "RU-212-t0-r0|gptoss|u2",
+     "model": "gptoss",
+     "runs": [
+      3
+     ],
+     "answer": "명의변경은 수수료가 없고 처리 시간도 30분 이내이므로, 비용 면에서는 명의변경이 새로 개통하는 것보다 유리합니다.",
+     "combined": null,
+     "byJudge": {
+      "qwen": {
+       "pass": null,
+       "findings": []
+      },
+      "deepseek": {
+       "pass": true,
+       "findings": []
+      },
+      "mistral-": {
+       "pass": null,
+       "findings": []
+      }
+     }
+    }
+   ]
+  },
+  {
    "inputId": "RU-217-t0-r0",
    "set": "B",
    "question": "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?",
@@ -9779,6 +9056,7 @@
     "해지하면 이후 요금이 나오지 않는다(해지한 달 요금만 일할 계산)"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-217-t0-r0|exaone|u0",
@@ -9842,6 +9120,7 @@
     "고객센터나 홈페이지에서 분실 신고를 하면 즉시 이용 정지된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-278-t0-r0|exaone|u0",
@@ -9913,6 +9192,7 @@
     "데이터 무제한은 하루 12,100원이다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-279-t0-r0|exaone|u0",
@@ -10025,6 +9305,7 @@
     "미납 요금을 완납한 뒤 신청해야 한다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-281-t0-r0|exaone|u0",
@@ -10110,6 +9391,7 @@
     "본인 인증을 하면 한도를 최대 월 100만 원까지 올릴 수 있다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-286-t0-r0|exaone|u0",
@@ -10230,6 +9512,7 @@
     "대리 방문이어도 양도인과 양수인의 신분증이 필요하다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "유지",
    "answers": [
     {
      "caseId": "RU-291-t0-r0|exaone|u0",
@@ -10324,6 +9607,7 @@
     "멤버십 등급은 직전 1년간 납부 금액을 기준으로 정해진다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-317-t0-r0|exaone|u0",
@@ -10410,6 +9694,7 @@
     "접수 후 3영업일 이내에 조사가 진행된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-325-t0-r1|exaone|u0",
@@ -10521,6 +9806,7 @@
     "납부 기한 조정은 고객센터에 상담한다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-326-t0-r0|exaone|u0",
@@ -10609,6 +9895,7 @@
     "변경은 다음 달 청구분부터 적용된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-326-t0-r1|exaone|u0",
@@ -10672,6 +9959,7 @@
     "일시 정지 기간에도 기본료의 50%가 부과된다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-340-t0-r0|exaone|u0",
@@ -10732,10 +10020,10 @@
    "previousTurns": [],
    "expectedBehavior": "ANSWER",
    "requiredFacts": [
-    "분실해도 남은 단말 할부금은 정리해야 하며, 해지 시 일시 납부가 원칙이다",
-    "원하면 해지 후에도 기존 할부 일정을 유지해 나눠 낼 수 있다"
+    "분실해도 남은 단말 할부금은 내야 한다(해지하면 일시 납부가 원칙이고 원하면 나눠 낼 수 있으며, 새 폰으로 바꾸면 완납하거나 새 할부로 승계한다)"
    ],
    "labelReview": true,
+   "labelHumanReviewed": "필수 사실·근거만 변경",
    "answers": [
     {
      "caseId": "RU-342-t0-r1|exaone|u0",
@@ -10843,6 +10131,7 @@
     "로밍 요금제는 일 단위(하루)와 7일 기간권이 있어 7일짜리가 가장 길다"
    ],
    "labelReview": true,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-346-t0-r0|exaone|u0",
@@ -10938,6 +10227,7 @@
     "온라인으로 신청하면 택배로 2~3 영업일이 걸린다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-352-t0-r1|exaone|u0",
@@ -11002,6 +10292,7 @@
     "언리미티드 요금제는 속도 제한이 없다"
    ],
    "labelReview": false,
+   "labelHumanReviewed": null,
    "answers": [
     {
      "caseId": "RU-363-t0-r0|exaone|u0",

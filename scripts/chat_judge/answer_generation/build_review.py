@@ -1,5 +1,6 @@
 """사람 검토 목록. 1순위: 라벨 쟁점(검증 판단 불가 + 앱 규칙과 충돌하는 라벨). 2순위: 두 모델의 승패가 갈린 입력 중
-그 판정이 Judge끼리 갈렸거나 미확정인 답. 작성자 확신 낮음만 있는 항목은 결과에 영향이 있는 것만 2순위로 들어간다."""
+그 판정이 Judge끼리 갈렸거나 미확정인 답. 작성자 확신 낮음만 있는 항목은 결과에 영향이 있는 것만 2순위로 들어간다.
+사람이 이미 검토한 라벨(labels/human-reviewed.json)은 1순위에서 빼고, 2순위에는 labelHumanReviewed로 표시한다."""
 import json, gzip, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -7,9 +8,12 @@ from scripts.chat_judge import combine_judges as cj
 J = Path(__file__).resolve().parent / "labels"
 RESULTS = Path(sys.argv[1])  # capture-*.json.gz와 runs/가 있는 폴더(raw.tar.xz를 푼 곳)
 labels = {r["id"]: r for r in json.loads((J / "review.json").read_text(encoding="utf-8"))}
+reviewed = json.loads((J / "human-reviewed.json").read_text(encoding="utf-8"))["items"]
 PROMPT_CONFLICT = {"HALLU-001", "HALLU-002"}
 out = {"priority1_labels": [], "priority2_verdicts": []}
 for rid, row in labels.items():
+    if rid in reviewed:
+        continue
     if rid in PROMPT_CONFLICT or any(r.startswith("검증 판단 불가") for r in row["reasons"]):
         reasons = list(row["reasons"])
         if rid in PROMPT_CONFLICT:
@@ -44,7 +48,7 @@ for s in "AB":
         out["priority2_verdicts"].append({
             "inputId": iid, "set": s, "question": fx["question"], "previousTurns": cap[cids[0]]["previousTurns"],
             "expectedBehavior": fx["expectedBehavior"], "requiredFacts": fx["requiredFacts"],
-            "labelReview": iid in labels,
+            "labelReview": iid in labels, "labelHumanReviewed": reviewed.get(iid, {}).get("decision"),
             "answers": [{"caseId": cid, "model": cap[cid]["model"], "runs": cap[cid]["runs"],
                          "answer": cap[cid]["turns"][0]["outputMessage"]["content"],
                          "combined": verdict[cap[cid]["model"]][cid],
