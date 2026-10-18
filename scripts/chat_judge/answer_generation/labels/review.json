@@ -1,0 +1,5451 @@
+[
+ {
+  "id": "EVAL-003",
+  "set": "A",
+  "question": "이번 달에 요금제를 변경할 수 있을까요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-003",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "이번 달에 요금제를 변경할 수 있는지",
+     "sourceIds": [
+      "BILLING-0092",
+      "BILLING-0001",
+      "BILLING-0015",
+      "BILLING-0022",
+      "BILLING-0106"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "요금제 변경은 월 1회만 가능해 이번 달에 이미 변경했다면 다음 달에 가능하다",
+    "가입한 달에는 요금제를 변경할 수 없다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "이번 달 변경 이력·가입 월이라는 고객 조건에 따라 답이 갈린다. 가장 직접적인 BILLING-0092(요금제 이번 달에 바꿀 수 있나요)는 월 1회만 말하고 가입한 달 제한은 없다. 가입한 달 제한까지 필수로 둘지 사람 검토 필요(두 사실을 모두 가진 FAQ는 BILLING-0001, 0015, 0022, 0106)."
+  },
+  "verified": {
+   "id": "EVAL-003",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-003",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "이번 달에 요금제를 변경할 수 있는지",
+      "sourceIds": [
+       "BILLING-0092",
+       "BILLING-0001",
+       "BILLING-0015",
+       "BILLING-0022",
+       "BILLING-0106",
+       "BILLING-0043",
+       "BILLING-0057",
+       "BILLING-0064",
+       "BILLING-0078",
+       "BILLING-0085",
+       "BILLING-0155"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "요금제 변경은 월 1회만 가능해 이번 달에 이미 변경했다면 다음 달에 가능하다",
+     "가입한 달에는 요금제를 변경할 수 없다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "이번 달 변경 이력·가입 월이라는 고객 조건에 따라 답이 갈린다. 가장 직접적인 BILLING-0092(요금제 이번 달에 바꿀 수 있나요)는 월 1회만 말하고 가입한 달 제한은 없다. 가입한 달 제한까지 필수로 둘지 사람 검토 필요(두 사실을 모두 가진 FAQ는 BILLING-0001, 0015, 0022, 0106)."
+   },
+   "changes": "sourceIds 추가: 월 1회 변경을 답하는 BILLING-0043·0057·0064·0085·0155(설계자 정답)와 가입한 달 변경 불가를 답하는 BILLING-0078. 이미 넣은 BILLING-0092도 월 1회만 말하므로 같은 기준을 적용했다.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 이번 달 변경 이력·가입 월이라는 고객 조건에 따라 답이 갈린다. 가장 직접적인 BILLING-0092(요금제 이번 달에 바꿀 수 있나요)는 월 1회만 말하고 가입한 달 제한은 없다. 가입한 달 제한까지 필수로 둘지 사람 검토 필요(두 사실을 모두 가진 FAQ는 BILLING-0001, 0015, 0022, 0106)."
+  ]
+ },
+ {
+  "id": "EVAL-009",
+  "set": "A",
+  "question": "직접 방문하는 것과 위임장을 보내는 것 중 어느 쪽이 빠른가요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-009",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "직접 방문과 위임장 대리 방문 중 어느 쪽이 빠른지(명의변경 기준)",
+     "sourceIds": [
+      "NAME_CHANGE-0088"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "명의변경은 직접 방문과 위임장을 통한 대리 방문의 처리 시간이 같다",
+    "직접 방문하면 위임장이 필요 없어 서류가 하나 덜 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "어떤 업무인지 질문에 없다. 카탈로그에서 방문 방식별 처리 속도를 다룬 것은 명의변경 NAME_CHANGE-0088(내가 가는 거랑 위임장 주는 거랑 뭐가 빨라요)뿐이다. 유심 재발급 대리 방문 등 다른 업무의 속도 비교는 카탈로그에 없다. 업무를 되묻는 것도 적절하다고 보아 ANSWER_OR_CLARIFY로 두었다. 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-009",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-009",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "직접 방문과 위임장 대리 방문 중 어느 쪽이 빠른지(명의변경 기준)",
+      "sourceIds": [
+       "NAME_CHANGE-0088"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "명의변경은 직접 방문과 위임장을 통한 대리 방문의 처리 시간이 같다",
+     "직접 방문하면 위임장이 필요 없어 서류가 하나 덜 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "어떤 업무인지 질문에 없다. 카탈로그에서 방문 방식별 처리 속도를 다룬 것은 명의변경 NAME_CHANGE-0088(내가 가는 거랑 위임장 주는 거랑 뭐가 빨라요)뿐이다. 유심 재발급 대리 방문 등 다른 업무의 속도 비교는 카탈로그에 없다. 업무를 되묻는 것도 적절하다고 보아 ANSWER_OR_CLARIFY로 두었다. 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 어떤 업무인지 질문에 없다. 카탈로그에서 방문 방식별 처리 속도를 다룬 것은 명의변경 NAME_CHANGE-0088(내가 가는 거랑 위임장 주는 거랑 뭐가 빨라요)뿐이다. 유심 재발급 대리 방문 등 다른 업무의 속도 비교는 카탈로그에 없다. 업무를 되묻는 것도 적절하다고 보아 ANSWER_OR_CLARIFY로 두었다. 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-019",
+  "set": "A",
+  "question": "철회 기간 14일은 영업일 기준인가요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-019",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "high",
+   "note": "철회 기간 14일이 영업일인지 달력일인지는 카탈로그에 없다. 같은 질문인 PORTING-0108의 answer는 '개통 후 14일 이내로 안내됩니다'로 기준을 말하지 않고, PORTING-0016은 기산일(개통일)만 말한다. '개통일로부터 14일'은 말해도 되지만 영업일·달력일을 단정하면 근거 부족."
+  },
+  "verified": {
+   "id": "EVAL-019",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "EVAL-019",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "high",
+    "note": "철회 기간 14일이 영업일인지 달력일인지는 카탈로그에 없다. 같은 질문인 PORTING-0108의 answer는 '개통 후 14일 이내로 안내됩니다'로 기준을 말하지 않고, PORTING-0016은 기산일(개통일)만 말한다. '개통일로부터 14일'은 말해도 되지만 영업일·달력일을 단정하면 근거 부족."
+   },
+   "changes": "",
+   "reviewReason": "설계자 정답은 PORTING-0108(같은 질문 '철회 기간 14일은 영업일인가요, 달력일인가요?')·0008·0064·0080이지만 PORTING-0108 answer는 '개통 후 14일 이내로 안내됩니다. 기한이 임박했다면 서둘러 신청하시는 것이 안전합니다'로 영업일·달력일 기준을 말하지 않는다. PORTING-0016은 기산일(번호이동 개통일)만 말한다. 카탈로그 기준으로는 ABSTAIN이 맞다고 보아 라벨을 유지했으나, 설계자는 0108로 답하는 것(개통일로부터 14일 이내 + 서둘러 신청)을 정답으로 본 것으로 보여 ABSTAIN과 ANSWER(기준 미명시 안내) 중 어느 쪽으로 채점할지 사람이 정해야 한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자 정답은 PORTING-0108(같은 질문 '철회 기간 14일은 영업일인가요, 달력일인가요?')·0008·0064·0080이지만 PORTING-0108 answer는 '개통 후 14일 이내로 안내됩니다. 기한이 임박했다면 서둘러 신청하시는 것이 안전합니다'로 영업일·달력일 기준을 말하지 않는다. PORTING-0016은 기산일(번호이동 개통일)만 말한다. 카탈로그 기준으로는 ABSTAIN이 맞다고 보아 라벨을 유지했으나, 설계자는 0108로 답하는 것(개통일로부터 14일 이내 + 서둘러 신청)을 정답으로 본 것으로 보여 ABSTAIN과 ANSWER(기준 미명시 안내) 중 어느 쪽으로 채점할지 사람이 정해야 한다."
+  ]
+ },
+ {
+  "id": "EVAL-031",
+  "set": "A",
+  "question": "손주 이름으로 새로 개통하려면 어떻게 하나요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-031",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "손주 이름으로 새로 개통하는 방법",
+     "sourceIds": [
+      "SUBSCRIBE-0050",
+      "SUBSCRIBE-0026",
+      "SUBSCRIBE-0002",
+      "SUBSCRIBE-0006",
+      "SUBSCRIBE-0010",
+      "SUBSCRIBE-0034",
+      "SUBSCRIBE-0074",
+      "SUBSCRIBE-0086"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "만 14세 미만은 가입할 수 없다",
+    "만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "손주 나이에 따라 답이 갈린다. 가장 직접적인 SUBSCRIBE-0050(손주 이름으로 하나 더 만들려면 어떻게 해요)과 0026은 만 14~18세 서류만 말하고 만 14세 미만 불가는 없다(0002·0006·0010·0034·0074·0086은 둘 다 담음). 손주가 성인이면 손주 본인 신분증이 필요하다(SUBSCRIBE-0066·0077)는 갈래도 있다. 조부모가 법정대리인이 될 수 있는지는 카탈로그에 없다(FAQ는 '부모 동의서'로 표현). 미성년자 명의 최대 3회선은 부가 정보."
+  },
+  "verified": {
+   "id": "EVAL-031",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-031",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "손주 이름으로 새로 개통하는 방법",
+      "sourceIds": [
+       "SUBSCRIBE-0050",
+       "SUBSCRIBE-0026",
+       "SUBSCRIBE-0002",
+       "SUBSCRIBE-0006",
+       "SUBSCRIBE-0010",
+       "SUBSCRIBE-0034",
+       "SUBSCRIBE-0074",
+       "SUBSCRIBE-0086",
+       "SUBSCRIBE-0022",
+       "SUBSCRIBE-0030",
+       "SUBSCRIBE-0042",
+       "SUBSCRIBE-0102",
+       "SUBSCRIBE-0126",
+       "SUBSCRIBE-0130"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "만 14세 미만은 가입할 수 없다",
+     "만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "손주 나이에 따라 답이 갈린다. 가장 직접적인 SUBSCRIBE-0050(손주 이름으로 하나 더 만들려면 어떻게 해요)과 0026은 만 14~18세 서류만 말하고 만 14세 미만 불가는 없다(0002·0006·0010·0034·0074·0086은 둘 다 담음). 손주가 성인이면 손주 본인 신분증이 필요하다(SUBSCRIBE-0066·0077)는 갈래도 있다. 조부모가 법정대리인이 될 수 있는지는 카탈로그에 없다(FAQ는 '부모 동의서'로 표현). 미성년자 명의 최대 3회선은 부가 정보."
+   },
+   "changes": "sourceIds 추가: 손주가 만 14세 미만인 갈래에 직접 답하는 SUBSCRIBE-0022(손주 열세 살 → 가입 불가), 손주 폰 서류를 답하는 0102·0126·0130, 미성년 명의 서류를 답하는 0030·0042(0030·0042·0130은 설계자 정답). requiredFacts·판정은 그대로.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 손주 나이에 따라 답이 갈린다. 가장 직접적인 SUBSCRIBE-0050(손주 이름으로 하나 더 만들려면 어떻게 해요)과 0026은 만 14~18세 서류만 말하고 만 14세 미만 불가는 없다(0002·0006·0010·0034·0074·0086은 둘 다 담음). 손주가 성인이면 손주 본인 신분증이 필요하다(SUBSCRIBE-0066·0077)는 갈래도 있다. 조부모가 법정대리인이 될 수 있는지는 카탈로그에 없다(FAQ는 '부모 동의서'로 표현). 미성년자 명의 최대 3회선은 부가 정보."
+  ]
+ },
+ {
+  "id": "EVAL-033",
+  "set": "A",
+  "question": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른가요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-033",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른지",
+     "sourceIds": [
+      "TERMINATE-0113",
+      "TERMINATE-0109",
+      "TERMINATE-0101"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "매장 방문과 고객센터 전화 모두 신청 즉시 처리되어 속도 차이가 없다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "TERMINATE-0113(폰 잃어버렸는데 매장 가는 거랑 전화하는 거랑 뭐가 빨라요: 똑같이 바로 됩니다)이 가장 가깝다. 이 FAQ들은 해지 처리 기준이다. 질문이 분실 신고(이용 정지)를 뜻한다면 카탈로그는 고객센터·홈페이지 신고 시 즉시 정지만 말하고(DEVICE-0051·0091) 매장 신고 속도는 다루지 않는다. 어떤 업무인지 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-033",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-033",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "분실했을 때 매장 방문과 전화 중 어느 쪽이 빠른지",
+      "sourceIds": [
+       "TERMINATE-0113",
+       "TERMINATE-0109",
+       "TERMINATE-0101"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "매장 방문과 고객센터 전화 모두 신청 즉시 처리되어 속도 차이가 없다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "TERMINATE-0113(폰 잃어버렸는데 매장 가는 거랑 전화하는 거랑 뭐가 빨라요: 똑같이 바로 됩니다)이 가장 가깝다. 이 FAQ들은 해지 처리 기준이다. 질문이 분실 신고(이용 정지)를 뜻한다면 카탈로그는 고객센터·홈페이지 신고 시 즉시 정지만 말하고(DEVICE-0051·0091) 매장 신고 속도는 다루지 않는다. 어떤 업무인지 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: TERMINATE-0113(폰 잃어버렸는데 매장 가는 거랑 전화하는 거랑 뭐가 빨라요: 똑같이 바로 됩니다)이 가장 가깝다. 이 FAQ들은 해지 처리 기준이다. 질문이 분실 신고(이용 정지)를 뜻한다면 카탈로그는 고객센터·홈페이지 신고 시 즉시 정지만 말하고(DEVICE-0051·0091) 매장 신고 속도는 다루지 않는다. 어떤 업무인지 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-040",
+  "set": "A",
+  "question": "새 폰에 유심이 맞지 않는데 어떻게 하나요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-040",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "새 폰에 유심이 맞지 않을 때 해결 방법",
+     "sourceIds": [
+      "USIM-0089"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "매장에 가면 새 유심을 바로 받을 수 있다",
+    "유심 비용은 7,700원이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "USIM-0089(새 폰인데 유심이 안 맞아요)가 직접 답한다. 비용이 질문에 꼭 필요한지는 애매해 low로 둔다. 새 폰이 eSIM을 지원하면 eSIM(2,750원)도 방법이라는 내용(USIM-0111 등)은 부가 정보."
+  },
+  "verified": {
+   "id": "EVAL-040",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-040",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "새 폰에 유심이 맞지 않을 때 해결 방법",
+      "sourceIds": [
+       "USIM-0089",
+       "USIM-0029"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "매장에 가면 새 유심을 바로 받을 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "high",
+    "note": "USIM-0089(새 폰인데 유심이 안 맞아요)가 직접 답한다. 유심 비용 7,700원은 묻지 않은 부가 정보라 필수에서 뺐다(언급하면 근거 있음). 온라인 신청 시 택배 2~3영업일(USIM-0029)도 근거 있는 방법이다. 새 폰이 eSIM을 지원하면 eSIM(2,750원)도 방법이라는 내용(USIM-0111 등)은 부가 정보."
+   },
+   "changes": "requiredFacts에서 '유심 비용은 7,700원이다'를 뺐다. 질문은 해결 방법만 묻고 비용은 묻지 않아 LABEL_GUIDE의 '묻지 않은 부가 정보는 뺀다'에 해당한다(빼지 않으면 비용을 말하지 않은 정상 답이 감점됨). sourceIds에 새 폰용 유심을 택배로 받는 방법을 답하는 USIM-0029(설계자 정답) 추가, confidence low→high, note 갱신.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: USIM-0089(새 폰인데 유심이 안 맞아요)가 직접 답한다. 비용이 질문에 꼭 필요한지는 애매해 low로 둔다. 새 폰이 eSIM을 지원하면 eSIM(2,750원)도 방법이라는 내용(USIM-0111 등)은 부가 정보."
+  ]
+ },
+ {
+  "id": "EVAL-041",
+  "set": "A",
+  "question": "이번 달에 고지서를 두 통 받았습니다. 하나만 내면 되는 건지 확인 부탁드려요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-041",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "고지서를 두 통 받았을 때 하나만 내면 되는지 확인",
+     "sourceIds": [
+      "BILLING-0105"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "청구서가 중복 발송된 경우 고객센터에 확인한다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "EVAL-001과 같은 상황(BILLING-0105). '하나만 내면 되는지'는 카탈로그에 직접 답이 없다. '하나만 내면 된다'고 단정하면 근거 부족. PARTIAL_ANSWER로 볼지 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-041",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-041",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "고지서를 두 통 받았을 때 하나만 내면 되는지 확인",
+      "sourceIds": [
+       "BILLING-0105"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "청구서가 중복 발송된 경우 고객센터에 확인한다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "EVAL-001과 같은 상황(BILLING-0105). '하나만 내면 되는지'는 카탈로그에 직접 답이 없다. '하나만 내면 된다'고 단정하면 근거 부족. PARTIAL_ANSWER로 볼지 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: EVAL-001과 같은 상황(BILLING-0105). '하나만 내면 되는지'는 카탈로그에 직접 답이 없다. '하나만 내면 된다'고 단정하면 근거 부족. PARTIAL_ANSWER로 볼지 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-043",
+  "set": "A",
+  "question": "지난달에 한 번 바꿨는데 이달에 또 바꿔도 되는지 궁금합니다",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-043",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "지난달에 요금제를 한 번 바꿨는데 이번 달에 또 바꿀 수 있는지",
+     "sourceIds": [
+      "BILLING-0001",
+      "BILLING-0015",
+      "BILLING-0022",
+      "BILLING-0036",
+      "BILLING-0043",
+      "BILLING-0050",
+      "BILLING-0057",
+      "BILLING-0064",
+      "BILLING-0085",
+      "BILLING-0092",
+      "BILLING-0106",
+      "BILLING-0134",
+      "BILLING-0141",
+      "BILLING-0155"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "요금제 변경은 월 1회 가능해 지난달에 변경했어도 이번 달에 다시 변경할 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "무엇을 바꿨는지 질문에 없다. EVAL-003과 짝인 요금제 변경으로 해석했다. 지난달에 변경했으니 가입한 달 제한은 해당하지 않는다. 기기변경이라면 카탈로그는 개통 후 6개월 조건만 말하고 직전 변경 후 재변경 기준은 없다. 해석 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-043",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-043",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "지난달에 요금제를 한 번 바꿨는데 이번 달에 또 바꿀 수 있는지",
+      "sourceIds": [
+       "BILLING-0001",
+       "BILLING-0015",
+       "BILLING-0022",
+       "BILLING-0036",
+       "BILLING-0043",
+       "BILLING-0050",
+       "BILLING-0057",
+       "BILLING-0064",
+       "BILLING-0085",
+       "BILLING-0092",
+       "BILLING-0106",
+       "BILLING-0134",
+       "BILLING-0141",
+       "BILLING-0155"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "요금제 변경은 월 1회 가능해 지난달에 변경했어도 이번 달에 다시 변경할 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "무엇을 바꿨는지 질문에 없다. EVAL-003과 짝인 요금제 변경으로 해석했다. 지난달에 변경했으니 가입한 달 제한은 해당하지 않는다. 기기변경이라면 카탈로그는 개통 후 6개월 조건만 말하고 직전 변경 후 재변경 기준은 없다. 해석 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 무엇을 바꿨는지 질문에 없다. EVAL-003과 짝인 요금제 변경으로 해석했다. 지난달에 변경했으니 가입한 달 제한은 해당하지 않는다. 기기변경이라면 카탈로그는 개통 후 6개월 조건만 말하고 직전 변경 후 재변경 기준은 없다. 해석 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-047",
+  "set": "A",
+  "question": "약정 반년 지났는데 새 폰으로 갈아타려면 뭘 준비해서 어디로 가야 하나요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-047",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "약정 반년이 지나 새 폰으로 바꿀 때 준비할 것",
+     "sourceIds": [
+      "DEVICE-0034",
+      "DEVICE-0030",
+      "DEVICE-0038",
+      "DEVICE-0042"
+     ]
+    },
+    {
+     "questionPart": "기기변경을 하러 어디로 가야 하는지",
+     "sourceIds": [
+      "DEVICE-0038",
+      "DEVICE-0030",
+      "DEVICE-0042"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "기존 단말 할부금은 완납하거나 새 할부에 승계해야 한다",
+    "매장에서 기기변경을 신청한다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "'약정 반년'을 개통 후 6개월로 해석했다(EVAL-007과 짝). 기기변경에 필요한 신분증 등 서류 목록은 카탈로그에 없다. 개통 6개월 경과 확인(DEVICE-0034)을 언급하면 근거 있음."
+  },
+  "verified": {
+   "id": "EVAL-047",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-047",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "약정 반년이 지나 새 폰으로 바꿀 때 준비할 것",
+      "sourceIds": [
+       "DEVICE-0034",
+       "DEVICE-0030",
+       "DEVICE-0038",
+       "DEVICE-0042"
+      ]
+     },
+     {
+      "questionPart": "기기변경을 하러 어디로 가야 하는지",
+      "sourceIds": [
+       "DEVICE-0038",
+       "DEVICE-0030",
+       "DEVICE-0042"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "기존 단말 할부금은 완납하거나 새 할부에 승계해야 한다",
+     "매장에서 기기변경을 신청한다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "'약정 반년'을 개통 후 6개월로 해석했다(EVAL-007과 짝). 기기변경에 필요한 신분증 등 서류 목록은 카탈로그에 없다. 개통 6개월 경과 확인(DEVICE-0034)을 언급하면 근거 있음."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: '약정 반년'을 개통 후 6개월로 해석했다(EVAL-007과 짝). 기기변경에 필요한 신분증 등 서류 목록은 카탈로그에 없다. 개통 6개월 경과 확인(DEVICE-0034)을 언급하면 근거 있음."
+  ]
+ },
+ {
+  "id": "EVAL-049",
+  "set": "A",
+  "question": "제가 못 가서 동생을 보내려는데 제가 가는 것보다 오래 걸릴까요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-049",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "본인 대신 동생을 보내면 더 오래 걸리는지(명의변경 기준)",
+     "sourceIds": [
+      "NAME_CHANGE-0088"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "명의변경은 직접 방문과 위임장을 통한 대리 방문의 처리 시간이 같다",
+    "대리 방문에는 위임장이 추가로 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "EVAL-009와 짝. 어떤 업무인지 질문에 없다. 처리 시간을 비교한 FAQ는 명의변경 NAME_CHANGE-0088뿐이다. 다른 업무(유심 재발급 등)의 대리 방문 처리 시간은 카탈로그에 없다. 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-049",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-049",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "본인 대신 동생을 보내면 더 오래 걸리는지(명의변경 기준)",
+      "sourceIds": [
+       "NAME_CHANGE-0088"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "명의변경은 직접 방문과 위임장을 통한 대리 방문의 처리 시간이 같다",
+     "대리 방문에는 위임장이 추가로 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "EVAL-009와 짝. 어떤 업무인지 질문에 없다. 처리 시간을 비교한 FAQ는 명의변경 NAME_CHANGE-0088뿐이다. 다른 업무(유심 재발급 등)의 대리 방문 처리 시간은 카탈로그에 없다. 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: EVAL-009와 짝. 어떤 업무인지 질문에 없다. 처리 시간을 비교한 FAQ는 명의변경 NAME_CHANGE-0088뿐이다. 다른 업무(유심 재발급 등)의 대리 방문 처리 시간은 카탈로그에 없다. 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-056",
+  "set": "A",
+  "question": "기본 데이터 다 쓰고 나서 유튜브 보려니까 계속 버퍼링이 걸립니다",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-056",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "기본 데이터를 다 쓴 뒤 유튜브 버퍼링이 걸리는 이유",
+     "sourceIds": [
+      "PLAN-0077",
+      "PLAN-0137"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "기본 데이터를 다 쓰면 속도가 400kbps로 제한된다",
+    "속도 제한 상태에서는 고화질 영상 시청이 어렵다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "EVAL-016과 짝. PLAN-0077은 '속도 제한 상태라 고화질 영상은 어렵다'만 말하고 400kbps 수치가 없다. PLAN-0137은 400kbps와 '대용량 이용이 어렵다'를 말한다. 400kbps 수치는 PLAN-02 대부분의 FAQ에 있다. 언리미티드로 변경하면 제한이 없다(PLAN-0032 등)는 부가 정보."
+  },
+  "verified": {
+   "id": "EVAL-056",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-056",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "기본 데이터를 다 쓴 뒤 유튜브 버퍼링이 걸리는 이유",
+      "sourceIds": [
+       "PLAN-0077",
+       "PLAN-0137",
+       "PLAN-0002",
+       "PLAN-0012",
+       "PLAN-0027",
+       "PLAN-0092",
+       "PLAN-0097",
+       "PLAN-0102",
+       "PLAN-0107"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "기본 데이터를 다 쓰면 속도가 400kbps로 제한된다",
+     "속도 제한 상태에서는 고화질 영상 시청이 어렵다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "EVAL-016과 짝. PLAN-0077은 '속도 제한 상태라 고화질 영상은 어렵다'만 말하고 400kbps 수치가 없다. PLAN-0137은 400kbps와 '대용량 이용이 어렵다'를 말한다. 400kbps 수치는 PLAN-02 대부분의 FAQ에 있다. 언리미티드로 변경하면 제한이 없다(PLAN-0032 등)는 부가 정보."
+   },
+   "changes": "sourceIds 추가: 필수 사실 1(기본 데이터를 다 쓰면 400kbps로 제한)을 직접 답하는 PLAN-0002·0012·0092·0097·0102(설계자 정답)와 0027·0107. 원래 출처 PLAN-0077에는 400kbps 수치가 없어 필수 사실 1의 근거가 PLAN-0137 하나뿐이었다.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: EVAL-016과 짝. PLAN-0077은 '속도 제한 상태라 고화질 영상은 어렵다'만 말하고 400kbps 수치가 없다. PLAN-0137은 400kbps와 '대용량 이용이 어렵다'를 말한다. 400kbps 수치는 PLAN-02 대부분의 FAQ에 있다. 언리미티드로 변경하면 제한이 없다(PLAN-0032 등)는 부가 정보."
+  ]
+ },
+ {
+  "id": "EVAL-059",
+  "set": "A",
+  "question": "개통 취소할 수 있는 기간이 주말 빼고 세는 건지 그냥 날짜로 세는 건지 헷갈려요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-059",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": "개통 취소(철회) 14일을 주말 포함 달력일로 세는지 영업일로 세는지",
+   "confidence": "low",
+   "note": "번호이동 철회(PORTING-04)와 단말 반품(DEVICE-04)은 '개통 후 14일 이내'라고만 하고 영업일/달력일 여부를 말하지 않음. 다른 정책은 '영업일'을 명시하므로 달력일로 추정할 수는 있으나 근거 없음. 기간(14일)만 안내하고 세는 방식은 확인 불가로 보는 답도 적절. 신규 개통 자체의 취소 정책은 카탈로그에 없음."
+  },
+  "verified": {
+   "id": "EVAL-059",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "EVAL-059",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": "개통 취소(철회) 14일을 주말 포함 달력일로 세는지 영업일로 세는지",
+    "confidence": "low",
+    "note": "번호이동 철회(PORTING-04)와 단말 반품(DEVICE-04)은 '개통 후 14일 이내'라고만 하고 영업일/달력일 여부를 말하지 않음. 다른 정책은 '영업일'을 명시하므로 달력일로 추정할 수는 있으나 근거 없음. 기간(14일)만 안내하고 세는 방식은 확인 불가로 보는 답도 적절. 신규 개통 자체의 취소 정책은 카탈로그에 없음."
+   },
+   "changes": "",
+   "reviewReason": "카탈로그는 철회·반품 기간을 \"개통 후 14일 이내\"라고만 하고 영업일/달력일 여부는 어디에도 없음(PORTING-0108도 같은 질문에 \"14일 이내로 안내됩니다\"로만 답함). 설계자 정답은 PORTING-0108 등을 답 근거로 보지만 세는 방식은 확인되지 않음. ABSTAIN(세는 방식은 확인 불가)으로 둘지, 14일 이내 사실을 요구하는 PARTIAL_ANSWER로 둘지 사람이 정해야 함. \"개통 취소\"가 번호이동 철회인지 단말 반품인지도 불명확(둘 다 14일)."
+  },
+  "reasons": [
+   "검증 판단 불가: 카탈로그는 철회·반품 기간을 \"개통 후 14일 이내\"라고만 하고 영업일/달력일 여부는 어디에도 없음(PORTING-0108도 같은 질문에 \"14일 이내로 안내됩니다\"로만 답함). 설계자 정답은 PORTING-0108 등을 답 근거로 보지만 세는 방식은 확인되지 않음. ABSTAIN(세는 방식은 확인 불가)으로 둘지, 14일 이내 사실을 요구하는 PARTIAL_ANSWER로 둘지 사람이 정해야 함. \"개통 취소\"가 번호이동 철회인지 단말 반품인지도 불명확(둘 다 14일).",
+   "작성자 확신 낮음: 번호이동 철회(PORTING-04)와 단말 반품(DEVICE-04)은 '개통 후 14일 이내'라고만 하고 영업일/달력일 여부를 말하지 않음. 다른 정책은 '영업일'을 명시하므로 달력일로 추정할 수는 있으나 근거 없음. 기간(14일)만 안내하고 세는 방식은 확인 불가로 보는 답도 적절. 신규 개통 자체의 취소 정책은 카탈로그에 없음."
+  ]
+ },
+ {
+  "id": "EVAL-060",
+  "set": "A",
+  "question": "쓰던 번호 그대로 회사만 옮기고 싶은데 뭘 들고 어디로 가야 하나요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-060",
+   "expectedBehavior": "PARTIAL_ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "쓰던 번호 그대로 통신사만 옮길 때(번호이동) 무엇을 준비해야 하는지",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0074",
+      "PORTING-0082",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0030",
+      "PORTING-0034",
+      "PORTING-0038",
+      "PORTING-0078",
+      "PORTING-0106"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 한다",
+    "번호이동을 어디에서 신청하는지(방문 장소)는 FAQ에서 확인할 수 없다"
+   ],
+   "missingFact": "번호이동 신청 장소(어디로 가야 하는지)",
+   "confidence": "low",
+   "note": "번호이동 FAQ는 '신분증을 지참해 신청'이라고만 하고 매장·온라인 등 신청 경로를 말하지 않음. '어디로'가 매장 찾기로 따로 처리되는 질문이면 이 부분은 범위에서 빠질 수 있음."
+  },
+  "verified": {
+   "id": "EVAL-060",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-060",
+    "expectedBehavior": "PARTIAL_ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "쓰던 번호 그대로 통신사만 옮길 때(번호이동) 무엇을 준비해야 하는지",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0074",
+       "PORTING-0082",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0030",
+       "PORTING-0034",
+       "PORTING-0038",
+       "PORTING-0078",
+       "PORTING-0106",
+       "PORTING-0018",
+       "PORTING-0042",
+       "PORTING-0045",
+       "PORTING-0046",
+       "PORTING-0050",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0110",
+       "PORTING-0066",
+       "PORTING-0025",
+       "PORTING-0041",
+       "PORTING-0047"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 한다",
+     "번호이동을 어디에서 신청하는지(방문 장소)는 FAQ에서 확인할 수 없다"
+    ],
+    "missingFact": "번호이동 신청 장소(어디로 가야 하는지)",
+    "confidence": "low",
+    "note": "번호이동 FAQ는 '신분증을 지참해 신청'이라고만 하고 매장·온라인 등 신청 경로를 말하지 않음. '어디로'가 매장 찾기로 따로 처리되는 질문이면 이 부분은 범위에서 빠질 수 있음."
+   },
+   "changes": "준비물(본인 신분증, 미납 완납) 부분 sourceIds에 빠진 FAQ를 더함: PORTING-0018·0042·0045(신분증만, 밀린 요금 없어야), 0046·0050·0098·0102·0110(신분증·미납 완납), 0066(본인 신분증이면 됨), 0025·0041·0047(신분증 들고 신청). 설계자 정답 0018·0042·0045가 빠져 있었음. 신청 장소는 번호이동 FAQ 어디에도 없어 PARTIAL_ANSWER는 유지.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 번호이동 FAQ는 '신분증을 지참해 신청'이라고만 하고 매장·온라인 등 신청 경로를 말하지 않음. '어디로'가 매장 찾기로 따로 처리되는 질문이면 이 부분은 범위에서 빠질 수 있음."
+  ]
+ },
+ {
+  "id": "EVAL-070",
+  "set": "A",
+  "question": "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-070",
+   "expectedBehavior": "PARTIAL_ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "회사 업무로 매장에 갔을 때 본인 주민등록증만으로는 안 되는 이유",
+     "sourceIds": [
+      "SUBSCRIBE-0089"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "본인 명의 신분증은 본인 명의 개통에만 쓰이고 법인 명의는 별도 심사 절차로 진행된다",
+    "법인 명의 업무에 무엇을 더 가져가야 하는지는 FAQ에서 확인할 수 없다"
+   ],
+   "missingFact": "법인(회사) 명의 업무를 대신 처리할 때 필요한 서류",
+   "confidence": "low",
+   "note": "무슨 업무(법인 개통, 명의변경, 유심 재발급 등)인지 모름. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 설명하나 필요 서류는 카탈로그에 없음. 명의변경이면 회사 측 위임장(NAME_CHANGE-0022·0034), 유심 대리면 위임장·가입자 신분증 사본(USIM-02)으로 답이 달라져 되묻기도 적절할 수 있음."
+  },
+  "verified": {
+   "id": "EVAL-070",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "EVAL-070",
+    "expectedBehavior": "PARTIAL_ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "회사 업무로 매장에 갔을 때 본인 주민등록증만으로는 안 되는 이유",
+      "sourceIds": [
+       "SUBSCRIBE-0089"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "본인 명의 신분증은 본인 명의 개통에만 쓰이고 법인 명의는 별도 심사 절차로 진행된다",
+     "법인 명의 업무에 무엇을 더 가져가야 하는지는 FAQ에서 확인할 수 없다"
+    ],
+    "missingFact": "법인(회사) 명의 업무를 대신 처리할 때 필요한 서류",
+    "confidence": "low",
+    "note": "무슨 업무(법인 개통, 명의변경, 유심 재발급 등)인지 모름. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 설명하나 필요 서류는 카탈로그에 없음. 명의변경이면 회사 측 위임장(NAME_CHANGE-0022·0034), 유심 대리면 위임장·가입자 신분증 사본(USIM-02)으로 답이 달라져 되묻기도 적절할 수 있음. 또한 SUBSCRIBE-0009(법인 담당자가 개통하러 갈 때 본인 명의 신분증이면 됨)·0049·0069·0129(회사 폰도 본인 신분증이면 됨)는 질문 맥락상 담당자 본인 신분증으로 된다고 읽혀 SUBSCRIBE-0089와 충돌할 수 있음(answer 본문만 보면 일반 신분증 안내)."
+   },
+   "changes": "note에 SUBSCRIBE-0009·0049·0069·0129와 SUBSCRIBE-0089의 충돌 가능성을 덧붙임(라벨 판정은 유지).",
+   "reviewReason": "무슨 업무(법인 개통, 명의변경, 유심 대리 등)인지 질문에서 알 수 없고, 고객 발화가 불만 진술이라 \"무엇을 더 가져가야 하는지\"까지 묻는 것으로 볼지도 갈림. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 주지만, SUBSCRIBE-0009·0049·0069·0129는 법인 담당자·회사 폰도 본인 신분증이면 된다는 맥락이라 0089와 충돌 소지가 있음. PARTIAL_ANSWER 유지가 맞는지, 되묻기(ANSWER_OR_CLARIFY)가 맞는지 사람 검토 필요."
+  },
+  "reasons": [
+   "검증 판단 불가: 무슨 업무(법인 개통, 명의변경, 유심 대리 등)인지 질문에서 알 수 없고, 고객 발화가 불만 진술이라 \"무엇을 더 가져가야 하는지\"까지 묻는 것으로 볼지도 갈림. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 주지만, SUBSCRIBE-0009·0049·0069·0129는 법인 담당자·회사 폰도 본인 신분증이면 된다는 맥락이라 0089와 충돌 소지가 있음. PARTIAL_ANSWER 유지가 맞는지, 되묻기(ANSWER_OR_CLARIFY)가 맞는지 사람 검토 필요.",
+   "작성자 확신 낮음: 무슨 업무(법인 개통, 명의변경, 유심 재발급 등)인지 모름. 법인 개통으로 보면 SUBSCRIBE-0089가 이유를 설명하나 필요 서류는 카탈로그에 없음. 명의변경이면 회사 측 위임장(NAME_CHANGE-0022·0034), 유심 대리면 위임장·가입자 신분증 사본(USIM-02)으로 답이 달라져 되묻기도 적절할 수 있음."
+  ]
+ },
+ {
+  "id": "EVAL-071",
+  "set": "A",
+  "question": "열여섯 살 손자 폰을 만들어 주려는데 할머니가 가도 되는지, 서류는 뭐가 필요한지요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-071",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "열여섯 살 손자 폰 개통에 할머니가 가도 되는지",
+     "sourceIds": [
+      "SUBSCRIBE-0050"
+     ]
+    },
+    {
+     "questionPart": "손자(미성년자) 명의 개통에 필요한 서류",
+     "sourceIds": [
+      "SUBSCRIBE-0002",
+      "SUBSCRIBE-0010",
+      "SUBSCRIBE-0074",
+      "SUBSCRIBE-0082",
+      "SUBSCRIBE-0006",
+      "SUBSCRIBE-0018",
+      "SUBSCRIBE-0026",
+      "SUBSCRIBE-0030",
+      "SUBSCRIBE-0034",
+      "SUBSCRIBE-0042",
+      "SUBSCRIBE-0050",
+      "SUBSCRIBE-0058",
+      "SUBSCRIBE-0062",
+      "SUBSCRIBE-0078",
+      "SUBSCRIBE-0086",
+      "SUBSCRIBE-0090",
+      "SUBSCRIBE-0098",
+      "SUBSCRIBE-0102",
+      "SUBSCRIBE-0110",
+      "SUBSCRIBE-0114",
+      "SUBSCRIBE-0118",
+      "SUBSCRIBE-0122",
+      "SUBSCRIBE-0126",
+      "SUBSCRIBE-0130",
+      "SUBSCRIBE-0097"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다",
+    "할머니가 가더라도 부모(법정대리인)의 동의서·신분증과 가족관계증명서를 가져가면 된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "조부모가 방문해도 되는지는 SUBSCRIBE-0050 답 본문('손주가 … 부모 동의서, 가족관계증명서, 부모 신분증을 가져가시면 됩니다')에서만 간접적으로 나옴. 할머니가 법정대리인이 아니라는 전제. '열여섯 살'은 세는 방식과 관계없이 만 14~18세 범위로 봄. 미성년자 명의 최대 3회선은 묻지 않음."
+  },
+  "verified": {
+   "id": "EVAL-071",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-071",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "열여섯 살 손자 폰 개통에 할머니가 가도 되는지",
+      "sourceIds": [
+       "SUBSCRIBE-0050"
+      ]
+     },
+     {
+      "questionPart": "손자(미성년자) 명의 개통에 필요한 서류",
+      "sourceIds": [
+       "SUBSCRIBE-0002",
+       "SUBSCRIBE-0010",
+       "SUBSCRIBE-0074",
+       "SUBSCRIBE-0082",
+       "SUBSCRIBE-0006",
+       "SUBSCRIBE-0018",
+       "SUBSCRIBE-0026",
+       "SUBSCRIBE-0030",
+       "SUBSCRIBE-0034",
+       "SUBSCRIBE-0042",
+       "SUBSCRIBE-0050",
+       "SUBSCRIBE-0058",
+       "SUBSCRIBE-0062",
+       "SUBSCRIBE-0078",
+       "SUBSCRIBE-0086",
+       "SUBSCRIBE-0090",
+       "SUBSCRIBE-0098",
+       "SUBSCRIBE-0102",
+       "SUBSCRIBE-0110",
+       "SUBSCRIBE-0114",
+       "SUBSCRIBE-0118",
+       "SUBSCRIBE-0122",
+       "SUBSCRIBE-0126",
+       "SUBSCRIBE-0130",
+       "SUBSCRIBE-0097"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다",
+     "할머니가 가더라도 부모(법정대리인)의 동의서·신분증과 가족관계증명서를 가져가면 된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "조부모가 방문해도 되는지는 SUBSCRIBE-0050 답 본문('손주가 … 부모 동의서, 가족관계증명서, 부모 신분증을 가져가시면 됩니다')에서만 간접적으로 나옴. 할머니가 법정대리인이 아니라는 전제. '열여섯 살'은 세는 방식과 관계없이 만 14~18세 범위로 봄. 미성년자 명의 최대 3회선은 묻지 않음."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 조부모가 방문해도 되는지는 SUBSCRIBE-0050 답 본문('손주가 … 부모 동의서, 가족관계증명서, 부모 신분증을 가져가시면 됩니다')에서만 간접적으로 나옴. 할머니가 법정대리인이 아니라는 전제. '열여섯 살'은 세는 방식과 관계없이 만 14~18세 범위로 봄. 미성년자 명의 최대 3회선은 묻지 않음."
+  ]
+ },
+ {
+  "id": "EVAL-074",
+  "set": "A",
+  "question": "남은 폰 값을 한꺼번에 내는 게 더 손해인지 나눠 내는 게 손해인지 모르겠습니다",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-074",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "남은 단말 할부금을 한꺼번에 내는 것과 나눠 내는 것 중 어느 쪽이 손해인지",
+     "sourceIds": [
+      "TERMINATE-0103"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "남은 할부금 총액은 같고 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "직접 답하는 것은 해지 시 잔여 할부금 FAQ(TERMINATE-0103)뿐이고 질문에는 해지 상황이 없음. 할부 수수료 연 5.9%(DEVICE-01)가 남은 기간 분에도 붙는지, 일시 납부 시 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황이 아니면 ABSTAIN일 수 있어 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-074",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "EVAL-074",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "남은 단말 할부금을 한꺼번에 내는 것과 나눠 내는 것 중 어느 쪽이 손해인지",
+      "sourceIds": [
+       "TERMINATE-0103"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "남은 할부금 총액은 같고 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "직접 답하는 것은 해지 시 잔여 할부금 FAQ(TERMINATE-0103)뿐이고 질문에는 해지 상황이 없음. 할부 수수료 연 5.9%(DEVICE-01)가 남은 기간 분에도 붙는지, 일시 납부 시 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황이 아니면 ABSTAIN일 수 있어 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": "질문에 해지 상황이 없음. 직접 답하는 FAQ는 분실 해지 상황의 TERMINATE-0103(잔여 할부금 총액은 같음)뿐이고, 해지 없이 남은 할부금을 일찍 갚는 경우 연 5.9% 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황으로 보면 ANSWER, 일반 중도 상환으로 보면 ABSTAIN 또는 PARTIAL_ANSWER라 해석이 갈림. 설계자 정답(TERMINATE-0103)과 라벨은 같은 쪽."
+  },
+  "reasons": [
+   "검증 판단 불가: 질문에 해지 상황이 없음. 직접 답하는 FAQ는 분실 해지 상황의 TERMINATE-0103(잔여 할부금 총액은 같음)뿐이고, 해지 없이 남은 할부금을 일찍 갚는 경우 연 5.9% 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황으로 보면 ANSWER, 일반 중도 상환으로 보면 ABSTAIN 또는 PARTIAL_ANSWER라 해석이 갈림. 설계자 정답(TERMINATE-0103)과 라벨은 같은 쪽.",
+   "작성자 확신 낮음: 직접 답하는 것은 해지 시 잔여 할부금 FAQ(TERMINATE-0103)뿐이고 질문에는 해지 상황이 없음. 할부 수수료 연 5.9%(DEVICE-01)가 남은 기간 분에도 붙는지, 일시 납부 시 수수료가 줄어드는지는 카탈로그에 없음. 해지 상황이 아니면 ABSTAIN일 수 있어 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-080",
+  "set": "A",
+  "question": "기기를 바꿨더니 칩 크기가 달라서 안 들어갑니다. 어디서 바꿔야 하나요",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-080",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "기기를 바꿨는데 유심 크기가 맞지 않을 때 어디서 유심을 바꾸는지",
+     "sourceIds": [
+      "USIM-0001",
+      "USIM-0017",
+      "USIM-0025",
+      "USIM-0041",
+      "USIM-0105",
+      "USIM-0109",
+      "USIM-0005",
+      "USIM-0009",
+      "USIM-0033",
+      "USIM-0085",
+      "USIM-0097",
+      "USIM-0101",
+      "USIM-0113"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "매장을 방문하면 유심을 즉시 재발급받을 수 있다",
+    "온라인으로 신청하면 택배로 2~3 영업일 안에 받을 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그에 유심 크기 불일치 상황은 없음. 물리 유심 재발급 경로로 답할 수 있다고 봄. 새 단말이 eSIM을 지원하면 eSIM 발급(USIM-0031·0039)도 대안. 비용 7,700원은 묻지 않음."
+  },
+  "verified": {
+   "id": "EVAL-080",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-080",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "기기를 바꿨는데 유심 크기가 맞지 않을 때 어디서 유심을 바꾸는지",
+      "sourceIds": [
+       "USIM-0001",
+       "USIM-0017",
+       "USIM-0025",
+       "USIM-0041",
+       "USIM-0105",
+       "USIM-0109",
+       "USIM-0005",
+       "USIM-0009",
+       "USIM-0033",
+       "USIM-0085",
+       "USIM-0097",
+       "USIM-0101",
+       "USIM-0113",
+       "USIM-0089",
+       "USIM-0093",
+       "USIM-0057",
+       "USIM-0013",
+       "USIM-0037",
+       "USIM-0053",
+       "USIM-0077",
+       "USIM-0021",
+       "USIM-0045",
+       "USIM-0065",
+       "USIM-0029",
+       "USIM-0049",
+       "USIM-0061"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "매장을 방문하면 유심을 즉시 재발급받을 수 있다",
+     "온라인으로 신청하면 택배로 2~3 영업일 안에 받을 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "USIM-0089(매장에 오시면 새 유심을 바로 드립니다)·0093이 이 상황(새 폰에 유심이 안 맞음)에 직접 답함. 나머지는 물리 유심 재발급 경로(매장 즉시, 온라인 택배 2~3 영업일). \"어디서\"에 매장과 온라인 두 경로를 모두 필수로 둘지, 매장만으로 충분한지는 판단이 갈릴 수 있음. 새 단말이 eSIM을 지원하면 eSIM 발급(USIM-0031·0039)도 대안. 비용 7,700원은 묻지 않음."
+   },
+   "changes": "sourceIds에 USIM-0089·0093(새 폰에 유심이 안 맞을 때 매장에서 바로 새 유심)과 매장 즉시 발급(USIM-0057·0013·0037·0053·0077·0021·0045·0065), 온라인 택배(USIM-0029·0049·0061) FAQ를 더함. 설계자 정답 USIM-0089가 빠져 있었고, note의 \"유심 크기 불일치 상황은 카탈로그에 없음\"은 USIM-0089 본문과 맞지 않아 고침.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 카탈로그에 유심 크기 불일치 상황은 없음. 물리 유심 재발급 경로로 답할 수 있다고 봄. 새 단말이 eSIM을 지원하면 eSIM 발급(USIM-0031·0039)도 대안. 비용 7,700원은 묻지 않음."
+  ]
+ },
+ {
+  "id": "EVAL-139",
+  "set": "A",
+  "question": "대리인이 가면 가입자 신분증 사본도 챙겨야 해요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-139",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "대리인이 방문할 때 가입자 신분증 사본도 챙겨야 하는지",
+     "sourceIds": [
+      "USIM-0010",
+      "USIM-0026",
+      "USIM-0042",
+      "USIM-0058",
+      "USIM-0066",
+      "USIM-0082",
+      "USIM-0102",
+      "USIM-0110",
+      "USIM-0002",
+      "USIM-0006",
+      "USIM-0022",
+      "USIM-0030",
+      "USIM-0034",
+      "USIM-0038",
+      "USIM-0046",
+      "USIM-0050",
+      "USIM-0062",
+      "USIM-0070",
+      "USIM-0074",
+      "USIM-0078",
+      "USIM-0086",
+      "USIM-0090",
+      "USIM-0098",
+      "USIM-0106"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "대리인이 방문하면 위임장, 대리인 신분증, 가입자 신분증 사본이 모두 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "업무가 명시되지 않음. '가입자 신분증 사본' 표현은 유심 재발급(USIM-02) 기준. 명의변경 대리도 양도인 신분증 사본을 말하는 FAQ(NAME_CHANGE-0037·0058)가 있어 '챙겨야 한다'는 결론은 같지만 서류 구성은 다름."
+  },
+  "verified": {
+   "id": "EVAL-139",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-139",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "대리인이 방문할 때 가입자 신분증 사본도 챙겨야 하는지",
+      "sourceIds": [
+       "USIM-0010",
+       "USIM-0026",
+       "USIM-0042",
+       "USIM-0058",
+       "USIM-0066",
+       "USIM-0082",
+       "USIM-0102",
+       "USIM-0110",
+       "USIM-0002",
+       "USIM-0006",
+       "USIM-0022",
+       "USIM-0030",
+       "USIM-0034",
+       "USIM-0038",
+       "USIM-0046",
+       "USIM-0050",
+       "USIM-0062",
+       "USIM-0070",
+       "USIM-0074",
+       "USIM-0078",
+       "USIM-0086",
+       "USIM-0090",
+       "USIM-0098",
+       "USIM-0106",
+       "USIM-0114"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "대리인이 방문하면 위임장, 대리인 신분증, 가입자 신분증 사본이 모두 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "업무가 명시되지 않음. '가입자 신분증 사본' 표현은 유심 재발급(USIM-02) 기준. 명의변경 대리도 양도인 신분증 사본을 말하는 FAQ(NAME_CHANGE-0037·0058)가 있어 '챙겨야 한다'는 결론은 같지만 서류 구성은 다름."
+   },
+   "changes": "sourceIds에 USIM-0114(\"자식을 보내면 위임장이랑 사본까지 챙겨야 합니다\")를 더함. 대리 방문 시 가입자 신분증 사본이 필요하다는 점에 직접 답하고 설계자 정답에도 있음.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 업무가 명시되지 않음. '가입자 신분증 사본' 표현은 유심 재발급(USIM-02) 기준. 명의변경 대리도 양도인 신분증 사본을 말하는 FAQ(NAME_CHANGE-0037·0058)가 있어 '챙겨야 한다'는 결론은 같지만 서류 구성은 다름."
+  ]
+ },
+ {
+  "id": "EVAL-146",
+  "set": "A",
+  "question": "수수료가 없다던데 처리 시간은 얼마나 걸려요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-146",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "수수료가 없는 명의변경의 처리 시간",
+     "sourceIds": [
+      "NAME_CHANGE-0014",
+      "NAME_CHANGE-0026",
+      "NAME_CHANGE-0032",
+      "NAME_CHANGE-0044",
+      "NAME_CHANGE-0074",
+      "NAME_CHANGE-0086",
+      "NAME_CHANGE-0005",
+      "NAME_CHANGE-0008",
+      "NAME_CHANGE-0011",
+      "NAME_CHANGE-0017",
+      "NAME_CHANGE-0020",
+      "NAME_CHANGE-0023",
+      "NAME_CHANGE-0029",
+      "NAME_CHANGE-0035",
+      "NAME_CHANGE-0047",
+      "NAME_CHANGE-0050",
+      "NAME_CHANGE-0059",
+      "NAME_CHANGE-0065",
+      "NAME_CHANGE-0071",
+      "NAME_CHANGE-0077",
+      "NAME_CHANGE-0080",
+      "NAME_CHANGE-0089"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "명의변경은 매장에서 30분 이내에 처리된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "질문에 업무 이름이 없음. 카탈로그에서 '수수료가 없다'고 하는 업무는 명의변경뿐이라 명의변경으로 해석. 증명서 발급은 '무료·즉시'라는 표현이라 가능성은 낮지만 되묻기도 적절할 수 있음."
+  },
+  "verified": {
+   "id": "EVAL-146",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-146",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "수수료가 없는 명의변경의 처리 시간",
+      "sourceIds": [
+       "NAME_CHANGE-0014",
+       "NAME_CHANGE-0026",
+       "NAME_CHANGE-0032",
+       "NAME_CHANGE-0044",
+       "NAME_CHANGE-0074",
+       "NAME_CHANGE-0086",
+       "NAME_CHANGE-0005",
+       "NAME_CHANGE-0008",
+       "NAME_CHANGE-0011",
+       "NAME_CHANGE-0017",
+       "NAME_CHANGE-0020",
+       "NAME_CHANGE-0023",
+       "NAME_CHANGE-0029",
+       "NAME_CHANGE-0035",
+       "NAME_CHANGE-0047",
+       "NAME_CHANGE-0050",
+       "NAME_CHANGE-0059",
+       "NAME_CHANGE-0065",
+       "NAME_CHANGE-0071",
+       "NAME_CHANGE-0077",
+       "NAME_CHANGE-0080",
+       "NAME_CHANGE-0089"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "명의변경은 매장에서 30분 이내에 처리된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "질문에 업무 이름이 없음. 카탈로그에서 '수수료가 없다'고 하는 업무는 명의변경뿐이라 명의변경으로 해석. 증명서 발급은 '무료·즉시'라는 표현이라 가능성은 낮지만 되묻기도 적절할 수 있음."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 질문에 업무 이름이 없음. 카탈로그에서 '수수료가 없다'고 하는 업무는 명의변경뿐이라 명의변경으로 해석. 증명서 발급은 '무료·즉시'라는 표현이라 가능성은 낮지만 되묻기도 적절할 수 있음."
+  ]
+ },
+ {
+  "id": "EVAL-148",
+  "set": "A",
+  "question": "위임장만 있으면 둘 중 한 사람만 가도 되나요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-148",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "명의변경 때 위임장만 있으면 양도인·양수인 중 한 사람만 가도 되는지",
+     "sourceIds": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007",
+      "NAME_CHANGE-0010",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0016",
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0025",
+      "NAME_CHANGE-0031",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0049",
+      "NAME_CHANGE-0058",
+      "NAME_CHANGE-0073",
+      "NAME_CHANGE-0076",
+      "NAME_CHANGE-0079",
+      "NAME_CHANGE-0082"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "한쪽이 방문하지 못하면 위임장을 준비해 한 사람만 방문할 수 있다",
+    "위임장만으로는 안 되고 양도인과 양수인의 신분증이 모두 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "충돌: NAME_CHANGE-0001·0067은 한쪽이 못 오면 위임장과 함께 인감증명서도 필요하다고 하고, 나머지는 위임장만 말함. '둘 중 한 사람'은 명의변경의 양도인·양수인으로 해석. 부모·자녀, 회사 등 특정 대상 FAQ(0004·0022·0028·0034·0037)는 같은 내용이라도 제외."
+  },
+  "verified": {
+   "id": "EVAL-148",
+   "verdict": "FIXED",
+   "label": {
+    "id": "EVAL-148",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "명의변경 때 위임장만 있으면 양도인·양수인 중 한 사람만 가도 되는지",
+      "sourceIds": [
+       "NAME_CHANGE-0001",
+       "NAME_CHANGE-0007",
+       "NAME_CHANGE-0010",
+       "NAME_CHANGE-0013",
+       "NAME_CHANGE-0016",
+       "NAME_CHANGE-0019",
+       "NAME_CHANGE-0025",
+       "NAME_CHANGE-0031",
+       "NAME_CHANGE-0043",
+       "NAME_CHANGE-0049",
+       "NAME_CHANGE-0058",
+       "NAME_CHANGE-0073",
+       "NAME_CHANGE-0076",
+       "NAME_CHANGE-0079",
+       "NAME_CHANGE-0082",
+       "NAME_CHANGE-0055",
+       "NAME_CHANGE-0085"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "한쪽이 방문하지 못하면 위임장을 준비해 한 사람만 방문할 수 있다",
+     "위임장만으로는 안 되고 양도인과 양수인의 신분증이 모두 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "충돌: NAME_CHANGE-0001·0067은 한쪽이 못 오면 위임장과 함께 인감증명서도 필요하다고 하고, 나머지는 위임장만 말함. '둘 중 한 사람'은 명의변경의 양도인·양수인으로 해석. 부모·자녀, 회사 등 특정 대상 FAQ(0004·0022·0028·0034·0037)는 같은 내용이라도 제외."
+   },
+   "changes": "sourceIds에 NAME_CHANGE-0055(\"한 분만 오셨다면 위임장을 준비해 다시 방문\"), NAME_CHANGE-0085(\"혼자 보내시려면 위임장을 써 주셔야\")를 더함. 특정 대상 언급 없이 한 사람만 갈 때 위임장이 필요하다는 점에 직접 답함.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 충돌: NAME_CHANGE-0001·0067은 한쪽이 못 오면 위임장과 함께 인감증명서도 필요하다고 하고, 나머지는 위임장만 말함. '둘 중 한 사람'은 명의변경의 양도인·양수인으로 해석. 부모·자녀, 회사 등 특정 대상 FAQ(0004·0022·0028·0034·0037)는 같은 내용이라도 제외."
+  ]
+ },
+ {
+  "id": "EVAL-151",
+  "set": "A",
+  "question": "해지한 달 요금은 한 달 치가 다 나오나요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-151",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "회선을 해지한 달 요금이 한 달 치 다 나오는지",
+     "sourceIds": [
+      "TERMINATE-0001",
+      "TERMINATE-0025",
+      "TERMINATE-0073",
+      "TERMINATE-0081",
+      "TERMINATE-0089",
+      "TERMINATE-0005",
+      "TERMINATE-0009",
+      "TERMINATE-0013",
+      "TERMINATE-0017",
+      "TERMINATE-0029",
+      "TERMINATE-0033",
+      "TERMINATE-0037",
+      "TERMINATE-0045",
+      "TERMINATE-0061",
+      "TERMINATE-0065",
+      "TERMINATE-0085",
+      "TERMINATE-0097"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "해지한 달 요금은 일할 계산되어 사용한 날수만큼만 청구된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "회선 해지로 해석. 부가서비스 해지는 반대로 그 달 이용료가 일할 계산 없이 전액 청구됨(SERVICE-0051·0021 등). 질문에 대상이 없어 부가서비스 질문이면 답이 뒤집히므로 사람 검토 필요."
+  },
+  "verified": {
+   "id": "EVAL-151",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-151",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "회선을 해지한 달 요금이 한 달 치 다 나오는지",
+      "sourceIds": [
+       "TERMINATE-0001",
+       "TERMINATE-0025",
+       "TERMINATE-0073",
+       "TERMINATE-0081",
+       "TERMINATE-0089",
+       "TERMINATE-0005",
+       "TERMINATE-0009",
+       "TERMINATE-0013",
+       "TERMINATE-0017",
+       "TERMINATE-0029",
+       "TERMINATE-0033",
+       "TERMINATE-0037",
+       "TERMINATE-0045",
+       "TERMINATE-0061",
+       "TERMINATE-0065",
+       "TERMINATE-0085",
+       "TERMINATE-0097"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "해지한 달 요금은 일할 계산되어 사용한 날수만큼만 청구된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "회선 해지로 해석. 부가서비스 해지는 반대로 그 달 이용료가 일할 계산 없이 전액 청구됨(SERVICE-0051·0021 등). 질문에 대상이 없어 부가서비스 질문이면 답이 뒤집히므로 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 회선 해지로 해석. 부가서비스 해지는 반대로 그 달 이용료가 일할 계산 없이 전액 청구됨(SERVICE-0051·0021 등). 질문에 대상이 없어 부가서비스 질문이면 답이 뒤집히므로 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "EVAL-157",
+  "set": "A",
+  "question": "듀얼번호 월 3,300원 내면 태블릿도 같이 되나요?",
+  "conversation": [],
+  "written": {
+   "id": "EVAL-157",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "듀얼번호(월 3,300원)를 쓰면 태블릿도 같이 로밍이 되는지",
+     "sourceIds": [
+      "ROAMING-0049",
+      "ROAMING-0074"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "태블릿은 휴대폰과 별도 회선이라 로밍을 따로 신청해야 한다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "듀얼번호와 태블릿을 함께 다루는 FAQ는 없음. 듀얼번호는 국내 번호와 현지 번호를 함께 쓰는 서비스(ROAMING-0079·0019 등)이고 태블릿은 별도 신청(0049)이라 '같이 되지 않는다'로 판단. 로밍 데이터 나눠쓰기(최대 2회선)는 다른 서비스."
+  },
+  "verified": {
+   "id": "EVAL-157",
+   "verdict": "AGREE",
+   "label": {
+    "id": "EVAL-157",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "듀얼번호(월 3,300원)를 쓰면 태블릿도 같이 로밍이 되는지",
+      "sourceIds": [
+       "ROAMING-0049",
+       "ROAMING-0074"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "태블릿은 휴대폰과 별도 회선이라 로밍을 따로 신청해야 한다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "듀얼번호와 태블릿을 함께 다루는 FAQ는 없음. 듀얼번호는 국내 번호와 현지 번호를 함께 쓰는 서비스(ROAMING-0079·0019 등)이고 태블릿은 별도 신청(0049)이라 '같이 되지 않는다'로 판단. 로밍 데이터 나눠쓰기(최대 2회선)는 다른 서비스."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 듀얼번호와 태블릿을 함께 다루는 FAQ는 없음. 듀얼번호는 국내 번호와 현지 번호를 함께 쓰는 서비스(ROAMING-0079·0019 등)이고 태블릿은 별도 신청(0049)이라 '같이 되지 않는다'로 판단. 로밍 데이터 나눠쓰기(최대 2회선)는 다른 서비스."
+  ]
+ },
+ {
+  "id": "HALLU-010",
+  "set": "A",
+  "question": "청구서 우편이랑 이메일 중에 뭐가 더 나아요?",
+  "conversation": [],
+  "written": {
+   "id": "HALLU-010",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "청구서를 우편과 이메일 중 무엇으로 받는 게 나은지",
+     "sourceIds": [
+      "BILLING-0007",
+      "BILLING-0021",
+      "BILLING-0028",
+      "BILLING-0042",
+      "BILLING-0084",
+      "BILLING-0133",
+      "BILLING-0147",
+      "BILLING-0154"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "우편 청구서는 월 500원이 부과된다",
+    "이메일 청구서는 무료다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "\"더 나은가\"는 주관적인 질문이라 FAQ로는 비용 차이(우편 월 500원, 이메일 무료)까지만 답할 수 있다. 그 외 장단점을 단정하면 근거가 없다. BILLING-0140은 이메일과 모바일을 비교하는 \"둘 다 무료\" 문장이라 헷갈릴 수 있어 뺐고, BILLING-0126(청구서 미수신)도 상황이 달라 뺐다."
+  },
+  "verified": {
+   "id": "HALLU-010",
+   "verdict": "AGREE",
+   "label": {
+    "id": "HALLU-010",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "청구서를 우편과 이메일 중 무엇으로 받는 게 나은지",
+      "sourceIds": [
+       "BILLING-0007",
+       "BILLING-0021",
+       "BILLING-0028",
+       "BILLING-0042",
+       "BILLING-0084",
+       "BILLING-0133",
+       "BILLING-0147",
+       "BILLING-0154"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "우편 청구서는 월 500원이 부과된다",
+     "이메일 청구서는 무료다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "\"더 나은가\"는 주관적인 질문이라 FAQ로는 비용 차이(우편 월 500원, 이메일 무료)까지만 답할 수 있다. 그 외 장단점을 단정하면 근거가 없다. BILLING-0140은 이메일과 모바일을 비교하는 \"둘 다 무료\" 문장이라 헷갈릴 수 있어 뺐고, BILLING-0126(청구서 미수신)도 상황이 달라 뺐다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: \"더 나은가\"는 주관적인 질문이라 FAQ로는 비용 차이(우편 월 500원, 이메일 무료)까지만 답할 수 있다. 그 외 장단점을 단정하면 근거가 없다. BILLING-0140은 이메일과 모바일을 비교하는 \"둘 다 무료\" 문장이라 헷갈릴 수 있어 뺐고, BILLING-0126(청구서 미수신)도 상황이 달라 뺐다."
+  ]
+ },
+ {
+  "id": "HALLU-012",
+  "set": "A",
+  "question": "번호이동은 얼마나 걸려요? 새로 가입하는 것보다 빠른가요?",
+  "conversation": [],
+  "written": {
+   "id": "HALLU-012",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동이 얼마나 걸리는지",
+     "sourceIds": [
+      "PORTING-0001",
+      "PORTING-0009",
+      "PORTING-0017",
+      "PORTING-0025",
+      "PORTING-0029",
+      "PORTING-0033",
+      "PORTING-0037",
+      "PORTING-0049",
+      "PORTING-0073",
+      "PORTING-0081",
+      "PORTING-0089",
+      "PORTING-0093",
+      "PORTING-0101",
+      "PORTING-0109",
+      "PORTING-0113"
+     ]
+    },
+    {
+     "questionPart": "번호이동이 신규 가입보다 빠른지",
+     "sourceIds": [
+      "SUBSCRIBE-0003",
+      "SUBSCRIBE-0007",
+      "SUBSCRIBE-0011",
+      "SUBSCRIBE-0019",
+      "SUBSCRIBE-0027",
+      "SUBSCRIBE-0031",
+      "SUBSCRIBE-0039",
+      "SUBSCRIBE-0043",
+      "SUBSCRIBE-0047",
+      "SUBSCRIBE-0067",
+      "SUBSCRIBE-0071",
+      "SUBSCRIBE-0099",
+      "SUBSCRIBE-0103",
+      "SUBSCRIBE-0107",
+      "SUBSCRIBE-0111",
+      "SUBSCRIBE-0115",
+      "SUBSCRIBE-0119",
+      "SUBSCRIBE-0123",
+      "SUBSCRIBE-0127"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동은 평균 2시간 이내에 완료되고 늦어도 24시간 안에 처리된다",
+    "신규 가입은 매장에서 30분 이내에 개통되고 온라인 신청은 다음 날 개통된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "번호이동과 신규 가입을 직접 비교한 FAQ는 없다. 두 FAQ 사실로 비교하면 매장 신규 개통(30분)보다는 느리고 온라인 신규 개통(다음 날)보다는 빠를 수 있다는 정도만 말할 수 있다. 번호이동 처리 시간(09:00~20:00)은 묻지 않아 필수 사실에서 뺐다. 비교 부분을 답할 수 있다고 볼지 사람 확인이 필요하다."
+  },
+  "verified": {
+   "id": "HALLU-012",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "HALLU-012",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동이 얼마나 걸리는지",
+      "sourceIds": [
+       "PORTING-0001",
+       "PORTING-0009",
+       "PORTING-0017",
+       "PORTING-0025",
+       "PORTING-0029",
+       "PORTING-0033",
+       "PORTING-0037",
+       "PORTING-0049",
+       "PORTING-0073",
+       "PORTING-0081",
+       "PORTING-0089",
+       "PORTING-0093",
+       "PORTING-0101",
+       "PORTING-0109",
+       "PORTING-0113"
+      ]
+     },
+     {
+      "questionPart": "번호이동이 신규 가입보다 빠른지",
+      "sourceIds": [
+       "SUBSCRIBE-0003",
+       "SUBSCRIBE-0007",
+       "SUBSCRIBE-0011",
+       "SUBSCRIBE-0019",
+       "SUBSCRIBE-0027",
+       "SUBSCRIBE-0031",
+       "SUBSCRIBE-0039",
+       "SUBSCRIBE-0043",
+       "SUBSCRIBE-0047",
+       "SUBSCRIBE-0067",
+       "SUBSCRIBE-0071",
+       "SUBSCRIBE-0099",
+       "SUBSCRIBE-0103",
+       "SUBSCRIBE-0107",
+       "SUBSCRIBE-0111",
+       "SUBSCRIBE-0115",
+       "SUBSCRIBE-0119",
+       "SUBSCRIBE-0123",
+       "SUBSCRIBE-0127"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동은 평균 2시간 이내에 완료되고 늦어도 24시간 안에 처리된다",
+     "신규 가입은 매장에서 30분 이내에 개통되고 온라인 신청은 다음 날 개통된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "번호이동과 신규 가입을 직접 비교한 FAQ는 없다. 두 FAQ 사실로 비교하면 매장 신규 개통(30분)보다는 느리고 온라인 신규 개통(다음 날)보다는 빠를 수 있다는 정도만 말할 수 있다. 번호이동 처리 시간(09:00~20:00)은 묻지 않아 필수 사실에서 뺐다. 비교 부분을 답할 수 있다고 볼지 사람 확인이 필요하다."
+   },
+   "changes": "",
+   "reviewReason": "설계자 정보는 '신규 가입과의 비교는 근거에 없음'으로 보는데, 라벨은 PORTING-0001 등(평균 2시간, 최대 24시간)과 SUBSCRIBE-0011 등(매장 30분, 온라인 다음 날)의 사실을 나란히 놓으면 비교할 수 있다고 보고 ANSWER로 두었다. 카탈로그에 두 절차를 직접 비교한 FAQ는 없어서(번호이동+신규 함께 검색 0건) 비교 부분을 PARTIAL_ANSWER(missingFact: 번호이동과 신규 가입의 직접 비교)로 볼지 사람이 정해야 한다. 라벨은 그대로 두었다. 어느 쪽이든 '번호이동이 더 빠르다/느리다'고 잘라 말하면 근거가 없다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자 정보는 '신규 가입과의 비교는 근거에 없음'으로 보는데, 라벨은 PORTING-0001 등(평균 2시간, 최대 24시간)과 SUBSCRIBE-0011 등(매장 30분, 온라인 다음 날)의 사실을 나란히 놓으면 비교할 수 있다고 보고 ANSWER로 두었다. 카탈로그에 두 절차를 직접 비교한 FAQ는 없어서(번호이동+신규 함께 검색 0건) 비교 부분을 PARTIAL_ANSWER(missingFact: 번호이동과 신규 가입의 직접 비교)로 볼지 사람이 정해야 한다. 라벨은 그대로 두었다. 어느 쪽이든 '번호이동이 더 빠르다/느리다'고 잘라 말하면 근거가 없다.",
+   "작성자 확신 낮음: 번호이동과 신규 가입을 직접 비교한 FAQ는 없다. 두 FAQ 사실로 비교하면 매장 신규 개통(30분)보다는 느리고 온라인 신규 개통(다음 날)보다는 빠를 수 있다는 정도만 말할 수 있다. 번호이동 처리 시간(09:00~20:00)은 묻지 않아 필수 사실에서 뺐다. 비교 부분을 답할 수 있다고 볼지 사람 확인이 필요하다."
+  ]
+ },
+ {
+  "id": "HALLU-016",
+  "set": "A",
+  "question": "로밍 요금제 얼마고 현지에서 끊을 수 있어요?",
+  "conversation": [],
+  "written": {
+   "id": "HALLU-016",
+   "expectedBehavior": "PARTIAL_ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "로밍 요금제가 얼마인지",
+     "sourceIds": [
+      "ROAMING-0016",
+      "ROAMING-0021",
+      "ROAMING-0026",
+      "ROAMING-0051",
+      "ROAMING-0066"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "일 단위 로밍 요금제는 9,900원이다",
+    "7일 기간권은 39,000원이다",
+    "데이터 무제한 로밍은 하루 12,100원이다",
+    "현지에서 로밍 요금제를 해지할 수 있는지는 FAQ에서 확인할 수 없다"
+   ],
+   "missingFact": "현지에서 로밍 요금제 해지(중단) 가능 여부",
+   "confidence": "low",
+   "note": "\"끊다\"를 해지로 읽었다. \"표를 끊다\"처럼 현지에서 신청(가입)한다는 뜻이면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 해석을 사람이 확인해야 한다. 요금 불만 상황 FAQ(ROAMING-0056, 0061)는 뺐다."
+  },
+  "verified": {
+   "id": "HALLU-016",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "HALLU-016",
+    "expectedBehavior": "PARTIAL_ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "로밍 요금제가 얼마인지",
+      "sourceIds": [
+       "ROAMING-0016",
+       "ROAMING-0021",
+       "ROAMING-0026",
+       "ROAMING-0051",
+       "ROAMING-0066"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "일 단위 로밍 요금제는 9,900원이다",
+     "7일 기간권은 39,000원이다",
+     "데이터 무제한 로밍은 하루 12,100원이다",
+     "현지에서 로밍 요금제를 해지할 수 있는지는 FAQ에서 확인할 수 없다"
+    ],
+    "missingFact": "현지에서 로밍 요금제 해지(중단) 가능 여부",
+    "confidence": "low",
+    "note": "\"끊다\"를 해지로 읽었다. \"표를 끊다\"처럼 현지에서 신청(가입)한다는 뜻이면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 해석을 사람이 확인해야 한다. 요금 불만 상황 FAQ(ROAMING-0056, 0061)는 뺐다."
+   },
+   "changes": "",
+   "reviewReason": "'현지에서 끊을 수 있어요'가 해지(중단)인지 구매(신청)인지 해석이 둘로 갈린다. 해지로 읽으면 로밍 해지·중단을 다루는 FAQ가 없어(로밍+해지/중단/취소 검색 0건) PARTIAL_ANSWER가 맞고(설계자 정보도 이 해석), 신청으로 읽으면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 라벨(해지 해석, PARTIAL_ANSWER)은 그대로 두었다. 가격 부분 근거와 사실은 카탈로그와 맞다."
+  },
+  "reasons": [
+   "검증 판단 불가: '현지에서 끊을 수 있어요'가 해지(중단)인지 구매(신청)인지 해석이 둘로 갈린다. 해지로 읽으면 로밍 해지·중단을 다루는 FAQ가 없어(로밍+해지/중단/취소 검색 0건) PARTIAL_ANSWER가 맞고(설계자 정보도 이 해석), 신청으로 읽으면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 라벨(해지 해석, PARTIAL_ANSWER)은 그대로 두었다. 가격 부분 근거와 사실은 카탈로그와 맞다.",
+   "작성자 확신 낮음: \"끊다\"를 해지로 읽었다. \"표를 끊다\"처럼 현지에서 신청(가입)한다는 뜻이면 ROAMING-0007, 0017, 0042, 0047, 0052(현지 도착 후에도 신청 가능, 1시간 이내 적용)로 답할 수 있어 ANSWER가 된다. 해석을 사람이 확인해야 한다. 요금 불만 상황 FAQ(ROAMING-0056, 0061)는 뺐다."
+  ]
+ },
+ {
+  "id": "HALLU-020",
+  "set": "A",
+  "question": "유심 재발급하면 택배비는 따로 내나요?",
+  "conversation": [],
+  "written": {
+   "id": "HALLU-020",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "택배비가 따로 붙는지는 FAQ에 없다. 품질 기준 문서에도 \"유심 재발급 비용 7,700원\"으로 택배비 포함을 확정하면 근거 부족이라는 예가 있다. 다만 USIM-0097, 0101, 0105, 0109는 매장과 택배(온라인) 재발급 \"비용은 둘 다 7,700원으로 같다\"고 해, 추가 택배비가 없다고 읽을 여지가 있어 low로 둔다."
+  },
+  "verified": {
+   "id": "HALLU-020",
+   "verdict": "AGREE",
+   "label": {
+    "id": "HALLU-020",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "택배비가 따로 붙는지는 FAQ에 없다. 품질 기준 문서에도 \"유심 재발급 비용 7,700원\"으로 택배비 포함을 확정하면 근거 부족이라는 예가 있다. 다만 USIM-0097, 0101, 0105, 0109는 매장과 택배(온라인) 재발급 \"비용은 둘 다 7,700원으로 같다\"고 해, 추가 택배비가 없다고 읽을 여지가 있어 low로 둔다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 택배비가 따로 붙는지는 FAQ에 없다. 품질 기준 문서에도 \"유심 재발급 비용 7,700원\"으로 택배비 포함을 확정하면 근거 부족이라는 예가 있다. 다만 USIM-0097, 0101, 0105, 0109는 매장과 택배(온라인) 재발급 \"비용은 둘 다 7,700원으로 같다\"고 해, 추가 택배비가 없다고 읽을 여지가 있어 low로 둔다."
+  ]
+ },
+ {
+  "id": "H-003",
+  "set": "A",
+  "question": "휴대폰 요금을 신용카드 할부로 결제할 수 있을까요?",
+  "conversation": [],
+  "written": {
+   "id": "H-003",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "신용카드로 요금을 낼 수 있다는 FAQ(BILLING-0005, 0012 등)는 있지만 할부 결제 가능 여부는 없다. 신용카드 납부 가능까지만 말하고 할부는 확인 불가로 답하는 것이 맞다. 할부 부분 외에 질문 부분이 없어 ABSTAIN으로 두었지만, 신용카드 납부를 답할 수 있는 부분으로 보면 PARTIAL_ANSWER가 될 수 있다."
+  },
+  "verified": {
+   "id": "H-003",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-003",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "신용카드로 요금을 낼 수 있다는 FAQ(BILLING-0005, 0012 등)는 있지만 할부 결제 가능 여부는 없다. 신용카드 납부 가능까지만 말하고 할부는 확인 불가로 답하는 것이 맞다. 할부 부분 외에 질문 부분이 없어 ABSTAIN으로 두었지만, 신용카드 납부를 답할 수 있는 부분으로 보면 PARTIAL_ANSWER가 될 수 있다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 신용카드로 요금을 낼 수 있다는 FAQ(BILLING-0005, 0012 등)는 있지만 할부 결제 가능 여부는 없다. 신용카드 납부 가능까지만 말하고 할부는 확인 불가로 답하는 것이 맞다. 할부 부분 외에 질문 부분이 없어 ABSTAIN으로 두었지만, 신용카드 납부를 답할 수 있는 부분으로 보면 PARTIAL_ANSWER가 될 수 있다."
+  ]
+ },
+ {
+  "id": "H-082",
+  "set": "A",
+  "question": "청구서가 나오기 전에 이번 달 요금을 미리 확인할 수 있나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-082",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "청구서 발송(매월 10일)·납부 기한(25일)만 있고 청구 전 이번 달 요금 미리 조회 방법은 없다. BILLING-0109의 \"이번 달 결제 합계 확인\"은 소액결제 한도 맥락이다. 회원 데이터로 당월 요금을 보여 줄 수 있는지는 FAQ 밖이라 low."
+  },
+  "verified": {
+   "id": "H-082",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-082",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "청구서 발송(매월 10일)·납부 기한(25일)만 있고 청구 전 이번 달 요금 미리 조회 방법은 없다. BILLING-0109의 \"이번 달 결제 합계 확인\"은 소액결제 한도 맥락이다. 회원 데이터로 당월 요금을 보여 줄 수 있는지는 FAQ 밖이라 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 청구서 발송(매월 10일)·납부 기한(25일)만 있고 청구 전 이번 달 요금 미리 조회 방법은 없다. BILLING-0109의 \"이번 달 결제 합계 확인\"은 소액결제 한도 맥락이다. 회원 데이터로 당월 요금을 보여 줄 수 있는지는 FAQ 밖이라 low."
+  ]
+ },
+ {
+  "id": "H-083",
+  "set": "A",
+  "question": "청소년 요금제를 쓰다가 만 18세가 지나면 자동으로 다른 요금제로 바뀌나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-083",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "청소년 요금제를 쓰다가 만 18세가 지나면 자동으로 다른 요금제로 바뀌는지",
+     "sourceIds": [
+      "PLAN-0094"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "PLAN-0094만 나이가 지난 뒤 전환을 말하는데 \"전환될 수 있다\"로 자동 여부를 확정하지 않는다. PLAN-0104의 \"자동 전환되지 않고 신청이 필요\"는 만 65세 시니어 전환 상황이라 넣지 않았다. PLAN-0049는 일반 요금제로 바꾸려면 변경 신청이라고만 한다. 자동 전환 여부는 카탈로그가 분명히 말하지 않아 ABSTAIN으로 볼 여지도 있다."
+  },
+  "verified": {
+   "id": "H-083",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "H-083",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "청소년 요금제를 쓰다가 만 18세가 지나면 자동으로 다른 요금제로 바뀌는지",
+      "sourceIds": [
+       "PLAN-0094"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "PLAN-0094만 나이가 지난 뒤 전환을 말하는데 \"전환될 수 있다\"로 자동 여부를 확정하지 않는다. PLAN-0104의 \"자동 전환되지 않고 신청이 필요\"는 만 65세 시니어 전환 상황이라 넣지 않았다. PLAN-0049는 일반 요금제로 바꾸려면 변경 신청이라고만 한다. 자동 전환 여부는 카탈로그가 분명히 말하지 않아 ABSTAIN으로 볼 여지도 있다."
+   },
+   "changes": "",
+   "reviewReason": "설계자는 답 없음(expectNoAnswer)으로 봤지만 PLAN-0094 answer가 '청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있습니다'라고 연령 경과 뒤 전환을 직접 말한다. 다만 '자동으로' 바뀌는지는 확정하지 않는다('전환될 수 있다', 매장에서 확인). PLAN-0064도 '만 18세 이하만 가입 대상'만 말한다. PLAN-0094를 근거로 '전환될 수 있다'로 답하면 ANSWER, 자동 여부를 묻는 핵심에 답이 없다고 보면 ABSTAIN이다. 라벨(ANSWER, PLAN-0094)을 유지하되 사람이 정해야 한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자는 답 없음(expectNoAnswer)으로 봤지만 PLAN-0094 answer가 '청소년 요금제는 만 18세 이하 대상이라 나이가 지나면 일반 요금제로 전환될 수 있습니다'라고 연령 경과 뒤 전환을 직접 말한다. 다만 '자동으로' 바뀌는지는 확정하지 않는다('전환될 수 있다', 매장에서 확인). PLAN-0064도 '만 18세 이하만 가입 대상'만 말한다. PLAN-0094를 근거로 '전환될 수 있다'로 답하면 ANSWER, 자동 여부를 묻는 핵심에 답이 없다고 보면 ABSTAIN이다. 라벨(ANSWER, PLAN-0094)을 유지하되 사람이 정해야 한다.",
+   "작성자 확신 낮음: PLAN-0094만 나이가 지난 뒤 전환을 말하는데 \"전환될 수 있다\"로 자동 여부를 확정하지 않는다. PLAN-0104의 \"자동 전환되지 않고 신청이 필요\"는 만 65세 시니어 전환 상황이라 넣지 않았다. PLAN-0049는 일반 요금제로 바꾸려면 변경 신청이라고만 한다. 자동 전환 여부는 카탈로그가 분명히 말하지 않아 ABSTAIN으로 볼 여지도 있다."
+  ]
+ },
+ {
+  "id": "H-085",
+  "set": "A",
+  "question": "남은 할부금을 한꺼번에 갚으면 남은 수수료는 빼주나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-085",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "high",
+   "note": "할부 수수료 연 5.9%, 해지 시 잔여 할부금 일시 납부 원칙만 있고 중도 일시 상환 시 남은 수수료 감면 여부는 없다."
+  },
+  "verified": {
+   "id": "H-085",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "H-085",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "할부 수수료 연 5.9%, 해지 시 잔여 할부금 일시 납부 원칙만 있고 중도 일시 상환 시 남은 수수료 감면 여부는 없다. TERMINATE-0103(해지 시 일시 납부와 할부 유지는 잔여 할부금 총액이 같다)은 해지 상황이라 넣지 않았으나, 일시 상환해도 총액이 줄지 않는다고 읽힐 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": "라벨과 설계자 모두 ABSTAIN이고 중도 상환 시 수수료 감면을 직접 말하는 FAQ는 없다. 다만 TERMINATE-0103 answer가 '잔여 할부금 총액은 같고, 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이'라고 해, 해지 상황에서는 일시 납부해도 총액이 줄지 않는다(=남은 수수료를 빼 주지 않는다)고 읽힐 수 있다. 질문에는 해지 전제가 없어 다른 상황으로 보고 ABSTAIN을 유지했지만, 챗봇이 TERMINATE-0103을 들어 답했을 때 감점할지 사람이 정해야 한다. 라벨 confidence를 low로 낮추고 note에 이 점을 더했다."
+  },
+  "reasons": [
+   "검증 판단 불가: 라벨과 설계자 모두 ABSTAIN이고 중도 상환 시 수수료 감면을 직접 말하는 FAQ는 없다. 다만 TERMINATE-0103 answer가 '잔여 할부금 총액은 같고, 한 번에 내느냐 기존 일정대로 나눠 내느냐의 차이'라고 해, 해지 상황에서는 일시 납부해도 총액이 줄지 않는다(=남은 수수료를 빼 주지 않는다)고 읽힐 수 있다. 질문에는 해지 전제가 없어 다른 상황으로 보고 ABSTAIN을 유지했지만, 챗봇이 TERMINATE-0103을 들어 답했을 때 감점할지 사람이 정해야 한다. 라벨 confidence를 low로 낮추고 note에 이 점을 더했다."
+  ]
+ },
+ {
+  "id": "H-089",
+  "set": "A",
+  "question": "번호이동하는 날에 요금제도 같이 바꿀 수 있나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-089",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "번호이동 당일 요금제 변경을 다루는 FAQ가 없다. BILLING-01의 \"가입한 달에는 요금제 변경 불가, 다음 달부터\"가 번호이동으로 들어온 신규 가입에 적용된다고 볼 수도 있으나, 번호이동 시 요금제를 고르는 것과 가입 후 변경은 다른 상황이고 이동 방향(들어오는지 나가는지)도 불분명해 low."
+  },
+  "verified": {
+   "id": "H-089",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-089",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "번호이동 당일 요금제 변경을 다루는 FAQ가 없다. BILLING-01의 \"가입한 달에는 요금제 변경 불가, 다음 달부터\"가 번호이동으로 들어온 신규 가입에 적용된다고 볼 수도 있으나, 번호이동 시 요금제를 고르는 것과 가입 후 변경은 다른 상황이고 이동 방향(들어오는지 나가는지)도 불분명해 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 번호이동 당일 요금제 변경을 다루는 FAQ가 없다. BILLING-01의 \"가입한 달에는 요금제 변경 불가, 다음 달부터\"가 번호이동으로 들어온 신규 가입에 적용된다고 볼 수도 있으나, 번호이동 시 요금제를 고르는 것과 가입 후 변경은 다른 상황이고 이동 방향(들어오는지 나가는지)도 불분명해 low."
+  ]
+ },
+ {
+  "id": "H-093",
+  "set": "A",
+  "question": "유심을 재발급받는 동안에는 번호를 못 쓰나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-093",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "재발급은 매장 즉시 발급, 온라인 택배 2~3영업일, 새 유심을 받으면 기존 유심 자동 해지만 있고, 택배를 기다리는 동안 기존 번호 사용 가능 여부는 직접 말하지 않는다. \"새 유심을 받으면 기존 유심이 해지\"에서 그 전까지 쓸 수 있다고 추론할 여지가 있어 low."
+  },
+  "verified": {
+   "id": "H-093",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-093",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "재발급은 매장 즉시 발급, 온라인 택배 2~3영업일, 새 유심을 받으면 기존 유심 자동 해지만 있고, 택배를 기다리는 동안 기존 번호 사용 가능 여부는 직접 말하지 않는다. \"새 유심을 받으면 기존 유심이 해지\"에서 그 전까지 쓸 수 있다고 추론할 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 재발급은 매장 즉시 발급, 온라인 택배 2~3영업일, 새 유심을 받으면 기존 유심 자동 해지만 있고, 택배를 기다리는 동안 기존 번호 사용 가능 여부는 직접 말하지 않는다. \"새 유심을 받으면 기존 유심이 해지\"에서 그 전까지 쓸 수 있다고 추론할 여지가 있어 low."
+  ]
+ },
+ {
+  "id": "H-094",
+  "set": "A",
+  "question": "택배로 받은 유심을 직접 끼우면 바로 개통돼요?",
+  "conversation": [],
+  "written": {
+   "id": "H-094",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "택배 유심을 끼운 뒤 개통·활성화 절차를 다루는 FAQ가 없다. 신규 가입이라면 SUBSCRIBE-03의 \"온라인 신청은 다음 날 개통, 처리 09:00~20:00\"이 관련될 수 있으나, 유심 재발급 택배인지 신규 가입인지 불분명해 low."
+  },
+  "verified": {
+   "id": "H-094",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-094",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "택배 유심을 끼운 뒤 개통·활성화 절차를 다루는 FAQ가 없다. 신규 가입이라면 SUBSCRIBE-03의 \"온라인 신청은 다음 날 개통, 처리 09:00~20:00\"이 관련될 수 있으나, 유심 재발급 택배인지 신규 가입인지 불분명해 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 택배 유심을 끼운 뒤 개통·활성화 절차를 다루는 FAQ가 없다. 신규 가입이라면 SUBSCRIBE-03의 \"온라인 신청은 다음 날 개통, 처리 09:00~20:00\"이 관련될 수 있으나, 유심 재발급 택배인지 신규 가입인지 불분명해 low."
+  ]
+ },
+ {
+  "id": "H-106",
+  "set": "A",
+  "question": "청소년 요금제는 부모 명의 회선에도 걸 수 있나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-106",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "청소년 요금제는 만 18세 이하만 가입 대상이라는 사실만 있고, 자녀가 쓰는 부모 명의 회선에 걸 수 있는지는 없다. 명의자(부모) 나이 기준이면 불가로 추론할 수 있으나 카탈로그가 말하지 않아 low."
+  },
+  "verified": {
+   "id": "H-106",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-106",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "청소년 요금제는 만 18세 이하만 가입 대상이라는 사실만 있고, 자녀가 쓰는 부모 명의 회선에 걸 수 있는지는 없다. 명의자(부모) 나이 기준이면 불가로 추론할 수 있으나 카탈로그가 말하지 않아 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 청소년 요금제는 만 18세 이하만 가입 대상이라는 사실만 있고, 자녀가 쓰는 부모 명의 회선에 걸 수 있는지는 없다. 명의자(부모) 나이 기준이면 불가로 추론할 수 있으나 카탈로그가 말하지 않아 low."
+  ]
+ },
+ {
+  "id": "H-107",
+  "set": "A",
+  "question": "단말기 할부 개월 수를 중간에 바꿀 수 있어요?",
+  "conversation": [],
+  "written": {
+   "id": "H-107",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "할부 기간은 개통 시 24·30개월 중 선택한다는 사실만 있다. 같은 상황의 DEVICE-0089도 \"변경 가능 여부는 매장에 문의\"라고 해 변경 가능 여부 자체는 답이 없다. 개통 시 선택과 매장 문의 안내로 답하는 것을 ANSWER로 볼지 사람 확인 필요."
+  },
+  "verified": {
+   "id": "H-107",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-107",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "할부 기간은 개통 시 24·30개월 중 선택한다는 사실만 있다. 같은 상황의 DEVICE-0089도 \"변경 가능 여부는 매장에 문의\"라고 해 변경 가능 여부 자체는 답이 없다. 개통 시 선택과 매장 문의 안내로 답하는 것을 ANSWER로 볼지 사람 확인 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 할부 기간은 개통 시 24·30개월 중 선택한다는 사실만 있다. 같은 상황의 DEVICE-0089도 \"변경 가능 여부는 매장에 문의\"라고 해 변경 가능 여부 자체는 답이 없다. 개통 시 선택과 매장 문의 안내로 답하는 것을 ANSWER로 볼지 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "H-110",
+  "set": "A",
+  "question": "개통할 때 신분증 사본만 가져가도 되나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-110",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "개통에는 본인 명의 신분증(주민등록증·운전면허증·여권, 외국인은 외국인등록증+여권)이 필요하다는 사실만 있고 사본 인정 여부는 없다. 사본은 유심 재발급 대리 방문 때 가입자 신분증 사본(USIM-02)으로만 나온다. 원본이 필요하다고 추론할 여지가 있어 low."
+  },
+  "verified": {
+   "id": "H-110",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-110",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "개통에는 본인 명의 신분증(주민등록증·운전면허증·여권, 외국인은 외국인등록증+여권)이 필요하다는 사실만 있고 사본 인정 여부는 없다. 사본은 유심 재발급 대리 방문 때 가입자 신분증 사본(USIM-02)으로만 나온다. 원본이 필요하다고 추론할 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 개통에는 본인 명의 신분증(주민등록증·운전면허증·여권, 외국인은 외국인등록증+여권)이 필요하다는 사실만 있고 사본 인정 여부는 없다. 사본은 유심 재발급 대리 방문 때 가입자 신분증 사본(USIM-02)으로만 나온다. 원본이 필요하다고 추론할 여지가 있어 low."
+  ]
+ },
+ {
+  "id": "H-112",
+  "set": "A",
+  "question": "자녀 명의로 가입할 때 법정대리인이 조부모여도 되나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-112",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "자녀(손주) 명의로 가입할 때 조부모가 법정대리인 역할을 할 수 있는지",
+     "sourceIds": [
+      "SUBSCRIBE-0050",
+      "SUBSCRIBE-0130"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "손주(미성년자) 명의로 개통할 때는 부모 동의서, 가족관계증명서, 부모 신분증이 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "SUBSCRIBE-0050·0130은 조부모가 손주 폰을 만드는 상황에서 부모 서류가 필요하다고 해 조부모 단독으로는 안 된다고 읽힌다. 다만 조부모가 실제 법정대리인(후견인)인 경우는 카탈로그가 말하지 않아 ABSTAIN으로 볼 여지가 있다. 일반 FAQ는 \"법정대리인 동의서·가족관계증명서·법정대리인 신분증\"이라고만 한다."
+  },
+  "verified": {
+   "id": "H-112",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "H-112",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "자녀(손주) 명의로 가입할 때 조부모가 법정대리인 역할을 할 수 있는지",
+      "sourceIds": [
+       "SUBSCRIBE-0050",
+       "SUBSCRIBE-0130"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "손주(미성년자) 명의로 개통할 때는 부모 동의서, 가족관계증명서, 부모 신분증이 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "SUBSCRIBE-0050·0130은 조부모가 손주 폰을 만드는 상황에서 부모 서류가 필요하다고 해 조부모 단독으로는 안 된다고 읽힌다. 다만 조부모가 실제 법정대리인(후견인)인 경우는 카탈로그가 말하지 않아 ABSTAIN으로 볼 여지가 있다. 일반 FAQ는 \"법정대리인 동의서·가족관계증명서·법정대리인 신분증\"이라고만 한다."
+   },
+   "changes": "",
+   "reviewReason": "설계자는 답 없음으로 봤지만 SUBSCRIBE-0050·0130 answer가 손주 명의 개통 시 '부모 동의서, 가족관계증명서, 부모 신분증'이 필요하다고 해 조부모 단독으로는 법정대리인 서류를 대신할 수 없다고 읽힌다. 그러나 조부모가 실제 법정대리인(후견인)인 경우의 자격 범위는 카탈로그가 말하지 않는다(일반 FAQ는 '법정대리인 동의서·가족관계증명서·법정대리인 신분증'만). 질문을 '조부모가 대신 해 줄 수 있나'로 읽으면 ANSWER, '조부모가 법정대리인 자격이 되나'로 읽으면 ABSTAIN이라 해석이 갈린다. 라벨(ANSWER)을 유지한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자는 답 없음으로 봤지만 SUBSCRIBE-0050·0130 answer가 손주 명의 개통 시 '부모 동의서, 가족관계증명서, 부모 신분증'이 필요하다고 해 조부모 단독으로는 법정대리인 서류를 대신할 수 없다고 읽힌다. 그러나 조부모가 실제 법정대리인(후견인)인 경우의 자격 범위는 카탈로그가 말하지 않는다(일반 FAQ는 '법정대리인 동의서·가족관계증명서·법정대리인 신분증'만). 질문을 '조부모가 대신 해 줄 수 있나'로 읽으면 ANSWER, '조부모가 법정대리인 자격이 되나'로 읽으면 ABSTAIN이라 해석이 갈린다. 라벨(ANSWER)을 유지한다.",
+   "작성자 확신 낮음: SUBSCRIBE-0050·0130은 조부모가 손주 폰을 만드는 상황에서 부모 서류가 필요하다고 해 조부모 단독으로는 안 된다고 읽힌다. 다만 조부모가 실제 법정대리인(후견인)인 경우는 카탈로그가 말하지 않아 ABSTAIN으로 볼 여지가 있다. 일반 FAQ는 \"법정대리인 동의서·가족관계증명서·법정대리인 신분증\"이라고만 한다."
+  ]
+ },
+ {
+  "id": "H-114",
+  "set": "A",
+  "question": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-114",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하는지",
+     "sourceIds": [
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0010",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0026",
+      "PORTING-0030",
+      "PORTING-0034",
+      "PORTING-0038",
+      "PORTING-0042",
+      "PORTING-0045",
+      "PORTING-0046",
+      "PORTING-0050",
+      "PORTING-0074",
+      "PORTING-0078",
+      "PORTING-0082",
+      "PORTING-0098",
+      "PORTING-0102",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동은 본인 신분증을 지참해 신청하면 된다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그는 기존 통신사에 따로 연락할 필요가 없다고 직접 말하지 않고 준비물(본인 신분증, 기존 통신사 미납 완납)만 말한다. PORTING-0045 \"신분증 가지고 가서 옮긴다고 하시면 됩니다\"가 가장 가깝다. 결합 상품이면 해지 조건은 기존 통신사에 확인해야 한다(PORTING-0050)는 조건부 사실이 있다. 직접 답이 아니라 ABSTAIN으로 볼 여지가 있어 low."
+  },
+  "verified": {
+   "id": "H-114",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "H-114",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동 신청할 때 기존 통신사에 먼저 연락해야 하는지",
+      "sourceIds": [
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0010",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0026",
+       "PORTING-0030",
+       "PORTING-0034",
+       "PORTING-0038",
+       "PORTING-0042",
+       "PORTING-0045",
+       "PORTING-0046",
+       "PORTING-0050",
+       "PORTING-0074",
+       "PORTING-0078",
+       "PORTING-0082",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0106",
+       "PORTING-0110"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동은 본인 신분증을 지참해 신청하면 된다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그는 기존 통신사에 따로 연락할 필요가 없다고 직접 말하지 않고 준비물(본인 신분증, 기존 통신사 미납 완납)만 말한다. PORTING-0045 \"신분증 가지고 가서 옮긴다고 하시면 됩니다\"가 가장 가깝다. 결합 상품이면 해지 조건은 기존 통신사에 확인해야 한다(PORTING-0050)는 조건부 사실이 있다. 직접 답이 아니라 ABSTAIN으로 볼 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": "설계자는 답 없음으로 봤다. 카탈로그 어디에도 '기존 통신사에 먼저 연락할 필요 없다'는 문장은 없고, 번호이동 준비물이 본인 신분증과 기존 통신사 미납 완납뿐이라는 FAQ(PORTING-02 다수, PORTING-0045 '신분증 가지고 가서 옮긴다고 하시면 됩니다')에서 추론해야 한다. PORTING-0050은 결합 해지 조건은 기존 통신사에 확인하라고 해 조건부로는 연락이 필요하다. 준비물 안내로 답한 것을 ANSWER로 볼지, 연락 필요 여부 자체가 없으니 ABSTAIN으로 볼지 사람이 정해야 한다. 라벨(ANSWER, 준비물 사실)을 유지한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자는 답 없음으로 봤다. 카탈로그 어디에도 '기존 통신사에 먼저 연락할 필요 없다'는 문장은 없고, 번호이동 준비물이 본인 신분증과 기존 통신사 미납 완납뿐이라는 FAQ(PORTING-02 다수, PORTING-0045 '신분증 가지고 가서 옮긴다고 하시면 됩니다')에서 추론해야 한다. PORTING-0050은 결합 해지 조건은 기존 통신사에 확인하라고 해 조건부로는 연락이 필요하다. 준비물 안내로 답한 것을 ANSWER로 볼지, 연락 필요 여부 자체가 없으니 ABSTAIN으로 볼지 사람이 정해야 한다. 라벨(ANSWER, 준비물 사실)을 유지한다.",
+   "작성자 확신 낮음: 카탈로그는 기존 통신사에 따로 연락할 필요가 없다고 직접 말하지 않고 준비물(본인 신분증, 기존 통신사 미납 완납)만 말한다. PORTING-0045 \"신분증 가지고 가서 옮긴다고 하시면 됩니다\"가 가장 가깝다. 결합 상품이면 해지 조건은 기존 통신사에 확인해야 한다(PORTING-0050)는 조건부 사실이 있다. 직접 답이 아니라 ABSTAIN으로 볼 여지가 있어 low."
+  ]
+ },
+ {
+  "id": "H-119",
+  "set": "A",
+  "question": "유심 재발급을 미성년자 본인이 받을 수 있나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-119",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "유심 재발급은 본인 방문 시 신분증, 대리 방문 시 위임장·대리인 신분증·가입자 신분증 사본만 있고 미성년자 본인 재발급 가능 여부는 없다. \"본인이면 신분증만\"을 미성년자에게도 적용할 수 있다고 볼 여지가 있어 low."
+  },
+  "verified": {
+   "id": "H-119",
+   "verdict": "AGREE",
+   "label": {
+    "id": "H-119",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "유심 재발급은 본인 방문 시 신분증, 대리 방문 시 위임장·대리인 신분증·가입자 신분증 사본만 있고 미성년자 본인 재발급 가능 여부는 없다. \"본인이면 신분증만\"을 미성년자에게도 적용할 수 있다고 볼 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 유심 재발급은 본인 방문 시 신분증, 대리 방문 시 위임장·대리인 신분증·가입자 신분증 사본만 있고 미성년자 본인 재발급 가능 여부는 없다. \"본인이면 신분증만\"을 미성년자에게도 적용할 수 있다고 볼 여지가 있어 low."
+  ]
+ },
+ {
+  "id": "H-121",
+  "set": "A",
+  "question": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있나요?",
+  "conversation": [],
+  "written": {
+   "id": "H-121",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있는지",
+     "sourceIds": [
+      "DEVICE-0071"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "분실 신고로 정지된 회선은 고객센터에서 정지 해제를 요청할 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "DEVICE-0071은 단말 분실 신고 뒤 다시 찾은 상황의 답이라 유심 분실 신고에 그대로 적용되는지 확실하지 않다. 새 유심을 이미 재발급받았다면 기존 유심은 자동 해지된다(USIM-0004 등)는 조건이 있으나 고객이 재발급 여부를 말하지 않았고 원래 유심을 쓰려는 상황이라 필수 사실에서 뺐다."
+  },
+  "verified": {
+   "id": "H-121",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "H-121",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "유심 분실 신고를 취소하고 원래 유심을 다시 쓸 수 있는지",
+      "sourceIds": [
+       "DEVICE-0071"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "분실 신고로 정지된 회선은 고객센터에서 정지 해제를 요청할 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "DEVICE-0071은 단말 분실 신고 뒤 다시 찾은 상황의 답이라 유심 분실 신고에 그대로 적용되는지 확실하지 않다. 새 유심을 이미 재발급받았다면 기존 유심은 자동 해지된다(USIM-0004 등)는 조건이 있으나 고객이 재발급 여부를 말하지 않았고 원래 유심을 쓰려는 상황이라 필수 사실에서 뺐다."
+   },
+   "changes": "",
+   "reviewReason": "설계자는 답 없음(신고 취소는 다루지 않음)으로 봤다. DEVICE-0071 answer '분실 신고로 즉시 정지된 회선은 고객센터에서 정지 해제를 요청하실 수 있습니다'는 단말 분실 정책(DEVICE-03)이지만 '분실 신고로 정지된 회선' 일반을 말해, 유심 분실 신고(USIM-0004 '분실 신고를 하시면 즉시 이용 정지')에도 적용된다고 볼 수 있다. 재발급 전이라면 원래 유심을 다시 쓸 수 있다는 추론은 USIM-0096('신고만 하시면 즉시 이용 정지만 되고')과도 맞는다. 다른 정책 FAQ를 끌어온 답을 ANSWER로 인정할지 사람이 정해야 한다. 라벨(ANSWER, DEVICE-0071)을 유지한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 설계자는 답 없음(신고 취소는 다루지 않음)으로 봤다. DEVICE-0071 answer '분실 신고로 즉시 정지된 회선은 고객센터에서 정지 해제를 요청하실 수 있습니다'는 단말 분실 정책(DEVICE-03)이지만 '분실 신고로 정지된 회선' 일반을 말해, 유심 분실 신고(USIM-0004 '분실 신고를 하시면 즉시 이용 정지')에도 적용된다고 볼 수 있다. 재발급 전이라면 원래 유심을 다시 쓸 수 있다는 추론은 USIM-0096('신고만 하시면 즉시 이용 정지만 되고')과도 맞는다. 다른 정책 FAQ를 끌어온 답을 ANSWER로 인정할지 사람이 정해야 한다. 라벨(ANSWER, DEVICE-0071)을 유지한다.",
+   "작성자 확신 낮음: DEVICE-0071은 단말 분실 신고 뒤 다시 찾은 상황의 답이라 유심 분실 신고에 그대로 적용되는지 확실하지 않다. 새 유심을 이미 재발급받았다면 기존 유심은 자동 해지된다(USIM-0004 등)는 조건이 있으나 고객이 재발급 여부를 말하지 않았고 원래 유심을 쓰려는 상황이라 필수 사실에서 뺐다."
+  ]
+ },
+ {
+  "id": "RU-116-t0-r0",
+  "set": "B",
+  "question": "명의변경 서류 안내",
+  "conversation": [],
+  "written": {
+   "id": "RU-116-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "명의변경 서류",
+     "sourceIds": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0031",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0073",
+      "NAME_CHANGE-0079",
+      "NAME_CHANGE-0004",
+      "NAME_CHANGE-0010",
+      "NAME_CHANGE-0016",
+      "NAME_CHANGE-0022",
+      "NAME_CHANGE-0025",
+      "NAME_CHANGE-0034",
+      "NAME_CHANGE-0040",
+      "NAME_CHANGE-0049",
+      "NAME_CHANGE-0076",
+      "NAME_CHANGE-0082",
+      "NAME_CHANGE-0085"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "양도인과 양수인의 신분증이 각각 필요하다",
+    "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "수원 매장은 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  },
+  "verified": {
+   "id": "RU-116-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-116-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "명의변경 서류",
+      "sourceIds": [
+       "NAME_CHANGE-0001",
+       "NAME_CHANGE-0007",
+       "NAME_CHANGE-0013",
+       "NAME_CHANGE-0019",
+       "NAME_CHANGE-0031",
+       "NAME_CHANGE-0043",
+       "NAME_CHANGE-0073",
+       "NAME_CHANGE-0079",
+       "NAME_CHANGE-0004",
+       "NAME_CHANGE-0010",
+       "NAME_CHANGE-0016",
+       "NAME_CHANGE-0022",
+       "NAME_CHANGE-0025",
+       "NAME_CHANGE-0034",
+       "NAME_CHANGE-0040",
+       "NAME_CHANGE-0049",
+       "NAME_CHANGE-0076",
+       "NAME_CHANGE-0082",
+       "NAME_CHANGE-0085"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "양도인과 양수인의 신분증이 각각 필요하다",
+     "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "수원 매장은 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 수원 매장은 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  ]
+ },
+ {
+  "id": "RU-120-t0-r0",
+  "set": "B",
+  "question": "번호이동 조건",
+  "conversation": [],
+  "written": {
+   "id": "RU-120-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동 조건(개통·명의변경 후 경과 기간)",
+     "sourceIds": [
+      "PORTING-0011",
+      "PORTING-0027",
+      "PORTING-0043",
+      "PORTING-0083",
+      "PORTING-0095",
+      "PORTING-0111",
+      "PORTING-0003",
+      "PORTING-0015",
+      "PORTING-0019",
+      "PORTING-0031",
+      "PORTING-0035",
+      "PORTING-0039",
+      "PORTING-0055",
+      "PORTING-0059",
+      "PORTING-0063",
+      "PORTING-0087",
+      "PORTING-0099",
+      "PORTING-0103",
+      "PORTING-0107",
+      "PORTING-0115"
+     ]
+    },
+    {
+     "questionPart": "번호이동 조건(미납 요금)",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0058",
+      "PORTING-0074",
+      "PORTING-0082",
+      "PORTING-0102",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0022",
+      "PORTING-0034",
+      "PORTING-0038",
+      "PORTING-0045",
+      "PORTING-0046",
+      "PORTING-0050",
+      "PORTING-0054",
+      "PORTING-0062",
+      "PORTING-0070",
+      "PORTING-0078",
+      "PORTING-0094",
+      "PORTING-0098",
+      "PORTING-0106",
+      "PORTING-0110",
+      "PORTING-0114"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "개통 후 3개월이 지나야 번호이동할 수 있다",
+    "명의변경을 했다면 변경일로부터 1개월도 지나야 한다",
+    "기존 통신사에 미납 요금이 있으면 진행되지 않으며 완납해야 한다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "부산 서면 대리점은 따로 처리됨. '조건'의 핵심은 PORTING-03(개통 3개월·명의변경 1개월)이지만, PORTING-0014가 미납 여부도 자격 조건이라고 해 두 부분으로 나눴다. 미납 부분을 필수로 볼지 사람 검토 필요."
+  },
+  "verified": {
+   "id": "RU-120-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-120-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동 조건(개통·명의변경 후 경과 기간)",
+      "sourceIds": [
+       "PORTING-0011",
+       "PORTING-0027",
+       "PORTING-0043",
+       "PORTING-0083",
+       "PORTING-0095",
+       "PORTING-0111",
+       "PORTING-0003",
+       "PORTING-0015",
+       "PORTING-0019",
+       "PORTING-0031",
+       "PORTING-0035",
+       "PORTING-0039",
+       "PORTING-0055",
+       "PORTING-0059",
+       "PORTING-0063",
+       "PORTING-0087",
+       "PORTING-0099",
+       "PORTING-0103",
+       "PORTING-0107",
+       "PORTING-0115"
+      ]
+     },
+     {
+      "questionPart": "번호이동 조건(미납 요금)",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0058",
+       "PORTING-0074",
+       "PORTING-0082",
+       "PORTING-0102",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0022",
+       "PORTING-0034",
+       "PORTING-0038",
+       "PORTING-0045",
+       "PORTING-0046",
+       "PORTING-0050",
+       "PORTING-0054",
+       "PORTING-0062",
+       "PORTING-0070",
+       "PORTING-0078",
+       "PORTING-0094",
+       "PORTING-0098",
+       "PORTING-0106",
+       "PORTING-0110",
+       "PORTING-0114"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "개통 후 3개월이 지나야 번호이동할 수 있다",
+     "명의변경을 했다면 변경일로부터 1개월도 지나야 한다",
+     "기존 통신사에 미납 요금이 있으면 진행되지 않으며 완납해야 한다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "부산 서면 대리점은 따로 처리됨. '조건'의 핵심은 PORTING-03(개통 3개월·명의변경 1개월)이지만, PORTING-0014가 미납 여부도 자격 조건이라고 해 두 부분으로 나눴다. 미납 부분을 필수로 볼지 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 부산 서면 대리점은 따로 처리됨. '조건'의 핵심은 PORTING-03(개통 3개월·명의변경 1개월)이지만, PORTING-0014가 미납 여부도 자격 조건이라고 해 두 부분으로 나눴다. 미납 부분을 필수로 볼지 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "RU-132-t0-r0",
+  "set": "B",
+  "question": "명의변경 서류 안내",
+  "conversation": [],
+  "written": {
+   "id": "RU-132-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "명의변경 서류",
+     "sourceIds": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0031",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0073",
+      "NAME_CHANGE-0079",
+      "NAME_CHANGE-0004",
+      "NAME_CHANGE-0010",
+      "NAME_CHANGE-0016",
+      "NAME_CHANGE-0022",
+      "NAME_CHANGE-0025",
+      "NAME_CHANGE-0034",
+      "NAME_CHANGE-0040",
+      "NAME_CHANGE-0049",
+      "NAME_CHANGE-0076",
+      "NAME_CHANGE-0082",
+      "NAME_CHANGE-0085"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "양도인과 양수인의 신분증이 각각 필요하다",
+    "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "가까운 매장 찾기는 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  },
+  "verified": {
+   "id": "RU-132-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-132-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "명의변경 서류",
+      "sourceIds": [
+       "NAME_CHANGE-0001",
+       "NAME_CHANGE-0007",
+       "NAME_CHANGE-0013",
+       "NAME_CHANGE-0019",
+       "NAME_CHANGE-0031",
+       "NAME_CHANGE-0043",
+       "NAME_CHANGE-0073",
+       "NAME_CHANGE-0079",
+       "NAME_CHANGE-0004",
+       "NAME_CHANGE-0010",
+       "NAME_CHANGE-0016",
+       "NAME_CHANGE-0022",
+       "NAME_CHANGE-0025",
+       "NAME_CHANGE-0034",
+       "NAME_CHANGE-0040",
+       "NAME_CHANGE-0049",
+       "NAME_CHANGE-0076",
+       "NAME_CHANGE-0082",
+       "NAME_CHANGE-0085"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "양도인과 양수인의 신분증이 각각 필요하다",
+     "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "가까운 매장 찾기는 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 가까운 매장 찾기는 따로 처리됨. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  ]
+ },
+ {
+  "id": "RU-276-t0-r0",
+  "set": "B",
+  "question": "명의변경 준비물",
+  "conversation": [],
+  "written": {
+   "id": "RU-276-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "명의변경 준비물",
+     "sourceIds": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0031",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0073",
+      "NAME_CHANGE-0079",
+      "NAME_CHANGE-0004",
+      "NAME_CHANGE-0010",
+      "NAME_CHANGE-0016",
+      "NAME_CHANGE-0022",
+      "NAME_CHANGE-0025",
+      "NAME_CHANGE-0034",
+      "NAME_CHANGE-0040",
+      "NAME_CHANGE-0049",
+      "NAME_CHANGE-0076",
+      "NAME_CHANGE-0082",
+      "NAME_CHANGE-0085"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "양도인과 양수인의 신분증이 각각 필요하다",
+    "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "가까운 매장 찾기는 따로 처리됨. 미납 요금 완납(NAME_CHANGE-0002 등)은 준비물이 아니라 필수에서 뺐다. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  },
+  "verified": {
+   "id": "RU-276-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-276-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "명의변경 준비물",
+      "sourceIds": [
+       "NAME_CHANGE-0001",
+       "NAME_CHANGE-0007",
+       "NAME_CHANGE-0013",
+       "NAME_CHANGE-0019",
+       "NAME_CHANGE-0031",
+       "NAME_CHANGE-0043",
+       "NAME_CHANGE-0073",
+       "NAME_CHANGE-0079",
+       "NAME_CHANGE-0004",
+       "NAME_CHANGE-0010",
+       "NAME_CHANGE-0016",
+       "NAME_CHANGE-0022",
+       "NAME_CHANGE-0025",
+       "NAME_CHANGE-0034",
+       "NAME_CHANGE-0040",
+       "NAME_CHANGE-0049",
+       "NAME_CHANGE-0076",
+       "NAME_CHANGE-0082",
+       "NAME_CHANGE-0085"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "양도인과 양수인의 신분증이 각각 필요하다",
+     "원칙적으로 두 사람이 함께 매장을 방문하고, 한쪽이 방문하지 못하면 위임장이 추가로 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "가까운 매장 찾기는 따로 처리됨. 미납 요금 완납(NAME_CHANGE-0002 등)은 준비물이 아니라 필수에서 뺐다. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 가까운 매장 찾기는 따로 처리됨. 미납 요금 완납(NAME_CHANGE-0002 등)은 준비물이 아니라 필수에서 뺐다. 대리 방문 시 서류가 FAQ마다 다르다: NAME_CHANGE-0001은 '위임장과 인감증명서'(0067도 인감증명서 언급), 0073·0079·0082 등은 '위임장이 추가'(서류 하나 더)라고만 한다. 인감증명서 필요 여부가 충돌해 low로 둔다."
+  ]
+ },
+ {
+  "id": "RU-283-t0-r0",
+  "set": "B",
+  "question": "개통 취소 기간",
+  "conversation": [],
+  "written": {
+   "id": "RU-283-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "개통 취소 가능 기간",
+     "sourceIds": [
+      "DEVICE-0020",
+      "DEVICE-0028",
+      "DEVICE-0100",
+      "DEVICE-0116",
+      "DEVICE-0004",
+      "DEVICE-0060",
+      "DEVICE-0120",
+      "DEVICE-0036",
+      "DEVICE-0124",
+      "PORTING-0004",
+      "PORTING-0008",
+      "PORTING-0012",
+      "PORTING-0016",
+      "PORTING-0020",
+      "PORTING-0024",
+      "PORTING-0036",
+      "PORTING-0040",
+      "PORTING-0104"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "개통 후 14일 이내에 취소(단말 반품 또는 번호이동 철회)할 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "평택역 대리점은 따로 처리됨. 카탈로그에 '개통 취소'라는 정책은 없다. 가장 가까운 것은 단말 반품(DEVICE-04: 개통 후 14일 이내, 미개봉·사용 흔적 없음, 1회)과 번호이동 철회(PORTING-04: 개통 후 14일 이내)로, 둘 다 14일이라 함께 묶었다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요. 단말 반품으로 답하면 미개봉·1회 조건도 함께 말해야 정확하다."
+  },
+  "verified": {
+   "id": "RU-283-t0-r0",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "RU-283-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "개통 취소 가능 기간",
+      "sourceIds": [
+       "DEVICE-0020",
+       "DEVICE-0028",
+       "DEVICE-0100",
+       "DEVICE-0116",
+       "DEVICE-0004",
+       "DEVICE-0060",
+       "DEVICE-0120",
+       "DEVICE-0036",
+       "DEVICE-0124",
+       "PORTING-0004",
+       "PORTING-0008",
+       "PORTING-0012",
+       "PORTING-0016",
+       "PORTING-0020",
+       "PORTING-0024",
+       "PORTING-0036",
+       "PORTING-0040",
+       "PORTING-0104",
+       "DEVICE-0044",
+       "DEVICE-0076",
+       "DEVICE-0096",
+       "DEVICE-0108",
+       "PORTING-0052",
+       "PORTING-0056",
+       "PORTING-0068",
+       "PORTING-0080",
+       "PORTING-0108"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "개통 후 14일 이내에 취소(단말 반품 또는 번호이동 철회)할 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "평택역 대리점은 따로 처리됨. 카탈로그에 '개통 취소'라는 정책은 없다. 가장 가까운 것은 단말 반품(DEVICE-04: 개통 후 14일 이내, 미개봉·사용 흔적 없음, 1회)과 번호이동 철회(PORTING-04: 개통 후 14일 이내)로, 둘 다 14일이라 함께 묶었다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요. 단말 반품으로 답하면 미개봉·1회 조건도 함께 말해야 정확하다."
+   },
+   "changes": "sourceIds에 개통 후 14일 기간을 직접 말하는 반품 FAQ(DEVICE-0044·0076·0096·0108)와 철회·취소 기간 FAQ(PORTING-0052 \"취소할 수 있을까요\"→14일, 0056·0068·0080·0108)를 더했다.",
+   "reviewReason": "카탈로그에 \"개통 취소\" 정책이 따로 없다. 단말 반품(DEVICE-04, 개통 후 14일·미개봉·1회)과 번호이동 철회(PORTING-04, 개통 후 14일)로 풀면 ANSWER지만, 신규 개통(단말 구매 없이 유심만 개통 등)의 취소는 어느 FAQ도 다루지 않아 ABSTAIN으로 볼 수도 있다. 둘 다 14일이라 라벨 쪽을 택했지만 해석을 사람이 정해야 한다."
+  },
+  "reasons": [
+   "검증 판단 불가: 카탈로그에 \"개통 취소\" 정책이 따로 없다. 단말 반품(DEVICE-04, 개통 후 14일·미개봉·1회)과 번호이동 철회(PORTING-04, 개통 후 14일)로 풀면 ANSWER지만, 신규 개통(단말 구매 없이 유심만 개통 등)의 취소는 어느 FAQ도 다루지 않아 ABSTAIN으로 볼 수도 있다. 둘 다 14일이라 라벨 쪽을 택했지만 해석을 사람이 정해야 한다.",
+   "작성자 확신 낮음: 평택역 대리점은 따로 처리됨. 카탈로그에 '개통 취소'라는 정책은 없다. 가장 가까운 것은 단말 반품(DEVICE-04: 개통 후 14일 이내, 미개봉·사용 흔적 없음, 1회)과 번호이동 철회(PORTING-04: 개통 후 14일 이내)로, 둘 다 14일이라 함께 묶었다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요. 단말 반품으로 답하면 미개봉·1회 조건도 함께 말해야 정확하다."
+  ]
+ },
+ {
+  "id": "RU-285-t0-r0",
+  "set": "B",
+  "question": "휴대폰 분실 신고 방법",
+  "conversation": [],
+  "written": {
+   "id": "RU-285-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "휴대폰 분실 신고 방법",
+     "sourceIds": [
+      "DEVICE-0091",
+      "USIM-0036",
+      "USIM-0012",
+      "USIM-0028",
+      "USIM-0056",
+      "USIM-0076"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "고객센터나 홈페이지에서 분실 신고(이용 정지 신청)를 하면 즉시 이용 정지된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "내 위치 근처 매장은 따로 처리됨. 휴대폰 분실에 신고 채널까지 있는 FAQ는 DEVICE-0091뿐이고(DEVICE-0051은 고객센터만), 나머지는 유심 분실 FAQ(USIM-04)다. 답 본문에는 유심이 드러나지 않고 회선 정지 절차가 같아 함께 넣었지만 대상이 달라 low."
+  },
+  "verified": {
+   "id": "RU-285-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-285-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "휴대폰 분실 신고 방법",
+      "sourceIds": [
+       "DEVICE-0091",
+       "USIM-0036",
+       "USIM-0012",
+       "USIM-0028",
+       "USIM-0056",
+       "USIM-0076"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "고객센터나 홈페이지에서 분실 신고(이용 정지 신청)를 하면 즉시 이용 정지된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "내 위치 근처 매장은 따로 처리됨. 휴대폰 분실에 신고 채널까지 있는 FAQ는 DEVICE-0091뿐이고(DEVICE-0051은 고객센터만), 나머지는 유심 분실 FAQ(USIM-04)다. 답 본문에는 유심이 드러나지 않고 회선 정지 절차가 같아 함께 넣었지만 대상이 달라 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 내 위치 근처 매장은 따로 처리됨. 휴대폰 분실에 신고 채널까지 있는 FAQ는 DEVICE-0091뿐이고(DEVICE-0051은 고객센터만), 나머지는 유심 분실 FAQ(USIM-04)다. 답 본문에는 유심이 드러나지 않고 회선 정지 절차가 같아 함께 넣었지만 대상이 달라 low."
+  ]
+ },
+ {
+  "id": "RU-290-t0-r0",
+  "set": "B",
+  "question": "부가서비스 정리하는 방법",
+  "conversation": [],
+  "written": {
+   "id": "RU-290-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "부가서비스 정리(해지)하는 방법",
+     "sourceIds": [
+      "SERVICE-0016",
+      "SERVICE-0026",
+      "SERVICE-0031",
+      "SERVICE-0021"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "부가서비스는 해지를 신청하면 된다",
+    "해지를 신청해도 그 달 말일까지 이용할 수 있고 그 달 요금은 일할 계산 없이 그대로 청구된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "창원 상남동 매장은 따로 처리됨. '정리'를 해지로 풀었다. FAQ에는 해지 신청 채널(앱·고객센터 등)이나 가입한 부가서비스를 확인하는 방법이 없어, 채널을 단정하면 근거 부족이다."
+  },
+  "verified": {
+   "id": "RU-290-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-290-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "부가서비스 정리(해지)하는 방법",
+      "sourceIds": [
+       "SERVICE-0016",
+       "SERVICE-0026",
+       "SERVICE-0031",
+       "SERVICE-0021"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "부가서비스는 해지를 신청하면 된다",
+     "해지를 신청해도 그 달 말일까지 이용할 수 있고 그 달 요금은 일할 계산 없이 그대로 청구된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "창원 상남동 매장은 따로 처리됨. '정리'를 해지로 풀었다. FAQ에는 해지 신청 채널(앱·고객센터 등)이나 가입한 부가서비스를 확인하는 방법이 없어, 채널을 단정하면 근거 부족이다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 창원 상남동 매장은 따로 처리됨. '정리'를 해지로 풀었다. FAQ에는 해지 신청 채널(앱·고객센터 등)이나 가입한 부가서비스를 확인하는 방법이 없어, 채널을 단정하면 근거 부족이다."
+  ]
+ },
+ {
+  "id": "RU-291-t0-r0",
+  "set": "B",
+  "question": "명의변경 대리인 서류 안내",
+  "conversation": [],
+  "written": {
+   "id": "RU-291-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "명의변경 대리인 서류",
+     "sourceIds": [
+      "NAME_CHANGE-0001",
+      "NAME_CHANGE-0007",
+      "NAME_CHANGE-0013",
+      "NAME_CHANGE-0019",
+      "NAME_CHANGE-0031",
+      "NAME_CHANGE-0037",
+      "NAME_CHANGE-0043",
+      "NAME_CHANGE-0049",
+      "NAME_CHANGE-0058",
+      "NAME_CHANGE-0004",
+      "NAME_CHANGE-0010",
+      "NAME_CHANGE-0016",
+      "NAME_CHANGE-0022",
+      "NAME_CHANGE-0025",
+      "NAME_CHANGE-0034",
+      "NAME_CHANGE-0073",
+      "NAME_CHANGE-0076",
+      "NAME_CHANGE-0079",
+      "NAME_CHANGE-0082"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "한쪽이 방문하지 못해 대리 방문하면 위임장이 필요하다",
+    "대리 방문이어도 양도인과 양수인의 신분증이 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "춘천 매장 주소는 따로 처리됨. 인감증명서 필요 여부가 FAQ마다 다르다(NAME_CHANGE-0001·0067은 위임장과 인감증명서, 0073·0079·0082는 위임장 하나만 추가). 양도인 신분증 사본 가능은 0037·0058에만 있어 필수에서 뺐다."
+  },
+  "verified": {
+   "id": "RU-291-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-291-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "명의변경 대리인 서류",
+      "sourceIds": [
+       "NAME_CHANGE-0001",
+       "NAME_CHANGE-0007",
+       "NAME_CHANGE-0013",
+       "NAME_CHANGE-0019",
+       "NAME_CHANGE-0031",
+       "NAME_CHANGE-0037",
+       "NAME_CHANGE-0043",
+       "NAME_CHANGE-0049",
+       "NAME_CHANGE-0058",
+       "NAME_CHANGE-0004",
+       "NAME_CHANGE-0010",
+       "NAME_CHANGE-0016",
+       "NAME_CHANGE-0022",
+       "NAME_CHANGE-0025",
+       "NAME_CHANGE-0034",
+       "NAME_CHANGE-0073",
+       "NAME_CHANGE-0076",
+       "NAME_CHANGE-0079",
+       "NAME_CHANGE-0082"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "한쪽이 방문하지 못해 대리 방문하면 위임장이 필요하다",
+     "대리 방문이어도 양도인과 양수인의 신분증이 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "춘천 매장 주소는 따로 처리됨. 인감증명서 필요 여부가 FAQ마다 다르다(NAME_CHANGE-0001·0067은 위임장과 인감증명서, 0073·0079·0082는 위임장 하나만 추가). 양도인 신분증 사본 가능은 0037·0058에만 있어 필수에서 뺐다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 춘천 매장 주소는 따로 처리됨. 인감증명서 필요 여부가 FAQ마다 다르다(NAME_CHANGE-0001·0067은 위임장과 인감증명서, 0073·0079·0082는 위임장 하나만 추가). 양도인 신분증 사본 가능은 0037·0058에만 있어 필수에서 뺐다."
+  ]
+ },
+ {
+  "id": "RU-319-t0-r1",
+  "set": "B",
+  "question": "자동이체계좌변경은요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-319-t0-r1",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "자동이체 계좌 변경 방법",
+     "sourceIds": [
+      "BILLING-0068",
+      "BILLING-0145"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "납부 수단 변경은 신청은 바로 되지만 다음 달 청구분부터 적용된다",
+    "자동이체는 등록에 3영업일이 걸린다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "인터넷 이전 설치는 따로 처리됨. 자동이체 '계좌' 변경을 직접 다룬 FAQ는 없고 납부 수단 변경·자동이체 등록 FAQ(BILLING-0068·0145)가 가장 가깝다. 변경 채널(앱·고객센터 등)은 FAQ에 없다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요."
+  },
+  "verified": {
+   "id": "RU-319-t0-r1",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "RU-319-t0-r1",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "자동이체 계좌 변경 방법",
+      "sourceIds": [
+       "BILLING-0068",
+       "BILLING-0145",
+       "BILLING-0040",
+       "BILLING-0152"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "납부 수단 변경은 신청은 바로 되지만 다음 달 청구분부터 적용된다",
+     "자동이체는 등록에 3영업일이 걸린다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "인터넷 이전 설치는 따로 처리됨. 자동이체 '계좌' 변경을 직접 다룬 FAQ는 없고 납부 수단 변경·자동이체 등록 FAQ(BILLING-0068·0145)가 가장 가깝다. 변경 채널(앱·고객센터 등)은 FAQ에 없다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요."
+   },
+   "changes": "sourceIds에 BILLING-0040(\"납부 수단을 바꾸려면 어떻게 해요\"→변경 신청하면 다음 달 청구분부터 적용)·BILLING-0152(변경은 다음 달 청구분부터)를 더했다. 0040은 변경 방법을 묻는 FAQ라 0145보다 더 직접적이다.",
+   "reviewReason": "고객은 자동이체 계좌 변경을 \"어떻게 신청하는지\" 묻는데, 카탈로그에는 신청 채널·절차가 없고 납부 수단 변경의 적용 시점(다음 달 청구분)과 자동이체 등록 3영업일만 있다. 계좌 변경을 납부 수단 변경으로 볼지, 신청 방법이 없으니 PARTIAL_ANSWER(방법은 확인 불가)나 ABSTAIN으로 볼지 사람이 정해야 한다. 자동이체 계좌만 바꿀 때도 3영업일 등록이 걸린다는 것은 카탈로그가 직접 말하지 않는 추론이다."
+  },
+  "reasons": [
+   "검증 판단 불가: 고객은 자동이체 계좌 변경을 \"어떻게 신청하는지\" 묻는데, 카탈로그에는 신청 채널·절차가 없고 납부 수단 변경의 적용 시점(다음 달 청구분)과 자동이체 등록 3영업일만 있다. 계좌 변경을 납부 수단 변경으로 볼지, 신청 방법이 없으니 PARTIAL_ANSWER(방법은 확인 불가)나 ABSTAIN으로 볼지 사람이 정해야 한다. 자동이체 계좌만 바꿀 때도 3영업일 등록이 걸린다는 것은 카탈로그가 직접 말하지 않는 추론이다.",
+   "작성자 확신 낮음: 인터넷 이전 설치는 따로 처리됨. 자동이체 '계좌' 변경을 직접 다룬 FAQ는 없고 납부 수단 변경·자동이체 등록 FAQ(BILLING-0068·0145)가 가장 가깝다. 변경 채널(앱·고객센터 등)은 FAQ에 없다. 다른 상황으로 보고 ABSTAIN으로 할지 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "RU-326-t0-r0",
+  "set": "B",
+  "question": "납부일 변경 방법",
+  "conversation": [],
+  "written": {
+   "id": "RU-326-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "납부일 변경 방법",
+     "sourceIds": [
+      "BILLING-0100"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "납부 기한은 매월 25일이다",
+    "납부 기한 조정은 고객센터에 상담한다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "BILLING-0100은 '기한 조정은 고객센터에 상담해 보세요'라고만 하고 납부일 변경이 가능한지나 구체 절차는 말하지 않는다. 납부일 변경 FAQ가 따로 없어 이 FAQ를 근거로 삼을지, ABSTAIN으로 볼지 사람 확인이 필요하다."
+  },
+  "verified": {
+   "id": "RU-326-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-326-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "납부일 변경 방법",
+      "sourceIds": [
+       "BILLING-0100"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "납부 기한은 매월 25일이다",
+     "납부 기한 조정은 고객센터에 상담한다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "BILLING-0100은 '기한 조정은 고객센터에 상담해 보세요'라고만 하고 납부일 변경이 가능한지나 구체 절차는 말하지 않는다. 납부일 변경 FAQ가 따로 없어 이 FAQ를 근거로 삼을지, ABSTAIN으로 볼지 사람 확인이 필요하다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: BILLING-0100은 '기한 조정은 고객센터에 상담해 보세요'라고만 하고 납부일 변경이 가능한지나 구체 절차는 말하지 않는다. 납부일 변경 FAQ가 따로 없어 이 FAQ를 근거로 삼을지, ABSTAIN으로 볼지 사람 확인이 필요하다."
+  ]
+ },
+ {
+  "id": "RU-328-t0-r0",
+  "set": "B",
+  "question": "인터넷 해지 신청 방법",
+  "conversation": [],
+  "written": {
+   "id": "RU-328-t0-r0",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "TV 셋톱박스 반납과 함께 물은 것으로 보아 유선 인터넷 해지 질문이다. 카탈로그에는 유선 인터넷·TV 상품 FAQ가 없다. TERMINATE-01(매장·고객센터·홈페이지 신청, 즉시 해지)은 이동전화 회선 해지로 보여 다른 상황으로 판단했지만, 답 본문에 대상이 명시되지 않아 적용 여부는 사람 확인 필요."
+  },
+  "verified": {
+   "id": "RU-328-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-328-t0-r0",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "TV 셋톱박스 반납과 함께 물은 것으로 보아 유선 인터넷 해지 질문이다. 카탈로그에는 유선 인터넷·TV 상품 FAQ가 없다. TERMINATE-01(매장·고객센터·홈페이지 신청, 즉시 해지)은 이동전화 회선 해지로 보여 다른 상황으로 판단했지만, 답 본문에 대상이 명시되지 않아 적용 여부는 사람 확인 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: TV 셋톱박스 반납과 함께 물은 것으로 보아 유선 인터넷 해지 질문이다. 카탈로그에는 유선 인터넷·TV 상품 FAQ가 없다. TERMINATE-01(매장·고객센터·홈페이지 신청, 즉시 해지)은 이동전화 회선 해지로 보여 다른 상황으로 판단했지만, 답 본문에 대상이 명시되지 않아 적용 여부는 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "RU-342-t0-r1",
+  "set": "B",
+  "question": "분실폰할부금은계속내야해요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-342-t0-r1",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "분실한 폰의 할부금을 계속 내야 하는지",
+     "sourceIds": [
+      "TERMINATE-0003",
+      "TERMINATE-0023",
+      "TERMINATE-0043",
+      "TERMINATE-0063",
+      "TERMINATE-0103",
+      "TERMINATE-0011",
+      "TERMINATE-0019",
+      "TERMINATE-0035",
+      "TERMINATE-0051",
+      "TERMINATE-0067",
+      "TERMINATE-0083",
+      "TERMINATE-0007",
+      "TERMINATE-0015",
+      "TERMINATE-0027",
+      "TERMINATE-0031",
+      "TERMINATE-0047",
+      "TERMINATE-0055",
+      "TERMINATE-0075",
+      "TERMINATE-0099",
+      "TERMINATE-0111",
+      "TERMINATE-0115",
+      "TERMINATE-0039",
+      "TERMINATE-0095",
+      "TERMINATE-0107"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "분실해도 남은 단말 할부금은 정리해야 하며, 해지 시 일시 납부가 원칙이다",
+    "원하면 해지 후에도 기존 할부 일정을 유지해 나눠 낼 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그에 '분실해도 할부금이 면제되지 않는다'는 직접 문장은 없고, 해지 시 잔여 할부금 처리(TERMINATE-03)와 기기변경 시 완납·승계(DEVICE-02, 예: DEVICE-0026)만 있다. 고객이 해지할지 회선을 유지·기기변경할지에 따라 답이 갈려 ABSTAIN이나 ANSWER_OR_CLARIFY로 볼 여지도 있다. 해지 기준으로 정리했으며 사람 확인 필요."
+  },
+  "verified": {
+   "id": "RU-342-t0-r1",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "RU-342-t0-r1",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "분실한 폰의 할부금을 계속 내야 하는지",
+      "sourceIds": [
+       "TERMINATE-0003",
+       "TERMINATE-0023",
+       "TERMINATE-0043",
+       "TERMINATE-0063",
+       "TERMINATE-0103",
+       "TERMINATE-0011",
+       "TERMINATE-0019",
+       "TERMINATE-0035",
+       "TERMINATE-0051",
+       "TERMINATE-0067",
+       "TERMINATE-0083",
+       "TERMINATE-0007",
+       "TERMINATE-0015",
+       "TERMINATE-0027",
+       "TERMINATE-0031",
+       "TERMINATE-0047",
+       "TERMINATE-0055",
+       "TERMINATE-0075",
+       "TERMINATE-0099",
+       "TERMINATE-0111",
+       "TERMINATE-0115",
+       "TERMINATE-0039",
+       "TERMINATE-0095",
+       "TERMINATE-0107"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "분실해도 남은 단말 할부금은 정리해야 하며, 해지 시 일시 납부가 원칙이다",
+     "원하면 해지 후에도 기존 할부 일정을 유지해 나눠 낼 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그에 '분실해도 할부금이 면제되지 않는다'는 직접 문장은 없고, 해지 시 잔여 할부금 처리(TERMINATE-03)와 기기변경 시 완납·승계(DEVICE-02, 예: DEVICE-0026)만 있다. 고객이 해지할지 회선을 유지·기기변경할지에 따라 답이 갈려 ABSTAIN이나 ANSWER_OR_CLARIFY로 볼 여지도 있다. 해지 기준으로 정리했으며 사람 확인 필요."
+   },
+   "changes": "",
+   "reviewReason": "고객이 해지할지 회선을 유지(기기변경 등)할지 말하지 않았다. 카탈로그에는 분실 후 해지 시 잔여 할부금 처리(TERMINATE-03: 일시 납부 원칙, 할부 유지 선택 가능)와 분실 후 새 폰으로 기기변경 시 처리(DEVICE-0026: 남은 할부는 다 내거나 새 할부로 넘김, DEVICE-0006 등 DEVICE-02)가 따로 있고, 분실 자체로 할부금이 면제되지 않는다는 직접 문장은 없다. 현재 라벨(해지 기준 ANSWER)이면 DEVICE-0026으로 답한 응답이 불충족이 된다. 해지 기준 ANSWER로 둘지, 해지·기기변경 두 경우를 안내하는 ANSWER_OR_CLARIFY로 바꿀지 사람 확인 필요. 또 TERMINATE-0043, 0035, 0051, 0067, 0063, 0103, 0027, 0031, 0095, 0107은 '일시 납부가 원칙'을 말하지 않아 첫 필수 사실을 다 담지 않는다."
+  },
+  "reasons": [
+   "검증 판단 불가: 고객이 해지할지 회선을 유지(기기변경 등)할지 말하지 않았다. 카탈로그에는 분실 후 해지 시 잔여 할부금 처리(TERMINATE-03: 일시 납부 원칙, 할부 유지 선택 가능)와 분실 후 새 폰으로 기기변경 시 처리(DEVICE-0026: 남은 할부는 다 내거나 새 할부로 넘김, DEVICE-0006 등 DEVICE-02)가 따로 있고, 분실 자체로 할부금이 면제되지 않는다는 직접 문장은 없다. 현재 라벨(해지 기준 ANSWER)이면 DEVICE-0026으로 답한 응답이 불충족이 된다. 해지 기준 ANSWER로 둘지, 해지·기기변경 두 경우를 안내하는 ANSWER_OR_CLARIFY로 바꿀지 사람 확인 필요. 또 TERMINATE-0043, 0035, 0051, 0067, 0063, 0103, 0027, 0031, 0095, 0107은 '일시 납부가 원칙'을 말하지 않아 첫 필수 사실을 다 담지 않는다.",
+   "작성자 확신 낮음: 카탈로그에 '분실해도 할부금이 면제되지 않는다'는 직접 문장은 없고, 해지 시 잔여 할부금 처리(TERMINATE-03)와 기기변경 시 완납·승계(DEVICE-02, 예: DEVICE-0026)만 있다. 고객이 해지할지 회선을 유지·기기변경할지에 따라 답이 갈려 ABSTAIN이나 ANSWER_OR_CLARIFY로 볼 여지도 있다. 해지 기준으로 정리했으며 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "RU-343-t0-r1",
+  "set": "B",
+  "question": "그리고데이터이월도그대로되나요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-343-t0-r1",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "기기변경 시 데이터 이월이 유지되는지 다루는 FAQ가 없다. PLAN-03은 이월 비율(잔여량 50%)만, PLAN-0078은 요금제를 낮출 때의 이월(매장 확인)만 다룬다. PLAN-0068의 '이월은 요금제 기준'에서 기기변경과 무관하다고 추론할 여지가 있어 low."
+  },
+  "verified": {
+   "id": "RU-343-t0-r1",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-343-t0-r1",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "기기변경 시 데이터 이월이 유지되는지 다루는 FAQ가 없다. PLAN-03은 이월 비율(잔여량 50%)만, PLAN-0078은 요금제를 낮출 때의 이월(매장 확인)만 다룬다. PLAN-0068의 '이월은 요금제 기준'에서 기기변경과 무관하다고 추론할 여지가 있어 low."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 기기변경 시 데이터 이월이 유지되는지 다루는 FAQ가 없다. PLAN-03은 이월 비율(잔여량 50%)만, PLAN-0078은 요금제를 낮출 때의 이월(매장 확인)만 다룬다. PLAN-0068의 '이월은 요금제 기준'에서 기기변경과 무관하다고 추론할 여지가 있어 low."
+  ]
+ },
+ {
+  "id": "RU-346-t0-r0",
+  "set": "B",
+  "question": "해외로밍패스는며칠짜리까지있어요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-346-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "해외 로밍 패스는 며칠짜리까지 있는지",
+     "sourceIds": [
+      "ROAMING-0026",
+      "ROAMING-0021",
+      "ROAMING-0051",
+      "ROAMING-0066",
+      "ROAMING-0016",
+      "ROAMING-0031",
+      "ROAMING-0046",
+      "ROAMING-0056",
+      "ROAMING-0061",
+      "ROAMING-0076"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "로밍 요금제는 일 단위(하루)와 7일 기간권이 있어 7일짜리가 가장 길다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그는 일 단위 9,900원, 7일 기간권 39,000원, 데이터 무제한 일 12,100원 세 가지를 나열할 뿐 '이것이 전부'라고 말하지 않는다. 최장 7일은 목록에서 추론한 것이다. 현지 연장 부분은 따로 처리된 질문이다."
+  },
+  "verified": {
+   "id": "RU-346-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-346-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "해외 로밍 패스는 며칠짜리까지 있는지",
+      "sourceIds": [
+       "ROAMING-0026",
+       "ROAMING-0021",
+       "ROAMING-0051",
+       "ROAMING-0066",
+       "ROAMING-0016",
+       "ROAMING-0031",
+       "ROAMING-0046",
+       "ROAMING-0056",
+       "ROAMING-0061",
+       "ROAMING-0076"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "로밍 요금제는 일 단위(하루)와 7일 기간권이 있어 7일짜리가 가장 길다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그는 일 단위 9,900원, 7일 기간권 39,000원, 데이터 무제한 일 12,100원 세 가지를 나열할 뿐 '이것이 전부'라고 말하지 않는다. 최장 7일은 목록에서 추론한 것이다. 현지 연장 부분은 따로 처리된 질문이다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 카탈로그는 일 단위 9,900원, 7일 기간권 39,000원, 데이터 무제한 일 12,100원 세 가지를 나열할 뿐 '이것이 전부'라고 말하지 않는다. 최장 7일은 목록에서 추론한 것이다. 현지 연장 부분은 따로 처리된 질문이다."
+  ]
+ },
+ {
+  "id": "RU-189-t0-r0",
+  "set": "B",
+  "question": "유심과 eSIM을 쓰는 방식은 어떤 것들이 있는지 설명해줘",
+  "conversation": [],
+  "written": {
+   "id": "RU-189-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "유심과 eSIM을 쓰는 방식",
+     "sourceIds": [
+      "USIM-0011",
+      "USIM-0091",
+      "USIM-0099"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "eSIM은 eSIM을 지원하는 단말에서만 쓸 수 있다",
+    "eSIM 듀얼심으로 한 단말에서 최대 2개 회선을 함께 쓸 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "질문이 막연하다. 카탈로그에 '유심·eSIM 이용 방식'을 정리한 FAQ는 없고, eSIM 지원 단말 조건과 듀얼심(최대 2회선)만 있다. USIM-0023(칩을 꽂지 않는 유심)·USIM-0007(듀얼심 설명)도 관련 있으나 두 사실을 모두 담지 않아 제외. ABSTAIN으로 볼 여지도 있다."
+  },
+  "verified": {
+   "id": "RU-189-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-189-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "유심과 eSIM을 쓰는 방식",
+      "sourceIds": [
+       "USIM-0011",
+       "USIM-0091",
+       "USIM-0099"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "eSIM은 eSIM을 지원하는 단말에서만 쓸 수 있다",
+     "eSIM 듀얼심으로 한 단말에서 최대 2개 회선을 함께 쓸 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "질문이 막연하다. 카탈로그에 '유심·eSIM 이용 방식'을 정리한 FAQ는 없고, eSIM 지원 단말 조건과 듀얼심(최대 2회선)만 있다. USIM-0023(칩을 꽂지 않는 유심)·USIM-0007(듀얼심 설명)도 관련 있으나 두 사실을 모두 담지 않아 제외. ABSTAIN으로 볼 여지도 있다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 질문이 막연하다. 카탈로그에 '유심·eSIM 이용 방식'을 정리한 FAQ는 없고, eSIM 지원 단말 조건과 듀얼심(최대 2회선)만 있다. USIM-0023(칩을 꽂지 않는 유심)·USIM-0007(듀얼심 설명)도 관련 있으나 두 사실을 모두 담지 않아 제외. ABSTAIN으로 볼 여지도 있다."
+  ]
+ },
+ {
+  "id": "RU-311-t0-r0",
+  "set": "B",
+  "question": "거기서 eSIM 발급하면 비용은 얼마예요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-311-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "eSIM 발급 비용",
+     "sourceIds": [
+      "USIM-0011",
+      "USIM-0035",
+      "USIM-0067",
+      "USIM-0083",
+      "USIM-0091",
+      "USIM-0095",
+      "USIM-0003",
+      "USIM-0015",
+      "USIM-0019",
+      "USIM-0023",
+      "USIM-0027",
+      "USIM-0031",
+      "USIM-0039",
+      "USIM-0043",
+      "USIM-0047",
+      "USIM-0055",
+      "USIM-0063",
+      "USIM-0071",
+      "USIM-0079",
+      "USIM-0099",
+      "USIM-0103",
+      "USIM-0107",
+      "USIM-0111",
+      "USIM-0115"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "eSIM 발급 비용은 2,750원이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "이전 대화가 없어 '거기서'가 무엇을 가리키는지 알 수 없다. 카탈로그상 eSIM 비용은 발급 경로(매장·온라인)와 상관없이 2,750원이라 ANSWER로 두었으나, 타사 등 다른 대상을 가리킨다면 달라질 수 있다."
+  },
+  "verified": {
+   "id": "RU-311-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-311-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "eSIM 발급 비용",
+      "sourceIds": [
+       "USIM-0011",
+       "USIM-0035",
+       "USIM-0067",
+       "USIM-0083",
+       "USIM-0091",
+       "USIM-0095",
+       "USIM-0003",
+       "USIM-0015",
+       "USIM-0019",
+       "USIM-0023",
+       "USIM-0027",
+       "USIM-0031",
+       "USIM-0039",
+       "USIM-0043",
+       "USIM-0047",
+       "USIM-0055",
+       "USIM-0063",
+       "USIM-0071",
+       "USIM-0079",
+       "USIM-0099",
+       "USIM-0103",
+       "USIM-0107",
+       "USIM-0111",
+       "USIM-0115"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "eSIM 발급 비용은 2,750원이다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "이전 대화가 없어 '거기서'가 무엇을 가리키는지 알 수 없다. 카탈로그상 eSIM 비용은 발급 경로(매장·온라인)와 상관없이 2,750원이라 ANSWER로 두었으나, 타사 등 다른 대상을 가리킨다면 달라질 수 있다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 이전 대화가 없어 '거기서'가 무엇을 가리키는지 알 수 없다. 카탈로그상 eSIM 비용은 발급 경로(매장·온라인)와 상관없이 2,750원이라 ANSWER로 두었으나, 타사 등 다른 대상을 가리킨다면 달라질 수 있다."
+  ]
+ },
+ {
+  "id": "RU-208-t0-r0",
+  "set": "B",
+  "question": "매장 가는 거랑 전화하는 거랑 뭐가 더 빨라요",
+  "conversation": [],
+  "written": {
+   "id": "RU-208-t0-r0",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "매장 방문과 전화 중 어느 쪽이 더 빠른지(해지 기준)",
+     "sourceIds": [
+      "TERMINATE-0109",
+      "TERMINATE-0101"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "어떤 업무인지에 따라 다르며, 해지라면 매장·고객센터 전화·홈페이지 모두 신청 즉시 처리되어 속도가 같다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "앞 대화가 없어 어떤 업무인지 알 수 없다. 매장과 전화를 직접 비교하는 FAQ는 해지(TERMINATE-0109, 0101: 모두 신청 즉시 해지)뿐이다. 다른 업무(개통·재발급 등)는 매장 대 전화 비교가 카탈로그에 없어 업무를 되묻는 것도 정상으로 보았다. 사람 확인 필요."
+  },
+  "verified": {
+   "id": "RU-208-t0-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "RU-208-t0-r0",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "매장 방문과 전화 중 어느 쪽이 더 빠른지(해지 기준)",
+      "sourceIds": [
+       "TERMINATE-0109",
+       "TERMINATE-0101"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "어떤 업무인지에 따라 다르며, 해지라면 매장·고객센터 전화·홈페이지 모두 신청 즉시 처리되어 속도가 같다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "앞 대화가 없어 어떤 업무인지 알 수 없다. 매장과 전화를 직접 비교하는 FAQ는 해지(TERMINATE-0109, 0101: 모두 신청 즉시 해지)뿐이다. 다른 업무(개통·재발급 등)는 매장 대 전화 비교가 카탈로그에 없어 업무를 되묻는 것도 정상으로 보았다. 사람 확인 필요."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 앞 대화가 없어 어떤 업무인지 알 수 없다. 매장과 전화를 직접 비교하는 FAQ는 해지(TERMINATE-0109, 0101: 모두 신청 즉시 해지)뿐이다. 다른 업무(개통·재발급 등)는 매장 대 전화 비교가 카탈로그에 없어 업무를 되묻는 것도 정상으로 보았다. 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "RU-212-t0-r0",
+  "set": "B",
+  "question": "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?",
+  "conversation": [],
+  "written": {
+   "id": "RU-212-t0-r0",
+   "expectedBehavior": "PARTIAL_ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "성인이 된 자녀 명의로 바꾸는(명의변경) 비용",
+     "sourceIds": [
+      "NAME_CHANGE-0080",
+      "NAME_CHANGE-0002",
+      "NAME_CHANGE-0014",
+      "NAME_CHANGE-0026",
+      "NAME_CHANGE-0044",
+      "NAME_CHANGE-0068",
+      "NAME_CHANGE-0074",
+      "NAME_CHANGE-0086",
+      "NAME_CHANGE-0005",
+      "NAME_CHANGE-0008",
+      "NAME_CHANGE-0011",
+      "NAME_CHANGE-0017",
+      "NAME_CHANGE-0020",
+      "NAME_CHANGE-0029",
+      "NAME_CHANGE-0041",
+      "NAME_CHANGE-0053",
+      "NAME_CHANGE-0062",
+      "NAME_CHANGE-0077",
+      "NAME_CHANGE-0089"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "명의변경은 수수료가 없다",
+    "신규 개통 비용은 FAQ에서 확인할 수 없다"
+   ],
+   "missingFact": "신규 개통 시 드는 비용(가입비 등)",
+   "confidence": "low",
+   "note": "카탈로그에 신규 개통 비용이 없어 두 방법의 비용을 비교할 수 없다. NAME_CHANGE-0080은 '명의변경은 수수료가 없고, 기존 번호를 그대로 쓰려면 명의변경이 유리'라고 하지만 신규 개통 비용은 말하지 않는다. 이 FAQ를 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
+  },
+  "verified": {
+   "id": "RU-212-t0-r0",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "RU-212-t0-r0",
+    "expectedBehavior": "PARTIAL_ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "성인이 된 자녀 명의로 바꾸는(명의변경) 비용",
+      "sourceIds": [
+       "NAME_CHANGE-0080",
+       "NAME_CHANGE-0002",
+       "NAME_CHANGE-0014",
+       "NAME_CHANGE-0026",
+       "NAME_CHANGE-0044",
+       "NAME_CHANGE-0068",
+       "NAME_CHANGE-0074",
+       "NAME_CHANGE-0086",
+       "NAME_CHANGE-0005",
+       "NAME_CHANGE-0008",
+       "NAME_CHANGE-0011",
+       "NAME_CHANGE-0017",
+       "NAME_CHANGE-0020",
+       "NAME_CHANGE-0029",
+       "NAME_CHANGE-0041",
+       "NAME_CHANGE-0053",
+       "NAME_CHANGE-0062",
+       "NAME_CHANGE-0089"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "명의변경은 수수료가 없다",
+     "신규 개통 비용은 FAQ에서 확인할 수 없다"
+    ],
+    "missingFact": "신규 개통 시 드는 비용(가입비 등)",
+    "confidence": "low",
+    "note": "카탈로그에 신규 개통 비용이 없어 두 방법의 비용을 비교할 수 없다. NAME_CHANGE-0080은 '명의변경은 수수료가 없고, 기존 번호를 그대로 쓰려면 명의변경이 유리'라고 하지만 신규 개통 비용은 말하지 않는다. 이 FAQ를 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
+   },
+   "changes": "sourceIds에서 NAME_CHANGE-0077을 뺐다. 답 본문 \"둘 다 수수료가 없습니다\"는 가족 간·타인 간 명의변경 비교인데, 이 질문의 정답 근거로 두면 '명의변경과 신규 개통 둘 다 무료'로 읽혀 근거 밖 주장을 맞다고 볼 수 있다.",
+   "reviewReason": "NAME_CHANGE-0080 답 본문은 명의변경 수수료 없음과 '기존 번호를 그대로 쓰려면 명의변경이 유리'만 말하고 신규 개통 비용은 카탈로그 어디에도 없다(가입비·개통 비용 검색 결과 없음). PARTIAL_ANSWER(신규 개통 비용 확인 불가)로 둘지, NAME_CHANGE-0080을 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
+  },
+  "reasons": [
+   "검증 판단 불가: NAME_CHANGE-0080 답 본문은 명의변경 수수료 없음과 '기존 번호를 그대로 쓰려면 명의변경이 유리'만 말하고 신규 개통 비용은 카탈로그 어디에도 없다(가입비·개통 비용 검색 결과 없음). PARTIAL_ANSWER(신규 개통 비용 확인 불가)로 둘지, NAME_CHANGE-0080을 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요.",
+   "작성자 확신 낮음: 카탈로그에 신규 개통 비용이 없어 두 방법의 비용을 비교할 수 없다. NAME_CHANGE-0080은 '명의변경은 수수료가 없고, 기존 번호를 그대로 쓰려면 명의변경이 유리'라고 하지만 신규 개통 비용은 말하지 않는다. 이 FAQ를 비교 답으로 인정해 ANSWER로 볼지 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-vague-twice-t2-r0",
+  "set": "B",
+  "question": "번호 이동할 때 필요한 서류가 뭐야?",
+  "conversation": [
+   {
+    "customer": "번호 이동할 때 필요한 서류가 뭐야?",
+    "app": "현재 미납 요금이 있으신가요?"
+   },
+   {
+    "customer": "글쎄",
+    "app": "답변을 잘 이해하지 못했어요. 다시 한 번 알려주세요.\n현재 미납 요금이 있으신가요?"
+   }
+  ],
+  "written": {
+   "id": "CLAR-faq-bill-vague-twice-t2-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동할 때 필요한 서류",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0050",
+      "PORTING-0098",
+      "PORTING-0102",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  },
+  "verified": {
+   "id": "CLAR-faq-bill-vague-twice-t2-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "CLAR-faq-bill-vague-twice-t2-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동할 때 필요한 서류",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0050",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0106",
+       "PORTING-0110"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-dont-know-t1-r0",
+  "set": "B",
+  "question": "번호 이동할 때 필요한 서류가 뭐야?",
+  "conversation": [
+   {
+    "customer": "번호 이동할 때 필요한 서류가 뭐야?",
+    "app": "현재 미납 요금이 있으신가요?"
+   }
+  ],
+  "written": {
+   "id": "CLAR-faq-bill-dont-know-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동할 때 필요한 서류",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0050",
+      "PORTING-0098",
+      "PORTING-0102",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  },
+  "verified": {
+   "id": "CLAR-faq-bill-dont-know-t1-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "CLAR-faq-bill-dont-know-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동할 때 필요한 서류",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0050",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0106",
+       "PORTING-0110"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-hmm-twice-t2-r0",
+  "set": "B",
+  "question": "번호 이동할 때 필요한 서류가 뭐야?",
+  "conversation": [
+   {
+    "customer": "번호 이동할 때 필요한 서류가 뭐야?",
+    "app": "현재 미납 요금이 있으신가요?"
+   },
+   {
+    "customer": "음...",
+    "app": "답변을 잘 이해하지 못했어요. 다시 한 번 알려주세요.\n현재 미납 요금이 있으신가요?"
+   }
+  ],
+  "written": {
+   "id": "CLAR-faq-bill-hmm-twice-t2-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동할 때 필요한 서류",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0050",
+      "PORTING-0098",
+      "PORTING-0102",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  },
+  "verified": {
+   "id": "CLAR-faq-bill-hmm-twice-t2-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "CLAR-faq-bill-hmm-twice-t2-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동할 때 필요한 서류",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0050",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0106",
+       "PORTING-0110"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 두 번 되물었는데도 고객이 답하지 못했다. 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-unsure-immediate-t1-r0",
+  "set": "B",
+  "question": "번호 이동할 때 필요한 서류가 뭐야?",
+  "conversation": [
+   {
+    "customer": "번호 이동할 때 필요한 서류가 뭐야?",
+    "app": "현재 미납 요금이 있으신가요?"
+   }
+  ],
+  "written": {
+   "id": "CLAR-faq-bill-unsure-immediate-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동할 때 필요한 서류",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0050",
+      "PORTING-0098",
+      "PORTING-0102",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  },
+  "verified": {
+   "id": "CLAR-faq-bill-unsure-immediate-t1-r0",
+   "verdict": "AGREE",
+   "label": {
+    "id": "CLAR-faq-bill-unsure-immediate-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동할 때 필요한 서류",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0050",
+       "PORTING-0098",
+       "PORTING-0102",
+       "PORTING-0106",
+       "PORTING-0110"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 먼저 완납해야 진행되고, 미납 요금이 없으면 신분증만으로 신청된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+   },
+   "changes": "",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 고객이 미납 여부에 답하지 못했으므로(askedButUnanswered) 미납 있음·없음 두 경우를 모두 안내해야 한다. 이미 되물었는데 답을 못 했으니 다시 되묻기보다 바로 답하는 것으로 보고 ANSWER로 두었으나, ANSWER_OR_CLARIFY로 볼 여지도 있어 low로 남긴다."
+  ]
+ },
+ {
+  "id": "CLAR-dup-docs-after-lost-t0-r0",
+  "set": "B",
+  "question": "유심을 잃어버렸어요",
+  "conversation": [],
+  "written": {
+   "id": "CLAR-dup-docs-after-lost-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "유심을 잃어버렸을 때 어떻게 해야 하는지",
+     "sourceIds": [
+      "USIM-0036",
+      "USIM-0004",
+      "USIM-0020",
+      "USIM-0012",
+      "USIM-0028",
+      "USIM-0048",
+      "USIM-0052",
+      "USIM-0056",
+      "USIM-0076",
+      "USIM-0096"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "고객센터나 홈페이지에서 분실 신고를 하면 즉시 이용이 정지된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "질문 형태가 아닌 상황 진술이라 고객이 원하는 것(정지 처리, 재발급 방법·비용)이 모호하다. 분실 처리 절차(USIM-0036)를 기준으로 분실 신고·정지를 필수로 잡았다. 재발급 시 기존 유심 자동 해지(USIM-0036·0004·0020·0096)와 재발급 방법·비용(USIM-0025 등)까지 기대하는지는 사람 확인 필요."
+  },
+  "verified": {
+   "id": "CLAR-dup-docs-after-lost-t0-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CLAR-dup-docs-after-lost-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "유심을 잃어버렸을 때 어떻게 해야 하는지",
+      "sourceIds": [
+       "USIM-0036",
+       "USIM-0004",
+       "USIM-0020",
+       "USIM-0012",
+       "USIM-0028",
+       "USIM-0048",
+       "USIM-0052",
+       "USIM-0056",
+       "USIM-0076",
+       "USIM-0096",
+       "USIM-0068"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "고객센터나 홈페이지에서 분실 신고를 하면 즉시 이용이 정지된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "질문 형태가 아닌 상황 진술이라 고객이 원하는 것(정지 처리, 재발급 방법·비용)이 모호하다. 분실 처리 절차(USIM-0036)를 기준으로 분실 신고·정지를 필수로 잡았다. 재발급 시 기존 유심 자동 해지(USIM-0036·0004·0020·0096)와 재발급 방법·비용(USIM-0025 등)까지 기대하는지는 사람 확인 필요."
+   },
+   "changes": "sourceIds에 USIM-0068(분실 신고를 하면 바로 정지)을 추가. USIM-0052와 같은 내용인데 빠져 있었음. 해외 체류 중 분실(USIM-0040·0060·0080·0100)은 다른 상황이라 넣지 않음.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 질문 형태가 아닌 상황 진술이라 고객이 원하는 것(정지 처리, 재발급 방법·비용)이 모호하다. 분실 처리 절차(USIM-0036)를 기준으로 분실 신고·정지를 필수로 잡았다. 재발급 시 기존 유심 자동 해지(USIM-0036·0004·0020·0096)와 재발급 방법·비용(USIM-0025 등)까지 기대하는지는 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "FLOW-CL-02-t1-r0",
+  "set": "B",
+  "question": "번호이동 하고 싶어요",
+  "conversation": [
+   {
+    "customer": "번호이동 하고 싶어요",
+    "app": "현재 미납 요금이 있으신가요?"
+   }
+  ],
+  "written": {
+   "id": "FLOW-CL-02-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동 하는 방법(미납 없음, 개통 2년)",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0102",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0098",
+      "PORTING-0106",
+      "PORTING-0110",
+      "PORTING-0047",
+      "PORTING-0011",
+      "PORTING-0019",
+      "PORTING-0027",
+      "PORTING-0043"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동은 본인 신분증을 지참해 신청한다",
+    "개통 후 3개월이 지나야 번호이동이 가능하므로 개통 2년이 지난 고객은 신청할 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "미납이 없다고 답했으므로 미납 완납 조건은 요구하지 않는다. 명의변경 후 1개월 조건은 고객이 명의변경 여부를 말하지 않았고 묻지도 않아 필수에서 뺐다. 처리 시간(09:00~20:00, 평균 2시간)은 부가 정보. 서류 FAQ와 개통 기간 FAQ가 각각 사실 하나씩만 담고 있어(PORTING-0047만 둘 다) 한 부분에 함께 넣었다."
+  },
+  "verified": {
+   "id": "FLOW-CL-02-t1-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "FLOW-CL-02-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동 하는 방법(미납 없음, 개통 2년)",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0102",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0098",
+       "PORTING-0106",
+       "PORTING-0110",
+       "PORTING-0047",
+       "PORTING-0011",
+       "PORTING-0019",
+       "PORTING-0027",
+       "PORTING-0043",
+       "PORTING-0007",
+       "PORTING-0025",
+       "PORTING-0041",
+       "PORTING-0045",
+       "PORTING-0050",
+       "PORTING-0051"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동은 본인 신분증을 지참해 신청한다",
+     "개통 후 3개월이 지나야 번호이동이 가능하므로 개통 2년이 지난 고객은 신청할 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "미납이 없다고 답했으므로 미납 완납 조건은 요구하지 않는다. 명의변경 후 1개월 조건은 고객이 명의변경 여부를 말하지 않았고 묻지도 않아 필수에서 뺐다. 처리 시간(09:00~20:00, 평균 2시간)은 부가 정보. 서류 FAQ와 개통 기간 FAQ가 각각 사실 하나씩만 담고 있어(PORTING-0047만 둘 다) 한 부분에 함께 넣었다."
+   },
+   "changes": "sourceIds에 번호이동 신청 방법(PORTING-0025·0041·0045: 신분증 지참 신청), 서류·미납(PORTING-0050), 개통 3개월 조건(PORTING-0007·0051)을 추가. 같은 정책인데 빠져 있었음.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 미납이 없다고 답했으므로 미납 완납 조건은 요구하지 않는다. 명의변경 후 1개월 조건은 고객이 명의변경 여부를 말하지 않았고 묻지도 않아 필수에서 뺐다. 처리 시간(09:00~20:00, 평균 2시간)은 부가 정보. 서류 FAQ와 개통 기간 FAQ가 각각 사실 하나씩만 담고 있어(PORTING-0047만 둘 다) 한 부분에 함께 넣었다."
+  ]
+ },
+ {
+  "id": "FLOW-CL-06-t1-r0",
+  "set": "B",
+  "question": "미성년자도 가입할 수 있나요",
+  "conversation": [
+   {
+    "customer": "미성년자도 가입할 수 있나요",
+    "app": "가입하실 분이 만 14세 이상인가요?"
+   }
+  ],
+  "written": {
+   "id": "FLOW-CL-06-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "미성년자(만 15세) 가입 가능 여부와 조건",
+     "sourceIds": [
+      "SUBSCRIBE-0002",
+      "SUBSCRIBE-0010",
+      "SUBSCRIBE-0074",
+      "SUBSCRIBE-0006",
+      "SUBSCRIBE-0018",
+      "SUBSCRIBE-0030",
+      "SUBSCRIBE-0042",
+      "SUBSCRIBE-0058",
+      "SUBSCRIBE-0062",
+      "SUBSCRIBE-0086",
+      "SUBSCRIBE-0118",
+      "SUBSCRIBE-0034",
+      "SUBSCRIBE-0026",
+      "SUBSCRIBE-0050",
+      "SUBSCRIBE-0078",
+      "SUBSCRIBE-0082",
+      "SUBSCRIBE-0090",
+      "SUBSCRIBE-0098",
+      "SUBSCRIBE-0102"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "만 14세 이상 18세 이하는 가입할 수 있으므로 만 15세는 가입 가능하다",
+    "법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "부모 동행이라고 답했으므로 법정대리인(부모) 서류 기준으로 본다. 미성년자 명의 최대 3회선은 부가 정보. 가입자 본인 신분증 필요 여부는 FAQ에 없다. SUBSCRIBE-0026·0030·0050·0078·0082·0090·0098·0102는 서류만 있고 가입 가능 연령 판단은 없거나 일부만 있다."
+  },
+  "verified": {
+   "id": "FLOW-CL-06-t1-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "FLOW-CL-06-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "미성년자(만 15세) 가입 가능 여부와 조건",
+      "sourceIds": [
+       "SUBSCRIBE-0002",
+       "SUBSCRIBE-0010",
+       "SUBSCRIBE-0074",
+       "SUBSCRIBE-0006",
+       "SUBSCRIBE-0018",
+       "SUBSCRIBE-0030",
+       "SUBSCRIBE-0042",
+       "SUBSCRIBE-0058",
+       "SUBSCRIBE-0062",
+       "SUBSCRIBE-0086",
+       "SUBSCRIBE-0118",
+       "SUBSCRIBE-0034",
+       "SUBSCRIBE-0026",
+       "SUBSCRIBE-0050",
+       "SUBSCRIBE-0078",
+       "SUBSCRIBE-0082",
+       "SUBSCRIBE-0090",
+       "SUBSCRIBE-0098",
+       "SUBSCRIBE-0102",
+       "SUBSCRIBE-0014",
+       "SUBSCRIBE-0094",
+       "SUBSCRIBE-0097",
+       "SUBSCRIBE-0110",
+       "SUBSCRIBE-0114",
+       "SUBSCRIBE-0122",
+       "SUBSCRIBE-0126",
+       "SUBSCRIBE-0130"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "만 14세 이상 18세 이하는 가입할 수 있으므로 만 15세는 가입 가능하다",
+     "법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "부모 동행이라고 답했으므로 법정대리인(부모) 서류 기준으로 본다. 미성년자 명의 최대 3회선은 부가 정보. 가입자 본인 신분증 필요 여부는 FAQ에 없다. SUBSCRIBE-0026·0030·0050·0078·0082·0090·0098·0102는 서류만 있고 가입 가능 연령 판단은 없거나 일부만 있다."
+   },
+   "changes": "sourceIds에 미성년자 가입 연령·법정대리인 서류를 직접 말하는 SUBSCRIBE-0014(만 14~18세 법정대리인 동의, 14세 미만 불가), 0094·0114(14~18세 법정대리인 서류), 0097·0110·0122(동의서·가족관계증명서·법정대리인 신분증), 0126·0130(부모 동의서 등)을 추가.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 부모 동행이라고 답했으므로 법정대리인(부모) 서류 기준으로 본다. 미성년자 명의 최대 3회선은 부가 정보. 가입자 본인 신분증 필요 여부는 FAQ에 없다. SUBSCRIBE-0026·0030·0050·0078·0082·0090·0098·0102는 서류만 있고 가입 가능 연령 판단은 없거나 일부만 있다."
+  ]
+ },
+ {
+  "id": "FLOW-CO-01-t0-r0",
+  "set": "B",
+  "question": "번호이동에필요한서류",
+  "conversation": [],
+  "written": {
+   "id": "FLOW-CO-01-t0-r0",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "번호이동에 필요한 서류",
+     "sourceIds": [
+      "PORTING-0010",
+      "PORTING-0026",
+      "PORTING-0042",
+      "PORTING-0102",
+      "PORTING-0002",
+      "PORTING-0006",
+      "PORTING-0014",
+      "PORTING-0018",
+      "PORTING-0030",
+      "PORTING-0038",
+      "PORTING-0098",
+      "PORTING-0106",
+      "PORTING-0110"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "번호이동에는 본인 신분증이 필요하다",
+    "기존 통신사에 미납 요금이 있으면 완납해야 신청할 수 있다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "명의변경 서류 부분은 따로 처리된 것으로 보고 제외. 미납 여부에 따라 진행 가능 여부가 갈리고 앱이 이 조건을 되묻는 흐름이 있어 ANSWER_OR_CLARIFY로 두었다(FAQ 한 문장으로 두 경우를 모두 답할 수 있어 ANSWER로 볼 여지도 있음). 바로 답하면 두 사실을 모두 안내해야 한다."
+  },
+  "verified": {
+   "id": "FLOW-CO-01-t0-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "FLOW-CO-01-t0-r0",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "번호이동에 필요한 서류",
+      "sourceIds": [
+       "PORTING-0010",
+       "PORTING-0026",
+       "PORTING-0042",
+       "PORTING-0102",
+       "PORTING-0002",
+       "PORTING-0006",
+       "PORTING-0014",
+       "PORTING-0018",
+       "PORTING-0030",
+       "PORTING-0038",
+       "PORTING-0098",
+       "PORTING-0106",
+       "PORTING-0110",
+       "PORTING-0045",
+       "PORTING-0050",
+       "PORTING-0066"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "번호이동에는 본인 신분증이 필요하다",
+     "기존 통신사에 미납 요금이 있으면 완납해야 신청할 수 있다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "명의변경 서류 부분은 따로 처리된 것으로 보고 제외. 미납 여부에 따라 진행 가능 여부가 갈리고 앱이 이 조건을 되묻는 흐름이 있어 ANSWER_OR_CLARIFY로 두었다(FAQ 한 문장으로 두 경우를 모두 답할 수 있어 ANSWER로 볼 여지도 있음). 바로 답하면 두 사실을 모두 안내해야 한다."
+   },
+   "changes": "번호이동 서류 부분 sourceIds에 PORTING-0045(신분증 가지고 신청, 밀린 요금 없어야), PORTING-0050(본인 신분증과 미납 완납이면 진행), PORTING-0066(본인 신분증이면 됨)을 추가. 같은 정책인데 빠져 있었음. ANSWER_OR_CLARIFY 판정은 원 라벨대로 둔다.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 명의변경 서류 부분은 따로 처리된 것으로 보고 제외. 미납 여부에 따라 진행 가능 여부가 갈리고 앱이 이 조건을 되묻는 흐름이 있어 ANSWER_OR_CLARIFY로 두었다(FAQ 한 문장으로 두 경우를 모두 답할 수 있어 ANSWER로 볼 여지도 있음). 바로 답하면 두 사실을 모두 안내해야 한다."
+  ]
+ },
+ {
+  "id": "FLOW-MT-03-t1-r0",
+  "set": "B",
+  "question": "그럼 데이터 다 쓰면 어떻게 돼요?",
+  "conversation": [
+   {
+    "customer": "로밍 요금제를 신청하려고 합니다",
+    "app": "로밍 요금제 신청은 홈페이지나 고객센터를 통해 가능합니다. 출국 전에 신청하시면 더욱 원활하게 이용하실 수 있습니다. 접수 후 약 1시간 이내에 적용되니 참고해 주세요. 직접 신청하시려면 홈페이지를 이용해 주세요."
+   }
+  ],
+  "written": {
+   "id": "FLOW-MT-03-t1-r0",
+   "expectedBehavior": "ABSTAIN",
+   "answerSources": [],
+   "parts": [],
+   "requiredFacts": [],
+   "missingFact": "로밍 요금제의 데이터를 다 쓴 뒤 어떻게 되는지",
+   "confidence": "low",
+   "note": "문맥상 '로밍 요금제 데이터를 다 쓰면 어떻게 되나'이다. 앱이 푼 '로밍 데이터 사용 시 요금'은 질문을 바꿔 쓴 것이다. 카탈로그에는 로밍 요금제의 데이터 제공량이나 소진 후 처리가 없다. 국내 요금제 소진 후 400kbps 제한(PLAN-0012 등)과 로밍 요금 20만 원 도달 시 데이터 자동 차단(ROAMING-0008 등)은 다른 상황이다. 차단 FAQ를 답으로 인정할지는 사람 검토 필요."
+  },
+  "verified": {
+   "id": "FLOW-MT-03-t1-r0",
+   "verdict": "DISPUTE",
+   "label": {
+    "id": "FLOW-MT-03-t1-r0",
+    "expectedBehavior": "ABSTAIN",
+    "answerSources": [],
+    "parts": [],
+    "requiredFacts": [],
+    "missingFact": "로밍 요금제의 데이터를 다 쓴 뒤 어떻게 되는지",
+    "confidence": "low",
+    "note": "문맥상 '로밍 요금제 데이터를 다 쓰면 어떻게 되나'이다. 앱이 푼 '로밍 데이터 사용 시 요금'은 질문을 바꿔 쓴 것이다. 카탈로그에는 로밍 요금제의 데이터 제공량이나 소진 후 처리가 없다. 국내 요금제 소진 후 400kbps 제한(PLAN-0012 등)과 로밍 요금 20만 원 도달 시 데이터 자동 차단(ROAMING-0008 등)은 다른 상황이다. 차단 FAQ를 답으로 인정할지는 사람 검토 필요."
+   },
+   "changes": "",
+   "reviewReason": "'데이터 다 쓰면'을 로밍 요금제 데이터 소진으로 보면 카탈로그에 답이 없다(ABSTAIN). 로밍 요금 20만 원 도달 시 데이터 자동 차단·본인 인증으로 해제(ROAMING-0008·0013·0033·0058 등)를 답으로 인정하면 ANSWER 또는 PARTIAL_ANSWER가 된다. 국내 요금제 소진 후 400kbps(PLAN-0012 등)는 로밍이 아닌 다른 상황. 질문 해석이 둘로 갈려 사람이 정해야 한다. 라벨은 ABSTAIN 유지."
+  },
+  "reasons": [
+   "검증 판단 불가: '데이터 다 쓰면'을 로밍 요금제 데이터 소진으로 보면 카탈로그에 답이 없다(ABSTAIN). 로밍 요금 20만 원 도달 시 데이터 자동 차단·본인 인증으로 해제(ROAMING-0008·0013·0033·0058 등)를 답으로 인정하면 ANSWER 또는 PARTIAL_ANSWER가 된다. 국내 요금제 소진 후 400kbps(PLAN-0012 등)는 로밍이 아닌 다른 상황. 질문 해석이 둘로 갈려 사람이 정해야 한다. 라벨은 ABSTAIN 유지.",
+   "작성자 확신 낮음: 문맥상 '로밍 요금제 데이터를 다 쓰면 어떻게 되나'이다. 앱이 푼 '로밍 데이터 사용 시 요금'은 질문을 바꿔 쓴 것이다. 카탈로그에는 로밍 요금제의 데이터 제공량이나 소진 후 처리가 없다. 국내 요금제 소진 후 400kbps 제한(PLAN-0012 등)과 로밍 요금 20만 원 도달 시 데이터 자동 차단(ROAMING-0008 등)은 다른 상황이다. 차단 FAQ를 답으로 인정할지는 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "CTX-earlier-topic-late-correction-t2-r0",
+  "set": "B",
+  "question": "유심 재발급도 알아보고 있어요",
+  "conversation": [
+   {
+    "customer": "아버지에게 명의 변경을 신청하려고 합니다",
+    "app": "양도인(아버지)과 양수인(본인)께서 함께 매장을 방문하실 수 있나요?"
+   },
+   {
+    "customer": "유심 재발급도 알아보고 있어요",
+    "app": "재발급을 본인 직접 받으실 예정인가요?"
+   }
+  ],
+  "written": {
+   "id": "CTX-earlier-topic-late-correction-t2-r0",
+   "expectedBehavior": "ANSWER_OR_CLARIFY",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "유심 재발급 방법과 비용",
+     "sourceIds": [
+      "USIM-0025",
+      "USIM-0105",
+      "USIM-0109",
+      "USIM-0097",
+      "USIM-0101",
+      "USIM-0001",
+      "USIM-0017",
+      "USIM-0005",
+      "USIM-0009"
+     ]
+    },
+    {
+     "questionPart": "유심 재발급 준비 서류(본인/대리인)",
+     "sourceIds": [
+      "USIM-0010",
+      "USIM-0026",
+      "USIM-0058",
+      "USIM-0102",
+      "USIM-0110",
+      "USIM-0002",
+      "USIM-0006",
+      "USIM-0034",
+      "USIM-0098",
+      "USIM-0106"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "매장을 방문하면 즉시 발급되고 온라인으로 신청하면 택배로 2~3 영업일이 걸린다",
+    "유심 재발급 비용은 7,700원이다",
+    "본인이 방문하면 신분증만 있으면 된다",
+    "대리인이 방문하면 위임장, 대리인 신분증, 가입자 신분증 사본이 필요하다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "customerConditions에 들어간 '아버지가 아니라 배우자에게 변경합니다'는 '본인 직접 받으실 예정인가요?'에 대한 답이 아니다. 앞 턴의 명의변경 대상을 고친 말이라 본인/대리인 조건은 모르는 상태로 보았다. '알아보고 있어요'라 기대 범위(방법·비용·서류)가 모호하다."
+  },
+  "verified": {
+   "id": "CTX-earlier-topic-late-correction-t2-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-earlier-topic-late-correction-t2-r0",
+    "expectedBehavior": "ANSWER_OR_CLARIFY",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "유심 재발급 방법과 비용",
+      "sourceIds": [
+       "USIM-0025",
+       "USIM-0105",
+       "USIM-0109",
+       "USIM-0097",
+       "USIM-0101",
+       "USIM-0001",
+       "USIM-0017",
+       "USIM-0005",
+       "USIM-0009",
+       "USIM-0033",
+       "USIM-0041"
+      ]
+     },
+     {
+      "questionPart": "유심 재발급 준비 서류(본인/대리인)",
+      "sourceIds": [
+       "USIM-0010",
+       "USIM-0026",
+       "USIM-0058",
+       "USIM-0102",
+       "USIM-0110",
+       "USIM-0002",
+       "USIM-0006",
+       "USIM-0034",
+       "USIM-0098",
+       "USIM-0106",
+       "USIM-0074"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "매장을 방문하면 즉시 발급되고 온라인으로 신청하면 택배로 2~3 영업일이 걸린다",
+     "유심 재발급 비용은 7,700원이다",
+     "본인이 방문하면 신분증만 있으면 된다",
+     "대리인이 방문하면 위임장, 대리인 신분증, 가입자 신분증 사본이 필요하다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "customerConditions에 들어간 '아버지가 아니라 배우자에게 변경합니다'는 '본인 직접 받으실 예정인가요?'에 대한 답이 아니다. 앞 턴의 명의변경 대상을 고친 말이라 본인/대리인 조건은 모르는 상태로 보았다. '알아보고 있어요'라 기대 범위(방법·비용·서류)가 모호하다."
+   },
+   "changes": "1부분(방법·비용)에 매장 즉시·온라인 택배 2~3 영업일을 함께 말하는 USIM-0033(7,700원 포함), USIM-0041을 추가. 2부분(본인/대리인 서류)에 두 경우를 모두 말하는 USIM-0074를 추가. customerConditions의 답이 질문과 맞지 않아 본인/대리인 조건을 모르는 상태로 본 원 판단(ANSWER_OR_CLARIFY)은 맞음.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: customerConditions에 들어간 '아버지가 아니라 배우자에게 변경합니다'는 '본인 직접 받으실 예정인가요?'에 대한 답이 아니다. 앞 턴의 명의변경 대상을 고친 말이라 본인/대리인 조건은 모르는 상태로 보았다. '알아보고 있어요'라 기대 범위(방법·비용·서류)가 모호하다."
+  ]
+ },
+ {
+  "id": "CTX-followup-05-t1-r0",
+  "set": "B",
+  "question": "그때 요금은 얼마야?",
+  "conversation": [
+   {
+    "customer": "일본 로밍을 신청하고 싶어요",
+    "app": "일본 로밍을 신청하려면 홈페이지나 고객센터를 통해 진행하시면 됩니다. 출국 전에 신청하시는 것이 좋지만, 현지에 도착하신 후에도 신청이 가능합니다. 신청 후에는 약 1시간 이내에 로밍 서비스가 적용될 예정입니다. 안전한 여행 되세요!"
+   }
+  ],
+  "written": {
+   "id": "CTX-followup-05-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "일본 로밍 요금",
+     "sourceIds": [
+      "ROAMING-0026",
+      "ROAMING-0051",
+      "ROAMING-0016",
+      "ROAMING-0021",
+      "ROAMING-0056",
+      "ROAMING-0061",
+      "ROAMING-0066"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "로밍 일 단위 요금제는 9,900원이다",
+    "7일 기간권은 39,000원이다",
+    "데이터 무제한은 하루 12,100원이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  },
+  "verified": {
+   "id": "CTX-followup-05-t1-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-followup-05-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "일본 로밍 요금",
+      "sourceIds": [
+       "ROAMING-0026",
+       "ROAMING-0051",
+       "ROAMING-0016",
+       "ROAMING-0021",
+       "ROAMING-0056",
+       "ROAMING-0061",
+       "ROAMING-0066",
+       "ROAMING-0001",
+       "ROAMING-0006",
+       "ROAMING-0011",
+       "ROAMING-0031",
+       "ROAMING-0036",
+       "ROAMING-0041",
+       "ROAMING-0046",
+       "ROAMING-0071",
+       "ROAMING-0076"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "로밍 일 단위 요금제는 9,900원이다",
+     "7일 기간권은 39,000원이다",
+     "데이터 무제한은 하루 12,100원이다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+   },
+   "changes": "sourceIds에 요금을 일부 직접 답하는 ROAMING-0001(일 9,900·무제한 12,100), 0006(7일 39,000), 0011(무제한 12,100), 0031·0076(7일 39,000·하루 9,900), 0036·0041(일 9,900), 0046(무제한 12,100·7일 39,000), 0071(일 9,900·무제한 12,100)을 추가. 세 요금을 다 담지 않아도 같은 요금 정책을 answer 본문으로 직접 답함. requiredFacts·판정은 유지.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  ]
+ },
+ {
+  "id": "CTX-transition-01-compact-t0-r0",
+  "set": "B",
+  "question": "일본 로밍 비용을 알아보고 있어요",
+  "conversation": [],
+  "written": {
+   "id": "CTX-transition-01-compact-t0-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "일본 로밍 비용",
+     "sourceIds": [
+      "ROAMING-0026",
+      "ROAMING-0051",
+      "ROAMING-0016",
+      "ROAMING-0021",
+      "ROAMING-0056",
+      "ROAMING-0061",
+      "ROAMING-0066"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "로밍 일 단위 요금제는 9,900원이다",
+    "7일 기간권은 39,000원이다",
+    "데이터 무제한은 하루 12,100원이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  },
+  "verified": {
+   "id": "CTX-transition-01-compact-t0-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-transition-01-compact-t0-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "일본 로밍 비용",
+      "sourceIds": [
+       "ROAMING-0026",
+       "ROAMING-0051",
+       "ROAMING-0016",
+       "ROAMING-0021",
+       "ROAMING-0056",
+       "ROAMING-0061",
+       "ROAMING-0066",
+       "ROAMING-0001",
+       "ROAMING-0006",
+       "ROAMING-0011",
+       "ROAMING-0031",
+       "ROAMING-0036",
+       "ROAMING-0041",
+       "ROAMING-0046",
+       "ROAMING-0071",
+       "ROAMING-0076"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "로밍 일 단위 요금제는 9,900원이다",
+     "7일 기간권은 39,000원이다",
+     "데이터 무제한은 하루 12,100원이다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+   },
+   "changes": "sourceIds에 요금을 일부 직접 답하는 ROAMING-0001(일 9,900·무제한 12,100), 0006(7일 39,000), 0011(무제한 12,100), 0031·0076(7일 39,000·하루 9,900), 0036·0041(일 9,900), 0046(무제한 12,100·7일 39,000), 0071(일 9,900·무제한 12,100)을 추가. 세 요금을 다 담지 않아도 같은 요금 정책을 answer 본문으로 직접 답함. requiredFacts·판정은 유지.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 일본 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  ]
+ },
+ {
+  "id": "CTX-blind-03-t2-r0",
+  "set": "B",
+  "question": "하루에 얼마예요?",
+  "conversation": [
+   {
+    "customer": "다음 주에 일본 여행 가는데 로밍 신청하려고요",
+    "app": "다음 주 일본 여행 전에 로밍 신청을 하시면 좋겠네요. 홈페이지나 고객센터를 통해 쉽게 신청하실 수 있으니, 여행 준비 단계에서 로밍을 완료하시길 권장드립니다. 안전하고 즐거운 여행 되세요!"
+   },
+   {
+    "customer": "아 일본 말고 미국이에요",
+    "app": "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요."
+   }
+  ],
+  "written": {
+   "id": "CTX-blind-03-t2-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "미국 로밍 하루 요금",
+     "sourceIds": [
+      "ROAMING-0001",
+      "ROAMING-0016",
+      "ROAMING-0026",
+      "ROAMING-0051",
+      "ROAMING-0021",
+      "ROAMING-0056",
+      "ROAMING-0061",
+      "ROAMING-0066",
+      "ROAMING-0071"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "로밍 일 단위 요금제는 하루 9,900원이다",
+    "데이터 무제한은 하루 12,100원이다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "고객이 일본이 아니라 미국이라고 고친 뒤 하루 요금을 물었다. 카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 미국 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  },
+  "verified": {
+   "id": "CTX-blind-03-t2-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-blind-03-t2-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "미국 로밍 하루 요금",
+      "sourceIds": [
+       "ROAMING-0001",
+       "ROAMING-0016",
+       "ROAMING-0026",
+       "ROAMING-0051",
+       "ROAMING-0021",
+       "ROAMING-0056",
+       "ROAMING-0061",
+       "ROAMING-0066",
+       "ROAMING-0071",
+       "ROAMING-0011",
+       "ROAMING-0031",
+       "ROAMING-0036",
+       "ROAMING-0041",
+       "ROAMING-0076"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "로밍 일 단위 요금제는 하루 9,900원이다",
+     "데이터 무제한은 하루 12,100원이다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "고객이 일본이 아니라 미국이라고 고친 뒤 하루 요금을 물었다. 카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 미국 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+   },
+   "changes": "sourceIds에 하루 요금을 직접 말하는 ROAMING-0011(무제한 하루 12,100), 0031·0076(하루짜리 9,900), 0036·0041(일 단위 9,900)을 추가.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 고객이 일본이 아니라 미국이라고 고친 뒤 하루 요금을 물었다. 카탈로그 로밍 FAQ는 국가별 구분 없이 공통 요금·절차만 안내하므로 그 내용으로 답한다고 보았다. 미국 전용 요금이 따로 있는지는 FAQ로 확인할 수 없다."
+  ]
+ },
+ {
+  "id": "CTX-blind-20-t2-r0",
+  "set": "B",
+  "question": "아이폰도 되는 거죠?",
+  "conversation": [
+   {
+    "customer": "안녕하세요",
+    "app": "안녕하세요! 무러바라예요 😊 무엇이 궁금하세요?"
+   },
+   {
+    "customer": "eSIM으로 바꾸려고 하는데요",
+    "app": "현재 사용 중이신 단말기가 eSIM을 지원하나요?"
+   }
+  ],
+  "written": {
+   "id": "CTX-blind-20-t2-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "아이폰에서도 eSIM을 쓸 수 있는지",
+     "sourceIds": [
+      "USIM-0067",
+      "USIM-0015",
+      "USIM-0115",
+      "USIM-0055",
+      "USIM-0083",
+      "USIM-0011",
+      "USIM-0023",
+      "USIM-0075",
+      "USIM-0091",
+      "USIM-0035"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "eSIM은 eSIM을 지원하는 단말에서만 이용할 수 있다(아이폰도 기종이 eSIM을 지원하면 가능하다)"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "카탈로그에는 아이폰 기종별 eSIM 지원 여부가 없고 '지원 단말이면 가능'만 있다. 아이폰이 된다고 단정하면 근거 없음. 지원 여부는 매장에서 확인한다는 안내(USIM-0083)가 적절. ABSTAIN으로 볼 여지도 있어 사람 검토 필요."
+  },
+  "verified": {
+   "id": "CTX-blind-20-t2-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-blind-20-t2-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "아이폰에서도 eSIM을 쓸 수 있는지",
+      "sourceIds": [
+       "USIM-0067",
+       "USIM-0015",
+       "USIM-0115",
+       "USIM-0055",
+       "USIM-0083",
+       "USIM-0011",
+       "USIM-0023",
+       "USIM-0075",
+       "USIM-0091",
+       "USIM-0035",
+       "USIM-0027",
+       "USIM-0043",
+       "USIM-0047",
+       "USIM-0063",
+       "USIM-0087"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "eSIM은 eSIM을 지원하는 단말에서만 이용할 수 있다(아이폰도 기종이 eSIM을 지원하면 가능하다)"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "카탈로그에는 아이폰 기종별 eSIM 지원 여부가 없고 '지원 단말이면 가능'만 있다. 아이폰이 된다고 단정하면 근거 없음. 지원 여부는 매장에서 확인한다는 안내(USIM-0083)가 적절. ABSTAIN으로 볼 여지도 있어 사람 검토 필요."
+   },
+   "changes": "sourceIds에 기존 단말을 eSIM으로 바꿀 때 '지원 단말이어야 한다'를 직접 말하는 USIM-0027, 0043, 0047, 0063, 0087을 추가. 아이폰 기종별 정보는 카탈로그에 없어 조건부 답(ANSWER, low)이라는 원 판단은 유지.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 카탈로그에는 아이폰 기종별 eSIM 지원 여부가 없고 '지원 단말이면 가능'만 있다. 아이폰이 된다고 단정하면 근거 없음. 지원 여부는 매장에서 확인한다는 안내(USIM-0083)가 적절. ABSTAIN으로 볼 여지도 있어 사람 검토 필요."
+  ]
+ },
+ {
+  "id": "CTX-unseen-independent-4-t1-r0",
+  "set": "B",
+  "question": "휴대폰 분실 신고는 어디서 하나요?",
+  "conversation": [
+   {
+    "customer": "인터넷 가입을 알아보고 있어요",
+    "app": "관련 안내 정보를 찾지 못했습니다. 통신 서비스나 매장 관련 질문이라면 조금 더 구체적으로 알려주세요."
+   }
+  ],
+  "written": {
+   "id": "CTX-unseen-independent-4-t1-r0",
+   "expectedBehavior": "ANSWER",
+   "answerSources": [
+    "FAQ"
+   ],
+   "parts": [
+    {
+     "questionPart": "휴대폰 분실 신고하는 곳",
+     "sourceIds": [
+      "DEVICE-0091",
+      "USIM-0012",
+      "USIM-0028",
+      "USIM-0036",
+      "USIM-0048",
+      "USIM-0056",
+      "USIM-0076"
+     ]
+    }
+   ],
+   "requiredFacts": [
+    "고객센터나 홈페이지에서 분실 신고(이용 정지 신청)를 하면 즉시 이용이 정지된다"
+   ],
+   "missingFact": null,
+   "confidence": "low",
+   "note": "앞 턴(인터넷 가입)과 무관한 새 질문. 휴대폰 분실 FAQ는 DEVICE-0091(고객센터·홈페이지)과 DEVICE-0051(고객센터만)이다. USIM 분실 신고 FAQ는 본문이 일반 분실 신고 안내라 포함했다. 휴대폰 분실과 같은 상황으로 볼지는 사람 확인 필요."
+  },
+  "verified": {
+   "id": "CTX-unseen-independent-4-t1-r0",
+   "verdict": "FIXED",
+   "label": {
+    "id": "CTX-unseen-independent-4-t1-r0",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "휴대폰 분실 신고하는 곳",
+      "sourceIds": [
+       "DEVICE-0091",
+       "USIM-0012",
+       "USIM-0028",
+       "USIM-0036",
+       "USIM-0048",
+       "USIM-0056",
+       "USIM-0076",
+       "DEVICE-0051"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "고객센터나 홈페이지에서 분실 신고(이용 정지 신청)를 하면 즉시 이용이 정지된다"
+    ],
+    "missingFact": null,
+    "confidence": "low",
+    "note": "앞 턴(인터넷 가입)과 무관한 새 질문. 휴대폰 분실 FAQ는 DEVICE-0091(고객센터·홈페이지)과 DEVICE-0051(고객센터만)이다. USIM 분실 신고 FAQ는 본문이 일반 분실 신고 안내라 포함했다. 휴대폰 분실과 같은 상황으로 볼지는 사람 확인 필요."
+   },
+   "changes": "sourceIds에 DEVICE-0051(휴대폰 분실 시 고객센터에 분실 신고하면 바로 정지)을 추가. 원 note가 휴대폰 분실 FAQ로 짚었지만 sourceIds에서 빠져 있었음. 고객센터만 말하므로 requiredFacts(고객센터나 홈페이지)와 충돌하지 않음.",
+   "reviewReason": ""
+  },
+  "reasons": [
+   "작성자 확신 낮음: 앞 턴(인터넷 가입)과 무관한 새 질문. 휴대폰 분실 FAQ는 DEVICE-0091(고객센터·홈페이지)과 DEVICE-0051(고객센터만)이다. USIM 분실 신고 FAQ는 본문이 일반 분실 신고 안내라 포함했다. 휴대폰 분실과 같은 상황으로 볼지는 사람 확인 필요."
+  ]
+ },
+ {
+  "id": "HALLU-001",
+  "set": "A",
+  "question": "데이터 무제한 로밍으로 5일 쓰면 총 얼마예요?",
+  "conversation": [],
+  "written": null,
+  "verified": {
+   "label": {
+    "id": "HALLU-001",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "데이터 무제한 로밍을 5일 쓰면 총 얼마인지",
+      "sourceIds": [
+       "ROAMING-0021",
+       "ROAMING-0026",
+       "ROAMING-0051",
+       "ROAMING-0066",
+       "ROAMING-0071",
+       "ROAMING-0001",
+       "ROAMING-0011",
+       "ROAMING-0016",
+       "ROAMING-0046",
+       "ROAMING-0056",
+       "ROAMING-0061"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "데이터 무제한 로밍은 하루 12,100원이다",
+     "5일 쓰면 12,100원 × 5 = 60,500원이다"
+    ],
+    "missingFact": null,
+    "confidence": "high",
+    "note": "매일 부과된다는 합산 전제는 ROAMING-0056·0061에 직접 있음. 나머지는 '하루 12,100원'에서 계산. 7일 기간권 39,000원은 무제한 상품이 아니라 비교 대상이 아님.",
+    "provenance": "agent_written+agent_verified:AGREE"
+   }
+  },
+  "reasons": [
+   "설계 의도와 라벨 충돌: 설계자는 계산 값을 만들어 내는 위험을 보려 했는데 라벨은 계산 값을 필수 사실로 둠"
+  ]
+ },
+ {
+  "id": "HALLU-002",
+  "set": "A",
+  "question": "우편으로 청구서 받으면 1년에 얼마 내는 거예요?",
+  "conversation": [],
+  "written": null,
+  "verified": {
+   "label": {
+    "id": "HALLU-002",
+    "expectedBehavior": "ANSWER",
+    "answerSources": [
+     "FAQ"
+    ],
+    "parts": [
+     {
+      "questionPart": "우편 청구서를 받으면 1년에 얼마를 내는지",
+      "sourceIds": [
+       "BILLING-0028",
+       "BILLING-0035",
+       "BILLING-0133",
+       "BILLING-0007",
+       "BILLING-0021",
+       "BILLING-0042",
+       "BILLING-0056",
+       "BILLING-0077",
+       "BILLING-0084",
+       "BILLING-0091",
+       "BILLING-0119",
+       "BILLING-0126",
+       "BILLING-0140",
+       "BILLING-0147"
+      ]
+     }
+    ],
+    "requiredFacts": [
+     "우편 청구서는 월 500원이 부과된다",
+     "1년(12개월)이면 500원 × 12 = 6,000원이다"
+    ],
+    "missingFact": null,
+    "confidence": "high",
+    "note": "연 금액은 FAQ에 직접 없고 '월 500원'에서 계산. '월'이 빠진 BILLING-0154('종이는 500원')는 제외.",
+    "provenance": "agent_written+agent_verified:AGREE"
+   }
+  },
+  "reasons": [
+   "설계 의도와 라벨 충돌: 설계자는 계산 값을 만들어 내는 위험을 보려 했는데 라벨은 계산 값을 필수 사실로 둠"
+  ]
+ }
+]

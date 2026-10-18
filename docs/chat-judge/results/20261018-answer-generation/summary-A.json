@@ -1,0 +1,3033 @@
+{
+ "set": "A",
+ "judges": [
+  "qwen",
+  "deepseek-v3.2-usw2",
+  "mistral-large-3"
+ ],
+ "slices": {
+  "전체": {
+   "inputs": 217,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 217,
+     "pass": {
+      "n": 84,
+      "d": 198,
+      "pct": 42.4
+     },
+     "undecided": 19,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "exaone-r2": {
+     "turns": 217,
+     "pass": {
+      "n": 84,
+      "d": 198,
+      "pct": 42.4
+     },
+     "undecided": 19,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "exaone-r3": {
+     "turns": 217,
+     "pass": {
+      "n": 84,
+      "d": 198,
+      "pct": 42.4
+     },
+     "undecided": 19,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "gptoss-r1": {
+     "turns": 217,
+     "pass": {
+      "n": 143,
+      "d": 200,
+      "pct": 71.5
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 18,
+      "d": 217,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 183,
+      "d": 217,
+      "pct": 84.3
+     },
+     "overRefusal": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 217,
+      "pct": 8.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 217,
+     "pass": {
+      "n": 139,
+      "d": 197,
+      "pct": 70.6
+     },
+     "undecided": 20,
+     "unsupported": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "qualityComplete": {
+      "n": 181,
+      "d": 217,
+      "pct": 83.4
+     },
+     "overRefusal": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     }
+    },
+    "gptoss-r3": {
+     "turns": 217,
+     "pass": {
+      "n": 142,
+      "d": 197,
+      "pct": 72.1
+     },
+     "undecided": 20,
+     "unsupported": {
+      "n": 12,
+      "d": 217,
+      "pct": 5.5
+     },
+     "qualityComplete": {
+      "n": 180,
+      "d": 217,
+      "pct": 82.9
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 12,
+      "d": 217,
+      "pct": 5.5
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 217,
+     "pass": {
+      "n": 118,
+      "d": 208,
+      "pct": 56.7
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "exaone-r2": {
+     "turns": 217,
+     "pass": {
+      "n": 118,
+      "d": 208,
+      "pct": 56.7
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "exaone-r3": {
+     "turns": 217,
+     "pass": {
+      "n": 118,
+      "d": 208,
+      "pct": 56.7
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     },
+     "qualityComplete": {
+      "n": 161,
+      "d": 217,
+      "pct": 74.2
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 72,
+      "d": 217,
+      "pct": 33.2
+     }
+    },
+    "gptoss-r1": {
+     "turns": 217,
+     "pass": {
+      "n": 173,
+      "d": 209,
+      "pct": 82.8
+     },
+     "undecided": 8,
+     "unsupported": {
+      "n": 18,
+      "d": 217,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 183,
+      "d": 217,
+      "pct": 84.3
+     },
+     "overRefusal": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 217,
+      "pct": 8.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 217,
+     "pass": {
+      "n": 167,
+      "d": 213,
+      "pct": 78.4
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "qualityComplete": {
+      "n": 181,
+      "d": 217,
+      "pct": 83.4
+     },
+     "overRefusal": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 17,
+      "d": 217,
+      "pct": 7.8
+     }
+    },
+    "gptoss-r3": {
+     "turns": 217,
+     "pass": {
+      "n": 173,
+      "d": 209,
+      "pct": 82.8
+     },
+     "undecided": 8,
+     "unsupported": {
+      "n": 12,
+      "d": 217,
+      "pct": 5.5
+     },
+     "qualityComplete": {
+      "n": 180,
+      "d": 217,
+      "pct": 82.9
+     },
+     "overRefusal": {
+      "n": 16,
+      "d": 217,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 12,
+      "d": 217,
+      "pct": 5.5
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "gpt-oss만": 61,
+     "둘 다 통과": 69,
+     "미확정 포함": 34,
+     "둘 다 실패": 47,
+     "엑사원만": 6
+    },
+    "r2": {
+     "둘 다 실패": 51,
+     "미확정 포함": 35,
+     "gpt-oss만": 57,
+     "둘 다 통과": 70,
+     "엑사원만": 4
+    },
+    "r3": {
+     "미확정 포함": 37,
+     "둘 다 통과": 71,
+     "둘 다 실패": 48,
+     "gpt-oss만": 57,
+     "엑사원만": 4
+    }
+   }
+  },
+  "답할 수 있는 질문": {
+   "inputs": 129,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 129,
+     "pass": {
+      "n": 51,
+      "d": 111,
+      "pct": 45.9
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "exaone-r2": {
+     "turns": 129,
+     "pass": {
+      "n": 51,
+      "d": 111,
+      "pct": 45.9
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "exaone-r3": {
+     "turns": 129,
+     "pass": {
+      "n": 51,
+      "d": 111,
+      "pct": 45.9
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "gptoss-r1": {
+     "turns": 129,
+     "pass": {
+      "n": 69,
+      "d": 112,
+      "pct": 61.6
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 15,
+      "d": 129,
+      "pct": 11.6
+     },
+     "qualityComplete": {
+      "n": 98,
+      "d": 129,
+      "pct": 76.0
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 129,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 15,
+      "d": 129,
+      "pct": 11.6
+     }
+    },
+    "gptoss-r2": {
+     "turns": 129,
+     "pass": {
+      "n": 66,
+      "d": 109,
+      "pct": 60.6
+     },
+     "undecided": 20,
+     "unsupported": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "qualityComplete": {
+      "n": 98,
+      "d": 129,
+      "pct": 76.0
+     },
+     "overRefusal": {
+      "n": 11,
+      "d": 129,
+      "pct": 8.5
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     }
+    },
+    "gptoss-r3": {
+     "turns": 129,
+     "pass": {
+      "n": 68,
+      "d": 109,
+      "pct": 62.4
+     },
+     "undecided": 20,
+     "unsupported": {
+      "n": 8,
+      "d": 129,
+      "pct": 6.2
+     },
+     "qualityComplete": {
+      "n": 96,
+      "d": 129,
+      "pct": 74.4
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 129,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 8,
+      "d": 129,
+      "pct": 6.2
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 129,
+     "pass": {
+      "n": 80,
+      "d": 125,
+      "pct": 64.0
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "exaone-r2": {
+     "turns": 129,
+     "pass": {
+      "n": 80,
+      "d": 125,
+      "pct": 64.0
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "exaone-r3": {
+     "turns": 129,
+     "pass": {
+      "n": 80,
+      "d": 125,
+      "pct": 64.0
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 129,
+      "pct": 70.5
+     },
+     "overRefusal": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "shouldAbstain": {
+      "n": 33,
+      "d": 129,
+      "pct": 25.6
+     }
+    },
+    "gptoss-r1": {
+     "turns": 129,
+     "pass": {
+      "n": 93,
+      "d": 122,
+      "pct": 76.2
+     },
+     "undecided": 7,
+     "unsupported": {
+      "n": 15,
+      "d": 129,
+      "pct": 11.6
+     },
+     "qualityComplete": {
+      "n": 98,
+      "d": 129,
+      "pct": 76.0
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 129,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 15,
+      "d": 129,
+      "pct": 11.6
+     }
+    },
+    "gptoss-r2": {
+     "turns": 129,
+     "pass": {
+      "n": 90,
+      "d": 125,
+      "pct": 72.0
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     },
+     "qualityComplete": {
+      "n": 98,
+      "d": 129,
+      "pct": 76.0
+     },
+     "overRefusal": {
+      "n": 11,
+      "d": 129,
+      "pct": 8.5
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 129,
+      "pct": 10.1
+     }
+    },
+    "gptoss-r3": {
+     "turns": 129,
+     "pass": {
+      "n": 95,
+      "d": 122,
+      "pct": 77.9
+     },
+     "undecided": 7,
+     "unsupported": {
+      "n": 8,
+      "d": 129,
+      "pct": 6.2
+     },
+     "qualityComplete": {
+      "n": 96,
+      "d": 129,
+      "pct": 74.4
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 129,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 8,
+      "d": 129,
+      "pct": 6.2
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "gpt-oss만": 21,
+     "둘 다 통과": 36,
+     "미확정 포함": 33,
+     "엑사원만": 6,
+     "둘 다 실패": 33
+    },
+    "r2": {
+     "둘 다 실패": 36,
+     "미확정 포함": 34,
+     "gpt-oss만": 18,
+     "둘 다 통과": 37,
+     "엑사원만": 4
+    },
+    "r3": {
+     "미확정 포함": 36,
+     "둘 다 통과": 38,
+     "둘 다 실패": 34,
+     "gpt-oss만": 17,
+     "엑사원만": 4
+    }
+   }
+  },
+  "답 없음(ABSTAIN)": {
+   "inputs": 88,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 88,
+     "pass": {
+      "n": 33,
+      "d": 87,
+      "pct": 37.9
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "exaone-r2": {
+     "turns": 88,
+     "pass": {
+      "n": 33,
+      "d": 87,
+      "pct": 37.9
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "exaone-r3": {
+     "turns": 88,
+     "pass": {
+      "n": 33,
+      "d": 87,
+      "pct": 37.9
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "gptoss-r1": {
+     "turns": 88,
+     "pass": {
+      "n": 74,
+      "d": 88,
+      "pct": 84.1
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 88,
+      "pct": 96.6
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 88,
+      "pct": 8.0
+     },
+     "shouldAbstain": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     }
+    },
+    "gptoss-r2": {
+     "turns": 88,
+     "pass": {
+      "n": 73,
+      "d": 88,
+      "pct": 83.0
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     },
+     "qualityComplete": {
+      "n": 83,
+      "d": 88,
+      "pct": 94.3
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 88,
+      "pct": 6.8
+     },
+     "shouldAbstain": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     }
+    },
+    "gptoss-r3": {
+     "turns": 88,
+     "pass": {
+      "n": 74,
+      "d": 88,
+      "pct": 84.1
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     },
+     "qualityComplete": {
+      "n": 84,
+      "d": 88,
+      "pct": 95.5
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 88,
+      "pct": 6.8
+     },
+     "shouldAbstain": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 88,
+     "pass": {
+      "n": 38,
+      "d": 83,
+      "pct": 45.8
+     },
+     "undecided": 5,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "exaone-r2": {
+     "turns": 88,
+     "pass": {
+      "n": 38,
+      "d": 83,
+      "pct": 45.8
+     },
+     "undecided": 5,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "exaone-r3": {
+     "turns": 88,
+     "pass": {
+      "n": 38,
+      "d": 83,
+      "pct": 45.8
+     },
+     "undecided": 5,
+     "unsupported": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 88,
+      "pct": 79.5
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "shouldAbstain": {
+      "n": 39,
+      "d": 88,
+      "pct": 44.3
+     }
+    },
+    "gptoss-r1": {
+     "turns": 88,
+     "pass": {
+      "n": 80,
+      "d": 87,
+      "pct": 92.0
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 88,
+      "pct": 96.6
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 88,
+      "pct": 8.0
+     },
+     "shouldAbstain": {
+      "n": 3,
+      "d": 88,
+      "pct": 3.4
+     }
+    },
+    "gptoss-r2": {
+     "turns": 88,
+     "pass": {
+      "n": 77,
+      "d": 88,
+      "pct": 87.5
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     },
+     "qualityComplete": {
+      "n": 83,
+      "d": 88,
+      "pct": 94.3
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 88,
+      "pct": 6.8
+     },
+     "shouldAbstain": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     }
+    },
+    "gptoss-r3": {
+     "turns": 88,
+     "pass": {
+      "n": 78,
+      "d": 87,
+      "pct": 89.7
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     },
+     "qualityComplete": {
+      "n": 84,
+      "d": 88,
+      "pct": 95.5
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 88,
+      "pct": 6.8
+     },
+     "shouldAbstain": {
+      "n": 4,
+      "d": 88,
+      "pct": 4.5
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "둘 다 실패": 14,
+     "둘 다 통과": 33,
+     "gpt-oss만": 40,
+     "미확정 포함": 1
+    },
+    "r2": {
+     "둘 다 실패": 15,
+     "둘 다 통과": 33,
+     "gpt-oss만": 39,
+     "미확정 포함": 1
+    },
+    "r3": {
+     "둘 다 실패": 14,
+     "둘 다 통과": 33,
+     "gpt-oss만": 40,
+     "미확정 포함": 1
+    }
+   }
+  },
+  "근거 충분(엑사원 턴 기준)": {
+   "inputs": 108,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 49,
+      "d": 90,
+      "pct": 54.4
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "exaone-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 49,
+      "d": 90,
+      "pct": 54.4
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "exaone-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 49,
+      "d": 90,
+      "pct": 54.4
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "gptoss-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 65,
+      "d": 94,
+      "pct": 69.1
+     },
+     "undecided": 14,
+     "unsupported": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 89,
+      "d": 108,
+      "pct": 82.4
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 62,
+      "d": 90,
+      "pct": 68.9
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 108,
+      "pct": 84.3
+     },
+     "overRefusal": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "shouldAbstain": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     }
+    },
+    "gptoss-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 64,
+      "d": 91,
+      "pct": 70.3
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 5,
+      "d": 108,
+      "pct": 4.6
+     },
+     "qualityComplete": {
+      "n": 88,
+      "d": 108,
+      "pct": 81.5
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 5,
+      "d": 108,
+      "pct": 4.6
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 76,
+      "d": 104,
+      "pct": 73.1
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "exaone-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 76,
+      "d": 104,
+      "pct": 73.1
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "exaone-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 76,
+      "d": 104,
+      "pct": 73.1
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     },
+     "qualityComplete": {
+      "n": 86,
+      "d": 108,
+      "pct": 79.6
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 108,
+      "pct": 9.3
+     },
+     "shouldAbstain": {
+      "n": 18,
+      "d": 108,
+      "pct": 16.7
+     }
+    },
+    "gptoss-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 85,
+      "d": 103,
+      "pct": 82.5
+     },
+     "undecided": 5,
+     "unsupported": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 89,
+      "d": 108,
+      "pct": 82.4
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 83,
+      "d": 106,
+      "pct": 78.3
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "qualityComplete": {
+      "n": 91,
+      "d": 108,
+      "pct": 84.3
+     },
+     "overRefusal": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "shouldAbstain": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     }
+    },
+    "gptoss-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 86,
+      "d": 102,
+      "pct": 84.3
+     },
+     "undecided": 6,
+     "unsupported": {
+      "n": 5,
+      "d": 108,
+      "pct": 4.6
+     },
+     "qualityComplete": {
+      "n": 88,
+      "d": 108,
+      "pct": 81.5
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 5,
+      "d": 108,
+      "pct": 4.6
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "gpt-oss만": 17,
+     "둘 다 통과": 36,
+     "미확정 포함": 30,
+     "엑사원만": 5,
+     "둘 다 실패": 20
+    },
+    "r2": {
+     "둘 다 실패": 22,
+     "미확정 포함": 32,
+     "gpt-oss만": 15,
+     "둘 다 통과": 36,
+     "엑사원만": 3
+    },
+    "r3": {
+     "미확정 포함": 33,
+     "둘 다 통과": 37,
+     "둘 다 실패": 21,
+     "gpt-oss만": 14,
+     "엑사원만": 3
+    }
+   }
+  },
+  "라벨 검토 대상 제외": {
+   "inputs": 175,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 175,
+     "pass": {
+      "n": 75,
+      "d": 158,
+      "pct": 47.5
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "exaone-r2": {
+     "turns": 175,
+     "pass": {
+      "n": 75,
+      "d": 158,
+      "pct": 47.5
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "exaone-r3": {
+     "turns": 175,
+     "pass": {
+      "n": 75,
+      "d": 158,
+      "pct": 47.5
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "gptoss-r1": {
+     "turns": 175,
+     "pass": {
+      "n": 125,
+      "d": 160,
+      "pct": 78.1
+     },
+     "undecided": 15,
+     "unsupported": {
+      "n": 13,
+      "d": 175,
+      "pct": 7.4
+     },
+     "qualityComplete": {
+      "n": 158,
+      "d": 175,
+      "pct": 90.3
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 175,
+      "pct": 5.7
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 175,
+      "pct": 7.4
+     }
+    },
+    "gptoss-r2": {
+     "turns": 175,
+     "pass": {
+      "n": 123,
+      "d": 158,
+      "pct": 77.8
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 14,
+      "d": 175,
+      "pct": 8.0
+     },
+     "qualityComplete": {
+      "n": 157,
+      "d": 175,
+      "pct": 89.7
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 175,
+      "pct": 5.7
+     },
+     "shouldAbstain": {
+      "n": 14,
+      "d": 175,
+      "pct": 8.0
+     }
+    },
+    "gptoss-r3": {
+     "turns": 175,
+     "pass": {
+      "n": 127,
+      "d": 158,
+      "pct": 80.4
+     },
+     "undecided": 17,
+     "unsupported": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     },
+     "qualityComplete": {
+      "n": 158,
+      "d": 175,
+      "pct": 90.3
+     },
+     "overRefusal": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 175,
+     "pass": {
+      "n": 103,
+      "d": 166,
+      "pct": 62.0
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "exaone-r2": {
+     "turns": 175,
+     "pass": {
+      "n": 103,
+      "d": 166,
+      "pct": 62.0
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "exaone-r3": {
+     "turns": 175,
+     "pass": {
+      "n": 103,
+      "d": 166,
+      "pct": 62.0
+     },
+     "undecided": 9,
+     "unsupported": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     },
+     "qualityComplete": {
+      "n": 143,
+      "d": 175,
+      "pct": 81.7
+     },
+     "overRefusal": {
+      "n": 12,
+      "d": 175,
+      "pct": 6.9
+     },
+     "shouldAbstain": {
+      "n": 56,
+      "d": 175,
+      "pct": 32.0
+     }
+    },
+    "gptoss-r1": {
+     "turns": 175,
+     "pass": {
+      "n": 151,
+      "d": 168,
+      "pct": 89.9
+     },
+     "undecided": 7,
+     "unsupported": {
+      "n": 13,
+      "d": 175,
+      "pct": 7.4
+     },
+     "qualityComplete": {
+      "n": 158,
+      "d": 175,
+      "pct": 90.3
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 175,
+      "pct": 5.7
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 175,
+      "pct": 7.4
+     }
+    },
+    "gptoss-r2": {
+     "turns": 175,
+     "pass": {
+      "n": 147,
+      "d": 172,
+      "pct": 85.5
+     },
+     "undecided": 3,
+     "unsupported": {
+      "n": 14,
+      "d": 175,
+      "pct": 8.0
+     },
+     "qualityComplete": {
+      "n": 157,
+      "d": 175,
+      "pct": 89.7
+     },
+     "overRefusal": {
+      "n": 10,
+      "d": 175,
+      "pct": 5.7
+     },
+     "shouldAbstain": {
+      "n": 14,
+      "d": 175,
+      "pct": 8.0
+     }
+    },
+    "gptoss-r3": {
+     "turns": 175,
+     "pass": {
+      "n": 153,
+      "d": 169,
+      "pct": 90.5
+     },
+     "undecided": 6,
+     "unsupported": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     },
+     "qualityComplete": {
+      "n": 158,
+      "d": 175,
+      "pct": 90.3
+     },
+     "overRefusal": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 175,
+      "pct": 5.1
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "gpt-oss만": 52,
+     "둘 다 통과": 62,
+     "미확정 포함": 30,
+     "둘 다 실패": 27,
+     "엑사원만": 4
+    },
+    "r2": {
+     "둘 다 실패": 30,
+     "미확정 포함": 31,
+     "gpt-oss만": 49,
+     "둘 다 통과": 63,
+     "엑사원만": 2
+    },
+    "r3": {
+     "미확정 포함": 33,
+     "둘 다 통과": 64,
+     "gpt-oss만": 50,
+     "둘 다 실패": 26,
+     "엑사원만": 2
+    }
+   }
+  },
+  "묶음:answer_quality_20": {
+   "inputs": 19,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 19,
+     "pass": {
+      "n": 4,
+      "d": 17,
+      "pct": 23.5
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "exaone-r2": {
+     "turns": 19,
+     "pass": {
+      "n": 4,
+      "d": 17,
+      "pct": 23.5
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "exaone-r3": {
+     "turns": 19,
+     "pass": {
+      "n": 4,
+      "d": 17,
+      "pct": 23.5
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "gptoss-r1": {
+     "turns": 19,
+     "pass": {
+      "n": 4,
+      "d": 17,
+      "pct": 23.5
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 7,
+      "d": 19,
+      "pct": 36.8
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 19,
+     "pass": {
+      "n": 3,
+      "d": 17,
+      "pct": 17.6
+     },
+     "undecided": 2,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    },
+    "gptoss-r3": {
+     "turns": 19,
+     "pass": {
+      "n": 4,
+      "d": 18,
+      "pct": 22.2
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "overRefusal": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 19,
+     "pass": {
+      "n": 8,
+      "d": 18,
+      "pct": 44.4
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "exaone-r2": {
+     "turns": 19,
+     "pass": {
+      "n": 8,
+      "d": 18,
+      "pct": 44.4
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "exaone-r3": {
+     "turns": 19,
+     "pass": {
+      "n": 8,
+      "d": 18,
+      "pct": 44.4
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     },
+     "qualityComplete": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 19,
+      "pct": 21.1
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 19,
+      "pct": 10.5
+     }
+    },
+    "gptoss-r1": {
+     "turns": 19,
+     "pass": {
+      "n": 8,
+      "d": 19,
+      "pct": 42.1
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 7,
+      "d": 19,
+      "pct": 36.8
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    },
+    "gptoss-r2": {
+     "turns": 19,
+     "pass": {
+      "n": 6,
+      "d": 18,
+      "pct": 33.3
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "overRefusal": {
+      "n": 6,
+      "d": 19,
+      "pct": 31.6
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    },
+    "gptoss-r3": {
+     "turns": 19,
+     "pass": {
+      "n": 7,
+      "d": 19,
+      "pct": 36.8
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     },
+     "qualityComplete": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "overRefusal": {
+      "n": 5,
+      "d": 19,
+      "pct": 26.3
+     },
+     "shouldAbstain": {
+      "n": 1,
+      "d": 19,
+      "pct": 5.3
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "둘 다 실패": 11,
+     "미확정 포함": 3,
+     "엑사원만": 2,
+     "둘 다 통과": 1,
+     "gpt-oss만": 2
+    },
+    "r2": {
+     "둘 다 실패": 12,
+     "미확정 포함": 3,
+     "엑사원만": 2,
+     "둘 다 통과": 1,
+     "gpt-oss만": 1
+    },
+    "r3": {
+     "둘 다 실패": 12,
+     "미확정 포함": 3,
+     "엑사원만": 2,
+     "둘 다 통과": 1,
+     "gpt-oss만": 1
+    }
+   }
+  },
+  "묶음:eval180": {
+   "inputs": 108,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 47,
+      "d": 92,
+      "pct": 51.1
+     },
+     "undecided": 16,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "exaone-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 47,
+      "d": 92,
+      "pct": 51.1
+     },
+     "undecided": 16,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "exaone-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 47,
+      "d": 92,
+      "pct": 51.1
+     },
+     "undecided": 16,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "gptoss-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 65,
+      "d": 93,
+      "pct": 69.9
+     },
+     "undecided": 15,
+     "unsupported": {
+      "n": 15,
+      "d": 108,
+      "pct": 13.9
+     },
+     "qualityComplete": {
+      "n": 92,
+      "d": 108,
+      "pct": 85.2
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 108,
+      "pct": 2.8
+     },
+     "shouldAbstain": {
+      "n": 15,
+      "d": 108,
+      "pct": 13.9
+     }
+    },
+    "gptoss-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 64,
+      "d": 90,
+      "pct": 71.1
+     },
+     "undecided": 18,
+     "unsupported": {
+      "n": 13,
+      "d": 108,
+      "pct": 12.0
+     },
+     "qualityComplete": {
+      "n": 95,
+      "d": 108,
+      "pct": 88.0
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 108,
+      "pct": 3.7
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 108,
+      "pct": 12.0
+     }
+    },
+    "gptoss-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 64,
+      "d": 89,
+      "pct": 71.9
+     },
+     "undecided": 19,
+     "unsupported": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 92,
+      "d": 108,
+      "pct": 85.2
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 108,
+      "pct": 3.7
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 72,
+      "d": 104,
+      "pct": 69.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "exaone-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 72,
+      "d": 104,
+      "pct": 69.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "exaone-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 72,
+      "d": 104,
+      "pct": 69.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     },
+     "qualityComplete": {
+      "n": 85,
+      "d": 108,
+      "pct": 78.7
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 108,
+      "pct": 7.4
+     },
+     "shouldAbstain": {
+      "n": 27,
+      "d": 108,
+      "pct": 25.0
+     }
+    },
+    "gptoss-r1": {
+     "turns": 108,
+     "pass": {
+      "n": 86,
+      "d": 101,
+      "pct": 85.1
+     },
+     "undecided": 7,
+     "unsupported": {
+      "n": 15,
+      "d": 108,
+      "pct": 13.9
+     },
+     "qualityComplete": {
+      "n": 92,
+      "d": 108,
+      "pct": 85.2
+     },
+     "overRefusal": {
+      "n": 3,
+      "d": 108,
+      "pct": 2.8
+     },
+     "shouldAbstain": {
+      "n": 15,
+      "d": 108,
+      "pct": 13.9
+     }
+    },
+    "gptoss-r2": {
+     "turns": 108,
+     "pass": {
+      "n": 86,
+      "d": 105,
+      "pct": 81.9
+     },
+     "undecided": 3,
+     "unsupported": {
+      "n": 13,
+      "d": 108,
+      "pct": 12.0
+     },
+     "qualityComplete": {
+      "n": 95,
+      "d": 108,
+      "pct": 88.0
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 108,
+      "pct": 3.7
+     },
+     "shouldAbstain": {
+      "n": 13,
+      "d": 108,
+      "pct": 12.0
+     }
+    },
+    "gptoss-r3": {
+     "turns": 108,
+     "pass": {
+      "n": 89,
+      "d": 101,
+      "pct": 88.1
+     },
+     "undecided": 7,
+     "unsupported": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     },
+     "qualityComplete": {
+      "n": 92,
+      "d": 108,
+      "pct": 85.2
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 108,
+      "pct": 3.7
+     },
+     "shouldAbstain": {
+      "n": 9,
+      "d": 108,
+      "pct": 8.3
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "gpt-oss만": 19,
+     "둘 다 통과": 35,
+     "미확정 포함": 30,
+     "둘 다 실패": 20,
+     "엑사원만": 4
+    },
+    "r2": {
+     "둘 다 실패": 21,
+     "미확정 포함": 31,
+     "gpt-oss만": 18,
+     "둘 다 통과": 36,
+     "엑사원만": 2
+    },
+    "r3": {
+     "미확정 포함": 33,
+     "둘 다 통과": 37,
+     "둘 다 실패": 20,
+     "gpt-oss만": 16,
+     "엑사원만": 2
+    }
+   }
+  },
+  "묶음:holdout90": {
+   "inputs": 90,
+   "anyFail": {
+    "exaone-r1": {
+     "turns": 90,
+     "pass": {
+      "n": 33,
+      "d": 89,
+      "pct": 37.1
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "exaone-r2": {
+     "turns": 90,
+     "pass": {
+      "n": 33,
+      "d": 89,
+      "pct": 37.1
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "exaone-r3": {
+     "turns": 90,
+     "pass": {
+      "n": 33,
+      "d": 89,
+      "pct": 37.1
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "gptoss-r1": {
+     "turns": 90,
+     "pass": {
+      "n": 74,
+      "d": 90,
+      "pct": 82.2
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     },
+     "qualityComplete": {
+      "n": 84,
+      "d": 90,
+      "pct": 93.3
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 90,
+      "pct": 8.9
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     }
+    },
+    "gptoss-r2": {
+     "turns": 90,
+     "pass": {
+      "n": 72,
+      "d": 90,
+      "pct": 80.0
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 3,
+      "d": 90,
+      "pct": 3.3
+     },
+     "qualityComplete": {
+      "n": 81,
+      "d": 90,
+      "pct": 90.0
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 90,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 3,
+      "d": 90,
+      "pct": 3.3
+     }
+    },
+    "gptoss-r3": {
+     "turns": 90,
+     "pass": {
+      "n": 74,
+      "d": 90,
+      "pct": 82.2
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     },
+     "qualityComplete": {
+      "n": 83,
+      "d": 90,
+      "pct": 92.2
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 90,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     }
+    }
+   },
+   "majority": {
+    "exaone-r1": {
+     "turns": 90,
+     "pass": {
+      "n": 38,
+      "d": 86,
+      "pct": 44.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "exaone-r2": {
+     "turns": 90,
+     "pass": {
+      "n": 38,
+      "d": 86,
+      "pct": 44.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "exaone-r3": {
+     "turns": 90,
+     "pass": {
+      "n": 38,
+      "d": 86,
+      "pct": 44.2
+     },
+     "undecided": 4,
+     "unsupported": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     },
+     "qualityComplete": {
+      "n": 70,
+      "d": 90,
+      "pct": 77.8
+     },
+     "overRefusal": {
+      "n": 4,
+      "d": 90,
+      "pct": 4.4
+     },
+     "shouldAbstain": {
+      "n": 43,
+      "d": 90,
+      "pct": 47.8
+     }
+    },
+    "gptoss-r1": {
+     "turns": 90,
+     "pass": {
+      "n": 79,
+      "d": 89,
+      "pct": 88.8
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     },
+     "qualityComplete": {
+      "n": 84,
+      "d": 90,
+      "pct": 93.3
+     },
+     "overRefusal": {
+      "n": 8,
+      "d": 90,
+      "pct": 8.9
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     }
+    },
+    "gptoss-r2": {
+     "turns": 90,
+     "pass": {
+      "n": 75,
+      "d": 90,
+      "pct": 83.3
+     },
+     "undecided": 0,
+     "unsupported": {
+      "n": 3,
+      "d": 90,
+      "pct": 3.3
+     },
+     "qualityComplete": {
+      "n": 81,
+      "d": 90,
+      "pct": 90.0
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 90,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 3,
+      "d": 90,
+      "pct": 3.3
+     }
+    },
+    "gptoss-r3": {
+     "turns": 90,
+     "pass": {
+      "n": 77,
+      "d": 89,
+      "pct": 86.5
+     },
+     "undecided": 1,
+     "unsupported": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     },
+     "qualityComplete": {
+      "n": 83,
+      "d": 90,
+      "pct": 92.2
+     },
+     "overRefusal": {
+      "n": 7,
+      "d": 90,
+      "pct": 7.8
+     },
+     "shouldAbstain": {
+      "n": 2,
+      "d": 90,
+      "pct": 2.2
+     }
+    }
+   },
+   "pairs": {
+    "r1": {
+     "둘 다 통과": 33,
+     "gpt-oss만": 40,
+     "둘 다 실패": 16,
+     "미확정 포함": 1
+    },
+    "r2": {
+     "둘 다 통과": 33,
+     "gpt-oss만": 38,
+     "둘 다 실패": 18,
+     "미확정 포함": 1
+    },
+    "r3": {
+     "둘 다 통과": 33,
+     "gpt-oss만": 40,
+     "둘 다 실패": 16,
+     "미확정 포함": 1
+    }
+   }
+  }
+ },
+ "reviewCounts": {
+  "결합 판정 미확정": 51,
+  "라벨 검토 대상": 113,
+  "Judge 모델끼리 갈림": 99
+ }
+}
