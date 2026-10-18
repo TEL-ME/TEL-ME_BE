@@ -174,7 +174,7 @@ class PlanTaskChatIntegrationTest {
                 command.sessionId(), command.inputMessageId(), command.content());
         return new AnalyzedTurn(turns.prepareAnalysis(command.sessionId(),
                 new IntentSubQueryResponse(id, (short) 1, ConsultRequest.Intent.FAQ, command.content(), Map.of()),
-                LocationStatus.MISSING, null), null, Purpose.GENERAL_FAQ, command.content(), command.content());
+                LocationStatus.MISSING), null, Purpose.GENERAL_FAQ, command.content(), command.content());
     }
 
     private long createSession() throws Exception {
