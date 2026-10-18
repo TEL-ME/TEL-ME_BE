@@ -1,0 +1,327 @@
+<title>답변 판정 검토대</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 검토 책상 — 왼쪽은 처리할 입력 대기열, 오른쪽은 한 입력의 사건 기록(질문 → 라벨 → 근거 → 답과 Judge 판정 → 내 판정) */
+:root {
+  --bg: #f3f6f7; --surface: #ffffff; --sunk: #e9eef0; --ink: #1a2226; --muted: #5b6970; --line: #d7e0e4;
+  --accent: #2c5a86; --accent-soft: #e1ebf4;
+  --pass: #24704a; --pass-soft: #dff0e6; --fail: #a83434; --fail-soft: #f7e1e1; --unsure: #9a6210; --unsure-soft: #f6ead6;
+  --exa: #6b4c9a; --exa-soft: #ece6f5; --gpt: #1f6f6b; --gpt-soft: #dcefed;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171a; --surface: #182024; --sunk: #0d1214; --ink: #e3eaed; --muted: #93a2a9; --line: #29343a;
+  --accent: #82abd4; --accent-soft: #1c2b39;
+  --pass: #6cc38f; --pass-soft: #17301f; --fail: #e58080; --fail-soft: #3a1c1c; --unsure: #e2aa55; --unsure-soft: #34270f;
+  --exa: #b79ce0; --exa-soft: #2a2238; --gpt: #6cc7c0; --gpt-soft: #15302e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171a; --surface: #182024; --sunk: #0d1214; --ink: #e3eaed; --muted: #93a2a9; --line: #29343a;
+  --accent: #82abd4; --accent-soft: #1c2b39;
+  --pass: #6cc38f; --pass-soft: #17301f; --fail: #e58080; --fail-soft: #3a1c1c; --unsure: #e2aa55; --unsure-soft: #34270f;
+  --exa: #b79ce0; --exa-soft: #2a2238; --gpt: #6cc7c0; --gpt-soft: #15302e; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.6 }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface) }
+button, textarea, select { font: inherit; color: inherit }
+button:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.mono { font-family: var(--font-mono); font-size: 12.5px }
+.muted { color: var(--muted) }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px }
+h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em }
+.progress { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-variant-numeric: tabular-nums }
+.bar { width: 140px; height: 6px; background: var(--sunk); border-radius: 3px; overflow: hidden }
+.bar > i { display: block; height: 100%; background: var(--accent) }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden }
+.seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; font-size: 13px }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface) }
+.notice { margin-top: 8px; font-size: 13px; padding: 6px 10px; border-radius: var(--r); background: var(--unsure-soft); color: var(--unsure) }
+
+main { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 0; min-height: calc(100vh - 60px) }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr) } .queue { max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--line) } }
+.queue { border-right: 1px solid var(--line); overflow-y: auto; max-height: calc(100vh - 70px); position: sticky; top: 70px; background: var(--surface) }
+.queue button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
+  background: transparent; padding: 9px 14px 9px max(14px, env(safe-area-inset-left, 0px)); cursor: pointer }
+.queue button:hover { background: var(--sunk) }
+.queue button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent) }
+.queue .qid { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere }
+.queue .qtext { grid-column: 1 / -1; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.count { font-size: 12px; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 10px; background: var(--sunk); align-self: start }
+.count.done { background: var(--pass-soft); color: var(--pass) }
+
+.case { padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); min-width: 0 }
+.case-inner { max-width: 980px; display: grid; gap: 18px }
+.case-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.case-head h2 { font-family: var(--font-mono); font-size: 15px; font-weight: 500; margin: 0 8px 0 0; overflow-wrap: anywhere }
+.chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--sunk); color: var(--muted); white-space: nowrap }
+.chip.set { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
+.chip.exp { background: var(--ink); color: var(--surface) }
+.chip.pass { background: var(--pass-soft); color: var(--pass) } .chip.fail { background: var(--fail-soft); color: var(--fail) } .chip.none { background: var(--unsure-soft); color: var(--unsure) }
+.chip.exa { background: var(--exa-soft); color: var(--exa); font-weight: 600 } .chip.gpt { background: var(--gpt-soft); color: var(--gpt); font-weight: 600 }
+.question { font-size: 18px; font-weight: 600; line-height: 1.45; text-wrap: balance; margin: 0 }
+.label-sm { font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; margin: 0 0 6px }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; min-width: 0 }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px }
+.convo { display: grid; gap: 6px; font-size: 13.5px }
+.convo .c { color: var(--ink) } .convo .a { color: var(--muted); padding-left: 12px; border-left: 2px solid var(--line); white-space: pre-wrap }
+ul.facts { margin: 0; padding-left: 18px; display: grid; gap: 3px }
+.src { display: grid; gap: 2px; padding-block: 6px; border-top: 1px dashed var(--line) } .src:first-of-type { border-top: 0; padding-top: 0 }
+.src .sq { font-size: 12.5px; color: var(--muted) }
+
+.answers { display: grid; gap: 14px }
+.ans { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0 }
+.ans.needs { border-color: var(--unsure) }
+.ans-head { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line) }
+.ans-head .spacer { flex: 1 }
+.ans-text { padding: 12px 14px; font-size: 15px; white-space: pre-wrap; border-bottom: 1px solid var(--line) }
+.judges { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 13px }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line) }
+th { font-weight: 600; color: var(--muted); font-size: 12px; white-space: nowrap }
+td.jn { white-space: nowrap; font-weight: 600 }
+.reason { color: var(--muted); font-size: 12.5px; margin-top: 2px }
+.claim { margin-top: 4px } .claim q { quotes: "“" "”"; color: var(--ink) }
+.mine { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; align-items: start; padding: 12px 14px; background: var(--sunk); border-radius: 0 0 var(--r) var(--r) }
+@media (max-width: 560px) { .mine { grid-template-columns: minmax(0, 1fr) } }
+.verdict { display: inline-flex; gap: 6px; flex-wrap: wrap }
+.verdict button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 6px 12px; cursor: pointer; font-weight: 600 }
+.verdict button[data-v="pass"][aria-pressed="true"] { background: var(--pass); border-color: var(--pass); color: var(--surface) }
+.verdict button[data-v="fail"][aria-pressed="true"] { background: var(--fail); border-color: var(--fail); color: var(--surface) }
+.verdict button[data-v="unsure"][aria-pressed="true"] { background: var(--unsure); border-color: var(--unsure); color: var(--surface) }
+.verdict button:disabled { opacity: .5; cursor: not-allowed }
+textarea { width: 100%; min-height: 38px; resize: vertical; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 6px 8px; font-size: 13px }
+.saved { font-size: 12px; color: var(--muted); grid-column: 1 / -1 }
+.nav { display: flex; gap: 8px; flex-wrap: wrap }
+.nav button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 6px 12px; cursor: pointer }
+.nav button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent) }
+.help { font-size: 13px; color: var(--muted); max-width: 70ch }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<header class="top">
+  <div class="top-row">
+    <h1>답변 판정 검토대</h1>
+    <div class="progress" id="progress"></div>
+    <div class="filters">
+      <div class="seg" role="group" aria-label="묶음">
+        <button type="button" data-set="all" aria-pressed="true">전체</button>
+        <button type="button" data-set="B" aria-pressed="false">B 52</button>
+        <button type="button" data-set="A" aria-pressed="false">A 표본 20</button>
+      </div>
+      <div class="seg" role="group" aria-label="상태">
+        <button type="button" data-status="all" aria-pressed="true">모두</button>
+        <button type="button" data-status="todo" aria-pressed="false">판단 남음</button>
+        <button type="button" data-status="done" aria-pressed="false">끝남</button>
+      </div>
+    </div>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+</header>
+
+<main>
+  <nav class="queue" id="queue" aria-label="입력 목록"></nav>
+  <section class="case" id="case" aria-live="polite"></section>
+</main>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(() => {
+  const ITEMS = JSON.parse(document.getElementById("data").textContent);
+  const EXPECTED = { ANSWER: "답변", PARTIAL_ANSWER: "일부 답변 + 나머지 보류", ABSTAIN: "답 없음(보류)", ANSWER_OR_CLARIFY: "답변 또는 되묻기", OUT_OF_SCOPE: "범위 밖", STORE_LOOKUP: "매장 조회" };
+  const GROUND = { SUPPORTED: "근거 있음", UNSUPPORTED: "근거 없음", NOT_APPLICABLE: "사실 주장 없음", REVIEW: "불확실" };
+  const QUAL = { COMPLETE: "충족", PARTIAL: "일부", MISSED: "놓침", NOT_APPLICABLE: "해당 없음", REVIEW: "불확실" };
+  const ABST = { APPROPRIATE: "적절한 거절", OVER_REFUSAL: "과도한 거절", SHOULD_ABSTAIN: "보류했어야 함", NOT_APPLICABLE: "해당 없음", REVIEW: "불확실" };
+  const EVID = { ENOUGH: "충분", INSUFFICIENT: "부족", UNCERTAIN: "불확실" };
+  const VERDICT = { pass: "통과", fail: "실패", unsure: "모르겠음" };
+
+  const state = { set: "all", status: "all", current: null, verdicts: {}, db: null, canWrite: true, pending: {} };
+  try { const s = JSON.parse(localStorage.getItem("review-ui") || "{}"); Object.assign(state, { set: s.set || "all", status: s.status || "all", current: s.current || null }); } catch (e) {}
+  if (/^[A-Za-z0-9._~-]+$/.test(location.hash.slice(1))) state.current = location.hash.slice(1);
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const modelChip = (m) => m === "exaone" ? '<span class="chip exa">엑사원</span>' : '<span class="chip gpt">gpt-oss</span>';
+  const passChip = (p, prefix = "") => p === true ? `<span class="chip pass">${prefix}통과</span>` : p === false ? `<span class="chip fail">${prefix}실패</span>` : `<span class="chip none">${prefix}미확정</span>`;
+  const contestedOf = (it) => it.answers.filter((a) => a.contested);
+  const decided = (a) => !!(state.verdicts[a.key] && state.verdicts[a.key].verdict);
+  const itemDone = (it) => contestedOf(it).every(decided);
+  const visible = () => ITEMS.filter((it) => (state.set === "all" || it.set === state.set)
+    && (state.status === "all" || (state.status === "todo" ? !itemDone(it) : itemDone(it))));
+  const remember = () => { try { localStorage.setItem("review-ui", JSON.stringify({ set: state.set, status: state.status, current: state.current })); } catch (e) {} };
+
+  function renderProgress() {
+    const parts = ["B", "A"].map((s) => {
+      const all = ITEMS.filter((i) => i.set === s).flatMap(contestedOf);
+      const n = all.filter(decided).length;
+      return `<span>${s} <b>${n}</b>/${all.length}</span>`;
+    });
+    const all = ITEMS.flatMap(contestedOf); const n = all.filter(decided).length;
+    document.getElementById("progress").innerHTML = `<div class="bar" aria-hidden="true"><i style="width:${(100 * n / all.length).toFixed(1)}%"></i></div>`
+      + `<span>판단 필요한 답 <b>${n}</b>/${all.length}</span>` + parts.join("");
+  }
+
+  function renderQueue() {
+    const q = document.getElementById("queue");
+    const list = visible();
+    if (!list.length) { q.innerHTML = '<p class="help" style="padding:14px">이 조건에 맞는 입력이 없습니다.</p>'; return; }
+    q.innerHTML = list.map((it) => {
+      const c = contestedOf(it); const n = c.filter(decided).length;
+      return `<button type="button" data-id="${esc(it.id)}" aria-current="${it.id === state.current}">
+        <span class="qid">${esc(it.set)} · ${esc(it.id)}</span><span class="count ${n === c.length ? "done" : ""}">${n}/${c.length}</span>
+        <span class="qtext">${esc(it.question)}</span></button>`;
+    }).join("");
+  }
+
+  function judgeRows(a) {
+    return a.judges.map((j) => {
+      const claims = j.claims.map((c) => `<div class="claim"><q>${esc(c.claim)}</q><div class="reason">${esc(c.reason)}</div></div>`).join("");
+      const g = j.grounding ? `<span class="chip ${j.grounding === "UNSUPPORTED" ? "fail" : j.grounding === "SUPPORTED" ? "pass" : ""}">${GROUND[j.grounding] || j.grounding}</span>${claims}`
+        : `<span class="chip none">판정 못 함</span><div class="reason">${esc((j.groundingError || "").slice(0, 160))}</div>`;
+      const q = j.quality.length ? j.quality.map((x) => `<div><span class="chip ${x.outcome === "COMPLETE" ? "pass" : x.outcome === "MISSED" ? "fail" : ""}">${QUAL[x.outcome] || x.outcome}</span>${j.qualityRule ? ` <span class="mono muted">${esc(j.qualityRule)}</span>` : ""}<div class="reason">${esc(x.reason)}</div></div>`).join("")
+        : '<span class="chip none">판정 못 함</span>';
+      const ab = j.abstention ? `<span class="chip ${j.abstention === "OVER_REFUSAL" || j.abstention === "SHOULD_ABSTAIN" ? "fail" : ""}">${ABST[j.abstention] || j.abstention}</span>` : '<span class="chip none">판정 못 함</span>';
+      const ev = j.evidence.length ? `<div class="reason">근거로 답할 수 있나: ${j.evidence.map((e) => EVID[e] || e).join(", ")}</div>` : "";
+      return `<tr><td class="jn">${esc(j.name)}<div>${passChip(j.pass)}</div></td><td>${g}</td><td>${q}</td><td>${ab}${ev}</td></tr>`;
+    }).join("");
+  }
+
+  function renderCase() {
+    const box = document.getElementById("case");
+    const it = ITEMS.find((i) => i.id === state.current) || visible()[0] || ITEMS[0];
+    state.current = it.id;
+    const prev = it.previous.length ? `<div class="panel"><p class="label-sm">앞 대화</p><div class="convo">${it.previous.map((p) =>
+      `<div class="c">고객: ${esc(p.question)}</div><div class="a">${esc(p.answer)}</div>`).join("")}</div></div>` : "";
+    const cond = Object.keys(it.conditions || {}).length ? `<p class="reason">고객이 답한 조건: ${Object.entries(it.conditions).map(([k, v]) => `${esc(k)} → ${esc(v)}`).join(" / ")}</p>` : "";
+    const ref = it.reference.length ? `<p class="label-sm" style="margin-top:10px">정답 묶음(질문 부분별 FAQ)</p>${it.reference.map((r) =>
+      `<div class="reason">${esc(r.part)} — <span class="mono">${esc(r.alts.slice(0, 6).join(", "))}${r.alts.length > 6 ? ` 외 ${r.alts.length - 6}개` : ""}</span></div>`).join("")}` : "";
+    const answers = it.answers.map((a) => {
+      const v = state.verdicts[a.key] || {};
+      const dis = state.canWrite ? "" : "disabled";
+      return `<article class="ans ${a.contested && !v.verdict ? "needs" : ""}" data-key="${esc(a.key)}">
+        <div class="ans-head">${modelChip(a.model)}<span class="muted">${a.runs.join("·")}회차</span>
+          <span class="chip">가드 ${esc(a.guard || "-")}</span><span class="spacer"></span>
+          ${a.contested ? '<span class="chip none">판단 필요</span>' : '<span class="chip">세 Judge 일치</span>'} ${passChip(a.combined, "결합 ")}</div>
+        <div class="ans-text">${esc(a.text)}</div>
+        <div class="judges"><table><thead><tr><th>Judge</th><th>근거성</th><th>충족도</th><th>보류</th></tr></thead><tbody>${judgeRows(a)}</tbody></table></div>
+        <div class="mine">
+          <div class="verdict" role="group" aria-label="내 판정">
+            ${["pass", "fail", "unsure"].map((k) => `<button type="button" data-v="${k}" aria-pressed="${v.verdict === k}" ${dis}>${VERDICT[k]}</button>`).join("")}
+          </div>
+          <textarea id="note-${esc(a.key)}" placeholder="이유나 메모(선택)" ${dis}>${esc(v.note || "")}</textarea>
+          <div class="saved" id="saved-${esc(a.key)}">${v.verdict ? `저장됨: ${VERDICT[v.verdict]}` : a.contested ? "아직 판단하지 않았습니다." : "Judge 셋이 같은 판정이라 선택 사항입니다."}</div>
+        </div></article>`;
+    }).join("");
+    const list = visible(); const idx = list.findIndex((i) => i.id === it.id);
+    box.innerHTML = `<div class="case-inner">
+      <div class="case-head"><h2>${esc(it.id)}</h2><span class="chip set">${it.set === "B" ? "B 실제 경로" : "A 근거 고정"}</span>
+        ${it.group ? `<span class="chip">${esc(it.group)}</span>` : ""}<span class="chip exp">기대: ${EXPECTED[it.expected] || it.expected}</span>
+        ${it.labelReviewed ? `<span class="chip">라벨 1차 검토: ${esc(it.labelReviewed)}</span>` : ""}</div>
+      ${prev}
+      <div><p class="label-sm">판정 질문</p><p class="question">${esc(it.question)}</p>${cond}</div>
+      <div class="two">
+        <div class="panel"><p class="label-sm">라벨 — 필수 사실</p>${it.facts.length ? `<ul class="facts">${it.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : '<p class="muted" style="margin:0">없음(답 없는 질문)</p>'}
+          ${it.missing ? `<p class="reason">FAQ에 없는 부분: ${esc(it.missing)}</p>` : ""}${ref}</div>
+        <div class="panel"><p class="label-sm">생성에 넘긴 근거</p>${it.sources.map((s) => `<div class="src"><span class="mono">${esc(s.id || "-")}</span><span class="sq">Q. ${esc(s.q)}</span><span>${esc(s.a)}</span></div>`).join("")}</div>
+      </div>
+      <p class="help">답마다 이 답이 고객에게 나가도 되는지(라벨 기준으로 충족하고, 근거에 없는 말을 하지 않는지) 고르세요. 노란 테두리가 Judge 판정이 갈렸거나 미확정이라 판단이 필요한 답입니다.</p>
+      <div class="answers">${answers}</div>
+      <div class="nav">
+        <button type="button" data-go="prev" ${idx <= 0 ? "disabled" : ""}>이전 입력</button>
+        <button type="button" data-go="next" ${idx < 0 || idx >= list.length - 1 ? "disabled" : ""}>다음 입력</button>
+        <button type="button" class="primary" data-go="todo">다음 판단 남은 입력</button>
+      </div></div>`;
+    if (location.hash.slice(1) !== it.id) history.replaceState(null, "", "#" + it.id);
+    remember();
+  }
+
+  function renderAll() { renderProgress(); renderQueue(); renderCase(); }
+
+  function select(id) { state.current = id; renderQueue(); renderCase(); document.getElementById("case").scrollIntoView({ block: "start" }); }
+
+  async function save(key, patch) {
+    const item = ITEMS.find((i) => i.answers.some((a) => a.key === key));
+    const ans = item.answers.find((a) => a.key === key);
+    const next = { ...(state.verdicts[key] || {}), ...patch, inputId: item.id, set: item.set, model: ans.model, runs: ans.runs, contested: ans.contested, updatedAt: new Date().toISOString() };
+    state.verdicts[key] = next;
+    const label = document.getElementById("saved-" + key);
+    if (!state.db) { if (label) label.textContent = "저장할 수 없습니다. 이 보기에서는 판정이 남지 않습니다."; return; }
+    if (label) label.textContent = "저장 중…";
+    const prev = state.pending[key] || Promise.resolve();
+    state.pending[key] = prev.then(() => state.db.collection("verdicts").doc(key).set(next)).then(() => {
+      const l = document.getElementById("saved-" + key); if (l) l.textContent = next.verdict ? `저장됨: ${VERDICT[next.verdict]}` : "메모 저장됨";
+    }).catch((e) => {
+      const l = document.getElementById("saved-" + key);
+      if (e && e.code === "invalid_argument") { state.canWrite = false; showNotice("이 보기에서는 판정을 저장할 권한이 없습니다."); }
+      if (l) l.textContent = "저장하지 못했습니다(" + (e && e.code || "오류") + "). 잠시 뒤 다시 눌러 주세요.";
+    });
+  }
+
+  function showNotice(msg) { const n = document.getElementById("notice"); n.textContent = msg; n.hidden = false; }
+
+  document.addEventListener("click", (e) => {
+    const f = e.target.closest("[data-set],[data-status]");
+    if (f) {
+      if (f.dataset.set) state.set = f.dataset.set; else state.status = f.dataset.status;
+      document.querySelectorAll("[data-set]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.set === state.set));
+      document.querySelectorAll("[data-status]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.status === state.status));
+      const list = visible(); if (list.length && !list.some((i) => i.id === state.current)) state.current = list[0].id;
+      renderAll(); return;
+    }
+    const q = e.target.closest(".queue button[data-id]"); if (q) { select(q.dataset.id); return; }
+    const v = e.target.closest(".verdict button[data-v]");
+    if (v && !v.disabled) {
+      const art = v.closest(".ans"); const key = art.dataset.key;
+      const cur = (state.verdicts[key] || {}).verdict;
+      const verdict = cur === v.dataset.v ? null : v.dataset.v;
+      art.querySelectorAll(".verdict button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === verdict));
+      art.classList.toggle("needs", !verdict && ITEMS.some((i) => i.answers.some((a) => a.key === key && a.contested)));
+      save(key, { verdict, note: art.querySelector("textarea").value });
+      renderProgress(); renderQueue(); return;
+    }
+    const g = e.target.closest("[data-go]");
+    if (g) {
+      const list = visible(); const idx = list.findIndex((i) => i.id === state.current);
+      if (g.dataset.go === "prev" && idx > 0) select(list[idx - 1].id);
+      else if (g.dataset.go === "next" && idx < list.length - 1) select(list[idx + 1].id);
+      else if (g.dataset.go === "todo") {
+        const order = ITEMS.filter((i) => state.set === "all" || i.set === state.set);
+        const start = order.findIndex((i) => i.id === state.current);
+        const rest = order.slice(start + 1).concat(order.slice(0, start + 1));
+        const n = rest.find((i) => !itemDone(i));
+        if (n) select(n.id); else showNotice("판단할 답이 더 없습니다. 모두 끝났습니다.");
+      }
+    }
+  });
+
+  const timers = {};
+  document.addEventListener("input", (e) => {
+    if (e.target.tagName !== "TEXTAREA") return;
+    const art = e.target.closest(".ans"); const key = art.dataset.key;
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(() => save(key, { note: e.target.value }), 900);
+  });
+
+  renderAll();
+
+  (async () => {
+    const [db, user] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null]);
+    if (!db) { showNotice("판정을 저장할 수 없는 보기입니다. 판정은 이 창에만 남고 Claude에게 전달되지 않습니다."); return; }
+    state.db = db;
+    try { if (user && (await user.can("data.write")) === false) { state.canWrite = false; showNotice("보기 전용입니다. 판정을 저장할 수 없습니다."); renderCase(); } } catch (e) {}
+    db.collection("verdicts").onSnapshot((snap) => {
+      const next = {};
+      snap.docs.forEach((d) => { next[d.id] = d.data(); });
+      state.verdicts = next;
+      const active = document.activeElement && document.activeElement.tagName === "TEXTAREA";
+      renderProgress(); renderQueue(); if (!active) renderCase();
+    }, (err) => showNotice("저장된 판정을 불러오지 못했습니다(" + (err && err.code) + "). 새로고침해 주세요."));
+  })();
+})();
+</script>

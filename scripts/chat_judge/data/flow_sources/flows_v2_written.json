@@ -1,0 +1,1516 @@
+{
+  "cases": [
+    {
+      "id": "SF13",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "유심 인식 불량, 업무는 밝히고 위치는 현재 위치 버튼",
+      "turns": [
+        {
+          "question": "유심이 갑자기 인식이 안 되는데 지금 바로 새로 받을 수 있는 매장 좀 찾아주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "영등포구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "USIM_REISSUE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(유심 재발급)는 질문에 있음. 위치를 물으면 현재 위치(영등포구)로 답한다."
+        }
+      ]
+    },
+    {
+      "id": "SF14",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "번호이동 목적, 주변 매장 요청, 현재 위치 버튼",
+      "turns": [
+        {
+          "question": "쓰던 번호 그대로 TELME로 옮기고 싶어요. 제 주변에 매장 있나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "해운대구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "PORT_IN",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(번호이동)는 질문에 있음. 위치는 현재 위치(해운대구)."
+        }
+      ]
+    },
+    {
+      "id": "SF15",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "업무·위치 모두 없음, 되묻기에 신규가입과 현재 위치로 답함",
+      "turns": [
+        {
+          "question": "대리점 어디 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "신규로 하나 개통하려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "의정부시"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NEW_LINE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무를 물으면 신규가입, 위치를 물으면 현재 위치(의정부시)."
+        }
+      ]
+    },
+    {
+      "id": "SF16",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "특정 업무 없이 상담만 원함, 현재 위치 버튼",
+      "turns": [
+        {
+          "question": "제 근처 TELME 매장 좀 보여주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "특별히 처리할 건 없고 요금제 상담만 받아보려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "대전 중구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "특정 업무 없음. 업무를 물으면 상담만 원한다고 답하므로 업무 조건 없이 매장을 보여주면 된다. 위치는 현재 위치(대전 중구)."
+        }
+      ]
+    },
+    {
+      "id": "SF17",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "명의변경 목적, 가까운 지점 요청, 현재 위치 버튼",
+      "turns": [
+        {
+          "question": "남편 명의로 된 회선을 제 앞으로 옮기러 가려는데 가까운 지점이 어디죠",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "양천구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NAME_CHANGE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(명의변경)는 질문에 있음. 위치는 현재 위치(양천구)."
+        }
+      ]
+    },
+    {
+      "id": "SF18",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "업무 없이 오프라인 매장 요청, 되묻기에 번호이동과 현재 위치",
+      "turns": [
+        {
+          "question": "가까운 오프라인 매장 있으면 알려주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "다른 통신사에서 번호이동 하려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "강남구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "PORT_IN",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무를 물으면 번호이동, 위치는 현재 위치(강남구)."
+        }
+      ]
+    },
+    {
+      "id": "SF19",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "세컨폰 개통 목적의 짧은 질문, 현재 위치 버튼",
+      "turns": [
+        {
+          "question": "세컨폰 하나 만들려고요. 매장 위치요",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "현재 위치 사용",
+              "currentLocation": "대전 중구"
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NEW_LINE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "세컨폰을 만든다는 것은 신규가입. 위치는 현재 위치(대전 중구)."
+        }
+      ]
+    },
+    {
+      "id": "SF20",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "부산 서면역 근처 유심 재발급 매장",
+      "turns": [
+        {
+          "question": "서면역 근처에 유심 재발급 해주는 데 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "서면역",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "USIM_REISSUE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무와 위치(부산 서면역)가 모두 질문에 있음. 위치를 다시 물으면 같은 장소로 답한다."
+        }
+      ]
+    },
+    {
+      "id": "SF21",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "대전역 쪽 매장, 업무는 되묻기에서 명의변경",
+      "turns": [
+        {
+          "question": "대전역 쪽 매장 좀 알려주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "명의변경 하려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "대전역",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NAME_CHANGE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "위치(대전역)는 질문에 있고 업무는 없음. 업무를 물으면 명의변경."
+        }
+      ]
+    },
+    {
+      "id": "SF22",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "광화문 쪽이라는 모호한 위치, 특정 업무 없음",
+      "turns": [
+        {
+          "question": "광화문 쪽에 매장 있나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "딱히 업무는 없고 그냥 폰 구경하면서 상담 좀 받으려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "광화문 쪽이요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "특정 업무 없음. 위치는 '광화문 쪽'이라는 모호한 표현."
+        }
+      ]
+    },
+    {
+      "id": "SF23",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "인천 부평역 근처 번호이동",
+      "turns": [
+        {
+          "question": "다른 통신사에서 넘어오려고 하는데 부평역 근처에 매장 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "부평역",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "PORT_IN",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(번호이동)와 위치(인천 부평역)가 질문에 있음."
+        }
+      ]
+    },
+    {
+      "id": "SF24",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "대구 동성로 근처 신규 개통",
+      "turns": [
+        {
+          "question": "개통하러 가려는데 동성로 근처로 찾아주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "대구 동성로",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NEW_LINE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "'개통하러'는 신규가입. 위치는 대구 동성로."
+        }
+      ]
+    },
+    {
+      "id": "SF25",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "유심 분실, 위치는 되묻기에서 울산 삼산동",
+      "turns": [
+        {
+          "question": "유심 잃어버려서요ㅠ 매장 찾아줘",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "울산 삼산동이요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "USIM_REISSUE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(유심 재발급)는 질문에 있음. 위치를 물으면 울산 삼산동(동 이름)."
+        }
+      ]
+    },
+    {
+      "id": "SF26",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "명의 넘기기 목적, 위치는 되묻기에서 의정부역",
+      "turns": [
+        {
+          "question": "명의 넘기는 거 하러 매장 가야 되는데요",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "의정부역 근처요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NAME_CHANGE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(명의변경)는 질문에 있음. 위치를 물으면 의정부역."
+        }
+      ]
+    },
+    {
+      "id": "SF27",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "업무·위치 모두 없음, 되묻기에 신규가입과 송도 센트럴파크",
+      "turns": [
+        {
+          "question": "매장 위치 알고 싶어요",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "새 번호로 개통이요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "송도 센트럴파크 근처",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "NEW_LINE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무를 물으면 신규가입, 위치를 물으면 인천 송도 센트럴파크 근처(랜드마크)."
+        }
+      ]
+    },
+    {
+      "id": "SF28",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "해운대 해수욕장 근처, 특정 업무 없음",
+      "turns": [
+        {
+          "question": "해운대 해수욕장 근처에 TELME 매장 있으려나",
+          "clarificationReplies": [
+            {
+              "whenKey": "serviceType",
+              "content": "아뇨 그냥 요금 문의 좀 하려고요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": "location",
+              "content": "해운대 해수욕장",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "특정 업무 없음. 위치는 부산 해운대 해수욕장(랜드마크)."
+        }
+      ]
+    },
+    {
+      "id": "SF29",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "홍대입구역 근처 번호이동",
+      "turns": [
+        {
+          "question": "홍대입구역에서 가까운 대리점 있으면 거기서 번호이동 하려고요",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "홍대입구역",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "PORT_IN",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(번호이동)와 위치(서울 홍대입구역)가 질문에 있음."
+        }
+      ]
+    },
+    {
+      "id": "SF30",
+      "suite": "store_flow",
+      "actor": "GUEST",
+      "requiresKakao": true,
+      "scenario": "대구 수성구 유심 재발급 매장",
+      "turns": [
+        {
+          "question": "대구 수성구 쪽에 유심 새로 받을 수 있는 매장 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": "location",
+              "content": "대구 수성구",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "STORE_LOOKUP",
+          "expectedServiceType": "USIM_REISSUE",
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "업무(유심 재발급)와 위치(대구 수성구, 구 이름)가 질문에 있음."
+        }
+      ]
+    },
+    {
+      "id": "CF13",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "단말 반품 가능 여부, 개통 경과일·사용 여부를 되물음",
+      "turns": [
+        {
+          "question": "새로 산 폰 반품하고 싶은데 언제든 받아주나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "개통한 지 20일쯤 됐고 케이스 끼워서 쓰고 있었어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "DEVICE-0020",
+            "DEVICE-0028",
+            "DEVICE-0100",
+            "DEVICE-0004",
+            "DEVICE-0056",
+            "DEVICE-0116"
+          ],
+          "requiredFacts": [
+            "개통 후 14일이 지나 반품·교환이 어렵다고 안내한다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "개통 후 14일 이내여야 반품·교환이 가능하다",
+            "미개봉이거나 사용 흔적이 없는 상태여야 한다",
+            "반품·교환은 1회에 한해 가능하다"
+          ],
+          "note": "되묻기 답: 개통 20일, 사용 중 → 기간이 지나 불가."
+        }
+      ]
+    },
+    {
+      "id": "CF14",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "번호이동 후 원래 통신사로 되돌리기, 이동 후 경과일을 되물음",
+      "turns": [
+        {
+          "question": "TELME로 번호이동 했는데 통화 품질이 별로라 원래 쓰던 데로 되돌리고 싶어요. 가능한가요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "옮긴 지 일주일 조금 넘었어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "PORTING-0004",
+            "PORTING-0088",
+            "PORTING-0096",
+            "PORTING-0008",
+            "PORTING-0028",
+            "PORTING-0052",
+            "PORTING-0072"
+          ],
+          "requiredFacts": [
+            "개통 후 14일 이내라 철회할 수 있다",
+            "철회하면 원래 통신사로 자동 복원된다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "개통 후 14일 이내면 철회할 수 있고 원래 통신사로 자동 복원된다",
+            "14일이 지났으면 철회가 아니라 새로 번호이동을 신청해야 한다"
+          ],
+          "note": "되묻기 답: 8~9일 경과 → 14일 이내라 철회 가능."
+        }
+      ]
+    },
+    {
+      "id": "CF15",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "요금 미납 시 정지 시점, 연체 기간을 모름",
+      "turns": [
+        {
+          "question": "요금을 좀 밀렸는데 이러다 폰 끊기나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "납부 기한이 언제였는지 잘 모르겠어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "BILLING-0094",
+            "BILLING-0045",
+            "BILLING-0003",
+            "BILLING-0017",
+            "BILLING-0101"
+          ],
+          "requiredFacts": [
+            "납부 기한 후 15일이 지나면 발신이 정지된다",
+            "30일이 지나면 수신까지 정지된다",
+            "60일이 지나면 직권 해지될 수 있다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "납부 기한 후 15일이 지나면 발신이 정지된다",
+            "30일이 지나면 수신까지 정지된다",
+            "60일이 지나면 직권 해지될 수 있다"
+          ],
+          "note": "되묻기 답이 '모르겠다'라서 경과일별 단계를 모두 안내해야 한다."
+        }
+      ]
+    },
+    {
+      "id": "CF16",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "명의변경 시 신용 심사 여부, 단말 할부 잔여를 되물음",
+      "turns": [
+        {
+          "question": "명의변경하면 받는 사람이 신용 심사 같은 거 받아야 하나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "기계값은 이미 다 갚았어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "NAME_CHANGE-0045",
+            "NAME_CHANGE-0081",
+            "NAME_CHANGE-0087",
+            "NAME_CHANGE-0051",
+            "NAME_CHANGE-0009"
+          ],
+          "requiredFacts": [
+            "단말 할부금이 없으므로 신용 심사 없이 명의변경이 진행된다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "단말 할부금이 없으면 신용 심사 없이 진행된다",
+            "할부금이 남아 있으면 양수인이 신용 심사를 통과해야 한다"
+          ],
+          "note": "되묻기 답: 할부 완납 → 심사 없음."
+        }
+      ]
+    },
+    {
+      "id": "CF17",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "동생에게 번호 넘기기, 양쪽 나이를 되물음",
+      "turns": [
+        {
+          "question": "제 번호를 남동생 앞으로 넘겨줄 수 있나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "저는 고2고 동생은 중학생이에요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "NAME_CHANGE-0048",
+            "NAME_CHANGE-0054",
+            "NAME_CHANGE-0003",
+            "NAME_CHANGE-0027",
+            "NAME_CHANGE-0052"
+          ],
+          "requiredFacts": [
+            "두 사람 모두 미성년자라 명의변경이 불가능하다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "양도인과 양수인이 모두 미성년자이면 명의변경이 불가능하다",
+            "넘기는 사람이 성인이면 미성년자에게 넘길 수 있다"
+          ],
+          "note": "되묻기 답: 양도인·양수인 모두 미성년자 → 불가."
+        }
+      ]
+    },
+    {
+      "id": "CF18",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "해외 로밍 요금제 선택, 체류 기간을 되물음",
+      "turns": [
+        {
+          "question": "해외 나가는데 로밍 뭐로 하는 게 제일 싸요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "6일 일정이고 지도랑 카톡 정도만 써요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "ROAMING-0021",
+            "ROAMING-0026",
+            "ROAMING-0051",
+            "ROAMING-0066",
+            "ROAMING-0031",
+            "ROAMING-0046"
+          ],
+          "requiredFacts": [
+            "6일 일정이면 7일 기간권(39,000원)이 하루 9,900원인 일 단위보다 저렴하다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "하루씩 쓰면 일 단위 9,900원이다",
+            "일주일 정도면 7일 기간권 39,000원이다",
+            "데이터를 많이 쓰면 무제한이 하루 12,100원이다"
+          ],
+          "note": "되묻기 답: 6일, 데이터 적게 사용 → 7일 기간권이 가장 쌈(일 단위 6일이면 59,400원)."
+        }
+      ]
+    },
+    {
+      "id": "CF19",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "신규 개통 후 이용 시점, 신청 경로를 모름",
+      "turns": [
+        {
+          "question": "새 회선 신청하면 언제부터 쓸 수 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "매장 갈지 인터넷으로 할지 아직 잘 모르겠어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "SUBSCRIBE-0011",
+            "SUBSCRIBE-0047",
+            "SUBSCRIBE-0019",
+            "SUBSCRIBE-0031",
+            "SUBSCRIBE-0007"
+          ],
+          "requiredFacts": [
+            "매장에서 개통하면 30분 이내에 완료된다",
+            "온라인으로 신청하면 다음 날 개통된다",
+            "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "매장에서 개통하면 30분 이내에 완료된다",
+            "온라인으로 신청하면 다음 날 개통된다",
+            "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+          ],
+          "note": "되묻기 답이 '모르겠다'라서 매장·온라인 두 경우를 모두 안내해야 한다."
+        }
+      ]
+    },
+    {
+      "id": "CF20",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "요금제 변경 가능 여부, 이번 달 변경 이력을 되물음",
+      "turns": [
+        {
+          "question": "요금제 지금 다른 걸로 바꿀 수 있어요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "이번 달 초에 이미 한 번 바꿨어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "BILLING-0015",
+            "BILLING-0106",
+            "BILLING-0085",
+            "BILLING-0092",
+            "BILLING-0078",
+            "BILLING-0022"
+          ],
+          "requiredFacts": [
+            "요금제 변경은 월 1회만 가능하다",
+            "이번 달에 이미 변경했으므로 다음 달에 변경할 수 있다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "요금제 변경은 월 1회만 가능하다",
+            "가입한 달에는 변경할 수 없다",
+            "변경하면 신청일 다음 날 00:00부터 적용된다"
+          ],
+          "note": "되묻기 답: 이번 달 이미 변경 → 다음 달부터 가능."
+        }
+      ]
+    },
+    {
+      "id": "CF21",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "개통 가능 회선 수, 명의 유형을 되물음",
+      "turns": [
+        {
+          "question": "회선을 여러 개 만들려고 하는데 최대 몇 개까지 돼요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "개인 말고 회사 명의로 할 거예요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "SUBSCRIBE-0020",
+            "SUBSCRIBE-0116",
+            "SUBSCRIBE-0124",
+            "SUBSCRIBE-0004",
+            "SUBSCRIBE-0064",
+            "SUBSCRIBE-0056"
+          ],
+          "requiredFacts": [
+            "법인 명의는 개인 5회선 한도 대신 별도 심사를 거쳐 진행된다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "개인(성인)은 1인당 최대 5회선까지 개통할 수 있다",
+            "법인 명의는 별도 심사를 거쳐 진행된다"
+          ],
+          "note": "되묻기 답: 법인 명의 → 정해진 회선 수 제한 대신 별도 심사."
+        }
+      ]
+    },
+    {
+      "id": "CF22",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "유심 재발급 소요 기간, 신청 경로를 되물음",
+      "turns": [
+        {
+          "question": "유심 다시 받는 데 며칠 걸려요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "매장 갈 시간이 없어서 온라인으로 하려고요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "USIM-0001",
+            "USIM-0025",
+            "USIM-0041",
+            "USIM-0105",
+            "USIM-0109",
+            "USIM-0061"
+          ],
+          "requiredFacts": [
+            "온라인으로 신청하면 택배로 2~3 영업일 안에 받는다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "매장을 방문하면 즉시 발급받을 수 있다",
+            "온라인으로 신청하면 택배로 2~3 영업일이 걸린다"
+          ],
+          "note": "되묻기 답: 온라인 신청 → 택배 2~3 영업일."
+        }
+      ]
+    },
+    {
+      "id": "CF23",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "번호이동 당일 처리 여부, 신청 시각을 되물음",
+      "turns": [
+        {
+          "question": "번호이동 신청하면 그날 바로 끝나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "퇴근하고 밤 10시쯤에나 신청할 수 있어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "PORTING-0049",
+            "PORTING-0053",
+            "PORTING-0005",
+            "PORTING-0033",
+            "PORTING-0013",
+            "PORTING-0057"
+          ],
+          "requiredFacts": [
+            "번호이동 처리는 09:00부터 20:00까지라 밤 10시 신청은 당일 처리되지 않는다",
+            "다음 날 09:00부터 처리되며 처리 시작 후 평균 2시간 이내에 완료된다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "번호이동 처리는 매일 09:00부터 20:00까지만 진행된다",
+            "처리 시간 안에 신청하면 평균 2시간 이내에 완료된다",
+            "20:00 이후 신청은 다음 날 09:00부터 처리된다"
+          ],
+          "note": "되묻기 답: 22시 신청 → 다음 날 처리."
+        }
+      ]
+    },
+    {
+      "id": "CF24",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "기본 데이터 소진 후 처리, 자기 요금제를 모름",
+      "turns": [
+        {
+          "question": "데이터 다 쓰면 어떻게 돼요? 돈이 더 나오나요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "제 요금제가 뭔지 잘 모르겠어요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [
+            "PLAN-0012",
+            "PLAN-0002",
+            "PLAN-0082",
+            "PLAN-0017",
+            "PLAN-0092"
+          ],
+          "requiredFacts": [
+            "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+            "소진 후 추가 요금은 없다",
+            "언리미티드 요금제는 속도 제한이 없다"
+          ],
+          "factsIfAnsweredDirectly": [
+            "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+            "소진 후 추가 요금은 없다",
+            "언리미티드 요금제는 속도 제한이 없다"
+          ],
+          "note": "되묻기 답이 '모르겠다'라서 일반 요금제와 언리미티드 두 경우를 모두 안내해야 한다."
+        }
+      ]
+    },
+    {
+      "id": "CF25",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "할아버지 요금제 추천, 만 73세·데이터 적게 씀",
+      "turns": [
+        {
+          "question": "할아버지 폰 바꿔드리려는데 요금제는 뭐가 좋을까요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "올해 만 73세세요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "데이터는 거의 안 쓰시고 전화만 하세요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "청소년 요금제(만 14~18세 대상)는 추천하지 않는다"
+          ],
+          "note": "만 73세는 시니어 요금제(만 65세 이상) 대상. 되묻기 순서는 나이 → 데이터로 가정."
+        }
+      ]
+    },
+    {
+      "id": "CF26",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "중학생 아들 첫 폰, 만 14세·데이터 많이 씀",
+      "turns": [
+        {
+          "question": "중2 아들 첫 폰인데 요금제 어떤 걸로 해야 돼요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "만 14살이요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "유튜브랑 게임을 많이 해서 한 달에 50기가 넘게 쓸 것 같아요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "시니어 요금제(만 65세 이상 대상)는 추천하지 않는다",
+            "만 14세를 청소년 요금제 가입 대상(만 14~18세)에서 제외하지 않는다"
+          ],
+          "note": "만 14세는 청소년 요금제 하한. 데이터 많이 사용."
+        }
+      ]
+    },
+    {
+      "id": "CF27",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "대학생, 데이터 무제한이 필요하다고 먼저 밝힘",
+      "turns": [
+        {
+          "question": "대학생인데 넷플릭스를 맨날 봐서 데이터가 엄청 필요해요. 뭐 쓰면 돼요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "스물두 살이에요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "네, 한 달에 100기가는 넘게 쓰는 것 같아요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "청소년 요금제(만 14~18세)와 시니어 요금제(만 65세 이상)는 추천하지 않는다"
+          ],
+          "note": "데이터 사용량은 질문에 이미 드러나 있어 데이터를 다시 묻지 않을 수 있음(두 번째 답은 물을 때만 사용)."
+        }
+      ]
+    },
+    {
+      "id": "CF28",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "직장인, 와이파이 위주라 데이터 적게 씀",
+      "turns": [
+        {
+          "question": "직장인인데 거의 와이파이만 써서 데이터를 별로 안 써요. 싼 요금제 있을까요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "서른다섯이요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "한 달에 2~3기가 정도요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "청소년 요금제(만 14~18세)와 시니어 요금제(만 65세 이상)는 추천하지 않는다"
+          ],
+          "note": "성인 일반, 데이터 적게 사용."
+        }
+      ]
+    },
+    {
+      "id": "CF29",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "만 18세 동생, 청소년 요금제 상한 나이",
+      "turns": [
+        {
+          "question": "곧 대학 가는 동생 요금제 하나 추천해 줄래요?",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "만 18세예요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "많이 안 써요, 한 달에 10기가 안 될 거예요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "시니어 요금제(만 65세 이상 대상)는 추천하지 않는다",
+            "만 18세를 청소년 요금제 가입 대상(만 14~18세)에서 제외하지 않는다"
+          ],
+          "note": "만 18세는 청소년 요금제 상한 포함. 일반 요금제 추천도 허용."
+        }
+      ]
+    },
+    {
+      "id": "CF30",
+      "suite": "clarification_flow",
+      "actor": "GUEST",
+      "requiresKakao": false,
+      "scenario": "만 62세 아버지, 시니어 요금제 가능 여부와 데이터 많이 씀",
+      "turns": [
+        {
+          "question": "60대 초반이신 아버지 요금제 고르는 중인데, 시니어 요금제 되면 그걸로 하고 아니면 다른 걸로 추천해 주세요",
+          "clarificationReplies": [
+            {
+              "whenKey": null,
+              "content": "만 62세세요",
+              "currentLocation": null
+            },
+            {
+              "whenKey": null,
+              "content": "영상을 많이 보셔서 한 달에 60기가 넘게 쓰세요",
+              "currentLocation": null
+            }
+          ],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "판매 중인 요금제 하나를 추천한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다",
+            "만 65세 미만이라 시니어 요금제는 가입 대상이 아니라고 안내하고 추천하지 않는다",
+            "청소년 요금제는 추천하지 않는다"
+          ],
+          "note": "시니어 요금제는 만 65세 이상이라 만 62세는 불가. 데이터 많이 사용."
+        }
+      ]
+    },
+    {
+      "id": "MD13",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "가입 요금제의 월 기본료 확인",
+      "turns": [
+        {
+          "question": "제 폰 요금제 한 달 기본료가 얼마짜리예요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "가입한 요금제 이름을 알려준다",
+            "가입한 요금제의 월정액을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "가입 요금제 데이터로 답할 수 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD14",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "이번 달 남은 데이터 확인",
+      "turns": [
+        {
+          "question": "이번 달 데이터 아직 얼마 남았는지 알 수 있나요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 데이터 사용량을 알려준다",
+            "요금제 기본 제공량 대비 남은 데이터 양을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "사용량과 요금제 제공량으로 계산 가능."
+        }
+      ]
+    },
+    {
+      "id": "MD15",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "약정 할인율 확인",
+      "turns": [
+        {
+          "question": "저 약정 할인 몇 프로 받고 있죠?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "약정 할인율을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "약정 정보에 할인율이 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD16",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "약정 경과 기간 확인",
+      "turns": [
+        {
+          "question": "약정 걸고 쓴 지 몇 달째인지 궁금해요",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "약정 시작 후 지난 개월 수를 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "약정 기간과 남은 기간으로 답할 수 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD17",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "할인 반영된 이번 달 청구 예상액",
+      "turns": [
+        {
+          "question": "이번 달 청구될 요금 미리 좀 알 수 있어요? 할인 들어간 금액으로요",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 예상 요금을 알려준다",
+            "예상 요금에 약정 할인이 반영됐는지 함께 설명한다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "예상 요금 데이터로 답할 수 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD18",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "데이터 적게 써서 요금제 낮추기 상담",
+      "turns": [
+        {
+          "question": "데이터를 생각보다 적게 쓰는 것 같아서 요금제를 낮출까 하는데, 제 사용량이면 어떤 게 맞을까요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 데이터 사용량을 근거로 든다",
+            "판매 중인 요금제 하나를 추천하거나 현재 요금제 유지를 권한다",
+            "추천 요금제의 월정액과 데이터 제공량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "사용량 기반 추천."
+        }
+      ]
+    },
+    {
+      "id": "MD19",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "위약금 없이 해지하려면 남은 기간",
+      "turns": [
+        {
+          "question": "위약금 하나도 안 내고 해지하려면 몇 달 더 써야 해요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "남은 약정 개월 수를 알려준다",
+            "약정을 다 채우면 위약금이 없다고 안내한다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "약정 남은 기간으로 답할 수 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD20",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "통화 무제한 여부와 이번 달 통화량",
+      "turns": [
+        {
+          "question": "제 요금제 통화 무제한 맞아요? 이번 달 통화 얼마나 했는지도 알려주세요",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "가입한 요금제가 음성 통화 무제한인지 알려준다",
+            "이번 달 통화 사용량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "요금제 정보와 사용량으로 답할 수 있음."
+        }
+      ]
+    },
+    {
+      "id": "MD21",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "요금제 데이터 제공량을 묻고 이어서 사용량을 주어 없이 물음",
+      "turns": [
+        {
+          "question": "제 요금제는 데이터 몇 기가 주는 거예요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "가입한 요금제의 기본 데이터 제공량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "1턴."
+        },
+        {
+          "question": "이번 달은 그중에 얼마나 썼어요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 데이터 사용량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "'그중에'는 앞 턴의 요금제 데이터 제공량을 가리킴."
+        }
+      ]
+    },
+    {
+      "id": "MD22",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "통화 사용량을 묻고 이어서 문자를 주어 없이 물음",
+      "turns": [
+        {
+          "question": "이번 달 전화 몇 분 했어요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 통화 사용량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "1턴."
+        },
+        {
+          "question": "문자는요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "이번 달 문자 사용량을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "주어 없이 이번 달 문자 사용량을 묻는 것."
+        }
+      ]
+    },
+    {
+      "id": "MD23",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "약정 여부를 묻고 이어서 종료 시점을 주어 없이 물음",
+      "turns": [
+        {
+          "question": "제 폰 약정 걸려 있어요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "약정에 가입되어 있다고 알려준다",
+            "약정 기간(개월)을 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "1턴."
+        },
+        {
+          "question": "그럼 끝나는 건 언제쯤이에요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ANSWER",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [
+            "약정 종료 시점이나 남은 약정 개월 수를 알려준다"
+          ],
+          "factsIfAnsweredDirectly": [],
+          "note": "'끝나는 건'은 앞 턴의 약정을 가리킴."
+        }
+      ]
+    },
+    {
+      "id": "MD24",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "번호이동 진행 상황 조회(데이터 없음)",
+      "turns": [
+        {
+          "question": "제가 신청한 번호이동 지금 어디까지 진행됐어요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ABSTAIN",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "번호이동 진행 상황 데이터가 없어 답할 수 없음."
+        }
+      ]
+    },
+    {
+      "id": "MD25",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "가족 결합 할인 적용 여부(데이터 없음)",
+      "turns": [
+        {
+          "question": "우리 가족 결합 할인 제 회선에 적용돼 있나요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ABSTAIN",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "가족·결합 할인 데이터가 없어 답할 수 없음."
+        }
+      ]
+    },
+    {
+      "id": "MD26",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "현재 요금제 가입 전 과거 청구액(데이터 없음)",
+      "turns": [
+        {
+          "question": "작년 이맘때 요금 얼마 나왔는지 보고 싶어요",
+          "clarificationReplies": [],
+          "expectedBehavior": "ABSTAIN",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "현재 요금제 가입(약 8개월 전) 이전 청구 내역 데이터가 없음."
+        }
+      ]
+    },
+    {
+      "id": "MD27",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "해외 로밍 사용량(데이터 없음)",
+      "turns": [
+        {
+          "question": "지난주에 일본 다녀왔는데 거기서 로밍 데이터 얼마나 썼는지 나와요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ABSTAIN",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "로밍 사용량 데이터가 없어 답할 수 없음."
+        }
+      ]
+    },
+    {
+      "id": "MD28",
+      "suite": "member_data",
+      "actor": "MEMBER",
+      "requiresKakao": false,
+      "scenario": "멤버십 포인트 잔액(데이터 없음)",
+      "turns": [
+        {
+          "question": "제 멤버십 포인트 올해 얼마나 남아 있어요?",
+          "clarificationReplies": [],
+          "expectedBehavior": "ABSTAIN",
+          "expectedServiceType": null,
+          "faqSlotIds": [],
+          "requiredFacts": [],
+          "factsIfAnsweredDirectly": [],
+          "note": "멤버십 데이터가 없어 답할 수 없음."
+        }
+      ]
+    }
+  ]
+}

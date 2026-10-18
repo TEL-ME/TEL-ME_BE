@@ -1,0 +1,1001 @@
+{
+ "compound": [
+  {
+   "id": "C021",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "자녀 계좌로는 환불받을 수 없다",
+      "환불은 본인 명의 계좌로만 된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "듀얼번호는 월 3,300원이 추가된다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C022",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "로밍은 신청 후 1시간 안에 적용된다",
+      "조금 더 기다리면 된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "번호를 남기려면 정지가 낫다",
+      "정지는 기본료 절반만 내고 30일씩, 1년에 90일까지 가능하다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C023",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "매장에 신분증을 지참해 방문하면 즉시 발급된다",
+      "비용은 7,700원이다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "홈페이지에서 신청하면 즉시 무료로 발급된다"
+     ]
+    }
+   ],
+   "reason": "두 파트 모두 seed 답변에 사실이 있다. 7,700원은 매장·온라인 공통(USIM-0105/0109)이라 매장 질문에도 맞다."
+  },
+  {
+   "id": "C024",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "할부금이 남아 있어도 명의변경이 가능하다",
+      "양수인이 신용 심사를 통과해야 진행된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "홈페이지에서 신청하면 즉시 해지된다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C025",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "깨진 유심은 신고하지 않아도 된다",
+      "새로 받으면 예전 유심은 자동으로 없어진다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "할부금이 남아 있으면 양수인이 신용 심사를 통과해야 한다",
+      "할부금을 정리한 뒤 다시 시도할 수 있다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C026",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "앱에서 회선별 잔여 데이터를 확인할 수 있다",
+      "기본 데이터를 다 쓴 회선은 400kbps로 제한된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "매장은 30분이면 되어 더 빠르다",
+      "인터넷 신청은 다음 날 된다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C027",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "7일 기간권은 39,000원이다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "처리는 09:00부터 20:00까지만 된다",
+      "아침에 신청하면 당일에 끝날 가능성이 크다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C028",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "양도인과 양수인의 신분증이 모두 필요하다",
+      "두 사람이 함께 방문해야 한다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "가장 저렴한 알뜰 미니는 15,000원에 1.5GB이다",
+      "가장 비싼 5G 언리미티드는 105,000원에 데이터 무제한이다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C029",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종이다",
+      "연령 제한 요금제는 별도 정책으로 운영된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "반품과 교환은 조건이 동일하다",
+      "둘 다 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한한다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C030",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "청구서 수령 방법 변경은 다음 달 청구분부터 적용된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "1회 정지는 최대 30일이라 종료 후 다시 신청해야 한다",
+      "연간 90일 한도 안에서 가능하다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C031",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "출국 당일 신청도 가능하다",
+      "신청 후 1시간 이내에 적용되니 여유를 두고 신청해야 한다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "발신 정지는 납부 기한 후 15일 기준으로 된다",
+      "완납하면 2시간 이내에 재개된다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C032",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "심사를 통과하지 못하면 명의변경이 진행되지 않는다",
+      "심사를 통과한 뒤 다시 신청할 수 있다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "위임장, 대리인 신분증, 가입자 신분증 사본을 준비해야 한다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C033",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "처리는 09:00부터 시작된다",
+      "처리 시작 후 평균 2시간 이내에 완료된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "전월 사용분 청구서는 매월 10일에 발송된다",
+      "납부 기한은 매월 25일이다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C034",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "본인 인증을 하면 된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "외국인등록증과 여권을 함께 챙겨 매장을 방문하면 된다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C035",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "부가서비스는 신청 즉시 적용된다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "7일 기간권은 39,000원이다",
+      "하루짜리는 9,900원이다"
+     ]
+    }
+   ],
+   "reason": "두 파트 모두 seed 답변에 사실이 있고 질문이 이를 묻는다. 참고: 한 달 체류 질문에 seed는 7일권·하루권만 제시하며, 카탈로그 ROAMING-0056/0061(7일권 반복이 더 저렴), ROAMING-0071(한 달이면 일 단위가 무제한보다 유리)도 관련 답이 있다. 필수 사실 자체는 맞다."
+  },
+  {
+   "id": "C036",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "워치는 휴대폰과 별개 회선이다",
+      "워치 로밍은 따로 신청해야 한다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "우편 청구서는 월 500원이다",
+      "이메일 청구서는 무료이다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C037",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "알뜰 요금제는 저렴한 요금제이다",
+      "세이브와 미니 두 가지가 있다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "본인 명의는 신분증만 있으면 된다",
+      "미성년 자녀 명의는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요하다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C038",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "반품은 개통 후 14일 이내에만 가능하다",
+      "기한이 지나면 반품이 어렵다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "할부금이 남아 있으면 양수인이 신용 심사를 통과해야 명의변경이 가능하다",
+      "심사 결과에 따라 진행이 어려울 수 있다"
+     ]
+    }
+   ],
+   "reason": "seed DEVICE-0096 질문은 분실 후 찾은 폰 상황이지만 답변은 일반 반품 기한이라 16일차 질문에 그대로 맞다. 2파트 사실도 NAME_CHANGE-0063 답변 그대로다."
+  },
+  {
+   "id": "C039",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "성인은 1인당 최대 5회선까지 가능하다",
+      "이미 5회선이면 추가 개통이 어렵다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "일시 납부는 그 자리에서 정리가 끝난다",
+      "할부 유지는 기존 일정대로 계속 나눠 낼 수 있다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  },
+  {
+   "id": "C040",
+   "verdict": "OK",
+   "parts": [
+    {
+     "requiredFacts": [
+      "매장이나 고객센터로 신청할 수 있다",
+      "개통일로부터 14일 이내에 신청해야 한다"
+     ]
+    },
+    {
+     "requiredFacts": [
+      "5G 요금제는 라이트·스탠다드·프리미엄·언리미티드 4종이다",
+      "LTE 요금제는 베이직·플러스·맥스 3종이다",
+      "알뜰 요금제는 세이브·미니 2종이다"
+     ]
+    }
+   ],
+   "reason": "모든 파트의 requiredFacts가 seed FAQ 답변에 명시돼 있고 subQuestion이 그 내용을 직접 묻는다."
+  }
+ ],
+ "partial": [
+  {
+   "id": "P001",
+   "verdict": "OK",
+   "requiredFacts": [
+    "한도 변경은 신청 즉시 적용된다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) BILLING-0053 답변 '한도 변경은 신청 즉시 적용'과 일치. (b) 카탈로그의 소액결제 답변은 기본 30만/최대 100만/즉시 적용뿐이고 0원 설정·차단 언급 없음.",
+   "searched": [
+    "소액결제",
+    "결제 한도",
+    "0원",
+    "차단",
+    "막",
+    "낮추",
+    "줄이",
+    "최소",
+    "자녀/게임"
+   ]
+  },
+  {
+   "id": "P002",
+   "verdict": "OK",
+   "requiredFacts": [
+    "납부 기한 후 15일이 되면 발신이 정지된다",
+    "30일이면 수신까지 정지된다",
+    "60일이면 직권 해지될 수 있다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) BILLING-0003 답변 그대로. (b) 연체료·가산금·지연 이자 언급 답변 없음('이자'는 단말 할부 연 5.9%뿐).",
+   "searched": [
+    "연체",
+    "가산",
+    "지연",
+    "늦게",
+    "이자",
+    "추가 요금",
+    "위약"
+   ]
+  },
+  {
+   "id": "P003",
+   "verdict": "OK",
+   "requiredFacts": [
+    "개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태면 교환할 수 있다",
+    "교환은 1회만 가능하다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) DEVICE-0020 답변과 일치. (b) 교환 시 차액·정산·다른 기종 관련 답변 없음(정산은 해지 할부 맥락 TERMINATE-0107뿐).",
+   "searched": [
+    "차액",
+    "정산",
+    "더 비싼",
+    "기종",
+    "모델",
+    "추가 금액"
+   ]
+  },
+  {
+   "id": "P004",
+   "verdict": "OK",
+   "requiredFacts": [
+    "분실 단말에는 반품·교환 규정이 적용되지 않는다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) DEVICE-0016 답변 '분실 단말에는 적용되지 않습니다'. (b) 임대폰·대여폰 답변 없음.",
+   "searched": [
+    "임대",
+    "대여",
+    "빌려",
+    "임시",
+    "분실 후 폰"
+   ]
+  },
+  {
+   "id": "P005",
+   "verdict": "OK",
+   "requiredFacts": [
+    "매장에서 30분 이내에 처리된다",
+    "수수료는 없다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) NAME_CHANGE-0005 답변과 일치. (b) 멤버십 답변(SERVICE-0002/0007/0022 등)은 등급 체계·산정 기준만 있고 명의변경 승계 언급 없음.",
+   "searched": [
+    "멤버십",
+    "등급",
+    "승계",
+    "넘어",
+    "이어지",
+    "명의변경+멤버십"
+   ]
+  },
+  {
+   "id": "P006",
+   "verdict": "OK",
+   "requiredFacts": [
+    "매장 방문 시 30분 이내에 처리된다",
+    "수수료는 없다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) NAME_CHANGE-0008 답변과 일치. (b) 약정 답변은 모두 해지 위약금(TERMINATE-*) 관련이고 명의변경 시 약정 승계 언급 없음. '승계'는 기기변경 할부 승계만 있음.",
+   "searched": [
+    "약정",
+    "승계",
+    "이어지",
+    "넘어가",
+    "명의변경+약정"
+   ]
+  },
+  {
+   "id": "P007",
+   "verdict": "OK",
+   "requiredFacts": [
+    "언리미티드는 속도 제한이 없다",
+    "나머지 요금제는 기본 데이터 소진 후 400kbps로 제한된다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) PLAN-0127 답변과 일치. (b) 핫스팟·테더링·노트북·공유 언급 답변 없음.",
+   "searched": [
+    "핫스팟",
+    "테더링",
+    "노트북",
+    "공유",
+    "무제한"
+   ]
+  },
+  {
+   "id": "P008",
+   "verdict": "OK",
+   "requiredFacts": [
+    "알뜰 요금제는 세이브·미니 2종이다",
+    "5G 요금제는 별도로 4종이 있다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) PLAN-0066 답변과 일치. (b) '결합'이 들어간 답변은 PORTING-0050(결합 해지 조건은 기존 통신사 확인)과 PLAN-0067(결합해도 속도 제한은 요금제 기준)뿐이고 결합 할인 유지 여부는 없음.",
+   "searched": [
+    "결합",
+    "가족 할인",
+    "할인",
+    "알뜰+결합"
+   ]
+  },
+  {
+   "id": "P009",
+   "verdict": "OK",
+   "requiredFacts": [
+    "원래 통신사로 자동 복원된다",
+    "철회는 개통 후 14일 이내에만 가능하다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) PORTING-0012 답변과 일치. (b) PORTING 답변에 수수료·비용·무료 언급 없음.",
+   "searched": [
+    "철회+수수료",
+    "철회+비용",
+    "PORTING 전체 수수료/비용/무료"
+   ]
+  },
+  {
+   "id": "P010",
+   "verdict": "OK",
+   "requiredFacts": [
+    "평균 처리 시간은 2시간이다",
+    "최대 24시간까지 걸릴 수 있다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) PORTING-0073 답변과 일치. (b) 처리 중 기존 단말 수신 가능 여부 답변 없음('수신'은 미납 정지 맥락뿐).",
+   "searched": [
+    "수신",
+    "받을 수",
+    "착신",
+    "기존 폰",
+    "기존 단말",
+    "처리 중"
+   ]
+  },
+  {
+   "id": "P011",
+   "verdict": "OK",
+   "requiredFacts": [
+    "데이터 로밍을 켜면 3~5분 안에 현지 망에 연결된다",
+    "출국 전에 앱에서 가입 상태를 확인해 두면 된다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) ROAMING-0045 답변과 일치. (b) 경유·환승·국가별 적용 답변 없음.",
+   "searched": [
+    "경유",
+    "환승",
+    "국가",
+    "나라",
+    "여러 나라"
+   ]
+  },
+  {
+   "id": "P012",
+   "verdict": "OK",
+   "requiredFacts": [
+    "집에서 하든 공항에서 하든 똑같이 1시간 안에 된다",
+    "집에서 미리 하는 게 편하다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) ROAMING-0077 답변과 일치. (b) 시작 날짜 지정·예약 답변 없음(신청 후 1시간 적용, 출국 전 권장만 있음).",
+   "searched": [
+    "예약",
+    "날짜",
+    "지정",
+    "시작일",
+    "미리",
+    "출국",
+    "언제부터"
+   ]
+  },
+  {
+   "id": "P013",
+   "verdict": "OK",
+   "requiredFacts": [
+    "등급은 1년치 납부액을 기준으로 매년 1월에 다시 매겨진다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) SERVICE-0052 답변과 일치. (b) 등급별 혜택·영화·쿠폰·포인트 답변 없음. SERVICE-0057은 'VIP가 골드보다 위'라는 순위만 말한다.",
+   "searched": [
+    "혜택",
+    "영화",
+    "쿠폰",
+    "포인트",
+    "적립",
+    "VIP",
+    "골드"
+   ]
+  },
+  {
+   "id": "P014",
+   "verdict": "OK",
+   "requiredFacts": [
+    "해지한 달의 월 이용료는 일할 계산되지 않아 그대로 청구된다",
+    "다음 달부터는 청구되지 않는다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) SERVICE-0051 답변과 일치. (b) 부가서비스 해지 창구(앱/고객센터) 답변 없음. SERVICE-0016/0031/0021은 요금 처리만, 창구 언급은 회선 해지(TERMINATE-0001 등)뿐이라 부가서비스에 해당하지 않음.",
+   "searched": [
+    "부가",
+    "해지+앱",
+    "해지+고객센터",
+    "SERVICE 전체 앱/홈페이지/고객센터"
+   ]
+  },
+  {
+   "id": "P015",
+   "verdict": "OK",
+   "requiredFacts": [
+    "성인은 1인당 최대 5회선이다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) SUBSCRIBE-0112 답변과 일치. (b) 워치·태블릿이 5회선 한도에 포함되는지 명시한 답변 없음. 주의: SUBSCRIBE-0072 '본인 명의로 개통한 회선만 5회선에 포함'과 ROAMING-0014/0049 '워치·태블릿은 별도 회선'을 합치면 포함된다고 추론할 여지가 있다. 그래도 명시 답은 아니라 OK로 둔다.",
+   "searched": [
+    "워치",
+    "태블릿",
+    "웨어러블",
+    "회선 수",
+    "5회선",
+    "포함"
+   ]
+  },
+  {
+   "id": "P016",
+   "verdict": "DROP",
+   "requiredFacts": [
+    "매장에서 하면 30분이면 된다",
+    "법인 명의는 별도 심사를 거쳐야 하고 심사 결과가 나와야 개통된다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(b)는 미답이 맞다(SUBSCRIBE-0084/0104는 '심사가 끝나야 된다'만 있고 기간 없음). (a)가 문제다. seed SUBSCRIBE-0079는 '30분'만 말하지만 SUBSCRIBE-0084는 '법인 명의 가입은 별도 심사를 거치기 때문에 결과가 나와야 개통', SUBSCRIBE-0104는 '심사가 끝나야 됩니다'라고 한다. 반면 SUBSCRIBE-0059는 '법인 회선도 매장 당일 개통 30분'이라 카탈로그가 서로 어긋난다. '오늘 바로 30분'만 필수로 두면 오답 유도 위험이 있어 심사 조건을 추가했다. 이 사실은 seed 밖 FAQ에서 왔고, 충돌이 싫으면 DROP도 고려할 만하다.",
+   "searched": [
+    "법인",
+    "회사",
+    "심사",
+    "며칠",
+    "기간",
+    "당일",
+    "30분"
+   ],
+   "reviewerVerdict": "FIX",
+   "dropReason": "법인 당일 개통에 대해 FAQ끼리 모순(SUBSCRIBE-0059 당일 30분 vs SUBSCRIBE-0084·0104 심사 후 개통)이라 라벨이 어느 쪽이든 판정이 흔들린다(2026-10-17)"
+  },
+  {
+   "id": "P017",
+   "verdict": "OK",
+   "requiredFacts": [
+    "일시 정지는 기본료의 50%만 내고 번호를 유지할 수 있다",
+    "해지는 요금이 안 나가지만 번호와 계약이 없어진다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) TERMINATE-0096 답변과 일치. (b) 일시 정지 중 수신 가능 여부 답변 없음(정지 답변은 요금 50%·기간, 분실 정지는 '이용 정지'뿐).",
+   "searched": [
+    "정지+수신",
+    "정지+전화",
+    "정지+문자",
+    "이용 정지",
+    "일시 정지"
+   ]
+  },
+  {
+   "id": "P018",
+   "verdict": "OK",
+   "requiredFacts": [
+    "해지 후에도 원하면 할부를 그대로 나눠 낼 수 있다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) TERMINATE-0071 답변과 일치. (b) 할부금 납부를 가족 명의 카드로 바꾸는 답변 없음. 납부 수단 4종·변경 시점(BILLING-0012/0040)만 있고 명의 조건 언급 없음.",
+   "searched": [
+    "카드",
+    "납부 수단",
+    "자동이체",
+    "타인 명의",
+    "가족 명의",
+    "할부+카드/계좌"
+   ]
+  },
+  {
+   "id": "P019",
+   "verdict": "OK",
+   "requiredFacts": [
+    "본인 신분증이 있어야 한다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) USIM-0018 답변과 일치. (b) 모바일 신분증 언급 답변 없음. 참고: SUBSCRIBE-0001/0037 등이 개통 시 인정 신분증(주민등록증·운전면허증·여권)을 나열하지만 유심·모바일 신분증 답은 아니다.",
+   "searched": [
+    "모바일 신분증",
+    "실물",
+    "신분증 종류",
+    "주민등록증",
+    "운전면허"
+   ]
+  },
+  {
+   "id": "P020",
+   "verdict": "OK",
+   "requiredFacts": [
+    "본인이 가면 신분증만 있으면 된다",
+    "자녀를 보내면 위임장과 신분증 사본까지 챙겨야 한다"
+   ],
+   "answeringSlotIds": [],
+   "reason": "(a) USIM-0114 답변 '위임장이랑 사본까지'와 일치('신분증 사본' 표현은 USIM-0110/0098과도 맞음). (b) 위임장 양식·자필 답변 없음.",
+   "searched": [
+    "양식",
+    "서식",
+    "자필",
+    "손으로",
+    "위임장"
+   ]
+  }
+ ],
+ "outOfScope": [
+  {
+   "id": "O001",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O002",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O003",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O004",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "보호필름 부착 요령은 범위 밖. DEVICE-0072는 필름 부착이 교환 조건(사용 흔적)에 미치는 영향만 다루고 요령은 없다."
+  },
+  {
+   "id": "O005",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O006",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O007",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O008",
+   "verdict": "IN_SCOPE",
+   "answeringSlotIds": [
+    "DEVICE-0039",
+    "DEVICE-0059",
+    "DEVICE-0111",
+    "DEVICE-0119"
+   ],
+   "reason": "직접 교체해도 되는지는 FAQ에 없지만, 배터리 불량 수리 경로(제조사 서비스센터, 보험 시 자기부담 30%)가 DEVICE FAQ에 있어 단말 지원 범위 안이다. 봇이 서비스센터 수리를 안내하면 정답에 가까워 순수 범위 밖 항목으로 쓰기 어렵다. 범위 밖으로 남기려면 DROP 권장."
+  },
+  {
+   "id": "O009",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  },
+  {
+   "id": "O010",
+   "verdict": "OK",
+   "answeringSlotIds": [],
+   "reason": "단말 설정·타 서비스·개인 보안 문제로 통신사 고객지원 범위 밖이다. 카탈로그 검색에서 관련 답변 없음."
+  }
+ ],
+ "flowFaq": [
+  {
+   "id": "CF13",
+   "verdict": "OK",
+   "requiredFacts": [
+    "개통 후 14일이 지나 반품·교환이 어렵다고 안내한다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개통 후 14일 이내여야 반품·교환이 가능하다",
+    "미개봉이거나 사용 흔적이 없는 상태여야 한다",
+    "반품·교환은 1회에 한해 가능하다"
+   ],
+   "reason": "20일 경과로 14일 기준을 넘어 반품·교환 불가라는 사실은 DEVICE-0020/0028 등에 명시돼 있다. 직접 답 사실 3개도 목록 FAQ와 일치. 케이스 끼워 사용한 점(사용 흔적)도 불가 사유지만 필수로 둘 필요는 없다."
+  },
+  {
+   "id": "CF14",
+   "verdict": "OK",
+   "requiredFacts": [
+    "개통 후 14일 이내라 철회할 수 있다",
+    "철회하면 원래 통신사로 자동 복원된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개통 후 14일 이내면 철회할 수 있고 원래 통신사로 자동 복원된다",
+    "14일이 지났으면 철회가 아니라 새로 번호이동을 신청해야 한다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF15",
+   "verdict": "OK",
+   "requiredFacts": [
+    "납부 기한 후 15일이 지나면 발신이 정지된다",
+    "30일이 지나면 수신까지 정지된다",
+    "60일이 지나면 직권 해지될 수 있다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "납부 기한 후 15일이 지나면 발신이 정지된다",
+    "30일이 지나면 수신까지 정지된다",
+    "60일이 지나면 직권 해지될 수 있다"
+   ],
+   "reason": "모든 사실이 BILLING-0094/0045에 명시. 참고: 고객이 '기한을 모른다'고 했으니 납부 기한 매월 25일(BILLING-0016)이 도움이 되지만, 목록 FAQ에 없어 필수에 넣지 않았다."
+  },
+  {
+   "id": "CF16",
+   "verdict": "OK",
+   "requiredFacts": [
+    "단말 할부금이 없으므로 신용 심사 없이 명의변경이 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "단말 할부금이 없으면 신용 심사 없이 진행된다",
+    "할부금이 남아 있으면 양수인이 신용 심사를 통과해야 한다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF17",
+   "verdict": "OK",
+   "requiredFacts": [
+    "두 사람 모두 미성년자라 명의변경이 불가능하다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "양도인과 양수인이 모두 미성년자이면 명의변경이 불가능하다",
+    "넘기는 사람이 성인이면 미성년자에게 넘길 수 있다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF18",
+   "verdict": "OK",
+   "requiredFacts": [
+    "6일 일정이면 7일 기간권(39,000원)이 하루 9,900원인 일 단위보다 저렴하다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "하루씩 쓰면 일 단위 9,900원이다",
+    "일주일 정도면 7일 기간권 39,000원이다",
+    "데이터를 많이 쓰면 무제한이 하루 12,100원이다"
+   ],
+   "reason": "'6일이면 7일권이 더 싸다'는 ROAMING-0066/0076(며칠 이상이면 일주일권이 쌈)과 가격에서 바로 나온다. 직접 답 3개는 ROAMING-0021 답변 그대로."
+  },
+  {
+   "id": "CF19",
+   "verdict": "OK",
+   "requiredFacts": [
+    "매장에서 개통하면 30분 이내에 완료된다",
+    "온라인으로 신청하면 다음 날 개통된다",
+    "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "매장에서 개통하면 30분 이내에 완료된다",
+    "온라인으로 신청하면 다음 날 개통된다",
+    "개통 처리는 매일 09:00부터 20:00까지 진행된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF20",
+   "verdict": "OK",
+   "requiredFacts": [
+    "요금제 변경은 월 1회만 가능하다",
+    "이번 달에 이미 변경했으므로 다음 달에 변경할 수 있다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "요금제 변경은 월 1회만 가능하다",
+    "가입한 달에는 변경할 수 없다",
+    "변경하면 신청일 다음 날 00:00부터 적용된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF21",
+   "verdict": "OK",
+   "requiredFacts": [
+    "법인 명의는 개인 5회선 한도 대신 별도 심사를 거쳐 진행된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "개인(성인)은 1인당 최대 5회선까지 개통할 수 있다",
+    "법인 명의는 별도 심사를 거쳐 진행된다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF22",
+   "verdict": "OK",
+   "requiredFacts": [
+    "온라인으로 신청하면 택배로 2~3 영업일 안에 받는다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "매장을 방문하면 즉시 발급받을 수 있다",
+    "온라인으로 신청하면 택배로 2~3 영업일이 걸린다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  },
+  {
+   "id": "CF23",
+   "verdict": "OK",
+   "requiredFacts": [
+    "번호이동 처리는 09:00부터 20:00까지라 밤 10시 신청은 당일 처리되지 않는다",
+    "다음 날 09:00부터 처리되며 처리 시작 후 평균 2시간 이내에 완료된다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "번호이동 처리는 매일 09:00부터 20:00까지만 진행된다",
+    "처리 시간 안에 신청하면 평균 2시간 이내에 완료된다",
+    "20:00 이후 신청은 다음 날 09:00부터 처리된다"
+   ],
+   "reason": "PORTING-0053/0005/0049에 명시. '20:00 이후 신청은 다음 날 09:00부터 처리'는 PORTING-0005(20:00~09:00 처리 안 함)와 0053(09:00부터 시작)을 합친 표현이다."
+  },
+  {
+   "id": "CF24",
+   "verdict": "OK",
+   "requiredFacts": [
+    "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+    "소진 후 추가 요금은 없다",
+    "언리미티드 요금제는 속도 제한이 없다"
+   ],
+   "factsIfAnsweredDirectly": [
+    "일반 요금제는 기본 데이터를 다 쓰면 400kbps로 속도가 제한된다",
+    "소진 후 추가 요금은 없다",
+    "언리미티드 요금제는 속도 제한이 없다"
+   ],
+   "reason": "requiredFacts(답변 후 상황)와 factsIfAnsweredDirectly(전체 분기) 모두 목록 FAQ 답변에 명시돼 있고 질문 범위 안이다."
+  }
+ ],
+ "memberNoData": [
+  {
+   "id": "MD24",
+   "verdict": "FAQ_PARTLY",
+   "answeringSlotIds": [
+    "PORTING-0001",
+    "PORTING-0033",
+    "PORTING-0049",
+    "PORTING-0077",
+    "PORTING-0085"
+   ],
+   "reason": "개인 진행 상태 데이터는 없다. 다만 일반 처리 기준(매일 09:00~20:00 처리, 평균 2시간, 최대 24시간, 24시간이 지나면 고객센터 확인)은 FAQ에 있어 봇이 일반 정책으로 안내할 수 있다."
+  },
+  {
+   "id": "MD25",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "가족 결합 할인 정책 답변이 카탈로그에 없다('결합'은 PORTING-0050 번호이동, PLAN-0067 속도 제한에만 나옴)."
+  },
+  {
+   "id": "MD26",
+   "verdict": "FAQ_PARTLY",
+   "answeringSlotIds": [
+    "SERVICE-0050",
+    "SERVICE-0045",
+    "SERVICE-0060",
+    "BILLING-0128"
+   ],
+   "reason": "작년 청구액 데이터는 없다. 다만 요금납부확인서를 홈페이지에서 무료로 바로 발급받을 수 있고(최근 3년분), 청구 내역은 고객센터에서 확인해 준다는 경로가 FAQ에 있다."
+  },
+  {
+   "id": "MD27",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "로밍 사용량 조회 FAQ가 없다. ROAMING-0005/0020/0040은 '가입 상태' 조회만 안내하고 사용량은 아니다."
+  },
+  {
+   "id": "MD28",
+   "verdict": "NO_DATA_OK",
+   "answeringSlotIds": [],
+   "reason": "카탈로그에 '포인트'가 없다. SERVICE-0027은 등급 확인(앱·홈페이지)만 다루고 포인트 잔액은 아니다."
+  }
+ ],
+ "note": "별도 검수자가 FAQ 전체와 대조한 결과. P016은 검수자가 FIX로 봤지만 FAQ끼리 모순이라 빼기로 했다(reviewerVerdict에 원래 판정). flowFaq와 memberNoData는 흐름 평가셋 빌더가 flow_v1_sources/flows_v2_verified.json으로 읽는다."
+}
