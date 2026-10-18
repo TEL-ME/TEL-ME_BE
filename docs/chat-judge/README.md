@@ -169,4 +169,4 @@ python -X utf8 -m unittest discover -s scripts/chat_judge -p "test_*.py" -t .
 | [20261016-flows-v1](results/20261016-flows-v1/README.md) | 흐름 평가셋 v1 첫 캡처와 판정(드러난 앱 문제) |
 | [20261017-label-fixes](results/20261017-label-fixes/README.md) | 라벨 수정과 기준 보완 뒤 재판정. **가장 최근 수치** |
 | [20261017-situation-context](results/20261017-situation-context/README.md) | FAQ 질문 문장을 상황 맥락으로 넘기는 시험. 나빠지거나 같아서 되돌렸다 |
-| [20261018-answer-generation](results/20261018-answer-generation/README.md) | 답변 생성 모델(엑사원 vs gpt-oss) 채점. 13번 모델 결정 근거. 라벨 1차 사람 검토 반영, 판정 쟁점 검토 전 |
+| [20261018-answer-generation](results/20261018-answer-generation/README.md) | 답변 생성 모델(엑사원 vs gpt-oss) 채점과 사람 검토. 13번은 gpt-oss로 결정 |
