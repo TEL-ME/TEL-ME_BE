@@ -152,6 +152,10 @@ member:
     frontend-uri: ${FRONTEND_URL:http://localhost:3000}
 
 rag:
+  answer:
+    # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. 기본 꺼짐
+    # gpt-oss로 결정(TELME-180, docs/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
+    bedrock: ${RAG_ANSWER_BEDROCK:false}
   evidence-check:
     # 검색이 통과시킨 근거가 질문에 실제로 답하는지 LLM에 한 번 더 묻는다
     # 호출이 하나 늘어 응답이 느려진다. 측정 후 기본값을 정한다
@@ -197,9 +201,18 @@ telme:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
       # 조건 뽑기 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
       bedrock-extraction: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:false}
+    # 비교·FAQ 후보 근거 검증 gpt-oss(Bedrock) 사용(실패 시 엑사원 대체). 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK이고
+    # 호출마다 따로 끄면 엑사원이다. docs/EVIDENCE_RESOLVER_COMPARISON.md
+    evidence-resolver:
+      comparison-bedrock: ${CONSULT_COMPARISON_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
+      candidate-bedrock: ${CONSULT_CANDIDATE_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
+      # 후보 근거 검증에서 단어 검사 대신 고객 원문, 대상 낱말 규칙, 회색 구간 판정기로 확인한다(TELME-184)
+      candidate-judge: ${CONSULT_CANDIDATE_EVIDENCE_JUDGE:true}
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
+      # 분류를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. 기본 꺼짐
+      bedrock: ${CONSULT_PLAN_QUESTION_BEDROCK:false}
       # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
       answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:
@@ -220,6 +233,9 @@ telme:
     # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
     # 의도 분류를 gpt-oss로 바꾸면 끈다. 켜 두면 맞게 나뉜 질문을 다시 합친다(docs/ROUTING_CALL_COMPARISON.md 2단계)
     request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:true}
+    # 라우팅 호출 4개(의도 분류, 요청 개수 판정, 검색어 검증, 후속 분석)를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다.
+    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). 켤 때 위 요청 개수 판정은 false로 끈다. 기본 꺼짐
+    bedrock: ${ROUTING_BEDROCK:false}
 
 speech:
   tts:

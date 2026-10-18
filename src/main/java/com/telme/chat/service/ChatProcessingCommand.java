@@ -5,11 +5,17 @@ public record ChatProcessingCommand(
         Long sessionId,
         Long inputMessageId,
         String content,
-        ChatCoordinates coordinates
+        ChatCoordinates coordinates,
+        ChatResponseStopwatch stopwatch
 ) {
 
     public ChatProcessingCommand(Long executionId, Long sessionId, Long inputMessageId, String content) {
-        this(executionId, sessionId, inputMessageId, content, null);
+        this(executionId, sessionId, inputMessageId, content, null, null);
+    }
+
+    public ChatProcessingCommand(
+            Long executionId, Long sessionId, Long inputMessageId, String content, ChatCoordinates coordinates) {
+        this(executionId, sessionId, inputMessageId, content, coordinates, null);
     }
 
     @Override

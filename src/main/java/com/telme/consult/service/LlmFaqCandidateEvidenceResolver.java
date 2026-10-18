@@ -12,14 +12,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceResolver {
+    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 250이면 JSON이 끊긴 사례가 있다(docs/EVIDENCE_RESOLVER_COMPARISON.md)
+    private static final int MAX_OUTPUT_TOKENS = 512;
     private static final Pattern FAQ_ID = Pattern.compile("(?:ID\\s*)?(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUESTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]{2,}");
     private static final Set<String> QUESTION_FILLERS = Set.of(
@@ -36,9 +34,40 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
             애매하면 선택하지 마세요. JSON 객체만 출력하세요.
             {"answerable":false,"faqId":null,"quote":null}
             """;
+    // 복합 질문의 하위 질문은 라우팅이 나눈 조각이라 대상·조건이 빠질 수 있다. 고객 원문을 함께 주고 답할 부분을 지정한다
+    private static final String CONTEXT_RULE = """
+            고객 원문에는 여러 질문이 섞여 있을 수 있습니다. '이번에 답할 부분'에 답하는 FAQ만 고르세요.
+            이번에 답할 부분에 빠진 대상이나 조건은 고객 원문에서 찾아 판단하세요. 원문의 다른 질문에만 답하는 FAQ는 고르지 마세요.
+            """;
+
+    /**
+     * 판정 방식(TELME-184, docs/EVIDENCE_RESOLVER_COMPARISON.md). questionTermCheck: 질문 낱말이 FAQ 문답에 모두 있어야
+     * 통과(TELME-87). customerMessageContext: 고객 원문을 함께 넘긴다. verifier: 모델이 고른 FAQ를 한 번 더 확인한다(없으면 생략).
+     */
+    public record Options(boolean questionTermCheck, boolean customerMessageContext, CandidateVerifier verifier) {
+        public static final Options CURRENT = new Options(true, false, null);
+    }
+
+    // 모델이 고른 FAQ가 답할 부분에 실제로 답하는지 확인한다
+    @FunctionalInterface
+    public interface CandidateVerifier {
+        boolean answers(Long executionId, Long consultRequestId, String question, String customerMessage,
+                FaqSearchResponse candidate);
+    }
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
+    private final Options options;
+
+    public LlmFaqCandidateEvidenceResolver(LlmClient llmClient, ObjectMapper objectMapper) {
+        this(llmClient, objectMapper, Options.CURRENT);
+    }
+
+    public LlmFaqCandidateEvidenceResolver(LlmClient llmClient, ObjectMapper objectMapper, Options options) {
+        this.llmClient = llmClient;
+        this.objectMapper = objectMapper;
+        this.options = options;
+    }
 
     @Override
     public FaqSearchResponse resolve(Long executionId, String question, List<FaqSearchResponse> candidates) {
@@ -54,6 +83,23 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
     @Override
     public FaqSearchResponse resolve(Long executionId, Long consultRequestId, String question,
             List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
+        return resolve(executionId, consultRequestId, question, null, candidates, allowQuoteRepairFailure);
+    }
+
+    @Override
+    public FaqSearchResponse resolve(Long executionId, Long consultRequestId, String question, String customerMessage,
+            List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
+        FaqSearchResponse selected = select(executionId, consultRequestId, question, customerMessage, candidates,
+                allowQuoteRepairFailure);
+        if (selected == null || options.verifier() == null) {
+            return selected;
+        }
+        return options.verifier().answers(executionId, consultRequestId, question, customerMessage, selected)
+                ? selected : null;
+    }
+
+    private FaqSearchResponse select(Long executionId, Long consultRequestId, String question, String customerMessage,
+            List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
         if (candidates.isEmpty()) {
             return null;
         }
@@ -62,13 +108,19 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
             context.append("ID ").append(candidate.faqId()).append(" Q: ")
                     .append(candidate.question()).append("\nA: ").append(candidate.answer()).append('\n');
         }
+        boolean withMessage = options.customerMessageContext() && customerMessage != null
+                && !customerMessage.isBlank() && !customerMessage.strip().equals(question.strip());
+        String asked = withMessage
+                ? "고객 원문: " + customerMessage.strip() + "\n이번에 답할 부분: " + question
+                : "고객 질문: " + question;
         var request = LlmRequest.builder()
                 .executionId(executionId).taskType(TaskType.EVIDENCE_CHECK)
                 .consultRequestId(consultRequestId)
-                .systemPrompt(PROMPT)
-                .userPrompt("고객 질문: " + question + "\nFAQ 후보:\n" + context)
-                .format(ResponseFormat.JSON).temperature(0.0).maxTokens(250)
-                .contextCount(candidates.size()).promptVersion("faq-candidate-evidence-v2")
+                .systemPrompt(withMessage ? PROMPT + CONTEXT_RULE : PROMPT)
+                .userPrompt(asked + "\nFAQ 후보:\n" + context)
+                .format(ResponseFormat.JSON).temperature(0.0).maxTokens(MAX_OUTPUT_TOKENS)
+                .contextCount(candidates.size())
+                .promptVersion(withMessage ? "faq-candidate-evidence-v3" : "faq-candidate-evidence-v2")
                 .build();
         try {
             String output = llmClient.generate(request);
@@ -92,7 +144,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
             if (selected == null) {
                 return null;
             }
-            if (!coversQuestionTerms(question, selected)) {
+            if (options.questionTermCheck() && !coversQuestionTerms(question, selected)) {
                 return null;
             }
             if (hasExactQuote(response, selected)) {
@@ -105,9 +157,9 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
                     .systemPrompt("FAQ 답변(A)에서 고객 질문에 답하는 연속된 문구를 한 글자도 바꾸지 말고 "
                             + "복사하세요. 의역하거나 새 사실을 넣지 마세요. JSON만 출력하세요. "
                             + "{\"answerable\":false,\"faqId\":null,\"quote\":null}")
-                    .userPrompt("고객 질문: " + question + "\nID " + selected.faqId()
+                    .userPrompt(asked + "\nID " + selected.faqId()
                             + " Q: " + selected.question() + "\nA: " + selected.answer())
-                    .format(ResponseFormat.JSON).temperature(0.0).maxTokens(250)
+                    .format(ResponseFormat.JSON).temperature(0.0).maxTokens(MAX_OUTPUT_TOKENS)
                     .contextCount(1).promptVersion("faq-candidate-quote-retry-v2")
                     .build();
             String retryOutput = llmClient.generate(retry);
@@ -136,7 +188,8 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
         return quote.length() >= 8 && candidate.answer().contains(quote);
     }
 
-    private boolean coversQuestionTerms(String question, FaqSearchResponse candidate) {
+    // 질문 낱말이 FAQ 문답에 모두 있어야 통과(TELME-87). 후보 판정기가 실패했을 때도 이 검사로 돌아간다
+    public static boolean coversQuestionTerms(String question, FaqSearchResponse candidate) {
         String source = (candidate.question() + candidate.answer())
                 .replaceAll("\\s+", "").toLowerCase(java.util.Locale.ROOT);
         Matcher words = QUESTION_WORD.matcher(question);

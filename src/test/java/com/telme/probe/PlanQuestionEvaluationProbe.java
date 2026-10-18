@@ -65,7 +65,7 @@ class PlanQuestionEvaluationProbe {
     private void score(String name, List<Case> cases) {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
-                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true));
+                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
         System.out.println("EVAL|" + name + "|" + PlanQuestionPromptTemplates.PROMPT_VERSION);
 
         Map<PlanQuestionType, int[]> perType = new LinkedHashMap<>();
@@ -94,7 +94,7 @@ class PlanQuestionEvaluationProbe {
     void 기존_FAQ_질문을_요금제_질문으로_가져가는지_확인한다() throws Exception {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
-                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true));
+                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
         JsonNode faqs = new ObjectMapper().readTree(new File("scripts/data/faq_full_1150.json"));
 
         int captured = 0;

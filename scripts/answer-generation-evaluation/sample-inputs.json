@@ -1,0 +1,38 @@
+[
+  {
+    "id": "sample-price",
+    "userQuery": "유심 재발급 비용이 얼마예요?",
+    "searchResults": [
+      {"faqId": 1, "slotId": "USIM-0001", "category": "유심", "question": "유심 재발급 비용은 얼마인가요?",
+       "answer": "유심 재발급 비용은 7,700원입니다. 매장에서는 즉시 발급됩니다.", "score": 0.93}
+    ]
+  },
+  {
+    "id": "sample-time-limit",
+    "userQuery": "저녁 8시에 개통 접수 되나요?",
+    "searchResults": [
+      {"faqId": 2, "slotId": "SUBSCRIBE-0001", "category": "가입", "question": "개통 접수 가능 시간이 어떻게 되나요?",
+       "answer": "개통 접수는 19:30까지 가능합니다. 19:30 이후에는 접수가 불가합니다.", "score": 0.9}
+    ]
+  },
+  {
+    "id": "sample-no-evidence",
+    "userQuery": "오늘 서울 날씨 알려줘",
+    "searchResults": []
+  },
+  {
+    "id": "sample-condition-history",
+    "userQuery": "그럼 위약금은요?",
+    "resolvedQuery": "로밍 해지하면 위약금은 얼마예요?",
+    "conditions": {"서비스": "해외 로밍"},
+    "conditionLabels": {"서비스": "어떤 서비스인가요?"},
+    "history": [
+      {"role": "USER", "content": "해외 로밍을 해지하고 싶어요"},
+      {"role": "ASSISTANT", "content": "로밍 해지는 고객센터나 앱에서 신청할 수 있어요."}
+    ],
+    "searchResults": [
+      {"faqId": 3, "slotId": "ROAMING-0001", "category": "로밍", "question": "로밍 해지 시 위약금이 있나요?",
+       "answer": "로밍 요금제는 약정이 없어 해지해도 위약금이 없습니다.", "score": 0.88}
+    ]
+  }
+]

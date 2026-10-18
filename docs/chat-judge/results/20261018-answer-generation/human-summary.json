@@ -1,0 +1,94 @@
+{
+ "A": {
+  "reviewedContested": 27,
+  "judgeVsHuman": {
+   "exaone|anyFail|Judge 미확정": 4,
+   "exaone|anyFail|Judge 실패, 사람 통과": 5,
+   "exaone|anyFail|일치": 4,
+   "exaone|majority|Judge 미확정": 2,
+   "exaone|majority|Judge 실패, 사람 통과": 2,
+   "exaone|majority|Judge 통과, 사람 실패": 2,
+   "exaone|majority|일치": 7,
+   "gptoss|anyFail|Judge 미확정": 5,
+   "gptoss|anyFail|Judge 실패, 사람 통과": 8,
+   "gptoss|anyFail|일치": 1,
+   "gptoss|majority|Judge 미확정": 2,
+   "gptoss|majority|Judge 실패, 사람 통과": 2,
+   "gptoss|majority|일치": 10
+  }
+ },
+ "B": {
+  "reviewedContested": 82,
+  "judgeVsHuman": {
+   "exaone|anyFail|Judge 미확정": 17,
+   "exaone|anyFail|Judge 실패, 사람 통과": 5,
+   "exaone|anyFail|일치": 11,
+   "exaone|majority|Judge 미확정": 6,
+   "exaone|majority|Judge 통과, 사람 실패": 5,
+   "exaone|majority|일치": 22,
+   "gptoss|anyFail|Judge 미확정": 40,
+   "gptoss|anyFail|Judge 실패, 사람 통과": 9,
+   "gptoss|majority|Judge 미확정": 2,
+   "gptoss|majority|Judge 실패, 사람 통과": 4,
+   "gptoss|majority|일치": 43
+  },
+  "rates": {
+   "anyFail|exaone-r1": {
+    "pass": 88,
+    "decided": 131,
+    "undecided": 0,
+    "pct": 67.2,
+    "contestedNotReviewed": 17
+   },
+   "anyFail|gptoss-r1": {
+    "pass": 101,
+    "decided": 131,
+    "undecided": 0,
+    "pct": 77.1,
+    "contestedNotReviewed": 13
+   },
+   "anyFail|gptoss-r2": {
+    "pass": 99,
+    "decided": 131,
+    "undecided": 0,
+    "pct": 75.6,
+    "contestedNotReviewed": 12
+   },
+   "anyFail|gptoss-r3": {
+    "pass": 100,
+    "decided": 131,
+    "undecided": 0,
+    "pct": 76.3,
+    "contestedNotReviewed": 14
+   },
+   "majority|exaone-r1": {
+    "pass": 94,
+    "decided": 128,
+    "undecided": 3,
+    "pct": 73.4,
+    "contestedNotReviewed": 17
+   },
+   "majority|gptoss-r1": {
+    "pass": 105,
+    "decided": 130,
+    "undecided": 1,
+    "pct": 80.8,
+    "contestedNotReviewed": 13
+   },
+   "majority|gptoss-r2": {
+    "pass": 103,
+    "decided": 130,
+    "undecided": 1,
+    "pct": 79.2,
+    "contestedNotReviewed": 12
+   },
+   "majority|gptoss-r3": {
+    "pass": 105,
+    "decided": 130,
+    "undecided": 1,
+    "pct": 80.8,
+    "contestedNotReviewed": 14
+   }
+  }
+ }
+}

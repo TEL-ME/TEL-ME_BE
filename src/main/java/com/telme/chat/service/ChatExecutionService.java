@@ -32,6 +32,7 @@ public class ChatExecutionService {
     private final ApplicationEventPublisher eventPublisher;
     private final ChatOutputGuard outputGuard;
     private final ChatInputMaskRepository inputMasks;
+    private final ChatResponseTimer responseTimer;
 
     public ChatExecutionState startAnswer(Long executionId) {
         ChatExecution execution = getRunningExecution(executionId);
@@ -64,7 +65,7 @@ public class ChatExecutionService {
         String stores = chatMessageConverter.toJson(answer.storeResults());
         String searchContext = chatMessageConverter.toContextJson(answer.storeSearchContext());
         verifyOutput(() -> outputGuard.verifySerialized(answer.content(), followUps, stores, searchContext, masks));
-        Instant completedAt = Instant.now();
+        Ending ending = end(execution);
 
         ChatMessage message = outputMessage(session, execution, answer.messageType());
         message.complete(
@@ -74,11 +75,11 @@ public class ChatExecutionService {
                 followUps,
                 stores,
                 searchContext,
-                completedAt
+                ending.at()
         );
-        execution.complete(message, completedAt);
+        execution.complete(message, ending.at(), ending.totalMs());
         if (!preserveConsultation) session.resume();
-        session.touch(completedAt);
+        session.touch(ending.at());
         ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
@@ -100,16 +101,16 @@ public class ChatExecutionService {
         OutputMaskContext masks = readMasks(execution,
                 () -> outputGuard.needsClarificationMaskContext(question, options));
         verifyOutput(() -> outputGuard.verifyClarification(question, options, masks));
-        Instant completedAt = Instant.now();
+        Ending ending = end(execution);
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.CLARIFICATION);
         // 선택지가 있으면 후속 질문 자리에 실어 보낸다. 화면이 버튼으로 그려 눌러서 답할 수 있다
         String followUps = options == null || options.isEmpty() ? null : chatMessageConverter.toJson(options);
         verifyOutput(() -> outputGuard.verifySerializedClarification(question, followUps, masks));
-        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, followUps, null, completedAt);
-        execution.complete(message, completedAt);
+        message.complete(ChatMessage.MessageType.CLARIFICATION, question, null, followUps, null, ending.at());
+        execution.complete(message, ending.at(), ending.totalMs());
         session.waitForClarification();
-        session.touch(completedAt);
+        session.touch(ending.at());
         ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
@@ -121,10 +122,10 @@ public class ChatExecutionService {
             throw new GeneralException(ChatErrorCode.ANSWER_ALREADY_STARTED);
         }
         ChatSession session = lockSession(execution);
-        Instant endedAt = Instant.now();
+        Ending ending = end(execution);
 
-        execution.completeWithoutOutput(endedAt);
-        session.touch(endedAt);
+        execution.completeWithoutOutput(ending.at(), ending.totalMs());
+        session.touch(ending.at());
         chatExecutionRepository.flush();
         ChatExecutionState state = ChatExecutionState.of(execution);
         requestPostProcessing(execution, execution.getInputMessage().getSequenceNo());
@@ -134,17 +135,30 @@ public class ChatExecutionService {
     public ChatExecutionState fail(Long executionId, ChatFailure failure) {
         ChatExecution execution = getRunningExecution(executionId);
         ChatSession session = lockSession(execution);
-        Instant endedAt = Instant.now();
+        Ending ending = end(execution);
 
         ChatMessage message = outputMessage(session, execution, ChatMessage.MessageType.ERROR);
         if (failure.isOutputSafetyFailure()) {
             // 안전 안내만 남긴다. 차단 후보·근거·추천 질문을 정상 답변 이력으로 저장하지 않는다.
-            message.complete(ChatMessage.MessageType.ERROR, failure.message(), null, null, null, endedAt);
+            message.complete(ChatMessage.MessageType.ERROR, failure.message(), null, null, null, ending.at());
         }
-        message.fail(failure.status(), endedAt);
-        execution.fail(failure.executionStatus(), failure.errorCode(), message, endedAt);
-        session.touch(endedAt);
+        message.fail(failure.status(), ending.at());
+        execution.fail(failure.executionStatus(), failure.errorCode(), message, ending.at(), ending.totalMs());
+        session.touch(ending.at());
         return flushed(execution);
+    }
+
+    private record Ending(Instant at, Integer totalMs) {
+    }
+
+    // 종료 시각과 처리 시간은 결과를 실행에 기록하는 이 지점에서 함께 잰다.
+    // 처리 시간은 같은 트랜잭션의 남은 상담 상태 저장·커밋과 그 뒤 SSE 전송을 포함하지 않는다.
+    // 종료 시각은 started_at·단계 기록 시각과 같은 DB 시계로 남겨, 처리 이력에서 시작·단계·종료 순서가 뒤집히지 않게 한다.
+    // 시간 계산은 이 시각이 아니라 total_ms로 한다.
+    private Ending end(ChatExecution execution) {
+        return new Ending(
+                chatExecutionRepository.currentDatabaseTime(),
+                responseTimer.findElapsedMillis(execution.getExecutionId()));
     }
 
     private OutputMaskContext readMasks(ChatExecution execution, BooleanSupplier needed) {

@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage.AnswerBasis;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
+import com.telme.rag.config.RagAnswerLlmConfiguration;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
@@ -17,6 +18,7 @@ import com.telme.chat.service.ExecutionTrace;
 import com.telme.chat.service.ChatTokenEstimator;
 import com.telme.llm.config.LlmProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +36,10 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final ExecutionTrace trace;
     private final int contextSize;
 
+    // 모델은 RagAnswerLlmConfiguration이 고른다(rag.answer.bedrock)
     @Autowired
-    public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+    public RagAnswerGenerator(@Qualifier(RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT) LlmClient client,
+            AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
             LlmProperties properties) {
         this(client, converter, guard, checker, recorder, trace, properties.contextSize());

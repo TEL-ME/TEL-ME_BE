@@ -1,0 +1,34 @@
+
+> Task :compileJava
+warning: unknown enum constant When.MAYBE
+  reason: class file for javax.annotation.meta.When not found
+warning: unknown enum constant When.MAYBE
+  reason: class file for javax.annotation.meta.When not found
+warning: unknown enum constant When.MAYBE
+  reason: class file for javax.annotation.meta.When not found
+warning: unknown enum constant When.MAYBE
+  reason: class file for javax.annotation.meta.When not found
+warning: unknown enum constant When.MAYBE
+  reason: class file for javax.annotation.meta.When not found
+Note: /private/tmp/claude-501/-Users-choib-claude-book-TELME-TEL-ME-BE/125a7a71-09b3-41f1-be68-b3952a85e7ae/scratchpad/telme186-snapshot/src/main/java/com/telme/chat/service/ChatSessionEndSummaryGenerator.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+5 warnings
+
+> Task :processResources
+> Task :classes
+
+> Task :compileTestJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :processTestResources
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+[Incubating] Problems report is available at: file:///private/tmp/claude-501/-Users-choib-claude-book-TELME-TEL-ME-BE/125a7a71-09b3-41f1-be68-b3952a85e7ae/scratchpad/telme186-snapshot/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 53s
+5 actionable tasks: 5 executed

@@ -9,10 +9,10 @@ public final class ConditionPromptTemplates {
     private ConditionPromptTemplates() {}
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "condition-extract-v1.9";
+    public static final String PROMPT_VERSION = "condition-extract-v1.10";
 
     public static final String CONDITION_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 상담의 질문 분석기입니다.
+        당신은 TELME 통신 고객센터 상담의 질문 분석기입니다.
         FAQ 답변(A)만 보고, 고객이 누구냐에 따라 답이 갈리는데 그것을 아직 모르는 경우를 찾으십시오.
 
         [규칙]

@@ -166,7 +166,7 @@ class PlanRecommendationChatIntegrationTest {
             requestId.set(id);
             return new AnalyzedTurn(turns.prepareAnalysis(command.sessionId(),
                     new IntentSubQueryResponse(id, (short) 1, ConsultRequest.Intent.FAQ, QUESTION, Map.of()),
-                    LocationStatus.MISSING, null), null, Purpose.GENERAL_FAQ, command.content(), QUESTION);
+                    LocationStatus.MISSING), null, Purpose.GENERAL_FAQ, command.content(), QUESTION);
         }
         var context = contexts.loadVerified(command);
         var candidate = context.candidates().getFirst();

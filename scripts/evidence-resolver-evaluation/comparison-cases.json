@@ -1,0 +1,148 @@
+{
+  "description": "비교 근거 검증 비교용 질문 19개. CMP-001~014와 기존 180건의 비교 표현 3개, 연결 표현 2개(나머지 2개는 CMP-005·010과 같아 제외). goldFaqIds는 ForcedEvidenceComparisonProbe의 고정 근거, 없는 항목은 정답을 정하지 않았다",
+  "cases": [
+    {
+      "id": "CMP-001",
+      "question": "5G와 LTE 요금제 종류를 비교해줘",
+      "goldFaqIds": [
+        117
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-002",
+      "question": "너겟 5G 요금제와 LTE 요금제의 데이터 제공량 차이를 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-003",
+      "question": "월 5만 원대 요금제에서 데이터와 속도 제한 조건을 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-004",
+      "question": "eSIM과 유심의 개통 절차를 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-005",
+      "question": "명의 변경과 번호 이동의 필요 서류를 비교해줘",
+      "goldFaqIds": [
+        65,
+        125
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-006",
+      "question": "선택약정과 공시지원금 할인 차이를 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-007",
+      "question": "해외 로밍 패스와 데이터 로밍 종량제의 요금 및 제공량을 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-008",
+      "question": "일반 요금제와 청소년 요금제의 가입 조건을 비교해줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-009",
+      "question": "인터넷 결합 할인과 가족 결합 할인 차이를 비교해서 알려줘",
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-010",
+      "question": "분실 신고와 일시 정지의 차이와 이용 제한을 비교해줘",
+      "goldFaqIds": [
+        45,
+        637
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-011",
+      "question": "물리 유심 재발급과 eSIM 발급 비용을 비교해줘",
+      "goldFaqIds": [
+        297
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-012",
+      "question": "청소년 요금제와 시니어 요금제의 가입 연령을 비교해줘",
+      "goldFaqIds": [
+        121
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-013",
+      "question": "5G 라이트와 LTE 플러스의 월 요금과 데이터 제공량을 비교해줘",
+      "goldFaqIds": [
+        1001
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "CMP-014",
+      "question": "일시 정지와 해지의 요금 차이를 비교해줘",
+      "goldFaqIds": [
+        697
+      ],
+      "source": "ComparisonPolicyProbe"
+    },
+    {
+      "id": "EVAL-023",
+      "question": "한도 초과 후 본인 인증을 하는 것과 그냥 두는 것의 차이가 뭔가요?",
+      "goldSlotIds": [
+        "ROAMING-0078"
+      ],
+      "type": "SIMILAR",
+      "source": "eval_questions_180_multigold"
+    },
+    {
+      "id": "EVAL-109",
+      "question": "알뜰폰 업체별 요금을 비교해 주세요",
+      "goldSlotIds": [],
+      "type": "UNRELATED",
+      "source": "eval_questions_180_multigold"
+    },
+    {
+      "id": "EVAL-155",
+      "question": "하루 9,900원짜리랑 12,100원짜리 차이가 뭐예요?",
+      "goldSlotIds": [
+        "ROAMING-0001",
+        "ROAMING-0011",
+        "ROAMING-0016",
+        "ROAMING-0021",
+        "ROAMING-0026",
+        "ROAMING-0046",
+        "ROAMING-0051",
+        "ROAMING-0056",
+        "ROAMING-0061",
+        "ROAMING-0066",
+        "ROAMING-0071"
+      ],
+      "type": "ANSWER",
+      "source": "eval_questions_180_multigold"
+    },
+    {
+      "id": "LINK-001",
+      "question": "청소년 요금제하고 시니어 요금제 차이가 뭐야",
+      "goldFaqIds": [
+        121
+      ],
+      "source": "comparison-evidence-v3 connector_cases"
+    },
+    {
+      "id": "LINK-002",
+      "question": "청소년 요금제하고 시니어 요금제의 가격 차이가 뭐야",
+      "goldFaqIds": [],
+      "note": "가격 근거가 없어 보류가 맞다",
+      "source": "comparison-evidence-v3 connector_cases"
+    }
+  ]
+}

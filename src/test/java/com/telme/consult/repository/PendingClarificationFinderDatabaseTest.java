@@ -14,7 +14,7 @@ class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
     private long ask(long rid) {
         long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
         var decision =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 new com.telme.consult.dto.DialogueInput(
                                         rid,
