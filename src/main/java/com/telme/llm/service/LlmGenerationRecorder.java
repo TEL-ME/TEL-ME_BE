@@ -95,7 +95,7 @@ public class LlmGenerationRecorder {
             int attempt, Status status, Integer firstTokenMs, Integer totalMs, String errorMessage) {
 
         public static Result success(int attempt, Integer firstTokenMs, long totalMs) {
-            return new Result(attempt, Status.SUCCESS, firstTokenMs, (int) totalMs, null);
+            return new Result(attempt, Status.SUCCESS, firstTokenMs, recordableMillis(totalMs), null);
         }
 
         // 근거가 없어 LLM을 호출하지 않은 경우
@@ -104,7 +104,12 @@ public class LlmGenerationRecorder {
         }
 
         public static Result failure(int attempt, Throwable error, Integer firstTokenMs, long totalMs) {
-            return new Result(attempt, toStatus(error), firstTokenMs, (int) totalMs, error.getMessage());
+            return new Result(attempt, toStatus(error), firstTokenMs, recordableMillis(totalMs), error.getMessage());
+        }
+
+        // INTEGER 범위를 넘는 시간은 음수로 넘치거나 최대값으로 왜곡하지 않고 측정 불가로 남긴다.
+        static Integer recordableMillis(long elapsedMs) {
+            return elapsedMs < 0 || elapsedMs > Integer.MAX_VALUE ? null : (int) elapsedMs;
         }
 
         private static Status toStatus(Throwable error) {

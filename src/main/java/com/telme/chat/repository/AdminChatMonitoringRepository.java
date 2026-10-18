@@ -19,7 +19,7 @@ public class AdminChatMonitoringRepository {
     private static final String SELECT = """
             SELECT m.message_id, m.message_type, m.session_id, m.content, m.created_at AS message_created_at,
                    s.user_id, u.name AS user_name, s.guest_id::text AS guest_id,
-                   e.execution_id, e.status AS execution_status, e.started_at, e.ended_at, e.error_code,
+                   e.execution_id, e.status AS execution_status, e.started_at, e.ended_at, e.total_ms, e.error_code,
                    o.message_type AS answer_type, o.answer_basis, r.intent,
                    (SELECT string_agg(DISTINCT a, ',') FROM chat_input_guard_events g
                         CROSS JOIN LATERAL jsonb_array_elements_text(g.actions) a

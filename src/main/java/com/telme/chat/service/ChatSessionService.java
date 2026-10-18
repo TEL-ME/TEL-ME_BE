@@ -169,6 +169,17 @@ public class ChatSessionService {
             Long sessionId,
             ChatMessageSendRequest request
     ) {
+        return sendMessage(actor, sessionId, request, ChatResponseStopwatch.start());
+    }
+
+    // stopwatch는 접수 요청에서 시작한 처리 시간 측정값이다. 처리 명령에 실어 비동기 작업까지 넘긴다.
+    @Transactional
+    public ChatMessageSendResponse sendMessage(
+            ChatActor actor,
+            Long sessionId,
+            ChatMessageSendRequest request,
+            ChatResponseStopwatch stopwatch
+    ) {
         ChatCoordinates coordinates = ChatCoordinates.optional(request.latitude(), request.longitude());
         ChatSession session = getOwnedSessionForUpdate(actor, sessionId);
         if (session.getStatus() == ChatSession.Status.CLOSED) {
@@ -214,8 +225,8 @@ public class ChatSessionService {
                 .build());
 
         session.touch(completedAt);
-        eventPublisher.publishEvent(new ChatProcessingCommand(
-                execution.getExecutionId(), sessionId, message.getMessageId(), message.getContent(), coordinates));
+        eventPublisher.publishEvent(new ChatProcessingCommand(execution.getExecutionId(), sessionId,
+                message.getMessageId(), message.getContent(), coordinates, stopwatch));
         ChatMessageSendResponse response = chatMessageConverter.toSendResponse(message, execution);
         if (guarded.notice() != null) {
             response = response.withInputGuard(guarded.notice());

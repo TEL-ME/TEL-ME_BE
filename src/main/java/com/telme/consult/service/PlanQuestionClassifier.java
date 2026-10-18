@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.config.PlanQuestionConfiguration;
 import com.telme.consult.config.PlanQuestionProperties;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
@@ -10,22 +11,30 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 // LLM 분류가 기본이고, 꺼져 있거나 분류하지 못했을 때만 규칙 분류를 쓴다
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class PlanQuestionClassifier {
 
-    private static final int MAX_TOKENS = 30;
+    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 쓴다. 엑사원은 스키마로 답만 내서 한도와 관계없이 짧다
+    private static final int MAX_TOKENS = 512;
     private static final Pattern RELATED = Pattern.compile("요금|플랜|데이터|통화|문자|사용량|약정|위약금|해지|가입|추천|5G|LTE|스탠다드|프리미엄|라이트|베이직|언리미티드|알뜰|청소년|시니어|갈아|바꾸|저렴|싼");
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
     private final PlanQuestionProperties properties;
+
+    // 분류 모델은 PlanQuestionConfiguration이 고른다(telme.consult.plan-question.bedrock)
+    public PlanQuestionClassifier(@Qualifier(PlanQuestionConfiguration.PLAN_QUESTION_LLM_CLIENT) LlmClient llmClient,
+            ObjectMapper objectMapper, PlanQuestionProperties properties) {
+        this.llmClient = llmClient;
+        this.objectMapper = objectMapper;
+        this.properties = properties;
+    }
 
     public PlanQuestionType classify(Long executionId, String question) {
         if (question == null || question.isBlank()) {

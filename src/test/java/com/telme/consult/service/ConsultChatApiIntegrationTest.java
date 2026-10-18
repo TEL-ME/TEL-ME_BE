@@ -413,7 +413,7 @@ class ConsultChatApiIntegrationTest {
                                     // 업무를 말한 질문으로 보아 지역만 되묻는다
                                     Map.of("serviceType", "USIM_REISSUE")),
                             command.coordinates() == null ? LocationStatus.MISSING
-                                    : LocationStatus.COORDINATES_AVAILABLE, null),
+                                    : LocationStatus.COORDINATES_AVAILABLE),
                     null,
                     Purpose.NEARBY_STORE,
                     command.content(),

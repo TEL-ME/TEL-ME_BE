@@ -62,7 +62,8 @@
 ## 설정과 기록
 
 - 모드는 `chat.question-resolution.mode`(환경 변수 `CHAT_QUESTION_RESOLUTION_MODE`)로 선택하며 기본값은 `REGEX_GATED`다.
-- 흔들림 보완은 `chat.question-resolution.stability-guards`(환경 변수 `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS`)로 켜며 기본값은 `false`다. 아래 TELME-165 2차의 코드 규칙 네 가지를 함께 켠다. EXAONE에서는 켜도 결과가 같아 지금은 끄고, 문맥 판정을 gpt-oss(Bedrock)로 바꿀 때 켠다.
+- 흔들림 보완은 `chat.question-resolution.stability-guards`(환경 변수 `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS`)로 켜며 기본값은 `false`다. 아래 TELME-165 2차의 코드 규칙 네 가지를 함께 켠다. EXAONE에서는 켜도 결과가 같아 지금은 끈다.
+- 문맥 판정 모델은 `chat.question-resolution.bedrock`(환경 변수 `CHAT_QUESTION_RESOLUTION_BEDROCK`, 기본 `false`)으로 고른다. 켜면 두 모델 호출을 gpt-oss(Bedrock)로 부르고, 호출이 실패하거나 Bedrock이 꺼져 있으면 엑사원으로 대체한다. 흔들림 보완은 이 값을 켜면 `stability-guards`와 관계없이 켜진다(TELME-182). 이 문서의 측정 결과로 gpt-oss로 정했다.
 - 두 모델 호출은 `CONTEXT_RESOLUTION` 작업으로 기록하고 프롬프트 버전은 `context-v32-reference`, `context-v32-sources`다. 기록 테이블의 30자 제한에 맞춰 각각 21자·19자로 관리한다.
 - 현재 대상 판정 출력은 512토큰, 이전 발언 분석 출력은 `max(512, min(2048, 128 + 64 × 출처 수))`다. 플래그와 관계없이 적용한다. gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서, 한도가 64였을 때 앱의 Bedrock 클라이언트로는 현재 대상 판정 응답의 16%가 비거나 잘렸다. temperature는 0이고, 두 요청이 사고 모드 끄기를 지정해 Qwen3와 EXAONE 4.0에서는 사고 모드를 끈다.
 - 실행 trace의 `questionResolution`에 최종 관계와 실제 출처 ID를, `questionResolutionEvidence`에 분석 결과, 판정 주체(`referenceSource`: `RULE` 또는 `MODEL`), 순서 번호와 실제 ID의 대응을 남긴다.
