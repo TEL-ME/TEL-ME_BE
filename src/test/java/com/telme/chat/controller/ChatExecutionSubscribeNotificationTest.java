@@ -1,9 +1,11 @@
 package com.telme.chat.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -93,6 +95,18 @@ class ChatExecutionSubscribeNotificationTest {
 
         controller.subscribe(request, SESSION_ID, EXECUTION_ID);
         verify(notifications).dismissDelivered(EXECUTION_ID);
+    }
+
+    @Test
+    @DisplayName("결과를 보낸 뒤 알림 삭제가 실패해도 구독 응답은 정상으로 돌려준다")
+    void 알림_삭제_실패는_구독을_막지_않는다() {
+        when(actors.getCurrentActor(request)).thenReturn(actor);
+        when(sessions.getExecution(actor, EXECUTION_ID)).thenReturn(state(ChatExecution.Status.COMPLETED));
+        when(emitters.sendTerminalNow(any(), eq("complete"), any())).thenReturn(true);
+        doThrow(new IllegalStateException("db down")).when(notifications).dismissDelivered(EXECUTION_ID);
+
+        assertThat(controller.subscribe(request, SESSION_ID, EXECUTION_ID)).isNotNull();
+        verify(emitters).markDeliveredLate(EXECUTION_ID);
     }
 
     private static ChatExecutionState state(ChatExecution.Status status) {

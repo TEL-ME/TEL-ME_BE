@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.function.BooleanSupplier;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
@@ -36,6 +37,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 // SSE 엔드포인트는 SseEmitter를 직접 반환해야 하므로 기존 API의 공통 응답 컨벤션을 따르기 어렵습니다.
 // 따라서 다른 API들과 섞이지 않도록 독립된 컨트롤러로 분리하여 관리합니다.
+@Slf4j
 @Tag(name = "Chat Execution", description = "AI 응답 실행 구독")
 @RestController
 @RequiredArgsConstructor
@@ -121,9 +123,18 @@ public class ChatExecutionController {
         emitterRegistry.withTerminalLock(executionId, () -> {
             if (send.getAsBoolean()) {
                 emitterRegistry.markDeliveredLate(executionId);
-                notifications.ifAvailable(service -> service.dismissDelivered(executionId));
+                dismissQuietly(executionId);
             }
         });
+    }
+
+    // 알림 삭제 실패가 이미 보낸 결과의 응답을 오류로 바꾸지 않게 한다. 실패하면 서버 알림이 남을 뿐이다
+    private void dismissQuietly(Long executionId) {
+        try {
+            notifications.ifAvailable(service -> service.dismissDelivered(executionId));
+        } catch (RuntimeException exception) {
+            log.warn("늦은 구독 알림 삭제 실패: executionId={}", executionId, exception);
+        }
     }
 
     private long timeoutMillis() {
