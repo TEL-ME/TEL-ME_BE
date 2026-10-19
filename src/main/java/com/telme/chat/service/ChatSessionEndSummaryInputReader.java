@@ -45,7 +45,7 @@ class ChatSessionEndSummaryInputReader {
         }
         var requests = jdbc.query("""
                 SELECT consult_request_id, origin_message_id, subquery_order, query_text, status,
-                    answer_outcome, answer_text, answer_message_id, display_question
+                    answer_outcome, answer_text, answer_message_id, display_question, intent
                 FROM consult_requests WHERE session_id=? ORDER BY origin_message_id, subquery_order
                 """, (rs, n) -> new ChatEndSummaryData.Request(rs.getLong("origin_message_id"),
                         rs.getInt("subquery_order"), safe(rs.getString("query_text"), maskSources),
@@ -54,7 +54,7 @@ class ChatSessionEndSummaryInputReader {
                         rs.getString("answer_text") == null ? null : safe(rs.getString("answer_text"), maskSources),
                         (Long) rs.getObject("answer_message_id"),
                         rs.getString("display_question") == null ? null
-                                : safe(rs.getString("display_question"), maskSources)),
+                                : safe(rs.getString("display_question"), maskSources), rs.getString("intent")),
                 sessionId);
         boolean recorded = requests.stream().anyMatch(request -> request.outcome() != null);
         Set<Long> social = new HashSet<>();
@@ -81,10 +81,10 @@ class ChatSessionEndSummaryInputReader {
             // 기본 대화(인사·감사·정체 질문 등)는 서버 고정 문구로만 답한다. 질문이 섞이면 고정 문구가 아닌 답이 나간다
             boolean greeting = (ChatContextFormatter.isSocial(message.content()) || !replies.isEmpty())
                     && replies.stream().allMatch(reply -> isFixedSocial(reply.content()));
-            // 결과를 기록한 상담과 상담 요청이 하나도 없는 상담(기록할 하위 질문이 없음)에서는 상담 요청 없이 범위 밖
-            // 안내만 받은 발화(잡담·인사)를 문의로 보지 않는다. 실시간 경로가 통신 질문을 범위 밖으로 잘못 처리한
-            // 경우도 빠지므로 그런 오분류는 실시간 쪽에서 고친다
-            boolean outOfScope = (recorded || requests.isEmpty()) && !replies.isEmpty()
+            // 상담 요청이 하나도 없는 상담에서 범위 밖 안내만 받은 발화(잡담·인사)는 요약하지 않는다. 결과를 기록한
+            // 상담에서는 입력에 남겨 정정 맥락("아 5일 아니고 10일이요"가 범위 밖으로 처리된 경우)을 모델이 보게 하되,
+            // 남은 사항·주제·안내로는 쓰지 않는다(recordedPending, topicSources, recordedGuidanceQuotes)
+            boolean outOfScope = requests.isEmpty() && !replies.isEmpty()
                     && replies.stream().allMatch(reply -> "OUT_OF_SCOPE".equals(reply.basis()));
             if (greeting || outOfScope) {
                 social.add(message.id());

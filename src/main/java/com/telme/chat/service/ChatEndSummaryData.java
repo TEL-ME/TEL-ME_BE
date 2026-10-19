@@ -17,12 +17,12 @@ final class ChatEndSummaryData {
             String content, String basis, String executionStatus) {}
 
     /**
-     * outcome·answerText·answerMessageId·displayQuestion은 실시간 경로가 하위 질문마다 기록한 결과다(V40, AnswerOutcome).
+     * outcome·answerText·answerMessageId·displayQuestion은 실시간 경로가 하위 질문마다 기록한 결과다(V41, AnswerOutcome).
      * 그 전에 저장된 상담은 null이다. answerText는 안내 후보로만 쓰고 모델 입력에는 넣지 않는다.
      */
     record Request(long originMessageId, int order, String query, String status,
             List<String> pendingQuestions, Long requestId, String outcome,
-            @JsonIgnore String answerText, @JsonIgnore Long answerMessageId, String displayQuestion) {
+            @JsonIgnore String answerText, @JsonIgnore Long answerMessageId, String displayQuestion, String intent) {
         Request(long originMessageId, int order, String query, String status) {
             this(originMessageId, order, query, status, List.of(), null);
         }
@@ -33,7 +33,7 @@ final class ChatEndSummaryData {
 
         Request(long originMessageId, int order, String query, String status, List<String> pendingQuestions,
                 Long requestId) {
-            this(originMessageId, order, query, status, pendingQuestions, requestId, null, null, null, null);
+            this(originMessageId, order, query, status, pendingQuestions, requestId, null, null, null, null, null);
         }
 
         Request {
@@ -42,7 +42,7 @@ final class ChatEndSummaryData {
 
         Request withPendingQuestions(List<String> questions) {
             return new Request(originMessageId, order, query, status, questions, requestId, outcome, answerText,
-                    answerMessageId, displayQuestion);
+                    answerMessageId, displayQuestion, intent);
         }
     }
 

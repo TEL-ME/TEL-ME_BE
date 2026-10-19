@@ -60,7 +60,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 .isEqualTo("[2]");
         var request = request();
         assertThat(request.executionId()).isEqualTo(10L);
-        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v11");
+        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v12");
         var schema = mapper.valueToTree(request.responseSchema()).path("properties");
         assertThat(schema.has("guidance")).isFalse();
         assertThat(schema.path("selectedSentenceIds").path("items").path("enum").toString()).isEqualTo("[1]");
@@ -69,7 +69,7 @@ class ChatSessionEndSummaryGeneratorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"[99]", "[0]", "[-1]", "[1,1]", "[1.5]", "[\"1\"]", "null"})
+    @ValueSource(strings = {"[99]", "[0]", "[-1]", "[1.5]", "[\"1\"]", "null"})
     @DisplayName("틀린 번호를 첫 안내로 대체하지 않고 제한된 재요청 후 거부한다")
     void 틀린_번호는_임의로_보정하지_않는다(String ids) throws Exception {
         var response = (ObjectNode) mapper.readTree(selection(1, 1));
@@ -78,6 +78,17 @@ class ChatSessionEndSummaryGeneratorTest {
 
         assertThatThrownBy(() -> generate(input())).hasMessage("INVALID_SELECTION");
         verify(client, times(2)).generate(any());
+    }
+
+    @Test
+    @DisplayName("같은 번호를 두 번 고르면 안내를 한 번만 적고, 스키마에는 vLLM이 지원하지 않는 uniqueItems를 쓰지 않는다")
+    void 같은_번호는_한_번만_적는다() throws Exception {
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.set("selectedSentenceIds", mapper.readTree("[1,1]"));
+        when(client.generate(any())).thenReturn(response.toString());
+
+        assertThat(generate(input()).content().guidance()).containsExactly("안내받은 내용: 홈페이지를 확인해 주세요.");
+        assertThat(mapper.writeValueAsString(request().responseSchema())).doesNotContain("uniqueItems");
     }
 
     @Test
@@ -352,7 +363,7 @@ class ChatSessionEndSummaryGeneratorTest {
             return result.toString();
         });
 
-        var result = generator(2300).generate(input, now.plusSeconds(300));
+        var result = generator(2600).generate(input, now.plusSeconds(300));
 
         assertThat(calls).hasSizeGreaterThan(1);
         assertThat(calls).allSatisfy(body -> {
