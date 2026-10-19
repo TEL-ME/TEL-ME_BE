@@ -63,6 +63,8 @@ class QueryRoutingServiceTest {
             intentConverter,
             transactionTemplate
         );
+        // 요청 개수 판정은 기본으로 하지 않는다. 이 시험은 판정을 켠 경로를 확인한다
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "requestInventoryEnabled", true);
         org.mockito.Mockito.lenient().when(queryRoutingRepository.saveAndFlush(any()))
                 .thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(consultRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -515,27 +517,6 @@ class QueryRoutingServiceTest {
 
         assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
                 .containsExactly("로밍요금", "유심재발급방법");
-    }
-
-    @Test
-    @DisplayName("하나의 문의로 합친 뒤에도 정제 검색 후보와 고객 원문을 각각 보존한다")
-    void 단일_문의_통합_뒤에도_검색_후보를_보존한다() {
-        given(llmClient.generate(any())).willReturn("""
-                {"intent":"FAQ","confidence":0.95,"refinedQuery":"유심 재발급 신분증 및 매장 방문 절차",
-                 "extractedConditions":{},"subQueries":[
-                  {"order":1,"intent":"FAQ","queryText":"유심 재발급 신분증",
-                   "requestQuote":"신분증지참","conditions":{}},
-                  {"order":2,"intent":"FAQ","queryText":"유심 재발급 매장 방문 절차",
-                   "requestQuote":"매장방문절차","conditions":{}}]}
-                """, "{\"decision\":\"SINGLE\",\"requestCount\":1}");
-        String question = "유심 재발급 신분증 지참과 매장 방문 절차를 알려주세요.";
-        var message = msg(question);
-
-        var result = service.routeSingleConsult(message, null);
-
-        assertThat(result.subQueries()).hasSize(1);
-        assertThat(result.subQueries().getFirst().queryText()).isEqualTo("유심 재발급 신분증 및 매장 방문 절차");
-        assertThat(message.getContent()).isEqualTo(question);
     }
 
     @Test

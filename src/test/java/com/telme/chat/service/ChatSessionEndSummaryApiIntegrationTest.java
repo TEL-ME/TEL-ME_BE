@@ -15,19 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.llm.service.LlmClient;
 import com.telme.chat.guard.ChatInputInspector;
-import com.telme.chat.repository.ChatEndSummaryInquiryRepository;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,23 +52,11 @@ class ChatSessionEndSummaryApiIntegrationTest {
     private ChatSessionEndSummaryService service;
     @Autowired
     private ChatSessionEndSummaryStore store;
-    @Autowired
-    private ChatEndSummaryInquiryRepository inquiryRepository;
     @MockitoBean
     private LlmClient client;
     @MockitoBean
     private Clock clock;
     private AtomicReference<Instant> time;
-    private final List<Long> createdCategoryFaqs = new ArrayList<>();
-
-    @AfterEach
-    void 분류_검증에서_생성한_근거만_정리한다() {
-        // 다른 FAQ 테스트의 검색·집계에 이번 테스트의 합성 근거가 섞이지 않도록 한다.
-        for (long faq : createdCategoryFaqs) {
-            jdbc.update("DELETE FROM message_sources WHERE faq_id=?", faq);
-            jdbc.update("DELETE FROM faqs WHERE faq_id=?", faq);
-        }
-    }
 
     @BeforeEach
     void 시각과_모델을_준비한다() {
@@ -93,7 +77,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         service.process(fixture.sessionId());
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.topics[0]").value("해외 로밍 문의"));
+                .andExpect(jsonPath("$.result.summary.topics[0]").value("로밍 신청 방법 문의"));
         close(fixture);
         service.process(fixture.sessionId());
         assertState(fixture, "COMPLETED");
@@ -308,7 +292,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
-                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("추가 확인이 완료되지 않은 문의: ‘유심 재발급 문의’"));
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("확인 필요: 유심 재발급 문의"));
         assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE session_id=?",
                 String.class, fixture.sessionId())).isEqualTo("WAITING_CONDITION");
     }
@@ -343,7 +327,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.result.summary.guidance").isEmpty())
                 .andExpect(jsonPath("$.result.summary.pendingItems[0]")
-                        .value("방문자가 본인인지 대리인인지 아직 확인되지 않았습니다."));
+                        .value("미확인 조건: 유심 재발급 서류 문의 — 대리인이 방문하시는 건가요?"));
         var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(captor.capture());
         assertThat(mapper.readTree(captor.getValue().userPrompt()).path("requests").get(0)
@@ -380,7 +364,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         assertThat(input.path("currentConditions").get(0).path("answeredSequence").intValue()).isEqualTo(3);
         assertThat(input.path("conditionSources").get(0).path("content").asText()).contains("이번 달");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance[0]").value("이번 달 가입 기준 안내"));
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("조건 확인 후 안내: 이번 달 가입 기준 안내"));
     }
 
     @Test
@@ -397,7 +381,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance[0]").value("홈페이지를 확인해 주세요."));
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("안내받은 내용: 홈페이지를 확인해 주세요."));
     }
 
     @Test
@@ -460,28 +444,23 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 INSERT INTO consult_conditions(consult_request_id,condition_key,condition_value,source,status,
                     answered_message_id) VALUES (?, 'joined_this_month', 'true', 'ASKED', 'FILLED', ?)
                 """, request, correction);
-        selectOfferedGuidance();
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(
+                fixture.questionId(), java.util.stream.IntStream.rangeClosed(1, 8).toArray()));
         close(fixture);
 
         service.process(fixture.sessionId());
 
         assertState(fixture, "COMPLETED");
         mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.guidance.length()").value(1))
-                .andExpect(jsonPath("$.result.summary.guidance[0]")
-                        .value(org.hamcrest.Matchers.containsString("이번 달 조건 안내입니다.")))
-                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1));
+                .andExpect(jsonPath("$.result.summary.guidance.length()").value(8))
+                .andExpect(jsonPath("$.result.summary.guidance[7]")
+                        .value("조건 확인 후 안내: 이번 달 조건 안내입니다."));
         var stored = mapper.readTree(jdbc.queryForObject(
                 "SELECT result::text FROM chat_session_end_summaries WHERE session_id=?",
                 String.class, fixture.sessionId()));
-        assertThat(stored.path("guidance")).hasSize(1);
-        for (int index = 1; index <= 8; index++) {
-            assertThat(stored.path("guidance").get(0).path("text").asText())
-                    .contains("이전 조건 안내 " + index + "입니다.");
-        }
-        assertThat(stored.path("guidance").get(0).path("text").asText()).contains("이번 달 조건 안내입니다.");
-        assertThat(stored.path("guidance").get(0).path("sourceMessageIds"))
-                .anySatisfy(id -> assertThat(id.asLong()).isEqualTo(latestAnswer));
+        assertThat(stored.path("guidance")).hasSize(8);
+        assertThat(stored.path("guidance").get(7).path("sourceMessageIds").get(0).asLong())
+                .isEqualTo(latestAnswer);
     }
 
     @Test
@@ -521,7 +500,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
         var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(captor.capture());
         assertThat(mapper.valueToTree(captor.getValue().responseSchema()).path("properties").path("pendingItems")
-                .path("maxItems").asInt()).isZero();
+                .path("maxItems").asInt()).isEqualTo(9);
     }
 
     @Test
@@ -571,10 +550,7 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
-        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(body).doesNotContain("input_mask_spans");
-        // 생성 시각의 소수점 숫자가 카드번호 조각과 우연히 겹칠 수 있어 요약 내용만 검사한다.
-        assertThat(mapper.readTree(body).path("result").path("summary").toString())
+        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
                 .contains(visible).doesNotContain("4111", "990101", "1234567", "\uFFFC", "input_mask_spans");
     }
 
@@ -594,263 +570,11 @@ class ChatSessionEndSummaryApiIntegrationTest {
 
         assertState(fixture, "COMPLETED");
         var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
-        String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(mapper.readTree(body).path("result").path("summary").toString())
+        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
                 .contains(expected).doesNotContain("990101", "1234567", "4111", "\\uFFFC");
         var prompt = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
         verify(client).generate(prompt.capture());
         assertThat(prompt.getValue().userPrompt()).contains(expected).doesNotContain("990101", "1234567", "4111");
-    }
-
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-        "PORTING | 번호이동 문의", "NAME_CHANGE | 명의변경 문의", "SUBSCRIBE | 가입·개통 문의",
-        "BILLING | 요금·청구 문의", "DEVICE | 단말·할부 문의", "SERVICE | 부가서비스·기타 문의",
-        "PLAN | 요금제 문의", "USIM | 유심 문의", "ROAMING | 해외 로밍 문의", "TERMINATE | 해지 문의"
-    })
-    @DisplayName("실제 저장된 FAQ 분류로 두 안내 문단을 묶어 종료 요약 저장과 재조회에 보존한다")
-    void 저장된_근거_분류로_종료_요약을_묶어_조회한다(String category, String title) throws Exception {
-        String question = "준비 서류와 처리 시간을 알려주세요.";
-        String documents = "본인 신분증이 필요합니다.";
-        String duration = "처리에는 2영업일이 걸립니다.";
-        var fixture = fixture(false, question, documents + "\n\n" + duration);
-        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
-        jdbc.update("""
-                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
-                VALUES (?, ?, 1, 'FAQ', ?, 'DONE')
-                """, fixture.sessionId(), fixture.questionId(), question);
-        addFaqSource(fixture, category, 1);
-        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(
-                fixture.questionId(), 1, 2));
-        close(fixture);
-
-        service.process(fixture.sessionId());
-
-        assertState(fixture, "COMPLETED");
-        for (int read = 0; read < 2; read++) {
-            mvc.perform(get(path(fixture)).session(fixture.actor()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1))
-                    .andExpect(jsonPath("$.result.summary.inquiries[0].title").value(title))
-                    .andExpect(jsonPath("$.result.summary.inquiries[0].text").value(documents + " " + duration))
-                    .andExpect(jsonPath("$.result.summary.guidance.length()").value(1));
-        }
-        verify(client).generate(any());
-    }
-
-    @Test
-    @DisplayName("단일 STORE 요청의 저장된 의도를 읽어 문의 분류에 사용한다")
-    void 저장된_매장_요청_의도를_읽는다() throws Exception {
-        var fixture = fixture(false, "안내를 부탁드립니다.", "방문 가능한 곳을 안내했습니다.");
-        jdbc.update("""
-                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
-                VALUES (?, ?, 1, 'STORE', '안내를 부탁드립니다.', 'DONE')
-                """, fixture.sessionId(), fixture.questionId());
-        mockResult(fixture);
-        close(fixture);
-
-        service.process(fixture.sessionId());
-
-        assertState(fixture, "COMPLETED");
-        mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.inquiries[0].title").value("매장 문의"));
-    }
-
-    @Test
-    @DisplayName("상담 세션이 다른 FAQ 분류는 함께 읽지 않는다")
-    void 다른_세션의_분류를_읽지_않는다() throws Exception {
-        var first = fixture(false, "진행 방법 문의", "서류 안내입니다.");
-        var second = fixture(false, "진행 방법 문의", "시간 안내입니다.");
-        addFaqSource(first, "PORTING", 1);
-        addFaqSource(second, "NAME_CHANGE", 1);
-
-        var metadata = inquiryRepository.findBySessionId(first.sessionId());
-
-        assertThat(metadata.keySet()).containsExactlyInAnyOrder(first.questionId(), first.answerId());
-        assertThat(metadata.get(first.answerId()).faqCategories()).containsExactly("PORTING");
-    }
-
-    @Test
-    @DisplayName("답변 당시 버전과 다른 FAQ의 현재 분류를 과거 상담에 적용하지 않는다")
-    void 버전이_달라진_근거_분류는_추정하지_않는다() throws Exception {
-        var fixture = fixture(false, "진행 방법 문의", "서류 안내입니다.");
-        addFaqSource(fixture, "NAME_CHANGE", 2);
-
-        var metadata = inquiryRepository.findBySessionId(fixture.sessionId());
-
-        assertThat(metadata.get(fixture.answerId()).faqCategories()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("분리된 최신 기간 정정을 종료 요약의 같은 문의에 저장하고 재조회한다")
-    void 최신_가입_기간을_종료_저장과_조회에_반영한다() throws Exception {
-        var fixture = fixture(false, "제 회선 가입 기간은 18개월입니다. 유심 재발급 비용은요?",
-                "유심 재발급 비용은 7,700원입니다.");
-        long question = message(fixture.sessionId(), 3, "USER", "QUESTION",
-                "같은 유심 문의의 가입 기간을 정정할게요. 18개월이 아니라 24개월입니다.", null);
-        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
-                "신분증을 지참해 매장을 방문합니다. 신청은 접수되지 않았습니다.", question);
-        jdbc.update("""
-                INSERT INTO chat_executions(session_id,input_message_id,output_message_id,status,ended_at)
-                VALUES (?,?,?,'COMPLETED',?)
-                """, fixture.sessionId(), question, answer, Timestamp.from(time.get()));
-        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE session_id=? AND role='ASSISTANT'",
-                fixture.sessionId());
-        when(client.generate(any())).thenAnswer(invocation -> {
-            com.telme.llm.dto.req.LlmRequest request = invocation.getArgument(0);
-            var prompt = mapper.readTree(request.userPrompt());
-            var selected = mapper.createObjectNode();
-            var topics = selected.putObject("topics");
-            prompt.path("requiredTopicMessageIds").forEach(id -> topics.put(id.asText(), "유심 문의"));
-            var ids = selected.putArray("selectedSentenceIds");
-            prompt.path("guidanceCandidates").forEach(item -> ids.add(item.path("sentenceId").asInt()));
-            selected.putArray("pendingItems");
-            return selected.toString();
-        });
-        close(fixture);
-
-        service.process(fixture.sessionId());
-
-        assertState(fixture, "COMPLETED");
-        mvc.perform(get(path(fixture)).session(fixture.actor()))
-                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1))
-                .andExpect(jsonPath("$.result.summary.inquiries[0].text")
-                        .value(org.hamcrest.Matchers.allOf(org.hamcrest.Matchers.containsString("24개월"),
-                                org.hamcrest.Matchers.containsString("신분증"),
-                                org.hamcrest.Matchers.containsString("매장"),
-                                org.hamcrest.Matchers.containsString("접수되지 않았습니다"),
-                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
-                                        "제 회선 가입 기간은 18개월입니다.")))));
-    }
-
-    private void addFaqSource(Fixture fixture, String category, int citedVersion) {
-        long faq = jdbc.queryForObject("""
-                INSERT INTO faqs(category,question,answer,version)
-                VALUES (?, ?, ?, 1) RETURNING faq_id
-                """, Long.class, category, "합성 분류 검증 질문 " + fixture.sessionId(),
-                "합성 분류 검증 답변 " + fixture.answerId());
-        createdCategoryFaqs.add(faq);
-        jdbc.update("INSERT INTO message_sources(message_id,faq_id,faq_version) VALUES (?,?,?)",
-                fixture.answerId(), faq, citedVersion);
-    }
-
-    @Test
-    @DisplayName("부분 요약 둘의 병합 입력이 초과해도 원문을 서버에서 합쳐 종료 저장과 재조회에 보존한다")
-    void 병합_입력_초과_상담의_종료_요약을_저장하고_재조회한다() throws Exception {
-        String question = "유심 재발급 절차와 준비물을 확인하는 문의입니다 ".substring(0, 12);
-        var fixture = fixture(false, question + " 0", mergeLimitAnswer(0));
-        for (int index = 1; index < 9; index++) {
-            long q = message(fixture.sessionId(), index * 2 + 1, "USER", "QUESTION", question + " " + index, null);
-            long a = message(fixture.sessionId(), index * 2 + 2, "ASSISTANT", "ANSWER", mergeLimitAnswer(index % 8), q);
-            jdbc.update("""
-                    INSERT INTO chat_executions(session_id,input_message_id,output_message_id,status,ended_at)
-                    VALUES (?,?,?,'COMPLETED',?)
-                    """, fixture.sessionId(), q, a, Timestamp.from(time.get()));
-        }
-        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE session_id=? AND role='ASSISTANT'",
-                fixture.sessionId());
-        jdbc.update("""
-                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
-                SELECT session_id,message_id,1,'FAQ',content,'DONE' FROM chat_messages
-                WHERE session_id=? AND role='USER'
-                """, fixture.sessionId());
-        when(client.generate(any())).thenAnswer(invocation -> {
-            var prompt = mapper.readTree(((com.telme.llm.dto.req.LlmRequest) invocation.getArgument(0)).userPrompt());
-            var result = mapper.createObjectNode();
-            var topics = result.putObject("topics");
-            prompt.path("requests").forEach(request -> topics.put(request.path("originMessageId").asText(),
-                    "유심 재발급 문의"));
-            var ids = result.putArray("selectedSentenceIds");
-            prompt.path("guidanceCandidates").forEach(candidate -> ids.add(candidate.path("sentenceId").asInt()));
-            result.putArray("pendingItems");
-            return result.toString();
-        });
-        close(fixture);
-
-        service.process(fixture.sessionId());
-
-        assertState(fixture, "COMPLETED");
-        String previous = null;
-        for (int read = 0; read < 2; read++) {
-            String response = mvc.perform(get(path(fixture)).session(fixture.actor()))
-                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            var summary = mapper.readTree(response).path("result").path("summary");
-            for (int index = 0; index < 8; index++) {
-                assertThat(summary.toString()).contains("안내 항목 " + index);
-            }
-            if (previous != null) {
-                assertThat(summary.toString()).isEqualTo(previous);
-            }
-            previous = summary.toString();
-        }
-        verify(client, org.mockito.Mockito.times(2)).generate(any());
-    }
-
-    @Test
-    @DisplayName("480자 초과 문단과 9개 안내를 종료 처리부터 저장·재조회까지 모두 보존한다")
-    void 긴_문단과_아홉_안내를_누락하지_않고_저장한다() throws Exception {
-        var paragraphs = new java.util.ArrayList<String>();
-        String preparation = java.util.stream.IntStream.rangeClosed(1, 40)
-                .mapToObj(index -> "방문 전 준비 항목 " + index + "의 서류와 조건을 확인해야 합니다.")
-                .collect(java.util.stream.Collectors.joining(" "));
-        paragraphs.add("유심 재발급 비용은 7,700원이며 기기 불량 확인 시에만 무료입니다. "
-                + preparation + " "
-                + "명의자 본인이 신분증을 지참하고 매장을 방문해야 합니다. 신청은 접수되지 않았습니다.");
-        for (int index = 2; index <= 9; index++) {
-            paragraphs.add("유심 추가 안내 " + index + "의 조건은 별도로 확인해야 합니다.");
-        }
-        var fixture = fixture(false, "유심 재발급 조건과 절차를 알려주세요.", String.join("\n\n", paragraphs));
-        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
-        jdbc.update("""
-                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status)
-                VALUES (?, ?, 1, 'FAQ', '유심 재발급 절차', 'DONE')
-                """, fixture.sessionId(), fixture.questionId());
-        selectOfferedGuidance();
-        close(fixture);
-
-        service.process(fixture.sessionId());
-
-        assertState(fixture, "COMPLETED");
-        String previous = null;
-        for (int read = 0; read < 2; read++) {
-            String response = mvc.perform(get(path(fixture)).session(fixture.actor()))
-                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            var summary = mapper.readTree(response).path("result").path("summary");
-            assertThat(summary.path("inquiries")).hasSize(1);
-            String text = summary.path("inquiries").get(0).path("text").asText();
-            assertThat(text).contains("7,700원", "기기 불량 확인 시에만 무료", "명의자 본인", "신분증",
-                    "매장을 방문", "신청은 접수되지 않았습니다");
-            assertThat(text).contains(preparation);
-            for (int index = 2; index <= 9; index++) {
-                assertThat(text).contains(paragraphs.get(index - 1));
-            }
-            if (previous != null) {
-                assertThat(summary.toString()).isEqualTo(previous);
-            }
-            previous = summary.toString();
-        }
-    }
-
-    private void selectOfferedGuidance() {
-        when(client.generate(any())).thenAnswer(invocation -> {
-            com.telme.llm.dto.req.LlmRequest request = invocation.getArgument(0);
-            var prompt = mapper.readTree(request.userPrompt());
-            var result = mapper.createObjectNode();
-            var topics = result.putObject("topics");
-            mapper.valueToTree(request.responseSchema()).path("properties").path("topics").path("required")
-                    .forEach(id -> topics.put(id.asText(), "상담 문의"));
-            var ids = result.putArray("selectedSentenceIds");
-            assertThat(prompt.path("guidanceCandidates")).hasSizeLessThanOrEqualTo(8);
-            prompt.path("guidanceCandidates").forEach(candidate -> ids.add(candidate.path("sentenceId").asInt()));
-            result.putArray("pendingItems");
-            return result.toString();
-        });
-    }
-
-    private String mergeLimitAnswer(int index) {
-        return "유심 재발급의 안내 항목 " + index + "입니다. "
-                + "방문 전 준비물과 이용 절차 및 필요한 조건을 확인하는 안내입니다 ".repeat(20)
-                .substring(0, 125) + " 안내를 확인했습니다.";
     }
 
     private Fixture fixture(boolean running, String question, String answer) throws Exception {

@@ -1,6 +1,6 @@
 # 요금제 질문 분류 모델 비교 (엑사원 vs gpt-oss)
 
-TELME-182. 요금제·내 정보 질문 분류(`PlanQuestionClassifier`)를 엑사원 3.5 7.8B와 Bedrock gpt-oss-120b로 같은 입력에 돌려 비교했다. 결과에 따라 **gpt-oss로 정했다**. 설정은 `CONSULT_PLAN_QUESTION_BEDROCK`(`telme.consult.plan-question.bedrock`)이다.
+TELME-182. 요금제·내 정보 질문 분류(`PlanQuestionClassifier`)를 엑사원 3.5 7.8B와 Bedrock gpt-oss-120b로 같은 입력에 돌려 비교했다. 결과에 따라 **gpt-oss로 정했다**. 설정은 `CONSULT_PLAN_QUESTION_BEDROCK`(`telme.consult.plan-question.bedrock`)이고 TELME-194부터 기본 켜짐이다.
 
 ## 왜 앞단을 결정 사항대로 두고 쟀나
 

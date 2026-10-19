@@ -16,7 +16,7 @@ public final class AnswerPromptTemplates {
     public static final String NO_EVIDENCE_ANSWER = NO_EVIDENCE_MESSAGE + ".";
 
     // 아래 프롬프트를 고치면 함께 올린다. 개선 전후 비교에 쓰인다
-    public static final String PROMPT_VERSION = "rag-answer-v4.8";
+    public static final String PROMPT_VERSION = "rag-answer-v4.9";
 
     public static final String ANSWER_SYSTEM_PROMPT = """
         당신은 TELME 통신 고객센터 AI 상담사입니다.
@@ -35,8 +35,7 @@ public final class AnswerPromptTemplates {
            "TELME샵", "유플러스샵", "이벤트 페이지", "공식 사이트"는 어떤 경우에도 쓰지 마십시오.
            근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.
         4. 근거에 있는 숫자만 쓰고, 근거의 숫자를 더하거나 곱해서 새 숫자를 만들지 마십시오.
-           근거에 없는 신청 권유나 접수·처리 제안을 덧붙이지 마십시오.
-           근거에 이번 상담의 신청 미접수·미처리 상태가 명시돼 있으면 생략하지 마십시오.
+           금액과 기간은 근거에 적힌 글자를 그대로 복사해 쓰고, 다시 계산하거나 비슷한 숫자로 바꿔 쓰지 마십시오.
         5. 고객이 제시한 조건이 있으면 그 조건에 해당하는 내용만 골라 답변하십시오.
         6. 근거에 조건별로 다른 내용이 있는데 고객 조건을 모르면, 조건을 나누어 모두 안내하십시오.
         7. 존댓말로 간결하게 답하십시오. 3~5문장을 넘기지 마십시오.

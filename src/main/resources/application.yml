@@ -72,12 +72,6 @@ springdoc:
 ollama:
   url: ${OLLAMA_URL:http://localhost:11434}
 
-chat:
-  end-summary:
-    model:
-      # 종료 요약만 별도 선택한다. 답변·판정·목록 제목의 모델 설정은 바꾸지 않는다.
-      provider: ${CHAT_END_SUMMARY_MODEL_PROVIDER:ollama}
-
 kakao:
   local:
     # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
@@ -157,11 +151,24 @@ member:
     # 앱은 뜨도록 로컬 더미값을 기본값으로 둔다.
     frontend-uri: ${FRONTEND_URL:http://localhost:3000}
 
+chat:
+  summary:
+    # 대화 요약을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SUMMARY_BEDROCK:true}
+  session-title:
+    # 세션 제목을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SESSION_TITLE_BEDROCK:true}
+  question-resolution:
+    # 문맥 해석을 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
+    # gpt-oss 문맥 판정의 흔들림 보완(docs/CONTEXT_RESOLUTION.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
+    stability-guards: ${CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS:false}
+
 rag:
   answer:
-    # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. 기본 꺼짐
+    # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. false면 엑사원
     # gpt-oss로 결정(TELME-180, docs/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
-    bedrock: ${RAG_ANSWER_BEDROCK:false}
+    bedrock: ${RAG_ANSWER_BEDROCK:true}
   evidence-check:
     # 검색이 통과시킨 근거가 질문에 실제로 답하는지 LLM에 한 번 더 묻는다
     # 호출이 하나 늘어 응답이 느려진다. 측정 후 기본값을 정한다
@@ -205,8 +212,8 @@ telme:
     # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
     faq-clarification:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
-      # 조건 뽑기 Bedrock 사용(실패 시 엑사원 대체), 기본 꺼짐
-      bedrock-extraction: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:false}
+      # 조건 뽑기를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+      bedrock: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:true}
     # 비교·FAQ 후보 근거 검증 gpt-oss(Bedrock) 사용(실패 시 엑사원 대체). 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK이고
     # 호출마다 따로 끄면 엑사원이다. docs/EVIDENCE_RESOLVER_COMPARISON.md
     evidence-resolver:
@@ -217,8 +224,8 @@ telme:
     # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
     plan-question:
       enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
-      # 분류를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. 기본 꺼짐
-      bedrock: ${CONSULT_PLAN_QUESTION_BEDROCK:false}
+      # 분류를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+      bedrock: ${CONSULT_PLAN_QUESTION_BEDROCK:true}
       # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
       answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:
@@ -237,11 +244,12 @@ telme:
     demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
   routing:
     # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
-    # 의도 분류를 gpt-oss로 바꾸면 끈다. 켜 두면 맞게 나뉜 질문을 다시 합친다(docs/ROUTING_CALL_COMPARISON.md 2단계)
-    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:true}
+    # 비워 두면 라우팅 모델을 따라간다: gpt-oss(Bedrock)면 하지 않고(맞게 나뉜 질문을 다시 합치므로), 엑사원이면 한다
+    # (docs/ROUTING_CALL_COMPARISON.md 2단계). true/false를 주면 그 값을 쓴다
+    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:}
     # 라우팅 호출 4개(의도 분류, 요청 개수 판정, 검색어 검증, 후속 분석)를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다.
-    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). 켤 때 위 요청 개수 판정은 false로 끈다. 기본 꺼짐
-    bedrock: ${ROUTING_BEDROCK:false}
+    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). false면 엑사원이고 이때는 위 요청 개수 판정이 켜진다
+    bedrock: ${ROUTING_BEDROCK:true}
 
 speech:
   tts:

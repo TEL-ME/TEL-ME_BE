@@ -249,18 +249,13 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         if (!original.equals(resolved)) {
             List<FaqSearchResponse> results = search(input, resolved, FaqSearchKind.RESOLVED);
             return !results.isEmpty() || resolved.equals(refined)
-                    ? results : searchRefined(input, resolved, refined, results);
+                    ? results : search(input, refined, FaqSearchKind.REFINED);
         }
         List<FaqSearchResponse> results = search(input, original, FaqSearchKind.ORIGINAL);
         if (!results.isEmpty() || original.equals(refined)) {
             return results;
         }
-        return searchRefined(input, original, refined, results);
-    }
-
-    private List<FaqSearchResponse> searchRefined(AnswerInput input, String original, String refined,
-            List<FaqSearchResponse> results) {
-        // 복원된 질문도 이전 발언과 최신 조건을 포함한 본문 전체로 후보의 의미를 검증한다.
+        // develop의 의미 검증을 유지하되, 호칭만 다른 문장은 같은 상담 본문으로 비교한다.
         String selected = ConsultationQuestion.extract(Objects.requireNonNull(
                 refinedQueries.select(original, refined, input.executionId()), "refinedQuery"));
         trace.append(input.executionId(), "refinedQueryChecks", Map.of(
