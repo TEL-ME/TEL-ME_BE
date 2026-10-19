@@ -60,7 +60,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 .isEqualTo("[2]");
         var request = request();
         assertThat(request.executionId()).isEqualTo(10L);
-        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v10");
+        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v11");
         var schema = mapper.valueToTree(request.responseSchema()).path("properties");
         assertThat(schema.has("guidance")).isFalse();
         assertThat(schema.path("selectedSentenceIds").path("items").path("enum").toString()).isEqualTo("[1]");
@@ -401,6 +401,22 @@ class ChatSessionEndSummaryGeneratorTest {
 
         assertThat(generate(input).content().pendingItems())
                 .containsExactly("답변을 마치지 못한 문의: 유심 재발급 비용");
+    }
+
+    @Test
+    @DisplayName("원래 문의가 있는 상담에서 상담 요청 없이 실패한 질문은 주제 대신 고객 원문으로 적는다")
+    void 주제를_달_수_없는_실패_질문은_원문으로_적는다() throws Exception {
+        var input = new ChatEndSummaryData.Input(1, 3, 10L, List.of(
+                new ChatEndSummaryData.Message(1, 1, null, "USER", "QUESTION", "로밍 신청 방법", null, "COMPLETED"),
+                new ChatEndSummaryData.Message(2, 2, 1L, "ASSISTANT", "ANSWER", "홈페이지에서 신청합니다.", "GROUNDED",
+                        null),
+                new ChatEndSummaryData.Message(3, 3, null, "USER", "QUESTION", "그럼 대리인이 가도 되나", null, "FAILED")),
+                List.of(new ChatEndSummaryData.Request(1, 1, "로밍 신청 방법", "DONE")), Set.of(3L), List.of(),
+                OutputMaskContext.empty());
+        when(client.generate(any())).thenReturn(selection(1, 1));
+
+        assertThat(generate(input).content().pendingItems())
+                .containsExactly("답변을 마치지 못한 문의: 그럼 대리인이 가도 되나");
     }
 
     @Test

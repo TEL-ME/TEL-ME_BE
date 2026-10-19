@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 class ChatSessionEndSummaryGenerator {
-    static final String VERSION = "consultation-end-summary-v10";
+    static final String VERSION = "consultation-end-summary-v11";
     static final List<String> FIELDS = List.of("topics", "guidance", "pendingItems");
     private static final List<String> MODEL_FIELDS = List.of("topics", "selectedSentenceIds", "pendingItems");
     private static final int MAX_GUIDANCE_LENGTH = 480;
@@ -50,6 +50,8 @@ class ChatSessionEndSummaryGenerator {
             안내받은 내용과 남은 확인 사항만 기록합니다. 고객에게 새 질문이나 알려주시면 안내하겠다는 약속을 하지 않습니다.
             개인정보와 욕설을 출력하지 않습니다. 문구는 항목당 최대 240자, 안내 번호는 최대 8개입니다.
             남은 사항의 최대 개수는 응답 스키마의 한도를 따릅니다. 저장된 미확인 조건을 생략하지 않습니다.
+            requests의 outcome은 하위 질문의 실제 결과입니다. ANSWERED·STORES는 안내함, NO_EVIDENCE는 답하지 못함,
+            ASKED는 조건을 묻는 중, SPLIT_REFUSED는 처리하지 않음입니다. displayQuestion은 고객에게 보인 하위 질문입니다.
             """;
 
     private final ObjectMapper mapper;
@@ -558,12 +560,18 @@ class ChatSessionEndSummaryGenerator {
                     }
                 }
             }
+            // 원래 문의가 있는 상담에서 주제는 원래 문의에만 달 수 있어, 상담 요청 없이 실패한 질문에는 주제가 없다.
+            // 그때는 고객 원문으로 적는다
+            if (labels.isEmpty() && !message.content().isBlank()) {
+                labels.add("답변을 마치지 못한 문의: " + message.content().strip().replaceAll("\\s+", " "));
+            }
             if (labels.isEmpty()) {
                 throw new IllegalArgumentException("INVALID_OUTPUT");
             }
             confirmedPending.put(message.id(), labels);
         }
         List<JsonNode> otherPending = new ArrayList<>();
+        Set<Long> keptPending = new HashSet<>();
         for (var item : safe.path("pendingItems")) {
             boolean known = false;
             for (var id : item.path("sourceMessageIds")) {
@@ -571,6 +579,19 @@ class ChatSessionEndSummaryGenerator {
             }
             if (!known) {
                 otherPending.add(item);
+                item.path("sourceMessageIds").forEach(id -> keptPending.add(id.longValue()));
+            }
+        }
+        // 기록된 결과가 있는 상담에서 모델이 빠뜨린 남은 문의는 요약 전체를 실패시키지 않고 고객 원문으로 채운다.
+        // 문의를 숨기지 않으며 모델 문장을 새로 만들지 않는다
+        if (input.recordsOutcomes()) {
+            for (var message : input.messages()) {
+                if (message.role().equals("USER") && requiredPending.contains(message.id())
+                        && !keptPending.contains(message.id()) && !confirmedPending.containsKey(message.id())
+                        && !message.content().isBlank()) {
+                    confirmedPending.put(message.id(), Set.of("답변을 받지 못한 문의: "
+                            + message.content().strip().replaceAll("\\s+", " ")));
+                }
             }
         }
         var pendingItems = safe.putArray("pendingItems");
@@ -582,8 +603,9 @@ class ChatSessionEndSummaryGenerator {
                     maskSources.add(OutputMaskContext.Source.from(inspection));
                 }
                 String text = inspection.content().strip();
+                // 서버 문구는 저장된 고객 질문·물어본 질문을 그대로 쓰므로 길면 요약 전체를 실패시키지 않고 자른다
                 if (text.length() > 240) {
-                    throw new IllegalArgumentException("INPUT_LIMIT");
+                    text = text.substring(0, 239) + "…";
                 }
                 var item = pendingItems.addObject();
                 item.put("text", text);
@@ -622,9 +644,29 @@ class ChatSessionEndSummaryGenerator {
 
     private Map<Long, Set<String>> collectConfirmedPending(ChatEndSummaryData.Input input, Set<Long> requiredPending) {
         Map<Long, Set<String>> confirmedPending = new LinkedHashMap<>();
+        boolean recorded = input.recordsOutcomes();
         for (var request : input.requests()) {
-            if (!requiredPending.contains(request.originMessageId())
-                    || !Set.of("PENDING", "WAITING_CONDITION").contains(request.status())) {
+            if (!requiredPending.contains(request.originMessageId())) {
+                continue;
+            }
+            // 기록된 결과가 있으면 하위 질문마다 서버 문구로 적는다. 같은 원문의 답을 받은 하위 질문과 섞이지 않는다
+            if (recorded && !Set.of("PENDING", "WAITING_CONDITION").contains(request.status())) {
+                boolean unanswered = Set.of("NO_EVIDENCE", "SPLIT_REFUSED").contains(String.valueOf(request.outcome()));
+                boolean abandoned = "CANCELLED".equals(request.status()) && "ASKED".equals(request.outcome());
+                if (unanswered || abandoned) {
+                    confirmedPending.computeIfAbsent(request.originMessageId(), key -> new java.util.LinkedHashSet<>())
+                            .add("답변을 받지 못한 문의: " + questionLabel(input, request));
+                }
+                continue;
+            }
+            if (!Set.of("PENDING", "WAITING_CONDITION").contains(request.status())) {
+                continue;
+            }
+            if (recorded && "ASKED".equals(request.outcome()) && request.answerText() != null) {
+                // 실제로 물어본 질문만 적는다. 계획에만 있고 묻지 않은 조건은 고객이 본 적이 없다
+                confirmedPending.computeIfAbsent(request.originMessageId(), key -> new java.util.LinkedHashSet<>())
+                        .add("미확인 조건: " + questionLabel(input, request) + " — "
+                                + request.answerText().strip().replaceAll("\\s+", " "));
                 continue;
             }
             if (request.requestId() == null && request.pendingQuestions().isEmpty()) {
@@ -706,6 +748,9 @@ class ChatSessionEndSummaryGenerator {
 
     private Map<String, Set<Long>> guidanceQuotes(ChatEndSummaryData.Input input, Set<Long> allowed,
             List<OutputMaskContext.Source> maskSources) {
+        if (input.recordsOutcomes()) {
+            return recordedGuidanceQuotes(input, allowed, maskSources);
+        }
         Map<String, Set<Long>> quotes = new LinkedHashMap<>();
         for (var message : input.messages()) {
             if (!allowed.contains(message.id()) || !message.role().equals("ASSISTANT")
@@ -736,6 +781,58 @@ class ChatSessionEndSummaryGenerator {
         return quotes;
     }
 
+    // 실시간 경로가 하위 질문마다 기록한 결과 중 안내한 것(근거 있는 답, 매장 목록)의 문구만 안내 후보로 쓴다.
+    // 답하지 못한 하위 질문, 되묻기, 직접 답변(인사·범위 밖·주제 확인)은 기록된 안내가 없어 후보가 되지 않는다
+    private Map<String, Set<Long>> recordedGuidanceQuotes(ChatEndSummaryData.Input input, Set<Long> allowed,
+            List<OutputMaskContext.Source> maskSources) {
+        Map<String, Set<Long>> quotes = new LinkedHashMap<>();
+        for (var request : input.requests()) {
+            if (!isGuided(request) || request.answerText() == null || request.answerMessageId() == null
+                    || !allowed.contains(request.answerMessageId())) {
+                continue;
+            }
+            var message = input.messages().stream().filter(value -> value.id() == request.answerMessageId())
+                    .findFirst().orElse(null);
+            if (message == null) {
+                continue;
+            }
+            var inspection = inspector.inspect(request.answerText());
+            if (!inspection.maskSpans().isEmpty()) {
+                maskSources.add(OutputMaskContext.Source.from(inspection));
+            }
+            for (String paragraph : inspection.content().split("\\n\\s*\\n")) {
+                List<String> kept = new ArrayList<>();
+                for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
+                    String text = sentence.strip();
+                    if (!text.isBlank() && !text.endsWith("?")) {
+                        kept.add(text);
+                    }
+                }
+                String quote = String.join(" ", kept);
+                if (quote.length() > MAX_GUIDANCE_LENGTH) {
+                    throw new IllegalArgumentException("INPUT_LIMIT");
+                }
+                if (!quote.isBlank()) {
+                    quotes.computeIfAbsent(quote, key -> new HashSet<>()).add(message.id());
+                }
+            }
+        }
+        return quotes;
+    }
+
+    private static boolean isGuided(ChatEndSummaryData.Request request) {
+        return "ANSWERED".equals(request.outcome()) || "STORES".equals(request.outcome());
+    }
+
+    // 남은 사항 문구에 쓰는 하위 질문. 복합 질문은 고객에게 보인 소제목, 단일 질문은 고객 원문이다
+    private static String questionLabel(ChatEndSummaryData.Input input, ChatEndSummaryData.Request request) {
+        String label = request.displayQuestion() != null ? request.displayQuestion()
+                : input.messages().stream().filter(message -> message.id() == request.originMessageId())
+                        .map(ChatEndSummaryData.Message::content).findFirst().orElse(request.query());
+        label = label.strip().replaceAll("\\s+", " ");
+        return label.length() > 100 ? label.substring(0, 99) + "…" : label;
+    }
+
     private boolean isClarificationQuestion(ChatEndSummaryData.Message message, String text,
             ChatEndSummaryData.Input input) {
         if (text.endsWith("?")) {
@@ -761,6 +858,11 @@ class ChatSessionEndSummaryGenerator {
     }
 
     private boolean hasGroundedGuidance(ChatEndSummaryData.Input input, Set<Long> allowed) {
+        if (input.recordsOutcomes()) {
+            return input.requests().stream().anyMatch(request -> isGuided(request) && request.answerText() != null
+                    && !request.answerText().isBlank() && request.answerMessageId() != null
+                    && allowed.contains(request.answerMessageId()));
+        }
         return input.messages().stream().anyMatch(message -> allowed.contains(message.id())
                 && message.role().equals("ASSISTANT") && !message.content().isBlank()
                 && (message.type().equals("STORE_RESULT")

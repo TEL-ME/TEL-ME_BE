@@ -44,22 +44,49 @@ class ChatSessionEndSummaryInputReader {
             throw new IllegalArgumentException("INPUT_LIMIT");
         }
         var requests = jdbc.query("""
-                SELECT consult_request_id, origin_message_id, subquery_order, query_text, status
+                SELECT consult_request_id, origin_message_id, subquery_order, query_text, status,
+                    answer_outcome, answer_text, answer_message_id, display_question
                 FROM consult_requests WHERE session_id=? ORDER BY origin_message_id, subquery_order
                 """, (rs, n) -> new ChatEndSummaryData.Request(rs.getLong("origin_message_id"),
                         rs.getInt("subquery_order"), safe(rs.getString("query_text"), maskSources),
                         rs.getString("status"),
-                        List.of(), rs.getLong("consult_request_id")),
+                        List.of(), rs.getLong("consult_request_id"), rs.getString("answer_outcome"),
+                        rs.getString("answer_text") == null ? null : safe(rs.getString("answer_text"), maskSources),
+                        (Long) rs.getObject("answer_message_id"),
+                        rs.getString("display_question") == null ? null
+                                : safe(rs.getString("display_question"), maskSources)),
                 sessionId);
+        boolean recorded = requests.stream().anyMatch(request -> request.outcome() != null);
         Set<Long> social = new HashSet<>();
         for (var message : messages) {
-            if (!message.role().equals("USER") || !ChatContextFormatter.isSocial(message.content())
-                    || requests.stream().anyMatch(request -> request.originMessageId() == message.id())) {
+            if (!message.role().equals("USER")) {
                 continue;
             }
             var replies = messages.stream().filter(reply -> Long.valueOf(message.id()).equals(reply.replyTo()))
                     .toList();
-            if (replies.stream().allMatch(reply -> isFixedSocial(reply.content()))) {
+            // 감사·작별 인사만 있는 발화는 실시간 경로가 후속 질문으로 접수했어도 문의가 아니다.
+            // 그 뒤 답이 다른 하위 질문의 결과로 기록됐으면(조건 답으로 받아 앞 문의를 답한 경우) 그 답은 남긴다
+            if (ChatEndSummaryClosingRemarks.isClosingRemark(message.content())) {
+                social.add(message.id());
+                var loaded = requests;
+                replies.stream().filter(reply -> loaded.stream().noneMatch(request ->
+                                Long.valueOf(reply.id()).equals(request.answerMessageId())
+                                        && request.originMessageId() != message.id()))
+                        .forEach(reply -> social.add(reply.id()));
+                continue;
+            }
+            if (requests.stream().anyMatch(request -> request.originMessageId() == message.id())) {
+                continue;
+            }
+            // 기본 대화(인사·감사·정체 질문 등)는 서버 고정 문구로만 답한다. 질문이 섞이면 고정 문구가 아닌 답이 나간다
+            boolean greeting = (ChatContextFormatter.isSocial(message.content()) || !replies.isEmpty())
+                    && replies.stream().allMatch(reply -> isFixedSocial(reply.content()));
+            // 결과를 기록한 상담과 상담 요청이 하나도 없는 상담(기록할 하위 질문이 없음)에서는 상담 요청 없이 범위 밖
+            // 안내만 받은 발화(잡담·인사)를 문의로 보지 않는다. 실시간 경로가 통신 질문을 범위 밖으로 잘못 처리한
+            // 경우도 빠지므로 그런 오분류는 실시간 쪽에서 고친다
+            boolean outOfScope = (recorded || requests.isEmpty()) && !replies.isEmpty()
+                    && replies.stream().allMatch(reply -> "OUT_OF_SCOPE".equals(reply.basis()));
+            if (greeting || outOfScope) {
                 social.add(message.id());
                 replies.forEach(reply -> social.add(reply.id()));
             }
@@ -82,9 +109,8 @@ class ChatSessionEndSummaryInputReader {
                         safe(rs.getString("question"), maskSources)),
                 sessionId).stream().collect(Collectors.groupingBy(Map.Entry::getKey,
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-        requests = requests.stream().map(request -> new ChatEndSummaryData.Request(request.originMessageId(),
-                request.order(), request.query(), request.status(),
-                waitingQuestions.getOrDefault(request.requestId(), List.of()), request.requestId())).toList();
+        requests = requests.stream().map(request -> request.withPendingQuestions(
+                waitingQuestions.getOrDefault(request.requestId(), List.of()))).toList();
         Set<Long> pending = new HashSet<>();
         requests.stream().filter(request -> Set.of("PENDING", "WAITING_CONDITION").contains(request.status()))
                 .forEach(request -> pending.add(request.originMessageId()));
@@ -93,10 +119,13 @@ class ChatSessionEndSummaryInputReader {
                     ? "" : message.executionStatus())) {
                 pending.add(message.id());
             }
-            if (Set.of("NO_EVIDENCE", "OUT_OF_SCOPE").contains(message.basis() == null ? "" : message.basis())
-                    && message.replyTo() != null && ids.contains(message.replyTo())) {
+            if (!recorded && Set.of("NO_EVIDENCE", "OUT_OF_SCOPE").contains(message.basis() == null ? ""
+                    : message.basis()) && message.replyTo() != null && ids.contains(message.replyTo())) {
                 pending.add(message.replyTo());
             }
+        }
+        if (recorded) {
+            pending.addAll(recordedPending(messages, requests));
         }
         if (requests.isEmpty() && !messages.isEmpty()) {
             var last = messages.getLast();
@@ -162,8 +191,41 @@ class ChatSessionEndSummaryInputReader {
         }
     }
 
+    /**
+     * 실시간 경로가 기록한 결과로 정한 남은 문의.
+     * - 답하지 못했거나(NO_EVIDENCE) 나눠 보내 달라는 안내로 처리하지 않은(SPLIT_REFUSED) 하위 질문
+     * - 되묻다가 고객이 다른 질문으로 넘어가 취소된 하위 질문(CANCELLED·ASKED)
+     * - 상담 요청 없이 받은 안내 문구(주제 확인, 나눠 보내기, 질문 개수 초과). 이 답들은 상담 요청을 만들지 않는
+     *   직접 답변(근거 표시 없음)이고 어느 하위 질문의 결과로도 기록되지 않는다. 범위 밖 안내는 위에서 뺐다
+     */
+    private static Set<Long> recordedPending(List<ChatEndSummaryData.Message> messages,
+            List<ChatEndSummaryData.Request> requests) {
+        Set<Long> pending = new HashSet<>();
+        for (var request : requests) {
+            boolean unanswered = Set.of("NO_EVIDENCE", "SPLIT_REFUSED").contains(String.valueOf(request.outcome()));
+            boolean abandoned = "CANCELLED".equals(request.status()) && "ASKED".equals(request.outcome());
+            if (unanswered || abandoned) {
+                pending.add(request.originMessageId());
+            }
+        }
+        Set<Long> recordedMessages = requests.stream().map(ChatEndSummaryData.Request::answerMessageId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> origins = requests.stream().map(ChatEndSummaryData.Request::originMessageId)
+                .collect(Collectors.toSet());
+        for (var message : messages) {
+            if (message.role().equals("ASSISTANT") && message.type().equals("ANSWER") && message.basis() == null
+                    && message.replyTo() != null && !recordedMessages.contains(message.id())
+                    && !origins.contains(message.replyTo())
+                    && messages.stream().anyMatch(user -> user.id() == message.replyTo())) {
+                pending.add(message.replyTo());
+            }
+        }
+        return pending;
+    }
+
+    // 기본 대화 고정 응답(페르소나). 이전 문구는 페르소나 도입 전에 저장된 대화를 위해 남긴다
     private boolean isFixedSocial(String value) {
-        return Set.of("안녕하세요. 무엇을 도와드릴까요?",
+        return BasicConversationResponder.isFixedResponse(value) || Set.of("안녕하세요. 무엇을 도와드릴까요?",
                 "천만에요. 더 궁금한 점이 있으면 말씀해 주세요.",
                 "이용해 주셔서 감사합니다. 궁금한 점이 생기면 다시 말씀해 주세요.").contains(value);
     }

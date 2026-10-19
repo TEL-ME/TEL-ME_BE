@@ -577,6 +577,133 @@ class ChatSessionEndSummaryApiIntegrationTest {
         assertThat(prompt.getValue().userPrompt()).contains(expected).doesNotContain("990101", "1234567", "4111");
     }
 
+    @Test
+    @DisplayName("기록된 하위 질문 결과로 복합 답변의 안내 문구와 답하지 못한 하위 질문을 나눈다")
+    void 기록된_결과로_안내와_답하지_못한_하위_질문을_나눈다() throws Exception {
+        var fixture = fixture(false, "로밍 신청 방법이랑 유심 재발급 비용", "1. 로밍 신청 방법\n홈페이지에서 신청할 수 있습니다."
+                + "\n\n2. 유심 재발급 비용\n" + com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "홈페이지에서 신청할 수 있습니다.", fixture.answerId(), "로밍 신청 방법");
+        request(fixture, 2, "DONE", "NO_EVIDENCE", null, fixture.answerId(), "유심 재발급 비용");
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        var prompt = mapper.readTree(captureRequest().userPrompt());
+        assertThat(prompt.path("guidanceCandidates").toString()).contains("홈페이지에서 신청할 수 있습니다.")
+                .doesNotContain("1. 로밍", com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_MESSAGE);
+        assertThat(prompt.path("pendingIds").toString()).isEqualTo("[" + fixture.questionId() + "]");
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("답변을 받지 못한 문의: 유심 재발급 비용"));
+    }
+
+    @Test
+    @DisplayName("기록된 결과가 있으면 실제로 물어본 질문만 미확인 조건으로 적고 범위 밖 잡담은 요약하지 않는다")
+    void 물어본_질문만_미확인_조건이고_범위_밖_잡담은_뺀다() throws Exception {
+        var fixture = fixture(false, "번호이동 방법이랑 근처 매장",
+                "1. 번호이동 방법\n신분증을 챙기세요.\n\n2. 근처 매장\n어느 지역에서 찾으세요?");
+        jdbc.update("UPDATE chat_messages SET message_type='CLARIFICATION' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "신분증을 챙기세요.", fixture.answerId(), "번호이동 방법");
+        long store = request(fixture, 2, "WAITING_CONDITION", "ASKED", "어느 지역에서 찾으세요?", fixture.answerId(),
+                "근처 매장");
+        jdbc.update("""
+                INSERT INTO consult_conditions(consult_request_id,condition_key,status,asked_message_id)
+                VALUES (?, 'location', 'PENDING', ?), (?, 'serviceType', 'PENDING', NULL)
+                """, store, fixture.answerId(), store);
+        long chat = message(fixture.sessionId(), 3, "USER", "QUESTION", "오늘 날씨 어때요", null);
+        long outOfScope = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER", "저는 통신 서비스와 매장 관련 질문을 도와드려요.",
+                chat);
+        jdbc.update("UPDATE chat_messages SET answer_basis='OUT_OF_SCOPE' WHERE message_id=?", outOfScope);
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        assertThat(captureRequest().userPrompt()).doesNotContain("오늘 날씨");
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("안내받은 내용: 신분증을 챙기세요."))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("미확인 조건: 근처 매장 — 어느 지역에서 찾으세요?"));
+    }
+
+    @Test
+    @DisplayName("기록된 상담에서 상담 요청 없이 주제 확인 안내만 받은 질문은 남은 문의로 채우고 안내로 쓰지 않는다")
+    void 주제_확인_안내만_받은_질문은_남은_문의다() throws Exception {
+        var fixture = fixture(false, "요금 납부일 바꾸고 싶어요", "매월 말일로 바꿀 수 있습니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "매월 말일로 바꿀 수 있습니다.", fixture.answerId(), null);
+        long vague = message(fixture.sessionId(), 3, "USER", "QUESTION", "그거 말고 그거요", null);
+        message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.", vague);
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        var prompt = mapper.readTree(captureRequest().userPrompt());
+        assertThat(prompt.path("guidanceCandidates").toString()).doesNotContain("확인이 필요합니다");
+        assertThat(prompt.path("pendingIds").toString()).isEqualTo("[" + vague + "]");
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("답변을 받지 못한 문의: 그거 말고 그거요"));
+    }
+
+    @Test
+    @DisplayName("상담 요청이 하나도 없는 상담에서 인사와 범위 밖 잡담만 있으면 요약하지 않는다")
+    void 인사와_범위_밖_잡담만_있으면_빈_상담이다() throws Exception {
+        var fixture = fixture(false, "안녕하세요", ChatPersona.GREETING);
+        long chat = message(fixture.sessionId(), 3, "USER", "QUESTION", "그냥 한번 눌러본거예요", null);
+        long outOfScope = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER", "저는 통신 서비스와 매장 관련 질문을 도와드려요.",
+                chat);
+        jdbc.update("UPDATE chat_messages SET answer_basis='OUT_OF_SCOPE' WHERE message_id=?", outOfScope);
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "EMPTY");
+        verify(client, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("감사·작별 인사가 후속 질문으로 접수돼 근거 없음으로 끝나도 문의로 요약하지 않는다")
+    void 감사_인사는_후속_질문으로_접수돼도_문의가_아니다() throws Exception {
+        var fixture = fixture(false, "요금 납부일 바꾸고 싶어요", "매월 말일로 바꿀 수 있습니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "매월 말일로 바꿀 수 있습니다.", fixture.answerId(), null);
+        long thanks = message(fixture.sessionId(), 3, "USER", "QUESTION", "네 감사합니다 수고하세요~", null);
+        long reply = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER, thanks);
+        jdbc.update("UPDATE chat_messages SET answer_basis='NO_EVIDENCE' WHERE message_id=?", reply);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_message_id) VALUES (?, ?, 1, 'FAQ', '감사 인사', 'DONE', 'NO_EVIDENCE', ?)
+                """, fixture.sessionId(), thanks, reply);
+        when(client.generate(any())).thenReturn(ChatSessionEndSummaryGeneratorTest.selection(fixture.questionId(), 1));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        var prompt = mapper.readTree(captureRequest().userPrompt());
+        assertThat(prompt.toString()).doesNotContain("수고하세요");
+        assertThat(prompt.path("pendingIds").toString()).isEqualTo("[]");
+        assertState(fixture, "COMPLETED");
+    }
+
+    private long request(Fixture fixture, int order, String status, String outcome, String text, Long messageId,
+            String display) {
+        return jdbc.queryForObject("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id,display_question)
+                VALUES (?, ?, ?, 'FAQ', ?, ?, ?, ?, ?, ?) RETURNING consult_request_id
+                """, Long.class, fixture.sessionId(), fixture.questionId(), order,
+                display == null ? "하위 질문" : display.replace(" ", ""), status, outcome, text, messageId, display);
+    }
+
+    private com.telme.llm.dto.req.LlmRequest captureRequest() {
+        var captor = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
+        verify(client).generate(captor.capture());
+        return captor.getValue();
+    }
+
     private Fixture fixture(boolean running, String question, String answer) throws Exception {
         var actor = new MockHttpSession();
         var response = mvc.perform(post("/api/v1/chat/sessions").session(actor)
