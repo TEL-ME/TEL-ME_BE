@@ -3,8 +3,11 @@ package com.telme.rag.service;
 import com.telme.rag.exception.AnswerGuardException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -104,6 +107,26 @@ public class AnswerGuard {
             "샵", "이벤트", "홈페이지", "페이지", "사이트", "앱", "메뉴",
             "고객센터", "콜센터", "매장", "대리점", "지점"
     );
+
+    private static final Set<String> VISIT_CHANNELS = Set.of("매장", "대리점", "지점");
+    private static final Pattern APPLICATION_ADVICE = Pattern.compile(
+            "(?:신청|접수|가입)하(?:시면|세요|십시오)|(?:신청|접수|처리|진행)해\\s*드리|"
+                    + "(?:신청|접수|가입)(?:을|를)?\\s*도와|(?:신청|접수|가입)해\\s*보(?:세요|시)|"
+                    + "(?:신청|접수|가입)(?:을|를)?\\s*(?:권장|권유|추천)");
+    private static final Pattern UNPROCESSED_RECORD = Pattern.compile(
+            "(?:이번\\s*상담|상담\\s*(?:과정|중)).*(?:신청|접수|처리|완료).*(?:않았|미접수|미처리)");
+    private static final Pattern APPLICATION_WORD = Pattern.compile("[가-힣A-Za-z0-9]+");
+    private static final Pattern APPLICATION_TASK = Pattern.compile(
+            "재발급|발급|재가입|가입|변경|해지|취소|교체|등록|정지|개통|이전|납부|결제|충전|해제");
+    private static final Pattern APPLICATION_VISITOR = Pattern.compile("본인|대리인|미성년자|법인");
+    private static final Set<String> APPLICATION_PROCEDURE_WORDS = Set.of(
+            "본인", "대리인", "미성년자", "법인", "신분증", "위임장", "지참", "지참한", "지참하여", "지참하고",
+            "가지고", "방문", "방문하는", "방문하여", "방문하시어", "방문해야", "절차", "안내했습니다",
+            "시", "경우", "조건", "필요", "해야", "합니다", "됩니다", "입니다", "그것", "해당", "상품", "서비스");
+
+    private static final Pattern VISIT_PROCEDURE_WORD = Pattern.compile(
+            "방문(?:하세요|하시면|하면|하는|하여|하시어|해야)?|절차로는|가까운|지정된|또는|lg샵|이벤트|페이지|"
+                    + "홈페이지|없이|할|수|없습니다|가능합니다|경우에만");
 
     // 실제 생성 결과에서 근거 없이 추가된 결제·부가 정책이다. 근거에 같은 항목이 있을 때만 답변에 쓸 수 있다
     // 같은 항목을 FAQ 답변은 제도 이름으로, 고객은 흔한 말로 부른다. 둘 중 하나가 근거에 있으면 같은 사실이다
@@ -226,16 +249,27 @@ public class AnswerGuard {
     /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
     public String applyEvidencePolicy(
             String answer, String context, String userQuery, String confirmedValues) {
+        return applyEvidencePolicy(answer, context, userQuery, confirmedValues, null);
+    }
+
+    // FAQ 본문의 줄바꿈과 서로 다른 검색 결과의 경계를 구분해 준비물 조건을 보존한다.
+    public String applyEvidencePolicy(String answer, String context, String userQuery,
+            String confirmedValues, List<String> sourceAnswers) {
         String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
+        filtered = trimUnsupportedApplicationAdvice(filtered, context);
+        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
+                ? context : context + "\n" + confirmedValues;
+        filtered = GroundedPreparationAdvice.filter(filtered, context, userQuery, sourceAnswers, candidate -> {
+            verifyAmounts(candidate, numericEvidence, userQuery);
+            verifyMeasures(candidate, numericEvidence, userQuery);
+        });
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
         filtered = trimContradictedFreeClaims(filtered, context);
         filtered = trimContradictedTimeClaims(filtered, context);
-        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
-                ? context : context + "\n" + confirmedValues;
         verifyAmounts(filtered, numericEvidence, userQuery);
         verifyMeasures(filtered, numericEvidence, userQuery);
         return filtered;
@@ -246,12 +280,16 @@ public class AnswerGuard {
             return answer == null ? "" : answer;
         }
 
-        Set<ComparisonClaim> grounded = comparisonsIn(context);
+        List<String> evidence = context == null ? List.of() : List.of(SENTENCE.split(context.strip()));
+        Set<ComparisonClaim> grounded = findGroundedComparisons(evidence);
         Set<ComparisonClaim> asked = comparisonsIn(userQuery);
         StringBuilder kept = new StringBuilder();
         for (String sentence : SENTENCE.split(answer.strip())) {
             Set<ComparisonClaim> invented = comparisonsIn(sentence);
             invented.removeAll(grounded);
+            if (GroundedApplicationChoice.isNeutralChoice(sentence)) {
+                invented.remove(ComparisonClaim.CONVENIENT);
+            }
             if (isSafeUserReference(sentence)) {
                 invented.removeAll(asked);
             }
@@ -264,8 +302,123 @@ public class AnswerGuard {
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
     }
 
+    private Set<ComparisonClaim> findGroundedComparisons(List<String> evidence) {
+        Set<ComparisonClaim> grounded = new LinkedHashSet<>();
+        for (String sentence : evidence) {
+            var claims = comparisonsIn(sentence);
+            // 고객이 고를 수 있다는 안내는 특정 방법이 더 편리하다는 근거가 아니다.
+            if (GroundedApplicationChoice.isNeutralChoice(sentence)) {
+                claims.remove(ComparisonClaim.CONVENIENT);
+            }
+            grounded.addAll(claims);
+        }
+        return grounded;
+    }
+
     public String trimUngroundedChannels(String answer, String context, String userQuery) {
-        return trimSentences(answer, context, userQuery, CHANNELS, "근거에 없는 안내 창구");
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            Set<String> invented = ungrounded(sentence, context, userQuery, CHANNELS);
+            String grounded = invented.isEmpty() ? sentence : findGroundedVisitProcedure(sentence, context);
+            if (grounded != null) {
+                kept.append(kept.isEmpty() ? "" : " ").append(grounded);
+                continue;
+            }
+            log.warn("[AnswerGuard] 근거에 없는 안내 창구로 문장 제거: {} | {}", invented, sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    public String trimUnsupportedApplicationAdvice(String answer, String context) {
+        if (answer == null || answer.isBlank() || context == null || context.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        var evidence = java.util.Arrays.stream(SENTENCE.split(context.strip())).toList();
+        var instructions = evidence.stream().filter(sentence -> APPLICATION_ADVICE.matcher(sentence).find())
+                .distinct().toList();
+        var kept = new LinkedHashSet<String>();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (!APPLICATION_ADVICE.matcher(sentence).find() || evidence.contains(sentence)
+                    || GroundedApplicationChoice.isSupported(sentence, evidence)) {
+                kept.add(sentence);
+            } else {
+                var matching = instructions.stream()
+                        .filter(instruction -> hasMatchingApplicationBusiness(sentence, instruction)).toList();
+                if (matching.size() == 1) {
+                    // 대상과 업무가 확인된 원문 전체를 써야 준비물과 방문자 조건도 함께 보존된다.
+                    kept.add(matching.getFirst());
+                } else if (matching.isEmpty()) {
+                    String visit = findGroundedVisitProcedure(sentence, context);
+                    if (visit != null) {
+                        kept.add(visit);
+                    }
+                }
+            }
+        }
+        if (kept.isEmpty()) {
+            return AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
+        }
+        var records = evidence.stream().filter(sentence -> UNPROCESSED_RECORD.matcher(sentence).find())
+                .distinct().toList();
+        if (records.size() == 1 && kept.stream().noneMatch(sentence -> UNPROCESSED_RECORD.matcher(sentence).find())) {
+            kept.add(records.getFirst());
+        }
+        return String.join(" ", kept);
+    }
+
+    private boolean hasMatchingApplicationBusiness(String sentence, String evidenceSentence) {
+        List<String> subjects = extractApplicationSubjects(sentence);
+        Set<String> tasks = extractApplicationTasks(sentence);
+        Set<String> visitors = extractApplicationTerms(sentence, APPLICATION_VISITOR);
+        // 상품명·명의자까지 같은 순서로 확인하며, 생략된 대상이나 여러 업무의 연결 관계를 추정하지 않는다.
+        boolean sameVisitor = visitors.isEmpty()
+                || visitors.equals(extractApplicationTerms(evidenceSentence, APPLICATION_VISITOR));
+        return !subjects.isEmpty() && subjects.equals(extractApplicationSubjects(evidenceSentence))
+                && tasks.size() == 1 && tasks.equals(extractApplicationTasks(evidenceSentence))
+                && sameVisitor;
+    }
+
+    private List<String> extractApplicationSubjects(String sentence) {
+        List<String> subjects = new ArrayList<>();
+        String withoutAdvice = APPLICATION_ADVICE.matcher(sentence).replaceAll("");
+        Matcher matcher = APPLICATION_WORD.matcher(withoutAdvice);
+        while (matcher.find()) {
+            String word = APPLICATION_TASK.matcher(matcher.group().toLowerCase(Locale.ROOT)).replaceAll("");
+            if (APPLICATION_PROCEDURE_WORDS.contains(word)) {
+                continue;
+            }
+            String previous;
+            do {
+                previous = word;
+                word = TOPIC_PARTICLE.matcher(word).replaceFirst("");
+            } while (!word.equals(previous));
+            if (!word.isBlank() && !CHANNELS.contains(word) && !APPLICATION_PROCEDURE_WORDS.contains(word)) {
+                subjects.add(word);
+            }
+        }
+        return subjects;
+    }
+
+    private Set<String> extractApplicationTasks(String sentence) {
+        String withoutAdvice = APPLICATION_ADVICE.matcher(sentence).replaceAll("");
+        Set<String> tasks = extractApplicationTerms(withoutAdvice, APPLICATION_TASK);
+        Matcher advice = APPLICATION_ADVICE.matcher(sentence);
+        if (tasks.isEmpty() && advice.find()) {
+            tasks.add(advice.group().substring(0, 2));
+        }
+        return tasks;
+    }
+
+    private Set<String> extractApplicationTerms(String sentence, Pattern pattern) {
+        Set<String> terms = new LinkedHashSet<>();
+        Matcher matcher = pattern.matcher(sentence);
+        while (matcher.find()) {
+            terms.add(matcher.group().replaceAll("\\s+", "").toLowerCase(Locale.ROOT));
+        }
+        return terms;
     }
 
     public String trimUngroundedPolicyAttributes(String answer, String context, String userQuery) {
@@ -482,22 +635,62 @@ public class AnswerGuard {
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
     }
 
-    private String trimSentences(
-            String answer, String context, String userQuery, Set<String> words, String reason) {
-        if (answer == null || answer.isBlank()) {
-            return answer == null ? "" : answer;
+    private String findGroundedVisitProcedure(String sentence, String context) {
+        if (context == null || context.isBlank() || !sentence.contains("신분증") || !sentence.contains("방문")) {
+            return null;
         }
-        StringBuilder kept = new StringBuilder();
-        for (String sentence : SENTENCE.split(answer.strip())) {
-            Set<String> invented = ungrounded(sentence, context, userQuery, words);
-            if (invented.isEmpty()) {
-                kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        Set<String> candidates = new LinkedHashSet<>();
+        for (String evidenceSentence : SENTENCE.split(context.strip())) {
+            if (!evidenceSentence.contains("신분증") || !evidenceSentence.contains("방문")) {
                 continue;
             }
-            log.warn("[AnswerGuard] {}로 문장 제거: {} | {}", reason, invented, sentence);
+            if (!hasMatchingVisitBusiness(sentence, evidenceSentence)) {
+                continue;
+            }
+            boolean sameChannel = VISIT_CHANNELS.stream()
+                    .anyMatch(channel -> sentence.contains(channel) && evidenceSentence.contains(channel));
+            if (sameChannel) {
+                candidates.add(evidenceSentence.strip());
+            }
         }
-        // 지어낸 문장만 있던 답변이라 근거 없음으로 돌린다
-        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+        // 일부 단어만 지우면 준비물의 조건이나 부정 표현을 손상할 수 있어 단일 근거 문장을 그대로 사용한다.
+        return candidates.size() == 1 ? candidates.iterator().next() : null;
+    }
+
+    private boolean hasMatchingVisitBusiness(String sentence, String evidenceSentence) {
+        if (APPLICATION_ADVICE.matcher(sentence).find()) {
+            return hasMatchingApplicationBusiness(sentence, evidenceSentence);
+        }
+        List<String> subjects = extractVisitSubjects(sentence);
+        List<String> evidenceSubjects = extractVisitSubjects(evidenceSentence);
+        Set<String> tasks = extractApplicationTasks(sentence);
+        Set<String> evidenceTasks = extractApplicationTasks(evidenceSentence);
+        Set<String> visitors = extractApplicationTerms(sentence, APPLICATION_VISITOR);
+        boolean sameVisitor = visitors.isEmpty()
+                || visitors.equals(extractApplicationTerms(evidenceSentence, APPLICATION_VISITOR));
+        if (!subjects.equals(evidenceSubjects) || tasks.size() > 1 || evidenceTasks.size() > 1 || !sameVisitor) {
+            return false;
+        }
+        if (!subjects.isEmpty()) {
+            return tasks.size() == 1 && tasks.equals(evidenceTasks);
+        }
+        // 양쪽 모두 대상이 없는 공통 방문 문구만 복구하며, 명시된 다른 업무나 신청 권유를 연결하지 않는다.
+        return !APPLICATION_ADVICE.matcher(evidenceSentence).find()
+                && (tasks.isEmpty() || evidenceTasks.isEmpty() || tasks.equals(evidenceTasks));
+    }
+
+    private List<String> extractVisitSubjects(String sentence) {
+        List<String> words = new ArrayList<>();
+        Matcher matcher = APPLICATION_WORD.matcher(sentence);
+        while (matcher.find()) {
+            String word = matcher.group().toLowerCase(Locale.ROOT);
+            if (!VISIT_PROCEDURE_WORD.matcher(word).matches()) {
+                words.add(word);
+            }
+        }
+        return extractApplicationSubjects(String.join(" ", words)).stream()
+                .filter(word -> !VISIT_PROCEDURE_WORD.matcher(word).matches())
+                .toList();
     }
 
     private Set<String> ungrounded(

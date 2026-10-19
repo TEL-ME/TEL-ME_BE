@@ -127,11 +127,17 @@ class PromptRelationComparisonProbe {
             }
         };
         AnswerGuard guard=new AnswerGuard() {
-            @Override public String applyEvidencePolicy(
-                    String raw,String evidence,String question,String confirmed) {
-                o.guardApplied=true;
-                try { o.guardFinal=super.applyEvidencePolicy(raw,evidence,question,confirmed); return o.guardFinal; }
-                catch(RuntimeException e) { o.guardError=e.getClass().getSimpleName()+": "+e.getMessage(); throw e; }
+            @Override
+            public String applyEvidencePolicy(String raw, String evidence, String question,
+                    String confirmed, List<String> sourceAnswers) {
+                o.guardApplied = true;
+                try {
+                    o.guardFinal = super.applyEvidencePolicy(raw, evidence, question, confirmed, sourceAnswers);
+                    return o.guardFinal;
+                } catch (RuntimeException exception) {
+                    o.guardError = exception.getClass().getSimpleName() + ": " + exception.getMessage();
+                    throw exception;
+                }
             }
         };
         RagAnswerGenerator generator=new RagAnswerGenerator(observed,new AnswerContextConverter(),guard,

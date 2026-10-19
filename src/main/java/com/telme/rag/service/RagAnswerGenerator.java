@@ -12,6 +12,7 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.exception.AnswerGuardException;
 import java.util.Objects;
+import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
@@ -19,7 +20,6 @@ import com.telme.chat.service.ChatTokenEstimator;
 import com.telme.llm.config.LlmProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -85,9 +85,10 @@ public class RagAnswerGenerator implements AnswerGenerator {
         }
 
         String context = contextConverter.toContext(request.searchResults());
-        String answerEvidence = request.searchResults().stream()
+        List<String> sourceAnswers = request.searchResults().stream()
                 .map(result -> result.answer() == null ? "" : result.answer())
-                .collect(Collectors.joining("\n"));
+                .toList();
+        String answerEvidence = String.join("\n", sourceAnswers);
 
         // 검색은 문장 유사도로만 걸러 묻는 항목이 근거에 없는 질문도 통과시킨다
         if (!relevanceChecker.canAnswer(request.executionId(), request.resolvedQuery(), context)) {
@@ -96,6 +97,20 @@ public class RagAnswerGenerator implements AnswerGenerator {
             log.info("[RagAnswerGenerator] 근거가 질문에 답하지 않아 생성을 건너뛴다 executionId={}",
                     request.executionId());
             return answerWithoutEvidence(request, handler);
+        }
+
+        String procedure = ProcedureEvidenceAnswer.select(request);
+        if (procedure != null) {
+            String answer = answerGuard.applyEvidencePolicy(
+                    procedure, answerEvidence, request.resolvedQuery(), "", sourceAnswers);
+            AnswerBasis basis = toAnswerBasis(answer);
+            trace.stage(request.executionId(), "guard", Map.of("outcome",
+                    basis == AnswerBasis.GROUNDED ? "KEPT" : "NO_EVIDENCE",
+                    "reason", "VERIFIED_PROCEDURE_SOURCE_QUOTE"));
+            handler.onToken(answer);
+            handler.onComplete();
+            return AnswerResult.builder().answer(answer).answerBasis(basis)
+                    .sources(contextConverter.toSources(request.searchResults())).build();
         }
 
         String system = AnswerPromptTemplates.systemPromptFor(request.userQuery())
@@ -120,7 +135,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         CollectingHandler collector =
                 new CollectingHandler(handler, answerGuard, answerEvidence, request.resolvedQuery(),
-                        String.join(" ", request.conditions().values()),
+                        String.join(" ", request.conditions().values()), sourceAnswers,
                         trace, request.executionId(), request.consultRequestId());
         try {
             llmClient.stream(llmRequest, collector);
@@ -189,6 +204,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         private final String context;
         private final String userQuery;
         private final String confirmedValues;
+        private final List<String> sourceAnswers;
         private final StringBuilder collected = new StringBuilder();
         private String answer = "";
         private RuntimeException failure;
@@ -200,12 +216,14 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         private CollectingHandler(
                 LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery,
-                String confirmedValues, ExecutionTrace trace, Long executionId, Long consultRequestId) {
+                String confirmedValues, List<String> sourceAnswers,
+                ExecutionTrace trace, Long executionId, Long consultRequestId) {
             this.delegate = delegate;
             this.answerGuard = answerGuard;
             this.context = context;
             this.userQuery = userQuery;
             this.confirmedValues = confirmedValues;
+            this.sourceAnswers = sourceAnswers;
             this.trace = trace;
             this.executionId = executionId;
             this.consultRequestId = consultRequestId;
@@ -228,7 +246,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
             }
             try {
                 answer = answerGuard.applyEvidencePolicy(
-                        collected.toString().strip(), context, userQuery, confirmedValues);
+                        collected.toString().strip(), context, userQuery, confirmedValues, sourceAnswers);
                 // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(

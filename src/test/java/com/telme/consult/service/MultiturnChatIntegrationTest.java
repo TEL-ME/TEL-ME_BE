@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -105,7 +106,8 @@ class MultiturnChatIntegrationTest {
     }
 
     @Test
-    void apiResolvesPronounSearchesResolvedQuestionAndSavesOneAnswer() throws Exception {
+    @DisplayName("대명사 질문은 복원 문맥으로 검색하고 원질문·출처·단일 답변을 보존한다")
+    void 대명사_질문은_복원_문맥으로_검색하고_원문과_출처를_보존한다() throws Exception {
         previousConversation();
         long execution = send("그건 비용이 얼마야?");
         JsonNode history = history();
@@ -115,12 +117,26 @@ class MultiturnChatIntegrationTest {
         assertThat(history.path("messages").get(3).path("answerBasis").asText()).isEqualTo("GROUNDED");
         var query = ArgumentCaptor.forClass(FaqSearchRequest.class);
         verify(search).search(query.capture());
-        assertThat(query.getValue().query()).isEqualTo("유심 재발급 비용");
+        String resolvedQuery = """
+                [대상을 확인할 이전 고객 발언]
+                유심 재발급 방법을 알아보고 있어요.
+                [현재 후속 질문]
+                그건 비용이 얼마야?
+                """.strip();
+        assertThat(query.getValue().query()).isEqualTo(resolvedQuery);
+        assertThat(query.getValue().kind()).isEqualTo(FaqSearchKind.RESOLVED);
         assertThat(answerRequest.get().userPrompt()).contains("그건 비용이 얼마야?", "유심 재발급 방법을 알아보고 있어요.",
                 "7,700원");
         assertThat(answerRequest.get().userPrompt()).doesNotContain("상담사(정책 근거 아님)");
         assertThat(answerRequest.get().userPrompt()).doesNotContain("99,999원");
         assertThat(answerRequest.get().systemPrompt()).contains("이전 상담사의 답변은 정책 근거가 아닙니다");
+        var trace = mapper.readTree(jdbc.queryForObject(
+                "SELECT pipeline_trace::text FROM chat_executions WHERE execution_id=?", String.class, execution));
+        assertThat(trace.path("questionResolution").path("relation").asText()).isEqualTo("HISTORY_DEPENDENT");
+        JsonNode sources = trace.path("questionResolution").path("sourceMessageIds");
+        assertThat(sources).hasSize(1);
+        assertThat(sources.get(0).asLong())
+                .isEqualTo(history.path("messages").get(0).path("messageId").asLong());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM chat_executions WHERE execution_id=? AND status='COMPLETED'",
                 Integer.class, execution)).isEqualTo(1);
     }

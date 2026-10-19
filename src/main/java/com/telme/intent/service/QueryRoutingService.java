@@ -328,10 +328,12 @@ public class QueryRoutingService {
                 && payload.intent() == QueryRouting.Intent.FAQ && payload.subQueries().size() > 1) {
             inventory = requestInventory(analysisQuestion, executionId);
             if (inventory.decision() != Decision.MULTIPLE) {
+                // 단일 문의로 묶어도 재검색 후보는 보존한다. 사용 직전 원문·복원 문맥과 의미를 검증한다.
                 String wholeQuery = restored
-                        ? groundedSingleFaqQuery(payload.refinedQuery(), promptQuestion.strip(), previousSubject,
-                                executionId)
-                        : question;
+                    ? groundedSingleFaqQuery(payload.refinedQuery(), promptQuestion.strip(), previousSubject,
+                            executionId)
+                    : payload.refinedQuery() == null || payload.refinedQuery().isBlank()
+                            ? question : payload.refinedQuery().strip();
                 payload = new LlmRoutingPayload(QueryRouting.Intent.FAQ, payload.confidence(), wholeQuery,
                         payload.extractedConditions(), List.of(new LlmRoutingPayload.SubQueryPayload(
                                 (short) 1, ConsultRequest.Intent.FAQ, wholeQuery, Collections.emptyMap())));
