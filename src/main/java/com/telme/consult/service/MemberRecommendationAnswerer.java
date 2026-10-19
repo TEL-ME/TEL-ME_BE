@@ -39,6 +39,8 @@ public class MemberRecommendationAnswerer {
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
     public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
     public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;
+    // 데이터 사용량을 받은 뒤에야 물을지 알 수 있는 질문. 앞선 되묻기를 마친 뒤에도 처음 묻는 것은 허용한다
+    public static final java.util.Set<String> USAGE_FOLLOW_UP_KEYS = java.util.Set.of(VOICE_KEY, SMS_KEY);
 
     // content와 asks 중 하나만 있다. asks가 있으면 그 순서대로 되물어야 한다
     public record Outcome(String content, List<String> followUps, List<MissingCondition> asks) {
@@ -213,7 +215,7 @@ public class MemberRecommendationAnswerer {
     private record AgeGroup(Plan.TargetGroup group, boolean fromAnswer) {
     }
 
-    // 생년월일이 있으면 그것을, 없으면 되묻기 답을 쓴다. 둘 다 없으면 group이 null
+    // 생년월일이 있으면 그것을, 없으면 되묻기 답을 쓴다(선택지 글자 또는 직접 입력한 나이). 둘 다 없으면 group이 null
     private AgeGroup ageGroup(Long userId, String ageAnswer) {
         LocalDate birthDate = userId == null ? null : userRepository.findById(userId).map(User::getBirthDate).orElse(null);
         if (birthDate != null) {
@@ -230,7 +232,11 @@ public class MemberRecommendationAnswerer {
         if (SENIOR_OPTION.equals(ageAnswer)) {
             return new AgeGroup(Plan.TargetGroup.SENIOR, true);
         }
-        return GENERAL_OPTION.equals(ageAnswer) ? new AgeGroup(Plan.TargetGroup.GENERAL, true) : new AgeGroup(null, false);
+        if (GENERAL_OPTION.equals(ageAnswer)) {
+            return new AgeGroup(Plan.TargetGroup.GENERAL, true);
+        }
+        Plan.TargetGroup typed = AgeReplyParser.parse(ageAnswer);
+        return typed == null ? new AgeGroup(null, false) : new AgeGroup(typed, true);
     }
 
     // 앞서 한 답을 다시 묻지 않고 썼으면 답변 끝에 알린다

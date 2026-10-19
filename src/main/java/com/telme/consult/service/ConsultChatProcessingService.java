@@ -214,7 +214,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         Prepared searched = answers.clarifies() && prepared.decision().action() == Action.PROCEED
                 ? answers.prepare(answerInput, plansClarification)
                 : Prepared.none();
-        var plan = plansClarification
+        var plan = plansClarification || isUsageFollowUp(searched.plan())
                 ? searched.plan().remaining(prepared.decision().conditions())
                 : ClarificationPlan.none();
         if (plan.needsClarification()) {
@@ -625,6 +625,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             return new ChatFailure(ChatMessage.Status.FAILED, general.getErrorCode().getCode());
         }
         return new ChatFailure(ChatMessage.Status.FAILED, PROCESSING_ERROR_CODE);
+    }
+
+    // 요금제 추천이 데이터 사용량을 받은 뒤에 붙이는 통화·문자 질문만 저장된 계획을 마친 뒤에도 묻는다
+    private static boolean isUsageFollowUp(ClarificationPlan plan) {
+        return plan.needsClarification() && plan.conditions().stream()
+                .allMatch(condition -> MemberRecommendationAnswerer.USAGE_FOLLOW_UP_KEYS.contains(condition.key()));
     }
 
     public interface TurnAnalyzer {

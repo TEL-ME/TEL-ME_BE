@@ -13,6 +13,7 @@ import com.telme.usage.service.SubscriptionUsageService;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -231,6 +232,27 @@ class MemberRecommendationAnswererTest {
                 .content();
 
         assertThat(content).contains("5G 청소년(월 55,000원").doesNotContain("앞서 알려주신");
+    }
+
+    @Test
+    void 직접_입력한_나이도_나이대로_읽고_다시_묻지_않는다() {
+        assertThat(answered(null, "17살이에요", "3GB")).contains("알뜰 청소년");
+        assertThat(answered(null, "70대예요", "30GB")).contains("5G 스탠다드");
+        assertThat(answered(null, "20대예요", "3GB")).doesNotContain("청소년");
+
+        Outcome previousTyped = answerer.recommend(null, Map.of("monthly_data_usage", "40GB"),
+                Map.of("age_group", "20대예요"), true);
+
+        assertThat(previousTyped.asks()).isNull();
+        assertThat(previousTyped.content()).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 직접_입력한_나이가_구분_둘에_걸치거나_알_수_없으면_나이대를_되묻는다() {
+        for (String vague : List.of("10대예요", "60대예요", "비밀이에요", "10살")) {
+            assertThat(answerer.recommend(null, Map.of("age_group", vague, "monthly_data_usage", "3GB"), true).asks())
+                    .as(vague).extracting(MissingCondition::key).containsExactly("age_group");
+        }
     }
 
     @Test
