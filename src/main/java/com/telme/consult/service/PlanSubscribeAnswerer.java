@@ -61,7 +61,7 @@ public class PlanSubscribeAnswerer implements PlanTaskHandler {
         return reply("%s(월 %s, 데이터 %s)%s 요금제 가입 화면에서 신청할 수 있어요. %s%s".formatted(target.getName(),
                         PlanFormat.money(target.getMonthlyFee()), PlanFormat.data(target.isUnlimited(), target.getDataGb()),
                         topicParticle(target.getName()), terms(), PlanChangeAnswerer.ageNote(target)),
-                PlanTaskLinks.SUBSCRIBE);
+                PlanTaskLinks.subscribeTo(target.getName()));
     }
 
     private String terms() {

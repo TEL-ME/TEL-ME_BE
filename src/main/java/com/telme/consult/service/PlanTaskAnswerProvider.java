@@ -2,9 +2,9 @@ package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
-import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.repository.SessionRecommendationAnswers;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
@@ -25,17 +25,23 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     // 요금제 추천 답변(MemberRecommendationAnswerer)이 더 싸거나 큰 요금제를 권할 때 다는 버튼. 이 버튼 옆에 변경 화면 링크를 더한다
     static final String RECOMMENDATION_CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
-    // 요금제 추천 답변(MemberRecommendationAnswerer.recommendation)의 첫 문장 끝
-    private static final String RECOMMENDATION_MARK = "요금제를 추천해요.";
 
     private final AnswerProvider delegate;
     private final Map<PlanTask, PlanTaskHandler> handlers;
     private final LongFunction<Optional<Long>> memberOfSession;
+    private final LongFunction<Optional<String>> recommendationOfSession;
     private final ExecutionTrace trace;
     private final boolean enabled;
 
     public PlanTaskAnswerProvider(AnswerProvider delegate, List<? extends PlanTaskHandler> handlers,
             LongFunction<Optional<Long>> memberOfSession, ExecutionTrace trace, boolean enabled) {
+        this(delegate, handlers, memberOfSession, sessionId -> Optional.empty(), trace, enabled);
+    }
+
+    // recommendationOfSession은 채팅방의 가장 최근 요금제 추천 답변 본문. 없으면 비어 있다
+    public PlanTaskAnswerProvider(AnswerProvider delegate, List<? extends PlanTaskHandler> handlers,
+            LongFunction<Optional<Long>> memberOfSession, LongFunction<Optional<String>> recommendationOfSession,
+            ExecutionTrace trace, boolean enabled) {
         this.delegate = Objects.requireNonNull(delegate);
         this.handlers = new EnumMap<>(PlanTask.class);
         for (PlanTaskHandler handler : handlers) {
@@ -44,6 +50,7 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
             }
         }
         this.memberOfSession = Objects.requireNonNull(memberOfSession);
+        this.recommendationOfSession = Objects.requireNonNull(recommendationOfSession);
         this.trace = Objects.requireNonNull(trace);
         this.enabled = enabled;
     }
@@ -101,22 +108,14 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     // 같은 채팅방에서 가장 최근에 한 요금제 추천 답변의 첫 문장("…쓰신다면 5G 스탠다드(월 65,000원…) 요금제를 추천해요.").
     // 뒤따르는 "5G로 쓰시려면 …" 같은 다른 후보는 대상이 아니라 첫 문장만 쓴다. 없으면 null
-    static String recentRecommendation(AnswerInput input) {
-        if (input.context() == null) {
-            return null;
-        }
-        List<ChatContextMessage> history = input.context().history();
-        for (int i = history.size() - 1; i >= 0; i--) {
-            ChatContextMessage message = history.get(i);
-            if (message.role() != ChatMessage.Role.ASSISTANT || message.content() == null) {
-                continue;
-            }
-            int end = message.content().indexOf(RECOMMENDATION_MARK);
-            if (end >= 0) {
-                return message.content().substring(0, end + RECOMMENDATION_MARK.length());
-            }
-        }
-        return null;
+    private String recentRecommendation(AnswerInput input) {
+        return recommendationOfSession.apply(input.sessionId()).map(PlanTaskAnswerProvider::firstSentence).orElse(null);
+    }
+
+    static String firstSentence(String recommendation) {
+        int end = recommendation.indexOf(SessionRecommendationAnswers.RECOMMENDATION_MARK);
+        return end < 0 ? recommendation
+                : recommendation.substring(0, end + SessionRecommendationAnswers.RECOMMENDATION_MARK.length());
     }
 
     private GeneratedAnswer answered(AnswerInput input, String task, PlanTaskOutcome outcome) {

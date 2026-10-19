@@ -90,7 +90,7 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
                                 PlanFormat.data(target.isUnlimited(), target.getDataGb()),
                                 directionParticle(target.getName()), target.getName(),
                                 PlanTaskSupport.objectParticle(target.getName()), rules(), ageNote(target)),
-                PlanTaskLinks.CHANGE);
+                PlanTaskLinks.changeTo(target.getName()));
     }
 
     // 기존 변경 규칙(SubscriptionCommandService.changePlan)의 가입 당월·월 1회 제한을 같은 기준으로 먼저 본다.

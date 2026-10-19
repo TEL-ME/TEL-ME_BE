@@ -65,6 +65,7 @@ class PlanTaskChatIntegrationTest {
     @Autowired PlanRepository plans;
     @Autowired SubscriptionCommandService subscriptions;
     @Autowired SubscriptionQueryService subscriptionQueries;
+    @Autowired com.telme.consult.repository.SessionRecommendationAnswers recommendations;
     @MockitoBean ChatProcessingPort processing;
 
     long userId;
@@ -81,7 +82,8 @@ class PlanTaskChatIntegrationTest {
         AnswerProvider faq = mock(AnswerProvider.class);
         when(faq.clarifies()).thenReturn(true);
         when(faq.prepare(any(), anyBoolean())).thenReturn(Prepared.none());
-        var answers = new PlanTaskAnswerProvider(faq, handlers, sessionId -> Optional.of(userId), ExecutionTrace.noop(), true);
+        var answers = new PlanTaskAnswerProvider(faq, handlers, sessionId -> Optional.of(userId),
+                recommendations::latestRecommendation, ExecutionTrace.noop(), true);
         var actualProcessing = new ConsultChatProcessingService(this::analyze, answers, persistence,
                 new ConfirmedConditionConverter());
         doAnswer(call -> {
@@ -113,7 +115,7 @@ class PlanTaskChatIntegrationTest {
 
         assertThat(answer.path("messageType").asText()).isEqualTo("ANSWER");
         assertThat(answer.path("content").asText()).contains("지금 쓰는 LTE 맥스에서 5G 라이트", "요금제 변경 화면에서");
-        assertThat(answer.path("followUps").toString()).contains(PlanTaskLinks.CHANGE);
+        assertThat(answer.path("followUps").toString()).contains("5G 라이트 변경하러 가기");
         assertThat(currentPlan()).isEqualTo("LTE 맥스");
     }
 
@@ -126,6 +128,51 @@ class PlanTaskChatIntegrationTest {
         assertThat(answer.path("content").asText()).startsWith("요금제 가입 화면에서");
         assertThat(answer.path("followUps").toString()).contains(PlanTaskLinks.SUBSCRIBE);
         assertThat(subscriptionQueries.getMine(userId).subscribed()).isFalse();
+    }
+
+    @Test
+    void 이름_없는_가입_요청은_채팅방에_저장된_직전_추천_요금제로_안내한다() throws Exception {
+        subscriptions.cancel(userId);
+        long sessionId = createSession();
+        insertAssistantAnswer(sessionId, 1, "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요."
+                + " 5G로 쓰시려면 5G 프리미엄(월 85,000원, 데이터 150GB) 요금제가 가장 저렴해요.");
+
+        waitCompleted(send(sessionId, "그 요금제로 가입하고싶어"));
+
+        JsonNode messages = history(sessionId).path("result").path("messages");
+        String content = messages.get(messages.size() - 1).path("content").asText();
+        assertThat(content).startsWith("5G 스탠다드(월 65,000원, 데이터 50GB)는 요금제 가입 화면에서 신청할 수 있어요.");
+        assertThat(content).doesNotContain("5G 프리미엄");
+        assertThat(messages.get(messages.size() - 1).path("followUps").toString()).contains("5G 스탠다드 가입하러 가기");
+    }
+
+    @Test
+    void 추천_기록이_없으면_이름_없는_가입_요청은_가입_화면에서_고르도록_안내한다() throws Exception {
+        subscriptions.cancel(userId);
+        long sessionId = createSession();
+
+        waitCompleted(send(sessionId, "요금제 가입하고 싶어"));
+
+        JsonNode messages = history(sessionId).path("result").path("messages");
+        assertThat(messages.get(messages.size() - 1).path("content").asText())
+                .startsWith("요금제 가입 화면에서 원하는 요금제를 골라 신청해 주세요.");
+    }
+
+    @Test
+    void 가장_최근_추천_답변만_읽고_추천이_아닌_답변은_건너뛴다() throws Exception {
+        long sessionId = createSession();
+        insertAssistantAnswer(sessionId, 1, "한 달에 데이터를 3GB 쓰신다면 LTE 베이직(월 33,000원, 데이터 4GB) 요금제를 추천해요.");
+        insertAssistantAnswer(sessionId, 2, "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요.");
+        insertAssistantAnswer(sessionId, 3, "요금제 가입 화면에서 신청해 주세요.");
+
+        assertThat(recommendations.latestRecommendation(sessionId)).hasValueSatisfying(content ->
+                assertThat(content).startsWith("한 달에 데이터를 40GB"));
+        assertThat(recommendations.latestRecommendation(createSession())).isEmpty();
+    }
+
+    private void insertAssistantAnswer(long sessionId, int sequence, String content) {
+        jdbc.update("INSERT INTO chat_messages(session_id,sequence_no,role,message_type,content,status,completed_at)"
+                + " VALUES (?,?,'ASSISTANT','ANSWER',?,'COMPLETED',now())", sessionId, sequence, content);
     }
 
     @Test

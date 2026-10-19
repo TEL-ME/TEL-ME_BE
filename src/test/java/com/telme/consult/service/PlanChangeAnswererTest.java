@@ -62,7 +62,7 @@ class PlanChangeAnswererTest {
 
         assertThat(outcome.content()).isEqualTo("지금 쓰는 LTE 맥스에서 5G 라이트(월 45,000원, 데이터 12GB)로 바꾸려면"
                 + " 요금제 변경 화면에서 5G 라이트를 골라 주세요. 변경은 신청한 다음 날 0시부터 적용되고, 요금제는 한 달에 한 번만 바꿀 수 있어요.");
-        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.CHANGE);
+        assertThat(outcome.followUps()).containsExactly("5G 라이트 변경하러 가기");
     }
 
     @Test
@@ -164,7 +164,7 @@ class PlanChangeAnswererTest {
         var outcome = answerer(true).answer(USER_ID, "5G 라이트로 바꿔줘", null);
 
         assertThat(outcome.content()).contains("요금제 변경 화면에서 5G 라이트를 골라 주세요", "변경은 바로 적용되고");
-        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.CHANGE);
+        assertThat(outcome.followUps()).containsExactly("5G 라이트 변경하러 가기");
     }
 
     private PlanChangeAnswerer answerer(boolean demoMode) {

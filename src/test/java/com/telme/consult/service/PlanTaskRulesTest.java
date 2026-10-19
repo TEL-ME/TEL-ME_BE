@@ -99,6 +99,17 @@ class PlanTaskRulesTest {
     }
 
     @Test
+    @DisplayName("요금제 이름이 붙은 링크 문구도 업무 요청이 아니라 화면 안내로 받는다")
+    void 요금제_지정_링크_문구() {
+        for (String link : List.of(PlanTaskLinks.subscribeTo("5G 스탠다드"), PlanTaskLinks.changeTo("LTE 플러스"))) {
+            assertThat(PlanTaskRules.detect(link)).isEmpty();
+            assertThat(PlanTaskLinks.guideFor(link)).isPresent();
+        }
+        assertThat(PlanTaskLinks.guideFor(" 가입하러 가기")).isEmpty();
+        assertThat(PlanTaskLinks.guideFor("가입하러 가기")).isEmpty();
+    }
+
+    @Test
     @DisplayName("정지 기간은 숫자 일수, 주, 보름, 달을 일수로 읽는다")
     void 정지_기간() {
         assertThat(PlanTaskRules.pauseDays("10일 일시정지해줘")).hasValue(10);

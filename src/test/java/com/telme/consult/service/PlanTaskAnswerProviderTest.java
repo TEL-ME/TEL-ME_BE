@@ -11,8 +11,6 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
-import com.telme.chat.service.ChatContext;
-import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
@@ -99,42 +97,27 @@ class PlanTaskAnswerProviderTest {
     }
 
     @Test
-    @DisplayName("직전 추천 답변의 첫 문장을 처리기가 대상 요금제를 보충하는 데 넘긴다")
+    @DisplayName("채팅방의 직전 추천 답변 첫 문장을 처리기가 대상 요금제를 보충하는 데 넘긴다")
     void 직전_추천_보충() {
         String recommendation = "한 달에 데이터를 8GB 쓰신다면 LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.";
         String content = recommendation + " 5G로 쓰시려면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제가 가장 저렴해요. 로그인하고 가입하세요.";
         when(changes.answer(USER_ID, "그 요금제로 바꿔줘", "그 요금제로 바꿔줘", recommendation))
                 .thenReturn(PlanTaskOutcome.reply("LTE 플러스로 바꾸려면 변경 화면에서 신청해 주세요.", PlanTaskLinks.CHANGE));
-        var history = List.of(
-                new ChatContextMessage(1L, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION, "요금제 추천해줘", null),
-                new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER, content, null));
-        var context = new ChatContext(2L, 3L, null, history, "그 요금제로 바꿔줘", 10);
+        provider = new PlanTaskAnswerProvider(faq, List.of(changes, cancels), sessionId -> Optional.of(USER_ID),
+                sessionId -> sessionId == 2L ? Optional.of(content) : Optional.empty(), ExecutionTrace.noop(), true);
 
-        GeneratedAnswer answer = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그 요금제로 바꿔줘",
-                "그 요금제로 바꿔줘", Map.of(), "그 요금제로 바꿔줘", context, true, null, Map.of()), true).answer();
+        GeneratedAnswer answer = provider.prepare(input(Purpose.GENERAL_FAQ, "그 요금제로 바꿔줘"), true).answer();
 
         assertThat(answer.answer().content()).startsWith("LTE 플러스로 바꾸려면");
     }
 
     @Test
-    @DisplayName("직전 추천은 가장 최근 추천 답변의 첫 문장이고, 추천 답변이 없으면 비어 있다")
-    void 직전_추천_찾기() {
-        var older = new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
-                "한 달에 데이터를 3GB 쓰신다면 LTE 베이직(월 33,000원, 데이터 4GB) 요금제를 추천해요. 뒤 문장", null);
-        var newer = new ChatContextMessage(4L, 4, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
-                "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요. 뒤 문장", null);
-        var other = new ChatContextMessage(5L, 5, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
-                "요금제 가입 화면에서 신청해 주세요.", null);
-
-        assertThat(PlanTaskAnswerProvider.recentRecommendation(withHistory(List.of(older, newer, other))))
+    @DisplayName("직전 추천은 첫 문장만 쓴다. 문장 끝 표시가 없으면 본문 전체를 그대로 넘긴다")
+    void 첫_문장만_쓴다() {
+        assertThat(PlanTaskAnswerProvider.firstSentence(
+                "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요. 뒤 문장"))
                 .isEqualTo("한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요.");
-        assertThat(PlanTaskAnswerProvider.recentRecommendation(withHistory(List.of(other)))).isNull();
-        assertThat(PlanTaskAnswerProvider.recentRecommendation(input(Purpose.GENERAL_FAQ, "요금제 가입하고 싶어"))).isNull();
-    }
-
-    private static AnswerInput withHistory(List<ChatContextMessage> history) {
-        return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "요금제 가입하고 싶어", "요금제 가입하고 싶어", Map.of(),
-                "요금제 가입하고 싶어", new ChatContext(2L, 9L, null, history, "요금제 가입하고 싶어", 10), true, null, Map.of());
+        assertThat(PlanTaskAnswerProvider.firstSentence("표시 없는 본문")).isEqualTo("표시 없는 본문");
     }
 
     @Test

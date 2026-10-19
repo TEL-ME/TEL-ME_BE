@@ -60,7 +60,9 @@ class PlanSubscribeAnswererTest {
         var outcome = answerer.answer(USER_ID, "요금제 가입하고 싶어", null, recommended);
 
         assertThat(outcome.content()).startsWith("5G 라이트(월 45,000원, 데이터 12GB)는 요금제 가입 화면에서 신청할 수 있어요.");
-        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.SUBSCRIBE);
+        assertThat(outcome.followUps()).containsExactly("5G 라이트 가입하러 가기");
+        assertThat(answerer.answer(USER_ID, "LTE 맥스 가입하고 싶어", null, recommended).followUps())
+                .containsExactly("LTE 맥스 가입하러 가기");
         assertThat(answerer.answer(USER_ID, "LTE 맥스 가입하고 싶어", null, recommended).content()).startsWith("LTE 맥스(");
         assertThat(answerer.answer(USER_ID, "요금제 가입하고 싶어", null, null).content())
                 .startsWith("요금제 가입 화면에서 원하는 요금제를 골라 신청해 주세요.");
@@ -73,7 +75,7 @@ class PlanSubscribeAnswererTest {
 
         assertThat(outcome.content()).isEqualTo("5G 라이트(월 45,000원, 데이터 12GB)는 요금제 가입 화면에서 신청할 수 있어요."
                 + " 약정 없이 가입하거나 24개월 약정으로 월정액 25% 할인을 받을 수 있고, 신청하면 다음 날 오전 9시에 개통돼요.");
-        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.SUBSCRIBE);
+        assertThat(outcome.followUps()).containsExactly("5G 라이트 가입하러 가기");
         assertThat(answerer.answer(USER_ID, "5G 시니어 가입할게요", null).content()).endsWith("화면에서 생년월일을 입력해요.");
     }
 
