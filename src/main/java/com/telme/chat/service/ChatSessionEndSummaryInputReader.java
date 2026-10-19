@@ -5,6 +5,8 @@ import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.converter.ChatContextFormatter;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.repository.ChatEndSummaryInquiryRepository;
+import com.telme.chat.repository.ChatEndSummaryConditionRepository;
 import com.telme.chat.safety.OutputMaskContext;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,6 +27,8 @@ class ChatSessionEndSummaryInputReader {
     private final ObjectMapper mapper;
     private final ChatEndSummaryProperties properties;
     private final ChatInputMaskRepository inputMasks;
+    private final ChatEndSummaryInquiryRepository inquiryRepository;
+    private final ChatEndSummaryConditionRepository conditionRepository;
 
     @Transactional(readOnly = true)
     ChatEndSummaryData.Input read(long sessionId) {
@@ -35,11 +39,15 @@ class ChatSessionEndSummaryInputReader {
                 FROM chat_messages m LEFT JOIN chat_executions e ON e.input_message_id=m.message_id
                 WHERE m.session_id=? AND m.status='COMPLETED' AND m.message_type NOT IN ('ERROR','BLOCKED')
                 ORDER BY m.sequence_no LIMIT ?
-                """, (rs, n) -> new ChatEndSummaryData.Message(rs.getLong("message_id"),
-                        rs.getInt("sequence_no"), (Long) rs.getObject("reply_to_id"), rs.getString("role"),
-                        rs.getString("message_type"), safeContent(rs.getString("content"),
-                                rs.getString("store_results"), maskSources), rs.getString("answer_basis"),
-                        rs.getString("execution_status")), sessionId, properties.maxMessages() + 1);
+                """, (rs, n) -> {
+                    var content = safeContent(rs.getString("content"), rs.getString("store_results"), maskSources);
+                    String basis = rs.getString("answer_basis");
+                    String type = ChatEndSummarySourceText.resolveSummaryMessageType(
+                            rs.getString("message_type"), basis, content.text());
+                    return new ChatEndSummaryData.Message(rs.getLong("message_id"), rs.getInt("sequence_no"),
+                            (Long) rs.getObject("reply_to_id"), rs.getString("role"), type, content.text(), basis,
+                            rs.getString("execution_status"), content.hasStoreResults());
+                }, sessionId, properties.maxMessages() + 1);
         if (messages.size() > properties.maxMessages()) {
             throw new IllegalArgumentException("INPUT_LIMIT");
         }
@@ -93,6 +101,14 @@ class ChatSessionEndSummaryInputReader {
                     ? "" : message.executionStatus())) {
                 pending.add(message.id());
             }
+            if (message.type().equals("CLARIFICATION") && message.replyTo() != null
+                    && ids.contains(message.replyTo())) {
+                boolean answeredLater = messages.stream().anyMatch(answer -> answer.sequence() > message.sequence()
+                        && message.replyTo().equals(answer.replyTo()) && "GROUNDED".equals(answer.basis()));
+                if (!answeredLater) {
+                    pending.add(message.replyTo());
+                }
+            }
             if (Set.of("NO_EVIDENCE", "OUT_OF_SCOPE").contains(message.basis() == null ? "" : message.basis())
                     && message.replyTo() != null && ids.contains(message.replyTo())) {
                 pending.add(message.replyTo());
@@ -110,22 +126,20 @@ class ChatSessionEndSummaryInputReader {
         var executions = jdbc.queryForList("""
                 SELECT execution_id FROM chat_executions WHERE session_id=? ORDER BY execution_id DESC LIMIT 1
                 """, Long.class, sessionId);
-        var conditions = jdbc.query("""
-                SELECT r.consult_request_id, r.origin_message_id, c.condition_key, c.condition_value,
-                    c.status, c.source, c.answered_message_id, a.sequence_no
-                FROM consult_requests r JOIN consult_conditions c USING (consult_request_id)
-                LEFT JOIN chat_messages a ON a.message_id=c.answered_message_id
-                WHERE r.session_id=? ORDER BY r.consult_request_id, c.condition_key
-                """, (rs, n) -> new ChatEndSummaryData.Condition(rs.getLong("consult_request_id"),
-                        rs.getLong("origin_message_id"), rs.getString("condition_key"),
-                        safe(rs.getString("condition_value"), maskSources), rs.getString("status"),
-                        rs.getString("source"),
-                        (Long) rs.getObject("answered_message_id"), (Integer) rs.getObject("sequence_no")),
-                sessionId).stream().filter(condition -> ids.contains(condition.originMessageId())).toList();
+        var conditions = conditionRepository.findBySessionId(sessionId).stream()
+                .filter(condition -> ids.contains(condition.originMessageId()))
+                .map(condition -> new ChatEndSummaryData.Condition(condition.requestId(), condition.originMessageId(),
+                        condition.key(), safe(condition.value(), maskSources), condition.status(), condition.source(),
+                        condition.answeredMessageId(), condition.answeredSequence(), condition.askedMessageId()))
+                .toList();
         maskSources.addAll(inputMasks.read(sessionId, through).sources());
-        return new ChatEndSummaryData.Input(sessionId, through,
+        var input = new ChatEndSummaryData.Input(sessionId, through,
                 executions.isEmpty() ? null : executions.getFirst(), messages, requests, pending, conditions,
-                new OutputMaskContext(maskSources));
+                new OutputMaskContext(maskSources), inquiryRepository.findBySessionId(sessionId));
+        Set<Long> unresolved = pending.stream().filter(id -> !ChatEndSummaryResolution.isResolved(input, id))
+                .collect(Collectors.toSet());
+        return new ChatEndSummaryData.Input(sessionId, through, input.executionId(), messages, requests,
+                unresolved, conditions, input.maskContext(), input.inquiryClassifications());
     }
 
     private String safe(String text, List<OutputMaskContext.Source> maskSources) {
@@ -139,10 +153,10 @@ class ChatSessionEndSummaryInputReader {
         return inspection.content();
     }
 
-    private String safeContent(String text, String stores, List<OutputMaskContext.Source> maskSources) {
+    private SafeContent safeContent(String text, String stores, List<OutputMaskContext.Source> maskSources) {
         String result = safe(text, maskSources);
         if (stores == null) {
-            return result;
+            return new SafeContent(result, false);
         }
         try {
             var root = mapper.readTree(stores);
@@ -156,11 +170,14 @@ class ChatSessionEndSummaryInputReader {
                     }
                 }
             }
-            return result + (labels.isEmpty() ? "" : "\n안내한 매장: " + String.join(", ", labels));
+            return new SafeContent(result + (labels.isEmpty() ? "" : "\n안내한 매장: " + String.join(", ", labels)),
+                    !labels.isEmpty());
         } catch (java.io.IOException exception) {
             throw new IllegalArgumentException("INVALID_INPUT");
         }
     }
+
+    private record SafeContent(String text, boolean hasStoreResults) {}
 
     private boolean isFixedSocial(String value) {
         return Set.of("안녕하세요. 무엇을 도와드릴까요?",

@@ -38,8 +38,8 @@ class AnswerPromptTemplatesTest {
     }
 
     @Test
-    @DisplayName("페르소나와 친근한 거절 문구 외에는 기존 근거·출력 계약을 유지한다")
-    void 일반_관계_제한_외_v3_전문을_유지한다() throws Exception {
+    @DisplayName("관계·안내 창구·신청 상태 규칙과 거절 문구 외에는 기존 전문을 유지한다")
+    void 관계_창구_신청_상태_규칙_외_v3_전문을_유지한다() throws Exception {
         String baseline;
         try (var input = getClass().getResourceAsStream("/rag/prompt-relations/rag-answer-v3.txt")) {
             assertThat(input).isNotNull();
@@ -53,13 +53,19 @@ class AnswerPromptTemplatesTest {
                 + "   - 근거가 \"홈페이지로 신청하시면 됩니다\"이면 \"홈페이지\"라고만 쓰십시오.\n"
                 + "   \"TELME샵\", \"유플러스샵\", \"이벤트 페이지\", \"공식 사이트\"는 어떤 경우에도 쓰지 마십시오.\n"
                 + "   근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.\n";
+        String applicationAddition =
+                "   근거에 없는 신청 권유나 접수·처리 제안을 덧붙이지 마십시오.\n"
+                + "   근거에 이번 상담의 신청 미접수·미처리 상태가 명시돼 있으면 생략하지 마십시오.\n";
 
         // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(relationAddition);
-        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(channelAddition);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT)
+                .containsOnlyOnce(relationAddition)
+                .containsOnlyOnce(channelAddition)
+                .containsOnlyOnce(applicationAddition);
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
                 .replace(relationAddition, "")
                 .replace(channelAddition, "")
+                .replace(applicationAddition, "")
                 .replace("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요",
                         "안내드릴 수 있는 정보가 없습니다")).isEqualTo(baseline);
         // 정체성 지침이 붙으면 무관 질문에 근거 없는 GROUNDED 답변이 늘어 FAQ 답변 프롬프트에는 넣지 않는다.

@@ -481,6 +481,284 @@ class RagAnswerGeneratorTest {
         assertThat(handler.error).isNull();
     }
 
+    @Test
+    @DisplayName("명확한 단일 유심 절차는 추가 생성 없이 검사한 근거 원문을 전달한다")
+    void 단일_절차는_추가_생성을_하지_않는다() {
+        String question = "유심 재발급 비용과 무료 조건을 알고 싶어요. 절차만 설명해 주세요.";
+        String evidence = "유심 재발급 비용은 7,700원입니다. 신분증을 가지고 매장을 방문해야 합니다.";
+        StubClient client = new StubClient(List.of("근거 없는 신청을 도와드리겠습니다."));
+        var request = AnswerRequest.builder().executionId(42L).userQuery(question)
+                .searchResults(List.of(faq(1L, question, evidence))).build();
+
+        var result = generator(client).generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(evidence);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(client.called).isFalse();
+        assertThat(handler.tokens).containsExactly(evidence);
+    }
+
+    @Test
+    @DisplayName("원문 전달도 답변 검사 후 안내 불가 문구가 남으면 근거 없음으로 기록한다")
+    void 원문_안내의_검사_결과가_근거_없음이면_판정도_일치한다() {
+        String question = "유심 재발급 비용과 무료 조건을 알고 싶어요. 절차만 설명해 주세요.";
+        String evidence = "죄송합니다. " + AnswerPromptTemplates.NO_EVIDENCE_MESSAGE
+                + ". 신분증을 가지고 매장을 방문해야 합니다.";
+        var client = new StubClient(List.of("호출하지 않는 답변"));
+        var request = new AnswerRequest(42L, question, Map.of(), List.of(faq(1L, question, evidence)));
+
+        var result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isFalse();
+        assertThat(result.answer()).contains(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+    }
+
+    @Test
+    @DisplayName("로밍 근거가 섞여도 이심 비용만 최종 답변으로 전달한다")
+    void 혼합_근거의_다른_업무_절차를_최종_답변에서_제거한다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        StubClient client = new StubClient(List.of(cost, " eSIM을 신청하세요."));
+        AnswerRequest request = request("eSIM 발급 비용을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, cost)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(cost);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일치하는 신청 근거가 없으면 답변 생성 경로에서도 근거 없음으로 반환한다")
+    void 다른_업무의_신청만_생성하면_근거_없음으로_반환한다() {
+        StubClient client = new StubClient(List.of("eSIM을 신청하세요."));
+        AnswerRequest request = request("eSIM 발급 비용을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, "eSIM 발급 비용은 2,750원입니다.")));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일치하는 재발급 업무는 대리인과 위임장 및 신분증 조건을 복원하여 전달한다")
+    void 최종_답변에_방문자와_준비물_조건을_그대로_전달한다() {
+        String evidence = "대리인은 위임장과 신분증을 지참한 경우에만 매장에서 유심 재발급을 신청하시면 됩니다.";
+        StubClient client = new StubClient(List.of("유심 재발급을 신청하세요."));
+        AnswerRequest request = request("유심 재발급 방법을 알려주세요.",
+                List.of(faq(1L, "로밍은 앱에서 신청하세요."), faq(2L, evidence)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(evidence);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(evidence);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일반 방문 안내도 로밍 근거로 이심 절차를 복원하지 않고 정상 비용만 전달한다")
+    void 일반_방문에서_다른_업무의_절차를_최종_전달하지_않는다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        StubClient client = new StubClient(List.of(cost,
+                " eSIM 발급은 신분증을 가지고 홈페이지 또는 매장을 방문하세요."));
+        AnswerRequest request = request("eSIM 발급 비용과 절차를 알려주세요.",
+                List.of(faq(1L, "로밍 변경 시 신분증을 가지고 매장을 방문해야 합니다."), faq(2L, cost)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(cost);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("일반 방문 복원 후에도 같은 유심 업무의 방문자와 준비물을 최종 전달한다")
+    void 일반_방문의_같은_업무_조건을_최종_전달한다() {
+        String evidence = "대리인은 유심 재발급 시 위임장과 신분증을 가지고 매장을 방문해야 합니다.";
+        StubClient client = new StubClient(List.of(
+                "유심 재발급 시 신분증을 가지고 홈페이지 또는 매장을 방문하세요."));
+        AnswerRequest request = request("유심 재발급 절차를 알려주세요.", List.of(faq(1L, evidence)));
+
+        AnswerResult result = generator(client).generate(request, handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(evidence);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(evidence);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("생성 응답의 근거 있는 신청 방법 선택은 근거 상태와 최종 전달 내용까지 보존한다")
+    void 신청_방법_선택을_근거_있는_최종_답변으로_전달한다() {
+        String evidence = "매장에 가시거나 고객센터에 전화하시거나 홈페이지로 신청하시면 됩니다.";
+        String answer = "고객센터 전화, 홈페이지, 또는 매장 방문 중 편하신 방법으로 신청하시면 됩니다.";
+        var client = new StubClient(List.of("고객센터 전화, 홈페이지, ",
+                "또는 매장 방문 중 편하신 방법으로 신청하시면 됩니다."));
+
+        var result = generator(client).generate(request("인터넷 해지 신청 방법", List.of(faq(1L, evidence))), handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(answer);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(answer);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("생성 응답의 선택 안내에 근거 없는 창구를 보태면 최종 답변과 근거 상태를 함께 차단한다")
+    void 추가한_신청_창구를_최종_응답에서_차단한다() {
+        String evidence = "매장에 가시거나 고객센터에 전화하시거나 홈페이지로 신청하시면 됩니다.";
+        var client = new StubClient(List.of("고객센터 전화, 홈페이지, 매장 방문, 앱 중 편하신 방법으로 신청하시면 됩니다."));
+
+        var result = generator(client).generate(request("인터넷 해지 신청 방법", List.of(faq(1L, evidence))), handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("순차 신청 절차를 선택 안내로 바꾼 생성문은 최종 답변과 근거 상태를 함께 차단한다")
+    void 선행_절차를_생략한_선택_안내를_최종_응답에서_차단한다() {
+        String evidence = "고객센터에 전화하여, 홈페이지로 신청하시면 됩니다.";
+        var client = new StubClient(List.of("고객센터 전화, 홈페이지 중 편하신 방법으로 신청하시면 됩니다."));
+
+        var result = generator(client).generate(request("인터넷 해지 신청 방법", List.of(faq(1L, evidence))), handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("준비물 단정은 고객에게 전송하기 전에 명의자와 대리인 조건을 포함한 원문으로 복원한다")
+    void 준비물_단정의_원시_토큰을_최종_답변에_노출하지_않는다() {
+        String evidence = "유심 재발급 비용은 7,700원입니다. "
+                + "명의자 본인은 신분증을 지참하고 매장을 방문해야 합니다. "
+                + "대리인은 위임장과 신분증을 가지고 매장을 방문해야 합니다.";
+        var client = new StubClient(List.of("유심 재발급 비용은 7,700원입니다. 필요한 준비물은 신분증", "만 있으면 됩니다."));
+
+        var result = generator(client).generate(request("유심 재발급 준비물", List.of(faq(1L, evidence))), handler);
+
+        assertThat(client.called).isTrue();
+        assertThat(result.answer()).isEqualTo(evidence).doesNotContain("신분증만");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(evidence);
+        assertThat(handler.completed).isTrue();
+        assertThat(handler.error).isNull();
+    }
+
+    @Test
+    @DisplayName("여러 FAQ의 다른 업무 준비물을 합치지 않고 확인된 비용만 최종 전송한다")
+    void 다른_업무의_준비물을_최종_응답에_추가하지_않는다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        var client = new StubClient(List.of(cost, " 필요한 준비물은 신분증만 준비하시면 됩니다."));
+        var request = request("eSIM 발급 준비물과 비용", List.of(
+                faq(1L, "로밍 변경은 위임장과 신분증을 지참하고 매장을 방문해야 합니다."), faq(2L, cost)));
+
+        var result = generator(client).generate(request, handler);
+
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(cost);
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("하나의 FAQ 안에서 줄바꿈한 준비물과 방문자 조건도 최종 답변에 모두 보존한다")
+    void 한_FAQ의_여러_줄_조건을_보존한다() {
+        String evidence = "유심 재발급은 신분증을 지참하고 매장을 방문해야 합니다.\n"
+                + "대리인은 위임장도 지참해야 합니다.\n명의자 본인 또는 대리인이 방문할 수 있습니다.";
+        var client = new StubClient(List.of("유심 재발급은 신분증만 준비하면 됩니다."));
+
+        var result = generator(client).generate(request("유심 재발급 준비물", List.of(faq(1L, evidence))), handler);
+
+        String expected = evidence.replace("\n", " ");
+        assertThat(result.answer()).isEqualTo(expected);
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(expected);
+    }
+
+    @Test
+    @DisplayName("모델이 첫 문장을 그대로 골라도 같은 FAQ의 본인 방문 제한을 빠뜨리지 않는다")
+    void 원문_일부만_골라도_방문_조건을_함께_보존한다() {
+        String first = "유심 재발급은 신분증을 지참해야 합니다.";
+        String evidence = first + "\n명의자 본인만 매장을 방문할 수 있습니다.";
+        var client = new StubClient(List.of(first));
+
+        var result = generator(client).generate(request("유심 재발급 준비물", List.of(faq(1L, evidence))), handler);
+
+        String expected = evidence.replace("\n", " ");
+        assertThat(result.answer()).isEqualTo(expected);
+        assertThat(handler.tokens).containsExactly(expected);
+    }
+
+    @Test
+    @DisplayName("여러 FAQ 중 같은 문의의 여러 줄 조건만 복원하고 다른 업무 조건은 섞지 않는다")
+    void 여러_FAQ의_줄바꿈과_업무_경계를_유지한다() {
+        String evidence = "유심 재발급은 신분증을 지참하고 매장을 방문해야 합니다.\n"
+                + "대리인은 위임장도 지참해야 합니다.";
+        String other = "로밍 변경은 신분증을 지참해야 합니다.\n법인 방문 시 별도 서류가 필요합니다.";
+        var client = new StubClient(List.of("유심 재발급은 신분증만 준비하면 됩니다."));
+
+        var result = generator(client).generate(request("유심 재발급 준비물",
+                List.of(faq(1L, evidence), faq(2L, other))), handler);
+
+        assertThat(result.answer()).contains("대리인은 위임장도 지참해야 합니다.").doesNotContain("로밍", "법인");
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.GROUNDED);
+        assertThat(handler.tokens).containsExactly(result.answer());
+    }
+
+    @Test
+    @DisplayName("여러 FAQ가 있어도 잘못된 수치를 복원으로 덮지 않고 안전 안내로 반환한다")
+    void 복수_FAQ에서도_잘못된_수치를_고쳐_통과시키지_않는다() {
+        String evidence = "유심 재발급 비용은 7,700원입니다. 신분증을 지참하고 매장을 방문해야 합니다.";
+        var client = new StubClient(List.of("유심 재발급 비용은 8,800원이며 신분증만 지참하면 됩니다."));
+
+        var result = generator(client).generate(request("유심 재발급 준비물",
+                List.of(faq(1L, evidence), faq(2L, "로밍 서비스를 안내합니다."))), handler);
+
+        assertThat(result.answerBasis()).isEqualTo(AnswerBasis.NO_EVIDENCE);
+        assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(handler.error).isNull();
+        assertThat(handler.completed).isTrue();
+    }
+
+    @Test
+    @DisplayName("대상이 생략된 다른 FAQ 준비물에 비용 FAQ의 상품과 업무를 빌려 붙이지 않는다")
+    void 다른_FAQ에서_생략한_대상을_추론하지_않는다() {
+        String cost = "eSIM 발급 비용은 2,750원입니다.";
+        String unknown = "신분증과 위임장을 지참하고 매장을 방문해야 합니다.";
+        var client = new StubClient(List.of(cost + " 신분증만 준비하면 됩니다."));
+
+        var result = generator(client).generate(request("eSIM 발급 준비물과 비용",
+                List.of(faq(1L, unknown), faq(2L, cost))), handler);
+
+        assertThat(result.answer()).isEqualTo(cost);
+        assertThat(handler.tokens).containsExactly(cost);
+    }
+
     private RagAnswerGenerator generator(LlmClient client) {
         return generator(client, ExecutionTrace.noop());
     }

@@ -72,6 +72,12 @@ springdoc:
 ollama:
   url: ${OLLAMA_URL:http://localhost:11434}
 
+chat:
+  end-summary:
+    model:
+      # 종료 요약만 별도 선택한다. 답변·판정·목록 제목의 모델 설정은 바꾸지 않는다.
+      provider: ${CHAT_END_SUMMARY_MODEL_PROVIDER:ollama}
+
 kakao:
   local:
     # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
