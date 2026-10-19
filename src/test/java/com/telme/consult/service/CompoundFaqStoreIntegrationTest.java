@@ -154,6 +154,10 @@ class CompoundFaqStoreIntegrationTest {
         assertThat(asked.path("content").asText()).contains("1. 번호이동 방법", "신분증", "2. ", "어느 지역");
         assertThat(statuses()).containsExactly("DONE", "WAITING_CONDITION");
         assertThat(answerInputs).extracting(AnswerInput::purpose).containsExactly(Purpose.GENERAL_FAQ);
+        // 하위 질문마다 고객에게 보인 결과를 기록한다(상담 종료 요약이 읽는다)
+        assertThat(outcomes()).containsExactly("ANSWERED|번호이동 방법", "ASKED|번호이동 가능한 매장");
+        assertThat(answerTexts().getFirst()).contains("신분증").doesNotContain("1. 번호이동 방법");
+        assertThat(answerTexts().get(1)).contains("어느 지역").doesNotContain("신분증");
         long askedId = asked.path("message_id").asLong();
         await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM message_sources WHERE message_id=? AND faq_id=?",
@@ -167,6 +171,7 @@ class CompoundFaqStoreIntegrationTest {
         var service = command("번호이동", null);
         processor.request(service);
         assertStoreOnly(service);
+        assertThat(outcomes()).containsExactly("ANSWERED|번호이동 방법", "STORES|번호이동 가능한 매장");
         // 이미 답한 FAQ는 다시 생성하지 않는다.
         assertThat(answerInputs).extracting(AnswerInput::purpose)
                 .containsExactly(Purpose.GENERAL_FAQ, Purpose.NEARBY_STORE);
@@ -216,6 +221,7 @@ class CompoundFaqStoreIntegrationTest {
 
         assertThat(statuses()).containsExactly("DONE", "DONE");
         assertThat(output(declined).path("content").asText()).contains("검색 지역 없이는");
+        assertThat(outcomes()).containsExactly("ANSWERED|번호이동 방법", "NO_EVIDENCE|매장 찾기");
         // FAQ는 처음 메시지에서 이미 답했다.
         assertThat(answerInputs).extracting(AnswerInput::purpose).containsExactly(Purpose.GENERAL_FAQ);
     }
@@ -253,6 +259,9 @@ class CompoundFaqStoreIntegrationTest {
         var output = output(command);
         assertThat(statuses()).containsExactly("DONE", "DONE");
         assertThat(output.path("content").asText()).contains(com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER, "복합 검증 매장");
+        assertThat(outcomes()).containsExactly("NO_EVIDENCE|번호이동 방법", "STORES|강남역 번호이동 매장");
+        assertThat(answerTexts().getFirst()).isNull();
+        assertThat(answerTexts().get(1)).contains("복합 검증 매장");
         assertThat(output.path("store_results").isArray()).isTrue();
         assertThat(output.path("answer_basis").isNull()).isTrue();
         assertThat(events.tokens).containsExactly(output.path("content").asText());
@@ -325,6 +334,8 @@ class CompoundFaqStoreIntegrationTest {
         assertThat(answerInputs).isEmpty();
         // 처리하지 않은 하위 상담을 열린 상태로 남기지 않는다.
         assertThat(statuses()).containsOnly("CANCELLED");
+        assertThat(outcomes()).containsExactly("SPLIT_REFUSED|번호이동 방법", "SPLIT_REFUSED|번호이동 매장",
+                "SPLIT_REFUSED|유심 재발급 매장");
     }
 
     @Test
@@ -417,6 +428,17 @@ class CompoundFaqStoreIntegrationTest {
 
     private List<String> statuses() {
         return jdbc.queryForList("SELECT status FROM consult_requests WHERE session_id=? ORDER BY subquery_order",
+                String.class, sessionId);
+    }
+
+    // 하위 질문 순서대로 "결과|소제목". 소제목이 없으면(단일 질문) 결과만
+    private List<String> outcomes() {
+        return jdbc.queryForList("SELECT answer_outcome || coalesce('|' || display_question, '')"
+                + " FROM consult_requests WHERE session_id=? ORDER BY subquery_order", String.class, sessionId);
+    }
+
+    private List<String> answerTexts() {
+        return jdbc.queryForList("SELECT answer_text FROM consult_requests WHERE session_id=? ORDER BY subquery_order",
                 String.class, sessionId);
     }
 

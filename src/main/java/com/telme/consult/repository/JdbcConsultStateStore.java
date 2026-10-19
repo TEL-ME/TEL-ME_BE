@@ -2,6 +2,7 @@ package com.telme.consult.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.dto.AnswerOutcome;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -462,6 +463,29 @@ public final class JdbcConsultStateStore {
                             requestId);
                     return read(sessionId, requestId);
                 });
+    }
+
+    /**
+     * 하위 질문에 대해 고객에게 보인 결과를 기록한다. 상태·버전은 바꾸지 않는다(상태 전이는 complete·cancel·save가 한다).
+     * 답변·되묻기 메시지를 저장한 같은 트랜잭션에서 호출한다. 복합 되묻기에서 기록한 소제목은 조건을 받은 뒤 단일
+     * 경로로 답할 때도 유지한다.
+     */
+    public void recordOutcome(long sessionId, long requestId, AnswerOutcome outcome, long messageId) {
+        Objects.requireNonNull(outcome, "outcome");
+        int updated =
+                jdbc.update(
+                        "UPDATE consult_requests SET answer_outcome=?,answer_text=?,answer_message_id=?,"
+                                + "display_question=coalesce(?,display_question)"
+                                + " WHERE consult_request_id=? AND session_id=?",
+                        outcome.kind().name(),
+                        outcome.text(),
+                        messageId,
+                        outcome.displayQuestion(),
+                        requestId,
+                        sessionId);
+        if (updated != 1) {
+            throw new GeneralException(ConsultErrorCode.REQUEST_NOT_FOUND);
+        }
     }
 
     /** 상담만 취소하고 메시지·조건 이력은 남긴다. */

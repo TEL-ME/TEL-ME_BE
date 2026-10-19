@@ -61,10 +61,15 @@ class PlanAnswerProcessingTest {
         processor.request(command);
 
         ArgumentCaptor<ChatAnswer> saved = ArgumentCaptor.forClass(ChatAnswer.class);
+        ArgumentCaptor<com.telme.consult.dto.AnswerOutcome> outcome =
+                ArgumentCaptor.forClass(com.telme.consult.dto.AnswerOutcome.class);
         verify(persistence, atLeastOnce()).persistFinalAnswer(
-                eq(EXECUTION_ID), eq(SESSION_ID), eq(11L), anyInt(), saved.capture(), anyList());
+                eq(EXECUTION_ID), eq(SESSION_ID), eq(11L), anyInt(), saved.capture(), anyList(), outcome.capture());
         assertThat(saved.getValue().content()).isEqualTo(PLAN_ANSWER);
         assertThat(saved.getValue().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
+        // 단일 질문은 소제목 없이 고객에게 보인 답 그대로 기록한다
+        assertThat(outcome.getValue()).isEqualTo(new com.telme.consult.dto.AnswerOutcome(
+                com.telme.consult.dto.AnswerOutcome.Kind.ANSWERED, PLAN_ANSWER, null));
         verify(stream).onToken(PLAN_ANSWER);
         verify(faq, never()).generate(any());
         verify(faq, never()).generate(any(), any());
@@ -147,7 +152,7 @@ class PlanAnswerProcessingTest {
                         ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
         when(persistence.startAnswer(EXECUTION_ID, SESSION_ID)).thenReturn(new ChatExecutionState(
                 SESSION_ID, EXECUTION_ID, ChatExecution.Status.RUNNING, null, null));
-        when(persistence.persistFinalAnswer(anyLong(), anyLong(), anyLong(), anyInt(), any(), anyList()))
+        when(persistence.persistFinalAnswer(anyLong(), anyLong(), anyLong(), anyInt(), any(), anyList(), any()))
                 .thenReturn(completed);
         when(persistence.persistFinalAnswers(anyLong(), anyLong(), anyList(), any(), anyList()))
                 .thenReturn(completed);

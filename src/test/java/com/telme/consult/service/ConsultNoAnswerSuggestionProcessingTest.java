@@ -107,7 +107,7 @@ class ConsultNoAnswerSuggestionProcessingTest {
 
         ArgumentCaptor<ChatAnswer> saved = ArgumentCaptor.forClass(ChatAnswer.class);
         verify(persistence, org.mockito.Mockito.atLeastOnce()).persistFinalAnswer(
-                eq(EXECUTION_ID), eq(SESSION_ID), eq(11L), anyInt(), saved.capture(), anyList());
+                eq(EXECUTION_ID), eq(SESSION_ID), eq(11L), anyInt(), saved.capture(), anyList(), any());
         return saved.getValue();
     }
 
@@ -154,7 +154,7 @@ class ConsultNoAnswerSuggestionProcessingTest {
                         ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
         when(persistence.startAnswer(EXECUTION_ID, SESSION_ID)).thenReturn(new ChatExecutionState(
                 SESSION_ID, EXECUTION_ID, ChatExecution.Status.RUNNING, null, null));
-        when(persistence.persistFinalAnswer(anyLong(), anyLong(), anyLong(), anyInt(), any(), anyList()))
+        when(persistence.persistFinalAnswer(anyLong(), anyLong(), anyLong(), anyInt(), any(), anyList(), any()))
                 .thenReturn(completed);
         when(persistence.persistFinalAnswers(anyLong(), anyLong(), anyList(), any(), anyList()))
                 .thenReturn(completed);

@@ -15,6 +15,7 @@ import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
+import com.telme.consult.dto.AnswerOutcome;
 import com.telme.consult.dto.ClarificationPlan;
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput.Purpose;
@@ -262,7 +263,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                         prepared.decision().consultRequestId(),
                         prepared.expectedVersion() + 1,
                         generated.answer(),
-                        generated.sources());
+                        generated.sources(),
+                        outcome(turn.purpose(), generated, null));
         if (prepared.decision().action() == Action.PROCEED
                 && generated.answer().messageType() == ChatMessage.MessageType.ANSWER) {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
@@ -314,7 +316,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (preparedTurns.stream().filter(prepared -> prepared.decision().action() == Action.ASK).count() > 1) {
             var completed = persistence.persistSplitGuidance(command.executionId(), command.sessionId(),
                     new ChatAnswer(ChatMessage.MessageType.ANSWER, SPLIT_STORE_GUIDANCE, null, List.of(), null),
-                    preparedTurns);
+                    preparedTurns, consultTurns.stream().map(turn -> displayText(command.content(), turn)).toList());
             events.completed(command.executionId(), completed);
             return;
         }
@@ -345,12 +347,14 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<ChatStoreSearchContextResponse> storeContexts = new ArrayList<>();
         boolean hasGroundedAnswer = false;
         boolean faqOnly = consultTurns.stream().allMatch(turn -> turn.purpose() == Purpose.GENERAL_FAQ);
+        List<AnswerOutcome> outcomes = new ArrayList<>();
         for (int i = 0; i < consultTurns.size(); i++) {
             ConsultTurn part = consultTurns.get(i);
             GeneratedAnswer generated = generatePart(part, preparedTurns.get(i), inputs.get(i), prepareds.get(i));
             boolean grounded = part.purpose() == Purpose.GENERAL_FAQ
                     && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
             String content = partContent(part, generated, grounded);
+            outcomes.add(outcome(part.purpose(), generated, displayText(command.content(), part)));
             if (part.purpose() == Purpose.NEARBY_STORE && generated.answer().storeResults() != null
                     && !generated.answer().storeResults().isEmpty()) {
                 storeResults.addAll(generated.answer().storeResults());
@@ -402,10 +406,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         if (faqOnly) {
             combined = withNoAnswerSuggestion(combined, command.content());
         }
-        List<ConsultChatPersistenceService.ConsultCompletion> completions = preparedTurns.stream()
-                .map(prepared -> new ConsultChatPersistenceService.ConsultCompletion(
-                        prepared.decision().consultRequestId(), prepared.expectedVersion() + 1))
-                .toList();
+        List<ConsultChatPersistenceService.ConsultCompletion> completions = new ArrayList<>();
+        for (int i = 0; i < preparedTurns.size(); i++) {
+            completions.add(new ConsultChatPersistenceService.ConsultCompletion(
+                    preparedTurns.get(i).decision().consultRequestId(), preparedTurns.get(i).expectedVersion() + 1,
+                    outcomes.get(i)));
+        }
         var completed = persistence.persistFinalAnswers(
                 command.executionId(), command.sessionId(), completions, combined, sources);
         // 여러 모델 호출의 중간 토큰은 저장된 최종 답변과 다를 수 있어 완료 후 한 번만 전송한다.
@@ -480,6 +486,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<AnswerSource> sources = new ArrayList<>();
         Set<Long> sourceFaqIds = new HashSet<>();
         List<ConsultService.PreparedTurn> answeredTurns = new ArrayList<>();
+        List<AnswerOutcome> answeredOutcomes = new ArrayList<>();
         for (int i = 0; i < consultTurns.size(); i++) {
             if (i == askIndex) {
                 continue;
@@ -488,6 +495,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             GeneratedAnswer generated = generatePart(part, preparedTurns.get(i), inputs.get(i), prepareds.get(i));
             boolean grounded = part.purpose() == Purpose.GENERAL_FAQ
                     && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
+            answeredOutcomes.add(outcome(part.purpose(), generated, displayText(command.content(), part)));
             // 되묻기 메시지에는 매장 목록 칸이 없어 매장 이름을 본문에 남긴다
             sections.add("%d. %s\n%s".formatted(sections.size() + 1,
                     displayText(command.content(), part), partContent(part, generated, grounded)));
@@ -517,7 +525,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 asking.decision().message()));
         var completed = persistence.persistCompoundClarification(
                 command.executionId(), command.sessionId(), answeredTurns, asking,
-                String.join("\n\n", sections), asking.decision().options(), sources);
+                String.join("\n\n", sections), asking.decision().options(), sources,
+                answeredOutcomes, displayText(command.content(), consultTurns.get(askIndex)));
         try {
             events.completed(command.executionId(), completed);
         } catch (RuntimeException deliveryFailure) {
@@ -541,8 +550,24 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         return generated;
     }
 
+    // 하위 질문에 대해 고객에게 보인 결과. 답변을 만든 뒤 기록만 한다(상담 종료 요약이 읽는다).
+    // 근거 있는 FAQ 답은 ANSWERED, 매장 목록이 나가면 STORES, 그 밖(근거 없음, 지역 없는 매장 찾기 안내)은 NO_EVIDENCE다
+    private static AnswerOutcome outcome(Purpose purpose, GeneratedAnswer generated, String displayQuestion) {
+        boolean grounded = purpose == Purpose.GENERAL_FAQ
+                && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
+        boolean stores = generated.answer().storeResults() != null && !generated.answer().storeResults().isEmpty();
+        AnswerOutcome.Kind kind = grounded ? AnswerOutcome.Kind.ANSWERED
+                : stores ? AnswerOutcome.Kind.STORES : AnswerOutcome.Kind.NO_EVIDENCE;
+        String text = kind == AnswerOutcome.Kind.NO_EVIDENCE ? null : shownText(purpose, generated, grounded);
+        return new AnswerOutcome(kind, text, displayQuestion);
+    }
+
     private static String partContent(ConsultTurn part, GeneratedAnswer generated, boolean grounded) {
-        if (part.purpose() == Purpose.GENERAL_FAQ) {
+        return shownText(part.purpose(), generated, grounded);
+    }
+
+    private static String shownText(Purpose purpose, GeneratedAnswer generated, boolean grounded) {
+        if (purpose == Purpose.GENERAL_FAQ) {
             return grounded ? generated.answer().content() : AnswerPromptTemplates.NO_EVIDENCE_ANSWER;
         }
         String content = Objects.toString(generated.answer().content(), "조건에 맞는 매장이에요.");

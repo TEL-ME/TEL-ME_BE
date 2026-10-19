@@ -5,6 +5,7 @@ import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ConsultationQuestion;
+import com.telme.consult.dto.AnswerOutcome;
 import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
@@ -43,11 +44,16 @@ public class ConsultChatPersistenceService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
-    public record ConsultCompletion(long consultRequestId, int expectedVersion) {
+    /** outcome은 이 하위 질문에 대해 고객에게 보인 결과다. 없으면 기록하지 않는다. */
+    public record ConsultCompletion(long consultRequestId, int expectedVersion, AnswerOutcome outcome) {
         public ConsultCompletion {
             if (consultRequestId <= 0 || expectedVersion < 0) {
                 throw new IllegalArgumentException("완료할 상담 참조가 올바르지 않습니다.");
             }
+        }
+
+        public ConsultCompletion(long consultRequestId, int expectedVersion) {
+            this(consultRequestId, expectedVersion, null);
         }
     }
 
@@ -109,12 +115,26 @@ public class ConsultChatPersistenceService {
     @Transactional
     public ChatExecutionState persistSplitGuidance(
             long executionId, long sessionId, ChatAnswer answer, List<ConsultService.PreparedTurn> turns) {
-        if (turns.isEmpty() || turns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+        return persistSplitGuidance(executionId, sessionId, answer, turns, null);
+    }
+
+    // displayQuestions는 turns와 같은 순서의 하위 질문 문구다. 있으면 처리하지 않은 결과를 함께 기록한다
+    @Transactional
+    public ChatExecutionState persistSplitGuidance(long executionId, long sessionId, ChatAnswer answer,
+            List<ConsultService.PreparedTurn> turns, List<String> displayQuestions) {
+        if (turns.isEmpty() || turns.stream().anyMatch(turn -> turn.sessionId() != sessionId)
+                || displayQuestions != null && displayQuestions.size() != turns.size()) {
             throw new IllegalArgumentException("취소할 하위 상담이 올바르지 않습니다.");
         }
         ChatExecutionState state = persistDirectAnswer(executionId, sessionId, answer);
-        for (ConsultService.PreparedTurn turn : turns) {
+        for (int i = 0; i < turns.size(); i++) {
+            ConsultService.PreparedTurn turn = turns.get(i);
             stateStore.cancel(sessionId, turn.decision().consultRequestId(), turn.expectedVersion());
+            if (displayQuestions != null) {
+                stateStore.recordOutcome(sessionId, turn.decision().consultRequestId(),
+                        new AnswerOutcome(AnswerOutcome.Kind.SPLIT_REFUSED, answer.content(), displayQuestions.get(i)),
+                        state.outputMessage().messageId());
+            }
         }
         return state;
     }
@@ -144,8 +164,20 @@ public class ConsultChatPersistenceService {
             int expectedVersion,
             ChatAnswer answer,
             List<AnswerSource> sources) {
+        return persistFinalAnswer(executionId, sessionId, consultRequestId, expectedVersion, answer, sources, null);
+    }
+
+    @Transactional
+    public ChatExecutionState persistFinalAnswer(
+            long executionId,
+            long sessionId,
+            long consultRequestId,
+            int expectedVersion,
+            ChatAnswer answer,
+            List<AnswerSource> sources,
+            AnswerOutcome outcome) {
         return persistFinalAnswers(executionId, sessionId,
-                List.of(new ConsultCompletion(consultRequestId, expectedVersion)), answer, sources);
+                List.of(new ConsultCompletion(consultRequestId, expectedVersion, outcome)), answer, sources);
     }
 
     @Transactional
@@ -177,6 +209,10 @@ public class ConsultChatPersistenceService {
         for (ConsultCompletion completion : completions) {
             stateStore.complete(sessionId, completion.consultRequestId(),
                     completion.expectedVersion(), state.outputMessage().messageId());
+            if (completion.outcome() != null) {
+                stateStore.recordOutcome(sessionId, completion.consultRequestId(), completion.outcome(),
+                        state.outputMessage().messageId());
+            }
         }
         if (!sources.isEmpty()) {
             eventPublisher.publishEvent(
@@ -268,11 +304,29 @@ public class ConsultChatPersistenceService {
             String content,
             List<String> options,
             List<AnswerSource> sources) {
+        return persistCompoundClarification(executionId, sessionId, answeredTurns, asking, content, options, sources,
+                null, null);
+    }
+
+    // answeredOutcomes는 answeredTurns와 같은 순서다. askingDisplay는 되묻는 하위 질문의 소제목이다.
+    // answeredOutcomes가 있으면 하위 질문마다 고객에게 보인 결과를 함께 기록한다
+    @Transactional
+    public ChatExecutionState persistCompoundClarification(
+            long executionId,
+            long sessionId,
+            List<ConsultService.PreparedTurn> answeredTurns,
+            ConsultService.PreparedTurn asking,
+            String content,
+            List<String> options,
+            List<AnswerSource> sources,
+            List<AnswerOutcome> answeredOutcomes,
+            String askingDisplay) {
         Objects.requireNonNull(asking, "asking");
         if (answeredTurns.isEmpty()
                 || asking.sessionId() != sessionId
                 || asking.decision().action() != Action.ASK
-                || answeredTurns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+                || answeredTurns.stream().anyMatch(turn -> turn.sessionId() != sessionId)
+                || answeredOutcomes != null && answeredOutcomes.size() != answeredTurns.size()) {
             throw new IllegalArgumentException("복합 질문 되묻기 저장에 필요한 상담 결과가 올바르지 않습니다.");
         }
         var sessions =
@@ -292,9 +346,18 @@ public class ConsultChatPersistenceService {
         }
         long messageId = state.outputMessage().messageId();
         consultService.persist(asking, new MessageLinks(messageId, null, null));
-        for (ConsultService.PreparedTurn answered : answeredTurns) {
+        for (int i = 0; i < answeredTurns.size(); i++) {
+            ConsultService.PreparedTurn answered = answeredTurns.get(i);
             stateStore.completeInClarification(sessionId, answered.decision().consultRequestId(),
                     answered.expectedVersion() + 1, messageId);
+            if (answeredOutcomes != null) {
+                stateStore.recordOutcome(sessionId, answered.decision().consultRequestId(), answeredOutcomes.get(i),
+                        messageId);
+            }
+        }
+        if (answeredOutcomes != null) {
+            stateStore.recordOutcome(sessionId, asking.decision().consultRequestId(),
+                    AnswerOutcome.asked(asking.decision().message(), askingDisplay), messageId);
         }
         if (!sources.isEmpty()) {
             eventPublisher.publishEvent(new AnswerSourcesReady(messageId, sources));
@@ -353,6 +416,8 @@ public class ConsultChatPersistenceService {
                 prepared,
                 new MessageLinks(
                         state.outputMessage().messageId(), inputMessageId, answeredField));
+        stateStore.recordOutcome(prepared.sessionId(), prepared.decision().consultRequestId(),
+                AnswerOutcome.asked(prepared.decision().message(), null), state.outputMessage().messageId());
         return state;
     }
 
