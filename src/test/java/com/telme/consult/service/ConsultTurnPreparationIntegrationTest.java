@@ -77,7 +77,7 @@ class ConsultTurnPreparationIntegrationTest {
                 turns.prepareAnalysis(
                         sessionId,
                         analysis(Map.of("serviceType", "USIM_REISSUE")),
-                        LocationStatus.MISSING, null);
+                        LocationStatus.MISSING);
         assertThat(result.prepared().decision().action()).isEqualTo(Action.ASK);
         assertThat(result.prepared().decision().waitingField()).isEqualTo("location");
         assertThat(result.prepared().decision().conditions().get("serviceType"))
@@ -95,7 +95,7 @@ class ConsultTurnPreparationIntegrationTest {
                 requestId, requestId);
         var result =
                 turns.prepareAnalysis(
-                        sessionId, analysis(Map.of("location", " ")), LocationStatus.MISSING, null);
+                        sessionId, analysis(Map.of("location", " ")), LocationStatus.MISSING);
         assertThat(result.prepared().decision().action()).isEqualTo(Action.PROCEED);
         assertThat(result.prepared().decision().conditions().get("location"))
                 .isEqualTo(Condition.filled("강남역"));
@@ -166,13 +166,13 @@ class ConsultTurnPreparationIntegrationTest {
         assertThatThrownBy(
                         () ->
                                 turns.prepareAnalysis(
-                                        Long.MAX_VALUE, analysis(Map.of()), LocationStatus.MISSING, null))
+                                        Long.MAX_VALUE, analysis(Map.of()), LocationStatus.MISSING))
                 .isInstanceOf(GeneralException.class);
         assertThat(states.load(sessionId, requestId).version()).isEqualTo(1);
     }
 
     private long ask() {
-        var result = turns.prepareAnalysis(sessionId, analysis(Map.of()), LocationStatus.MISSING, null);
+        var result = turns.prepareAnalysis(sessionId, analysis(Map.of()), LocationStatus.MISSING);
         long asked = message("ASSISTANT", "CLARIFICATION", result.prepared().decision().message());
         consult.persist(result.prepared(), new MessageLinks(asked, null, null));
         return asked;

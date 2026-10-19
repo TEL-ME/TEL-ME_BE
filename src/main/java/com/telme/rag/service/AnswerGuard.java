@@ -37,6 +37,9 @@ public class AnswerGuard {
             "(?:(\\d[\\d,]*(?:\\.\\d+)?)\\s*[~～-]\\s*)?"
                     + "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(영업일|Gbps|Mbps|kbps|Kbps|배|%|일|개월|시간|분|GB|회|년)");
 
+    private static final Pattern SAME_PERIOD_DAY = Pattern.compile("하루(?!하루)");
+    private static final Pattern SAME_PERIOD_WEEK = Pattern.compile("일주일");
+
     // 운영 시간처럼 시각 자체가 정책인 경우도 숫자 근거로 검사한다. 9:00과 09:00은 같은 값이다
     private static final Pattern CLOCK_TIME = Pattern.compile(
             "(?<!\\d)([01]?\\d|2[0-3]):([0-5]\\d)(?!\\d)");
@@ -166,7 +169,7 @@ public class AnswerGuard {
                     + "(?:확인|안내|답변)(?:하기|드리기)?\\s*(?:어렵(?:습니다|어요)?|어려워요))");
     private static final Pattern NEGATIVE_SCOPE = Pattern.compile(
             "(?:(?:발급|제공|지원|이용|적용|조회)(?:되지|할 수 없)|"
-                    + "범위\\s*밖|대상이\\s*아니|불가)");
+                    + "범위\\s*밖|범위에\\s*(?:포함되지|들지|해당되지)|대상이\\s*아니|불가)");
     private static final Pattern UPPER_BOUND = Pattern.compile(
             "(?:까지|이내|이하|최대|최근|범위\\s*밖|이전)");
     private static final Pattern DEPENDENT_EXPLANATION = Pattern.compile(
@@ -199,6 +202,26 @@ public class AnswerGuard {
     private static final Pattern ACTION_POSITIVE = Pattern.compile(
             "(?:가능|할\\s*수\\s*있|(?:지원|제공)(?:합니다|됩니다|돼요))");
 
+    // "오후 7시 30분", "19시", "7시 반"처럼 한글로 적은 시각. 콜론 표기와 같은 값으로 비교한다. '시간'은 시각이 아니다
+    // 숫자 앞에 숫자·소수점이 있거나(2024시즌), 시 뒤에 낱말이 이어지면(3 시설, 5 시니어, 2 시행일) 시각이 아니다
+    private static final Pattern KOREAN_CLOCK = Pattern.compile(
+            "(오전|오후|새벽|아침|낮|저녁|밤)?\\s*(?<![\\d.])(\\d{1,2})\\s*시(?!간)(?=[^가-힣]|$|"
+                    + "(?:가|는|은|를|을|에|부터|까지|이후|이전|전|후|쯤|경|정|마다|이|도|와|과|로|만|반))"
+                    + "(?:\\s*(?:(\\d{1,2})\\s*분|(반)))?");
+    // 시각 이후와 시각까지. 둘 다 있으면 범위나 두 조건이라 방향을 정하지 않는다
+    private static final Pattern TIME_AFTER = Pattern.compile("이후|부터|넘어|지나서|지난\\s*후");
+    private static final Pattern TIME_BEFORE = Pattern.compile("이전|까지|전에|이내");
+
+    // 무료·무상이라는 단정. "무료는 아닙니다", "무료로 제공되지 않습니다", "요금이 없다면·없으면·없을 때·없는지·없도록·들지 않도록"은 단정이 아니다
+    private static final Pattern FREE_CLAIM = Pattern.compile(
+            "무료|무상|공짜|(?:비용|요금|수수료|금액)(?:이|가|은|는|도)?\\s*(?:전혀\\s*|따로\\s*|별도로\\s*)?"
+                    + "(?:없(?!다면|으면|어야|는\\s*경우|도록|을\\s*때|는지)|들지\\s*않(?!도록)|발생하지\\s*않(?!도록)|부과되지\\s*않(?!도록)|청구되지\\s*않(?!도록))");
+    private static final Pattern FREE_NEGATED = Pattern.compile(
+            "(?:무료|무상|공짜)(?:는|가|로는|로도|로)?\\s*(?:아니|아닙|아님|제공(?:되|하)지\\s*않|적용(?:되|하)지\\s*않)");
+    private static final Pattern FREE_EVIDENCE = Pattern.compile(
+            "무료|무상|공짜|면제|(?:비용|요금|수수료)(?:이|은|는)?\\s*(?:전혀\\s*)?(?:없|들지\\s*않|발생하지\\s*않)"
+                    + "|부과(?:되)?지\\s*않|청구되지\\s*않|발생하지\\s*않");
+
     private static final Set<String> CHARGE_TOPICS = Set.of("수수료", "위약금");
     private static final Set<String> GENERIC_CHARGE_WORDS = Set.of(
             "수수료", "위약금", "발생", "부과", "무료", "면제", "없습니다", "없어요", "있습니다", "있어요");
@@ -226,15 +249,27 @@ public class AnswerGuard {
     /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
     public String applyEvidencePolicy(
             String answer, String context, String userQuery, String confirmedValues) {
+        return applyEvidencePolicy(answer, context, userQuery, confirmedValues, null);
+    }
+
+    // FAQ 본문의 줄바꿈과 서로 다른 검색 결과의 경계를 구분해 준비물 조건을 보존한다.
+    public String applyEvidencePolicy(String answer, String context, String userQuery,
+            String confirmedValues, List<String> sourceAnswers) {
         String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
         filtered = trimUnsupportedApplicationAdvice(filtered, context);
+        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
+                ? context : context + "\n" + confirmedValues;
+        filtered = GroundedPreparationAdvice.filter(filtered, context, userQuery, sourceAnswers, candidate -> {
+            verifyAmounts(candidate, numericEvidence, userQuery);
+            verifyMeasures(candidate, numericEvidence, userQuery);
+        });
         filtered = trimUngroundedComparisons(filtered, context, userQuery);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
-        String numericEvidence = confirmedValues == null || confirmedValues.isBlank()
-                ? context : context + "\n" + confirmedValues;
+        filtered = trimContradictedFreeClaims(filtered, context);
+        filtered = trimContradictedTimeClaims(filtered, context);
         verifyAmounts(filtered, numericEvidence, userQuery);
         verifyMeasures(filtered, numericEvidence, userQuery);
         return filtered;
@@ -245,12 +280,16 @@ public class AnswerGuard {
             return answer == null ? "" : answer;
         }
 
-        Set<ComparisonClaim> grounded = comparisonsIn(context);
+        List<String> evidence = context == null ? List.of() : List.of(SENTENCE.split(context.strip()));
+        Set<ComparisonClaim> grounded = findGroundedComparisons(evidence);
         Set<ComparisonClaim> asked = comparisonsIn(userQuery);
         StringBuilder kept = new StringBuilder();
         for (String sentence : SENTENCE.split(answer.strip())) {
             Set<ComparisonClaim> invented = comparisonsIn(sentence);
             invented.removeAll(grounded);
+            if (GroundedApplicationChoice.isNeutralChoice(sentence)) {
+                invented.remove(ComparisonClaim.CONVENIENT);
+            }
             if (isSafeUserReference(sentence)) {
                 invented.removeAll(asked);
             }
@@ -261,6 +300,19 @@ public class AnswerGuard {
             log.warn("[AnswerGuard] 근거에 없는 비교 표현으로 문장 제거: {} | {}", invented, sentence);
         }
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private Set<ComparisonClaim> findGroundedComparisons(List<String> evidence) {
+        Set<ComparisonClaim> grounded = new LinkedHashSet<>();
+        for (String sentence : evidence) {
+            var claims = comparisonsIn(sentence);
+            // 고객이 고를 수 있다는 안내는 특정 방법이 더 편리하다는 근거가 아니다.
+            if (GroundedApplicationChoice.isNeutralChoice(sentence)) {
+                claims.remove(ComparisonClaim.CONVENIENT);
+            }
+            grounded.addAll(claims);
+        }
+        return grounded;
     }
 
     public String trimUngroundedChannels(String answer, String context, String userQuery) {
@@ -289,7 +341,8 @@ public class AnswerGuard {
                 .distinct().toList();
         var kept = new LinkedHashSet<String>();
         for (String sentence : SENTENCE.split(answer.strip())) {
-            if (!APPLICATION_ADVICE.matcher(sentence).find() || evidence.contains(sentence)) {
+            if (!APPLICATION_ADVICE.matcher(sentence).find() || evidence.contains(sentence)
+                    || GroundedApplicationChoice.isSupported(sentence, evidence)) {
                 kept.add(sentence);
             } else {
                 var matching = instructions.stream()
@@ -477,6 +530,72 @@ public class AnswerGuard {
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
     }
 
+    // 근거에 금액이 있는데 근거에 무료 표현이 하나도 없으면 "무료"라는 단정은 근거와 반대다
+    public String trimContradictedFreeClaims(String answer, String context) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        boolean evidenceHasPrice = !amountsIn(context).isEmpty() && !FREE_EVIDENCE.matcher(context).find();
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (evidenceHasPrice && claimsFree(sentence)) {
+                log.warn("[AnswerGuard] 근거의 금액과 반대로 무료라고 단정해 문장 제거: {}", sentence);
+                continue;
+            }
+            kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private static boolean claimsFree(String sentence) {
+        return FREE_CLAIM.matcher(FREE_NEGATED.matcher(sentence).replaceAll("")).find();
+    }
+
+    // 같은 시각에 대해 근거와 가능 여부가 반대인 문장을 제거한다. "19:30 이후 불가"를 "이후에도 가능"으로 바꾼 경우다
+    public String trimContradictedTimeClaims(String answer, String context) {
+        if (answer == null || answer.isBlank()) {
+            return answer == null ? "" : answer;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : SENTENCE.split(answer.strip())) {
+            if (contradictsTimeEvidence(sentence, context)) {
+                log.warn("[AnswerGuard] 근거와 반대인 시각 조건으로 문장 제거: {}", sentence);
+                continue;
+            }
+            kept.append(kept.isEmpty() ? "" : " ").append(sentence);
+        }
+        return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private boolean contradictsTimeEvidence(String sentence, String context) {
+        Set<String> times = timeKeys(sentence);
+        Boolean claimed = availableAfter(sentence);
+        if (context == null || times.size() != 1 || claimed == null) {
+            return false;
+        }
+        for (String evidence : SENTENCE.split(context)) {
+            Boolean stated = timeKeys(evidence).equals(times) ? availableAfter(evidence) : null;
+            if (stated != null && !stated.equals(claimed)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 문장이 말하는 "그 시각 이후에 가능한가". 이후/부터는 가능 여부 그대로, 이전/까지는 반대다. 알 수 없으면 null
+    private static Boolean availableAfter(String sentence) {
+        boolean after = TIME_AFTER.matcher(sentence).find();
+        if (after == TIME_BEFORE.matcher(sentence).find()) {
+            return null;
+        }
+        boolean negative = ACTION_NEGATIVE.matcher(sentence).find();
+        boolean positive = !negative && ACTION_POSITIVE.matcher(sentence).find();
+        if (!negative && !positive) {
+            return null;
+        }
+        return after ? positive : negative;
+    }
+
     public String trimContradictedChargeClaims(String answer, String context) {
         if (answer == null || answer.isBlank()) {
             return answer == null ? "" : answer;
@@ -603,10 +722,11 @@ public class AnswerGuard {
 
     public void verifyMeasures(String answer, String context, String userQuery) {
         Set<String> invented = ungroundedValues(
-                answer, context, userQuery, this::measuresIn,
+                answer, context, userQuery, this::measuresIn, this::groundedMeasuresIn,
                 (value, sentence) -> isSafeUserReference(sentence)
                         || isOutsideSupportedUpperBound(value, sentence, context)
-                        || isCustomerElapsed(value, sentence));
+                        || isCustomerElapsed(value, sentence)
+                        || isClockContrast(value, sentence, context));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
             throw new AnswerGuardException("근거에 없는 수치: " + invented);
@@ -619,7 +739,17 @@ public class AnswerGuard {
             String userQuery,
             Function<String, Set<T>> extractor,
             BiPredicate<T, String> safeUserValue) {
-        Set<T> grounded = extractor.apply(context);
+        return ungroundedValues(answer, context, userQuery, extractor, extractor, safeUserValue);
+    }
+
+    private <T> Set<T> ungroundedValues(
+            String answer,
+            String context,
+            String userQuery,
+            Function<String, Set<T>> extractor,
+            Function<String, Set<T>> groundedExtractor,
+            BiPredicate<T, String> safeUserValue) {
+        Set<T> grounded = groundedExtractor.apply(context);
         Set<T> userValues = extractor.apply(userQuery);
         Set<T> invented = new LinkedHashSet<>();
 
@@ -637,6 +767,17 @@ public class AnswerGuard {
             invented.addAll(sentenceValues);
         }
         return invented;
+    }
+
+    // 고객이 말한 시각을 근거의 시각과 견주는 문장이다. "저녁 8시는 마감 시간인 19:30 이후라 불가합니다"처럼
+    // 같은 문장에 근거에 있는 시각이 함께 있으면 고객 시각을 사실로 단정한 것이 아니다
+    private boolean isClockContrast(String userMeasure, String sentence, String context) {
+        if (!userMeasure.contains(":")) {
+            return false;
+        }
+        Set<String> grounded = measuresIn(context);
+        return measuresIn(sentence).stream()
+                .anyMatch(value -> value.contains(":") && !value.equals(userMeasure) && grounded.contains(value));
     }
 
     // 고객이 자기 경과 기간을 말한 것을 받아 적는 문장이다. "개통한 지 4개월이 되셨으므로", "2개월밖에 지나지 않으셨기 때문에"가 그 경우다
@@ -1031,8 +1172,11 @@ public class AnswerGuard {
         patterns.put(ComparisonClaim.CHEAPER, Pattern.compile("(?:저렴|(?<!비)(?:싸|싼|쌉))"));
         patterns.put(ComparisonClaim.EXPENSIVE, Pattern.compile("(?:비싸|비싼|비쌉)"));
         patterns.put(ComparisonClaim.FASTER, Pattern.compile("(?:빠르|빠른|빠릅|빨라|빨리|시간.{0,4}절약)"));
-        patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile("(?:편리|간편|편의|편한|편하)"));
-        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:이점|장점)"));
+        // "편하신 방법으로 신청하세요"는 고객이 고르라는 안내이지 방법끼리 견준 말이 아니다
+        patterns.put(ComparisonClaim.CONVENIENT, Pattern.compile(
+                "(?:편리|간편|편의|편한(?!\\s*(?:방법|방식|시간|곳|채널|쪽))|편하(?!신\\s*(?:방법|방식|시간|곳|채널|쪽)))"));
+        // "차이점"의 "이점"은 장점이 아니다
+        patterns.put(ComparisonClaim.ADVANTAGE, Pattern.compile("(?:(?<!차)이점|장점)"));
         patterns.put(ComparisonClaim.STABLE, Pattern.compile("안정"));
         patterns.put(ComparisonClaim.SIMPLE, Pattern.compile("(?:간단|수월|복잡하지\\s*않)"));
         patterns.put(ComparisonClaim.BETTER, Pattern.compile("(?:나은|낫(?:다|습|아요|습니다)|더\\s*좋)"));
@@ -1065,12 +1209,26 @@ public class AnswerGuard {
         return Map.copyOf(patterns);
     }
 
+    // 근거가 "하루짜리"인데 답변이 "1일"이라고 쓴 것은 새 수치가 아니다. 근거에만 적용해 답변의 "하루"를 새 수치로 만들지 않는다
+    private Set<String> groundedMeasuresIn(String text) {
+        Set<String> measures = measuresIn(text);
+        if (text != null && SAME_PERIOD_DAY.matcher(text).find()) {
+            measures.add("1일");
+        }
+        if (text != null && SAME_PERIOD_WEEK.matcher(text).find()) {
+            measures.add("7일");
+        }
+        return measures;
+    }
+
     private Set<String> measuresIn(String text) {
         Set<String> measures = new LinkedHashSet<>();
         if (text == null) {
             return measures;
         }
-        Matcher matcher = MEASURE.matcher(text);
+        ClockScan clocks = scanClocks(text);
+        // 한글 시각은 값으로 바꾸고 문장에서 뺀다. "7시 30분"의 30분을 시간 수치로 세지 않기 위해서다
+        Matcher matcher = MEASURE.matcher(clocks.rest());
         while (matcher.find()) {
             String unit = matcher.group(3);
             if (matcher.group(1) != null) {
@@ -1078,13 +1236,75 @@ public class AnswerGuard {
             }
             measures.add(normalizeMeasureNumber(matcher.group(2)) + unit);
         }
-        Matcher clockMatcher = CLOCK_TIME.matcher(text);
+        Matcher clockMatcher = CLOCK_TIME.matcher(clocks.rest());
         while (clockMatcher.find()) {
-            measures.add("%02d:%02d".formatted(
-                    Integer.parseInt(clockMatcher.group(1)),
-                    Integer.parseInt(clockMatcher.group(2))));
+            addClock(measures, Integer.parseInt(clockMatcher.group(1)), Integer.parseInt(clockMatcher.group(2)), true);
         }
+        measures.addAll(clocks.keys());
         return measures;
+    }
+
+    private record ClockScan(Set<String> keys, String rest) {}
+
+    // 시각은 24시간 값("19:30")과 12시간 값("~07:30")으로 함께 적는다. 오전·오후를 말하지 않은 1~12시는 12시간 값만 적어
+    // 근거가 오전이든 오후든 같은 시각이면 통과하고, 오전·오후를 말했는데 다르면 24시간 값이 달라 차단한다
+    private ClockScan scanClocks(String text) {
+        Set<String> keys = new LinkedHashSet<>();
+        StringBuilder rest = new StringBuilder();
+        Matcher matcher = KOREAN_CLOCK.matcher(text);
+        int last = 0;
+        while (matcher.find()) {
+            int hour = Integer.parseInt(matcher.group(2));
+            int minute = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : matcher.group(4) != null ? 30 : 0;
+            // 24시는 "24시 고객센터"처럼 운영 방식을 말하는 경우가 많아 시각으로 읽지 않는다
+            if (hour >= 24 || minute > 59) {
+                continue;
+            }
+            rest.append(text, last, matcher.start()).append(' ');
+            last = matcher.end();
+            Integer exact = exactHour(matcher.group(1), hour);
+            addClock(keys, exact != null ? exact : hour, minute, exact != null);
+        }
+        rest.append(text.substring(last));
+        return new ClockScan(keys, rest.toString());
+    }
+
+    private static Integer exactHour(String marker, int hour) {
+        if (hour >= 13) {
+            return hour % 24;
+        }
+        if (marker == null) {
+            return hour == 0 ? 0 : null;
+        }
+        return switch (marker) {
+            case "오전", "새벽", "아침" -> hour % 12;
+            case "오후" -> hour < 12 ? hour + 12 : 12;
+            case "낮" -> hour >= 1 && hour <= 5 ? hour + 12 : hour;
+            case "저녁" -> hour < 12 ? hour + 12 : hour;
+            default -> hour == 12 ? 0 : hour >= 6 ? hour + 12 : hour;
+        };
+    }
+
+    private static void addClock(Set<String> keys, int hour, int minute, boolean exact) {
+        if (exact) {
+            keys.add("%02d:%02d".formatted(hour % 24, minute));
+        }
+        keys.add("~%02d:%02d".formatted(hour % 12, minute));
+    }
+
+    // 문장 속 시각을 12시간 값으로 모은다. 두 문장이 같은 시각을 말하는지 비교하는 데 쓴다
+    private Set<String> timeKeys(String text) {
+        Set<String> keys = new LinkedHashSet<>();
+        if (text == null) {
+            return keys;
+        }
+        ClockScan clocks = scanClocks(text);
+        Matcher clockMatcher = CLOCK_TIME.matcher(clocks.rest());
+        while (clockMatcher.find()) {
+            addClock(keys, Integer.parseInt(clockMatcher.group(1)), Integer.parseInt(clockMatcher.group(2)), false);
+        }
+        clocks.keys().stream().filter(key -> key.startsWith("~")).forEach(keys::add);
+        return keys;
     }
 
     private String normalizeMeasureNumber(String number) {

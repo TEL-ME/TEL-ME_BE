@@ -18,6 +18,7 @@ import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.rag.converter.AnswerContextConverter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -185,13 +186,23 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         if (results.isEmpty() && !input.streamTokens()) {
             List<FaqSearchResponse> candidates = searchComparisonCandidate(
                     input, input.originalUserQuery(), "FAQ_CANDIDATE");
+            String evidenceQuestion = ConsultationQuestion.extract(input.candidateEvidenceQuery());
+            // 복합 질문은 검색용 문장이 공백 없이 정규화된다. 후보 FAQ를 선택한 모델이
+            // 인용문만 형식에 맞추지 못한 경우까지 근거 부족으로 버리지는 않는다.
+            boolean allowQuoteRepairFailure =
+                    !evidenceQuestion.equals(ConsultationQuestion.extract(input.originalUserQuery()));
+            // 근거 검증에 넣은 문장을 남겨, 같은 입력(후보는 searchResults의 FAQ_CANDIDATE)으로 모델을 다시 비교할 수 있게 한다
+            Map<String, Object> evidenceInput = new LinkedHashMap<>();
+            evidenceInput.put("consultRequestId", input.consultRequestId());
+            evidenceInput.put("question", evidenceQuestion);
+            evidenceInput.put("allowQuoteRepairFailure", allowQuoteRepairFailure);
+            String customerMessage = input.customerMessage() == null
+                    ? null : ConsultationQuestion.extract(input.customerMessage());
+            evidenceInput.put("customerMessage", customerMessage);
+            trace.append(input.executionId(), "faqCandidateEvidenceInputs", evidenceInput);
             FaqSearchResponse verified = candidateEvidence.resolve(
-                    input.executionId(), input.consultRequestId(),
-                    ConsultationQuestion.extract(input.candidateEvidenceQuery()), candidates,
-                    // 복합 질문은 검색용 문장이 공백 없이 정규화된다. 후보 FAQ를 선택한 모델이
-                    // 인용문만 형식에 맞추지 못한 경우까지 근거 부족으로 버리지는 않는다.
-                    !ConsultationQuestion.extract(input.candidateEvidenceQuery())
-                            .equals(ConsultationQuestion.extract(input.originalUserQuery())));
+                    input.executionId(), input.consultRequestId(), evidenceQuestion, customerMessage, candidates,
+                    allowQuoteRepairFailure);
             if (verified != null) {
                 trace.stage(input.executionId(), "faqCandidateAnswer", Map.of(
                         "method", "VERIFIED_FAQ_ANSWER", "faqId", verified.faqId()));
@@ -270,8 +281,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     private ComparisonEvidenceResolver.Resolution resolveComparison(
             AnswerInput input, List<FaqSearchResponse> original) {
+        String question = ConsultationQuestion.extract(input.originalUserQuery());
+        // 비교 근거 검증에 넣은 문장과 원문 검색 결과의 FAQ 순서를 남겨, 같은 입력으로 모델을 다시 비교할 수 있게 한다.
+        // 검색 결과 본문은 같은 상담의 searchResults에 이미 있어 FAQ id만 남긴다
+        Map<String, Object> evidenceInput = new LinkedHashMap<>();
+        evidenceInput.put("consultRequestId", input.consultRequestId());
+        evidenceInput.put("question", question);
+        evidenceInput.put("originalFaqIds", original.stream().map(FaqSearchResponse::faqId).toList());
+        trace.append(input.executionId(), "comparisonEvidenceInputs", evidenceInput);
         return comparisonEvidence.resolveDetailed(input.executionId(),
-                input.consultRequestId(), ConsultationQuestion.extract(input.originalUserQuery()), original,
+                input.consultRequestId(), question, original,
                 (query, kind) -> searchComparisonCandidate(input, query, kind));
     }
 

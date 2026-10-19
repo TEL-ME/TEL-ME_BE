@@ -13,34 +13,23 @@ import com.telme.consult.dto.DialogueInput.Condition;
 import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
-import com.telme.consult.service.ClarificationTextGenerator.GenerationUnavailableException;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.HashMap;
 import java.util.Map;
 
 class DialogueServiceTest {
-    private final DialogueService service = new DialogueService(p -> "어느 지역에서 매장을 찾으세요?");
+    private final DialogueService service = new DialogueService();
 
     private DialogueInput input(
             Map<String, Condition> old, Map<String, Condition> updates, LocationStatus location) {
         return new DialogueInput(10L, Purpose.NEARBY_STORE, old, updates, location);
     }
 
-    private DialogueService noModel() {
-        return new DialogueService(
-                p -> {
-                    throw new AssertionError("모델을 호출하면 안 됨");
-                });
-    }
-
     @Test
     void actualCoordinatesProceedAndResolvePendingLocationWithoutInventingRegion() {
-        var result = noModel().assess(input(
+        var result = service.decide(input(
                 Map.of("location", Condition.pending(), "serviceType", Condition.declined()),
                 Map.of(), LocationStatus.COORDINATES_AVAILABLE));
         assertEquals(Action.PROCEED, result.action());
@@ -50,13 +39,7 @@ class DialogueServiceTest {
 
     @Test
     void clarificationFollowupAndCorrectionResumeSameConsultation() {
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
-        var flow =
-                new DialogueService(
-                        prompt -> {
-                            calls.incrementAndGet();
-                            return "어느 지역에서 매장을 찾으세요?";
-                        });
+        var flow = new DialogueService();
         var first =
                 flow.decide(
                         input(
@@ -87,7 +70,6 @@ class DialogueServiceTest {
         assertEquals(Action.PROCEED, corrected.action());
         assertEquals("홍대입구역", corrected.conditions().get("location").value());
         assertEquals("강남역", resumed.conditions().get("location").value());
-        assertEquals(1, calls.get(), "조건 충족 후 불필요한 되묻기 모델 호출을 하지 않는다");
     }
 
     @Test
@@ -96,7 +78,7 @@ class DialogueServiceTest {
         assertEquals(Action.ASK, result.action());
         assertEquals("location", result.waitingField());
         assertEquals(10L, result.consultRequestId());
-        assertEquals(MessageOrigin.MODEL, result.messageOrigin());
+        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
         assertFalse(result.conditions().containsKey("location"));
     }
 
@@ -110,7 +92,7 @@ class DialogueServiceTest {
     @Test
     void locationPermissionDoesNotBypassPendingRegion() {
         var result =
-                service.assess(
+                service.decide(
                         input(
                                 Map.of("location", Condition.pending()),
                                 Map.of(),
@@ -122,7 +104,7 @@ class DialogueServiceTest {
     @Test
     void suppliedRegionResolvesWaitingEvenWhenLocationIsAvailable() {
         var result =
-                noModel()
+                service
                         .decide(
                                 input(
                                         Map.of("location", Condition.pending(),
@@ -136,7 +118,7 @@ class DialogueServiceTest {
     @Test
     void followupFillsRegionAndStopsWaiting() {
         var result =
-                noModel()
+                service
                         .decide(
                                 input(
                                         Map.of("location", Condition.pending(),
@@ -159,7 +141,7 @@ class DialogueServiceTest {
                                 "serviceType",
                                 Condition.filled("유심")));
         var result =
-                noModel()
+                service
                         .decide(
                                 input(
                                         old,
@@ -175,7 +157,7 @@ class DialogueServiceTest {
     void deniedGpsStillAllowsTypedRegion() {
         assertEquals(
                 Action.PROCEED,
-                noModel()
+                service
                         .decide(
                                 input(
                                         Map.of("serviceType", Condition.declined()),
@@ -194,7 +176,7 @@ class DialogueServiceTest {
     @Test
     void declinedRegionClearsOldValueAndDoesNotAskAgain() {
         var result =
-                noModel()
+                service
                         .decide(
                                 input(
                                         Map.of("location", Condition.filled("강남역")),
@@ -211,14 +193,13 @@ class DialogueServiceTest {
                 Map.of("location", Condition.filled("강남역")),
                 Map.of("location", Condition.declined()),
                 LocationStatus.COORDINATES_AVAILABLE);
-        for (var result : java.util.List.of(noModel().assess(rejected), noModel().decide(rejected))) {
-            assertEquals(Action.ALTERNATIVE_GUIDANCE, result.action());
-            assertEquals(ConditionStatus.DECLINED, result.conditions().get("location").status());
-            assertNull(result.conditions().get("location").value());
-            assertNull(result.waitingField());
-            assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
-            assertTrue(result.message().contains("지역을 알려주실 수 있을 때"));
-        }
+        var result = service.decide(rejected);
+        assertEquals(Action.ALTERNATIVE_GUIDANCE, result.action());
+        assertEquals(ConditionStatus.DECLINED, result.conditions().get("location").status());
+        assertNull(result.conditions().get("location").value());
+        assertNull(result.waitingField());
+        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
+        assertTrue(result.message().contains("지역을 알려주실 수 있을 때"));
     }
 
     @Test
@@ -226,8 +207,8 @@ class DialogueServiceTest {
         var previous = Map.of("location", Condition.declined(),
                 "serviceType", Condition.declined());
         assertEquals(Action.ALTERNATIVE_GUIDANCE,
-                noModel().assess(input(previous, Map.of(), LocationStatus.COORDINATES_AVAILABLE)).action());
-        var updated = noModel().decide(input(
+                service.decide(input(previous, Map.of(), LocationStatus.COORDINATES_AVAILABLE)).action());
+        var updated = service.decide(input(
                 previous, Map.of("location", Condition.filled("강남역")), LocationStatus.COORDINATES_AVAILABLE));
         assertEquals(Action.PROCEED, updated.action());
         assertEquals("강남역", updated.conditions().get("location").value());
@@ -235,7 +216,7 @@ class DialogueServiceTest {
 
     @Test
     void 지역이_정해지면_업무를_선택지와_함께_묻는다() {
-        var result = noModel().decide(input(
+        var result = service.decide(input(
                 Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
 
         assertEquals(Action.ASK, result.action());
@@ -256,7 +237,7 @@ class DialogueServiceTest {
 
     @Test
     void 좌표로_지역이_정해져도_업무는_묻는다() {
-        var result = noModel().assess(
+        var result = service.decide(
                 input(Map.of(), Map.of(), LocationStatus.COORDINATES_AVAILABLE));
 
         assertEquals(Action.ASK, result.action());
@@ -265,7 +246,7 @@ class DialogueServiceTest {
 
     @Test
     void 업무를_받으면_더_묻지_않는다() {
-        var result = noModel().decide(input(
+        var result = service.decide(input(
                 Map.of("location", Condition.filled("강남역"), "serviceType", Condition.pending()),
                 Map.of("serviceType", Condition.filled("유심 재발급")),
                 LocationStatus.MISSING));
@@ -277,7 +258,7 @@ class DialogueServiceTest {
 
     @Test
     void 업무를_고르지_않겠다고_하면_업무_없이_진행한다() {
-        var result = noModel().decide(input(
+        var result = service.decide(input(
                 Map.of("location", Condition.filled("강남역"), "serviceType", Condition.pending()),
                 Map.of("serviceType", Condition.declined()),
                 LocationStatus.MISSING));
@@ -291,15 +272,14 @@ class DialogueServiceTest {
         var faq = new DialogueInput(12L, Purpose.GENERAL_FAQ,
                 Map.of(), Map.of(), LocationStatus.COORDINATES_AVAILABLE);
 
-        assertEquals(Action.PROCEED, noModel().decide(faq).action());
+        assertEquals(Action.PROCEED, service.decide(faq).action());
     }
 
     @Test
     void regionDeclineDoesNotBlockGeneralFaq() {
         var faq = new DialogueInput(11L, Purpose.GENERAL_FAQ,
                 Map.of("location", Condition.declined()), Map.of(), LocationStatus.COORDINATES_AVAILABLE);
-        assertEquals(Action.PROCEED, noModel().assess(faq).action());
-        assertEquals(Action.PROCEED, noModel().decide(faq).action());
+        assertEquals(Action.PROCEED, service.decide(faq).action());
     }
 
     @Test
@@ -307,50 +287,17 @@ class DialogueServiceTest {
         var input =
                 new DialogueInput(
                         11L, Purpose.GENERAL_FAQ, Map.of(), Map.of(), LocationStatus.MISSING);
-        assertEquals(Action.PROCEED, noModel().decide(input).action());
+        assertEquals(Action.PROCEED, service.decide(input).action());
     }
 
     @Test
-    void modelFailureUsesTemplateButKeepsWaiting() {
-        var failing =
-                new DialogueService(
-                        p -> {
-                            throw new GenerationUnavailableException("timeout");
-                        });
-        var result = failing.decide(input(Map.of(), Map.of(), LocationStatus.MISSING));
-        assertEquals(Action.ASK, result.action());
-        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
-        assertTrue(result.message().contains("역 이름"));
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"   "})
-    void invalidModelTextUsesTemplate(String text) {
-        var result =
-                new DialogueService(p -> text)
-                        .decide(input(Map.of(), Map.of(), LocationStatus.MISSING));
-        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
-    }
-
-    @Test
-    void tooLongTextUsesTemplate() {
-        var result =
-                new DialogueService(p -> "가".repeat(241))
-                        .decide(input(Map.of(), Map.of(), LocationStatus.MISSING));
-        assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
-    }
-
-    @Test
-    void programmingErrorIsNotSilentlyHidden() {
-        var failing =
-                new DialogueService(
-                        p -> {
-                            throw new IllegalStateException("bug");
-                        });
-        assertThrows(
-                IllegalStateException.class,
-                () -> failing.decide(input(Map.of(), Map.of(), LocationStatus.MISSING)));
+    void missingRegionAsksWithFixedQuestion() {
+        for (var location : java.util.List.of(LocationStatus.MISSING, LocationStatus.DECLINED)) {
+            var result = service.decide(input(Map.of(), Map.of(), location));
+            assertEquals(Action.ASK, result.action());
+            assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
+            assertEquals("어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.", result.message());
+        }
     }
 
     @Test
@@ -369,22 +316,5 @@ class DialogueServiceTest {
                                 Map.of(),
                                 Map.of(),
                                 LocationStatus.MISSING));
-    }
-
-    @Test
-    void promptOnlyRequestsMissingRegion() {
-        var inspecting =
-                new DialogueService(
-                        p -> {
-                            assertTrue(p.userPrompt().contains("검색 지역"));
-                            assertTrue(p.systemPrompt().contains("재고"));
-                            assertFalse(p.userPrompt().contains("전화번호"));
-                            return p.fallbackText();
-                        });
-        assertEquals(
-                MessageOrigin.MODEL,
-                inspecting
-                        .decide(input(Map.of(), Map.of(), LocationStatus.MISSING))
-                        .messageOrigin());
     }
 }

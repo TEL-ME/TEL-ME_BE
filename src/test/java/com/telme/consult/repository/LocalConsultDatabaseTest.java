@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.telme.consult.dto.DialogueDecision.Action;
 import com.telme.consult.dto.DialogueInput;
@@ -155,7 +154,7 @@ class LocalConsultDatabaseTest {
     void oldUserMessageCannotAnswerNewClarificationAndRollbackPreservesWaiting() {
         long rid = request(session);
         long stale = message(session, "USER", "QUESTION", "COMPLETED");
-        var service = new DialogueService(p -> p.fallbackText());
+        var service = new DialogueService();
         var ask =
                 service.decide(
                         storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
@@ -204,7 +203,7 @@ class LocalConsultDatabaseTest {
     void askSaveReloadAnswerAndProceedWithoutMarkingDone() {
         long rid = request(session);
         var initial = states.load(session, rid);
-        var service = new DialogueService(p -> p.fallbackText());
+        var service = new DialogueService();
         var ask =
                 service.decide(
                         storeInput(rid, initial.conditions(), Map.of(), LocationStatus.MISSING));
@@ -263,7 +262,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var initial = states.load(session, rid);
         var ask =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long wrong = message(session(2L, null), "ASSISTANT", "CLARIFICATION", "COMPLETED");
@@ -292,7 +291,7 @@ class LocalConsultDatabaseTest {
     void twoSubrequestsKeepIndependentConditions() {
         long a = request(session), b = request(session);
         var decision =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(a, Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
         states.save(session, states.load(session, a).version(), decision, MessageLinks.none());
@@ -303,7 +302,7 @@ class LocalConsultDatabaseTest {
     void duplicateClarificationRollsBackNewMessageInSharedTransaction() {
         long rid = request(session);
         var ask =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long firstMessage = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
@@ -314,7 +313,7 @@ class LocalConsultDatabaseTest {
                         ask,
                         new MessageLinks(firstMessage, null, null));
         var repeatedAsk =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(rid, waiting.conditions(), Map.of(), LocationStatus.MISSING));
         int count = jdbc.queryForObject("SELECT count(*) FROM chat_messages", Integer.class);
@@ -358,7 +357,7 @@ class LocalConsultDatabaseTest {
         assertEquals("DONE", done.status());
         var service =
                 new com.telme.consult.service.ConsultService(
-                        states, new DialogueService(p -> fail("종료된 상담은 모델을 호출하지 않음")));
+                        states, new DialogueService());
         var error =
                 assertThrows(
                         GeneralException.class,
@@ -374,7 +373,7 @@ class LocalConsultDatabaseTest {
                 org.springframework.http.HttpStatus.CONFLICT, error.getErrorCode().getStatus());
         assertThrows(GeneralException.class, () -> states.cancel(session, rid, done.version()));
         var next =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 new DialogueInput(
                                         rid,
@@ -391,7 +390,7 @@ class LocalConsultDatabaseTest {
     void waitingCannotCompleteAndCancelPreservesConditions() {
         long rid = request(session), other = request(session);
         var ask =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         long asked = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
@@ -431,7 +430,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var initial = states.load(session, rid);
         var ask =
-                new DialogueService(p -> p.fallbackText())
+                new DialogueService()
                         .decide(
                                 storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
         assertThrows(
@@ -447,14 +446,9 @@ class LocalConsultDatabaseTest {
 
     @Test
     void compoundConsultationPersistsPartialCompletionAndResumesOnlyStore() {
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var planner =
                 new CompoundDialoguePlanner(
-                        new DialogueService(
-                                p -> {
-                                    calls.incrementAndGet();
-                                    return p.fallbackText();
-                                }));
+                        new DialogueService());
         long origin = message(session, "USER", "QUESTION", "COMPLETED");
         long faq =
                 jdbc.queryForObject(
@@ -502,7 +496,6 @@ class LocalConsultDatabaseTest {
                                 planned(store, Purpose.NEARBY_STORE, asked, Map.of())));
         assertNull(waiting.clarification());
         assertTrue(waiting.ready().isEmpty());
-        assertEquals(1, calls.get());
 
         long reply = message(session, "USER", "QUESTION", "COMPLETED");
         var resumed =
@@ -529,7 +522,6 @@ class LocalConsultDatabaseTest {
         long storeAnswer = message(session, "ASSISTANT", "STORE_RESULT", "COMPLETED");
         states.complete(session, store, saved.version(), storeAnswer);
         assertEquals("DONE", states.load(session, store).status());
-        assertEquals(1, calls.get());
     }
 
     private Request planned(
@@ -546,7 +538,7 @@ class LocalConsultDatabaseTest {
     void concurrentConditionUpdatesAllowOneWriterAndRejectStaleWriter() throws Exception {
         long rid = request(session);
         var initial = states.load(session, rid);
-        var service = new DialogueService(p -> p.fallbackText());
+        var service = new DialogueService();
         var a =
                 service.decide(
                         storeInput(rid, Map.of(), Map.of("location", Condition.filled("강남역")), LocationStatus.MISSING));
@@ -600,19 +592,10 @@ class LocalConsultDatabaseTest {
 
     @Test
     void consultationServicePersistsQuestionAndResumesFromReloadedState() {
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    calls.incrementAndGet();
-                                    assertFalse(
-                                            org.springframework.transaction.support
-                                                    .TransactionSynchronizationManager
-                                                    .isActualTransactionActive());
-                                    return prompt.fallbackText();
-                                }));
+                        new DialogueService());
         long rid = request(session);
         var prepared =
                 service.prepare(
@@ -634,7 +617,6 @@ class LocalConsultDatabaseTest {
         assertEquals(waiting.version() + 1, saved.version());
         assertEquals("PENDING", saved.status());
         assertEquals("강남역", states.load(session, rid).conditions().get("location").value());
-        assertEquals(1, calls.get());
         var correction =
                 service.prepare(
                         session,
@@ -644,14 +626,13 @@ class LocalConsultDatabaseTest {
                         LocationStatus.MISSING);
         service.persist(correction, MessageLinks.none());
         assertEquals("홍대입구역", states.load(session, rid).conditions().get("location").value());
-        assertEquals(1, calls.get());
     }
 
     @Test
     void consultationServiceRecordsRefusalWithoutAnotherQuestion() {
         var service =
                 new com.telme.consult.service.ConsultService(
-                        states, new DialogueService(prompt -> prompt.fallbackText()));
+                        states, new DialogueService());
         long rid = request(session);
         var first =
                 service.prepare(
@@ -677,7 +658,7 @@ class LocalConsultDatabaseTest {
     void consultationServiceRejectsPreparedTurnWhenStateChangedDuringGeneration() {
         var service =
                 new com.telme.consult.service.ConsultService(
-                        states, new DialogueService(prompt -> prompt.fallbackText()));
+                        states, new DialogueService());
         long rid = request(session);
         var stale =
                 service.prepare(
@@ -702,15 +683,10 @@ class LocalConsultDatabaseTest {
 
     @Test
     void serviceDoesNotRegenerateUnansweredClarification() {
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    calls.incrementAndGet();
-                                    return prompt.fallbackText();
-                                }));
+                        new DialogueService());
         long rid = request(session);
         var first =
                 service.prepare(
@@ -729,7 +705,6 @@ class LocalConsultDatabaseTest {
                                         Map.of("serviceType", Condition.declined()),
                                         LocationStatus.MISSING));
         assertEquals(question, pending.messageId());
-        assertEquals(1, calls.get());
         assertEquals(waiting.version(), states.load(session, rid).version());
         assertEquals("WAITING_CONDITION", states.load(session, rid).status());
 
@@ -744,7 +719,6 @@ class LocalConsultDatabaseTest {
         assertEquals(Action.PROCEED, next.decision().action());
         service.persist(next, new MessageLinks(null, reply, "location"));
         assertEquals("강남역", states.load(session, rid).conditions().get("location").value());
-        assertEquals(1, calls.get());
     }
 
     @Test
@@ -754,15 +728,10 @@ class LocalConsultDatabaseTest {
                 "INSERT INTO consult_conditions(consult_request_id,condition_key,status) "
                         + "VALUES (?,'location','PENDING')",
                 rid);
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    calls.incrementAndGet();
-                                    return prompt.fallbackText();
-                                }));
+                        new DialogueService());
 
         assertEquals(
                 Action.ASK,
@@ -774,13 +743,12 @@ class LocalConsultDatabaseTest {
                                 LocationStatus.MISSING)
                         .decision()
                         .action());
-        assertEquals(1, calls.get());
     }
 
     @Test
     void pendingQuestionLookupIsScopedToConversationAndRequest() {
         long rid = request(session);
-        var dialogue = new DialogueService(prompt -> prompt.fallbackText());
+        var dialogue = new DialogueService();
         var ask =
                 dialogue.decide(
                         storeInput(rid, Map.of(), Map.of(), LocationStatus.MISSING));
@@ -800,15 +768,12 @@ class LocalConsultDatabaseTest {
     }
 
     @Test
-    void prepareRejectsOuterTransactionBeforeModelInvocation() {
+    void prepareRejectsOuterTransaction() {
         long rid = request(session);
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    throw new AssertionError("모델을 호출하면 안 됨");
-                                }));
+                        new DialogueService());
         assertThrows(
                 IllegalStateException.class,
                 () ->
@@ -826,15 +791,10 @@ class LocalConsultDatabaseTest {
     @Test
     void pendingTurnReturnsExistingQuestionWithoutGeneratingOrChangingState() {
         long rid = request(session);
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    calls.incrementAndGet();
-                                    return prompt.fallbackText();
-                                }));
+                        new DialogueService());
         var first =
                 service.prepareTurn(
                         session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
@@ -848,7 +808,6 @@ class LocalConsultDatabaseTest {
         assertNull(pending.prepared());
         assertEquals(question, pending.pendingMessageId());
         assertEquals(saved, states.load(session, rid));
-        assertEquals(1, calls.get());
         long reply = message(session, "USER", "QUESTION", "COMPLETED");
         var resumed =
                 service.prepareTurn(
@@ -860,7 +819,6 @@ class LocalConsultDatabaseTest {
         assertFalse(resumed.waitingForReply());
         var ready = service.persist(resumed.prepared(), new MessageLinks(null, reply, "location"));
         assertEquals("강남역", ready.conditions().get("location").value());
-        assertEquals(1, calls.get());
     }
 
     @Test
@@ -868,7 +826,7 @@ class LocalConsultDatabaseTest {
         long rid = request(session);
         var service =
                 new com.telme.consult.service.ConsultService(
-                        states, new DialogueService(prompt -> prompt.fallbackText()));
+                        states, new DialogueService());
         var first =
                 service.prepare(
                         session, rid, Purpose.NEARBY_STORE, Map.of("serviceType", Condition.declined()), LocationStatus.MISSING);
@@ -934,15 +892,10 @@ class LocalConsultDatabaseTest {
     @Test
     void correctionWhileWaitingPreservesQuestionAndResumesWithUpdatedService() {
         long rid = request(session);
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                prompt -> {
-                                    calls.incrementAndGet();
-                                    return prompt.fallbackText();
-                                }));
+                        new DialogueService());
         var first =
                 service.prepare(
                         session,
@@ -981,7 +934,6 @@ class LocalConsultDatabaseTest {
         var ready = service.persist(resumed.prepared(), new MessageLinks(null, reply, "location"));
         assertEquals("NUMBER_TRANSFER", ready.conditions().get("serviceType").value());
         assertEquals("강남역", ready.conditions().get("location").value());
-        assertEquals(1, calls.get());
     }
 
     @Test
@@ -990,8 +942,7 @@ class LocalConsultDatabaseTest {
         var service =
                 new com.telme.consult.service.ConsultService(
                         states,
-                        new DialogueService(
-                                com.telme.consult.service.ClarificationTextGenerator.template()));
+                        new DialogueService());
         var first =
                 service.prepare(
                         session,

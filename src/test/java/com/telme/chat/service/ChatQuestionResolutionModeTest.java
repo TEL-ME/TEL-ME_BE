@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.config.ChatQuestionResolutionLlmConfiguration;
 import com.telme.chat.config.ChatQuestionResolutionProperties;
 import com.telme.llm.service.LlmClient;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class ChatQuestionResolutionModeTest {
 
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(ChatQuestionResolutionProperties.class)
-    @Import(ChatQuestionResolver.class)
+    @Import({ChatQuestionResolver.class, ChatQuestionResolutionLlmConfiguration.class})
     static class ResolutionConfiguration {
     }
 }

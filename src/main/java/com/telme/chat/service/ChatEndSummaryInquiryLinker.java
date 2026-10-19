@@ -2,33 +2,38 @@ package com.telme.chat.service;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 final class ChatEndSummaryInquiryLinker {
     private static final Pattern FOLLOWUP = Pattern.compile(
             "그(?:럼|건|거|유심|재발급|교체|회선)|해당|아까|앞서|추가로|준비물|신분증|무료|비용|절차|방문");
     private static final Pattern RESET = Pattern.compile(
-            "다른회선|다른번호|다른사람|별도(?:의)?(?:회선|신청|문의)|새(?:로운)?문의|새신청건|별개|다른질문|다른유심|다른기기");
+            "다른회선|다른번호|다른사람|다른(?:가족|(?:(?:친|사촌|큰|작은)?형)(?:님)?|(?:직장)?동료)"
+                    + "|별도(?:의)?(?:회선|신청|문의)"
+                    + "|새(?:로운)?문의|새신청건|별개|다른질문|다른유심|다른기기");
     private static final Pattern BACK_REFERENCE = Pattern.compile(
             "그건|그거|그유심|그재발급|그교체|그회선|아까.*(?:유심|회선)|앞서.*(?:유심|회선)");
-    private static final Pattern UNSPECIFIED_PERSON = Pattern.compile(
-            "부모님|친구|동생|누나|언니|오빠|형님|할머니|할아버지|대리인|가족(?:의|회선|요금)"
-                    + "|(?:아들|딸)(?:의|이|은|한테|에게|을|회선|요금|유심|로밍|[0-9a-z])");
+    private static final Pattern VISITOR_REPLY = Pattern.compile(
+            "^(?:(?:네|예)[,.]?)?(?:제가|저는|본인이|본인은|대리인이|대리인은|어머니가|어머니는"
+                    + "|아버지가|아버지는|배우자가|배우자는)"
+                    + "(?:(?:직접|대신)|(?:매장|대리점)(?:에|으로)?"
+                    + "|(?:본인)?신분증을?(?:지참(?:하고|해서|해)|가지고))*"
+                    + "(?:방문(?:합니다|할게요|할거예요|해요|하겠습니다)|갑니다|갈게요|가요|가겠습니다)[.!]*$");
 
     private ChatEndSummaryInquiryLinker() {}
 
     static Map<Long, Long> resolveRoots(ChatEndSummaryData.Input input) {
         Map<Long, Long> roots = new LinkedHashMap<>();
+        Map<Long, ChatEndSummaryData.Message> questions = new LinkedHashMap<>();
         Map<String, Episode> episodes = new LinkedHashMap<>();
         Episode previous = null;
         for (var message : input.messages()) {
             if (!message.role().equals("USER")) {
                 continue;
             }
+            questions.put(message.id(), message);
             String text = normalizeText(message.content());
             String queries = input.requests().stream().filter(r -> r.originMessageId() == message.id())
                     .map(ChatEndSummaryData.Request::query).reduce("", (a, b) -> a + " " + b);
@@ -39,7 +44,7 @@ final class ChatEndSummaryInquiryLinker {
             if (domain.equals("UNKNOWN")) {
                 domain = identifyPurpose(queries);
             }
-            String person = extractPerson(text);
+            String person = ChatEndSummaryPersonScope.createGroupingIdentity(message.content());
             String product = identifyProduct(text);
             String line = extractLine(text);
             String operation = identifyOperation(text);
@@ -102,7 +107,11 @@ final class ChatEndSummaryInquiryLinker {
             previous = target;
         }
         for (var condition : input.conditions()) {
-            if (condition.answeredMessageId() != null && roots.containsKey(condition.originMessageId())) {
+            var origin = questions.get(condition.originMessageId());
+            var reply = questions.get(condition.answeredMessageId());
+            // 앞단이 다른 사람의 질문을 조건 응답으로 저장해도 이미 나눈 대상 묶음을 덮어쓰지 않는다.
+            if (origin != null && reply != null && roots.containsKey(condition.originMessageId())
+                    && hasSameConditionScope(origin.content(), reply.content())) {
                 roots.put(condition.answeredMessageId(), roots.get(condition.originMessageId()));
             }
         }
@@ -131,22 +140,33 @@ final class ChatEndSummaryInquiryLinker {
                 .replace("엄마", "어머니").replace("아빠", "아버지");
     }
 
+    static boolean hasSameConditionScope(String original, String followup) {
+        // 방문자만 답한 짧은 문장은 명의자가 바뀐 새 문의와 구별해 기존 정상 응답을 유지한다.
+        return VISITOR_REPLY.matcher(normalizeText(followup)).matches()
+                || hasSameClarificationScope(original, followup);
+    }
+
     static boolean hasSameClarificationScope(String original, String followup) {
         String before = normalizeText(original);
         String after = normalizeText(followup);
-        if (RESET.matcher(after).find() || UNSPECIFIED_PERSON.matcher(after).find()) {
+        if (RESET.matcher(after).find() || ChatEndSummaryPersonScope.hasUnspecifiedPerson(followup)) {
             return false;
         }
-        String person = extractPerson(before);
+        String person = extractPerson(original);
         String line = extractLine(before);
         var source = new Episode(0, "UNKNOWN", person.isBlank() ? "SELF" : person, identifyProduct(before),
                 line.isBlank() ? "DEFAULT" : line, identifyOperation(before));
-        return !source.person.equals("MULTIPLE") && isCompatible(source, extractPerson(after),
+        return !source.person.equals("MULTIPLE") && isCompatible(source, extractPerson(followup),
                 identifyProduct(after), extractLine(after), identifyOperation(after), false);
     }
 
     private static boolean isCompatible(Episode episode, String person, String product, String line,
             String operation, boolean reference) {
+        // 같은 명시적 대상 집합끼리만 묶고 일부 대상이나 모호한 지시어로 축소하지 않는다.
+        if ((episode.person.startsWith("MULTIPLE:") || person.startsWith("MULTIPLE:"))
+                && !episode.person.equals(person)) {
+            return false;
+        }
         if (!person.isBlank() && !episode.person.equals(person)) {
             return false;
         }
@@ -162,17 +182,8 @@ final class ChatEndSummaryInquiryLinker {
         return operation.isBlank() || episode.operation.isBlank() || operation.equals(episode.operation) || reference;
     }
 
-    private static String extractPerson(String text) {
-        Set<String> people = new LinkedHashSet<>();
-        for (String name : List.of("어머니", "아버지", "배우자", "자녀", "남편", "아내")) {
-            if (text.contains(name)) {
-                people.add(name);
-            }
-        }
-        if (text.contains("본인") || text.contains("저는") || text.contains("제유심") || text.contains("제회선")) {
-            people.add("SELF");
-        }
-        return people.size() > 1 ? "MULTIPLE" : people.stream().findFirst().orElse("");
+    static String extractPerson(String text) {
+        return ChatEndSummaryPersonScope.extract(text);
     }
 
     private static String identifyProduct(String text) {

@@ -24,7 +24,7 @@ class PlanQuestionClassifierTest {
 
     @BeforeEach
     void setUp() {
-        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(true, true));
+        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
     }
 
     @Test
@@ -124,7 +124,7 @@ class PlanQuestionClassifierTest {
 
     @Test
     void 꺼져_있으면_모델을_부르지_않고_규칙으로_분류한다() {
-        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(false, true));
+        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(false, true, false));
 
         assertThat(classifier.classify(1L, "내 요금제 뭐야")).isEqualTo(PlanQuestionType.MY_SUBSCRIPTION);
         assertThat(classifier.classify(1L, "요금제 변경은 어떻게 해요")).isEqualTo(PlanQuestionType.NONE);

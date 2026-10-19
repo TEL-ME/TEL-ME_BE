@@ -16,7 +16,8 @@ final class ChatEndSummaryResolution {
                         .anyMatch(condition -> isLinkedMessage(input, condition, messageId)))
                 .toList();
         return requests.isEmpty() ? ChatEndSummaryTopicResolution.isResolved(input, messageId)
-                : requests.stream().allMatch(request -> isResolvedRequest(input, request));
+                : requests.stream().allMatch(request -> isResolvedRequest(input, request)
+                        || ChatEndSummaryStoreContinuation.isResolved(input, request));
     }
 
     static Set<Long> findPendingOrigins(ChatEndSummaryData.Input input, Set<Long> pendingIds) {
@@ -63,7 +64,7 @@ final class ChatEndSummaryResolution {
         return List.copyOf(result);
     }
 
-    private static boolean isResolvedRequest(ChatEndSummaryData.Input input, ChatEndSummaryData.Request request) {
+    static boolean isResolvedRequest(ChatEndSummaryData.Input input, ChatEndSummaryData.Request request) {
         boolean ambiguous = request.requestId() == null && input.conditions().stream()
                 .anyMatch(condition -> condition.originMessageId() == request.originMessageId())
                 && input.requests().stream().filter(other -> other.originMessageId() == request.originMessageId())
@@ -117,6 +118,10 @@ final class ChatEndSummaryResolution {
                 || reply.sequence() <= origin.sequence() || Set.of("FAILED", "CANCELLED")
                         .contains(reply.executionStatus() == null ? "" : reply.executionStatus())
                 || condition.answeredSequence() != null && condition.answeredSequence() != reply.sequence()) {
+            return false;
+        }
+        // 완료 상태와 조건 연결만으로는 다른 사람·회선의 답변을 원래 문의의 해결 근거로 쓸 수 없다.
+        if (!ChatEndSummaryInquiryLinker.hasSameConditionScope(origin.content(), reply.content())) {
             return false;
         }
         if (condition.askedMessageId() == null) {

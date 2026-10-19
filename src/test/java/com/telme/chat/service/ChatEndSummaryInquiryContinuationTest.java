@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ChatEndSummaryInquiryContinuationTest {
     @Test
@@ -162,6 +165,54 @@ class ChatEndSummaryInquiryContinuationTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().sourceText()).contains("7700원", "신분증", "매장");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"가족,가족", "형,형", "직장 동료,동료", "그럼 형,형", "그리고 형,형"})
+    @DisplayName("가족·형·동료의 안내와 제목을 본인 유심 문의에 합치지 않는다")
+    void 추가_대상의_원문과_제목을_구분한다(String person, String title) {
+        var result = groups(List.of("본인 유심 재발급 비용은요?", person + " 유심 재발급 비용은요?"),
+                List.of("본인 유심 비용은 7700원입니다.", person + " 유심 비용은 5500원입니다."));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.getFirst().sourceText()).contains("7700원").doesNotContain("5500원");
+        assertThat(result.getLast().sourceText()).contains("5500원").doesNotContain("7700원");
+        assertThat(result.getLast().title()).startsWith(title + " ");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가족", "형", "직장 동료"})
+    @DisplayName("본인과 추가 대상이 함께 있으면 모호한 유심 지시어를 최근 대상에 임의 연결하지 않는다")
+    void 추가_대상이_있는_모호한_참조를_구분한다(String person) {
+        var result = groups(List.of("본인 유심 재발급 비용은요?", person + " 유심 재발급 비용은요?",
+                "아까 그 유심 준비물은요?"), List.of("본인 비용은 7700원입니다.", person + " 비용은 5500원입니다.",
+                "소유자 확인이 필요합니다."));
+
+        assertThat(result).hasSize(3);
+        assertThat(result.getLast().sourceText()).doesNotContain("7700원", "5500원");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가족", "형", "직장 동료"})
+    @DisplayName("대상이 한 명으로 유지되는 가족·형·동료 문의의 이어묻기는 같은 문단으로 묶는다")
+    void 같은_추가_대상의_이어묻기를_유지한다(String person) {
+        var result = groups(List.of(person + " 유심 재발급 비용은요?", "그 유심 준비물은요?"),
+                List.of(person + " 유심 비용은 5500원입니다.", "신분증을 지참합니다."));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().sourceText()).contains("5500원", "신분증");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"그 유심 유형별 준비물은요?", "그 유심 가족 결합 무료 조건은요?",
+        "그 유심 선택형 요금은요?", "그 유심 신형 기기 준비물은요?"})
+    @DisplayName("유형과 가족 결합 같은 상품 표현을 형이나 다른 가족 소유자로 오인하지 않는다")
+    void 상품_표현을_사람으로_오인하지_않는다(String question) {
+        var result = groups(List.of("유심 재발급 비용은요?", question),
+                List.of("재발급 비용은 7700원입니다.", "문의한 조건을 안내받았습니다."));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().sourceText()).contains("7700원", "문의한 조건");
     }
 
     private List<ChatEndSummaryInquiryGrouper.Inquiry> groups(List<String> questions, List<String> answers) {

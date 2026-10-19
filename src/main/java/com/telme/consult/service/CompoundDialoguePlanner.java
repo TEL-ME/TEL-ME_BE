@@ -78,7 +78,7 @@ public final class CompoundDialoguePlanner {
                 closed.add(id);
                 continue;
             }
-            var decision = dialogue.assess(request.input());
+            var decision = dialogue.decide(request.input());
             if (decision.action() == Action.PROCEED) {
                 ready.add(decision);
             } else if (decision.action() == Action.ALTERNATIVE_GUIDANCE) {

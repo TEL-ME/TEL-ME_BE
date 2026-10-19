@@ -1,0 +1,1998 @@
+[
+ {
+  "id": "RU-059",
+  "group": "복합 FAQ",
+  "source": "eval180",
+  "turns": [
+   "7,700원 내면 택배로도 받을 수 있어요? 며칠 걸려요?"
+  ]
+ },
+ {
+  "id": "RU-089",
+  "group": "FAQ+매장",
+  "source": "holdout20",
+  "turns": [
+   "eSIM 재발급 절차와 서울역 근처 처리 매장을 함께 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-090",
+  "group": "FAQ+매장",
+  "source": "holdout20",
+  "turns": [
+   "번호이동 준비 서류 알려주고 신촌 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-091",
+  "group": "FAQ+매장",
+  "source": "holdout20",
+  "turns": [
+   "로밍 신청 방법과 인천공항 매장 위치 같이 알려줘"
+  ]
+ },
+ {
+  "id": "RU-092",
+  "group": "FAQ+매장",
+  "source": "holdout20",
+  "turns": [
+   "인터넷 가입 혜택을 설명하고 판교역 근처 상담 매장 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-093",
+  "group": "FAQ+매장",
+  "source": "holdout20",
+  "turns": [
+   "위약금 계산법과 강남역 주변 해지 처리 매장 알려줘"
+  ]
+ },
+ {
+  "id": "RU-115",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "5G 요금제 종류를 설명해 주고 강남역 근처 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-116",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "명의변경 서류를 알려주고 수원에서 처리 가능한 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-117",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "로밍 요금제를 추천하고 인천공항 U+ 매장 위치도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-118",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "eSIM 발급 비용과 홍대에서 발급 가능한 매장을 같이 알려줘"
+  ]
+ },
+ {
+  "id": "RU-119",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "해지 위약금 계산 방법을 설명하고 잠실 근처 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-120",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "번호이동 조건을 알려주고 부산 서면 대리점도 추천해줘"
+  ]
+ },
+ {
+  "id": "RU-121",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "인터넷 TV 결합 할인과 대전역 주변 상담 매장을 같이 알려줘"
+  ]
+ },
+ {
+  "id": "RU-122",
+  "group": "FAQ+매장",
+  "source": "routing32",
+  "turns": [
+   "시니어 요금제 혜택을 설명하고 대구에서 가입할 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-132",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "명의변경 서류 알려주고 가까운 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-133",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "유심 재발급 비용 알려주고 근처 유심 재발급 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-134",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "번호이동 방법이랑 번호이동 되는 매장 알려줘"
+  ]
+ },
+ {
+  "id": "RU-135",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "로밍 신청 방법 알려주고 강남역 근처 매장도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-136",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "요금제 변경은 어떻게 해? 그리고 신촌역 매장 위치도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-137",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "분실 신고 방법이랑 홍대입구역 근처 매장 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-138",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "eSIM 개통 절차 알려주고 현재 위치에서 가까운 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-139",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "인터넷 해지할 때 장비 반납 방법이랑 근처 매장 알려줘"
+  ]
+ },
+ {
+  "id": "RU-140",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "휴대폰 일시정지 신청 방법 알려주고 잠실역 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-141",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "명의변경 수수료 얼마야? 그리고 가까운 명의변경 매장도"
+  ]
+ },
+ {
+  "id": "RU-142",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "신규 개통 준비물 알려주고 판교역 근처 개통 가능한 매장 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-143",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "유심 재발급 방법이랑 서울역 근처 유심 재발급 매장 알려줘"
+  ]
+ },
+ {
+  "id": "RU-144",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "소액결제 차단 방법 알려주고 가까운 매장도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-145",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "데이터 쉐어링 신청 방법이랑 여의도역 근처 매장 위치 알려줘"
+  ]
+ },
+ {
+  "id": "RU-146",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "번호이동 하면 위약금 있나요? 그리고 근처 번호이동 매장 찾아주세요"
+  ]
+ },
+ {
+  "id": "RU-147",
+  "group": "FAQ+매장",
+  "source": "compound_store16",
+  "turns": [
+   "가족결합 할인 조건 알려주고 강남역 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-149",
+  "group": "복합 FAQ",
+  "source": "compound_faq7",
+  "turns": [
+   "명의 변경에 필요한 서류와 번호 이동에 필요한 서류를 각각 알려줘"
+  ]
+ },
+ {
+  "id": "RU-150",
+  "group": "복합 FAQ",
+  "source": "compound_faq7",
+  "turns": [
+   "명의 변경에 필요한 서류와 명의 변경 시 무료 해외 항공권을 주는지 각각 알려줘"
+  ]
+ },
+ {
+  "id": "RU-154",
+  "group": "FAQ+매장",
+  "source": "compound_faq7",
+  "turns": [
+   "요금제 종류 알려주고 강남역 근처 매장 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-170",
+  "group": "복합 FAQ",
+  "source": "spacing_base",
+  "turns": [
+   "로밍요금과 유심재발급방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-172",
+  "group": "복합 FAQ",
+  "source": "spacing_base",
+  "turns": [
+   "휴대폰해지 방법 알려줘. 인터넷가입 방법도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-173",
+  "group": "복합 FAQ",
+  "source": "spacing_base",
+  "turns": [
+   "로밍요금과 유심재발급비용 알려줘"
+  ]
+ },
+ {
+  "id": "RU-182",
+  "group": "복합 FAQ",
+  "source": "spacing_additional",
+  "turns": [
+   "요금납부방법과데이터충전비용알려줘"
+  ]
+ },
+ {
+  "id": "RU-183",
+  "group": "복합 FAQ",
+  "source": "spacing_additional",
+  "turns": [
+   "유심재발급비용과로밍신청방법그리고해지서류알려줘"
+  ]
+ },
+ {
+  "id": "RU-193",
+  "group": "복합 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "로밍 신청 방법과 유심 재발급 비용을 각각 알려줘"
+  ]
+ },
+ {
+  "id": "RU-194",
+  "group": "복합 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "부가서비스를 가입하는 방법하고 해지하는 방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-195",
+  "group": "복합 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "번호이동 비용, 필요한 서류, 신청 방법을 각각 알려줘"
+  ]
+ },
+ {
+  "id": "RU-196",
+  "group": "복합 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "인터넷 해지 위약금과 휴대폰 명의 변경 서류를 알려줘"
+  ]
+ },
+ {
+  "id": "RU-205",
+  "group": "복합 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "등급이 몇 단계나 있고 뭘로 정해져요"
+  ]
+ },
+ {
+  "id": "RU-274",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "사당역 매장 위치 알려주고 거기서 번호이동하면 필요한 서류도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-275",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "기기변경 할 때 쓰던 폰 반납해야 하나요? 그리고 건대입구역 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-276",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "가까운 매장 찾아주고, 거기 가기 전에 명의변경 준비물도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-277",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "데이터 무제한 요금제 뭐 있는지 알려주고 목동 매장 영업시간도"
+  ]
+ },
+ {
+  "id": "RU-278",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "유심 잃어버렸는데 정지 방법 알려주고 근처 재발급 매장도 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-279",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "해운대 근처 매장 어디 있는지랑 로밍 데이터 요금 알려줘"
+  ]
+ },
+ {
+  "id": "RU-280",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "가족 결합하면 얼마나 할인되는지, 그리고 동탄역 근처 상담 가능한 매장"
+  ]
+ },
+ {
+  "id": "RU-281",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "미납 요금 있어도 번호이동 되나요? 된다면 영등포 매장도 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-282",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "청소년 요금제 설명해 주고 송도에 가입 가능한 대리점 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-283",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "개통 취소 기간 알려주고 평택역 대리점 위치도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-284",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "eSIM으로 바꾸는 방법이랑 성수동 근처 eSIM 되는 매장"
+  ]
+ },
+ {
+  "id": "RU-285",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "휴대폰 분실 신고는 어떻게 해요? 내 위치 근처 매장도 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-286",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "왕십리역 매장 몇 시에 닫는지 알려주고 소액결제 한도 변경 방법도"
+  ]
+ },
+ {
+  "id": "RU-287",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "인터넷 이전 설치 신청 방법이랑 구로디지털단지 매장 연락처"
+  ]
+ },
+ {
+  "id": "RU-288",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "위약금 없이 해지하는 조건 알려주고 전주 객사 근처 해지 매장도"
+  ]
+ },
+ {
+  "id": "RU-289",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "선불폰 충전 방법 알려주고 안양 범계 근처 선불폰 개통 매장 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-290",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "부가서비스 정리하는 법 알려주고 창원 상남동 매장도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-291",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "명의변경 대리인 서류 알려주고 춘천 매장 주소도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-292",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "요금 납부일 바꾸는 방법 알려주고, 강릉에 있는 매장도 하나 찾아줘"
+  ]
+ },
+ {
+  "id": "RU-293",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "데이터 쉐어링 요금 알려주고 세종시청 근처 매장 주차 되는지도"
+  ]
+ },
+ {
+  "id": "RU-312",
+  "group": "FAQ+매장",
+  "source": "new175",
+  "turns": [
+   "로밍 신청 방법도 알려주고 거기 몇 시까지 하는지도요"
+  ]
+ },
+ {
+  "id": "RU-315",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "데이터 쉐어링 신청 방법과 소액결제 차단 방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-316",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "일시정지 기간이랑 분실 신고 절차 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-317",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "eSIM 발급 비용하고 멤버십 등급 기준 알려줘"
+  ]
+ },
+ {
+  "id": "RU-318",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "가족결합 할인 조건, 청소년 요금제 가입 나이 알려줘"
+  ]
+ },
+ {
+  "id": "RU-319",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "인터넷 이전 설치는 어떻게 신청해요? 자동이체 계좌 변경은요?"
+  ]
+ },
+ {
+  "id": "RU-320",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "요금 청구서 재발행 방법 알려주고 미납 요금 납부 방법도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-321",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "개통 취소 가능 기간이 언제까지예요? 그리고 취소하면 위약금 있어요?"
+  ]
+ },
+ {
+  "id": "RU-322",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "기기변경할 때 선택약정이랑 공시지원금 중 뭐가 나은지, 그리고 쓰던 폰 보상 판매 방법"
+  ]
+ },
+ {
+  "id": "RU-323",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "약정 중에 해지하면 위약금 얼마나 나와요? 번호 변경 수수료도 궁금해요"
+  ]
+ },
+ {
+  "id": "RU-324",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "데이터선물하기방법이랑로밍패스요금알려줘"
+  ]
+ },
+ {
+  "id": "RU-325",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "컬러링 해지 방법, 번호 변경 방법, 명의도용 신고 방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-326",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "납부일 변경이랑 청구서 이메일 신청이랑 자동이체 해지 어떻게 해요?"
+  ]
+ },
+ {
+  "id": "RU-327",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "휴대폰 보험 가입 조건 알려주고 보험금 청구는 어떻게 하는지도 알려줘"
+  ]
+ },
+ {
+  "id": "RU-328",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "TV 셋톱박스 반납 방법이랑 인터넷 해지 신청 방법"
+  ]
+ },
+ {
+  "id": "RU-329",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "출국 전에 로밍 패스 가입하는 법이랑 현지 유심 쓸 때 주의할 점 알려줘"
+  ]
+ },
+ {
+  "id": "RU-330",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "유심 분실했을 때 정지하는 방법 알려줘. 재발급 받으려면 신분증 꼭 있어야 해?"
+  ]
+ },
+ {
+  "id": "RU-331",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "5G 요금제 중 제일 싼 거 알려주고 그 요금제 데이터 다 쓰면 속도 제한이 어떻게 되는지도"
+  ]
+ },
+ {
+  "id": "RU-333",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "멤버십 VIP 혜택 뭐 있어요? 등급 올리는 방법도 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-334",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "소액결제 한도 올리는 법이랑 결제 내역 확인하는 법"
+  ]
+ },
+ {
+  "id": "RU-335",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "번호이동 할 때 위약금, 남은 할부금, 멤버십 포인트는 각각 어떻게 돼요?"
+  ]
+ },
+ {
+  "id": "RU-336",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "배우자 명의로 회선 넘기는 방법이랑 그 회선 가족결합에 넣는 방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-337",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "인터넷 속도가 느린데 장애 신고는 어디서 해요? 그리고 요금제 속도 올리는 방법도요"
+  ]
+ },
+ {
+  "id": "RU-338",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "외국인 개통에 필요한 서류랑 외국인 선불폰 충전 방법 알려줘"
+  ]
+ },
+ {
+  "id": "RU-339",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "자녀 폰 유해차단 서비스 가입 방법이랑 데이터 사용량 확인하는 법 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-340",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "일시정지 중에도 요금 나오나요? 정지 해제는 어떻게 해요?"
+  ]
+ },
+ {
+  "id": "RU-341",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "eSIM 발급 비용이랑 발급 가능 기종, 그리고 기존 유심 처리 방법까지 알려줘"
+  ]
+ },
+ {
+  "id": "RU-342",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "분실한 폰 위치 찾는 서비스 있나요? 분실폰 할부금은 계속 내야 해요?"
+  ]
+ },
+ {
+  "id": "RU-343",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "기기변경하면 쓰던 요금제 유지돼요? 그리고 데이터 이월도 그대로 되나요?"
+  ]
+ },
+ {
+  "id": "RU-344",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "로밍 중에 받은 문자 요금이랑 귀국 후 로밍 자동 해제 여부 알려줘"
+  ]
+ },
+ {
+  "id": "RU-345",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "분실폰 보험 처리 기간은 얼마나 걸려요? 자기부담금도 내야 하나요?"
+  ]
+ },
+ {
+  "id": "RU-346",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "해외 로밍 패스는 며칠짜리까지 있어요? 현지에서 연장도 되나요?"
+  ]
+ },
+ {
+  "id": "RU-347",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "번호 변경하면 기존 번호 안내 서비스 돼요? 수수료는 있어요?"
+  ]
+ },
+ {
+  "id": "RU-348",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "인터넷 이전 설치 비용, 소요 기간, 신청 방법 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-349",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "데이터 쉐어링 요금이랑 연결 가능한 기기 수를 각각 알려줘"
+  ]
+ },
+ {
+  "id": "RU-350",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "청소년 요금제 데이터 제공량 알려주고 부모 동의 절차도 알려주세요"
+  ]
+ },
+ {
+  "id": "RU-351",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "선택약정 할인율이 얼마예요? 약정 기간 중에 해지하면 할인 반환금도 있나요?"
+  ]
+ },
+ {
+  "id": "RU-352",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "유심 재발급 비용, 소요 시간, 대리 수령 가능 여부를 알려줘"
+  ]
+ },
+ {
+  "id": "RU-353",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "소액결제 차단하면 앱 결제도 막혀요? 다시 풀려면 어떻게 해요?"
+  ]
+ },
+ {
+  "id": "RU-354",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "가족결합 하면 할인 얼마나 돼요? 결합 해지할 때 위약금도 있어요?"
+  ]
+ },
+ {
+  "id": "RU-355",
+  "group": "복합 FAQ",
+  "source": "new175",
+  "turns": [
+   "번호이동하면 멤버십 등급, 포인트, 가족결합 할인은 어떻게 되나요?"
+  ]
+ },
+ {
+  "id": "RU-219",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?"
+  ]
+ },
+ {
+  "id": "RU-217",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "분실 시 일시 정지와 해지는 요금 면에서 어떻게 다른가요?"
+  ]
+ },
+ {
+  "id": "RU-057",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "명의변경 수수료가 없으면 인지세도 안 내나요?"
+  ]
+ },
+ {
+  "id": "RU-148",
+  "group": "단일 FAQ",
+  "source": "compound_faq7",
+  "turns": [
+   "물리 유심 재발급 비용은 얼마인가요?"
+  ]
+ },
+ {
+  "id": "RU-175",
+  "group": "단일 FAQ",
+  "source": "spacing_base",
+  "turns": [
+   "해외로출장가는데 로밍신청어떻게해"
+  ]
+ },
+ {
+  "id": "RU-099",
+  "group": "단일 FAQ",
+  "source": "routing32",
+  "turns": [
+   "휴대폰 요금제를 낮추면 약정 할인도 바뀌나요?"
+  ]
+ },
+ {
+  "id": "RU-357",
+  "group": "단일 FAQ",
+  "source": "new175",
+  "turns": [
+   "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘"
+  ]
+ },
+ {
+  "id": "RU-131",
+  "group": "단일 FAQ",
+  "source": "context3",
+  "turns": [
+   "노트북은요?"
+  ]
+ },
+ {
+  "id": "RU-177",
+  "group": "단일 FAQ",
+  "source": "spacing_additional",
+  "turns": [
+   "eSIM재발급받고싶어요"
+  ]
+ },
+ {
+  "id": "RU-065",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "정지해도 기본료 50%는 나온다는데 한 번에 며칠까지 정지돼요?"
+  ]
+ },
+ {
+  "id": "RU-048",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "우리 동네가 5G 커버리지에 들어가는지 어떻게 확인해요?"
+  ]
+ },
+ {
+  "id": "RU-189",
+  "group": "단일 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "유심과 eSIM을 쓰는 방식은 어떤 것들이 있는지 설명해줘"
+  ]
+ },
+ {
+  "id": "RU-364",
+  "group": "단일 FAQ",
+  "source": "new175",
+  "turns": [
+   "인터넷 장애 신고는 앱, 전화, 홈페이지 중 어디서 해요?"
+  ]
+ },
+ {
+  "id": "RU-071",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "유심을 재발급받으면 예전 유심에 저장된 연락처도 새 유심으로 옮겨지나요?"
+  ]
+ },
+ {
+  "id": "RU-311",
+  "group": "단일 FAQ",
+  "source": "new175",
+  "turns": [
+   "거기서 eSIM 발급하면 비용은 얼마예요?"
+  ]
+ },
+ {
+  "id": "RU-208",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "매장 가는 거랑 전화하는 거랑 뭐가 더 빨라요"
+  ]
+ },
+ {
+  "id": "RU-212",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "성인이 된 자녀 명의로 바꾸는 것과 새로 개통하는 것 중 비용 면에서 어느 쪽이 나은가요?"
+  ]
+ },
+ {
+  "id": "RU-176",
+  "group": "단일 FAQ",
+  "source": "spacing_base",
+  "turns": [
+   "인터넷가입은안하고 해지만하려고요"
+  ]
+ },
+ {
+  "id": "RU-363",
+  "group": "단일 FAQ",
+  "source": "new175",
+  "turns": [
+   "5G 요금제 데이터 다 쓰면 속도 제한은 어떻게 걸려요?"
+  ]
+ },
+ {
+  "id": "RU-023",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "가입한 지 얼마 안 됐는데 벌써 통신사를 바꾸고 싶습니다. 될까요"
+  ]
+ },
+ {
+  "id": "RU-081",
+  "group": "단일 FAQ",
+  "source": "holdout20",
+  "turns": [
+   "USIM을 잃어버렸다면 재발급할 때 어떤 서류가 필요해요?"
+  ]
+ },
+ {
+  "id": "RU-010",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "4년 전 요금 납부 기록을 발급받을 수 있나요?"
+  ]
+ },
+ {
+  "id": "RU-063",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "양수인이 신용 심사를 받는 건 어떤 경우예요?"
+  ]
+ },
+ {
+  "id": "RU-218",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "외국인 자녀 개통에 가족관계증명서를 못 냈더니 거절됐습니다"
+  ]
+ },
+ {
+  "id": "RU-062",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "3개월 지나야 옮길 수 있다는데 그 기준이 개통일이에요?"
+  ]
+ },
+ {
+  "id": "RU-020",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "제가 못 가서 동생을 보내려는데 제가 가는 것보다 오래 걸릴까요"
+  ]
+ },
+ {
+  "id": "RU-005",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "알뜰 미니 요금제는 얼마인가요?"
+  ]
+ },
+ {
+  "id": "RU-227",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요"
+  ]
+ },
+ {
+  "id": "RU-055",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "유심 재발급 비용은 카드로 결제할 수 있나요?"
+  ]
+ },
+ {
+  "id": "RU-181",
+  "group": "단일 FAQ",
+  "source": "spacing_additional",
+  "turns": [
+   "해지는안하고일시정지만하고싶어요"
+  ]
+ },
+ {
+  "id": "RU-002",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "한 번 교환한 단말을 다시 교환할 수 있나요?"
+  ]
+ },
+ {
+  "id": "RU-220",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "법인 명의 개통이랑 미성년자 개통 중 뭐가 더 까다로워요?"
+  ]
+ },
+ {
+  "id": "RU-058",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "요금 밀리고 60일 지나면 번호가 아예 없어지는 건가요?"
+  ]
+ },
+ {
+  "id": "RU-244",
+  "group": "단일 FAQ",
+  "source": "new175",
+  "turns": [
+   "대리점에서도 명의변경 처리가 되나요?"
+  ]
+ },
+ {
+  "id": "RU-191",
+  "group": "단일 FAQ",
+  "source": "spacing_requestObjective",
+  "turns": [
+   "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘"
+  ]
+ },
+ {
+  "id": "RU-060",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "2,750원짜리 발급은 아무 폰에서나 되는 거예요?"
+  ]
+ },
+ {
+  "id": "RU-027",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "회사 심부름으로 매장에 갔는데 제 주민등록증만으로는 안 된다고 돌려보냈어요"
+  ]
+ },
+ {
+  "id": "RU-100",
+  "group": "단일 FAQ",
+  "source": "routing32",
+  "turns": [
+   "번호이동을 신청하려면 어떤 조건이 필요한가요?"
+  ]
+ },
+ {
+  "id": "RU-053",
+  "group": "단일 FAQ",
+  "source": "eval180",
+  "turns": [
+   "아이 워치용 요금제는 어떤 게 있나요?"
+  ]
+ },
+ {
+  "id": "RU-203",
+  "group": "단일 FAQ",
+  "source": "spacing_faq",
+  "turns": [
+   "출국 전에 신청하는 거랑 도착해서 신청하는 거랑 뭐가 나아요?"
+  ]
+ },
+ {
+  "id": "CLAR-store-vague-twice",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심 재발급 가능한 매장 찾아줘",
+   "글쎄",
+   "글쎄"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-vague-twice",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "글쎄",
+   "글쎄"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-yes",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-dont-know",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "모르겠어"
+  ]
+ },
+ {
+  "id": "CLAR-faq-minor-age",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "미성년자도 가입가능한가요?",
+   "저는 만 16세예요"
+  ]
+ },
+ {
+  "id": "CLAR-interrupt-store-then-faq-then-yes",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심 재발급 가능한 매장 찾아줘",
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-ne",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "네"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-eung",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "응"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-no",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "아니요"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-eopseoyo",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "없어요"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-ireoke",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "미납 요금 없어요"
+  ]
+ },
+ {
+  "id": "CLAR-faq-minor-no",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "미성년자도 가입가능한가요?",
+   "저는 만 12세예요"
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-hmm-twice",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "음...",
+   "음..."
+  ]
+ },
+ {
+  "id": "CLAR-faq-bill-unsure-immediate",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호 이동할 때 필요한 서류가 뭐야?",
+   "잘 모르겠어요"
+  ]
+ },
+ {
+  "id": "CLAR-store-region-decline",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심 재발급 가능한 매장 찾아줘",
+   "알려주고 싶지 않아요"
+  ]
+ },
+ {
+  "id": "CLAR-compound-docs-and-cost",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호이동 필요 서류와 유심 재발급 비용 알려줘",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-compound-docs-and-plan",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-compound-vague-then-answer",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "번호이동 필요 서류와 유심 재발급 비용 알려줘",
+   "글쎄",
+   "아니요"
+  ]
+ },
+ {
+  "id": "CLAR-dup-docs-yes",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심 재발급 시 필요한 서류를 알려주세요.",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-dup-docs-after-lost",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심을 잃어버렸어요",
+   "유심 재발급 시 필요한 서류를 알려주세요.",
+   "예"
+  ]
+ },
+ {
+  "id": "CLAR-choice-docs-button",
+  "group": "되묻기",
+  "source": "clarification-evaluation",
+  "turns": [
+   "유심 재발급 받으려면 서류 뭐 필요해요",
+   "본인"
+  ]
+ },
+ {
+  "id": "FLOW-CL-01",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "기기변경 하고 싶어요",
+   "개통한 지 1년 넘었고 남은 할부금은 없어요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-02",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "번호이동 하고 싶어요",
+   "미납 요금은 없고 개통한 지 2년 됐어요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-03",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "해지하면 위약금 얼마 나오나요",
+   "24개월 약정 중에 10개월 썼어요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-04",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "유심 재발급 받고 싶어요",
+   "유심을 잃어버렸고 제가 직접 매장에 갈 거예요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-05",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "로밍 요금제 얼마예요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-06",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "미성년자도 가입할 수 있나요",
+   "만 15세이고 부모님이랑 같이 갈 거예요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-07",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "명의변경 하려면 뭐 필요해요?",
+   "양도인이랑 양수인 둘 다 직접 매장에 갈 거예요"
+  ]
+ },
+ {
+  "id": "FLOW-CL-08",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "요금 안 냈는데 정지되나요"
+  ]
+ },
+ {
+  "id": "FLOW-CO-01",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "명의 변경에 필요한 서류와 번호 이동에 필요한 서류를 각각 알려줘",
+   "둘 다 본인이 직접 가요"
+  ]
+ },
+ {
+  "id": "FLOW-CO-02",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "명의 변경에 필요한 서류와 명의 변경 시 무료 해외 항공권을 주는지 각각 알려줘",
+   "직접 매장에 가요"
+  ]
+ },
+ {
+  "id": "FLOW-MT-01",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "인터넷 해지를 하려고 합니다",
+   "장비는 어떻게 반납해요?"
+  ]
+ },
+ {
+  "id": "FLOW-MT-02",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "수수료는 얼마나 나와요?"
+  ]
+ },
+ {
+  "id": "FLOW-MT-03",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "로밍 요금제를 신청하려고 합니다",
+   "그럼 데이터 다 쓰면 어떻게 돼요?"
+  ]
+ },
+ {
+  "id": "FLOW-MT-04",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "유심 재발급 비용은 얼마예요?",
+   "택배로도 받을 수 있나요?"
+  ]
+ },
+ {
+  "id": "FLOW-MT-05",
+  "group": "대화 흐름",
+  "source": "chat-flows-22",
+  "turns": [
+   "명의변경을 하려고 해요",
+   "미성년자 자녀한테도 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-transition-09",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 신규 설치를 신청하고 싶어요",
+   "신규가 아니라 이전 설치입니다",
+   "그 서비스 취소는 어떻게 해?"
+  ]
+ },
+ {
+  "id": "CTX-fresh-transition-3",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "어머니에게 휴대폰 명의를 변경하려고 합니다",
+   "어머니가 아니라 누나에게 변경합니다",
+   "그건 서류가 뭐가 필요하죠?"
+  ]
+ },
+ {
+  "id": "CTX-hold-indep-4",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "로밍 요금제를 알아보고 있어요",
+   "해지 위약금은 어떻게 계산해요?"
+  ]
+ },
+ {
+  "id": "CTX-transition-04",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "명의 변경 방법이 궁금해요",
+   "이전에 신청한 인터넷 설치를 취소하고 싶어요"
+  ]
+ },
+ {
+  "id": "CTX-followup-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 가입 방법을 알려주세요",
+   "아까 말한 건 어떻게 신청해?"
+  ]
+ },
+ {
+  "id": "CTX-transition-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "아버지에게 명의 변경하려고 합니다",
+   "아버지가 아니라 배우자에게 변경합니다",
+   "그건 서류가 뭐가 필요해?"
+  ]
+ },
+ {
+  "id": "CTX-hold-link-4",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "외국인도 되나요?"
+  ]
+ },
+ {
+  "id": "CTX-fresh-followup-4",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "미성년자 신규 개통을 알아보고 있어요",
+   "필요한 서류를 다시 알려주세요"
+  ]
+ },
+ {
+  "id": "CTX-acc-independent-02",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 설치를 신청하려고 합니다",
+   "5G 요금제 추천해 주세요"
+  ]
+ },
+ {
+  "id": "CTX-acc-implicit-09",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "요금제 변경을 하려고 합니다",
+   "온라인으로 바로 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-acc-independent-05",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "가족결합 할인도 있어요?"
+  ]
+ },
+ {
+  "id": "CTX-followup-02-compact",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "명의 변경 방법을 알려주세요",
+   "필요한서류는?"
+  ]
+ },
+ {
+  "id": "CTX-hold-omit-7",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "수수료는 매장에서 내나요, 다음 달 요금에 붙나요?"
+  ]
+ },
+ {
+  "id": "CTX-followup-01-compact",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "로밍 요금제는 어떻게 골라요?",
+   "그럼신청방법은?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-followup-5",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 알아보고 있어요",
+   "그럼 언제쯤 완료돼요?"
+  ]
+ },
+ {
+  "id": "CTX-evidence-correction-02",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "어머니에게 휴대폰 명의를 변경하려고 합니다",
+   "어머니가 아니라 형에게 변경합니다",
+   "필요한 서류는?"
+  ]
+ },
+ {
+  "id": "CTX-earlier-topic-late-correction",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "아버지에게 명의 변경을 신청하려고 합니다",
+   "유심 재발급도 알아보고 있어요",
+   "아버지가 아니라 배우자에게 변경합니다",
+   "앞서 첫 번째로 문의한 건 필요한 서류가 뭐야?"
+  ]
+ },
+ {
+  "id": "CTX-followup-08",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "유심 재발급을 하려고 합니다",
+   "그럼 비용은 얼마나 드나요?"
+  ]
+ },
+ {
+  "id": "CTX-single2-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 해지할까 고민 중이에요",
+   "약정 남아 있으면 얼마나 물어야 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-followup-05",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "일본 로밍을 신청하고 싶어요",
+   "그때 요금은 얼마야?"
+  ]
+ },
+ {
+  "id": "CTX-evidence-correction-03",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 해지를 다음 달에 신청하려고 합니다",
+   "다음 달이 아니라 이번 달입니다",
+   "그럼 처리 기간은?"
+  ]
+ },
+ {
+  "id": "CTX-transition-01-compact",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "일본 로밍 비용을 알아보고 있어요",
+   "요금납부방법알려줘"
+  ]
+ },
+ {
+  "id": "CTX-transition-07-compact",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "유심 재발급을 대리인이 신청하려고 합니다",
+   "대리인이 아니라 제가 직접 신청합니다",
+   "그럼비용은?"
+  ]
+ },
+ {
+  "id": "CTX-gate-plain-03",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "해외 로밍을 신청하려고 합니다",
+   "첫 번째로 신청한 회선 말고 두 번째 회선 요금이 궁금해요"
+  ]
+ },
+ {
+  "id": "CTX-unseen-implicit-1",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "일본 로밍을 신청하려고 합니다",
+   "미국은요?"
+  ]
+ },
+ {
+  "id": "CTX-single2-10",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "기기변경 알아보고 있는데요",
+   "그거 온라인으로도 신청돼요?"
+  ]
+ },
+ {
+  "id": "CTX-review-ordinal-01",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "로밍 신청을 알아보고 있어요",
+   "유심 재발급도 하려고 해요",
+   "처음 물어본 거 요금은요?"
+  ]
+ },
+ {
+  "id": "CTX-hold-omit-5",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 신규 설치를 하려고 합니다",
+   "설치 날짜는 언제로 잡을 수 있어요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-followup-7",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "요금제 변경을 신청하려고 합니다",
+   "그거 취소도 가능한가요?"
+  ]
+ },
+ {
+  "id": "CTX-single2-09",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "부모님 폰을 효도 요금제로 가입시켜 드리고 싶어요",
+   "본인이 직접 매장에 가야 하나요?"
+  ]
+ },
+ {
+  "id": "CTX-blind-22",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "청구서를 이메일로 받고 싶어요",
+   "그거 신청하면 종이 청구서는 자동으로 끊기는 건가요? 아니면 따로 해지 신청을 또 해야 하는 건가요?"
+  ]
+ },
+ {
+  "id": "CTX-gate-plain-02",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "처음 신청한 사람도 할인 받을 수 있나요?"
+  ]
+ },
+ {
+  "id": "CTX-cost-bare-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 해지를 하려고 합니다",
+   "위약금도 내야 하나요?"
+  ]
+ },
+ {
+  "id": "CTX-acc-item-03",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "유심 재발급을 받으려고 합니다",
+   "그건 신분증 사본으로도 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-independent-1",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "일본 로밍을 신청하려고 합니다",
+   "데이터 쉐어링 요금은 얼마인가요?"
+  ]
+ },
+ {
+  "id": "CTX-acc-item-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "명의 변경을 하려고 합니다",
+   "이전에 말한 거 미성년자 자녀한테도 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-acc-implicit-04",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "명의 변경을 하려고 합니다",
+   "배우자도 해당돼요?"
+  ]
+ },
+ {
+  "id": "CTX-blind-03",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "다음 주에 일본 여행 가는데 로밍 신청하려고요",
+   "아 일본 말고 미국이에요",
+   "하루에 얼마예요?"
+  ]
+ },
+ {
+  "id": "CTX-acc-implicit-07",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "해외 로밍을 신청하려고 합니다",
+   "출국 당일에 해도 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-hold-link-1",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "요금제 변경을 하려고 합니다",
+   "주말에도 처리돼요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-independent-6",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "로밍 요금제를 알아보고 있어요",
+   "가족 결합 할인 조건이 뭐예요?"
+  ]
+ },
+ {
+  "id": "CTX-blind-20",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "안녕하세요",
+   "eSIM으로 바꾸려고 하는데요",
+   "아이폰도 되는 거죠?"
+  ]
+ },
+ {
+  "id": "CTX-single-15",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "휴대폰을 지하철에서 잃어버렸어요",
+   "지금 바로 막을 수 있나요?"
+  ]
+ },
+ {
+  "id": "CTX-evidence-followup-03",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "휴대폰 소액결제 차단을 신청하려고 해요",
+   "필요한 서류는?"
+  ]
+ },
+ {
+  "id": "CTX-cost-long-01",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 이전 설치를 신청하려고 합니다",
+   "설치 기사님 방문비용은 따로 청구되는 건가요?"
+  ]
+ },
+ {
+  "id": "CTX-blind-10",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동 하려고 하는데요",
+   "주말에도 돼요?"
+  ]
+ },
+ {
+  "id": "CTX-blind-06",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "요금제 바꾸려고요",
+   "근데 소액결제 차단은 어떻게 해요?"
+  ]
+ },
+ {
+  "id": "CTX-cost-bare-05",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "유심 재발급을 받으려고 합니다",
+   "수수료 붙나요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-implicit-3",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 설치를 신청하려고 합니다",
+   "주말에도 와요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-implicit-2",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "유심 재발급을 하려고 합니다",
+   "가족이 대신 가도 되나요?"
+  ]
+ },
+ {
+  "id": "CTX-unseen-independent-4",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 가입을 알아보고 있어요",
+   "휴대폰 분실 신고는 어디서 하나요?"
+  ]
+ },
+ {
+  "id": "CTX-fresh-followup-3",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "휴대폰 해지를 신청하려고 합니다",
+   "그럼 처리 기간은 얼마나 되죠?"
+  ]
+ },
+ {
+  "id": "CTX-blind-12",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "아버지 명의로 된 폰을 제 명의로 바꾸려고요",
+   "필요한 서류가 뭐예요"
+  ]
+ },
+ {
+  "id": "CTX-hold-indep-8",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동을 하려고 합니다",
+   "처음 개통한 날부터 요금이 나가나요?"
+  ]
+ },
+ {
+  "id": "CTX-gate-ordinal-02",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "인터넷 해지를 하려고 합니다",
+   "유심 재발급을 받으려고 합니다",
+   "첫 번째로 문의한 거 위약금은 얼마나 나와요?"
+  ]
+ },
+ {
+  "id": "CTX-single2-01",
+  "group": "멀티턴",
+  "source": "context-resolution-evaluation",
+  "turns": [
+   "번호이동 하려고 해요",
+   "주말에도 돼요?"
+  ]
+ }
+]

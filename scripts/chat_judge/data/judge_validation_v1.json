@@ -1,0 +1,4638 @@
+{
+ "version": 1,
+ "seed": 180,
+ "source": {
+  "humanFile": "v7-three-model-full-302-human-review-lyj.md",
+  "humanSha256": "f647dbabd94fa722599e4a92340d19864216c8571bb877252f5b0d2da064b394",
+  "captureFile": "v7-capture.json.gz",
+  "captureSha256": "b3fe8a1cadcec1096707a2b3648e6e6d3b4778129debdeb8d2210b729d966217",
+  "telme100Commit": "ae637974770f03fa8620c6b5540877becf1ff0c5"
+ },
+ "annotators": {
+  "A": "TELME-100 V7 302건 판정(이용재)",
+  "B": "미작성"
+ },
+ "strata": {
+  "UNSUPPORTED": 39,
+  "OVER_REFUSAL": 7,
+  "SUPPORTED_PARTIAL_OR_MISSED": 25,
+  "SUPPORTED_COMPLETE": 20,
+  "NO_CLAIM_REFUSAL": 15,
+  "OTHER": 10
+ },
+ "items": [
+  {
+   "id": "PIPE-BILLING-0020:0",
+   "category": "BILLING",
+   "question": "이중 납부 환불 대신 다음 달 요금 차감이 가능한가요?",
+   "previousTurns": [],
+   "answer": "네, 이중 납부 금액을 다음 달 요금에서 차감하는 방식으로 선택하실 수 있습니다. 차감 후 환불은 본인 명의 계좌로 5영업일 이내에 이루어집니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0020",
+     "answer": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다. 환불은 본인 명의 계좌로 5영업일 이내입니다."
+    },
+    {
+     "sourceId": "BILLING-0076",
+     "answer": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다."
+    },
+    {
+     "sourceId": "BILLING-0055",
+     "answer": "고객센터 접수 시 다음 달 차감 방식을 선택하면 됩니다. 접수 후 3영업일 이내에 확인되고, 환불을 택하면 5영업일 이내에 본인 명의 계좌로 입금됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "이중 납부 환불 대신 다음 달 요금 차감이 가능한가요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0020",
+       "answer": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다. 환불은 본인 명의 계좌로 5영업일 이내입니다."
+      },
+      {
+       "sourceId": "BILLING-0139",
+       "answer": "환불은 본인 명의 계좌로 5영업일 이내에 들어오고, 차감은 다음 달 요금에서 빠집니다. 편한 쪽을 고르시면 됩니다."
+      },
+      {
+       "sourceId": "BILLING-0146",
+       "answer": "환불은 본인 명의 계좌로 5영업일 이내 지급되고, 차감은 다음 달 요금에 반영됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "이중 납부 금액은 환불 대신 다음 달 요금에서 차감하는 방식도 선택할 수 있다.",
+    "환불을 택하면 본인 명의 계좌로 5영업일 이내 지급된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0021:0",
+   "category": "BILLING",
+   "question": "청구서 수령 방법 종류를 알려주세요.",
+   "previousTurns": [],
+   "answer": "청구서 수령 방법은 이메일, 모바일 알림, 우편 총 3가지입니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0021",
+     "answer": "이메일, 모바일 알림, 우편 3종입니다. 우편만 월 500원이 부과됩니다."
+    },
+    {
+     "sourceId": "BILLING-0105",
+     "answer": "수령 방법은 이메일, 모바일, 우편 중 하나입니다. 중복 발송이면 고객센터에 확인해 주세요."
+    },
+    {
+     "sourceId": "BILLING-0028",
+     "answer": "이메일, 모바일 알림, 우편 중에서 받으실 수 있습니다. 우편은 월 500원이 붙고 나머지는 무료입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "청구서 수령 방법 종류를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0021",
+       "answer": "이메일, 모바일 알림, 우편 3종입니다. 우편만 월 500원이 부과됩니다."
+      },
+      {
+       "sourceId": "BILLING-0028",
+       "answer": "이메일, 모바일 알림, 우편 중에서 받으실 수 있습니다. 우편은 월 500원이 붙고 나머지는 무료입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "청구서는 이메일, 모바일 알림, 우편 3가지로 받을 수 있다.",
+    "우편만 월 500원이 부과되고 나머지는 무료다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0054:0",
+   "category": "BILLING",
+   "question": "미납 요금을 가상계좌로 납부하는 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "그 후 해당 가상계좌로 지정된 금액을 입금하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0054",
+     "answer": "납부 수단 4종(계좌이체·신용카드·가상계좌·간편결제) 중 가상계좌를 선택해 입금하시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "미납 요금을 가상계좌로 납부하는 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0054",
+       "answer": "납부 수단 4종(계좌이체·신용카드·가상계좌·간편결제) 중 가상계좌를 선택해 입금하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "납부 수단(계좌이체·신용카드·가상계좌·간편결제) 중 가상계좌를 선택해 입금하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0065:0",
+   "category": "BILLING",
+   "question": "자동이체 두 번 나갔는데 어떻게 해요",
+   "previousTurns": [],
+   "answer": "자동이체는 일반적으로 매월 25일에 한 번만 진행됩니다. 두 번 나간 경우는 오류일 가능성이 높습니다. 고객센터에 연락하여 상황을 접수하시면 정확한 문제 해결을 도와드리겠습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0065",
+     "answer": "고객센터에 접수하시면 됩니다. 자동이체는 원래 25일에 한 번만 나갑니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "자동이체 두 번 나갔는데 어떻게 해요",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0065",
+       "answer": "고객센터에 접수하시면 됩니다. 자동이체는 원래 25일에 한 번만 나갑니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "자동이체 이중 출금은 고객센터에 접수하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0069:0",
+   "category": "BILLING",
+   "question": "이중 납부 환불을 배우자 계좌로 받을 수 있어요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0069",
+     "answer": "환불은 가입자 본인 명의 계좌로만 가능합니다."
+    },
+    {
+     "sourceId": "BILLING-0006",
+     "answer": "가입자 본인 명의 계좌로 환불됩니다. 접수 후 3영업일 이내 확인, 5영업일 이내 환불입니다."
+    },
+    {
+     "sourceId": "BILLING-0048",
+     "answer": "환불은 가입자 본인 명의 계좌로만 가능하며, 접수 시 계좌를 알려주시면 3영업일 이내 확인 후 5영업일 이내에 입금됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "이중 납부 환불을 배우자 계좌로 받을 수 있어요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0069",
+       "answer": "환불은 가입자 본인 명의 계좌로만 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "이중 납부 환불은 가입자 본인 명의 계좌로만 가능하므로 배우자 계좌로는 받을 수 없다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0072:0",
+   "category": "BILLING",
+   "question": "25일 전에 미리 낼 수 있어요?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "25일 전에 미리 낼 수 있어요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0072",
+       "answer": "네, 청구서가 10일에 발송된 뒤 25일 전에 납부하셔도 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "청구서가 10일에 발송된 뒤 25일 납부 기한 전에 미리 납부해도 된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0074:0",
+   "category": "BILLING",
+   "question": "미납이 있어도 소액결제 한도를 올릴 수 있어요?",
+   "previousTurns": [],
+   "answer": "네, 미납이 있더라도 소액결제 한도를 올릴 수 있습니다. 한도는 본인 인증을 통해 최대 월 100만 원까지 상향 조정 가능합니다. 하지만 미납 상태에 따른 추가 제한 사항은 고객센터를 통해 확인해 보시는 것이 좋습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0074",
+     "answer": "한도 상향은 본인 인증으로 진행되며 최대 월 100만 원입니다. 미납 여부와 관련된 제한은 고객센터에서 확인해 주세요."
+    },
+    {
+     "sourceId": "BILLING-0046",
+     "answer": "본인 인증을 거쳐 신청하면 즉시 적용됩니다. 기본 월 30만 원, 최대 월 100만 원입니다."
+    },
+    {
+     "sourceId": "BILLING-0116",
+     "answer": "상향은 즉시 적용됩니다. 최대 한도인 월 100만 원을 초과했는지 확인해 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "미납이 있어도 소액결제 한도를 올릴 수 있어요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0074",
+       "answer": "한도 상향은 본인 인증으로 진행되며 최대 월 100만 원입니다. 미납 여부와 관련된 제한은 고객센터에서 확인해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "소액결제 한도 상향은 본인 인증으로 진행되며 최대 월 100만 원이다.",
+    "미납 시 한도 상향 제한 여부는 고객센터에서 확인해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0087:0",
+   "category": "BILLING",
+   "question": "청구서를 못 받았다는 이유로 정지가 유예되나요?",
+   "previousTurns": [],
+   "answer": "청구서를 못 받으셨더라도 정지는 납부 기한이 지나고 15일 후에 발신 정지, 30일 후에 수신 정지가 적용됩니다. 따라서 청구서 수령 여부와 직접적인 유예 관계는 없습니다. 기한 내에 요금을 납부하시면 정지를 방지할 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0087",
+     "answer": "정지는 납부 기한 기준으로 15일 후 발신 정지, 30일 후 수신 정지가 적용됩니다."
+    },
+    {
+     "sourceId": "BILLING-0059",
+     "answer": "청구서를 못 받으셨어도 기한이 지나고 15일이면 전화가 안 걸리니, 기한 안에 내시면 됩니다. 이미 끊겼으면 다 내시면 2시간 안에 됩니다."
+    },
+    {
+     "sourceId": "BILLING-0115",
+     "answer": "정지는 납부 기한 후 15일 기준입니다. 완납하시면 2시간 이내에 재개됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "청구서를 못 받았다는 이유로 정지가 유예되나요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0087",
+       "answer": "정지는 납부 기한 기준으로 15일 후 발신 정지, 30일 후 수신 정지가 적용됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "이용 정지는 납부 기한 기준 15일 후 발신 정지, 30일 후 수신 정지가 적용된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0100:0",
+   "category": "BILLING",
+   "question": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+   "previousTurns": [],
+   "answer": "납부 기한은 매월 25일까지입니다. 현재 요금 납부에 어려움이 있으시다면, 고객센터에 연락하여 상황을 설명해 주시면 도움을 받으실 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0100",
+     "answer": "납부 기한은 매월 25일입니다. 기한 조정은 고객센터에 상담해 보세요."
+    },
+    {
+     "sourceId": "BILLING-0128",
+     "answer": "청구서는 10일에 나오고 25일까지 내시면 됩니다. 내역은 고객센터에서 확인해 드립니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "요금이 너무 많이 나왔는데 25일까지 다 못 낼 것 같아요",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0100",
+       "answer": "납부 기한은 매월 25일입니다. 기한 조정은 고객센터에 상담해 보세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "납부 기한은 매월 25일이다.",
+    "납부 기한 조정은 고객센터에 상담해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0117:0",
+   "category": "BILLING",
+   "question": "자동이체와 카드 결제가 같은 달에 둘 다 나갔습니다",
+   "previousTurns": [],
+   "answer": "이 경우 고객센터에 연락하여 환불 접수를 진행해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0117",
+     "answer": "납부 수단 변경은 다음 달 청구분부터 적용되어 겹칠 수 있습니다. 이중 납부는 고객센터에 환불 접수해 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "자동이체와 카드 결제가 같은 달에 둘 다 나갔습니다",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0117",
+       "answer": "납부 수단 변경은 다음 달 청구분부터 적용되어 겹칠 수 있습니다. 이중 납부는 고객센터에 환불 접수해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "납부 수단 변경은 다음 달 청구분부터 적용되어 두 수단 결제가 겹칠 수 있다.",
+    "이중 납부는 고객센터에 환불 접수하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0123:0",
+   "category": "BILLING",
+   "question": "청구서에 결제한 적 없는 소액결제가 있어요",
+   "previousTurns": [],
+   "answer": "청구서에 결제 기록이 없는 소액결제 항목이 표시된 경우, 이는 소액결제 한도 내에서 발생한 것으로 보입니다. 기본 한도는 월 30만 원입니다. 정확한 내용 확인을 위해 고객센터에 문의해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0123",
+     "answer": "소액결제 한도는 기본 월 30만 원입니다. 내역이 이상하면 고객센터에 확인해 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "청구서에 결제한 적 없는 소액결제가 있어요",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0123",
+       "answer": "소액결제 한도는 기본 월 30만 원입니다. 내역이 이상하면 고객센터에 확인해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "결제하지 않은 소액결제 내역이 있으면 고객센터에 확인해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0129:0",
+   "category": "BILLING",
+   "question": "요금 두 번 냈는데 전화가 끊겼어요",
+   "previousTurns": [],
+   "answer": "밀린 요금이 있어 전화가 끊겼을 가능성이 있습니다. 두 번의 요금 납부는 별도로 접수되어야 하며, 해당 사항을 고객센터에 연락하여 확인 및 처리를 요청하시는 것이 좋습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0129",
+     "answer": "밀린 게 있으면 15일 지나서 끊깁니다. 두 번 낸 건 따로 접수하셔야 돌려드립니다."
+    },
+    {
+     "sourceId": "BILLING-0066",
+     "answer": "밀린 요금 내시면 2시간 안에 다시 됩니다."
+    },
+    {
+     "sourceId": "BILLING-0108",
+     "answer": "완납 후 2시간 이내에 재개됩니다. 그 이상 지나도 안 되면 고객센터에 확인해 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "요금 두 번 냈는데 전화가 끊겼어요",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0129",
+       "answer": "밀린 게 있으면 15일 지나서 끊깁니다. 두 번 낸 건 따로 접수하셔야 돌려드립니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "미납이 있으면 납부 기한 15일이 지나 이용이 정지된다.",
+    "두 번 낸 요금은 따로 접수해야 돌려받을 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0135:0",
+   "category": "BILLING",
+   "question": "청구서 나오는 날이랑 내는 날이랑 왜 달라요?",
+   "previousTurns": [],
+   "answer": "청구서는 매월 10일에 발송되며, 납부 기한은 그 다음 달인 25일까지입니다. 이렇게 일정 시간 간격을 두어 고객님께서 청구서 내용을 확인하고 납부하실 수 있도록 하였습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0135",
+     "answer": "청구서는 매월 10일에 발송되고 납부 기한은 매월 25일이라 확인할 시간을 두는 것입니다."
+    },
+    {
+     "sourceId": "BILLING-0156",
+     "answer": "청구서가 10일에 먼저 오고, 25일까지 내는 겁니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "청구서 나오는 날이랑 내는 날이랑 왜 달라요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0023",
+       "answer": "청구서는 매월 10일에 발송되고, 납부 기한은 매월 25일입니다."
+      },
+      {
+       "sourceId": "BILLING-0135",
+       "answer": "청구서는 매월 10일에 발송되고 납부 기한은 매월 25일이라 확인할 시간을 두는 것입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "청구서는 매월 10일에 발송되고 납부 기한은 매월 25일이다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0138:0",
+   "category": "BILLING",
+   "question": "자동이체랑 가상계좌랑 뭐가 나아요?",
+   "previousTurns": [],
+   "answer": "반면에 가상계좌는 매번 입금해야 하는 방식이라 관리가 조금 더 번거로울 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0138",
+     "answer": "자동이체는 등록에 3영업일이 걸리지만 매달 자동 출금되고, 가상계좌는 그때그때 입금하는 방식입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "자동이체랑 가상계좌랑 뭐가 나아요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0138",
+       "answer": "자동이체는 등록에 3영업일이 걸리지만 매달 자동 출금되고, 가상계좌는 그때그때 입금하는 방식입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "자동이체는 등록에 3영업일이 걸리지만 이후 매달 자동 출금된다.",
+    "가상계좌는 그때그때 직접 입금하는 방식이다."
+   ]
+  },
+  {
+   "id": "PIPE-BILLING-0146:0",
+   "category": "BILLING",
+   "question": "미납 상태에서 환불과 차감 중 어느 쪽이 유리한가요?",
+   "previousTurns": [],
+   "answer": "미납 상태에서 선택하실 경우, 환불은 본인 명의 계좌로 5영업일 이내에 이루어지며, 차감은 다음 달 요금에서 자동으로 반영됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0146",
+     "answer": "환불은 본인 명의 계좌로 5영업일 이내 지급되고, 차감은 다음 달 요금에 반영됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "미납 상태에서 환불과 차감 중 어느 쪽이 유리한가요?",
+     "alternatives": [
+      {
+       "sourceId": "BILLING-0020",
+       "answer": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다. 환불은 본인 명의 계좌로 5영업일 이내입니다."
+      },
+      {
+       "sourceId": "BILLING-0146",
+       "answer": "환불은 본인 명의 계좌로 5영업일 이내 지급되고, 차감은 다음 달 요금에 반영됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "환불은 본인 명의 계좌로 5영업일 이내 지급된다.",
+    "차감은 다음 달 요금에 반영된다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0004:0",
+   "category": "DEVICE",
+   "question": "배터리가 이상해서 새 폰 반품하려는데 기한이 얼마예요?",
+   "previousTurns": [],
+   "answer": "개통 후 14일 이내이고 새 폰을 미개봉 상태로 유지하셨다면 반품이 가능합니다. 한 번에 한하여 적용됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0004",
+     "answer": "개통 후 14일 이내이고 미개봉이거나 사용 흔적이 없는 상태여야 합니다. 1회에 한해 가능합니다."
+    },
+    {
+     "sourceId": "DEVICE-0104",
+     "answer": "14일 안에 안 쓴 상태여야 바꿔드립니다. 쓰셨으면 수리를 받으셔야 합니다."
+    },
+    {
+     "sourceId": "DEVICE-0024",
+     "answer": "개통하고 14일 안에 안 쓴 상태면 한 번 바꿔드립니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "배터리가 이상해서 새 폰 반품하려는데 기한이 얼마예요?",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0004",
+       "answer": "개통 후 14일 이내이고 미개봉이거나 사용 흔적이 없는 상태여야 합니다. 1회에 한해 가능합니다."
+      },
+      {
+       "sourceId": "DEVICE-0060",
+       "answer": "네, 개통 후 14일 이내이고 미개봉이거나 사용 흔적이 없으면 1회에 한해 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "반품은 개통 후 14일 이내에 가능하다.",
+    "미개봉이거나 사용 흔적이 없는 상태여야 하며 1회에 한해 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0048:0",
+   "category": "DEVICE",
+   "question": "물에 빠뜨린 새 폰 교환하려면 어떻게 해요",
+   "previousTurns": [],
+   "answer": "물에 빠뜨린 새 폰의 경우, 개통 후 14일 이내에 사용 흔적이 거의 없는 상태여야 교환이 가능합니다. 만약 침수된 상태라면 제조사의 서비스 센터를 통해 수리를 받아야 합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0048",
+     "answer": "개통하고 14일 안에 안 쓴 상태여야 바꿔드립니다. 침수됐으면 수리를 받으셔야 합니다."
+    },
+    {
+     "sourceId": "DEVICE-0088",
+     "answer": "교환은 미개봉이거나 사용 흔적이 없어야 합니다. 침수 단말은 제조사 서비스센터 수리 대상입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "물에 빠뜨린 새 폰 교환하려면 어떻게 해요",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0048",
+       "answer": "개통하고 14일 안에 안 쓴 상태여야 바꿔드립니다. 침수됐으면 수리를 받으셔야 합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "교환은 개통 후 14일 이내 사용하지 않은 상태여야 가능하다.",
+    "침수된 경우 교환이 아니라 수리를 받아야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0062:0",
+   "category": "DEVICE",
+   "question": "액정만 깨졌는데 기기변경 대신 수리로 갈 수 있을까요?",
+   "previousTurns": [],
+   "answer": "액정이 깨졌을 경우, 기기 변경 기간이 경과하지 않았다면 수리로 진행하실 수 있습니다. 현재 조건으로는 개통 후 6개월 이내이므로 수리를 추천드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0062",
+     "answer": "기기 변경은 개통 후 6개월이 지나야 하므로, 그 전이라면 수리로 진행하시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "액정만 깨졌는데 기기변경 대신 수리로 갈 수 있을까요?",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0062",
+       "answer": "기기 변경은 개통 후 6개월이 지나야 하므로, 그 전이라면 수리로 진행하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "기기 변경은 개통 후 6개월이 지나야 가능하므로 그 전이라면 수리로 진행하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0070:0",
+   "category": "DEVICE",
+   "question": "개통 6개월이 지나면 할부금 완납 없이도 기기변경이 되나요?",
+   "previousTurns": [],
+   "answer": "개통 후 6개월이 지나더라도 할부금 완납 없이는 기기변경이 불가능합니다. 기기변경을 위해서는 기존 할부금을 완납하거나 새 할부 조건으로 승계해야 합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0070",
+     "answer": "기존 할부금을 완납하거나 새 할부에 승계해야 합니다. 둘 중 하나는 필요합니다."
+    },
+    {
+     "sourceId": "DEVICE-0046",
+     "answer": "개통하고 6개월이 지나면 바꾸실 수 있습니다. 남은 할부금은 다 내시거나 새 할부로 넘기시면 됩니다."
+    },
+    {
+     "sourceId": "DEVICE-0010",
+     "answer": "개통일로부터 6개월이 지나야 기기변경을 신청할 수 있습니다. 기존 할부금은 완납하거나 새 할부에 승계하는 방식으로 처리됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "개통 6개월이 지나면 할부금 완납 없이도 기기변경이 되나요?",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0070",
+       "answer": "기존 할부금을 완납하거나 새 할부에 승계해야 합니다. 둘 중 하나는 필요합니다."
+      },
+      {
+       "sourceId": "DEVICE-0090",
+       "answer": "기존 할부금을 완납하거나 새 할부에 승계해야 진행됩니다. 둘 중 하나를 선택해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "MISSED",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "개통 6개월이 지나도 기존 할부금을 완납하거나 새 할부에 승계해야 기기변경이 된다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0072:0",
+   "category": "DEVICE",
+   "question": "액정 보호필름을 붙였는데 교환이 가능한가요?",
+   "previousTurns": [],
+   "answer": "액정 보호필름을 붙였더라도 교환이 가능합니다. 하지만 교환을 위해서는 제품이 미개봉 상태이거나 사용 흔적이 전혀 없어야 합니다. 필름 부착 여부는 사용 흔적으로 간주될 수 있으니 매장에서 확인받으시는 것이 좋습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0072",
+     "answer": "교환은 미개봉이거나 사용 흔적이 없는 상태여야 합니다. 필름 부착은 사용 흔적으로 볼 수 있어 매장 확인이 필요합니다."
+    },
+    {
+     "sourceId": "DEVICE-0092",
+     "answer": "교환은 개통 후 14일 이내에 미개봉이거나 사용 흔적이 없는 상태에서만 가능합니다. 사용한 흔적이 있으면 교환이 어려울 수 있으니 매장에서 상태를 확인받아 보시기 바랍니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "액정 보호필름을 붙였는데 교환이 가능한가요?",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0072",
+       "answer": "교환은 미개봉이거나 사용 흔적이 없는 상태여야 합니다. 필름 부착은 사용 흔적으로 볼 수 있어 매장 확인이 필요합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "교환은 미개봉이거나 사용 흔적이 없는 상태여야 한다.",
+    "보호필름 부착은 사용 흔적으로 볼 수 있어 매장 확인이 필요하다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0084:0",
+   "category": "DEVICE",
+   "question": "배터리가 하루도 안 가는 새 폰인데 교환 거절당했어요",
+   "previousTurns": [],
+   "answer": "배터리 성능 문제로 인해 교환을 원하시는 경우, 개통 후 14일 이내에 새 제품이 미개봉 상태여야 교환이 가능합니다. 만약 해당 기간이 지났거나 제품에 사용 흔적이 있다면 교환이 어려울 수 있습니다. 서비스센터에 방문하시어 정확한 상태를 확인해 보시는 것을 권장드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0084",
+     "answer": "교환은 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서만 1회 가능합니다. 기간이 지났거나 사용 흔적이 있으면 서비스센터 수리로 안내됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "배터리가 하루도 안 가는 새 폰인데 교환 거절당했어요",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0020",
+       "answer": "개통 후 14일 이내에 미개봉이거나 사용 흔적이 없는 상태라면 반품이나 교환이 가능합니다. 다만 1회만 가능합니다."
+      },
+      {
+       "sourceId": "DEVICE-0084",
+       "answer": "교환은 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서만 1회 가능합니다. 기간이 지났거나 사용 흔적이 있으면 서비스센터 수리로 안내됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "교환은 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서만 1회 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0098:0",
+   "category": "DEVICE",
+   "question": "침수로 기기변경하려는데 할부 승계가 거절됐습니다",
+   "previousTurns": [],
+   "answer": "기존 할부금은 완납하거나 새 할부 계약으로 승계해야 합니다. 승계가 어려우시다면 완납을 통해 진행할 수 있습니다. 추가로 변경을 위해서는 개통 후 6개월이 경과해야 합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0098",
+     "answer": "기존 할부금은 완납하거나 새 할부에 승계해야 합니다. 승계가 어려우면 완납으로 진행하시면 됩니다."
+    },
+    {
+     "sourceId": "DEVICE-0018",
+     "answer": "완납하거나 새 할부에 승계해야 합니다. 개통 후 6개월이 지나야 변경할 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "침수로 기기변경하려는데 할부 승계가 거절됐습니다",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0090",
+       "answer": "기존 할부금을 완납하거나 새 할부에 승계해야 진행됩니다. 둘 중 하나를 선택해 주세요."
+      },
+      {
+       "sourceId": "DEVICE-0098",
+       "answer": "기존 할부금은 완납하거나 새 할부에 승계해야 합니다. 승계가 어려우면 완납으로 진행하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "기기변경 시 기존 할부금은 완납하거나 새 할부에 승계해야 한다.",
+    "승계가 안 되면 완납으로 진행하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0099:0",
+   "category": "DEVICE",
+   "question": "물에 빠뜨렸습니다. 어디로 가야 합니까.",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "물에 빠뜨렸습니다. 어디로 가야 합니까.",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0099",
+       "answer": "파손 수리는 제조사 서비스센터에서 진행합니다. 단말 보험에 가입하셨다면 수리비의 30%만 자기부담금으로 내시면 됩니다. 분실하신 경우에는 즉시 이용 정지를 신청하실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": [
+    "파손(침수) 수리는 제조사 서비스센터에서 진행한다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0102:0",
+   "category": "DEVICE",
+   "question": "액정 깨진 폰 바꾸러 갔는데 안 된대요",
+   "previousTurns": [],
+   "answer": "개통 후 6개월이 지나지 않아 교체가 어렵습니다. 현재는 수리를 받으셔야 합니다. 자세한 수리 절차는 가까운 서비스 센터를 방문하시거나 연락주시면 안내해 드리겠습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0102",
+     "answer": "개통하고 6개월이 안 돼서 그렇습니다. 그 전엔 수리를 받으셔야 합니다."
+    },
+    {
+     "sourceId": "DEVICE-0022",
+     "answer": "개통하고 6개월 지나야 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "액정 깨진 폰 바꾸러 갔는데 안 된대요",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0102",
+       "answer": "개통하고 6개월이 안 돼서 그렇습니다. 그 전엔 수리를 받으셔야 합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "기기 변경은 개통 후 6개월이 지나야 가능하고, 그 전에는 수리를 받아야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0116:0",
+   "category": "DEVICE",
+   "question": "반품과 교환은 조건이 서로 다른가요?",
+   "previousTurns": [],
+   "answer": "반품과 교환 모두 개통 후 14일 이내에 미개봉 제품이거나 사용 흔적이 없는 상태에서 1회에 한해 동일한 조건으로 적용됩니다. 따라서 조건은 서로 다릅니다만, 실제로는 동일한 기준을 따릅니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0116",
+     "answer": "반품과 교환 모두 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한해 적용되는 동일한 조건입니다."
+    },
+    {
+     "sourceId": "DEVICE-0124",
+     "answer": "네, 반품과 교환 모두 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한해 가능한 동일한 조건이라 언제든 원하시는 쪽으로 처리해 드릴 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "반품과 교환은 조건이 서로 다른가요?",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0116",
+       "answer": "반품과 교환 모두 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한해 적용되는 동일한 조건입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "반품과 교환은 조건이 같다.",
+    "둘 다 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한해 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-DEVICE-0129:0",
+   "category": "DEVICE",
+   "question": "배터리 때문에 새로 사는데 할부 길게 하는 게 나아요",
+   "previousTurns": [],
+   "answer": "연 이자율은 5.9%로 동일합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "DEVICE-0129",
+     "answer": "30개월은 매달 적게 내지만 이자를 더 냅니다. 이자율은 연 5.9%로 같습니다."
+    },
+    {
+     "sourceId": "DEVICE-0049",
+     "answer": "24개월이나 30개월 중에 고르시면 됩니다. 이자는 연 5.9%입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "배터리 때문에 새로 사는데 할부 길게 하는 게 나아요",
+     "alternatives": [
+      {
+       "sourceId": "DEVICE-0129",
+       "answer": "30개월은 매달 적게 내지만 이자를 더 냅니다. 이자율은 연 5.9%로 같습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "30개월 할부는 매달 내는 금액이 적지만 이자를 더 낸다.",
+    "할부 이자율은 연 5.9%로 같다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0015:0",
+   "category": "NAME_CHANGE",
+   "question": "남편 폰 제 이름으로 하는데 할부 남았으면 어떻게 돼요",
+   "previousTurns": [],
+   "answer": "심사 결과에 따라 결정됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0015",
+     "answer": "제 이름으로 받는 분이 신용 심사를 받으셔야 합니다. 통과하면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "남편 폰 제 이름으로 하는데 할부 남았으면 어떻게 돼요",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0015",
+       "answer": "제 이름으로 받는 분이 신용 심사를 받으셔야 합니다. 통과하면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "할부가 남아 있으면 명의를 받는 사람(양수인)이 신용 심사를 받아야 하고, 통과하면 진행된다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0020:0",
+   "category": "NAME_CHANGE",
+   "question": "미성년 자녀가 성인이 됐는데 명의를 자녀 앞으로 바꾸는 순서를 알려주세요.",
+   "previousTurns": [],
+   "answer": "미성년 자녀가 성인이 되어 명의 변경을 원하시는군요. 이 과정에서 별도의 수수료는 발생하지 않습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0020",
+     "answer": "두 분이 신분증을 챙겨 매장을 방문하시면 접수되고, 미납 요금이 없으면 30분 이내에 처리됩니다. 수수료는 없습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "미성년 자녀가 성인이 됐는데 명의를 자녀 앞으로 바꾸는 순서를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0020",
+       "answer": "두 분이 신분증을 챙겨 매장을 방문하시면 접수되고, 미납 요금이 없으면 30분 이내에 처리됩니다. 수수료는 없습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "MISSED",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "양도인과 양수인 두 사람이 신분증을 지참해 매장을 방문하면 접수된다.",
+    "미납 요금이 없으면 30분 이내에 처리되며 수수료는 없다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0024:0",
+   "category": "NAME_CHANGE",
+   "question": "미성년자한테 폰 명의 넘기는 절차가 어떻게 돼요?",
+   "previousTurns": [],
+   "answer": "미성년자 간의 휴대폰 명의 이전은 현재 규정상 허용되지 않습니다. 따라서 미성년자에게 휴대폰 명의를 넘기는 절차는 진행하실 수 없습니다. 성인 간의 거래에 대해서는 일반적인 절차를 따르게 됩니다. 자세한 절차에 대해 궁금하시다면 성인 간의 휴대폰 명의 이전 방법을 문의해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0024",
+     "answer": "양수인이 미성년자이고 양도인도 미성년자라면 진행할 수 없습니다. 성인 간 또는 성인이 관여하는 경우에만 일반 절차로 진행됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "미성년자한테 폰 명의 넘기는 절차가 어떻게 돼요?",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0024",
+       "answer": "양수인이 미성년자이고 양도인도 미성년자라면 진행할 수 없습니다. 성인 간 또는 성인이 관여하는 경우에만 일반 절차로 진행됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "양도인과 양수인이 모두 미성년자이면 명의변경을 진행할 수 없다.",
+    "성인 간 또는 성인이 관여하는 경우에만 일반 절차로 진행된다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0025:0",
+   "category": "NAME_CHANGE",
+   "question": "가족 간 명의변경 시 방문과 서류 절차를 정리해 주세요.",
+   "previousTurns": [],
+   "answer": "가족 간 명의변경을 위해서는 양도인과 양수인 모두 신분증을 지참하고 함께 매장을 방문해야 합니다. 만약 한 분이 직접 방문이 어려우시다면, 위임장을 준비하여 대리로 진행할 수 있습니다. 방문 시 필요한 서류는 구체적인 상황에 따라 다를 수 있으나, 일반적으로 신분증 외에 추가적인 서류 요청이 있을 수 있으니 매장 직원에게 안내를 받으시는 것이 좋습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0025",
+     "answer": "양도인과 양수인이 각각 신분증을 지참하고 함께 매장을 방문합니다. 한쪽이 방문하지 못하면 위임장으로 대리 진행이 가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "가족 간 명의변경 시 방문과 서류 절차를 정리해 주세요.",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0007",
+       "answer": "양도인과 양수인의 신분증이 각각 필요하며, 원칙적으로 두 분이 함께 매장을 방문하셔야 합니다. 대리인이 방문하는 경우에는 위임장이 필요합니다."
+      },
+      {
+       "sourceId": "NAME_CHANGE-0019",
+       "answer": "양도인과 양수인이 각자 신분증을 지참하고 함께 매장을 방문하시면 접수가 진행됩니다. 두 분 중 한 분이 오시기 어려우면 위임장을 준비해 대리 방문하실 수 있습니다."
+      },
+      {
+       "sourceId": "NAME_CHANGE-0025",
+       "answer": "양도인과 양수인이 각각 신분증을 지참하고 함께 매장을 방문합니다. 한쪽이 방문하지 못하면 위임장으로 대리 진행이 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "양도인과 양수인이 각각 신분증을 지참하고 함께 매장을 방문해야 한다.",
+    "한쪽이 방문하지 못하면 위임장으로 대리 진행할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0030:0",
+   "category": "NAME_CHANGE",
+   "question": "퇴사자에게 회사 회선을 넘길 때 할부 잔액이 있으면 어떻게 진행되나요?",
+   "previousTurns": [],
+   "answer": "퇴사자가 회사 회선을 넘기려면 먼저 신용 심사를 받아야 합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0030",
+     "answer": "양수인인 퇴사자가 신용 심사를 받고, 통과하면 명의변경이 진행됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "퇴사자에게 회사 회선을 넘길 때 할부 잔액이 있으면 어떻게 진행되나요?",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0009",
+       "answer": "양수인이 신용 심사를 받습니다. 심사를 통과하면 명의변경이 진행됩니다."
+      },
+      {
+       "sourceId": "NAME_CHANGE-0030",
+       "answer": "양수인인 퇴사자가 신용 심사를 받고, 통과하면 명의변경이 진행됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "할부 잔액이 있으면 양수인(퇴사자)이 신용 심사를 받고, 통과하면 명의변경이 진행된다."
+   ]
+  },
+  {
+   "id": "PIPE-NAME_CHANGE-0070:0",
+   "category": "NAME_CHANGE",
+   "question": "회사가 폐업해서 양도인이 없어요",
+   "previousTurns": [],
+   "answer": "양도인이 없는 경우에는 원칙적으로 절차 진행이 어렵습니다. 매장에 직접 방문하셔서 현재 상황을 설명하시고 필요한 대리 서류나 추가적인 안내를 받으시는 것이 좋습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "NAME_CHANGE-0070",
+     "answer": "양도인 측 서류 없이는 원칙적으로 진행이 어렵습니다. 매장에 사정을 말씀하시고 필요한 대리 서류를 안내받으세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "회사가 폐업해서 양도인이 없어요",
+     "alternatives": [
+      {
+       "sourceId": "NAME_CHANGE-0070",
+       "answer": "양도인 측 서류 없이는 원칙적으로 진행이 어렵습니다. 매장에 사정을 말씀하시고 필요한 대리 서류를 안내받으세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "양도인 측 서류 없이는 원칙적으로 명의변경 진행이 어렵다.",
+    "매장에 사정을 말하고 필요한 대리 서류를 안내받아야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-OUT-001:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "이번 주 나스닥 지수는 얼마나 올랐나요?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-002:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "김치찌개를 맛있게 끓이는 방법 알려줘",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-007:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "피아노를 혼자 조율하는 법을 알려줘",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-017:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "아파트 전세 계약할 때 주의할 점은?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-018:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "주식 매도 시점은 어떻게 정하면 좋아?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-023:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "조선 세종대왕의 즉위 연도는 언제야?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-032:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "카메라 조리개 값은 뭘 뜻하나요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-038:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "채권 가격과 금리의 관계를 설명해줘",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-040:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "바둑에서 포석을 연습하는 방법을 알려줘",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-042:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "떡볶이 양념을 덜 맵게 만드는 방법은?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-043:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "로마 제국의 수도는 어디였나요?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-049:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "반려견 목욕 주기는 어느 정도가 좋아요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-OUT-050:0",
+   "category": "OUT_OF_SCOPE",
+   "question": "아마존강의 길이는 얼마나 되나요?",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "OUT_OF_SCOPE",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "NOT_APPLICABLE",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": []
+  },
+  {
+   "id": "PIPE-PLAN-0003:0",
+   "category": "PLAN",
+   "question": "가족한테 데이터 한 번에 얼마까지 보낼 수 있어요?",
+   "previousTurns": [],
+   "answer": "가족에게 한 번에 최대 2GB의 데이터를 보낼 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0003",
+     "answer": "한 번에 최대 2GB, 한 달에 2회까지 보낼 수 있습니다."
+    },
+    {
+     "sourceId": "PLAN-0063",
+     "answer": "월 2회까지만 가능합니다. 회당 최대 2GB입니다."
+    },
+    {
+     "sourceId": "PLAN-0103",
+     "answer": "데이터 선물은 한 달에 2회, 회당 최대 2GB까지 가능합니다. 이번 달에 이미 2회를 보내셨다면 다음 달까지 기다리셔야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "가족한테 데이터 한 번에 얼마까지 보낼 수 있어요?",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0003",
+       "answer": "한 번에 최대 2GB, 한 달에 2회까지 보낼 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "가족에게 데이터는 한 번에 최대 2GB까지 보낼 수 있다.",
+    "한 달에 2회까지 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0017:0",
+   "category": "PLAN",
+   "question": "소진 후 속도 제한 값이 요금제마다 다른가요?",
+   "previousTurns": [],
+   "answer": "네, 소진 후 속도 제한 값은 요금제에 따라 다릅니다. 일반 요금제의 경우 소진 후 속도가 400kbps로 제한되지만, 언리미티드 요금제에서는 데이터 소진 후에도 속도 제한이 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0017",
+     "answer": "일반 요금제는 모두 400kbps로 같습니다. 언리미티드만 제한이 없습니다."
+    },
+    {
+     "sourceId": "PLAN-0042",
+     "answer": "언리미티드 요금제로 변경하시면 소진 후에도 속도 제한 없이 이용하실 수 있습니다. 일반 요금제는 소진 후 400kbps로 제한됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "소진 후 속도 제한 값이 요금제마다 다른가요?",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0017",
+       "answer": "일반 요금제는 모두 400kbps로 같습니다. 언리미티드만 제한이 없습니다."
+      },
+      {
+       "sourceId": "PLAN-0062",
+       "answer": "속도 제한은 어떤 요금제든 400kbps로 같습니다. 언리미티드만 제한이 없습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "소진 후 속도 제한은 일반 요금제 모두 400kbps로 같다.",
+    "언리미티드 요금제만 속도 제한이 없다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0036:0",
+   "category": "PLAN",
+   "question": "나이 바뀌어서 요금제 바꾸려는데 어떤 게 있는지 알려주세요.",
+   "previousTurns": [],
+   "answer": "나이가 변경되어 시니어 요금제 자격이 되셨다면, 만 65세 이상을 증명할 수 있는 신분증을 준비하시고 매장이나 고객센터를 통해 시니어 요금제로 변경 신청을 하실 수 있습니다. 다른 요금제로의 변경도 필요하시다면, 현재 나이와 상황에 맞는 요금제를 확인해 보시는 것이 좋습니다. 자세한 내용은 고객센터에 문의해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0114",
+     "answer": "시니어 요금제는 만 65세 이상만 가입할 수 있어 나이가 안 되시면 변경이 어렵습니다. 신분증으로 확인이 필요합니다."
+    },
+    {
+     "sourceId": "PLAN-0044",
+     "answer": "생년월일 확인이 가능한 신분증을 지참해 매장이나 고객센터에 변경을 신청하시면 됩니다."
+    },
+    {
+     "sourceId": "PLAN-0049",
+     "answer": "청소년 요금제는 만 18세 이하 대상입니다. 일반 요금제로 바꾸시려면 매장이나 앱에서 변경 신청을 하시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "나이 바뀌어서 요금제 바꾸려는데 어떤 게 있는지 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0036",
+       "answer": "5G 4종(라이트·스탠다드·프리미엄·언리미티드), LTE 3종(베이직·플러스·맥스), 알뜰 2종(세이브·미니)이 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "요금제는 5G 4종(라이트·스탠다드·프리미엄·언리미티드), LTE 3종(베이직·플러스·맥스), 알뜰 2종(세이브·미니)이 있다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0047:0",
+   "category": "PLAN",
+   "question": "가족 회선의 속도 제한 상태를 확인하는 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "가족 회선의 속도 제한 상태를 확인하려면 먼저 앱을 통해 해당 회선의 잔여 데이터 사용량을 확인해 보세요. 만약 기본 데이터 사용량을 모두 사용한 경우, 속도가 400kbps로 제한된 상태임을 알 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0047",
+     "answer": "앱에서 회선별 잔여 데이터를 확인합니다. 기본 데이터를 다 쓴 회선은 400kbps로 제한된 상태입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "가족 회선의 속도 제한 상태를 확인하는 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0047",
+       "answer": "앱에서 회선별 잔여 데이터를 확인합니다. 기본 데이터를 다 쓴 회선은 400kbps로 제한된 상태입니다."
+      },
+      {
+       "sourceId": "PLAN-0107",
+       "answer": "그 회선이 기본 데이터를 다 써 400kbps로 제한된 상태일 수 있습니다. 앱에서 잔여량을 확인해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "앱에서 회선별 잔여 데이터를 확인하면 된다.",
+    "기본 데이터를 다 쓴 회선은 400kbps로 제한된 상태다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0066:0",
+   "category": "PLAN",
+   "question": "알뜰 요금제로 5G를 쓸 수 있어요?",
+   "previousTurns": [],
+   "answer": "네, 알뜰 요금제로도 5G 서비스를 이용하실 수 있습니다. 현재 세이브와 미니 두 가지 알뜰 요금제 중에서 5G를 지원하는 요금제가 별도로 4종이 준비되어 있습니다. 어떤 요금제가 적합하신지 자세히 알고 싶으시다면, 자세한 조건과 혜택을 확인해 보시는 것을 추천드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0066",
+     "answer": "알뜰 요금제는 세이브·미니 2종이고, 5G 요금제는 별도로 4종이 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "알뜰 요금제로 5G를 쓸 수 있어요?",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0066",
+       "answer": "알뜰 요금제는 세이브·미니 2종이고, 5G 요금제는 별도로 4종이 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "알뜰 요금제는 세이브·미니 2종이며, 5G 요금제(4종)는 이와 별도다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0069:0",
+   "category": "PLAN",
+   "question": "데이터 많이 쓰는 청소년도 청소년 요금제 되나요?",
+   "previousTurns": [],
+   "answer": "네, 만 18세 이하의 청소년이면 데이터를 많이 써도 청소년 요금제에 가입할 수 있습니다. 가입을 위해서는 신분증을 통해 생년월일을 확인해야 합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0129",
+     "answer": "청소년 요금제는 만 18세 이하만 가능합니다. 나이가 되면 두 가지를 비교해 보시고, 신분증으로 나이 확인이 필요합니다."
+    },
+    {
+     "sourceId": "PLAN-0109",
+     "answer": "청소년 요금제는 만 18세 이하 대상입니다. 데이터가 부족하면 기본 제공량이 더 큰 요금제로 변경을 검토해 보세요."
+    },
+    {
+     "sourceId": "PLAN-0069",
+     "answer": "만 18세 이하면 가입할 수 있습니다. 신분증으로 생년월일 확인이 필요합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "데이터 많이 쓰는 청소년도 청소년 요금제 되나요?",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0009",
+       "answer": "만 18세 이하까지 가입할 수 있습니다. 생년월일 확인이 가능한 신분증이 필요합니다."
+      },
+      {
+       "sourceId": "PLAN-0069",
+       "answer": "만 18세 이하면 가입할 수 있습니다. 신분증으로 생년월일 확인이 필요합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "청소년 요금제는 만 18세 이하면 가입할 수 있다.",
+    "신분증으로 생년월일 확인이 필요하다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0092:0",
+   "category": "PLAN",
+   "question": "데이터가 갑자기 느려졌어요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "데이터가 갑자기 느려졌어요",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0092",
+       "answer": "기본 제공 데이터를 모두 사용하시면 400kbps로 속도가 제한됩니다. 소진량은 앱에서 확인하실 수 있고, 언리미티드 요금제로 바꾸시면 제한 없이 이용하실 수 있습니다."
+      },
+      {
+       "sourceId": "PLAN-0097",
+       "answer": "기본 데이터를 다 쓰면 400kbps로 제한됩니다. 사용량을 앱에서 확인해 보시고, 제한이 불편하면 언리미티드로 변경하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "기본 제공 데이터를 모두 쓰면 400kbps로 속도가 제한된다.",
+    "사용량은 앱에서 확인할 수 있고, 언리미티드로 변경하면 제한 없이 쓸 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0121:0",
+   "category": "PLAN",
+   "question": "5G랑 LTE랑 뭐가 달라요?",
+   "previousTurns": [],
+   "answer": "5G와 LTE는 속도와 기술적 차이가 있습니다. - **지연 시간**: 5G는 저지연 특성을 갖추고 있어 실시간 응용 프로그램에 더 적합합니다. - **연결 밀도**: 5G는 더 많은 기기를 동시에 연결할 수 있는 능력이 있습니다. 요금제 구성도 다릅니다: 5G는 라이트, 스탠다드, 프리미엄, 언리미티드 등 4가지 종류가 있으며, LTE는 베이직, 플러스, 맥스 등 3가지 종류로 나뉩니다. 추가로 알뜰 요금제도 선택 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0121",
+     "answer": "5G는 라이트·스탠다드·프리미엄·언리미티드 4종, LTE는 베이직·플러스·맥스 3종으로 구성이 다릅니다. 알뜰 요금제 2종도 별도로 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "5G랑 LTE랑 뭐가 달라요?",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0121",
+       "answer": "5G는 라이트·스탠다드·프리미엄·언리미티드 4종, LTE는 베이직·플러스·맥스 3종으로 구성이 다릅니다. 알뜰 요금제 2종도 별도로 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "5G는 라이트·스탠다드·프리미엄·언리미티드 4종, LTE는 베이직·플러스·맥스 3종으로 구성이 다르다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0136:0",
+   "category": "PLAN",
+   "question": "연령 제한 요금제와 일반 라인업의 종류 수 차이를 알려주세요.",
+   "previousTurns": [],
+   "answer": "연령 제한 요금제는 별도의 정책으로 운영되고 있어 정확한 종류 수가 일반 라인업과 비교해 명시되어 있지 않습니다. 일반 라인업의 경우 5G 4종, LTE 3종, 알뜰폰 2종으로 구성되어 있습니다. 연령 제한 요금제의 구체적인 종류 수에 대해서는 안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0136",
+     "answer": "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종입니다. 연령 제한 요금제는 별도 정책으로 운영됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "연령 제한 요금제와 일반 라인업의 종류 수 차이를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0136",
+       "answer": "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종입니다. 연령 제한 요금제는 별도 정책으로 운영됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종이다.",
+    "연령 제한 요금제는 별도 정책으로 운영된다."
+   ]
+  },
+  {
+   "id": "PIPE-PLAN-0143:0",
+   "category": "PLAN",
+   "question": "손주한테 주는 거랑 넘기는 거랑 뭐가 나아요",
+   "previousTurns": [],
+   "answer": "손주에게 데이터를 제공하는 방법으로는 '넘기기'와 '주기'가 있습니다. 반면 주기 방식은 한 달에 최대 2번, 각 2GB씩 데이터를 제공할 수 있습니다. 어떤 방법이 더 적합한지는 손주 사용 패턴과 필요 데이터량에 따라 달라질 수 있으니, 상황에 맞게 선택하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PLAN-0143",
+     "answer": "넘기는 건 절반(50%)이 자동으로 넘어가고, 주는 건 한 달에 2번 2GB씩 줄 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "손주한테 주는 거랑 넘기는 거랑 뭐가 나아요",
+     "alternatives": [
+      {
+       "sourceId": "PLAN-0143",
+       "answer": "넘기는 건 절반(50%)이 자동으로 넘어가고, 주는 건 한 달에 2번 2GB씩 줄 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "데이터 넘기기는 50%가 자동으로 넘어간다.",
+    "데이터 주기는 한 달에 2번, 한 번에 2GB씩 줄 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0023:0",
+   "category": "PORTING",
+   "question": "명의 바꾸고 바로 옮길 수 있어요",
+   "previousTurns": [],
+   "answer": "명의를 바꾸신 후 바로 이동이 가능한 것이 아니라, 변경 후 1개월이 경과해야 이동이 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0023",
+     "answer": "명의 바꾸고 1개월 지나야 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "명의 바꾸고 바로 옮길 수 있어요",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0023",
+       "answer": "명의 바꾸고 1개월 지나야 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "명의변경 후 1개월이 지나야 번호이동할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0029:0",
+   "category": "PORTING",
+   "question": "번호이동 신청하면 그다음에 뭘 해야 돼요?",
+   "previousTurns": [],
+   "answer": "번호이동 신청 후에는 기존 통신사에 미납 요금이 없는지 확인하시고, 만약 미납 요금이 있다면 먼저 완납하셔야 합니다. 이후 새로운 통신사의 안내에 따라 필요한 절차를 진행하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0026",
+     "answer": "본인 신분증을 지참해 신청하시면 됩니다. 기존 통신사에 미납 요금이 있으면 먼저 완납하셔야 진행됩니다."
+    },
+    {
+     "sourceId": "PORTING-0030",
+     "answer": "기존 통신사 미납 요금이 없는지 먼저 확인하고, 본인 신분증을 지참해 번호이동을 신청하시면 됩니다."
+    },
+    {
+     "sourceId": "PORTING-0042",
+     "answer": "신분증만 있으면 됩니다. 밀린 요금이 있으면 먼저 내셔야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "번호이동 신청하면 그다음에 뭘 해야 돼요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0029",
+       "answer": "신청 후에는 기다리시면 됩니다. 09:00~20:00 사이 신청 기준으로 평균 2시간 이내에 완료되고, 늦어도 24시간 안에 처리됩니다."
+      },
+      {
+       "sourceId": "PORTING-0057",
+       "answer": "09:00부터 20:00 사이에 신청하시면 평균 2시간 이내에 처리되어 당일 완료가 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "번호이동 신청 후에는 별도 조치 없이 기다리면 된다.",
+    "09:00~20:00 사이 신청 시 평균 2시간 이내에 처리된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0032:0",
+   "category": "PORTING",
+   "question": "옮긴 걸 없던 일로 하려면 누구한테 말해요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "옮긴 걸 없던 일로 하려면 누구한테 말해요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0032",
+       "answer": "고객센터나 매장에 철회를 요청하시면 됩니다. 개통 후 14일 이내면 원래 통신사로 자동 복원됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": [
+    "번호이동 철회는 고객센터나 매장에 요청하면 된다.",
+    "개통 후 14일 이내면 원래 통신사로 자동 복원된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0033:0",
+   "category": "PORTING",
+   "question": "번호이동 처리 절차와 소요 시간을 알려주세요.",
+   "previousTurns": [],
+   "answer": "번호이동 처리는 매일 오전 9시부터 오후 8시까지 가능하며, 신청 후 평균 2시간 이내에 완료됩니다. 늦어지더라도 최대 24시간 이내에 처리될 예정입니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0033",
+     "answer": "매일 09:00부터 20:00까지 접수하시면 되고, 접수 후 평균 2시간 이내, 늦어도 24시간 이내에 처리됩니다."
+    },
+    {
+     "sourceId": "PORTING-0025",
+     "answer": "신분증을 가지고 신청하시면 09:00~20:00 사이에 처리됩니다. 보통 2시간 이내, 늦어도 24시간 안에 완료됩니다."
+    },
+    {
+     "sourceId": "PORTING-0037",
+     "answer": "09:00~20:00 사이에 신청하면 평균 2시간 이내에 완료됩니다. 최대 24시간까지 걸릴 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "번호이동 처리 절차와 소요 시간을 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0033",
+       "answer": "매일 09:00부터 20:00까지 접수하시면 되고, 접수 후 평균 2시간 이내, 늦어도 24시간 이내에 처리됩니다."
+      },
+      {
+       "sourceId": "PORTING-0105",
+       "answer": "같습니다. 매일 09:00부터 20:00까지 처리되고 평균 2시간 이내입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "번호이동은 매일 09:00부터 20:00까지 처리된다.",
+    "접수 후 평균 2시간 이내에 처리된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0044:0",
+   "category": "PORTING",
+   "question": "옮긴 거 무르려면 어떻게 해요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "옮긴 거 무르려면 어떻게 해요",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0044",
+       "answer": "14일 안에 고객센터나 매장에 말씀하시면 됩니다. 원래 통신사로 돌아갑니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": [
+    "개통 후 14일 안에 고객센터나 매장에 요청하면 철회할 수 있다.",
+    "철회하면 원래 통신사로 돌아간다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0049:0",
+   "category": "PORTING",
+   "question": "다른 데서 번호 그대로 옮겨오려는데 저녁 늦게 신청해도 그날 바로 되나요?",
+   "previousTurns": [],
+   "answer": "저녁 늦게 신청하시더라도 번호 이동 처리 시간은 매일 오후 9시부터 저녁 8시까지 운영됩니다. 신청하신 경우 평균 2시간 이내에 완료되며, 늦어도 하루 이내에 처리될 예정입니다. 다만, 처리 시간을 고려하시어 가능한 한 저녁 시간대 이전에 신청하시는 것을 권장드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0049",
+     "answer": "번호이동 처리는 매일 09:00부터 20:00까지만 진행됩니다. 처리 시간 안에 신청하시면 평균 2시간 이내에 완료되고, 늦어도 24시간 이내에 처리됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "다른 데서 번호 그대로 옮겨오려는데 저녁 늦게 신청해도 그날 바로 되나요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0049",
+       "answer": "번호이동 처리는 매일 09:00부터 20:00까지만 진행됩니다. 처리 시간 안에 신청하시면 평균 2시간 이내에 완료되고, 늦어도 24시간 이내에 처리됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "번호이동 처리는 매일 09:00부터 20:00까지만 진행된다.",
+    "처리 시간 안에 신청하면 평균 2시간 이내, 늦어도 24시간 이내에 처리된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0052:0",
+   "category": "PORTING",
+   "question": "이동한 지 일주일 됐는데 취소할 수 있을까요?",
+   "previousTurns": [],
+   "answer": "네, 개통 후 14일 이내이므로 취소하실 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0052",
+     "answer": "네, 개통 후 14일 이내이므로 철회하실 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "이동한 지 일주일 됐는데 취소할 수 있을까요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0052",
+       "answer": "네, 개통 후 14일 이내이므로 철회하실 수 있습니다."
+      },
+      {
+       "sourceId": "PORTING-0068",
+       "answer": "철회는 개통 후 14일 이내에만 가능합니다. 그 기간이 지났다면 철회하실 수 없습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "번호이동 철회는 개통 후 14일 이내에 가능하므로 일주일이면 철회할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0060:0",
+   "category": "PORTING",
+   "question": "철회 후 원래 통신사 요금제도 그대로 복원되나요?",
+   "previousTurns": [],
+   "answer": "네, 철회 후에는 원래 통신사의 요금제가 자동으로 복원됩니다. 하지만 철회는 개통 후 14일 이내에만 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0060",
+     "answer": "회선은 원래 통신사로 자동 복원됩니다. 철회는 개통 후 14일 이내에 가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "철회 후 원래 통신사 요금제도 그대로 복원되나요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0012",
+       "answer": "원래 통신사로 자동 복원됩니다. 철회는 개통 후 14일 이내에만 가능합니다."
+      },
+      {
+       "sourceId": "PORTING-0060",
+       "answer": "회선은 원래 통신사로 자동 복원됩니다. 철회는 개통 후 14일 이내에 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "철회하면 원래 통신사로 자동 복원된다.",
+    "철회는 개통 후 14일 이내에만 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0071:0",
+   "category": "PORTING",
+   "question": "개통 두 달인데 되나요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0071",
+     "answer": "안 됩니다. 3개월이 지나야 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "개통 두 달인데 되나요",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0071",
+       "answer": "안 됩니다. 3개월이 지나야 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "번호이동은 개통 후 3개월이 지나야 가능하므로 두 달이면 안 된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0085:0",
+   "category": "PORTING",
+   "question": "일요일 오후에 신청했는데 진행이 안 됩니다",
+   "previousTurns": [],
+   "answer": "일요일 오후에 신청하셨더라도 처리는 평일 오전 9시부터 오후 8시까지 운영됩니다. 현재 시간이 처리 시간 외라면 진행이 일시적으로 중단될 수 있습니다. 평일로 재개되면 평균 2시간 이내에 처리될 예정입니다. 불편을 드려 죄송합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0085",
+     "answer": "처리는 매일 09:00부터 20:00까지만 진행됩니다. 처리 시간 안이라면 평균 2시간 이내에 완료됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "일요일 오후에 신청했는데 진행이 안 됩니다",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0005",
+       "answer": "네, 20:00 이후부터 다음 날 09:00 전까지는 처리되지 않습니다. 처리 시간 안에는 평균 2시간 이내에 완료됩니다."
+      },
+      {
+       "sourceId": "PORTING-0085",
+       "answer": "처리는 매일 09:00부터 20:00까지만 진행됩니다. 처리 시간 안이라면 평균 2시간 이내에 완료됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "번호이동은 매일 09:00부터 20:00까지만 처리되고 그 외 시간에는 처리되지 않는다.",
+    "처리 시간 안이면 평균 2시간 이내에 완료된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0087:0",
+   "category": "PORTING",
+   "question": "기기변경한 지 얼마 안 됐다고 번호이동이 안 된답니다",
+   "previousTurns": [],
+   "answer": "기기변경 후 번호이동이 제한되는 기간은 개통일 기준으로 3개월입니다. 현재 기간이 이 기준을 충족하지 못하고 있으니, 3개월이 경과하신 후에 다시 시도해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0087",
+     "answer": "제한은 개통일 기준 3개월, 명의변경일 기준 1개월입니다. 두 날짜를 확인해 보세요."
+    },
+    {
+     "sourceId": "PORTING-0091",
+     "answer": "개통한 지 3개월이 안 돼서 그렇습니다. 3개월 지나면 됩니다."
+    },
+    {
+     "sourceId": "PORTING-0079",
+     "answer": "명의변경일로부터 1개월이 지나야 번호이동이 가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "기기변경한 지 얼마 안 됐다고 번호이동이 안 된답니다",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0087",
+       "answer": "제한은 개통일 기준 3개월, 명의변경일 기준 1개월입니다. 두 날짜를 확인해 보세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "번호이동 제한은 개통일 기준 3개월, 명의변경일 기준 1개월이다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0092:0",
+   "category": "PORTING",
+   "question": "옮겼는데 전화가 잘 안 돼요",
+   "previousTurns": [],
+   "answer": "전화 연결에 문제가 있으시군요. 이동 후 14일 이내라면 서비스 변경을 취소하실 수 있습니다. 원래 통신사로 다시 돌아갈 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0092",
+     "answer": "14일 안이면 무를 수 있습니다. 원래 통신사로 돌아갑니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "옮겼는데 전화가 잘 안 돼요",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0092",
+       "answer": "14일 안이면 무를 수 있습니다. 원래 통신사로 돌아갑니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "번호이동 후 14일 안이면 철회할 수 있다.",
+    "철회하면 원래 통신사로 돌아간다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0107:0",
+   "category": "PORTING",
+   "question": "개통 후 3개월과 명의변경 후 1개월 중 어느 조건이 더 자주 걸리나요?",
+   "previousTurns": [],
+   "answer": "명의변경 후 1개월 조건이 추가로 적용되는 경우에만 해당 조건이 발생하므로, 일반적인 경우 개통 후 3개월 조건만 확인하시면 됩니다. 따라서 대부분의 경우 개통 후 3개월 조건이 더 자주 적용됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "PORTING-0107",
+     "answer": "명의변경을 한 경우에만 1개월 조건이 추가로 붙습니다. 대부분은 개통 후 3개월 조건만 확인하시면 됩니다."
+    },
+    {
+     "sourceId": "PORTING-0103",
+     "answer": "명의변경 기준은 1개월, 개통 기준은 3개월이라 명의변경 기준이 더 짧습니다."
+    },
+    {
+     "sourceId": "PORTING-0099",
+     "answer": "둘 다 지나야 합니다. 개통 후 3개월과 명의변경 후 1개월 중 늦게 끝나는 쪽까지 기다리셔야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "개통 후 3개월과 명의변경 후 1개월 중 어느 조건이 더 자주 걸리나요?",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0107",
+       "answer": "명의변경을 한 경우에만 1개월 조건이 추가로 붙습니다. 대부분은 개통 후 3개월 조건만 확인하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "명의변경 후 1개월 조건은 명의변경을 한 경우에만 추가로 붙는다.",
+    "대부분은 개통 후 3개월 조건만 확인하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-PORTING-0113:0",
+   "category": "PORTING",
+   "question": "빨리 되는 날이랑 늦는 날이랑 있어요",
+   "previousTurns": [],
+   "answer": "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "빨리 되는 날이랑 늦는 날이랑 있어요",
+     "alternatives": [
+      {
+       "sourceId": "PORTING-0113",
+       "answer": "보통 2시간이면 되는데 늦으면 24시간까지 걸립니다. 09:00에서 20:00 사이에 신청하세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": [
+    "번호이동은 보통 2시간이면 되지만 늦으면 24시간까지 걸린다.",
+    "09:00~20:00 사이에 신청해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-ROAMING-0022:0",
+   "category": "ROAMING",
+   "question": "로밍은 어떻게 신청해요?",
+   "previousTurns": [],
+   "answer": "출국 전에 신청하시는 것이 좋지만, 현지 도착 후에도 신청하실 수 있습니다. 신청 후에는 약 1시간 이내에 로밍 서비스가 적용됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "ROAMING-0022",
+     "answer": "홈페이지나 고객센터에서 신청하시면 됩니다. 출국 전에 신청하시는 걸 권장드리지만, 현지 도착 후에도 신청하실 수 있습니다."
+    },
+    {
+     "sourceId": "ROAMING-0032",
+     "answer": "홈페이지나 고객센터에서 하시면 됩니다. 신청하고 1시간 안에 적용됩니다."
+    },
+    {
+     "sourceId": "ROAMING-0027",
+     "answer": "고객센터에 전화해 로밍 요금제와 이용 기간을 말씀하시면 접수됩니다. 접수 후 1시간 이내에 적용되며, 홈페이지에서 직접 신청하셔도 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "로밍은 어떻게 신청해요?",
+     "alternatives": [
+      {
+       "sourceId": "ROAMING-0022",
+       "answer": "홈페이지나 고객센터에서 신청하시면 됩니다. 출국 전에 신청하시는 걸 권장드리지만, 현지 도착 후에도 신청하실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "로밍은 홈페이지나 고객센터에서 신청한다.",
+    "출국 전 신청을 권장하지만 현지 도착 후에도 신청할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-ROAMING-0025:0",
+   "category": "ROAMING",
+   "question": "현지 도착 후 로밍 설정 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "자동으로 현지 통신사 네트워크에 연결되기까지 약 3~5분 정도 소요될 예정입니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "ROAMING-0025",
+     "answer": "단말에서 데이터 로밍을 켜시면 3~5분 안에 현지 망에 자동으로 연결됩니다. 가입 상태는 앱이나 홈페이지에서 미리 확인하실 수 있습니다."
+    },
+    {
+     "sourceId": "ROAMING-0080",
+     "answer": "먼저 앱이나 홈페이지에서 가입 상태를 확인하시고, 현지에 도착하면 단말에서 데이터 로밍을 켜시면 됩니다. 연결까지 3~5분 걸립니다."
+    },
+    {
+     "sourceId": "ROAMING-0015",
+     "answer": "현지에 도착하시면 단말에서 데이터 로밍을 켜셔야 합니다. 자동으로 연결되기까지 3~5분 걸립니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "현지 도착 후 로밍 설정 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "ROAMING-0025",
+       "answer": "단말에서 데이터 로밍을 켜시면 3~5분 안에 현지 망에 자동으로 연결됩니다. 가입 상태는 앱이나 홈페이지에서 미리 확인하실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "현지에서 단말의 데이터 로밍을 켜면 3~5분 안에 현지 망에 자동 연결된다."
+   ]
+  },
+  {
+   "id": "PIPE-ROAMING-0027:0",
+   "category": "ROAMING",
+   "question": "고객센터 전화로 로밍을 신청하는 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "고객센터에 전화하셔서 로밍 요금제와 이용 기간을 알려주시면 로밍 신청이 접수됩니다. 접수 후 약 1시간 이내에 로밍 서비스가 자동으로 적용됩니다. 추가로 홈페이지에서도 직접 로밍을 신청하실 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "ROAMING-0027",
+     "answer": "고객센터에 전화해 로밍 요금제와 이용 기간을 말씀하시면 접수됩니다. 접수 후 1시간 이내에 적용되며, 홈페이지에서 직접 신청하셔도 됩니다."
+    },
+    {
+     "sourceId": "ROAMING-0032",
+     "answer": "홈페이지나 고객센터에서 하시면 됩니다. 신청하고 1시간 안에 적용됩니다."
+    },
+    {
+     "sourceId": "ROAMING-0022",
+     "answer": "홈페이지나 고객센터에서 신청하시면 됩니다. 출국 전에 신청하시는 걸 권장드리지만, 현지 도착 후에도 신청하실 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "고객센터 전화로 로밍을 신청하는 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "ROAMING-0027",
+       "answer": "고객센터에 전화해 로밍 요금제와 이용 기간을 말씀하시면 접수됩니다. 접수 후 1시간 이내에 적용되며, 홈페이지에서 직접 신청하셔도 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "고객센터에 전화해 로밍 요금제와 이용 기간을 말하면 접수된다.",
+    "접수 후 1시간 이내에 적용된다."
+   ]
+  },
+  {
+   "id": "PIPE-ROAMING-0031:0",
+   "category": "ROAMING",
+   "question": "오래 나가 있을 건데 로밍은 뭘로 해요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "오래 나가 있을 건데 로밍은 뭘로 해요",
+     "alternatives": [
+      {
+       "sourceId": "ROAMING-0031",
+       "answer": "일주일씩 쓰시면 7일 기간권 39,000원이 있습니다. 하루짜리는 9,900원입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "NO_CLAIM_REFUSAL",
+   "requiredFacts": [
+    "7일 기간권은 39,000원이다.",
+    "하루짜리(1일권)는 9,900원이다."
+   ]
+  },
+  {
+   "id": "PIPE-ROAMING-0053:0",
+   "category": "ROAMING",
+   "question": "현지에서 영상 보다가 갑자기 인터넷만 안 되고 전화는 돼요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "현지에서 영상 보다가 갑자기 인터넷만 안 되고 전화는 돼요",
+     "alternatives": [
+      {
+       "sourceId": "ROAMING-0053",
+       "answer": "로밍 요금이 20만 원에 도달해 데이터가 자동 차단된 상태입니다. 통화와 문자는 계속 되며, 본인 인증을 하시면 데이터도 다시 이용하실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "APPROPRIATE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "로밍 요금이 20만 원에 도달하면 데이터가 자동 차단된다.",
+    "통화와 문자는 계속 되며, 본인 인증을 하면 데이터를 다시 쓸 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0019:0",
+   "category": "SERVICE",
+   "question": "내 명의로 모르는 회선이 있는 것 같은데 신고 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "명의도용으로 의심되는 회선에 대해 신고를 원하시는군요. 고객센터로 직접 연락하시어 명의도용 신고를 접수하시면 됩니다. 접수 후에는 3영업일 이내에 조사가 진행되며, 도용이 확인되면 해당 요금은 전액 취소될 예정입니다. 신고 방법에 대한 자세한 안내는 고객센터로 문의해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0019",
+     "answer": "고객센터로 명의도용 신고를 접수하시면 됩니다. 접수 후 3영업일 이내에 조사가 진행되고, 도용으로 확인되면 해당 요금은 전액 취소됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "내 명의로 모르는 회선이 있는 것 같은데 신고 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0019",
+       "answer": "고객센터로 명의도용 신고를 접수하시면 됩니다. 접수 후 3영업일 이내에 조사가 진행되고, 도용으로 확인되면 해당 요금은 전액 취소됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "고객센터로 명의도용 신고를 접수한다.",
+    "접수 후 3영업일 이내에 조사가 진행되고, 도용으로 확인되면 해당 요금은 전액 취소된다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0026:0",
+   "category": "SERVICE",
+   "question": "부가서비스 없애려면 어떻게 해요",
+   "previousTurns": [],
+   "answer": "부가서비스를 없애려면 신청 절차를 진행하시면 됩니다. 변경 신청 후 그 달 말까지는 기존 부가서비스를 계속 이용하실 수 있으며, 요금에도 변화가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0026",
+     "answer": "신청만 하시면 됩니다. 그 달 말일까지는 계속 쓰실 수 있고, 요금도 그대로 나갑니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "부가서비스 없애려면 어떻게 해요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0026",
+       "answer": "신청만 하시면 됩니다. 그 달 말일까지는 계속 쓰실 수 있고, 요금도 그대로 나갑니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "부가서비스는 해지 신청만 하면 된다.",
+    "신청한 달 말일까지는 계속 이용되고 그 달 요금도 그대로 나간다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0041:0",
+   "category": "SERVICE",
+   "question": "부가서비스 해지하고 다시 가입할 수 있나요",
+   "previousTurns": [],
+   "answer": "네, 부가서비스를 해지한 후 다시 가입하실 수 있습니다. 신청하시면 즉시 새로운 부가서비스가 적용됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0041",
+     "answer": "네, 가입은 신청하시면 즉시 적용됩니다."
+    },
+    {
+     "sourceId": "SERVICE-0016",
+     "answer": "가입은 신청하시면 바로 적용됩니다. 해지를 신청하시면 신청일이 속한 달 말일까지는 계속 이용하실 수 있고, 그 달 요금은 일할 계산 없이 그대로 청구됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "부가서비스 해지하고 다시 가입할 수 있나요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0041",
+       "answer": "네, 가입은 신청하시면 즉시 적용됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "부가서비스는 해지 후 다시 가입할 수 있고, 가입 신청 시 즉시 적용된다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0044:0",
+   "category": "SERVICE",
+   "question": "신고했는데 며칠째 연락이 없어요",
+   "previousTurns": [],
+   "answer": "명의도용 조사는 접수 후 일반적으로 3영업일 이내에 진행됩니다. 주말과 공휴일은 포함되지 않으니, 그 기간이 경과했다면 조금 더 기다려 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0044",
+     "answer": "명의도용 조사는 접수 후 3영업일 이내에 진행됩니다. 영업일 기준이라 주말과 공휴일은 빠지니 그 안이라면 조금 더 기다려 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "신고했는데 며칠째 연락이 없어요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0044",
+       "answer": "명의도용 조사는 접수 후 3영업일 이내에 진행됩니다. 영업일 기준이라 주말과 공휴일은 빠지니 그 안이라면 조금 더 기다려 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "명의도용 조사는 접수 후 3영업일 이내에 진행된다.",
+    "영업일 기준이라 주말·공휴일은 빠지므로 그 안이면 더 기다려야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0046:0",
+   "category": "SERVICE",
+   "question": "해지 신청했는데 아직도 서비스가 이용되고 있어요",
+   "previousTurns": [],
+   "answer": "해지 신청을 하셨더라도 신청일이 속한 달의 말일까지는 서비스 이용이 계속됩니다. 정상적인 절차이므로 걱정하지 않으셔도 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0046",
+     "answer": "정상입니다. 해지를 신청하셔도 신청일이 속한 달 말일까지는 계속 이용하실 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "해지 신청했는데 아직도 서비스가 이용되고 있어요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0046",
+       "answer": "정상입니다. 해지를 신청하셔도 신청일이 속한 달 말일까지는 계속 이용하실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "해지 신청 후에도 신청일이 속한 달 말일까지 계속 이용되는 것이 정상이다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0051:0",
+   "category": "SERVICE",
+   "question": "부가서비스 해지했는데 요금이 또 나왔어요",
+   "previousTurns": [],
+   "answer": "해지한 달의 요금은 일할 계산되어 청구되므로, 해지 후에도 해당 달의 요금이 발생할 수 있습니다. 다음 달부터는 더 이상 요금이 청구되지 않을 것입니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0051",
+     "answer": "해지한 달의 월 이용료는 일할 계산되지 않아 그대로 청구됩니다. 다음 달부터는 나오지 않습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "부가서비스 해지했는데 요금이 또 나왔어요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0051",
+       "answer": "해지한 달의 월 이용료는 일할 계산되지 않아 그대로 청구됩니다. 다음 달부터는 나오지 않습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "해지한 달의 월 이용료는 일할 계산되지 않고 그대로 청구된다.",
+    "다음 달부터는 청구되지 않는다."
+   ]
+  },
+  {
+   "id": "PIPE-SERVICE-0065:0",
+   "category": "SERVICE",
+   "question": "홈페이지로 받는 거랑 매장에서 받는 거랑 증명서가 달라요",
+   "previousTurns": [],
+   "answer": "홈페이지를 통해 증명서를 발급받으실 경우 즉시 무료로 받으실 수 있으며, 최근 3년분까지 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SERVICE-0065",
+     "answer": "홈페이지에서 신청하시면 즉시 무료로 발급됩니다. 최근 3년분까지 가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "홈페이지로 받는 거랑 매장에서 받는 거랑 증명서가 달라요",
+     "alternatives": [
+      {
+       "sourceId": "SERVICE-0065",
+       "answer": "홈페이지에서 신청하시면 즉시 무료로 발급됩니다. 최근 3년분까지 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "홈페이지에서 신청하면 증명서가 즉시 무료로 발급된다.",
+    "최근 3년분까지 발급 가능하다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0019:0",
+   "category": "SUBSCRIBE",
+   "question": "가입하면 언제부터 되나요",
+   "previousTurns": [],
+   "answer": "가입하신 방법에 따라 다릅니다. 매장에서 가입하시면 가입 즉시 서비스 이용이 가능합니다. 인터넷을 통해 신청하신 경우에는 다음 날부터 서비스 이용이 가능하며, 신청 시간은 오전 9시부터 오후 8시까지입니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0019",
+     "answer": "매장에서 하시면 30분 안에 됩니다. 인터넷으로 신청하시면 다음 날 되고, 09:00부터 20:00까지 처리됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "가입하면 언제부터 되나요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0019",
+       "answer": "매장에서 하시면 30분 안에 됩니다. 인터넷으로 신청하시면 다음 날 되고, 09:00부터 20:00까지 처리됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "매장 가입은 30분 안에 개통된다.",
+    "인터넷 신청은 다음 날 개통되며 09:00부터 20:00까지 처리된다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0022:0",
+   "category": "SUBSCRIBE",
+   "question": "손주가 열세 살인데 폰 만들어줄 수 있어요",
+   "previousTurns": [],
+   "answer": "손주가 열세 살이시군요. 하지만 현재 만 14세 미만 고객은 가입이 불가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0022",
+     "answer": "만 14세 미만은 가입이 안 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "손주가 열세 살인데 폰 만들어줄 수 있어요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0022",
+       "answer": "만 14세 미만은 가입이 안 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "만 14세 미만은 가입할 수 없으므로 열세 살 명의로는 만들 수 없다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0029:0",
+   "category": "SUBSCRIBE",
+   "question": "휴대폰 새로 만들려는데 신분증 말고 또 뭐 챙겨야 하나요?",
+   "previousTurns": [],
+   "answer": "휴대폰을 새로 만들 때는 본인 명의의 신분증 외에 추가로 다른 서류는 필요하지 않습니다. 주민등록증, 운전면허증, 여권 중 하나만 가져오시면 됩니다. 외국인이시라면 외국인등록증과 여권을 함께 준비하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0029",
+     "answer": "본인 명의 신분증만 있으면 됩니다. 주민등록증, 운전면허증, 여권 중 하나를 지참하시면 되고, 외국인이신 경우에는 외국인등록증과 여권을 함께 준비하시면 됩니다."
+    },
+    {
+     "sourceId": "SUBSCRIBE-0005",
+     "answer": "네, 본인 명의 신분증(주민등록증, 운전면허증, 여권 중 하나)이 필요합니다."
+    },
+    {
+     "sourceId": "SUBSCRIBE-0001",
+     "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 아무거나 가져오시면 됩니다. 외국인이시면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "휴대폰 새로 만들려는데 신분증 말고 또 뭐 챙겨야 하나요?",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0001",
+       "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 아무거나 가져오시면 됩니다. 외국인이시면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0029",
+       "answer": "본인 명의 신분증만 있으면 됩니다. 주민등록증, 운전면허증, 여권 중 하나를 지참하시면 되고, 외국인이신 경우에는 외국인등록증과 여권을 함께 준비하시면 됩니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0109",
+       "answer": "운전면허증도 됩니다. 본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 어느 것이든 가능합니다. 외국인이시라면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "본인 명의 신분증(주민등록증, 운전면허증, 여권 중 하나)만 있으면 된다.",
+    "외국인은 외국인등록증과 여권을 함께 지참해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0049:0",
+   "category": "SUBSCRIBE",
+   "question": "회사 폰 만들 때 뭐 가져가요",
+   "previousTurns": [],
+   "answer": "회사 폰을 만들 때는 신분증을 가져가시면 됩니다. 주민등록증, 운전면허증, 여권 중 하나를 준비하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0049",
+     "answer": "신분증 가져가시면 됩니다. 주민등록증, 운전면허증, 여권 중 하나면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "회사 폰 만들 때 뭐 가져가요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0001",
+       "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 아무거나 가져오시면 됩니다. 외국인이시면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0049",
+       "answer": "신분증 가져가시면 됩니다. 주민등록증, 운전면허증, 여권 중 하나면 됩니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0109",
+       "answer": "운전면허증도 됩니다. 본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 어느 것이든 가능합니다. 외국인이시라면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "본인 명의 신분증(주민등록증, 운전면허증, 여권 중 하나)을 가져가면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0066:0",
+   "category": "SUBSCRIBE",
+   "question": "만 18세 생일이 지나면 법정대리인 서류 없이 개통할 수 있나요?",
+   "previousTurns": [],
+   "answer": "네, 만 18세 생일이 지나면 법정대리인 서류 없이 본인 신분증만으로 개통이 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0066",
+     "answer": "법정대리인 서류는 만 14세 이상 18세 이하에 필요합니다. 성인이 되면 본인 신분증만으로 가능합니다."
+    },
+    {
+     "sourceId": "SUBSCRIBE-0062",
+     "answer": "만 14세 이상 18세 이하는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 있어야 가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "만 18세 생일이 지나면 법정대리인 서류 없이 개통할 수 있나요?",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0066",
+       "answer": "법정대리인 서류는 만 14세 이상 18세 이하에 필요합니다. 성인이 되면 본인 신분증만으로 가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "법정대리인 서류는 만 14세 이상 18세 이하에 필요하다.",
+    "성인이 되면 본인 신분증만으로 개통할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0077:0",
+   "category": "SUBSCRIBE",
+   "question": "아들 대신 제가 가서 아들 폰 만들 수 있나요",
+   "previousTurns": [],
+   "answer": "아들 명의로 폰을 만들기 위해서는 아드님의 신분증이 필요합니다. 현재 아드님의 신분증을 직접 확인하실 수 없다면, 해당 절차를 진행하기 어렵습니다. 아드님께서 직접 방문하시거나, 필요한 경우 아드님의 동의를 얻어 진행하시는 것을 권장드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0077",
+     "answer": "아들 명의로 하려면 아들 본인 신분증이 있어야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "아들 대신 제가 가서 아들 폰 만들 수 있나요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0077",
+       "answer": "아들 명의로 하려면 아들 본인 신분증이 있어야 합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "아들 명의로 개통하려면 아들 본인의 신분증이 있어야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0084:0",
+   "category": "SUBSCRIBE",
+   "question": "회사 이름으로 폰 만들려는데 심사 때문에 안 된대요",
+   "previousTurns": [],
+   "answer": "법인 명의로 폰을 개통하려면 추가적인 심사 과정을 거쳐야 합니다. 심사 결과에 따라 개통 여부가 결정되므로, 심사 결과를 확인해 주시기 바랍니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0084",
+     "answer": "법인 명의 가입은 별도 심사를 거치기 때문에 결과가 나와야 개통됩니다. 심사 결과를 확인해 주세요."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "회사 이름으로 폰 만들려는데 심사 때문에 안 된대요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0084",
+       "answer": "법인 명의 가입은 별도 심사를 거치기 때문에 결과가 나와야 개통됩니다. 심사 결과를 확인해 주세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "법인 명의 가입은 별도 심사를 거쳐 결과가 나와야 개통된다.",
+    "심사 결과를 확인해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0094:0",
+   "category": "SUBSCRIBE",
+   "question": "법인 명의로 미성년 인턴 회선을 만들려다 거절됐습니다",
+   "previousTurns": [],
+   "answer": "법인 명의로 미성년자 인턴 회선을 개설하려는 경우, 미성년자의 법정대리인 서류가 필요하며, 미성년자의 나이는 만 14세 이상 18세 이하여야 합니다. 만 14세 미만의 경우 회선 개설이 불가능합니다. 따라서 거절된 이유는 미성년자의 나이 조건을 충족하지 못했거나 필요한 법정대리인 서류가 미비했을 가능성이 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0094",
+     "answer": "미성년자 명의 가입은 만 14세 이상 18세 이하이고 법정대리인 서류가 갖춰져야 합니다. 만 14세 미만은 불가능합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "법인 명의로 미성년 인턴 회선을 만들려다 거절됐습니다",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0034",
+       "answer": "미성년자 명의 가입은 만 14세 이상 18세 이하일 때 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다. 만 14세 미만은 불가능합니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0094",
+       "answer": "미성년자 명의 가입은 만 14세 이상 18세 이하이고 법정대리인 서류가 갖춰져야 합니다. 만 14세 미만은 불가능합니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "미성년자 명의 가입은 만 14세 이상 18세 이하이고 법정대리인 서류(동의서·가족관계증명서·법정대리인 신분증)가 갖춰져야 한다.",
+    "만 14세 미만은 가입할 수 없다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0101:0",
+   "category": "SUBSCRIBE",
+   "question": "처음 만드는데 신분증이 안 된대요",
+   "previousTurns": [],
+   "answer": "주민등록증, 운전면허증, 여권 중 본인 이름으로 된 것을 준비해 주시면 됩니다. 다른 종류의 신분증은 현재 사용이 제한될 수 있으니 해당 서류들을 확인해 주세요.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0101",
+     "answer": "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나여야 합니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "처음 만드는데 신분증이 안 된대요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0101",
+       "answer": "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나여야 합니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0105",
+       "answer": "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나를 가져가셔야 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나여야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0105:0",
+   "category": "SUBSCRIBE",
+   "question": "폰 하나 더 하려는데 신분증 때문에 안 된대요",
+   "previousTurns": [],
+   "answer": "본인 확인을 위해 주민등록증, 운전면허증, 여권 중 하나를 지참해 주시면 됩니다. 해당 서류로 확인이 가능하니 다시 방문해 주세요.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0105",
+     "answer": "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나를 가져가셔야 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "폰 하나 더 하려는데 신분증 때문에 안 된대요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0025",
+       "answer": "주민등록증이나 운전면허증, 여권 중 하나 가져가시면 됩니다."
+      },
+      {
+       "sourceId": "SUBSCRIBE-0105",
+       "answer": "본인 이름으로 된 주민등록증, 운전면허증, 여권 중 하나를 가져가셔야 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "주민등록증, 운전면허증, 여권 중 하나(본인 명의)를 가져가야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0112:0",
+   "category": "SUBSCRIBE",
+   "question": "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?",
+   "previousTurns": [],
+   "answer": "개인 명의 회선의 경우 최대 5회선까지 허용됩니다. 애 명의 회선의 경우 별도의 심사 기준이 적용되어 한도가 다를 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "SUBSCRIBE-0112",
+     "answer": "성인은 1인당 최대 5회선입니다. 법인 명의는 별도 심사로 정해집니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0112",
+       "answer": "성인은 1인당 최대 5회선입니다. 법인 명의는 별도 심사로 정해집니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "성인은 1인당 최대 5회선까지 가입할 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-SUBSCRIBE-0127:0",
+   "category": "SUBSCRIBE",
+   "question": "아들 폰 매장이 빨라요 인터넷이 빨라요",
+   "previousTurns": [],
+   "answer": "어느 지역의 통신사 매장을 찾으시나요? 역 이름이나 동네를 알려주세요.",
+   "messageType": "CLARIFICATION",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "아들 폰 매장이 빨라요 인터넷이 빨라요",
+     "alternatives": [
+      {
+       "sourceId": "SUBSCRIBE-0127",
+       "answer": "매장이 빠릅니다. 30분이면 됩니다. 인터넷은 다음 날 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "OTHER",
+   "requiredFacts": [
+    "매장이 더 빠르며 30분이면 개통된다.",
+    "인터넷 신청은 다음 날 개통된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0010:0",
+   "category": "TERMINATE",
+   "question": "약정 중간에 해지하면 위약금이 얼마나 나오나요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0010",
+     "answer": "약정은 24개월이며, 12개월 미만에 해지하면 할인 반환금의 100%, 12개월 이상 24개월 미만이면 50%를 반환합니다."
+    },
+    {
+     "sourceId": "TERMINATE-0026",
+     "answer": "24개월 약정 기준으로, 12개월이 되기 전에 해지하면 할인 반환금 100%, 12개월 이상 24개월 미만이면 50%를 내시면 됩니다."
+    },
+    {
+     "sourceId": "TERMINATE-0102",
+     "answer": "약정 기간은 24개월입니다. 12개월이 되기 전에 해지하시면 받으신 요금 할인액의 100%를 반환해야 하고, 12개월 이상 24개월 미만이면 50%를 반환합니다. 같은 해지라도 12개월을 넘겼는지에 따라 반환금이 절반으로 줄어듭니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "약정 중간에 해지하면 위약금이 얼마나 나오나요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0010",
+       "answer": "약정은 24개월이며, 12개월 미만에 해지하면 할인 반환금의 100%, 12개월 이상 24개월 미만이면 50%를 반환합니다."
+      },
+      {
+       "sourceId": "TERMINATE-0018",
+       "answer": "약정 24개월 안에 해지하시면 있습니다. 12개월 전이면 할인 받은 거 전부(100%), 넘었으면 절반(50%)입니다."
+      },
+      {
+       "sourceId": "TERMINATE-0026",
+       "answer": "24개월 약정 기준으로, 12개월이 되기 전에 해지하면 할인 반환금 100%, 12개월 이상 24개월 미만이면 50%를 내시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "약정은 24개월이다.",
+    "12개월 미만에 해지하면 할인 반환금의 100%, 12개월 이상 24개월 미만이면 50%를 반환한다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0013:0",
+   "category": "TERMINATE",
+   "question": "분실 후 해지 시 요금 정산 기준을 알려주세요.",
+   "previousTurns": [],
+   "answer": "분실 후 해지 시 요금은 해지 신청이 처리된 달부터 정산됩니다. 해당 달의 요금은 일할 계산되어 청구됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0013",
+     "answer": "해지 신청 즉시 처리되며 해지한 달의 요금은 일할 계산됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "분실 후 해지 시 요금 정산 기준을 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0013",
+       "answer": "해지 신청 즉시 처리되며 해지한 달의 요금은 일할 계산됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "해지는 신청 즉시 처리된다.",
+    "해지한 달의 요금은 일할 계산된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0029:0",
+   "category": "TERMINATE",
+   "question": "해외에 오래 있을 건데 해지는 어떤 순서로 해요?",
+   "previousTurns": [],
+   "answer": "해지 신청 후 즉시 처리되며, 해지된 달의 요금은 일할 계산되어 청구됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0029",
+     "answer": "홈페이지나 고객센터로 신청하시면 즉시 해지됩니다. 해지한 달 요금은 일할 계산되어 청구됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "해외에 오래 있을 건데 해지는 어떤 순서로 해요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0029",
+       "answer": "홈페이지나 고객센터로 신청하시면 즉시 해지됩니다. 해지한 달 요금은 일할 계산되어 청구됩니다."
+      },
+      {
+       "sourceId": "TERMINATE-0037",
+       "answer": "홈페이지에서 해지를 신청하면 즉시 처리됩니다. 해지월 요금은 일할 계산됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "홈페이지(또는 고객센터)로 해지를 신청하면 즉시 해지된다.",
+    "해지한 달 요금은 일할 계산되어 청구된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0049:0",
+   "category": "TERMINATE",
+   "question": "해외 나가 있는 동안 홈페이지로 해지할 수 있을까요?",
+   "previousTurns": [],
+   "answer": "신청 즉시 해지 처리가 이루어집니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0049",
+     "answer": "네, 홈페이지에서 신청하시면 즉시 해지됩니다."
+    },
+    {
+     "sourceId": "TERMINATE-0077",
+     "answer": "홈페이지나 고객센터로 신청하시면 즉시 해지됩니다. 매장에 가지 않아도 됩니다."
+    },
+    {
+     "sourceId": "TERMINATE-0081",
+     "answer": "고객센터 전화나 홈페이지로도 해지 신청이 가능합니다. 신청하시면 즉시 해지되고 해당 월 요금은 일할 계산됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "해외 나가 있는 동안 홈페이지로 해지할 수 있을까요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0049",
+       "answer": "네, 홈페이지에서 신청하시면 즉시 해지됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "홈페이지에서 해지를 신청할 수 있고 즉시 해지된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0053:0",
+   "category": "TERMINATE",
+   "question": "폰을 잃어버렸는데 매장 안 가고 해지할 수 있을까요?",
+   "previousTurns": [],
+   "answer": "신청 즉시 해지 처리가 완료됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0053",
+     "answer": "네, 고객센터 전화나 홈페이지로도 해지 신청이 됩니다. 신청 즉시 해지됩니다."
+    },
+    {
+     "sourceId": "TERMINATE-0077",
+     "answer": "홈페이지나 고객센터로 신청하시면 즉시 해지됩니다. 매장에 가지 않아도 됩니다."
+    },
+    {
+     "sourceId": "TERMINATE-0041",
+     "answer": "매장에 가시거나 고객센터에 전화하시거나 홈페이지로 신청하시면 됩니다. 신청하시면 바로 해지됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "폰을 잃어버렸는데 매장 안 가고 해지할 수 있을까요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0053",
+       "answer": "네, 고객센터 전화나 홈페이지로도 해지 신청이 됩니다. 신청 즉시 해지됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "매장 방문 없이 고객센터 전화나 홈페이지로 해지 신청할 수 있다.",
+    "신청 즉시 해지된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0071:0",
+   "category": "TERMINATE",
+   "question": "군대 가는 아들 폰 해지하면 할부 계속 나눠 낼 수 있나요",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0071",
+     "answer": "네, 원하시면 그대로 나눠 내실 수 있습니다."
+    },
+    {
+     "sourceId": "TERMINATE-0091",
+     "answer": "해지할 때 나눠 내는 걸로 하셨으면 계속 나옵니다. 한 번에 정리하시려면 남은 걸 다 내시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "군대 가는 아들 폰 해지하면 할부 계속 나눠 낼 수 있나요",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0071",
+       "answer": "네, 원하시면 그대로 나눠 내실 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "해지해도 남은 할부는 원하면 그대로 나눠 낼 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0085:0",
+   "category": "TERMINATE",
+   "question": "해지 신청했는데 다음 달 요금이 청구됐습니다",
+   "previousTurns": [],
+   "answer": "해지 신청 후에도 다음 달 요금이 청구되는 것은 해지 처리 과정에서 일시적인 청구일 수 있습니다. 해지 신청이 접수되면 해당 월의 남은 기간에 대한 요금이 일할 계산되어 청구되며, 이후 달부터는 요금이 발생하지 않습니다. 청구 내역을 고객센터에서 자세히 확인해 보시는 것을 권장드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0085",
+     "answer": "해지는 신청 즉시 처리되고 해지월 요금만 일할 계산됩니다. 청구 내역을 고객센터에서 확인해 보세요."
+    },
+    {
+     "sourceId": "SERVICE-0051",
+     "answer": "해지한 달의 월 이용료는 일할 계산되지 않아 그대로 청구됩니다. 다음 달부터는 나오지 않습니다."
+    },
+    {
+     "sourceId": "TERMINATE-0089",
+     "answer": "해지 신청 즉시 처리되고, 그 달 요금은 사용한 날수만큼 일할 계산되어 청구됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "해지 신청했는데 다음 달 요금이 청구됐습니다",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0085",
+       "answer": "해지는 신청 즉시 처리되고 해지월 요금만 일할 계산됩니다. 청구 내역을 고객센터에서 확인해 보세요."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "해지는 신청 즉시 처리되고 해지월 요금만 일할 계산된다.",
+    "청구 내역은 고객센터에서 확인해야 한다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0090:0",
+   "category": "TERMINATE",
+   "question": "요금 부담돼서 해지했는데 위약금이 더 나와요",
+   "previousTurns": [],
+   "answer": "약정 기간 내에 해지를 진행하셨다면 반환금이 발생할 수 있습니다. 만약 해지 시점이 약정 기간의 절반을 초과했다면, 반환금은 절반만 적용될 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0090",
+     "answer": "약정 기간 안에 해지하면 반환금이 있습니다. 12개월 전이면 전부, 넘었으면 절반입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "요금 부담돼서 해지했는데 위약금이 더 나와요",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0090",
+       "answer": "약정 기간 안에 해지하면 반환금이 있습니다. 12개월 전이면 전부, 넘었으면 절반입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "약정 기간 안에 해지하면 할인 반환금이 있다.",
+    "12개월 전이면 전부(100%), 넘었으면 절반(50%)이다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0092:0",
+   "category": "TERMINATE",
+   "question": "정지 중인데 청구서가 왔어요",
+   "previousTurns": [],
+   "answer": "정지 중에 청구서가 도착하셨다니 다행입니다. 청구서를 확인하시고 요금을 정산하시면 서비스 정지 해제에 필요한 시간 내에 정상화될 수 있습니다. 추가 도움이 필요하시면 언제든지 연락 주세요.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "BILLING-0059",
+     "answer": "청구서를 못 받으셨어도 기한이 지나고 15일이면 전화가 안 걸리니, 기한 안에 내시면 됩니다. 이미 끊겼으면 다 내시면 2시간 안에 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "정지 중인데 청구서가 왔어요",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0092",
+       "answer": "정지 기간에도 기본료의 절반(50%)은 청구됩니다. 전액 면제가 아닙니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "일시 정지 기간에도 기본료의 50%가 청구된다.",
+    "정지 중이라도 전액 면제가 아니다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0095:0",
+   "category": "TERMINATE",
+   "question": "한 번에 내는 거랑 나눠 내는 거랑 뭐가 더 나아요?",
+   "previousTurns": [],
+   "answer": "반면에 할부 납부는 금액 부담을 줄여주며, 일정 기간 동안 나눠서 납부할 수 있어 경제적 부담을 덜 수 있습니다. 고객님의 재정 상황과 편의성에 따라 선택하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0095",
+     "answer": "일시 납부는 그 자리에서 정리가 끝나고, 할부 유지는 기존 일정대로 계속 나눠 내실 수 있습니다. 편하신 쪽으로 선택하시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "한 번에 내는 거랑 나눠 내는 거랑 뭐가 더 나아요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0095",
+       "answer": "일시 납부는 그 자리에서 정리가 끝나고, 할부 유지는 기존 일정대로 계속 나눠 내실 수 있습니다. 편하신 쪽으로 선택하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "일시 납부는 그 자리에서 정리가 끝나고, 할부 유지는 기존 일정대로 계속 나눠 낸다.",
+    "편한 쪽을 선택하면 된다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0096:0",
+   "category": "TERMINATE",
+   "question": "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?",
+   "previousTurns": [],
+   "answer": "일시 정지는 기본료의 절반만 내면 되고 번호를 유지할 수 있어 추후 재가입이 용이합니다. 반면에 해지는 요금 부담이 완전히 사라지지만, 사용하던 번호와 계약이 종료되므로 다시 개통할 때는 새로운 절차가 필요합니다. 번호 유지와 재사용 가능성을 고려하신다면 일시 정지를, 완전히 요금 부담을 없애고 싶으시다면 해지를 추천드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0096",
+     "answer": "일시 정지는 기본료의 50%만 내고 번호를 유지할 수 있습니다. 해지는 요금이 아예 안 나가지만 번호와 계약이 없어집니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0096",
+       "answer": "일시 정지는 기본료의 50%만 내고 번호를 유지할 수 있습니다. 해지는 요금이 아예 안 나가지만 번호와 계약이 없어집니다."
+      },
+      {
+       "sourceId": "TERMINATE-0100",
+       "answer": "정지는 기본료의 50%를 내면서 번호를 유지하고, 해지는 요금이 없어지지만 번호도 없어집니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "일시 정지는 기본료의 50%를 내면서 번호를 유지한다.",
+    "해지는 요금이 나가지 않지만 번호와 계약이 없어진다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0104:0",
+   "category": "TERMINATE",
+   "question": "장기 미사용이면 일시 정지와 해지 중 어느 쪽이 유리한가요?",
+   "previousTurns": [],
+   "answer": "장기 미사용 시 번호를 계속 유지하고 싶으시다면 일시 정지를 추천드립니다. 일시 정지 시 기본료가 50% 감면되며, 1회에 30일, 연 최대 90일까지 가능합니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0104",
+     "answer": "번호를 유지하려면 일시 정지(기본료 50%, 1회 30일, 연 90일)가 낫고, 다시 쓸 계획이 없으면 해지가 낫습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "장기 미사용이면 일시 정지와 해지 중 어느 쪽이 유리한가요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0104",
+       "answer": "번호를 유지하려면 일시 정지(기본료 50%, 1회 30일, 연 90일)가 낫고, 다시 쓸 계획이 없으면 해지가 낫습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "번호를 유지하려면 일시 정지(기본료 50%, 1회 30일, 연 90일)가 낫다.",
+    "다시 쓸 계획이 없으면 해지가 낫다."
+   ]
+  },
+  {
+   "id": "PIPE-TERMINATE-0105:0",
+   "category": "TERMINATE",
+   "question": "요금 부담으로 해지할 때 홈페이지와 고객센터 중 어느 쪽이 빠른가요?",
+   "previousTurns": [],
+   "answer": "안내드릴 수 있는 정보가 없습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "TERMINATE-0105",
+     "answer": "둘 다 신청 즉시 해지되어 차이가 없습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "요금 부담으로 해지할 때 홈페이지와 고객센터 중 어느 쪽이 빠른가요?",
+     "alternatives": [
+      {
+       "sourceId": "TERMINATE-0105",
+       "answer": "둘 다 신청 즉시 해지되어 차이가 없습니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "NOT_APPLICABLE",
+     "quality": "MISSED",
+     "abstention": "OVER_REFUSAL"
+    }
+   },
+   "stratum": "OVER_REFUSAL",
+   "requiredFacts": [
+    "홈페이지와 고객센터 모두 신청 즉시 해지되어 속도 차이가 없다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0012:0",
+   "category": "USIM",
+   "question": "유심 분실 신고는 어디로 하나요?",
+   "previousTurns": [],
+   "answer": "신고 후 즉시 이용이 정지됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0012",
+     "answer": "고객센터나 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+    },
+    {
+     "sourceId": "USIM-0036",
+     "answer": "고객센터나 홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다. 이후 새 유심을 재발급받으시면 기존 유심은 자동으로 해지됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "유심 분실 신고는 어디로 하나요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0012",
+       "answer": "고객센터나 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "MISSED",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "유심 분실 신고는 고객센터나 홈페이지에서 한다.",
+    "신고하면 즉시 이용 정지된다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0036:0",
+   "category": "USIM",
+   "question": "유심 분실 시 처리 절차를 알려주세요.",
+   "previousTurns": [],
+   "answer": "이후 새 유심을 재발급 받으시면 기존 유심은 자동으로 해지됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0036",
+     "answer": "고객센터나 홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다. 이후 새 유심을 재발급받으시면 기존 유심은 자동으로 해지됩니다."
+    },
+    {
+     "sourceId": "USIM-0040",
+     "answer": "홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다. 귀국 후 새 유심을 재발급받으시면 기존 유심은 자동으로 해지됩니다."
+    },
+    {
+     "sourceId": "USIM-0108",
+     "answer": "잃어버린 것이 아니면 재발급으로 진행합니다. 새 유심을 받으면 기존 유심은 자동 해지됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "유심 분실 시 처리 절차를 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0004",
+       "answer": "분실 신고를 하시면 즉시 이용 정지가 됩니다. 새 유심을 재발급받으면 기존 유심은 자동으로 해지됩니다."
+      },
+      {
+       "sourceId": "USIM-0036",
+       "answer": "고객센터나 홈페이지에서 분실 신고를 하시면 즉시 이용 정지됩니다. 이후 새 유심을 재발급받으시면 기존 유심은 자동으로 해지됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "분실 신고를 하면 즉시 이용 정지된다.",
+    "새 유심을 재발급받으면 기존 유심은 자동으로 해지된다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0041:0",
+   "category": "USIM",
+   "question": "재발급 신청 절차를 순서대로 알려주세요.",
+   "previousTurns": [],
+   "answer": "재발급 신청은 주로 두 가지 방법으로 진행됩니다. 둘째, 온라인으로 신청하시면 택배로 수령하실 수 있으며, 이 경우 처리 기간은 약 2~3 영업일이 소요됩니다. 매장 방문이 어려우시다면 온라인 신청을 추천드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0041",
+     "answer": "매장을 방문하시면 즉시 발급받으실 수 있습니다. 매장 방문이 어려우시면 온라인으로 신청해 택배로 받으실 수 있으며 2~3 영업일이 걸립니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "재발급 신청 절차를 순서대로 알려주세요.",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0041",
+       "answer": "매장을 방문하시면 즉시 발급받으실 수 있습니다. 매장 방문이 어려우시면 온라인으로 신청해 택배로 받으실 수 있으며 2~3 영업일이 걸립니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "매장을 방문하면 즉시 발급받을 수 있다.",
+    "온라인으로 신청하면 택배로 받으며 2~3영업일이 걸린다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0060:0",
+   "category": "USIM",
+   "question": "해외에서 홈페이지로 분실 신고가 가능한가요?",
+   "previousTurns": [],
+   "answer": "네, 해외에서도 홈페이지를 통해 분실 신고가 가능합니다. 신고 후 즉시 이용 정지 처리가 이루어집니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0060",
+     "answer": "네, 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "해외에서 홈페이지로 분실 신고가 가능한가요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0060",
+       "answer": "네, 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "홈페이지에서 분실 신고를 할 수 있고, 신고하면 즉시 이용 정지된다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0083:0",
+   "category": "USIM",
+   "question": "기존 유심이 자꾸 오류가 나서 eSIM으로 바꾸고 싶은데 제 폰이 지원하는지 모르겠어요",
+   "previousTurns": [],
+   "answer": "eSIM 지원 여부는 매장에서 확인해 드릴 수 있습니다. 폰이 eSIM을 지원한다면 전환이 가능하며, 발급 비용은 2,750원입니다. 매장 방문을 권장드립니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0083",
+     "answer": "eSIM은 지원 단말에서만 전환하실 수 있습니다. 단말 지원 여부는 매장에서 확인해 드리며, 발급 비용은 2,750원입니다."
+    },
+    {
+     "sourceId": "USIM-0087",
+     "answer": "eSIM은 지원 단말에서만 발급할 수 있습니다. 지원하지 않는 단말이면 물리 유심을 재발급받으셔야 합니다."
+    },
+    {
+     "sourceId": "USIM-0091",
+     "answer": "eSIM을 지원하는 단말이라면 바꾸실 수 있습니다. 발급 비용은 2,750원이고, 듀얼심으로 최대 2개 회선을 동시에 쓰실 수 있습니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "기존 유심이 자꾸 오류가 나서 eSIM으로 바꾸고 싶은데 제 폰이 지원하는지 모르겠어요",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0027",
+       "answer": "eSIM을 지원하는 단말인지 먼저 확인하시고, 매장이나 온라인에서 발급을 신청하시면 됩니다. 비용은 2,750원입니다."
+      },
+      {
+       "sourceId": "USIM-0035",
+       "answer": "eSIM을 지원하는 단말이라면 매장이나 온라인에서 전환 신청을 하시면 됩니다. 발급 비용은 2,750원입니다."
+      },
+      {
+       "sourceId": "USIM-0039",
+       "answer": "새 단말이 eSIM을 지원하는지 확인한 뒤 매장이나 온라인에서 eSIM 발급을 신청하시면 됩니다. 발급 비용은 2,750원입니다."
+      },
+      {
+       "sourceId": "USIM-0083",
+       "answer": "eSIM은 지원 단말에서만 전환하실 수 있습니다. 단말 지원 여부는 매장에서 확인해 드리며, 발급 비용은 2,750원입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_COMPLETE",
+   "requiredFacts": [
+    "eSIM은 지원 단말에서만 전환할 수 있으므로 단말 지원 여부를 먼저 확인해야 한다.",
+    "eSIM 발급 비용은 2,750원이다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0097:0",
+   "category": "USIM",
+   "question": "유심 깨졌을 때 매장이랑 택배 중 뭐가 나아요?",
+   "previousTurns": [],
+   "answer": "비용은 두 방법 모두 7,700원으로 동일합니다. 상황에 맞게 선택하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0097",
+     "answer": "급하면 매장이 즉시 발급이라 낫습니다. 택배는 2~3 영업일 걸리고 비용은 둘 다 7,700원입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "유심 깨졌을 때 매장이랑 택배 중 뭐가 나아요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0097",
+       "answer": "급하면 매장이 즉시 발급이라 낫습니다. 택배는 2~3 영업일 걸리고 비용은 둘 다 7,700원입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "SUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "NOT_APPLICABLE"
+    }
+   },
+   "stratum": "SUPPORTED_PARTIAL_OR_MISSED",
+   "requiredFacts": [
+    "매장은 즉시 발급되어 급할 때 낫다.",
+    "택배는 2~3영업일이 걸리며, 비용은 둘 다 7,700원으로 같다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0099:0",
+   "category": "USIM",
+   "question": "폰 바꿀 때 물리 유심 그대로 쓰는 거랑 eSIM 새로 받는 거랑 뭐가 달라요?",
+   "previousTurns": [],
+   "answer": "물리 유심을 그대로 사용하는 경우 기존 유심을 새 기기에 삽입하여 사용할 수 있습니다. 반면에 eSIM을 새로 받는 경우, 2,750원의 비용이 발생하며, 지원하는 단말에서만 활성화 가능합니다. eSIM의 장점은 듀얼심 기능을 통해 최대 2개의 회선을 동시에 사용할 수 있다는 점입니다. 어떤 방식이 더 적합한지는 사용 패턴과 기기 호환성을 고려해 결정하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0099",
+     "answer": "eSIM은 2,750원에 새로 발급받고 지원 단말이어야 합니다. 듀얼심으로 최대 2개 회선을 함께 쓸 수 있는 점이 다릅니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "폰 바꿀 때 물리 유심 그대로 쓰는 거랑 eSIM 새로 받는 거랑 뭐가 달라요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0099",
+       "answer": "eSIM은 2,750원에 새로 발급받고 지원 단말이어야 합니다. 듀얼심으로 최대 2개 회선을 함께 쓸 수 있는 점이 다릅니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "eSIM은 2,750원에 새로 발급받아야 하고 지원 단말이어야 한다.",
+    "eSIM은 듀얼심으로 최대 2개 회선을 함께 쓸 수 있다."
+   ]
+  },
+  {
+   "id": "PIPE-USIM-0104:0",
+   "category": "USIM",
+   "question": "기기변경 시 분실 신고를 하는 것과 재발급만 하는 것은 어떻게 다른가요?",
+   "previousTurns": [],
+   "answer": "분실 신고는 즉시 기기의 사용을 정지시키는 절차로, 유심의 분실이나 도난 상황에서 보안을 강화하기 위해 이루어집니다. 반면에 재발급은 새로운 유심을 발급받으면서 기존 유심이 자동으로 해지되는 과정으로, 유심만 교체하는 경우에 해당합니다. 따라서 분실이 의심되는 경우에는 분실 신고를, 단순히 유심만 교체하려는 경우에는 재발급 절차를 진행하시면 됩니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0104",
+     "answer": "분실 신고는 즉시 정지 조치이고, 재발급은 새 유심을 받으면서 기존 유심이 자동 해지되는 절차입니다. 잃어버린 게 아니라면 재발급만 하시면 됩니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "기기변경 시 분실 신고를 하는 것과 재발급만 하는 것은 어떻게 다른가요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0104",
+       "answer": "분실 신고는 즉시 정지 조치이고, 재발급은 새 유심을 받으면서 기존 유심이 자동 해지되는 절차입니다. 잃어버린 게 아니라면 재발급만 하시면 됩니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "COMPLETE",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "분실 신고는 즉시 이용을 정지하는 조치다.",
+    "재발급은 새 유심을 받으면서 기존 유심이 자동 해지되는 절차이며, 잃어버린 게 아니면 재발급만 하면 된다."
+   ]
+  },
+  {
+   "id": "REG-MIXED:0",
+   "category": "답할 수 있는 내용과 없는 내용",
+   "question": "유심 재발급 비용은 얼마고 배송비도 내야 하나요?",
+   "previousTurns": [],
+   "answer": "유심 재발급 비용은 7,700원입니다. 온라인으로 신청하신 경우에는 택배로 배송되며, 배송비는 별도로 발생하지 않습니다. 매장 방문 시에는 즉시 받으실 수 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "PARTIAL_ANSWER",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0001",
+     "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다."
+    },
+    {
+     "sourceId": "USIM-0073",
+     "answer": "인식 오류가 계속되면 재발급을 받으시는 게 좋습니다. 매장에서는 즉시 발급되고, 비용은 7,700원입니다."
+    },
+    {
+     "sourceId": "USIM-0077",
+     "answer": "매장을 방문하시면 즉시 재발급됩니다. 비용은 7,700원입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [
+    {
+     "questionPart": "유심 재발급 비용은 얼마고 배송비도 내야 하나요?",
+     "alternatives": [
+      {
+       "sourceId": "USIM-0001",
+       "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다."
+      },
+      {
+       "sourceId": "USIM-0009",
+       "answer": "온라인 신청 시 택배로 2~3 영업일이 걸립니다. 매장 방문은 즉시 발급이며 비용은 7,700원입니다."
+      }
+     ]
+    }
+   ],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "PARTIAL",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": [
+    "유심 재발급 비용은 7,700원이다."
+   ]
+  },
+  {
+   "id": "REG-NO_EVIDENCE:0",
+   "category": "근거 부족",
+   "question": "유심 재발급하면 택배비는 따로 내나요?",
+   "previousTurns": [],
+   "answer": "유심 재발급 비용은 7,700원으로 포함되어 있습니다.",
+   "messageType": "ANSWER",
+   "expectedBehavior": "ABSTAIN",
+   "deliveredSources": [
+    {
+     "sourceId": "USIM-0001",
+     "answer": "7,700원입니다. 매장에서 바로 받으실 수 있고, 온라인 신청 시 택배로 2~3 영업일 걸립니다."
+    },
+    {
+     "sourceId": "USIM-0029",
+     "answer": "온라인으로 재발급을 신청하시면 택배로 2~3 영업일 안에 받으실 수 있습니다. 비용은 7,700원입니다."
+    },
+    {
+     "sourceId": "USIM-0009",
+     "answer": "온라인 신청 시 택배로 2~3 영업일이 걸립니다. 매장 방문은 즉시 발급이며 비용은 7,700원입니다."
+    }
+   ],
+   "sourceProvenance": "captured_rag_input",
+   "referenceGroups": [],
+   "labels": {
+    "A": {
+     "grounding": "UNSUPPORTED",
+     "quality": "MISSED",
+     "abstention": "SHOULD_ABSTAIN"
+    }
+   },
+   "stratum": "UNSUPPORTED",
+   "requiredFacts": []
+  }
+ ]
+}

@@ -1,0 +1,1385 @@
+{
+ "review": "판정 갈린 답 사람 검토(2026-10-18)",
+ "page": "https://claude.ai/artifact/KCYBwizUWz2rj1XVKnRQDP",
+ "scope": "B는 2순위 판정 쟁점 52개 입력 전부, A는 2순위 69개 입력 중 20개 표본(시드 20261018)",
+ "key": "<입력 id>__<모델>__u<고유 답 번호>. capture-*.json.gz의 caseId '<입력 id>|<모델>|u<번호>'와 같다",
+ "verdicts": {
+  "CLAR-compound-docs-and-cost-t1-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-compound-docs-and-cost-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-compound-docs-and-cost-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-compound-docs-and-cost-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2
+   ]
+  },
+  "CLAR-compound-docs-and-cost-t1-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-compound-docs-and-cost-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "CLAR-dup-docs-after-lost-t2-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-dup-docs-after-lost-t2-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-dup-docs-after-lost-t2-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-dup-docs-after-lost-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-eopseoyo-t1-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-eopseoyo-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-eopseoyo-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-eopseoyo-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-hmm-twice-t2-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-hmm-twice-t2-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-hmm-twice-t2-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-hmm-twice-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-vague-twice-t2-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-vague-twice-t2-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-bill-vague-twice-t2-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-vague-twice-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2
+   ]
+  },
+  "CLAR-faq-bill-vague-twice-t2-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-bill-vague-twice-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "CLAR-faq-minor-no-t1-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-minor-no-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CLAR-faq-minor-no-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CLAR-faq-minor-no-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-acc-implicit-07-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-acc-implicit-07-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-acc-implicit-07-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-acc-implicit-07-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-blind-03-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-03-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-blind-03-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-03-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-blind-20-t2-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-blind-20-t2-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-blind-20-t2-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-20-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "CTX-blind-20-t2-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-20-t2-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "CTX-blind-22-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-blind-22-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-blind-22-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-22-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    3
+   ]
+  },
+  "CTX-blind-22-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-blind-22-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "CTX-followup-01-compact-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-followup-01-compact-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-followup-01-compact-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-followup-01-compact-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    3
+   ]
+  },
+  "CTX-followup-01-compact-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-followup-01-compact-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "CTX-followup-01-compact-t1-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-followup-01-compact-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-followup-05-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-followup-05-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "CTX-review-ordinal-01-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-review-ordinal-01-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-unseen-followup-5-t1-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-unseen-followup-5-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-unseen-implicit-1-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-unseen-implicit-1-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "CTX-unseen-independent-1-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-unseen-independent-1-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    3
+   ]
+  },
+  "CTX-unseen-independent-4-t1-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "CTX-unseen-independent-4-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "CTX-unseen-independent-4-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-unseen-independent-4-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "CTX-unseen-independent-4-t1-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "CTX-unseen-independent-4-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "EVAL-009__exaone__u0": {
+   "verdict": "pass",
+   "note": "묻는 것(어느 쪽이 빠른지)에 답함. '서류 하나 덜'은 부가 사실",
+   "inputId": "EVAL-009",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-025__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 '사용 패턴'을 원인으로 들고, 고객 사정을 추측해 단정",
+   "inputId": "EVAL-025",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-042__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-042",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-046__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 조언(CCTV 확인, Lost & Found, 추가 요금 방지)",
+   "inputId": "EVAL-046",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-049__exaone__u0": {
+   "verdict": "pass",
+   "note": "묻는 것(오래 걸리는지)에 답함. 위임장 언급은 없음(경계 사례)",
+   "inputId": "EVAL-049",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-049__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-049",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "EVAL-049__gptoss__u2": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-049",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "EVAL-052__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-052",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-056__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-056",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-056__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-056",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "EVAL-065__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 '다른 요인들로 인해 조정'",
+   "inputId": "EVAL-065",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-066__exaone__u0": {
+   "verdict": "pass",
+   "note": "'3영업일 안에 확인해 드립니다'(SERVICE-0014)가 결과 시점을 뒷받침",
+   "inputId": "EVAL-066",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-066__gptoss__u0": {
+   "verdict": "pass",
+   "note": "SERVICE-0014 문장 그대로",
+   "inputId": "EVAL-066",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    1,
+    3
+   ]
+  },
+  "EVAL-067__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-067",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "EVAL-072__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-072",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-072__gptoss__u0": {
+   "verdict": "pass",
+   "note": "'결과가 나올 때까지 기다려야'는 근거('결과가 나와야 개통')에서 바로 나옴",
+   "inputId": "EVAL-072",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "EVAL-072__gptoss__u1": {
+   "verdict": "pass",
+   "note": "위와 같음",
+   "inputId": "EVAL-072",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "EVAL-136__gptoss__u0": {
+   "verdict": "pass",
+   "note": "요금제 이름은 빠졌지만 묻는 데이터 양에 정확히 답함",
+   "inputId": "EVAL-136",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "EVAL-144__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-144",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "EVAL-146__exaone__u0": {
+   "verdict": "pass",
+   "note": "사실은 맞지만 '수수리' 오타가 있음",
+   "inputId": "EVAL-146",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "EVAL-149__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "EVAL-149",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "FLOW-CL-01-t1-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "FLOW-CL-01-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "FLOW-CL-01-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "FLOW-CL-01-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "FLOW-CL-01-t1-r0__gptoss__u1": {
+   "verdict": "fail",
+   "note": "",
+   "inputId": "FLOW-CL-01-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "FLOW-CL-01-t1-r0__gptoss__u2": {
+   "verdict": "pass",
+   "note": "",
+   "inputId": "FLOW-CL-01-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "FLOW-CL-04-t1-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "FLOW-CL-04-t1-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "FLOW-CL-04-t1-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "FLOW-CL-04-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "FLOW-CL-04-t1-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "FLOW-CL-04-t1-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "FLOW-CL-08-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "60일 직권 해지·2시간 재개는 넘긴 BILLING-0094에 있음",
+   "inputId": "FLOW-CL-08-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "FLOW-CL-08-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "FLOW-CL-08-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "FLOW-MT-03-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 효과 주장('출국 전에 신청하면 더욱 원활하게 이용')",
+   "inputId": "FLOW-MT-03-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "H-009__exaone__u0": {
+   "verdict": "pass",
+   "note": "소급 여부를 지어내지 않고 문의로 넘긴 보류",
+   "inputId": "H-009",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "H-010__gptoss__u1": {
+   "verdict": "fail",
+   "note": "답 없는 질문(현금처럼 쓸 수 있나)에 확인 불가라고 하지 않고 이월 규정만 말함",
+   "inputId": "H-010",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "H-116__exaone__u0": {
+   "verdict": "fail",
+   "note": "'언제까지 내야 하나'에 답하지도 보류하지도 않고 위약금 비율만 말함",
+   "inputId": "H-116",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "H-127__exaone__u0": {
+   "verdict": "fail",
+   "note": "'문자로 알려주나'에 답하지도 보류하지도 않고 확인 경로만 안내",
+   "inputId": "H-127",
+   "set": "A",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "HALLU-019__gptoss__u1": {
+   "verdict": "pass",
+   "note": "'현지 도착 후에도 신청 가능'에서 '며칠 전 제한 없음'이 바로 나옴",
+   "inputId": "HALLU-019",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "HALLU-019__gptoss__u2": {
+   "verdict": "pass",
+   "note": "현지 도착 후에도 신청 가능하다고 답함",
+   "inputId": "HALLU-019",
+   "set": "A",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "RU-002-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-002-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-010-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-010-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-010-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-010-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-065-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-065-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-065-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-065-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-093-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-093-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-116-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-116-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-132-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-132-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-140-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-140-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-140-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-140-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-141-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-141-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-143-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-143-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-143-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-143-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "RU-170-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-170-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-170-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-170-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-172-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-172-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-172-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-172-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-175-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "마지막 당부 문장은 인사말 수준(CTX-blind-03 엑사원 통과와 같은 기준)",
+   "inputId": "RU-175-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-175-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-175-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2
+   ]
+  },
+  "RU-175-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-175-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "RU-205-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-205-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-208-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "업무를 한정하지 않고 '매장·전화 모두 즉시, 속도 동일'이라고 단정. 넘긴 SUBSCRIBE-0127(가입은 매장이 빠름)과 어긋남",
+   "inputId": "RU-208-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-208-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "'해지' 기준으로 한정해 답함",
+   "inputId": "RU-208-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2
+   ]
+  },
+  "RU-208-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "'해지' 기준으로 한정해 답함",
+   "inputId": "RU-208-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "RU-212-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "비용을 물었는데 '명의변경은 수수료가 없다'를 빠뜨림",
+   "inputId": "RU-212-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-212-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-212-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-212-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-212-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "RU-212-t0-r0__gptoss__u2": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-212-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "RU-217-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "'요금 부담을 줄이려면 일시 정지'라는 근거 없는 권유. 해지는 이후 요금이 없어 오히려 반대",
+   "inputId": "RU-217-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-278-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 주장('폰 없이도 쉽게 정지 처리')",
+   "inputId": "RU-278-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-279-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "요금 목록에서 7일 기간권 39,000원을 빠뜨리고 '기간 요금제도 있다'고만 함",
+   "inputId": "RU-279-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-281-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-281-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-281-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-281-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-286-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "'한도 변경은 신청 즉시 적용'(BILLING-0053)이 낮출 때도 포함",
+   "inputId": "RU-286-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "RU-291-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-291-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-317-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-317-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-317-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-317-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-317-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-317-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2,
+    3
+   ]
+  },
+  "RU-325-t0-r1__exaone__u0": {
+   "verdict": "pass",
+   "note": "'자세한 절차는 고객센터 안내'는 안내 문구 수준",
+   "inputId": "RU-325-t0-r1",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-325-t0-r1__gptoss__u2": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-325-t0-r1",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    3
+   ]
+  },
+  "RU-326-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "첫 문장이 거절처럼 보이지만 25일·고객센터 상담 두 사실을 모두 전달",
+   "inputId": "RU-326-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-326-t0-r1__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-326-t0-r1",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-340-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-340-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-342-t0-r1__gptoss__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-342-t0-r1",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1
+   ]
+  },
+  "RU-342-t0-r1__gptoss__u1": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-342-t0-r1",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "RU-346-t0-r0__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-346-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-346-t0-r0__gptoss__u0": {
+   "verdict": "pass",
+   "note": "하루·7일 두 상품을 나열해 '며칠짜리까지'에 답함",
+   "inputId": "RU-346-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    1,
+    3
+   ]
+  },
+  "RU-346-t0-r0__gptoss__u1": {
+   "verdict": "pass",
+   "note": "하루·7일 두 상품을 나열해 '며칠짜리까지'에 답함",
+   "inputId": "RU-346-t0-r0",
+   "set": "B",
+   "model": "gptoss",
+   "runs": [
+    2
+   ]
+  },
+  "RU-352-t0-r1__exaone__u0": {
+   "verdict": "pass",
+   "note": "필수 사실을 전달하고 근거에 없는 말이 없음",
+   "inputId": "RU-352-t0-r1",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  },
+  "RU-363-t0-r0__exaone__u0": {
+   "verdict": "fail",
+   "note": "근거에 없는 주장('40G 요금제의 경우', '요금제에 따라 제한 속도가 다를 수 있음')",
+   "inputId": "RU-363-t0-r0",
+   "set": "B",
+   "model": "exaone",
+   "runs": [
+    1,
+    2,
+    3
+   ]
+  }
+ }
+}

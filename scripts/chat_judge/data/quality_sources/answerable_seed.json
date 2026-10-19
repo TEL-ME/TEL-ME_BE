@@ -1,0 +1,1497 @@
+[
+ {
+  "key": "A001",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0052"
+  ],
+  "faq": {
+   "slotId": "BILLING-0052",
+   "question": "발신 정지 이후 재개까지의 절차를 알려주세요.",
+   "answer": "미납 요금을 완납하면 2시간 이내에 재개됩니다. 완납하지 않으면 30일에 수신 정지, 60일에 직권 해지될 수 있습니다."
+  }
+ },
+ {
+  "key": "A002",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0032"
+  ],
+  "faq": {
+   "slotId": "BILLING-0032",
+   "question": "휴대폰으로 결제하는 거 한 달에 얼마까지 돼요",
+   "answer": "월 30만 원까지 됩니다."
+  }
+ },
+ {
+  "key": "A003",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0014"
+  ],
+  "faq": {
+   "slotId": "BILLING-0014",
+   "question": "청구서 수령 방법을 바꾸면 언제부터 적용되나요?",
+   "answer": "다음 달 청구분부터 적용됩니다."
+  }
+ },
+ {
+  "key": "A004",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0097"
+  ],
+  "faq": {
+   "slotId": "BILLING-0097",
+   "question": "두 번 낸 거 자식 계좌로 받을 수 있나요",
+   "answer": "안 됩니다. 본인 명의 계좌로만 됩니다."
+  }
+ },
+ {
+  "key": "A005",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0007",
+   "BILLING-0133"
+  ],
+  "faq": {
+   "slotId": "BILLING-0007",
+   "question": "우편 청구서는 돈 내야 해요?",
+   "answer": "네, 우편은 월 500원이 부과됩니다. 이메일과 모바일 알림은 무료입니다."
+  }
+ },
+ {
+  "key": "A006",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0147",
+   "BILLING-0154"
+  ],
+  "faq": {
+   "slotId": "BILLING-0147",
+   "question": "우편 청구서와 이메일 청구서의 비용 차이를 알려주세요.",
+   "answer": "우편은 월 500원, 이메일은 무료입니다."
+  }
+ },
+ {
+  "key": "A007",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0115"
+  ],
+  "faq": {
+   "slotId": "BILLING-0115",
+   "question": "청구서를 못 받았는데 발신이 정지됐습니다",
+   "answer": "정지는 납부 기한 후 15일 기준입니다. 완납하시면 2시간 이내에 재개됩니다."
+  }
+ },
+ {
+  "key": "A008",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0053"
+  ],
+  "faq": {
+   "slotId": "BILLING-0053",
+   "question": "소액결제 한도를 다시 낮추는 절차를 알려주세요.",
+   "answer": "한도 변경은 신청 즉시 적용됩니다. 기본 한도는 월 30만 원입니다."
+  }
+ },
+ {
+  "key": "A009",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0016",
+   "BILLING-0023",
+   "BILLING-0121",
+   "BILLING-0135"
+  ],
+  "faq": {
+   "slotId": "BILLING-0016",
+   "question": "청구서 발송일을 알려주세요.",
+   "answer": "전월 사용분 청구서는 매월 10일에 발송됩니다. 납부 기한은 매월 25일입니다."
+  }
+ },
+ {
+  "key": "A010",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0003",
+   "BILLING-0024",
+   "BILLING-0094"
+  ],
+  "faq": {
+   "slotId": "BILLING-0003",
+   "question": "요금 안 내면 며칠 뒤에 전화가 끊겨요?",
+   "answer": "납부 기한이 지나고 15일이 되면 발신이 정지됩니다. 30일이면 수신까지, 60일이면 직권 해지될 수 있습니다."
+  }
+ },
+ {
+  "key": "A011",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0020",
+   "BILLING-0139",
+   "BILLING-0146"
+  ],
+  "faq": {
+   "slotId": "BILLING-0020",
+   "question": "이중 납부 환불 대신 다음 달 요금 차감이 가능한가요?",
+   "answer": "네, 다음 달 요금에서 차감하는 방식도 선택할 수 있습니다. 환불은 본인 명의 계좌로 5영업일 이내입니다."
+  }
+ },
+ {
+  "key": "A012",
+  "category": "BILLING",
+  "goldGroup": [
+   "BILLING-0008",
+   "BILLING-0071",
+   "BILLING-0148"
+  ],
+  "faq": {
+   "slotId": "BILLING-0008",
+   "question": "요금제 바꾸면 그 달 요금은 어떻게 계산돼요?",
+   "answer": "변경 신청일 다음 날 00:00부터 새 요금제가 적용되고, 그 달 요금은 일할 계산됩니다."
+  }
+ },
+ {
+  "key": "A013",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0016"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0016",
+   "question": "분실 단말은 반품 규정이 적용되나요?",
+   "answer": "반품·교환은 개통 후 14일 이내, 미개봉 또는 미사용 상태, 1회에 한합니다. 분실 단말에는 적용되지 않습니다."
+  }
+ },
+ {
+  "key": "A014",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0028",
+   "DEVICE-0032"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0028",
+   "question": "단말 반품이나 교환은 어떻게 신청해요?",
+   "answer": "개통일로부터 14일 이내에 매장이나 고객센터로 신청하시면 됩니다. 미개봉이거나 사용 흔적이 없는 상태여야 하고, 반품·교환은 1회에 한해 가능합니다."
+  }
+ },
+ {
+  "key": "A015",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0028",
+   "DEVICE-0040"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0028",
+   "question": "단말 반품이나 교환은 어떻게 신청해요?",
+   "answer": "개통일로부터 14일 이내에 매장이나 고객센터로 신청하시면 됩니다. 미개봉이거나 사용 흔적이 없는 상태여야 하고, 반품·교환은 1회에 한해 가능합니다."
+  }
+ },
+ {
+  "key": "A016",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0012",
+   "DEVICE-0032",
+   "DEVICE-0056"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0012",
+   "question": "액정 불량 단말의 교환 가능 조건을 알려주세요.",
+   "answer": "개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태, 1회에 한해 가능합니다."
+  }
+ },
+ {
+  "key": "A017",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0013",
+   "DEVICE-0033"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0013",
+   "question": "침수로 새 단말을 할부 구매할 때 기간 옵션을 알려주세요.",
+   "answer": "24개월 또는 30개월 중 선택할 수 있습니다. 할부 수수료는 연 5.9%입니다."
+  }
+ },
+ {
+  "key": "A018",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0020",
+   "DEVICE-0084"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0020",
+   "question": "산 지 얼마 안 된 폰 바꿀 수 있나요",
+   "answer": "개통 후 14일 이내에 미개봉이거나 사용 흔적이 없는 상태라면 반품이나 교환이 가능합니다. 다만 1회만 가능합니다."
+  }
+ },
+ {
+  "key": "A019",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0119"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0119",
+   "question": "배터리 수리 시 보험 가입자와 미가입자의 부담 차이는 얼마나 되나요?",
+   "answer": "가입자는 수리비의 30%만 부담하고, 미가입자는 전액을 부담합니다."
+  }
+ },
+ {
+  "key": "A020",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0096"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0096",
+   "question": "분실 신고 후 찾은 새 폰을 반품하려는데 15일째입니다",
+   "answer": "반품은 개통 후 14일 이내에만 가능합니다. 기한이 지나면 반품이 어렵습니다."
+  }
+ },
+ {
+  "key": "A021",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0116"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0116",
+   "question": "반품과 교환은 조건이 서로 다른가요?",
+   "answer": "반품과 교환 모두 개통 후 14일 이내, 미개봉이거나 사용 흔적이 없는 상태에서 1회에 한해 적용되는 동일한 조건입니다."
+  }
+ },
+ {
+  "key": "A022",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0006",
+   "DEVICE-0110"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0006",
+   "question": "폰을 잃어버려서 새로 사려는데 기기변경 조건이 뭐예요?",
+   "answer": "기기 변경은 개통 후 6개월이 지나야 가능합니다. 기존 할부금은 완납하거나 새 할부에 승계해야 합니다."
+  }
+ },
+ {
+  "key": "A023",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0048"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0048",
+   "question": "물에 빠뜨린 새 폰 교환하려면 어떻게 해요",
+   "answer": "개통하고 14일 안에 안 쓴 상태여야 바꿔드립니다. 침수됐으면 수리를 받으셔야 합니다."
+  }
+ },
+ {
+  "key": "A024",
+  "category": "DEVICE",
+  "goldGroup": [
+   "DEVICE-0025"
+  ],
+  "faq": {
+   "slotId": "DEVICE-0025",
+   "question": "할부하면 이자 붙어요",
+   "answer": "네, 연 5.9% 붙습니다."
+  }
+ },
+ {
+  "key": "A025",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0021"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0021",
+   "question": "신용 심사에서 떨어지면 명의변경이 아예 안 되나요?",
+   "answer": "네, 심사를 통과하지 못하면 명의변경이 진행되지 않습니다. 통과하신 뒤에 다시 신청하실 수 있습니다."
+  }
+ },
+ {
+  "key": "A026",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0007",
+   "NAME_CHANGE-0025"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0007",
+   "question": "명의변경 시 필요한 서류를 정리해서 알려주세요.",
+   "answer": "양도인과 양수인의 신분증이 각각 필요하며, 원칙적으로 두 분이 함께 매장을 방문하셔야 합니다. 대리인이 방문하는 경우에는 위임장이 필요합니다."
+  }
+ },
+ {
+  "key": "A027",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0086"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0014",
+   "question": "명의 바꾸는 데 오래 걸려요?",
+   "answer": "매장에서 30분 이내에 처리됩니다. 수수료는 없습니다."
+  }
+ },
+ {
+  "key": "A028",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0063"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0063",
+   "question": "명의변경 신청했는데 신용 심사에서 거절됐습니다",
+   "answer": "할부금이 남아 있는 경우 양수인의 신용 심사를 통과해야 명의변경이 가능합니다. 심사 결과에 따라 진행이 어려울 수 있습니다."
+  }
+ },
+ {
+  "key": "A029",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0038"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0038",
+   "question": "미납 요금 있어도 명의변경 될까요?",
+   "answer": "미납 요금이 있으면 완납하셔야 명의변경이 진행됩니다."
+  }
+ },
+ {
+  "key": "A030",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0014",
+   "NAME_CHANGE-0086"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0014",
+   "question": "명의 바꾸는 데 오래 걸려요?",
+   "answer": "매장에서 30분 이내에 처리됩니다. 수수료는 없습니다."
+  }
+ },
+ {
+  "key": "A031",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0058"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0058",
+   "question": "퇴사했는데 회사 담당자가 매장에 같이 못 온대요",
+   "answer": "양도인 측 위임장을 받아 오시면 대리로 진행할 수 있습니다. 양도인 신분증 사본과 본인 신분증을 지참해 주세요."
+  }
+ },
+ {
+  "key": "A032",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0057"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0057",
+   "question": "형 폰을 제 명의로 바꾸려는데 심사에서 막혔대요",
+   "answer": "할부금이 남아 있으면 양수인의 신용 심사를 통과해야 합니다. 심사 결과에 따라 진행이 어려울 수 있으니 할부금을 정리한 뒤 다시 시도해 보세요."
+  }
+ },
+ {
+  "key": "A033",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0039"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0039",
+   "question": "핸드폰 값 남았는데 이름 바꿀 수 있어요?",
+   "answer": "가능합니다. 다만 양수인이 신용 심사를 통과해야 진행됩니다."
+  }
+ },
+ {
+  "key": "A034",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0061"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0061",
+   "question": "아버지 신분증만 가지고 갔는데 처리가 안 됐습니다",
+   "answer": "명의변경은 양도인과 양수인의 신분증이 모두 필요하고 두 분이 함께 방문하셔야 합니다. 신분증 하나만으로는 처리되지 않습니다."
+  }
+ },
+ {
+  "key": "A035",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0005",
+   "NAME_CHANGE-0023",
+   "NAME_CHANGE-0032"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0005",
+   "question": "엄마 폰 제 이름으로 바꾸는 데 얼마나 걸려요?",
+   "answer": "매장에서 30분 이내에 처리됩니다. 수수료는 없고, 미납 요금이 있으면 먼저 완납하셔야 합니다."
+  }
+ },
+ {
+  "key": "A036",
+  "category": "NAME_CHANGE",
+  "goldGroup": [
+   "NAME_CHANGE-0008"
+  ],
+  "faq": {
+   "slotId": "NAME_CHANGE-0008",
+   "question": "미성년 자녀 회선을 성인이 된 시점에 본인 명의로 바꿀 때 소요 시간과 비용을 알려주세요.",
+   "answer": "매장 방문 시 30분 이내에 처리되며 수수료는 없습니다. 미납 요금이 있으면 완납 후 진행됩니다."
+  }
+ },
+ {
+  "key": "A037",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0081"
+  ],
+  "faq": {
+   "slotId": "PLAN-0081",
+   "question": "데이터 조금 쓰는데 싼 거 있나요",
+   "answer": "알뜰 요금제가 2가지 있습니다. 세이브랑 미니예요."
+  }
+ },
+ {
+  "key": "A038",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0036"
+  ],
+  "faq": {
+   "slotId": "PLAN-0036",
+   "question": "나이 바뀌어서 요금제 바꾸려는데 어떤 게 있는지 알려주세요.",
+   "answer": "5G 4종(라이트·스탠다드·프리미엄·언리미티드), LTE 3종(베이직·플러스·맥스), 알뜰 2종(세이브·미니)이 있습니다."
+  }
+ },
+ {
+  "key": "A039",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0047",
+   "PLAN-0107"
+  ],
+  "faq": {
+   "slotId": "PLAN-0047",
+   "question": "가족 회선의 속도 제한 상태를 확인하는 절차를 알려주세요.",
+   "answer": "앱에서 회선별 잔여 데이터를 확인합니다. 기본 데이터를 다 쓴 회선은 400kbps로 제한된 상태입니다."
+  }
+ },
+ {
+  "key": "A040",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0066"
+  ],
+  "faq": {
+   "slotId": "PLAN-0066",
+   "question": "알뜰 요금제로 5G를 쓸 수 있어요?",
+   "answer": "알뜰 요금제는 세이브·미니 2종이고, 5G 요금제는 별도로 4종이 있습니다."
+  }
+ },
+ {
+  "key": "A041",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0003"
+  ],
+  "faq": {
+   "slotId": "PLAN-0003",
+   "question": "가족한테 데이터 한 번에 얼마까지 보낼 수 있어요?",
+   "answer": "한 번에 최대 2GB, 한 달에 2회까지 보낼 수 있습니다."
+  }
+ },
+ {
+  "key": "A042",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0091",
+   "PLAN-0106"
+  ],
+  "faq": {
+   "slotId": "PLAN-0091",
+   "question": "요금제가 너무 많아서 뭐가 뭔지 모르겠어요",
+   "answer": "크게 세 갈래로 보시면 됩니다. 5G 요금제 4종(라이트·스탠다드·프리미엄·언리미티드), LTE 요금제 3종(베이직·플러스·맥스), 알뜰 요금제 2종(세이브·미니)을 운영하고 있습니다."
+  }
+ },
+ {
+  "key": "A043",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0127"
+  ],
+  "faq": {
+   "slotId": "PLAN-0127",
+   "question": "가족 중 언리미티드 쓰는 사람이랑 아닌 사람이랑 뭐가 달라요?",
+   "answer": "언리미티드는 속도 제한이 없고, 나머지는 기본 데이터 소진 후 400kbps로 제한됩니다."
+  }
+ },
+ {
+  "key": "A044",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0058",
+   "PLAN-0083"
+  ],
+  "faq": {
+   "slotId": "PLAN-0058",
+   "question": "남은 데이터 손주한테 어떻게 줘요",
+   "answer": "앱에서 보내시면 됩니다. 한 달에 2번, 한 번에 2GB까지 됩니다."
+  }
+ },
+ {
+  "key": "A045",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0140",
+   "PLAN-0145"
+  ],
+  "faq": {
+   "slotId": "PLAN-0140",
+   "question": "나이 제한 없는 요금제 중 가장 저렴한 것과 가장 비싼 것을 비교해 주세요.",
+   "answer": "가장 저렴한 알뜰 미니는 15,000원에 1.5GB, 가장 비싼 5G 언리미티드는 105,000원에 무제한입니다."
+  }
+ },
+ {
+  "key": "A046",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0026"
+  ],
+  "faq": {
+   "slotId": "PLAN-0026",
+   "question": "알뜰 요금제라는 게 뭐예요",
+   "answer": "세이브랑 미니, 두 가지가 있는 저렴한 요금제입니다."
+  }
+ },
+ {
+  "key": "A047",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0136"
+  ],
+  "faq": {
+   "slotId": "PLAN-0136",
+   "question": "연령 제한 요금제와 일반 라인업의 종류 수 차이를 알려주세요.",
+   "answer": "일반 라인업은 5G 4종, LTE 3종, 알뜰 2종입니다. 연령 제한 요금제는 별도 정책으로 운영됩니다."
+  }
+ },
+ {
+  "key": "A048",
+  "category": "PLAN",
+  "goldGroup": [
+   "PLAN-0065",
+   "PLAN-0115"
+  ],
+  "faq": {
+   "slotId": "PLAN-0065",
+   "question": "제일 싼 요금제로 가입할 수 있을까요?",
+   "answer": "네, 알뜰 미니 요금제가 월 15,000원으로 가장 저렴하며 기본 데이터 1.5GB가 제공됩니다."
+  }
+ },
+ {
+  "key": "A049",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0073",
+   "PORTING-0081"
+  ],
+  "faq": {
+   "slotId": "PORTING-0073",
+   "question": "번호이동 신청한 지 3시간 넘었는데 아직 안 됩니다",
+   "answer": "평균 처리 시간은 2시간이지만 최대 24시간까지 걸릴 수 있습니다. 조금 더 기다려 주시고, 24시간이 지나도 안 되면 고객센터로 문의해 주세요."
+  }
+ },
+ {
+  "key": "A050",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0091"
+  ],
+  "faq": {
+   "slotId": "PORTING-0091",
+   "question": "새 폰 샀는데 번호를 못 옮긴대요",
+   "answer": "개통한 지 3개월이 안 돼서 그렇습니다. 3개월 지나면 됩니다."
+  }
+ },
+ {
+  "key": "A051",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0073",
+   "PORTING-0081"
+  ],
+  "faq": {
+   "slotId": "PORTING-0073",
+   "question": "번호이동 신청한 지 3시간 넘었는데 아직 안 됩니다",
+   "answer": "평균 처리 시간은 2시간이지만 최대 24시간까지 걸릴 수 있습니다. 조금 더 기다려 주시고, 24시간이 지나도 안 되면 고객센터로 문의해 주세요."
+  }
+ },
+ {
+  "key": "A052",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0034",
+   "PORTING-0054",
+   "PORTING-0058",
+   "PORTING-0074"
+  ],
+  "faq": {
+   "slotId": "PORTING-0034",
+   "question": "미납 요금이 있을 때 번호이동 진행 순서를 알려주세요.",
+   "answer": "먼저 기존 통신사 미납 요금을 완납한 뒤, 본인 신분증을 지참해 신청하시면 됩니다."
+  }
+ },
+ {
+  "key": "A053",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0005",
+   "PORTING-0085"
+  ],
+  "faq": {
+   "slotId": "PORTING-0005",
+   "question": "번호이동 처리가 안 되는 시간이 있어요?",
+   "answer": "네, 20:00 이후부터 다음 날 09:00 전까지는 처리되지 않습니다. 처리 시간 안에는 평균 2시간 이내에 완료됩니다."
+  }
+ },
+ {
+  "key": "A054",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0053",
+   "PORTING-0057"
+  ],
+  "faq": {
+   "slotId": "PORTING-0053",
+   "question": "밤에 신청해도 다음 날 아침에 바로 될까요?",
+   "answer": "처리는 09:00부터 시작됩니다. 처리 시작 후 평균 2시간 이내에 완료됩니다."
+  }
+ },
+ {
+  "key": "A055",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0097"
+  ],
+  "faq": {
+   "slotId": "PORTING-0097",
+   "question": "아침에 신청하는 거랑 저녁에 신청하는 거랑 뭐가 빨라요?",
+   "answer": "처리는 09:00부터 20:00까지라 아침 신청이 당일에 끝날 가능성이 큽니다. 평균 2시간 이내 처리입니다."
+  }
+ },
+ {
+  "key": "A056",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0058"
+  ],
+  "faq": {
+   "slotId": "PORTING-0058",
+   "question": "기존 통신사에 미납금이 있어도 신청할 수 있나요?",
+   "answer": "미납 요금이 있으면 번호이동이 진행되지 않습니다. 완납 후 신청하셔야 합니다."
+  }
+ },
+ {
+  "key": "A057",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0071"
+  ],
+  "faq": {
+   "slotId": "PORTING-0071",
+   "question": "개통 두 달인데 되나요",
+   "answer": "안 됩니다. 3개월이 지나야 됩니다."
+  }
+ },
+ {
+  "key": "A058",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0044"
+  ],
+  "faq": {
+   "slotId": "PORTING-0044",
+   "question": "옮긴 거 무르려면 어떻게 해요",
+   "answer": "14일 안에 고객센터나 매장에 말씀하시면 됩니다. 원래 통신사로 돌아갑니다."
+  }
+ },
+ {
+  "key": "A059",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0012",
+   "PORTING-0060"
+  ],
+  "faq": {
+   "slotId": "PORTING-0012",
+   "question": "번호이동 철회 시 회선은 어떻게 처리되나요?",
+   "answer": "원래 통신사로 자동 복원됩니다. 철회는 개통 후 14일 이내에만 가능합니다."
+  }
+ },
+ {
+  "key": "A060",
+  "category": "PORTING",
+  "goldGroup": [
+   "PORTING-0074",
+   "PORTING-0078"
+  ],
+  "faq": {
+   "slotId": "PORTING-0074",
+   "question": "번호이동 신청했는데 미납 요금 때문에 막혔대요",
+   "answer": "기존 통신사 미납 요금을 완납하신 뒤 다시 신청해 주세요. 신청 시에는 본인 신분증이 필요합니다."
+  }
+ },
+ {
+  "key": "A061",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0014",
+   "ROAMING-0034",
+   "ROAMING-0069"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0014",
+   "question": "워치도 로밍 되나요",
+   "answer": "워치는 휴대폰과 별개 회선이라 로밍을 따로 신청하셔야 합니다."
+  }
+ },
+ {
+  "key": "A062",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0077"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0077",
+   "question": "집에서 신청하는 거랑 공항에서 신청하는 거랑 달라요",
+   "answer": "똑같이 1시간 안에 됩니다. 집에서 미리 하시는 게 편합니다."
+  }
+ },
+ {
+  "key": "A063",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0062"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0062",
+   "question": "신청했는데 아직 안 돼요",
+   "answer": "신청하면 1시간 안에 됩니다. 조금만 기다려 주세요."
+  }
+ },
+ {
+  "key": "A064",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0046"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0046",
+   "question": "일주일 여행인데 무제한으로 할 수 있나요",
+   "answer": "네, 데이터 무제한은 하루 12,100원입니다. 일주일이면 7일 기간권 39,000원이 더 쌉니다."
+  }
+ },
+ {
+  "key": "A065",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0045"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0045",
+   "question": "도착 직후 바로 데이터를 쓸 수 있나요?",
+   "answer": "데이터 로밍을 켜면 3~5분 안에 현지 망에 연결됩니다. 출국 전에 가입 상태를 앱에서 확인해 두시면 됩니다."
+  }
+ },
+ {
+  "key": "A066",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0037"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0037",
+   "question": "출장 당일 아침에 신청해도 될까요?",
+   "answer": "가능합니다. 신청 후 1시간 이내에 적용되니 출국 시간에 여유를 두고 신청해 주세요."
+  }
+ },
+ {
+  "key": "A067",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0018"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0018",
+   "question": "로밍 차단 풀려면 뭐 해야 돼요",
+   "answer": "본인 인증을 하시면 됩니다."
+  }
+ },
+ {
+  "key": "A068",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0006"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0006",
+   "question": "7일 로밍권은 얼마예요?",
+   "answer": "7일 기간권은 39,000원입니다."
+  }
+ },
+ {
+  "key": "A069",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0051"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0051",
+   "question": "로밍 요금이 얼마나 나올지 걱정돼요",
+   "answer": "일 단위는 9,900원, 7일 기간권은 39,000원, 무제한은 일 12,100원입니다. 체류 기간에 맞는 요금제를 고르시면 예상 요금을 미리 아실 수 있습니다."
+  }
+ },
+ {
+  "key": "A070",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0031"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0031",
+   "question": "오래 나가 있을 건데 로밍은 뭘로 해요",
+   "answer": "일주일씩 쓰시면 7일 기간권 39,000원이 있습니다. 하루짜리는 9,900원입니다."
+  }
+ },
+ {
+  "key": "A071",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0011"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0011",
+   "question": "데이터 무제한 로밍 요금이 어떻게 되나요?",
+   "answer": "데이터 무제한 로밍은 하루 12,100원입니다."
+  }
+ },
+ {
+  "key": "A072",
+  "category": "ROAMING",
+  "goldGroup": [
+   "ROAMING-0044"
+  ],
+  "faq": {
+   "slotId": "ROAMING-0044",
+   "question": "듀얼번호를 쓰면 요금이 추가되나요?",
+   "answer": "네, 듀얼번호는 월 3,300원이 추가됩니다."
+  }
+ },
+ {
+  "key": "A073",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0036"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0036",
+   "question": "부가서비스를 가입한 당일에 해지해도 그 달 요금이 나오나요?",
+   "answer": "네, 월 이용료는 일할 계산되지 않아 가입 당일 해지하셔도 그 달 요금은 전액 청구됩니다."
+  }
+ },
+ {
+  "key": "A074",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0031"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0031",
+   "question": "부가서비스 해지하면 그 달 요금은 안 나가나요?",
+   "answer": "해지를 신청하셔도 해당 월 말일까지는 이용하실 수 있고, 월 이용료는 일할 계산되지 않아 그 달 요금은 그대로 청구됩니다. 가입은 신청 즉시 적용됩니다."
+  }
+ },
+ {
+  "key": "A075",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0032"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0032",
+   "question": "올해 요금을 많이 내면 바로 등급이 올라갈 수 있나요?",
+   "answer": "바로 반영되지는 않습니다. 등급은 직전 1년 납부액을 기준으로 매년 1월에 한 번 갱신됩니다."
+  }
+ },
+ {
+  "key": "A076",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0052"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0052",
+   "question": "멤버십 등급이 왜 바뀌었어요",
+   "answer": "1년치 납부액을 기준으로 매년 1월에 등급이 다시 매겨집니다. 그래서 바뀔 수 있습니다."
+  }
+ },
+ {
+  "key": "A077",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0004",
+   "SERVICE-0029"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0004",
+   "question": "제 명의로 누가 개통한 것 같아요. 신고하면 어떻게 되나요?",
+   "answer": "신고 접수 후 3영업일 이내에 조사가 진행됩니다. 도용이 확인되면 해당 요금은 전액 취소됩니다."
+  }
+ },
+ {
+  "key": "A078",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0006"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0006",
+   "question": "부가서비스는 가입하면 언제부터 쓸 수 있나요?",
+   "answer": "신청 즉시 적용됩니다."
+  }
+ },
+ {
+  "key": "A079",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0003",
+   "SERVICE-0013",
+   "SERVICE-0023"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0003",
+   "question": "매장 문 여는 시간이 몇 시예요?",
+   "answer": "평일과 토요일 모두 10:00에 엽니다. 평일은 19:00, 토요일은 17:00에 닫고 일요일과 공휴일은 쉽니다."
+  }
+ },
+ {
+  "key": "A080",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0051"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0051",
+   "question": "부가서비스 해지했는데 요금이 또 나왔어요",
+   "answer": "해지한 달의 월 이용료는 일할 계산되지 않아 그대로 청구됩니다. 다음 달부터는 나오지 않습니다."
+  }
+ },
+ {
+  "key": "A081",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0034"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0034",
+   "question": "신고하면 요금을 다 돌려받을 수 있나요?",
+   "answer": "조사 결과 명의도용이 확인되면 해당 요금은 전액 취소됩니다."
+  }
+ },
+ {
+  "key": "A082",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0065"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0065",
+   "question": "홈페이지로 받는 거랑 매장에서 받는 거랑 증명서가 달라요",
+   "answer": "홈페이지에서 신청하시면 즉시 무료로 발급됩니다. 최근 3년분까지 가능합니다."
+  }
+ },
+ {
+  "key": "A083",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0055"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0055",
+   "question": "증명서 종류마다 발급 방법이 달라요?",
+   "answer": "가입사실확인서, 요금납부확인서, 해지확인서 세 종류 모두 홈페이지에서 즉시 무료로 발급되어 방법은 같습니다."
+  }
+ },
+ {
+  "key": "A084",
+  "category": "SERVICE",
+  "goldGroup": [
+   "SERVICE-0035",
+   "SERVICE-0040"
+  ],
+  "faq": {
+   "slotId": "SERVICE-0035",
+   "question": "해지한 지 2년 된 회선도 증명서 발급되나요?",
+   "answer": "가능합니다. 해지일로부터 최근 3년분까지는 발급받으실 수 있습니다."
+  }
+ },
+ {
+  "key": "A085",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0110"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0110",
+   "question": "세컨드폰을 제 명의로 하는 거랑 애 명의로 하는 거랑 서류가 달라요?",
+   "answer": "본인 명의는 신분증만 있으면 되지만, 미성년 자녀 명의는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다."
+  }
+ },
+ {
+  "key": "A086",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0079"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0079",
+   "question": "회사 폰 오늘 바로 되나요",
+   "answer": "매장에서 하시면 30분이면 됩니다."
+  }
+ },
+ {
+  "key": "A087",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0013"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0013",
+   "question": "외국인 가입 시 여권 외에 필요한 서류를 알려주세요.",
+   "answer": "외국인등록증과 여권을 함께 지참하셔야 합니다."
+  }
+ },
+ {
+  "key": "A088",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0088",
+   "SUBSCRIBE-0096"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0088",
+   "question": "외국인인데 회선을 추가하려니 한도라고 해요",
+   "answer": "성인은 1인당 최대 5회선까지입니다. 이미 5회선이면 추가 개통이 어렵습니다."
+  }
+ },
+ {
+  "key": "A089",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0123",
+   "SUBSCRIBE-0127"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0123",
+   "question": "매장이랑 인터넷 중 어디가 빨리 되나요",
+   "answer": "매장은 30분이면 됩니다. 인터넷은 다음 날 되니 매장이 더 빠릅니다."
+  }
+ },
+ {
+  "key": "A090",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0127"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0127",
+   "question": "아들 폰 매장이 빨라요 인터넷이 빨라요",
+   "answer": "매장이 빠릅니다. 30분이면 됩니다. 인터넷은 다음 날 됩니다."
+  }
+ },
+ {
+  "key": "A091",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0001",
+   "SUBSCRIBE-0109"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0001",
+   "question": "폰 처음 만들 때 뭐 가져가야 해요?",
+   "answer": "본인 명의 신분증이면 주민등록증, 운전면허증, 여권 중 아무거나 가져오시면 됩니다. 외국인이시면 외국인등록증과 여권을 함께 지참하셔야 합니다."
+  }
+ },
+ {
+  "key": "A092",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0051"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0051",
+   "question": "처음 만드는 건데 매장 가면 바로 돼요",
+   "answer": "네, 30분 안에 됩니다."
+  }
+ },
+ {
+  "key": "A093",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0112"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0112",
+   "question": "애 명의 회선이랑 제 명의 회선이랑 한도가 달라요?",
+   "answer": "성인은 1인당 최대 5회선입니다. 법인 명의는 별도 심사로 정해집니다."
+  }
+ },
+ {
+  "key": "A094",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0096"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0096",
+   "question": "첫 개통인데 회선 한도 초과라고 나옵니다",
+   "answer": "성인은 1인당 최대 5회선입니다. 본인 명의로 이미 개통된 회선이 있는지 확인해 보세요."
+  }
+ },
+ {
+  "key": "A095",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0122"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0122",
+   "question": "자녀 명의와 부모 명의 중 어느 쪽으로 개통하는 게 서류가 간단한가요?",
+   "answer": "부모 본인 명의가 신분증 하나로 끝나 간단합니다. 자녀 명의는 법정대리인 동의서, 가족관계증명서, 법정대리인 신분증이 필요합니다."
+  }
+ },
+ {
+  "key": "A096",
+  "category": "SUBSCRIBE",
+  "goldGroup": [
+   "SUBSCRIBE-0033"
+  ],
+  "faq": {
+   "slotId": "SUBSCRIBE-0033",
+   "question": "외국인 친구가 개통하려면 서류를 어떻게 준비해요?",
+   "answer": "외국인등록증과 여권을 함께 챙겨 매장을 방문하면 됩니다."
+  }
+ },
+ {
+  "key": "A097",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0084"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0084",
+   "question": "30일 정지가 끝났는데 자동으로 다시 정지되지 않습니다",
+   "answer": "1회 정지는 최대 30일이라 종료 후 다시 신청하셔야 합니다. 연간 90일 한도 안에서 가능합니다."
+  }
+ },
+ {
+  "key": "A098",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0058"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0058",
+   "question": "11개월째에 해지하면 위약금을 다 물어야 하나요?",
+   "answer": "네, 12개월 미만이라 할인 반환금의 100%를 반환하셔야 합니다."
+  }
+ },
+ {
+  "key": "A099",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0095"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0095",
+   "question": "한 번에 내는 거랑 나눠 내는 거랑 뭐가 더 나아요?",
+   "answer": "일시 납부는 그 자리에서 정리가 끝나고, 할부 유지는 기존 일정대로 계속 나눠 내실 수 있습니다. 편하신 쪽으로 선택하시면 됩니다."
+  }
+ },
+ {
+  "key": "A100",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0112"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0112",
+   "question": "오래 안 쓰면 정지가 나아요 해지가 나아요",
+   "answer": "번호 남기려면 정지가 낫습니다. 기본료 절반만 내고 30일씩, 일 년에 90일까지 됩니다."
+  }
+ },
+ {
+  "key": "A101",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0009",
+   "TERMINATE-0025"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0009",
+   "question": "장기 해외 체류로 해지할 때 신청 채널과 처리 시점을 알려주세요.",
+   "answer": "매장, 고객센터, 홈페이지 어디서든 신청할 수 있고 신청 즉시 해지됩니다. 해지월 요금은 일할 계산됩니다."
+  }
+ },
+ {
+  "key": "A102",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0025",
+   "TERMINATE-0033"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0025",
+   "question": "해지 신청 절차를 알려주세요.",
+   "answer": "매장, 고객센터, 홈페이지 중 편하신 경로로 신청하시면 즉시 해지 처리됩니다. 해지한 달의 요금은 일할 계산되어 청구됩니다."
+  }
+ },
+ {
+  "key": "A103",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0004",
+   "TERMINATE-0020"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0004",
+   "question": "한동안 안 쓸 건데 정지시킬 수 있어요?",
+   "answer": "일시 정지는 연간 최대 90일, 1회 최대 30일까지 가능합니다. 정지 기간에는 기본료의 50%가 부과됩니다."
+  }
+ },
+ {
+  "key": "A104",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0049"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0049",
+   "question": "해외 나가 있는 동안 홈페이지로 해지할 수 있을까요?",
+   "answer": "네, 홈페이지에서 신청하시면 즉시 해지됩니다."
+  }
+ },
+ {
+  "key": "A105",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0047"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0047",
+   "question": "안 쓰는 폰 해지할 때 할부 남은 건 어떻게 해요",
+   "answer": "한 번에 내시면 됩니다. 원하시면 해지 뒤에도 그대로 나눠 내실 수 있습니다."
+  }
+ },
+ {
+  "key": "A106",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0071"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0071",
+   "question": "군대 가는 아들 폰 해지하면 할부 계속 나눠 낼 수 있나요",
+   "answer": "네, 원하시면 그대로 나눠 내실 수 있습니다."
+  }
+ },
+ {
+  "key": "A107",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0001"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0001",
+   "question": "번호 해지는 어떻게 해요?",
+   "answer": "매장 방문, 고객센터 전화, 홈페이지 신청 중 편하신 방법으로 하시면 됩니다. 신청 즉시 해지되고 요금은 일할 계산됩니다."
+  }
+ },
+ {
+  "key": "A108",
+  "category": "TERMINATE",
+  "goldGroup": [
+   "TERMINATE-0096",
+   "TERMINATE-0100"
+  ],
+  "faq": {
+   "slotId": "TERMINATE-0096",
+   "question": "정지하는 거랑 아예 해지하는 거랑 뭐가 더 나아요?",
+   "answer": "일시 정지는 기본료의 50%만 내고 번호를 유지할 수 있습니다. 해지는 요금이 아예 안 나가지만 번호와 계약이 없어집니다."
+  }
+ },
+ {
+  "key": "A109",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0018"
+  ],
+  "faq": {
+   "slotId": "USIM-0018",
+   "question": "유심 받을 때 신분증 꼭 있어야 해요",
+   "answer": "네, 본인 신분증이 있어야 합니다."
+  }
+ },
+ {
+  "key": "A110",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0060"
+  ],
+  "faq": {
+   "slotId": "USIM-0060",
+   "question": "해외에서 홈페이지로 분실 신고가 가능한가요?",
+   "answer": "네, 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+  }
+ },
+ {
+  "key": "A111",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0012"
+  ],
+  "faq": {
+   "slotId": "USIM-0012",
+   "question": "유심 분실 신고는 어디로 하나요?",
+   "answer": "고객센터나 홈페이지에서 신고하시면 즉시 이용 정지됩니다."
+  }
+ },
+ {
+  "key": "A112",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0033"
+  ],
+  "faq": {
+   "slotId": "USIM-0033",
+   "question": "인식이 안 되는 유심을 재발급하는 절차를 알려주세요.",
+   "answer": "매장에 신분증을 지참하고 방문하시면 즉시 발급됩니다. 온라인 신청은 택배로 2~3 영업일이 걸리며 비용은 7,700원입니다."
+  }
+ },
+ {
+  "key": "A113",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0037",
+   "USIM-0077"
+  ],
+  "faq": {
+   "slotId": "USIM-0037",
+   "question": "파손된 유심을 당일에 교체하려면 어떻게 하나요?",
+   "answer": "매장을 방문하시면 즉시 발급됩니다. 비용은 7,700원입니다."
+  }
+ },
+ {
+  "key": "A114",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0027",
+   "USIM-0031",
+   "USIM-0035",
+   "USIM-0039"
+  ],
+  "faq": {
+   "slotId": "USIM-0027",
+   "question": "유심이 깨져서 eSIM으로 바꾸려면 어떻게 해요?",
+   "answer": "eSIM을 지원하는 단말인지 먼저 확인하시고, 매장이나 온라인에서 발급을 신청하시면 됩니다. 비용은 2,750원입니다."
+  }
+ },
+ {
+  "key": "A115",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0030"
+  ],
+  "faq": {
+   "slotId": "USIM-0030",
+   "question": "해외에서 부모님이 대신 유심을 받아 보내려면 뭘 준비해야 해요?",
+   "answer": "대리인 방문이라 위임장, 대리인 신분증, 가입자 신분증 사본을 준비하셔야 합니다."
+  }
+ },
+ {
+  "key": "A116",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0072"
+  ],
+  "faq": {
+   "slotId": "USIM-0072",
+   "question": "유심 깨졌는데 신고해야 하나요",
+   "answer": "깨진 건 신고 안 하셔도 됩니다. 새로 받으시면 예전 건 자동으로 없어집니다."
+  }
+ },
+ {
+  "key": "A117",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0106"
+  ],
+  "faq": {
+   "slotId": "USIM-0106",
+   "question": "분실 재발급에서 본인 방문과 대리인 방문은 서류가 얼마나 다른가요?",
+   "answer": "본인은 신분증 하나, 대리인은 위임장·대리인 신분증·가입자 신분증 사본 세 가지입니다."
+  }
+ },
+ {
+  "key": "A118",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0112"
+  ],
+  "faq": {
+   "slotId": "USIM-0112",
+   "question": "깨진 유심은 신고를 해요 새로 받아요",
+   "answer": "새로 받으시면 됩니다. 신고는 잃어버렸을 때 하는 겁니다."
+  }
+ },
+ {
+  "key": "A119",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0016",
+   "USIM-0024"
+  ],
+  "faq": {
+   "slotId": "USIM-0016",
+   "question": "분실 신고 후 재발급하면 기존 유심은 자동 해지되나요?",
+   "answer": "네, 새 유심을 재발급받으면 기존 유심은 자동으로 해지됩니다."
+  }
+ },
+ {
+  "key": "A120",
+  "category": "USIM",
+  "goldGroup": [
+   "USIM-0114"
+  ],
+  "faq": {
+   "slotId": "USIM-0114",
+   "question": "내가 가는 거랑 자식 보내는 거랑 서류가 달라요",
+   "answer": "제가 가시면 신분증만 있으면 됩니다. 자식을 보내면 위임장이랑 사본까지 챙겨야 합니다."
+  }
+ }
+]

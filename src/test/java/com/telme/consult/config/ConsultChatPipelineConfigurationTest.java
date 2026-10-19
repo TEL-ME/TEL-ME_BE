@@ -93,7 +93,7 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(MemberRecommendationAnswerer.class, () -> mock(MemberRecommendationAnswerer.class))
                     .withBean(SessionRecommendationAnswers.class, () -> mock(SessionRecommendationAnswers.class))
                     .withBean(ChatSessionRepository.class, () -> mock(ChatSessionRepository.class))
-                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true))
+                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true, false))
                     .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new)
                     .withBean(SearchProperties.class, () -> searchProperties(SearchProperties.GrayZone.DISABLED));
 

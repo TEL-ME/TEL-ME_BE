@@ -179,6 +179,58 @@ class ChatEndSummaryFollowupResolutionIntegrationTest {
         assertThat(summary.path("remaining").get(0).path("kind").asText()).isEqualTo("WAITING_RESPONSE");
     }
 
+    @Test
+    @DisplayName("본인 조건에 어머니 문의가 잘못 저장돼도 종료 요약에서 대상과 미해결 상태를 분리한다")
+    void 다른_사람의_조건_연결을_종료_요약에서_분리한다() throws Exception {
+        var fixture = ownerFixture("어머니는 가입한 지 18개월 됐고 유심을 분실했어요. "
+                + "어머니가 직접 매장에 갈 때 재발급 비용과 준비물도 알려주세요.");
+
+        assertThat(reader.read(fixture.sessionId()).pendingIds()).contains(fixture.questionId());
+
+        var summary = closeAndRead(fixture);
+
+        assertThat(summary.path("inquiries")).hasSize(1);
+        assertThat(summary.path("inquiries").get(0).path("title").asText()).startsWith("어머니");
+        assertThat(summary.path("inquiries").get(0).path("text").asText())
+                .contains("18개월", "7,700원", "신분증").doesNotContain("12개월");
+        assertThat(summary.path("remaining")).hasSize(1);
+        assertThat(summary.path("remaining").get(0).path("title").asText()).startsWith("본인");
+        assertThat(summary.path("remaining").get(0).path("text").asText())
+                .contains("12개월").doesNotContain("18개월");
+        assertThat(jdbc.queryForObject("SELECT status FROM consult_requests WHERE consult_request_id=?",
+                String.class, fixture.requestId())).isEqualTo("DONE");
+    }
+
+    @Test
+    @DisplayName("같은 본인의 정상 조건 응답은 계속 해결로 처리하고 기간과 안내를 보존한다")
+    void 같은_본인의_조건_응답은_계속_해결한다() throws Exception {
+        var fixture = ownerFixture("본인이 신분증을 지참해서 직접 매장에 갑니다.");
+
+        var summary = closeAndRead(fixture);
+
+        assertThat(summary.path("remaining")).isEmpty();
+        assertThat(summary.path("inquiries")).hasSize(1);
+        assertThat(summary.path("inquiries").get(0).path("text").asText())
+                .contains("12개월", "7,700원", "신분증");
+    }
+
+    private Fixture ownerFixture(String followup) throws Exception {
+        var fixture = fixture("GROUNDED");
+        String original = "저는 가입한 지 12개월 됐고 유심을 분실했어요. "
+                + "제가 직접 매장에 갈 때 재발급 비용과 준비물을 알려주세요.";
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", original, fixture.questionId());
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?",
+                "방문 시 필요한 준비물은 무엇인가요?", fixture.askedId());
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", followup, fixture.replyId());
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?",
+                "유심 재발급 비용은 7,700원입니다. 매장 방문 시 신분증을 지참해 주세요.", fixture.answerId());
+        jdbc.update("UPDATE consult_requests SET query_text=? WHERE consult_request_id=?",
+                original, fixture.requestId());
+        jdbc.update("UPDATE consult_conditions SET condition_key='prepared_items',condition_value='신분증' "
+                + "WHERE consult_request_id=?", fixture.requestId());
+        return fixture;
+    }
+
     private Fixture fixture(String basis) throws Exception {
         var actor = new MockHttpSession();
         var response = mvc.perform(post("/api/v1/chat/sessions").session(actor)

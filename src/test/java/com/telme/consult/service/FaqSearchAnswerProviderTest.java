@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -122,6 +123,35 @@ class FaqSearchAnswerProviderTest {
         verify(evidence).resolveDetailed(org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.eq(question), any(), any());
         assertThat(input.originalUserQuery()).startsWith("바라야 ");
+    }
+
+    // 비교 근거 검증 입력 기록에는 FAQ 본문 없이 원문 검색 결과의 FAQ id 순서만 남긴다. 본문은 searchResults에 있다
+    @Test
+    @SuppressWarnings("unchecked")
+    void comparisonEvidenceInputTracesOnlyFaqIds() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        ComparisonEvidenceResolver evidence = mock(ComparisonEvidenceResolver.class);
+        var trace = mock(ExecutionTrace.class);
+        var first = new FaqSearchResponse(10L, null, "PLAN", "청소년 요금제 나이", "만 18세 이하입니다.", 0.8, 1, null, 1, null);
+        var second = new FaqSearchResponse(11L, null, "PLAN", "시니어 요금제 나이", "만 65세 이상입니다.", 0.7, 1, null, 2, null);
+        String question = "청소년 요금제랑 시니어 요금제 가입 나이가 다른가요";
+        when(searches.search(any())).thenReturn(List.of(first, second));
+        when(evidence.applies(question)).thenReturn(true);
+        when(evidence.resolveDetailed(any(), any(), any(), any(), any()))
+                .thenReturn(new ComparisonEvidenceResolver.Resolution(List.of(), null));
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER,
+                        NO_EVIDENCE_ANSWER, ChatMessage.AnswerBasis.NO_EVIDENCE, List.of(), null)),
+                trace, evidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()));
+
+        ArgumentCaptor<Object> traced = ArgumentCaptor.forClass(Object.class);
+        verify(trace).append(eq(1L), eq("comparisonEvidenceInputs"), traced.capture());
+        assertThat((Map<String, Object>) traced.getValue())
+                .containsEntry("question", question)
+                .containsEntry("originalFaqIds", List.of(10L, 11L))
+                .doesNotContainKey("originalSources");
     }
 
     @Test
@@ -241,7 +271,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), candidateEvidence);
 
@@ -264,7 +294,7 @@ class FaqSearchAnswerProviderTest {
                 "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
                 ComparisonEvidenceResolver.passthrough(), candidateEvidence);
 
@@ -277,9 +307,41 @@ class FaqSearchAnswerProviderTest {
         assertThat(search.getValue().query()).isEqualTo("번호이동서류는뭐고");
         var evidenceQuestion = ArgumentCaptor.forClass(String.class);
         var quoteRepairFailure = ArgumentCaptor.forClass(Boolean.class);
-        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), quoteRepairFailure.capture());
+        verify(candidateEvidence).resolve(any(), any(), evidenceQuestion.capture(), any(), any(), quoteRepairFailure.capture());
         assertThat(evidenceQuestion.getValue()).isEqualTo("번호 이동 서류는 뭐고");
         assertThat(quoteRepairFailure.getValue()).isTrue();
+    }
+
+    // TELME-184: 복합 하위 질문이면 나누기 전 고객 원문을 근거 검증에 넘기고 실행 기록에도 남긴다
+    @Test
+    void candidateValidationReceivesCustomerMessageAndTracesIt() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var candidateEvidence = mock(FaqCandidateEvidenceResolver.class);
+        var trace = mock(ExecutionTrace.class);
+        var source = new FaqSearchResponse(65L, null, "PORTING", "번호이동 서류",
+                "본인 신분증이 필요합니다.", 0.68, 1, null, 1, null);
+        when(searches.search(any())).thenReturn(List.of());
+        when(searches.searchCandidates(any())).thenReturn(List.of(source));
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        var provider = new FaqSearchAnswerProvider(searches, answers, trace,
+                ComparisonEvidenceResolver.passthrough(), candidateEvidence);
+
+        provider.generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ,
+                "번호이동서류는뭐고", "번호이동서류는뭐고", Map.of(),
+                "번호이동서류는뭐고", null, false, null, Map.of(), "번호이동 서류는 뭐고",
+                "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?"));
+
+        var customerMessage = ArgumentCaptor.forClass(String.class);
+        verify(candidateEvidence).resolve(any(), any(), any(), customerMessage.capture(), any(), anyBoolean());
+        assertThat(customerMessage.getValue()).isEqualTo("번호이동 서류는 뭐고 요금제 변경은 어떻게 해?");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Object> traced = ArgumentCaptor.forClass(Object.class);
+        verify(trace).append(eq(1L), eq("faqCandidateEvidenceInputs"), traced.capture());
+        assertThat((Map<String, Object>) traced.getValue())
+                .containsEntry("question", "번호이동 서류는 뭐고")
+                .containsEntry("customerMessage", "번호이동 서류는 뭐고 요금제 변경은 어떻게 해?")
+                .containsEntry("allowQuoteRepairFailure", true);
     }
 
     // 후보 확인으로 답한 경우도 일반 답변과 같이 근거 FAQ로 추천 질문을 붙인다
@@ -295,7 +357,7 @@ class FaqSearchAnswerProviderTest {
                 "양도인과 양수인의 신분증이 각각 필요합니다.", 0.68, 1, null, 3, null);
         when(searches.search(any())).thenReturn(List.of());
         when(searches.searchCandidates(any())).thenReturn(List.of(other, source));
-        when(candidateEvidence.resolve(any(), any(), any(), any(), anyBoolean())).thenReturn(source);
+        when(candidateEvidence.resolve(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(source);
         when(suggestions.suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(source)))
                 .thenReturn(List.of("명의변경 수수료가 있나요?"));
         var provider = new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),

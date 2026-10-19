@@ -273,6 +273,35 @@ class AdminChatMonitoringIntegrationTest {
     }
 
     @Test
+    @DisplayName("소요 시간은 측정값을 우선하고 없으면 과거 기록의 시각 차이를 쓴다")
+    void 소요_시간은_처리_시간을_쓴다() throws Exception {
+        // 시각이 뒤집혀 있어도 처리 시간 값을 그대로 보여 준다
+        jdbc.update("UPDATE chat_executions SET total_ms=2350, ended_at=started_at - interval '1 second'"
+                + " WHERE execution_id=?", completedExecutionId);
+
+        mockMvc.perform(admin(get(URL + "/{id}", completedExecutionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.elapsedMs").value(2350));
+        mockMvc.perform(admin(get(URL).param("beforeId", String.valueOf(runningMessageId + 1)).param("size", "3")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.items[2].elapsedMs").value(2350))
+                // 진행 중인 실행은 아직 처리 시간이 없다
+                .andExpect(jsonPath("$.result.items[0].elapsedMs").value(nullValue()));
+        // 처리 시간 측정 전 기록은 시각 차이로 채운다
+        jdbc.update("UPDATE chat_executions SET ended_at=started_at + interval '1.5 seconds'"
+                + " WHERE execution_id=?", failedExecutionId);
+        mockMvc.perform(admin(get(URL + "/{id}", failedExecutionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.endedAt").exists())
+                .andExpect(jsonPath("$.result.elapsedMs").value(1500));
+        jdbc.update("UPDATE chat_executions SET ended_at=started_at - interval '1 second'"
+                + " WHERE execution_id=?", failedExecutionId);
+        mockMvc.perform(admin(get(URL + "/{id}", failedExecutionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.elapsedMs").value(nullValue()));
+    }
+
+    @Test
     @DisplayName("없는 실행은 404")
     void 없는_실행은_404() throws Exception {
         mockMvc.perform(admin(get(URL + "/{id}", Long.MAX_VALUE)))

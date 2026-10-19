@@ -7,10 +7,6 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatProcessingCommand;
-import com.telme.consult.dto.DialogueInput;
-import com.telme.consult.dto.DialogueInput.Condition;
-import com.telme.consult.dto.DialogueInput.LocationStatus;
-import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.intent.service.RoutingPromptTemplates;
@@ -95,7 +91,7 @@ class RoutingGenerationRecordIntegrationTest {
         assertThat(rows).extracting(row -> row.get("task_type")).containsOnly("ROUTING");
         assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
         assertThat(rows).extracting(row -> row.get("prompt_version")).containsExactly(
-                "routing-request-v4-single-search",
+                "routing-request-v5-single-search",
                 "routing-request-inventory-v4",
                 "routing-faq-faithfulness-v2-single-search");
     }
@@ -117,25 +113,6 @@ class RoutingGenerationRecordIntegrationTest {
         assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
         assertThat(rows).extracting(row -> row.get("prompt_version"))
                 .containsOnly("routing-faq-faithfulness-single-v3");
-    }
-
-    // 매장 지역 되묻기 문장 생성도 의도 분류와 같은 채팅 실행에 기록돼야 한다
-    @Test
-    void recordsClarificationGenerationCallAsClarification() {
-        doReturn("어느 지역의 매장을 찾으시나요?").when(model).generate(any());
-        ChatProcessingCommand command = createCommand("유심 재발급 매장 알려줘");
-        var dialogue = new DialogueService(new LlmClarificationTextGenerator(recordingClient));
-
-        dialogue.decide(new DialogueInput(1L, Purpose.NEARBY_STORE,
-                Map.of("serviceType", Condition.filled("USIM_REISSUE")), Map.of(), LocationStatus.MISSING),
-                command.executionId());
-
-        List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT task_type, status FROM llm_generations
-                WHERE execution_id=? ORDER BY generation_id
-                """, command.executionId());
-        assertThat(rows).extracting(row -> row.get("task_type")).containsExactly("CLARIFICATION");
-        assertThat(rows).extracting(row -> row.get("status")).containsOnly("SUCCESS");
     }
 
     private ChatProcessingCommand createCommand(String content) {

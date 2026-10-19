@@ -95,7 +95,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 .isEqualTo("[2]");
         var request = request();
         assertThat(request.executionId()).isEqualTo(10L);
-        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v13");
+        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v14");
         var schema = mapper.valueToTree(request.responseSchema()).path("properties");
         assertThat(schema.has("guidance")).isFalse();
         assertThat(schema.path("selectedSentenceIds").path("items").path("enum").toString()).isEqualTo("[1]");
@@ -584,7 +584,8 @@ class ChatSessionEndSummaryGeneratorTest {
     @DisplayName("분할·모델 호출·최종 검증에서 전체 안내 원문의 후보 검사를 작업당 한 번만 수행한다")
     void 전체_안내_원문은_후보_생성에서_한_번만_검사한다(int exchanges) throws Exception {
         var inspector = spy(new ChatInputInspector(mapper));
-        var target = new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(), inspector,
+        var target = new ChatSessionEndSummaryGenerator(mapper,
+                (modelRequest, modelDeadline) -> client.generate(modelRequest), new ChatTokenEstimator(), inspector,
                 new ChatOutputGuard(mapper), new ChatEndSummaryProperties(true, false, false, 20000, 768,
                         400, 8, 2, Duration.ofMinutes(5), Duration.ofMinutes(15)), Clock.fixed(now, ZoneOffset.UTC));
         var messages = new ArrayList<ChatEndSummaryData.Message>();
@@ -738,7 +739,8 @@ class ChatSessionEndSummaryGeneratorTest {
     private ChatSessionEndSummaryGenerator generator(int budget) {
         var properties = new ChatEndSummaryProperties(true, false, false, budget, 768, 400, 8, 2,
                 Duration.ofMinutes(5), Duration.ofMinutes(15));
-        return new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(),
+        return new ChatSessionEndSummaryGenerator(mapper,
+                (modelRequest, modelDeadline) -> client.generate(modelRequest), new ChatTokenEstimator(),
                 new ChatInputInspector(mapper), new ChatOutputGuard(mapper), properties,
                 Clock.fixed(now, ZoneOffset.UTC));
     }

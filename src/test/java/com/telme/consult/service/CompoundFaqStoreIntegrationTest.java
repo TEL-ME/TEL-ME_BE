@@ -334,9 +334,9 @@ class CompoundFaqStoreIntegrationTest {
         var queries = routing.routeSingleConsult(messages.findByIdWithSession(command.inputMessageId()).orElseThrow(), null)
                 .subQueries();
         var first = preparation.prepareAnalysis(sessionId, queries.getFirst(),
-                com.telme.consult.dto.DialogueInput.LocationStatus.MISSING, null);
+                com.telme.consult.dto.DialogueInput.LocationStatus.MISSING);
         var second = preparation.prepareAnalysis(sessionId, queries.get(1),
-                com.telme.consult.dto.DialogueInput.LocationStatus.MISSING, null);
+                com.telme.consult.dto.DialogueInput.LocationStatus.MISSING);
         int version = first.prepared().expectedVersion();
         var stale = new ConsultService.PreparationResult(new ConsultService.PreparedTurn(sessionId,
                 second.prepared().expectedVersion() + 1, second.prepared().decision()), null);

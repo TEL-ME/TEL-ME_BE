@@ -196,7 +196,8 @@ class ChatEndSummaryPartialMergeTest {
     }
 
     private ChatEndSummaryData.Result generate(ChatEndSummaryData.Input input) {
-        var target = new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(),
+        var target = new ChatSessionEndSummaryGenerator(mapper,
+                (modelRequest, modelDeadline) -> client.generate(modelRequest), new ChatTokenEstimator(),
                 new ChatInputInspector(mapper), new ChatOutputGuard(mapper),
                 new ChatEndSummaryProperties(true, false, false, 3072, 768, 400, 8, 2,
                         Duration.ofMinutes(5), Duration.ofMinutes(15)), Clock.systemUTC());

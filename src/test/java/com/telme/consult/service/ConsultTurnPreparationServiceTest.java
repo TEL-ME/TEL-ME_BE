@@ -42,7 +42,7 @@ class ConsultTurnPreparationServiceTest {
                         ConsultRequest.Intent.STORE,
                         "유심 매장",
                         Map.of("location", " 강남역 ", "serviceType", "USIM_REISSUE"));
-        service.prepareAnalysis(1L, analysis, LocationStatus.MISSING, 9L);
+        service.prepareAnalysis(1L, analysis, LocationStatus.MISSING);
         verify(consult)
                 .prepareTurn(
                         1L,
@@ -53,7 +53,7 @@ class ConsultTurnPreparationServiceTest {
                                 Condition.filled("강남역"),
                                 "serviceType",
                                 Condition.filled("USIM_REISSUE")),
-                        LocationStatus.MISSING, 9L);
+                        LocationStatus.MISSING);
     }
 
     @Test
@@ -62,7 +62,7 @@ class ConsultTurnPreparationServiceTest {
         var context = context("STORE").withExecutionId(8L);
         var updates = Map.of("location", Condition.filled("강남역"));
         var prepared = result(Action.PROCEED, updates);
-        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING, 8L))
+        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING))
                 .thenReturn(prepared);
         var value =
                 service.prepareFollowup(
@@ -80,7 +80,7 @@ class ConsultTurnPreparationServiceTest {
     @Test
     void refusalRemainsDeclinedInsteadOfInventedLocation() {
         var updates = Map.of("location", Condition.declined());
-        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING, null))
+        when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING))
                 .thenReturn(result(Action.ALTERNATIVE_GUIDANCE, updates));
         var value =
                 service.prepareFollowup(
@@ -105,7 +105,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         updates,
-                        LocationStatus.MISSING, 8L))
+                        LocationStatus.MISSING))
                 .thenReturn(pending);
 
         var value =
@@ -121,7 +121,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         updates,
-                        LocationStatus.MISSING, 8L);
+                        LocationStatus.MISSING);
     }
 
     @Test
@@ -134,7 +134,7 @@ class ConsultTurnPreparationServiceTest {
                         101L,
                         Purpose.NEARBY_STORE,
                         Map.of(),
-                        LocationStatus.MISSING, null))
+                        LocationStatus.MISSING))
                 .thenReturn(pending);
 
         var value =

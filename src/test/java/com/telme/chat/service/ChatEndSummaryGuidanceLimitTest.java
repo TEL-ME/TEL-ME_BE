@@ -193,7 +193,9 @@ class ChatEndSummaryGuidanceLimitTest {
                 OutputMaskContext.empty());
         var inspector = new ChatInputInspector(mapper);
         var guard = new ChatOutputGuard(mapper);
-        var target = new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(), inspector, guard,
+        var target = new ChatSessionEndSummaryGenerator(mapper,
+                (modelRequest, modelDeadline) -> client.generate(modelRequest), new ChatTokenEstimator(),
+                inspector, guard,
                 new ChatEndSummaryProperties(true, false, false, 3072, 768, 400, 8, 2,
                         Duration.ofMinutes(5), Duration.ofMinutes(15)), Clock.systemUTC());
         return new ChatEndSummaryGroundedGenerator(mapper, inspector, guard)

@@ -30,7 +30,8 @@ class ChatEndSummarySourcePreservationTest {
 
     @BeforeEach
     void 생성기를_준비한다() {
-        generator = new ChatSessionEndSummaryGenerator(mapper, client, new ChatTokenEstimator(),
+        generator = new ChatSessionEndSummaryGenerator(mapper,
+                (modelRequest, modelDeadline) -> client.generate(modelRequest), new ChatTokenEstimator(),
                 new ChatInputInspector(mapper), new ChatOutputGuard(mapper),
                 new ChatEndSummaryProperties(true, false, false, 3072, 768, 400, 8, 2,
                         Duration.ofMinutes(5), Duration.ofMinutes(15)), Clock.systemUTC());

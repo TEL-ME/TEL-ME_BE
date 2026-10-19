@@ -129,10 +129,12 @@ class ChatSessionServiceTest {
                             execution.getExecutionId(), execution.getStatus().name(), message.getCreatedAt());
                 });
 
+        ChatResponseStopwatch stopwatch = new ChatResponseStopwatch(123L);
         ChatMessageSendResponse response = chatSessionService.sendMessage(
                 new ChatActor(7L, null),
                 10L,
-                new ChatMessageSendRequest("가까운 매장 알려줘")
+                new ChatMessageSendRequest("가까운 매장 알려줘"),
+                stopwatch
         );
 
         ArgumentCaptor<ChatExecution> executionCaptor = ArgumentCaptor.forClass(ChatExecution.class);
@@ -148,8 +150,9 @@ class ChatSessionServiceTest {
         assertThat(session.getLastActiveAt()).isEqualTo(message.getCompletedAt());
         assertThat(response.sequenceNo()).isEqualTo(3);
         assertThat(response.executionStatus()).isEqualTo("RUNNING");
+        // 접수 요청에서 시작한 측정값을 처리 명령에 그대로 싣는다
         verify(eventPublisher).publishEvent(new ChatProcessingCommand(
-                execution.getExecutionId(), 10L, message.getMessageId(), "가까운 매장 알려줘"));
+                execution.getExecutionId(), 10L, message.getMessageId(), "가까운 매장 알려줘", null, stopwatch));
     }
 
     @Test

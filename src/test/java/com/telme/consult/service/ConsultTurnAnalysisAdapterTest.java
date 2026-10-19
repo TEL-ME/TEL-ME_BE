@@ -51,7 +51,7 @@ class ConsultTurnAnalysisAdapterTest {
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
         var context = new Context(1, 10, raw, List.of());
         var prepared = mock(ConsultService.PreparationResult.class);
-        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any(), any()))
+        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any()))
                 .thenReturn(prepared);
         var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
             assertThat(input.historyResolved()).isFalse();
@@ -291,7 +291,7 @@ class ConsultTurnAnalysisAdapterTest {
                 new IntentSubQueryResponse(
                         101L, (short) 1, ConsultRequest.Intent.FAQ, "요금 납부 방법", Map.of());
         var result = new ConsultService.PreparationResult(null, 9L);
-        when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING, 3L)).thenReturn(result);
+        when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING)).thenReturn(result);
         var adapter =
                 new ConsultTurnAnalysisAdapter(
                         command -> context,
@@ -313,7 +313,7 @@ class ConsultTurnAnalysisAdapterTest {
         var second = new IntentSubQueryResponse(
                 102L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
         for (var query : List.of(first, second)) {
-            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING, 3L))
+            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING))
                     .thenReturn(new ConsultService.PreparationResult(
                             new ConsultService.PreparedTurn(1, 1,
                                     new DialogueDecision(query.consultRequestId(), Action.PROCEED,
@@ -426,12 +426,12 @@ class ConsultTurnAnalysisAdapterTest {
                 new ChatContext(1L, 10L, null, List.of(previous), question, 100));
         var model = mock(LlmClient.class);
         var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
-        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any(),
-                org.mockito.ArgumentMatchers.eq(3L)))
+        var query = new IntentSubQueryResponse(101L, (short) 1,
+                ConsultRequest.Intent.FAQ, "유심 재발급 절차", Map.of());
+        when(preparation.prepareAnalysis(1L, query, LocationStatus.MISSING))
                 .thenReturn(mock(ConsultService.PreparationResult.class));
         var adapter = new ConsultTurnAnalysisAdapter(command -> context, input ->
-                new AnalysisResult(new IntentSubQueryResponse(101L, (short) 1,
-                        ConsultRequest.Intent.FAQ, "유심 재발급 절차", Map.of()), null, LocationStatus.MISSING),
+                new AnalysisResult(query, null, LocationStatus.MISSING),
                 preparation, new FollowupConditionConverter(), resolver);
 
         var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, question));
@@ -439,6 +439,7 @@ class ConsultTurnAnalysisAdapterTest {
         assertThat(turn.searchQuery()).isEqualTo("유심 재발급 절차");
         assertThat(turn.resolvedUserQuery()).contains(previous.content(), question, "18개월");
         assertThat(turn.originalUserQuery()).isEqualTo(question);
+        verify(preparation).prepareAnalysis(1L, query, LocationStatus.MISSING);
         verifyNoInteractions(model);
     }
 

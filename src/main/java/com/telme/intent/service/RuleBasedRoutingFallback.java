@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -86,7 +87,7 @@ public class RuleBasedRoutingFallback {
         "기기변경", "번호이동", "부가서비스", "결합", "데이터",
         "요금", "개통", "해외", "명의", "가입", "혜택", "재발급", "분실", "택배",
         "통신", "휴대폰", "핸드폰", "폰", "단말", "할부", "통화", "청구", "납부", "인터넷", "번호", "보험",
-        "5G", "LTE", "USIM", "이심", "유플러스", "U+"
+        "5G", "LTE", "USIM", "이심", "TELME", "텔미", "유플러스", "U+"
     );
 
     // 업무 이름 뒤에 붙는 서술·인용 어미. 동사 어미("하려고요")는 넣지 않는다
@@ -147,7 +148,8 @@ public class RuleBasedRoutingFallback {
             && STORE_LOOKUP_PATTERN.matcher(text).find()
             && (!STORE_VISIT_POLICY_PATTERN.matcher(text).find()
                 || STORE_RESULT_REQUEST_PATTERN.matcher(text).find());
-        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains)
+        String upperText = text.toUpperCase(Locale.ROOT);
+        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(keyword -> upperText.contains(keyword.toUpperCase(Locale.ROOT)))
             || CANCEL_SERVICE_PATTERN.matcher(text).find()
             || (!hasStore && STORE_ENTITY_PATTERN.matcher(text).find()
                 && (text.contains("방문") || text.contains("처리") || text.contains("가능")));

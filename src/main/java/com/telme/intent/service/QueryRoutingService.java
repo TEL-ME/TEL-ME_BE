@@ -10,6 +10,7 @@ import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.intent.config.RoutingLlmConfiguration;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.FollowUpRouteResponse.Disposition;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -112,9 +114,10 @@ public class QueryRoutingService {
                 intentConverter, transactionTemplate, UnknownFaqRecheck.none());
     }
 
+    // 라우팅 호출의 모델은 RoutingLlmConfiguration이 고른다(telme.routing.bedrock)
     @Autowired
     public QueryRoutingService(
-            LlmClient llmClient,
+            @Qualifier(RoutingLlmConfiguration.ROUTING_LLM_CLIENT) LlmClient llmClient,
             ObjectMapper objectMapper,
             QueryRoutingRepository queryRoutingRepository,
             ConsultRequestRepository consultRequestRepository,
@@ -237,7 +240,7 @@ public class QueryRoutingService {
                 .format(ResponseFormat.JSON)
                 .temperature(0.0)
                 .maxTokens(768)
-                .promptVersion("routing-request-v4-single-search")
+                .promptVersion("routing-request-v5-single-search")
                 .build();
 
             String json = llmClient.generate(request);
@@ -1180,7 +1183,7 @@ public class QueryRoutingService {
             .temperature(0.0)
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v4")
+            .promptVersion("routing-follow-up-v5")
             .build();
 
         String json = llmClient.generate(request);
