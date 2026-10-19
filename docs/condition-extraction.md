@@ -21,7 +21,7 @@ FAQ를 검색한 뒤 그 근거만으로 답을 확정할 수 있는지 판단�
 - 조건을 뽑으려면 FAQ 답변을 봐야 해서 검색 뒤에 부른다. `FaqSearchAnswerProvider`가 그 자리다.
 - 뽑은 조건을 실제로 되묻고 답을 받는 흐름은 아래 "되묻고 답받기"에 적었다.
 - `telme.consult.faq-clarification.enabled`로 켜고 끈다. 기본은 켜져 있고, 끄면 지금처럼 바로 답한다.
-- 조건 뽑기 모델은 `telme.consult.faq-clarification.bedrock-extraction`으로 고른다. 기본(꺼짐)은 엑사원이고, 켜면 Bedrock으로 뽑되 실패하면 엑사원으로 대체한다. 비교 결과는 `CLARIFICATION_EXTRACTION_MODEL.md`에 있다.
+- 조건 뽑기 모델은 `telme.consult.faq-clarification.bedrock`으로 고른다. 기본(켜짐)은 Bedrock으로 뽑되 실패하면 엑사원으로 대체하고, false로 두면 엑사원이다. 비교 결과는 `CLARIFICATION_EXTRACTION_MODEL.md`에 있다.
 
 ## 모델에게 받는 것
 
@@ -208,7 +208,7 @@ AI      (번호이동이 되는 강남 매장 목록)
 - **불필요한 조건을 모델이 처음부터 냈고** 걸러내기(`alreadySaid`, `known`)는 표현이 다르면 못 잡았다. "안 내면"과 "납부하셨나요"는 글자가 겹치지 않는다.
 - 뽑은 조건을 한 번 더 검증하는 단계는 엑사원과 Bedrock 모두 필요한 되묻기도 지워 접었다.
   → **조건 뽑기를 Bedrock(gpt-oss-120b)으로 바꾸는 쪽**이 평가셋 22% → 72~81%, 기존 평가 77% → 85%(각 3회, TELME-185)로 가장 좋았다. 실제 채팅 흐름에서 평가셋 32건의 되묻기는 31건에서 14건이 됐고(TELME-176, 1회) 필요한 되묻기 6건은 모두 유지됐다.
-- 기본은 꺼져 있다(`bedrock-extraction`). 켜면 Bedrock으로 뽑고 호출이 실패하면 엑사원으로 대체한다.
+- 기본은 켜져 있다(`bedrock`). Bedrock으로 뽑고 호출이 실패하면 엑사원으로 대체한다. false로 두면 엑사원이다.
 - 평가셋(`grading-cases.json`)과 분석 전체는 `CLARIFICATION_EXTRACTION_MODEL.md`에 적었다.
 
 ## 프롬프트 비교

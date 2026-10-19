@@ -1,42 +1,74 @@
 # 답변 경로 LLM 호출의 gpt-oss 전환 현황
 
-답변 경로의 LLM 호출을 EXAONE 3.5 7.8B에서 Bedrock gpt-oss-120b로 옮기는 작업(TELME-182)의 현황표다. 호출마다 근거가 있는 것만 바꾸고, 바꿀 때는 플래그로 켠다. Bedrock 호출이 실패하면 그 호출만 EXAONE으로 대체한다(`FallbackLlmClient`).
+답변 경로의 LLM 호출을 EXAONE 3.5 7.8B에서 Bedrock gpt-oss-120b로 옮기는 작업(TELME-182)의 현황표다. 호출마다 근거가 있는 것만 바꾸고, 플래그로 켜고 끈다. **TELME-194부터 확정된 호출은 기본으로 gpt-oss(Bedrock)를 먼저 부른다.** Bedrock 호출이 실패하면 그 호출만 EXAONE으로 대체한다(`FallbackLlmClient`).
 
 ## 호출별 상태
 
 | # | 호출 | 클래스 | 상태 | 플래그 (기본값) | 근거 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 문맥 해석 | `ChatQuestionResolver` | **gpt-oss 확정**, 설정 추가 | `CHAT_QUESTION_RESOLUTION_BEDROCK` (false) | [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md). 켜면 흔들림 보완도 함께 켜진다. 비용 항목 목록의 `위약금` 누락은 프롬프트를 고치면 재측정이 필요해 아직 손대지 않았다 |
-| 2 | 의도 분류 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | [ROUTING_CALL_COMPARISON.md](ROUTING_CALL_COMPARISON.md) 1단계 |
-| 3 | 요청 개수 판정 | `QueryRoutingService` | **gpt-oss 전환 시 끔** | `ROUTING_REQUEST_INVENTORY_ENABLED` (true) | 같은 문서 2단계. `ROUTING_BEDROCK=true`면 false로 둔다. 켜 둔 채 Bedrock으로 라우팅하면 시작할 때 경고 로그를 남긴다 |
-| 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 3단계 |
-| 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (false) | 같은 문서 4단계 |
-| 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (false) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154(3회 같음), gpt-oss 164~166. gpt-oss 호출당 p50 0.60초(엑사원 시간은 배포 환경에서 잰다). 출력 한도를 30에서 512로 올렸다 |
-| 7 | 조건 뽑기 | `ConditionExtractor` | **gpt-oss 확정**, 설정 있음 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (false) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md). 평가셋 32건 엑사원 22%, gpt-oss 72~81%(각 3회, TELME-185). 기본값은 1~6번과 함께 아래 전환을 켤 때 켠다 |
+| 1 | 문맥 해석 | `ChatQuestionResolver` | **gpt-oss 확정**, 설정 추가 | `CHAT_QUESTION_RESOLUTION_BEDROCK` (true) | [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md). 켜면 흔들림 보완도 함께 켜진다. 비용 항목 목록의 `위약금` 누락은 프롬프트를 고치면 재측정이 필요해 아직 손대지 않았다 |
+| 2 | 의도 분류 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | [ROUTING_CALL_COMPARISON.md](ROUTING_CALL_COMPARISON.md) 1단계 |
+| 3 | 요청 개수 판정 | `QueryRoutingService` | **하지 않음**(gpt-oss 전환 시 끔) | `ROUTING_REQUEST_INVENTORY_ENABLED` (false) | 같은 문서 2단계. 호출 자체를 하지 않는다(엑사원이 하는 것이 아니다). 라우팅을 엑사원으로 되돌리면 true로 켠다. 켜 둔 채 Bedrock으로 라우팅하면 시작할 때 경고 로그를 남긴다 |
+| 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | 같은 문서 3단계 |
+| 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | 같은 문서 4단계 |
+| 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (true) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154(3회 같음), gpt-oss 164~166. gpt-oss 호출당 p50 0.60초(엑사원 시간은 배포 환경에서 잰다). 출력 한도를 30에서 512로 올렸다 |
+| 7 | 조건 뽑기 | `ConditionExtractor` | **gpt-oss 확정**, 설정 있음 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` (true) | [CLARIFICATION_EXTRACTION_MODEL.md](CLARIFICATION_EXTRACTION_MODEL.md). 평가셋 32건 엑사원 22%, gpt-oss 72~81%(각 3회, TELME-185). TELME-185에서는 기본 꺼짐으로 두었다가 TELME-194에서 기본 켜짐으로 바꿨다 |
 | 8 | 되묻기 문장 | `DialogueService` | **호출 없앰**, 고정 문구 | — | 매장 위치 질문 하나에만 쓰였고 프롬프트가 대체 문구를 그대로 예시로 줬다. 지금은 "어느 지역의 매장을 찾으시나요? 역 이름이나 동네를 알려주세요."를 바로 쓴다 |
 | 9 | 회색 구간 근거 판정 | `FaqEvidenceJudge` | 이미 Bedrock | — | [GRAY_ZONE_UPPER_BAND.md](GRAY_ZONE_UPPER_BAND.md) |
 | 10 | 비교 근거 검증 | `LlmComparisonEvidenceResolver` | **gpt-oss 확정**, 기본 켜짐(TELME-184) | `CONSULT_COMPARISON_EVIDENCE_BEDROCK` (주지 않으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`, true) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) "비교 근거 검증 재확인". 블라인드 양쪽 답 있음 19개에서 맞는 답 엑사원 1, gpt-oss 5~6, 틀린 답 0 |
 | 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **gpt-oss 확정**, TELME-184에서 수정(P7), 기본 켜짐 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK` (위와 같음, true), `CONSULT_CANDIDATE_EVIDENCE_JUDGE` (true) | 같은 문서 "복합 질문 입력 확인"(TELME-182, 수정 전 채택 1건)과 "후보 근거 검증 수정"(TELME-184). 수정 후 개발용 맞는 답 30 / 31 / 30, 블라인드 12 / 12 / 10. 문맥 해석이 후속 질문을 복원하지 못하면 틀린 답이 날 수 있다("후속 질문 확인") |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
-| 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (false) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) |
+| 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (true) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) |
 
 대화 요약, 세션 제목, 상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나왔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)).
 
-## 전환 켜기
+## 기본 구성과 끄는 방법
 
-```bash
-ROUTING_BEDROCK=true
-ROUTING_REQUEST_INVENTORY_ENABLED=false
-CHAT_QUESTION_RESOLUTION_BEDROCK=true
-CONSULT_PLAN_QUESTION_BEDROCK=true
-CONSULT_FAQ_CLARIFICATION_BEDROCK=true
-RAG_ANSWER_BEDROCK=true
-```
+TELME-194부터 1·2·4·5·6·7·10·11·13번은 기본으로 gpt-oss(Bedrock)를 먼저 부르고, 3번(요청 개수 판정)은 하지 않는다. 호출을 엑사원으로 돌리려면 아래 플래그를 false로 준다.
 
-- `QueryRoutingService`는 `routingLlmClient`(`RoutingLlmConfiguration`)를, `ChatQuestionResolver`는 `contextResolutionLlmClient`(`ChatQuestionResolutionLlmConfiguration`)를, `PlanQuestionClassifier`는 `planQuestionLlmClient`(`PlanQuestionConfiguration`)를, `RagAnswerGenerator`는 `ragAnswerLlmClient`(`RagAnswerLlmConfiguration`)를 이름으로 주입받는다. 다른 호출의 기본 모델은 그대로 EXAONE이다.
-- `LLM_BEDROCK_ENABLED=false`로 Bedrock 빈이 없으면 플래그를 켜도 EXAONE을 쓴다.
+### 전체 플래그
+
+| 호출 | 환경 변수 | 설정 키 | 기본 | 바꾸면 |
+| --- | --- | --- | --- | --- |
+| 문맥 해석 | `CHAT_QUESTION_RESOLUTION_BEDROCK` | `chat.question-resolution.bedrock` | true | false면 엑사원. 흔들림 보완도 함께 꺼진다 |
+| 문맥 흔들림 보완 | `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS` | `chat.question-resolution.stability-guards` | false | 위 bedrock이 true면 이 값과 관계없이 켜진다 |
+| 라우팅(의도 분류, 검색어 검증, 후속 분석, 켠 경우 요청 개수 판정) | `ROUTING_BEDROCK` | `telme.routing.bedrock` | true | false면 모두 엑사원 |
+| 요청 개수 판정 | `ROUTING_REQUEST_INVENTORY_ENABLED` | `telme.routing.request-inventory-enabled` | false | true면 판정을 한다. 라우팅이 엑사원일 때 켠다 |
+| 요금제 질문 분류 | `CONSULT_PLAN_QUESTION_BEDROCK` | `telme.consult.plan-question.bedrock` | true | false면 엑사원 |
+| 조건 뽑기 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` | `telme.consult.faq-clarification.bedrock` | true | false면 엑사원 |
+| 비교 근거 검증 | `CONSULT_COMPARISON_EVIDENCE_BEDROCK`(없으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`) | `telme.consult.evidence-resolver.comparison-bedrock` | true | false면 엑사원 |
+| 후보 근거 검증 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK`(없으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`) | `telme.consult.evidence-resolver.candidate-bedrock` | true | false면 엑사원 |
+| 후보 판정 방식 | `CONSULT_CANDIDATE_EVIDENCE_JUDGE` | `telme.consult.evidence-resolver.candidate-judge` | true | false면 단어 검사로 막는다 |
+| 답변 생성 | `RAG_ANSWER_BEDROCK` | `rag.answer.bedrock` | true | false면 엑사원 |
+| 회색 구간 판정(Bedrock 전용) | `SEARCH_GRAY_ZONE_ENABLED` | `search.gray-zone.enabled` | true | false면 판정을 하지 않는다 |
+| Bedrock 연결 | `LLM_BEDROCK_ENABLED` | `llm.bedrock.enabled` | true | false면 Bedrock 호출이 없고, 전환 플래그가 켜져 있어도 엑사원으로 동작한다 |
+| 근거 적합성 판정 | `RAG_EVIDENCE_CHECK_ENABLED` | `rag.evidence-check.enabled` | false | true면 엑사원으로 판정한다(위 12번) |
+
+키 이름은 호출마다 정해진 대로 두었다. 모델 전환 플래그는 대부분 `bedrock`이고 근거 검증만 호출이 둘이라 `comparison-bedrock`, `candidate-bedrock`으로 나눈다. 기본값은 `application.yml`과 각 `*Properties`의 `@DefaultValue`가 같다(`BedrockFlagDefaultsTest`가 확인한다).
+
+### 라우팅 호출과 두 스위치
+
+| 라우팅 호출 | `ROUTING_BEDROCK` (어느 모델로 부르나) | `ROUTING_REQUEST_INVENTORY_ENABLED` (이 호출을 하나) |
+| --- | --- | --- |
+| 의도 분류 | 적용 | 해당 없음 |
+| 요청 개수 판정 | 적용 | **이 호출만 켜고 끔**(기본 끔) |
+| 검색어 검증 | 적용 | 해당 없음 |
+| 후속 분석 | 적용 | 해당 없음 |
+
+- 라우팅 호출 4개는 같은 클라이언트를 쓰므로 `ROUTING_BEDROCK`으로 한꺼번에 바꾸고, 호출별로 나눌 수 없다.
+- 요청 개수 판정은 의도 분류가 FAQ 하위 질문을 2개 이상으로 나눴을 때 "정말 요청이 여러 개인가"를 한 번 더 확인해 잘못 나눈 것을 합치는 호출이다. EXAONE의 과잉 분해를 막으려고 넣었다. gpt-oss는 정확하게 나눠서 이 판정이 맞게 나눈 질문을 약 10% 다시 합치므로 하지 않는다(TELME-182 결정).
+- 하지 않으면 의도 분류가 나눈 개수를 그대로 쓰고, 하위 질문마다 서로 다른 원문 근거가 있는지만 코드 규칙(`IndependentQuestionPolicy`)으로 확인한다. 단독 비교 질문 보정 규칙과 검색어 검증은 그대로 돈다.
+- 라우팅을 엑사원으로 되돌리면(`ROUTING_BEDROCK=false`) 요청 개수 판정도 true로 켠다. `ROUTING_BEDROCK=true`인데 판정이 켜져 있으면 시작할 때 경고 로그를 남긴다.
+
+### 동작 방식
+
+- `QueryRoutingService`는 `routingLlmClient`(`RoutingLlmConfiguration`)를, `ChatQuestionResolver`는 `contextResolutionLlmClient`(`ChatQuestionResolutionLlmConfiguration`)를, `PlanQuestionClassifier`는 `planQuestionLlmClient`(`PlanQuestionConfiguration`)를, `RagAnswerGenerator`는 `ragAnswerLlmClient`(`RagAnswerLlmConfiguration`)를 이름으로 주입받는다. 이름 붙은 클라이언트만 바꾸므로 다른 호출의 기본 모델은 그대로 EXAONE이다.
+- Bedrock 빈이 없으면(`LLM_BEDROCK_ENABLED=false`) 플래그가 켜져 있어도 EXAONE을 쓴다.
+- **대체는 호출마다 따로 판단하고 실패를 기억하지 않는다.** 라우팅이 엑사원으로 대체되어도 다음 호출(조건 뽑기, 답변 생성 등)은 다시 Bedrock부터 시도한다. Bedrock 전체가 응답하지 않으면 호출마다 먼저 Bedrock을 시도한 뒤 엑사원으로 가며, 응답이 오지 않는 시간 초과는 호출마다 최대 8초(`LLM_BEDROCK_TIMEOUT`)를 기다린다. 이 지연이 한 턴에 얼마나 쌓이는지는 재지 않았다.
+- 라우팅이 엑사원으로 대체되는 동안에는 요청 개수 판정이 꺼져 있어 엑사원의 과잉 분해를 막는 모델 검사가 없다(하위 질문 원문 근거 확인 규칙은 동작한다).
+- Bedrock 키(`AWS_BEARER_TOKEN_BEDROCK`)가 없으면 Bedrock 호출이 실패해 엑사원으로 대체된다. 로컬에서 키 없이 쓰려면 `SEARCH_GRAY_ZONE_ENABLED=false`와 `LLM_BEDROCK_ENABLED=false`를 함께 준다. 하나만 끄면 앱이 뜨지 않거나 판정이 실패한다.
 - 답변 생성은 스트리밍이다. Bedrock 클라이언트는 답을 다 받은 뒤 한 번에 보내므로(TELME-182 B 입력에서 gpt-oss 호출 중앙값 0.44초) 글자가 나눠서 나오지 않는다. 첫 글자를 보내기 전에 Bedrock이 실패하면 같은 요청을 엑사원 스트리밍으로 다시 부른다(`FallbackLlmClient`). 글자가 나간 뒤에는 대체하지 않는다.
-- 1~7번과 13번은 아직 기본 꺼짐이다. 아래 마지막 측정 뒤에 한 번에 켠다. 10·11번(근거 검증)은 TELME-184에서 기본 켜짐으로 들어갔다.
+- 호출 수가 늘어난다. TELME-182 캡처에서 고객 발화 344개에 앞단 gpt-oss 호출이 1,815건(발화당 약 5건)이었고, 답변 생성이 발화마다 1건 더 든다.
 
 ## 답변 생성 입력과 답변 (13번)
 
@@ -44,7 +76,7 @@ RAG_ANSWER_BEDROCK=true
 
 | 항목 | 내용 |
 |---|---|
-| 앞단 | 1·2·4·5·6·7·10·11번 gpt-oss(앱 Bedrock 클라이언트), 3번 끔. 캡처 프로브가 회색 구간 판정과 되묻기를 켠다. 답변 생성(13번)은 앱 기본값(엑사원)이라, 대화 이력에 들어가는 앞 턴 응답은 엑사원이 만든 것이다 |
+| 앞단 | 1·2·4·5·6·7·10·11번 gpt-oss(앱 Bedrock 클라이언트), 3번 끔. 캡처 프로브가 회색 구간 판정과 되묻기를 켠다. 측정 당시 답변 생성(13번)은 엑사원이 기본이라(설정 추가 전), 대화 이력에 들어가는 앞 턴 응답은 엑사원이 만든 것이다 |
 | DB | `telme-flow-postgres`(5440)에서 `telme_judge_eval`을 템플릿으로 만든 `telme_answer_b1_182`, 질문 벡터 1,152 |
 | 시나리오 | `scenarios-b.json` 236개, 고객 발화 344개를 같은 세션에 순서대로 보냈다. 앱 응답은 답변 181, 되묻기 163이고 오류는 없었다 |
 | 입력 | 답변 생성 요청 256개 중 검색 근거가 있는 131개(복합 FAQ 31, FAQ+매장 27, 멀티턴 25, 되묻기 20, 단일 FAQ 15, 대화 흐름 13). 대화 이력이 있는 입력 12, 확정 조건이 있는 입력 19, 해석된 질문이 원문과 다른 입력 12 |
