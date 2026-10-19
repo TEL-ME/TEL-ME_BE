@@ -131,6 +131,71 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 추천한_요금제에_통화나_문자_한도가_있으면_그_항목을_되묻는다() {
+        // 1GB는 통화 300분, 문자 100건 한도가 있는 알뜰 미니
+        Outcome both = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "1GB"), true);
+        assertThat(both.content()).isNull();
+        assertThat(both.asks()).extracting(MissingCondition::key).containsExactly("monthly_voice_usage", "monthly_sms_usage");
+        assertThat(both.asks().get(0).options()).isEmpty();
+
+        // 4GB 이하 구간의 LTE 베이직은 통화만 한도가 있다
+        Outcome voiceOnly = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "3GB"), true);
+        assertThat(voiceOnly.asks()).extracting(MissingCondition::key).containsExactly("monthly_voice_usage");
+    }
+
+    @Test
+    void 통화나_문자_한도가_없는_요금제를_추천하면_묻지_않는다() {
+        Outcome outcome = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("5G 스탠다드").doesNotContain("통화·문자를 많이 쓰신다면");
+    }
+
+    @Test
+    void 통화량을_말하면_그_한도를_채우는_요금제로_올려_추천한다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "600분", "monthly_sms_usage", "거의 없음");
+
+        Outcome outcome = answerer.recommend(null, confirmed, true);
+
+        // 통화 600분의 1.2배는 700분 한도의 LTE 베이직도 넘어 통화 무제한인 5G 라이트가 된다
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("5G 라이트(월 45,000원, 데이터 8GB)").doesNotContain("통화·문자를 많이 쓰신다면");
+    }
+
+    @Test
+    void 통화량이_적으면_한도가_있는_요금제를_그대로_추천한다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "100분", "monthly_sms_usage", "20건");
+
+        Outcome outcome = answerer.recommend(null, confirmed, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("알뜰 미니(월 15,000원, 데이터 1.5GB)");
+    }
+
+    @Test
+    void 통화나_문자를_모르거나_되묻지_못하면_한도를_알리고_추천한다() {
+        Map<String, String> unsure = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "모름", "monthly_sms_usage", "모름");
+        assertThat(answerer.recommend(null, unsure, true).content())
+                .contains("알뜰 미니").contains("이 요금제는 통화 300분, 문자 100건까지 쓸 수 있으니");
+
+        Map<String, String> unasked = Map.of("age_group", GENERAL, "monthly_data_usage", "3GB");
+        Outcome outcome = answerer.recommend(null, unasked, false);
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("LTE 베이직").contains("이 요금제는 통화 700분까지 쓸 수 있으니");
+    }
+
+    @Test
+    void 숫자_없이_많이_한다고만_답하면_통화를_다시_묻는다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "3GB", "monthly_voice_usage", "많이 해요");
+
+        assertThat(answerer.recommend(null, confirmed, true).asks())
+                .extracting(MissingCondition::key).containsExactly("monthly_voice_usage");
+    }
+
+    @Test
     void 비회원_답변에는_로그인_안내를_회원_답변에는_사용량_안내를_붙인다() {
         assertThat(answered(null, GENERAL, "40GB")).contains("로그인하고 요금제에 가입하시면");
         assertThat(answered(userId, GENERAL, "40GB")).contains("가입한 요금제의 사용량이 쌓이면");
@@ -149,7 +214,7 @@ class MemberRecommendationAnswererTest {
 
     @Test
     void 같은_채팅방에서_앞서_한_답은_다시_묻지_않고_쓰며_썼다고_알린다() {
-        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB");
+        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB", "monthly_sms_usage", "50건");
 
         Outcome outcome = answerer.recommend(null, Map.of(), previous, true);
 

@@ -245,6 +245,19 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("통화량과 문자량도 숫자로 답하면 모델을 부르지 않고 코드로 읽는다")
+    void analyzeFollowUp_readsCallAndTextUsageWithoutLlm() {
+        givenWaiting("monthly_voice_usage");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "한 5시간쯤 해요").conditions())
+                .containsExactly(entry("monthly_voice_usage", "300분"));
+
+        givenWaiting("monthly_sms_usage");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "50건이요").conditions())
+                .containsExactly(entry("monthly_sms_usage", "50건"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
     @DisplayName("숫자가 분명하지 않은 사용량 답은 모델이 읽는다")
     void analyzeFollowUp_sendsVagueDataUsageToLlm() {
         givenWaitingDataUsage();
@@ -268,6 +281,10 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     private void givenWaitingDataUsage() {
+        givenWaiting("monthly_data_usage");
+    }
+
+    private void givenWaiting(String key) {
         ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
         ConsultRequest waiting = ConsultRequest.builder()
                 .consultRequestId(WAITING_CONSULT_REQUEST_ID)
@@ -275,7 +292,7 @@ class QueryRoutingServiceFollowUpTest {
                 .intent(ConsultRequest.Intent.FAQ)
                 .status(ConsultRequest.Status.WAITING_CONDITION)
                 .conditions(List.of(ConsultCondition.builder()
-                        .conditionKey("monthly_data_usage")
+                        .conditionKey(key)
                         .status(ConsultCondition.Status.PENDING)
                         .askedMessage(askedMessage)
                         .build()))

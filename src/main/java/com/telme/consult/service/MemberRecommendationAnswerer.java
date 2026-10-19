@@ -37,6 +37,8 @@ public class MemberRecommendationAnswerer {
 
     public static final String AGE_KEY = "age_group";
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
+    public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
+    public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;
 
     // content와 asks 중 하나만 있다. asks가 있으면 그 순서대로 되물어야 한다
     public record Outcome(String content, List<String> followUps, List<MissingCondition> asks) {
@@ -91,7 +93,7 @@ public class MemberRecommendationAnswerer {
         Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
-            return byAnswers(group, answers.get(DATA_KEY), active, userId != null, mayAsk,
+            return byAnswers(group, answers, active, userId != null, mayAsk,
                     reuseNote(ageReused && age.fromAnswer(), dataReused));
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
@@ -109,10 +111,11 @@ public class MemberRecommendationAnswerer {
                 usage.get(), discountPercent(subscription), note);
     }
 
-    // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다
-    private Outcome byAnswers(Plan.TargetGroup group, String dataAnswer, List<Plan> active,
+    // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.
+    // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다
+    private Outcome byAnswers(Plan.TargetGroup group, Map<String, String> answers, List<Plan> active,
             boolean member, boolean mayAsk, String note) {
-        DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(dataAnswer);
+        DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
             return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
         }
@@ -130,14 +133,55 @@ public class MemberRecommendationAnswerer {
         if (!answered) {
             return nudge("사용량을 알려주시면 맞는 요금제를 추천해 드릴 수 있어요.");
         }
+        CallTextReplyParser.Result voice = CallTextReplyParser.parseVoice(answers.get(VOICE_KEY));
+        CallTextReplyParser.Result sms = CallTextReplyParser.parseSms(answers.get(SMS_KEY));
         boolean unlimited = usage.kind() == DataUsageReplyParser.Kind.UNLIMITED;
-        UsageFit fit = recommender.forUsage(pool(active, group), new Demand(unlimited ? Long.MAX_VALUE : usage.dataMb(), 0, 0));
+        Demand demand = new Demand(unlimited ? Long.MAX_VALUE : usage.dataMb(), amountOf(voice), amountOf(sms));
+        UsageFit fit = recommender.forUsage(pool(active, group), demand);
         if (fit == null) {
             return nudge("지금은 추천할 수 있는 요금제가 없어요.");
         }
+        UsageLimits limits = UsageLimits.of(fit.cheapest());
+        List<MissingCondition> asks = new ArrayList<>();
+        if (limits.voiceMinutes() != null && !voice.readable()) {
+            asks.add(voiceQuestion());
+        }
+        if (limits.smsCount() != null && !sms.readable()) {
+            asks.add(smsQuestion());
+        }
+        if (mayAsk && !asks.isEmpty()) {
+            return new Outcome(null, List.of(), asks);
+        }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
-        return new Outcome(recommendation(usage, fit) + tail + note, List.of(CATALOG_QUESTION), null);
+        return new Outcome(recommendation(usage, fit) + limitNotice(limits, voice, sms) + tail + note,
+                List.of(CATALOG_QUESTION), null);
+    }
+
+    // 모르거나 말하지 않은 항목은 0으로 두고, 무제한이라고 한 항목은 한도가 없는 요금제만 채운다
+    private static long amountOf(CallTextReplyParser.Result result) {
+        return switch (result.kind()) {
+            case AMOUNT -> result.value();
+            case UNLIMITED -> Long.MAX_VALUE;
+            default -> 0;
+        };
+    }
+
+    // 한도가 있는 항목을 모르는 채로 추천했으면 한도를 알려 확인하게 한다
+    private static String limitNotice(UsageLimits limits, CallTextReplyParser.Result voice, CallTextReplyParser.Result sms) {
+        List<String> unknown = new ArrayList<>();
+        if (limits.voiceMinutes() != null && notKnown(voice)) {
+            unknown.add("통화 %d분".formatted(limits.voiceMinutes()));
+        }
+        if (limits.smsCount() != null && notKnown(sms)) {
+            unknown.add("문자 %d건".formatted(limits.smsCount()));
+        }
+        return unknown.isEmpty() ? "" : " 이 요금제는 %s까지 쓸 수 있으니 통화·문자를 많이 쓰신다면 확인해 보세요."
+                .formatted(String.join(", ", unknown));
+    }
+
+    private static boolean notKnown(CallTextReplyParser.Result result) {
+        return result.kind() == CallTextReplyParser.Kind.UNSURE || result.kind() == CallTextReplyParser.Kind.UNREADABLE;
     }
 
     private static String recommendation(DataUsageReplyParser.Result usage, UsageFit fit) {
@@ -201,6 +245,14 @@ public class MemberRecommendationAnswerer {
     private static MissingCondition ageQuestion() {
         return new MissingCondition(AGE_KEY, "나이에 따라 추천하는 요금제가 달라져요. 나이대가 어떻게 되세요?",
                 List.of(YOUTH_OPTION, GENERAL_OPTION, SENIOR_OPTION), null);
+    }
+
+    private static MissingCondition voiceQuestion() {
+        return new MissingCondition(VOICE_KEY, "한 달에 통화는 대략 몇 분 쓰세요? 잘 모르시면 모른다고 해 주세요.", List.of(), null);
+    }
+
+    private static MissingCondition smsQuestion() {
+        return new MissingCondition(SMS_KEY, "한 달에 문자는 대략 몇 건 보내세요? 잘 모르시면 모른다고 해 주세요.", List.of(), null);
     }
 
     private static MissingCondition dataQuestion() {

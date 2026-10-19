@@ -59,11 +59,11 @@ public final class DataUsageReplyParser {
     private static final Pattern GB_ONLY = Pattern.compile("^\\s*(" + NUMBER + ")\\s*g\\s*$");
     private static final Pattern OTHER_QUANTITY = Pattern.compile(
             "\\d\\s*(?:명|대|살|세|개|원|%|회선|년|개월|시간|분|건|번|배|퍼센트|일|인(?![가데지듯]))");
-    private static final Pattern DAILY = Pattern.compile("하루|매일|일\\s*평균|일평균|(?<!\\d)1일");
-    private static final Pattern MONTHLY = Pattern.compile("한\\s*달|매달|달에|월\\s*평균|월간|1개월");
-    private static final Pattern UNLIMITED = Pattern.compile("무제한|언리미티드|제한\\s*없");
-    private static final Pattern NEGATION = Pattern.compile("안|않|아니|필요\\s*없|싫");
-    private static final Pattern UNSURE = Pattern.compile("모르|몰라|모름|글쎄|기억(?:이)?\\s*(?:안|잘)|감이\\s*안|확실하지");
+    static final Pattern DAILY = Pattern.compile("하루|매일|일\\s*평균|일평균|(?<!\\d)1일");
+    static final Pattern MONTHLY = Pattern.compile("한\\s*달|매달|달에|월\\s*평균|월간|1개월");
+    static final Pattern UNLIMITED = Pattern.compile("무제한|언리미티드|제한\\s*없");
+    static final Pattern NEGATION = Pattern.compile("안|않|아니|필요\\s*없|싫");
+    static final Pattern UNSURE = Pattern.compile("모르|몰라|모름|글쎄|기억(?:이)?\\s*(?:안|잘)|감이\\s*안|확실하지");
     private static final Pattern GB_WORD = Pattern.compile("^(?:" + GB_UNIT + ")$");
 
     private DataUsageReplyParser() {}

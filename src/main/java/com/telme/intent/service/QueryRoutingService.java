@@ -9,6 +9,7 @@ import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.consult.service.CallTextReplyParser;
 import com.telme.consult.service.DataUsageReplyParser;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.config.RoutingLlmConfiguration;
@@ -60,7 +61,7 @@ import org.springframework.web.client.RestClientException;
 @Slf4j
 public class QueryRoutingService {
     private static final int MAX_CONSULT_SUB_QUERIES = 3;
-    private static final int MAX_DATA_USAGE_REPLY_LENGTH = 30;
+    private static final int MAX_USAGE_REPLY_LENGTH = 30;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -1070,20 +1071,11 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
-        // 요금제 추천의 데이터 사용량 질문에 짧게 답한 것은 모델 없이 읽는다. 단위와 하루·한 달 구분을 코드가 정확히 읽는다
+        // 요금제 추천의 사용량 질문(데이터·통화·문자)에 짧게 답한 것은 모델 없이 읽는다. 단위와 하루·한 달 구분을 코드가 정확히 읽는다
         // 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 판단한다
-        if (waiting.pendingKeys().contains(DataUsageReplyParser.CONDITION_KEY)
-                && reply.length() <= MAX_DATA_USAGE_REPLY_LENGTH && !reply.contains("?")) {
-            DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(reply);
-            if (usage.readable()) {
-                log.info("[후속분석] 데이터 사용량 답을 코드로 읽었습니다: consultRequestId={}, kind={}",
-                        waiting.consultRequestId(), usage.kind());
-                return new FollowUpRouteResponse(
-                    waiting.consultRequestId(),
-                    Map.of(DataUsageReplyParser.CONDITION_KEY, usage.canonical()),
-                    Collections.emptySet(),
-                    QueryRouting.Method.RULE);
-            }
+        FollowUpRouteResponse usageReply = readUsageReply(waiting, reply);
+        if (usageReply != null) {
+            return usageReply;
         }
 
         LlmFollowUpPayload payload;
@@ -1185,6 +1177,34 @@ public class QueryRoutingService {
         if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
+    }
+
+    // 사용량 질문 하나만 기다리는 중이고 답이 짧은 숫자 답이면 정리한 값으로 돌려준다. 아니면 null
+    private FollowUpRouteResponse readUsageReply(WaitingConsult waiting, String reply) {
+        if (waiting.pendingKeys().size() != 1 || reply.length() > MAX_USAGE_REPLY_LENGTH || reply.contains("?")) {
+            return null;
+        }
+        String key = waiting.pendingKeys().iterator().next();
+        String value = switch (key) {
+            case DataUsageReplyParser.CONDITION_KEY -> canonicalOf(DataUsageReplyParser.parse(reply));
+            case CallTextReplyParser.VOICE_KEY -> canonicalOf(CallTextReplyParser.parseVoice(reply));
+            case CallTextReplyParser.SMS_KEY -> canonicalOf(CallTextReplyParser.parseSms(reply));
+            default -> null;
+        };
+        if (value == null) {
+            return null;
+        }
+        log.info("[후속분석] 사용량 답을 코드로 읽었습니다: consultRequestId={}, key={}", waiting.consultRequestId(), key);
+        return new FollowUpRouteResponse(
+            waiting.consultRequestId(), Map.of(key, value), Collections.emptySet(), QueryRouting.Method.RULE);
+    }
+
+    private static String canonicalOf(DataUsageReplyParser.Result result) {
+        return result.readable() ? result.canonical() : null;
+    }
+
+    private static String canonicalOf(CallTextReplyParser.Result result) {
+        return result.readable() ? result.canonical() : null;
     }
 
     private LlmFollowUpPayload requestFollowUpAnalysis(String reply, WaitingConsult waiting, Long executionId) {
