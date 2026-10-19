@@ -4,7 +4,6 @@ import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ConsultationQuestion;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatQuestionResolver;
-import com.telme.chat.service.ChatTopicClarification;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
@@ -161,7 +160,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
                 result.initialQuery().queryText()).withContext(context.routingContext(),
-                        context.resolvedQuestion());
+                        context.historyResolved()
+                                ? result.initialQuery().queryText() : context.resolvedQuestion());
     }
 
     private Context resolveQuestion(ChatProcessingCommand command, Context context) {
@@ -194,7 +194,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
 
     private AnalyzedTurn clarification() {
         return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                ChatTopicClarification.MESSAGE,
+                "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.",
                 null, List.of(), null));
     }
 

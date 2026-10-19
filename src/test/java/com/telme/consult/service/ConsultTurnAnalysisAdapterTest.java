@@ -417,33 +417,6 @@ class ConsultTurnAnalysisAdapterTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("정제 검색 후보가 현재 조건과 검증된 복원 문맥을 덮어쓰지 않는다")
-    void 검색_후보와_복원된_원문을_구분한다() {
-        String question = "가입 기간은 18개월입니다. 같은 유심 절차를 다시 알려주세요.";
-        var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
-                ChatMessage.MessageType.QUESTION, "유심 분실 재발급 문의입니다.", null);
-        var context = new Context(1, 10, question, List.of(),
-                new ChatContext(1L, 10L, null, List.of(previous), question, 100));
-        var model = mock(LlmClient.class);
-        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
-        var query = new IntentSubQueryResponse(101L, (short) 1,
-                ConsultRequest.Intent.FAQ, "유심 재발급 절차", Map.of());
-        when(preparation.prepareAnalysis(1L, query, LocationStatus.MISSING))
-                .thenReturn(mock(ConsultService.PreparationResult.class));
-        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input ->
-                new AnalysisResult(query, null, LocationStatus.MISSING),
-                preparation, new FollowupConditionConverter(), resolver);
-
-        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, question));
-
-        assertThat(turn.searchQuery()).isEqualTo("유심 재발급 절차");
-        assertThat(turn.resolvedUserQuery()).contains(previous.content(), question, "18개월");
-        assertThat(turn.originalUserQuery()).isEqualTo(question);
-        verify(preparation).prepareAnalysis(1L, query, LocationStatus.MISSING);
-        verifyNoInteractions(model);
-    }
-
-    @Test
     void missingAnalysisKindIsRejected() {
         assertThatThrownBy(() -> new AnalysisResult(null, null, LocationStatus.MISSING))
                 .isInstanceOf(IllegalArgumentException.class);

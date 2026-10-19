@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
-import lombok.Builder;
 
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record ChatSessionEndSummaryResponse(
@@ -16,25 +15,11 @@ public record ChatSessionEndSummaryResponse(
         Instant generatedAt,
         String message
 ) {
-    @Builder
-    public record Inquiry(String title, String text) {}
-
-    @Builder
-    public record Remaining(String title, String text, String kind) {}
-
-    @Builder
-    public record Content(List<String> topics, List<String> guidance, List<String> pendingItems,
-            List<Inquiry> inquiries, List<Remaining> remaining) {
-        public Content(List<String> topics, List<String> guidance, List<String> pendingItems) {
-            this(topics, guidance, pendingItems, List.of(), List.of());
-        }
-
+    public record Content(List<String> topics, List<String> guidance, List<String> pendingItems) {
         public Content {
             topics = List.copyOf(topics);
             guidance = List.copyOf(guidance);
             pendingItems = List.copyOf(pendingItems);
-            inquiries = List.copyOf(inquiries);
-            remaining = List.copyOf(remaining);
         }
     }
 }

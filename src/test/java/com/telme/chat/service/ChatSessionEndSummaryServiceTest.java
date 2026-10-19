@@ -31,7 +31,6 @@ class ChatSessionEndSummaryServiceTest {
     private final ChatSessionEndSummaryStore store = mock(ChatSessionEndSummaryStore.class);
     private final ChatSessionEndSummaryInputReader reader = mock(ChatSessionEndSummaryInputReader.class);
     private final ChatSessionEndSummaryGenerator generator = mock(ChatSessionEndSummaryGenerator.class);
-    private final ChatEndSummaryGroundedGenerator grounded = mock(ChatEndSummaryGroundedGenerator.class);
     private final Logger logger = (Logger) LoggerFactory.getLogger(ChatSessionEndSummaryService.class);
     private final ListAppender<ILoggingEvent> logs = new ListAppender<>();
     private final ChatEndSummaryData.Input input = new ChatEndSummaryData.Input(1, 1, 10L, List.of(
@@ -49,7 +48,7 @@ class ChatSessionEndSummaryServiceTest {
         when(reader.read(1)).thenReturn(input);
         var properties = new ChatEndSummaryProperties(true, false, false, 3072, 768, 400, 8, 2,
                 Duration.ofMinutes(5), Duration.ofMinutes(15));
-        service = new ChatSessionEndSummaryService(store, reader, generator, grounded, properties,
+        service = new ChatSessionEndSummaryService(store, reader, generator, properties,
                 mock(ApplicationEventPublisher.class));
     }
 
@@ -101,19 +100,4 @@ class ChatSessionEndSummaryServiceTest {
         verify(store).finish(lease, input, null, "FAILED", "INPUT_LIMIT");
         assertThat(logs.list).isEmpty();
     }
-    @Test
-    @DisplayName("서비스는 문의별 원문 중심 후처리를 마친 결과만 저장한다")
-    void 문의별_원문_결과를_저장한다() {
-        var selected = new ChatEndSummaryData.Result("선택 결과", null, OutputMaskContext.empty());
-        var finalSummary = new ChatEndSummaryData.Result("문의별 결과", null, OutputMaskContext.empty());
-        when(generator.generate(input, lease.deadline())).thenReturn(selected);
-        when(grounded.generate(input, selected)).thenReturn(
-                new ChatEndSummaryGroundedGenerator.Result(finalSummary, List.of(), List.of()));
-
-        service.process(1);
-
-        verify(grounded).generate(input, selected);
-        verify(store).finish(lease, input, finalSummary, "COMPLETED", null);
-    }
-
 }

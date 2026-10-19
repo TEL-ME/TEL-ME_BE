@@ -17,7 +17,6 @@ public class ChatSessionEndSummaryService {
     private final ChatSessionEndSummaryStore store;
     private final ChatSessionEndSummaryInputReader reader;
     private final ChatSessionEndSummaryGenerator generator;
-    private final ChatEndSummaryGroundedGenerator groundedGenerator;
     private final ChatEndSummaryProperties properties;
     private final ApplicationEventPublisher publisher;
 
@@ -49,8 +48,7 @@ public class ChatSessionEndSummaryService {
                 store.finish(lease.get(), input, null, "EMPTY", null);
                 return;
             }
-            var extractive = generator.generate(input, lease.get().deadline());
-            var result = groundedGenerator.generate(input, extractive).summary();
+            var result = generator.generate(input, lease.get().deadline());
             store.finish(lease.get(), input, result, "COMPLETED", null);
         } catch (ChatOutputBlockedException exception) {
             store.finish(lease.get(), input, null, "FAILED", "OUTPUT_BLOCKED");
