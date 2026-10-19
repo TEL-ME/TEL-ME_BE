@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
@@ -50,13 +52,13 @@ class PlanTaskAnswerProviderTest {
         when(faq.prepare(any(), anyBoolean())).thenReturn(searched);
 
         assertThat(provider.prepare(input(Purpose.GENERAL_FAQ, "요금제 변경은 어떻게 해요?"), true)).isSameAs(searched);
-        verify(changes, never()).answer(any(), any(), any());
+        verify(changes, never()).answer(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("업무 요청이면 기존 답변 경로를 부르지 않고 맡은 처리기의 안내와 링크를 요금제 데이터 답변으로 낸다")
     void 업무_안내() {
-        when(changes.answer(USER_ID, "5G 라이트로 바꿔줘", "5G 라이트로 바꿔줘"))
+        when(changes.answer(USER_ID, "5G 라이트로 바꿔줘", "5G 라이트로 바꿔줘", null))
                 .thenReturn(PlanTaskOutcome.reply("요금제 변경 화면에서 골라 주세요.", PlanTaskLinks.CHANGE));
 
         GeneratedAnswer answer = provider.prepare(input(Purpose.GENERAL_FAQ, "5G 라이트로 바꿔줘"), true).answer();
@@ -80,14 +82,14 @@ class PlanTaskAnswerProviderTest {
                 "그건 데이터 몇 기가예요?", Map.of(), resolved, null);
 
         assertThat(provider.prepare(input, true)).isSameAs(searched);
-        verify(changes, never()).answer(any(), any(), any());
+        verify(changes, never()).answer(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("이번 원문이 업무 요청이면 풀어쓴 문장은 처리기가 대상 요금제를 보충하는 데 넘긴다")
     void 대상_보충() {
         String resolved = "[대상을 확인할 이전 고객 발언]\n5G 라이트 얼마예요?\n[현재 후속 질문]\n그걸로 바꿔줘";
-        when(changes.answer(USER_ID, "그걸로 바꿔줘", resolved))
+        when(changes.answer(USER_ID, "그걸로 바꿔줘", resolved, null))
                 .thenReturn(PlanTaskOutcome.reply("5G 라이트로 바꾸려면 변경 화면에서 골라 주세요.", PlanTaskLinks.CHANGE));
 
         GeneratedAnswer answer = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그걸로 바꿔줘",
@@ -97,14 +99,53 @@ class PlanTaskAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("직전 추천 답변의 첫 문장을 처리기가 대상 요금제를 보충하는 데 넘긴다")
+    void 직전_추천_보충() {
+        String recommendation = "한 달에 데이터를 8GB 쓰신다면 LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.";
+        String content = recommendation + " 5G로 쓰시려면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제가 가장 저렴해요. 로그인하고 가입하세요.";
+        when(changes.answer(USER_ID, "그 요금제로 바꿔줘", "그 요금제로 바꿔줘", recommendation))
+                .thenReturn(PlanTaskOutcome.reply("LTE 플러스로 바꾸려면 변경 화면에서 신청해 주세요.", PlanTaskLinks.CHANGE));
+        var history = List.of(
+                new ChatContextMessage(1L, 1, ChatMessage.Role.USER, ChatMessage.MessageType.QUESTION, "요금제 추천해줘", null),
+                new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER, content, null));
+        var context = new ChatContext(2L, 3L, null, history, "그 요금제로 바꿔줘", 10);
+
+        GeneratedAnswer answer = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그 요금제로 바꿔줘",
+                "그 요금제로 바꿔줘", Map.of(), "그 요금제로 바꿔줘", context, true, null, Map.of()), true).answer();
+
+        assertThat(answer.answer().content()).startsWith("LTE 플러스로 바꾸려면");
+    }
+
+    @Test
+    @DisplayName("직전 추천은 가장 최근 추천 답변의 첫 문장이고, 추천 답변이 없으면 비어 있다")
+    void 직전_추천_찾기() {
+        var older = new ChatContextMessage(2L, 2, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                "한 달에 데이터를 3GB 쓰신다면 LTE 베이직(월 33,000원, 데이터 4GB) 요금제를 추천해요. 뒤 문장", null);
+        var newer = new ChatContextMessage(4L, 4, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요. 뒤 문장", null);
+        var other = new ChatContextMessage(5L, 5, ChatMessage.Role.ASSISTANT, ChatMessage.MessageType.ANSWER,
+                "요금제 가입 화면에서 신청해 주세요.", null);
+
+        assertThat(PlanTaskAnswerProvider.recentRecommendation(withHistory(List.of(older, newer, other))))
+                .isEqualTo("한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요.");
+        assertThat(PlanTaskAnswerProvider.recentRecommendation(withHistory(List.of(other)))).isNull();
+        assertThat(PlanTaskAnswerProvider.recentRecommendation(input(Purpose.GENERAL_FAQ, "요금제 가입하고 싶어"))).isNull();
+    }
+
+    private static AnswerInput withHistory(List<ChatContextMessage> history) {
+        return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "요금제 가입하고 싶어", "요금제 가입하고 싶어", Map.of(),
+                "요금제 가입하고 싶어", new ChatContext(2L, 9L, null, history, "요금제 가입하고 싶어", 10), true, null, Map.of());
+    }
+
+    @Test
     @DisplayName("업무마다 맡은 처리기로 보낸다. 해지 요청은 변경 처리기를 부르지 않는다")
     void 업무별_처리기() {
-        when(cancels.answer(any(), any(), any())).thenReturn(PlanTaskOutcome.reply("해지하면 바로 끊겨요.", PlanTaskLinks.CANCEL));
+        when(cancels.answer(any(), any(), any(), any())).thenReturn(PlanTaskOutcome.reply("해지하면 바로 끊겨요.", PlanTaskLinks.CANCEL));
 
         GeneratedAnswer answer = provider.prepare(input(Purpose.GENERAL_FAQ, "요금제 해지해줘"), true).answer();
 
         assertThat(answer.answer().content()).isEqualTo("해지하면 바로 끊겨요.");
-        verify(changes, never()).answer(any(), any(), any());
+        verify(changes, never()).answer(any(), any(), any(), any());
     }
 
     @Test
@@ -123,13 +164,13 @@ class PlanTaskAnswerProviderTest {
         provider(false).prepare(input(Purpose.GENERAL_FAQ, "5G 라이트로 바꿔줘"), true);
         provider.prepare(input(Purpose.NEARBY_STORE, "5G 라이트로 바꿔줘"), true);
 
-        verify(changes, never()).answer(any(), any(), any());
+        verify(changes, never()).answer(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("안내 중 오류가 나도 FAQ 답으로 넘기지 않고 화면에서 진행하도록 알린다")
     void 오류() {
-        when(changes.answer(any(), any(), any())).thenThrow(new IllegalStateException("DB 연결 끊김"));
+        when(changes.answer(any(), any(), any(), any())).thenThrow(new IllegalStateException("DB 연결 끊김"));
 
         GeneratedAnswer answer = provider.prepare(input(Purpose.GENERAL_FAQ, "5G 라이트로 바꿔줘"), true).answer();
 

@@ -32,6 +32,12 @@ final class PlanTaskSupport {
     }
 
     // 띄어쓰기와 대소문자를 무시하고, 음성 인식이 소리 나는 대로 적은 "오지"·"엘티이"도 5G·LTE로 읽는다
+    // 원문과 풀어쓴 문장에 이름이 없으면 직전 추천 문장에서 찾는다
+    static List<Plan> namedPlans(List<Plan> selling, String original, String resolved, String recommended) {
+        List<Plan> named = namedPlans(selling, original, resolved);
+        return named.isEmpty() ? mentionedPlans(selling, recommended) : named;
+    }
+
     static List<Plan> mentionedPlans(List<Plan> selling, String... texts) {
         StringBuilder joined = new StringBuilder();
         for (String text : texts) {

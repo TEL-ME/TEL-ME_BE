@@ -90,14 +90,14 @@ public final class PlanTaskRules {
                 && (PAUSE_WORD.matcher(text).find() || planWord || PERIOD.matcher(text).find())) {
             return Optional.of(PlanTask.PAUSE);
         }
-        // 대상 요금제를 말하면 바라는 말도 받고, 말하지 않으면 "요금제"와 함께 분명히 맡길 때만 받는다
+        // 변경은 대상 요금제를 말해야 바라는 말도 받는다. 신청은 "요금제 가입하고 싶어"처럼 요금제를 함께 말하면 받는다(대상이 없으면 가입 화면으로 안내)
         boolean target = TARGET.matcher(text).find();
         if ((CHANGE_REQUEST.matcher(text).find() && (target || planWord)) || (CHANGE_WISH.matcher(text).find() && target)
                 || (CHOOSE.matcher(text).find() && target)) {
             return Optional.of(PlanTask.CHANGE);
         }
         if ((SUBSCRIBE_REQUEST.matcher(text).find() && (target || planWord))
-                || (SUBSCRIBE_WISH.matcher(text).find() && target)) {
+                || (SUBSCRIBE_WISH.matcher(text).find() && (target || planWord))) {
             return Optional.of(PlanTask.SUBSCRIBE);
         }
         return Optional.empty();

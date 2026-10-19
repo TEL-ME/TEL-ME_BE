@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
@@ -24,6 +25,8 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     // 요금제 추천 답변(MemberRecommendationAnswerer)이 더 싸거나 큰 요금제를 권할 때 다는 버튼. 이 버튼 옆에 변경 화면 링크를 더한다
     static final String RECOMMENDATION_CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
+    // 요금제 추천 답변(MemberRecommendationAnswerer.recommendation)의 첫 문장 끝
+    private static final String RECOMMENDATION_MARK = "요금제를 추천해요.";
 
     private final AnswerProvider delegate;
     private final Map<PlanTask, PlanTaskHandler> handlers;
@@ -88,12 +91,32 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     private PlanTaskOutcome handle(PlanTaskHandler handler, AnswerInput input) {
         try {
-            return handler.answer(memberOf(input), input.originalUserQuery(), input.resolvedUserQuery());
+            return handler.answer(memberOf(input), input.originalUserQuery(), input.resolvedUserQuery(), recentRecommendation(input));
         } catch (RuntimeException exception) {
             // 기존 FAQ 경로로 넘기면 업무 요청에 엉뚱한 답이 나가서 안내하지 못했다고만 알린다
             log.error("[채팅 요금제 업무] 안내 중 오류 task={}, executionId={}", handler.task(), input.executionId(), exception);
             return PlanTaskOutcome.reply(PlanTaskSupport.FAILED);
         }
+    }
+
+    // 같은 채팅방에서 가장 최근에 한 요금제 추천 답변의 첫 문장("…쓰신다면 5G 스탠다드(월 65,000원…) 요금제를 추천해요.").
+    // 뒤따르는 "5G로 쓰시려면 …" 같은 다른 후보는 대상이 아니라 첫 문장만 쓴다. 없으면 null
+    static String recentRecommendation(AnswerInput input) {
+        if (input.context() == null) {
+            return null;
+        }
+        List<ChatContextMessage> history = input.context().history();
+        for (int i = history.size() - 1; i >= 0; i--) {
+            ChatContextMessage message = history.get(i);
+            if (message.role() != ChatMessage.Role.ASSISTANT || message.content() == null) {
+                continue;
+            }
+            int end = message.content().indexOf(RECOMMENDATION_MARK);
+            if (end >= 0) {
+                return message.content().substring(0, end + RECOMMENDATION_MARK.length());
+            }
+        }
+        return null;
     }
 
     private GeneratedAnswer answered(AnswerInput input, String task, PlanTaskOutcome outcome) {

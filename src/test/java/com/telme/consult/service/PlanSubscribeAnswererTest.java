@@ -53,6 +53,20 @@ class PlanSubscribeAnswererTest {
     }
 
     @Test
+    @DisplayName("이름이 없어도 직전 추천 요금제가 있으면 그 요금제로 안내하고, 원문에 이름이 있으면 원문을 따른다")
+    void 직전_추천을_대상으로_쓴다() {
+        String recommended = "한 달에 데이터를 40GB 쓰신다면 5G 라이트(월 45,000원, 데이터 12GB) 요금제를 추천해요.";
+
+        var outcome = answerer.answer(USER_ID, "요금제 가입하고 싶어", null, recommended);
+
+        assertThat(outcome.content()).startsWith("5G 라이트(월 45,000원, 데이터 12GB)는 요금제 가입 화면에서 신청할 수 있어요.");
+        assertThat(outcome.followUps()).containsExactly(PlanTaskLinks.SUBSCRIBE);
+        assertThat(answerer.answer(USER_ID, "LTE 맥스 가입하고 싶어", null, recommended).content()).startsWith("LTE 맥스(");
+        assertThat(answerer.answer(USER_ID, "요금제 가입하고 싶어", null, null).content())
+                .startsWith("요금제 가입 화면에서 원하는 요금제를 골라 신청해 주세요.");
+    }
+
+    @Test
     @DisplayName("신청할 요금제를 말하면 요금·약정·개통 시점을 알려주고 가입 화면 링크를 준다")
     void 신청_안내() {
         var outcome = answerer.answer(USER_ID, "5G 라이트 신청해줘", null);

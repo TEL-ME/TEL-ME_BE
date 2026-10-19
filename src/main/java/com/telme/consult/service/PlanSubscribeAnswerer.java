@@ -32,11 +32,16 @@ public class PlanSubscribeAnswerer implements PlanTaskHandler {
 
     @Override
     public PlanTaskOutcome answer(Long userId, String original, String resolved) {
+        return answer(userId, original, resolved, null);
+    }
+
+    @Override
+    public PlanTaskOutcome answer(Long userId, String original, String resolved, String recommended) {
         if (userId == null) {
             return reply("요금제 신청은 " + PlanTaskSupport.LOGIN_REQUIRED);
         }
         List<Plan> named = PlanTaskSupport.namedPlans(
-                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved);
+                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved, recommended);
         SubscriptionMeResponse mine = queryService.getMine(userId);
         if (mine.subscribed()) {
             var current = mine.subscription().currentPlan() != null ? mine.subscription().currentPlan()
