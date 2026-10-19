@@ -4,6 +4,7 @@ import com.telme.consult.dto.MissingCondition;
 import com.telme.consult.service.PlanRecommender.Demand;
 import com.telme.consult.service.PlanRecommender.Kind;
 import com.telme.consult.service.PlanRecommender.Recommendation;
+import com.telme.consult.service.PlanRecommender.UsageFit;
 import com.telme.member.entity.User;
 import com.telme.member.repository.UserRepository;
 import com.telme.plan.entity.Plan;
@@ -35,7 +36,7 @@ import org.springframework.stereotype.Component;
 public class MemberRecommendationAnswerer {
 
     public static final String AGE_KEY = "age_group";
-    public static final String HEAVY_KEY = "heavy_data";
+    public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
 
     // content와 asks 중 하나만 있다. asks가 있으면 그 순서대로 되물어야 한다
     public record Outcome(String content, List<String> followUps, List<MissingCondition> asks) {
@@ -45,10 +46,8 @@ public class MemberRecommendationAnswerer {
     private static final String CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
     private static final int COOLDOWN_MONTHS = 3;
     private static final int MB_PER_GB = 1024;
-    private static final long HEAVY_DATA_MB = 50L * MB_PER_GB;
-    private static final long LIGHT_DATA_MB = 3L * MB_PER_GB;
-    private static final String YES = "예";
-    private static final String NO = "아니요";
+    // 말한 사용량이 요금제 데이터의 이 비율을 넘으면 한도에 가깝다고 알린다
+    private static final double TIGHT_RATIO = 0.75;
     private static final String YOUTH_OPTION = "만 %d~%d세".formatted(
             SubscriptionEligibilityChecker.YOUTH_MIN_AGE, SubscriptionEligibilityChecker.YOUTH_MAX_AGE);
     private static final String GENERAL_OPTION = "만 %d~%d세".formatted(
@@ -73,7 +72,7 @@ public class MemberRecommendationAnswerer {
         Map<String, String> answers = new HashMap<>(previous);
         answers.putAll(confirmed);
         boolean ageReused = !confirmed.containsKey(AGE_KEY) && previous.containsKey(AGE_KEY);
-        boolean heavyReused = !confirmed.containsKey(HEAVY_KEY) && previous.containsKey(HEAVY_KEY);
+        boolean dataReused = !confirmed.containsKey(DATA_KEY) && previous.containsKey(DATA_KEY);
         String ageAnswer = answers.get(AGE_KEY);
         Optional<UsageDemand> usage = Optional.empty();
         Plan current = null;
@@ -92,8 +91,8 @@ public class MemberRecommendationAnswerer {
         Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
-            return byAnswers(group, answers.get(HEAVY_KEY), active, userId != null, mayAsk,
-                    reuseNote(ageReused && age.fromAnswer(), heavyReused));
+            return byAnswers(group, answers.get(DATA_KEY), active, userId != null, mayAsk,
+                    reuseNote(ageReused && age.fromAnswer(), dataReused));
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
@@ -110,33 +109,54 @@ public class MemberRecommendationAnswerer {
                 usage.get(), discountPercent(subscription), note);
     }
 
-    // 사용량이 없으면 나이대와 데이터를 많이 쓰는지만 묻고 그에 맞는 요금제를 추천한다
-    private Outcome byAnswers(Plan.TargetGroup group, String heavy, List<Plan> active,
+    // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다
+    private Outcome byAnswers(Plan.TargetGroup group, String dataAnswer, List<Plan> active,
             boolean member, boolean mayAsk, String note) {
-        boolean answered = YES.equals(heavy) || NO.equals(heavy);
+        DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(dataAnswer);
+        if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
+            return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
+        }
+        boolean answered = usage.readable();
         if (mayAsk && (group == null || !answered)) {
             List<MissingCondition> asks = new ArrayList<>();
             if (group == null) {
                 asks.add(ageQuestion());
             }
             if (!answered) {
-                asks.add(heavyQuestion());
+                asks.add(dataQuestion());
             }
             return new Outcome(null, List.of(), asks);
         }
         if (!answered) {
             return nudge("사용량을 알려주시면 맞는 요금제를 추천해 드릴 수 있어요.");
         }
-        boolean isHeavy = YES.equals(heavy);
-        Plan plan = recommender.forDataNeed(pool(active, group), isHeavy ? HEAVY_DATA_MB : LIGHT_DATA_MB);
-        if (plan == null) {
+        boolean unlimited = usage.kind() == DataUsageReplyParser.Kind.UNLIMITED;
+        UsageFit fit = recommender.forUsage(pool(active, group), new Demand(unlimited ? Long.MAX_VALUE : usage.dataMb(), 0, 0));
+        if (fit == null) {
             return nudge("지금은 추천할 수 있는 요금제가 없어요.");
         }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
-        return new Outcome("데이터를 %s %s(%s) 요금제를 추천해요.%s".formatted(
-                isHeavy ? "많이 쓰신다면" : "적게 쓰신다면", plan.getName(), summary(plan), tail) + note,
-                List.of(CATALOG_QUESTION), null);
+        return new Outcome(recommendation(usage, fit) + tail + note, List.of(CATALOG_QUESTION), null);
+    }
+
+    private static String recommendation(DataUsageReplyParser.Result usage, UsageFit fit) {
+        Plan plan = fit.cheapest();
+        StringBuilder text = new StringBuilder(usage.kind() == DataUsageReplyParser.Kind.UNLIMITED
+                ? "데이터를 무제한으로 쓰신다면 %s(%s) 요금제를 추천해요.".formatted(plan.getName(), summary(plan))
+                : "한 달에 데이터를 %s 쓰신다면 %s(%s) 요금제를 추천해요.".formatted(gb(usage.dataMb()), plan.getName(), summary(plan)));
+        if (isTight(plan, usage)) {
+            text.append(" 한도에 가까워서 사용량이 늘면 모자랄 수 있어요.");
+        }
+        if (fit.fiveG() != null && plan.getNetworkType() == Plan.NetworkType.LTE) {
+            text.append(" 5G로 쓰시려면 %s(%s) 요금제가 가장 저렴해요.".formatted(fit.fiveG().getName(), summary(fit.fiveG())));
+        }
+        return text.toString();
+    }
+
+    private static boolean isTight(Plan plan, DataUsageReplyParser.Result usage) {
+        Long limitMb = UsageLimits.of(plan).dataMb();
+        return usage.kind() == DataUsageReplyParser.Kind.AMOUNT && limitMb != null && usage.dataMb() >= limitMb * TIGHT_RATIO;
     }
 
     // 일반 요금제는 누구나, 청소년·시니어 요금제는 해당하는 나이대만 고를 수 있다
@@ -170,11 +190,11 @@ public class MemberRecommendationAnswerer {
     }
 
     // 앞서 한 답을 다시 묻지 않고 썼으면 답변 끝에 알린다
-    private static String reuseNote(boolean age, boolean heavy) {
-        if (!age && !heavy) {
+    private static String reuseNote(boolean age, boolean data) {
+        if (!age && !data) {
             return "";
         }
-        String what = age && heavy ? "나이대와 데이터 사용량" : age ? "나이대" : "데이터 사용량";
+        String what = age && data ? "나이대와 데이터 사용량" : age ? "나이대" : "데이터 사용량";
         return " 앞서 알려주신 %s 답을 기준으로 했어요.".formatted(what);
     }
 
@@ -183,8 +203,8 @@ public class MemberRecommendationAnswerer {
                 List.of(YOUTH_OPTION, GENERAL_OPTION, SENIOR_OPTION), null);
     }
 
-    private static MissingCondition heavyQuestion() {
-        return new MissingCondition(HEAVY_KEY, "데이터를 많이 쓰시는 편인가요? (한 달 50GB 이상)", List.of(YES, NO), null);
+    private static MissingCondition dataQuestion() {
+        return new MissingCondition(DATA_KEY, "한 달에 데이터를 얼마나 쓰세요? 대략 몇 GB인지 채팅으로 알려주세요. 잘 모르시면 모른다고 해 주세요.", List.of(), null);
     }
 
     // 요금제를 바꾼 지 얼마 안 됐으면 곧바로 다시 바꾸라고 권하지 않는다

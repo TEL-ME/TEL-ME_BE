@@ -28,7 +28,20 @@ public final class DataUsageReplyParser {
         public boolean readable() {
             return kind != Kind.UNREADABLE;
         }
+
+        // 조건 값으로 저장하는 글자. 다시 읽어도 같은 결과가 나온다
+        public String canonical() {
+            return switch (kind) {
+                case AMOUNT -> dataMb % MB_PER_GB == 0 ? dataMb / MB_PER_GB + "GB" : dataMb + "MB";
+                case UNLIMITED -> "무제한";
+                case UNSURE -> "모름";
+                case UNREADABLE -> throw new IllegalStateException("읽지 못한 답은 조건 값이 될 수 없습니다.");
+            };
+        }
     }
+
+    // 요금제 추천이 월 데이터 사용량을 되물을 때 쓰는 조건 이름
+    public static final String CONDITION_KEY = "monthly_data_usage";
 
     private static final long MB_PER_GB = 1024;
     private static final long MAX_GB = 10_000;

@@ -19,7 +19,7 @@ public class SessionRecommendationAnswers {
                 SELECT DISTINCT ON (c.condition_key) c.condition_key, c.condition_value
                 FROM consult_conditions c
                 JOIN consult_requests r ON r.consult_request_id = c.consult_request_id
-                WHERE r.session_id = ? AND c.condition_key IN ('age_group', 'heavy_data')
+                WHERE r.session_id = ? AND c.condition_key IN ('age_group', 'monthly_data_usage')
                   AND c.status = 'FILLED' AND c.condition_value IS NOT NULL
                 ORDER BY c.condition_key, c.updated_at DESC, c.condition_id DESC
                 """, rows -> {

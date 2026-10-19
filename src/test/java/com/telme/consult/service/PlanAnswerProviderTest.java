@@ -196,7 +196,7 @@ class PlanAnswerProviderTest {
 
     @Test
     void 같은_채팅방에서_앞서_한_답을_추천_답변기에_함께_넘긴다() {
-        previous = Map.of("age_group", "만 65세 이상", "heavy_data", "예");
+        previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "40GB");
         provider = provider(true);
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
         when(recommendation.recommend(77L, Map.of(), previous, true))

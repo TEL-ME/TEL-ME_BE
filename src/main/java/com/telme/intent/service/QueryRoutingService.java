@@ -9,6 +9,7 @@ import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.consult.service.DataUsageReplyParser;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.config.RoutingLlmConfiguration;
 import com.telme.intent.converter.IntentConverter;
@@ -59,6 +60,7 @@ import org.springframework.web.client.RestClientException;
 @Slf4j
 public class QueryRoutingService {
     private static final int MAX_CONSULT_SUB_QUERIES = 3;
+    private static final int MAX_DATA_USAGE_REPLY_LENGTH = 30;
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -1066,6 +1068,22 @@ public class QueryRoutingService {
                 Map.of(FollowUpRouteResponse.SERVICE_TYPE_KEY, pickedServiceType),
                 Collections.emptySet(),
                 QueryRouting.Method.RULE);
+        }
+
+        // 요금제 추천의 데이터 사용량 질문에 짧게 답한 것은 모델 없이 읽는다. 단위와 하루·한 달 구분을 코드가 정확히 읽는다
+        // 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 판단한다
+        if (waiting.pendingKeys().contains(DataUsageReplyParser.CONDITION_KEY)
+                && reply.length() <= MAX_DATA_USAGE_REPLY_LENGTH && !reply.contains("?")) {
+            DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(reply);
+            if (usage.readable()) {
+                log.info("[후속분석] 데이터 사용량 답을 코드로 읽었습니다: consultRequestId={}, kind={}",
+                        waiting.consultRequestId(), usage.kind());
+                return new FollowUpRouteResponse(
+                    waiting.consultRequestId(),
+                    Map.of(DataUsageReplyParser.CONDITION_KEY, usage.canonical()),
+                    Collections.emptySet(),
+                    QueryRouting.Method.RULE);
+            }
         }
 
         LlmFollowUpPayload payload;

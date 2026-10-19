@@ -222,6 +222,69 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("데이터 사용량을 숫자로 답하면 모델을 부르지 않고 코드로 읽어 정리한 값으로 넘긴다")
+    void analyzeFollowUp_readsDataUsageWithoutLlm() {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "하루에 2기가쯤 써요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "60GB"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("데이터 사용량을 모른다고 답해도 코드로 읽어 모름으로 넘긴다")
+    void analyzeFollowUp_readsUnsureDataUsageWithoutLlm() {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "잘 모르겠어요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "모름"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("숫자가 분명하지 않은 사용량 답은 모델이 읽는다")
+    void analyzeFollowUp_sendsVagueDataUsageToLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "많이 써요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
+    @DisplayName("사용량이 들어 있어도 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 읽는다")
+    void analyzeFollowUp_sendsQuestionWithDataUsageToLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        service.analyzeFollowUp(SESSION_ID, "50기가 쓰는데 요금제 바꾸면 위약금 있나요?");
+
+        verify(llmClient).generate(any());
+    }
+
+    private void givenWaitingDataUsage() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("monthly_data_usage")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+    }
+
+    @Test
     @DisplayName("업무를 직접 풀어 쓴 답은 모델이 읽는다")
     void analyzeFollowUp_sendsFreeServiceTypeTextToLlm() {
         ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
