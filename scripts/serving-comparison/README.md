@@ -18,6 +18,7 @@
 | `calls.sql` | 측정 구간의 LLM 호출을 서빙·작업·결과별로 세고, 서버가 잰 턴 시간을 본다 |
 | `run.sh`, `series.sh` | 앱 EC2에서 시나리오 하나(`app.env`를 만들고 앱을 다시 띄운 뒤 부하·집계) 또는 여러 개를 차례로 돈다 |
 | `embed_check.py` | T2: 같은 질문을 Ollama·TEI bge-m3로 임베딩해 벡터와 검색 상위 FAQ를 비교한다 |
+| `capture_remote.py` | T4: 이 PC에서 캡처 프로브로 서비스 품질셋 답변을 모으고, EXAONE·임베딩만 GPU EC2를 부른다. 판정은 `docs/chat-judge/SERVICE_EVALUATION.md` 2~3절 |
 
 ## 앱 설정 (`app.env`)
 
@@ -59,7 +60,7 @@ RAG_ANSWER_BEDROCK=true
 | S1 즉시 장애 | `fault-refuse.yml` | 모든 답변 경로 호출이 바로 엑사원으로 넘어간다 | 1, 5, 10, 20 | 100 |
 | S2 응답 없음 | `fault-hang.yml` | 호출마다 8초를 기다린 뒤 넘어간다 | 1(질문 10), 5, 10 | 20 |
 | S3 오래 쉰 뒤 장애 | `fault-refuse.yml` | 15분 동안 엑사원 호출 없이 둔 뒤 S1을 N=5로 시작. Ollama는 `OLLAMA_KEEP_ALIVE` 기본(10m)과 `-1` 두 번 | 5 | 20 |
-| T4 정확도 | 엑사원만 | S1 N=1 답 내용(`load_chat.py`가 저장)을 TELME-180 Judge로 채점 | 1 | 100 |
+| T4 정확도 | 끔(S1과 같은 경로) | 서비스 품질셋 v2.2 전체를 `capture_remote.py`로 캡처해 TELME-180 Judge로 판정 | 1 | 307턴 |
 
 - Bedrock 비용은 S0에서만 생긴다(S1·S2는 요청이 Bedrock에 닿지 않는다). 두 구성 × N 2개 × 100턴 = 400턴, 호출 약 2,250건, 약 $1. 실행 전에 다시 계산해 승인받는다.
 - **앱은 채팅 턴을 동시에 4개까지만 처리한다**(`ChatProcessingDispatcher` 스레드 4, 대기열 100). N이 4보다 크면 나머지는 앱 안에서 기다리므로, 엑사원에 동시에 가는 요청은 대략 4~5개(+ 요약·제목 1)다. 이 상한이 서빙 차이보다 먼저 드러날 수 있어 `calls.sql`의 서버 턴 시간과 함께 본다.
