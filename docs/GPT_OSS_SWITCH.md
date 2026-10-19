@@ -19,14 +19,15 @@
 | 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **gpt-oss 확정**, TELME-184에서 수정(P7), 기본 켜짐 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK` (위와 같음, true), `CONSULT_CANDIDATE_EVIDENCE_JUDGE` (true) | 같은 문서 "복합 질문 입력 확인"(TELME-182, 수정 전 채택 1건)과 "후보 근거 검증 수정"(TELME-184). 수정 후 개발용 맞는 답 30 / 31 / 30, 블라인드 12 / 12 / 10. 문맥 해석이 후속 질문을 복원하지 못하면 틀린 답이 날 수 있다("후속 질문 확인") |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
 | 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (true) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) 프롬프트는 TELME-194에서 금액 복사 규칙을 더해 v4.9가 됐다(아래 "답변 프롬프트 v4.9") |
-| 14 | 세션 제목 | `ChatSessionTitleService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SESSION_TITLE_BEDROCK` (true) | 아래 "세션 제목". 출력 한도를 32에서 512로 올렸다(32에서는 제목이 비거나 잘렸다). 상담 종료 요약은 엑사원이다 |
+| 14 | 세션 제목 | `ChatSessionTitleService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SESSION_TITLE_BEDROCK` (true) | 아래 "세션 제목". 출력 한도를 32에서 512로 올렸다(32에서는 제목이 비거나 잘렸다). 상담 종료 요약은 16번 |
 | 15 | 대화 요약 | `ChatSummaryService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SUMMARY_BEDROCK` (true) | 대화가 16개 메시지 또는 2,048토큰을 넘을 때만 도는 백그라운드 호출. 60사례 두 모델 같게 나왔고(60/60, [BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)) 그 측정도 출력 한도 512로 했다 |
+| 16 | 상담 종료 요약 | `ChatSessionEndSummaryGenerator` | **gpt-oss**, 설정 추가(TELME-198) | `CHAT_END_SUMMARY_BEDROCK` (true) | 기본은 gpt-oss, 실패하면 엑사원. Bedrock에는 출력 스키마가 전달되지 않아 지시문으로 붙인다(`SchemaInstructionLlmClient`). 블라인드 평가는 [consultation-end-summary.md](consultation-end-summary.md). 기능 자체는 `CHAT_END_SUMMARY_ENABLED`(기본 꺼짐) |
 
-상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나와 엑사원으로 둔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)). 세션 제목과 대화 요약은 TELME-194에서 gpt-oss로 바꿨다(14, 15번).
+상담 종료 요약은 TELME-198에서 gpt-oss를 기본으로 바꿨다(16번). 세션 제목과 대화 요약은 TELME-194에서 gpt-oss로 바꿨다(14, 15번).
 
 ## 기본 구성과 끄는 방법
 
-TELME-194부터 1·2·4·5·6·7·10·11·13·14·15번은 기본으로 gpt-oss(Bedrock)를 먼저 부르고, 3번(요청 개수 판정)은 하지 않는다. 호출을 엑사원으로 돌리려면 아래 플래그를 false로 준다.
+TELME-194부터 1·2·4·5·6·7·10·11·13·14·15번(TELME-198부터 16번 포함)은 기본으로 gpt-oss(Bedrock)를 먼저 부르고, 3번(요청 개수 판정)은 하지 않는다. 호출을 엑사원으로 돌리려면 아래 플래그를 false로 준다.
 
 ### 전체 플래그
 
@@ -44,6 +45,7 @@ TELME-194부터 1·2·4·5·6·7·10·11·13·14·15번은 기본으로 gpt-oss(
 | 답변 생성 | `RAG_ANSWER_BEDROCK` | `rag.answer.bedrock` | true | false면 엑사원 |
 | 세션 제목 | `CHAT_SESSION_TITLE_BEDROCK` | `chat.session-title.bedrock` | true | false면 엑사원. 출력 한도(`chat.session-title.max-output-tokens`)는 512 |
 | 대화 요약 | `CHAT_SUMMARY_BEDROCK` | `chat.summary.bedrock` | true | false면 엑사원 |
+| 상담 종료 요약 | `CHAT_END_SUMMARY_BEDROCK` | `chat.end-summary.bedrock` | true | false면 엑사원 |
 | 회색 구간 판정(Bedrock 전용) | `SEARCH_GRAY_ZONE_ENABLED` | `search.gray-zone.enabled` | true | false면 판정을 하지 않는다 |
 | Bedrock 연결 | `LLM_BEDROCK_ENABLED` | `llm.bedrock.enabled` | true | false면 Bedrock 호출이 없고, 전환 플래그가 켜져 있어도 엑사원으로 동작한다 |
 | 근거 적합성 판정 | `RAG_EVIDENCE_CHECK_ENABLED` | `rag.evidence-check.enabled` | false | true면 엑사원으로 판정한다(위 12번) |

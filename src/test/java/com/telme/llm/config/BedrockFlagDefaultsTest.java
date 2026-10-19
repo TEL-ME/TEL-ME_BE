@@ -2,6 +2,7 @@ package com.telme.llm.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.telme.chat.config.ChatEndSummaryProperties;
 import com.telme.chat.config.ChatQuestionResolutionProperties;
 import com.telme.chat.config.ChatSessionTitleProperties;
 import com.telme.chat.config.ChatSummaryProperties;
@@ -26,7 +27,8 @@ class BedrockFlagDefaultsTest {
     @Configuration
     @EnableConfigurationProperties({RoutingLlmProperties.class, ChatQuestionResolutionProperties.class,
             PlanQuestionProperties.class, FaqClarificationProperties.class, RagAnswerProperties.class,
-            EvidenceResolverProperties.class, ChatSessionTitleProperties.class, ChatSummaryProperties.class})
+            EvidenceResolverProperties.class, ChatSessionTitleProperties.class, ChatSummaryProperties.class,
+            ChatEndSummaryProperties.class})
     static class Properties {
     }
 
@@ -53,11 +55,13 @@ class BedrockFlagDefaultsTest {
                     .isEqualTo(classDefault("chat.summary", ChatSummaryProperties.class));
             assertThat(context.getBean(EvidenceResolverProperties.class))
                     .isEqualTo(classDefault("telme.consult.evidence-resolver", EvidenceResolverProperties.class));
+            assertThat(context.getBean(ChatEndSummaryProperties.class).bedrock())
+                    .isEqualTo(classDefault("chat.end-summary", ChatEndSummaryProperties.class).bedrock());
         });
     }
 
     @Test
-    @DisplayName("기본은 호출 7개 모두 gpt-oss(Bedrock)이고 요청 개수 판정은 하지 않는다")
+    @DisplayName("기본은 호출 8개 모두 gpt-oss(Bedrock)이고 요청 개수 판정은 하지 않는다")
     void 기본은_모두_gpt_oss이고_요청_개수_판정은_하지_않는다() {
         runner.run(context -> {
             RoutingLlmProperties routing = context.getBean(RoutingLlmProperties.class);
@@ -69,6 +73,7 @@ class BedrockFlagDefaultsTest {
             assertThat(context.getBean(RagAnswerProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(ChatSessionTitleProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(ChatSummaryProperties.class).bedrock()).isTrue();
+            assertThat(context.getBean(ChatEndSummaryProperties.class).bedrock()).isTrue();
             EvidenceResolverProperties evidence = context.getBean(EvidenceResolverProperties.class);
             assertThat(evidence.comparisonBedrock()).isTrue();
             assertThat(evidence.candidateBedrock()).isTrue();
@@ -81,7 +86,7 @@ class BedrockFlagDefaultsTest {
         runner.withPropertyValues(
                 "ROUTING_BEDROCK=false", "CHAT_QUESTION_RESOLUTION_BEDROCK=false", "CONSULT_PLAN_QUESTION_BEDROCK=false",
                 "CONSULT_FAQ_CLARIFICATION_BEDROCK=false", "RAG_ANSWER_BEDROCK=false", "CHAT_SESSION_TITLE_BEDROCK=false",
-                "CHAT_SUMMARY_BEDROCK=false").run(context -> {
+                "CHAT_SUMMARY_BEDROCK=false", "CHAT_END_SUMMARY_BEDROCK=false").run(context -> {
             // 환경 변수는 application.yml의 ${...} 자리표시자가 읽는다
             assertThat(context.getBean(RoutingLlmProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(ChatQuestionResolutionProperties.class).bedrock()).isFalse();
@@ -90,6 +95,7 @@ class BedrockFlagDefaultsTest {
             assertThat(context.getBean(RagAnswerProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(ChatSessionTitleProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(ChatSummaryProperties.class).bedrock()).isFalse();
+            assertThat(context.getBean(ChatEndSummaryProperties.class).bedrock()).isFalse();
         });
     }
 
