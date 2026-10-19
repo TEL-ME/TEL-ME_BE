@@ -124,17 +124,6 @@ class NotificationRepositoryDatabaseTest {
     }
 
     @Test
-    @DisplayName("내 세션인지 확인한다")
-    void 세션_주인을_확인한다() {
-        long mine = memberSession(USER_ID, null);
-        long others = memberSession(OTHER_USER_ID, null);
-
-        assertThat(repository.ownsSession(member, mine)).isTrue();
-        assertThat(repository.ownsSession(member, others)).isFalse();
-        assertThat(repository.ownsSession(guest, mine)).isFalse();
-    }
-
-    @Test
     @DisplayName("게스트 알림은 로그인 승계 뒤 회원에게 보이고 읽음 상태도 이어진다")
     void 게스트_알림은_승계된다() {
         long before = repository.countUnread(member);

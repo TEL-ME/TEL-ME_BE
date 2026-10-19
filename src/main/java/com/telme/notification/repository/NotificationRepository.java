@@ -73,12 +73,6 @@ public class NotificationRepository {
         return count == null ? 0 : count;
     }
 
-    public boolean ownsSession(ChatActor actor, long sessionId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM chat_sessions s WHERE s.session_id = ? AND " + owner(actor) + ")",
-                Boolean.class, sessionId, ownerId(actor)));
-    }
-
     // 채팅방에 들어가면 그 방의 안 읽은 알림을 모두 읽음 처리한다. 바뀐 개수를 돌려준다
     public int markSessionRead(ChatActor actor, long sessionId) {
         return jdbc.update("""
