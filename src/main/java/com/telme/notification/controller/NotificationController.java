@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// 게스트도 쓰므로 채팅 경로 아래에 둔다. /api/v1/chat/**만 비로그인 허용·게스트 발급 대상이다
+// 게스트도 써야 해서 비로그인 허용 경로(/api/v1/chat/**) 아래에 둔다
 @Tag(name = "Notification", description = "새 답변 알림 저장, 목록, 안 읽은 개수, 채팅방 단위 읽음 처리")
 @Validated
 @RestController
@@ -45,16 +45,17 @@ public class NotificationController {
 
     @Operation(
             summary = "알림 저장",
-            description = "다른 화면에 있을 때 새 답변 알림이 울리면 프론트가 저장합니다. "
-                    + "내 채팅방의 완료된 챗봇 답변·되묻기·매장 결과만 저장할 수 있습니다. "
-                    + "같은 메시지로 다시 요청하면 새로 만들지 않고 기존 알림을 돌려줍니다.")
+            description = "다른 화면에 있거나 탭이 뒤에 있을 때 알림이 울리면 프론트가 저장합니다. "
+                    + "ANSWER_ARRIVED는 완료된 챗봇 답변·되묻기·매장 결과, ANSWER_FAILED는 실패·시간 초과 답변만 "
+                    + "저장할 수 있습니다(취소된 답변 제외). 같은 메시지로 다시 요청하면 기존 알림을 돌려줍니다. "
+                    + "답변 처리는 끝났지만 종료 결과를 전달하지 못한 실행은 서버가 직접 저장합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "저장 성공 또는 이미 저장된 알림"),
             @ApiResponse(responseCode = "400", description = "COMMON400-0: JSON 형식이나 type 값 오류. "
                     + "COMMON400-1: 필수값 누락, ID가 0 이하"),
             @ApiResponse(responseCode = "401", description = "CHAT401-0: 사용할 수 있는 회원 또는 게스트 신원 없음"),
             @ApiResponse(responseCode = "404", description = "NOTIFICATION404-0: 메시지가 없거나, 내 채팅방 메시지가 아니거나, "
-                    + "알림 대상(완료된 챗봇 답변·되묻기·매장 결과)이 아님")
+                    + "알림 종류에 맞는 대상이 아님")
     })
     @PostMapping
     public CustomResponse<NotificationResponse> save(
@@ -116,7 +117,7 @@ public class NotificationController {
     @PatchMapping("/read")
     public CustomResponse<NotificationReadResponse> readSession(
             HttpServletRequest servletRequest,
-            // 누락을 @NotNull로 막는다. 필수 @RequestParam 누락은 공통 처리기에 없어 500이 된다
+            // 필수 @RequestParam 누락은 500이 되어 @NotNull로 검증한다
             @Parameter(description = "들어간 채팅방 ID", required = true)
             @RequestParam(required = false)
             @NotNull(message = "채팅방 ID는 필수입니다.")

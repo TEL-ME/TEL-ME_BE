@@ -1,6 +1,8 @@
 package com.telme.chat.service;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,7 +17,21 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ChatEmitterRegistry {
 
+    // 늦은 전달 기록 보관 시간. 실행 시간 초과보다 길게 둔다
+    private static final Duration DELIVERED_LATE_TTL = Duration.ofMinutes(10);
+    private static final int TERMINAL_LOCK_STRIPES = 64;
+
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+    // 늦게 구독한 화면에 종료 결과를 먼저 전한 실행
+    private final Map<Long, Instant> deliveredLate = new ConcurrentHashMap<>();
+    // 실행별 종료 처리(전송 + 알림 판단) 잠금
+    private final Object[] terminalLocks = new Object[TERMINAL_LOCK_STRIPES];
+
+    public ChatEmitterRegistry() {
+        for (int i = 0; i < terminalLocks.length; i++) {
+            terminalLocks[i] = new Object();
+        }
+    }
 
     public void register(Long executionId, SseEmitter emitter) {
         SseEmitter previous = emitters.put(executionId, emitter);
@@ -58,35 +74,57 @@ public class ChatEmitterRegistry {
         }
     }
 
-    public void complete(Long executionId, Object payload) {
+    // 보냈으면 true, 구독자가 없거나 전송 실패면 false
+    public boolean complete(Long executionId, Object payload) {
+        return terminate(executionId, "complete", payload);
+    }
+
+    public boolean fail(Long executionId, Object payload) {
+        return terminate(executionId, "error", payload);
+    }
+
+    private boolean terminate(Long executionId, String eventName, Object payload) {
         SseEmitter emitter = emitters.remove(executionId);
         if (emitter == null) {
-            return;
+            return false;
         }
-        sendQuietly(emitter, "complete", payload);
+        boolean delivered = sendQuietly(emitter, eventName, payload);
         emitter.complete();
+        return delivered;
     }
 
-    public void fail(Long executionId, Object payload) {
-        SseEmitter emitter = emitters.remove(executionId);
-        if (emitter == null) {
-            return;
+    // 같은 실행의 종료 처리는 한 번에 하나만
+    public void withTerminalLock(Long executionId, Runnable action) {
+        synchronized (terminalLocks[Math.floorMod(executionId.hashCode(), terminalLocks.length)]) {
+            action.run();
         }
-        sendQuietly(emitter, "error", payload);
-        emitter.complete();
     }
 
-    // 구독을 걸기 전에 이미 끝나 있던 실행을 위한 즉시 종료 경로 — registry에는 등록하지 않는다.
-    public void sendTerminalNow(SseEmitter emitter, String eventName, Object payload) {
-        sendQuietly(emitter, eventName, payload);
-        emitter.complete();
+    public void markDeliveredLate(Long executionId) {
+        Instant now = Instant.now();
+        deliveredLate.values().removeIf(markedAt -> markedAt.isBefore(now.minus(DELIVERED_LATE_TTL)));
+        deliveredLate.put(executionId, now);
     }
 
-    private void sendQuietly(SseEmitter emitter, String eventName, Object payload) {
+    // 늦게 구독한 화면에 이미 전한 실행이면 true. 확인하면 기록을 지운다
+    public boolean consumeDeliveredLate(Long executionId) {
+        return deliveredLate.remove(executionId) != null;
+    }
+
+    // 구독을 걸기 전에 이미 끝나 있던 실행을 위한 즉시 종료 경로 — registry에는 등록하지 않는다. 보냈으면 true
+    public boolean sendTerminalNow(SseEmitter emitter, String eventName, Object payload) {
+        boolean delivered = sendQuietly(emitter, eventName, payload);
+        emitter.complete();
+        return delivered;
+    }
+
+    private boolean sendQuietly(SseEmitter emitter, String eventName, Object payload) {
         try {
             emitter.send(SseEmitter.event().name(eventName).data(payload));
+            return true;
         } catch (IOException | IllegalStateException exception) {
             log.info("SSE 종료 이벤트 전송 실패", exception);
+            return false;
         }
     }
 }

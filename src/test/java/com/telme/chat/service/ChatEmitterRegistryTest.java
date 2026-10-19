@@ -58,7 +58,7 @@ class ChatEmitterRegistryTest {
         SseEmitter emitter = mock(SseEmitter.class);
         registry.register(157L, emitter);
 
-        registry.complete(157L, "결과 메시지");
+        assertThat(registry.complete(157L, "결과 메시지")).isTrue();
 
         verify(emitter).send(any(SseEmitter.SseEventBuilder.class));
         verify(emitter).complete();
@@ -67,8 +67,49 @@ class ChatEmitterRegistryTest {
 
     @Test
     void completeIsNoOpWhenNoSubscriberIsRegistered() {
-        // AI가 답변을 완료했는데 아직 아무도 구독하지 않은 경우 — 예외 없이 조용히 넘어가야 한다
-        registry.complete(157L, "결과 메시지");
+        // AI가 답변을 완료했는데 아직 아무도 구독하지 않은 경우 — 예외 없이 넘어가고 전하지 못했다고 알린다
+        assertThat(registry.complete(157L, "결과 메시지")).isFalse();
+        assertThat(registry.fail(157L, "AI_PROCESSING_ERROR")).isFalse();
+    }
+
+    @Test
+    void deliveredLateMarkIsConsumedOnce() {
+        registry.markDeliveredLate(157L);
+
+        assertThat(registry.consumeDeliveredLate(157L)).isTrue();
+        assertThat(registry.consumeDeliveredLate(157L)).isFalse();
+        assertThat(registry.consumeDeliveredLate(158L)).isFalse();
+    }
+
+    @Test
+    void terminalLockRunsAction() {
+        var ran = new boolean[1];
+
+        registry.withTerminalLock(157L, () -> ran[0] = true);
+
+        assertThat(ran[0]).isTrue();
+    }
+
+    @Test
+    void sendTerminalNowReportsWhetherEventWasDelivered() throws IOException {
+        SseEmitter delivered = mock(SseEmitter.class);
+        SseEmitter disconnected = mock(SseEmitter.class);
+        doThrow(new IOException("broken pipe")).when(disconnected).send(any(SseEmitter.SseEventBuilder.class));
+
+        assertThat(registry.sendTerminalNow(delivered, "complete", "결과 메시지")).isTrue();
+        assertThat(registry.sendTerminalNow(disconnected, "complete", "결과 메시지")).isFalse();
+        verify(disconnected).complete();
+    }
+
+    @Test
+    void terminalEventReportsNotDeliveredWhenClientAlreadyDisconnected() throws IOException {
+        SseEmitter emitter = mock(SseEmitter.class);
+        doThrow(new IOException("broken pipe")).when(emitter).send(any(SseEmitter.SseEventBuilder.class));
+        registry.register(157L, emitter);
+
+        assertThat(registry.complete(157L, "결과 메시지")).isFalse();
+        verify(emitter).complete();
+        assertThat(registry.isRegistered(157L)).isFalse();
     }
 
     @Test
@@ -76,7 +117,7 @@ class ChatEmitterRegistryTest {
         SseEmitter emitter = mock(SseEmitter.class);
         registry.register(157L, emitter);
 
-        registry.fail(157L, "AI_PROCESSING_ERROR");
+        assertThat(registry.fail(157L, "AI_PROCESSING_ERROR")).isTrue();
 
         verify(emitter).send(any(SseEmitter.SseEventBuilder.class));
         verify(emitter).complete();

@@ -38,33 +38,18 @@ class NotificationServiceTest {
     @DisplayName("새로 저장하면 저장한 알림을 돌려준다")
     void 새로_저장한_알림을_돌려준다() {
         NotificationRow saved = row(7L, 10L, 100L);
-        when(notifications.insert(member, 10L, 100L, "ANSWER_ARRIVED")).thenReturn(Optional.of(7L));
+        when(notifications.insert(member, 10L, 100L, TYPE)).thenReturn(Optional.of(7L));
         when(notifications.findById(member, 7L)).thenReturn(Optional.of(saved));
 
         assertThat(service.save(member, TYPE, 10L, 100L)).isEqualTo(saved);
     }
 
     @Test
-    @DisplayName("이미 저장된 답변이면 기존 알림을 돌려준다")
-    void 중복_저장은_기존_알림을_돌려준다() {
-        NotificationRow existing = row(7L, 10L, 100L);
-        when(notifications.insert(member, 10L, 100L, "ANSWER_ARRIVED")).thenReturn(Optional.empty());
-        when(notifications.findByMessageId(member, 100L)).thenReturn(Optional.of(existing));
-
-        assertThat(service.save(member, TYPE, 10L, 100L)).isEqualTo(existing);
-    }
-
-    @Test
-    @DisplayName("저장된 알림과 채팅방 번호가 다르거나 저장 대상이 아니면 404")
+    @DisplayName("저장 대상이 아니면 404")
     void 저장할_수_없으면_404() {
         when(notifications.insert(any(), anyLong(), anyLong(), any())).thenReturn(Optional.empty());
-        when(notifications.findByMessageId(member, 100L)).thenReturn(Optional.of(row(7L, 10L, 100L)));
-        when(notifications.findByMessageId(member, 200L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.save(member, TYPE, 11L, 100L))
-                .extracting(e -> ((GeneralException) e).getErrorCode())
-                .isEqualTo(NotificationErrorCode.TARGET_UNAVAILABLE);
-        assertThatThrownBy(() -> service.save(member, TYPE, 10L, 200L))
                 .extracting(e -> ((GeneralException) e).getErrorCode())
                 .isEqualTo(NotificationErrorCode.TARGET_UNAVAILABLE);
     }

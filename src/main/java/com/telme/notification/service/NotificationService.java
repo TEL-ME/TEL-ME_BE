@@ -21,14 +21,24 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final ChatSessionRepository chatSessionRepository;
 
-    // 같은 답변을 다시 저장하면 기존 알림을 돌려준다(새로고침·재시도)
+    // 이미 있으면 기존 알림을 돌려준다
     @Transactional
     public NotificationRow save(ChatActor actor, NotificationType type, long sessionId, long messageId) {
-        return notificationRepository.insert(actor, sessionId, messageId, type.name())
+        return notificationRepository.insert(actor, sessionId, messageId, type)
                 .flatMap(id -> notificationRepository.findById(actor, id))
-                .or(() -> notificationRepository.findByMessageId(actor, messageId)
-                        .filter(saved -> saved.sessionId() == sessionId))
                 .orElseThrow(() -> new GeneralException(NotificationErrorCode.TARGET_UNAVAILABLE));
+    }
+
+    // 종료 결과를 전하지 못한 실행의 알림을 남긴다
+    @Transactional
+    public void saveUndelivered(long executionId, NotificationType type) {
+        notificationRepository.insertForExecution(executionId, type);
+    }
+
+    // 늦은 구독에 결과를 전한 뒤 서버 알림만 지운다
+    @Transactional
+    public void dismissDelivered(long executionId) {
+        notificationRepository.deleteServerSaved(executionId);
     }
 
     public NotificationPage getPage(ChatActor actor, Long cursor, int size) {

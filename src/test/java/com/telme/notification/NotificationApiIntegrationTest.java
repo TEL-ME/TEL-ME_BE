@@ -10,6 +10,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.member.repository.UserRepository;
 import com.telme.member.service.GuestSuccessionService;
+import com.telme.notification.dto.NotificationType;
+import com.telme.notification.service.NotificationService;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +45,9 @@ class NotificationApiIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private long ownerId;
     private MockHttpSession owner;
@@ -102,6 +107,38 @@ class NotificationApiIntegrationTest {
         expectUnavailable(save(owner, room, error));
         expectUnavailable(save(owner, room, Long.MAX_VALUE));
         expectUnread(owner, 0);
+    }
+
+    @Test
+    @DisplayName("실패·시간 초과 답변은 ANSWER_FAILED로 저장하고, 취소된 답변이나 종류가 맞지 않으면 404")
+    void 실패_알림() throws Exception {
+        long failed = message(room, "ASSISTANT", "ERROR", "FAILED", null);
+        long timeout = message(room, "ASSISTANT", "ANSWER", "TIMEOUT", null);
+        long cancelled = message(room, "ASSISTANT", "ANSWER", "CANCELLED", null);
+
+        expectUnavailable(save(owner, room, failed, "ANSWER_ARRIVED"));
+        expectUnavailable(save(owner, room, cancelled, "ANSWER_FAILED"));
+        save(owner, room, failed, "ANSWER_FAILED")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.type").value("ANSWER_FAILED"))
+                .andExpect(jsonPath("$.result.body").doesNotExist());
+        save(owner, room, timeout, "ANSWER_FAILED").andExpect(status().isOk());
+        expectUnread(owner, 2);
+    }
+
+    @Test
+    @DisplayName("결과를 전하지 못해 서버가 남긴 알림도 목록에 나오고, 프론트가 같은 답변을 저장해도 하나만 남는다")
+    void 서버가_남긴_알림() throws Exception {
+        long answer = message(room, "ASSISTANT", "ANSWER", "창을 닫은 사이 온 답변");
+        notificationService.saveUndelivered(execution(room, answer), NotificationType.ANSWER_ARRIVED);
+
+        mvc.perform(get(URL).session(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.notifications.length()").value(1))
+                .andExpect(jsonPath("$.result.notifications[0].messageId").value(answer))
+                .andExpect(jsonPath("$.result.notifications[0].body").value("창을 닫은 사이 온 답변"));
+        save(owner, room, answer).andExpect(status().isOk());
+        expectUnread(owner, 1);
     }
 
     @Test
@@ -209,9 +246,14 @@ class NotificationApiIntegrationTest {
     }
 
     private ResultActions save(MockHttpSession session, long sessionId, long messageId) throws Exception {
+        return save(session, sessionId, messageId, "ANSWER_ARRIVED");
+    }
+
+    private ResultActions save(MockHttpSession session, long sessionId, long messageId, String type)
+            throws Exception {
         return mvc.perform(post(URL).session(session).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"type\":\"ANSWER_ARRIVED\",\"sessionId\":%d,\"messageId\":%d}"
-                        .formatted(sessionId, messageId)));
+                .content("{\"type\":\"%s\",\"sessionId\":%d,\"messageId\":%d}"
+                        .formatted(type, sessionId, messageId)));
     }
 
     private ResultActions readRoom(MockHttpSession session, long sessionId) throws Exception {
@@ -247,10 +289,21 @@ class NotificationApiIntegrationTest {
     }
 
     private long message(long sessionId, String role, String type, String content) {
+        return message(sessionId, role, type, "COMPLETED", content);
+    }
+
+    private long message(long sessionId, String role, String type, String status, String content) {
         return jdbc.queryForObject("INSERT INTO chat_messages (session_id, sequence_no, role, message_type, status,"
                         + " content) VALUES (?, (SELECT coalesce(max(sequence_no), 0) + 1 FROM chat_messages"
-                        + " WHERE session_id = ?), ?, ?, 'COMPLETED', ?) RETURNING message_id",
-                Long.class, sessionId, sessionId, role, type, content);
+                        + " WHERE session_id = ?), ?, ?, ?, ?) RETURNING message_id",
+                Long.class, sessionId, sessionId, role, type, status, content);
+    }
+
+    private long execution(long sessionId, long outputMessageId) {
+        long input = message(sessionId, "USER", "QUESTION", "질문");
+        return jdbc.queryForObject("INSERT INTO chat_executions (session_id, input_message_id, output_message_id,"
+                + " status) VALUES (?, ?, ?, 'COMPLETED') RETURNING execution_id",
+                Long.class, sessionId, input, outputMessageId);
     }
 
     private static MockHttpSession memberSession(long userId) {

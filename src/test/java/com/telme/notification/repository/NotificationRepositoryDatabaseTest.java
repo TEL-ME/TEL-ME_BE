@@ -3,6 +3,7 @@ package com.telme.notification.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.chat.service.ChatActor;
+import com.telme.notification.dto.NotificationType;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class NotificationRepositoryDatabaseTest {
 
-    private static final String TYPE = "ANSWER_ARRIVED";
+    private static final NotificationType TYPE = NotificationType.ANSWER_ARRIVED;
+    private static final NotificationType FAILED = NotificationType.ANSWER_FAILED;
     private static final long USER_ID = 1L;
     private static final long OTHER_USER_ID = 2L;
 
@@ -41,16 +43,16 @@ class NotificationRepositoryDatabaseTest {
     }
 
     @Test
-    @DisplayName("내 세션의 완료된 답변은 저장되고, 같은 답변을 다시 저장하면 새로 생기지 않는다")
+    @DisplayName("내 세션의 완료된 답변은 저장되고, 같은 답변을 다시 저장하면 기존 알림 번호를 돌려준다")
     void 같은_답변은_한_번만_저장한다() {
         long session = memberSession(USER_ID, "요금제 상담");
         long answer = message(session, "ASSISTANT", "ANSWER", "COMPLETED", "5G 요금제는 세 가지가 있습니다.");
 
         long id = repository.insert(member, session, answer, TYPE).orElseThrow();
 
-        assertThat(repository.insert(member, session, answer, TYPE)).isEmpty();
-        NotificationRow row = repository.findByMessageId(member, answer).orElseThrow();
-        assertThat(row.notificationId()).isEqualTo(id);
+        assertThat(repository.insert(member, session, answer, TYPE)).contains(id);
+        NotificationRow row = repository.findById(member, id).orElseThrow();
+        assertThat(row.messageId()).isEqualTo(answer);
         assertThat(row.sessionTitle()).isEqualTo("요금제 상담");
         assertThat(row.messagePreview()).isEqualTo("5G 요금제는 세 가지가 있습니다.");
         assertThat(row.readAt()).isNull();
@@ -84,6 +86,59 @@ class NotificationRepositoryDatabaseTest {
         assertThat(repository.insert(member, otherSession, answer, TYPE)).isEmpty();
         assertThat(repository.insert(member, sessionOf(othersAnswer), othersAnswer, TYPE)).isEmpty();
         assertThat(repository.insert(guest, session, answer, TYPE)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("실패 알림은 실패·시간 초과 답변만 저장하고, 취소된 답변과 종류가 맞지 않는 메시지는 거절한다")
+    void 실패_알림_대상() {
+        long session = memberSession(USER_ID, null);
+        long failed = message(session, "ASSISTANT", "ERROR", "FAILED", null);
+        long timeout = message(session, "ASSISTANT", "ANSWER", "TIMEOUT", null);
+        long cancelled = message(session, "ASSISTANT", "ANSWER", "CANCELLED", null);
+        long answer = message(session, "ASSISTANT", "ANSWER", "COMPLETED", "답변");
+
+        assertThat(repository.insert(member, session, failed, FAILED)).isPresent();
+        assertThat(repository.insert(member, session, timeout, FAILED)).isPresent();
+        assertThat(repository.insert(member, session, cancelled, FAILED)).isEmpty();
+        assertThat(repository.insert(member, session, answer, FAILED)).isEmpty();
+        assertThat(repository.insert(member, session, cancelled, TYPE)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("서버는 실행의 출력 메시지로 알림을 저장·삭제하고, 대상이 아니거나 이미 있으면 저장하지 않는다")
+    void 실행_기준_저장과_삭제() {
+        long session = memberSession(USER_ID, null);
+        long answer = message(session, "ASSISTANT", "ANSWER", "COMPLETED", "답변");
+        long execution = execution(session, answer);
+        long cancelled = execution(session, message(session, "ASSISTANT", "ANSWER", "CANCELLED", null));
+
+        long id = repository.insertForExecution(execution, TYPE).orElseThrow();
+        assertThat(repository.insertForExecution(execution, TYPE)).isEmpty();
+        assertThat(repository.insertForExecution(cancelled, FAILED)).isEmpty();
+        assertThat(repository.findById(member, id).orElseThrow().messageId()).isEqualTo(answer);
+
+        assertThat(repository.deleteServerSaved(execution)).isEqualTo(1);
+        assertThat(repository.findById(member, id)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("프론트가 저장한 알림은 서버 저장이 덮지 않고, 서버 알림을 프론트가 다시 저장하면 지워지지 않는다")
+    void 프론트_저장_알림은_지우지_않는다() {
+        long session = memberSession(USER_ID, null);
+        long clientFirst = message(session, "ASSISTANT", "ANSWER", "COMPLETED", "프론트가 먼저");
+        long clientExecution = execution(session, clientFirst);
+        long serverFirst = message(session, "ASSISTANT", "ANSWER", "COMPLETED", "서버가 먼저");
+        long serverExecution = execution(session, serverFirst);
+
+        long clientId = repository.insert(member, session, clientFirst, TYPE).orElseThrow();
+        assertThat(repository.insertForExecution(clientExecution, TYPE)).isEmpty();
+        assertThat(repository.deleteServerSaved(clientExecution)).isZero();
+        assertThat(repository.findById(member, clientId)).isPresent();
+
+        long serverId = repository.insertForExecution(serverExecution, TYPE).orElseThrow();
+        assertThat(repository.insert(member, session, serverFirst, TYPE)).contains(serverId);
+        assertThat(repository.deleteServerSaved(serverExecution)).isZero();
+        assertThat(repository.findById(member, serverId)).isPresent();
     }
 
     @Test
@@ -162,6 +217,12 @@ class NotificationRepositoryDatabaseTest {
         return jdbc.queryForObject("INSERT INTO chat_messages (session_id, sequence_no, role, message_type, status,"
                         + " content) VALUES (?, ?, ?, ?, ?, ?) RETURNING message_id",
                 Long.class, session, ++sequence, role, type, status, content);
+    }
+
+    private long execution(long session, long outputMessageId) {
+        long input = message(session, "USER", "QUESTION", "COMPLETED", "질문");
+        return jdbc.queryForObject("INSERT INTO chat_executions (session_id, input_message_id, output_message_id,"
+                + " status) VALUES (?, ?, ?, 'COMPLETED') RETURNING execution_id", Long.class, session, input, outputMessageId);
     }
 
     private long sessionOf(long messageId) {

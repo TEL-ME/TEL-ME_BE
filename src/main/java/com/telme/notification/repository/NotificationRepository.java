@@ -1,18 +1,19 @@
 package com.telme.notification.repository;
 
 import com.telme.chat.service.ChatActor;
+import com.telme.notification.dto.NotificationType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-// 모든 조회·변경은 chat_sessions 조인으로 현재 회원·게스트의 세션인지 확인한다.
-// 로그인 승계로 세션 주인이 바뀌면 알림도 함께 따라간다
+// 사용자 요청은 chat_sessions 조인으로 주인을 확인한다(승계 시 알림도 따라감)
 @Repository
 @RequiredArgsConstructor
 public class NotificationRepository {
@@ -29,32 +30,53 @@ public class NotificationRepository {
             JOIN chat_messages m ON m.message_id = n.message_id
             """.formatted(PREVIEW_LENGTH);
 
-    // 알림이 울릴 수 있는 메시지: 완료된 챗봇 답변·되묻기·매장 결과(오류 응답 제외)
-    private static final String NOTIFIABLE_MESSAGE = "m.role = 'ASSISTANT' AND m.status = 'COMPLETED'"
-            + " AND m.message_type IN ('ANSWER', 'CLARIFICATION', 'STORE_RESULT')";
+    // 종류별 알림 대상 메시지
+    private static final Map<NotificationType, String> TARGET_MESSAGE = Map.of(
+            NotificationType.ANSWER_ARRIVED,
+            "m.status = 'COMPLETED' AND m.message_type IN ('ANSWER', 'CLARIFICATION', 'STORE_RESULT')",
+            NotificationType.ANSWER_FAILED,
+            "m.status IN ('FAILED', 'TIMEOUT')");
 
-    // 주인 확인과 저장을 한 문장으로 한다. 저장 대상이 아니거나 이미 저장된 메시지면 비어 있다
-    public Optional<Long> insert(ChatActor actor, long sessionId, long messageId, String type) {
+    // 프론트 저장. 이미 있으면 CLIENT로 바꿔 그 알림을 돌려준다
+    public Optional<Long> insert(ChatActor actor, long sessionId, long messageId, NotificationType type) {
         return jdbc.queryForList("""
-                INSERT INTO notifications (session_id, message_id, type)
-                SELECT m.session_id, m.message_id, ?
+                INSERT INTO notifications (session_id, message_id, type, source)
+                SELECT m.session_id, m.message_id, ?, 'CLIENT'
                 FROM chat_messages m
                 JOIN chat_sessions s ON s.session_id = m.session_id
                 WHERE m.message_id = ? AND m.session_id = ? AND %s AND %s
+                ON CONFLICT (message_id) DO UPDATE SET source = 'CLIENT'
+                RETURNING notification_id
+                """.formatted(target(type), owner(actor)),
+                Long.class, type.name(), messageId, sessionId, ownerId(actor)).stream().findFirst();
+    }
+
+    // 서버 저장. 종료 결과를 전하지 못한 실행의 출력 메시지로 저장한다
+    public Optional<Long> insertForExecution(long executionId, NotificationType type) {
+        return jdbc.queryForList("""
+                INSERT INTO notifications (session_id, message_id, type, source)
+                SELECT m.session_id, m.message_id, ?, 'SERVER'
+                FROM chat_executions e
+                JOIN chat_messages m ON m.message_id = e.output_message_id
+                WHERE e.execution_id = ? AND %s
                 ON CONFLICT (message_id) DO NOTHING
                 RETURNING notification_id
-                """.formatted(NOTIFIABLE_MESSAGE, owner(actor)),
-                Long.class, type, messageId, sessionId, ownerId(actor)).stream().findFirst();
+                """.formatted(target(type)),
+                Long.class, type.name(), executionId).stream().findFirst();
+    }
+
+    // 늦은 구독에 결과를 전한 실행의 서버 알림만 지운다
+    public int deleteServerSaved(long executionId) {
+        return jdbc.update("""
+                DELETE FROM notifications n
+                USING chat_executions e
+                WHERE e.execution_id = ? AND n.message_id = e.output_message_id AND n.source = 'SERVER'
+                """, executionId);
     }
 
     public Optional<NotificationRow> findById(ChatActor actor, long notificationId) {
         return jdbc.query(SELECT + " WHERE n.notification_id = ? AND " + owner(actor),
                 this::read, notificationId, ownerId(actor)).stream().findFirst();
-    }
-
-    public Optional<NotificationRow> findByMessageId(ChatActor actor, long messageId) {
-        return jdbc.query(SELECT + " WHERE n.message_id = ? AND " + owner(actor),
-                this::read, messageId, ownerId(actor)).stream().findFirst();
     }
 
     // PK 커서. 첫 조회는 Long.MAX_VALUE
@@ -82,7 +104,11 @@ public class NotificationRepository {
                 """.formatted(owner(actor)), sessionId, ownerId(actor));
     }
 
-    // 고정된 두 조건만 고른다. 사용자 입력 SQL이 아니다. 승계된 게스트 세션은 회원 조건으로만 보인다
+    private static String target(NotificationType type) {
+        return "m.role = 'ASSISTANT' AND " + TARGET_MESSAGE.get(type);
+    }
+
+    // 고정된 두 조건만 쓴다(사용자 입력 아님)
     private static String owner(ChatActor actor) {
         return actor.isMember() ? "s.user_id = ?" : "s.user_id IS NULL AND s.guest_id = ?";
     }
