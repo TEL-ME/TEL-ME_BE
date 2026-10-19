@@ -136,6 +136,36 @@ class PlanRecommenderTest {
         assertThat(recommend("FIVE_G_STANDARD", demand(38 * GB), true).kind()).isEqualTo(Kind.KEEP);
     }
 
+    @Test
+    void 사용량을_모를_때는_필요한_데이터를_여유_없이_채우는_가장_싼_요금제를_고른다() {
+        assertThat(needed(null, 3 * GB)).isEqualTo("BUDGET_SAVE");
+        assertThat(needed(null, 8 * GB)).isEqualTo("FIVE_G_LITE");
+        assertThat(needed(null, 45 * GB)).isEqualTo("FIVE_G_STANDARD");
+        assertThat(needed(null, 50 * GB)).isEqualTo("FIVE_G_STANDARD");
+        assertThat(needed(null, 51 * GB)).isEqualTo("LTE_MAX");
+        assertThat(needed(null, 150 * GB)).isEqualTo("FIVE_G_PREMIUM");
+    }
+
+    @Test
+    void 사용량을_모를_때는_통화와_문자_한도를_따지지_않고_데이터만_본다() {
+        // LTE 베이직은 통화 700분 한도가 있지만 4GB를 채우는 가장 싼 요금제다
+        assertThat(needed(null, 4 * GB)).isEqualTo("LTE_BASIC");
+    }
+
+    @Test
+    void 사용량을_모를_때도_청소년과_시니어_요금제는_후보에_넣었을_때만_고른다() {
+        assertThat(needed(Plan.TargetGroup.YOUTH, 50 * GB)).isEqualTo("FIVE_G_YOUTH");
+        assertThat(needed(Plan.TargetGroup.YOUTH, 3 * GB)).isEqualTo("BUDGET_YOUTH");
+        assertThat(needed(Plan.TargetGroup.SENIOR, 3 * GB)).isEqualTo("BUDGET_SENIOR");
+        assertThat(needed(Plan.TargetGroup.SENIOR, 50 * GB)).isEqualTo("FIVE_G_STANDARD");
+    }
+
+    @Test
+    void 사용량을_모를_때_어느_요금제도_채우지_못하면_무제한_요금제를_고르고_후보가_없으면_없다() {
+        assertThat(needed(null, 200 * GB)).isEqualTo("FIVE_G_UNLIMITED");
+        assertThat(recommender.forDataNeed(List.of(), 3 * GB)).isNull();
+    }
+
     // 추천을 따라 요금제를 바꾸면 사용량이 새 한도에 맞춰 줄어드는 사용량 모델 때문에 계속 따라가면 아래로 내려간다.
     // 석 달 안에는 다시 내리지 않고 내릴 때 여유를 더 두면 한 해에 바뀌는 횟수가 제한되고 한도 경계에서 오가지 않는다
     @Test
@@ -166,6 +196,10 @@ class PlanRecommenderTest {
 
     private static long average(List<long[]> window, int index) {
         return Math.round(window.stream().mapToLong(values -> values[index]).average().orElse(0));
+    }
+
+    private String needed(Plan.TargetGroup extra, long dataMb) {
+        return recommender.forDataNeed(candidates(extra), dataMb).getCode();
     }
 
     private Recommendation recommend(String currentCode, Demand demand, boolean allowDowngrade) {
