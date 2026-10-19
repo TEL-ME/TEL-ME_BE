@@ -65,8 +65,11 @@ class ChatSessionEndSummaryInputReader {
             var replies = messages.stream().filter(reply -> Long.valueOf(message.id()).equals(reply.replyTo()))
                     .toList();
             // 감사·작별 인사만 있는 발화는 실시간 경로가 후속 질문으로 접수했어도 문의가 아니다.
-            // 그 뒤 답이 다른 하위 질문의 결과로 기록됐으면(조건 답으로 받아 앞 문의를 답한 경우) 그 답은 남긴다
-            if (ChatEndSummaryClosingRemarks.isClosingRemark(message.content())) {
+            // 그 뒤 답이 다른 하위 질문의 결과로 기록됐으면(조건 답으로 받아 앞 문의를 답한 경우) 그 답은 남긴다.
+            // 실시간 경로가 이 발화로 접수한 요청에 실제 안내를 했으면("ㅇㅋ 땡큐"에 앞 질문의 안내가 나간 경우) 빼지 않는다
+            boolean guided = requests.stream().anyMatch(request -> request.originMessageId() == message.id()
+                    && ("ANSWERED".equals(request.outcome()) || "STORES".equals(request.outcome())));
+            if (!guided && ChatEndSummaryClosingRemarks.isClosingRemark(message.content())) {
                 social.add(message.id());
                 var loaded = requests;
                 replies.stream().filter(reply -> loaded.stream().noneMatch(request ->
@@ -218,6 +221,20 @@ class ChatSessionEndSummaryInputReader {
                     && !origins.contains(message.replyTo())
                     && messages.stream().anyMatch(user -> user.id() == message.replyTo())) {
                 pending.add(message.replyTo());
+            }
+        }
+        // 되묻는 중에 고객이 조건 대신 새 질문을 하면 실시간 경로가 조건 답으로 받아 같은 질문을 다시 묻는다
+        // ("유심 비번 까먹었어요"에 "답변을 잘 이해하지 못했어요"). 새로 묻는 되묻기는 하위 질문 결과(ASKED)로
+        // 기록되지만 다시 묻기는 기록되지 않는다. 상담 요청 없는 발화에 기록되지 않은 되묻기만 돌아왔으면 남은 문의
+        // 후보로 둔다. 조건 답을 못 알아들은 경우와 섞이므로 모델이 주제를 붙였을 때만 적는다(생성기)
+        for (var user : messages) {
+            if (!user.role().equals("USER") || origins.contains(user.id())) {
+                continue;
+            }
+            var replies = messages.stream().filter(reply -> Long.valueOf(user.id()).equals(reply.replyTo())).toList();
+            if (!replies.isEmpty() && replies.stream().allMatch(reply -> reply.type().equals("CLARIFICATION")
+                    && !recordedMessages.contains(reply.id()))) {
+                pending.add(user.id());
             }
         }
         return pending;

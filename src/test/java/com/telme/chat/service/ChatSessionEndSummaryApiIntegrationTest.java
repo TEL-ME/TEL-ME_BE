@@ -837,6 +837,55 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(0));
     }
 
+    @Test
+    @DisplayName("되묻는 중에 한 새 질문이 다시 묻기만 받았으면 모델이 주제를 붙인 경우 남은 문의로 적는다")
+    void 다시_묻기만_받은_새_질문은_남은_문의다() throws Exception {
+        var fixture = fixture(false, "신촌 근처 매장 알려주세요", "어떤 업무로 매장을 찾으시나요?");
+        jdbc.update("UPDATE chat_messages SET message_type='CLARIFICATION' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "WAITING_CONDITION", "ASKED", "어떤 업무로 매장을 찾으시나요?", fixture.answerId(), null);
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "유심 비번 까먹었는데 어떡해요", null);
+        message(fixture.sessionId(), 4, "ASSISTANT", "CLARIFICATION",
+                "답변을 잘 이해하지 못했어요. 다시 한 번 알려주세요.\n어떤 업무로 매장을 찾으시나요?", next);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"신촌 근처 매장","%d":"유심 비밀번호 분실"},"selectedSentenceIds":[],"pendingItems":[]}"""
+                .formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        assertThat(mapper.readTree(captureRequest().userPrompt()).path("pendingIds").toString())
+                .isEqualTo("[" + fixture.questionId() + "," + next + "]");
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(2))
+                .andExpect(jsonPath("$.result.summary.pendingItems[1]").value("답변을 받지 못한 문의: 유심 비밀번호 분실"));
+    }
+
+    @Test
+    @DisplayName("감사 인사로 접수된 요청에 실제 안내가 나갔으면 인사로 빼지 않고 그 안내를 남긴다")
+    void 안내가_나간_감사_인사는_빼지_않는다() throws Exception {
+        var fixture = fixture(false, "해외에서 폰 잃어버리면 어떻게 해요?", com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        jdbc.update("UPDATE chat_messages SET answer_basis='NO_EVIDENCE' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "NO_EVIDENCE", null, fixture.answerId(), null);
+        long thanks = message(fixture.sessionId(), 3, "USER", "QUESTION", "ㅇㅋ 땡큐", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER", "현지 통신사에 연락해 이용 정지를 하세요.", thanks);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", answer);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '해외 분실 조치', 'DONE', 'ANSWERED', '현지 통신사에 연락해 이용 정지를 하세요.', ?)
+                """, fixture.sessionId(), thanks, answer);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"해외 폰 분실 조치","%d":"해외 폰 분실 조치"},"selectedSentenceIds":[1],"pendingItems":[]}"""
+                .formatted(fixture.questionId(), thanks));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.guidance[0]").value("안내받은 내용: 현지 통신사에 연락해 이용 정지를 하세요."))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(0));
+    }
+
     private long request(Fixture fixture, int order, String status, String outcome, String text, Long messageId,
             String display) {
         return jdbc.queryForObject("""
