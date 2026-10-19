@@ -48,4 +48,36 @@ public class LlmConfig {
         return new RetryingLlmClient(
                 new RecordingLlmClient(baseLlmClient, recorder, properties.model()), retryProperties);
     }
+
+    // vLLM(OpenAI 호환 API) 서버. 시간 제한은 Ollama와 같은 llm.* 값을 쓴다
+    @Bean
+    @ConditionalOnProperty(name = "llm.provider", havingValue = "vllm")
+    public RestClient vllmRestClient(
+            RestClient.Builder builder,
+            LlmProperties properties,
+            @Value("${vllm.url}") String vllmUrl
+    ) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(properties.connectTimeout());
+        requestFactory.setReadTimeout(properties.readTimeout());
+
+        return builder
+                .baseUrl(vllmUrl)
+                .requestFactory(requestFactory)
+                .build();
+    }
+
+    // Ollama와 같은 재시도·기록으로 감싸고, 호출 기록에는 서빙을 구분하도록 provider를 vllm으로 남긴다
+    @Bean
+    @Primary
+    @ConditionalOnProperty(name = "llm.provider", havingValue = "vllm")
+    public LlmClient vllmLlmClient(
+            @Qualifier("baseLlmClient") LlmClient baseLlmClient,
+            LlmProperties properties,
+            LlmRetryProperties retryProperties,
+            LlmGenerationRecorder recorder) {
+        return new RetryingLlmClient(
+                new RecordingLlmClient(baseLlmClient, recorder, properties.model(), LlmGenerationRecorder.VLLM),
+                retryProperties);
+    }
 }

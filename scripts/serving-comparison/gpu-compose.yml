@@ -1,0 +1,65 @@
+# GPU EC2의 EXAONE·bge-m3 서빙. 프로필 하나만 띄운다(같은 GPU를 나눠 쓰므로 둘을 동시에 띄우지 않는다)
+#   Ollama:      docker compose -f gpu-compose.yml --profile ollama up -d
+#                docker exec telme-ollama ollama pull exaone3.5:7.8b && docker exec telme-ollama ollama pull bge-m3
+#   vLLM + TEI:  docker compose -f gpu-compose.yml --profile vllm up -d
+# 앱 설정은 README의 "앱 설정" 표를 따른다. 보안 그룹은 앱 EC2에서 오는 11434·8000·8080만 연다
+services:
+  ollama:
+    image: ollama/ollama:0.34.0
+    container_name: telme-ollama
+    profiles: ["ollama"]
+    restart: unless-stopped
+    gpus: all
+    environment:
+      # 기본 10분(로컬 docker-compose와 같음). S3에서 -1(내리지 않음)로도 잰다
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+      # vLLM의 --max-num-seqs와 같게 맞춰 동시 처리 수를 공정하게 비교한다
+      OLLAMA_NUM_PARALLEL: ${MAX_CONCURRENT:-8}
+      # EXAONE과 bge-m3를 함께 올려 둔다
+      OLLAMA_MAX_LOADED_MODELS: 2
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+  vllm:
+    # 2026-10-10 모델 비교 실험(scripts/judge-serving-evaluation/user-data-vllm-exaone.sh)과 같은 이미지
+    image: vllm/vllm-openai@sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3
+    container_name: telme-vllm
+    profiles: ["vllm"]
+    restart: unless-stopped
+    gpus: all
+    ipc: host
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    # served-model-name은 앱의 LLM_MODEL과 같아야 한다. GPU 메모리는 TEI 몫(약 2~3GB)을 남긴다
+    command: >
+      --model LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct-AWQ
+      --served-model-name exaone3.5:7.8b
+      --quantization awq
+      --dtype half
+      --trust-remote-code
+      --max-model-len 8192
+      --gpu-memory-utilization ${VLLM_GPU_MEMORY:-0.75}
+      --max-num-seqs ${MAX_CONCURRENT:-8}
+      --seed 0
+
+  tei:
+    # 태그 앞부분은 GPU 세대다: L4(g6) 89-, A10G(g5) 86-, T4(g4dn) turing-
+    image: ${TEI_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:89-1.8}
+    container_name: telme-tei
+    profiles: ["vllm"]
+    restart: unless-stopped
+    gpus: all
+    ports:
+      - "8080:80"
+    volumes:
+      - hf-cache:/data
+    # FAQ 재임베딩 배치(50건)가 한 번에 들어가게 한다
+    command: --model-id BAAI/bge-m3 --max-client-batch-size 64
+
+volumes:
+  ollama-data:
+  hf-cache:
