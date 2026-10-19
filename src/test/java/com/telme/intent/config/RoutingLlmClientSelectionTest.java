@@ -52,13 +52,13 @@ class RoutingLlmClientSelectionTest {
     }
 
     @Test
-    @DisplayName("설정을 주지 않으면 꺼져 있고, 설정 이름으로 켠다")
-    void 기본은_꺼져_있고_설정으로_켠다() {
-        assertThat(bind(Map.of()).bedrock()).isFalse();
-        assertThat(bind(Map.of("telme.routing.bedrock", "true")).bedrock()).isTrue();
-        assertThat(bind(Map.of()).requestInventoryEnabled()).isTrue();
-        assertThat(bind(Map.of("telme.routing.request-inventory-enabled", "false")).requestInventoryEnabled())
-                .isFalse();
+    @DisplayName("설정을 주지 않으면 라우팅은 gpt-oss이고 요청 개수 판정은 하지 않는다")
+    void 기본은_gpt_oss이고_요청_개수_판정은_하지_않는다() {
+        assertThat(bind(Map.of()).bedrock()).isTrue();
+        assertThat(bind(Map.of("telme.routing.bedrock", "false")).bedrock()).isFalse();
+        assertThat(bind(Map.of()).requestInventoryEnabled()).isFalse();
+        assertThat(bind(Map.of("telme.routing.request-inventory-enabled", "true")).requestInventoryEnabled())
+                .isTrue();
     }
 
     @Test

@@ -103,4 +103,23 @@ class FallbackLlmClientTest {
         verify(handler).onError(failure);
         verifyNoInteractions(fallback);
     }
+
+    @Test
+    @DisplayName("스트리밍은 글자가 나간 뒤 완료 처리에서 예외가 나면(가드 차단 등) 대체하지 않고 오류로 넘긴다")
+    void 스트리밍_글자가_나간_뒤_완료_처리_예외는_넘긴다() {
+        LlmStreamHandler handler = mock(LlmStreamHandler.class);
+        IllegalStateException rejection = new IllegalStateException("가드 차단");
+        doThrow(rejection).when(handler).onComplete();
+        doAnswer(invocation -> {
+            LlmStreamHandler target = invocation.getArgument(1);
+            target.onToken("답");
+            target.onComplete();
+            return null;
+        }).when(primary).stream(any(), any());
+
+        client.stream(request, handler);
+
+        verify(handler).onError(rejection);
+        verifyNoInteractions(fallback);
+    }
 }

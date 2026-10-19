@@ -20,16 +20,16 @@ class ChatQuestionResolutionPropertiesTest {
         assertThat(guarded.mode()).isEqualTo(ChatQuestionResolutionProperties.Mode.REGEX_GATED);
     }
 
-    // Bedrock 판정은 기본으로 꺼져 있고, 켜면 흔들림 보완도 함께 켜진다
+    // Bedrock 판정은 기본으로 켜져 있고, 켜면 흔들림 보완도 함께 켜진다. 끄면 보완도 따라 꺼진다
     @Test
-    void bedrockIsOffByDefaultAndTurnsOnStabilityGuards() {
+    void bedrockIsOnByDefaultAndTurnsOnStabilityGuards() {
         var defaults = bind(Map.of());
-        assertThat(defaults.bedrock()).isFalse();
-        assertThat(defaults.guardsEnabled()).isFalse();
-        var bedrock = bind(Map.of("CHAT_QUESTION_RESOLUTION_BEDROCK", "true"));
-        assertThat(bedrock.bedrock()).isTrue();
-        assertThat(bedrock.stabilityGuards()).isFalse();
-        assertThat(bedrock.guardsEnabled()).isTrue();
+        assertThat(defaults.bedrock()).isTrue();
+        assertThat(defaults.stabilityGuards()).isFalse();
+        assertThat(defaults.guardsEnabled()).isTrue();
+        var off = bind(Map.of("CHAT_QUESTION_RESOLUTION_BEDROCK", "false"));
+        assertThat(off.bedrock()).isFalse();
+        assertThat(off.guardsEnabled()).isFalse();
     }
 
     private static ChatQuestionResolutionProperties bind(Map<String, Object> variables) {

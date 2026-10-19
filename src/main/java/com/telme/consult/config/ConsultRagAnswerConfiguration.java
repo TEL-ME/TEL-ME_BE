@@ -150,7 +150,7 @@ public class ConsultRagAnswerConfiguration {
     }
 
     static LlmClient extractionClient(FaqClarificationProperties clarification, LlmClient exaone, LlmClient bedrock) {
-        return clarification.bedrockExtraction() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
+        return clarification.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
     }
 
     @Bean

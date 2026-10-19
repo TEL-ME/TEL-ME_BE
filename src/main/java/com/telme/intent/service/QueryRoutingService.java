@@ -99,8 +99,8 @@ public class QueryRoutingService {
     private final TransactionTemplate transactionTemplate;
     private final UnknownFaqRecheck unknownFaqRecheck;
     // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다
-    @Value("${telme.routing.request-inventory-enabled:true}")
-    private boolean requestInventoryEnabled = true;
+    @Value("${telme.routing.request-inventory-enabled:false}")
+    private boolean requestInventoryEnabled = false;
 
     public QueryRoutingService(
             LlmClient llmClient,

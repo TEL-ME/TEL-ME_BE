@@ -7,6 +7,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 // 실패하면 엑사원으로 대체한다. requestInventoryEnabled는 QueryRoutingService가 쓰는 값과 같고, 여기서는 bedrock과 어긋났는지만 본다
 @ConfigurationProperties(prefix = "telme.routing")
 public record RoutingLlmProperties(
-        @DefaultValue("false") boolean bedrock,
-        @DefaultValue("true") boolean requestInventoryEnabled) {
+        @DefaultValue("true") boolean bedrock,
+        @DefaultValue("false") boolean requestInventoryEnabled) {
 }
