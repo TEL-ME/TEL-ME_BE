@@ -152,6 +152,9 @@ member:
     frontend-uri: ${FRONTEND_URL:http://localhost:3000}
 
 chat:
+  summary:
+    # 대화 요약을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SUMMARY_BEDROCK:true}
   session-title:
     # 세션 제목을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
     bedrock: ${CHAT_SESSION_TITLE_BEDROCK:true}

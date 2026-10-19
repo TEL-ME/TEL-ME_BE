@@ -2,6 +2,7 @@ package com.telme.chat.service;
 
 import static com.telme.chat.guard.MaskSpan.MASK;
 
+import com.telme.chat.config.ChatSummaryLlmConfiguration;
 import com.telme.chat.config.ChatSummaryProperties;
 import com.telme.chat.converter.ChatSummaryConverter;
 import com.telme.chat.repository.ChatInputMaskRepository;
@@ -15,6 +16,7 @@ import com.telme.global.common.exception.GeneralException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Service
 @Slf4j
@@ -26,8 +28,11 @@ public class ChatSummaryService {
     private final ChatSummaryConverter converter;
     private final ChatInputMaskRepository inputMasks;
 
+    // 요약 모델은 ChatSummaryLlmConfiguration이 고른다(chat.summary.bedrock)
     @Autowired
-    public ChatSummaryService(ChatSummaryStore store, LlmClient client, ChatSummaryProperties properties,
+    public ChatSummaryService(ChatSummaryStore store,
+            @Qualifier(ChatSummaryLlmConfiguration.CHAT_SUMMARY_LLM_CLIENT) LlmClient client,
+            ChatSummaryProperties properties,
             ChatSummaryConverter converter, ChatInputMaskRepository inputMasks) {
         this.chatSummaryStore = store;
         this.llmClient = client;
