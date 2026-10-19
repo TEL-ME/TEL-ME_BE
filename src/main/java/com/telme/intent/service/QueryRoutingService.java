@@ -11,6 +11,7 @@ import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.config.RoutingLlmConfiguration;
+import com.telme.intent.config.RoutingRequestInventory;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.FollowUpRouteResponse.Disposition;
@@ -49,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -98,9 +98,8 @@ public class QueryRoutingService {
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
     private final UnknownFaqRecheck unknownFaqRecheck;
-    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다
-    @Value("${telme.routing.request-inventory-enabled:true}")
-    private boolean requestInventoryEnabled = true;
+    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다. 값은 RoutingLlmConfiguration이 정한다
+    private boolean requestInventoryEnabled = false;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -146,6 +145,11 @@ public class QueryRoutingService {
         this.intentConverter = intentConverter;
         this.transactionTemplate = transactionTemplate;
         this.unknownFaqRecheck = Objects.requireNonNull(unknownFaqRecheck);
+    }
+
+    @Autowired(required = false)
+    void setRoutingRequestInventory(RoutingRequestInventory inventory) {
+        this.requestInventoryEnabled = inventory.enabled();
     }
 
     // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
