@@ -7,5 +7,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "telme.consult.faq-clarification")
 public record FaqClarificationProperties(
         @DefaultValue("true") boolean enabled,
-        @DefaultValue("false") boolean bedrockExtraction) {
+        @DefaultValue("true") boolean bedrock) {
 }

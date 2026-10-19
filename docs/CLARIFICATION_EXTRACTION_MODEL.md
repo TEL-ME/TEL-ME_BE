@@ -8,7 +8,7 @@
 - **문제**: 정답 근거를 찾고도 안 물어도 되는 것을 되묻는 경우가 많다. 평가셋 32건 중 26건이 해당했고 엑사원은 그중 25건을 되물었다.
 - **원인**: 불필요한 조건을 **모델이 처음부터 내고**, 걸러내기가 거의 못 걸렀다. 불필요한 되묻기는 모두 모델이 낸 조건에서 나왔다.
 - **결론**: **조건 뽑기를 Bedrock(gpt-oss-120b)으로 바꾼다.** 평가셋 22% → 72~81%, 기존 평가 77% → 85%(각 3회), 실제 채팅 흐름 32건의 되묻기 31 → 14개(TELME-176, 1회).
-- **적용**: 설정 `telme.consult.faq-clarification.bedrock-extraction`(기본 **꺼짐**). 켜면 Bedrock으로 뽑고 실패하면 엑사원으로 대체한다. 기본값을 켜짐으로 바꾸는 일은 TELME-185에서 검토했으나 보류했다.
+- **적용**: 설정 `telme.consult.faq-clarification.bedrock`(기본 **켜짐**). Bedrock으로 뽑고 실패하면 엑사원으로 대체한다. TELME-185에서는 기본을 꺼짐으로 두었다가 TELME-194에서 켜짐으로 바꿨다. 키 이름은 TELME-194에서 `bedrock-extraction`에서 `bedrock`으로 통일했고 환경 변수는 그대로다.
 - **대화 시나리오**: 플래그를 켠 33개 중 27개가 통과했고 나이 중복 질문 4건은 판정을 보강해 해결했다. 나머지 2건은 모델마다 달라지는 가정이라 엑사원 전용으로 표시했다(3.4절).
 - **접은 것**: 뽑은 조건을 한 번 더 검증하는 단계(엑사원·Bedrock 모두 필요한 되묻기도 지워 이득이 없었다), 새로 쓴 gpt용 프롬프트(오히려 나빠졌다).
 
@@ -169,10 +169,10 @@
 
 | 설정 | 동작 |
 | --- | --- |
-| `telme.consult.faq-clarification.bedrock-extraction=false`(기본) | 조건 뽑기를 엑사원으로 한다. 지금 운영과 같다 |
-| `true` | Bedrock(`llm.bedrock`)으로 뽑는다. 호출이 실패하거나 Bedrock이 꺼져 있으면 엑사원으로 뽑는다 |
+| `telme.consult.faq-clarification.bedrock=true`(기본) | Bedrock(`llm.bedrock`)으로 뽑는다. 호출이 실패하거나 Bedrock이 꺼져 있으면 엑사원으로 뽑는다 |
+| `false` | 조건 뽑기를 엑사원으로 한다 |
 
-- 환경 변수는 `CONSULT_FAQ_CLARIFICATION_BEDROCK`이다. 기본값은 꺼짐이다. 프롬프트는 두 모델이 같은 v1.9를 쓴다(8절에서 모델별 후보를 시도했지만 나은 것이 없어 분리하지 않았다).
+- 환경 변수는 `CONSULT_FAQ_CLARIFICATION_BEDROCK`이다. 기본값은 켜짐이다. 프롬프트는 두 모델이 같은 v1.9를 쓴다(8절에서 모델별 후보를 시도했지만 나은 것이 없어 분리하지 않았다).
 - `FallbackLlmClient`가 Bedrock 실패 시 같은 요청을 엑사원으로 다시 보낸다.
 - Bedrock 키는 `AWS_BEARER_TOKEN_BEDROCK` 또는 AWS 기본 자격 증명을 쓴다(판정기와 같다).
 - 조건 뽑기가 Bedrock이 되면 FAQ 근거가 있는 모든 질문에서 Bedrock을 한 번 더 부른다. 판정기는 점수가 애매한 질문에만 부르지만 조건 뽑기는 근거가 있으면 매번 부른다.

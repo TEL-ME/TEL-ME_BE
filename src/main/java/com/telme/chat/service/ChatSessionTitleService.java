@@ -1,23 +1,32 @@
 package com.telme.chat.service;
 
+import com.telme.chat.config.ChatSessionTitleLlmConfiguration;
 import com.telme.chat.config.ChatSessionTitleProperties;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.service.LlmClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 class ChatSessionTitleService {
 
     private final LlmClient llmClient;
     private final ChatSessionTitleStore titleStore;
     private final ChatSessionTitleProperties properties;
+
+    // 제목 모델은 ChatSessionTitleLlmConfiguration이 고른다(chat.session-title.bedrock)
+    ChatSessionTitleService(
+            @Qualifier(ChatSessionTitleLlmConfiguration.SESSION_TITLE_LLM_CLIENT) LlmClient llmClient,
+            ChatSessionTitleStore titleStore, ChatSessionTitleProperties properties) {
+        this.llmClient = llmClient;
+        this.titleStore = titleStore;
+        this.properties = properties;
+    }
 
     public boolean generateIfMissing(ChatSessionTitleRequested requested) {
         if (titleStore.hasTitle(requested.sessionId())) {

@@ -22,7 +22,7 @@ class ChatSessionTitleServiceTest {
 
     private final LlmClient llmClient = mock(LlmClient.class);
     private final ChatSessionTitleStore titleStore = mock(ChatSessionTitleStore.class);
-    private final ChatSessionTitleProperties properties = new ChatSessionTitleProperties(30, 32);
+    private final ChatSessionTitleProperties properties = new ChatSessionTitleProperties(30, 512, true);
     private final ChatSessionTitleService service =
             new ChatSessionTitleService(llmClient, titleStore, properties);
     private ChatSessionTitleRequested requested;
@@ -47,7 +47,7 @@ class ChatSessionTitleServiceTest {
         LlmRequest sent = requestCaptor.getValue();
         assertThat(sent.executionId()).isEqualTo(10L);
         assertThat(sent.taskType()).isEqualTo(TaskType.SESSION_TITLE);
-        assertThat(sent.maxTokens()).isEqualTo(32);
+        assertThat(sent.maxTokens()).isEqualTo(512);
         assertThat(sent.systemPrompt()).contains("30자 이내");
         assertThat(sent.userPrompt())
                 .contains("<question>")

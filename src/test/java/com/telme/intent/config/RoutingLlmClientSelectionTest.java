@@ -13,6 +13,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -52,13 +53,13 @@ class RoutingLlmClientSelectionTest {
     }
 
     @Test
-    @DisplayName("설정을 주지 않으면 꺼져 있고, 설정 이름으로 켠다")
-    void 기본은_꺼져_있고_설정으로_켠다() {
-        assertThat(bind(Map.of()).bedrock()).isFalse();
-        assertThat(bind(Map.of("telme.routing.bedrock", "true")).bedrock()).isTrue();
-        assertThat(bind(Map.of()).requestInventoryEnabled()).isTrue();
-        assertThat(bind(Map.of("telme.routing.request-inventory-enabled", "false")).requestInventoryEnabled())
-                .isFalse();
+    @DisplayName("설정을 주지 않으면 라우팅은 gpt-oss이고 요청 개수 판정은 하지 않는다")
+    void 기본은_gpt_oss이고_요청_개수_판정은_하지_않는다() {
+        assertThat(bind(Map.of()).bedrock()).isTrue();
+        assertThat(bind(Map.of("telme.routing.bedrock", "false")).bedrock()).isFalse();
+        assertThat(bind(Map.of()).requestInventoryEnabled()).isNull();
+        assertThat(bind(Map.of("telme.routing.request-inventory-enabled", "true")).requestInventoryEnabled())
+                .isTrue();
     }
 
     @Test
@@ -77,6 +78,48 @@ class RoutingLlmClientSelectionTest {
         RoutingLlmConfiguration.routingClient(new RoutingLlmProperties(false, true), exaone, bedrock);
 
         assertThat(output).doesNotContain("ROUTING_REQUEST_INVENTORY_ENABLED");
+    }
+
+    @Test
+    @DisplayName("요청 개수 판정을 비워 두면 라우팅이 gpt-oss일 때 끄고 엑사원일 때 켠다")
+    void 비워_두면_라우팅_모델을_따라간다() {
+        var auto = new RoutingLlmProperties(true, null);
+
+        assertThat(auto.inventoryEnabled(true)).isFalse();
+        assertThat(auto.inventoryEnabled(false)).isTrue();
+        assertThat(new RoutingLlmProperties(true, true).inventoryEnabled(true)).isTrue();
+        assertThat(new RoutingLlmProperties(true, false).inventoryEnabled(false)).isFalse();
+    }
+
+    @Test
+    @DisplayName("엑사원으로 라우팅하는데 요청 개수 판정을 직접 꺼 두면 경고를 남기고, 비워 두면 남기지 않는다")
+    void 엑사원인데_판정이_꺼져_있으면_경고한다(CapturedOutput output) {
+        RoutingLlmConfiguration.routingClient(new RoutingLlmProperties(true, null), exaone, null);
+        RoutingLlmConfiguration.routingClient(new RoutingLlmProperties(false, null), exaone, bedrock);
+        assertThat(output).doesNotContain("ROUTING_REQUEST_INVENTORY_ENABLED");
+
+        RoutingLlmConfiguration.routingClient(new RoutingLlmProperties(false, false), exaone, bedrock);
+
+        assertThat(output).contains("엑사원으로 부르는데", "ROUTING_REQUEST_INVENTORY_ENABLED");
+    }
+
+    @Test
+    @DisplayName("요청 개수 판정 빈은 시작할 때 정해진 라우팅 모델을 따른다")
+    void 판정_빈은_라우팅_모델을_따른다() {
+        var configuration = new RoutingLlmConfiguration();
+        var auto = new RoutingLlmProperties(true, null);
+
+        assertThat(configuration.routingRequestInventory(auto, providerOf(bedrock)).enabled()).isFalse();
+        assertThat(configuration.routingRequestInventory(auto, providerOf(null)).enabled()).isTrue();
+        assertThat(configuration.routingRequestInventory(new RoutingLlmProperties(false, null), providerOf(bedrock))
+                .enabled()).isTrue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ObjectProvider<LlmClient> providerOf(LlmClient client) {
+        ObjectProvider<LlmClient> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(client);
+        return provider;
     }
 
     private static RoutingLlmProperties bind(Map<String, Object> values) {

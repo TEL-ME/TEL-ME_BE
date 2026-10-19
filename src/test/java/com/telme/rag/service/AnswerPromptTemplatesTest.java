@@ -54,17 +54,22 @@ class AnswerPromptTemplatesTest {
                 + "   \"TELME샵\", \"유플러스샵\", \"이벤트 페이지\", \"공식 사이트\"는 어떤 경우에도 쓰지 마십시오.\n"
                 + "   근거에 그 말이 없고, 쓰면 답변 전체가 버려집니다.\n";
 
+        String copyAddition =
+                "   금액과 기간은 근거에 적힌 글자를 그대로 복사해 쓰고, 다시 계산하거나 비슷한 숫자로 바꿔 쓰지 마십시오.\n";
+
         // 전문을 대조해 사례 지시와 무관한 역할·거절·길이·출력 규칙 변경도 감지한다.
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(relationAddition);
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(channelAddition);
+        assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).contains(copyAddition);
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT
                 .replace(relationAddition, "")
                 .replace(channelAddition, "")
+                .replace(copyAddition, "")
                 .replace("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요",
                         "안내드릴 수 있는 정보가 없습니다")).isEqualTo(baseline);
         // 정체성 지침이 붙으면 무관 질문에 근거 없는 GROUNDED 답변이 늘어 FAQ 답변 프롬프트에는 넣지 않는다.
         assertThat(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT).doesNotContain("무러바라", "[정체성과 말투]");
-        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.8");
+        assertThat(AnswerPromptTemplates.PROMPT_VERSION).isEqualTo("rag-answer-v4.9");
         assertThat(AnswerPromptTemplates.NO_EVIDENCE_ANSWER).isEqualTo("지금 확인할 수 있는 정보만으로는 정확하게 안내드리기 어려워요.");
     }
 
@@ -98,7 +103,7 @@ class AnswerPromptTemplatesTest {
         verify(client).stream(capture.capture(), any());
         LlmRequest sent = capture.getValue();
         assertThat(sent.systemPrompt()).isEqualTo(AnswerPromptTemplates.ANSWER_SYSTEM_PROMPT);
-        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.8");
+        assertThat(sent.promptVersion()).isEqualTo("rag-answer-v4.9");
         assertThat(sent.userPrompt()).isEqualTo(AnswerPromptTemplates.buildUserPrompt(
                 request, new AnswerContextConverter().toContext(List.of(source))));
         assertThat(sent.userPrompt()).contains("7,700원입니다.", "- 지역: 국내", "cost?");

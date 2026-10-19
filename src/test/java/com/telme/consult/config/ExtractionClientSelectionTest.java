@@ -1,8 +1,11 @@
 package com.telme.consult.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
 import java.util.Map;
@@ -37,17 +40,27 @@ class ExtractionClientSelectionTest {
     void 켜져_있으면_bedrock이다() {
         var properties = new FaqClarificationProperties(true, true);
 
-        assertThat(ConsultRagAnswerConfiguration.extractionClient(properties, exaone, bedrock))
-                .isInstanceOf(FallbackLlmClient.class);
+        var client = ConsultRagAnswerConfiguration.extractionClient(properties, exaone, bedrock);
+
+        assertThat(client).isInstanceOf(FallbackLlmClient.class);
+        when(bedrock.generate(any())).thenThrow(new IllegalStateException("bedrock down"));
+        when(exaone.generate(any())).thenReturn("엑사원 응답");
+
+        assertThat(client.generate(LlmRequest.builder().systemPrompt("s").userPrompt("u").build())).isEqualTo("엑사원 응답");
     }
 
     @Test
-    @DisplayName("설정을 주지 않으면 조건 뽑기는 엑사원이다")
-    void 기본값은_엑사원이다() {
+    @DisplayName("설정을 주지 않으면 조건 뽑기는 gpt-oss이고, 끄면 엑사원이다")
+    void 기본값은_bedrock이다() {
         var binder = new Binder(new MapConfigurationPropertySource(Map.of()));
         var defaults = binder.bindOrCreate("telme.consult.faq-clarification", FaqClarificationProperties.class);
 
-        assertThat(defaults.bedrockExtraction()).isFalse();
-        assertThat(ConsultRagAnswerConfiguration.extractionClient(defaults, exaone, bedrock)).isSameAs(exaone);
+        assertThat(defaults.bedrock()).isTrue();
+        assertThat(ConsultRagAnswerConfiguration.extractionClient(defaults, exaone, bedrock))
+                .isInstanceOf(FallbackLlmClient.class);
+        var off = new Binder(new MapConfigurationPropertySource(Map.of("telme.consult.faq-clarification.bedrock", "false")))
+                .bindOrCreate("telme.consult.faq-clarification", FaqClarificationProperties.class);
+        assertThat(off.bedrock()).isFalse();
+        assertThat(ConsultRagAnswerConfiguration.extractionClient(off, exaone, bedrock)).isSameAs(exaone);
     }
 }
