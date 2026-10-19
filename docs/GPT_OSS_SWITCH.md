@@ -19,8 +19,9 @@
 | 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **gpt-oss 확정**, TELME-184에서 수정(P7), 기본 켜짐 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK` (위와 같음, true), `CONSULT_CANDIDATE_EVIDENCE_JUDGE` (true) | 같은 문서 "복합 질문 입력 확인"(TELME-182, 수정 전 채택 1건)과 "후보 근거 검증 수정"(TELME-184). 수정 후 개발용 맞는 답 30 / 31 / 30, 블라인드 12 / 12 / 10. 문맥 해석이 후속 질문을 복원하지 못하면 틀린 답이 날 수 있다("후속 질문 확인") |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
 | 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (true) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) 프롬프트는 TELME-194에서 금액 복사 규칙을 더해 v4.9가 됐다(아래 "답변 프롬프트 v4.9") |
+| 14 | 세션 제목 | `ChatSessionTitleService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SESSION_TITLE_BEDROCK` (true) | 아래 "세션 제목". 출력 한도를 32에서 512로 올렸다(32에서는 제목이 비거나 잘렸다). 대화 요약과 상담 종료 요약은 엑사원이다 |
 
-대화 요약, 세션 제목, 상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나왔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)).
+대화 요약과 상담 종료 요약은 답변 경로 밖이고 두 모델이 같게 나와 엑사원으로 둔다([BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)). 세션 제목은 TELME-194에서 gpt-oss로 바꿨다(14번).
 
 ## 기본 구성과 끄는 방법
 
@@ -40,6 +41,7 @@ TELME-194부터 1·2·4·5·6·7·10·11·13번은 기본으로 gpt-oss(Bedrock)
 | 후보 근거 검증 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK`(없으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`) | `telme.consult.evidence-resolver.candidate-bedrock` | true | false면 엑사원 |
 | 후보 판정 방식 | `CONSULT_CANDIDATE_EVIDENCE_JUDGE` | `telme.consult.evidence-resolver.candidate-judge` | true | false면 단어 검사로 막는다 |
 | 답변 생성 | `RAG_ANSWER_BEDROCK` | `rag.answer.bedrock` | true | false면 엑사원 |
+| 세션 제목 | `CHAT_SESSION_TITLE_BEDROCK` | `chat.session-title.bedrock` | true | false면 엑사원. 출력 한도(`chat.session-title.max-output-tokens`)는 512 |
 | 회색 구간 판정(Bedrock 전용) | `SEARCH_GRAY_ZONE_ENABLED` | `search.gray-zone.enabled` | true | false면 판정을 하지 않는다 |
 | Bedrock 연결 | `LLM_BEDROCK_ENABLED` | `llm.bedrock.enabled` | true | false면 Bedrock 호출이 없고, 전환 플래그가 켜져 있어도 엑사원으로 동작한다 |
 | 근거 적합성 판정 | `RAG_EVIDENCE_CHECK_ENABLED` | `rag.evidence-check.enabled` | false | true면 엑사원으로 판정한다(위 12번) |
@@ -183,6 +185,21 @@ python3 -I scripts/answer-generation-evaluation/score_answers.py build/answers-b
 ```
 
 결과 파일은 `scripts/answer-generation-evaluation/results/TELME-182/`의 `capture-b182.jsonl.gz`(캡처), `inputs-b182.json`(입력), `answers-b182-exaone.jsonl.gz`, `answers-b182-gptoss.jsonl.gz`(두 모델 3회 답변)다.
+
+## 세션 제목 (TELME-194)
+
+세션 제목은 첫 질문으로 짧은 제목을 만드는 호출이다. TELME-174에서 두 모델이 같게 나와(20/20) 바꾸지 않았지만, 그 측정은 평가용 라우터를 거쳤고 앱의 Bedrock 클라이언트와 앱의 출력 한도(32토큰)로 잰 것이 아니었다. 앱 설정 그대로 실제 Bedrock(`us-east-1`, 추론 강도 low)을 불러 보니 한도가 문제였다.
+
+| 출력 한도 | 성공 | 실패(빈 응답) | 비고 |
+| ---: | ---: | ---: | --- |
+| 32 (이전 기본) | 13 / 20 | **7** | 성공한 것 중에도 "소액결", "휴대폰 분", "5G"처럼 잘린 제목이 있었다 |
+| 128 | 20 / 20 | 0 | 제목 30자 초과 0 |
+| **512 (현재 기본)** | 20 / 20 | 0 | 제목 30자 초과 0 |
+
+- gpt-oss는 답 앞의 내부 추론도 출력 한도를 써서 32토큰으로는 제목이 비거나 중간에서 끊긴다. 그래서 켜기만 하고 한도를 두면 실패 35%가 엑사원으로 대체되고 잘린 제목은 그대로 저장된다. 한도를 512로 올렸다. 엑사원은 제목이 짧아 한도를 올려도 같고, 30자를 넘으면 코드가 잘라 낸다.
+- 실제 앱(기본 설정)에서 새 대화 5개를 시작했을 때 제목 5개 모두 gpt-oss가 만들었고 성공했다(호출 0.6~0.9초). "유심 재발급 비용 안내", "소액결제 한도 상향 요청", "휴대폰 분실 및 정지 요청", "약정 종료 후 요금 변동 여부", "근처 매장 위치 안내"였다.
+- 호출은 한도 확인 60건과 앱 확인 5건, 모두 응답을 받았다(약 $0.01 추정).
+- Bedrock 호출이 실패하면 엑사원으로 대체하는 것은 다른 호출과 같고(`FallbackLlmClient`), 이름 붙은 클라이언트 연결과 기본값은 `BedrockSwitchWiringTest`, `BedrockFlagDefaultsTest`가 확인한다.
 
 ## 답변 프롬프트 v4.9: 금액 복사 규칙 (TELME-194)
 

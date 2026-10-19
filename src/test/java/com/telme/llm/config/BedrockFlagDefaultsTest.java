@@ -3,6 +3,7 @@ package com.telme.llm.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.chat.config.ChatQuestionResolutionProperties;
+import com.telme.chat.config.ChatSessionTitleProperties;
 import com.telme.consult.config.EvidenceResolverProperties;
 import com.telme.consult.config.FaqClarificationProperties;
 import com.telme.consult.config.PlanQuestionProperties;
@@ -24,7 +25,7 @@ class BedrockFlagDefaultsTest {
     @Configuration
     @EnableConfigurationProperties({RoutingLlmProperties.class, ChatQuestionResolutionProperties.class,
             PlanQuestionProperties.class, FaqClarificationProperties.class, RagAnswerProperties.class,
-            EvidenceResolverProperties.class})
+            EvidenceResolverProperties.class, ChatSessionTitleProperties.class})
     static class Properties {
     }
 
@@ -45,6 +46,8 @@ class BedrockFlagDefaultsTest {
             assertThat(context.getBean(FaqClarificationProperties.class).bedrock())
                     .isEqualTo(classDefault("telme.consult.faq-clarification", FaqClarificationProperties.class).bedrock());
             assertThat(context.getBean(RagAnswerProperties.class)).isEqualTo(classDefault("rag.answer", RagAnswerProperties.class));
+            assertThat(context.getBean(ChatSessionTitleProperties.class))
+                    .isEqualTo(classDefault("chat.session-title", ChatSessionTitleProperties.class));
             assertThat(context.getBean(EvidenceResolverProperties.class))
                     .isEqualTo(classDefault("telme.consult.evidence-resolver", EvidenceResolverProperties.class));
         });
@@ -61,6 +64,7 @@ class BedrockFlagDefaultsTest {
             assertThat(context.getBean(PlanQuestionProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(FaqClarificationProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(RagAnswerProperties.class).bedrock()).isTrue();
+            assertThat(context.getBean(ChatSessionTitleProperties.class).bedrock()).isTrue();
             EvidenceResolverProperties evidence = context.getBean(EvidenceResolverProperties.class);
             assertThat(evidence.comparisonBedrock()).isTrue();
             assertThat(evidence.candidateBedrock()).isTrue();
@@ -72,13 +76,14 @@ class BedrockFlagDefaultsTest {
     void 환경_변수_이름으로_호출마다_끌_수_있다() {
         runner.withPropertyValues(
                 "ROUTING_BEDROCK=false", "CHAT_QUESTION_RESOLUTION_BEDROCK=false", "CONSULT_PLAN_QUESTION_BEDROCK=false",
-                "CONSULT_FAQ_CLARIFICATION_BEDROCK=false", "RAG_ANSWER_BEDROCK=false").run(context -> {
+                "CONSULT_FAQ_CLARIFICATION_BEDROCK=false", "RAG_ANSWER_BEDROCK=false", "CHAT_SESSION_TITLE_BEDROCK=false").run(context -> {
             // 환경 변수는 application.yml의 ${...} 자리표시자가 읽는다
             assertThat(context.getBean(RoutingLlmProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(ChatQuestionResolutionProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(PlanQuestionProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(FaqClarificationProperties.class).bedrock()).isFalse();
             assertThat(context.getBean(RagAnswerProperties.class).bedrock()).isFalse();
+            assertThat(context.getBean(ChatSessionTitleProperties.class).bedrock()).isFalse();
         });
     }
 

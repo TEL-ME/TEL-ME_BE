@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.telme.chat.config.ChatQuestionResolutionLlmConfiguration;
 import com.telme.chat.config.ChatQuestionResolutionProperties;
+import com.telme.chat.config.ChatSessionTitleLlmConfiguration;
+import com.telme.chat.config.ChatSessionTitleProperties;
 import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.consult.config.PlanQuestionConfiguration;
 import com.telme.consult.service.PlanQuestionClassifier;
@@ -36,14 +38,16 @@ class BedrockSwitchWiringTest {
             "telme.routing.bedrock", RoutingLlmConfiguration.ROUTING_LLM_CLIENT,
             "chat.question-resolution.bedrock", ChatQuestionResolutionLlmConfiguration.CONTEXT_RESOLUTION_LLM_CLIENT,
             "telme.consult.plan-question.bedrock", PlanQuestionConfiguration.PLAN_QUESTION_LLM_CLIENT,
-            "rag.answer.bedrock", RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT);
+            "rag.answer.bedrock", RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT,
+            "chat.session-title.bedrock", ChatSessionTitleLlmConfiguration.SESSION_TITLE_LLM_CLIENT);
 
     private final ApplicationContextRunner base = new ApplicationContextRunner()
             .withUserConfiguration(RoutingLlmConfiguration.class, ChatQuestionResolutionLlmConfiguration.class,
-                    PlanQuestionConfiguration.class, RagAnswerLlmConfiguration.class, Exaone.class);
+                    PlanQuestionConfiguration.class, RagAnswerLlmConfiguration.class, ChatSessionTitleLlmConfiguration.class,
+                    Exaone.class);
 
     @Configuration
-    @EnableConfigurationProperties(ChatQuestionResolutionProperties.class)
+    @EnableConfigurationProperties({ChatQuestionResolutionProperties.class, ChatSessionTitleProperties.class})
     static class Exaone {
         @Bean
         @Primary
@@ -135,17 +139,19 @@ class BedrockSwitchWiringTest {
 
     @Test
     @DisplayName("호출하는 쪽이 이름 붙은 클라이언트를 받아야 플래그가 실제로 적용된다")
-    void 호출하는_쪽이_이름_붙은_클라이언트를_받는다() {
+    void 호출하는_쪽이_이름_붙은_클라이언트를_받는다() throws Exception {
         assertThat(qualifierOfLlmClient(QueryRoutingService.class)).isEqualTo(RoutingLlmConfiguration.ROUTING_LLM_CLIENT);
         assertThat(qualifierOfLlmClient(ChatQuestionResolver.class))
                 .isEqualTo(ChatQuestionResolutionLlmConfiguration.CONTEXT_RESOLUTION_LLM_CLIENT);
         assertThat(qualifierOfLlmClient(PlanQuestionClassifier.class)).isEqualTo(PlanQuestionConfiguration.PLAN_QUESTION_LLM_CLIENT);
         assertThat(qualifierOfLlmClient(RagAnswerGenerator.class)).isEqualTo(RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT);
+        assertThat(qualifierOfLlmClient(Class.forName("com.telme.chat.service.ChatSessionTitleService")))
+                .isEqualTo(ChatSessionTitleLlmConfiguration.SESSION_TITLE_LLM_CLIENT);
     }
 
     // 스프링이 쓰는 생성자(@Autowired가 붙었거나 하나뿐인 생성자)에서 LlmClient 매개변수의 @Qualifier 이름
     private static String qualifierOfLlmClient(Class<?> type) {
-        Constructor<?>[] constructors = type.getConstructors();
+        Constructor<?>[] constructors = type.getDeclaredConstructors();
         Constructor<?> constructor = Arrays.stream(constructors)
                 .filter(candidate -> candidate.isAnnotationPresent(Autowired.class)).findFirst()
                 .orElse(constructors.length == 1 ? constructors[0] : null);

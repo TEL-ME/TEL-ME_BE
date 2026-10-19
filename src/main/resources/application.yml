@@ -152,6 +152,9 @@ member:
     frontend-uri: ${FRONTEND_URL:http://localhost:3000}
 
 chat:
+  session-title:
+    # 세션 제목을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SESSION_TITLE_BEDROCK:true}
   question-resolution:
     # 문맥 해석을 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
     bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
