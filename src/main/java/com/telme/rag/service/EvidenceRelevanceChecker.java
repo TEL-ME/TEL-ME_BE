@@ -28,7 +28,7 @@ public class EvidenceRelevanceChecker {
 
         LlmRequest request = LlmRequest.builder()
                 .executionId(executionId)
-                .taskType(TaskType.ROUTING)
+                .taskType(TaskType.EVIDENCE_CHECK)
                 .systemPrompt(EvidenceRelevancePromptTemplates.SYSTEM_PROMPT)
                 .userPrompt(EvidenceRelevancePromptTemplates.userPrompt(context, question))
                 .format(ResponseFormat.JSON)

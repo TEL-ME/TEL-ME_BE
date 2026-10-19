@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
+// bedrock: 대화 요약을 gpt-oss(Bedrock)로 만들고 실패하면 엑사원으로 대체한다
 @ConfigurationProperties(prefix = "chat.summary")
 public record ChatSummaryProperties(
         @DefaultValue("16") int triggerMessages,
@@ -13,13 +14,21 @@ public record ChatSummaryProperties(
         @DefaultValue("16") int maxBatchMessages,
         @DefaultValue("3072") int maxInputTokens,
         @DefaultValue("512") int maxOutputTokens,
-        @DefaultValue("true") boolean groundedOutput
+        @DefaultValue("true") boolean groundedOutput,
+        @DefaultValue("true") boolean bedrock
 ) {
 
     public ChatSummaryProperties(int triggerMessages, int triggerTokens, int retainedMessages,
             int retainedTokens, int maxBatchMessages, int maxInputTokens, int maxOutputTokens) {
         this(triggerMessages, triggerTokens, retainedMessages, retainedTokens, maxBatchMessages,
                 maxInputTokens, maxOutputTokens, false);
+    }
+
+    public ChatSummaryProperties(int triggerMessages, int triggerTokens, int retainedMessages,
+            int retainedTokens, int maxBatchMessages, int maxInputTokens, int maxOutputTokens,
+            boolean groundedOutput) {
+        this(triggerMessages, triggerTokens, retainedMessages, retainedTokens, maxBatchMessages,
+                maxInputTokens, maxOutputTokens, groundedOutput, false);
     }
 
     @ConstructorBinding

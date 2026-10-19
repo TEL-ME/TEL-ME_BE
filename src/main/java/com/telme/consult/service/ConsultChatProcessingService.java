@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.dto.res.ChatStoreSearchContextResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatPersona;
 import com.telme.chat.service.ChatCoordinates;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatProcessingCommand;
@@ -130,7 +131,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
 
     private void process(ChatProcessingCommand command) {
         trace.stage(command.executionId(), "processing", Map.of(
-                "handler", "ConsultChatProcessingService", "traceVersion", 1));
+                "handler", "ConsultChatProcessingService", "traceVersion", 2));
         AnalyzedTurn turn = analyzer.analyze(command);
         if (turn.directAnswer() == null && turn.preparation() != null) {
             trace.stage(command.executionId(), "analysis", Map.of(
@@ -145,13 +146,17 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         if (turn.directAnswer() != null) {
             var completed =
-                    persistence.persistDirectAnswer(
-                            command.executionId(), command.sessionId(), turn.directAnswer());
+                    command.coordinates() == null
+                            && BasicConversationAnalysisProvider.preservesWaitingState(command.content())
+                            ? persistence.persistBasicConversation(
+                                    command.executionId(), command.sessionId(), turn.directAnswer())
+                            : persistence.persistDirectAnswer(
+                                    command.executionId(), command.sessionId(), turn.directAnswer());
             events.completed(command.executionId(), completed);
             return;
         }
         if (turn.consultTurns() != null) {
-            processCompound(command, turn.consultTurns(), turn.context());
+            processCompound(command, turn.consultTurns(), turn.context(), turn.resolvedUserQuery());
             return;
         }
         var result = turn.preparation();
@@ -263,7 +268,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             // 트랜잭션이 완료된 동일 답변만 전송한다. 연결 실패가 완료된 DB 상태를 되돌리지 않는다.
             // 추적 기록은 전송 뒤에 남긴다. 기록용 DB 쓰기가 최종 답변 전송을 늦추지 않게 한다.
             try {
-                events.stream(command.executionId()).onToken(generated.answer().content());
+                events.stream(command.executionId()).onToken(
+                        ChatPersona.prependGreeting(command.content(), generated.answer().content()));
                 trace.stage(command.executionId(), "finalTransmission", Map.of(
                         "outputMessageId", completed.outputMessage().messageId(),
                         "status", "DISPATCH_RETURNED"));
@@ -283,7 +289,12 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
     }
 
-    private void processCompound(ChatProcessingCommand command, List<ConsultTurn> consultTurns, ChatContext context) {
+    // resolvedQuestion: 문맥 해석을 거친 이번 턴 전체 질문. 이전 대화로 복원하지 않은 턴은 이번 턴 원문과 같다
+    private void processCompound(ChatProcessingCommand command, List<ConsultTurn> consultTurns, ChatContext context,
+            String resolvedQuestion) {
+        // 하위 질문을 나누기 전 고객 문장. 후속 질문("그럼 비용은? 택배로도 돼?")은 원문에 대상이 없어 복원된 문장을 쓴다
+        String customerMessage = resolvedQuestion == null || resolvedQuestion.isBlank()
+                ? command.content() : resolvedQuestion;
         for (ConsultTurn turn : consultTurns) {
             if (turn.preparation().waitingForReply()) {
                 var completed = persistence.persistWaiting(command.executionId(), command.sessionId(),
@@ -310,7 +321,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<AnswerInput> inputs = new ArrayList<>();
         List<Prepared> prepareds = new ArrayList<>();
         for (int i = 0; i < consultTurns.size(); i++) {
-            AnswerInput input = compoundInput(command, consultTurns.get(i), preparedTurns.get(i), context);
+            AnswerInput input = compoundInput(command, consultTurns.get(i), preparedTurns.get(i), context,
+                    customerMessage);
             inputs.add(input);
             boolean faq = consultTurns.get(i).purpose() == Purpose.GENERAL_FAQ;
             prepareds.add(faq && answers.clarifies() ? answers.prepare(input, true) : Prepared.none());
@@ -398,7 +410,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 command.executionId(), command.sessionId(), completions, combined, sources);
         // 여러 모델 호출의 중간 토큰은 저장된 최종 답변과 다를 수 있어 완료 후 한 번만 전송한다.
         try {
-            events.stream(command.executionId()).onToken(combined.content());
+            events.stream(command.executionId()).onToken(
+                    ChatPersona.prependGreeting(command.content(), combined.content()));
             trace.stage(command.executionId(), "finalTransmission", Map.of(
                     "outputMessageId", completed.outputMessage().messageId(),
                     "status", "DISPATCH_RETURNED"));
@@ -418,7 +431,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     private AnswerInput compoundInput(ChatProcessingCommand command, ConsultTurn part,
-            ConsultService.PreparedTurn prepared, ChatContext context) {
+            ConsultService.PreparedTurn prepared, ChatContext context, String customerMessage) {
         var conditions = prepared.decision().conditions();
         boolean namedLocation = conditions.containsKey("location")
                 && conditions.get("location").status() == ConditionStatus.FILLED;
@@ -432,7 +445,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                 part.purpose(), part.queryText(), part.queryText(),
                 conditionConverter.convert(conditions),
                 part.queryText(), context, false, coordinates, asked,
-                displayText(command.content(), part));
+                displayText(command.content(), part), customerMessage);
     }
 
     // 검색어는 라우팅 정규화 값을 유지하고, 복합 응답 제목만 이번 고객 원문의 띄어쓰기로 복원한다.
@@ -794,7 +807,18 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             boolean streamTokens,
             ChatCoordinates coordinates,
             Map<String, String> askedQuestions,
-            String candidateEvidenceQuery) {
+            String candidateEvidenceQuery,
+            // 복합 질문에서 하위 질문으로 나누기 전 고객 원문. 하위 질문이 조각이라 빠진 대상·조건을 근거 검증이 찾는 데 쓴다
+            String customerMessage) {
+        public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
+                String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
+                String resolvedUserQuery, ChatContext context, boolean streamTokens,
+                ChatCoordinates coordinates, Map<String, String> askedQuestions, String candidateEvidenceQuery) {
+            this(executionId, sessionId, consultRequestId, purpose, originalUserQuery, searchQuery,
+                    confirmedConditions, resolvedUserQuery, context, streamTokens, coordinates,
+                    askedQuestions, candidateEvidenceQuery, null);
+        }
+
         public AnswerInput(long executionId, long sessionId, long consultRequestId, Purpose purpose,
                 String originalUserQuery, String searchQuery, Map<String, String> confirmedConditions,
                 String resolvedUserQuery, ChatContext context, boolean streamTokens,
@@ -879,6 +903,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             askedQuestions = askedQuestions == null ? Map.of() : Map.copyOf(askedQuestions);
             candidateEvidenceQuery = candidateEvidenceQuery == null || candidateEvidenceQuery.isBlank()
                     ? originalUserQuery : candidateEvidenceQuery.strip();
+            customerMessage = customerMessage == null || customerMessage.isBlank() ? null : customerMessage.strip();
         }
     }
 

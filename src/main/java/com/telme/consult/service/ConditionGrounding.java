@@ -21,6 +21,9 @@ final class ConditionGrounding {
     // 고객 질문과 겹치는 길이. 조사까지 붙어 늘어나지 않도록 질문끼리보다 짧게 잡는다
     private static final int MIN_SAID_OVERLAP = 5;
     private static final int MIN_KNOWN_SHARED_BIGRAMS = 2;
+    private static final int MIN_SUBJECTLESS_LENGTH = 6;
+    private static final Pattern EXCLUSIVE_SUBJECT = Pattern.compile("(?:본인|대리인)[이가은는]");
+    private static final Pattern AGE_THRESHOLD = Pattern.compile("(.*?)만\\s*\\d+\\s*세");
     private static final Pattern QUANTITY_UNIT =
             Pattern.compile("(?:\\d|몇|한|두|세|네)(개월|영업일|시간|년|세|일|회)");
 
@@ -94,8 +97,16 @@ final class ConditionGrounding {
         return options.stream()
                 .filter(option -> containsValue(sourceText, compact(option))
                         // 한쪽만 근거에 적히기도 한다. "법인인 경우"만 있어도 질문이 개인·법인을 둘 다 물으면 짝이다
-                        || containsValue(compact(question), compact(option)))
+                        || containsValue(compact(question), compact(option))
+                        || everyWordGrounded(option, sourceText + compact(question)))
                 .toList();
+    }
+
+    // 근거에 낱말로 흩어진 선택지는 낱말마다 근거에 있어야 한다
+    private static boolean everyWordGrounded(String option, String text) {
+        String[] words = option.strip().split("\\s+");
+        return words.length >= 2 && Arrays.stream(words)
+                .allMatch(word -> word.length() >= 2 && containsValue(text, compact(word)));
     }
 
     // 11500원 안의 1500원처럼 숫자 중간에 걸린 값은 다른 값이다
@@ -161,7 +172,42 @@ final class ConditionGrounding {
     static boolean asksTheSame(String question, String other) {
         String left = compact(question);
         String right = compact(other);
-        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX;
+        return commonPrefix(left, right) >= MIN_QUESTION_PREFIX
+                || sameExceptSubject(question, other);
+    }
+
+    // 나이 기준 질문의 대상. 나이 기준을 묻는 질문이 아니면 null
+    static String ageSubject(String question) {
+        var matcher = AGE_THRESHOLD.matcher(question);
+        return matcher.find() ? compact(matcher.group(1)) : null;
+    }
+
+    // 같은 대상의 나이 기준 여러 개를 나이 하나로 묻는 질문
+    static String mergedAgeQuestion(String question) {
+        var matcher = AGE_THRESHOLD.matcher(question);
+        String subject = matcher.find() ? matcher.group(1).strip() : "";
+        if (subject.isEmpty()) {
+            return "나이가 어떻게 되시나요?";
+        }
+        if (subject.endsWith("나이가")) {
+            return subject + " 어떻게 되시나요?";
+        }
+        return subject.replaceAll("[이가은는]$", "") + "의 나이가 어떻게 되시나요?";
+    }
+
+    // 본인과 대리인처럼 서로 배타적인 주어만 바꾼 질문
+    private static boolean sameExceptSubject(String question, String other) {
+        String left = withoutSubject(question);
+        return left != null && left.equals(withoutSubject(other));
+    }
+
+    private static String withoutSubject(String question) {
+        String[] words = question.strip().split("\\s+", 2);
+        if (words.length < 2 || !EXCLUSIVE_SUBJECT.matcher(words[0]).matches()) {
+            return null;
+        }
+        String rest = compact(words[1]);
+        return rest.length() >= MIN_SUBJECTLESS_LENGTH ? rest : null;
     }
 
     private static int commonPrefix(String left, String right) {

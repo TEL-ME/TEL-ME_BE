@@ -4,6 +4,7 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextMessage;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ public final class RoutingPromptTemplates {
 
     private RoutingPromptTemplates() {}
 
-    public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = """
+    private static final String FAITHFULNESS_RULES = """
         검색 질의가 고객의 원래 요청을 왜곡했는지만 판단한다. 각 하위 질문을 독립적으로 판정한다.
         question은 현재 고객 발화다. previousSubject는 현재 발화에서 생략한 대상을 복원하는 데만 사용한다.
         이전 발언의 별도 요청이나 조건을 현재 발화의 요청으로 취급하지 않는다.
@@ -22,6 +23,22 @@ public final class RoutingPromptTemplates {
         띄어쓰기 변경, 같은 뜻의 표현, 질문 전체에 명확히 공통인 대상의 반복은 unsafe=false다.
         상황 설명을 그 상황의 일반적인 처리 안내로 바꾸는 것은 허용한다. 특정 해결책을 선택한 것으로 바꾸면 unsafe=true다.
         원문의 조건, 부정, 비교 대상을 빠뜨리거나 비교를 한쪽의 단독 설명으로 바꾸면 unsafe=true다.
+        """;
+
+    // 단일 검색어(원문 검색 0건 뒤 재검색 후보)에만 쓰는 대조 순서. 복합 하위 질문에 쓰면 멀쩡한 하위 검색어까지 막아
+    // 단일 검색어에만 붙인다(TELME-175 3단계)
+    private static final String SINGLE_QUERY_CHECK = """
+        질의를 다음 순서로 판정한다.
+        1. 원문의 조건을 모두 찾는다. 상황·이유(~인데, ~해서), 조건(~하면, ~때, ~전, ~후), 사람과 대상(외국인, 자녀, 법인, 대리인, 미성년자),
+           나이·금액·기간·횟수, 경로(온라인, 매장, 택배), 부정(~안 하고, ~말고)이 조건이다.
+        2. 찾은 조건이 질의에 같은 뜻으로 모두 남아 있는지 하나씩 대조한다. 하나라도 빠지거나 뜻이 바뀌면 unsafe=true다.
+        3. 질의에만 있는 업무, 대상, 상품명, 금액, 기간, 등급, 수령 방법, 서류 이름이 있으면 unsafe=true다.
+           원문의 넓은 말을 좁은 말로 바꾼 것(결합 할인을 특정 결합 상품으로, 등급을 특정 등급으로)도 원문에 없는 것을 넣은 것이다.
+        4. 판단이 서지 않으면 unsafe=true다. unsafe=true인 질의는 고객 원문으로 검색하므로 손해가 작다.
+        질문을 검색어 형태로 바꾼 것('~ 여부', '~ 방법', '~ 비교', '~ 차이')은 조건이 모두 남아 있으면 unsafe=false다.
+        """;
+
+    private static final String FAITHFULNESS_EXAMPLES = """
         답변이나 수정된 검색 질의를 생성하지 않는다.
         예: 원문="유심을 잃어버렸어요", 질의="유심 분실 처리 안내" -> unsafe=false
         예: 원문="유심을 잃어버렸어요", 질의="유심 분실 시 재발급 방법" -> unsafe=true
@@ -37,19 +54,32 @@ public final class RoutingPromptTemplates {
         입력 순서대로 판정하고 {"unsafe":[false,true]} 형식의 JSON만 출력한다.
         """;
 
+    // 복합 FAQ 하위 질문 묶음의 검색어 검증
+    public static final String FAQ_QUERY_FAITHFULNESS_PROMPT = FAITHFULNESS_RULES + FAITHFULNESS_EXAMPLES;
+
+    // 단일 검색어의 검색어 검증. 조건을 하나씩 대조하는 순서를 더한다
+    public static final String FAQ_SINGLE_QUERY_FAITHFULNESS_PROMPT =
+            FAITHFULNESS_RULES + SINGLE_QUERY_CHECK + FAITHFULNESS_EXAMPLES;
+
     public static final String REQUEST_INVENTORY_PROMPT = """
         고객이 원하는 최종 결과의 관계와 요청 개수만 판정한다. 하위 질문, 검색어, 답변을 생성하지 않는다.
-        대상의 개수, 문장 수, 답변에 필요한 설명 항목 수는 요청 개수가 아니다.
+        대상의 개수, 문장 수, 고객이 묻지 않았는데 답변에 필요한 설명 항목 수는 요청 개수가 아니다.
         SINGLE: 한 업무 신청, 하나의 문제 해결, 한 업무의 전체 처리 순서나 전체 구성 안내.
         상황, 원인, 조건, 부정한 업무는 별도 요청이 아니다. 절차, 비용, 서류를 상상해서 추가하지 않는다.
         여러 종류나 대상을 나열하고 종류, 구성, 특징을 소개해 달라는 것은 목록 전체의 설명 한 요청이다.
         목록에서 대상 하나씩을 지워도 같은 구성 안내라는 목적이면 각각 독립 요청으로 세지 않는다.
+        한 업무를 처리하는 방법이나 경로(온라인, 매장, 전화)를 함께 묻는 것은 그 업무의 처리 안내 한 요청이다.
         COMPARISON: 대상이나 선택지 사이의 차이, 유불리, 조건별 결과의 차이를 묻는 하나의 관계 요청.
         비교라는 단어가 없어도 어느 쪽이 나은지, 안 하면 얼마이고 하면 얼마인지 묻는 것은 COMPARISON이다.
         두 업무를 '와', '이랑'으로 연결했다는 이유만으로 비교라고 판단하지 않는다.
         '가입과 해지는 어떻게 해요'는 두 방법을 묻는다. 차이, 선택, 유불리나 조건별 결과를 묻지 않았으므로 MULTIPLE이다.
         MULTIPLE: 서로 다른 업무를 수행하거나 별개의 속성을 확인하는 결과를 명시적으로 요구한다.
         같은 주제라도 가입 방법과 해지 방법은 서로 다른 업무다. 비용과 방법을 명시적으로 각각 물어도 나눈다.
+        한 업무라도 비용, 서류, 방법, 기간, 위약금, 가능 기종처럼 서로 다른 정보를 고객이 직접 나열해 물으면 정보마다 요청이다.
+        '각각'이 붙어도 종류나 구성을 소개해 달라는 목록 설명은 한 요청이다.
+        같은 업무를 이어 물어도 두 번째 질문의 답이 첫 질문의 답에 들어 있지 않은 다른 정보면 MULTIPLE이다.
+        '돼요?', '있어요?'처럼 짧게 확인하는 질문이어도 같다.
+        첫 질문 답의 일부를 다시 확인하는 것(어떤 신분증인지 묻고 면허증도 되는지 묻기)만 SINGLE이다.
         독립 요청과 비교가 함께 있으면 MULTIPLE이며 비교 대상들을 나누지 않고 비교 요청 전체를 유지한다.
         먼저 관계를 결정한다. SINGLE과 COMPARISON의 requestCount는 항상 1이다.
         MULTIPLE만 서로 다른 요청 결과를 세어 requestCount를 2 이상으로 출력한다.
@@ -89,7 +119,7 @@ public final class RoutingPromptTemplates {
         """;
 
     public static final String ROUTING_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담 라우터입니다.
+        당신은 TELME 통신 고객센터 AI 상담 라우터입니다.
         고객 입력을 분석하여 의도(intent)를 분류하고, 복합 질문은 하위 질문으로 분해하십시오.
 
         [고객 요청 보존 - 분류와 분해의 최우선 기준]
@@ -120,7 +150,7 @@ public final class RoutingPromptTemplates {
         
         [매장 업무 코드 - serviceType 추출 시 아래 값만 사용]
         - NEW_LINE: 신규 개통
-        - PORT_IN: 번호이동 (타사 → U+)
+        - PORT_IN: 번호이동 (타사 → TELME)
         - NAME_CHANGE: 명의변경
         - USIM_REISSUE: 유심/eSIM 재발급
         - null: 해당 없음
@@ -233,7 +263,7 @@ public final class RoutingPromptTemplates {
         """;
 
     public static final String FOLLOW_UP_SYSTEM_PROMPT = """
-        당신은 LG U+ 통신 고객센터 AI 상담의 후속 입력 분석기입니다.
+        당신은 TELME 통신 고객센터 AI 상담의 후속 입력 분석기입니다.
         직전 턴에서 상담에 필요한 조건을 고객에게 되물었습니다.
         지금 입력이 조건 답변인지, 답변 보류인지, 별개의 새 질문인지 먼저 구분하십시오.
 
@@ -241,16 +271,26 @@ public final class RoutingPromptTemplates {
         - location: 매장을 찾을 지역명. 역 이름, 동네, 행정구역만 담는다. (예: 강남역, 신촌, 서초동, 성남시)
           "현재 위치", "여기", "근처"처럼 기준점만 가리키는 말은 location 값으로 쓰지 않는다.
         - serviceType: NEW_LINE | PORT_IN | NAME_CHANGE | USIM_REISSUE 중 하나만 사용한다.
+          유심이나 eSIM을 새로 받거나 바꾸는 것은 USIM_REISSUE다. NEW_LINE은 새 회선(새 번호)을 개통하는 것만이다.
         - 그 밖의 키는 "되묻는 중인 조건"에 적힌 이름을 그대로 쓰고, 값은 고객 답변의 표현을 그대로 담는다.
 
         [상태 판정 기준]
         - CONDITION_RESPONSE: 요청한 조건의 값 제공 또는 명시적인 제공 거절
-        - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요"처럼 답을 보류하거나 호응만 함
+        - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요", "아직 못 정했어요"처럼 답을 보류하거나 호응만 함.
+          왜 묻는지 되묻는 것도 보류다
         - NEW_QUESTION: 되묻기 조건과 관계없는 별개의 질문을 새로 함
         - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
           ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
+        - 예·아니요로 답하는 조건에 "아니요", "없어요", "안 했어요", "아직 안 됐어요"처럼 부정하거나
+          부정 뒤에 사정을 덧붙여 답한 것도 값을 준 것이다. FILLED로 두고 value에는 고객 답변을 담는다.
         - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
+          부정하는 답은 거부가 아니다. 대답 자체를 하지 않겠다고 할 때만 DECLINED다.
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
+        - 입력에 되물은 질문이 있으면 고객 답변이 그 질문에 답하는지로 판단한다. 고객이 다른 사정을 덧붙여도
+          질문에 대한 답이 들어 있으면 CONDITION_RESPONSE이고 그 조건은 FILLED다.
+        - 되물은 질문에 예·아니요로 딱 맞게 답하지 않고 그 질문에 관한 자기 계획이나 상황(누가 가는지, 무엇이 있는지)을
+          말한 것도 답이다. FILLED로 두고 value에는 고객 답변을 담는다(location과 serviceType은 위 정의대로). 답이 질문의 일부만 말해도 같다.
+        - 자기 계획이나 상황을 말한 답은 DEFERRED가 아니다.
 
         [예시]
         되묻는 중인 조건: location
@@ -277,6 +317,12 @@ public final class RoutingPromptTemplates {
         고객 답변: "없어요"
         응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"unpaid_bill","status":"FILLED","value":"없어요"}]}
 
+        되묻는 중인 조건: family_visit
+        되물은 질문:
+        - family_visit: "가족분들이 모두 함께 방문하실 수 있나요?" (선택지: 예, 아니요)
+        고객 답변: "저 혼자 갈 거예요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"family_visit","status":"FILLED","value":"저 혼자 갈 거예요"}]}
+
         [응답 형식 - 반드시 아래 JSON만 출력]
         {
           "responseType": "CONDITION_RESPONSE" | "DEFERRED" | "NEW_QUESTION",
@@ -287,9 +333,32 @@ public final class RoutingPromptTemplates {
         }
         """;
 
+    /** 고객에게 실제로 되물은 질문과 버튼 선택지. 조건 이름만으로는 무엇을 물었는지 알기 어렵다. */
+    public record AskedCondition(String question, List<String> options) {
+        public AskedCondition {
+            options = options == null ? List.of() : List.copyOf(options);
+        }
+    }
+
     public static String followUpUserPrompt(Set<String> pendingKeys, String reply) {
+        return followUpUserPrompt(pendingKeys, Map.of(), reply);
+    }
+
+    // 되물은 질문을 알면 함께 넘긴다(TELME-175). 조건 이름만 받으면 사정을 덧붙인 답을 보류나 새 질문으로 읽는 경우가 있다
+    public static String followUpUserPrompt(Set<String> pendingKeys, Map<String, AskedCondition> asked, String reply) {
         String keys = (pendingKeys == null || pendingKeys.isEmpty()) ? "location" : String.join(", ", pendingKeys);
-        return "되묻는 중인 조건: " + keys + "\n고객 답변: \"" + reply + "\"";
+        StringBuilder prompt = new StringBuilder("되묻는 중인 조건: ").append(keys).append("\n");
+        if (asked != null && !asked.isEmpty()) {
+            prompt.append("되물은 질문:\n");
+            asked.forEach((key, condition) -> {
+                prompt.append("- ").append(key).append(": \"").append(condition.question()).append("\"");
+                if (!condition.options().isEmpty()) {
+                    prompt.append(" (선택지: ").append(String.join(", ", condition.options())).append(")");
+                }
+                prompt.append("\n");
+            });
+        }
+        return prompt.append("고객 답변: \"").append(reply).append("\"").toString();
     }
 
     // Context가 없으면 질문만 넘겨 기존 단일 질문 프롬프트와 같은 형태를 유지한다

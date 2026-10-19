@@ -38,6 +38,36 @@ class QueryRoutingAnalysisProviderTest {
     private final QueryRoutingAnalysisProvider provider =
             new QueryRoutingAnalysisProvider(messages, routing, followups);
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void selectsRoutingByHistoryResolutionInsteadOfTextChanges(boolean restored) {
+        String raw = "안녕 바라야, 유심을 잃어버렸어요";
+        var history = new ChatContext(3L, 7L, null, List.of(), raw, 20);
+        var context = new Context(3L, 7L, raw, List.of(), history)
+                .withResolution("유심을 잃어버렸어요", restored)
+                .withExecutionId(21L);
+        var message = ChatMessage.builder().messageId(7L)
+                .session(ChatSession.builder().sessionId(3L).build())
+                .role(ChatMessage.Role.USER).messageType(ChatMessage.MessageType.QUESTION).content(raw).build();
+        var query = new IntentSubQueryResponse(11L, (short) 1,
+                ConsultRequest.Intent.FAQ, "유심 분실 시 재발급 방법", Map.of());
+        var result = new IntentRouteResponse(5L, 7L, QueryRouting.Intent.FAQ, query.queryText(),
+                BigDecimal.ONE, QueryRouting.Method.LLM, Map.of(), List.of(query));
+        when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
+        if (restored) {
+            when(routing.routeSingleConsult(message, history, context.resolvedQuestion(), 21L)).thenReturn(result);
+        } else {
+            when(routing.routeSingleConsult(message, history, 21L)).thenReturn(result);
+        }
+        assertThat(provider.analyze(context).initialQuery()).isEqualTo(query);
+        if (restored) {
+            verify(routing).routeSingleConsult(message, history, context.resolvedQuestion(), 21L);
+        } else {
+            verify(routing).routeSingleConsult(message, history, 21L);
+        }
+        org.mockito.Mockito.verifyNoMoreInteractions(routing);
+    }
+
     @Test
     void initialQuestionUsesActualRoutingResult() {
         var routingContext =
@@ -59,7 +89,7 @@ class QueryRoutingAnalysisProviderTest {
                         "요금 납부 방법",
                         Map.of());
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, routingContext))
+        when(routing.routeSingleConsult(message, routingContext, (Long) null))
                 .thenReturn(
                         new IntentRouteResponse(
                                 5L,
@@ -143,7 +173,7 @@ class QueryRoutingAnalysisProviderTest {
                         .messageType(ChatMessage.MessageType.QUESTION)
                         .build();
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
+        when(routing.routeSingleConsult(message, null, (Long) null))
                 .thenReturn(
                         new IntentRouteResponse(
                                 5L,
@@ -179,7 +209,7 @@ class QueryRoutingAnalysisProviderTest {
                 new IntentSubQueryResponse(
                         12L, (short) 2, ConsultRequest.Intent.STORE, "매장", Map.of());
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
+        when(routing.routeSingleConsult(message, null, (Long) null))
                 .thenReturn(
                         new IntentRouteResponse(
                                 5L,
@@ -208,7 +238,7 @@ class QueryRoutingAnalysisProviderTest {
         var second = new IntentSubQueryResponse(
                 12L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null)).thenReturn(new IntentRouteResponse(
+        when(routing.routeSingleConsult(message, null, (Long) null)).thenReturn(new IntentRouteResponse(
                 5L, 7L, QueryRouting.Intent.FAQ, "요금제와 로밍", BigDecimal.ONE,
                 QueryRouting.Method.LLM, Map.of(), List.of(first, second)));
 
@@ -228,7 +258,7 @@ class QueryRoutingAnalysisProviderTest {
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .build();
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
+        when(routing.routeSingleConsult(message, null, (Long) null))
                 .thenThrow(new UnsupportedCompoundQuestionException());
 
         AnalysisResult result = provider.analyze(context);
@@ -259,7 +289,8 @@ class QueryRoutingAnalysisProviderTest {
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .build();
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null)).thenThrow(new UnsupportedCompoundQuestionException(parts));
+        when(routing.routeSingleConsult(message, null, (Long) null))
+                .thenThrow(new UnsupportedCompoundQuestionException(parts));
 
         AnalysisResult result = withButtons.analyze(
                 new Context(3L, 7L, "명의변경 서류 알려주고 강남역 근처 매장도 찾아줘", List.of()));
@@ -279,7 +310,7 @@ class QueryRoutingAnalysisProviderTest {
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .build();
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
+        when(routing.routeSingleConsult(message, null, (Long) null))
                 .thenThrow(new TooManyFaqQuestionsException(3));
 
         AnalysisResult result = provider.analyze(context);
@@ -298,7 +329,7 @@ class QueryRoutingAnalysisProviderTest {
                 .messageType(ChatMessage.MessageType.QUESTION)
                 .build();
         when(messages.findByIdWithSession(7L)).thenReturn(Optional.of(message));
-        when(routing.routeSingleConsult(message, null))
+        when(routing.routeSingleConsult(message, null, (Long) null))
                 .thenReturn(new IntentRouteResponse(
                         5L, 7L, QueryRouting.Intent.UNKNOWN, "로밍 요금 알려줘",
                         new BigDecimal("0.3"), QueryRouting.Method.LLM,

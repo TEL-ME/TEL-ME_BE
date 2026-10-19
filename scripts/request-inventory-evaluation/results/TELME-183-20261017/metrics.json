@@ -1,0 +1,65 @@
+{
+  "issue": "TELME-183",
+  "measuredAt": "2026-10-17",
+  "scope": "요청 개수 판정",
+  "runs": {
+    "inventory-1": {
+      "total": 210,
+      "correct": 200,
+      "multipleCorrect": 55,
+      "singleCorrect": 145,
+      "latency": {
+        "count": 210,
+        "medianMs": 868.0,
+        "p95Ms": 959
+      }
+    },
+    "inventory-2": {
+      "total": 210,
+      "correct": 200,
+      "multipleCorrect": 55,
+      "singleCorrect": 145,
+      "latency": {
+        "count": 210,
+        "medianMs": 808.0,
+        "p95Ms": 880
+      }
+    },
+    "route-full-1": {
+      "total": 210,
+      "correct": 196,
+      "multipleCorrect": 51,
+      "singleCorrect": 145,
+      "latency": {
+        "count": 210,
+        "medianMs": 7993.5,
+        "p95Ms": 11924
+      }
+    },
+    "route-full-2": {
+      "total": 210,
+      "correct": 196,
+      "multipleCorrect": 51,
+      "singleCorrect": 145,
+      "latency": {
+        "count": 210,
+        "medianMs": 7156.5,
+        "p95Ms": 10289
+      }
+    }
+  },
+  "comparisons": {
+    "inventory": {
+      "bothCorrect": 200,
+      "bothWrong": 10,
+      "decisionChanged": [],
+      "recordedModelResponseChanged": []
+    },
+    "route-full": {
+      "bothCorrect": 196,
+      "bothWrong": 14,
+      "decisionChanged": [],
+      "recordedModelResponseChanged": []
+    }
+  }
+}

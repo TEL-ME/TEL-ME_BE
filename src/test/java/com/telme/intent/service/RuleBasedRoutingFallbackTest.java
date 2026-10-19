@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class RuleBasedRoutingFallbackTest {
@@ -20,6 +21,14 @@ class RuleBasedRoutingFallbackTest {
     @BeforeEach
     void setUp() {
         fallback = new RuleBasedRoutingFallback();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"네,", "네, 고마워요", "😊", "?!", "1️⃣", "₩"})
+    void acknowledgementsAndSymbolsAreNotLocations(String reply) {
+        var result = fallback.classifyFollowUp(reply, Set.of("location"));
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.DEFERRED);
+        assertThat(result.conditions()).isEmpty();
     }
 
     @Test
@@ -212,5 +221,41 @@ class RuleBasedRoutingFallbackTest {
                 .anyMatch(condition -> "location".equals(condition.key())
                         && condition.status() == LlmFollowUpPayload.Status.FILLED
                         && place.equals(condition.value()));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "유심 재발급, USIM_REISSUE",
+            "유심 재발급이요, USIM_REISSUE",
+            "명의변경이라고, NAME_CHANGE",
+            "명의 변경이요., NAME_CHANGE",
+            "번호이동이에요, PORT_IN",
+            "신규 개통입니다, NEW_LINE"
+    })
+    @DisplayName("업무 이름에 어미만 붙은 짧은 답은 규칙으로 업무를 읽는다")
+    void serviceTypeOfShortReply_readsServiceNameWithEnding(String reply, String code) {
+        assertThat(fallback.serviceTypeOfShortReply(reply)).isEqualTo(code);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"유심 재발급 하려고요", "유심 재발급 어떻게 해요?", "명의변경 하려면 뭐 필요해",
+            "신촌에서 번호이동이요", "유심 재발급 비용이요", "유심이요"})
+    @DisplayName("동사가 붙거나 다른 말이 섞인 답은 규칙으로 업무를 읽지 않는다")
+    void serviceTypeOfShortReply_leavesSentencesToModel(String reply) {
+        assertThat(fallback.serviceTypeOfShortReply(reply)).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"telme 가입 방법 알려줘", "Telme 가입 방법 알려줘", "TELME 가입 방법 알려줘", "텔미 가입 방법 알려줘"})
+    @DisplayName("영문 키워드는 대소문자와 상관없이 FAQ 질문으로 읽는다")
+    void classify_matchesFaqKeywordsRegardlessOfCase(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5g 알려줘", "lte 알려줘", "esim 알려줘", "usim 알려줘"})
+    @DisplayName("소문자로 쓴 망·유심 이름도 FAQ 질문으로 읽는다")
+    void classify_matchesLowercaseNetworkNames(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
     }
 }

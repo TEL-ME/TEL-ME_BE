@@ -13,6 +13,12 @@ import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.converter.FollowupConditionConverter;
 import com.telme.consult.service.ConsultChatEvents;
 import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.service.MemberPlanAnswerer;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberRecommendationAnswerer;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
 import com.telme.consult.service.FaqCandidateEvidenceResolver;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatPersistenceService;
@@ -40,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import com.telme.faq.config.SearchProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
@@ -80,7 +87,35 @@ class ConsultChatPipelineConfigurationTest {
                     .withBean(
                             ConsultChatPersistenceService.class,
                             () -> mock(ConsultChatPersistenceService.class))
-                    .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new);
+                    .withBean(PlanQuestionClassifier.class, () -> mock(PlanQuestionClassifier.class))
+                    .withBean(PlanCatalogAnswerer.class, () -> mock(PlanCatalogAnswerer.class))
+                    .withBean(MemberPlanAnswerer.class, () -> mock(MemberPlanAnswerer.class))
+                    .withBean(MemberRecommendationAnswerer.class, () -> mock(MemberRecommendationAnswerer.class))
+                    .withBean(SessionRecommendationAnswers.class, () -> mock(SessionRecommendationAnswers.class))
+                    .withBean(ChatSessionRepository.class, () -> mock(ChatSessionRepository.class))
+                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true, false))
+                    .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new)
+                    .withBean(SearchProperties.class, () -> searchProperties(SearchProperties.GrayZone.DISABLED));
+
+    private static SearchProperties searchProperties(SearchProperties.GrayZone grayZone) {
+        return new SearchProperties(0.72, new SearchProperties.DualVector(true, 0.88),
+                new SearchProperties.ScoreRecording(false, java.time.Duration.ofDays(90)), grayZone);
+    }
+
+    @Test
+    void grayZoneWithoutEvidenceJudgeFailsAtStartup() {
+        // 회색 구간을 켰는데 판정기(llm.bedrock)가 꺼져 있으면 판정 없이 아래쪽 후보를 근거로 쓰게 되므로 기동을 막는다
+        runner.withAllowBeanDefinitionOverriding(true)
+                .withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(SearchProperties.class,
+                        () -> searchProperties(new SearchProperties.GrayZone(true, 0.80, 0.69, 0.88, 0.80)))
+                .run(context -> assertThat(context).getFailure()
+                        .hasRootCauseInstanceOf(IllegalStateException.class)
+                        .rootCause().hasMessageContaining("llm.bedrock.enabled"));
+    }
 
     @Test
     void namedLocationImplementationReplacesUnavailableAdapter() {

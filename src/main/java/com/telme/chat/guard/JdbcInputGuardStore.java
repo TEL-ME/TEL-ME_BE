@@ -33,7 +33,7 @@ public class JdbcInputGuardStore {
             Instant restrictionStartedAt,
             Instant restrictionUntil) {}
 
-    public record Cached(String fingerprint, ChatMessageSendResponse response) {}
+    public record Cached(String fingerprint, String policyVersion, ChatMessageSendResponse response) {}
 
     public State lock(ChatActor actor, Instant now) {
         Long member = actor.userId();
@@ -182,11 +182,12 @@ public class JdbcInputGuardStore {
         var matches =
                 jdbc.query(
                         """
-                        SELECT e.request_fingerprint,e.response_snapshot::text FROM chat_input_guard_events e
+                        SELECT e.request_fingerprint,e.policy_version,e.response_snapshot::text
+                        FROM chat_input_guard_events e
                         JOIN chat_input_guard_states s ON s.guard_state_id=e.guard_state_id WHERE e.request_id=? AND
                         """
                                 + cohort(state),
-                        (rs, row) -> new Cached(rs.getString(1), decode(rs.getString(2))),
+                        (rs, row) -> new Cached(rs.getString(1), rs.getString(2), decode(rs.getString(3))),
                         parameters(state, requestId));
         return matches.stream().findFirst();
     }

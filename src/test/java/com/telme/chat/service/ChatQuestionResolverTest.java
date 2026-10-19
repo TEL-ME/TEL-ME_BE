@@ -27,7 +27,42 @@ class ChatQuestionResolverTest {
     private final LlmClient model = mock(LlmClient.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final ChatQuestionResolver resolver = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop());
+    // 흔들림 보완(chat.question-resolution.stability-guards)을 켠 판정기
+    private final ChatQuestionResolver guarded = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop(),
+            Mode.REGEX_GATED, true);
     private final ChatContextMessage source = customer(501L, 1, "해외 로밍 신청을 알아보고 있어요.");
+
+    @ParameterizedTest
+    @ValueSource(strings = {"바라야 그럼 신청 방법은?", "안녕 바라야, 그럼 신청 방법은?",
+            "그럼 신청 방법은? 고마워 바라야"})
+    void addressedFollowUpStillResolvesTheSameCustomerSource(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).endsWith("[현재 후속 질문]\n그럼 신청 방법은?");
+        assertThat(context.currentQuestion()).isEqualTo(original);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(mapper.readTree(request.getValue().userPrompt()).path("currentQuestion").asText())
+                .isEqualTo("그럼 신청 방법은?");
+    }
+
+    @Test
+    void resolutionTraceKeepsOriginalAlongsideAnalysisBody() {
+        var trace = mock(ExecutionTrace.class);
+        var traced = new ChatQuestionResolver(model, mapper, trace);
+        String original = "바라야 근처 매장 알려줘";
+        traced.resolve(command(original), null);
+        var value = ArgumentCaptor.forClass(Object.class);
+        verify(trace).stage(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("questionResolution"), value.capture());
+        assertThat((Map<?, ?>) value.getValue()).extracting("originalQuery", "analysisQuery")
+                .containsExactly(original, "근처 매장 알려줘");
+    }
 
     @Test
     void preservesOriginalRequestNegationAndResolvesOnlyCustomerSources() throws Exception {
@@ -230,7 +265,7 @@ class ChatQuestionResolverTest {
         assertThat(data.path("sourceMessages").get(0).path("index").asInt()).isEqualTo(1);
         assertThat(data.path("sourceMessages").get(0).has("messageId")).isFalse();
         assertThat(request.getValue().taskType()).isEqualTo(TaskType.CONTEXT_RESOLUTION);
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
     }
 
     @Test
@@ -308,6 +343,7 @@ class ChatQuestionResolverTest {
         assertThat(requests.getAllValues()).allSatisfy(request -> {
             assertThat(request.responseSchema()).isNotNull();
             assertThat(request.think()).isFalse();
+            assertThat(request.promptVersion()).hasSizeLessThanOrEqualTo(30);
         });
         assertThat(requests.getAllValues().get(0).responseSchema()).isEqualTo(ChatQuestionResolver.referenceSchema());
         assertThat(requests.getAllValues().get(1).responseSchema()).isEqualTo(ChatQuestionResolver.sourcesSchema(1));
@@ -354,7 +390,8 @@ class ChatQuestionResolverTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"요금 안 내면 언제 정지되나요?", "요금 너무 많이 나왔어요", "요금제 변경은 어떻게 해요?",
-            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?"})
+            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?",
+            "위약금 얼마나 나와요?", "수수료는 얼마예요?"})
     void anyBusinessWordLeavesTheTargetDecisionToTheModel(String question) {
         assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
     }
@@ -367,7 +404,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).containsExactly(501L);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
     }
 
     @Test
@@ -430,17 +467,17 @@ class ChatQuestionResolverTest {
         assertThat(result.needsClarification()).isFalse();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
     }
 
-    // 앞에 붙은 "[문의]" 표시 때문에 문맥 판정 후보에서 빠지지 않는다. 고객 원문은 그대로 전달한다.
+    // 허용한 앞 표시는 상담 판별용 입력에서 제외한다. 저장 원문은 변경하지 않는다.
     @Test
     void leadingTagDoesNotHideAFollowUpFromContextResolution() throws Exception {
         String question = "[문의] 비용은 얼마인가요?";
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
         assertThat(result.sourceMessageIds()).containsExactly(501L);
-        assertThat(result.question()).contains(source.content(), question);
+        assertThat(result.question()).contains(source.content(), "비용은 얼마인가요?");
     }
 
     @Test
@@ -466,7 +503,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
     }
 
     // 지시어 없이 조건만 말한 짧은 후속 질문도 이전 고객 발언이 있으면 대상 생략 여부를 모델이 판정한다.
@@ -493,6 +530,81 @@ class ChatQuestionResolverTest {
         org.mockito.Mockito.verifyNoInteractions(model);
     }
 
+    // 흔들림 보완을 켜면 비용 항목만 묻는 후속 질문은 길어도 이전 고객 발언이 있을 때 모델이 판정한다.
+    // 이전 발언이 없거나 보완을 끄면 지금처럼 모델 없이 독립 질문이다.
+    @Test
+    void longCostItemQuestionWithCustomerHistoryIsJudgedByTheModelWhenGuarded() throws Exception {
+        String question = "설치 기사님 방문비용은 따로 청구되는 건가요?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        assertThat(guarded.resolve(command(question), null).sourceMessageIds()).isEmpty();
+        assertThat(resolver.resolve(command(question), context).sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        assertThat(guarded.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
+    }
+
+    // 흔들림 보완을 켜면 고객 발언이 하나뿐이고 하려는 일을 말했을 때 모델이 그 발언의 업무를 0개로 세도 그 발언에 연결한다.
+    // 사실만 말한 발언, 업무를 둘로 센 발언은 그대로 확인 안내이고, 보완을 끄면 지금처럼 확인 안내다.
+    @Test
+    void onlyCustomerStatementIsLinkedEvenWhenModelCountsNoBusinessWhenGuarded() throws Exception {
+        String none = omitted("[{\"index\":1,\"targetCount\":0,\"parentIndex\":0}]");
+        assertThat(guarded.validateResolution("가족이 대신 가도 되나요?", none, Map.of(501L, source))
+                .sourceMessageIds()).containsExactly(501L);
+        assertThat(resolver.validateResolution("가족이 대신 가도 되나요?", none, Map.of(501L, source))
+                .needsClarification()).isTrue();
+        assertThat(guarded.validateResolution("가족이 대신 가도 되나요?",
+                omitted("[{\"index\":1,\"targetCount\":2,\"parentIndex\":0}]"), Map.of(501L, source))
+                .needsClarification()).isTrue();
+        // 앞 표시 [문의]의 '문의'는 하려는 일을 말한 것으로 보지 않는다
+        for (String fact : List.of("회선이 세 개 있어요", "폰을 바꾼 지 한 달 됐어요", "[문의] 회선이 세 개 있어요")) {
+            var statement = customer(502L, 1, fact);
+            assertThat(guarded.validateResolution("그거 어떻게 해요?", none, Map.of(502L, statement))
+                    .needsClarification()).isTrue();
+        }
+    }
+
+    // 흔들림 보완을 켜면 이전 발언 분석 응답이 틀릴 때 한 번만 다시 묻고, 다시 틀리면 확인 안내로 끝낸다. 끄면 다시 묻지 않는다.
+    @Test
+    void invalidSourceAnalysisIsAskedOnceMoreWhenGuarded() {
+        String question = "그건 얼마야?";
+        String invalid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":2,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+        String valid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        when(model.generate(any())).thenReturn(invalid, valid);
+        assertThat(guarded.resolve(command(question), context).sourceMessageIds()).containsExactly(501L);
+
+        for (boolean guards : List.of(true, false)) {
+            var retried = mock(LlmClient.class);
+            when(retried.generate(any())).thenReturn(invalid);
+            var result = new ChatQuestionResolver(retried, mapper, ExecutionTrace.noop(), Mode.REGEX_GATED, guards)
+                    .resolve(command(question), context);
+            assertThat(result.needsClarification()).isTrue();
+            verify(retried, org.mockito.Mockito.times(guards ? 2 : 1)).generate(any());
+        }
+    }
+
+    // 흔들림 보완을 켜면 '그 상품'처럼 지시어가 붙은 일반 명사도 지시어로 본다
+    @Test
+    void demonstrativeProductPhraseIsGenericOnlyWhenGuarded() {
+        assertThat(ChatQuestionResolver.isGenericFollowUp("그 상품의 이용 기간은요?", true)).isTrue();
+        assertThat(ChatQuestionResolver.isGenericFollowUp("그 상품의 이용 기간은요?")).isFalse();
+    }
+
+    // gpt-oss는 내부 추론도 출력 한도를 써서 한도가 작으면 답이 비거나 잘린다. 흔들림 보완과 관계없이 두 요청 모두 512 이상이다
+    @Test
+    void outputTokenLimitIsAtLeast512WithOrWithoutGuards() throws Exception {
+        String question = "그 서비스 해지는 어떻게 해요?";
+        var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        guarded.resolve(command(question), context);
+        resolver.resolve(command(question), context);
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model, org.mockito.Mockito.times(4)).generate(requests.capture());
+        var all = requests.getAllValues();
+        assertThat(all).allSatisfy(request -> assertThat(request.maxTokens()).isGreaterThanOrEqualTo(512));
+    }
+
     // 짧아도 상품이나 업무가 있으면 모델이 EXPLICIT으로 판정해 이전 주제를 붙이지 않는다.
     @Test
     void shortQuestionWithItsOwnTargetKeepsNoHistory() throws Exception {
@@ -516,7 +628,7 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).containsExactly(903L);
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v30-sources");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
     }
 
     // '처음 신청한'은 일반 문장에도 쓰여 규칙으로 대상 생략을 정하지 않고 현재 대상 판정 모델에 맡긴다.
@@ -528,12 +640,12 @@ class ChatQuestionResolverTest {
         assertThat(result.sourceMessageIds()).isEmpty();
         var request = ArgumentCaptor.forClass(LlmRequest.class);
         verify(model).generate(request.capture());
-        assertThat(request.getValue().promptVersion()).isEqualTo("multiturn-resolution-v31-reference");
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
     }
 
-    // 앞 표시는 모델 판정 입력에서 떼고, 결과 질문에는 고객 원문을 그대로 쓴다.
+    // 앞 표시는 공통 분석 입력에서 제외하므로 모델 입력과 복원 질문에 같은 본문을 쓴다.
     @Test
-    void leadingTagIsRemovedFromModelInputOnly() throws Exception {
+    void leadingTagIsRemovedFromAnalysisInput() throws Exception {
         String question = "[문의] 기사님 방문비용은 따로 청구되나요?";
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         var result = resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
@@ -543,7 +655,19 @@ class ChatQuestionResolverTest {
             assertThat(mapper.readTree(request.userPrompt()).path("currentQuestion").asText())
                     .isEqualTo("기사님 방문비용은 따로 청구되나요?");
         }
-        assertThat(result.question()).contains(question);
+        assertThat(result.question()).contains("기사님 방문비용은 따로 청구되나요?").doesNotContain("[문의]");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"[문의] 그럼 필요한 서류는 어떻게 준비하나요?",
+            "[문의] 무러바라님 그럼 필요한 서류는 어떻게 준비하나요?"})
+    void leadingTagAndAddressUseTheSameHistory(String question) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var result = resolver.resolve(command(question),
+                new ChatContext(1L, 5L, null, List.of(source), question, 100));
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        assertThat(result.question()).contains("그럼 필요한 서류는 어떻게 준비하나요?")
+                .doesNotContain("[문의]", "무러바라님");
     }
 
     static void respond(LlmClient client, String combined) throws Exception {

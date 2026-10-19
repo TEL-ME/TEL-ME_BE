@@ -1,5 +1,6 @@
 package com.telme.consult.repository;
 
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.consult.dto.ClarificationReask;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -32,7 +33,9 @@ public final class AskedConditionQuestionFinder implements AskedQuestions {
                 rs -> {
                     String question = rs.getString(2);
                     if (question != null && !question.isBlank()) {
-                        questions.put(rs.getString(1), ClarificationReask.questionOf(question));
+                        // 되묻기 원문에는 첫 질문의 인사가 붙어 있을 수 있다. 조건 라벨에는 질문 부분만 쓴다
+                        questions.put(rs.getString(1),
+                                ConsultationQuestion.extract(ClarificationReask.questionOf(question)));
                     }
                 },
                 consultRequestId);

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.exception.LlmStreamCancelledException;
@@ -141,6 +142,7 @@ class LlmFaqCandidateEvidenceResolverTest {
         verify(llm, times(2)).generate(requests.capture());
         assertThat(requests.getAllValues()).allSatisfy(request -> {
             assertThat(request.consultRequestId()).isEqualTo(11L);
+            assertThat(request.taskType()).isEqualTo(TaskType.EVIDENCE_CHECK);
             // llm_generations.prompt_version은 varchar(30)이다.
             assertThat(request.promptVersion().length()).isLessThanOrEqualTo(30);
         });
@@ -183,5 +185,76 @@ class LlmFaqCandidateEvidenceResolverTest {
         for (int i = 0; i < 4; i++) {
             assertThat(resolver.resolve(null, "명의 변경 서류는?", List.of(source))).isNull();
         }
+    }
+
+    // TELME-184: 하위 질문 조각에 고객 원문을 함께 주고, 단어 검사 대신 고른 FAQ를 다시 확인한다
+    @Test
+    void contextModeSendsCustomerMessageAndSkipsQuestionTermCheck() {
+        var verified = new java.util.ArrayList<String>();
+        var withContext = new LlmFaqCandidateEvidenceResolver(llm, new ObjectMapper(),
+                new LlmFaqCandidateEvidenceResolver.Options(false, true,
+                        (executionId, consultRequestId, question, customerMessage, candidate) -> {
+                            verified.add(question + "|" + customerMessage + "|" + candidate.faqId());
+                            return true;
+                        }));
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":true,"faqId":65,"quote":"양도인과 양수인의 신분증이 각각 필요합니다."}
+                """);
+
+        // "궁금해요"는 FAQ 문답에 없어 단어 검사였다면 막혔다
+        assertThat(withContext.resolve(31L, 11L, "서류도 궁금해요", "명의변경 하려는데 시간은 얼마나 걸려요? 서류도 궁금해요",
+                List.of(source), true)).isSameAs(source);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm).generate(request.capture());
+        assertThat(request.getValue().userPrompt())
+                .startsWith("고객 원문: 명의변경 하려는데 시간은 얼마나 걸려요? 서류도 궁금해요\n이번에 답할 부분: 서류도 궁금해요\n");
+        assertThat(request.getValue().systemPrompt()).contains("이번에 답할 부분");
+        assertThat(request.getValue().promptVersion()).isEqualTo("faq-candidate-evidence-v3");
+        assertThat(verified).containsExactly("서류도 궁금해요|명의변경 하려는데 시간은 얼마나 걸려요? 서류도 궁금해요|65");
+    }
+
+    @Test
+    void verifierRejectionDropsSelectedCandidate() {
+        var rejecting = new LlmFaqCandidateEvidenceResolver(llm, new ObjectMapper(),
+                new LlmFaqCandidateEvidenceResolver.Options(false, true,
+                        (executionId, consultRequestId, question, customerMessage, candidate) -> false));
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":true,"faqId":65,"quote":"양도인과 양수인의 신분증이 각각 필요합니다."}
+                """);
+
+        assertThat(rejecting.resolve(null, null, "서류는요", "명의변경 서류는요", List.of(source), false)).isNull();
+    }
+
+    @Test
+    void sameCustomerMessageKeepsSingleQuestionPrompt() {
+        var withContext = new LlmFaqCandidateEvidenceResolver(llm, new ObjectMapper(),
+                new LlmFaqCandidateEvidenceResolver.Options(false, true, null));
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":false,"faqId":null,"quote":null}
+                """);
+
+        assertThat(withContext.resolve(null, null, "명의 변경 서류는?", "명의 변경 서류는?", List.of(source), false))
+                .isNull();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm).generate(request.capture());
+        assertThat(request.getValue().userPrompt()).startsWith("고객 질문: 명의 변경 서류는?\n");
+        assertThat(request.getValue().promptVersion()).isEqualTo("faq-candidate-evidence-v2");
+    }
+
+    @Test
+    void quoteRetryKeepsCustomerMessage() {
+        var withContext = new LlmFaqCandidateEvidenceResolver(llm, new ObjectMapper(),
+                new LlmFaqCandidateEvidenceResolver.Options(false, true, null));
+        when(llm.generate(any())).thenReturn("""
+                {"answerable":true,"faqId":65,"quote":"신분증 두 개"}
+                """, """
+                {"answerable":true,"faqId":65,"quote":"양도인과 양수인의 신분증이 각각 필요합니다."}
+                """);
+
+        assertThat(withContext.resolve(null, null, "서류는요", "명의변경 서류는요", List.of(source), false))
+                .isSameAs(source);
+        var requests = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm, times(2)).generate(requests.capture());
+        assertThat(requests.getAllValues().get(1).userPrompt()).startsWith("고객 원문: 명의변경 서류는요\n이번에 답할 부분: 서류는요\n");
     }
 }

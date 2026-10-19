@@ -58,7 +58,8 @@ class ConsultTurnPreparationServiceTest {
 
     @Test
     void followupKeepsQuestionAndUserMessageReferences() {
-        var context = context("STORE");
+        // 되묻기 문장 생성 호출을 이 채팅 실행에 기록하도록 문맥의 실행 ID를 넘긴다
+        var context = context("STORE").withExecutionId(8L);
         var updates = Map.of("location", Condition.filled("강남역"));
         var prepared = result(Action.PROCEED, updates);
         when(consult.prepareTurn(1L, 101L, Purpose.NEARBY_STORE, updates, LocationStatus.MISSING))
@@ -93,7 +94,7 @@ class ConsultTurnPreparationServiceTest {
 
     @Test
     void correctionWhileWaitingUpdatesConditionWithoutAnsweringQuestion() {
-        var context = context("STORE");
+        var context = context("STORE").withExecutionId(8L);
         var candidate = context.candidates().getFirst();
         var updates = Map.of("serviceType", Condition.filled("USIM_REISSUE"));
         var pending =

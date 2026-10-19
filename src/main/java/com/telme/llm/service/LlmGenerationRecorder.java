@@ -11,7 +11,6 @@ import com.telme.llm.repository.LlmGenerationRepository;
 import com.telme.llm.converter.OllamaRequestConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import java.util.Map;
 import java.util.LinkedHashMap;
 
 import lombok.RequiredArgsConstructor;
@@ -31,13 +30,23 @@ public class LlmGenerationRecorder {
     private final OllamaRequestConverter requestConverter;
     private final ObjectMapper mapper;
 
+    private static final String OLLAMA = "ollama";
+
     // 기록 실패가 LLM 응답을 막지 않도록 별도 트랜잭션으로 저장하고 예외를 삼킨다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(LlmRequest request, String model, Result result) {
+        record(request, model, OLLAMA, result);
+    }
+
+    // Ollama가 아닌 호출(Bedrock 판정 등)은 provider를 같이 남긴다
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void record(LlmRequest request, String model, String provider, Result result) {
         if (request.executionId() == null) {
+            // 채팅 실행 밖의 호출(관리자 테스트 API 등)은 의도적으로 남기지 않는다. 누락을 찾을 수 있게 흔적만 둔다
+            log.debug("[LlmGenerationRecorder] 실행 ID가 없어 호출 기록 생략 taskType={}", request.taskType());
             return;
         }
-        String options = requestOptions(request, model);
+        String options = requestOptions(request, model, provider);
         try {
             llmGenerationRepository.save(LlmGeneration.builder()
                     .execution(chatExecutionRepository.getReferenceById(request.executionId()))
@@ -58,14 +67,21 @@ public class LlmGenerationRecorder {
     }
 
     // 요청 옵션은 부가 정보다. 만들지 못해도 호출 기록 행은 옵션 없이(null) 남긴다
-    private String requestOptions(LlmRequest request, String model) {
+    private String requestOptions(LlmRequest request, String model, String provider) {
         if (model == null) {
             return null;
         }
         try {
-            var metadata = new LinkedHashMap<String, Object>(Map.of("provider", "ollama",
-                    "options", requestConverter.toChatRequest(request, false).options(),
-                    "format", request.format().name()));
+            var metadata = new LinkedHashMap<String, Object>();
+            metadata.put("provider", provider);
+            if (OLLAMA.equals(provider)) {
+                metadata.put("options", requestConverter.toChatRequest(request, false).options());
+            } else {
+                // null이면 클라이언트 기본값(Bedrock은 llm.bedrock.max-tokens, temperature 0)을 썼다는 뜻
+                metadata.put("temperature", request.temperature());
+                metadata.put("maxTokens", request.maxTokens());
+            }
+            metadata.put("format", request.format().name());
             metadata.put("consultRequestId", request.consultRequestId());
             return mapper.writeValueAsString(metadata);
         } catch (RuntimeException | JsonProcessingException e) {
@@ -79,7 +95,7 @@ public class LlmGenerationRecorder {
             int attempt, Status status, Integer firstTokenMs, Integer totalMs, String errorMessage) {
 
         public static Result success(int attempt, Integer firstTokenMs, long totalMs) {
-            return new Result(attempt, Status.SUCCESS, firstTokenMs, (int) totalMs, null);
+            return new Result(attempt, Status.SUCCESS, firstTokenMs, recordableMillis(totalMs), null);
         }
 
         // 근거가 없어 LLM을 호출하지 않은 경우
@@ -88,7 +104,12 @@ public class LlmGenerationRecorder {
         }
 
         public static Result failure(int attempt, Throwable error, Integer firstTokenMs, long totalMs) {
-            return new Result(attempt, toStatus(error), firstTokenMs, (int) totalMs, error.getMessage());
+            return new Result(attempt, toStatus(error), firstTokenMs, recordableMillis(totalMs), error.getMessage());
+        }
+
+        // INTEGER 범위를 넘는 시간은 음수로 넘치거나 최대값으로 왜곡하지 않고 측정 불가로 남긴다.
+        static Integer recordableMillis(long elapsedMs) {
+            return elapsedMs < 0 || elapsedMs > Integer.MAX_VALUE ? null : (int) elapsedMs;
         }
 
         private static Status toStatus(Throwable error) {

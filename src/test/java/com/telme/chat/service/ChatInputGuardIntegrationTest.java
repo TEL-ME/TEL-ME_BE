@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -14,6 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.telme.chat.repository.ChatInputMaskRepository;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,6 +94,7 @@ import java.util.concurrent.atomic.AtomicReference;
         })
 @AutoConfigureMockMvc
 class ChatInputGuardIntegrationTest {
+    @Autowired private ChatInputMaskRepository inputMasks;
     private static final Instant START = Instant.parse("2026-10-07T00:00:00Z");
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
@@ -383,9 +387,7 @@ class ChatInputGuardIntegrationTest {
         "주민번호 990101-1234567 납부 문의 | 주민번호 [주민등록번호] 납부 문의",
         "카드 4111111111111111 납부 문의 | 카드 [카드번호] 납부 문의",
         "990101-1234567 4111111111111111 납부 문의 | [주민등록번호] [카드번호] 납부 문의",
-        "카드 4111111111111111 12개월 약정 문의 | 카드 [카드번호] 12개월 약정 문의",
-        "카드 4111111111111111 18개월 약정 문의 | 카드 [카드번호]개월 약정 문의",
-        "카드 4111-1111-1111-1111-18개월 약정 문의 | 카드 [카드번호]개월 약정 문의"
+        "카드 4111111111111111 12개월 약정 문의 | 카드 [카드번호] 12개월 약정 문의"
     })
     @DisplayName("유형 문구를 사용하던 배포 전 요청도 같은 요청 ID로 재전송하면 원래 실행을 반환한다")
     void 기존_마스킹_요청의_해시와_재전송을_유지한다(String input, String legacyContent) throws Exception {
@@ -402,7 +404,8 @@ class ChatInputGuardIntegrationTest {
                 String.class, sid)).isEqualTo(legacyHash);
 
         // 독립 검증 DB에서만 배포 전 저장된 마스킹 문구와 해시를 재현한다.
-        jdbc.update("UPDATE chat_input_guard_events SET sanitized_content=?,request_fingerprint=?"
+        jdbc.update("UPDATE chat_input_guard_events SET policy_version='chat-input-guard-v2',"
+                + " sanitized_content=?,request_fingerprint=?"
                 + " WHERE session_id=?", legacyContent, legacyHash, sid);
         jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?", legacyContent, messageId);
 
@@ -415,6 +418,212 @@ class ChatInputGuardIntegrationTest {
                 .isEqualTo(legacyContent);
         request(sid, identity, input + " 다른 문의", key, 409);
         assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "카드번호 411111 1111111 111 납부 문의 | 카드번호 [주민등록번호] 111 납부 문의",
+        "카드 4111111111111111 18개월 약정 문의 | 카드 [카드번호]개월 약정 문의",
+        "제 카드번호는 4111111111111111인데요 | 제 카드번호는 [카드번호]인데요"
+    })
+    @DisplayName("검사 결과가 변경된 입력도 저장된 v2 영수증의 해시로 비교해 기존 접수를 재사용한다")
+    void 이전_정책의_실제_경계로_기존_접수를_재전송한다(String input, String legacyContent) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, "카드 4111111111111111 납부 문의", key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        String legacyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + legacyContent + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        // 실제 v2가 접수하던 응답 영수증을 전용 DB에서만 재현한다. 새 정책 판정으로 덮어쓰지 않는다.
+        jdbc.update("UPDATE chat_input_guard_events SET policy_version='chat-input-guard-v2',"
+                + " request_fingerprint=? WHERE session_id=?", legacyHash, sid);
+
+        assertThat(body(request(sid, identity, input, key, 201))).isEqualTo(first);
+        request(sid, identity, input + " 다른 문의", key, 409);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "카드 4111111111111111 18개월로 약정 문의 | 카드 ***개월로 약정 문의"
+                + " | 카드 [카드번호]개월로 약정 문의",
+        "주민번호 990101-1234567 4개월로 약정 문의 | 주민번호 ***개월로 약정 문의"
+                + " | 주민번호 [카드번호]개월로 약정 문의",
+        "카드 4111111111111111 003원짜리 납부 문의 | 카드 ***원짜리 납부 문의"
+                + " | 카드 [카드번호]원짜리 납부 문의",
+        "카드 4111111111111111 18개월간 약정 문의 | 카드 ***개월간 약정 문의"
+                + " | 카드 [카드번호]개월간 약정 문의",
+        "카드 4111111111111111 18개월째 약정 문의 | 카드 ***개월째 약정 문의"
+                + " | 카드 [카드번호]개월째 약정 문의",
+        "카드 4111111111111111 18개월치 납부 문의 | 카드 ***개월치 납부 문의"
+                + " | 카드 [카드번호]개월치 납부 문의",
+        "카드 4111111111111111 18개월씩 납부 문의 | 카드 ***개월씩 납부 문의"
+                + " | 카드 [카드번호]개월씩 납부 문의",
+        "카드 4111111111111111 18개월이요 | 카드 ***개월이요 | 카드 [카드번호]개월이요",
+        "카드 4111111111111111 3만원씩 납부 문의 | 카드 ***만원씩 납부 문의"
+                + " | 카드 [카드번호]만원씩 납부 문의",
+        "카드 4111111111111111 18개월째인데요 | 카드 ***개월째인데요 | 카드 [카드번호]개월째인데요",
+        "카드 4111111111111111 18개월째예요 | 카드 ***개월째예요 | 카드 [카드번호]개월째예요",
+        "카드 4111111111111111 18개월치예요 | 카드 ***개월치예요 | 카드 [카드번호]개월치예요",
+        "카드 4111111111111111 18개월째입니다 | 카드 ***개월째입니다 | 카드 [카드번호]개월째입니다",
+        "카드 4111111111111111 3만원씩이고요 | 카드 ***만원씩이고요 | 카드 [카드번호]만원씩이고요"
+    })
+    @DisplayName("옛 v3 영수증은 같은 응답을 유지하고 새 요청만 재안내하며 해시·중복 방지를 유지한다")
+    void 기존_v3_영수증과_새_재입력_안내를_구분한다(
+            String input, String oldContent, String fingerprintContent) throws Exception {
+        long sid = session(identity);
+        UUID oldKey = UUID.randomUUID();
+        var first = body(request(sid, identity, "카드 4111111111111111 납부 문의", oldKey, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        String oldHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + fingerprintContent + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        int maskStart = oldContent.indexOf("***");
+        String spans = mapper.writeValueAsString(List.of(Map.of("start", maskStart, "end", maskStart + 3)));
+        // 변경 전 v3의 안전한 문구·위치·영수증을 전용 DB에 재현한다. 원문 번호는 저장하지 않는다.
+        jdbc.update("UPDATE chat_messages SET content=?, input_mask_spans=?::jsonb WHERE message_id=?",
+                oldContent, spans, first.at("/result/messageId").asLong());
+        jdbc.update("UPDATE chat_input_guard_events SET policy_version='chat-input-guard-v3',"
+                + " sanitized_content=?, request_fingerprint=? WHERE session_id=?", oldContent, oldHash, sid);
+        clearInvocations(analyzer, answers);
+
+        assertThat(body(request(sid, identity, input, oldKey, 201))).isEqualTo(first);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(oldContent);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        request(sid, identity, input + " 다른 문의", oldKey, 409);
+
+        UUID newKey = UUID.randomUUID();
+        var rewritten = body(request(sid, identity, input, newKey, 200));
+        assertThat(rewritten.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(rewritten.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(rewritten.at("/result").has("executionId")).isFalse();
+        assertThat(body(request(sid, identity, input, newKey, 200))).isEqualTo(rewritten);
+        assertThat(count("chat_messages")).isEqualTo(3);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(2);
+        assertThat(jdbc.queryForList("SELECT request_fingerprint FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).containsOnly(oldHash);
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "카드번호 411111 1111111 111 납부 문의 | 카드번호 *** 납부 문의",
+        "고객번호 1234567890123 4111 1111 1111 1111 납부 문의 | 고객번호 1234567890123 *** 납부 문의",
+        "제 카드번호는 4111111111111111인데요 납부 방법은요? | 제 카드번호는 ***인데요 납부 방법은요?",
+        "주민번호 990101-1234567 4개월 약정 문의 | 주민번호 *** 4개월 약정 문의",
+        "카드 4111111111111111 약정 18개월 요금 5만원 문의 | 카드 *** 약정 18개월 요금 5만원 문의",
+        "카드 4111111111111111 12개월로 약정 문의 | 카드 *** 12개월로 약정 문의",
+        "카드 4111111111111111 12개월짜리는 얼마예요? | 카드 *** 12개월짜리는 얼마예요?",
+        "카드 4111111111111111 7700원으로 납부 문의 | 카드 *** 7700원으로 납부 문의",
+        "카드 4111111111111111, 18개월로 약정 문의 | 카드 ***, 18개월로 약정 문의",
+        "카드 4111111111111111 약정 18개월동안 납부 문의 | 카드 *** 약정 18개월동안 납부 문의",
+        "카드번호 4111111111111111 18분실 신고 | 카드번호 ***분실 신고",
+        "카드번호 4111111111111111 003원룸 주소 변경 | 카드번호 ***원룸 주소 변경",
+        "카드번호 4111111111111111 18일반 문의 | 카드번호 ***일반 문의",
+        "카드 4111111111111111 12개월간 약정 문의 | 카드 *** 12개월간 약정 문의",
+        "카드 4111111111111111 12개월째 납부 문의 | 카드 *** 12개월째 납부 문의",
+        "카드 4111111111111111 12개월치 금액 문의 | 카드 *** 12개월치 금액 문의",
+        "카드 4111111111111111 12개월씩 납부 문의 | 카드 *** 12개월씩 납부 문의",
+        "카드 4111111111111111 12개월이요 | 카드 *** 12개월이요",
+        "카드 4111111111111111 7700원씩 납부 문의 | 카드 *** 7700원씩 납부 문의",
+        "카드 4111111111111111, 18개월간 약정 문의 | 카드 ***, 18개월간 약정 문의",
+        "카드 4111111111111111 약정 18개월째 문의 | 카드 *** 약정 18개월째 문의",
+        "카드 4111111111111111 / 18개월치 납부 문의 | 카드 *** / 18개월치 납부 문의",
+        "카드 4111111111111111 기간 18개월씩 납부 문의 | 카드 *** 기간 18개월씩 납부 문의",
+        "카드 4111111111111111, 18개월이요 | 카드 ***, 18개월이요",
+        "카드 4111111111111111 금액 3만원씩 납부 문의 | 카드 *** 금액 3만원씩 납부 문의",
+        "카드 4111111111111111 12개월째인데요 | 카드 *** 12개월째인데요",
+        "카드 4111111111111111 12개월치예요 | 카드 *** 12개월치예요",
+        "카드 4111111111111111 7700원씩입니다 | 카드 *** 7700원씩입니다",
+        "카드 4111111111111111, 18개월째예요 | 카드 ***, 18개월째예요",
+        "카드 4111111111111111 기간 18개월치입니다 | 카드 *** 기간 18개월치입니다",
+        "주민번호 990101-1234567 4개월인데요 | 주민번호 *** 4개월인데요",
+        "카드 4111111111111111 일간 요금 문의 | 카드 *** 일간 요금 문의"
+    })
+    @DisplayName("누락을 보완한 마스크와 명확한 상담 조건을 저장·분석하며 재전송해도 중복 생성하지 않는다")
+    void 보완한_마스킹과_정상_문의의_저장과_재전송을_유지한다(String input, String expected) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+
+        assertThat(analyzedContent.get()).isEqualTo(expected);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(expected);
+        assertThat(jdbc.queryForObject("SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
+                String.class, sid)).isEqualTo(expected);
+        assertThat(body(request(sid, identity, input, key, 201))).isEqualTo(first);
+        request(sid, identity, input + " 다른 문의", key, 409);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "제 카드번호는 4111111111111111인데요", "주민번호는 990101-1234567이고요",
+        "카드 4111111111111111 18개월 약정 문의", "카드 4111-1111-1111-1111-18개월 문의",
+        "카드 4111-1111-1111-1111-18개월", "카드 4111111111111111 18개월입니다",
+        "카드 4111111111111111 18개월로 약정 문의", "카드 4111111111111111 18개월동안 납부 문의",
+        "카드 4111111111111111 18개월짜리 약정 문의", "카드 4111111111111111 18개월로는 변경할 수 있나요?",
+        "카드 4111111111111111 18개월동안만 납부 문의", "카드 4111111111111111 18개월짜리로는요 문의",
+        "카드 4111-1111-1111-1111-18개월로 문의", "카드 4111111111111111 003원짜리 납부 문의",
+        "카드 4111111111111111 18개월간 약정 문의", "카드 4111111111111111 18개월째 약정 문의",
+        "카드 4111111111111111 18개월치 납부 문의", "카드 4111111111111111 18개월씩 납부 문의",
+        "카드 4111111111111111 18개월이요", "카드 4111111111111111 3만원씩 납부 문의",
+        "카드 4111111111111111 18개월간은 약정 문의", "카드 4111111111111111 18개월째는 약정 문의",
+        "카드 4111111111111111 18개월치로 납부 문의", "카드 4111111111111111 18개월씩만 납부 문의",
+        "카드 4111111111111111 18개월이요?", "카드 4111111111111111 3원씩 납부 문의",
+        "카드 4111111111111111 3년째 납부 문의", "카드 4111111111111111 18일간 납부 문의",
+        "카드 4111111111111111 18시간째 납부 문의", "카드 4111111111111111 18분씩 통화 문의",
+        "카드 4111111111111111 18개월째인데요", "카드 4111111111111111 18개월째예요",
+        "카드 4111111111111111 18개월치예요", "카드 4111111111111111 18개월째이에요",
+        "카드 4111111111111111 18개월째입니다", "카드 4111111111111111 18개월째이고요",
+        "카드 4111111111111111 3만원씩인데요", "카드 4111111111111111 3원짜리예요",
+        "카드 4111111111111111 18년째이에요", "카드 4111111111111111 18일간입니다",
+        "카드 4111111111111111 18시간동안이고요", "카드 4111111111111111 18분씩예요",
+        "카드 4111111111111111 18개월째만인데요", "카드 4111111111111111 18개월치로는예요",
+        "카드 4111111111111111 18개월째인데요?"
+    })
+    @DisplayName("소개만 남거나 번호·기간이 모호한 요청은 재입력을 안내하며 경고·실행·중복 메시지를 만들지 않는다")
+    void 재입력이_필요한_요청을_중복_실행하지_않는다(String input) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        var first = body(request(sid, identity, input, key, 200));
+
+        assertThat(first.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(first.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(first.at("/result").has("executionId")).isFalse();
+        if (input.contains("18개월")) {
+            assertThat(first.at("/result/inputGuard/message").asText()).contains("경계가 불명확", "번호를 제외");
+        }
+        assertThat(body(request(sid, identity, input, key, 200))).isEqualTo(first);
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        assertThat(history(sid).toString()).doesNotContain("4111", "990101", "1234567");
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"18개월로", "18개월간", "3만원씩", "18개월째인데요", "18개월치예요", "3만원씩이고요"})
+    @DisplayName("추가 어미의 모호한 조건이 있어도 실제 욕설은 재입력 안내보다 먼저 한 번 경고한다")
+    void 모호한_조건의_추가_어미도_욕설_차단을_완화하지_않는다(String condition) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        String input = "씨발 카드 4111111111111111 " + condition + " 약정 문의";
+        var first = body(request(sid, identity, input, key, 200));
+
+        assertThat(first.at("/result/inputGuard/action").asText()).isEqualTo("WARNED");
+        assertThat(first.at("/result/inputGuard/violationCount").asInt()).isEqualTo(1);
+        assertThat(body(request(sid, identity, input, key, 200))).isEqualTo(first);
+        assertThat(count("chat_messages")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
     }
 
     @Test
@@ -446,7 +655,11 @@ class ChatInputGuardIntegrationTest {
                 "카드 4111111111111111 003 개인정보를 가려주세요", UUID.randomUUID(), 201));
         waitCompleted(accepted.at("/result/executionId").asLong());
         assertThat(analyzedContent.get()).isEqualTo("카드 *** 개인정보를 가려주세요");
-        assertThat(history(sid).toString()).doesNotContain("4111", "003");
+        var messages = history(sid).at("/result/messages");
+        assertThat(messages).hasSize(2);
+        assertThat(messages.get(0).path("content").asText()).isEqualTo("카드 *** 개인정보를 가려주세요");
+        // 시각·식별자의 우연한 숫자 일치가 아니라 실제 표시 문구의 번호 노출을 확인한다.
+        messages.forEach(message -> assertThat(message.path("content").asText()).doesNotContain("4111", "003"));
         assertThat(jdbc.queryForObject(
                 "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?",
                 String.class, sid)).isEqualTo("카드 *** 개인정보를 가려주세요");
@@ -519,7 +732,6 @@ class ChatInputGuardIntegrationTest {
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "카드 4111 1111 1111 1111 3번 문의 | 카드 ***번 문의",
-        "카드 4111-1111-1111-1111-18개월 문의 | 카드 ***개월 문의",
         "카드 4111111111111111 약정 18개월 문의 | 카드 *** 약정 18개월 문의"
     })
     @DisplayName("숫자 묶음 전체 보호와 명확한 조건 보존이 접수·저장·상담에서 일치한다")
@@ -553,8 +765,7 @@ class ChatInputGuardIntegrationTest {
     @ValueSource(strings = {
         "990101-1234567", "제 주민번호는 990101-1234567입니다",
         "4111111111111111", "제 카드번호는 4111111111111111입니다",
-        "4111 1111 1111 1111 3번", "카드 4111-1111-1111-1111-18개월",
-        "카드 4111111111111111 18개월입니다",
+        "4111 1111 1111 1111 3번",
         "주민번호 990101-1234567, 카드번호 4111111111111111"
     })
     @DisplayName("번호·소개·단위만 남는 입력은 별표로 저장하고 검색·생성 없이 재입력을 안내한다")
@@ -637,7 +848,7 @@ class ChatInputGuardIntegrationTest {
         var client = org.mockito.Mockito.mock(com.telme.llm.service.LlmClient.class);
         when(client.generate(any())).thenReturn("**주민번호 *** 카드 *** 유심 재발급**");
         var summaryService = new ChatSummaryService(summary, client,
-                new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512), summaryConverter);
+                new ChatSummaryProperties(4, 2048, 2, 1024, 16, 3072, 512), summaryConverter, inputMasks);
         Boolean saved = new TransactionTemplate(transactions).execute(status ->
                 summaryService.summarizeIfNeeded(new ChatSummaryRequested(eid, sid, 4)));
         assertThat(saved).isTrue();

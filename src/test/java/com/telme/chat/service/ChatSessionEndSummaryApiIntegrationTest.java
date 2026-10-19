@@ -554,6 +554,29 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .contains(visible).doesNotContain("4111", "990101", "1234567", "\uFFFC", "input_mask_spans");
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "씨 990101-1234567 발 요금 안내입니다. | 씨 *** 발 요금 안내입니다.",
+        "개 4111111111111111 새끼 유심 안내입니다. | 개 *** 새끼 유심 안내입니다."
+    })
+    @DisplayName("과거 안내 원문을 읽으며 새로 가린 마스크 위치도 종료 요약 저장·조회까지 보존한다")
+    void 과거_안내의_첫_마스크_검사_결과를_보존한다(String original, String expected) throws Exception {
+        var fixture = fixture(false, "유심 요금 문의", original);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        mockResult(fixture);
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        var result = mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk()).andReturn();
+        assertThat(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8))
+                .contains(expected).doesNotContain("990101", "1234567", "4111", "\\uFFFC");
+        var prompt = ArgumentCaptor.forClass(com.telme.llm.dto.req.LlmRequest.class);
+        verify(client).generate(prompt.capture());
+        assertThat(prompt.getValue().userPrompt()).contains(expected).doesNotContain("990101", "1234567", "4111");
+    }
+
     private Fixture fixture(boolean running, String question, String answer) throws Exception {
         var actor = new MockHttpSession();
         var response = mvc.perform(post("/api/v1/chat/sessions").session(actor)

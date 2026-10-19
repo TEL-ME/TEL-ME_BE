@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ public class SubscriptionUsageService {
 
     static final int VIEWABLE_PAST_MONTHS = 6;
     static final int RECENT_MONTHS_LIMIT = 3;
+    static final int DEMAND_MONTHS = 3;
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionHistoryRepository historyRepository;
@@ -83,17 +85,16 @@ public class SubscriptionUsageService {
         double fraction = visibleFraction(target, activationDate, today,
                 pausedDates(subscription.getSubscriptionId(), availableFrom, today));
         MonthUsage usage = target.equals(thisMonth)
-                ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, now, today, activationDate)
+                ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, today, activationDate)
                 : pastMonthUsage(stored, fraction, limitsAt(planHistories, target));
         return UsageOverview.active(availableFrom, thisMonth, usage);
     }
 
     private MonthUsage thisMonthUsage(Subscription subscription, SubscriptionSnapshot snapshot,
-            List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction, Instant now,
+            List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction,
             LocalDate today, LocalDate activationDate) {
         LocalDate thisMonth = today.withDayOfMonth(1);
         UsageLimits limits = limitsAt(planHistories, thisMonth);
-        Plan plan = snapshot.currentPlan();
         return new MonthUsage(
                 thisMonth,
                 thisMonth.lengthOfMonth() - today.getDayOfMonth(),
@@ -101,7 +102,7 @@ public class SubscriptionUsageService {
                 ResourceUsage.of(scale(stored.getUsedDataMb(), fraction), limits.dataMb()),
                 ResourceUsage.of(scale(stored.getUsedVoiceMinutes(), fraction), limits.voiceMinutes()),
                 ResourceUsage.of(scale(stored.getUsedSmsCount(), fraction), limits.smsCount()),
-                expectedFee(subscription, plan, planHistories, now, thisMonth, activationDate));
+                expectedFee(subscription, planHistories, thisMonth, activationDate));
     }
 
     private MonthUsage pastMonthUsage(SubscriptionUsage stored, double fraction, UsageLimits limits) {
@@ -144,6 +145,32 @@ public class SubscriptionUsageService {
         return result;
     }
 
+    // 추천에 쓰는 평소 사용량. 이번 달을 포함한 최근 3개월의 한 달 전체 값의 평균이고 개통 전 달은 뺀다
+    public Optional<UsageDemand> getDemand(Long userId) {
+        Instant now = calendar.now();
+        Optional<Subscription> found = subscriptionRepository.findByUserIdAndStatus(userId, Subscription.Status.ACTIVE);
+        if (found.isEmpty() || stateReader.read(found.get(), now).currentPlan() == null) {
+            return Optional.empty();
+        }
+        Subscription subscription = found.get();
+        List<SubscriptionHistory> planHistories = planHistories(subscription);
+        LocalDate activationDate = activationDate(planHistories);
+        LocalDate thisMonth = calendar.today(now).withDayOfMonth(1);
+        LocalDate from = thisMonth.minusMonths(DEMAND_MONTHS - 1L);
+        List<SubscriptionUsage> months = ensureGenerated(subscription, planHistories, activationDate, thisMonth).values()
+                .stream()
+                .filter(usage -> !usage.getUsageMonth().isBefore(from))
+                .toList();
+        if (months.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new UsageDemand(
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedDataMb).average().orElse(0)),
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedVoiceMinutes).average().orElse(0)),
+                Math.round(months.stream().mapToLong(SubscriptionUsage::getUsedSmsCount).average().orElse(0)),
+                months.size()));
+    }
+
     // 개통한 달부터 이번 달까지(최대 6개월 전부터) 없는 달만 그 달 1일의 요금제 제공량 기준으로 만든다. 동시 요청은 먼저 들어간 값이 남는다
     private Map<LocalDate, SubscriptionUsage> ensureGenerated(Subscription subscription,
             List<SubscriptionHistory> planHistories, LocalDate activationDate, LocalDate thisMonth) {
@@ -171,7 +198,7 @@ public class SubscriptionUsageService {
 
     // 사용량 생성과 한도 표시는 그 달 1일에 쓰던 요금제의 제공량 기준
     private UsageLimits limitsAt(List<SubscriptionHistory> planHistories, LocalDate month) {
-        return UsageLimits.of(planRepository.findById(PlanTimeline.planAt(planHistories, startOfMonth(month)))
+        return UsageLimits.of(planRepository.findById(PlanTimeline.planAt(planHistories, startOfDay(month)))
                 .orElseThrow());
     }
 
@@ -182,8 +209,8 @@ public class SubscriptionUsageService {
         return activationMonth.isAfter(oldestViewable) ? activationMonth : oldestViewable;
     }
 
-    private Instant startOfMonth(LocalDate month) {
-        return month.atStartOfDay(TimeZones.KST).toInstant();
+    private Instant startOfDay(LocalDate day) {
+        return day.atStartOfDay(TimeZones.KST).toInstant();
     }
 
     private Map<LocalDate, SubscriptionUsage> byMonth(List<SubscriptionUsage> usages) {
@@ -223,17 +250,39 @@ public class SubscriptionUsageService {
         return Math.round(value * fraction);
     }
 
-    private ExpectedFee expectedFee(Subscription subscription, Plan currentPlan, List<SubscriptionHistory> planHistories,
-            Instant now, LocalDate thisMonth, LocalDate activationDate) {
-        int amount = feeAfterContract(subscription, currentPlan.getMonthlyFee(), now);
+    private ExpectedFee expectedFee(Subscription subscription, List<SubscriptionHistory> planHistories,
+            LocalDate thisMonth, LocalDate activationDate) {
+        MonthlyFee current = monthlyFee(subscription, planHistories, thisMonth, activationDate);
         if (!activationDate.isBefore(thisMonth)) {
-            return new ExpectedFee(amount, null, null);
+            return new ExpectedFee(current.amount(), null, null, current.prorated());
         }
-        Instant previousMonthStart = startOfMonth(thisMonth.minusMonths(1));
-        Long previousPlanId = PlanTimeline.planAt(planHistories, previousMonthStart);
-        Plan previousPlan = planRepository.findById(previousPlanId).orElseThrow();
-        int previousAmount = feeAfterContract(subscription, previousPlan.getMonthlyFee(), previousMonthStart);
-        return new ExpectedFee(amount, previousAmount, amount - previousAmount);
+        LocalDate previousMonth = thisMonth.minusMonths(1);
+        int previous = monthlyFee(subscription, planHistories, previousMonth, activationDate).amount();
+        return new ExpectedFee(current.amount(), previous, current.amount() - previous, current.prorated());
+    }
+
+    // 날마다 그날 적용 중인 요금제의 월정액에 그날의 약정 할인을 반영해 더하고 그 달 일수로 나눈다. 개통 전 날은 0원이다.
+    // 요금제 변경·약정 만료·개통일로 하루 요금이 달라지는 달은 prorated가 true
+    private MonthlyFee monthlyFee(Subscription subscription, List<SubscriptionHistory> planHistories,
+            LocalDate month, LocalDate activationDate) {
+        Map<Long, Plan> plans = new HashMap<>();
+        Set<Integer> dailyFees = new HashSet<>();
+        long total = 0;
+        for (LocalDate day = month; day.getMonth() == month.getMonth(); day = day.plusDays(1)) {
+            int fee = 0;
+            if (!day.isBefore(activationDate)) {
+                Instant startOfDay = startOfDay(day);
+                Long planId = PlanTimeline.planAt(planHistories, startOfDay);
+                Plan plan = plans.computeIfAbsent(planId, id -> planRepository.findById(id).orElseThrow());
+                fee = feeAfterContract(subscription, plan.getMonthlyFee(), startOfDay);
+            }
+            dailyFees.add(fee);
+            total += fee;
+        }
+        return new MonthlyFee((int) Math.round((double) total / month.lengthOfMonth()), dailyFees.size() > 1);
+    }
+
+    private record MonthlyFee(int amount, boolean prorated) {
     }
 
     private int feeAfterContract(Subscription subscription, int monthlyFee, Instant at) {

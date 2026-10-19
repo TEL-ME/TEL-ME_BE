@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -151,6 +152,59 @@ class RecordingLlmClientTest {
         client.generate(request(42L), 2);
 
         assertThat(recorder.results.getFirst().attempt()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("provider를 주면 provider를 함께 기록한다")
+    void provider를_함께_기록한다() {
+        List<String> providers = new ArrayList<>();
+        LlmGenerationRecorder capturing = new LlmGenerationRecorder(null, null, null, null) {
+
+            @Override
+            public void record(LlmRequest request, String model, String provider, Result result) {
+                providers.add(provider);
+            }
+        };
+
+        new RecordingLlmClient(new StubClient(null), capturing, "openai.gpt-oss-120b-1:0", "bedrock")
+                .generate(request(42L));
+
+        assertThat(providers).containsExactly("bedrock");
+    }
+
+    @Test
+    @DisplayName("단조 시계 값의 차이로 호출 시간을 잰다(시작 값이 음수여도 된다)")
+    void 단조_시계_차이로_호출_시간을_잰다() {
+        var ticks = new ArrayDeque<>(List.of(-5_000_000L, 3_000_000L));
+        var client = new RecordingLlmClient(new StubClient(null), recorder, "test", null, ticks::removeFirst);
+
+        client.generate(request(42L));
+
+        assertThat(recorder.results.getFirst().totalMs()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("스트리밍의 첫 토큰과 전체 시간은 같은 단조 시계로 재고 값이 넘어가도 차이는 맞다")
+    void 스트리밍_첫_토큰과_전체_시간을_같은_시계로_잰다() {
+        var ticks = new ArrayDeque<>(List.of(
+                Long.MAX_VALUE - 5_000_000L, Long.MIN_VALUE + 4_999_999L, Long.MIN_VALUE + 14_999_999L));
+        var client = new RecordingLlmClient(new StubClient(null), recorder, "test", null, ticks::removeFirst);
+
+        client.stream(request(42L), new CollectingHandler());
+
+        assertThat(recorder.results.getFirst().firstTokenMs()).isEqualTo(10);
+        assertThat(recorder.results.getFirst().totalMs()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("INTEGER 범위를 벗어난 시간은 음수나 최대값 대신 측정 불가(null)로 남기고 0ms는 유지한다")
+    void 정수_범위를_벗어난_시간은_null로_남긴다() {
+        for (long invalid : new long[] {-1, (long) Integer.MAX_VALUE + 1, Long.MAX_VALUE}) {
+            assertThat(Result.success(1, null, invalid).totalMs()).isNull();
+            assertThat(Result.failure(1, new IllegalStateException("test"), null, invalid).totalMs()).isNull();
+        }
+        assertThat(Result.success(1, null, 0).totalMs()).isZero();
+        assertThat(Result.success(1, null, Integer.MAX_VALUE).totalMs()).isEqualTo(Integer.MAX_VALUE);
     }
 
     private RecordingLlmClient client(LlmClient delegate) {

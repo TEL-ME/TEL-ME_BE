@@ -61,6 +61,10 @@ public class ChatExecution {
     @Column(name = "error_code", length = 50)
     private String errorCode;
 
+    // 서버 처리 시간(ms). 측정하지 못한 실행은 null이다.
+    @Column(name = "total_ms")
+    private Integer totalMs;
+
     public boolean isRunning() {
         return this.status == Status.RUNNING;
     }
@@ -69,21 +73,24 @@ public class ChatExecution {
         this.outputMessage = outputMessage;
     }
 
-    public void complete(ChatMessage outputMessage, Instant endedAt) {
+    public void complete(ChatMessage outputMessage, Instant endedAt, Integer totalMs) {
         this.outputMessage = outputMessage;
         this.status = Status.COMPLETED;
         this.endedAt = endedAt;
+        this.totalMs = totalMs;
     }
 
-    public void completeWithoutOutput(Instant endedAt) {
+    public void completeWithoutOutput(Instant endedAt, Integer totalMs) {
         this.status = Status.COMPLETED;
         this.endedAt = endedAt;
+        this.totalMs = totalMs;
     }
 
-    public void fail(Status status, String errorCode, ChatMessage outputMessage, Instant endedAt) {
+    public void fail(Status status, String errorCode, ChatMessage outputMessage, Instant endedAt, Integer totalMs) {
         this.outputMessage = outputMessage;
         this.status = status;
         this.errorCode = errorCode;
         this.endedAt = endedAt;
+        this.totalMs = totalMs;
     }
 }

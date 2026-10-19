@@ -22,6 +22,12 @@ public interface FaqCandidateEvidenceResolver {
         return resolve(executionId, consultRequestId, question, candidates);
     }
 
+    // customerMessage: 하위 질문을 나누기 전 고객 원문. 쓰지 않는 구현은 무시한다
+    default FaqSearchResponse resolve(Long executionId, Long consultRequestId, String question, String customerMessage,
+            List<FaqSearchResponse> candidates, boolean allowQuoteRepairFailure) {
+        return resolve(executionId, consultRequestId, question, candidates, allowQuoteRepairFailure);
+    }
+
     static FaqCandidateEvidenceResolver disabled() {
         return (executionId, question, candidates) -> null;
     }

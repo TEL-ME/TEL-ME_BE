@@ -1,0 +1,282 @@
+[
+  {
+    "key": "M001",
+    "turn1": {
+      "userQuestion": "이번 달 요금이 계좌 자동이체로도 빠지고 카드로도 결제됐어요. 왜 두 번이나 나간 거예요?",
+      "requiredFacts": ["납부 수단 변경은 다음 달 청구분부터 적용되어 겹칠 수 있다.", "이중 납부는 고객센터에 환불 접수하면 된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그런데 혹시 요금을 납부 기한까지 못 내면 회선 정지는 언제부터 걸리나요?",
+      "requiredFacts": ["납부 기한 기준 15일 후 발신 정지가 적용된다.", "납부 기한 기준 30일 후 수신 정지가 적용된다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": false
+    }
+  },
+  {
+    "key": "M002",
+    "turn1": {
+      "userQuestion": "청구서를 보니까 제가 쓴 적 없는 소액결제가 찍혀 있어요. 이거 어떻게 해야 하나요?",
+      "requiredFacts": ["내역이 이상하면 고객센터에 확인하면 된다.", "소액결제 한도는 기본 월 30만 원이다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그 한도는 올릴 수도 있어요? 최대 얼마까지 돼요?",
+      "requiredFacts": ["한도 상향은 본인 인증으로 진행된다.", "최대 월 100만 원까지 가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M003",
+    "turn1": {
+      "userQuestion": "폰을 바꾸고 싶은데 지금 쓰는 폰 할부가 아직 남아 있어요. 그래도 바꿀 수 있나요?",
+      "requiredFacts": ["기존 할부금을 완납하거나 새 할부에 승계해야 한다.", "둘 중 하나는 필요하다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그렇게 바꾼 폰이 배터리가 이상하면요? 며칠 안에 말해야 무를 수 있어요?",
+      "requiredFacts": ["개통 후 14일 이내여야 한다.", "미개봉이거나 사용 흔적이 없는 상태여야 한다.", "1회에 한해 가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M004",
+    "turn1": {
+      "userQuestion": "기기변경 하러 갔더니 남은 할부금 때문에 진행이 안 된다고 하네요. 어떻게 해야 돼요?",
+      "requiredFacts": ["기존 할부금을 완납하거나 새 할부에 승계해야 진행된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "개통한 지 며칠 안 된 새 폰이 배터리가 이상한데, 다른 폰으로 교환받을 수 있나요?",
+      "requiredFacts": ["개통 후 14일 이내여야 한다.", "사용하지 않은 상태여야 한다.", "한 번만 교환 가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": false
+    }
+  },
+  {
+    "key": "M005",
+    "turn1": {
+      "userQuestion": "중학생인 우리 애가 친구한테 자기 폰 명의를 넘겨주겠다는데 그게 가능한가요?",
+      "requiredFacts": ["미성년자 사이의 명의변경은 불가능하다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그럼 성인인 제가 만 17세 동생한테 넘기는 건요?",
+      "requiredFacts": ["양도인이 성인이면 가능하다.", "양도인과 양수인이 모두 미성년자인 경우에만 불가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M006",
+    "turn1": {
+      "userQuestion": "명의변경 하려는데 제가 직접 매장에 가는 거랑 위임장 써서 다른 사람 보내는 거랑 처리 속도가 달라요?",
+      "requiredFacts": ["처리 시간은 같다.", "직접 가면 서류가 하나 덜 필요하다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "딸이 가는 경우엔요? 제가 같이 가는 거랑 딸 혼자 보내는 거랑 챙길 게 달라지나요?",
+      "requiredFacts": ["같이 가면 신분증만 있으면 된다.", "딸 혼자 보내려면 위임장을 써 줘야 한다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M007",
+    "turn1": {
+      "userQuestion": "지금 가입할 수 있는 요금제가 몇 개나 되고 가격대는 어느 정도예요?",
+      "requiredFacts": ["요금제는 9가지가 있다.", "15,000원부터 105,000원까지 있다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "제 건 중간 정도라 매달 말쯤 다 썼다고 알림이 오던데, 그 뒤엔 어떻게 해야 해요?",
+      "requiredFacts": ["데이터 소진 후에는 400kbps로 계속 이용된다.", "속도 제한이 불편하면 언리미티드로 변경하면 된다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M008",
+    "turn1": {
+      "userQuestion": "데이터 다 쓰고 400kbps로 느려진 상태랑 언리미티드 요금제랑 실제로 써 보면 차이가 많이 나나요?",
+      "requiredFacts": ["400kbps는 속도 제한 상태라 대용량 이용이 어렵다.", "언리미티드는 제한 없이 이용된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "가족 네 명이 5G 프리미엄이랑 LTE 맥스로 나눠서 가입하려는데, 두 요금제 가격이랑 데이터가 각각 어떻게 돼요?",
+      "requiredFacts": ["5G 프리미엄은 85,000원에 150GB이다.", "LTE 맥스는 69,000원에 100GB이다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": false
+    }
+  },
+  {
+    "key": "M009",
+    "turn1": {
+      "userQuestion": "다른 통신사에서 번호 그대로 옮겨 오려는데, 예전 통신사 요금이 좀 밀려 있어요. 그래도 신청돼요?",
+      "requiredFacts": ["기존 통신사 미납 요금이 있으면 신청이 진행되지 않는다.", "본인 신분증이 필요하다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그 회선 명의를 얼마 전에 제 앞으로 바꿨는데, 그래도 바로 할 수 있나요?",
+      "requiredFacts": ["명의를 바꾸고 1개월이 지나야 가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M010",
+    "turn1": {
+      "userQuestion": "번호이동 하려는데 이전 통신사에 밀린 요금이 있는지 없는지에 따라 절차가 달라지나요?",
+      "requiredFacts": ["미납 요금이 없으면 본인 신분증만으로 바로 신청된다.", "미납 요금이 있으면 완납 후에 신청할 수 있다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그거 토요일에도 처리돼요?",
+      "requiredFacts": ["매일 처리된다.", "처리 시간은 09:00부터 20:00까지다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M011",
+    "turn1": {
+      "userQuestion": "해외 도착해서 로밍을 켰는데 10분이 넘도록 신호가 안 잡혀요. 어떻게 해야 하죠?",
+      "requiredFacts": ["현지 망 자동 연결은 보통 3~5분 걸린다.", "그 이상 지연되면 단말을 재부팅한 뒤 데이터 로밍을 다시 켜 본다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "연결되고 나면 같이 온 가족이랑도 나눠 쓸 수 있어요? 몇 명까지 돼요?",
+      "requiredFacts": ["로밍 데이터 나눠쓰기를 신청하면 된다.", "최대 2회선까지 함께 쓸 수 있다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M012",
+    "turn1": {
+      "userQuestion": "해외에 보름 있으면서 로밍을 썼는데 요금이 예상보다 훨씬 많이 나왔어요. 왜 이렇게 나온 거예요?",
+      "requiredFacts": ["일 단위는 하루 9,900원, 무제한은 하루 12,100원이 매일 부과된다.", "7일 기간권 39,000원을 두 번 쓰는 편이 더 저렴할 수 있다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "다음 출장 땐 도착해서 뭘 하면 바로 써지는 거예요?",
+      "requiredFacts": ["단말에서 데이터 로밍을 켜면 된다.", "켜면 3~5분 안에 현지 망에 자동으로 연결된다.", "가입 상태는 앱이나 홈페이지에서 미리 확인할 수 있다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M013",
+    "turn1": {
+      "userQuestion": "제 명의가 도용된 것 같아서 신고했는데, 확인 결과는 언제쯤 나와요?",
+      "requiredFacts": ["3영업일 안에 확인해 준다.", "도용이 맞으면 요금은 전액 없애 준다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "기다리는 동안 직접 가서 얘기해 보고 싶은데, 평일 퇴근하고 저녁 7시 넘어서 가도 돼요?",
+      "requiredFacts": ["평일 운영은 19:00까지다.", "19:00 이후에는 방문이 어렵다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M014",
+    "turn1": {
+      "userQuestion": "토요일에 직영점에 가 보려는데 몇 시부터 몇 시까지 열어요?",
+      "requiredFacts": ["토요일은 10:00부터 17:00까지 운영한다.", "매장별로 운영 시간이 다를 수 있어 방문 전 확인을 권한다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그리고 올해 들어서 멤버십 등급이 떨어졌던데 이유가 뭔가요?",
+      "requiredFacts": ["멤버십은 직전 1년간 납부 금액을 기준으로 한다.", "매년 1월에 갱신된다.", "사용 금액이 줄면 등급이 낮아질 수 있다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": false
+    }
+  },
+  {
+    "key": "M015",
+    "turn1": {
+      "userQuestion": "새로 폰 개통하려는데 매장에서 하는 거랑 온라인으로 신청하는 거 중에 뭐가 더 빨라요?",
+      "requiredFacts": ["매장에서 개통하면 30분 이내에 완료된다.", "온라인으로 신청하면 다음 날 개통된다.", "개통 처리는 매일 09:00부터 20:00까지 진행된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "저는 아까 온라인으로 넣었는데, 그럼 오늘 안에는 안 되는 거예요?",
+      "requiredFacts": ["온라인은 다음 날 개통된다.", "09:00부터 20:00 사이에 접수해야 처리된다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M016",
+    "turn1": {
+      "userQuestion": "지금 쓰는 번호 말고 회선을 하나 더 개통하고 싶은데, 한 사람이 몇 개까지 만들 수 있어요?",
+      "requiredFacts": ["성인 1인당 최대 5회선까지 개통할 수 있다.", "법인 명의 가입은 별도 심사를 거친다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "회사 이름으로 하면요? 그것도 바로 되나요?",
+      "requiredFacts": ["법인 명의 가입은 별도 심사를 거친다.", "심사 결과가 나와야 개통된다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M017",
+    "turn1": {
+      "userQuestion": "아들이 곧 입대해서 쓰던 폰을 해지하려는데 어디서 하면 돼요?",
+      "requiredFacts": ["매장, 고객센터, 홈페이지 어디서든 가능하다.", "신청하면 바로 해지된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그 폰 할부가 아직 꽤 남았는데 그건 어떻게 되는 거예요?",
+      "requiredFacts": ["남은 할부금은 일시 납부가 원칙이다.", "원하면 해지 후에도 기존 할부 일정을 유지할 수 있다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M018",
+    "turn1": {
+      "userQuestion": "지금 해외에 나와 있는데 여기서 전화로 회선 해지 신청할 수 있나요?",
+      "requiredFacts": ["고객센터에 전화하면 바로 해지된다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "그럼 남은 할부금은 그때 한 번에 다 내야 돼요?",
+      "requiredFacts": ["남은 할부금은 일시 납부가 원칙이다.", "원하면 해지 후에도 기존 할부 일정을 유지할 수 있다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  },
+  {
+    "key": "M019",
+    "turn1": {
+      "userQuestion": "유심 카드가 깨져 버렸는데 이참에 eSIM으로 바꾸고 싶어요. 어떻게 하면 돼요?",
+      "requiredFacts": ["eSIM을 지원하는 단말인지 먼저 확인해야 한다.", "매장이나 온라인에서 발급을 신청하면 된다.", "비용은 2,750원이다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "듀얼심이라는 게 정확히 어떤 기능인가요?",
+      "requiredFacts": ["한 폰에서 회선 2개를 동시에 쓰는 기능이다.", "eSIM으로 최대 2개 회선까지 가능하다."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": false
+    }
+  },
+  {
+    "key": "M020",
+    "turn1": {
+      "userQuestion": "유심이 깨졌는데 매장 가서 받는 거랑 택배로 받는 거 중에 뭐가 나을까요?",
+      "requiredFacts": ["매장은 즉시 발급이라 급하면 매장이 낫다.", "택배는 2~3 영업일 걸린다.", "비용은 둘 다 7,700원이다."],
+      "expectedBehavior": "ANSWER"
+    },
+    "turn2": {
+      "userQuestion": "새 거 받으면 지금 깨진 건 혹시 아직 쓸 수 있는 거예요?",
+      "requiredFacts": ["새로 받으면 예전 유심은 자동으로 없어진다(쓸 수 없다)."],
+      "expectedBehavior": "ANSWER",
+      "dependsOnPrevious": true
+    }
+  }
+]

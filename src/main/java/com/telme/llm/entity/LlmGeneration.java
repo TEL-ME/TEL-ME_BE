@@ -32,7 +32,9 @@ import lombok.NoArgsConstructor;
 public class LlmGeneration {
 
     public enum TaskType {
-        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE
+        ROUTING, CONTEXT_RESOLUTION, RAG_ANSWER, CLARIFICATION, CONDITION_EXTRACT, FOLLOW_UP, SUMMARY, SESSION_TITLE,
+        // FAQ 근거 선택·판정(회색 구간 및 후보 판정). 의도 분류(ROUTING)와 호출 수와 처리 시간을 나눠 보기 위해 분리
+        EVIDENCE_CHECK
     }
 
     public enum Status {
@@ -59,7 +61,7 @@ public class LlmGeneration {
     @Column(name = "model", length = 50)
     private String model;
 
-    @Column(name = "prompt_version", length = 30)
+    @Column(name = "prompt_version", length = 100)
     private String promptVersion;
 
     @JdbcTypeCode(SqlTypes.JSON)

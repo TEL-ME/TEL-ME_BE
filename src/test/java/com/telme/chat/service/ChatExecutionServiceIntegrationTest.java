@@ -2,6 +2,10 @@ package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
@@ -12,29 +16,42 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatSession;
 import com.telme.chat.exception.ChatErrorCode;
+import com.telme.chat.repository.ChatExecutionRepository;
+import com.telme.chat.repository.ChatInputMaskRepository;
+import com.telme.chat.guard.ChatInputInspector;
+import com.telme.chat.safety.OutputMaskContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.global.common.code.BaseErrorCode;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.member.entity.User;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
 @RecordApplicationEvents
 class ChatExecutionServiceIntegrationTest {
+    @MockitoSpyBean private ChatExecutionRepository executions;
+
+    @MockitoSpyBean private ChatInputMaskRepository inputMasks;
 
     @Autowired
     private ChatSessionService chatSessionService;
@@ -50,6 +67,9 @@ class ChatExecutionServiceIntegrationTest {
 
     @Autowired
     private ApplicationEvents applicationEvents;
+
+    @Autowired
+    private ChatResponseTimer responseTimer;
 
     private ChatActor actor;
     private Long sessionId;
@@ -69,6 +89,95 @@ class ChatExecutionServiceIntegrationTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"answer", "basic", "clarification", "withoutOutput", "failed", "cancelled"})
+    @DisplayName("모든 종료 경로는 접수 때 시작한 측정값으로 처리 시간을 남긴다")
+    void 모든_종료_경로가_접수부터의_처리_시간을_남긴다(String path) {
+        var question = send("유심 재발급 비용 알려줘");
+        // 이 테스트는 커밋하지 않아 디스패처가 돌지 않는다. 디스패처가 하는 등록을 직접 한다
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(1_500));
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "유심 재발급 비용 알려줘", null, stopwatch));
+        try {
+            finish(path, question.executionId());
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getTotalMs()).isBetween(1_500, 60_000);
+        assertThat(execution.getEndedAt()).isNotNull();
+        if (execution.getOutputMessage() != null) {
+            assertThat(execution.getOutputMessage().getCompletedAt()).isEqualTo(execution.getEndedAt());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"answer", "basic", "clarification", "withoutOutput", "failed", "cancelled"})
+    @DisplayName("모든 종료 경로는 시작 시각과 같은 DB 시계로 종료·답변 완료·마지막 활동 시각을 남긴다")
+    void 모든_종료_경로가_DB_시계로_종료_시각을_남긴다(String path) {
+        var question = send("유심 재발급 비용 알려줘");
+        Instant databaseTime = findExecution(question.executionId()).getStartedAt().plusSeconds(2);
+        doReturn(databaseTime).when(executions).currentDatabaseTime();
+
+        finish(path, question.executionId());
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getEndedAt()).isEqualTo(databaseTime);
+        if (execution.getOutputMessage() != null) {
+            assertThat(execution.getOutputMessage().getCompletedAt()).isEqualTo(databaseTime);
+        }
+        assertThat(findSession().getLastActiveAt()).isEqualTo(databaseTime);
+    }
+
+    @Test
+    @DisplayName("종료 시각은 트랜잭션 시작 시각이 아니라 호출한 순간의 DB 시계다")
+    void 종료_시각은_호출_시점의_DB_시계다() {
+        Instant transactionStart = jdbcTemplate.queryForObject(
+                "SELECT CURRENT_TIMESTAMP", (rs, row) -> rs.getTimestamp(1).toInstant());
+        jdbcTemplate.execute("SELECT pg_sleep(0.02)");
+
+        assertThat(executions.currentDatabaseTime()).isAfter(transactionStart);
+    }
+
+    @Test
+    @DisplayName("시작 측정값이 없는 실행은 0ms가 아니라 측정 불가(null)로 끝낸다")
+    void 시작_측정값이_없으면_처리_시간을_비운다() {
+        var question = send("유심 재발급 비용 알려줘");
+
+        chatExecutionService.fail(question.executionId(),
+                new ChatFailure(ChatMessage.Status.TIMEOUT, "EXECUTION_TIMEOUT"));
+
+        var execution = findExecution(question.executionId());
+        assertThat(execution.getEndedAt()).isNotNull();
+        assertThat(execution.getTotalMs()).isNull();
+    }
+
+    @Test
+    @DisplayName("이미 끝난 실행을 다시 완료하려 하면 거부하고 처음 기록한 처리 시간을 유지한다")
+    void 중복_완료는_처음_처리_시간을_바꾸지_않는다() {
+        var question = send("유심 재발급 비용 알려줘");
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime());
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "유심 재발급 비용 알려줘", null, stopwatch));
+        try {
+            chatExecutionService.completeAnswer(question.executionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null));
+            Integer first = findExecution(question.executionId()).getTotalMs();
+
+            assertErrorCode(() -> chatExecutionService.fail(question.executionId(),
+                    new ChatFailure(ChatMessage.Status.TIMEOUT, "EXECUTION_TIMEOUT")),
+                    ChatErrorCode.EXECUTION_NOT_RUNNING);
+
+            var execution = findExecution(question.executionId());
+            assertThat(first).isNotNull();
+            assertThat(execution.getTotalMs()).isEqualTo(first);
+            assertThat(execution.getStatus()).isEqualTo(ChatExecution.Status.COMPLETED);
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
+    }
+
+    @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
         "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
@@ -85,6 +194,18 @@ class ChatExecutionServiceIntegrationTest {
         entityManager.clear();
         assertThat(historyItem(2).followUps()).containsExactly(visible);
         assertThat(historyItem(2).content()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+    }
+
+    @Test
+    @DisplayName("인사말을 붙인 되묻기의 선택지에만 마스크가 있어도 출처를 한 번 조회하고 보존한다")
+    void 인사말과_선택지의_마스크를_함께_처리한다() {
+        var question = send("안녕하세요 씨 990101-1234567 발 요금 문의");
+
+        chatExecutionService.askClarification(question.executionId(), "어떤 조건인가요?", List.of("씨 *** 발 요금 문의"));
+
+        verify(inputMasks, times(1)).read(sessionId, 1);
+        assertThat(historyItem(2).content()).isEqualTo("안녕하세요! 어떤 조건인가요?");
+        assertThat(historyItem(2).followUps()).containsExactly("씨 *** 발 요금 문의");
     }
 
     @Test
@@ -111,6 +232,58 @@ class ChatExecutionServiceIntegrationTest {
                 "씨 *** 발 요금 문의", List.of())).isInstanceOf(GeneralException.class)
                 .extracting(error -> ((GeneralException) error).getErrorCode())
                 .isEqualTo(ChatErrorCode.OUTPUT_CHECK_FAILED);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?",
+                Integer.class, sessionId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("마스크가 없는 정상 답변과 되묻기는 마스크 이력을 조회하지 않는다")
+    void 마스크가_없는_출력은_마스크_조회만_생략한다() {
+        var first = send("요금 문의");
+        chatExecutionService.completeAnswer(first.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "요금은 7700원이며 약정은 18개월입니다.", null,
+                List.of("다른 요금제는?"), null));
+        var next = send("변경 문의");
+        chatExecutionService.askClarification(next.executionId(), "가입한 달을 알려주세요.", List.of("이번 달", "지난달"));
+
+        verifyNoInteractions(inputMasks);
+        assertThat(historyItem(2).content()).contains("7700원", "18개월");
+    }
+
+    @Test
+    @DisplayName("마스크가 없는 실제 욕설도 조회 생략과 관계없이 차단한다")
+    void 마스크_조회_생략으로_일반_욕설_검사를_건너뛰지_않는다() {
+        var question = send("요금 문의");
+
+        assertThatThrownBy(() -> chatExecutionService.askClarification(question.executionId(), "씨발", List.of()))
+                .isInstanceOf(ChatOutputBlockedException.class);
+        verifyNoInteractions(inputMasks);
+    }
+
+    @Test
+    @DisplayName("본문이 정상이어도 추천 질문에 마스크가 있으면 출처를 한 번 조회해 두 검사에 재사용한다")
+    void 추천_질문의_마스크도_한_번_조회한다() {
+        var question = send("씨 990101-1234567 발 요금 문의");
+        chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "정상 안내", null, List.of("씨 *** 발 요금 문의"), null));
+
+        verify(inputMasks, times(1)).read(sessionId, 1);
+        assertThat(historyItem(2).followUps()).containsExactly("씨 *** 발 요금 문의");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"씨***발", "개***새끼", "씨 *** 발", "씨******발"})
+    @DisplayName("형식 정리에서 별표가 보존돼도 실제 답변 저장 경로는 욕설을 차단한다")
+    void 보존된_별표_욕설을_답변으로_저장하지_않는다(String unsafe) {
+        var question = send("카드 4111111111111111 납부 문의");
+        var inspected = new ChatInputInspector(new ObjectMapper()).inspect("카드 4111111111111111 납부 문의");
+        var sources = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspected)));
+        String normalized = ChatSummaryNormalizer.normalize(unsafe, sources);
+
+        assertThat(normalized).isEqualTo(unsafe);
+        assertThatThrownBy(() -> chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, normalized, null, List.of(), null)))
+                .isInstanceOf(ChatOutputBlockedException.class);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM chat_messages WHERE session_id=?",
                 Integer.class, sessionId)).isEqualTo(1);
     }
@@ -460,6 +633,21 @@ class ChatExecutionServiceIntegrationTest {
         assertErrorCode(
                 () -> chatSessionService.getExecution(new ChatActor(null, UUID.randomUUID()), question.executionId()),
                 ChatErrorCode.EXECUTION_NOT_FOUND);
+    }
+
+    private void finish(String path, Long executionId) {
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", null, null, null);
+        switch (path) {
+            case "answer" -> chatExecutionService.completeAnswer(executionId, answer);
+            case "basic" -> chatExecutionService.completeBasicConversation(executionId, answer);
+            case "clarification" -> chatExecutionService.askClarification(executionId, "어느 지역인가요?");
+            case "withoutOutput" -> chatExecutionService.completeWithoutOutput(executionId);
+            case "failed" -> chatExecutionService.fail(executionId,
+                    new ChatFailure(ChatMessage.Status.TIMEOUT, "LLM_TIMEOUT"));
+            case "cancelled" -> chatExecutionService.fail(executionId,
+                    new ChatFailure(ChatMessage.Status.CANCELLED, "CANCELLED"));
+            default -> throw new IllegalArgumentException(path);
+        }
     }
 
     private ChatMessageSendResponse send(String content) {

@@ -22,7 +22,7 @@ import java.util.Objects;
 /** 최초 질문은 실제 라우팅 서비스로 보내고, 대기 중 후속 답변은 기존 상담 분석 경계로 넘긴다. */
 public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
     private static final String UNKNOWN_GUIDANCE =
-            "통신 서비스와 관련된 질문을 입력해 주세요. 요금제, 로밍, 매장 위치 등을 도와드릴 수 있습니다.";
+            "저는 통신 서비스와 매장 관련 질문을 도와드려요. 요금제, 로밍, 유심 또는 매장에 대해 궁금한 내용을 알려주세요.";
     private static final String UNCERTAIN_GUIDANCE =
             "질문을 정확히 분류하기 어렵습니다. 궁금한 통신 서비스나 매장 정보를 조금 더 구체적으로 알려주세요.";
     private static final String COMPOUND_GUIDANCE =
@@ -75,9 +75,10 @@ public final class QueryRoutingAnalysisProvider implements AnalysisProvider {
                         .orElseThrow(() -> new IllegalArgumentException("라우팅할 사용자 메시지가 없습니다."));
         IntentRouteResponse result;
         try {
-            result = context.message().equals(context.resolvedQuestion())
-                    ? routing.routeSingleConsult(message, context.routingContext())
-                    : routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion());
+            result = context.historyResolved()
+                    ? routing.routeSingleConsult(message, context.routingContext(), context.resolvedQuestion(),
+                            context.executionId())
+                    : routing.routeSingleConsult(message, context.routingContext(), context.executionId());
         } catch (UnsupportedCompoundQuestionException exception) {
             // 나눈 질문으로 버튼을 만들지 못하면 기존 고정 버튼을 쓴다
             List<String> buttons = Objects.requireNonNull(

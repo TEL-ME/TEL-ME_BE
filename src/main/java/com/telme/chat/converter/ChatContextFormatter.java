@@ -1,20 +1,26 @@
 package com.telme.chat.converter;
 
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.service.BasicConversationClassifier;
+import com.telme.chat.service.BasicConversationResponder;
 import com.telme.chat.service.ChatContext;
 import com.telme.chat.service.ChatContextMessage;
 import com.telme.chat.service.ChatTokenEstimator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class ChatContextFormatter {
     private ChatContextFormatter() {}
 
     public static boolean isSocial(String content) {
         if (content == null) return false;
+        if (BasicConversationClassifier.classify(content).isPure()
+                || BasicConversationResponder.isFixedResponse(content)) return true;
         String normalized = content.strip().replaceAll("(?U)\\s+", "").replaceAll("[.!?~…]+", "");
-        return java.util.Set.of("안녕", "안녕하세요", "안녕하십니까", "반가워요", "반갑습니다",
+        return Set.of("안녕", "안녕하세요", "안녕하십니까", "반가워요", "반갑습니다",
                 "감사합니다", "감사해요", "감사", "고마워", "고마워요", "고맙습니다", "고맙네요",
                 "안녕히계세요", "안녕히가세요", "잘가요", "잘가", "다음에또올게요", "수고하세요", "수고하셨습니다",
                 "천만에요", "천만에요더궁금한점이있으면말씀해주세요",
@@ -50,7 +56,7 @@ public final class ChatContextFormatter {
         // 과거 모델 답변과 출처가 없는 일반 요약을 새 정책 답변의 입력으로 재사용하지 않는다.
         String summary = context.summarySources().stream()
                 .filter(message -> message.role() == ChatMessage.Role.USER)
-                .map(ChatContextFormatter::line).collect(java.util.stream.Collectors.joining("\n"));
+                .map(ChatContextFormatter::line).collect(Collectors.joining("\n"));
         if (summary.isBlank()) summary = null;
         if (summary != null && used + estimator.estimatePromptPart(summary) > budget) {
             summary = null;

@@ -4,9 +4,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "chat.question-resolution")
-public record ChatQuestionResolutionProperties(@DefaultValue("REGEX_GATED") Mode mode) {
+// stabilityGuards: gpt-oss 문맥 판정의 흔들림을 막는 보완(docs/CONTEXT_RESOLUTION.md). EXAONE에서는 결과가 같아 기본은 끈다
+// bedrock: 문맥 판정을 gpt-oss(Bedrock)로 부르고 실패하면 엑사원으로 대체한다. 켜면 흔들림 보완도 함께 켠다. 기본 켜짐
+public record ChatQuestionResolutionProperties(@DefaultValue("REGEX_GATED") Mode mode,
+        @DefaultValue("false") boolean stabilityGuards,
+        @DefaultValue("true") boolean bedrock) {
     public enum Mode {
         REGEX_GATED,
         LLM_ALL
+    }
+
+    public boolean guardsEnabled() {
+        return stabilityGuards || bedrock;
     }
 }

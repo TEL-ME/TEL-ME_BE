@@ -99,7 +99,7 @@ public class ConsultService {
             // 질문은 유지하고, 정정된 조건만 저장하도록 반환한다.
             var snapshot = stateStore.load(sessionId, requestId);
             var decision =
-                    dialogueService.assess(
+                    dialogueService.decide(
                             new DialogueInput(
                                     requestId,
                                     purpose,
@@ -133,13 +133,12 @@ public class ConsultService {
         if (Set.of("DONE", "CANCELLED").contains(snapshot.status())) {
             throw new GeneralException(ConsultErrorCode.REQUEST_CLOSED);
         }
-        // 상태를 읽는 트랜잭션은 모델 호출 전에 끝난다.
         var input =
                 new DialogueInput(
                         requestId, purpose, snapshot.conditions(), updates, locationStatus);
-        var assessment = dialogueService.assess(input);
+        var assessment = dialogueService.decide(input);
         if (assessment.action() == Action.ASK) {
-            // 답을 기다리는 질문이 있으면 모델을 다시 호출하지 않는다.
+            // 답을 기다리는 질문이 있으면 새 질문을 만들지 않는다.
             stateStore
                     .findPendingClarificationMessageId(
                             sessionId, requestId, assessment.waitingField())
@@ -147,11 +146,6 @@ public class ConsultService {
                             messageId -> {
                                 throw new ClarificationAlreadyPending(messageId);
                             });
-            return new PreparedTurn(
-                    sessionId,
-                    snapshot.version(),
-                    dialogueService.decide(input),
-                    snapshot.clarificationPlan());
         }
         return new PreparedTurn(
                 sessionId, snapshot.version(), assessment, snapshot.clarificationPlan());

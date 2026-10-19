@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ConsultationQuestion;
 import com.telme.chat.service.ChatProcessingCommand;
 import com.telme.chat.service.ChatQuestionResolver;
 import com.telme.chat.entity.ChatMessage;
@@ -58,6 +59,10 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 || context.userMessageId() != command.inputMessageId()) {
             throw new IllegalArgumentException("분석할 사용자 메시지가 일치하지 않습니다.");
         }
+        // 순수 인사는 문맥 복원이나 조건 실패 판정 전에 처리한다. 좌표 입력은 상담 처리에 남긴다.
+        ChatAnswer basicAnswer = command.coordinates() == null
+                ? BasicConversationAnalysisProvider.answerFor(context) : null;
+        if (basicAnswer != null) return AnalyzedTurn.direct(basicAnswer);
         if (context.candidates().isEmpty()) {
             context = resolveQuestion(command, context);
             if (context == null) {
@@ -115,7 +120,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 resolution = new Resolution(resolution.candidate(), updates);
             }
             // 라우팅이 모르는 FAQ 조건은 되묻기에 실어 보낸 선택지로 채운다
-            resolution = FaqClarificationAnswers.fill(resolution, context.message());
+            resolution = FaqClarificationAnswers.fill(resolution, ConsultationQuestion.extract(context.message()));
             // 재질문에도 답이 없으면 거절로 처리
             if (resolution.updates().isEmpty()
                     && resolution.candidate().reasks() >= ClarificationReask.MAX_REASKS) {
@@ -155,8 +160,8 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
                 purpose(result.initialQuery().intent().name()),
                 context.message(),
                 result.initialQuery().queryText()).withContext(context.routingContext(),
-                        context.message().equals(context.resolvedQuestion())
-                                ? context.message() : result.initialQuery().queryText());
+                        context.historyResolved()
+                                ? result.initialQuery().queryText() : context.resolvedQuestion());
     }
 
     private Context resolveQuestion(ChatProcessingCommand command, Context context) {
@@ -167,7 +172,7 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         if (resolution.needsClarification()) {
             return null;
         }
-        return context.withResolvedQuestion(resolution.question())
+        return context.withResolution(resolution.question(), !resolution.sourceMessageIds().isEmpty())
                 .withRoutingContext(resolver.contextFor(resolution, context.routingContext()));
     }
 

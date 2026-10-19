@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@Tag(name = "Chat Speech", description = "챗봇 답변 음성 듣기 API")
+@Tag(name = "Chat Speech", description = "챗봇 음성 듣기·말하기 API")
 @Validated
 @RestController
 @RequiredArgsConstructor

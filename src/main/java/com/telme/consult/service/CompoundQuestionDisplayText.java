@@ -1,6 +1,7 @@
 package com.telme.consult.service;
 
 import com.telme.intent.service.RoutingQuestionNormalizer;
+import com.telme.chat.service.ConsultationQuestion;
 
 /**
  * 복합 질문의 검색어는 라우팅 정규화 값을 유지하되, 화면에는 고객이 입력한 띄어쓰기 구간을 보여 준다.
@@ -13,6 +14,7 @@ final class CompoundQuestionDisplayText {
                 || queryText == null || queryText.isBlank()) {
             return queryText;
         }
+        originalQuestion = ConsultationQuestion.extract(originalQuestion);
         String target = RoutingQuestionNormalizer.normalize(queryText);
         if (target.isBlank()) {
             return queryText;

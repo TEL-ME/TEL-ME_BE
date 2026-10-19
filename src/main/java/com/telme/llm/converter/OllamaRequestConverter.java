@@ -65,6 +65,8 @@ public class OllamaRequestConverter {
             case CONDITION_EXTRACT -> new Defaults(0.0, 500);
             case SUMMARY -> new Defaults(0.3, 512);
             case SESSION_TITLE -> new Defaults(0.2, 32);
+            // 근거 판정(rag.evidence-check) 기본값
+            case EVIDENCE_CHECK -> new Defaults(0.0, 300);
         };
     }
 

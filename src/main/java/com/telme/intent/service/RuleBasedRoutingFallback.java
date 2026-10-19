@@ -4,6 +4,8 @@ import static com.telme.intent.dto.res.FollowUpRouteResponse.LOCATION_KEY;
 import static com.telme.intent.dto.res.FollowUpRouteResponse.SERVICE_TYPE_KEY;
 
 import com.telme.consult.entity.ConsultRequest;
+import com.telme.chat.service.ConsultationQuestion;
+import com.telme.chat.service.ConversationInput;
 import com.telme.intent.dto.res.LlmFollowUpPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ConditionPayload;
 import com.telme.intent.dto.res.LlmFollowUpPayload.ResponseType;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -50,7 +53,7 @@ public class RuleBasedRoutingFallback {
     // "네", "음"처럼 호응만 하는 답변이 지역으로 잡히면 되묻기를 유지하지 못한다.
     // "네거리"를 거르지 않도록 답변 전체가 호응일 때만 막는다
     private static final Pattern ACK_ONLY_PATTERN = Pattern.compile(
-        "^(네|넵|예|응|음|어|아|그래|알겠|오케이|ok|okay)[요오은는\\s.!~]*$",
+        "^(네|넵|예|응|음|어|아|그래|알겠|오케이|ok|okay)[요오은는\\s,.!~，:：;；?？]*$",
         Pattern.CASE_INSENSITIVE
     );
 
@@ -84,8 +87,16 @@ public class RuleBasedRoutingFallback {
         "기기변경", "번호이동", "부가서비스", "결합", "데이터",
         "요금", "개통", "해외", "명의", "가입", "혜택", "재발급", "분실", "택배",
         "통신", "휴대폰", "핸드폰", "폰", "단말", "할부", "통화", "청구", "납부", "인터넷", "번호", "보험",
-        "5G", "LTE", "USIM", "이심", "유플러스", "U+"
+        "5G", "LTE", "USIM", "이심", "TELME", "텔미", "유플러스", "U+"
     );
+
+    // 업무 이름 뒤에 붙는 서술·인용 어미. 동사 어미("하려고요")는 넣지 않는다
+    private static final Pattern SHORT_REPLY_ENDING = Pattern.compile(
+        "\\s*(?:이라고요|라고요|이라고|라고|이에요|예요|입니다|이요|요)?[\\s.!~]*$");
+    // 업무 이름만으로 된 말. 띄어쓰기는 달라도 된다
+    private static final Pattern SERVICE_NAME_ONLY = Pattern.compile(
+        "(?:유심|USIM|이심|eSIM)\\s*(?:재발급|교체|변경)?|명의\\s*변경|번호\\s*이동|신규\\s*개통",
+        Pattern.CASE_INSENSITIVE);
 
     private record ServiceTypeRule(String code, Pattern pattern) {}
 
@@ -137,7 +148,8 @@ public class RuleBasedRoutingFallback {
             && STORE_LOOKUP_PATTERN.matcher(text).find()
             && (!STORE_VISIT_POLICY_PATTERN.matcher(text).find()
                 || STORE_RESULT_REQUEST_PATTERN.matcher(text).find());
-        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(text::contains)
+        String upperText = text.toUpperCase(Locale.ROOT);
+        boolean hasFaq = FAQ_KEYWORDS.stream().anyMatch(keyword -> upperText.contains(keyword.toUpperCase(Locale.ROOT)))
             || CANCEL_SERVICE_PATTERN.matcher(text).find()
             || (!hasStore && STORE_ENTITY_PATTERN.matcher(text).find()
                 && (text.contains("방문") || text.contains("처리") || text.contains("가능")));
@@ -179,7 +191,10 @@ public class RuleBasedRoutingFallback {
             return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
         }
 
-        String reply = text.trim();
+        String reply = ConsultationQuestion.extract(text).strip();
+        if (!ConversationInput.hasSemanticContent(reply)) {
+            return new LlmFollowUpPayload(ResponseType.DEFERRED, Collections.emptyList());
+        }
 
         if (DECLINE_PATTERN.matcher(reply).find()) {
             Set<String> declinedKeys = (pendingKeys == null || pendingKeys.isEmpty())
@@ -224,7 +239,8 @@ public class RuleBasedRoutingFallback {
             return matcher.group();
         }
         // 길면 지역이 아닌 다른 발화로 보고 되묻기를 유지한다
-        if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")) {
+        if (reply.length() > BARE_LOCATION_MAX_LENGTH || reply.contains("?")
+                || reply.codePoints().noneMatch(Character::isLetter)) {
             return null;
         }
         // 기준점 표현이 있으면 그 앞의 실제 지명만 받는다("판교 근처요" -> 판교, "현재 위치에서 찾아줘" -> 없음)
@@ -279,6 +295,20 @@ public class RuleBasedRoutingFallback {
                 .map(ServiceTypeOption::code)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 업무 이름에 "이요", "이라고", "입니다" 같은 어미만 붙은 짧은 답이면 그 업무 코드, 아니면 null.
+     * 버튼 문구와 글자가 조금 달라도 같은 답이다("명의변경이라고", "유심 재발급이요"). 모델은 이런 답을
+     * 새 질문으로 읽는 경우가 있다(TELME-175 4단계). "하려고요"처럼 동사가 붙은 답과 다른 말이 섞인 답은 모델이 읽는다
+     */
+    public String serviceTypeOfShortReply(String reply) {
+        String option = serviceTypeOfOption(reply);
+        if (option != null || reply == null) {
+            return option;
+        }
+        String core = SHORT_REPLY_ENDING.matcher(reply.strip()).replaceFirst("").strip();
+        return SERVICE_NAME_ONLY.matcher(core).matches() ? serviceTypeOf(core) : null;
     }
 
     boolean hasServiceTypeMention(String text) {
