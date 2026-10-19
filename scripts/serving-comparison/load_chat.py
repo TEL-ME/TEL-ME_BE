@@ -71,7 +71,9 @@ def run_one(base, case, timeout, poll):
                 return {**row, "status": "OK", "seconds": round(time.time() - started, 2), "sessionId": session_id,
                         "types": [m.get("messageType") for m in replies],
                         "basis": [m.get("answerBasis") for m in replies],
-                        "chars": sum(len(m.get("content") or "") for m in replies)}
+                        "chars": sum(len(m.get("content") or "") for m in replies),
+                        # 정확도 비교(T4)에서 Judge로 채점할 수 있게 답 내용도 남긴다
+                        "content": "\n---\n".join(m.get("content") or "" for m in replies)}
             time.sleep(poll)
         return {**row, "status": "TIMEOUT", "seconds": timeout, "sessionId": session_id}
     except Exception as error:  # 측정은 계속한다. 실패 원인은 결과에 남긴다
