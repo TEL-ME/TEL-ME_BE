@@ -232,8 +232,14 @@ class SuggestedQuestionRecommenderTest {
                 new ClassPathResource(SuggestedQuestionRecommender.POLICY_LINKS_PATH).getInputStream()) {
             links = MAPPER.readValue(in, PolicyLinks.class);
         }
+        // 재측정마다 목록이 바뀌므로 특정 FAQ 대신 실측 목록이 비지 않고 불러와졌는지만 본다
+        FaqRules rules;
+        try (InputStream in =
+                new ClassPathResource(SuggestedQuestionRecommender.FAQ_RULES_PATH).getInputStream()) {
+            rules = MAPPER.readValue(in, FaqRules.class);
+        }
 
-        assertThat(recommender.isUnanswerable("PLAN-0091")).isTrue();
+        assertThat(rules.unanswerableSlotIds()).isNotEmpty().allMatch(recommender::isUnanswerable);
         assertThat(links.representativeQuestions().values())
                 .noneMatch(rep -> recommender.isUnanswerable(rep.slotId()));
     }

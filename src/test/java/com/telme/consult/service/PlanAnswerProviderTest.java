@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ExecutionTrace;
@@ -21,12 +22,15 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 
 class PlanAnswerProviderTest {
 
@@ -301,22 +305,22 @@ class PlanAnswerProviderTest {
     }
 
     @Test
-    void 후속_질문_버튼_문구는_추천이나_내_정보_답변으로_가져가지_않는다() {
-        String button = "요금제가 너무 많아서 뭐가 뭔지 모르겠어요";
+    void 후속_질문_버튼_문구는_추천이나_내_정보_답변으로_가져가지_않는다() throws IOException {
+        String button = planButton();
         for (PlanQuestionType type : List.of(PlanQuestionType.RECOMMENDATION, PlanQuestionType.MY_USAGE,
                 PlanQuestionType.MY_SUBSCRIPTION)) {
             when(classifier.classify(anyLong(), any())).thenReturn(type);
 
             assertThat(provider.prepare(input(button), true)).isEqualTo(Prepared.none());
             assertThat(provider.generate(input(button))).isEqualTo(FAQ_ANSWER);
-            assertThat(provider.generate(input("요금제가 너무 많아서  뭐가 뭔지 모르겠어요 "))).isEqualTo(FAQ_ANSWER);
+            assertThat(provider.generate(input(button.replace(" ", "  ") + " "))).isEqualTo(FAQ_ANSWER);
         }
         verifyNoInteractions(recommendation, member);
     }
 
     @Test
-    void 후속_질문_버튼_문구도_요금제_목록_질문이면_요금제_표로_답한다() {
-        String button = "요금제가 너무 많아서 뭐가 뭔지 모르겠어요";
+    void 후속_질문_버튼_문구도_요금제_목록_질문이면_요금제_표로_답한다() throws IOException {
+        String button = planButton();
         when(classifier.classify(1L, button)).thenReturn(PlanQuestionType.PLAN_CATALOG);
 
         assertThat(provider.generate(input(button)).answer().content()).isEqualTo("요금제 안내예요.");
@@ -362,5 +366,13 @@ class PlanAnswerProviderTest {
 
     private static AnswerInput input(String question) {
         return new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of());
+    }
+
+    // 대표 질문은 재측정 때 바뀌므로 실제 버튼 데이터에서 요금제 대표 질문을 읽는다
+    private static String planButton() throws IOException {
+        try (InputStream in = new ClassPathResource("suggested-question/policy-links.json").getInputStream()) {
+            return new ObjectMapper().readTree(in).path("representativeQuestions").path("PLAN-01")
+                    .path("question").asText();
+        }
     }
 }
