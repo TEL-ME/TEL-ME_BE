@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 1 | 문맥 해석 | `ChatQuestionResolver` | **gpt-oss 확정**, 설정 추가 | `CHAT_QUESTION_RESOLUTION_BEDROCK` (true) | [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md). 켜면 흔들림 보완도 함께 켜진다. 비용 항목 목록의 `위약금` 누락은 프롬프트를 고치면 재측정이 필요해 아직 손대지 않았다 |
 | 2 | 의도 분류 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | [ROUTING_CALL_COMPARISON.md](ROUTING_CALL_COMPARISON.md) 1단계 |
-| 3 | 요청 개수 판정 | `QueryRoutingService` | **하지 않음**(gpt-oss 전환 시 끔) | `ROUTING_REQUEST_INVENTORY_ENABLED` (false) | 같은 문서 2단계. 호출 자체를 하지 않는다(엑사원이 하는 것이 아니다). 라우팅을 엑사원으로 되돌리면 true로 켠다. 켜 둔 채 Bedrock으로 라우팅하면 시작할 때 경고 로그를 남긴다 |
+| 3 | 요청 개수 판정 | `QueryRoutingService` | **라우팅이 gpt-oss면 하지 않음, 엑사원이면 함** | `ROUTING_REQUEST_INVENTORY_ENABLED` (비움 = 라우팅 모델을 따라감) | 같은 문서 2단계. 호출 자체를 하지 않는다(엑사원이 하는 것이 아니다). 시작할 때 라우팅이 엑사원이면(`ROUTING_BEDROCK=false`, `LLM_BEDROCK_ENABLED=false`, 키 없음) 자동으로 켠다. 값을 직접 줘서 라우팅 모델과 어긋나면 시작할 때 경고 로그를 남긴다. 장애로 호출 단위로 엑사원이 되는 경우는 따라가지 못한다 |
 | 4 | 검색어 검증 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | 같은 문서 3단계 |
 | 5 | 후속 분석 | `QueryRoutingService` | **gpt-oss 확정**, 설정 추가 | `ROUTING_BEDROCK` (true) | 같은 문서 4단계 |
 | 6 | 요금제 질문 분류 | `PlanQuestionClassifier` | **gpt-oss 확정**, 설정 추가 | `CONSULT_PLAN_QUESTION_BEDROCK` (true) | [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md). 185턴 중 엑사원 154(3회 같음), gpt-oss 164~166. gpt-oss 호출당 p50 0.60초(엑사원 시간은 배포 환경에서 잰다). 출력 한도를 30에서 512로 올렸다 |
@@ -35,7 +35,7 @@ TELME-194부터 1·2·4·5·6·7·10·11·13·14·15번은 기본으로 gpt-oss(
 | 문맥 해석 | `CHAT_QUESTION_RESOLUTION_BEDROCK` | `chat.question-resolution.bedrock` | true | false면 엑사원. 흔들림 보완도 함께 꺼진다 |
 | 문맥 흔들림 보완 | `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS` | `chat.question-resolution.stability-guards` | false | 위 bedrock이 true면 이 값과 관계없이 켜진다 |
 | 라우팅(의도 분류, 검색어 검증, 후속 분석, 켠 경우 요청 개수 판정) | `ROUTING_BEDROCK` | `telme.routing.bedrock` | true | false면 모두 엑사원 |
-| 요청 개수 판정 | `ROUTING_REQUEST_INVENTORY_ENABLED` | `telme.routing.request-inventory-enabled` | false | true면 판정을 한다. 라우팅이 엑사원일 때 켠다 |
+| 요청 개수 판정 | `ROUTING_REQUEST_INVENTORY_ENABLED` | `telme.routing.request-inventory-enabled` | 비움 | 비우면 라우팅이 gpt-oss일 때 끄고 엑사원일 때 켠다. true/false를 주면 그 값을 쓴다 |
 | 요금제 질문 분류 | `CONSULT_PLAN_QUESTION_BEDROCK` | `telme.consult.plan-question.bedrock` | true | false면 엑사원 |
 | 조건 뽑기 | `CONSULT_FAQ_CLARIFICATION_BEDROCK` | `telme.consult.faq-clarification.bedrock` | true | false면 엑사원 |
 | 비교 근거 검증 | `CONSULT_COMPARISON_EVIDENCE_BEDROCK`(없으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`) | `telme.consult.evidence-resolver.comparison-bedrock` | true | false면 엑사원 |
@@ -62,13 +62,14 @@ TELME-194부터 1·2·4·5·6·7·10·11·13·14·15번은 기본으로 gpt-oss(
 - 라우팅 호출 4개는 같은 클라이언트를 쓰므로 `ROUTING_BEDROCK`으로 한꺼번에 바꾸고, 호출별로 나눌 수 없다.
 - 요청 개수 판정은 의도 분류가 FAQ 하위 질문을 2개 이상으로 나눴을 때 "정말 요청이 여러 개인가"를 한 번 더 확인해 잘못 나눈 것을 합치는 호출이다. EXAONE의 과잉 분해를 막으려고 넣었다. gpt-oss는 정확하게 나눠서 이 판정이 맞게 나눈 질문을 약 10% 다시 합치므로 하지 않는다(TELME-182 결정).
 - 하지 않으면 의도 분류가 나눈 개수를 그대로 쓰고, 하위 질문마다 서로 다른 원문 근거가 있는지만 코드 규칙(`IndependentQuestionPolicy`)으로 확인한다. 단독 비교 질문 보정 규칙과 검색어 검증은 그대로 돈다.
-- 라우팅을 엑사원으로 되돌리면(`ROUTING_BEDROCK=false`) 요청 개수 판정도 true로 켠다. `ROUTING_BEDROCK=true`인데 판정이 켜져 있으면 시작할 때 경고 로그를 남긴다.
+- 라우팅을 엑사원으로 되돌리면(`ROUTING_BEDROCK=false` 등) 요청 개수 판정은 자동으로 켜진다. 값을 직접 줘서 라우팅 모델과 어긋나면(gpt-oss인데 켬, 엑사원인데 끔) 시작할 때 경고 로그를 남긴다.
 
 ### 동작 방식
 
 - `QueryRoutingService`는 `routingLlmClient`(`RoutingLlmConfiguration`)를, `ChatQuestionResolver`는 `contextResolutionLlmClient`(`ChatQuestionResolutionLlmConfiguration`)를, `PlanQuestionClassifier`는 `planQuestionLlmClient`(`PlanQuestionConfiguration`)를, `RagAnswerGenerator`는 `ragAnswerLlmClient`(`RagAnswerLlmConfiguration`)를 이름으로 주입받는다. 이름 붙은 클라이언트만 바꾸므로 다른 호출의 기본 모델은 그대로 EXAONE이다.
 - Bedrock 빈이 없으면(`LLM_BEDROCK_ENABLED=false`) 플래그가 켜져 있어도 EXAONE을 쓴다.
 - **대체는 호출마다 따로 판단하고 실패를 기억하지 않는다.** 라우팅이 엑사원으로 대체되어도 다음 호출(조건 뽑기, 답변 생성 등)은 다시 Bedrock부터 시도한다. Bedrock 전체가 응답하지 않으면 호출마다 먼저 Bedrock을 시도한 뒤 엑사원으로 가며, 응답이 오지 않는 시간 초과는 호출마다 최대 8초(`LLM_BEDROCK_TIMEOUT`)를 기다린다. 한 턴에 이 지연이 쌓여 40~85초가 걸렸다(아래 "Bedrock 장애 시 동작 확인").
+- **키가 없으면 시작할 때 경고한다.** `AWS_BEARER_TOKEN_BEDROCK`이 없으면 모든 Bedrock 호출이 실패해 조용히 엑사원으로 도므로 앱이 뜬 뒤 경고 로그를 한 번 남긴다(`BedrockCredentialsCheck`). 키 값이 맞는지는 호출해 봐야 알 수 있어 확인하지 않는다(키가 틀리면 호출마다 약 0.3초 만에 실패하고 ERROR 로그가 남는다).
 - 라우팅이 엑사원으로 대체되는 동안에는 요청 개수 판정이 꺼져 있어 엑사원의 과잉 분해를 막는 모델 검사가 없다(하위 질문 원문 근거 확인 규칙은 동작한다). 한 요청 질문 9개 중 판정을 끄면 7개가 잘못 나뉘거나 거절됐고 켜면 2개였다(아래 C).
 - Bedrock 키(`AWS_BEARER_TOKEN_BEDROCK`)가 없으면 Bedrock 호출이 실패해 엑사원으로 대체된다. 로컬에서 키 없이 쓰려면 `SEARCH_GRAY_ZONE_ENABLED=false`와 `LLM_BEDROCK_ENABLED=false`를 함께 준다. 하나만 끄면 앱이 뜨지 않거나 판정이 실패한다.
 - 답변 생성은 스트리밍이다. Bedrock 클라이언트는 답을 다 받은 뒤 한 번에 보내므로(TELME-182 B 입력에서 gpt-oss 호출 중앙값 0.44초) 글자가 나눠서 나오지 않는다. 첫 글자를 보내기 전에 Bedrock이 실패하면 같은 요청을 엑사원 스트리밍으로 다시 부른다(`FallbackLlmClient`). 글자가 나간 뒤에는 대체하지 않는다.

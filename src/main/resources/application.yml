@@ -244,11 +244,11 @@ telme:
     demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
   routing:
     # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
-    # gpt-oss 의도 분류는 맞게 나뉜 질문을 이 판정이 다시 합치므로 하지 않는다. 라우팅을 엑사원으로 되돌리면 true로 켠다
-    # (docs/ROUTING_CALL_COMPARISON.md 2단계)
-    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:false}
+    # 비워 두면 라우팅 모델을 따라간다: gpt-oss(Bedrock)면 하지 않고(맞게 나뉜 질문을 다시 합치므로), 엑사원이면 한다
+    # (docs/ROUTING_CALL_COMPARISON.md 2단계). true/false를 주면 그 값을 쓴다
+    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:}
     # 라우팅 호출 4개(의도 분류, 요청 개수 판정, 검색어 검증, 후속 분석)를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다.
-    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). false면 엑사원이고 이때는 위 요청 개수 판정을 true로 켠다
+    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). false면 엑사원이고 이때는 위 요청 개수 판정이 켜진다
     bedrock: ${ROUTING_BEDROCK:true}
 
 speech:

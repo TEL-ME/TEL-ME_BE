@@ -62,7 +62,7 @@ class BedrockFlagDefaultsTest {
         runner.run(context -> {
             RoutingLlmProperties routing = context.getBean(RoutingLlmProperties.class);
             assertThat(routing.bedrock()).isTrue();
-            assertThat(routing.requestInventoryEnabled()).isFalse();
+            assertThat(routing.requestInventoryEnabled()).isNull();
             assertThat(context.getBean(ChatQuestionResolutionProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(PlanQuestionProperties.class).bedrock()).isTrue();
             assertThat(context.getBean(FaqClarificationProperties.class).bedrock()).isTrue();
