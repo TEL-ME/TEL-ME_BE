@@ -53,7 +53,7 @@ final class ChatEndSummaryGroundedGenerator {
             for (var period : original.path("topics")) {
                 boolean quote = period.path("text").asText().startsWith("고객이 언급한 기간(원문): ");
                 boolean absorbed = groups.stream().anyMatch(group -> !group.periodContext().isBlank()
-                        && period.path("text").asText().endsWith(group.periodContext()));
+                        && group.sourceMessageIds().containsAll(extractSourceIds(period)));
                 if (quote && !absorbed) {
                     topics.add(period);
                 }
@@ -106,6 +106,12 @@ final class ChatEndSummaryGroundedGenerator {
         return List.copyOf(result);
     }
 
+    private List<Long> extractSourceIds(com.fasterxml.jackson.databind.JsonNode item) {
+        List<Long> result = new ArrayList<>();
+        item.path("sourceMessageIds").forEach(value -> result.add(value.asLong()));
+        return List.copyOf(result);
+    }
+
     private String convertToRecordTone(String text) {
         return text.replace("방문해 주시기 바랍니다.", "방문하는 절차를 안내받았습니다.")
                 .replace("방문해 주세요.", "방문하는 절차를 안내받았습니다.");
@@ -118,14 +124,16 @@ final class ChatEndSummaryGroundedGenerator {
         String compact = context.replaceAll("\\s+", "");
         var self = java.util.regex.Pattern.compile("(?:저는|본인).*?([0-9]+(?:개월|년))").matcher(compact);
         var family = java.util.regex.Pattern.compile("어머니.*?([0-9]+(?:개월|년))").matcher(compact);
-        if (self.find() && family.find() && compact.contains("가입")) {
+        if (self.find() && family.find() && compact.contains("가입")
+                && ChatEndSummaryPeriodContext.canStatePeriod(context)) {
             return "고객이 말한 가입 기간은 본인 " + self.group(1) + ", 어머니 " + family.group(1) + "입니다. ";
         }
         var periods = java.util.regex.Pattern.compile("[0-9]+(?:개월|년)").matcher(compact).results()
                 .map(java.util.regex.MatchResult::group).toList();
         boolean scopedSubject = java.util.regex.Pattern.compile(
                 "어머니|엄마|아버지|아빠|배우자|자녀|남편|아내|회선|명의자|대리인").matcher(compact).find();
-        if (periods.size() == 1 && compact.contains("가입") && !scopedSubject) {
+        if (periods.size() == 1 && compact.contains("가입") && !scopedSubject
+                && ChatEndSummaryPeriodContext.canStatePeriod(context)) {
             return "고객은 가입 기간이 " + periods.getFirst() + "이라고 말씀하셨습니다. ";
         }
         // 대상이나 정정 관계를 단순 규칙으로 확정할 수 없으면 원문을 그대로 남긴다.

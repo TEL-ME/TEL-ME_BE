@@ -7,6 +7,29 @@ import org.junit.jupiter.api.Test;
 
 class ChatEndSummarySourceTextTest {
     @Test
+    @DisplayName("기간 대상과 정정값이 문장이나 줄바꿈으로 나뉘어도 원문을 함께 추출한다")
+    void 분리된_기간_정정의_대상과_값을_보존한다() {
+        assertThat(ChatEndSummarySourceText.extractPeriodQuotes(
+                "가입 기간을 정정할게요. 18개월이 아니라 24개월입니다."))
+                .containsExactly("가입 기간을 정정할게요. 18개월이 아니라 24개월입니다.");
+        assertThat(ChatEndSummarySourceText.extractPeriodQuotes("약정 기간을 정정합니다.\n12개월이 아니라 2년입니다."))
+                .containsExactly("약정 기간을 정정합니다. 12개월이 아니라 2년입니다.");
+        assertThat(ChatEndSummarySourceText.extractPeriodQuotes("가입 18개월이라고 잘못 말했어요. 24개월입니다."))
+                .containsExactly("가입 18개월이라고 잘못 말했어요. 24개월입니다.");
+    }
+
+    @Test
+    @DisplayName("기간 대상 뒤 다른 사람의 값을 임의로 같은 정정으로 연결하지 않는다")
+    void 문장_경계의_다른_대상을_합치지_않는다() {
+        assertThat(ChatEndSummarySourceText.extractPeriodQuotes(
+                "제 가입 기간을 정정할게요. 어머니는 24개월입니다."))
+                .isEmpty();
+        assertThat(ChatEndSummarySourceText.extractPeriodQuotes(
+                "가입 기간을 확인합니다. 24개월 요금제의 비용은 7,700원입니다."))
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("고정 주제 확인 요청만 확인 질문으로 구분하고 일반 답변은 유지한다")
     void 고정_확인_요청을_안내로_취급하지_않는다() {
         String question = "어떤 내용에 대한 질문인지 확인이 필요합니다. "

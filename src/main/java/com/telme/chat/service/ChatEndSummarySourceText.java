@@ -48,9 +48,30 @@ final class ChatEndSummarySourceText {
     }
 
     static List<String> extractPeriodQuotes(String text) {
-        return splitSentences(text).stream()
-                .filter(sentence -> PERIOD.matcher(sentence).find() && CONTRACT.matcher(sentence).find())
-                .distinct().toList();
+        List<String> sentences = splitSentences(text);
+        List<String> quotes = new ArrayList<>();
+        for (int index = 0; index < sentences.size(); index++) {
+            String sentence = sentences.get(index);
+            if (!CONTRACT.matcher(sentence).find()) {
+                continue;
+            }
+            boolean joined = false;
+            if (index + 1 < sentences.size()) {
+                String next = sentences.get(index + 1);
+                if (PERIOD.matcher(next).find() && !CONTRACT.matcher(next).find()
+                        && ChatEndSummaryPeriodContext.isCorrection(sentence + " " + next)
+                        && ChatEndSummaryInquiryLinker.hasSameClarificationScope(sentence, next)) {
+                    // 정정 대상과 새 값이 문장 경계로 나뉘어도 두 원문을 함께 보존한다.
+                    quotes.add(sentence + " " + next);
+                    index++;
+                    joined = true;
+                }
+            }
+            if (!joined && PERIOD.matcher(sentence).find()) {
+                quotes.add(sentence);
+            }
+        }
+        return quotes.stream().distinct().toList();
     }
 
     static String extractClarificationQuestion(String text) {

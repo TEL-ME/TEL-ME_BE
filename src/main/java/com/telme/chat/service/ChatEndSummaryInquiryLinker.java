@@ -9,10 +9,12 @@ import java.util.regex.Pattern;
 final class ChatEndSummaryInquiryLinker {
     private static final Pattern FOLLOWUP = Pattern.compile(
             "그(?:럼|건|거|유심|재발급|교체|회선)|해당|아까|앞서|추가로|준비물|신분증|무료|비용|절차|방문");
+    private static final Pattern EXPLICIT_FOLLOWUP = Pattern.compile(
+            "같은문의|그문의|그안내|그조건|아까|앞서|방금|이전.*(?:문의|안내)|그럼");
     private static final Pattern RESET = Pattern.compile(
             "다른회선|다른번호|다른사람|다른(?:가족|(?:(?:친|사촌|큰|작은)?형)(?:님)?|(?:직장)?동료)"
                     + "|별도(?:의)?(?:회선|신청|문의)"
-                    + "|새(?:로운)?문의|새신청건|별개|다른질문|다른유심|다른기기");
+                    + "|새(?:로운)?문의|새신청건|별개|다른질문|다른유심|다른기기|다른요금제|다른상품|다른업무");
     private static final Pattern BACK_REFERENCE = Pattern.compile(
             "그건|그거|그유심|그재발급|그교체|그회선|아까.*(?:유심|회선)|앞서.*(?:유심|회선)");
     private static final Pattern VISITOR_REPLY = Pattern.compile(
@@ -52,9 +54,11 @@ final class ChatEndSummaryInquiryLinker {
             boolean correction = text.matches("(?s).*(?:정정|아니라|잘못말|확인해보니).*");
             boolean followup = FOLLOWUP.matcher(text).find();
             boolean backReference = BACK_REFERENCE.matcher(text).find();
-            if (domain.equals("UNKNOWN") && previous != null && previous.domain.equals("USIM")
-                    && followup && !reset) {
-                domain = "USIM";
+            boolean explicitFollowup = EXPLICIT_FOLLOWUP.matcher(text).find();
+            if (domain.equals("UNKNOWN") && previous != null && !reset
+                    && (previous.domain.equals("USIM") && followup
+                    || !previous.domain.equals("UNKNOWN") && explicitFollowup)) {
+                domain = previous.domain;
             }
             if (text.contains("로밍") && (text.contains("유심") || text.contains("esim"))) {
                 for (String kind : List.of("USIM", "ROAMING")) {
@@ -68,11 +72,13 @@ final class ChatEndSummaryInquiryLinker {
             }
             Episode target = null;
             boolean ambiguousReference = false;
-            if (!reset && domain.equals("USIM") && backReference) {
+            if (!reset && (domain.equals("USIM") && backReference
+                    || !domain.equals("UNKNOWN") && explicitFollowup)) {
                 List<Episode> candidates = new ArrayList<>();
                 for (var episode : episodes.values()) {
-                    if (episode.domain.equals("USIM")
-                            && isCompatible(episode, person, product, line, operation, true)) {
+                    if (episode.domain.equals(domain)
+                            && isContinuationCompatible(episode, person, product, line, operation,
+                                    domain.equals("USIM"))) {
                         candidates.add(episode);
                     }
                 }
@@ -85,8 +91,9 @@ final class ChatEndSummaryInquiryLinker {
             }
             if (target == null && !ambiguousReference && !reset && previous != null
                     && domain.equals(previous.domain)
-                    && isCompatible(previous, person, product, line, operation, backReference)) {
-                if ((domain.equals("USIM") && followup) || correction) {
+                    && isContinuationCompatible(previous, person, product, line, operation,
+                            domain.equals("USIM") && backReference)) {
+                if ((domain.equals("USIM") && followup) || explicitFollowup || correction) {
                     target = previous;
                 }
             }
@@ -160,6 +167,50 @@ final class ChatEndSummaryInquiryLinker {
                 identifyProduct(after), extractLine(after), identifyOperation(after), false);
     }
 
+    static boolean hasSamePeriodScope(ChatEndSummaryPeriodContext.Quote original,
+            ChatEndSummaryPeriodContext.Quote followup) {
+        if (RESET.matcher(normalizeText(followup.scope())).find()) {
+            return false;
+        }
+        var source = resolvePeriodScope(original);
+        var target = resolvePeriodScope(followup);
+        if (source.person.startsWith("MULTIPLE:") || target.person.startsWith("MULTIPLE:")) {
+            return false;
+        }
+        return isCompatible(source, target.person, target.product, target.line, "", false);
+    }
+
+    private static Episode resolvePeriodScope(ChatEndSummaryPeriodContext.Quote quote) {
+        String text = normalizeText(quote.text());
+        String scope = normalizeText(quote.scope());
+        String person = ChatEndSummaryPersonScope.createGroupingIdentity(quote.text());
+        if (person.isBlank()) {
+            person = ChatEndSummaryPersonScope.createGroupingIdentity(quote.scope());
+        }
+        String line = extractLine(text);
+        if (line.isBlank()) {
+            line = extractLine(scope);
+        }
+        String product = identifyProduct(text);
+        if (product.isBlank()) {
+            product = identifyProduct(scope);
+        }
+        return new Episode(0, "UNKNOWN", person.isBlank() ? "SELF" : person, product, line, "");
+    }
+
+    private static boolean isContinuationCompatible(Episode episode, String person, String product, String line,
+            String operation, boolean reference) {
+        if (isCompatible(episode, person, product, line, operation, reference)) {
+            return true;
+        }
+        // 명의 양도는 두 당사자의 한 업무이므로 명시한 같은 회선의 본인 참조만 예외로 연결한다.
+        return episode.domain.equals("NAME_CHANGE") && episode.person.startsWith("MULTIPLE:")
+                && List.of(episode.person.substring("MULTIPLE:".length()).split("\\|")).contains("SELF")
+                && person.equals("SELF") && !line.isBlank() && episode.line.equals(line)
+                && (product.isBlank() || episode.product.isBlank() || episode.product.equals(product))
+                && (operation.isBlank() || episode.operation.isBlank() || episode.operation.equals(operation));
+    }
+
     private static boolean isCompatible(Episode episode, String person, String product, String line,
             String operation, boolean reference) {
         // 같은 명시적 대상 집합끼리만 묶고 일부 대상이나 모호한 지시어로 축소하지 않는다.
@@ -194,18 +245,35 @@ final class ChatEndSummaryInquiryLinker {
     }
 
     private static String identifyOperation(String text) {
+        if (text.contains("요금제")) {
+            if (text.contains("추천")) {
+                return "PLAN_RECOMMEND";
+            }
+            if (text.contains("변경") || text.contains("바꾸")) {
+                return "PLAN_CHANGE";
+            }
+        }
         if (text.contains("최초등록") || text.contains("처음등록") || text.contains("활성화")) {
             return "ACTIVATE";
         }
         if (text.contains("재발급") || text.contains("분실")) {
             return "REISSUE";
         }
-        return text.contains("교체") ? "REPLACE" : "";
+        if (text.contains("교체")) {
+            return "REPLACE";
+        }
+        boolean refund = text.contains("환불");
+        boolean payment = text.contains("납부") || text.contains("납입") || text.contains("결제");
+        if (refund != payment) {
+            return refund ? "REFUND" : "PAYMENT";
+        }
+        return "";
     }
 
     private static String extractLine(String text) {
         var matcher = Pattern.compile(
-                "(?:첫번째|두번째|세번째|[0-9]+번|[ab])회선|회선(?:[ab]|[0-9]+번?)").matcher(text);
+                "(?:첫번째|두번째|세번째|(?<![a-z0-9])(?:[0-9]+번?|[a-z]))회선"
+                        + "|회선(?:[a-z]|[0-9]+번?)(?![a-z0-9])").matcher(text);
         if (!matcher.find()) {
             return "";
         }

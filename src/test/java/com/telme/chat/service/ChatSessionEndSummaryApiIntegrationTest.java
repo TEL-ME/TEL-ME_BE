@@ -681,6 +681,48 @@ class ChatSessionEndSummaryApiIntegrationTest {
         assertThat(metadata.get(fixture.answerId()).faqCategories()).isEmpty();
     }
 
+    @Test
+    @DisplayName("분리된 최신 기간 정정을 종료 요약의 같은 문의에 저장하고 재조회한다")
+    void 최신_가입_기간을_종료_저장과_조회에_반영한다() throws Exception {
+        var fixture = fixture(false, "제 회선 가입 기간은 18개월입니다. 유심 재발급 비용은요?",
+                "유심 재발급 비용은 7,700원입니다.");
+        long question = message(fixture.sessionId(), 3, "USER", "QUESTION",
+                "같은 유심 문의의 가입 기간을 정정할게요. 18개월이 아니라 24개월입니다.", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                "신분증을 지참해 매장을 방문합니다. 신청은 접수되지 않았습니다.", question);
+        jdbc.update("""
+                INSERT INTO chat_executions(session_id,input_message_id,output_message_id,status,ended_at)
+                VALUES (?,?,?,'COMPLETED',?)
+                """, fixture.sessionId(), question, answer, Timestamp.from(time.get()));
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE session_id=? AND role='ASSISTANT'",
+                fixture.sessionId());
+        when(client.generate(any())).thenAnswer(invocation -> {
+            com.telme.llm.dto.req.LlmRequest request = invocation.getArgument(0);
+            var prompt = mapper.readTree(request.userPrompt());
+            var selected = mapper.createObjectNode();
+            var topics = selected.putObject("topics");
+            prompt.path("requiredTopicMessageIds").forEach(id -> topics.put(id.asText(), "유심 문의"));
+            var ids = selected.putArray("selectedSentenceIds");
+            prompt.path("guidanceCandidates").forEach(item -> ids.add(item.path("sentenceId").asInt()));
+            selected.putArray("pendingItems");
+            return selected.toString();
+        });
+        close(fixture);
+
+        service.process(fixture.sessionId());
+
+        assertState(fixture, "COMPLETED");
+        mvc.perform(get(path(fixture)).session(fixture.actor()))
+                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].text")
+                        .value(org.hamcrest.Matchers.allOf(org.hamcrest.Matchers.containsString("24개월"),
+                                org.hamcrest.Matchers.containsString("신분증"),
+                                org.hamcrest.Matchers.containsString("매장"),
+                                org.hamcrest.Matchers.containsString("접수되지 않았습니다"),
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                                        "제 회선 가입 기간은 18개월입니다.")))));
+    }
+
     private void addFaqSource(Fixture fixture, String category, int citedVersion) {
         long faq = jdbc.queryForObject("""
                 INSERT INTO faqs(category,question,answer,version)

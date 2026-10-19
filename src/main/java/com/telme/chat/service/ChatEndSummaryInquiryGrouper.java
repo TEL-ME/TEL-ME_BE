@@ -79,7 +79,11 @@ final class ChatEndSummaryInquiryGrouper {
             // 한 사용자 발언이 여러 문의를 포함하면 기간을 임의의 상품에 붙이지 않는다.
             if (targets.size() == 1) {
                 var target = targets.getFirst();
-                target.periods.add(topic.path("text").asText().substring(prefix.length()));
+                String scope = topicIds.stream().filter(messages::containsKey).map(messages::get)
+                        .filter(message -> message.role().equals("USER"))
+                        .map(ChatEndSummaryData.Message::content).collect(java.util.stream.Collectors.joining(" "));
+                target.periods.add(new ChatEndSummaryPeriodContext.Quote(
+                        topic.path("text").asText().substring(prefix.length()), scope));
                 target.sources.addAll(topicIds);
             }
         }
@@ -149,7 +153,7 @@ final class ChatEndSummaryInquiryGrouper {
         private final List<String> texts = new ArrayList<>();
         private final Set<Long> sources = new LinkedHashSet<>();
         private final Set<Long> origins = new LinkedHashSet<>();
-        private final Set<String> periods = new LinkedHashSet<>();
+        private final List<ChatEndSummaryPeriodContext.Quote> periods = new ArrayList<>();
 
         private Inquiry build() {
             String last = texts.getLast();
@@ -158,7 +162,7 @@ final class ChatEndSummaryInquiryGrouper {
             // 문단 일부만 달라도 동일 문장은 반복하지 않는다. 조건이 다른 문장은 그대로 남긴다.
             String source = supersedes ? last : ChatEndSummarySourceText.deduplicate(texts);
             return new Inquiry(key, ChatEndSummaryInquiryTitle.create(purpose, String.join(" ", questions)),
-                    source, String.join(" ", periods),
+                    source, String.join(" ", ChatEndSummaryPeriodContext.latestScoped(periods)),
                     List.copyOf(sources), List.copyOf(questionSources), texts.size());
         }
     }
