@@ -523,7 +523,7 @@ public class AnswerGuard {
                 (value, sentence) -> isSafeUserReference(sentence));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 금액 발견: {}", invented);
-            throw new AnswerGuardException("근거에 없는 금액: " + invented);
+            throw new AnswerGuardException("근거에 없는 금액: " + invented, AnswerGuardException.Kind.AMOUNT);
         }
     }
 
@@ -536,7 +536,7 @@ public class AnswerGuard {
                         || isClockContrast(value, sentence, context));
         if (!invented.isEmpty()) {
             log.warn("[AnswerGuard] 근거에 없는 수치 발견: {}", invented);
-            throw new AnswerGuardException("근거에 없는 수치: " + invented);
+            throw new AnswerGuardException("근거에 없는 수치: " + invented, AnswerGuardException.Kind.MEASURE);
         }
     }
 

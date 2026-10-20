@@ -131,9 +131,11 @@ class AnswerGenerationProbe {
         }
         CapturingClient client = new CapturingClient(stored != null
                 ? new FakeClient(stored.path("rawAnswer").asText()) : clientFor(model, calls, input));
+        // ANSWER_PROBE_AMOUNT_RETRY=true면 가드가 금액으로 막은 답을 추론 강도 medium으로 한 번 다시 생성한다(TELME-205)
         var generator = new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(),
                 new EvidenceRelevanceChecker(client, mapper, new EvidenceCheckProperties(false, 300)),
-                Mockito.mock(LlmGenerationRecorder.class), ExecutionTrace.noop());
+                Mockito.mock(LlmGenerationRecorder.class), ExecutionTrace.noop(),
+                "true".equals(System.getenv("ANSWER_PROBE_AMOUNT_RETRY")));
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", input.path("id").asText());
         row.put("model", model);

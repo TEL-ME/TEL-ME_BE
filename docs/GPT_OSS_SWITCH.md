@@ -18,7 +18,7 @@
 | 10 | 비교 근거 검증 | `LlmComparisonEvidenceResolver` | **gpt-oss 확정**, 기본 켜짐(TELME-184) | `CONSULT_COMPARISON_EVIDENCE_BEDROCK` (주지 않으면 `CONSULT_EVIDENCE_RESOLVER_BEDROCK`, true) | [EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) "비교 근거 검증 재확인". 블라인드 양쪽 답 있음 19개에서 맞는 답 엑사원 1, gpt-oss 5~6, 틀린 답 0 |
 | 11 | 후보 근거 검증 | `LlmFaqCandidateEvidenceResolver` | **gpt-oss 확정**, TELME-184에서 수정(P7), 기본 켜짐 | `CONSULT_CANDIDATE_EVIDENCE_BEDROCK` (위와 같음, true), `CONSULT_CANDIDATE_EVIDENCE_JUDGE` (true) | 같은 문서 "복합 질문 입력 확인"(TELME-182, 수정 전 채택 1건)과 "후보 근거 검증 수정"(TELME-184). 수정 후 개발용 맞는 답 30 / 31 / 30, 블라인드 12 / 12 / 10. 문맥 해석이 후속 질문을 복원하지 못하면 틀린 답이 날 수 있다("후속 질문 확인") |
 | 12 | 근거 적합성 판정 | `EvidenceRelevanceChecker` | **꺼진 채로 둠**(TELME-182 결정) | `RAG_EVIDENCE_CHECK_ENABLED` (false) | 회색 구간(Q_A 0.69~0.80, 질문 0.80~0.90)은 9가 v4로 이미 판정한다. 겹치지 않는 것은 판정 없이 통과하는 높은 점수 구간뿐이다. 켜면 기본 `LlmClient`(엑사원)로 판정하므로, 다시 쓰려면 Bedrock 연결과 재측정이 먼저다 |
-| 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (true) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) 프롬프트는 TELME-194에서 금액 복사 규칙을 더해 v4.9가 됐다(아래 "답변 프롬프트 v4.9") |
+| 13 | 답변 생성 | `RagAnswerGenerator` | **gpt-oss 확정**(TELME-180), 설정 추가 | `RAG_ANSWER_BEDROCK` (true) | [채점 결과](chat-judge/results/20261018-answer-generation/README.md). 정답 근거 고정(A, 217개) 통과율 엑사원 43%, gpt-oss 73~74%. 결정된 앞단을 통과한 입력(B, 131개)은 Judge가 갈린 답을 사람이 판정해 엑사원 67%, gpt-oss 76~77%. B 입력과 두 모델 답변은 아래 "답변 생성 입력과 답변"(TELME-182) 프롬프트는 TELME-194에서 금액 복사 규칙을 더해 v4.9가 됐다(아래 "답변 프롬프트 v4.9"). 가드가 근거에 없는 금액으로 막으면 추론 강도 medium으로 한 번 다시 생성한다(TELME-205, `RAG_ANSWER_AMOUNT_RETRY`, 기본 켜짐) |
 | 14 | 세션 제목 | `ChatSessionTitleService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SESSION_TITLE_BEDROCK` (true) | 아래 "세션 제목". 출력 한도를 32에서 512로 올렸다(32에서는 제목이 비거나 잘렸다). 상담 종료 요약은 엑사원이다 |
 | 15 | 대화 요약 | `ChatSummaryService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SUMMARY_BEDROCK` (true) | 대화가 16개 메시지 또는 2,048토큰을 넘을 때만 도는 백그라운드 호출. 60사례 두 모델 같게 나왔고(60/60, [BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)) 그 측정도 출력 한도 512로 했다 |
 
@@ -226,9 +226,36 @@ gpt-oss가 짧은 `유심 재발급 비용` 질문에 근거(7,700원)와 다른
 - **한계**: gpt-oss는 같은 입력에도 흔들려 3회 범위로 본다. 가드 처리 비율로만 봤고 품질 채점(Judge)은 다시 하지 않았다. 변경은 한 줄이라 이 결과를 이 한 줄의 효과로 읽었지만, 입력 일부는 회차 간 흔들림 안에서 바뀐 것이다(예: EVAL-019 1회 근거 없음, EVAL-060 1회 막음).
 - **호출과 비용**: gpt-oss 1,065건(21 + 393 + 651, 모두 성공)과 엑사원 131건이다. 호출당 약 $0.0002로 곱해 $0.2 안팎으로 추정한다(실제 청구액은 확인하지 않았다).
 
+## 금액으로 막힌 답 다시 생성 (TELME-205)
+
+v4.9 뒤에도 남은 7,800원을 재현했다. 남아 있던 입력 3개(`유심 재발급 비용`, "그럼 비용은 얼마나 드나요?", "그럼비용은?")를 최신 develop(프롬프트 v4.9)의 `RagAnswerGenerator`에 각 10회 넣었다(gpt-oss Tokyo, 출력 한도 1,000). 조건만 바꿔 가며 원인을 좁혔다.
+
+| 조건 | 7,800원이 나온 답 |
+| --- | --- |
+| reasoning low(운영 설정) | 20/30 (입력별 2·8·10) |
+| reasoning medium | **0/30** |
+| low, 대화 이력 뺌 | 13/20 |
+| low, 질문을 문장으로("유심 재발급 비용이 얼마예요?") | 2/10 |
+| low, 금액 복사 규칙 없는 프롬프트(v4.8) | 24/30 |
+
+- **원인은 추론 강도다.** low에서 생각 과정은 매번 "cost 7,700원"으로 맞는데 최종 답에 "재발급 비용은 7,800원이 아니라 7,700원입니다"(20건 중 16건)처럼 근거에 없는 금액을 끼워 넣는다. low의 생각은 25자 안팎으로 짧다. 질문 형태와 대화 이력은 주원인이 아니다.
+- v4.9 금액 복사 규칙은 이 입력들에서 효과가 작았다(24/30 → 20/30). 위 "답변 프롬프트 v4.9" 절의 B·subset7 결과 파일은 호출 기록의 프롬프트 버전이 `rag-answer-v4.8`로 남아 있어(A만 v4.9) 그 절의 B 수치가 규칙을 넣은 프롬프트로 잰 것인지 분명하지 않다.
+- medium은 출력 토큰 중앙값 38 → 102, 호출 시간 중앙값 0.42초 → 0.74초다.
+
+답변 생성 전체를 medium으로 바꾸면 모든 답이 달라져 품질 채점을 다시 해야 하므로, **가드가 근거에 없는 금액으로 막았을 때만 그 호출을 medium으로 한 번 다시 생성**한다(`RagAnswerGenerator`, `rag.answer.amount-retry`, 환경 변수 `RAG_ANSWER_AMOUNT_RETRY`, 기본 켜짐). 또 막히면 지금처럼 안전 안내로 끝난다. 다시 생성이 실패하면(Bedrock 오류 등) 오류 없이 안전 안내로 끝난다. 수치(기간·횟수)로 막힌 답과 엑사원 답(`rag.answer.bedrock=false`)은 다시 부르지 않는다. 다시 생성은 실행 기록 `answerRetries`(사유, 추론 강도, 결과)와 호출 기록 `request_options.reasoningEffort`에 남는다.
+
+| 확인 | 입력 | 결과 |
+| --- | --- | --- |
+| 위 입력 3개, 다시 생성 켬 | 3개 × 10회 | **30/30 7,700원으로 답함**(20건이 다시 생성) |
+| 블라인드(별도 에이전트가 쓴 금액 FAQ 24개의 짧은 질문·후속 질문 48개, 같은 분야 금액 FAQ 2개를 함께 근거로) | 48개 × 3회 | 끔: 금액으로 막힘 1건(`유심 택배 비용` → 7,800원), 켬: 금액으로 막힘 0건이라 다시 생성 0건. 두 실행 모두 나머지 143건은 답함 |
+
+- 블라인드에서 7,800원은 유심 FAQ에서만 한 번 나왔다. 이 현상은 유심 재발급 금액(7,700원)에 몰려 있고, 다른 금액 질문의 평소 답은 다시 생성의 영향을 받지 않는다(144건 중 다시 생성 0건).
+- 한계: 가드가 잡지 못하는 숫자 오류(근거에 있는 다른 금액을 잘못 쓰는 경우)는 그대로다. 블라인드 켬 실행에서는 막힌 답이 나오지 않아 블라인드 문장으로 다시 생성의 효과를 보지는 못했다.
+- 비용: 재현과 확인을 합쳐 gpt-oss 약 450건, 약 $0.09(호출 기록의 토큰으로 계산, 실제 청구액은 확인하지 않음).
+- 결과: `scripts/answer-generation-evaluation/results/TELME-205-20261020/raw.tar.xz`(재현 `repro/`, 블라인드 `blind/`의 입력과 답변). 풀 때는 `tar -xJf raw.tar.xz`. 프로브 옵션은 `ANSWER_PROBE_REASONING`(추론 강도), `ANSWER_PROBE_RECORD_REASONING`(생각 과정 기록), `ANSWER_PROBE_AMOUNT_RETRY`(다시 생성)다.
+
 ## 남은 일
 
-- 13번(답변 생성): gpt-oss가 근거(7,700원)와 다른 `7,800원`을 쓰는 문제는 v4.9로 크게 줄었지만(B 가드 막음 31건에서 10건) 짧은 후속 질문("그럼 비용은?")에서 남아 있다.
 - 문맥 해석의 앞단 규칙(`REGEX_GATED`)이 대상이 빠진 후속 질문("그 기간에도 요금이 나와요?", "그동안 문자는 받을 수 있어요?")을 모델 없이 혼자 완결된 질문으로 넘긴다. 후속 질문 블라인드 30개 중 24개가 그랬다([EVIDENCE_RESOLVER_COMPARISON.md](EVIDENCE_RESOLVER_COMPARISON.md) "후속 질문 확인").
 - 요금제 질문 분류에서 두 모델이 같이 놓치는 내 정보 질문(28개 중 9개, [PLAN_QUESTION_MODEL.md](PLAN_QUESTION_MODEL.md)).
 - 전환을 모두 켠 구성으로 평가셋 v2.2와 대화 흐름 v2를 세 모델 Judge로 2~3회 잰다.

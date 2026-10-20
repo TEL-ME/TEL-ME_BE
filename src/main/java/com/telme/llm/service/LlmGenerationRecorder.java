@@ -82,6 +82,9 @@ public class LlmGenerationRecorder {
                 // null이면 클라이언트 기본값(Bedrock은 llm.bedrock.max-tokens, temperature 0)을 썼다는 뜻
                 metadata.put("temperature", request.temperature());
                 metadata.put("maxTokens", request.maxTokens());
+                if (request.reasoningEffort() != null) {
+                    metadata.put("reasoningEffort", request.reasoningEffort());
+                }
             }
             metadata.put("format", request.format().name());
             metadata.put("consultRequestId", request.consultRequestId());

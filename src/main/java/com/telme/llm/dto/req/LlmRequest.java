@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Builder
+@Builder(toBuilder = true)
 public record LlmRequest(
         // null이면 호출 기록을 남기지 않음
         Long executionId,
@@ -27,13 +27,15 @@ public record LlmRequest(
         // 응답을 제한할 JSON Schema. 지정하면 JSON 응답으로 요청한다. null이면 형식 제한 없음
         Map<String, Object> responseSchema,
         // false면 사고 모드를 지원하는 모델에서 끈다. null이면 모델 기본값
-        Boolean think
+        Boolean think,
+        // gpt-oss(Bedrock) 추론 강도(low, medium, high). null이면 llm.bedrock.reasoning-effort. 다른 모델은 쓰지 않는다
+        String reasoningEffort
 ) {
     public LlmRequest(Long executionId, TaskType taskType, String systemPrompt, String userPrompt,
             ResponseFormat format, Double temperature, Integer maxTokens, Integer contextCount,
             String promptVersion) {
         this(executionId, null, taskType, systemPrompt, userPrompt, format, temperature, maxTokens,
-                contextCount, promptVersion, null, null);
+                contextCount, promptVersion, null, null, null);
     }
 
     public LlmRequest {

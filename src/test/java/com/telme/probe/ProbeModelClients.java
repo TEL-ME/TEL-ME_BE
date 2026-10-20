@@ -28,7 +28,8 @@ import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
  * 모델 비교 프로브가 함께 쓰는 클라이언트. 엑사원(Ollama)과 gpt-oss(Bedrock)를 같은 방식으로 부르고 호출마다 기록한다.
  * gpt-oss는 앱의 BedrockClient와 같은 요청 변환을 쓰되 종료 사유·토큰·걸린 시간을 남긴다.
  * 환경 변수: ANSWER_PROBE_OLLAMA_URL, ANSWER_PROBE_OLLAMA_MODEL, LLM_BEDROCK_REGION, ANSWER_PROBE_MAX_TOKENS,
- * ANSWER_PROBE_TIMEOUT_SECONDS. Bedrock API 키는 AWS_BEARER_TOKEN_BEDROCK로 준다.
+ * ANSWER_PROBE_TIMEOUT_SECONDS, ANSWER_PROBE_REASONING(gpt-oss 추론 강도, 기본 low), ANSWER_PROBE_RECORD_REASONING(true면 생각 과정 기록).
+ * Bedrock API 키는 AWS_BEARER_TOKEN_BEDROCK로 준다.
  */
 final class ProbeModelClients {
     private static volatile BedrockRuntimeClient sharedRuntime;
@@ -63,7 +64,8 @@ final class ProbeModelClients {
         return new BedrockProperties(true, System.getenv().getOrDefault("LLM_BEDROCK_REGION", "ap-northeast-1"),
                 "openai.gpt-oss-120b-1:0",
                 Duration.ofSeconds(Long.parseLong(System.getenv().getOrDefault("ANSWER_PROBE_TIMEOUT_SECONDS", "60"))),
-                "low", Integer.parseInt(System.getenv().getOrDefault("ANSWER_PROBE_MAX_TOKENS", "1000")), 50,
+                System.getenv().getOrDefault("ANSWER_PROBE_REASONING", "low"),
+                Integer.parseInt(System.getenv().getOrDefault("ANSWER_PROBE_MAX_TOKENS", "1000")), 50,
                 Duration.ofSeconds(1));
     }
 
@@ -161,6 +163,13 @@ final class ProbeModelClients {
                 call.put("outputTokens", response.usage().outputTokens());
                 String output = response.output().message().content().stream().map(ContentBlock::text)
                         .filter(Objects::nonNull).collect(Collectors.joining()).strip();
+                // ANSWER_PROBE_RECORD_REASONING=true면 gpt-oss의 생각 과정(reasoningContent)도 남긴다(앱은 버린다)
+                if ("true".equals(System.getenv("ANSWER_PROBE_RECORD_REASONING"))) {
+                    call.put("reasoning", response.output().message().content().stream()
+                            .map(ContentBlock::reasoningContent).filter(Objects::nonNull)
+                            .map(block -> block.reasoningText() == null ? "" : block.reasoningText().text())
+                            .collect(Collectors.joining()).strip());
+                }
                 if (recordOutput) {
                     call.put("output", output);
                 }

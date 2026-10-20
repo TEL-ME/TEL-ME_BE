@@ -67,6 +67,14 @@ class RagAnswerLlmClientSelectionTest {
         assertThat(bind(Map.of("rag.answer.bedrock", "false")).bedrock()).isFalse();
     }
 
+    @Test
+    @DisplayName("금액 재시도는 기본 켜짐이고 설정 이름으로 끈다")
+    void 금액_재시도는_기본_켜짐() {
+        assertThat(bind(Map.of()).amountRetry()).isTrue();
+        assertThat(bind(Map.of("rag.answer.amount-retry", "false")).amountRetry()).isFalse();
+        assertThat(new RagAnswerProperties(true).amountRetry()).isTrue();
+    }
+
     private static RagAnswerProperties bind(Map<String, Object> values) {
         return new Binder(new MapConfigurationPropertySource(values))
                 .bindOrCreate("rag.answer", RagAnswerProperties.class);

@@ -76,6 +76,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
         "llm.model=guard-delivery-test",
         "llm.retry.wait-duration=0ms",
         "rag.evidence-check.enabled=false",
+        // 가드가 한 번 막는 경로를 본다. 금액으로 막힌 답의 다시 생성은 RagAnswerAmountRetryTest가 본다
+        "rag.answer.amount-retry=false",
         "spring.datasource.hikari.maximum-pool-size=2"
 })
 class ConsultGuardedAnswerDeliveryIntegrationTest {
