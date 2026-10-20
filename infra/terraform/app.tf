@@ -127,9 +127,16 @@ resource "aws_launch_template" "app" {
     log_group       = aws_cloudwatch_log_group.app.name
   }))
 
+  # provider default_tags는 시작 템플릿 자체에만 붙고 ASG가 띄우는 EC2, EBS에는 붙지 않는다.
+  # 팀원 SSM 접속 정책(infra/iam)이 Project=telme 태그로 대상을 고르므로 여기서 직접 붙인다
   tag_specifications {
     resource_type = "instance"
-    tags          = { Name = "${var.name}-app" }
+    tags          = merge(data.aws_default_tags.current.tags, { Name = "${var.name}-app" })
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+    tags          = merge(data.aws_default_tags.current.tags, { Name = "${var.name}-app" })
   }
 
   # 새 AMI가 나올 때마다 서버가 교체되지 않게 한다
@@ -171,7 +178,19 @@ resource "aws_autoscaling_group" "app" {
     value               = "${var.name}-app"
     propagate_at_launch = true
   }
+
+  # ASG 자원에는 default_tags가 붙지 않아 따로 둔다. EC2 태그는 시작 템플릿이 붙이므로 전파하지 않는다
+  dynamic "tag" {
+    for_each = data.aws_default_tags.current.tags
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = false
+    }
+  }
 }
+
+data "aws_default_tags" "current" {}
 
 resource "aws_autoscaling_policy" "cpu" {
   name                   = "${var.name}-app-cpu"

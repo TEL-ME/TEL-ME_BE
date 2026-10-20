@@ -46,13 +46,16 @@ fi
 mv "$TMP" "$ENV_FILE"
 
 # 2) TEI. 127.0.0.1에만 열어 서버 밖에서는 못 부르게 한다
+# --max-batch-tokens 기본값(16384)은 준비 단계에서 약 7.6GB를 써 t3.large(8GB)에서 OOM으로 재시작을 반복한다.
+# 2048이면 약 3.1GB. FAQ 최장 글이 약 100토큰이라 --auto-truncate로 잘리는 입력은 없다(벡터가 DB와 같음 확인)
 docker rm -f telme-tei >/dev/null 2>&1 || true
 docker run -d --name telme-tei --restart unless-stopped \
   -p 127.0.0.1:8081:80 \
   -v /opt/telme/tei-data:/data \
   --log-driver awslogs --log-opt awslogs-region="$REGION" \
   --log-opt awslogs-group="$LOG_GROUP" --log-opt awslogs-stream="tei-$INSTANCE_ID" \
-  "$TEI_IMAGE" --model-id BAAI/bge-m3 --max-client-batch-size 64
+  "$TEI_IMAGE" --model-id BAAI/bge-m3 --max-client-batch-size 64 \
+  --max-batch-tokens 2048 --auto-truncate
 
 # 첫 부팅에는 bge-m3(약 2.3GB)를 받느라 시간이 걸린다. 앱의 임베딩 워밍업이 실패하지 않게 기다린다
 for _ in $(seq 1 120); do
