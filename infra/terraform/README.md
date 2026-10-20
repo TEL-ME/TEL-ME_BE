@@ -1,6 +1,6 @@
 # TEL-ME 배포 인프라 (Terraform)
 
-서울 리전 9~10일 시연 배포용. 도메인 없이 CloudFront 기본 주소(`*.cloudfront.net`)로 연다.
+서울 리전 9~10일 시연 배포용. 서비스 주소는 `https://www.telme.site`(가비아 도메인 + us-east-1 ACM 인증서를 CloudFront에 연결)다. 도메인 변수를 비우면 CloudFront 기본 주소(`*.cloudfront.net`)로도 열 수 있다.
 
 ```text
 브라우저 ─HTTPS→ CloudFront ─┬ /*                          → S3 (OAC)
@@ -51,6 +51,68 @@ DNS는 가비아에 두고, 인증서만 ACM에서 받는다. 루트(`telme.site
 
 인증서는 Terraform 밖에 있어 destroy해도 남는다. 다시 올리면 `www` CNAME 값만 새 CloudFront 주소로 고친다. 두 변수를 비우면 `*.cloudfront.net`으로 동작한다.
 
+## 초기 데이터
+
+운영 DB에는 Flyway의 `db/migration`만 적용된다(`application-prod.yml`). 로컬 샘플인 `db/dev-migration`은 들어가지 않으므로 아래 세 가지를 2차 apply 뒤(앱이 떠서 테이블이 생긴 뒤) 한 번 넣는다.
+
+| 데이터 | 로컬에서 넣던 곳 | 운영에서 넣는 방법 |
+|---|---|---|
+| FAQ 1,150건 + 벡터 2종 | (로컬은 별도 적재) | `scripts/data/faq_full_1150.json`을 앱 이미지의 FAQ 적재 기능(`FAQ_BATCH_LOAD_ENABLED`)으로 넣는다. 벡터는 TEI가 만든다 |
+| 매장 150곳 | `V7__seed_stores.sql` | 같은 SQL을 psql로 넣는다. 업무 종류(`store_service_types`)는 운영 마이그레이션 V20에 이미 있다 |
+| 관리자 계정 | `V2`(계정) + `V8`(비밀번호 `admin1234`) | 새 이메일·비밀번호로 직접 만든다. 로컬 비밀번호를 운영에 쓰지 않는다 |
+| 요금제 15종 | — | 운영 마이그레이션 V29에 있어 자동으로 들어간다 |
+
+넣지 않는 것: `V2`의 샘플 사용자·매장 2곳·FAQ 2건, `V12`의 더미 벡터. 더미 벡터가 섞이면 검색 결과가 틀어진다.
+
+모두 앱 EC2에서 한다(`aws ssm start-session --profile telme --target <앱 인스턴스 ID>`). DB 접속 정보는 `/opt/telme/app.env`에 있다.
+
+```bash
+sudo -i
+mkdir -p /opt/telme/seed && cd /opt/telme/seed
+# 레포가 공개라 develop의 파일을 그대로 받는다
+curl -fsSLO https://raw.githubusercontent.com/TEL-ME/TEL-ME_BE/develop/scripts/data/faq_full_1150.json
+curl -fsSLO https://raw.githubusercontent.com/TEL-ME/TEL-ME_BE/develop/src/main/resources/db/dev-migration/V7__seed_stores.sql
+
+# psql은 컨테이너로 쓴다. 작은따옴표 안의 변수는 컨테이너 안에서 app.env 값으로 풀리고, 인자는 "$@"로 그대로 넘긴다
+psql_run() {
+  docker run --rm -i --network host --env-file /opt/telme/app.env -v /opt/telme/seed:/seed:ro postgres:16 \
+    sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql "host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER sslmode=require" -v ON_ERROR_STOP=1 "$@"' sh "$@"
+}
+```
+
+1. **매장**
+   ```bash
+   psql_run -f /seed/V7__seed_stores.sql
+   ```
+2. **FAQ와 벡터**: 같은 이미지를 한 번 더 띄워 적재만 하고 끝낸다(`exit-after`). 떠 있는 앱과 포트가 겹치지 않게 18080을 쓴다. 이미 있는 FAQ(`slot_id`)는 건너뛰므로 다시 돌려도 안전하다
+   ```bash
+   docker run --rm --network host --env-file /opt/telme/app.env \
+     -e SERVER_PORT=18080 -e JAVA_TOOL_OPTIONS=-Xmx1g \
+     -e FAQ_BATCH_LOAD_ENABLED=true -e FAQ_BATCH_LOAD_PATH=/seed/faq_full_1150.json \
+     -v /opt/telme/seed:/seed:ro \
+     "$(docker inspect telme-app --format '{{.Config.Image}}')"
+   # 마지막에 "[FaqBatchLoadRunner] 완료 - 파일 1150건 ... 신규 적재 1150건"이 나오면 된다
+   ```
+3. **관리자 계정**: 비밀번호 해시는 내 Mac에서 만든다(비밀번호가 서버 기록에 남지 않게)
+   ```bash
+   # Mac
+   htpasswd -bnBC 10 "" '<관리자 비밀번호>' | tr -d ':\n'; echo   # $2y$10$... 출력
+   ```
+   ```bash
+   # 앱 EC2. 해시의 $가 풀리지 않게 따옴표 친 heredoc으로 파일을 만든다
+   cat > /opt/telme/seed/admin.sql <<'SQL'
+   INSERT INTO users (email, password_hash, name, role, status)
+   VALUES ('<관리자 이메일>', '<위 해시>', '운영자', 'ADMIN', 'ACTIVE');
+   SQL
+   psql_run -f /seed/admin.sql && rm /opt/telme/seed/admin.sql
+   ```
+4. **확인**
+   ```bash
+   psql_run -c "select (select count(*) from faqs) faqs, (select count(embedding_question) from faq_embeddings) question_vectors, (select count(*) from stores) stores, (select count(*) from plans) plans, (select count(*) from users where role='ADMIN') admins"
+   # faqs 1150, question_vectors 1150, stores 150, plans 15, admins 1
+   ```
+   화면에서 FAQ 질문 하나, 매장 찾기, 관리자 로그인까지 확인한다.
+
 ## 처음 띄우기
 
 1. **1차 apply** (`app_instance_count = 0`)
@@ -84,7 +146,7 @@ DNS는 가비아에 두고, 인증서만 ACM에서 받는다. 루트(`telme.site
    aws s3 sync dist s3://$(terraform output -raw frontend_bucket) --delete --profile telme
    aws cloudfront create-invalidation --distribution-id $(terraform output -raw cloudfront_distribution_id) --paths '/*' --profile telme
    ```
-8. **FAQ 벡터 데이터**: 앱 EC2에 SSM으로 접속해 넣는다.
+8. **초기 데이터 넣기**: 위 "초기 데이터" 절을 따른다. 운영은 `db/dev-migration`(샘플 데이터)을 적용하지 않아 FAQ·매장·관리자 계정이 비어 있다.
 9. **GPU 처음 준비**
    ```bash
    aws ec2 start-instances --profile telme --instance-ids $(terraform output -raw gpu_instance_id)
@@ -135,11 +197,11 @@ RDS는 삭제 방지가 켜져 있어 바로 지워지지 않는다(실수 방�
 
 ## 주의
 
-- CloudFront → ALB 구간은 HTTP다(도메인이 없어 ALB 인증서를 받을 수 없음). ALB는 CloudFront IP 대역 + 비밀 헤더가 맞는 요청만 받는다.
+- CloudFront → ALB 구간은 HTTP다. 사용자와 만나는 구간(브라우저 → CloudFront)만 HTTPS로 두고, ALB에는 인증서를 따로 붙이지 않았다. 대신 ALB는 CloudFront IP 대역(보안 그룹) + CloudFront가 붙이는 비밀 헤더가 맞는 요청만 받는다. 이 구간까지 암호화하려면 ALB용 인증서(서울 리전 ACM, 예: `origin.telme.site`)와 HTTPS 리스너를 추가하면 된다.
 - 비밀 헤더 값과 DB 주소는 state에 남는다. state 버킷은 암호화·퍼블릭 차단·버전 관리가 켜져 있다.
 - 도메인 없이 CloudFront를 지웠다 다시 만들면 주소가 바뀌어 OAuth·카카오맵 등록을 다시 해야 한다. 도메인을 쓰면 가비아 `www` CNAME만 고친다.
 - GPU는 30분 유휴 시 스스로 꺼진다. 2시간 넘게 켜져 있으면 알람이 온다.
-- Bedrock이 실패해 엑사원 호출이 생기면 앱이 꺼진 GPU를 켠다(TELME-204, `VLLM_GPU_INSTANCE_ID`). 켜지고 vLLM이 준비되기까지 몇 분은 대체 호출이 실패한다. 대체가 한 번이라도 생기면 `telme-bedrock-fallback` 알람이 온다.
+- 2분 안에 엑사원 호출이 3번 이상 생기면(Bedrock 장애 등) 앱이 꺼진 GPU를 켠다(TELME-204, `VLLM_GPU_INSTANCE_ID`). 조건 추출 파싱 실패나 일시 오류로 한 번 불린 걸로는 켜지 않는다. 켜서 vLLM이 첫 답을 내기까지 약 1분 40초~2분 40초(2026-10-19 실측)이고, 그동안 대체 호출은 실패한다. 대체가 한 번이라도 생기면 `telme-bedrock-fallback` 알람이 온다.
 - RDS 백업은 KST 02:00~02:30, 유지 관리는 KST 월 03:00~04:00. 자동 마이너 버전 업그레이드는 꺼 두었다.
 - TEI는 t3.large 메모리에 맞게 `--max-batch-tokens 2048 --auto-truncate`로 띄운다(기본값이면 OOM으로 재시작 반복). 새 앱 서버는 부팅할 때 Hugging Face에서 bge-m3(약 2.3GB)를 받는다.
 - 컨테이너에 `AWS_ACCESS_KEY_ID`·`AWS_BEARER_TOKEN_BEDROCK`을 넣지 않는다. 넣으면 역할보다 먼저 쓰여 Bedrock 호출이 깨진다.
