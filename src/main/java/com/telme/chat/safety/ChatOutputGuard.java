@@ -105,11 +105,6 @@ public final class ChatOutputGuard {
         verifyJson(options, "clarificationOptions", masks);
     }
 
-    /** 최종 직렬화된 종료 요약의 문장만 검사한다. 입력 제재 상태는 변경하지 않는다. */
-    public void verifySummary(String value, OutputMaskContext masks) {
-        verifyJson(value, "summary", masks);
-    }
-
     public boolean needsMaskContext(ChatAnswer answer) {
         return containsMask(answer.content(), 0) || containsMask(answer.followUps(), 0)
                 || containsMask(answer.storeResults(), 0)
