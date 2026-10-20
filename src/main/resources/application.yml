@@ -79,16 +79,17 @@ vllm:
   # 응답 대기는 llm.read-timeout을 그대로 쓴다
   connect-timeout: ${VLLM_CONNECT_TIMEOUT:1s}
   gpu:
-    # 평소 꺼 두는 GPU EC2. 엑사원 호출이 오면 꺼져 있을 때 켠다(끄는 건 GPU 안의 30분 유휴 스크립트).
+    # 평소 꺼 두는 GPU EC2. Bedrock이 실패해 엑사원으로 대체되면 꺼져 있을 때 켠다(끄는 건 GPU 안의 30분 유휴 스크립트).
+    # 조건 추출 파싱 재시도처럼 엑사원을 직접 부르는 호출로는 켜지 않는다.
     # 비우면(로컬/CI) 자동 기동을 하지 않는다. 운영은 Terraform이 SSM으로 넣는다
     instance-id: ${VLLM_GPU_INSTANCE_ID:}
     region: ${VLLM_GPU_REGION:ap-northeast-2}
     # 이 간격 안에서는 상태 확인·기동 요청을 다시 보내지 않는다
     start-interval: 1m
-    # start-window 안에 엑사원 호출이 start-min-calls번 이상일 때만 켠다.
-    # 조건 추출 파싱 실패, 일시 오류처럼 한 번 불린 걸로는 켜지 않는다(한 번 켜면 30분 이상 과금)
-    start-min-calls: 3
-    start-window: 2m
+    # start-window 안에 Bedrock 실패 대체가 start-min-fallbacks번 이상일 때만 켠다.
+    # 8초 시간 초과, 429 같은 일시 오류 한 번으로는 켜지 않는다(한 번 켜면 30분 이상 과금)
+    start-min-fallbacks: 2
+    start-window: 5m
 
 kakao:
   local:

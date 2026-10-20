@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.ec2.model.DescribeInstanceStatusRequest;
 import software.amazon.awssdk.services.ec2.model.InstanceStateName;
 import software.amazon.awssdk.services.ec2.model.StartInstancesRequest;
 
-// 엑사원(vLLM) 호출이 짧은 시간에 여러 번 생기면(Bedrock 장애) 꺼져 있는 GPU EC2를 킴
+// Bedrock이 실패해 엑사원(vLLM)으로 대체된 호출이(GpuWakingLlmClient) 짧은 시간에 여러 번이면 꺼져 있는 GPU EC2를 킴
 // 끄는 건 GPU 안의 유휴 스크립트(30분)
 // 켜서 vLLM이 첫 답을 내기까지 약 1분 40초~2분 40초(2026-10-19 실측, gp3 기본 131~156초)
 // 그동안의 엑사원 호출은 연결 시간 제한(1초) 뒤 실패하고, 준비된 뒤 호출부터 대체된다
@@ -25,7 +25,7 @@ public class GpuInstanceStarter {
     private final VllmGpuProperties properties;
     private final Clock clock;
     private final Executor executor;
-    private final Deque<Instant> recentCalls = new ArrayDeque<>();
+    private final Deque<Instant> recentFallbacks = new ArrayDeque<>();
     private final AtomicReference<Instant> lastRequestedAt = new AtomicReference<>();
 
     public GpuInstanceStarter(Ec2Client ec2, VllmGpuProperties properties, Clock clock, Executor executor) {
@@ -35,11 +35,12 @@ public class GpuInstanceStarter {
         this.executor = executor;
     }
 
+    // Bedrock 실패 대체 한 번마다 부른다
     // 호출을 막지 않게 상태 확인과 기동은 다른 스레드에서
     // 간격 안의 중복 요청은 한 번으로 합침
     public void requestStart() {
         Instant now = clock.instant();
-        if (!enoughRecentCalls(now)) {
+        if (!enoughRecentFallbacks(now)) {
             return;
         }
         Instant last = lastRequestedAt.get();
@@ -56,14 +57,14 @@ public class GpuInstanceStarter {
         }
     }
 
-    // 최근 startWindow 안의 엑사원 호출 수가 startMinCalls 이상인지
-    private synchronized boolean enoughRecentCalls(Instant now) {
-        recentCalls.addLast(now);
+    // 최근 startWindow 안의 대체 수가 startMinFallbacks 이상인지
+    private synchronized boolean enoughRecentFallbacks(Instant now) {
+        recentFallbacks.addLast(now);
         Instant windowStart = now.minus(properties.startWindow());
-        while (!recentCalls.isEmpty() && !recentCalls.peekFirst().isAfter(windowStart)) {
-            recentCalls.pollFirst();
+        while (!recentFallbacks.isEmpty() && !recentFallbacks.peekFirst().isAfter(windowStart)) {
+            recentFallbacks.pollFirst();
         }
-        return recentCalls.size() >= properties.startMinCalls();
+        return recentFallbacks.size() >= properties.startMinFallbacks();
     }
 
     // 실패해도 LLM 호출 흐름에는 영향X
