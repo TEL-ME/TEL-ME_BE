@@ -24,8 +24,9 @@ class VllmGpuConfigTest {
                     assertThat(context).hasSingleBean(Ec2Client.class);
                     VllmGpuProperties properties = context.getBean(VllmGpuProperties.class);
                     assertThat(properties.region()).isEqualTo("ap-northeast-2");
-                    assertThat(properties.startMinCalls()).isEqualTo(3);
-                    assertThat(properties.startWindow()).isEqualTo(Duration.ofMinutes(2));
+                    assertThat(properties.startInterval()).isEqualTo(Duration.ofMinutes(1));
+                    assertThat(properties.startMinFallbacks()).isEqualTo(2);
+                    assertThat(properties.startWindow()).isEqualTo(Duration.ofMinutes(5));
                     // EC2 API가 응답하지 않아도 기동 스레드가 오래 묶이지 않는다
                     var override = context.getBean(Ec2Client.class).serviceClientConfiguration().overrideConfiguration();
                     assertThat(override.apiCallTimeout()).contains(Duration.ofSeconds(10));

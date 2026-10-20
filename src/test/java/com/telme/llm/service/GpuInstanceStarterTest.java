@@ -36,7 +36,7 @@ class GpuInstanceStarterTest {
 
     private final Ec2Client ec2 = mock(Ec2Client.class);
     private final MutableClock clock = new MutableClock(NOW);
-    // 호출 수 조건(startMinCalls)은 아래 따로 확인하고, 나머지 테스트는 한 번 불리면 켜지게 둔다
+    // 대체 수 조건(startMinFallbacks)은 아래 따로 확인하고, 나머지 테스트는 한 번 불리면 켜지게 둔다
     private final VllmGpuProperties properties = properties(1);
     // 테스트에서는 기동 확인을 호출한 스레드에서 바로 실행한다
     private final GpuInstanceStarter starter = new GpuInstanceStarter(ec2, properties, clock, Runnable::run);
@@ -144,34 +144,28 @@ class GpuInstanceStarterTest {
     }
 
     @Test
-    @DisplayName("2분 안에 엑사원 호출이 3번 쌓여야 켠다(파싱 실패·일시 오류 한 번으로는 켜지 않음)")
-    void 호출이_기준만큼_쌓여야_켠다() {
+    @DisplayName("5분 안에 대체가 2번 쌓여야 켠다(일시 오류 한 번으로는 켜지 않음)")
+    void 대체가_기준만큼_쌓여야_켠다() {
         givenState(InstanceStateName.STOPPED);
-        GpuInstanceStarter guarded = new GpuInstanceStarter(ec2, properties(3), clock, Runnable::run);
+        GpuInstanceStarter guarded = new GpuInstanceStarter(ec2, properties(2), clock, Runnable::run);
 
         guarded.requestStart();
-        clock.advance(Duration.ofSeconds(30));
-        guarded.requestStart();
-
         verify(ec2, never()).describeInstanceStatus(any(DescribeInstanceStatusRequest.class));
 
-        clock.advance(Duration.ofSeconds(30));
+        clock.advance(Duration.ofMinutes(4));
         guarded.requestStart();
-
         verify(ec2).startInstances(any(StartInstancesRequest.class));
     }
 
     @Test
-    @DisplayName("2분보다 오래된 호출은 세지 않는다")
-    void 오래된_호출은_세지_않는다() {
+    @DisplayName("5분보다 오래된 대체는 세지 않는다")
+    void 오래된_대체는_세지_않는다() {
         givenState(InstanceStateName.STOPPED);
-        GpuInstanceStarter guarded = new GpuInstanceStarter(ec2, properties(3), clock, Runnable::run);
+        GpuInstanceStarter guarded = new GpuInstanceStarter(ec2, properties(2), clock, Runnable::run);
 
         guarded.requestStart();
-        clock.advance(Duration.ofMinutes(1));
-        guarded.requestStart();
-        clock.advance(Duration.ofMinutes(1));
-        // 첫 호출은 정확히 2분 전이라 빠지고, 남은 2번으로는 켜지 않는다
+        // 첫 대체는 정확히 5분 전이라 빠진다
+        clock.advance(Duration.ofMinutes(5));
         guarded.requestStart();
 
         verify(ec2, never()).describeInstanceStatus(any(DescribeInstanceStatusRequest.class));
@@ -187,9 +181,9 @@ class GpuInstanceStarterTest {
                         .build());
     }
 
-    private static VllmGpuProperties properties(int startMinCalls) {
-        return new VllmGpuProperties(INSTANCE_ID, "ap-northeast-2", Duration.ofMinutes(1), startMinCalls,
-                Duration.ofMinutes(2));
+    private static VllmGpuProperties properties(int startMinFallbacks) {
+        return new VllmGpuProperties(INSTANCE_ID, "ap-northeast-2", Duration.ofMinutes(1), startMinFallbacks,
+                Duration.ofMinutes(5));
     }
 
     private static final class MutableClock extends Clock {
