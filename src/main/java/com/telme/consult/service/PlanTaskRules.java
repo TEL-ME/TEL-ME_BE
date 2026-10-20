@@ -53,7 +53,7 @@ public final class PlanTaskRules {
     private static final Pattern WITHDRAW = Pattern.compile("취소|철회");
     // 어떤 요금제로 할지 아직 고르는 중이면 추천 경로가 답한다
     private static final Pattern STILL_CHOOSING = Pattern.compile(
-            "(뭐|뭘|어떤|어느|무슨)(가|로|요금제|걸|거)|좋을까|나을까|좋은지|추천해(줘|주세요|주실|줄래)|추천좀");
+            "(뭐|뭘|어떤|어느|무슨)(가|로|요금제|걸|거|게|것)|뭐있|좋을까|나을까|좋은지|추천해(줘|주세요|주실|줄래)|추천좀");
 
     private static final Pattern DAYS = Pattern.compile("(?<![0-9월])([0-9]{1,3})일");
     private static final Pattern WEEKS = Pattern.compile("([0-9]{1,2})주");
