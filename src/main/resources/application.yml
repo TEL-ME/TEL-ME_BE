@@ -163,6 +163,11 @@ chat:
     bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
     # gpt-oss 문맥 판정의 흔들림 보완(docs/CONTEXT_RESOLUTION.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
     stability-guards: ${CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS:false}
+  processing:
+    # 채팅 턴을 동시에 처리하는 수와 처리를 기다릴 수 있는 턴 수. 대기열이 넘치면 그 턴은 바로 실패로 끝난다
+    # 배포 값은 예상 동시 사용자 수와 GPU·Bedrock 처리량으로 정한다(TELME-187 T1 실측)
+    threads: ${CHAT_PROCESSING_THREADS:4}
+    queue-capacity: ${CHAT_PROCESSING_QUEUE:100}
 
 rag:
   answer:
