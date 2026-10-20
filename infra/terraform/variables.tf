@@ -47,7 +47,7 @@ variable "app_max_size" {
 }
 
 variable "app_image_tag" {
-  description = "처음 띄울 백엔드 이미지 태그. 이후에는 CD가 SSM 파라미터 /telme/prod/deploy/image_tag를 바꾼다"
+  description = "SSM 이미지 태그 파라미터를 처음 만들 때만 쓰는 값. 만든 뒤로는 바꿔도 반영되지 않는다(ignore_changes). 태그는 CLI나 CD가 /telme/prod/deploy/image_tag에 쓴다"
   type        = string
   default     = "initial"
 }

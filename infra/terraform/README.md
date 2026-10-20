@@ -139,7 +139,11 @@ psql_run() {
    docker build --platform linux/amd64 -t $REPO:<git-sha> ../..
    docker push $REPO:<git-sha>
    ```
-6. **2차 apply**: `terraform.tfvars`에서 `app_instance_count = 1`, `app_image_tag = "<git-sha>"`로 바꾸고 apply. 첫 기동에 Flyway가 RDS에 확장·테이블을 만든다.
+6. **배포할 태그 기록 → 2차 apply**: 이미지 태그 파라미터는 CD가 바꾸는 값이라 Terraform이 처음 만든 뒤로는 값을 건드리지 않는다(`ignore_changes`). 그래서 `app_image_tag`를 바꿔 apply해도 반영되지 않으니, 태그는 CLI로 먼저 쓴다
+   ```bash
+   aws ssm put-parameter --profile telme --name /telme/prod/deploy/image_tag --value <git-sha> --overwrite
+   ```
+   그다음 `terraform.tfvars`에서 `app_instance_count = 1`로 바꾸고 plan → apply. 첫 기동에 Flyway가 RDS에 확장·테이블을 만든다.
 7. **프론트 올리기** (FE 레포, `VITE_API_BASE_URL`은 비우고 `VITE_ENABLE_MSW=false`)
    ```bash
    npm run build
