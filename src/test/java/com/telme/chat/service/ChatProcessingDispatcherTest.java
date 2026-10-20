@@ -204,6 +204,115 @@ class ChatProcessingDispatcherTest {
         verify(executions, never()).fail(any(), any());
     }
 
+    @Test
+    @DisplayName("종료할 때 진행 중인 턴은 끝나기를 기다리고, 시작 전인 턴은 바로 서버 종료 실패로 기록한다")
+    void 종료_때_진행_중은_기다리고_시작_전은_실패_기록한다() throws Exception {
+        ThreadPoolTaskExecutor single = singleThreadExecutor();
+        ChatProcessingDispatcher shuttingDown = dispatcher(single, Duration.ofSeconds(10));
+        CountDownLatch processing = new CountDownLatch(1);
+        CountDownLatch finish = new CountDownLatch(1);
+        blockUntil(processing, finish);
+
+        shuttingDown.dispatch(command(1L, null));
+        assertThat(processing.await(5, TimeUnit.SECONDS)).isTrue();
+        shuttingDown.dispatch(command(2L, null));
+        Thread shutdown = Thread.ofPlatform().start(shuttingDown::shutdown);
+
+        verify(executions, timeout(5_000)).fail(eq(2L), argThat(isShutdownFailure()));
+        // 진행 중인 턴은 아직 끝나지 않았으므로 건드리지 않고 종료도 기다린다
+        verify(executions, never()).fail(eq(1L), any());
+        assertThat(shutdown.isAlive()).isTrue();
+
+        finish.countDown();
+        shutdown.join(5_000);
+        assertThat(shutdown.isAlive()).isFalse();
+        verify(port, times(1)).request(any());
+        verify(executions, never()).fail(eq(1L), any());
+        assertThat(timer.countTracked()).isZero();
+    }
+
+    @Test
+    @DisplayName("종료 대기 시간 안에 끝나지 않은 턴은 서버 종료 실패로 기록하고 끊는다")
+    void 대기_시간이_지나면_남은_턴을_실패_기록하고_끊는다() throws Exception {
+        ThreadPoolTaskExecutor single = singleThreadExecutor();
+        ChatProcessingDispatcher shuttingDown = dispatcher(single, Duration.ofMillis(200));
+        CountDownLatch processing = new CountDownLatch(1);
+        CountDownLatch interrupted = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            processing.countDown();
+            try {
+                new CountDownLatch(1).await(30, TimeUnit.SECONDS);
+            } catch (InterruptedException exception) {
+                interrupted.countDown();
+                Thread.currentThread().interrupt();
+            }
+            return null;
+        }).when(port).request(any());
+
+        shuttingDown.dispatch(command(1L, null));
+        assertThat(processing.await(5, TimeUnit.SECONDS)).isTrue();
+        shuttingDown.shutdown();
+
+        verify(executions).fail(eq(1L), argThat(isShutdownFailure()));
+        assertThat(interrupted.await(5, TimeUnit.SECONDS)).isTrue();
+        await().atMost(Duration.ofSeconds(5)).until(() -> timer.countTracked() == 0);
+    }
+
+    @Test
+    @DisplayName("종료 중 실패 기록이 DB 오류로 던져져도 나머지 턴을 정리하고 종료를 마친다")
+    void 실패_기록이_던져도_나머지_턴을_정리한다() throws Exception {
+        ThreadPoolTaskExecutor single = singleThreadExecutor();
+        ChatProcessingDispatcher shuttingDown = dispatcher(single, Duration.ofMillis(200));
+        CountDownLatch processing = new CountDownLatch(1);
+        CountDownLatch finish = new CountDownLatch(1);
+        blockUntil(processing, finish);
+        doThrow(new IllegalStateException("db down")).when(executions).fail(eq(2L), any());
+
+        shuttingDown.dispatch(command(1L, null));
+        assertThat(processing.await(5, TimeUnit.SECONDS)).isTrue();
+        shuttingDown.dispatch(command(2L, null));
+        shuttingDown.dispatch(command(3L, null));
+        shuttingDown.shutdown();
+
+        verify(executions).fail(eq(2L), argThat(isShutdownFailure()));
+        verify(executions).fail(eq(3L), argThat(isShutdownFailure()));
+        verify(executions).fail(eq(1L), argThat(isShutdownFailure()));
+        finish.countDown();
+    }
+
+    @Test
+    @DisplayName("진행 중인 턴이 없으면 기다리지 않고 바로 종료한다")
+    void 진행_중인_턴이_없으면_바로_종료한다() {
+        ChatProcessingDispatcher idle = dispatcher(singleThreadExecutor(), Duration.ofSeconds(10));
+
+        long started = System.nanoTime();
+        idle.shutdown();
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+        verify(executions, never()).fail(any(), any());
+    }
+
+    private ThreadPoolTaskExecutor singleThreadExecutor() {
+        ThreadPoolTaskExecutor single = new ThreadPoolTaskExecutor();
+        single.setCorePoolSize(1);
+        single.setMaxPoolSize(1);
+        single.setQueueCapacity(10);
+        single.initialize();
+        return single;
+    }
+
+    @SuppressWarnings("unchecked")
+    private ChatProcessingDispatcher dispatcher(ThreadPoolTaskExecutor pool, Duration shutdownWait) {
+        ObjectProvider<ChatProcessingPort> ports = mock(ObjectProvider.class);
+        when(ports.getIfAvailable()).thenReturn(port);
+        return new ChatProcessingDispatcher(
+                ports, executions, timer, mock(PlatformTransactionManager.class), pool, shutdownWait);
+    }
+
+    private static org.mockito.ArgumentMatcher<ChatFailure> isShutdownFailure() {
+        return failure -> ChatProcessingDispatcher.SERVER_SHUTDOWN.equals(failure.errorCode());
+    }
+
     private void blockUntil(CountDownLatch processing, CountDownLatch finish) {
         doAnswer(invocation -> {
             processing.countDown();

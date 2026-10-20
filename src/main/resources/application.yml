@@ -5,6 +5,12 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:telme}
     username: ${POSTGRES_USER:telme}
     password: ${POSTGRES_PASSWORD:telme}
+  lifecycle:
+    # 웹 서버가 진행 중인 요청을 기다리는 시간. 기본 30초는 SSE로 연결된 채팅 턴이 있으면 끝까지 쓰이는데, 앱 서버는 `docker run`에
+    # --stop-timeout 없이 떠서(infra/terraform/user_data/app.sh) 강제 종료 시간이 docker 기본 10초다.
+    # 이 값과 아래 chat.processing.shutdown-wait에 Tomcat 종료 지연(실측 약 2초)과 JVM 종료를 더한 시간이 10초 안에 들어야 정상 종료 처리가 끝까지 돈다.
+    # 배포에서 --stop-timeout을 늘리면 두 값도 함께 늘린다. ALB가 종료 전에 120초 동안 요청을 마무리하게 두므로 대부분의 턴은 그 전에 끝난다
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:3s}
   jpa:
     open-in-view: false
     hibernate:
@@ -192,6 +198,10 @@ chat:
     # 배포 값은 예상 동시 사용자 수와 GPU·Bedrock 처리량으로 정한다(TELME-187 T1 실측)
     threads: ${CHAT_PROCESSING_THREADS:4}
     queue-capacity: ${CHAT_PROCESSING_QUEUE:100}
+    # 재배포(SIGTERM) 때 진행 중인 채팅 턴이 끝나기를 기다리는 시간(N). 넘으면 남은 턴을 실패로 기록하고 끊는다.
+    # 웹 서버 종료 대기(spring.lifecycle.timeout-per-shutdown-phase 3초)가 먼저 쓰이고 이 대기가 이어진다. 둘에 Tomcat 종료 지연(약 2초)을 더한 시간이 강제 종료 시간(T)보다 짧아야 한다.
+    # T는 앱이 아니라 배포 설정이고 지금은 docker 기본 10초라 기본값 2초로 합 약 8초(실측)를 맞췄다. 운영 값은 배포 담당자가 환경 변수로 정한다.
+    shutdown-wait: ${CHAT_PROCESSING_SHUTDOWN_WAIT:2s}
 
 rag:
   answer:
