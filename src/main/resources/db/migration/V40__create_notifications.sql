@@ -5,9 +5,10 @@ CREATE TABLE notifications (
     session_id      BIGINT      NOT NULL REFERENCES chat_sessions (session_id) ON DELETE CASCADE,
     message_id      BIGINT      NOT NULL REFERENCES chat_messages (message_id) ON DELETE CASCADE,
     type            VARCHAR(30) NOT NULL,           -- ANSWER_ARRIVED / ANSWER_FAILED
-    -- 저장한 쪽. 늦은 구독 시 SERVER만 지운다
     source          VARCHAR(10) NOT NULL,           -- SERVER / CLIENT
     read_at         TIMESTAMPTZ,                    -- NULL이면 안 읽음
+    -- 늦게 구독한 화면이 결과를 받아 서버 알림을 숨긴 시각. 순서가 엇갈려도 행이 남아 있어 서버 저장이 다시 생기지 않는다
+    dismissed_at    TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- 새로고침·재시도로 같은 답변 알림이 여러 번 저장되지 않게 한다
     CONSTRAINT uk_notifications_message UNIQUE (message_id),
@@ -19,4 +20,4 @@ CREATE TABLE notifications (
 CREATE INDEX ix_notifications_session ON notifications (session_id, notification_id DESC);
 
 -- 안 읽은 개수·채팅방 읽음 처리
-CREATE INDEX ix_notifications_unread ON notifications (session_id) WHERE read_at IS NULL;
+CREATE INDEX ix_notifications_unread ON notifications (session_id) WHERE read_at IS NULL AND dismissed_at IS NULL;

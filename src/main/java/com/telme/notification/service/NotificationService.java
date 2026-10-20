@@ -35,10 +35,10 @@ public class NotificationService {
         notificationRepository.insertForExecution(executionId, type);
     }
 
-    // 늦은 구독에 결과를 전한 뒤 서버 알림만 지운다
+    // 늦은 구독에 결과를 전한 뒤 부른다. 서버 알림은 숨기고, 아직 없으면 뒤늦게 생기지 않게 숨긴 행을 남긴다
     @Transactional
     public void dismissDelivered(long executionId) {
-        notificationRepository.deleteServerSaved(executionId);
+        notificationRepository.markDelivered(executionId);
     }
 
     public NotificationPage getPage(ChatActor actor, Long cursor, int size) {

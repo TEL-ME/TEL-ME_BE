@@ -1,6 +1,8 @@
 package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.telme.chat.config.ChatExecutionProperties;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
@@ -10,13 +12,18 @@ import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.member.entity.User;
+import com.telme.notification.dto.NotificationType;
+import com.telme.notification.service.NotificationService;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +51,12 @@ class ChatExecutionTimeoutSchedulerIntegrationTest {
     @Autowired
     private ApplicationContext applicationContext;
 
+    @Autowired
+    private ChatEmitterRegistry emitterRegistry;
+
+    @Autowired
+    private ObjectProvider<NotificationService> notifications;
+
     private ChatExecutionTimeoutScheduler scheduler;
     private ChatActor actor;
 
@@ -52,7 +65,9 @@ class ChatExecutionTimeoutSchedulerIntegrationTest {
         scheduler = new ChatExecutionTimeoutScheduler(
                 chatExecutionRepository,
                 chatExecutionService,
-                chatExecutionProperties
+                chatExecutionProperties,
+                emitterRegistry,
+                notifications
         );
 
         User user = User.builder()
@@ -93,6 +108,22 @@ class ChatExecutionTimeoutSchedulerIntegrationTest {
                 .isEqualTo(ChatExecution.Status.RUNNING);
 
         assertThat(send(staleSessionId, "다시 질문할게요").sequenceNo()).isEqualTo(3);
+    }
+
+    // 리뷰 재현: 멈춘 실행을 스케줄러가 시간 초과로 끝내면, 기다리는 화면이 없으니 실패 알림을 남긴다
+    @Test
+    void timedOutExecutionWithoutScreenSavesFailedNotification() {
+        NotificationService notificationService = mock(NotificationService.class);
+        ChatExecutionTimeoutScheduler withNotifications = new ChatExecutionTimeoutScheduler(
+                chatExecutionRepository, chatExecutionService, chatExecutionProperties, emitterRegistry,
+                new StaticListableBeanFactory(Map.of("notificationService", notificationService))
+                        .getBeanProvider(NotificationService.class));
+        ChatMessageSendResponse stale = send(createSession(), "멈춘 질문");
+        backdate(stale.executionId());
+
+        withNotifications.timeOutExecutionsStartedBefore(Instant.now().minus(Duration.ofMinutes(5)));
+
+        verify(notificationService).saveUndelivered(stale.executionId(), NotificationType.ANSWER_FAILED);
     }
 
     @Test

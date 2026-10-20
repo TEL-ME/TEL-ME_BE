@@ -81,28 +81,20 @@ public final class ChatEmitterConsultEvents implements ConsultChatEvents {
         };
     }
 
-    // 늦은 구독이 먼저 전했으면 전달된 것으로 본다. 같은 잠금 안에서 판단한다
+    // 늦은 구독이 먼저 결과를 받았으면 그쪽이 숨긴 알림 행을 남겨 두어, 여기서 저장해도 새 알림이 생기지 않는다(DB 고유 키)
     @Override
     public void completed(long executionId, ChatExecutionState state) {
-        emitters.withTerminalLock(executionId, () -> {
-            boolean delivered = emitters.complete(executionId, state);
-            boolean deliveredLate = emitters.consumeDeliveredLate(executionId);
-            if (!delivered && !deliveredLate) {
-                saveUndelivered(executionId, NotificationType.ANSWER_ARRIVED);
-            }
-        });
+        if (!emitters.complete(executionId, state)) {
+            saveUndelivered(executionId, NotificationType.ANSWER_ARRIVED);
+        }
     }
 
     @Override
     public void failed(long executionId, ChatFailure failure) {
-        emitters.withTerminalLock(executionId, () -> {
-            boolean delivered = emitters.fail(executionId, failure);
-            boolean deliveredLate = emitters.consumeDeliveredLate(executionId);
-            // 연결이 끊겨 취소된 답변은 사용자가 떠난 것이라 알리지 않는다
-            if (!delivered && !deliveredLate && failure.status() != ChatMessage.Status.CANCELLED) {
-                saveUndelivered(executionId, NotificationType.ANSWER_FAILED);
-            }
-        });
+        // 연결이 끊겨 취소된 답변은 사용자가 떠난 것이라 알리지 않는다
+        if (!emitters.fail(executionId, failure) && failure.status() != ChatMessage.Status.CANCELLED) {
+            saveUndelivered(executionId, NotificationType.ANSWER_FAILED);
+        }
     }
 
     // 알림 저장 실패가 답변 완료 처리를 깨뜨리지 않게 한다

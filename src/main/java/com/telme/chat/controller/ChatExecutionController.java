@@ -118,22 +118,19 @@ public class ChatExecutionController {
         return emitter;
     }
 
-    // 결과를 전했을 때만 서버 알림을 지운다. 상담 처리 완료와 같은 잠금을 쓰고 전달 기록을 남긴다
+    // 결과를 전했을 때만 서버 알림을 숨긴다. 상담 처리 완료와 순서가 엇갈려도 DB 알림 행으로 맞춰진다
     private void deliverLate(Long executionId, BooleanSupplier send) {
-        emitterRegistry.withTerminalLock(executionId, () -> {
-            if (send.getAsBoolean()) {
-                emitterRegistry.markDeliveredLate(executionId);
-                dismissQuietly(executionId);
-            }
-        });
+        if (send.getAsBoolean()) {
+            dismissQuietly(executionId);
+        }
     }
 
-    // 알림 삭제 실패가 이미 보낸 결과의 응답을 오류로 바꾸지 않게 한다. 실패하면 서버 알림이 남을 뿐이다
+    // 알림 숨김 실패가 이미 보낸 결과의 응답을 오류로 바꾸지 않게 한다. 실패하면 서버 알림이 남을 뿐이다
     private void dismissQuietly(Long executionId) {
         try {
             notifications.ifAvailable(service -> service.dismissDelivered(executionId));
         } catch (RuntimeException exception) {
-            log.warn("늦은 구독 알림 삭제 실패: executionId={}", executionId, exception);
+            log.warn("늦은 구독 알림 숨김 실패: executionId={}", executionId, exception);
         }
     }
 

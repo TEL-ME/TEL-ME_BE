@@ -73,24 +73,6 @@ class ChatEmitterRegistryTest {
     }
 
     @Test
-    void deliveredLateMarkIsConsumedOnce() {
-        registry.markDeliveredLate(157L);
-
-        assertThat(registry.consumeDeliveredLate(157L)).isTrue();
-        assertThat(registry.consumeDeliveredLate(157L)).isFalse();
-        assertThat(registry.consumeDeliveredLate(158L)).isFalse();
-    }
-
-    @Test
-    void terminalLockRunsAction() {
-        var ran = new boolean[1];
-
-        registry.withTerminalLock(157L, () -> ran[0] = true);
-
-        assertThat(ran[0]).isTrue();
-    }
-
-    @Test
     void sendTerminalNowReportsWhetherEventWasDelivered() throws IOException {
         SseEmitter delivered = mock(SseEmitter.class);
         SseEmitter disconnected = mock(SseEmitter.class);

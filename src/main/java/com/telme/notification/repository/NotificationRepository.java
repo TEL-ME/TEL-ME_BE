@@ -37,7 +37,7 @@ public class NotificationRepository {
             NotificationType.ANSWER_FAILED,
             "m.status IN ('FAILED', 'TIMEOUT')");
 
-    // 프론트 저장. 이미 있으면 CLIENT로 바꿔 그 알림을 돌려준다
+    // 프론트 저장. 이미 있으면 CLIENT로 바꾸고 숨김을 풀어 그 알림을 돌려준다(결과를 받은 프론트의 판단이 우선)
     public Optional<Long> insert(ChatActor actor, long sessionId, long messageId, NotificationType type) {
         return jdbc.queryForList("""
                 INSERT INTO notifications (session_id, message_id, type, source)
@@ -45,13 +45,13 @@ public class NotificationRepository {
                 FROM chat_messages m
                 JOIN chat_sessions s ON s.session_id = m.session_id
                 WHERE m.message_id = ? AND m.session_id = ? AND %s AND %s
-                ON CONFLICT (message_id) DO UPDATE SET source = 'CLIENT'
+                ON CONFLICT (message_id) DO UPDATE SET source = 'CLIENT', dismissed_at = NULL
                 RETURNING notification_id
                 """.formatted(target(type), owner(actor)),
                 Long.class, type.name(), messageId, sessionId, ownerId(actor)).stream().findFirst();
     }
 
-    // 서버 저장. 종료 결과를 전하지 못한 실행의 출력 메시지로 저장한다
+    // 서버 저장. 종료 결과를 전하지 못한 실행의 출력 메시지로 저장한다. 이미 행이 있으면(숨김 포함) 그대로 둔다
     public Optional<Long> insertForExecution(long executionId, NotificationType type) {
         return jdbc.queryForList("""
                 INSERT INTO notifications (session_id, message_id, type, source)
@@ -65,23 +65,30 @@ public class NotificationRepository {
                 Long.class, type.name(), executionId).stream().findFirst();
     }
 
-    // 늦은 구독에 결과를 전한 실행의 서버 알림만 지운다
-    public int deleteServerSaved(long executionId) {
+    // 늦은 구독에 결과를 전한 실행을 숨김으로 남긴다. 서버 알림이 있으면 숨기고, 아직 없으면 숨긴 행을 먼저 만들어
+    // 뒤늦은 서버 저장이 생기지 않게 한다. 프론트가 저장한 알림은 건드리지 않는다
+    public int markDelivered(long executionId) {
         return jdbc.update("""
-                DELETE FROM notifications n
-                USING chat_executions e
-                WHERE e.execution_id = ? AND n.message_id = e.output_message_id AND n.source = 'SERVER'
-                """, executionId);
+                INSERT INTO notifications (session_id, message_id, type, source, dismissed_at)
+                SELECT m.session_id, m.message_id,
+                       CASE WHEN m.status = 'COMPLETED' THEN 'ANSWER_ARRIVED' ELSE 'ANSWER_FAILED' END, 'SERVER', now()
+                FROM chat_executions e
+                JOIN chat_messages m ON m.message_id = e.output_message_id
+                WHERE e.execution_id = ? AND ((%s) OR (%s))
+                ON CONFLICT (message_id) DO UPDATE SET dismissed_at = now()
+                WHERE notifications.source = 'SERVER'
+                """.formatted(target(NotificationType.ANSWER_ARRIVED), target(NotificationType.ANSWER_FAILED)),
+                executionId);
     }
 
     public Optional<NotificationRow> findById(ChatActor actor, long notificationId) {
-        return jdbc.query(SELECT + " WHERE n.notification_id = ? AND " + owner(actor),
+        return jdbc.query(SELECT + " WHERE n.notification_id = ? AND n.dismissed_at IS NULL AND " + owner(actor),
                 this::read, notificationId, ownerId(actor)).stream().findFirst();
     }
 
     // PK 커서. 첫 조회는 Long.MAX_VALUE
     public List<NotificationRow> findPage(ChatActor actor, long beforeId, int limit) {
-        return jdbc.query(SELECT + " WHERE n.notification_id < ? AND " + owner(actor)
+        return jdbc.query(SELECT + " WHERE n.notification_id < ? AND n.dismissed_at IS NULL AND " + owner(actor)
                         + " ORDER BY n.notification_id DESC LIMIT ?",
                 this::read, beforeId, ownerId(actor), limit);
     }
@@ -90,7 +97,7 @@ public class NotificationRepository {
         Long count = jdbc.queryForObject("""
                 SELECT count(*) FROM notifications n
                 JOIN chat_sessions s ON s.session_id = n.session_id
-                WHERE n.read_at IS NULL AND %s
+                WHERE n.read_at IS NULL AND n.dismissed_at IS NULL AND %s
                 """.formatted(owner(actor)), Long.class, ownerId(actor));
         return count == null ? 0 : count;
     }
@@ -100,7 +107,8 @@ public class NotificationRepository {
         return jdbc.update("""
                 UPDATE notifications n SET read_at = now()
                 FROM chat_sessions s
-                WHERE s.session_id = n.session_id AND n.session_id = ? AND n.read_at IS NULL AND %s
+                WHERE s.session_id = n.session_id AND n.session_id = ? AND n.read_at IS NULL
+                  AND n.dismissed_at IS NULL AND %s
                 """.formatted(owner(actor)), sessionId, ownerId(actor));
     }
 

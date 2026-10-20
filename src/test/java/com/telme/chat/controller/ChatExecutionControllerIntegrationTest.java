@@ -122,7 +122,7 @@ class ChatExecutionControllerIntegrationTest {
     }
 
     @Test
-    void lateSubscriberRemovesNotificationSavedForUndeliveredAnswer() throws Exception {
+    void lateSubscriberHidesNotificationSavedForUndeliveredAnswer() throws Exception {
         long sessionId = createSession();
         ChatMessageSendResponse question = sendMessage(sessionId, "가까운 매장 알려줘");
         chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
@@ -182,7 +182,7 @@ class ChatExecutionControllerIntegrationTest {
         return ((Number) entityManager.createNativeQuery("""
                 SELECT count(*) FROM notifications n
                 JOIN chat_executions e ON e.output_message_id = n.message_id
-                WHERE e.execution_id = ?1
+                WHERE e.execution_id = ?1 AND n.dismissed_at IS NULL
                 """).setParameter(1, executionId).getSingleResult()).longValue();
     }
 }

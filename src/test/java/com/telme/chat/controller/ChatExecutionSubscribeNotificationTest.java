@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,7 +22,6 @@ import com.telme.notification.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
@@ -46,14 +44,6 @@ class ChatExecutionSubscribeNotificationTest {
             new StaticListableBeanFactory(Map.of("notificationService", notifications))
                     .getBeanProvider(NotificationService.class));
 
-    @BeforeEach
-    void runTerminalLockAction() {
-        doAnswer(invocation -> {
-            invocation.<Runnable>getArgument(1).run();
-            return null;
-        }).when(emitters).withTerminalLock(anyLong(), any());
-    }
-
     @Test
     @DisplayName("이미 끝난 실행을 구독했는데 결과 전송에 실패하면 서버 알림을 지우지 않는다")
     void 즉시_종료_전송_실패면_알림_유지() {
@@ -64,7 +54,6 @@ class ChatExecutionSubscribeNotificationTest {
         controller.subscribe(request, SESSION_ID, EXECUTION_ID);
 
         verify(notifications, never()).dismissDelivered(anyLong());
-        verify(emitters, never()).markDeliveredLate(anyLong());
     }
 
     @Test
@@ -76,7 +65,6 @@ class ChatExecutionSubscribeNotificationTest {
 
         controller.subscribe(request, SESSION_ID, EXECUTION_ID);
 
-        verify(emitters).markDeliveredLate(EXECUTION_ID);
         verify(notifications).dismissDelivered(EXECUTION_ID);
     }
 
@@ -106,7 +94,6 @@ class ChatExecutionSubscribeNotificationTest {
         doThrow(new IllegalStateException("db down")).when(notifications).dismissDelivered(EXECUTION_ID);
 
         assertThat(controller.subscribe(request, SESSION_ID, EXECUTION_ID)).isNotNull();
-        verify(emitters).markDeliveredLate(EXECUTION_ID);
     }
 
     private static ChatExecutionState state(ChatExecution.Status status) {
