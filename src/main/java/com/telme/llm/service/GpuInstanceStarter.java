@@ -1,8 +1,10 @@
 package com.telme.llm.service;
 
+import com.telme.llm.config.VllmGpuProperties;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,23 +14,23 @@ import software.amazon.awssdk.services.ec2.model.DescribeInstanceStatusRequest;
 import software.amazon.awssdk.services.ec2.model.InstanceStateName;
 import software.amazon.awssdk.services.ec2.model.StartInstancesRequest;
 
-// Bedrock 장애로 엑사원(vLLM)을 부를 때 꺼져 있는 GPU EC2를 킴
+// 엑사원(vLLM) 호출이 짧은 시간에 여러 번 생기면(Bedrock 장애) 꺼져 있는 GPU EC2를 킴
 // 끄는 건 GPU 안의 유휴 스크립트(30분)
-// 켜지는 데 몇 분 걸리므로 이 요청을 만든 호출은 대개 실패, 그 뒤 호출부터 대체된다
+// 켜서 vLLM이 첫 답을 내기까지 약 1분 40초~2분 40초(2026-10-19 실측, gp3 기본 131~156초)
+// 그동안의 엑사원 호출은 연결 시간 제한(1초) 뒤 실패하고, 준비된 뒤 호출부터 대체된다
 @Slf4j
 public class GpuInstanceStarter {
 
     private final Ec2Client ec2;
-    private final String instanceId;
-    private final Duration startInterval;
+    private final VllmGpuProperties properties;
     private final Clock clock;
     private final Executor executor;
+    private final Deque<Instant> recentCalls = new ArrayDeque<>();
     private final AtomicReference<Instant> lastRequestedAt = new AtomicReference<>();
 
-    public GpuInstanceStarter(Ec2Client ec2, String instanceId, Duration startInterval, Clock clock, Executor executor) {
+    public GpuInstanceStarter(Ec2Client ec2, VllmGpuProperties properties, Clock clock, Executor executor) {
         this.ec2 = ec2;
-        this.instanceId = instanceId;
-        this.startInterval = startInterval;
+        this.properties = properties;
         this.clock = clock;
         this.executor = executor;
     }
@@ -37,8 +39,11 @@ public class GpuInstanceStarter {
     // 간격 안의 중복 요청은 한 번으로 합침
     public void requestStart() {
         Instant now = clock.instant();
+        if (!enoughRecentCalls(now)) {
+            return;
+        }
         Instant last = lastRequestedAt.get();
-        if (last != null && now.isBefore(last.plus(startInterval))) {
+        if (last != null && now.isBefore(last.plus(properties.startInterval()))) {
             return;
         }
         if (!lastRequestedAt.compareAndSet(last, now)) {
@@ -47,15 +52,26 @@ public class GpuInstanceStarter {
         try {
             executor.execute(this::startIfStopped);
         } catch (RejectedExecutionException e) {
-            log.warn("[GPU 자동 기동] 요청을 넣지 못했습니다(앱 종료 중일 수 있음). instanceId={}", instanceId);
+            log.warn("[GPU 자동 기동] 요청을 넣지 못했습니다(앱 종료 중일 수 있음). instanceId={}", properties.instanceId());
         }
+    }
+
+    // 최근 startWindow 안의 엑사원 호출 수가 startMinCalls 이상인지
+    private synchronized boolean enoughRecentCalls(Instant now) {
+        recentCalls.addLast(now);
+        Instant windowStart = now.minus(properties.startWindow());
+        while (!recentCalls.isEmpty() && !recentCalls.peekFirst().isAfter(windowStart)) {
+            recentCalls.pollFirst();
+        }
+        return recentCalls.size() >= properties.startMinCalls();
     }
 
     // 실패해도 LLM 호출 흐름에는 영향X
     // 다음 간격에 다시 시도
     void startIfStopped() {
+        String instanceId = properties.instanceId();
         try {
-            InstanceStateName state = currentState();
+            InstanceStateName state = currentState(instanceId);
             if (state != InstanceStateName.STOPPED) {
                 // pending, running은 켜는 중이거나 켜져 있고 stopping은 다 꺼진 뒤 다음 요청에서 켠다
                 log.info("[GPU 자동 기동] 켜지 않습니다. instanceId={}, state={}", instanceId, state);
@@ -69,7 +85,7 @@ public class GpuInstanceStarter {
     }
 
     // 꺼진 인스턴스는 기본 조회에 나오지 않아 includeAllInstances를 켠다
-    private InstanceStateName currentState() {
+    private InstanceStateName currentState(String instanceId) {
         var statuses = ec2.describeInstanceStatus(DescribeInstanceStatusRequest.builder()
                         .instanceIds(instanceId)
                         .includeAllInstances(true)

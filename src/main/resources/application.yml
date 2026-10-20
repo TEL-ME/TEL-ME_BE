@@ -85,6 +85,10 @@ vllm:
     region: ${VLLM_GPU_REGION:ap-northeast-2}
     # 이 간격 안에서는 상태 확인·기동 요청을 다시 보내지 않는다
     start-interval: 1m
+    # start-window 안에 엑사원 호출이 start-min-calls번 이상일 때만 켠다.
+    # 조건 추출 파싱 실패, 일시 오류처럼 한 번 불린 걸로는 켜지 않는다(한 번 켜면 30분 이상 과금)
+    start-min-calls: 3
+    start-window: 2m
 
 kakao:
   local:
