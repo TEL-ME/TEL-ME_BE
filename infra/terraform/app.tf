@@ -1,5 +1,6 @@
-# CloudFront → ALB(HTTP 80) → 앱 EC2(8080) 도메인이 없어 ALB에 붙일 인증서를 받을 수 없으므로
-# 이 구간은 HTTP다. ALB는 CloudFront가 붙인 비밀 헤더가 맞는 요청만 넘기고 나머지는 403으로 막는다
+# CloudFront → ALB(HTTP 80) → 앱 EC2(8080). HTTPS는 브라우저 → CloudFront(www.telme.site) 구간에서 끝나고
+# ALB에는 인증서를 따로 붙이지 않았다. 대신 ALB는 CloudFront IP 대역(보안 그룹)에서 오고
+# CloudFront가 붙인 비밀 헤더가 맞는 요청만 넘기고 나머지는 403으로 막는다
 
 resource "random_password" "origin_secret" {
   length  = 40

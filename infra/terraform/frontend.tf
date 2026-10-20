@@ -1,6 +1,6 @@
-# 도메인 없이 CloudFront 기본 주소(*.cloudfront.net)와 기본 인증서로 HTTPS를 연다.
+# CloudFront 하나로 www.telme.site(us-east-1 ACM 인증서)를 연다. 도메인 변수를 비우면 *.cloudfront.net 기본 주소, 인증서로 연다.
 # 화면 파일은 S3, /api·로그인 경로는 ALB로 보낸다. 같은 주소라 CORS·쿠키 문제가 없다.
-# 지웠다 다시 만들면 주소가 바뀌고 OAuth 등록도 다시 해야 하므로 준비 기간에도 지우지 않는다
+# 지웠다 다시 만들면 CloudFront 주소가 바뀌어 가비아 www CNAME을 고쳐야 한다(도메인 없이 쓰면 OAuth, 카카오맵 등록도 다시)
 
 resource "aws_s3_bucket" "frontend" {
   bucket        = "${var.name}-frontend-${data.aws_caller_identity.current.account_id}"
