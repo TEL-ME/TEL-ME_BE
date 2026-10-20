@@ -72,7 +72,8 @@ public class MemberRecommendationAnswerer {
 
     // 회원이 아니면 userId는 null. confirmed는 이번 질문의 되묻기 답, previous는 같은 채팅방에서 앞서 한 답이고
     // 앞서 한 답은 다시 묻지 않고 쓴다. mayAsk가 false이면 되묻지 않는다
-    public Outcome recommend(Long userId, Map<String, String> confirmed, Map<String, String> previous, boolean mayAsk) {
+    public Outcome recommend(Long userId, Map<String, String> confirmed, Map<String, String> remembered, boolean mayAsk) {
+        Map<String, String> previous = withoutUnsure(remembered);
         Map<String, String> answers = new HashMap<>(previous);
         answers.putAll(confirmed);
         boolean ageReused = !confirmed.containsKey(AGE_KEY) && previous.containsKey(AGE_KEY);
@@ -111,6 +112,22 @@ public class MemberRecommendationAnswerer {
         }
         return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand,
                 usage.get(), discountPercent(subscription), note);
+    }
+
+    // 앞서 "모르겠어요"라고 한 사용량은 다시 쓰지 않는다. 그대로 쓰면 다음 추천이 되묻지 않고 안내로만 끝난다
+    private static Map<String, String> withoutUnsure(Map<String, String> remembered) {
+        Map<String, String> reusable = new HashMap<>(remembered);
+        reusable.entrySet().removeIf(entry -> isUnsure(entry.getKey(), entry.getValue()));
+        return reusable;
+    }
+
+    private static boolean isUnsure(String key, String value) {
+        return switch (key) {
+            case DATA_KEY -> DataUsageReplyParser.parse(value).kind() == DataUsageReplyParser.Kind.UNSURE;
+            case VOICE_KEY -> CallTextReplyParser.parseVoice(value).kind() == CallTextReplyParser.Kind.UNSURE;
+            case SMS_KEY -> CallTextReplyParser.parseSms(value).kind() == CallTextReplyParser.Kind.UNSURE;
+            default -> false;
+        };
     }
 
     // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.

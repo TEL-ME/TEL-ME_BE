@@ -11,10 +11,12 @@ import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.LongFunction;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +27,9 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     // 요금제 추천 답변(MemberRecommendationAnswerer)이 더 싸거나 큰 요금제를 권할 때 다는 버튼. 이 버튼 옆에 변경 화면 링크를 더한다
     static final String RECOMMENDATION_CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
+
+    // 대상 요금제를 직전 추천에서 보충하는 업무. 정지·해지는 쓰지 않아 저장된 메시지를 읽지 않는다
+    private static final Set<PlanTask> USES_RECOMMENDATION = EnumSet.of(PlanTask.CHANGE, PlanTask.SUBSCRIBE);
 
     private final AnswerProvider delegate;
     private final Map<PlanTask, PlanTaskHandler> handlers;
@@ -98,7 +103,8 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
 
     private PlanTaskOutcome handle(PlanTaskHandler handler, AnswerInput input) {
         try {
-            return handler.answer(memberOf(input), input.originalUserQuery(), input.resolvedUserQuery(), recentRecommendation(input));
+            String recommended = USES_RECOMMENDATION.contains(handler.task()) ? recentRecommendation(input) : null;
+            return handler.answer(memberOf(input), input.originalUserQuery(), input.resolvedUserQuery(), recommended);
         } catch (RuntimeException exception) {
             // 기존 FAQ 경로로 넘기면 업무 요청에 엉뚱한 답이 나가서 안내하지 못했다고만 알린다
             log.error("[채팅 요금제 업무] 안내 중 오류 task={}, executionId={}", handler.task(), input.executionId(), exception);
@@ -106,16 +112,40 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
         }
     }
 
-    // 같은 채팅방에서 가장 최근에 한 요금제 추천 답변의 첫 문장("…쓰신다면 5G 스탠다드(월 65,000원…) 요금제를 추천해요.").
-    // 뒤따르는 "5G로 쓰시려면 …" 같은 다른 후보는 대상이 아니라 첫 문장만 쓴다. 없으면 null
+    // 같은 채팅방에서 가장 최근에 한 요금제 추천 답변에서 추천한 요금제를 알려주는 문장.
+    // 뒤따르는 "5G로 쓰시려면 …" 같은 다른 후보와 지금 쓰는 요금제 문장은 대상이 아니라 빼고 쓴다. 없으면 null
     private String recentRecommendation(AnswerInput input) {
-        return recommendationOfSession.apply(input.sessionId()).map(PlanTaskAnswerProvider::firstSentence).orElse(null);
+        return recommendationOfSession.apply(input.sessionId()).map(PlanTaskAnswerProvider::targetSentence).orElse(null);
     }
 
-    static String firstSentence(String recommendation) {
+    static String targetSentence(String recommendation) {
         int end = recommendation.indexOf(SessionRecommendationAnswers.RECOMMENDATION_MARK);
-        return end < 0 ? recommendation
-                : recommendation.substring(0, end + SessionRecommendationAnswers.RECOMMENDATION_MARK.length());
+        if (end >= 0) {
+            return recommendation.substring(0, end + SessionRecommendationAnswers.RECOMMENDATION_MARK.length());
+        }
+        // 사용량이 있는 회원에게는 현재 요금제 문장 뒤에 추천한 요금제가 나온다
+        String sentence = between(recommendation, SessionRecommendationAnswers.UPGRADE_MARK,
+                SessionRecommendationAnswers.SHORTAGE_END, SessionRecommendationAnswers.UPGRADE_END);
+        if (sentence == null) {
+            sentence = between(recommendation, SessionRecommendationAnswers.CHEAPER_MARK,
+                    SessionRecommendationAnswers.USE_END, SessionRecommendationAnswers.CHEAPER_END);
+        }
+        if (sentence == null) {
+            sentence = between(recommendation, SessionRecommendationAnswers.KEEP_MARK,
+                    SessionRecommendationAnswers.USE_END, SessionRecommendationAnswers.KEEP_MARK);
+        }
+        return sentence == null ? recommendation : sentence;
+    }
+
+    // mark가 든 문장을 start 뒤부터 end 끝까지 잘라낸다. mark가 없거나 앞뒤를 찾지 못하면 null
+    private static String between(String text, String mark, String start, String end) {
+        int markAt = text.indexOf(mark);
+        if (markAt < 0) {
+            return null;
+        }
+        int from = text.lastIndexOf(start, markAt);
+        int to = text.indexOf(end, markAt);
+        return from < 0 || to < 0 ? null : text.substring(from + start.length(), to + end.length());
     }
 
     private GeneratedAnswer answered(AnswerInput input, String task, PlanTaskOutcome outcome) {

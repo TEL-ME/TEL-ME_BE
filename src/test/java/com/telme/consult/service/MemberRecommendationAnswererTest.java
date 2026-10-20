@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.telme.consult.dto.MissingCondition;
+import com.telme.consult.repository.SessionRecommendationAnswers;
 import com.telme.consult.service.MemberRecommendationAnswerer.Outcome;
 import com.telme.member.entity.User;
 import com.telme.member.repository.UserRepository;
@@ -232,6 +233,26 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 앞서_모르겠다고_한_사용량은_다시_쓰지_않고_되묻는다() {
+        // 저장된 값은 "모름"일 수도, 말한 그대로("잘 모르겠어요")일 수도 있다
+        for (String unsure : List.of("모름", "잘 모르겠어요")) {
+            Outcome outcome = answerer.recommend(null, Map.of(),
+                    Map.of("age_group", GENERAL, "monthly_data_usage", unsure), true);
+
+            assertThat(outcome.asks()).as(unsure).extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+        }
+        // 이번 질문에서 새로 알려주면 그 답을 쓰고, 모르겠다는 답을 앞서 썼다고 알리지 않는다
+        Outcome answered = answerer.recommend(null, Map.of("monthly_data_usage", "40GB"),
+                Map.of("age_group", GENERAL, "monthly_data_usage", "모름"), true);
+
+        assertThat(answered.asks()).isNull();
+        assertThat(answered.content()).contains("한 달에 데이터를 40GB 쓰신다면").doesNotContain("데이터 사용량 답을 기준으로");
+        // 이번 질문에서 모르겠다고 하면 되묻지 않고 안내한다
+        assertThat(answerer.recommend(null, Map.of("monthly_data_usage", "모름"), Map.of("age_group", GENERAL), true).content())
+                .contains("사용량을 잘 모르시면");
+    }
+
+    @Test
     void 이번에_한_답이_앞서_한_답보다_우선하고_이번_답은_앞서_썼다고_알리지_않는다() {
         Map<String, String> previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB");
 
@@ -366,6 +387,39 @@ class MemberRecommendationAnswererTest {
 
         assertThat(outcome.content()).contains("지금 쓰는 5G 스탠다드(월 65,000원, 데이터 50GB)이 사용량에 알맞아요", "그대로 쓰시는 걸 추천해요");
         assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    // 추천 답변 문구가 바뀌면 신청·변경이 직전 추천을 찾는 문구(SessionRecommendationAnswers)와 어긋나므로 함께 확인한다
+    @Test
+    void 더_싼_요금제를_권하는_답변에서_직전_추천_요금제만_찾는다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.CHEAPER_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content))
+                .isEqualTo("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면 사용량을 채우면서 월 20,000원 아낄 수 있어요.");
+    }
+
+    @Test
+    void 더_큰_요금제를_권하는_답변에서_직전_추천_요금제만_찾는다() {
+        subscribeAndUse("FIVE_G_LITE", 20 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.UPGRADE_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).isEqualTo("5G 스탠다드(월 65,000원, 데이터 50GB)을 추천해요.");
+    }
+
+    @Test
+    void 그대로_쓰라는_답변에서는_지금_요금제를_직전_추천으로_찾는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.KEEP_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).isEqualTo(
+                "지금 쓰는 5G 스탠다드(월 65,000원, 데이터 50GB)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요.");
     }
 
     @Test

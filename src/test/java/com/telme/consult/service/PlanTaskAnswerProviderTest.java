@@ -112,12 +112,31 @@ class PlanTaskAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("직전 추천은 대상 요금제를 보충하는 변경·신청만 조회하고, 해지는 조회하지 않는다")
+    void 해지는_직전_추천을_조회하지_않는다() {
+        java.util.concurrent.atomic.AtomicInteger lookups = new java.util.concurrent.atomic.AtomicInteger();
+        provider = new PlanTaskAnswerProvider(faq, List.of(changes, cancels), sessionId -> Optional.of(USER_ID),
+                sessionId -> {
+                    lookups.incrementAndGet();
+                    return Optional.empty();
+                }, ExecutionTrace.noop(), true);
+        when(cancels.answer(any(), any(), any(), any())).thenReturn(PlanTaskOutcome.reply("해지하면 바로 끊겨요.", PlanTaskLinks.CANCEL));
+        when(changes.answer(any(), any(), any(), any())).thenReturn(PlanTaskOutcome.reply("변경 화면에서 골라 주세요.", PlanTaskLinks.CHANGE));
+
+        provider.prepare(input(Purpose.GENERAL_FAQ, "요금제 해지해줘"), true);
+        assertThat(lookups.get()).isZero();
+
+        provider.prepare(input(Purpose.GENERAL_FAQ, "그 요금제로 바꿔줘"), true);
+        assertThat(lookups.get()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("직전 추천은 첫 문장만 쓴다. 문장 끝 표시가 없으면 본문 전체를 그대로 넘긴다")
     void 첫_문장만_쓴다() {
-        assertThat(PlanTaskAnswerProvider.firstSentence(
+        assertThat(PlanTaskAnswerProvider.targetSentence(
                 "한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요. 뒤 문장"))
                 .isEqualTo("한 달에 데이터를 40GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요.");
-        assertThat(PlanTaskAnswerProvider.firstSentence("표시 없는 본문")).isEqualTo("표시 없는 본문");
+        assertThat(PlanTaskAnswerProvider.targetSentence("표시 없는 본문")).isEqualTo("표시 없는 본문");
     }
 
     @Test

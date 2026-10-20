@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 // 요금제 업무들이 함께 쓰는 요금제 이름 찾기, 조사, 시각 표기
 final class PlanTaskSupport {
@@ -17,6 +18,10 @@ final class PlanTaskSupport {
     static final String MY_PLAN_QUESTION = "내 요금제 알려줘";
     static final String LOGIN_REQUIRED = "로그인한 뒤 마이페이지의 내 요금제 화면에서 할 수 있어요.";
     static final String FAILED = "지금은 안내하지 못했어요. 마이페이지의 내 요금제 화면에서 진행해 주세요.";
+
+    // 직전 추천을 가리키는 말. 띄어쓰기를 지운 문장에서 찾는다
+    private static final Pattern REFERENCE = Pattern.compile("[그이저](요금제|플랜|걸|거|것)|추천(해준|한|받은)(걸|거|것|요금제)|방금|아까");
+    private static final Pattern OTHER_PLAN = Pattern.compile("다른|딴");
 
     private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("M월 d일 H시", Locale.KOREAN);
@@ -32,10 +37,26 @@ final class PlanTaskSupport {
     }
 
     // 띄어쓰기와 대소문자를 무시하고, 음성 인식이 소리 나는 대로 적은 "오지"·"엘티이"도 5G·LTE로 읽는다
-    // 원문과 풀어쓴 문장에 이름이 없으면 직전 추천 문장에서 찾는다
+    // 원문에 이름이 없을 때 "그 요금제", "그걸로"처럼 추천을 가리키면 직전 추천 요금제를 풀어쓴 문장보다 먼저 쓴다.
+    // "다른 요금제로"는 추천과 다른 요금제를 고르겠다는 말이라 대상을 정하지 않는다. 그 밖에는 풀어쓴 문장, 직전 추천 순서로 찾는다
     static List<Plan> namedPlans(List<Plan> selling, String original, String resolved, String recommended) {
-        List<Plan> named = namedPlans(selling, original, resolved);
-        return named.isEmpty() ? mentionedPlans(selling, recommended) : named;
+        List<Plan> named = mentionedPlans(selling, original);
+        if (!named.isEmpty()) {
+            return named;
+        }
+        String asked = original == null ? "" : original.replaceAll("\\s+", "");
+        boolean refersToRecommendation = REFERENCE.matcher(asked).find();
+        if (!refersToRecommendation && OTHER_PLAN.matcher(asked).find()) {
+            return List.of();
+        }
+        if (refersToRecommendation) {
+            List<Plan> fromRecommendation = mentionedPlans(selling, recommended);
+            if (!fromRecommendation.isEmpty()) {
+                return fromRecommendation;
+            }
+        }
+        List<Plan> fromContext = mentionedPlans(selling, resolved);
+        return fromContext.isEmpty() ? mentionedPlans(selling, recommended) : fromContext;
     }
 
     static List<Plan> mentionedPlans(List<Plan> selling, String... texts) {
