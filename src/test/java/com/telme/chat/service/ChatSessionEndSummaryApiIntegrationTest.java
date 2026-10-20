@@ -631,6 +631,28 @@ class ChatSessionEndSummaryApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("답변 머리말만 있는 문단은 안내로 쓰지 않고 다음 문단을 안내로 남긴다")
+    void 답변_머리말은_안내가_아니다() throws Exception {
+        String answer = "요금제 안내예요.\n\n[5G] 5G 언리미티드: 월 105,000원, 데이터 무제한";
+        var fixture = fixture(false, "데이터 무제한 요금제 뭐있어요?", answer);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", answer, fixture.answerId(), null);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"데이터 무제한 요금제"},"selectedSentenceIds":[1],"pendingItems":[]}"""
+                .formatted(fixture.questionId()));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        var prompt = mapper.readTree(captureRequest().userPrompt());
+        assertThat(prompt.path("guidanceCandidates").toString()).doesNotContain("요금제 안내예요");
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.guidance.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.guidance[0]")
+                        .value("안내받은 내용: [5G] 5G 언리미티드: 월 105,000원, 데이터 무제한"));
+    }
+
+    @Test
     @DisplayName("기록된 상담에서 상담 요청 없이 주제 확인 안내만 받은 질문은 모델이 주제를 붙이면 그 주제로 남은 문의에 적고 안내로 쓰지 않는다")
     void 주제_확인_안내만_받은_질문은_남은_문의다() throws Exception {
         var fixture = fixture(false, "요금 납부일 바꾸고 싶어요", "매월 말일로 바꿀 수 있습니다.");
@@ -820,6 +842,154 @@ class ChatSessionEndSummaryApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("'A 말고 B'로 정정하면 모델이 주제를 달리 붙여도 정정 뒤 주제로 묶고 문의별 목록에서 정정 전 답을 뺀다")
+    void 정정하면_정정_전_답을_문의별_목록에서_뺀다() throws Exception {
+        var fixture = fixture(false, "자동이체 카드로 바꾸고 싶은데요", "신용카드로 변경 신청하시면 다음 달 청구분부터 적용됩니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "신용카드로 변경 신청하시면 다음 달 청구분부터 적용됩니다.", fixture.answerId(), null);
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "아 죄송 카드 말고 계좌로요", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER", "계좌이체로 변경 신청하시면 됩니다.", next);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", answer);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '계좌 자동이체', 'DONE', 'ANSWERED', '계좌이체로 변경 신청하시면 됩니다.', ?)
+                """, fixture.sessionId(), next, answer);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"자동이체 카드 변경","%d":"자동이체 계좌 변경"},"selectedSentenceIds":[1,2],
+                 "pendingItems":[]}""".formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.topics.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.topics[0]").value("자동이체 계좌 변경"))
+                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].title").value("자동이체 계좌 변경"))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].text").value("안내받은 내용: 계좌이체로 변경 신청하시면 됩니다."))
+                .andExpect(jsonPath("$.result.summary.guidance.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("되묻는 중에 '그건 됐고'로 거둔 문의는 남은 사항에 넣지 않는다")
+    void 거둔_문의는_남은_사항이_아니다() throws Exception {
+        var fixture = fixture(false, "매장 찾고싶어요", "어느 지역의 매장을 찾으시나요?");
+        jdbc.update("UPDATE chat_messages SET message_type='CLARIFICATION' WHERE message_id=?", fixture.answerId());
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id)
+                VALUES (?, ?, 1, 'STORE', '매장 찾기', 'CANCELLED', 'ASKED', '어느 지역의 매장을 찾으시나요?', ?)
+                """, fixture.sessionId(), fixture.questionId(), fixture.answerId());
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "아 그건 됐고 폰 잃어버렸을때 위치 찾는 서비스 있어요?", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER, next);
+        jdbc.update("UPDATE chat_messages SET answer_basis='NO_EVIDENCE' WHERE message_id=?", answer);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '분실폰 위치 찾기', 'DONE', 'NO_EVIDENCE', ?)
+                """, fixture.sessionId(), next, answer);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"매장 찾기","%d":"분실폰 위치 찾기"},"selectedSentenceIds":[],"pendingItems":[]}"""
+                .formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("답변을 받지 못한 문의: 분실폰 위치 찾기"));
+    }
+
+    @Test
+    @DisplayName("복합 질문 뒤의 정정은 앞 문의와 묶지 않아 답을 받지 못한 하위 질문이 남는다")
+    void 복합_질문_뒤_정정은_하위_질문을_지우지_않는다() throws Exception {
+        var fixture = fixture(false, "선택약정 24개월 하면 할인 몇프로에요? 중간에 해지하면 어떻게 되고요",
+                "1. 할인 몇프로에요?\n정확하게 안내드리기 어려워요.\n\n2. 중간에 해지하면 어떻게 되고요\n12개월 미만에 해지하면 할인 반환금의 100%를 반환합니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "NO_EVIDENCE", null, fixture.answerId(), "할인 몇프로에요?");
+        request(fixture, 2, "DONE", "ANSWERED", "12개월 미만에 해지하면 할인 반환금의 100%를 반환합니다.", fixture.answerId(),
+                "중간에 해지하면 어떻게 되고요");
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "잠깐만요 24개월이 아니라 12개월로 할 생각이에요", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                com.telme.rag.service.AnswerPromptTemplates.NO_EVIDENCE_ANSWER, next);
+        jdbc.update("UPDATE chat_messages SET answer_basis='NO_EVIDENCE' WHERE message_id=?", answer);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '12개월 약정', 'DONE', 'NO_EVIDENCE', ?)
+                """, fixture.sessionId(), next, answer);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"선택약정 할인과 해지","%d":"12개월 약정 변경"},"selectedSentenceIds":[1],
+                 "pendingItems":[]}""".formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.topics.length()").value(2))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(2))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("답변을 받지 못한 문의: 할인 몇프로에요?"));
+    }
+
+    @Test
+    @DisplayName("'아니 그러니까'로 같은 문의를 다시 물으면 한 문의로 묶고 두 답을 모두 남긴다")
+    void 다시_물은_질문은_한_문의로_묶는다() throws Exception {
+        var fixture = fixture(false, "폰 잃어버렸어요 분실신고 어케해요ㅠ", "고객센터에 분실 신고를 하시면 바로 정지됩니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "고객센터에 분실 신고를 하시면 바로 정지됩니다.", fixture.answerId(), null);
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "아니 그러니까 폰 없어졌을때 정지는 어디서 하냐구요", null);
+        long answer = message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER", "매장에서도 신청하실 수 있습니다.", next);
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", answer);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '분실 정지', 'DONE', 'ANSWERED', '매장에서도 신청하실 수 있습니다.', ?)
+                """, fixture.sessionId(), next, answer);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"휴대폰 분실 신고","%d":"분실 시 서비스 정지"},"selectedSentenceIds":[1,2],
+                 "pendingItems":[]}""".formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.topics.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(2))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].title").value("분실 시 서비스 정지"))
+                .andExpect(jsonPath("$.result.summary.inquiries[1].title").value("분실 시 서비스 정지"));
+    }
+
+    @Test
+    @DisplayName("되묻는 중에 조건을 고쳐 말해 다시 되묻기를 받으면 정정 전 문의를 따로 남기지 않는다")
+    void 정정한_뒤_다시_되물으면_정정_전_문의는_남기지_않는다() throws Exception {
+        var fixture = fixture(false, "3만원대 요금제 추천좀요", "나이에 따라 추천하는 요금제가 달라져요. 나이대가 어떻게 되세요?");
+        jdbc.update("UPDATE chat_messages SET message_type='CLARIFICATION' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "CANCELLED", "ASKED", "나이에 따라 추천하는 요금제가 달라져요. 나이대가 어떻게 되세요?",
+                fixture.answerId(), null);
+        long next = message(fixture.sessionId(), 3, "USER", "QUESTION", "아니 그냥 5만원 이하면 돼요 데이터 많은걸로", null);
+        long asked = message(fixture.sessionId(), 4, "ASSISTANT", "CLARIFICATION", "나이대가 어떻게 되세요?", next);
+        jdbc.update("""
+                INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text,status,
+                    answer_outcome,answer_text,answer_message_id)
+                VALUES (?, ?, 1, 'FAQ', '5만원 이하 요금제', 'WAITING_CONDITION', 'ASKED', '나이대가 어떻게 되세요?', ?)
+                """, fixture.sessionId(), next, asked);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"3만원대 요금제 추천","%d":"5만원 이하 데이터 많은 요금제 추천"},"selectedSentenceIds":[],
+                 "pendingItems":[]}""".formatted(fixture.questionId(), next));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.topics.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]")
+                        .value("미확인 조건: 5만원 이하 데이터 많은 요금제 추천 — 나이대가 어떻게 되세요?"));
+    }
+
+    @Test
     @DisplayName("상담 요청 없이 주제 확인 안내만 받은 잡담은 모델이 주제를 붙이지 않으면 남은 사항이 아니다")
     void 주제_없는_잡담은_남은_사항이_아니다() throws Exception {
         var fixture = fixture(false, "데이터 선물하기 어케함", "앱에서 받는 분 번호와 용량을 입력하면 됩니다.");
@@ -884,6 +1054,55 @@ class ChatSessionEndSummaryApiIntegrationTest {
                 .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
                 .andExpect(jsonPath("$.result.summary.guidance[0]").value("안내받은 내용: 현지 통신사에 연락해 이용 정지를 하세요."))
                 .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("상담 요청 없는 남은 문의의 원문에 줄바꿈·탭이 있어도 주제 문구로 바꾼다")
+    void 줄바꿈이_있는_원문도_주제로_바꾼다() throws Exception {
+        var fixture = fixture(false, "요금 납부일 바꾸고 싶어요", "매월 말일로 바꿀 수 있습니다.");
+        jdbc.update("UPDATE chat_messages SET answer_basis='GROUNDED' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "매월 말일로 바꿀 수 있습니다.", fixture.answerId(), null);
+        long vague = message(fixture.sessionId(), 3, "USER", "QUESTION", "그거 말고\n\t그거요", null);
+        message(fixture.sessionId(), 4, "ASSISTANT", "ANSWER",
+                "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.", vague);
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"요금 납부일 변경","%d":"납부일 외 다른 문의"},"selectedSentenceIds":[1],"pendingItems":[]}"""
+                .formatted(fixture.questionId(), vague));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.pendingItems.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.pendingItems[0]").value("답변을 받지 못한 문의: 납부일 외 다른 문의"));
+    }
+
+    @Test
+    @DisplayName("안내와 남은 사항을 문의별로 묶어 제목과 함께 돌려주고, 안내를 고르지 않은 답도 첫 문단을 남긴다")
+    void 문의별로_제목과_함께_돌려준다() throws Exception {
+        var fixture = fixture(false, "로밍 신청 방법이랑 유심 재발급 비용이랑 근처 매장", "1. 로밍 신청 방법\n홈페이지에서 신청할 수 있습니다."
+                + "\n\n2. 유심 재발급 비용\n7,700원입니다.\n\n3. 근처 매장\n어느 지역의 매장을 찾으시나요?");
+        jdbc.update("UPDATE chat_messages SET message_type='CLARIFICATION' WHERE message_id=?", fixture.answerId());
+        request(fixture, 1, "DONE", "ANSWERED", "홈페이지에서 신청할 수 있습니다.", fixture.answerId(), "로밍 신청 방법");
+        request(fixture, 2, "DONE", "ANSWERED", "7,700원입니다.", fixture.answerId(), "유심 재발급 비용");
+        request(fixture, 3, "WAITING_CONDITION", "ASKED", "어느 지역의 매장을 찾으시나요?", fixture.answerId(), "근처 매장");
+        // 모델은 첫 안내만 고른다. 유심 비용 안내는 서버가 첫 문단으로 보충한다
+        when(client.generate(any())).thenReturn("""
+                {"topics":{"%d":"로밍 신청과 유심 비용, 매장 찾기"},"selectedSentenceIds":[1],"pendingItems":[]}"""
+                .formatted(fixture.questionId()));
+        close(fixture);
+        service.process(fixture.sessionId());
+
+        mvc.perform(get(path(fixture)).session(fixture.actor())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.summaryStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.summary.inquiries.length()").value(2))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].title").value("로밍 신청 방법"))
+                .andExpect(jsonPath("$.result.summary.inquiries[0].text").value("안내받은 내용: 홈페이지에서 신청할 수 있습니다."))
+                .andExpect(jsonPath("$.result.summary.inquiries[1].title").value("유심 재발급 비용"))
+                .andExpect(jsonPath("$.result.summary.inquiries[1].text").value("안내받은 내용: 7,700원입니다."))
+                .andExpect(jsonPath("$.result.summary.remaining.length()").value(1))
+                .andExpect(jsonPath("$.result.summary.remaining[0].kind").value("NEEDS_CONFIRMATION"))
+                .andExpect(jsonPath("$.result.summary.remaining[0].text").value("근처 매장 — 어느 지역의 매장을 찾으시나요?"));
     }
 
     private long request(Fixture fixture, int order, String status, String outcome, String text, Long messageId,

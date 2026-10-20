@@ -86,7 +86,8 @@ class ChatSessionEndSummaryInputReader {
                     && replies.stream().allMatch(reply -> isFixedSocial(reply.content()));
             // 상담 요청이 하나도 없는 상담에서 범위 밖 안내만 받은 발화(잡담·인사)는 요약하지 않는다. 결과를 기록한
             // 상담에서는 입력에 남겨 정정 맥락("아 5일 아니고 10일이요"가 범위 밖으로 처리된 경우)을 모델이 보게 하되,
-            // 남은 사항·주제·안내로는 쓰지 않는다(recordedPending, topicSources, recordedGuidanceQuotes)
+            // 남은 사항·주제·안내로는 쓰지 않는다(recordedPending, topicSources, recordedGuidanceQuotes). 범위 밖 답을
+            // 받은 통신 후속 질문도 있지만, 남은 사항 후보로 넣으면 모델이 잡담(날씨·로또·점심)에도 주제를 붙인다(13차 평가)
             boolean outOfScope = requests.isEmpty() && !replies.isEmpty()
                     && replies.stream().allMatch(reply -> "OUT_OF_SCOPE".equals(reply.basis()));
             if (greeting || outOfScope) {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.telme.chat.config.ChatEndSummaryConfiguration;
 import com.telme.chat.config.ChatEndSummaryProperties;
+import com.telme.chat.dto.res.ChatSessionEndSummaryResponse;
 import com.telme.chat.dto.res.ChatSessionEndSummaryResponse.Content;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.ChatOutputGuard;
@@ -27,10 +28,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 class ChatSessionEndSummaryGenerator {
-    static final String VERSION = "consultation-end-summary-v12";
+    static final String VERSION = "consultation-end-summary-v15";
     static final List<String> FIELDS = List.of("topics", "guidance", "pendingItems");
     private static final List<String> MODEL_FIELDS = List.of("topics", "selectedSentenceIds", "pendingItems");
     private static final int MAX_GUIDANCE_LENGTH = 480;
+    // 문의별 화면에 보이는 안내 요약 한 줄의 최대 길이
+    static final int MAX_SUMMARY_LENGTH = 120;
     private static final int MAX_GUIDANCE_ITEMS = 8;
     private static final int DEFAULT_PENDING_ITEMS = 8;
 
@@ -43,11 +46,13 @@ class ChatSessionEndSummaryGenerator {
             출력은 topics 객체, selectedSentenceIds 배열, pendingItems 배열입니다.
             topics는 문의 번호를 키로 하는 객체입니다. 문의 주제만 짧은 명사형으로 씁니다. 정책 답변이나 확인·처리 완료를 넣지 않습니다.
             한 발화에서 여러 가지를 물었으면(requests의 같은 문의 번호에 하위 질문이 여럿) 하나도 빠뜨리지 않고 한 주제에 모두 씁니다.
-            앞 문의의 기간·금액·대상·지역·조건을 고쳐 말하거나 같은 문의를 이어 물은 발화는 앞 문의와 글자까지 같은 주제를 쓰고,
-            주제에는 정정 뒤 값을 씁니다(예: '일본 5일 로밍'을 '일주일'로 고치면 둘 다 '일본 일주일 로밍 요금'). 정정 발화를 따로 주제로 만들지 않습니다.
+            앞 문의를 정정하거나 이어 물은 발화는 앞 문의와 글자까지 같은 주제를 쓰고 정정 뒤 값을 씁니다(예: 둘 다 '일본 일주일 로밍 요금').
             pendingIds의 발화에도 주제를 씁니다. 조건에 답한 발화(나이·지역 등 정보만 준 말)는 주제로 만들지 않습니다.
             인사와 통신 서비스와 무관한 잡담(날씨·음식·투자 등)에는 주제를 쓰지 않습니다.
+            주제는 고객이 물은 대상·내용대로 쓰고 챗봇의 되묻기 내용으로 바꾸지 않습니다.
             selectedSentenceIds는 guidanceCandidates의 sentenceId 중 중요한 안내 번호입니다. 안내 문장을 쓰거나 복사하지 않습니다.
+            guidanceSummaries는 고른 sentenceId별 한 문장 요약(60자 안팎)입니다. 원문 사실만 쓰고 숫자·전제 조건(일주일이면,
+            가족이 대신 등)·부정은 그대로 남기며, 없는 조건·기간 낱말·질문·권유를 더하지 않습니다.
             비용, 조건, 예외를 포함한 안내를 고릅니다. 최신 조건에 실제 답한 안내를 우선하고, 되묻기를 안내로 취급하지 않습니다.
             pendingItems는 남은 문의를 text와 원본 sourceMessageIds로 정리합니다. pendingIds의 문의와 미확인 조건을 빠뜨리지 않습니다.
             현재 조건은 currentConditions와 연결된 conditionSources를 사용합니다. 최신 정정은 이전 부분 요약보다 우선합니다.
@@ -151,10 +156,15 @@ class ChatSessionEndSummaryGenerator {
             selected.set("topics", partial.path("topics"));
             selected.set("pendingItems", partial.path("pendingItems"));
             var references = selected.putArray("selectedSentenceIds");
+            var summaries = selected.putObject("guidanceSummaries");
             for (var item : partial.path("guidance")) {
                 String text = item.path("text").asText().replaceFirst("^안내받은 내용: ", "");
-                candidates.stream().filter(candidate -> candidate.text().equals(text))
-                        .findFirst().ifPresent(candidate -> references.add(candidate.sentenceId()));
+                candidates.stream().filter(candidate -> candidate.text().equals(text)).findFirst().ifPresent(candidate -> {
+                    references.add(candidate.sentenceId());
+                    if (item.has("summary")) {
+                        summaries.put(String.valueOf(candidate.sentenceId()), item.path("summary").asText());
+                    }
+                });
             }
             selections.add(selected);
         }
@@ -333,9 +343,14 @@ class ChatSessionEndSummaryGenerator {
     }
 
     private JsonNode resolveSelection(JsonNode model, List<Candidate> choices, Set<Long> latest) {
-        if (!model.isObject() || model.size() != 3 || MODEL_FIELDS.stream().anyMatch(field -> !model.has(field))) {
+        // guidanceSummaries는 고른 안내의 짧은 요약이다. 없어도 원문 발췌로 요약을 만든다
+        boolean summarized = model.has("guidanceSummaries");
+        if (!model.isObject() || model.size() != (summarized ? 4 : 3)
+                || MODEL_FIELDS.stream().anyMatch(field -> !model.has(field))
+                || summarized && !model.path("guidanceSummaries").isObject()) {
             throw new IllegalArgumentException("INVALID_OUTPUT");
         }
+        var guidanceSummaries = model.path("guidanceSummaries");
         var selected = model.path("selectedSentenceIds");
         if (!selected.isArray() || selected.size() > MAX_GUIDANCE_ITEMS) {
             throw new IllegalArgumentException("INVALID_SELECTION");
@@ -367,10 +382,53 @@ class ChatSessionEndSummaryGenerator {
         for (var choice : selectGuidance(selected, choices, latest)) {
             var item = guidance.addObject();
             item.put("text", choice.text());
+            var summary = guidanceSummaries.path(String.valueOf(choice.sentenceId()));
+            if (summary.isTextual() && isFaithfulSummary(summary.textValue(), choice.text())) {
+                item.put("summary", summary.textValue().strip());
+            }
             var sources = item.putArray("sourceMessageIds");
             choice.sourceMessageIds().forEach(sources::add);
         }
         return result;
+    }
+
+    /**
+     * 모델이 쓴 안내 요약을 화면에 보여도 되는지. 하나라도 어기면 쓰지 않고 원문 발췌를 보여 준다.
+     * 요약과 원문의 숫자(쉼표를 뗀 값)가 같아야 한다(지어내지도 빼지도 않는다. "1회 30일, 연간 90일"을 "30일"로 줄이면
+     * 조건이 바뀐다). 기간 낱말(하루·열흘·일주일 등)과 대리·부정 표현도 양쪽에 함께 있어야 한다. 물음이나 지나치게 긴
+     * 문장은 요약이 아니다
+     */
+    static boolean isFaithfulSummary(String summary, String source) {
+        String text = summary.strip();
+        if (text.isEmpty() || text.length() > MAX_SUMMARY_LENGTH || text.contains("?")) {
+            return false;
+        }
+        if (!numbers(text).equals(numbers(source))) {
+            return false;
+        }
+        for (var words : SUMMARY_KEPT_WORDS) {
+            if (words.matcher(text).find() != words.matcher(source).find()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static final java.util.regex.Pattern NUMBER = java.util.regex.Pattern.compile("\\d[\\d,]*(?:\\.\\d+)?");
+
+    // 요약과 원문에 함께 있거나 함께 없어야 하는 말. 기간·대상 낱말은 하나씩, 부정은 무리로 본다
+    private static final List<java.util.regex.Pattern> SUMMARY_KEPT_WORDS = java.util.stream.Stream.of("하루", "이틀",
+            "사흘", "나흘", "닷새", "열흘", "보름", "일주일", "한 ?달", "두 ?달", "석 ?달", "반년", "일 ?년", "연간", "매월",
+            "매달", "평생", "무제한", "무료", "대신", "대리", "위임", "본인", "없|않|못|불가|안 ?되|안 ?돼")
+            .map(java.util.regex.Pattern::compile).toList();
+
+    private static Set<String> numbers(String text) {
+        Set<String> found = new HashSet<>();
+        var matcher = NUMBER.matcher(text);
+        while (matcher.find()) {
+            found.add(matcher.group().replace(",", ""));
+        }
+        return found;
     }
 
     private List<Candidate> selectGuidance(JsonNode selected, List<Candidate> choices, Set<Long> latest) {
@@ -437,6 +495,9 @@ class ChatSessionEndSummaryGenerator {
 
     private ChatEndSummaryData.Result labelGuidance(ChatEndSummaryData.Input input, ChatEndSummaryData.Result result) {
         ObjectNode root = (ObjectNode) parse(result.json());
+        if (input.recordsOutcomes()) {
+            coverAnsweredQuestions(input, root);
+        }
         Set<Long> latest = latestGuidance(input, allIds(input));
         for (var item : root.path("guidance")) {
             boolean current = false;
@@ -460,9 +521,199 @@ class ChatSessionEndSummaryGenerator {
             String prefix = current ? "조건 확인 후 안내: " : "조건 확인 전 안내: ";
             ((ObjectNode) item).put("text", item.path("text").asText().replaceFirst("^안내받은 내용: ", prefix));
         }
+        groupByInquiry(input, root);
         String serialized = json(root);
         guard.verifySummary(serialized, result.maskContext());
         return new ChatEndSummaryData.Result(serialized, readContent(serialized), result.maskContext());
+    }
+
+    /**
+     * 답을 받은 하위 질문마다 안내를 최소 한 문단은 남긴다. 문의별 화면은 안내가 없는 문의를 보여 주지 않으므로,
+     * 모델이 어떤 답의 안내를 하나도 고르지 않으면 그 문의가 요약에서 사라진다. 그 답의 첫 문단을 원문 그대로 더한다
+     * (모델 문장이 아니라 기록된 안내 문구다). 안내 최대 개수는 넘기지 않는다
+     */
+    private void coverAnsweredQuestions(ChatEndSummaryData.Input input, ObjectNode root) {
+        var guidance = (com.fasterxml.jackson.databind.node.ArrayNode) root.path("guidance");
+        Set<String> selected = new HashSet<>();
+        guidance.forEach(item -> selected.add(item.path("text").asText().replaceFirst("^안내받은 내용: ", "")));
+        Set<Long> ids = allIds(input);
+        for (var request : input.requests()) {
+            if (guidance.size() >= MAX_GUIDANCE_ITEMS) {
+                return;
+            }
+            if (!isGuided(request) || request.answerText() == null || request.answerMessageId() == null
+                    || !ids.contains(request.answerMessageId())) {
+                continue;
+            }
+            var quotes = recordedQuotes(inspector.inspect(request.answerText()).content()).stream()
+                    .filter(quote -> quote.length() <= MAX_GUIDANCE_LENGTH).toList();
+            if (quotes.isEmpty() || quotes.stream().anyMatch(selected::contains)) {
+                continue;
+            }
+            var item = guidance.addObject();
+            item.put("text", "안내받은 내용: " + quotes.getFirst());
+            item.putArray("sourceMessageIds").add(request.answerMessageId());
+            selected.add(quotes.getFirst());
+        }
+    }
+
+    /**
+     * 안내와 남은 사항을 문의별로 묶어 inquiries·remaining에 함께 저장한다. 화면이 "이 안내가 어느 문의에 대한 답인지"를
+     * 제목과 보여 준다. 제목은 복합 질문이면 고객에게 보인 하위 질문, 아니면 모델이 붙인 주요 문의 주제다.
+     * 기존 topics·guidance·pendingItems는 그대로 둔다
+     */
+    private void groupByInquiry(ChatEndSummaryData.Input input, ObjectNode root) {
+        Map<Long, String> topicOf = new HashMap<>();
+        for (var topic : root.path("topics")) {
+            topic.path("sourceMessageIds").forEach(id -> topicOf.putIfAbsent(id.longValue(), topic.path("text").asText()));
+        }
+        // 같은 문의에 같은 내용을 다시 물으면 답 문장만 조금 다른 안내가 둘 나온다("2~3 영업일 내에 도착합니다" /
+        // "2~3 영업일이 소요됩니다"). 같은 제목 안에서 거의 같은 안내는 나중 답 하나만 남긴다
+        List<String[]> grouped = new ArrayList<>();
+        List<Integer> sequences = new ArrayList<>();
+        Set<Long> superseded = input.recordsOutcomes() ? supersededAnswers(input, root) : Set.of();
+        for (var item : root.path("guidance")) {
+            if (!item.path("sourceMessageIds").isEmpty() && java.util.stream.StreamSupport
+                    .stream(item.path("sourceMessageIds").spliterator(), false)
+                    .allMatch(id -> superseded.contains(id.longValue()))) {
+                continue;
+            }
+            String text = item.path("text").asText();
+            // 화면에는 확인을 통과한 짧은 요약을, 없으면 원문 발췌를 보인다. 같은 내용인지는 원문으로 가린다
+            String shown = item.hasNonNull("summary") ? item.path("summary").asText() : text;
+            String title = inquiryTitle(input, topicOf, item.path("sourceMessageIds"), text);
+            int sequence = 0;
+            for (var id : item.path("sourceMessageIds")) {
+                sequence = Math.max(sequence, input.messages().stream().filter(message -> message.id() == id.longValue())
+                        .mapToInt(ChatEndSummaryData.Message::sequence).findFirst().orElse(0));
+            }
+            int same = -1;
+            for (int i = 0; i < grouped.size(); i++) {
+                if (grouped.get(i)[0].equals(title) && nearlySame(grouped.get(i)[1], text)) {
+                    same = i;
+                    break;
+                }
+            }
+            if (same < 0) {
+                grouped.add(new String[] {title, text, shown});
+                sequences.add(sequence);
+            } else if (sequence >= sequences.get(same)) {
+                grouped.set(same, new String[] {title, text, shown});
+                sequences.set(same, sequence);
+            }
+        }
+        var inquiries = root.putArray("inquiries");
+        for (String[] entry : grouped) {
+            var inquiry = inquiries.addObject();
+            inquiry.put("title", entry[0]);
+            inquiry.put("text", entry[2]);
+        }
+        var remaining = root.putArray("remaining");
+        Map<String, String> kinds = new LinkedHashMap<>();
+        kinds.put("미확인 조건: ", "NEEDS_CONFIRMATION");
+        kinds.put("확인 필요: ", "NEEDS_CONFIRMATION");
+        kinds.put("답변을 받지 못한 문의: ", "UNANSWERED");
+        kinds.put("답변을 마치지 못한 문의: ", "UNANSWERED");
+        for (var item : root.path("pendingItems")) {
+            String text = item.path("text").asText();
+            String kind = "OTHER";
+            for (var entry : kinds.entrySet()) {
+                if (text.startsWith(entry.getKey())) {
+                    text = text.substring(entry.getKey().length());
+                    kind = entry.getValue();
+                    break;
+                }
+            }
+            var sources = item.path("sourceMessageIds");
+            String title = sources.isEmpty() ? null : topicOf.get(sources.get(0).longValue());
+            var entry = remaining.addObject();
+            entry.put("title", title != null ? title : text.split(" — ", 2)[0]);
+            entry.put("text", text);
+            entry.put("kind", kind);
+        }
+    }
+
+    /**
+     * 정정으로 대체된 답. "카드로 바꾸고 싶어요" → "카드 말고 계좌로요"에서 앞 답(카드 변경 안내)은 고객이 원한 것이 아니다.
+     * 정정한 발화의 답이 안내로 남아 있을 때만 앞 답을 문의별 목록에서 뺀다(guidance 목록과 출처는 그대로 둔다).
+     * 앞 발화가 복합 질문이면 followUpPairs가 짝을 만들지 않아 그대로 둔다
+     */
+    private Set<Long> supersededAnswers(ChatEndSummaryData.Input input, ObjectNode root) {
+        Set<Long> shown = new HashSet<>();
+        root.path("guidance").forEach(item -> item.path("sourceMessageIds").forEach(id -> shown.add(id.longValue())));
+        Set<Long> superseded = new HashSet<>();
+        for (long[] pair : followUpPairs(input)) {
+            var corrected = input.messages().stream().filter(message -> message.id() == pair[1]).findFirst();
+            if (corrected.isEmpty() || !ChatEndSummaryFollowUps.isCorrection(corrected.get().content())) {
+                continue;
+            }
+            boolean answered = input.messages().stream().anyMatch(message -> message.role().equals("ASSISTANT")
+                    && Long.valueOf(pair[1]).equals(message.replyTo()) && shown.contains(message.id()));
+            if (answered) {
+                input.messages().stream().filter(message -> message.role().equals("ASSISTANT")
+                        && Long.valueOf(pair[0]).equals(message.replyTo()))
+                        .forEach(message -> superseded.add(message.id()));
+            }
+        }
+        return superseded;
+    }
+
+    // 두 안내가 거의 같은 내용인지. 머리말과 공백을 빼고 두 글자씩 묶은 조각의 겹침(다이스 계수)이 0.6 이상이면 같다고 본다
+    static boolean nearlySame(String first, String second) {
+        Set<String> a = bigrams(first);
+        Set<String> b = bigrams(second);
+        if (a.isEmpty() || b.isEmpty()) {
+            return false;
+        }
+        long common = a.stream().filter(b::contains).count();
+        return 2.0 * common / (a.size() + b.size()) >= 0.6;
+    }
+
+    private static Set<String> bigrams(String text) {
+        String compact = text.replaceFirst("^(안내받은 내용|조건 확인 후 안내|조건 확인 전 안내): ", "")
+                .replaceAll("[\\s\\p{Punct}]", "");
+        Set<String> grams = new HashSet<>();
+        for (int i = 0; i + 1 < compact.length(); i++) {
+            grams.add(compact.substring(i, i + 2));
+        }
+        return grams;
+    }
+
+    // 안내 문장이 어느 문의에 대한 답인지. 기록된 하위 질문이 있으면 그 소제목·주제를, 없으면 답이 달린 고객 발화나
+    // 그 앞의 가장 가까운 주요 문의 주제를 쓴다. 복합 답변은 하위 질문들이 같은 메시지를 공유하므로 안내 문장이
+    // 어느 하위 질문의 기록된 문구에서 나왔는지로 고른다
+    private String inquiryTitle(ChatEndSummaryData.Input input, Map<Long, String> topicOf, JsonNode sources,
+            String guidanceText) {
+        String quote = guidanceText.replaceFirst("^(안내받은 내용|조건 확인 후 안내|조건 확인 전 안내): ", "");
+        for (var id : sources) {
+            var owners = input.requests().stream()
+                    .filter(request -> Long.valueOf(id.longValue()).equals(request.answerMessageId())).toList();
+            var exact = owners.stream().filter(request -> request.answerText() != null
+                    && recordedQuotes(inspector.inspect(request.answerText()).content()).contains(quote)).toList();
+            for (var request : exact.isEmpty() ? owners : exact) {
+                if (request.displayQuestion() != null && !request.displayQuestion().isBlank()) {
+                    return request.displayQuestion().strip();
+                }
+                String topic = topicOf.get(request.originMessageId());
+                if (topic != null) {
+                    return topic;
+                }
+            }
+            var message = input.messages().stream().filter(value -> value.id() == id.longValue()).findFirst();
+            if (message.isEmpty()) {
+                continue;
+            }
+            if (message.get().replyTo() != null && topicOf.containsKey(message.get().replyTo())) {
+                return topicOf.get(message.get().replyTo());
+            }
+            var earlier = input.messages().stream().filter(user -> user.role().equals("USER")
+                    && user.sequence() < message.get().sequence() && topicOf.containsKey(user.id()))
+                    .reduce((first, second) -> second);
+            if (earlier.isPresent()) {
+                return topicOf.get(earlier.get().id());
+            }
+        }
+        return "상담 내용";
     }
 
     private void checkDeadline(Instant deadline) {
@@ -512,7 +763,13 @@ class ChatSessionEndSummaryGenerator {
             for (var value : values) {
                 var text = value.get("text");
                 var references = value.get("sourceMessageIds");
-                if (!value.isObject() || value.size() != 2 || text == null || !text.isTextual()
+                // 안내에는 서버가 확인한 짧은 요약(summary)이 붙을 수 있다(resolveSelection)
+                var summary = field.equals("guidance") ? value.get("summary") : null;
+                if (summary != null && (!summary.isTextual() || summary.textValue().isBlank()
+                        || summary.textValue().length() > MAX_SUMMARY_LENGTH)) {
+                    throw new IllegalArgumentException("INVALID_OUTPUT");
+                }
+                if (!value.isObject() || value.size() != (summary == null ? 2 : 3) || text == null || !text.isTextual()
                         || text.textValue().isBlank() || text.textValue().length() > (field.equals("guidance")
                                 ? MAX_GUIDANCE_LENGTH + 16 : 240)
                         || references == null || !references.isArray() || references.isEmpty()
@@ -560,6 +817,13 @@ class ChatSessionEndSummaryGenerator {
                 }
                 var item = safeValues.addObject();
                 item.put("text", masked);
+                if (summary != null) {
+                    var summaryInspection = inspector.inspect(summary.textValue().strip());
+                    if (!summaryInspection.maskSpans().isEmpty()) {
+                        maskSources.add(OutputMaskContext.Source.from(summaryInspection));
+                    }
+                    item.put("summary", summaryInspection.content().strip());
+                }
                 var source = item.putArray("sourceMessageIds");
                 ids.stream().sorted().forEach(source::add);
                 if (field.equals("pendingItems")) {
@@ -569,6 +833,9 @@ class ChatSessionEndSummaryGenerator {
                     coveredTopics.addAll(ids);
                 }
             }
+        }
+        if (input.recordsOutcomes()) {
+            joinFollowUps(input, safe);
         }
         Map<Long, Set<String>> confirmedPending = collectConfirmedPending(input, requiredPending);
         for (var message : input.messages()) {
@@ -668,15 +935,22 @@ class ChatSessionEndSummaryGenerator {
             throw new IllegalArgumentException("INVALID_OUTPUT");
         }
         Map<String, Set<Long>> distinctGuidance = new LinkedHashMap<>();
+        Map<String, String> summaries = new HashMap<>();
         for (var item : safe.path("guidance")) {
             Set<Long> source = distinctGuidance.computeIfAbsent(item.path("text").textValue(),
                     key -> new HashSet<>());
             item.path("sourceMessageIds").forEach(id -> source.add(id.longValue()));
+            if (item.has("summary")) {
+                summaries.putIfAbsent(item.path("text").textValue(), item.path("summary").textValue());
+            }
         }
         var guidance = safe.putArray("guidance");
         distinctGuidance.forEach((text, ids) -> {
             var item = guidance.addObject();
             item.put("text", text);
+            if (summaries.containsKey(text)) {
+                item.put("summary", summaries.get(text));
+            }
             var references = item.putArray("sourceMessageIds");
             ids.stream().sorted().forEach(references::add);
         });
@@ -684,6 +958,68 @@ class ChatSessionEndSummaryGenerator {
         OutputMaskContext masks = new OutputMaskContext(maskSources);
         guard.verifySummary(serialized, masks);
         return new ChatEndSummaryData.Result(serialized, readContent(serialized), masks);
+    }
+
+    /**
+     * 바로 앞 문의를 다시 묻거나 정정한 발화(ChatEndSummaryFollowUps)는 앞 문의와 같은 주제로 묶는다. 모델에게 같은
+     * 주제를 쓰라고 지시하지만 "카드 변경"/"계좌 변경"처럼 달리 붙이는 일이 있다. 정정 뒤 값이 담긴 뒤 발화의 주제를 쓴다.
+     * 두 발화 모두 주제가 있을 때만 바꾼다(조건에 답한 발화·잡담에는 주제를 새로 만들지 않는다)
+     */
+    private void joinFollowUps(ChatEndSummaryData.Input input, ObjectNode safe) {
+        Map<Long, String> topicOf = new LinkedHashMap<>();
+        safe.path("topics").forEach(topic -> topic.path("sourceMessageIds")
+                .forEach(id -> topicOf.put(id.longValue(), topic.path("text").textValue())));
+        boolean changed = false;
+        for (long[] pair : followUpPairs(input)) {
+            String from = topicOf.get(pair[0]);
+            String to = topicOf.get(pair[1]);
+            if (from == null || to == null || from.equals(to)) {
+                continue;
+            }
+            topicOf.replaceAll((id, text) -> text.equals(from) ? to : text);
+            changed = true;
+        }
+        if (!changed) {
+            return;
+        }
+        Map<String, Set<Long>> merged = new LinkedHashMap<>();
+        for (var topic : safe.path("topics")) {
+            topic.path("sourceMessageIds").forEach(id -> merged.computeIfAbsent(topicOf.get(id.longValue()),
+                    key -> new java.util.TreeSet<>()).add(id.longValue()));
+        }
+        var topics = safe.putArray("topics");
+        merged.forEach((text, ids) -> {
+            var item = topics.addObject();
+            item.put("text", text);
+            var sources = item.putArray("sourceMessageIds");
+            ids.forEach(sources::add);
+        });
+    }
+
+    // 바로 앞 고객 발화를 다시 묻거나 정정한 발화의 [앞 발화, 뒤 발화] 번호. 물어본 조건에 답한 발화는 빼고 본다.
+    // 앞 발화가 복합 질문이면 어느 하위 질문을 이어받았는지 알 수 없어 묶지 않는다(답 못 받은 하위 질문이 사라진다)
+    private static List<long[]> followUpPairs(ChatEndSummaryData.Input input) {
+        return adjacentUserPairs(input, ChatEndSummaryFollowUps::isFollowUp);
+    }
+
+    // 뒤 발화가 조건에 맞는 이웃한 고객 발화 [앞, 뒤]. 앞 발화가 복합 질문이거나 뒤 발화가 조건 답이면 뺀다
+    private static List<long[]> adjacentUserPairs(ChatEndSummaryData.Input input,
+            java.util.function.Predicate<String> matches) {
+        Set<Long> conditionAnswers = input.conditions().stream().map(ChatEndSummaryData.Condition::answeredMessageId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        var users = input.messages().stream().filter(message -> message.role().equals("USER"))
+                .sorted(java.util.Comparator.comparingInt(ChatEndSummaryData.Message::sequence)).toList();
+        List<long[]> pairs = new ArrayList<>();
+        for (int i = 1; i < users.size(); i++) {
+            var message = users.get(i);
+            long previous = users.get(i - 1).id();
+            boolean compound = input.requests().stream().filter(request -> request.originMessageId() == previous)
+                    .count() > 1;
+            if (!compound && !conditionAnswers.contains(message.id()) && matches.test(message.content())) {
+                pairs.add(new long[] {previous, message.id()});
+            }
+        }
+        return pairs;
     }
 
     // 같은 문구의 주요 문의는 출처를 합쳐 한 번만 둔다(정정·이어 묻기에 같은 주제를 쓰라고 지시한다)
@@ -760,6 +1096,20 @@ class ChatSessionEndSummaryGenerator {
                 open.forEach(origin -> merged.put(origin, topic));
             }
         });
+        // 다시 묻거나 정정한 뒤 발화에 남은 사항이 있으면(되묻기에 답하지 않음 등) 같은 주제의 앞 발화는 그쪽으로 이어진다
+        for (long[] pair : followUpPairs(input)) {
+            String topic = topicOf.get(pair[0]);
+            if (topic != null && topic.equals(topicOf.get(pair[1])) && confirmedPending.containsKey(pair[0])
+                    && confirmedPending.containsKey(pair[1]) && !merged.containsKey(pair[0])) {
+                resolved.add(pair[0]);
+            }
+        }
+        // 고객이 거둔 문의("매장 찾고싶어요" → "아 그건 됐고 …")는 남은 사항이 아니다
+        for (long[] pair : adjacentUserPairs(input, ChatEndSummaryFollowUps::isWithdrawal)) {
+            if (confirmedPending.containsKey(pair[0]) && !merged.containsKey(pair[0])) {
+                resolved.add(pair[0]);
+            }
+        }
         // 매장 찾기를 되묻는 중에 바로 다음 발화가 다시 매장 찾기면 지역·업무를 고쳐 말한 것이다("서면 말고 해운대요").
         // 앞 매장 찾기는 뒤 요청으로 이어지므로 따로 남기지 않는다
         for (var request : input.requests()) {
@@ -788,7 +1138,7 @@ class ChatSessionEndSummaryGenerator {
 
     private static String originText(ChatEndSummaryData.Input input, long origin) {
         return input.messages().stream().filter(message -> message.id() == origin).findFirst()
-                .map(message -> message.content().strip().replaceAll("\s+", " ")).orElse(null);
+                .map(message -> message.content().strip().replaceAll("\\s+", " ")).orElse(null);
     }
 
     // 이 발화 바로 다음 고객 발화가 만든 상담 요청의 종류(FAQ·STORE). 다음 발화에 요청이 없으면 null
@@ -864,12 +1214,27 @@ class ChatSessionEndSummaryGenerator {
 
     Content readContent(String serialized) {
         var root = parse(serialized);
-        if (!root.isObject() || root.size() != 3
-                || FIELDS.stream().anyMatch(field -> !root.path(field).isArray())) {
+        // inquiries·remaining은 문의별 묶음이 생긴 뒤 저장한 결과에만 있다. 예전 결과는 세 칸만 있다
+        boolean grouped = root.has("inquiries") && root.has("remaining");
+        if (!root.isObject() || root.size() != (grouped ? 5 : 3)
+                || FIELDS.stream().anyMatch(field -> !root.path(field).isArray())
+                || grouped && (!root.path("inquiries").isArray() || !root.path("remaining").isArray())) {
             throw new IllegalArgumentException("INVALID_STORED_RESULT");
         }
+        List<ChatSessionEndSummaryResponse.Inquiry> inquiries = new ArrayList<>();
+        List<ChatSessionEndSummaryResponse.Remaining> remaining = new ArrayList<>();
+        if (grouped) {
+            for (var item : root.path("inquiries")) {
+                inquiries.add(new ChatSessionEndSummaryResponse.Inquiry(
+                        item.path("title").asText(), item.path("text").asText()));
+            }
+            for (var item : root.path("remaining")) {
+                remaining.add(new ChatSessionEndSummaryResponse.Remaining(item.path("title").asText(),
+                        item.path("text").asText(), item.path("kind").asText()));
+            }
+        }
         return new Content(texts(root.path("topics")), texts(root.path("guidance")),
-                texts(root.path("pendingItems")));
+                texts(root.path("pendingItems")), inquiries, remaining);
     }
 
     private List<String> texts(JsonNode values) {
@@ -915,8 +1280,11 @@ class ChatSessionEndSummaryGenerator {
         }
         Map<String, Set<Long>> quotes = new LinkedHashMap<>();
         for (var message : input.messages()) {
+            // 주제 확인 안내("어떤 내용에 대한 질문인지 확인이 필요합니다")는 안내가 아니다
             if (!allowed.contains(message.id()) || !message.role().equals("ASSISTANT")
-                    || "NO_EVIDENCE".equals(message.basis()) || "OUT_OF_SCOPE".equals(message.basis())) {
+                    || "NO_EVIDENCE".equals(message.basis()) || "OUT_OF_SCOPE".equals(message.basis())
+                    || com.telme.consult.service.ConsultTurnAnalysisAdapter.TOPIC_CONFIRMATION
+                            .equals(message.content().strip())) {
                 continue;
             }
             var inspection = inspector.inspect(message.content());
@@ -962,21 +1330,34 @@ class ChatSessionEndSummaryGenerator {
             if (!inspection.maskSpans().isEmpty()) {
                 maskSources.add(OutputMaskContext.Source.from(inspection));
             }
-            for (String paragraph : inspection.content().split("\\n\\s*\\n")) {
-                List<String> kept = new ArrayList<>();
-                for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
-                    String text = sentence.strip();
-                    if (!text.isBlank() && !text.endsWith("?")) {
-                        kept.add(text);
-                    }
-                }
-                String quote = String.join(" ", kept);
+            for (String quote : recordedQuotes(inspection.content())) {
                 if (quote.length() > MAX_GUIDANCE_LENGTH) {
                     throw new IllegalArgumentException("INPUT_LIMIT");
                 }
-                if (!quote.isBlank()) {
-                    quotes.computeIfAbsent(quote, key -> new HashSet<>()).add(message.id());
+                quotes.computeIfAbsent(quote, key -> new HashSet<>()).add(message.id());
+            }
+        }
+        return quotes;
+    }
+
+    // 기록된 안내 문구를 안내 후보(문단 단위)로 나눈다. 물음표로 끝나는 문장은 안내가 아니다
+    // 답변 머리말("요금제 안내예요.")만 있는 문단. 내용이 없어 안내로 쓰지 않는다
+    private static final java.util.regex.Pattern ANSWER_HEADER = java.util.regex.Pattern.compile(
+            "^[^\\d.]{0,20}안내(예요|에요|입니다|드려요|드립니다|해 ?드릴게요)[.!]?$");
+
+    private static List<String> recordedQuotes(String maskedText) {
+        List<String> quotes = new ArrayList<>();
+        for (String paragraph : maskedText.split("\\n\\s*\\n")) {
+            List<String> kept = new ArrayList<>();
+            for (String sentence : paragraph.split("(?<=[.!?])\\s+|\\R+")) {
+                String text = sentence.strip();
+                if (!text.isBlank() && !text.endsWith("?")) {
+                    kept.add(text);
                 }
+            }
+            String quote = String.join(" ", kept);
+            if (!quote.isBlank() && !ANSWER_HEADER.matcher(quote).matches()) {
+                quotes.add(quote);
             }
         }
         return quotes;
@@ -1076,6 +1457,13 @@ class ChatSessionEndSummaryGenerator {
         properties.put("selectedSentenceIds", Map.of("type", "array", "minItems", requiresGuidance ? 1 : 0,
                 "maxItems", sentenceIds != null && sentenceIds.isEmpty() ? 0 : MAX_GUIDANCE_ITEMS,
                 "items", selection));
+        // 고른 안내의 짧은 요약. 키는 sentenceId이고 선택 사항이다(서버가 숫자를 원문과 맞춰 보고, 안 맞으면 원문을 쓴다)
+        Map<String, Object> summaries = new LinkedHashMap<>();
+        for (Integer id : sentenceIds == null ? List.<Integer>of() : sentenceIds) {
+            summaries.put(id.toString(), Map.of("type", "string", "minLength", 1, "maxLength", MAX_SUMMARY_LENGTH));
+        }
+        properties.put("guidanceSummaries", Map.of("type", "object", "properties", summaries,
+                "additionalProperties", false));
         // vLLM의 스키마 강제(guided decoding)는 uniqueItems를 지원하지 않아 요청을 거절한다. 중복은 서버가 받은 뒤 합친다
         return Map.of("type", "object", "properties", properties, "required", MODEL_FIELDS,
                 "additionalProperties", false);

@@ -551,7 +551,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
     }
 
     // 하위 질문에 대해 고객에게 보인 결과. 답변을 만든 뒤 기록만 한다(상담 종료 요약이 읽는다).
-    // 근거 있는 FAQ 답은 ANSWERED, 매장 목록이 나가면 STORES, 그 밖(근거 없음, 지역 없는 매장 찾기 안내)은 NO_EVIDENCE다
+    // 근거 있는 FAQ 답은 ANSWERED, 매장 목록이 나가면 STORES, 그 밖(근거 없음, 지역 없는 매장 찾기 안내)은 NO_EVIDENCE다.
+    // 대안 안내(ALTERNATIVE_GUIDANCE)는 고객이 지역을 거절해 매장 찾기를 하지 못한 경우라, 안내 문구는 나갔지만 요청한
+    // 매장 목록은 받지 못했으므로 NO_EVIDENCE로 기록해 종료 요약의 남은 문의로 둔다(의도한 동작)
     private static AnswerOutcome outcome(Purpose purpose, GeneratedAnswer generated, String displayQuestion) {
         boolean grounded = purpose == Purpose.GENERAL_FAQ
                 && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;

@@ -192,9 +192,12 @@ public final class ConsultTurnAnalysisAdapter implements TurnAnalyzer {
         return Objects.requireNonNull(analysis.analyze(context), "analysisResult");
     }
 
+    // 주제 확인 안내. 상담 종료 요약이 이 문구를 안내로 쓰지 않도록 공개한다
+    public static final String TOPIC_CONFIRMATION =
+            "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.";
+
     private AnalyzedTurn clarification() {
-        return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER,
-                "어떤 내용에 대한 질문인지 확인이 필요합니다. 상품이나 상담 주제를 조금 더 구체적으로 알려주세요.",
+        return AnalyzedTurn.direct(new ChatAnswer(ChatMessage.MessageType.ANSWER, TOPIC_CONFIRMATION,
                 null, List.of(), null));
     }
 

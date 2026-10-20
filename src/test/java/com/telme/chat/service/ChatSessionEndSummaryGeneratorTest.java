@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.telme.chat.config.ChatEndSummaryProperties;
+import com.telme.chat.dto.res.ChatSessionEndSummaryResponse;
 import com.telme.chat.guard.ChatInputInspector;
 import com.telme.chat.safety.ChatOutputBlockedException;
 import com.telme.chat.safety.ChatOutputGuard;
@@ -60,7 +61,7 @@ class ChatSessionEndSummaryGeneratorTest {
                 .isEqualTo("[2]");
         var request = request();
         assertThat(request.executionId()).isEqualTo(10L);
-        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v12");
+        assertThat(request.promptVersion()).isEqualTo("consultation-end-summary-v15");
         var schema = mapper.valueToTree(request.responseSchema()).path("properties");
         assertThat(schema.has("guidance")).isFalse();
         assertThat(schema.path("selectedSentenceIds").path("items").path("enum").toString()).isEqualTo("[1]");
@@ -89,6 +90,135 @@ class ChatSessionEndSummaryGeneratorTest {
 
         assertThat(generate(input()).content().guidance()).containsExactly("안내받은 내용: 홈페이지를 확인해 주세요.");
         assertThat(mapper.writeValueAsString(request().responseSchema())).doesNotContain("uniqueItems");
+    }
+
+    @Test
+    @DisplayName("같은 문의를 다시 물어 문장만 조금 다른 안내는 같은 내용으로 보고, 내용이 다른 안내는 구분한다")
+    void 거의_같은_안내를_가린다() {
+        assertThat(ChatSessionEndSummaryGenerator.nearlySame(
+                "안내받은 내용: 유심 재발급 비용은 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다. 온라인으로 신청하시면 택배로 2~3 영업일 내에 도착합니다.",
+                "안내받은 내용: 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다. 온라인으로 신청하시면 택배로 2~3 영업일이 소요됩니다."))
+                .isTrue();
+        assertThat(ChatSessionEndSummaryGenerator.nearlySame(
+                "안내받은 내용: 홈페이지나 고객센터에서 신청하시면 됩니다. 출국 전에 신청하시는 것을 권장드립니다.",
+                "안내받은 내용: 신청 후 1시간 이내에 적용됩니다.")).isFalse();
+        assertThat(ChatSessionEndSummaryGenerator.nearlySame(
+                "안내받은 내용: 일 단위 로밍 요금은 9,900원입니다.", "안내받은 내용: 유심 재발급 비용은 7,700원입니다."))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("모델이 쓴 짧은 요약은 문의별 목록에 보이고, 안내 목록과 출처는 원문 그대로 둔다")
+    void 확인된_요약을_문의별로_보인다() throws Exception {
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.putObject("guidanceSummaries").put("1", "유심 재발급 비용은 7,700원이고 매장에서 바로 받습니다.");
+        when(client.generate(any())).thenReturn(response.toString());
+
+        var result = generate(withGuidance("유심 재발급 비용은 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다."));
+
+        assertThat(result.content().guidance())
+                .containsExactly("안내받은 내용: 유심 재발급 비용은 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다.");
+        assertThat(result.content().inquiries()).extracting(ChatSessionEndSummaryResponse.Inquiry::text)
+                .containsExactly("유심 재발급 비용은 7,700원이고 매장에서 바로 받습니다.");
+        assertThat(mapper.readTree(result.json()).path("guidance").get(0).path("summary").asText())
+                .isEqualTo("유심 재발급 비용은 7,700원이고 매장에서 바로 받습니다.");
+        assertThat(mapper.valueToTree(request().responseSchema()).path("required").toString())
+                .doesNotContain("guidanceSummaries");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "유심 재발급 비용은 8,800원입니다.",
+            "유심 재발급 비용은 7,700원인데 신청하시겠어요?",
+            "  "})
+    @DisplayName("원문에 없는 숫자, 물음, 빈 요약은 쓰지 않고 원문 발췌를 보인다")
+    void 원문과_다른_요약은_발췌로_대신한다(String summary) throws Exception {
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.putObject("guidanceSummaries").put("1", summary);
+        when(client.generate(any())).thenReturn(response.toString());
+
+        var result = generate(withGuidance("유심 재발급 비용은 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다."));
+
+        assertThat(result.content().inquiries()).extracting(ChatSessionEndSummaryResponse.Inquiry::text)
+                .containsExactly("안내받은 내용: 유심 재발급 비용은 7,700원이며, 매장에 가시면 바로 받으실 수 있습니다.");
+        assertThat(mapper.readTree(result.json()).path("guidance").get(0).has("summary")).isFalse();
+    }
+
+    @Test
+    @DisplayName("요약 확인은 쉼표를 뗀 숫자로 비교하고, 원문보다 긴 문장은 받지 않는다")
+    void 요약의_숫자와_길이를_확인한다() {
+        String source = "유심 재발급 비용은 7,700원이며 택배로 2~3 영업일 내에 도착합니다.";
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary("재발급 비용 7700원, 택배는 2~3 영업일입니다.", source))
+                .isTrue();
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary("택배는 3~5 영업일입니다.", source)).isFalse();
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary(
+                "가".repeat(ChatSessionEndSummaryGenerator.MAX_SUMMARY_LENGTH + 1), source)).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            // 원문의 숫자를 빼면 조건이 바뀐다
+            "일시 정지는 1회 최대 30일, 연간 최대 90일까지 가능합니다.|일시 정지는 최대 30일까지 가능합니다.",
+            // 답이 전제한 기간을 빼면 다른 문의의 답처럼 읽힌다
+            "일주일이면 7일 기간권 39,000원이 가장 유리합니다.|7일 기간권 39,000원이 가장 유리합니다.",
+            // 원문에 없는 기간 낱말
+            "7일 기간권은 39,000원입니다.|열흘 기간권은 7일 기간권 39,000원보다 비쌉니다.",
+            // 대리 조건을 빼면 본인 절차처럼 읽힌다
+            "가족이 대신 명의 변경을 하려면 위임장을 작성하면 됩니다.|가족 명의 변경 시 위임장을 작성하면 됩니다.",
+            // 부정을 빼면 뜻이 뒤집힌다
+            "출금일을 다른 날짜로 선택할 수는 없습니다.|출금일을 다른 날짜로 선택할 수 있습니다."})
+    @DisplayName("원문의 숫자·기간 낱말·대리 조건·부정을 빼거나 지어낸 요약은 쓰지 않는다")
+    void 조건을_바꾼_요약은_쓰지_않는다(String source, String summary) {
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary(summary, source)).isFalse();
+    }
+
+    @Test
+    @DisplayName("숫자와 조건을 그대로 둔 짧은 요약은 쓴다")
+    void 조건을_지킨_요약은_쓴다() {
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary("1회 최대 30일, 연간 90일까지 정지할 수 있습니다.",
+                "일시 정지는 1회 최대 30일, 연간 최대 90일까지 가능합니다.")).isTrue();
+        assertThat(ChatSessionEndSummaryGenerator.isFaithfulSummary("가족이 대신 하려면 위임장이 필요합니다.",
+                "가족이 대신 명의 변경을 하려면 위임장을 작성하면 됩니다.")).isTrue();
+    }
+
+    @Test
+    @DisplayName("주제 확인 안내는 안내 후보로 내지 않는다")
+    void 주제_확인_안내는_안내_후보가_아니다() throws Exception {
+        var response = (ObjectNode) mapper.readTree(selection(1));
+        when(client.generate(any())).thenReturn(response.toString());
+        var input = new ChatEndSummaryData.Input(1, 2, 10L, List.of(
+                message(1, 1, null, "USER", "QUESTION", "그거 되나요", null),
+                message(2, 2, 1L, "ASSISTANT", "ANSWER",
+                        com.telme.consult.service.ConsultTurnAnalysisAdapter.TOPIC_CONFIRMATION, null)),
+                List.of(), Set.of(), List.of(), OutputMaskContext.empty());
+
+        var result = generate(input);
+
+        assertThat(mapper.readTree(request().userPrompt()).path("guidanceCandidates")).isEmpty();
+        assertThat(result.content().guidance()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("guidanceSummaries가 객체가 아니면 형식 오류로 본다")
+    void 요약_형식이_틀리면_거부한다() throws Exception {
+        var response = (ObjectNode) mapper.readTree(selection(1, 1));
+        response.putArray("guidanceSummaries").add("요약");
+        when(client.generate(any())).thenReturn(response.toString());
+
+        assertThatThrownBy(() -> generate(input())).hasMessage("INVALID_OUTPUT");
+    }
+
+    @Test
+    @DisplayName("문의별 묶음이 생기기 전에 저장된 세 칸 결과도 그대로 읽고, 문의별 목록은 비워 둔다")
+    void 예전_세_칸_결과도_읽는다() {
+        var content = generator.readContent("""
+                {"topics":[{"text":"로밍","sourceMessageIds":[1]}],
+                 "guidance":[{"text":"안내받은 내용: 홈페이지에서 신청합니다.","sourceMessageIds":[2]}],"pendingItems":[]}""");
+
+        assertThat(content.topics()).containsExactly("로밍");
+        assertThat(content.guidance()).containsExactly("안내받은 내용: 홈페이지에서 신청합니다.");
+        assertThat(content.inquiries()).isEmpty();
+        assertThat(content.remaining()).isEmpty();
     }
 
     @Test
@@ -363,7 +493,7 @@ class ChatSessionEndSummaryGeneratorTest {
             return result.toString();
         });
 
-        var result = generator(2600).generate(input, now.plusSeconds(300));
+        var result = generator(2900).generate(input, now.plusSeconds(300));
 
         assertThat(calls).hasSizeGreaterThan(1);
         assertThat(calls).allSatisfy(body -> {
