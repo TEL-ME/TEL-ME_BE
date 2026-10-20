@@ -25,7 +25,7 @@ NAT Gateway는 없다. 앱·GPU EC2는 퍼블릭 서브넷에 두고 보안 그�
 | `gpu.tf` | GPU EC2(만든 뒤 중지) |
 | `frontend.tf` | S3, CloudFront(오리진 2개, SPA 함수) |
 | `config.tf` | Parameter Store `/telme/prod/env/*`, 이미지 태그, 앱 시크릿 껍데기 |
-| `monitoring.tf` | 로그 그룹 7일, SNS 이메일, 알람 3개 |
+| `monitoring.tf` | 로그 그룹 7일, SNS 이메일, 알람 4개(5xx, 정상 서버 0대, GPU 2시간, Bedrock 대체) |
 | `user_data/app.sh` | 앱 EC2 첫 부팅: env 파일 → TEI → 백엔드 컨테이너. `/opt/telme/start.sh`로 다시 실행 가능 |
 | `user_data/gpu.sh` | GPU 부팅마다: `/opt/telme/vllm.sh`, 30분 유휴 시 자동 중지 cron |
 
@@ -108,14 +108,20 @@ GitHub Actions가 `telme-github-deploy` 역할(OIDC)로 같은 일을 한다. AW
 
 `DEPLOY_ENABLED`가 없으면 워크플로는 건너뛴다. 2차 apply가 끝난 뒤에 켠다.
 
+교체가 실패·취소되거나 35분 안에 끝나지 않으면 워크플로가 SSM 이미지 태그를 이전 값으로 되돌린다(시간 초과면 교체도 취소). 최소 정상 100%라 옛 서버는 그대로 남는다.
+
 손으로 할 때:
 
 ```bash
 aws ssm put-parameter --profile telme --name /telme/prod/deploy/image_tag --value <git-sha> --overwrite
-aws autoscaling start-instance-refresh --profile telme --auto-scaling-group-name telme-app
+# 설정을 꼭 준다. 없으면 최소 정상 90%라 한 대 구성에서 옛 서버를 먼저 내릴 수 있다
+aws autoscaling start-instance-refresh --profile telme --auto-scaling-group-name telme-app --strategy Rolling \
+  --preferences '{"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"InstanceWarmup":600}'
 ```
 
-설정값이나 시크릿만 바꿨으면 앱 EC2에서 `sudo /opt/telme/start.sh`를 다시 실행한다.
+실패하면 태그를 이전 값으로 되돌린다(`put-parameter`를 이전 태그로 다시 실행).
+
+설정값이나 시크릿만 바꿨으면 앱 EC2에서 `sudo /opt/telme/start.sh`를 다시 실행한다. DB 비밀번호도 부팅할 때 한 번 읽으므로, RDS 비밀번호를 손으로 회전했다면 같은 방법으로 다시 읽힌다(자동 회전은 365일로 늘려 시연 중에는 바뀌지 않는다).
 
 ## 끝낼 때
 
@@ -133,4 +139,7 @@ RDS는 삭제 방지가 켜져 있어 바로 지워지지 않는다(실수 방�
 - 비밀 헤더 값과 DB 주소는 state에 남는다. state 버킷은 암호화·퍼블릭 차단·버전 관리가 켜져 있다.
 - 도메인 없이 CloudFront를 지웠다 다시 만들면 주소가 바뀌어 OAuth·카카오맵 등록을 다시 해야 한다. 도메인을 쓰면 가비아 `www` CNAME만 고친다.
 - GPU는 30분 유휴 시 스스로 꺼진다. 2시간 넘게 켜져 있으면 알람이 온다.
+- Bedrock이 실패해 엑사원 호출이 생기면 앱이 꺼진 GPU를 켠다(TELME-204, `VLLM_GPU_INSTANCE_ID`). 켜지고 vLLM이 준비되기까지 몇 분은 대체 호출이 실패한다. 대체가 한 번이라도 생기면 `telme-bedrock-fallback` 알람이 온다.
+- RDS 백업은 KST 02:00~02:30, 유지 관리는 KST 월 03:00~04:00. 자동 마이너 버전 업그레이드는 꺼 두었다.
+- TEI는 t3.large 메모리에 맞게 `--max-batch-tokens 2048 --auto-truncate`로 띄운다(기본값이면 OOM으로 재시작 반복). 새 앱 서버는 부팅할 때 Hugging Face에서 bge-m3(약 2.3GB)를 받는다.
 - 컨테이너에 `AWS_ACCESS_KEY_ID`·`AWS_BEARER_TOKEN_BEDROCK`을 넣지 않는다. 넣으면 역할보다 먼저 쓰여 Bedrock 호출이 깨진다.
