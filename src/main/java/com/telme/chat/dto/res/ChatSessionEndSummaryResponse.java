@@ -34,7 +34,8 @@ public record ChatSessionEndSummaryResponse(
         }
     }
 
-    @Schema(description = "문의별 안내. title은 문의(복합 질문은 하위 질문), text는 그 문의에 대해 안내받은 원문 발췌다")
+    @Schema(description = "문의별 안내. title은 문의(복합 질문은 하위 질문), text는 그 문의에 대해 안내받은 내용의 "
+            + "짧은 요약이고, 요약이 확인을 통과하지 못하면 원문 발췌다")
     public record Inquiry(String title, String text) {}
 
     @Schema(description = "남은 사항. kind는 NEEDS_CONFIRMATION(물어본 조건에 답하지 않음) 또는 UNANSWERED(답을 받지 못함)")
