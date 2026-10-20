@@ -119,6 +119,16 @@ class DataUsageReplyParserTest {
     }
 
     @Test
+    void 문장_속에_단위를_붙여_말한_사용량만_읽는다() {
+        assertThat(DataUsageReplyParser.parseStated("50GB 쓰는데 요금제 추천해줘").dataMb()).isEqualTo(50 * GB);
+        assertThat(DataUsageReplyParser.parseStated("하루 2기가 써요").dataMb()).isEqualTo(60 * GB);
+        // 단위 없는 숫자, 무제한, 모름, 값이 둘인 문장은 읽지 않는다
+        for (String text : new String[] {"5만원 이하 추천해줘", "40", "무제한으로 써요", "잘 모르겠어요", "10GB 쓰다가 30GB 써요", "", null}) {
+            assertThat(DataUsageReplyParser.parseStated(text).kind()).as(String.valueOf(text)).isEqualTo(Kind.UNREADABLE);
+        }
+    }
+
+    @Test
     void 비어_있는_답은_읽지_않는다() {
         assertThat(DataUsageReplyParser.parse(null).kind()).isEqualTo(Kind.UNREADABLE);
     }

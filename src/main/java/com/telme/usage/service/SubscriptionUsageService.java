@@ -85,16 +85,19 @@ public class SubscriptionUsageService {
         double fraction = visibleFraction(target, activationDate, today,
                 pausedDates(subscription.getSubscriptionId(), availableFrom, today));
         MonthUsage usage = target.equals(thisMonth)
-                ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, today, activationDate)
+                ? thisMonthUsage(subscription, snapshot, planHistories, stored, fraction, now, activationDate)
                 : pastMonthUsage(stored, fraction, limitsAt(planHistories, target));
         return UsageOverview.active(availableFrom, thisMonth, usage);
     }
 
+    // 이번 달 한도는 지금 적용 중인 요금제 기준이다. 달 중간에 바꾸면 적용된 날부터 새 요금제 제공량이 한도가 되고,
+    // 이미 쓴 사용량은 그대로라 새 한도를 넘으면 초과로 표시된다
     private MonthUsage thisMonthUsage(Subscription subscription, SubscriptionSnapshot snapshot,
             List<SubscriptionHistory> planHistories, SubscriptionUsage stored, double fraction,
-            LocalDate today, LocalDate activationDate) {
+            Instant now, LocalDate activationDate) {
+        LocalDate today = calendar.today(now);
         LocalDate thisMonth = today.withDayOfMonth(1);
-        UsageLimits limits = limitsAt(planHistories, thisMonth);
+        UsageLimits limits = limitsAt(planHistories, now);
         return new MonthUsage(
                 thisMonth,
                 thisMonth.lengthOfMonth() - today.getDayOfMonth(),
@@ -196,10 +199,13 @@ public class SubscriptionUsageService {
         return UsageLimits.of(planRepository.findById(planHistories.get(0).getToPlanId()).orElseThrow());
     }
 
-    // 사용량 생성과 한도 표시는 그 달 1일에 쓰던 요금제의 제공량 기준
+    // 사용량 생성과 지난 달 한도 표시는 그 달 1일에 쓰던 요금제의 제공량 기준
     private UsageLimits limitsAt(List<SubscriptionHistory> planHistories, LocalDate month) {
-        return UsageLimits.of(planRepository.findById(PlanTimeline.planAt(planHistories, startOfDay(month)))
-                .orElseThrow());
+        return limitsAt(planHistories, startOfDay(month));
+    }
+
+    private UsageLimits limitsAt(List<SubscriptionHistory> planHistories, Instant at) {
+        return UsageLimits.of(planRepository.findById(PlanTimeline.planAt(planHistories, at)).orElseThrow());
     }
 
     // 개통한 달과 6개월 전 중 늦은 달

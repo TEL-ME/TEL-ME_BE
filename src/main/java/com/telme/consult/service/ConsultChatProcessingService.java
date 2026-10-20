@@ -16,7 +16,9 @@ import com.telme.chat.exception.ChatErrorCode;
 import com.telme.consult.repository.AskedQuestions;
 import com.telme.consult.converter.ConfirmedConditionConverter;
 import com.telme.consult.dto.ClarificationPlan;
+import com.telme.consult.dto.DialogueDecision;
 import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueInput;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.dto.DialogueInput.ConditionStatus;
 import com.telme.consult.exception.FaqAnswerSearchException;
@@ -180,7 +182,9 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         ClarificationPlan storedPlan = prepared.clarificationPlan();
         ClarificationPlan storedRemaining =
                 storedPlan.remaining(prepared.decision().conditions());
-        if (storedRemaining.needsClarification()) {
+        // 통화·문자는 앞선 답에 따라 필요 여부가 달라진다(통화 답으로 문자 한도가 없는 요금제로 바뀌면 문자는 필요 없다).
+        // 그래서 저장된 계획을 그대로 잇지 않고 아래에서 추천을 다시 계산해 지금 필요한 질문만 묻는다
+        if (storedRemaining.needsClarification() && !isUsageFollowUp(storedPlan)) {
             var asking = new ConsultService.PreparedTurn(
                     prepared.sessionId(),
                     prepared.expectedVersion(),
@@ -231,7 +235,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             events.completed(command.executionId(), clarification);
             return;
         }
-        persistence.persistReadyTurn(command.executionId(), prepared, turn.answeredField());
+        persistence.persistReadyTurn(command.executionId(),
+                isUsageFollowUp(storedPlan) ? withoutUnneededUsageFollowUps(prepared) : prepared, turn.answeredField());
         GeneratedAnswer generated;
         if (prepared.decision().action() == Action.ALTERNATIVE_GUIDANCE) {
             generated =
@@ -625,6 +630,28 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
             return new ChatFailure(ChatMessage.Status.FAILED, general.getErrorCode().getCode());
         }
         return new ChatFailure(ChatMessage.Status.FAILED, PROCESSING_ERROR_CODE);
+    }
+
+    // 통화·문자 질문을 더 하지 않고 답하면 계획에 남은 항목은 필요 없는 것이라 거절로 닫는다.
+    // 대기로 남겨 두면 상담을 완료할 수 없다
+    private static ConsultService.PreparedTurn withoutUnneededUsageFollowUps(ConsultService.PreparedTurn prepared) {
+        var decision = prepared.decision();
+        Map<String, DialogueInput.Condition> conditions = new LinkedHashMap<>(decision.conditions());
+        boolean changed = false;
+        for (String key : MemberRecommendationAnswerer.USAGE_FOLLOW_UP_KEYS) {
+            var condition = conditions.get(key);
+            if (condition != null && condition.status() == ConditionStatus.PENDING) {
+                conditions.put(key, DialogueInput.Condition.declined());
+                changed = true;
+            }
+        }
+        if (!changed) {
+            return prepared;
+        }
+        return new ConsultService.PreparedTurn(prepared.sessionId(), prepared.expectedVersion(),
+                new DialogueDecision(decision.consultRequestId(), decision.action(), conditions, decision.waitingField(),
+                        decision.message(), decision.messageOrigin(), decision.options()),
+                prepared.clarificationPlan());
     }
 
     // 요금제 추천이 데이터 사용량을 받은 뒤에 붙이는 통화·문자 질문만 저장된 계획을 마친 뒤에도 묻는다

@@ -14,12 +14,19 @@ import com.telme.subscription.dto.res.SubscriptionResponse;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
 import com.telme.subscription.service.SubscriptionCalendar;
 import com.telme.subscription.service.SubscriptionQueryService;
+import com.telme.usage.service.MonthUsage;
+import com.telme.usage.service.SubscriptionUsageService;
+import com.telme.usage.service.UsageLimits;
+import com.telme.usage.service.UsageOverview;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 // 요금제 변경. 채팅에서 바꾸지 않고, 바꿀 수 없는 상태(개통 전·일시 정지·변경 대기·가입 당월·월 1회)면 이유를, 바꿀 수 있으면 요금·적용 시점을 알려주고 요금제 변경 화면으로 안내한다
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PlanChangeAnswerer implements PlanTaskHandler {
@@ -29,6 +36,7 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
     private final SubscriptionProperties subscriptionProperties;
     private final SubscriptionHistoryRepository historyRepository;
     private final SubscriptionCalendar calendar;
+    private final SubscriptionUsageService usageService;
 
     @Override
     public PlanTask task() {
@@ -84,12 +92,13 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
             return reply("%s%s 지금 쓰고 계신 요금제예요.".formatted(target.getName(), topicParticle(target.getName())),
                     MY_PLAN_QUESTION);
         }
-        return reply("지금 쓰는 %s에서 %s(월 %s, 데이터 %s)%s 바꾸려면 요금제 변경 화면에서 %s%s 골라 주세요. %s%s"
+        return reply("지금 쓰는 %s에서 %s(월 %s, 데이터 %s)%s 바꾸려면 요금제 변경 화면에서 %s%s 골라 주세요. %s%s%s"
                         .formatted(subscription.currentPlan().name(), target.getName(),
                                 PlanFormat.money(target.getMonthlyFee()),
                                 PlanFormat.data(target.isUnlimited(), target.getDataGb()),
                                 directionParticle(target.getName()), target.getName(),
-                                PlanTaskSupport.objectParticle(target.getName()), rules(), ageNote(target)),
+                                PlanTaskSupport.objectParticle(target.getName()), rules(), ageNote(target),
+                                exceededNote(userId, target)),
                 PlanTaskLinks.changeTo(target.getName()));
     }
 
@@ -114,6 +123,35 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
         return subscriptionProperties.demoMode()
                 ? "변경은 바로 적용되고, 요금제는 한 달에 한 번만 바꿀 수 있어요."
                 : "변경은 신청한 다음 날 0시부터 적용되고, 요금제는 한 달에 한 번만 바꿀 수 있어요.";
+    }
+
+    // 이번 달 사용량이 바꿀 요금제의 한도를 이미 넘으면 바꾼 뒤 초과로 표시된다고 미리 알린다. 이미 쓴 사용량은 줄지 않는다.
+    // 사용량을 읽지 못해도 변경 안내는 그대로 한다
+    private String exceededNote(Long userId, Plan target) {
+        UsageOverview overview;
+        try {
+            overview = usageService.getOverview(userId);
+        } catch (RuntimeException exception) {
+            log.warn("[채팅 요금제 변경] 이번 달 사용량을 읽지 못해 초과 안내를 생략합니다. userId={}", userId, exception);
+            return "";
+        }
+        if (overview == null || overview.status() != UsageOverview.Status.ACTIVE || overview.usage() == null) {
+            return "";
+        }
+        MonthUsage usage = overview.usage();
+        UsageLimits limits = UsageLimits.of(target);
+        List<String> exceeded = new ArrayList<>();
+        if (limits.dataMb() != null && usage.data().used() > limits.dataMb()) {
+            exceeded.add("데이터 %s(한도 %s)".formatted(PlanFormat.megabytes(usage.data().used()), PlanFormat.megabytes(limits.dataMb())));
+        }
+        if (limits.voiceMinutes() != null && usage.voice().used() > limits.voiceMinutes()) {
+            exceeded.add("통화 %d분(한도 %d분)".formatted(usage.voice().used(), limits.voiceMinutes()));
+        }
+        if (limits.smsCount() != null && usage.sms().used() > limits.smsCount()) {
+            exceeded.add("문자 %d건(한도 %d건)".formatted(usage.sms().used(), limits.smsCount()));
+        }
+        return exceeded.isEmpty() ? "" : " 이번 달 사용량이 이 요금제 한도를 넘어요: %s. 바꾸면 이번 달은 한도를 넘은 것으로 표시되고, 이미 쓴 사용량은 줄지 않아요. 추가 요금은 없어요."
+                .formatted(String.join(", ", exceeded));
     }
 
     static String ageNote(Plan plan) {

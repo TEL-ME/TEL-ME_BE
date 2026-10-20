@@ -14,7 +14,12 @@ import com.telme.subscription.dto.res.SubscriptionResponse;
 import com.telme.subscription.repository.SubscriptionHistoryRepository;
 import com.telme.subscription.service.SubscriptionCalendar;
 import com.telme.subscription.service.SubscriptionQueryService;
+import com.telme.usage.service.MonthUsage;
+import com.telme.usage.service.ResourceUsage;
+import com.telme.usage.service.SubscriptionUsageService;
+import com.telme.usage.service.UsageOverview;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -37,6 +42,7 @@ class PlanChangeAnswererTest {
     private PlanRepository plans;
     private SubscriptionQueryService queries;
     private SubscriptionHistoryRepository histories;
+    private SubscriptionUsageService usages;
     private PlanChangeAnswerer answerer;
 
     @BeforeEach
@@ -44,6 +50,7 @@ class PlanChangeAnswererTest {
         plans = mock(PlanRepository.class);
         histories = mock(SubscriptionHistoryRepository.class);
         queries = mock(SubscriptionQueryService.class);
+        usages = mock(SubscriptionUsageService.class);
         when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(LITE, MAX, SENIOR, PREMIUM));
         when(queries.getMine(USER_ID)).thenReturn(SubscriptionMeResponse.of(subscription(MAX).build()));
         answerer = answerer(false);
@@ -167,9 +174,44 @@ class PlanChangeAnswererTest {
         assertThat(outcome.followUps()).containsExactly("5G 라이트 변경하러 가기");
     }
 
+    @Test
+    @DisplayName("이번 달 사용량이 바꿀 요금제 한도를 이미 넘으면 바꾼 뒤 초과로 표시된다고 미리 알린다")
+    void 한도_초과_안내() {
+        // 5G 라이트는 데이터 12GB. 데이터 100GB·통화 400분을 이미 썼다
+        when(usages.getOverview(USER_ID)).thenReturn(activeUsage(100 * 1024, 400, 20));
+
+        var outcome = answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null);
+
+        assertThat(outcome.content()).contains("5G 라이트(월 45,000원, 데이터 12GB)로 바꾸려면",
+                "이번 달 사용량이 이 요금제 한도를 넘어요: 데이터 100GB(한도 12GB)",
+                "바꾸면 이번 달은 한도를 넘은 것으로 표시되고, 이미 쓴 사용량은 줄지 않아요");
+        assertThat(outcome.followUps()).containsExactly("5G 라이트 변경하러 가기");
+    }
+
+    @Test
+    @DisplayName("사용량이 한도 안이거나 사용량을 읽을 수 없으면 초과 안내 없이 변경 안내만 한다")
+    void 한도_안이면_초과_안내_없음() {
+        String base = "지금 쓰는 LTE 맥스에서 5G 라이트(월 45,000원, 데이터 12GB)로 바꾸려면"
+                + " 요금제 변경 화면에서 5G 라이트를 골라 주세요. 변경은 신청한 다음 날 0시부터 적용되고, 요금제는 한 달에 한 번만 바꿀 수 있어요.";
+        when(usages.getOverview(USER_ID)).thenReturn(activeUsage(5 * 1024, 100, 20));
+        assertThat(answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null).content()).isEqualTo(base);
+
+        when(usages.getOverview(USER_ID)).thenReturn(UsageOverview.notSubscribed());
+        assertThat(answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null).content()).isEqualTo(base);
+
+        when(usages.getOverview(USER_ID)).thenThrow(new IllegalStateException("DB 연결 끊김"));
+        assertThat(answerer.answer(USER_ID, "5G 라이트로 바꿔줘", null).content()).isEqualTo(base);
+    }
+
     private PlanChangeAnswerer answerer(boolean demoMode) {
         return new PlanChangeAnswerer(plans, queries, new SubscriptionProperties(demoMode), histories,
-                new SubscriptionCalendar(Clock.fixed(NOW, ZoneOffset.UTC)));
+                new SubscriptionCalendar(Clock.fixed(NOW, ZoneOffset.UTC)), usages);
+    }
+
+    private static UsageOverview activeUsage(long dataMb, long voiceMinutes, long smsCount) {
+        LocalDate month = LocalDate.of(2026, 10, 1);
+        return UsageOverview.active(month, month, new MonthUsage(month, 14, false,
+                ResourceUsage.of(dataMb, 30L * 1024), ResourceUsage.of(voiceMinutes, 300L), ResourceUsage.of(smsCount, 100L), null));
     }
 
     private static SubscriptionResponse.SubscriptionResponseBuilder subscription(Plan current) {
@@ -185,6 +227,6 @@ class PlanChangeAnswererTest {
 
     private static Plan plan(long id, String name, int fee, String dataGb, Plan.TargetGroup group) {
         return Plan.builder().planId(id).name(name).monthlyFee(fee).dataGb(new BigDecimal(dataGb))
-                .targetGroup(group).status(Plan.Status.ACTIVE).build();
+                .voiceMinutes(300).smsCount(100).targetGroup(group).status(Plan.Status.ACTIVE).build();
     }
 }
