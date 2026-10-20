@@ -22,7 +22,7 @@
 | 14 | 세션 제목 | `ChatSessionTitleService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SESSION_TITLE_BEDROCK` (true) | 아래 "세션 제목". 출력 한도를 32에서 512로 올렸다(32에서는 제목이 비거나 잘렸다) |
 | 15 | 대화 요약 | `ChatSummaryService` | **gpt-oss**, 설정 추가(TELME-194) | `CHAT_SUMMARY_BEDROCK` (true) | 대화가 16개 메시지 또는 2,048토큰을 넘을 때만 도는 백그라운드 호출. 60사례 두 모델 같게 나왔고(60/60, [BEDROCK_SWITCH_EVALUATION.md](BEDROCK_SWITCH_EVALUATION.md)) 그 측정도 출력 한도 512로 했다 |
 
-상담 종료 요약은 기능을 없앴다. 세션 제목과 대화 요약은 TELME-194에서 gpt-oss로 바꿨다(14, 15번).
+상담 종료 요약은 TELME-207에서 기능을 없앴다. 세션 제목과 대화 요약은 TELME-194에서 gpt-oss로 바꿨다(14, 15번).
 
 ## 기본 구성과 끄는 방법
 
