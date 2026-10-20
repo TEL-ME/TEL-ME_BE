@@ -36,8 +36,10 @@ resource "aws_instance" "gpu" {
 
   tags = { Name = "${var.name}-gpu" }
 
+  # 꺼 두면 AWS가 공인 IP를 회수해 associate_public_ip_address가 false로 읽힌다.
+  # 무시하지 않으면 apply마다 GPU를 지우고 새로 만들어 받아 둔 모델(EBS)까지 사라진다
   lifecycle {
-    ignore_changes = [ami]
+    ignore_changes = [ami, associate_public_ip_address]
   }
 }
 
