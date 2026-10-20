@@ -54,11 +54,24 @@ resource "aws_db_instance" "main" {
   publicly_accessible    = false
   multi_az               = false
 
-  backup_retention_period    = 7
-  auto_minor_version_upgrade = true
+  backup_retention_period = 7
+  # 백업, 유지 관리 시간을 한국 새벽으로 고정(UTC 기준). 자동 마이너 업그레이드는 단일 AZ에서 수 분 재시작하므로 시연 기간에는 끈다
+  backup_window              = "17:00-17:30"         # KST 02:00~02:30
+  maintenance_window         = "sun:18:00-sun:19:00" # KST 월 03:00~04:00
+  auto_minor_version_upgrade = false
   apply_immediately          = true
 
   deletion_protection       = true
   skip_final_snapshot       = false
   final_snapshot_identifier = "${var.name}-db-final"
+}
+
+# RDS가 관리하는 비밀번호 회전 주기를 시연 기간보다 길게
+resource "aws_secretsmanager_secret_rotation" "db" {
+  secret_id          = aws_db_instance.main.master_user_secret[0].secret_arn
+  rotate_immediately = false
+
+  rotation_rules {
+    automatically_after_days = 365
+  }
 }
