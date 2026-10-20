@@ -22,7 +22,7 @@ class TranscriptionUsageLimiterTest {
     void 최소_15초로_센다() {
         TranscriptionUsageLimiter limiter = new TranscriptionUsageLimiter(
                 new MutableClock(Instant.parse("2026-10-13T03:00:00Z")),
-                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(45)));
+                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(45)), SpeechTestSupport.inMemoryDailyUsage());
 
         limiter.acquire(GUEST, Duration.ofSeconds(2));
         limiter.acquire(GUEST, Duration.ofMillis(14_100));
@@ -39,13 +39,13 @@ class TranscriptionUsageLimiterTest {
     void 긴_녹음은_올림한_초() {
         TranscriptionUsageLimiter limiter = new TranscriptionUsageLimiter(
                 new MutableClock(Instant.parse("2026-10-13T03:00:00Z")),
-                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(35)));
+                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(35)), SpeechTestSupport.inMemoryDailyUsage());
 
         limiter.acquire(GUEST, Duration.ofMillis(20_001));
 
         assertThatThrownBy(() -> limiter.acquire(GUEST, Duration.ofSeconds(1))).isInstanceOf(GeneralException.class);
         assertThatCode(() -> new TranscriptionUsageLimiter(new MutableClock(Instant.parse("2026-10-13T03:00:00Z")),
-                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(35))).acquire(GUEST, Duration.ofSeconds(21)))
+                SpeechTestSupport.sttProperties(10, Duration.ofSeconds(35)), SpeechTestSupport.inMemoryDailyUsage()).acquire(GUEST, Duration.ofSeconds(21)))
                 .doesNotThrowAnyException();
     }
 }
