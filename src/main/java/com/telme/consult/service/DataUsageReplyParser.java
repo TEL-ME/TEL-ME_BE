@@ -72,6 +72,21 @@ public final class DataUsageReplyParser {
 
     private DataUsageReplyParser() {}
 
+    // 질문 속에 단위를 붙여 말한 한 달 사용량만 읽는다. 단위 없는 숫자는 요금·개수 같은 다른 양일 수 있어 읽지 않고,
+    // 무제한·모름도 사용량으로 읽지 않는다. 값이 분명한 경우에만 AMOUNT이다
+    public static Result parseStated(String text) {
+        if (text == null || text.isBlank()) {
+            return Result.UNREADABLE;
+        }
+        String lowered = text.strip().toLowerCase(Locale.ROOT).replaceAll("(?<=\\d),(?=\\d{3})", "");
+        boolean daily = DAILY.matcher(lowered).find();
+        if (daily && MONTHLY.matcher(lowered).find()) {
+            return Result.UNREADABLE;
+        }
+        Set<BigDecimal> amounts = explicitAmounts(lowered);
+        return amounts.size() == 1 ? amount(amounts.iterator().next(), daily) : Result.UNREADABLE;
+    }
+
     public static Result parse(String reply) {
         if (reply == null || reply.isBlank()) {
             return Result.UNREADABLE;

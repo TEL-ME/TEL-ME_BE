@@ -9,6 +9,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -122,12 +123,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
         } else if (type == PlanQuestionType.RECOMMENDATION) {
             Long member = memberOf(input);
             Map<String, String> previous = previousAnswers.apply(input.sessionId());
+            Map<String, String> confirmed = withStated(input.originalUserQuery(), input.confirmedConditions());
             MemberRecommendationAnswerer.Outcome result =
-                    recommendation.recommend(member, input.confirmedConditions(), previous, mayAsk || mayAskUsageFollowUp);
+                    recommendation.recommend(member, confirmed, previous, mayAsk || mayAskUsageFollowUp);
             if (result.asks() != null && !mayAsk) {
                 List<MissingCondition> firstAsks = mayAskUsageFollowUp ? firstUsageFollowUps(result.asks(), input) : List.of();
                 result = firstAsks.isEmpty()
-                        ? recommendation.recommend(member, input.confirmedConditions(), previous, false)
+                        ? recommendation.recommend(member, confirmed, previous, false)
                         : new MemberRecommendationAnswerer.Outcome(null, List.of(), firstAsks);
             }
             if (result.asks() != null) {
@@ -146,6 +148,18 @@ public final class PlanAnswerProvider implements AnswerProvider {
         trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name()));
         return new Outcome(GeneratedAnswer.withoutSources(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, followUps, null)), null);
+    }
+
+    // 질문에 직접 말한 나이대·사용량은 앞서 저장된 답보다 우선하는 확정된 답으로 본다(이미 말했으니 되묻지 않는다).
+    // 되묻기로 확정한 값이 있으면 그 값이 우선한다
+    private static Map<String, String> withStated(String question, Map<String, String> confirmed) {
+        Map<String, String> stated = StatedRecommendationAnswers.of(question);
+        if (stated.isEmpty()) {
+            return confirmed;
+        }
+        Map<String, String> merged = new HashMap<>(stated);
+        merged.putAll(confirmed);
+        return merged;
     }
 
     // 앞선 되묻기를 마친 뒤에는 새 질문을 붙이지 않아 같은 조건을 끝없이 묻지 않는다.
