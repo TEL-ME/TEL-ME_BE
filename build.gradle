@@ -52,6 +52,10 @@ dependencies {
 
 	// 모니터링
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	// 서버 오류 수집 (Sentry). SENTRY_DSN이 없으면 꺼진다
+	implementation platform('io.sentry:sentry-bom:8.61.0')
+	implementation 'io.sentry:sentry-spring-boot-starter-jakarta'
+	implementation 'io.sentry:sentry-logback'
 
 	// 음성 합성·인식 (Amazon Polly, Transcribe)
 	implementation platform('software.amazon.awssdk:bom:2.55.6')
