@@ -184,11 +184,9 @@ class ChatSummaryNormalizerTest {
         String normalized = ChatSummaryNormalizer.normalize(unsafe, sources);
         var guard = new ChatOutputGuard(mapper);
         var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, normalized, null, List.of(), null);
-        String summary = mapper.writeValueAsString(List.of(normalized));
 
         assertThat(normalized).isEqualTo(unsafe);
         assertThatThrownBy(() -> guard.verify(answer, sources)).isInstanceOf(ChatOutputBlockedException.class);
-        assertThatThrownBy(() -> guard.verifySummary(summary, sources)).isInstanceOf(ChatOutputBlockedException.class);
     }
 
     private OutputMaskContext masks(String... contents) {

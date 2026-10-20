@@ -61,6 +61,8 @@ dependencies {
 	// Bedrock 호출용 HTTP 클라이언트. 동시 연결 수·연결 대기 시간을 설정하려고 직접 둔다
 	implementation 'software.amazon.awssdk:apache5-client'
 	implementation 'software.amazon.awssdk:transcribestreaming'
+	// Bedrock 장애 시 꺼 둔 GPU EC2(vLLM) 기동
+	implementation 'software.amazon.awssdk:ec2'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
