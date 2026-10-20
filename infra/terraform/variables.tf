@@ -132,9 +132,11 @@ variable "acm_certificate_arn" {
 variable "github_oidc_subjects" {
   description = "배포 역할을 맡을 수 있는 GitHub Actions 주체(레포·브랜치)"
   type        = list(string)
+  # 두 레포는 OIDC sub에 변경 불가 식별자(이름@숫자 ID)를 쓴다(use_immutable_subject).
+  # 확인: gh api repos/TEL-ME/<레포>/actions/oidc/customization/sub 의 sub_claim_prefix
   default = [
-    "repo:TEL-ME/TEL-ME_BE:ref:refs/heads/develop",
-    "repo:TEL-ME/TEL-ME_FE:ref:refs/heads/develop",
+    "repo:TEL-ME@326893416/TEL-ME_BE@1362451590:ref:refs/heads/develop",
+    "repo:TEL-ME@326893416/TEL-ME_FE@1362451895:ref:refs/heads/develop",
   ]
 }
 
