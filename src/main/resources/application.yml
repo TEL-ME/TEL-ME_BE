@@ -78,6 +78,13 @@ vllm:
   # 같은 VPC라 켜져 있으면 연결이 바로 된다. GPU가 꺼져 있을 때 대체 호출마다 5초(llm.connect-timeout)씩 기다리지 않게 짧게 둔다.
   # 응답 대기는 llm.read-timeout을 그대로 쓴다
   connect-timeout: ${VLLM_CONNECT_TIMEOUT:1s}
+  gpu:
+    # 평소 꺼 두는 GPU EC2. 엑사원 호출이 오면 꺼져 있을 때 켠다(끄는 건 GPU 안의 30분 유휴 스크립트).
+    # 비우면(로컬/CI) 자동 기동을 하지 않는다. 운영은 Terraform이 SSM으로 넣는다
+    instance-id: ${VLLM_GPU_INSTANCE_ID:}
+    region: ${VLLM_GPU_REGION:ap-northeast-2}
+    # 이 간격 안에서는 상태 확인·기동 요청을 다시 보내지 않는다
+    start-interval: 1m
 
 kakao:
   local:
