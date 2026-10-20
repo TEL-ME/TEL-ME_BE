@@ -20,6 +20,8 @@ import com.telme.chat.service.ChatExecutionService;
 import com.telme.chat.service.ChatSessionService;
 import com.telme.chat.service.HttpSessionChatActorProvider;
 import com.telme.member.entity.User;
+import com.telme.notification.dto.NotificationType;
+import com.telme.notification.service.NotificationService;
 
 import jakarta.persistence.EntityManager;
 
@@ -54,6 +56,9 @@ class ChatExecutionControllerIntegrationTest {
 
     @Autowired
     private ChatEmitterRegistry emitterRegistry;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private MockHttpSession ownerSession;
     private MockHttpSession otherSession;
@@ -117,6 +122,29 @@ class ChatExecutionControllerIntegrationTest {
     }
 
     @Test
+    void lateSubscriberHidesNotificationSavedForUndeliveredAnswer() throws Exception {
+        long sessionId = createSession();
+        ChatMessageSendResponse question = sendMessage(sessionId, "가까운 매장 알려줘");
+        chatExecutionService.completeAnswer(question.executionId(), new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "강남역점이 가장 가깝습니다.", null, null, null));
+        // 구독 전에 끝나 서버가 놓친 답변으로 알림을 남긴 상태
+        entityManager.flush();
+        notificationService.saveUndelivered(question.executionId(), NotificationType.ANSWER_ARRIVED);
+        assertThat(notificationCount(question.executionId())).isEqualTo(1);
+
+        MvcResult result = mockMvc.perform(get(
+                        "/api/v1/chat/sessions/{sessionId}/executions/{executionId}/subscribe",
+                        sessionId, question.executionId())
+                        .session(ownerSession))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(content().string(containsString("\"status\":\"COMPLETED\"")));
+
+        assertThat(notificationCount(question.executionId())).isZero();
+    }
+
+    @Test
     void registersSubscriptionWhileExecutionIsStillRunning() throws Exception {
         long sessionId = createSession();
         ChatMessageSendResponse question = sendMessage(sessionId, "가까운 매장 알려줘");
@@ -148,5 +176,13 @@ class ChatExecutionControllerIntegrationTest {
         entityManager.persist(user);
         entityManager.flush();
         return user;
+    }
+
+    private long notificationCount(long executionId) {
+        return ((Number) entityManager.createNativeQuery("""
+                SELECT count(*) FROM notifications n
+                JOIN chat_executions e ON e.output_message_id = n.message_id
+                WHERE e.execution_id = ?1 AND n.dismissed_at IS NULL
+                """).setParameter(1, executionId).getSingleResult()).longValue();
     }
 }

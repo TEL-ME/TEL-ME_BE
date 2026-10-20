@@ -14,6 +14,7 @@ import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.global.common.CustomResponse;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.notification.service.NotificationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,9 +22,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Duration;
+import java.util.function.BooleanSupplier;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +37,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 // SSE 엔드포인트는 SseEmitter를 직접 반환해야 하므로 기존 API의 공통 응답 컨벤션을 따르기 어렵습니다.
 // 따라서 다른 API들과 섞이지 않도록 독립된 컨트롤러로 분리하여 관리합니다.
+@Slf4j
 @Tag(name = "Chat Execution", description = "AI 응답 실행 구독")
 @RestController
 @RequiredArgsConstructor
@@ -49,6 +54,7 @@ public class ChatExecutionController {
     private final ChatEmitterRegistry emitterRegistry;
     private final ChatExecutionProperties chatExecutionProperties;
     private final ChatExecutionTraceService traces;
+    private final ObjectProvider<NotificationService> notifications;
 
     @Operation(summary = "실행 처리 흐름 조회", description = "본인 대화의 검색 근거와 처리 결과를 실행 ID로 조회합니다.")
     @GetMapping("/{executionId}/trace")
@@ -81,12 +87,13 @@ public class ChatExecutionController {
         SseEmitter emitter = new SseEmitter(timeoutMillis());
         if (state.status() != ChatExecution.Status.RUNNING) {
             // Fast-path: 구독을 걸기 전에 이미 끝난 실행이면 즉시 종료 처리합니다.
-            if (state.status() == ChatExecution.Status.COMPLETED) {
-                emitterRegistry.sendTerminalNow(emitter, "complete", state);
-            } else {
+            deliverLate(executionId, () -> {
+                if (state.status() == ChatExecution.Status.COMPLETED) {
+                    return emitterRegistry.sendTerminalNow(emitter, "complete", state);
+                }
                 ChatFailure chatFailure = new ChatFailure(ChatMessage.Status.valueOf(state.status().name()), state.errorCode());
-                emitterRegistry.sendTerminalNow(emitter, "error", chatFailure);
-            }
+                return emitterRegistry.sendTerminalNow(emitter, "error", chatFailure);
+            });
             return emitter;
         }
 
@@ -98,15 +105,33 @@ public class ChatExecutionController {
         ChatExecutionState currentState = chatSessionService.getExecution(actor, executionId);
         if (currentState.status() != ChatExecution.Status.RUNNING) {
             // 이미 등록된 상태이므로 registry를 통해 이벤트를 보내고 제거 및 종료합니다.
-            if (currentState.status() == ChatExecution.Status.COMPLETED) {
-                emitterRegistry.complete(executionId, currentState);
-            } else {
+            // 상담 처리 쪽이 먼저 보냈으면 여기서는 false라 알림을 건드리지 않습니다.
+            deliverLate(executionId, () -> {
+                if (currentState.status() == ChatExecution.Status.COMPLETED) {
+                    return emitterRegistry.complete(executionId, currentState);
+                }
                 ChatFailure chatFailure = new ChatFailure(ChatMessage.Status.valueOf(currentState.status().name()), currentState.errorCode());
-                emitterRegistry.fail(executionId, chatFailure);
-            }
+                return emitterRegistry.fail(executionId, chatFailure);
+            });
         }
 
         return emitter;
+    }
+
+    // 결과를 전했을 때만 서버 알림을 숨긴다. 상담 처리 완료와 순서가 엇갈려도 DB 알림 행으로 맞춰진다
+    private void deliverLate(Long executionId, BooleanSupplier send) {
+        if (send.getAsBoolean()) {
+            dismissQuietly(executionId);
+        }
+    }
+
+    // 알림 숨김 실패가 이미 보낸 결과의 응답을 오류로 바꾸지 않게 한다. 실패하면 서버 알림이 남을 뿐이다
+    private void dismissQuietly(Long executionId) {
+        try {
+            notifications.ifAvailable(service -> service.dismissDelivered(executionId));
+        } catch (RuntimeException exception) {
+            log.warn("늦은 구독 알림 숨김 실패: executionId={}", executionId, exception);
+        }
     }
 
     private long timeoutMillis() {

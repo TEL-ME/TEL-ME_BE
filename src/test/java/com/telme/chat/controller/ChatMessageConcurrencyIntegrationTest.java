@@ -11,6 +11,7 @@ import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.service.ChatAnswer;
 import com.telme.chat.service.ChatExecutionService;
+import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatExecutionTimeoutScheduler;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.HttpSessionChatActorProvider;
@@ -28,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.telme.notification.service.NotificationService;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,6 +69,12 @@ class ChatMessageConcurrencyIntegrationTest {
 
     @Autowired
     private ChatExecutionProperties chatExecutionProperties;
+
+    @Autowired
+    private ChatEmitterRegistry emitterRegistry;
+
+    @Autowired
+    private ObjectProvider<NotificationService> notifications;
 
     @MockitoBean
     private ChatProcessingPort chatProcessingPort;
@@ -131,7 +140,7 @@ class ChatMessageConcurrencyIntegrationTest {
         assertThat(postMessage(sessionId, "기다리는 중 추가 질문").getResponse().getStatus()).isEqualTo(409);
 
         ChatExecutionTimeoutScheduler scheduler = new ChatExecutionTimeoutScheduler(
-                chatExecutionRepository, chatExecutionService, chatExecutionProperties);
+                chatExecutionRepository, chatExecutionService, chatExecutionProperties, emitterRegistry, notifications);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);

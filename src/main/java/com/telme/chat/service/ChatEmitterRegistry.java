@@ -58,35 +58,39 @@ public class ChatEmitterRegistry {
         }
     }
 
-    public void complete(Long executionId, Object payload) {
+    // 보냈으면 true, 구독자가 없거나 전송 실패면 false
+    public boolean complete(Long executionId, Object payload) {
+        return terminate(executionId, "complete", payload);
+    }
+
+    public boolean fail(Long executionId, Object payload) {
+        return terminate(executionId, "error", payload);
+    }
+
+    private boolean terminate(Long executionId, String eventName, Object payload) {
         SseEmitter emitter = emitters.remove(executionId);
         if (emitter == null) {
-            return;
+            return false;
         }
-        sendQuietly(emitter, "complete", payload);
+        boolean delivered = sendQuietly(emitter, eventName, payload);
         emitter.complete();
+        return delivered;
     }
 
-    public void fail(Long executionId, Object payload) {
-        SseEmitter emitter = emitters.remove(executionId);
-        if (emitter == null) {
-            return;
-        }
-        sendQuietly(emitter, "error", payload);
+    // 구독을 걸기 전에 이미 끝나 있던 실행을 위한 즉시 종료 경로 — registry에는 등록하지 않는다. 보냈으면 true
+    public boolean sendTerminalNow(SseEmitter emitter, String eventName, Object payload) {
+        boolean delivered = sendQuietly(emitter, eventName, payload);
         emitter.complete();
+        return delivered;
     }
 
-    // 구독을 걸기 전에 이미 끝나 있던 실행을 위한 즉시 종료 경로 — registry에는 등록하지 않는다.
-    public void sendTerminalNow(SseEmitter emitter, String eventName, Object payload) {
-        sendQuietly(emitter, eventName, payload);
-        emitter.complete();
-    }
-
-    private void sendQuietly(SseEmitter emitter, String eventName, Object payload) {
+    private boolean sendQuietly(SseEmitter emitter, String eventName, Object payload) {
         try {
             emitter.send(SseEmitter.event().name(eventName).data(payload));
+            return true;
         } catch (IOException | IllegalStateException exception) {
             log.info("SSE 종료 이벤트 전송 실패", exception);
+            return false;
         }
     }
 }
