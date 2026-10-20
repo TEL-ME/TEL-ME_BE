@@ -18,7 +18,8 @@ class StatedRecommendationAnswersTest {
         assertThat(StatedRecommendationAnswers.of("한 달에 100기가 정도 써요 요금제 추천해줘")).containsOnly(Map.entry(DATA, "100GB"));
         assertThat(StatedRecommendationAnswers.of("500메가 쓰는데 요금제 추천해줘")).containsOnly(Map.entry(DATA, "500MB"));
         assertThat(StatedRecommendationAnswers.of("하루에 2기가 쓰는데 요금제 추천해줘")).containsOnly(Map.entry(DATA, "60GB"));
-        assertThat(StatedRecommendationAnswers.of("50GB 이상 쓰는 사람한테 맞는 요금제 추천해줘")).containsOnly(Map.entry(DATA, "50GB"));
+        assertThat(StatedRecommendationAnswers.of("매달 30GB 쓰는데 요금제 추천해줘")).containsOnly(Map.entry(DATA, "30GB"));
+        assertThat(StatedRecommendationAnswers.of("아이폰 쓰는데 한 달에 50GB 정도 써요 요금제 추천해줘")).containsOnly(Map.entry(DATA, "50GB"));
     }
 
     @Test
@@ -46,7 +47,19 @@ class StatedRecommendationAnswersTest {
             // 값이 둘이거나 하루와 한 달이 섞여 어느 쪽인지 알 수 없다
             "10GB 쓰다가 요즘 30GB 쓰는데 요금제 추천해줘", "하루 2GB 쓰고 한 달에 50GB 써요 요금제 추천해줘",
             // 나이가 한 구분에 들어가지 않거나 나이 표현이 아니다
-            "10대인데 요금제 추천해줘", "60대인데 요금제 추천해줘", "휴대폰 2대 쓰는데 요금제 추천해줘", "2세대 폰이라 5G 요금제 추천해줘"})
+            "10대인데 요금제 추천해줘", "60대인데 요금제 추천해줘", "휴대폰 2대 쓰는데 요금제 추천해줘", "2세대 폰이라 5G 요금제 추천해줘",
+            // 현재 요금제 크기를 말한 것이지 사용량이 아니다
+            "지금 10GB 요금제 쓰고 있는데 추천해줘", "10GB 쓰는 요금제인데 추천해줘", "10GB짜리 쓰는데 추천해줘",
+            // 한 달이 아닌 기간이나 지난 때
+            "일주일에 5GB 써요 요금제 추천해줘", "3일 동안 10GB 썼어요 요금제 추천해줘", "지난달에 50GB 사용했어요 요금제 추천해줘",
+            // 정확한 양이 아니다(다 써서 모자람, 안 씀, 이상·이하)
+            "10GB 다 써서 모자라요 요금제 추천해줘", "10GB도 안 써요 요금제 추천해줘", "50GB 이상 쓰는 사람한테 맞는 요금제 추천해줘",
+            "1GB 이하 쓰는데 가장 싼 요금제 추천해줘",
+            // 본인 이야기가 아니다
+            "친구는 50GB 쓴대 요금제 추천해줘", "친구는 50GB 써요 요금제 추천해줘", "어머니가 70세인데 추천해줘", "저희 아이 17살이에요 요금제 추천해줘",
+            // 나이 표현이지만 본인의 현재 나이가 아니다(부정, 비교, 지난 때, 자격 질문, 나이를 알 수 없는 학생 구분)
+            "청소년 요금제 말고 일반 요금제 추천해줘", "청소년 요금제랑 성인 요금제 비교해줘", "65세 이상 요금제 있어요?",
+            "고등학생 때 쓰던 번호인데 요금제 추천해줘", "중학생이에요 요금제 추천해줘", "17살 가입 가능한 요금제 추천해줘"})
     void 분명하지_않은_표현은_읽지_않는다(String question) {
         assertThat(StatedRecommendationAnswers.of(question)).isEmpty();
     }
