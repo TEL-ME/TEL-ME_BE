@@ -20,7 +20,9 @@ spring:
             redirect-uri: "${FRONTEND_URL:{baseUrl}}/login/oauth2/code/{registrationId}"
 
 server:
-  # 앞단(ALB/nginx)에서 TLS를 끝내도 X-Forwarded-Proto를 읽어 OAuth 리다이렉트 URI를 https로 만든다
+  # 앞단 프록시(ALB)가 붙이는 X-Forwarded-* 헤더를 요청의 scheme·포트·클라이언트 주소에 반영한다.
+  # 운영은 CloudFront → ALB 구간이 HTTP라 X-Forwarded-Proto가 http로 와서, 이 설정만으로는 https 주소가 되지 않는다.
+  # 그래서 OAuth redirect-uri는 위에서 FRONTEND_URL로 고정한다
   forward-headers-strategy: framework
   servlet:
     session:
