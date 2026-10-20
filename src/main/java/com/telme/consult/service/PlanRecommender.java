@@ -20,6 +20,10 @@ final class PlanRecommender {
     record Recommendation(Plan plan, Kind kind) {
     }
 
+    // fiveG는 가장 싼 요금제가 5G가 아닐 때 5G 중 가장 싼 요금제이고, 가장 싼 요금제가 5G면 null
+    record UsageFit(Plan cheapest, Plan fiveG) {
+    }
+
     private static final Comparator<Plan> CHEAPEST_THEN_MOST_DATA =
             Comparator.comparingInt(Plan::getMonthlyFee).thenComparing(PlanRecommender::dataMb, Comparator.reverseOrder());
 
@@ -41,10 +45,24 @@ final class PlanRecommender {
         return new Recommendation(best, best.getMonthlyFee() < current.getMonthlyFee() ? Kind.CHEAPER : Kind.UPGRADE);
     }
 
-    // 사용량을 모를 때 데이터 필요량만으로 고른다. 맞는 요금제가 없으면 데이터가 가장 큰 요금제
-    Plan forDataNeed(List<Plan> candidates, long dataMb) {
-        Plan fitting = cheapestFitting(candidates, new Demand(dataMb, 0, 0), 1.0);
-        return fitting != null ? fitting : candidates.stream().max(Comparator.comparingDouble(PlanRecommender::dataMb)).orElse(null);
+    // 고객이 말한 사용량에 여유를 둔 가장 싼 요금제와 5G 중 가장 싼 요금제. 후보가 없으면 null
+    UsageFit forUsage(List<Plan> candidates, Demand demand) {
+        Plan cheapest = cheapestFittingOrBiggest(candidates, demand);
+        if (cheapest == null) {
+            return null;
+        }
+        if (cheapest.getNetworkType() == Plan.NetworkType.FIVE_G) {
+            return new UsageFit(cheapest, null);
+        }
+        List<Plan> fiveG = candidates.stream().filter(plan -> plan.getNetworkType() == Plan.NetworkType.FIVE_G).toList();
+        return new UsageFit(cheapest, cheapestFittingOrBiggest(fiveG, demand));
+    }
+
+    // 채우는 요금제가 없으면 데이터가 가장 큰 요금제
+    private static Plan cheapestFittingOrBiggest(List<Plan> candidates, Demand demand) {
+        Plan fitting = cheapestFitting(candidates, demand, MARGIN);
+        return fitting != null ? fitting
+                : candidates.stream().max(Comparator.comparingDouble(PlanRecommender::dataMb)).orElse(null);
     }
 
     private static Plan cheapestFitting(List<Plan> candidates, Demand demand, double margin) {

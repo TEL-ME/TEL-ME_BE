@@ -53,7 +53,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
 
     @Override
     public Prepared prepare(AnswerInput input, boolean plansClarification) {
-        Outcome outcome = outcome(input, plansClarification);
+        Outcome outcome = outcome(input, plansClarification, true);
         if (outcome.asks() != null) {
             return new Prepared(List.of(), new ClarificationPlan(outcome.asks()));
         }
@@ -67,7 +67,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
 
     @Override
     public GeneratedAnswer generate(AnswerInput input) {
-        Outcome outcome = outcome(input, false);
+        Outcome outcome = outcome(input, false, false);
         return outcome.answer() != null ? outcome.answer() : faqAnswers.generate(input);
     }
 
@@ -77,9 +77,9 @@ public final class PlanAnswerProvider implements AnswerProvider {
     }
 
     // 요금제 데이터로 답을 만들다 실패하면 채팅을 실패시키지 않고 기존 FAQ 경로에 맡긴다
-    private Outcome outcome(AnswerInput input, boolean mayAsk) {
+    private Outcome outcome(AnswerInput input, boolean mayAsk, boolean mayAskUsageFollowUp) {
         try {
-            return planOutcome(input, mayAsk);
+            return planOutcome(input, mayAsk, mayAskUsageFollowUp);
         } catch (RuntimeException exception) {
             log.warn("[요금제 답변] 답변을 만들지 못해 FAQ 경로로 넘깁니다. executionId={}", input.executionId(), exception);
             return Outcome.NONE;
@@ -93,7 +93,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
         return type;
     }
 
-    private Outcome planOutcome(AnswerInput input, boolean mayAsk) {
+    private Outcome planOutcome(AnswerInput input, boolean mayAsk, boolean mayAskUsageFollowUp) {
         // 비교 질문은 기존 비교 답변 경로가 양쪽 FAQ 근거를 확인해 답한다
         if (!enabled || comparisonEvidence.applies(input.originalUserQuery())) {
             return Outcome.NONE;
@@ -120,8 +120,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
             content = memberAnswer == null ? null : memberAnswer.content();
             followUps = memberAnswer == null ? List.of() : memberAnswer.followUps();
         } else if (type == PlanQuestionType.RECOMMENDATION) {
-            MemberRecommendationAnswerer.Outcome result = recommendation.recommend(memberOf(input),
-                    input.confirmedConditions(), previousAnswers.apply(input.sessionId()), mayAsk);
+            Long member = memberOf(input);
+            Map<String, String> previous = previousAnswers.apply(input.sessionId());
+            MemberRecommendationAnswerer.Outcome result =
+                    recommendation.recommend(member, input.confirmedConditions(), previous, mayAsk || mayAskUsageFollowUp);
+            if (result.asks() != null && !mayAsk && !(mayAskUsageFollowUp && isFirstUsageFollowUp(result.asks(), input))) {
+                result = recommendation.recommend(member, input.confirmedConditions(), previous, false);
+            }
             if (result.asks() != null) {
                 trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name(), "clarify",
                         result.asks().stream().map(MissingCondition::key).toList()));
@@ -138,6 +143,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
         trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name()));
         return new Outcome(GeneratedAnswer.withoutSources(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, followUps, null)), null);
+    }
+
+    // 앞선 되묻기를 마친 뒤에는 새 질문을 붙이지 않아 같은 조건을 끝없이 묻지 않는다.
+    // 다만 통화·문자는 데이터 사용량을 받은 뒤에야 알 수 있으므로 이 상담에서 처음 묻는 경우만 허용한다
+    private static boolean isFirstUsageFollowUp(List<MissingCondition> asks, AnswerInput input) {
+        return asks.stream().allMatch(ask -> MemberRecommendationAnswerer.USAGE_FOLLOW_UP_KEYS.contains(ask.key())
+                && !input.askedQuestions().containsKey(ask.key()));
     }
 
     private Long memberOf(AnswerInput input) {

@@ -185,18 +185,55 @@ class PlanAnswerProviderTest {
         AnswerInput answered = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION,
                 Map.of("age_group", "만 65세 이상"));
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
-        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), false)).thenReturn(
+        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), true)).thenReturn(
                 new MemberRecommendationAnswerer.Outcome("시니어 추천", List.of(), null));
 
         Prepared prepared = provider.prepare(answered, false);
 
         assertThat(prepared.answer().answer().content()).isEqualTo("시니어 추천");
-        verify(recommendation).recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), false);
+    }
+
+    @Test
+    void 되묻기를_마친_턴에도_통화_문자는_처음_묻는_경우만_되묻는다() {
+        MissingCondition voice = new MissingCondition("monthly_voice_usage", "통화는 몇 분 쓰세요?", List.of(), null);
+        MissingCondition sms = new MissingCondition("monthly_sms_usage", "문자는 몇 건 보내세요?", List.of(), null);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        Map<String, String> confirmed = Map.of("age_group", "만 19~64세", "monthly_data_usage", "1GB");
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(voice, sms)));
+
+        Prepared first = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION,
+                confirmed), false);
+
+        assertThat(first.answer()).isNull();
+        assertThat(first.plan().conditions()).containsExactly(voice, sms);
+    }
+
+    @Test
+    void 이미_물은_통화_문자나_나이대_데이터는_되묻기를_마친_턴에_다시_묻지_않고_추천한다() {
+        MissingCondition voice = new MissingCondition("monthly_voice_usage", "통화는 몇 분 쓰세요?", List.of(), null);
+        MissingCondition data = new MissingCondition("monthly_data_usage", "데이터는 얼마나 쓰세요?", List.of(), null);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        Map<String, String> confirmed = Map.of("age_group", "만 19~64세", "monthly_data_usage", "많이 써요");
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(voice)));
+        when(recommendation.recommend(77L, confirmed, Map.of(), false))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("안내만", List.of(), null));
+        AnswerInput voiceAsked = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION, confirmed,
+                QUESTION, null, true, null, Map.of("monthly_voice_usage", "통화는 몇 분 쓰세요?"));
+
+        assertThat(provider.prepare(voiceAsked, false).answer().answer().content()).isEqualTo("안내만");
+
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(data)));
+        AnswerInput noneAsked = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION, confirmed);
+
+        assertThat(provider.prepare(noneAsked, false).answer().answer().content()).isEqualTo("안내만");
     }
 
     @Test
     void 같은_채팅방에서_앞서_한_답을_추천_답변기에_함께_넘긴다() {
-        previous = Map.of("age_group", "만 65세 이상", "heavy_data", "예");
+        previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "40GB");
         provider = provider(true);
         when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
         when(recommendation.recommend(77L, Map.of(), previous, true))

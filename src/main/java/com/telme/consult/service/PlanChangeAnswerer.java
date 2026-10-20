@@ -37,6 +37,11 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
 
     @Override
     public PlanTaskOutcome answer(Long userId, String original, String resolved) {
+        return answer(userId, original, resolved, null);
+    }
+
+    @Override
+    public PlanTaskOutcome answer(Long userId, String original, String resolved, String recommended) {
         if (userId == null) {
             return reply("요금제 변경은 " + PlanTaskSupport.LOGIN_REQUIRED);
         }
@@ -66,7 +71,7 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
 
         Long currentPlanId = subscription.currentPlan().planId();
         List<Plan> named = PlanTaskSupport.namedPlans(
-                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved);
+                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved, recommended);
         // "LTE 맥스에서 5G 라이트로 바꿔줘"처럼 지금 요금제를 함께 말하면 바꿀 요금제만 남긴다
         if (named.size() > 1) {
             named = named.stream().filter(plan -> !plan.getPlanId().equals(currentPlanId)).toList();
@@ -85,7 +90,7 @@ public class PlanChangeAnswerer implements PlanTaskHandler {
                                 PlanFormat.data(target.isUnlimited(), target.getDataGb()),
                                 directionParticle(target.getName()), target.getName(),
                                 PlanTaskSupport.objectParticle(target.getName()), rules(), ageNote(target)),
-                PlanTaskLinks.CHANGE);
+                PlanTaskLinks.changeTo(target.getName()));
     }
 
     // 기존 변경 규칙(SubscriptionCommandService.changePlan)의 가입 당월·월 1회 제한을 같은 기준으로 먼저 본다.

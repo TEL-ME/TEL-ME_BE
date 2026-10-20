@@ -32,11 +32,16 @@ public class PlanSubscribeAnswerer implements PlanTaskHandler {
 
     @Override
     public PlanTaskOutcome answer(Long userId, String original, String resolved) {
+        return answer(userId, original, resolved, null);
+    }
+
+    @Override
+    public PlanTaskOutcome answer(Long userId, String original, String resolved, String recommended) {
         if (userId == null) {
             return reply("요금제 신청은 " + PlanTaskSupport.LOGIN_REQUIRED);
         }
         List<Plan> named = PlanTaskSupport.namedPlans(
-                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved);
+                planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE), original, resolved, recommended);
         SubscriptionMeResponse mine = queryService.getMine(userId);
         if (mine.subscribed()) {
             var current = mine.subscription().currentPlan() != null ? mine.subscription().currentPlan()
@@ -56,7 +61,7 @@ public class PlanSubscribeAnswerer implements PlanTaskHandler {
         return reply("%s(월 %s, 데이터 %s)%s 요금제 가입 화면에서 신청할 수 있어요. %s%s".formatted(target.getName(),
                         PlanFormat.money(target.getMonthlyFee()), PlanFormat.data(target.isUnlimited(), target.getDataGb()),
                         topicParticle(target.getName()), terms(), PlanChangeAnswerer.ageNote(target)),
-                PlanTaskLinks.SUBSCRIBE);
+                PlanTaskLinks.subscribeTo(target.getName()));
     }
 
     private String terms() {
