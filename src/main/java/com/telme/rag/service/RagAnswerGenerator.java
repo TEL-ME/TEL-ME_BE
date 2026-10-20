@@ -18,7 +18,9 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.chat.service.ChatTokenEstimator;
+import com.telme.llm.config.BedrockConfig;
 import com.telme.llm.config.LlmProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import java.util.stream.Collectors;
@@ -41,33 +43,34 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final LlmGenerationRecorder recorder;
     private final ExecutionTrace trace;
     private final int contextSize;
-    private final boolean amountRetry;
+    // 금액으로 막힌 답을 다시 부를 gpt-oss(Bedrock). 엑사원 대체를 거치지 않는다. null이면 다시 생성하지 않는다
+    private final LlmClient amountRetryClient;
 
     // 모델은 RagAnswerLlmConfiguration이 고른다(rag.answer.bedrock)
     @Autowired
     public RagAnswerGenerator(@Qualifier(RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT) LlmClient client,
             AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
-            LlmProperties properties, RagAnswerProperties answerProperties) {
-        // 추론 강도는 gpt-oss에만 있다. 엑사원으로 답하면 다시 불러도 같은 답이라 bedrock이 꺼져 있으면 쓰지 않는다
+            LlmProperties properties, RagAnswerProperties answerProperties,
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {
         this(client, converter, guard, checker, recorder, trace, properties.contextSize(),
-                answerProperties.bedrock() && answerProperties.amountRetry());
+                RagAnswerLlmConfiguration.amountRetryClient(answerProperties, bedrock.getIfAvailable()));
     }
 
     public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace) {
-        this(client, converter, guard, checker, recorder, trace, false);
+        this(client, converter, guard, checker, recorder, trace, null);
     }
 
     public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
-            boolean amountRetry) {
-        this(client, converter, guard, checker, recorder, trace, 8192, amountRetry);
+            LlmClient amountRetryClient) {
+        this(client, converter, guard, checker, recorder, trace, 8192, amountRetryClient);
     }
 
     private RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace, int size,
-            boolean amountRetry) {
+            LlmClient amountRetryClient) {
         this.llmClient = client;
         this.contextConverter = converter;
         this.answerGuard = guard;
@@ -75,7 +78,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         this.recorder = recorder;
         this.trace = trace;
         this.contextSize = size;
-        this.amountRetry = amountRetry;
+        this.amountRetryClient = amountRetryClient;
     }
 
     @Override
@@ -138,8 +141,8 @@ public class RagAnswerGenerator implements AnswerGenerator {
         String confirmedValues = String.join(" ", request.conditions().values());
         CollectingHandler collector = new CollectingHandler(handler, answerGuard, answerEvidence,
                 request.resolvedQuery(), confirmedValues, trace, request.executionId(), request.consultRequestId());
-        AnswerGuardException rejection = streamGuarded(llmRequest, collector);
-        if (rejection != null && amountRetry && rejection.kind() == AnswerGuardException.Kind.AMOUNT) {
+        AnswerGuardException rejection = streamGuarded(llmClient, llmRequest, collector);
+        if (rejection != null && amountRetryClient != null && rejection.kind() == AnswerGuardException.Kind.AMOUNT) {
             collector = retryWithMoreReasoning(request, llmRequest, handler, answerEvidence, confirmedValues,
                     rejection);
             rejection = collector.rejection;
@@ -162,9 +165,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
     }
 
     // 가드 예외면 돌려주고, 그 밖의 실패는 그대로 던진다
-    private AnswerGuardException streamGuarded(LlmRequest llmRequest, CollectingHandler collector) {
+    private AnswerGuardException streamGuarded(LlmClient client, LlmRequest llmRequest, CollectingHandler collector) {
         try {
-            llmClient.stream(llmRequest, collector);
+            client.stream(llmRequest, collector);
             collector.rethrowIfFailed();
             return null;
         } catch (AnswerGuardException rejection) {
@@ -176,8 +179,9 @@ public class RagAnswerGenerator implements AnswerGenerator {
     }
 
     /**
-     * 근거에 없는 금액으로 막힌 답을 추론 강도를 올려 한 번 다시 생성한다. 다시 생성이 가드 밖의 이유로 실패하면
-     * 처음 막힌 것과 같이 안전 안내로 끝낸다(호출자에게 오류 알림은 넘기지 않는다). 고객이 끊은 것은 그대로 던진다
+     * 근거에 없는 금액으로 막힌 답을 추론 강도를 올려 gpt-oss로 한 번 다시 생성한다. 엑사원 대체는 거치지 않는다.
+     * 다시 생성이 가드 밖의 이유로 실패하면 처음 막힌 것과 같이 안전 안내로 끝낸다(호출자에게 오류 알림은 넘기지 않는다).
+     * 고객이 끊은 것은 그대로 던진다
      */
     private CollectingHandler retryWithMoreReasoning(AnswerRequest request, LlmRequest llmRequest,
             LlmStreamHandler handler, String answerEvidence, String confirmedValues,
@@ -191,7 +195,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 answerEvidence, request.resolvedQuery(), confirmedValues, trace, request.executionId(),
                 request.consultRequestId());
         try {
-            AnswerGuardException again = streamGuarded(
+            AnswerGuardException again = streamGuarded(amountRetryClient,
                     llmRequest.toBuilder().reasoningEffort(AMOUNT_RETRY_REASONING_EFFORT).build(), collector);
             retry.put("outcome", again == null ? "PASSED" : "BLOCKED");
         } catch (LlmStreamCancelledException cancelled) {

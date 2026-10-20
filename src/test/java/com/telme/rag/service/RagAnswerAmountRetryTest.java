@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.dto.req.LlmRequest;
+import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
@@ -34,7 +35,7 @@ class RagAnswerAmountRetryTest {
     void 금액으로_막히면_다시_생성한다() {
         Sequence client = new Sequence("재발급 비용은 7,800원이 아니라 7,700원입니다.", "유심 재발급 비용은 7,700원입니다.");
 
-        AnswerResult result = generator(client, true).generate(request(), handler);
+        AnswerResult result = generator(client, client).generate(request(), handler);
 
         assertThat(result.answer()).isEqualTo("유심 재발급 비용은 7,700원입니다.");
         assertThat(client.requests).hasSize(2);
@@ -52,7 +53,7 @@ class RagAnswerAmountRetryTest {
     void 다시도_막히면_안전_안내() {
         Sequence client = new Sequence("유심 재발급 비용은 7,800원입니다.", "유심 재발급 비용은 7,800원입니다.");
 
-        AnswerResult result = generator(client, true).generate(request(), handler);
+        AnswerResult result = generator(client, client).generate(request(), handler);
 
         assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(client.requests).hasSize(2);
@@ -67,7 +68,7 @@ class RagAnswerAmountRetryTest {
     void 다시_생성이_실패하면_안전_안내() {
         Sequence client = new Sequence("유심 재발급 비용은 7,800원입니다.", null);
 
-        AnswerResult result = generator(client, true).generate(request(), handler);
+        AnswerResult result = generator(client, client).generate(request(), handler);
 
         assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(handler.tokens).containsExactly(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
@@ -82,7 +83,7 @@ class RagAnswerAmountRetryTest {
     void 꺼져_있으면_다시_부르지_않는다() {
         Sequence client = new Sequence("유심 재발급 비용은 7,800원입니다.", "유심 재발급 비용은 7,700원입니다.");
 
-        AnswerResult result = generator(client, false).generate(request(), handler);
+        AnswerResult result = generator(client, null).generate(request(), handler);
 
         assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(client.requests).hasSize(1);
@@ -94,7 +95,7 @@ class RagAnswerAmountRetryTest {
     void 수치로_막히면_다시_부르지_않는다() {
         Sequence client = new Sequence("택배로 5일 걸립니다.", "택배로 2~3 영업일 걸립니다.");
 
-        AnswerResult result = generator(client, true).generate(request("택배로 받으면 얼마나 걸려요"), handler);
+        AnswerResult result = generator(client, client).generate(request("택배로 받으면 얼마나 걸려요"), handler);
 
         assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(client.requests).hasSize(1);
@@ -106,7 +107,7 @@ class RagAnswerAmountRetryTest {
     void 막히지_않으면_한_번만_부른다() {
         Sequence client = new Sequence("유심 재발급 비용은 7,700원입니다.");
 
-        AnswerResult result = generator(client, true).generate(request(), handler);
+        AnswerResult result = generator(client, client).generate(request(), handler);
 
         assertThat(result.answer()).isEqualTo("유심 재발급 비용은 7,700원입니다.");
         assertThat(client.requests).singleElement().satisfies(request ->
@@ -114,11 +115,27 @@ class RagAnswerAmountRetryTest {
         assertThat(trace.retries).isEmpty();
     }
 
-    private RagAnswerGenerator generator(LlmClient client, boolean amountRetry) {
+    @Test
+    @DisplayName("다시 생성은 gpt-oss만 부르고 실패해도 엑사원으로 넘기지 않는다")
+    void 다시_생성은_엑사원으로_넘기지_않는다() {
+        Sequence bedrock = new Sequence("유심 재발급 비용은 7,800원입니다.", null);
+        Sequence exaone = new Sequence("유심 재발급 비용은 7,700원입니다.");
+
+        AnswerResult result = generator(new FallbackLlmClient(bedrock, exaone), bedrock).generate(request(), handler);
+
+        assertThat(result.answer()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(bedrock.requests).hasSize(2);
+        assertThat(exaone.requests).isEmpty();
+        assertThat(handler.error).isNull();
+        assertThat(trace.retries).singleElement().satisfies(retry ->
+                assertThat(retry).containsEntry("outcome", "FAILED"));
+    }
+
+    private RagAnswerGenerator generator(LlmClient client, LlmClient amountRetryClient) {
         EvidenceRelevanceChecker checker = new EvidenceRelevanceChecker(
                 client, new ObjectMapper(), new EvidenceCheckProperties(false, 300));
         return new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(), checker,
-                Mockito.mock(LlmGenerationRecorder.class), trace, amountRetry);
+                Mockito.mock(LlmGenerationRecorder.class), trace, amountRetryClient);
     }
 
     private AnswerRequest request() {

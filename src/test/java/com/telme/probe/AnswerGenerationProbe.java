@@ -135,7 +135,7 @@ class AnswerGenerationProbe {
         var generator = new RagAnswerGenerator(client, new AnswerContextConverter(), new AnswerGuard(),
                 new EvidenceRelevanceChecker(client, mapper, new EvidenceCheckProperties(false, 300)),
                 Mockito.mock(LlmGenerationRecorder.class), ExecutionTrace.noop(),
-                "true".equals(System.getenv("ANSWER_PROBE_AMOUNT_RETRY")));
+                "true".equals(System.getenv("ANSWER_PROBE_AMOUNT_RETRY")) ? client : null);
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", input.path("id").asText());
         row.put("model", model);

@@ -75,6 +75,19 @@ class RagAnswerLlmClientSelectionTest {
         assertThat(new RagAnswerProperties(true).amountRetry()).isTrue();
     }
 
+    @Test
+    @DisplayName("금액 다시 생성은 대체 없이 gpt-oss만 부르고, 답변이 엑사원이거나 설정이 꺼져 있으면 하지 않는다")
+    void 금액_다시_생성은_gpt_oss만_부른다() {
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, true), bedrock))
+                .isSameAs(bedrock);
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, false), bedrock))
+                .isNull();
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(false, true), bedrock))
+                .isNull();
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, true), null))
+                .isNull();
+    }
+
     private static RagAnswerProperties bind(Map<String, Object> values) {
         return new Binder(new MapConfigurationPropertySource(values))
                 .bindOrCreate("rag.answer", RagAnswerProperties.class);
