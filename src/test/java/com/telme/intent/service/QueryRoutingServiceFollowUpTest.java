@@ -280,22 +280,96 @@ class QueryRoutingServiceFollowUpTest {
         verify(llmClient).generate(any());
     }
 
+    @Test
+    @DisplayName("모델이 읽을 수 없는 사용량을 값으로 채워도 받지 않아 되묻게 한다")
+    void analyzeFollowUp_dropsUnreadableUsageFilledByLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"많이 써요\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "많이 써요");
+
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("나이대와 사용량을 함께 기다릴 때 읽을 수 없는 값만 빼고 읽을 수 있는 값은 그대로 받는다")
+    void analyzeFollowUp_keepsOnlyReadableRecommendationAnswers() {
+        givenWaiting("age_group", "monthly_data_usage");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"60대예요\"},"
+                + "{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"40GB\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "60대인데 한 달에 40기가 써요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "40GB"));
+    }
+
+    @Test
+    @DisplayName("읽을 수 있는 나이대와 사용량 값은 모델이 채운 그대로 받는다")
+    void analyzeFollowUp_keepsReadableRecommendationAnswers() {
+        for (String age : List.of("만 14~18세", "만 19~64세", "만 65세 이상", "17살이에요", "30대", "청소년", "시니어")) {
+            givenWaiting("age_group", "monthly_data_usage", "monthly_voice_usage", "monthly_sms_usage");
+            given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                    + "{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + age + "\"},"
+                    + "{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"잘 모르겠어요\"},"
+                    + "{\"key\":\"monthly_voice_usage\",\"status\":\"FILLED\",\"value\":\"5시간\"},"
+                    + "{\"key\":\"monthly_sms_usage\",\"status\":\"FILLED\",\"value\":\"50건\"}]}");
+
+            FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "알려드릴게요 나이는 " + age + " 입니다");
+
+            assertThat(response.conditions()).as(age).containsOnly(
+                    entry("age_group", age), entry("monthly_data_usage", "잘 모르겠어요"),
+                    entry("monthly_voice_usage", "5시간"), entry("monthly_sms_usage", "50건"));
+        }
+    }
+
+    @Test
+    @DisplayName("통화·문자도 모델이 읽을 수 없는 값을 채우면 받지 않는다")
+    void analyzeFollowUp_dropsUnreadableCallAndTextFilledByLlm() {
+        givenWaiting("monthly_voice_usage", "monthly_sms_usage");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"monthly_voice_usage\",\"status\":\"FILLED\",\"value\":\"많이 해요\"},"
+                + "{\"key\":\"monthly_sms_usage\",\"status\":\"FILLED\",\"value\":\"50건\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "통화는 많이 하고 문자는 50건쯤 보내요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_sms_usage", "50건"));
+    }
+
+    @Test
+    @DisplayName("거절한 조건과 다른 조건은 사용량 검증과 상관없이 그대로 받는다")
+    void analyzeFollowUp_keepsDeclinedAndOtherConditions() {
+        givenWaiting("age_group", "location");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"age_group\",\"status\":\"DECLINED\"},"
+                + "{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "나이는 말하기 싫고 강남역이요");
+
+        assertThat(response.declinedKeys()).containsExactly("age_group");
+        assertThat(response.conditions()).containsExactly(entry("location", "강남역"));
+    }
+
     private void givenWaitingDataUsage() {
         givenWaiting("monthly_data_usage");
     }
 
-    private void givenWaiting(String key) {
+    private void givenWaiting(String... keys) {
         ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
         ConsultRequest waiting = ConsultRequest.builder()
                 .consultRequestId(WAITING_CONSULT_REQUEST_ID)
                 .subqueryOrder((short) 1)
                 .intent(ConsultRequest.Intent.FAQ)
                 .status(ConsultRequest.Status.WAITING_CONDITION)
-                .conditions(List.of(ConsultCondition.builder()
-                        .conditionKey(key)
-                        .status(ConsultCondition.Status.PENDING)
-                        .askedMessage(askedMessage)
-                        .build()))
+                .conditions(java.util.Arrays.stream(keys)
+                        .map(key -> ConsultCondition.builder()
+                                .conditionKey(key)
+                                .status(ConsultCondition.Status.PENDING)
+                                .askedMessage(askedMessage)
+                                .build())
+                        .toList())
                 .build();
         given(consultRequestRepository.findByLatestAskedQuestion(
                 SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));

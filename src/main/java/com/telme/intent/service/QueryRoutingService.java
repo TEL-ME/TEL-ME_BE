@@ -9,6 +9,7 @@ import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.consult.service.AgeReplyParser;
 import com.telme.consult.service.CallTextReplyParser;
 import com.telme.consult.service.DataUsageReplyParser;
 import com.telme.global.common.exception.GeneralException;
@@ -1360,9 +1361,25 @@ public class QueryRoutingService {
                 log.debug("[후속분석] 기준점만 가리키는 위치 표현은 지역명으로 받지 않습니다");
                 continue;
             }
+            if (!isReadableRecommendationAnswer(key, value)) {
+                log.debug("[후속분석] 코드가 읽을 수 없는 요금제 추천 조건 값은 받지 않습니다: {}", key);
+                continue;
+            }
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);
+    }
+
+    // 요금제 추천의 나이대·사용량은 코드가 읽을 수 있는 값만 받는다. 모델이 "많이 써요", "60대예요"를 값으로 채워도
+    // 읽지 못하면 비워 두어 다시 묻게 한다(채우면 되묻기가 끝나 추천이 되묻지 않고 안내나 일반 요금제로 끝난다)
+    private static boolean isReadableRecommendationAnswer(String key, String value) {
+        return switch (key) {
+            case AgeReplyParser.CONDITION_KEY -> AgeReplyParser.parse(value) != null;
+            case DataUsageReplyParser.CONDITION_KEY -> DataUsageReplyParser.parse(value).readable();
+            case CallTextReplyParser.VOICE_KEY -> CallTextReplyParser.parseVoice(value).readable();
+            case CallTextReplyParser.SMS_KEY -> CallTextReplyParser.parseSms(value).readable();
+            default -> true;
+        };
     }
 
     // "미납 요금이 있으신가요?"의 답이 지역일 수는 없는데 "아니요"가 지역으로 들어갔다

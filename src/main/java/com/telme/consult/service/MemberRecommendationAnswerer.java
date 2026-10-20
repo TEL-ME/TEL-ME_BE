@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MemberRecommendationAnswerer {
 
-    public static final String AGE_KEY = "age_group";
+    public static final String AGE_KEY = AgeReplyParser.CONDITION_KEY;
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
     public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
     public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;

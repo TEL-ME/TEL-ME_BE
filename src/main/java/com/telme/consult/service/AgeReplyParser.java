@@ -8,7 +8,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // 선택지 대신 직접 입력한 나이 답을 요금제 대상 구분으로 읽는다. 둘 이상에 걸치거나 알 수 없으면 null
-final class AgeReplyParser {
+public final class AgeReplyParser {
+
+    // 요금제 추천이 나이대를 되물을 때 쓰는 조건 이름
+    public static final String CONDITION_KEY = "age_group";
 
     private static final int MAX_AGE = 120;
 
@@ -23,7 +26,7 @@ final class AgeReplyParser {
     private AgeReplyParser() {
     }
 
-    static Plan.TargetGroup parse(String reply) {
+    public static Plan.TargetGroup parse(String reply) {
         if (reply == null || reply.isBlank()) {
             return null;
         }
