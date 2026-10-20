@@ -2,6 +2,7 @@ package com.telme.llm.config;
 
 import com.telme.llm.service.GpuInstanceStarter;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -19,12 +20,19 @@ import software.amazon.awssdk.services.ec2.Ec2Client;
 @ConditionalOnExpression("'${llm.provider:fake}' == 'vllm' and !'${vllm.gpu.instance-id:}'.isBlank()")
 public class VllmGpuConfig {
 
+    // EC2 API가 응답하지 않아도 기동 스레드가 오래 묶이지 않게 시간 제한을 둔다(Bedrock 클라이언트와 같은 방식)
+    private static final Duration API_CALL_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration API_CALL_ATTEMPT_TIMEOUT = Duration.ofSeconds(5);
+
     // 클래스패스에 HTTP 구현이 여러 개라 Bedrock과 같은 Apache5를 직접 지정
     @Bean(destroyMethod = "close")
     public Ec2Client gpuEc2Client(VllmGpuProperties properties) {
         return Ec2Client.builder()
                 .region(Region.of(properties.region()))
                 .httpClientBuilder(Apache5HttpClient.builder())
+                .overrideConfiguration(config -> config
+                        .apiCallTimeout(API_CALL_TIMEOUT)
+                        .apiCallAttemptTimeout(API_CALL_ATTEMPT_TIMEOUT))
                 .build();
     }
 
@@ -32,7 +40,7 @@ public class VllmGpuConfig {
     // 데몬이라 앱 종료를 막지 않는다
     @Bean
     public GpuInstanceStarter gpuInstanceStarter(Ec2Client gpuEc2Client, VllmGpuProperties properties) {
-        return new GpuInstanceStarter(gpuEc2Client, properties.instanceId(), properties.startInterval(),
+        return new GpuInstanceStarter(gpuEc2Client, properties,
                 Clock.systemUTC(), Executors.newSingleThreadExecutor(runnable -> {
                     Thread thread = new Thread(runnable, "gpu-instance-starter");
                     thread.setDaemon(true);
