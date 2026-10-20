@@ -27,6 +27,9 @@ locals {
 
     ROUTING_REQUEST_INVENTORY_ENABLED = "false"
 
+    # 시연용: 요금제 가입, 변경을 바로 적용하고 가입 당월, 월 1회 변경 제한을 생략
+    TELME_SUBSCRIPTION_DEMO_MODE = "true"
+
     FRONTEND_URL = local.site_url
   }
 }
