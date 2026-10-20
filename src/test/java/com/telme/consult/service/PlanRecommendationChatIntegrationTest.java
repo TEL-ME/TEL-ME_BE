@@ -101,6 +101,17 @@ class PlanRecommendationChatIntegrationTest {
                         new MissingCondition("age_group", "나이에 따라 추천하는 요금제가 달라져요. 나이대가 어떻게 되세요?", OPTIONS, null),
                         new MissingCondition("monthly_data_usage", "한 달에 데이터를 얼마나 쓰세요? 대략 몇 GB인지 채팅으로 알려주세요.", List.of(), null)));
             }
+            // 3GB는 통화·문자를 함께 계획하고, 통화 600분이면 문자 한도가 없는 요금제로 바뀌어 문자는 더 묻지 않는다
+            if (mayAsk && "3GB".equals(confirmed.get("monthly_data_usage")) && !confirmed.containsKey("monthly_voice_usage")) {
+                return new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(
+                        new MissingCondition("monthly_voice_usage", "한 달에 통화는 대략 몇 분 쓰세요?", List.of(), null),
+                        new MissingCondition("monthly_sms_usage", "한 달에 문자는 대략 몇 건 보내세요?", List.of(), null)));
+            }
+            if (mayAsk && "3GB".equals(confirmed.get("monthly_data_usage")) && confirmed.containsKey("monthly_voice_usage")
+                    && !"600분".equals(confirmed.get("monthly_voice_usage")) && !confirmed.containsKey("monthly_sms_usage")) {
+                return new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(
+                        new MissingCondition("monthly_sms_usage", "한 달에 문자는 대략 몇 건 보내세요?", List.of(), null)));
+            }
             if (mayAsk && "2GB".equals(confirmed.get("monthly_data_usage")) && !confirmed.containsKey("monthly_voice_usage")) {
                 return new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(
                         new MissingCondition("monthly_voice_usage", "한 달에 통화는 대략 몇 분 쓰세요?", List.of(), null)));
@@ -160,6 +171,45 @@ class PlanRecommendationChatIntegrationTest {
         assertThat(answersMemory.of(sessionId)).containsOnly(
                 java.util.Map.entry("age_group", "만 65세 이상"), java.util.Map.entry("monthly_data_usage", "40GB"));
         assertThat(answersMemory.of(createSession())).isEmpty();
+    }
+
+    @Test
+    void 통화_답으로_추천이_바뀌어_문자가_필요_없어지면_문자는_묻지_않고_추천한다() throws Exception {
+        long sessionId = createSession();
+
+        waitCompleted(send(sessionId, QUESTION));
+        waitCompleted(send(sessionId, "만 19~64세"));
+        waitCompleted(send(sessionId, "3GB"));
+        JsonNode asked = history(sessionId).path("result").path("messages");
+        assertThat(asked.get(asked.size() - 1).path("content").asText()).contains("통화는 대략 몇 분");
+
+        waitCompleted(send(sessionId, "600분"));
+
+        JsonNode last = history(sessionId).path("result").path("messages");
+        assertThat(last.size()).isEqualTo(8);
+        assertThat(last.get(7).path("messageType").asText()).isEqualTo("ANSWER");
+        assertThat(last.get(7).path("content").asText()).isEqualTo("추천 답변: 만 19~64세/3GB");
+    }
+
+    @Test
+    void 통화_답을_받은_뒤에도_문자가_필요하면_문자를_묻는다() throws Exception {
+        long sessionId = createSession();
+
+        waitCompleted(send(sessionId, QUESTION));
+        waitCompleted(send(sessionId, "만 19~64세"));
+        waitCompleted(send(sessionId, "3GB"));
+        waitCompleted(send(sessionId, "100분"));
+
+        JsonNode asked = history(sessionId).path("result").path("messages");
+        assertThat(asked.size()).isEqualTo(8);
+        assertThat(asked.get(7).path("messageType").asText()).isEqualTo("CLARIFICATION");
+        assertThat(asked.get(7).path("content").asText()).contains("문자는 대략 몇 건");
+
+        waitCompleted(send(sessionId, "50건"));
+
+        JsonNode last = history(sessionId).path("result").path("messages");
+        assertThat(last.size()).isEqualTo(10);
+        assertThat(last.get(9).path("messageType").asText()).isEqualTo("ANSWER");
     }
 
     @Test

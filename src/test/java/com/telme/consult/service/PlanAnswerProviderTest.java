@@ -210,6 +210,40 @@ class PlanAnswerProviderTest {
     }
 
     @Test
+    void 되묻기를_마친_턴에는_통화_문자_중_아직_묻지_않은_항목만_되묻는다() {
+        MissingCondition voice = new MissingCondition("monthly_voice_usage", "통화는 몇 분 쓰세요?", List.of(), null);
+        MissingCondition sms = new MissingCondition("monthly_sms_usage", "문자는 몇 건 보내세요?", List.of(), null);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        Map<String, String> confirmed = Map.of("age_group", "만 19~64세", "monthly_data_usage", "2GB");
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(voice, sms)));
+        AnswerInput voiceAsked = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION, confirmed,
+                QUESTION, null, true, null, Map.of("monthly_voice_usage", "통화는 몇 분 쓰세요?"));
+
+        Prepared prepared = provider.prepare(voiceAsked, false);
+
+        assertThat(prepared.answer()).isNull();
+        assertThat(prepared.plan().conditions()).containsExactly(sms);
+    }
+
+    @Test
+    void 나이대나_데이터가_섞인_되묻기는_되묻기를_마친_턴에_통화_문자와_함께_묻지_않는다() {
+        MissingCondition age = new MissingCondition("age_group", "나이대가 어떻게 되세요?", List.of(), null);
+        MissingCondition voice = new MissingCondition("monthly_voice_usage", "통화는 몇 분 쓰세요?", List.of(), null);
+        when(classifier.classify(1L, QUESTION)).thenReturn(PlanQuestionType.RECOMMENDATION);
+        Map<String, String> confirmed = Map.of("monthly_data_usage", "2GB");
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(), List.of(age, voice)));
+        when(recommendation.recommend(77L, confirmed, Map.of(), false))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("안내만", List.of(), null));
+
+        Prepared prepared = provider.prepare(
+                new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, QUESTION, QUESTION, confirmed), false);
+
+        assertThat(prepared.answer().answer().content()).isEqualTo("안내만");
+    }
+
+    @Test
     void 이미_물은_통화_문자나_나이대_데이터는_되묻기를_마친_턴에_다시_묻지_않고_추천한다() {
         MissingCondition voice = new MissingCondition("monthly_voice_usage", "통화는 몇 분 쓰세요?", List.of(), null);
         MissingCondition data = new MissingCondition("monthly_data_usage", "데이터는 얼마나 쓰세요?", List.of(), null);

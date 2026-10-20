@@ -124,8 +124,11 @@ public final class PlanAnswerProvider implements AnswerProvider {
             Map<String, String> previous = previousAnswers.apply(input.sessionId());
             MemberRecommendationAnswerer.Outcome result =
                     recommendation.recommend(member, input.confirmedConditions(), previous, mayAsk || mayAskUsageFollowUp);
-            if (result.asks() != null && !mayAsk && !(mayAskUsageFollowUp && isFirstUsageFollowUp(result.asks(), input))) {
-                result = recommendation.recommend(member, input.confirmedConditions(), previous, false);
+            if (result.asks() != null && !mayAsk) {
+                List<MissingCondition> firstAsks = mayAskUsageFollowUp ? firstUsageFollowUps(result.asks(), input) : List.of();
+                result = firstAsks.isEmpty()
+                        ? recommendation.recommend(member, input.confirmedConditions(), previous, false)
+                        : new MemberRecommendationAnswerer.Outcome(null, List.of(), firstAsks);
             }
             if (result.asks() != null) {
                 trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name(), "clarify",
@@ -146,10 +149,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
     }
 
     // 앞선 되묻기를 마친 뒤에는 새 질문을 붙이지 않아 같은 조건을 끝없이 묻지 않는다.
-    // 다만 통화·문자는 데이터 사용량을 받은 뒤에야 알 수 있으므로 이 상담에서 처음 묻는 경우만 허용한다
-    private static boolean isFirstUsageFollowUp(List<MissingCondition> asks, AnswerInput input) {
-        return asks.stream().allMatch(ask -> MemberRecommendationAnswerer.USAGE_FOLLOW_UP_KEYS.contains(ask.key())
-                && !input.askedQuestions().containsKey(ask.key()));
+    // 다만 통화·문자는 데이터 사용량을 받은 뒤에야 알 수 있으므로 이 상담에서 아직 묻지 않은 항목만 허용한다.
+    // 나이대·데이터가 섞여 있으면 새 질문이 아니라 빠진 답이라 허용하지 않는다
+    private static List<MissingCondition> firstUsageFollowUps(List<MissingCondition> asks, AnswerInput input) {
+        if (!asks.stream().allMatch(ask -> MemberRecommendationAnswerer.USAGE_FOLLOW_UP_KEYS.contains(ask.key()))) {
+            return List.of();
+        }
+        return asks.stream().filter(ask -> !input.askedQuestions().containsKey(ask.key())).toList();
     }
 
     private Long memberOf(AnswerInput input) {
