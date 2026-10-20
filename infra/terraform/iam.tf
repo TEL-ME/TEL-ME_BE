@@ -197,8 +197,13 @@ data "aws_iam_policy_document" "github_deploy" {
   }
 
   statement {
-    sid       = "InstanceRefresh"
-    actions   = ["autoscaling:StartInstanceRefresh", "autoscaling:DescribeInstanceRefreshes"]
+    sid = "InstanceRefresh"
+    # Cancel은 교체가 시간 안에 끝나지 않을 때 멈추고 이전 이미지로 되돌리려고 쓴다
+    actions = [
+      "autoscaling:StartInstanceRefresh",
+      "autoscaling:DescribeInstanceRefreshes",
+      "autoscaling:CancelInstanceRefresh",
+    ]
     resources = ["*"]
   }
 
