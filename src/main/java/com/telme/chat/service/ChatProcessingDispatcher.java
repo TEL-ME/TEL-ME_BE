@@ -1,5 +1,6 @@
 package com.telme.chat.service;
 
+import com.telme.chat.config.ChatProcessingProperties;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.global.common.exception.GeneralException;
 import jakarta.annotation.PreDestroy;
@@ -35,9 +36,10 @@ class ChatProcessingDispatcher {
             ObjectProvider<ChatProcessingPort> chatProcessingPort,
             ChatExecutionService chatExecutionService,
             ChatResponseTimer responseTimer,
-            PlatformTransactionManager transactionManager
+            PlatformTransactionManager transactionManager,
+            ChatProcessingProperties properties
     ) {
-        this(chatProcessingPort, chatExecutionService, responseTimer, transactionManager, createExecutor());
+        this(chatProcessingPort, chatExecutionService, responseTimer, transactionManager, createExecutor(properties));
     }
 
     ChatProcessingDispatcher(
@@ -109,12 +111,13 @@ class ChatProcessingDispatcher {
         executor.shutdown();
     }
 
-    private static ThreadPoolTaskExecutor createExecutor() {
+    // 동시 처리 수만큼 스레드를 고정해 두고, 넘치는 턴은 대기열에서 기다린다(chat.processing)
+    static ThreadPoolTaskExecutor createExecutor(ChatProcessingProperties properties) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setThreadNamePrefix(THREAD_NAME_PREFIX);
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(4);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(properties.threads());
+        executor.setMaxPoolSize(properties.threads());
+        executor.setQueueCapacity(properties.queueCapacity());
         executor.initialize();
         return executor;
     }

@@ -1,0 +1,19 @@
+# S2 Bedrock 응답 없음: Bedrock 주소를 연결은 받고 아무 응답도 하지 않는 서버로 바꾼다(LLM_BEDROCK_ENDPOINT).
+# 요청은 보내지지만 답이 오지 않아 SDK 전체 시간 제한(LLM_BEDROCK_TIMEOUT, 기본 8초)이 지나야 엑사원으로 넘어간다.
+# 진짜 주소를 hosts로 돌리는 방식은 TLS 연결 단계에서 연결 시간 제한(약 2초)에 먼저 걸려 "응답 없음"이 되지 않는다.
+# 평문 HTTP 주소라 서명 방식(IAM 역할 등 SigV4) 자격 증명으로 띄운다
+services:
+  bedrock-hang:
+    image: python:3.12-alpine
+    container_name: telme-bedrock-hang
+    # accept하지 않아도 커널이 연결을 받아 두고 요청도 받아 둔다(대기열 1024)
+    command: ["python", "-c", "import socket,time;s=socket.socket();s.bind(('0.0.0.0',8080));s.listen(1024);time.sleep(10**9)"]
+    networks:
+      serving:
+        ipv4_address: 172.30.0.10
+
+  app:
+    depends_on:
+      - bedrock-hang
+    environment:
+      LLM_BEDROCK_ENDPOINT: http://172.30.0.10:8080

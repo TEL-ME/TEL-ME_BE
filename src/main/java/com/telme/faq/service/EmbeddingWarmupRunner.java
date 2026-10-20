@@ -7,9 +7,10 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-// Ollama가 OLLAMA_KEEP_ALIVE(10분) 동안 요청이 없으면 모델을 내려서
-// 첫 요청이 콜드 로드(약 11초)를 그대로 맞는 걸 막기 위해 기동 시 한 번 미리 호출한다.
-// 기본은 꺼짐 — 로컬/테스트/CI에 Ollama가 없어도 안전, 실제 배포 환경에서만 켠다.
+// 첫 질문이 임베딩 서버의 준비 시간을 그대로 맞지 않게 기동 시 한 번 미리 호출한다.
+// Ollama는 OLLAMA_KEEP_ALIVE(10분) 동안 요청이 없으면 모델을 내려 콜드 로드(약 11초)가 생기고,
+// TEI는 모델을 내리지 않지만 서버가 막 떴을 때 첫 호출이 느리다.
+// 기본은 꺼짐 — 로컬/테스트/CI에 임베딩 서버가 없어도 안전, 실제 배포 환경에서만 켠다.
 @Slf4j
 @Component
 @RequiredArgsConstructor

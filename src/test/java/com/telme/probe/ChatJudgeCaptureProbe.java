@@ -59,8 +59,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** 실제 Chat API부터 상담 처리와 FAQ 검색까지 실행하고, Judge 입력을 별도 파일에 고정한다. */
+// 생성 서빙은 TELME_CHAT_JUDGE_LLM_PROVIDER로 바꿀 수 있다(ollama 또는 vllm, docs/SERVING_COMPARISON.md T4)
 @SpringBootTest(properties = {
-        "llm.provider=ollama",
+        "llm.provider=${TELME_CHAT_JUDGE_LLM_PROVIDER:ollama}",
         "telme.consult.persistence-enabled=true",
         "telme.consult.llm-enabled=true",
         "telme.consult.chat-integration-enabled=true",
@@ -99,6 +100,8 @@ class ChatJudgeCaptureProbe {
     @Autowired private SubscriptionQueryService subscriptionQueries;
     @Autowired private SubscriptionUsageService usageService;
     @Value("${ollama.url}") private String ollamaUrl;
+    @Value("${vllm.url}") private String vllmUrl;
+    @Value("${llm.provider}") private String provider;
     @Value("${llm.model}") private String generatorModel;
 
     private final List<SearchTrace> searchTraces = new ArrayList<>();
@@ -155,17 +158,28 @@ class ChatJudgeCaptureProbe {
         run.put("createdAt", Instant.now().toString());
         run.put("database", database);
         run.put("generatorModel", generatorModel);
-        JsonNode tags = ollamaGet("/api/tags");
-        for (JsonNode model : tags.path("models")) {
-            if (generatorModel.equals(model.path("name").asText())) {
-                run.put("generatorModelDigest", model.path("digest").asText());
-                break;
+        run.put("generatorProvider", provider);
+        if ("vllm".equals(provider)) {
+            // vLLM은 다이제스트가 없어 원본 모델 이름(root)을 남긴다
+            for (JsonNode model : httpGet(vllmUrl, "/v1/models").path("data")) {
+                if (generatorModel.equals(model.path("id").asText())) {
+                    run.put("generatorModelDigest", model.path("root").asText());
+                    break;
+                }
             }
+            run.put("generatorVllmVersion", httpGet(vllmUrl, "/version").path("version").asText());
+        } else {
+            for (JsonNode model : httpGet(ollamaUrl, "/api/tags").path("models")) {
+                if (generatorModel.equals(model.path("name").asText())) {
+                    run.put("generatorModelDigest", model.path("digest").asText());
+                    break;
+                }
+            }
+            run.put("generatorOllamaVersion", httpGet(ollamaUrl, "/api/version").path("version").asText());
         }
         if (!run.containsKey("generatorModelDigest")) {
-            throw new IllegalStateException("Ollama에서 답변 생성 모델을 찾지 못했습니다: " + generatorModel);
+            throw new IllegalStateException(provider + "에서 답변 생성 모델을 찾지 못했습니다: " + generatorModel);
         }
-        run.put("generatorOllamaVersion", ollamaGet("/api/version").path("version").asText());
         run.put("gitHead", gitHead());
         run.put("mainSourceSha256", mainSourceHash());
         run.put("fixtureSha256", sha256(Files.readAllBytes(fixturePath)));
@@ -525,12 +539,12 @@ class ChatJudgeCaptureProbe {
         return mapper.readTree(bytes);
     }
 
-    private JsonNode ollamaGet(String path) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(ollamaUrl + path)).GET().build();
+    private JsonNode httpGet(String baseUrl, String path) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + path)).GET().build();
         HttpResponse<byte[]> response = HttpClient.newHttpClient().send(
                 request, HttpResponse.BodyHandlers.ofByteArray());
         if (response.statusCode() != 200) {
-            throw new IOException("Ollama 정보 조회 실패: " + response.statusCode());
+            throw new IOException("모델 서버 정보 조회 실패: " + baseUrl + path + " " + response.statusCode());
         }
         return body(response.body());
     }

@@ -72,6 +72,13 @@ springdoc:
 ollama:
   url: ${OLLAMA_URL:http://localhost:11434}
 
+# llm.provider=vllm일 때 EXAONE을 부르는 vLLM 서버(OpenAI 호환 API). 서버의 --served-model-name은 llm.model과 같아야 한다
+vllm:
+  url: ${VLLM_URL:http://localhost:8000}
+  # 같은 VPC라 켜져 있으면 연결이 바로 된다. GPU가 꺼져 있을 때 대체 호출마다 5초(llm.connect-timeout)씩 기다리지 않게 짧게 둔다.
+  # 응답 대기는 llm.read-timeout을 그대로 쓴다
+  connect-timeout: ${VLLM_CONNECT_TIMEOUT:1s}
+
 kakao:
   local:
     # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
@@ -79,7 +86,7 @@ kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
 
 llm:
-  # fake: Ollama 없이 고정 응답 / ollama: 로컬 EXAONE 호출
+  # fake: Ollama 없이 고정 응답 / ollama: Ollama의 EXAONE 호출 / vllm: vLLM의 EXAONE 호출(vllm.url)
   provider: ${LLM_PROVIDER:fake}
   model: ${LLM_MODEL:exaone3.5:7.8b}
   connect-timeout: 5s
@@ -105,8 +112,13 @@ llm:
     # 분당 호출 수 한도는 아니다(평균 1.5초면 분당 약 max-connections × 40회 정도)
     max-connections: ${LLM_BEDROCK_MAX_CONNECTIONS:50}
     connection-acquire-timeout: 1s
+    # 비우면 지역 기본 주소. 서빙 비교의 응답 없음 장애를 만들 때만 쓴다(scripts/serving-comparison/fault-hang.yml)
+    endpoint: ${LLM_BEDROCK_ENDPOINT:}
 
 embedding:
+  # ollama: Ollama /api/embed(주소 기본 ollama.url) / tei: text-embeddings-inference /embed(서버가 띄운 bge-m3)
+  provider: ${EMBEDDING_PROVIDER:ollama}
+  url: ${EMBEDDING_URL:${ollama.url}}
   model: ${EMBEDDING_MODEL:bge-m3}
   dimension: 1024
   connect-timeout: 5s
@@ -163,6 +175,11 @@ chat:
     bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
     # gpt-oss 문맥 판정의 흔들림 보완(docs/CONTEXT_RESOLUTION.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
     stability-guards: ${CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS:false}
+  processing:
+    # 채팅 턴을 동시에 처리하는 수와 처리를 기다릴 수 있는 턴 수. 대기열이 넘치면 그 턴은 바로 실패로 끝난다
+    # 배포 값은 예상 동시 사용자 수와 GPU·Bedrock 처리량으로 정한다(TELME-187 T1 실측)
+    threads: ${CHAT_PROCESSING_THREADS:4}
+    queue-capacity: ${CHAT_PROCESSING_QUEUE:100}
 
 rag:
   answer:

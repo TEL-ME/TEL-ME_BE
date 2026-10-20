@@ -22,27 +22,27 @@ public class EmbeddingConfig {
     public RestClient embeddingSearchClient(
             RestClient.Builder builder,
             EmbeddingProperties properties,
-            @Value("${ollama.url}") String ollamaUrl
+            @Value("${embedding.url}") String embeddingUrl
     ) {
-        return build(builder, ollamaUrl, properties.connectTimeout(), properties.searchReadTimeout());
+        return build(builder, embeddingUrl, properties.connectTimeout(), properties.searchReadTimeout());
     }
 
     @Bean
     public RestClient embeddingBatchClient(
             RestClient.Builder builder,
             EmbeddingProperties properties,
-            @Value("${ollama.url}") String ollamaUrl
+            @Value("${embedding.url}") String embeddingUrl
     ) {
-        return build(builder, ollamaUrl, properties.connectTimeout(), properties.batchReadTimeout());
+        return build(builder, embeddingUrl, properties.connectTimeout(), properties.batchReadTimeout());
     }
 
-    private RestClient build(RestClient.Builder builder, String ollamaUrl, Duration connectTimeout, Duration readTimeout) {
+    private RestClient build(RestClient.Builder builder, String baseUrl, Duration connectTimeout, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);
         factory.setReadTimeout(readTimeout);
 
         return builder
-                .baseUrl(ollamaUrl)
+                .baseUrl(baseUrl)
                 .requestFactory(factory)
                 .build();
     }

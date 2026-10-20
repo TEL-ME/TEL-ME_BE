@@ -31,6 +31,7 @@ public class LlmGenerationRecorder {
     private final ObjectMapper mapper;
 
     private static final String OLLAMA = "ollama";
+    public static final String VLLM = "vllm";
 
     // 기록 실패가 LLM 응답을 막지 않도록 별도 트랜잭션으로 저장하고 예외를 삼킨다
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -74,7 +75,8 @@ public class LlmGenerationRecorder {
         try {
             var metadata = new LinkedHashMap<String, Object>();
             metadata.put("provider", provider);
-            if (OLLAMA.equals(provider)) {
+            // vLLM은 Ollama와 같은 작업별 기본값으로 보낸다(VllmRequestConverter)
+            if (OLLAMA.equals(provider) || VLLM.equals(provider)) {
                 metadata.put("options", requestConverter.toChatRequest(request, false).options());
             } else {
                 // null이면 클라이언트 기본값(Bedrock은 llm.bedrock.max-tokens, temperature 0)을 썼다는 뜻
