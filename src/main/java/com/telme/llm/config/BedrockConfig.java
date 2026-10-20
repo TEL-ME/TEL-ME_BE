@@ -5,6 +5,7 @@ import com.telme.llm.service.BedrockClient;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.RecordingLlmClient;
+import java.net.URI;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +35,11 @@ public class BedrockConfig {
     // 운영 클라이언트 설정을 한곳에 둔다. 테스트도 이 설정 그대로 주소만 바꿔 쓴다
     // 동시 호출이 몰리면 연결 수에서 막고, 연결을 못 얻으면 짧게 기다린 뒤 실패로 넘긴다
     static BedrockRuntimeClientBuilder clientBuilder(BedrockProperties properties) {
-        return BedrockRuntimeClient.builder()
+        BedrockRuntimeClientBuilder builder = BedrockRuntimeClient.builder();
+        if (properties.endpoint() != null && !properties.endpoint().isBlank()) {
+            builder.endpointOverride(URI.create(properties.endpoint()));
+        }
+        return builder
                 .region(Region.of(properties.region()))
                 .httpClientBuilder(Apache5HttpClient.builder()
                         .maxConnections(properties.maxConnections())

@@ -5,7 +5,9 @@ import com.telme.faq.dto.req.EmbedRequest;
 import com.telme.faq.dto.res.EmbedResponse;
 import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.exception.GeneralException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -56,23 +58,33 @@ public class EmbeddingClient {
 
     private EmbedResponse call(RestClient client, List<String> texts) {
         try {
-            return client.post()
+            return properties.tei() ? callTei(client, texts) : client.post()
                     .uri("/api/embed")
                     .body(new EmbedRequest(properties.model(), texts))
                     .retrieve()
                     .body(EmbedResponse.class);
         } catch (HttpClientErrorException e) {
-            log.warn("[EmbeddingClient] Ollama가 요청을 거부했습니다: {}", e.getStatusCode(), e);
+            log.warn("[EmbeddingClient] {}가 요청을 거부했습니다: {}", properties.provider(), e.getStatusCode(), e);
             throw new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_REJECTED);
         } catch (RestClientException e) {
-            log.warn("[EmbeddingClient] Ollama 호출에 실패했습니다.", e);
+            log.warn("[EmbeddingClient] {} 호출에 실패했습니다.", properties.provider(), e);
             throw new GeneralException(FaqErrorCode.EMBEDDING_REQUEST_FAILED);
         }
     }
 
+    // TEI는 서버가 띄운 모델 하나만 쓰고 벡터 배열만 돌려준다. Ollama처럼 정규화된 벡터를 받는다(normalize 기본 true)
+    private EmbedResponse callTei(RestClient client, List<String> texts) {
+        float[][] vectors = client.post()
+                .uri("/embed")
+                .body(Map.of("inputs", texts, "normalize", true))
+                .retrieve()
+                .body(float[][].class);
+        return vectors == null ? null : new EmbedResponse(Arrays.asList(vectors));
+    }
+
     List<float[]> validate(List<String> texts, EmbedResponse response) {
         if (response == null || response.embeddings() == null) {
-            log.warn("[EmbeddingClient] Ollama 응답이 비어있습니다.");
+            log.warn("[EmbeddingClient] {} 응답이 비어있습니다.", properties.provider());
             throw new GeneralException(FaqErrorCode.EMBEDDING_RESPONSE_INVALID);
         }
 

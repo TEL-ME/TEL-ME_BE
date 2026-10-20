@@ -2,6 +2,7 @@ package com.telme.faq.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -219,5 +220,28 @@ class EmbeddingClientTest {
         float[] result = embeddingClient.embed("질문");
 
         assertThat(result).hasSize(1024);
+    }
+
+    @Test
+    @DisplayName("TEI로 설정하면 /embed에 inputs로 보내고 벡터 배열 응답을 그대로 쓴다")
+    void TEI면_embed_경로로_보내고_벡터_배열을_읽는다() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://tei.test");
+        MockRestServiceServer teiServer = MockRestServiceServer.bindTo(builder).build();
+        RestClient client = builder.build();
+        EmbeddingClient teiClient = new EmbeddingClient(client, client, new EmbeddingProperties(
+                "bge-m3", 1024, Duration.ofSeconds(5), Duration.ofSeconds(15), Duration.ofSeconds(120), "tei"));
+        String vector = "[" + "0.1,".repeat(1023) + "0.1]";
+
+        teiServer.expect(requestTo("http://tei.test/embed"))
+                .andExpect(jsonPath("$.inputs[0]").value("질문1"))
+                .andExpect(jsonPath("$.inputs[1]").value("질문2"))
+                .andExpect(jsonPath("$.normalize").value(true))
+                .andRespond(withSuccess("[%s,%s]".formatted(vector, vector), MediaType.APPLICATION_JSON));
+
+        List<float[]> result = teiClient.embedBatch(List.of("질문1", "질문2"));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(1)).hasSize(1024);
+        teiServer.verify();
     }
 }

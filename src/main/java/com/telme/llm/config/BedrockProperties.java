@@ -2,6 +2,7 @@ package com.telme.llm.config;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 // 검색 근거 판정용 Bedrock 설정. 답변 생성(Ollama)과 따로 둔다
@@ -25,9 +26,19 @@ public record BedrockProperties(
         // 평균 1.5초면 분당 약 max-connections × 40회 정도다. 분당 한도를 강제하려면 별도 제한이 필요하다
         @DefaultValue("50") int maxConnections,
         // 연결이 모두 쓰이는 중이면 이만큼만 기다리고 판정 실패로 넘긴다. 기다리는 동안 고객 응답도 늦어진다
-        @DefaultValue("1s") Duration connectionAcquireTimeout
+        @DefaultValue("1s") Duration connectionAcquireTimeout,
+        // 비우면 지역의 기본 주소를 쓴다. 서빙 비교의 "Bedrock 응답 없음" 장애를 만들 때만 응답하지 않는 서버 주소를 준다
+        // (scripts/serving-comparison/fault-hang.yml)
+        String endpoint
 ) {
 
+    public BedrockProperties(boolean enabled, String region, String model, Duration timeout, String reasoningEffort,
+            int maxTokens, int maxConnections, Duration connectionAcquireTimeout) {
+        this(enabled, region, model, timeout, reasoningEffort, maxTokens, maxConnections, connectionAcquireTimeout,
+                null);
+    }
+
+    @ConstructorBinding
     public BedrockProperties {
         if (maxTokens < 1) {
             throw new IllegalArgumentException("llm.bedrock.max-tokens는 1 이상이어야 합니다: " + maxTokens);
