@@ -71,3 +71,33 @@ resource "aws_cloudwatch_metric_alarm" "gpu_running_long" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alarms.arn]
 }
+
+# Bedrock 호출이 실패해 엑사원(vLLM)으로 대체된 횟수. 앱 코드 없이 로그(FallbackLlmClient의 "[LLM 대체]")에서 센다
+resource "aws_cloudwatch_log_metric_filter" "bedrock_fallback" {
+  name           = "${var.name}-bedrock-fallback"
+  log_group_name = aws_cloudwatch_log_group.app.name
+  pattern        = "\"[LLM 대체]\""
+
+  metric_transformation {
+    namespace     = "TelMe"
+    name          = "BedrockFallbackCount"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+# 대체가 한 번이라도 일어나면 알린다. 이때 앱이 꺼진 GPU를 켜기 시작하므로(TELME-204) 사람도 상황을 본다
+resource "aws_cloudwatch_metric_alarm" "bedrock_fallback" {
+  alarm_name          = "${var.name}-bedrock-fallback"
+  alarm_description   = "Bedrock 호출이 실패해 엑사원으로 대체됨. Bedrock 상태와 GPU 기동을 확인"
+  namespace           = "TelMe"
+  metric_name         = aws_cloudwatch_log_metric_filter.bedrock_fallback.metric_transformation[0].name
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+  ok_actions          = [aws_sns_topic.alarms.arn]
+}
