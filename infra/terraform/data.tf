@@ -4,8 +4,9 @@ resource "aws_ecr_repository" "backend" {
   # 배포가 끝나면 destroy로 지운다. 이미지가 남아 있어도 지워지게 한다
   force_delete = true
 
+  # push할 때 알려진 취약점(CVE)을 기본 스캔한다. 무료이고 결과로 배포를 막지는 않는다(콘솔 ECR → 이미지 → 취약성)
   image_scanning_configuration {
-    scan_on_push = false
+    scan_on_push = true
   }
 }
 
