@@ -63,6 +63,7 @@ import org.springframework.web.client.RestClientException;
 public class QueryRoutingService {
     private static final int MAX_CONSULT_SUB_QUERIES = 3;
     private static final int MAX_USAGE_REPLY_LENGTH = 30;
+    private static final Pattern TYPED_AGE = Pattern.compile("\\d\\s*(?:세|살|대)");
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -1107,7 +1108,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
-        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys());
+        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys(), reply);
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -1116,7 +1117,7 @@ public class QueryRoutingService {
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys());
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys(), reply);
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -1327,7 +1328,7 @@ public class QueryRoutingService {
         return filled;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys) {
+    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys, String reply) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
@@ -1361,7 +1362,7 @@ public class QueryRoutingService {
                 log.debug("[후속분석] 기준점만 가리키는 위치 표현은 지역명으로 받지 않습니다");
                 continue;
             }
-            if (!isReadableRecommendationAnswer(key, value)) {
+            if (!isReadableRecommendationAnswer(key, value, reply)) {
                 log.debug("[후속분석] 코드가 읽을 수 없는 요금제 추천 조건 값은 받지 않습니다: {}", key);
                 continue;
             }
@@ -1372,14 +1373,23 @@ public class QueryRoutingService {
 
     // 요금제 추천의 나이대·사용량은 코드가 읽을 수 있는 값만 받는다. 모델이 "많이 써요", "60대예요"를 값으로 채워도
     // 읽지 못하면 비워 두어 다시 묻게 한다(채우면 되묻기가 끝나 추천이 되묻지 않고 안내나 일반 요금제로 끝난다)
-    private static boolean isReadableRecommendationAnswer(String key, String value) {
+    private static boolean isReadableRecommendationAnswer(String key, String value, String reply) {
         return switch (key) {
-            case AgeReplyParser.CONDITION_KEY -> AgeReplyParser.parse(value) != null;
+            case AgeReplyParser.CONDITION_KEY -> isReadableAge(value, reply);
             case DataUsageReplyParser.CONDITION_KEY -> DataUsageReplyParser.parse(value).readable();
             case CallTextReplyParser.VOICE_KEY -> CallTextReplyParser.parseVoice(value).readable();
             case CallTextReplyParser.SMS_KEY -> CallTextReplyParser.parseSms(value).readable();
             default -> true;
         };
+    }
+
+    // 고객이 숫자로 나이를 말했으면 코드가 원문에서 읽은 구분과 같을 때만 받는다. 모델은 "60대예요"나 "65세 미만이요"처럼
+    // 여러 구분에 걸치는 답도 선택지 하나로 골라 채우는데, 그러면 되묻지 않고 한쪽으로 정해진다
+    private static boolean isReadableAge(String value, String reply) {
+        if (AgeReplyParser.parse(value) == null) {
+            return false;
+        }
+        return !TYPED_AGE.matcher(reply).find() || AgeReplyParser.parse(value) == AgeReplyParser.parse(reply);
     }
 
     // "미납 요금이 있으신가요?"의 답이 지역일 수는 없는데 "아니요"가 지역으로 들어갔다

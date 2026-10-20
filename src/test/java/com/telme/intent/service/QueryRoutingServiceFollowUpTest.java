@@ -326,6 +326,43 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("고객이 숫자로 말한 나이가 여러 구분에 걸치는데 모델이 선택지 하나로 채우면 받지 않아 되묻게 한다")
+    void analyzeFollowUp_dropsAgeThatModelSnappedToOption() {
+        // 모델이 채운 선택지 값은 모두 읽을 수 있는 값이지만 고객 말과 구분이 다르거나 걸치는 말을 하나로 정한 것이다
+        Map<String, String> snapped = Map.of(
+                "60대예요", "만 65세 이상",
+                "65세 미만이요", "만 19~64세",
+                "10대예요", "만 14~18세",
+                "17살이에요", "만 19~64세");
+        snapped.forEach((reply, option) -> {
+            givenWaiting("age_group");
+            given(llmClient.generate(any())).willReturn(
+                    "{\"conditions\":[{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + option + "\"}]}");
+
+            assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).as(reply).isEmpty();
+        });
+    }
+
+    @Test
+    @DisplayName("고객이 말한 나이와 모델이 채운 선택지가 같은 구분이거나 나이를 숫자로 말하지 않았으면 그대로 받는다")
+    void analyzeFollowUp_keepsAgeThatMatchesTypedAge() {
+        Map<String, String> matching = Map.of(
+                "17살이에요", "만 14~18세",
+                "30대예요", "만 19~64세",
+                "35세", "만 19~64세",
+                "70세예요", "만 65세 이상",
+                "첫 번째요", "만 14~18세",
+                "시니어예요", "만 65세 이상");
+        matching.forEach((reply, option) -> {
+            givenWaiting("age_group");
+            given(llmClient.generate(any())).willReturn(
+                    "{\"conditions\":[{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + option + "\"}]}");
+
+            assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).as(reply).containsExactly(entry("age_group", option));
+        });
+    }
+
+    @Test
     @DisplayName("통화·문자도 모델이 읽을 수 없는 값을 채우면 받지 않는다")
     void analyzeFollowUp_dropsUnreadableCallAndTextFilledByLlm() {
         givenWaiting("monthly_voice_usage", "monthly_sms_usage");
