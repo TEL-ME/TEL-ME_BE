@@ -75,6 +75,9 @@ ollama:
 # llm.provider=vllm일 때 EXAONE을 부르는 vLLM 서버(OpenAI 호환 API). 서버의 --served-model-name은 llm.model과 같아야 한다
 vllm:
   url: ${VLLM_URL:http://localhost:8000}
+  # 같은 VPC라 켜져 있으면 연결이 바로 된다. GPU가 꺼져 있을 때 대체 호출마다 5초(llm.connect-timeout)씩 기다리지 않게 짧게 둔다.
+  # 응답 대기는 llm.read-timeout을 그대로 쓴다
+  connect-timeout: ${VLLM_CONNECT_TIMEOUT:1s}
 
 kakao:
   local:

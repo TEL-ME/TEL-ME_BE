@@ -1,5 +1,6 @@
 package com.telme.llm.config;
 
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -49,16 +50,17 @@ public class LlmConfig {
                 new RecordingLlmClient(baseLlmClient, recorder, properties.model()), retryProperties);
     }
 
-    // vLLM(OpenAI 호환 API) 서버. 시간 제한은 Ollama와 같은 llm.* 값을 쓴다
+    // vLLM(OpenAI 호환 API) 서버. 응답 대기는 Ollama와 같은 llm.read-timeout, 연결 대기는 vllm.connect-timeout을 쓴다
     @Bean
     @ConditionalOnProperty(name = "llm.provider", havingValue = "vllm")
     public RestClient vllmRestClient(
             RestClient.Builder builder,
             LlmProperties properties,
-            @Value("${vllm.url}") String vllmUrl
+            @Value("${vllm.url}") String vllmUrl,
+            @Value("${vllm.connect-timeout:1s}") Duration connectTimeout
     ) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.connectTimeout());
+        requestFactory.setConnectTimeout(connectTimeout);
         requestFactory.setReadTimeout(properties.readTimeout());
 
         return builder

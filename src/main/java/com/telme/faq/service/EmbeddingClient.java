@@ -84,7 +84,7 @@ public class EmbeddingClient {
 
     List<float[]> validate(List<String> texts, EmbedResponse response) {
         if (response == null || response.embeddings() == null) {
-            log.warn("[EmbeddingClient] Ollama 응답이 비어있습니다.");
+            log.warn("[EmbeddingClient] {} 응답이 비어있습니다.", properties.provider());
             throw new GeneralException(FaqErrorCode.EMBEDDING_RESPONSE_INVALID);
         }
 
