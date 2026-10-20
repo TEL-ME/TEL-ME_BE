@@ -86,7 +86,7 @@ resource "aws_cloudwatch_log_metric_filter" "bedrock_fallback" {
   }
 }
 
-# 대체가 한 번이라도 일어나면 알린다. 이때 앱이 꺼진 GPU를 켜기 시작하므로(TELME-204) 사람도 상황을 본다
+# 대체가 한 번이라도 일어나면 사람에게 바로 알린다. GPU는 비용이 들어 앱이 5분 안에 대체 2번일 때 켠다(TELME-204)
 resource "aws_cloudwatch_metric_alarm" "bedrock_fallback" {
   alarm_name          = "${var.name}-bedrock-fallback"
   alarm_description   = "Bedrock 호출이 실패해 엑사원으로 대체됨. Bedrock 상태와 GPU 기동을 확인"

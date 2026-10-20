@@ -17,7 +17,7 @@ locals {
     VLLM_URL           = "http://${aws_instance.gpu.private_ip}:8000"
     LLM_BEDROCK_REGION = var.bedrock_region
     LLM_BEDROCK_MODEL  = var.bedrock_model_id
-    # Bedrock 장애로 엑사원을 부를 때 꺼져 있는 GPU EC2를 앱이 켠다(iam.tf StartGpu 권한과 짝)
+    # Bedrock 실패로 엑사원 대체가 5분 안에 2번이면 꺼져 있는 GPU EC2를 앱이 켠다(TELME-204, iam.tf StartGpu 권한과 짝)
     VLLM_GPU_INSTANCE_ID = aws_instance.gpu.id
 
     # bge-m3는 같은 EC2 안의 TEI(CPU)가 맡는다. GPU가 꺼져 있어도 검색이 된다
