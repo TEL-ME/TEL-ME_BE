@@ -92,10 +92,6 @@
       "slotId": "ROAMING-0025",
       "question": "현지 도착 후 로밍 설정 절차를 알려주세요."
     },
-    "SERVICE-03": {
-      "slotId": "SERVICE-0058",
-      "question": "평일이랑 토요일 운영시간이 어떻게 다른가요?"
-    },
     "SUBSCRIBE-01": {
       "slotId": "SUBSCRIBE-0037",
       "question": "개통 시 지참해야 하는 신분증 종류를 정리해서 알려주세요."
@@ -270,10 +266,6 @@
         {
           "to": "USIM-02",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO"
         }
       ]
     },
@@ -283,10 +275,6 @@
         {
           "to": "USIM-01",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO"
         }
       ]
     },
@@ -318,13 +306,6 @@
         {
           "to": "SUBSCRIBE-03",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO",
-          "condition": {
-            "questionContains": "매장"
-          }
         }
       ]
     },
@@ -343,13 +324,6 @@
         {
           "to": "SUBSCRIBE-01",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO",
-          "condition": {
-            "questionContains": "매장"
-          }
         }
       ]
     },

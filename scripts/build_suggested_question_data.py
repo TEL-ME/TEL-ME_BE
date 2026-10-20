@@ -91,6 +91,8 @@ POLICY_TITLE = {
 #   PORTING-0036 "번호이동 철회는 어떻게 신청하나요?" → PORTING-0008
 #   DEVICE-0010 "기기변경 신청 가능 시점과 할부금 처리 기준을 알려주세요." → DEVICE-0038
 #   DEVICE-0040 "기기변경 직후 새 단말 교환 절차를 알려주세요." → DEVICE-0028
+# 라우터를 gpt-oss로 바꾼 뒤(TELME-194) 매장 운영 시간(SERVICE-03) FAQ 13개는 모두 매장 찾기로 가서 지역을 되묻는다.
+# 라우터 정의가 영업시간을 지점 정보로 보므로 질문을 바꿔도 FAQ 답이 나오지 않아, 유심·개통 뒤 운영 시간 연결을 뺐다
 REPRESENTATIVE = {
     "BILLING-01": "BILLING-0015", "BILLING-02": "BILLING-0016", "BILLING-03": "BILLING-0045",
     "BILLING-05": "BILLING-0012", "BILLING-07": "BILLING-0021",
@@ -106,7 +108,6 @@ REPRESENTATIVE = {
     "DEVICE-01": "DEVICE-0037", "DEVICE-02": "DEVICE-0038", "DEVICE-03": "DEVICE-0015", "DEVICE-04": "DEVICE-0028",
     "ROAMING-01": "ROAMING-0026", "ROAMING-02": "ROAMING-0022", "ROAMING-03": "ROAMING-0008",
     "ROAMING-05": "ROAMING-0025",
-    "SERVICE-03": "SERVICE-0058",
 }
 
 # 연결 종류: NEXT 같은 업무의 다음 단계, ALTERNATIVE 대안, INFO 관련 정보
@@ -120,8 +121,6 @@ def link(to: str, kind: str = NEXT, condition: dict | None = None) -> dict:
         out["condition"] = condition
     return out
 
-
-STORE_WORD = {"questionContains": "매장"}
 
 # 정책 → 이어서 물을 만한 정책. 앞이 우선이다. 4차 연결표(독립 검증 62/67 = 92.5%)
 LINKS = {
@@ -137,13 +136,13 @@ LINKS = {
     "PLAN-03": [link("PLAN-02", INFO), link("PLAN-05", ALTERNATIVE)],
     "PLAN-04": [link("PLAN-05", ALTERNATIVE), link("BILLING-01")],
     "PLAN-05": [link("BILLING-01"), link("PLAN-02", INFO)],
-    "USIM-01": [link("USIM-02"), link("SERVICE-03", INFO)],
-    "USIM-02": [link("USIM-01"), link("SERVICE-03", INFO)],
+    "USIM-01": [link("USIM-02")],
+    "USIM-02": [link("USIM-01")],
     "USIM-03": [link("USIM-01", ALTERNATIVE)],
     "USIM-04": [link("USIM-01"), link("USIM-02")],
-    "SUBSCRIBE-01": [link("SUBSCRIBE-03"), link("SERVICE-03", INFO, STORE_WORD)],
+    "SUBSCRIBE-01": [link("SUBSCRIBE-03")],
     "SUBSCRIBE-02": [link("SUBSCRIBE-03")],
-    "SUBSCRIBE-03": [link("SUBSCRIBE-01"), link("SERVICE-03", INFO, STORE_WORD)],
+    "SUBSCRIBE-03": [link("SUBSCRIBE-01")],
     "SUBSCRIBE-04": [link("SUBSCRIBE-01"), link("SUBSCRIBE-03")],
     "PORTING-01": [link("PORTING-02"), link("PORTING-04", INFO)],
     "PORTING-02": [link("PORTING-01"), link("PORTING-03", INFO)],
