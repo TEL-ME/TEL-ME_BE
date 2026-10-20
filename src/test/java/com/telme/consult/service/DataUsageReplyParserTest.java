@@ -30,6 +30,30 @@ class DataUsageReplyParserTest {
     }
 
     @Test
+    void 테라_단위는_TB로_읽는다() {
+        assertThat(mb("1TB")).isEqualTo(GB * GB);
+        assertThat(mb("1테라 써요")).isEqualTo(GB * GB);
+        assertThat(mb("0.5테라바이트")).isEqualTo(512 * GB);
+    }
+
+    @Test
+    void 범위는_양쪽_단위를_각각_적용해_큰_쪽으로_읽는다() {
+        assertThat(mb("500MB~1GB")).isEqualTo(GB);
+        assertThat(mb("500메가에서 1기가")).isEqualTo(GB);
+        assertThat(mb("1GB~500MB")).isEqualTo(GB);
+        assertThat(mb("500기가~1테라")).isEqualTo(GB * GB);
+    }
+
+    @Test
+    void g만_붙인_말도_GB로_읽되_망_이름은_읽지_않는다() {
+        assertThat(mb("50G요")).isEqualTo(50 * GB);
+        assertThat(mb("한 달에 50G")).isEqualTo(50 * GB);
+        assertThat(mb("한 50g 써요")).isEqualTo(50 * GB);
+        assertThat(DataUsageReplyParser.parse("50G 요금제").kind()).isEqualTo(Kind.UNREADABLE);
+        assertThat(DataUsageReplyParser.parse("5G요").kind()).isEqualTo(Kind.UNREADABLE);
+    }
+
+    @Test
     void 단위가_없으면_숫자만_말했을_때_GB로_읽는다() {
         assertThat(mb("200")).isEqualTo(200 * GB);
         assertThat(mb("50G")).isEqualTo(50 * GB);

@@ -22,6 +22,18 @@ class CallTextReplyParserTest {
     }
 
     @Test
+    void 범위는_양쪽을_분으로_바꿔_큰_쪽으로_읽는다() {
+        assertThat(voice("200분~300분")).isEqualTo(300);
+        assertThat(voice("1시간~2시간")).isEqualTo(120);
+        assertThat(voice("30분~1시간")).isEqualTo(60);
+        assertThat(voice("30분에서 1시간")).isEqualTo(60);
+        assertThat(voice("하루 10분~20분")).isEqualTo(600);
+        assertThat(sms("30건~50건")).isEqualTo(50);
+        assertThat(voice("통화는 200분~300분이고 문자는 50건이에요")).isEqualTo(300);
+        assertThat(sms("통화는 200분~300분이고 문자는 50건이에요")).isEqualTo(50);
+    }
+
+    @Test
     void 문자는_건_단위로_읽는다() {
         assertThat(sms("50건")).isEqualTo(50);
         assertThat(sms("한 100개쯤 보내요")).isEqualTo(100);
@@ -82,7 +94,7 @@ class CallTextReplyParserTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "", "   ", "많이 써요", "100000000분", "200분 쓰다가 요즘 500분", "한 달에 100분 하루에 10분",
-            "20대인데 300", "010-1234-5678"})
+            "20대인데 300", "010-1234-5678", "200분~300분이고 500분", "100분~200분 하루에 10분"})
     void 분명하지_않은_답은_읽지_않는다(String reply) {
         assertThat(CallTextReplyParser.parseVoice(reply).kind()).isEqualTo(Kind.UNREADABLE);
     }

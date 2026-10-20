@@ -104,6 +104,13 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 사용량이_1GB보다_적으면_MB로_안내한다() {
+        assertThat(answered(null, GENERAL, "50MB")).contains("한 달에 데이터를 50MB 쓰신다면");
+        assertThat(answered(null, GENERAL, "1000MB")).contains("한 달에 데이터를 1000MB 쓰신다면");
+        assertThat(answered(null, GENERAL, "1GB")).contains("한 달에 데이터를 1GB 쓰신다면");
+    }
+
+    @Test
     void 가장_싼_요금제가_LTE면_5G_중_가장_싼_요금제도_함께_안내한다() {
         assertThat(answered(null, GENERAL, "45GB"))
                 .contains("LTE 맥스(월 69,000원, 데이터 100GB) 요금제를 추천해요")

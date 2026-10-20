@@ -50,7 +50,8 @@ public final class DataUsageReplyParser {
     private static final String NUMBER = "\\d+(?:\\.\\d+)?";
     private static final String GB_UNIT = "기가바이트|기가|지비|gb";
     private static final String MB_UNIT = "메가바이트|메가|엠비|mb";
-    private static final String UNIT = "(?:" + GB_UNIT + "|" + MB_UNIT + ")";
+    private static final String TB_UNIT = "테라바이트|테라|tb";
+    private static final String UNIT = "(?:" + TB_UNIT + "|" + GB_UNIT + "|" + MB_UNIT + ")";
 
     // 숫자 하나 또는 범위(앞 숫자에 단위가 없으면 뒤 숫자의 단위를 따른다)
     private static final Pattern QUANTITY = Pattern.compile(
@@ -65,6 +66,9 @@ public final class DataUsageReplyParser {
     static final Pattern NEGATION = Pattern.compile("안|않|아니|필요\\s*없|싫");
     static final Pattern UNSURE = Pattern.compile("모르|몰라|모름|글쎄|기억(?:이)?\\s*(?:안|잘)|감이\\s*안|확실하지");
     private static final Pattern GB_WORD = Pattern.compile("^(?:" + GB_UNIT + ")$");
+    private static final Pattern TB_WORD = Pattern.compile("^(?:" + TB_UNIT + ")$");
+    // 숫자 뒤 g가 데이터 단위가 아닌 망 이름(5G 요금제 등)인 경우
+    private static final Pattern NETWORK_TAIL = Pattern.compile("^(?:[a-z]|\\s*(?:요금|망|폰|네트워크|서비스|가입))");
 
     private DataUsageReplyParser() {}
 
@@ -104,18 +108,19 @@ public final class DataUsageReplyParser {
         return new Result(Kind.AMOUNT, monthly.longValueExact());
     }
 
-    // 단위가 붙은 숫자만 읽는다. 범위는 큰 쪽을 쓴다
+    // 단위가 붙은 숫자만 읽는다. 범위는 양쪽을 MB로 바꾼 뒤 큰 쪽을 쓴다
     private static Set<BigDecimal> explicitAmounts(String text) {
         Set<BigDecimal> amounts = new LinkedHashSet<>();
         Matcher quantity = QUANTITY.matcher(text);
         while (quantity.find()) {
-            String unit = quantity.group(4) != null ? quantity.group(4) : quantity.group(2);
-            if (unit == null) {
+            String firstUnit = quantity.group(2) != null ? quantity.group(2) : quantity.group(4);
+            String secondUnit = quantity.group(4) != null ? quantity.group(4) : quantity.group(2);
+            if (firstUnit == null) {
                 continue;
             }
-            BigDecimal first = new BigDecimal(quantity.group(1));
-            BigDecimal second = quantity.group(3) == null ? first : new BigDecimal(quantity.group(3));
-            amounts.add(toMb(first.max(second), unit));
+            BigDecimal first = toMb(new BigDecimal(quantity.group(1)), firstUnit);
+            BigDecimal second = quantity.group(3) == null ? first : toMb(new BigDecimal(quantity.group(3)), secondUnit);
+            amounts.add(first.max(second));
         }
         Matcher korean = KOREAN_QUANTITY.matcher(text);
         while (korean.find()) {
@@ -139,17 +144,28 @@ public final class DataUsageReplyParser {
         List<BigDecimal> bare = new ArrayList<>();
         Matcher quantity = QUANTITY.matcher(text);
         while (quantity.find()) {
-            if (text.startsWith("g", quantity.end(1)) || text.startsWith("g", quantity.end())) {
-                return null;
-            }
             BigDecimal first = new BigDecimal(quantity.group(1));
             BigDecimal second = quantity.group(3) == null ? first : new BigDecimal(quantity.group(3));
-            bare.add(toMb(first.max(second), "gb"));
+            BigDecimal larger = first.max(second);
+            int g = text.startsWith("g", quantity.end(1)) ? quantity.end(1) : text.startsWith("g", quantity.end()) ? quantity.end() : -1;
+            if (g >= 0 && !isGigabyteAbbreviation(text, g, larger)) {
+                return null;
+            }
+            bare.add(toMb(larger, "gb"));
         }
         return bare.size() == 1 ? bare.get(0) : null;
     }
 
+    // 50G요, 한 달에 50G처럼 g만 붙인 말을 GB로 본다. 3~5G는 망 이름과 구분할 수 없어 읽지 않는다
+    private static boolean isGigabyteAbbreviation(String text, int gIndex, BigDecimal number) {
+        boolean networkGeneration = number.stripTrailingZeros().scale() <= 0 && number.intValue() >= 3 && number.intValue() <= 5;
+        return !networkGeneration && !NETWORK_TAIL.matcher(text.substring(gIndex + 1)).find();
+    }
+
     private static BigDecimal toMb(BigDecimal value, String unit) {
+        if (TB_WORD.matcher(unit).matches()) {
+            return value.multiply(BigDecimal.valueOf(MB_PER_GB * MB_PER_GB));
+        }
         return GB_WORD.matcher(unit).matches() ? value.multiply(BigDecimal.valueOf(MB_PER_GB)) : value;
     }
 

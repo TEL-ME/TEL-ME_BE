@@ -51,12 +51,15 @@ public final class CallTextReplyParser {
 
         private final String unit;
         private final Pattern amount;
+        private final Pattern range;
         private final Pattern otherUnit;
         private final Map<String, Long> factors;
 
         Channel(String unit, String units, String otherUnits, Map<String, Long> factors) {
             this.unit = unit;
             this.amount = Pattern.compile("(" + NUMBER + ")\\s*(" + units + ")");
+            this.range = Pattern.compile(
+                    "(" + NUMBER + ")\\s*(" + units + ")?\\s*(?:~|-|에서|부터)\\s*(" + NUMBER + ")\\s*(" + units + ")");
             this.otherUnit = Pattern.compile("\\d\\s*(?:" + otherUnits + ")");
             this.factors = factors;
         }
@@ -114,7 +117,23 @@ public final class CallTextReplyParser {
     }
 
     // 단위가 붙은 숫자를 합친다. 같은 단위에 값이 둘이면 어느 쪽인지 알 수 없어 읽지 않는다
+    // 범위("200분~300분", "30분~1시간")는 양쪽을 분·건으로 바꾼 뒤 큰 쪽 하나로 읽고, 다른 값이 함께 있으면 읽지 않는다
     private static BigDecimal explicitAmount(String text, Channel channel) {
+        BigDecimal ranged = null;
+        Matcher range = channel.range.matcher(text);
+        while (range.find()) {
+            String firstUnit = range.group(2) != null ? range.group(2) : range.group(4);
+            BigDecimal first = new BigDecimal(range.group(1)).multiply(BigDecimal.valueOf(channel.factors.get(firstUnit)));
+            BigDecimal second = new BigDecimal(range.group(3)).multiply(BigDecimal.valueOf(channel.factors.get(range.group(4))));
+            BigDecimal larger = first.max(second);
+            if (ranged != null && ranged.compareTo(larger) != 0) {
+                return BigDecimal.valueOf(MAX_VALUE + 1);
+            }
+            ranged = larger;
+        }
+        if (ranged != null) {
+            return channel.amount.matcher(range.reset().replaceAll(" ")).find() ? BigDecimal.valueOf(MAX_VALUE + 1) : ranged;
+        }
         Map<String, Set<BigDecimal>> byUnit = new HashMap<>();
         Matcher found = channel.amount.matcher(text);
         while (found.find()) {

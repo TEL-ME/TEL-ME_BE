@@ -338,6 +338,9 @@ public class MemberRecommendationAnswerer {
     }
 
     private static String gb(long mb) {
+        if (mb < MB_PER_GB) {
+            return mb + "MB";
+        }
         return new BigDecimal(mb).divide(BigDecimal.valueOf(MB_PER_GB), 1, RoundingMode.HALF_UP)
                 .stripTrailingZeros().toPlainString() + "GB";
     }
