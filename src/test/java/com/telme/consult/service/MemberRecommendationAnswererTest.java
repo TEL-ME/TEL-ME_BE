@@ -122,6 +122,38 @@ class MemberRecommendationAnswererTest {
     }
 
     @Test
+    void 더_싼_요금제를_찾으면_사용량에_맞는_가장_싼_요금제와_더_싼_요금제를_함께_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "10GB", "price_request", "cheaper");
+
+        Outcome outcome = answerer.recommend(null, answers, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("LTE 플러스", "가장 저렴한 요금제예요", "더 싼 요금제로는", "모자랄 수 있어요")
+                .doesNotContain("요금제를 추천해요.");
+        // 데이터가 많은 순으로 싼 요금제 3개까지
+        assertThat(outcome.content().indexOf("5G 라이트")).isLessThan(outcome.content().indexOf("LTE 베이직"));
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    @Test
+    void 사용량과_상관없이_싼_요금제를_찾으면_싼_순서로_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "10GB", "price_request", "cheapest");
+
+        String content = answerer.recommend(null, answers, true).content();
+
+        assertThat(content).contains("사용량과 상관없이 싼 순서로는 알뜰 미니");
+        assertThat(content.indexOf("알뜰 미니")).isLessThan(content.indexOf("알뜰 세이브"));
+    }
+
+    @Test
+    void 추천한_요금제가_이미_가장_싸면_더_싼_요금제가_없다고_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB", "monthly_voice_usage", "100분",
+                "monthly_sms_usage", "10건", "price_request", "cheaper");
+
+        assertThat(answerer.recommend(null, answers, true).content()).contains("알뜰 미니", "이보다 싼 요금제는 없어요");
+    }
+
+    @Test
     void 숫자_없이_많다고만_답하면_다시_묻고_되묻지_못하면_안내한다() {
         Map<String, String> vague = Map.of("age_group", GENERAL, "monthly_data_usage", "많이 써요");
 

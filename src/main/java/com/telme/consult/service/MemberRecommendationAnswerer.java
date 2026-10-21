@@ -24,10 +24,12 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +41,10 @@ public class MemberRecommendationAnswerer {
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
     public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
     public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;
+// 더 싼 요금제를 찾는 질문. 되묻기 조건이 아니라 질문에서 읽은 값이며 CHEAPER는 추천 사용량 기준, CHEAPEST는 사용량과 상관없이 싼 순서
+public static final String PRICE_KEY = "price_request";
+public static final String CHEAPER = "cheaper";
+public static final String CHEAPEST = "cheapest";
     // 데이터 사용량을 받은 뒤에야 물을지 알 수 있는 질문. 앞선 되묻기를 마친 뒤에도 처음 묻는 것은 허용한다
     public static final java.util.Set<String> USAGE_FOLLOW_UP_KEYS = java.util.Set.of(VOICE_KEY, SMS_KEY);
 
@@ -50,6 +56,7 @@ public class MemberRecommendationAnswerer {
     private static final String CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
     private static final int COOLDOWN_MONTHS = 3;
     private static final int MB_PER_GB = 1024;
+    private static final int MAX_CHEAPER = 3;
     // 말한 사용량이 요금제 데이터의 이 비율을 넘으면 한도에 가깝다고 알린다
     private static final double TIGHT_RATIO = 0.75;
     private static final String YOUTH_OPTION = "만 %d~%d세".formatted(
@@ -97,7 +104,7 @@ public class MemberRecommendationAnswerer {
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
             return byAnswers(group, answers, active, userId != null, mayAsk,
-                    reuseNote(ageReused && age.fromAnswer(), dataReused));
+                    reuseNote(ageReused && age.fromAnswer(), dataReused), answers.get(PRICE_KEY));
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
@@ -142,7 +149,7 @@ public class MemberRecommendationAnswerer {
     // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.
     // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다
     private Outcome byAnswers(Plan.TargetGroup group, Map<String, String> answers, List<Plan> active,
-            boolean member, boolean mayAsk, String note) {
+            boolean member, boolean mayAsk, String note, String priceRequest) {
         DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
             return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
@@ -180,10 +187,42 @@ public class MemberRecommendationAnswerer {
         if (mayAsk && !asks.isEmpty()) {
             return new Outcome(null, List.of(), asks);
         }
+        if (priceRequest != null) {
+            return new Outcome(cheaperPlans(usage, fit, pool(active, group), CHEAPEST.equals(priceRequest)) + note,
+                    List.of(CATALOG_QUESTION), null);
+        }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
         return new Outcome(recommendation(usage, fit) + limitNotice(limits, voice, sms) + tail + note,
                 List.of(CATALOG_QUESTION), null);
+    }
+
+    // 추천한 요금제보다 싼 요금제를 알린다. 사용량 기준이면 데이터가 많은 순, 사용량과 상관없이면 싼 순서로 3개까지이고,
+    // 추천 요금제가 이미 가장 싸면 그렇게 알린다. 싼 요금제는 사용량을 못 채울 수 있다는 말을 붙인다
+    private static String cheaperPlans(DataUsageReplyParser.Result usage, UsageFit fit, List<Plan> pool, boolean regardless) {
+        Plan base = fit.cheapest();
+        String basis = usage.kind() == DataUsageReplyParser.Kind.UNLIMITED ? "데이터를 무제한으로 쓰신다면"
+                : "한 달에 데이터를 %s 쓰신다면".formatted(gb(usage.dataMb()));
+        Comparator<Plan> order = regardless ? Comparator.comparingInt(Plan::getMonthlyFee)
+                : Comparator.comparingDouble((Plan plan) -> dataMb(plan)).reversed().thenComparingInt(Plan::getMonthlyFee);
+        List<Plan> cheaper = pool.stream().filter(plan -> plan.getMonthlyFee() < base.getMonthlyFee())
+                .sorted(order).limit(MAX_CHEAPER).toList();
+        if (cheaper.isEmpty()) {
+            return "%s %s(%s)이 가장 저렴한 요금제예요. 이보다 싼 요금제는 없어요.".formatted(basis, base.getName(), summary(base));
+        }
+        String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan)))
+                .collect(Collectors.joining(", "));
+        if (regardless) {
+            return "사용량과 상관없이 싼 순서로는 %s이에요. 한도가 작아서 사용량을 채우지 못할 수 있어요. %s %s(%s)이 사용량에 맞는 가장 저렴한 요금제예요."
+                    .formatted(list, basis, base.getName(), summary(base));
+        }
+        return "%s %s(%s)이 사용량에 맞는 가장 저렴한 요금제예요. 더 싼 요금제로는 %s이 있는데, 사용량을 채우지 못하고 모자랄 수 있어요."
+                .formatted(basis, base.getName(), summary(base), list);
+    }
+
+    private static double dataMb(Plan plan) {
+        Long limit = UsageLimits.of(plan).dataMb();
+        return limit == null ? Double.MAX_VALUE : limit;
     }
 
     // 모르거나 말하지 않은 항목은 0으로 두고, 무제한이라고 한 항목은 한도가 없는 요금제만 채운다

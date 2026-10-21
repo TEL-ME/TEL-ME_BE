@@ -11,6 +11,7 @@ class StatedRecommendationAnswersTest {
 
     private static final String AGE = "age_group";
     private static final String DATA = "monthly_data_usage";
+    private static final String PRICE = "price_request";
 
     @Test
     void 단위를_붙여_쓴다고_말한_사용량을_읽는다() {
@@ -34,6 +35,27 @@ class StatedRecommendationAnswersTest {
     void 나이와_사용량을_함께_말하면_둘_다_읽는다() {
         assertThat(StatedRecommendationAnswers.of("저는 17살이고 한 달에 50GB 써요. 요금제 추천해줘"))
                 .containsOnly(Map.entry(AGE, "만 14~18세"), Map.entry(DATA, "50GB"));
+    }
+
+    @Test
+    void 더_싼_요금제를_찾는_말은_추천_사용량_기준으로_읽는다() {
+        for (String question : new String[] {"더 싼 요금제 없어?", "더 저렴한 요금제 알려줘", "좀 더 싸게 쓸 수 없을까", "조금 싼 걸로 추천해줘"}) {
+            assertThat(StatedRecommendationAnswers.of(question)).containsOnly(Map.entry(PRICE, "cheaper"));
+        }
+    }
+
+    @Test
+    void 사용량과_상관없이_싼_요금제를_찾는_말은_싼_순서로_읽는다() {
+        assertThat(StatedRecommendationAnswers.of("얼마나 쓰는지에 상관없이 더 싼 요금제 없어?"))
+                .containsOnly(Map.entry(PRICE, "cheapest"));
+        assertThat(StatedRecommendationAnswers.of("사용량 말고 더 저렴한 거 알려줘")).containsOnly(Map.entry(PRICE, "cheapest"));
+    }
+
+    @Test
+    void 가장_싼_요금제를_묻거나_싸다는_말이_없으면_읽지_않는다() {
+        assertThat(StatedRecommendationAnswers.of("가장 저렴한 요금제 추천해줘")).isEmpty();
+        assertThat(StatedRecommendationAnswers.of("요금제 추천해줘")).isEmpty();
+        assertThat(StatedRecommendationAnswers.of("그 요금제로 가입하고 싶어")).isEmpty();
     }
 
     @ParameterizedTest

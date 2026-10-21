@@ -5,7 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-// 요금제 추천 질문에 고객이 직접 말한 나이대·한 달 데이터 사용량. 되묻기 답과 같은 조건 이름과 값 글자로 돌려준다.
+// 요금제 추천 질문에 고객이 직접 말한 나이대·한 달 데이터 사용량과, 더 싼 요금제를 찾는다는 말.
+// 나이대·사용량은 되묻기 답과 같은 조건 이름과 값 글자로 돌려준다.
 // 자유 문장은 되묻기 답과 달리 요금제 크기, 기간, 소진, 제3자 이야기가 섞여 오탐이 곧 잘못된 추천이 되므로,
 // 본인의 한 달 사용량과 나이가 분명할 때만 읽고 그 밖에는 읽지 않아 지금처럼 되묻는다
 final class StatedRecommendationAnswers {
@@ -29,14 +30,27 @@ final class StatedRecommendationAnswers {
             "말고|빼고|제외|아닌|아니고|아니라|비교|차이|때(?!문)|예전|옛날|과거|졸업|(?:요금제|플랜)\\s*(?:있어요|있나요|있을까요|있는지)"
                     + "|(?:가입|이용)\\s*(?:가능|할\\s*수|돼|되)|중학생|초등학생|유치원|중딩|초딩");
 
+    // 방금 추천한 것보다 더 싼 요금제를 찾는 말
+    private static final Pattern CHEAPER = Pattern.compile("더\\s*(?:싼|싸|싸게|저렴|쌈)|(?:좀|조금)\\s*(?:싼|싸|저렴)");
+    // 사용량과 상관없이 싼 요금제를 찾는 말
+    private static final Pattern REGARDLESS_OF_USAGE = Pattern.compile(
+            "상관\\s*없|관계\\s*없|무관|(?:사용량|데이터)\\s*(?:말고|빼고|무시)|(?:적어도|안\\s*써도)");
+
     private StatedRecommendationAnswers() {
     }
 
     static Map<String, String> of(String question) {
-        if (question == null || question.isBlank() || THIRD_PARTY.matcher(question).find()) {
+        if (question == null || question.isBlank()) {
             return Map.of();
         }
         Map<String, String> stated = new LinkedHashMap<>();
+        if (CHEAPER.matcher(question).find()) {
+            stated.put(MemberRecommendationAnswerer.PRICE_KEY, REGARDLESS_OF_USAGE.matcher(question).find()
+                    ? MemberRecommendationAnswerer.CHEAPEST : MemberRecommendationAnswerer.CHEAPER);
+        }
+        if (THIRD_PARTY.matcher(question).find()) {
+            return stated;
+        }
         if (USAGE_VERB.matcher(question).find() && !PLAN_SIZE.matcher(question).find()
                 && !PERIOD.matcher(question).find() && !NOT_EXACT.matcher(question).find()) {
             DataUsageReplyParser.Result usage = DataUsageReplyParser.parseStated(question);
