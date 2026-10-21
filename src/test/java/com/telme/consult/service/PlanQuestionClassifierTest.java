@@ -101,6 +101,18 @@ class PlanQuestionClassifierTest {
     }
 
     @Test
+    void 요금제나_제공량_말_없이_하루_요금을_물으면_모델이_목록이라_해도_NONE이다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\"}");
+
+        for (String question : new String[] {"요금은 하루에 얼마정도에요", "하루 요금이 얼마예요", "일일 비용이 얼마나 나와요"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.NONE);
+        }
+        // 요금제나 제공량을 함께 말하면 요금제 표로 답한다
+        assertThat(classifier.classify(1L, "하루 2GB 주는 요금제 뭐 있어요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        assertThat(classifier.classify(1L, "5G 스탠다드 얼마예요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+    }
+
+    @Test
     void 모델이_NONE이라고_하면_규칙이_맞다고_해도_NONE이다() {
         when(llm.generate(any())).thenReturn("{\"type\":\"NONE\"}");
 
