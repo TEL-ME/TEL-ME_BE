@@ -191,4 +191,15 @@ class PlanQuestionRulesTest {
             assertThat(PlanQuestionRules.asksDailyFee(question)).as(question).isFalse();
         }
     }
+
+    @Test
+    void 물건_이름_바로_뒤에_추천이_붙을_때만_다른_물건_추천으로_본다() {
+        for (String question : new String[] {"요즘 볼만한 영화 추천해 주세요", "노트북 하나 추천해 주세요", "점심 메뉴 추천해줘", "책 한 권 추천해줘"}) {
+            assertThat(PlanQuestionRules.recommendsOtherItem(question)).as(question).isTrue();
+        }
+        for (String question : new String[] {"영화 많이 보는데 추천해줘", "게임 많이 하는 고등학생인데 추천 좀", "유튜브 많이 보는데 추천해줘",
+                "음악 스트리밍 많이 들어요 뭐가 맞아요", "요금제 추천해줘", "데이터 많이 쓰는데 영화도 보는데 추천해줘"}) {
+            assertThat(PlanQuestionRules.recommendsOtherItem(question)).as(question).isFalse();
+        }
+    }
 }
