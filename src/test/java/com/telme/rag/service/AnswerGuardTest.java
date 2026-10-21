@@ -176,6 +176,48 @@ class AnswerGuardTest {
     }
 
     @Test
+    @DisplayName("숫자와 원 사이에 좁은 공백이 있어도 근거에 없는 금액은 막는다")
+    void 좁은_공백이_낀_근거_밖_금액은_막는다() {
+        String context = "유심 재발급 비용은 7,700원입니다.";
+
+        assertThatThrownBy(() -> guard.verifyAmounts("재발급 비용은 7,800 원입니다.", context, "유심 재발급 비용"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("7800")
+                .satisfies(e -> assertThat(((AnswerGuardException) e).kind()).isEqualTo(AnswerGuardException.Kind.AMOUNT));
+    }
+
+    @Test
+    @DisplayName("좁은 공백이 낀 금액도 근거에 있으면 통과시킨다")
+    void 좁은_공백이_낀_근거_금액은_통과한다() {
+        String context = "본인 인증을 하시면 월 100만 원까지 올려드립니다.";
+
+        assertThatCode(() -> guard.verifyAmounts("월 100 만 원까지 올려드립니다.", context, "한도 올려 주세요"))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> guard.verifyAmounts("월 200 만 원까지 올려드립니다.", context, "한도 올려 주세요"))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("2000000");
+    }
+
+    @Test
+    @DisplayName("소수점이 붙은 만 단위 금액을 숫자 중간부터 읽지 않는다")
+    void 소수점_만_단위_금액을_읽는다() {
+        assertThatCode(() -> guard.verifyAmounts("월 1.5만원입니다.", "월 15,000원입니다.", ""))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> guard.verifyAmounts("월 1.5만원입니다.", "월 5만 원입니다.", ""))
+                .isInstanceOf(AnswerGuardException.class)
+                .hasMessageContaining("15000");
+    }
+
+    @Test
+    @DisplayName("문장 끝 뒤의 좁은 공백도 문장 경계로 본다")
+    void 좁은_공백_뒤도_문장을_나눈다() {
+        String context = "유심 재발급 비용은 7,700원입니다.";
+        String answer = "재발급 비용은 7,700원입니다. 택배 배송은 무료입니다.";
+
+        assertThat(guard.trimContradictedFreeClaims(answer, context)).isEqualTo("재발급 비용은 7,700원입니다.");
+    }
+
+    @Test
     @DisplayName("금액이 아닌 숫자는 검사하지 않는다")
     void 금액이_아닌_숫자는_통과한다() {
         String context = "번호이동 처리는 매일 09:00부터 20:00까지 진행됩니다.";

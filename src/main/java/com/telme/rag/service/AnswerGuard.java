@@ -19,10 +19,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class AnswerGuard {
 
-    // 억·만 단위와 원 단위를 함께 잡는다. "30만 원"과 "300,000원"이 같은 값이어야 한다.
-    // 공백은 단위 뒤에만 허용한다. "1 원금"처럼 원으로 시작하는 낱말을 금액으로 읽지 않기 위해서다
+    // gpt-oss는 숫자와 단위 사이, 문장 사이에 좁은 공백(U+202F)을 쓴다. Java의 \s는 이 공백을 포함하지 않는다
+    private static final String SPACE = "[\\s\\u00a0\\u202f]";
+
+    // 억·만 단위와 원 단위를 함께 잡는다. "30만 원"과 "300,000원", "1.5만원"과 "15,000원"이 같은 값이어야 한다.
+    // 숫자와 원 사이에는 좁은 공백("7,800 원")만 허용한다. "1 원금"처럼 원으로 시작하는 낱말을 금액으로 읽지 않기 위해서다.
+    // "1.5만원"의 "5만"처럼 숫자 중간부터 읽지 않는다
     private static final Pattern AMOUNT = Pattern.compile(
-            "(?:(\\d[\\d,]*)\\s*억\\s*)?(?:(\\d[\\d,]*)\\s*만\\s*)?(\\d[\\d,]*)?원");
+            "(?<!\\d|\\d\\.)(?:(\\d[\\d,]*(?:\\.\\d+)?)" + SPACE + "*억" + SPACE + "*)?"
+                    + "(?:(\\d[\\d,]*(?:\\.\\d+)?)" + SPACE + "*만" + SPACE + "*)?(\\d[\\d,]*)?[\\u00a0\\u202f]?원");
 
     // 범위는 양쪽 값을 모두 검사한다. "2~3 영업일" 근거가 "5영업일"로 바뀌는 경우도 막아야 한다
     private static final int MIN_GROUNDED_RUN = 10;
@@ -41,8 +46,8 @@ public class AnswerGuard {
     private static final Pattern CLOCK_TIME = Pattern.compile(
             "(?<!\\d)([01]?\\d|2[0-3]):([0-5]\\d)(?!\\d)");
 
-    private static final BigInteger[] UNITS = {
-            BigInteger.valueOf(100_000_000L), BigInteger.valueOf(10_000L), BigInteger.ONE
+    private static final BigDecimal[] UNITS = {
+            BigDecimal.valueOf(100_000_000L), BigDecimal.valueOf(10_000L), BigDecimal.ONE
     };
 
     // 답변 불가 문구 뒤에 붙는 내용은 근거 밖 설명이라 잘라낸다. 앞은 서두일 수도 있어 그대로 둔다
@@ -119,7 +124,7 @@ public class AnswerGuard {
     private static final Map<ComparisonClaim, Pattern> COMPARISON_PATTERNS = comparisonPatterns();
 
     // 나머지 문장은 근거대로인 경우가 많아 금액과 달리 답변 전체를 막지 않는다
-    private static final Pattern SENTENCE = Pattern.compile("(?<=[.!?])\\s+|\\R+");
+    private static final Pattern SENTENCE = Pattern.compile("(?<=[.!?])" + SPACE + "+|\\R+");
 
     // 고객이 질문에 적은 값은 사실 근거가 아니다. 고객 입력임을 밝히고 근거에서 확인할 수 없다고 할 때만 허용한다
     private static final Pattern USER_VALUE_REFERENCE = Pattern.compile(
@@ -1135,9 +1140,9 @@ public class AnswerGuard {
         return amounts;
     }
 
-    // 숫자가 하나도 없이 "원"만 걸린 경우는 금액이 아님
+    // 숫자가 하나도 없이 "원"만 걸린 경우는 금액이 아님. 소수는 만·억 앞에만 오고 원 단위 아래는 버린다
     private BigInteger toAmount(Matcher matcher) {
-        BigInteger total = BigInteger.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
         boolean found = false;
         for (int group = 1; group <= UNITS.length; group++) {
             String digits = matcher.group(group);
@@ -1145,9 +1150,9 @@ public class AnswerGuard {
                 continue;
             }
             found = true;
-            total = total.add(new BigInteger(digits.replace(",", "")).multiply(UNITS[group - 1]));
+            total = total.add(new BigDecimal(digits.replace(",", "")).multiply(UNITS[group - 1]));
         }
-        return found ? total : null;
+        return found ? total.toBigInteger() : null;
     }
 
     private record MeasureValue(BigDecimal value, String unit) {}

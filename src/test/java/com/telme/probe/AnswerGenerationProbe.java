@@ -174,12 +174,16 @@ class AnswerGenerationProbe {
         return row;
     }
 
-    // 가드가 답변을 바꿨는지. RagAnswerGenerator의 가드 기록과 같은 기준이다
+    // 가드가 답변을 바꿨는지. RagAnswerGenerator의 가드 기록과 같은 기준이다(좁은 공백이 보통 공백으로만 바뀐 것은 그대로 둔 답)
     private static String guardOutcome(String raw, String finalAnswer) {
-        if (finalAnswer.equals(raw.strip())) {
+        if (plainSpaces(finalAnswer).equals(plainSpaces(raw.strip()))) {
             return "KEPT";
         }
         return finalAnswer.contains(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE) ? "REPLACED" : "MODIFIED";
+    }
+
+    private static String plainSpaces(String text) {
+        return text.replace(' ', ' ').replace(' ', ' ');
     }
 
     // Bedrock은 종료 사유가 max_tokens이면, 엑사원은 종료 사유를 알 수 없어 문장이 끝나지 않으면 잘림 의심으로 본다
