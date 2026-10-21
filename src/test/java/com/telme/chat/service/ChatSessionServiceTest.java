@@ -61,6 +61,9 @@ class ChatSessionServiceTest {
     @Mock
     private ChatInputGuardService inputGuard;
 
+    @Mock
+    private GuestDailyChatLimit guestDailyChatLimit;
+
     @InjectMocks
     private ChatSessionService chatSessionService;
 

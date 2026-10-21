@@ -202,6 +202,9 @@ chat:
     # 웹 서버 종료 대기(spring.lifecycle.timeout-per-shutdown-phase 3초)가 먼저 쓰이고 이 대기가 이어진다. 둘에 Tomcat 종료 지연(약 2초)을 더한 시간이 강제 종료 시간(T)보다 짧아야 한다.
     # T는 앱이 아니라 배포 설정이고 지금은 docker 기본 10초라 기본값 2초로 합 약 8초(실측)를 맞췄다. 운영 값은 배포 담당자가 환경 변수로 정한다.
     shutdown-wait: ${CHAT_PROCESSING_SHUTDOWN_WAIT:2s}
+  guest-limit:
+    # 게스트(비로그인)가 하루(한국 시간 0시 기준)에 보낼 수 있는 질문 수. 0이면 제한 없음. 회원은 제한하지 않는다(TELME-213)
+    daily-messages: ${CHAT_GUEST_DAILY_MESSAGES:10}
 
 rag:
   answer:

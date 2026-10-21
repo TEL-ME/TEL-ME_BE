@@ -305,7 +305,22 @@ public class ChatSessionController {
                                                       }
                                                     }
                                                     """)
-                            }))
+                            })),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "게스트가 오늘(한국 시간 0시 기준) 보낼 수 있는 질문 수를 모두 쓴 경우(CHAT429-0). 회원은 제한하지 않습니다.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "guestDailyLimit",
+                                    summary = "게스트 하루 질문 수 초과",
+                                    value = """
+                                            {
+                                              "isSuccess": false,
+                                              "code": "CHAT429-0",
+                                              "message": "오늘 비회원으로 보낼 수 있는 질문을 모두 사용했습니다. 로그인하면 이어서 대화할 수 있습니다."
+                                            }
+                                            """)))
     })
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<CustomResponse<ChatMessageSendResponse>> sendMessage(

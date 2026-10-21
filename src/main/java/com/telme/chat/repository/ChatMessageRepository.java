@@ -92,4 +92,17 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             where message.messageId = :messageId
             """)
     Optional<ChatMessage> findByIdWithSession(@Param("messageId") Long messageId);
+
+    // created_at이 DB 시각으로 채워지므로 "오늘"도 DB 시각으로 자른다(앱 서버 시계와 어긋나지 않게)
+    @Query(value = """
+            select count(*)
+            from chat_messages message
+            join chat_sessions session on session.session_id = message.session_id
+            where session.guest_id = :guestId
+              and session.user_id is null
+              and message.role = 'USER'
+              and message.message_type = 'QUESTION'
+              and message.created_at >= date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul'
+            """, nativeQuery = true)
+    long countGuestQuestionsToday(@Param("guestId") UUID guestId);
 }

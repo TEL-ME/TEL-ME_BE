@@ -48,6 +48,7 @@ public class ChatSessionService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<ChatFeedbackReader> chatFeedbackReader;
     private final ChatInputGuardService inputGuard;
+    private final GuestDailyChatLimit guestDailyChatLimit;
 
     @Transactional
     public ChatSessionCreateResponse createSession(ChatActor actor, ChatSessionCreateRequest request) {
@@ -207,6 +208,7 @@ public class ChatSessionService {
         if (findRunningExecution(sessionId).isPresent()) {
             throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
         }
+        guestDailyChatLimit.check(actor);
 
         Instant completedAt = Instant.now();
         ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
