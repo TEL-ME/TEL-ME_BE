@@ -52,6 +52,12 @@ class StatedRecommendationAnswersTest {
     }
 
     @Test
+    void 최소_사용량을_말하는_적어도는_사용량과_상관없다는_말로_읽지_않는다() {
+        assertThat(StatedRecommendationAnswers.of("적어도 10기가는 써야 하는데 더 싼 거 없어요?"))
+                .containsOnly(Map.entry(PRICE, "cheaper"), Map.entry(DATA, "10GB"));
+    }
+
+    @Test
     void 가장_싼_요금제를_묻거나_싸다는_말이_없으면_읽지_않는다() {
         assertThat(StatedRecommendationAnswers.of("가장 저렴한 요금제 추천해줘")).isEmpty();
         assertThat(StatedRecommendationAnswers.of("요금제 추천해줘")).isEmpty();

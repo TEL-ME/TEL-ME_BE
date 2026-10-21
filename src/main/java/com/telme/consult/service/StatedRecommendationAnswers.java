@@ -34,7 +34,7 @@ final class StatedRecommendationAnswers {
     private static final Pattern CHEAPER = Pattern.compile("더\\s*(?:싼|싸|싸게|저렴|쌈)|(?:좀|조금)\\s*(?:싼|싸|저렴)");
     // 사용량과 상관없이 싼 요금제를 찾는 말
     private static final Pattern REGARDLESS_OF_USAGE = Pattern.compile(
-            "상관\\s*없|관계\\s*없|무관|(?:사용량|데이터)\\s*(?:말고|빼고|무시)|(?:적어도|안\\s*써도)");
+            "상관\\s*없|관계\\s*없|무관|(?:사용량|데이터)\\s*(?:말고|빼고|무시)|안\\s*써도");
 
     private StatedRecommendationAnswers() {
     }

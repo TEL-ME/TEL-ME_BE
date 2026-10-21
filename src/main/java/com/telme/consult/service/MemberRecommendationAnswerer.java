@@ -41,10 +41,10 @@ public class MemberRecommendationAnswerer {
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
     public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
     public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;
-// 더 싼 요금제를 찾는 질문. 되묻기 조건이 아니라 질문에서 읽은 값이며 CHEAPER는 추천 사용량 기준, CHEAPEST는 사용량과 상관없이 싼 순서
-public static final String PRICE_KEY = "price_request";
-public static final String CHEAPER = "cheaper";
-public static final String CHEAPEST = "cheapest";
+    // 더 싼 요금제를 찾는 질문. 되묻기 조건이 아니라 질문에서 읽은 값이며 CHEAPER는 추천 사용량 기준, CHEAPEST는 사용량과 상관없이 싼 순서
+    public static final String PRICE_KEY = "price_request";
+    public static final String CHEAPER = "cheaper";
+    public static final String CHEAPEST = "cheapest";
     // 데이터 사용량을 받은 뒤에야 물을지 알 수 있는 질문. 앞선 되묻기를 마친 뒤에도 처음 묻는 것은 허용한다
     public static final java.util.Set<String> USAGE_FOLLOW_UP_KEYS = java.util.Set.of(VOICE_KEY, SMS_KEY);
 
@@ -119,10 +119,14 @@ public static final String CHEAPEST = "cheapest";
             if (mayAsk && !any.plan().equals(general.plan())) {
                 return new Outcome(null, List.of(), List.of(ageQuestion()));
             }
-            return answer(general, current, demand, usage.get(), discountPercent(subscription), note);
+            return answer(general, current, demand, usage.get(), discountPercent(subscription),
+                    cheaperThanCurrent(general, pool(active, null), current, demand, discountPercent(subscription),
+                            answers.get(PRICE_KEY)) + note);
         }
-        return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand,
-                usage.get(), discountPercent(subscription), note);
+        Recommendation recommendation = recommender.recommend(pool(active, group), current, demand, allowDowngrade);
+        return answer(recommendation, current, demand, usage.get(), discountPercent(subscription),
+                cheaperThanCurrent(recommendation, pool(active, group), current, demand, discountPercent(subscription),
+                        answers.get(PRICE_KEY)) + note);
     }
 
     // 나이대 질문의 선택지 글자. 직접 말한 나이도 이 글자로 맞춰 쓴다
@@ -193,7 +197,7 @@ public static final String CHEAPEST = "cheapest";
         }
         if (priceRequest != null) {
             return new Outcome(cheaperPlans(usage, fit, pool(active, group), CHEAPEST.equals(priceRequest)) + note,
-                    List.of(CATALOG_QUESTION), null);
+                    withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
         }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
@@ -220,27 +224,50 @@ public static final String CHEAPEST = "cheapest";
         return withLink;
     }
 
-    // 추천한 요금제보다 싼 요금제를 알린다. 사용량 기준이면 데이터가 많은 순, 사용량과 상관없이면 싼 순서로 3개까지이고,
-    // 추천 요금제가 이미 가장 싸면 그렇게 알린다. 싼 요금제는 사용량을 못 채울 수 있다는 말을 붙인다
+    // 추천 문장을 맨 앞에 두어 다음 질문의 "그 요금제"가 이 답의 추천을 찾을 수 있게 하고, 이어서 추천한 요금제보다 싼 요금제를 알린다.
+    // 사용량 기준이면 데이터가 많은 순, 사용량과 상관없이면 싼 순서로 3개까지이고, 추천 요금제가 이미 가장 싸면 그렇게 알린다
     private static String cheaperPlans(DataUsageReplyParser.Result usage, UsageFit fit, List<Plan> pool, boolean regardless) {
         Plan base = fit.cheapest();
         String basis = usage.kind() == DataUsageReplyParser.Kind.UNLIMITED ? "데이터를 무제한으로 쓰신다면"
                 : "한 달에 데이터를 %s 쓰신다면".formatted(gb(usage.dataMb()));
+        String head = "%s %s(%s) 요금제를 추천해요.".formatted(basis, base.getName(), summary(base));
         Comparator<Plan> order = regardless ? Comparator.comparingInt(Plan::getMonthlyFee)
                 : Comparator.comparingDouble((Plan plan) -> dataMb(plan)).reversed().thenComparingInt(Plan::getMonthlyFee);
         List<Plan> cheaper = pool.stream().filter(plan -> plan.getMonthlyFee() < base.getMonthlyFee())
                 .sorted(order).limit(MAX_CHEAPER).toList();
         if (cheaper.isEmpty()) {
-            return "%s %s(%s)이 가장 저렴한 요금제예요. 이보다 싼 요금제는 없어요.".formatted(basis, base.getName(), summary(base));
+            return head + " 이보다 싼 요금제는 없어요.";
         }
         String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan)))
                 .collect(Collectors.joining(", "));
         if (regardless) {
-            return "사용량과 상관없이 싼 순서로는 %s이에요. 한도가 작아서 사용량을 채우지 못할 수 있어요. %s %s(%s)이 사용량에 맞는 가장 저렴한 요금제예요."
-                    .formatted(list, basis, base.getName(), summary(base));
+            return head + " 사용량과 상관없이 싼 순서로는 %s이에요. 한도가 작아서 사용량을 채우지 못할 수 있어요.".formatted(list);
         }
-        return "%s %s(%s)이 사용량에 맞는 가장 저렴한 요금제예요. 더 싼 요금제로는 %s이 있는데, 사용량을 채우지 못하고 모자랄 수 있어요."
-                .formatted(basis, base.getName(), summary(base), list);
+        return head + " 더 싼 요금제로는 %s이 있는데, 사용량을 채우지 못하고 모자랄 수 있어요.".formatted(list);
+    }
+
+    // 사용량이 있는 회원이 더 싼 요금제를 찾으면 지금 쓰는 요금제보다 싼 요금제를 덧붙인다(이미 권한 요금제는 뺀다).
+    // 더 싼 요금제가 평균 사용량을 채우는지도 알린다. 더 싼 요금제를 찾는 말이 아니면 빈 글자
+    private static String cheaperThanCurrent(Recommendation recommendation, List<Plan> pool, Plan current, Demand demand,
+            int discountPercent, String priceRequest) {
+        if (priceRequest == null) {
+            return "";
+        }
+        Comparator<Plan> order = CHEAPEST.equals(priceRequest) ? Comparator.comparingInt(Plan::getMonthlyFee)
+                : Comparator.comparingDouble((Plan plan) -> dataMb(plan)).reversed().thenComparingInt(Plan::getMonthlyFee);
+        List<Plan> cheaper = pool.stream()
+                .filter(plan -> plan.getMonthlyFee() < current.getMonthlyFee() && !plan.equals(recommendation.plan()))
+                .sorted(order).limit(MAX_CHEAPER).toList();
+        if (cheaper.isEmpty()) {
+            return recommendation.kind() == Kind.CHEAPER ? "" : " 지금 쓰는 요금제보다 싼 요금제는 없어요.";
+        }
+        String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan, discountPercent)))
+                .collect(Collectors.joining(", "));
+        List<String> fitting = cheaper.stream().filter(plan -> PlanRecommender.fits(plan, demand)).map(Plan::getName).toList();
+        String fit = fitting.size() == cheaper.size() ? "모두 평균 사용량을 채워요."
+                : fitting.isEmpty() ? "평균 사용량을 채우지 못하고 모자랄 수 있어요."
+                : "이 중 %s은 평균 사용량을 채우고 나머지는 모자랄 수 있어요.".formatted(String.join(", ", fitting));
+        return " 지금 쓰는 요금제보다 싼 요금제로는 %s이 있어요. %s".formatted(list, fit);
     }
 
     private static double dataMb(Plan plan) {

@@ -128,11 +128,14 @@ class MemberRecommendationAnswererTest {
         Outcome outcome = answerer.recommend(null, answers, true);
 
         assertThat(outcome.asks()).isNull();
-        assertThat(outcome.content()).contains("LTE 플러스", "가장 저렴한 요금제예요", "더 싼 요금제로는", "모자랄 수 있어요")
-                .doesNotContain("요금제를 추천해요.");
+        assertThat(outcome.content()).contains("LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.", "더 싼 요금제로는",
+                "모자랄 수 있어요");
         // 데이터가 많은 순으로 싼 요금제 3개까지
         assertThat(outcome.content().indexOf("5G 라이트")).isLessThan(outcome.content().indexOf("LTE 베이직"));
-        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘", "LTE 플러스 가입하러 가기");
+        // 이어서 "그 요금제로 가입할래"라고 하면 싼 요금제 목록이 아니라 추천한 요금제를 대상으로 찾는다
+        assertThat(PlanTaskAnswerProvider.targetSentence(outcome.content()))
+                .isEqualTo("한 달에 데이터를 10GB 쓰신다면 LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.");
     }
 
     @Test
@@ -143,6 +146,36 @@ class MemberRecommendationAnswererTest {
 
         assertThat(content).contains("사용량과 상관없이 싼 순서로는 알뜰 미니");
         assertThat(content.indexOf("알뜰 미니")).isLessThan(content.indexOf("알뜰 세이브"));
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).contains("LTE 플러스").doesNotContain("알뜰 미니");
+    }
+
+    @Test
+    void 사용량이_있는_회원이_더_싼_요금제를_찾으면_그대로_쓰라는_안내에_싼_요금제를_덧붙인다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+        Map<String, String> answers = Map.of("age_group", GENERAL, "price_request", "cheaper");
+
+        Outcome outcome = answerer.recommend(userId, answers, true);
+
+        assertThat(outcome.content()).contains("그대로 쓰시는 걸 추천해요", "지금 쓰는 요금제보다 싼 요금제로는", "5G 라이트")
+                .containsPattern("평균 사용량을 채우지 못하고 모자랄 수 있어요|나머지는 모자랄 수 있어요|모두 평균 사용량을 채워요");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+        assertThat(PlanTaskAnswerProvider.targetSentence(outcome.content())).doesNotContain("싼 요금제로는");
+    }
+
+    @Test
+    void 사용량이_있는_회원이_가장_싼_요금제를_쓰면_더_싼_요금제가_없다고_알린다() {
+        subscribeAndUse("BUDGET_MINI", 1 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, Map.of("age_group", GENERAL, "price_request", "cheaper"), true);
+
+        assertThat(outcome.content()).contains("지금 쓰는 요금제보다 싼 요금제는 없어요");
+    }
+
+    @Test
+    void 더_싼_요금제를_찾는_말이_없으면_회원_답변에_싼_요금제를_덧붙이지_않는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+
+        assertThat(answerer.recommend(userId, age(GENERAL), true).content()).doesNotContain("보다 싼 요금제");
     }
 
     @Test
