@@ -68,4 +68,8 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
 
     @Query("select h from StoreHours h where h.id.storeId = :storeId")
     List<StoreHours> findHoursByStoreId(@Param("storeId") Long storeId);
+
+    // 채팅 매장 결과 여러 곳의 영업시간을 한 번에 읽는다. store_hours의 기본키(store_id, day_of_week) 앞 열로 찾는다
+    @Query("select h from StoreHours h where h.id.storeId in :storeIds")
+    List<StoreHours> findHoursByStoreIds(@Param("storeIds") Collection<Long> storeIds);
 }
