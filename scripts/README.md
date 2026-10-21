@@ -19,7 +19,8 @@
 | `bedrock-switch-evaluation/run_flow_scenarios.py` | 되묻기 완주·복합·FAQ+매장 복합·멀티턴 22개 대화를 실제 채팅 API로 끝까지 진행해 턴별 답변과 근거 FAQ 기록 (채점은 사람이 원문 대조). 결과: `docs/BEDROCK_SWITCH_EVALUATION.md` | 앱 경유 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
-| `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`) | 앱 경유 |
+| `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`: 되묻기는 첫 선택지로 이어서 답해 최종 답으로 확인) | 앱 경유 |
+| `check_faq_answerable_live.py` | FAQ 질문을 그대로 채팅에 보내 최종 근거 답이 나오는지 확인(되묻기는 첫 선택지로 이어서 답함). 결과 `data/faq_unanswerable.json` (`--recheck`: 실패·되묻기·표본만 다시, 표본 시드는 실행마다 새로 고르고 기록) | 앱 경유 |
 | `generate_stores.py` | 공공데이터 CSV → 매장 가상 데이터 + dev 시드 SQL | - |
 | `check_stores.py` | 매장 데이터 제약, 분포 + 시드 SQL 대조 | - |
 | `telme_docs.py` | 공통 문서 파서 | - |
@@ -410,6 +411,8 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 | `check_stores.py` | 14건 (필드 6 + 영업시간 4 + 업무 3 + 중복 1) |
 | `classify_search_failures.py` | 17건 (그룹 판정 6: 문자열 정답 포함 + 원인 판정 6 + 정답 전달 판정 3 + top-k 범위 2, 경계값 포함) |
 | `simulate_dual_vector.py` | 29건 (합치기 8: 우선순위, 중복 제거, 3개 컷, 임계값 경계 + 성공 판정 4 + 커버됨 분류 3, 문자열, 배열 정답 모두 + 최적 t 선택 8: 정상, 동점이면 높은 t, 평가셋별 무관 상쇄 제외, ANSWER 포함 합계, 기존 긍정 0건, 무관 0건, ANSWER 수 감소 제외, 잃고 얻으면 수 기준 통과 + 구성 경고 2 + 수집 벡터 확인 4) |
+| `check_suggested_questions_live.py` | 8건 (되묻기 따라가기 2: 첫 선택지로 같은 채팅방, 선택지 없는 되묻기에서 멈춤 + 대표 질문 판정 5: 바로 답·자기 FAQ 1위면 1번만, 되묻기 뒤 최종 답, 다른 FAQ 1위면 실패하고 한 번 더, 두 번째 통과도 남김, 선택지 없는 되묻기는 실패 + 전체 실행 1: 같은 대표 질문은 한 번만 재고 최종 답으로 검토표) |
+| `check_faq_answerable_live.py` | 17건 (판정 7: 바로 답, 되묻기 첫 선택지로 같은 채팅방, 되묻기 여러 번, 선택지 없는 되묻기, 되묻기 후 근거 없음, 끝나지 않는 되묻기, 대기 초과 + 재시도 2: 두 번 실패, 대기 초과는 다시 잰 결과 사용 + 결과 목록 1: 대기 초과 따로 남김 + 부분 재측정 7: 지난 결과 복원, 대기 초과 목록 없는 예전 결과, 다시 잴 대상·같은 시드 같은 표본, 표본이 깨지면 결과를 쓰지 않고 멈춤, 표본이 통과하면 결과 합쳐 쓰기, 쓴 시드 기록, `--limit`과 같이 쓰면 재기 전에 오류) |
 | `gray_zone_upper_band_bedrock.py` | 27건 (구간 판정 4: 위 선 통과, 아래 선 버림, 경계값 + 합치기 6: 판정 없음 구성, 위로 넓히기 거절, 질문 벡터 우선·중복 제거·3개 컷, 거절 후 빈자리, slot_id 없는 후보는 판정 없이 거부, 같은 slot 1회 판정 + 다수결 2 + 응답 해석 3: fail-open 포함 + 캐시 5: 호출 오류 저장 안 함, 깨진 JSON fail-open, 해시·다수결 저장, FAQ 문장 변경 감지, 바뀐 쌍만 재판정 + 채점 3 + 지연 백분위 2 + 질문 벡터 위 선 2) |
 | `judge_stability_bedrock.py` | 12건 (회차 채점 3: 하나라도 답 됨, 잘못 막음·막음 기준, 근거 없는 케이스 제외 + 회차별로 갈린 케이스 1 + 응답 해석 2: 운영과 같이 해석 실패는 실패 + 운영과 같은 근거 3: 판정 없이 통과·버림, 판정 결과와 실패 시 원래 임계값, 질문 벡터 먼저·3개 + 쌍별 비율 1 + 프롬프트 2: v3는 이전 운영·v4a는 지금 운영, 후보마다 규칙 한 줄씩) |
 

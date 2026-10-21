@@ -4,7 +4,9 @@
 
 추천 질문 플래그를 켜고 실제 LLM(ollama)으로 띄운 로컬 앱이 필요하다. docs/FOLLOWUP_RECOMMENDATION.md 7.2절
   - sample: 실제 말투 질문 20개. 생성 답변과 추천의 중복·적합성을 사람이 검토표에서 판정한다
-  - representatives: 대표 질문 32개를 보내 그 FAQ가 검색 1위로 나오는지 본다(버튼을 누르면 답이 나오는지)
+  - representatives: 대표 질문을 보내 버튼을 누르면 답이 나오는지 본다. 되묻기가 나오면 고객이 버튼을 누르듯
+    첫 번째 선택지로 같은 채팅방에서 답하고, 최종 답이 GROUNDED이고 그 FAQ가 근거 1위인지 본다.
+    실패하면 한 번 더 재서 같이 남긴다(check_faq_answerable_live.py와 같은 기준)
 
 질문마다 새 채팅방을 만들어 이전 대화가 섞이지 않게 한다. 비회원 세션 쿠키로 호출한다.
 """
@@ -34,6 +36,8 @@ SAMPLE_IDS = [
     "EVAL-027", "EVAL-163", "EVAL-081", "EVAL-090",
 ]
 FINAL_STATUSES = {"COMPLETED", "FAILED", "TIMEOUT", "CANCELLED"}
+# 조건이 여러 개면 한 번에 하나씩 묻는다. 이보다 길게 이어지면 막힌 것으로 본다
+MAX_CLARIFICATIONS = 3
 
 
 def load_json(path: Path):
@@ -63,7 +67,13 @@ class Client:
             raise SystemExit(f"{self.base_url}: 앱에 연결할 수 없습니다: {exc.reason}") from None
 
     def ask(self, title: str, question: str) -> dict:
-        session = self.call("POST", "/api/v1/chat/sessions", {"title": title[:100]})["sessionId"]
+        return self.send(self.open_session(title), question)
+
+    def open_session(self, title: str) -> int:
+        return self.call("POST", "/api/v1/chat/sessions", {"title": title[:100]})["sessionId"]
+
+    # 같은 채팅방에 이어서 보낸다. 되묻기에 답할 때 쓴다
+    def send(self, session: int, question: str) -> dict:
         sent = self.call("POST", f"/api/v1/chat/sessions/{session}/messages", {"content": question})
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
@@ -77,6 +87,23 @@ class Client:
             time.sleep(2)
         return {"status": "WAIT_TIMEOUT", "messageType": "", "content": "", "answerBasis": None,
                 "followUps": [], "sources": []}
+
+
+def follow_clarifications(client: Client, question: str) -> tuple[dict, bool, bool]:
+    """새 채팅방에 보내고, 되묻기가 나오면 첫 번째 선택지로 같은 채팅방에서 답한다(최대 3번).
+    (최종 응답, 되묻기에 답했는지, 선택지 없는 되묻기라 이어가지 못했는지)"""
+    session = client.open_session(question)
+    reply = client.send(session, question)
+    clarified = False
+    for _ in range(MAX_CLARIFICATIONS):
+        if reply.get("messageType") != "CLARIFICATION":
+            break
+        options = reply.get("followUps") or []
+        if not options:
+            return reply, clarified, True
+        clarified = True
+        reply = client.send(session, options[0])
+    return reply, clarified, False
 
 
 def first_source(reply: dict, slot_by_question: dict[str, str]) -> tuple[str, str]:
@@ -116,22 +143,49 @@ def run_sample(client: Client, out: Path, slot_by_question: dict[str, str], expe
     print("검토표의 '답변과 중복', '상황에 맞음' 열을 채운다. 추천이 없어야 하는 마지막 4개도 확인한다")
 
 
+def check_representative(client: Client, question: str, slot_id: str,
+                         slot_by_question: dict[str, str]) -> list[dict]:
+    """대표 질문 하나의 측정 결과. 첫 번째가 실패하면 한 번 더 재서 둘 다 돌려준다(LLM 결과가 매번 같지 않음).
+    통과: 되묻기를 따라간 최종 답이 GROUNDED이고 그 FAQ가 근거 1위"""
+    attempts = []
+    for _ in range(2):
+        reply, clarified, _ = follow_clarifications(client, question)
+        slot, _ = first_source(reply, slot_by_question)
+        attempts.append({"reply": reply, "slot": slot, "clarified": clarified,
+                         "passed": reply.get("answerBasis") == "GROUNDED" and slot == slot_id})
+        if attempts[0]["passed"]:
+            break
+    return attempts
+
+
 def run_representatives(client: Client, out: Path, slot_by_question: dict[str, str]) -> None:
     reps = load_json(POLICY_LINKS)["representativeQuestions"]
-    rows, ok = [], 0
-    for i, (policy, rep) in enumerate(sorted(reps.items()), 1):
-        reply = client.ask(policy, rep["question"])
-        slot, _ = first_source(reply, slot_by_question)
-        passed = reply.get("answerBasis") == "GROUNDED" and slot == rep["slotId"]
-        ok += passed
-        rows.append([policy, rep["slotId"], rep["question"], reply.get("answerBasis"), slot,
-                     "Y" if passed else "N", reply.get("content", "")])
-        print(f"[{i}/{len(reps)}] {policy} {reply.get('answerBasis')} 1위 {slot or '-'} {'OK' if passed else '확인 필요'}")
+    # 여러 정책이 같은 대표 질문을 쓰면 한 번만 잰다
+    by_slot: dict[str, dict] = {}
+    for policy, rep in sorted(reps.items()):
+        by_slot.setdefault(rep["slotId"], {"question": rep["question"], "policies": []})["policies"].append(policy)
+    rows, direct, clarified, retried = [], 0, 0, 0
+    for i, (slot_id, rep) in enumerate(sorted(by_slot.items()), 1):
+        attempts = check_representative(client, rep["question"], slot_id, slot_by_question)
+        first = attempts[0]
+        direct += first["passed"] and not first["clarified"]
+        clarified += first["passed"] and first["clarified"]
+        retried += len(attempts) == 2 and attempts[1]["passed"]
+        again = "" if len(attempts) == 1 else "Y" if attempts[1]["passed"] else "N"
+        rows.append([", ".join(rep["policies"]), slot_id, rep["question"], "Y" if first["clarified"] else "N",
+                     first["reply"].get("answerBasis"), first["slot"], "Y" if first["passed"] else "N", again,
+                     first["reply"].get("content", "")])
+        print(f"[{i}/{len(by_slot)}] {slot_id} {first['reply'].get('answerBasis')} 1위 {first['slot'] or '-'}"
+              f"{' (되묻기 후)' if first['clarified'] else ''} {'OK' if first['passed'] else '확인 필요'}"
+              f"{'' if not again else f' / 다시 재서 {again}'}")
     with out.open("w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["정책", "대표 FAQ", "대표 질문", "답변 근거", "실제 1위 FAQ", "통과", "생성 답변"])
+        w.writerow(["정책", "대표 FAQ", "대표 질문", "되묻기에 답함", "최종 답변 근거", "최종 1위 FAQ", "통과",
+                    "다시 재서 통과", "최종 생성 답변"])
         w.writerows(rows)
-    print(f"\n대표 질문 {ok}/{len(rows)}개가 GROUNDED + 자기 FAQ 1위 → {out}")
+    failed = len(rows) - direct - clarified
+    print(f"\n대표 질문 {len(rows)}개: 바로 답 {direct}, 되묻기 후 답 {clarified}, 실패 {failed}"
+          f"(그중 다시 재서 통과 {retried}) → {out}")
 
 
 def main() -> None:

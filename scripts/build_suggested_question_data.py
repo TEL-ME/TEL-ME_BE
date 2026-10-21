@@ -83,22 +83,31 @@ POLICY_TITLE = {
 # 대표 질문은 답이 안 나오는 FAQ(UNANSWERABLE_SRC)가 아니어야 한다. 복합 질문 처리(TELME-87) 뒤 라우터가
 # 여러 대상을 나열한 질문을 대상별로 쪼개 모두 실패해서 바꿨다
 #   PLAN-0041 "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요." → PLAN-0091
+# 되묻기에 끝까지 답하는 재측정(TELME-152) 뒤 바로 답이 나오는 같은 정책 질문으로 바꿨다. 앞의 하나는 문맥 확인 안내로 끝나고,
+# 나머지는 개통 후 기간처럼 고객이 직접 입력해야 하는 되묻기(선택지 없음)가 나와 버튼을 누르자마자 답이 나오지 않는다.
+# PLAN-0041은 이번 측정과 실제 채팅에서 다시 답이 나와 되돌렸다. "뭐가 달라요?" 같은 비교 질문은 FAQ 답변에 없는
+# 일반 설명을 덧붙여 피했다
+#   PLAN-0091 "요금제가 너무 많아서 뭐가 뭔지 모르겠어요" → PLAN-0041
+#   PORTING-0036 "번호이동 철회는 어떻게 신청하나요?" → PORTING-0008
+#   DEVICE-0010 "기기변경 신청 가능 시점과 할부금 처리 기준을 알려주세요." → DEVICE-0038
+#   DEVICE-0040 "기기변경 직후 새 단말 교환 절차를 알려주세요." → DEVICE-0028
+# 라우터를 gpt-oss로 바꾼 뒤(TELME-194) 매장 운영 시간(SERVICE-03) FAQ 13개는 모두 매장 찾기로 가서 지역을 되묻는다.
+# 라우터 정의가 영업시간을 지점 정보로 보므로 질문을 바꿔도 FAQ 답이 나오지 않아, 유심·개통 뒤 운영 시간 연결을 뺐다
 REPRESENTATIVE = {
     "BILLING-01": "BILLING-0015", "BILLING-02": "BILLING-0016", "BILLING-03": "BILLING-0045",
     "BILLING-05": "BILLING-0012", "BILLING-07": "BILLING-0021",
-    "PLAN-01": "PLAN-0091", "PLAN-02": "PLAN-0012", "PLAN-03": "PLAN-0018", "PLAN-04": "PLAN-0014",
+    "PLAN-01": "PLAN-0041", "PLAN-02": "PLAN-0012", "PLAN-03": "PLAN-0018", "PLAN-04": "PLAN-0014",
     "PLAN-05": "PLAN-0045",
     "USIM-01": "USIM-0017", "USIM-02": "USIM-0010", "USIM-04": "USIM-0036",
     "SUBSCRIBE-01": "SUBSCRIBE-0037", "SUBSCRIBE-02": "SUBSCRIBE-0014", "SUBSCRIBE-03": "SUBSCRIBE-0011",
     "PORTING-01": "PORTING-0033", "PORTING-02": "PORTING-0010", "PORTING-03": "PORTING-0011",
-    "PORTING-04": "PORTING-0036",
+    "PORTING-04": "PORTING-0008",
     "NAME_CHANGE-01": "NAME_CHANGE-0007", "NAME_CHANGE-02": "NAME_CHANGE-0014", "NAME_CHANGE-03": "NAME_CHANGE-0009",
     "TERMINATE-01": "TERMINATE-0057", "TERMINATE-02": "TERMINATE-0034", "TERMINATE-03": "TERMINATE-0011",
     "TERMINATE-04": "TERMINATE-0036",
-    "DEVICE-01": "DEVICE-0037", "DEVICE-02": "DEVICE-0010", "DEVICE-03": "DEVICE-0015", "DEVICE-04": "DEVICE-0040",
+    "DEVICE-01": "DEVICE-0037", "DEVICE-02": "DEVICE-0038", "DEVICE-03": "DEVICE-0015", "DEVICE-04": "DEVICE-0028",
     "ROAMING-01": "ROAMING-0026", "ROAMING-02": "ROAMING-0022", "ROAMING-03": "ROAMING-0008",
     "ROAMING-05": "ROAMING-0025",
-    "SERVICE-03": "SERVICE-0058",
 }
 
 # 연결 종류: NEXT 같은 업무의 다음 단계, ALTERNATIVE 대안, INFO 관련 정보
@@ -112,8 +121,6 @@ def link(to: str, kind: str = NEXT, condition: dict | None = None) -> dict:
         out["condition"] = condition
     return out
 
-
-STORE_WORD = {"questionContains": "매장"}
 
 # 정책 → 이어서 물을 만한 정책. 앞이 우선이다. 4차 연결표(독립 검증 62/67 = 92.5%)
 LINKS = {
@@ -129,13 +136,13 @@ LINKS = {
     "PLAN-03": [link("PLAN-02", INFO), link("PLAN-05", ALTERNATIVE)],
     "PLAN-04": [link("PLAN-05", ALTERNATIVE), link("BILLING-01")],
     "PLAN-05": [link("BILLING-01"), link("PLAN-02", INFO)],
-    "USIM-01": [link("USIM-02"), link("SERVICE-03", INFO)],
-    "USIM-02": [link("USIM-01"), link("SERVICE-03", INFO)],
+    "USIM-01": [link("USIM-02")],
+    "USIM-02": [link("USIM-01")],
     "USIM-03": [link("USIM-01", ALTERNATIVE)],
     "USIM-04": [link("USIM-01"), link("USIM-02")],
-    "SUBSCRIBE-01": [link("SUBSCRIBE-03"), link("SERVICE-03", INFO, STORE_WORD)],
+    "SUBSCRIBE-01": [link("SUBSCRIBE-03")],
     "SUBSCRIBE-02": [link("SUBSCRIBE-03")],
-    "SUBSCRIBE-03": [link("SUBSCRIBE-01"), link("SERVICE-03", INFO, STORE_WORD)],
+    "SUBSCRIBE-03": [link("SUBSCRIBE-01")],
     "SUBSCRIBE-04": [link("SUBSCRIBE-01"), link("SUBSCRIBE-03")],
     "PORTING-01": [link("PORTING-02"), link("PORTING-04", INFO)],
     "PORTING-02": [link("PORTING-01"), link("PORTING-03", INFO)],
