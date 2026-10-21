@@ -323,7 +323,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(
-                        answer.equals(collected.toString()) ? "KEPT"
+                        sameExceptSpaceKind(answer, collected.toString().strip()) ? "KEPT"
                                 : answer.contains(AnswerPromptTemplates.NO_EVIDENCE_MESSAGE)
                                         ? "REPLACED" : "MODIFIED",
                         "EVIDENCE_POLICY_RESULT");
@@ -373,6 +373,16 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         private String answer() {
             return answer;
+        }
+
+        // 가드는 앞뒤 공백을 뗀 답을 받고, 문장을 나눴다 다시 이을 때 문장 사이의 좁은 공백(U+202F)을 보통 공백으로 바꾼다.
+        // 그 차이만 있으면 고친 답이 아니다
+        private static boolean sameExceptSpaceKind(String answer, String collected) {
+            return plainSpaces(answer).equals(plainSpaces(collected));
+        }
+
+        private static String plainSpaces(String text) {
+            return text.replace(' ', ' ').replace(' ', ' ');
         }
 
         private void recordGuard(String outcome, String reason) {
