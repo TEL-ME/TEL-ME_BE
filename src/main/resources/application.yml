@@ -102,6 +102,12 @@ kakao:
     # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
     # 더미 키로도 앱은 뜨고, 호출만 STORE503-1로 실패한다
     rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
+  route:
+    # 매장 길찾기. 대중교통·도보·자전거는 카카오맵 REST API, 자동차는 카카오모빌리티 길찾기 API를 부른다.
+    # 로컬 검색과 같은 키를 쓴다. 더미 키로도 앱은 뜨고, 호출만 STORE503-2로 실패한다
+    rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
+    # 켜면 대중교통 출발지 → 첫 경로 좌표의 도보를 추가 조회한다. 적용하려면 재시작이 필요하다.
+    transit-origin-walk-enabled: ${KAKAO_ROUTE_TRANSIT_ORIGIN_WALK_ENABLED:false}
 
 llm:
   # fake: Ollama 없이 고정 응답 / ollama: Ollama의 EXAONE 호출 / vllm: vLLM의 EXAONE 호출(vllm.url)
