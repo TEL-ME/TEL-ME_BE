@@ -1466,6 +1466,52 @@ class QueryRoutingServiceTest {
         }
 
         @Test
+        @DisplayName("모델이 UNKNOWN이라 해도 매장 찾기 요청이면 규칙으로 STORE로 보정한다")
+        void unknownStoreRequestBecomesStore() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("매장 찾아주세요"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(r.method()).isEqualTo(QueryRouting.Method.RULE);
+            assertThat(r.subQueries()).singleElement()
+                    .satisfies(sub -> assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.STORE));
+        }
+
+        @Test
+        @DisplayName("모델이 UNKNOWN이라 해도 부가서비스 이름과 업무를 물으면 잡담을 뗀 질문으로 FAQ로 보정한다")
+        void unknownAddOnServiceBecomesFaq() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+
+            IntentRouteResponse r = service.route(msg("역시 안되는구나 ㅋㅋ 그럼 컬러링 해지는 어디서해요"));
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
+            assertThat(r.subQueries()).singleElement().satisfies(sub -> {
+                assertThat(sub.intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+                assertThat(sub.queryText()).isEqualTo("컬러링 해지는 어디서해요");
+            });
+        }
+
+        @Test
+        @DisplayName("매장도 부가서비스도 아닌 UNKNOWN은 그대로 둔다")
+        void unrelatedUnknownStaysUnknown() {
+            given(llmClient.generate(any())).willReturn("""
+                {"intent":"UNKNOWN","confidence":0.99,"refinedQuery":"",
+                 "extractedConditions":{},"subQueries":[]}
+                """);
+
+            for (String question : new String[] {"오늘 점심 뭐 먹지?", "점심메뉴 추천좀 ㅋㅋ", "근처 맛집 알려줘", "오늘 서울 날씨 어때요?"}) {
+                assertThat(service.route(msg(question)).intent()).as(question).isEqualTo(QueryRouting.Intent.UNKNOWN);
+            }
+        }
+
+        @Test
         @DisplayName("낮은 신뢰도로 보류한 UNKNOWN은 재확인하지 않는다")
         void lowConfidenceHoldIsNotRechecked() {
             given(llmClient.generate(any())).willReturn("""

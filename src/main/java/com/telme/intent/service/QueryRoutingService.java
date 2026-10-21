@@ -305,6 +305,17 @@ public class QueryRoutingService {
             method = QueryRouting.Method.SEARCH;
         }
 
+        // 모델이 UNKNOWN으로 본 질문 중 매장 찾기 요청과 부가서비스 질문은 규칙으로 되살린다
+        if (method == QueryRouting.Method.LLM && payload.intent() == QueryRouting.Intent.UNKNOWN) {
+            LlmRoutingPayload corrected = correctUnknown(question);
+            if (corrected != null) {
+                log.info("[라우팅] UNKNOWN이지만 {} 질문이라 규칙으로 보정합니다: messageId={}",
+                        corrected.intent(), userMessage.getMessageId());
+                payload = corrected;
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         boolean llmRouting = method == QueryRouting.Method.LLM;
         if (method == QueryRouting.Method.LLM
                 && payload.intent() != QueryRouting.Intent.UNKNOWN
@@ -1141,6 +1152,23 @@ public class QueryRoutingService {
             extracted.declinedKeys(),
             method,
             disposition(payload.responseType(), extracted));
+    }
+
+    private LlmRoutingPayload correctUnknown(String question) {
+        if (RuleBasedRoutingFallback.asksStoreLookup(question)) {
+            LlmRoutingPayload rule = ruleBasedFallback.classify(question);
+            if (rule.intent() == QueryRouting.Intent.STORE) {
+                return rule;
+            }
+        }
+        String addOnQuery = RoutingIntentCorrection.addOnServiceQuery(question);
+        if (addOnQuery == null) {
+            return null;
+        }
+        return new LlmRoutingPayload(
+                QueryRouting.Intent.FAQ, BigDecimal.valueOf(0.80), addOnQuery, Collections.emptyMap(),
+                List.of(new LlmRoutingPayload.SubQueryPayload(
+                        (short) 1, ConsultRequest.Intent.FAQ, addOnQuery, Collections.emptyMap())));
     }
 
     private boolean asksStoreCondition(Set<String> pendingKeys) {

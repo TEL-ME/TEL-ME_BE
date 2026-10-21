@@ -51,6 +51,28 @@ class ChatQuestionResolverTest {
                 .isEqualTo("그럼 신청 방법은?");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"아 정정할게요 중학생 아니고 초등학교 6학년이에요", "아 아들 아니고 딸이요", "아 잘못말했다 19살이요"})
+    void correctionWithHistoryIsJudgedByTheModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        verify(model, org.mockito.Mockito.atLeastOnce()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void correctionWithoutHistoryDoesNotCallTheModel() {
+        var context = new ChatContext(1L, 5L, null, List.of(), "아 아들 아니고 딸이요", 100);
+
+        var result = resolver.resolve(command("아 아들 아니고 딸이요"), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        verify(model, org.mockito.Mockito.never()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     void resolutionTraceKeepsOriginalAlongsideAnalysisBody() {
         var trace = mock(ExecutionTrace.class);

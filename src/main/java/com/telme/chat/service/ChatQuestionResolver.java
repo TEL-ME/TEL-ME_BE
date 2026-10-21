@@ -32,6 +32,8 @@ import org.springframework.stereotype.Service;
 public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
+    // 앞서 한 말을 고치는 꼴("정정할게요", "아니고", "아니라", "잘못 말했다"). 이 말만으로는 상담 대상을 알 수 없어 앞 발언과 연결되는지 모델이 판정한다
+    private static final Pattern CORRECTION = Pattern.compile("정정|아니고|아니라|아니다|잘못(?:말|알|봤|적|이야기)|다시말");
     private static final Pattern TEMPORAL_REFERENCE = Pattern.compile("그때|아까|앞서|이전에");
     private static final Pattern IMPLICIT = Pattern.compile(
             "^(?:그럼|신청방법|비용|요금|기간|필요한서류|얼마|어떻게신청)");
@@ -218,6 +220,8 @@ public class ChatQuestionResolver {
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
                 || madeOfGenericWords(gated, stabilityGuards)
                 || shortFollowUpWithHistory(compact(gated), context)
+                // "아 정정할게요 중학생 아니고 초등학교 6학년이에요"처럼 앞 발언을 고치는 말은 업무 이름이 없어 단독 질문으로 처리하면 범위 밖이 된다.
+                || CORRECTION.matcher(noWhitespace).find() && hasCustomerHistory(context)
                 // "설치 기사님 방문비용은 따로 청구되는 건가요?"처럼 길어도 업무 없이 비용 항목만 물으면 대상 유무는 모델이 판정한다.
                 || stabilityGuards && COST_ITEM.matcher(noWhitespace).find() && hasCustomerHistory(context);
         if (mode == Mode.REGEX_GATED && !candidate) {
