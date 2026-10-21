@@ -101,10 +101,23 @@ class PlanQuestionClassifierTest {
     }
 
     @Test
+    void 날짜나_남은_일수와_내_정보_질문은_하루_요금_규칙으로_막지_않는다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_PENALTY\"}");
+        assertThat(classifier.classify(1L, "약정 끝나기 1일 남았는데 위약금 얼마예요")).isEqualTo(PlanQuestionType.MY_PENALTY);
+
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_USAGE\"}");
+        for (String question : new String[] {"11일에 개통했는데 이번 달 요금 얼마 나와요", "오늘 하루 요금이 얼마나 나왔어요",
+                "내 하루 평균 사용 요금 얼마예요"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.MY_USAGE);
+        }
+    }
+
+    @Test
     void 요금제나_제공량_말_없이_하루_요금을_물으면_모델이_목록이라_해도_NONE이다() {
         when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\"}");
 
-        for (String question : new String[] {"요금은 하루에 얼마정도에요", "하루 요금이 얼마예요", "일일 비용이 얼마나 나와요"}) {
+        for (String question : new String[] {"요금은 하루에 얼마정도에요", "하루 요금이 얼마예요", "일일 비용이 얼마나 나와요",
+                "1일 요금이 얼마예요", "하루에 얼마 드나요"}) {
             assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.NONE);
         }
         // 요금제나 제공량을 함께 말하면 요금제 표로 답한다

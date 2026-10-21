@@ -180,4 +180,15 @@ class PlanQuestionRulesTest {
             assertThat(PlanQuestionRules.classify(question)).as(question).isEqualTo(expected);
         }
     }
+
+    @Test
+    void 하루_단위_요금_질문만_요금제_표_밖의_질문으로_본다() {
+        for (String question : new String[] {"요금은 하루에 얼마정도에요", "하루 요금이 얼마예요", "일일 비용이 얼마나 나와요", "1일 요금이 얼마예요"}) {
+            assertThat(PlanQuestionRules.asksDailyFee(question)).as(question).isTrue();
+        }
+        for (String question : new String[] {"약정 끝나기 1일 남았는데 위약금 얼마예요", "11일에 개통했는데 이번 달 요금 얼마 나와요",
+                "매달 21일에 빠져나가는 금액 얼마예요", "하루 2GB 주는 요금제 뭐 있어요", "5G 스탠다드 얼마예요", "이번 달 요금 얼마예요"}) {
+            assertThat(PlanQuestionRules.asksDailyFee(question)).as(question).isFalse();
+        }
+    }
 }

@@ -45,9 +45,12 @@ public final class PlanQuestionRules {
             "비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중|[와과랑].{1,15}중(에서)?(요금|어느|어떤|뭐|어디|가장|더|무엇)");
     // 요금제 표로 답할 수 없는 다른 서비스의 요금·사용 질문
     private static final Pattern OTHER_SERVICE = Pattern.compile("로밍|해외|국제전화");
-    // 요금제나 제공량 말 없이 하루 단위 요금을 묻는 말은 월 요금제 표가 아니라 앞서 이야기한 서비스(로밍 등)의 요금이다
-    private static final Pattern DAILY_FEE = Pattern.compile("하루|일일|1일|일당");
-    private static final Pattern FEE_WORD = Pattern.compile("요금|가격|비용|얼마");
+    // 요금제나 제공량 말 없이 하루 단위 요금을 묻는 말은 월 요금제 표가 아니라 앞서 이야기한 서비스(로밍 등)의 요금이다.
+    // 하루·일일·일당 바로 뒤나 앞에 요금 말이 붙을 때만 본다. "11일에 개통했는데", "약정 끝나기 1일 남았는데"처럼 날짜나 남은 일수는 아니다
+    private static final String DAY_UNIT = "(?:하루|일일|일당|(?<![0-9])1일)";
+    private static final String FEE_UNIT = "(?:요금|가격|비용|이용료|얼마)";
+    private static final Pattern DAILY_FEE = Pattern.compile(
+            DAY_UNIT + "(?:에|당|짜리|마다)?" + FEE_UNIT + "|" + "(?:요금|가격|비용)(?:은|이|는|가)?" + DAY_UNIT);
     private static final Pattern PLAN_OR_ALLOWANCE = Pattern.compile("(?i)요금제|플랜|데이터|통화|문자|gb|기가|무제한");
     private static final Pattern CHANGES = Pattern.compile(
             "려면|변경|바꾸|바꿔|바꿀|옮기|옮겨|갈아|전환|가입|신청|해지|할인|약정|로밍|자동|갑자기|올랐|부족|계속|안쓰고|따로"
@@ -74,17 +77,21 @@ public final class PlanQuestionRules {
         if (question == null) {
             return false;
         }
+        return OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
+    }
+
+    // 요금제 표로 답할 수 없는 하루 단위 요금 질문(로밍 등). 요금제 목록 판정에만 쓴다. 내 요금·내 위약금 같은 질문은 막지 않는다
+    public static boolean asksDailyFee(String question) {
+        if (question == null) {
+            return false;
+        }
         String text = question.replaceAll("\\s+", "");
-        return OTHER_SERVICE.matcher(text).find() || asksDailyFee(text);
+        return DAILY_FEE.matcher(text).find() && !PLAN_OR_ALLOWANCE.matcher(text).find();
     }
 
     // 영화·노트북처럼 요금제와 상관없는 추천 질문을 요금제 추천으로 보내지 않도록, 요금제를 고르는 말이 있는지 본다
     public static boolean mentionsPlan(String question) {
         return question != null && (PLAN_WORD.matcher(question).find() || PLAN_CHOICE_CUE.matcher(question).find());
-    }
-
-    private static boolean asksDailyFee(String text) {
-        return DAILY_FEE.matcher(text).find() && FEE_WORD.matcher(text).find() && !PLAN_OR_ALLOWANCE.matcher(text).find();
     }
 
     // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
@@ -141,7 +148,7 @@ public final class PlanQuestionRules {
         if (MY_USAGE.matcher(text).find() && !USAGE_EXCLUDED.matcher(text).find()) {
             return PlanQuestionType.MY_USAGE;
         }
-        if (PLAN_CATALOG.matcher(text).find() && !asksProcedure(PlanQuestionType.PLAN_CATALOG, text)) {
+        if (PLAN_CATALOG.matcher(text).find() && !asksProcedure(PlanQuestionType.PLAN_CATALOG, text) && !asksDailyFee(text)) {
             return PlanQuestionType.PLAN_CATALOG;
         }
         return PlanQuestionType.NONE;

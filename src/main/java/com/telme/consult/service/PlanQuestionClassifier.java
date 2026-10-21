@@ -62,6 +62,9 @@ public class PlanQuestionClassifier {
         if (type != PlanQuestionType.NONE && PlanQuestionRules.asksOtherService(question)) {
             return PlanQuestionType.NONE;
         }
+        if (type == PlanQuestionType.PLAN_CATALOG && PlanQuestionRules.asksDailyFee(question)) {
+            return PlanQuestionType.NONE;
+        }
         if (type == PlanQuestionType.RECOMMENDATION && !PlanQuestionRules.mentionsPlan(question)) {
             return PlanQuestionType.NONE;
         }
