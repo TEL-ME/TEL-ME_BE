@@ -307,3 +307,28 @@ speech:
     daily-duration-limit: ${SPEECH_STT_DAILY_DURATION_LIMIT:60m}
     # 요금제명·통신 용어 인식을 돕는 사용자 지정 어휘(Transcribe 콘솔, 서울 리전). 비우면 어휘 없이 인식한다
     vocabulary-name: ${SPEECH_STT_VOCABULARY_NAME:}
+
+# 서버 오류 수집(Sentry). DSN은 설정에 두지 않고 SENTRY_DSN 환경 변수로만 넣는다(공개 저장소). 비어 있으면 Sentry가 꺼진다.
+# 배포 버전은 SENTRY_RELEASE 환경 변수를 넣으면 그대로 쓴다
+sentry:
+  dsn: ${SENTRY_DSN:}
+  # 베타 기록만 거를 수 있도록 배포 환경마다 local·beta·production으로 나눈다
+  environment: ${SENTRY_ENVIRONMENT:local}
+  # 요청 헤더·IP·쿠키 같은 사용자 정보를 보내지 않는다. 쿼리스트링(위치 좌표 등)은 이 설정으로 막히지 않아 SentryConfig에서 지운다
+  send-default-pii: false
+  in-app-includes: com.telme
+  # 없는 경로(404)·허용 안 된 메서드(405)·지원 안 하는 형식(415)은 요청 쪽 실수인데, 전역 예외 처리의 마지막 Exception 처리에 걸려
+  # 500 + ERROR로 남는다. 서버 장애가 아니라 보내지 않는다. 응답 코드를 바로잡는 일은 별도로 다룬다
+  ignored-exceptions-for-type:
+    - org.springframework.web.servlet.resource.NoResourceFoundException
+    - org.springframework.web.HttpRequestMethodNotSupportedException
+    - org.springframework.web.HttpMediaTypeNotSupportedException
+  logging:
+    # ERROR 로그를 오류로 보낸다. 처리되지 않은 예외(전역 예외 처리의 [Unhandled Exception])와 채팅 AI 처리 실패가 여기에 남는다.
+    # GeneralException은 WARN이라 보내지 않는다. 5xx 중 사람이 고쳐야 하는 코드만 전역 예외 처리(ALERT_CODES)에서 ERROR로 올려 보낸다.
+    # 4xx 제외는 전역 예외 처리(GlobalExceptionHandler)가 모든 예외를 먼저 처리하는 것에 기대고 있다. Sentry가 따로 등록하는 예외 수집기
+    # (SentryExceptionResolver)는 상태 코드를 보지 않고 받은 예외를 모두 보내는데, 지금은 순서가 뒤(exception-resolver-order 기본값 1)라 닿지 않는다.
+    # 이 순서를 앞당기거나 전역 예외 처리의 마지막 Exception 처리를 지우면 4xx도 수집된다
+    minimum-event-level: error
+    # 오류 직전의 INFO 이상 로그를 흐름 기록으로 붙인다
+    minimum-breadcrumb-level: info
