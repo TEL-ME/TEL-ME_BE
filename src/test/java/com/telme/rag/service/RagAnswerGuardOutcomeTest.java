@@ -38,6 +38,15 @@ class RagAnswerGuardOutcomeTest {
     }
 
     @Test
+    @DisplayName("앞뒤 줄바꿈만 떼어 낸 답은 그대로 둔 답으로 기록한다")
+    void 앞뒤_공백만_뗀_답은_KEPT다() {
+        AnswerResult result = generate("\n재발급 비용은 7,700원입니다.\n");
+
+        assertThat(result.answer()).isEqualTo("재발급 비용은 7,700원입니다.");
+        assertThat(trace.guard).containsEntry("outcome", "KEPT");
+    }
+
+    @Test
     @DisplayName("문장을 지운 답은 고친 답으로 기록한다")
     void 문장을_지운_답은_MODIFIED다() {
         AnswerResult result = generate("재발급 비용은 7,700원입니다. 택배 배송은 무료입니다.");
