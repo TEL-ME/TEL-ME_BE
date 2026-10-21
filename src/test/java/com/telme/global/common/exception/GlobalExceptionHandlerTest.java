@@ -2,7 +2,12 @@ package com.telme.global.common.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.telme.chat.exception.ChatErrorCode;
+import com.telme.faq.exception.FaqErrorCode;
 import com.telme.global.common.CustomResponse;
+import com.telme.global.common.code.BaseErrorCode;
+import com.telme.llm.exception.LlmErrorCode;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +45,17 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<CustomResponse<Map<String, String>>> response = handler.handleValidationException(ex);
 
         assertThat(response.getBody().getResult()).containsEntry("region", "지역 코드는 숫자여야 합니다.");
+    }
+
+    @Test
+    @DisplayName("Sentry로 보낼 오류 코드는 실제 서버 오류(5xx) 코드와 일치한다")
+    void 알림_오류_코드는_실제_서버_오류_코드다() {
+        List<BaseErrorCode> codes = List.of(LlmErrorCode.INVALID_RESPONSE, FaqErrorCode.EMBEDDING_RESPONSE_INVALID,
+                FaqErrorCode.EMBEDDING_REQUEST_REJECTED, ChatErrorCode.OUTPUT_CHECK_FAILED);
+
+        assertThat(GlobalExceptionHandler.ALERT_CODES)
+                .containsExactlyInAnyOrderElementsOf(codes.stream().map(BaseErrorCode::getCode).toList());
+        assertThat(codes).allSatisfy(code -> assertThat(code.getStatus().is5xxServerError()).isTrue());
     }
 
     private MethodArgumentNotValidException exception(FieldError error) throws NoSuchMethodException {

@@ -2,6 +2,7 @@ package com.telme.global.common.exception;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.beans.BeanInstantiationException;
@@ -25,13 +26,25 @@ public class GlobalExceptionHandler {
 
     private static final String INVALID_FORMAT_MESSAGE = "요청 값의 형식이 올바르지 않습니다.";
 
+    // 사람이 고쳐야 하는 서버 오류 코드. 이 코드만 ERROR로 남겨 Sentry로 보내고 나머지 GeneralException은 WARN으로 둔다.
+    // LLM502-1 LLM 응답 형식 오류, FAQ500-0 임베딩 응답 오류, FAQ500-1 임베딩 요청 거부, CHAT500-1 답변 안전 검사 오류.
+    // 일시 장애(연결 실패·시간 초과·응답 끊김·검색 지연)는 다시 시도하면 풀리고, 외부 서비스(Bedrock·Polly·카카오)는 던지는 곳에서
+    // 설정·권한 오류만 이미 ERROR로 남겨 여기서 다시 올리면 같은 오류가 두 번 기록된다. 답변 정책 차단(CHAT500-0)은 정상 동작이다.
+    // 공통 패키지가 각 기능의 오류 코드에 의존하지 않도록 코드 문자열로 둔다(GlobalExceptionHandlerTest가 실제 코드와 맞춰 본다)
+    static final Set<String> ALERT_CODES = Set.of("LLM502-1", "FAQ500-0", "FAQ500-1", "CHAT500-1");
+
 	// 커스텀 예외 처리
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<CustomResponse<Void>> handleCustomException(GeneralException ex) {
 
     	BaseErrorCode errorCode = ex.getErrorCode();
 
-    	log.warn("[CustomException] {}", errorCode.getMessage());
+    	if (ALERT_CODES.contains(errorCode.getCode())) {
+    		// 던진 위치를 알 수 있게 예외를 함께 남긴다. GeneralException은 오류 코드만 담아 사용자 입력이 섞이지 않는다
+    		log.error("[CustomException] {} {}", errorCode.getCode(), errorCode.getMessage(), ex);
+    	} else {
+    		log.warn("[CustomException] {}", errorCode.getMessage());
+    	}
 
         return ResponseEntity
                 .status(errorCode.getStatus())
