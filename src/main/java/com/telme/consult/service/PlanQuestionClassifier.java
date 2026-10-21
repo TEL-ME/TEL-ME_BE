@@ -62,6 +62,9 @@ public class PlanQuestionClassifier {
         if (type != PlanQuestionType.NONE && PlanQuestionRules.asksOtherService(question)) {
             return PlanQuestionType.NONE;
         }
+        if (type == PlanQuestionType.RECOMMENDATION && !PlanQuestionRules.mentionsPlan(question)) {
+            return PlanQuestionType.NONE;
+        }
         if (isMyData(type)) {
             return PlanQuestionRules.hasPersonalMarker(type, question) && !PlanQuestionRules.asksProcedure(type, question)
                     ? type : PlanQuestionType.NONE;

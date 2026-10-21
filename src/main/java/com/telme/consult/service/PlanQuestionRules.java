@@ -54,6 +54,13 @@ public final class PlanQuestionRules {
     private static final Pattern OWN_USAGE = Pattern.compile("남은|남았|남아|썼|사용했|보냈|했는지");
     private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*남(은|았|아)");
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
+    // 요금제를 고르는 말에 함께 나오는 단어. "추천"처럼 다른 물건에도 쓰는 말과 "쓰", "싼"처럼 흔한 말은 넣지 않는다
+    private static final Pattern PLAN_WORD = Pattern.compile(
+            "(?i)요금|플랜|데이터|통화|문자|사용량|gb|기가|무제한|5g|lte|알뜰|청소년|시니어|어르신|약정|결합|통신비|통신사|월정액");
+    // 요금제라는 말 없이 고르는 말. 물건 이름 없이 "싼 거", "맞는 걸", 금액, 나이로 말하는 경우만 넣어 "저렴한 노트북"은 걸리지 않게 한다
+    private static final Pattern PLAN_CHOICE_CUE = Pattern.compile(
+            "(싼|저렴한|비싼|좋은|맞는|알맞은|어울리는|나은|가장|제일)\\s*(거|걸|것|게)|(나|저|제|우리)(한테|에게|게|가족)\\s*(맞|어울|좋)"
+                    + "|\\d[\\d,.]*\\s*만\\s*원|원\\s*(이하|이상|대|정도|미만)|\\d+\\s*(세|살)|(뭐|어떤\\s*게|뭘)\\s*(가\\s*)?(좋|나을|맞)");
 
     private PlanQuestionRules() {
     }
@@ -61,6 +68,11 @@ public final class PlanQuestionRules {
     // 로밍처럼 요금제 표 밖의 서비스를 묻는 질문이면 FAQ가 답한다
     public static boolean asksOtherService(String question) {
         return question != null && OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
+    }
+
+    // 영화·노트북처럼 요금제와 상관없는 추천 질문을 요금제 추천으로 보내지 않도록, 요금제를 고르는 말이 있는지 본다
+    public static boolean mentionsPlan(String question) {
+        return question != null && (PLAN_WORD.matcher(question).find() || PLAN_CHOICE_CUE.matcher(question).find());
     }
 
     // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
