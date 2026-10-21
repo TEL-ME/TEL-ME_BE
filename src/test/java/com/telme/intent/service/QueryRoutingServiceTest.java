@@ -2530,6 +2530,37 @@ class QueryRoutingServiceTest {
             assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", serviceType);
         }
 
+        // 영업일·영업시간처럼 업무와 상관없는 매장 정보만 물으면 업무를 되묻지 않도록 업무 필터 없음으로 표시한다
+        @ParameterizedTest
+        @ValueSource(strings = {"거기 토요일에도 열어?", "홍대입구역 근처 매장 몇시까지해요?", "강남역 매장 영업시간 알려줘", "여기 매장 주차 돼요?"})
+        void doesNotAskServiceTypeForStoreInfoQuestion(String question) {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "UNDECIDED");
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "UNDECIDED");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"근처 매장 알려줘", "강남역 근처 매장 찾아줘"})
+        void stillAsksServiceTypeWhenQuestionIsOnlyFindingStore(String question) {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
+
+            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
+        }
+
+        @Test
+        void keepsExplicitServiceTypeInStoreInfoQuestion() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("번호이동 가능한 매장 영업시간 알려줘"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
         @Test
         void fillsServiceTypeWhenLlmLeavesSubQueriesEmpty() {
             given(llmClient.generate(any())).willReturn("""

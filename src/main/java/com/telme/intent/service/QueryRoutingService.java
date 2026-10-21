@@ -1351,7 +1351,17 @@ public class QueryRoutingService {
     // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
     private Map<String, String> withRuleServiceType(
             QueryRouting.Intent intent, Map<String, String> extracted, String question) {
-        return intent == QueryRouting.Intent.STORE ? withRuleServiceType(extracted, question) : extracted;
+        if (intent != QueryRouting.Intent.STORE) {
+            return extracted;
+        }
+        Map<String, String> filled = withRuleServiceType(extracted, question);
+        // "거기 토요일에도 열어?"처럼 업무와 상관없는 매장 정보만 물으면 업무를 되묻지 않고 업무 필터 없이 찾는다
+        if (!filled.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY) && RuleBasedRoutingFallback.asksStoreInfo(question)) {
+            Map<String, String> undecided = new LinkedHashMap<>(filled);
+            undecided.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED);
+            return undecided;
+        }
+        return filled;
     }
 
     // 업무 조건이 없으면 주어진 원문에서 규칙으로 업무를 채운다.

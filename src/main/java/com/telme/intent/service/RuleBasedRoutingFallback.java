@@ -140,6 +140,13 @@ public class RuleBasedRoutingFallback {
         return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
     }
 
+    // 영업일·영업시간·주차처럼 어떤 업무로 가든 같은 매장 정보를 묻는 말. 이때는 업무를 되묻지 않는다
+    private static final Pattern STORE_INFO_PATTERN = Pattern.compile("영업|운영|열어|열려|열지|닫|몇\\s*시|쉬는|휴무|주차|전화번호|연락처");
+
+    static boolean asksStoreInfo(String text) {
+        return text != null && STORE_INFO_PATTERN.matcher(text).find();
+    }
+
     // 되묻는 조건과 별개로 매장을 찾아 달라는 말이 들어 있는지
     static boolean asksStoreLookup(String text) {
         return mentionsStore(text) && STORE_FIND_REQUEST_PATTERN.matcher(text).find();
