@@ -2,10 +2,13 @@ package com.telme.store.controller;
 
 import com.telme.global.common.CustomResponse;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
+import com.telme.store.dto.req.StoreRouteRequest;
 import com.telme.store.dto.res.StoreDetailResponse;
 import com.telme.store.dto.res.StoreNearbySearchResponse;
+import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.dto.res.StoreServiceTypeListResponse;
 import com.telme.store.service.StoreQueryService;
+import com.telme.store.service.StoreRouteService;
 import com.telme.store.service.StoreSearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +35,7 @@ public class StoreController {
 
     private final StoreSearchService storeSearchService;
     private final StoreQueryService storeQueryService;
+    private final StoreRouteService storeRouteService;
 
     @Operation(
             summary = "가까운 매장 검색",
@@ -61,6 +65,25 @@ public class StoreController {
     public CustomResponse<StoreDetailResponse> getStore(
             @Parameter(description = "조회할 매장 ID") @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId) {
         return CustomResponse.onSuccess(storeQueryService.getStore(storeId));
+    }
+
+    @Operation(
+            summary = "매장까지 길찾기",
+            description = "현재 위치(출발지)에서 매장까지의 경로를 이동 수단(CAR 자가용, TRANSIT 대중교통, WALK 도보, BICYCLE 자전거)별로 "
+                    + "반환합니다. steps의 path를 순서대로 이어 지도에 그리면 됩니다. 좌표는 위도·경도 순서이며, 출발지 좌표는 "
+                    + "경로 재사용을 위해 소수점 3자리(도보·자전거는 4자리)로 반올림해 조회하므로 경로의 시작점이 약간 다를 수 있습니다. "
+                    + "출발지와 매장이 같은 위치면 거리 0에 steps가 빈 배열입니다. 경로는 수단에 따라 2~10분간 재사용합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공"),
+        @ApiResponse(responseCode = "400", description = "STORE400-5: 최대 이동 거리 초과, COMMON400-1: 요청값 형식 오류"),
+        @ApiResponse(responseCode = "404", description = "STORE404-0: 매장이 없거나 폐점함, STORE404-1: 두 지점 사이의 경로를 찾지 못함"),
+        @ApiResponse(responseCode = "503", description = "STORE503-2: 길찾기 서비스 연결 실패·호출 한도 초과 (FE는 카카오맵 링크로 대신한다)")
+    })
+    @GetMapping("/{storeId}/route")
+    public CustomResponse<StoreRouteResponse> getRoute(
+            @Parameter(description = "도착지 매장 ID") @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId,
+            @Valid @ParameterObject @ModelAttribute StoreRouteRequest request) {
+        return CustomResponse.onSuccess(storeRouteService.getRoute(storeId, request));
     }
 
     @Operation(summary = "업무 종류 목록", description = "업무 선택 칩에 쓸 업무 코드와 이름을 반환합니다.")

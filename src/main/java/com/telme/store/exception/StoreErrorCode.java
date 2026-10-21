@@ -13,6 +13,7 @@ public enum StoreErrorCode implements BaseErrorCode{
 
     INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "STORE400-0", "위도와 경도를 모두 입력해 주세요."),
     OPEN_NOW_FILTER_DISABLED(HttpStatus.BAD_REQUEST, "STORE400-4", "영업 중 매장 검색은 아직 지원하지 않습니다."),
+    ROUTE_DISTANCE_EXCEEDED(HttpStatus.BAD_REQUEST, "STORE400-5", "설정된 최대 이동 거리를 초과한 경로입니다."),
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "STORE404-0", "매장을 찾을 수 없습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "STORE404-1", "현재 위치에서 매장까지의 경로를 찾을 수 없습니다."),
     STORE_CLOSED(HttpStatus.CONFLICT, "STORE409-0", "폐점한 매장은 수정할 수 없습니다."),
