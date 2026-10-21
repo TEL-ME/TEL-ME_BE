@@ -1,5 +1,6 @@
 package com.telme.consult.service;
 
+import com.telme.intent.service.RuleBasedRoutingFallback;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -10,8 +11,6 @@ import java.util.regex.Pattern;
 
 final class StoreHoursQuestion {
 
-    private static final Pattern HOURS_WORD = Pattern.compile(
-            "영업시간|영업일|영업(?:중|해|하|합)|몇시|열어|열려|열지|열었|열까|닫아|닫는|닫았|닫혀|휴무|쉬는|쉬어|언제까지|마감|문(?:여|닫)");
     private static final Pattern WEEKDAY_NAME = Pattern.compile("([월화수목금토일])요일");
     private static final Pattern NOW_WORD = Pattern.compile("지금|현재|당장|열었|열려있|영업중|영업해요");
 
@@ -27,7 +26,7 @@ final class StoreHoursQuestion {
             return Optional.empty();
         }
         String text = question.replaceAll("\\s+", "");
-        if (!HOURS_WORD.matcher(text).find()) {
+        if (!RuleBasedRoutingFallback.asksStoreHours(question)) {
             return Optional.empty();
         }
         List<DayOfWeek> named = new ArrayList<>();

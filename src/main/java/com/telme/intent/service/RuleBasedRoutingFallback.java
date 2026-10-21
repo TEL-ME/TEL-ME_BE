@@ -140,10 +140,16 @@ public class RuleBasedRoutingFallback {
         return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
     }
 
-    private static final Pattern STORE_INFO_PATTERN = Pattern.compile("영업|운영|열어|열려|열지|닫|몇\\s*시|쉬는|휴무|주차|전화번호|연락처");
+    private static final Pattern STORE_HOURS_PATTERN = Pattern.compile(
+            "영업시간|영업일|영업(?:중|해|하|합)|몇시|열어|열려|열지|열었|열까|닫아|닫는|닫았|닫혀|휴무|쉬는|쉬어|언제까지|마감|문(?:여|닫)");
+    private static final Pattern STORE_CONTACT_PATTERN = Pattern.compile("주차|전화번호|연락처");
+
+    public static boolean asksStoreHours(String text) {
+        return text != null && STORE_HOURS_PATTERN.matcher(text.replaceAll("\\s+", "")).find();
+    }
 
     static boolean asksStoreInfo(String text) {
-        return text != null && STORE_INFO_PATTERN.matcher(text).find();
+        return asksStoreHours(text) || text != null && STORE_CONTACT_PATTERN.matcher(text.replaceAll("\\s+", "")).find();
     }
 
     // 매장 말이 든 문장을 뺀 나머지의 물음 여부

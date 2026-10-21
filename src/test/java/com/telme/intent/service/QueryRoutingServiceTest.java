@@ -2531,7 +2531,8 @@ class QueryRoutingServiceTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = {"거기 토요일에도 열어?", "홍대입구역 근처 매장 몇시까지해요?", "강남역 매장 영업시간 알려줘", "여기 매장 주차 돼요?"})
+        @ValueSource(strings = {"거기 토요일에도 열어?", "홍대입구역 근처 매장 몇시까지해요?", "강남역 매장 영업시간 알려줘", "여기 매장 주차 돼요?",
+                "지금 강남역 근처 매장 열었어요?", "강남역 매장 마감 몇 시예요", "일요일에도 문 열어요?"})
         void doesNotAskServiceTypeForStoreInfoQuestion(String question) {
             given(llmClient.generate(any())).willReturn(store("{}", "{}"));
 
@@ -2542,7 +2543,7 @@ class QueryRoutingServiceTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = {"근처 매장 알려줘", "강남역 근처 매장 찾아줘"})
+        @ValueSource(strings = {"근처 매장 알려줘", "강남역 근처 매장 찾아줘", "영업점 찾아줘", "운영하는 매장 알려줘"})
         void stillAsksServiceTypeWhenQuestionIsOnlyFindingStore(String question) {
             given(llmClient.generate(any())).willReturn(store("{}", "{}"));
 
