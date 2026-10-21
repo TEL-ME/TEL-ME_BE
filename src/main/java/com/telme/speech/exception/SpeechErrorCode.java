@@ -18,7 +18,9 @@ public enum SpeechErrorCode implements BaseErrorCode {
     SYNTHESIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "SPEECH503-0",
             "음성 변환 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."),
     TRANSCRIPTION_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "SPEECH503-1",
-            "음성 인식 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+            "음성 인식 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."),
+    USAGE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "SPEECH503-2",
+            "음성 사용량을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String code;

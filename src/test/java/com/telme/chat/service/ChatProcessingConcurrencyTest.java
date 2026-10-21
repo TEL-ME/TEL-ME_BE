@@ -31,7 +31,7 @@ class ChatProcessingConcurrencyTest {
     void 기본값은_예전과_같다() {
         runner.run(context -> {
             ChatProcessingProperties properties = context.getBean(ChatProcessingProperties.class);
-            assertThat(properties).isEqualTo(new ChatProcessingProperties(4, 100));
+            assertThat(properties).isEqualTo(new ChatProcessingProperties(4, 100, ChatProcessingProperties.DEFAULT_SHUTDOWN_WAIT));
             assertThat(properties).isEqualTo(new Binder(new MapConfigurationPropertySource(Map.of()))
                     .bindOrCreate("chat.processing", ChatProcessingProperties.class));
         });
@@ -42,7 +42,7 @@ class ChatProcessingConcurrencyTest {
     void 환경_변수로_바꾼다() {
         runner.withPropertyValues("CHAT_PROCESSING_THREADS=16", "CHAT_PROCESSING_QUEUE=300").run(context ->
                 assertThat(context.getBean(ChatProcessingProperties.class))
-                        .isEqualTo(new ChatProcessingProperties(16, 300)));
+                        .isEqualTo(new ChatProcessingProperties(16, 300, ChatProcessingProperties.DEFAULT_SHUTDOWN_WAIT)));
     }
 
     @ParameterizedTest
@@ -56,7 +56,7 @@ class ChatProcessingConcurrencyTest {
     @Test
     @DisplayName("실행기는 설정한 수만큼 스레드를 고정하고 설정한 대기열을 쓴다")
     void 실행기는_설정값을_쓴다() {
-        var executor = ChatProcessingDispatcher.createExecutor(new ChatProcessingProperties(12, 250));
+        var executor = ChatProcessingDispatcher.createExecutor(new ChatProcessingProperties(12, 250, ChatProcessingProperties.DEFAULT_SHUTDOWN_WAIT));
         try {
             assertThat(executor.getCorePoolSize()).isEqualTo(12);
             assertThat(executor.getMaxPoolSize()).isEqualTo(12);

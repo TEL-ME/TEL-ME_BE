@@ -2,6 +2,7 @@ package com.telme.speech.service;
 
 import com.telme.chat.service.ChatActor;
 import com.telme.speech.config.SpeechSttProperties;
+import com.telme.speech.entity.SpeechDailyUsage;
 import java.time.Clock;
 import java.time.Duration;
 import org.springframework.stereotype.Component;
@@ -15,8 +16,10 @@ public class TranscriptionUsageLimiter {
 
     private final UsageQuota quota;
 
-    public TranscriptionUsageLimiter(Clock clock, SpeechSttProperties properties) {
-        this.quota = new UsageQuota(clock, properties.requestsPerMinute(), properties.dailyDurationLimit().toSeconds());
+    public TranscriptionUsageLimiter(Clock clock, SpeechSttProperties properties,
+            SpeechDailyUsageService dailyUsageService) {
+        this.quota = new UsageQuota(clock, properties.requestsPerMinute(), properties.dailyDurationLimit().toSeconds(),
+                SpeechDailyUsage.Kind.STT_SECONDS, dailyUsageService);
     }
 
     // TTS와 같이 Transcribe 호출 전에 차감하고 실패해도 돌려주지 않는다. 시간 초과는 이미 과금됐을 수 있고, 인식 실패(SPEECH422-0)도 과금된다

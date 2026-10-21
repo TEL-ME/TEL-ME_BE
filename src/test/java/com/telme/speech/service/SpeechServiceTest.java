@@ -58,7 +58,7 @@ class SpeechServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-10-12T00:00:00Z"), ZoneOffset.UTC);
         pollySpeechClient = mock(PollySpeechClient.class);
         speechService = new SpeechService(repository, pollySpeechClient, new SpeechAudioCache(clock, properties),
-                new SpeechUsageLimiter(clock, properties), properties);
+                new SpeechUsageLimiter(clock, properties, SpeechTestSupport.inMemoryDailyUsage()), properties);
         executor = Executors.newFixedThreadPool(2);
     }
 
