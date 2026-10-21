@@ -1,0 +1,104 @@
+package com.telme.intent.service;
+
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.consult.entity.ConsultRequest;
+import com.telme.consult.repository.ConsultRequestRepository;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Component;
+
+// 업무 질문에 매장 방문을 안내받은 뒤 "매장 어디예요?"처럼 업무 없이 매장을 찾으면, 그 상담의 업무를 쓴다.
+// 문맥 해석은 이런 질문을 앞 대화와 무관한 질문으로 보고 문맥을 넘기지 않아, 저장된 메시지를 직접 읽는다
+@Component
+@RequiredArgsConstructor
+public class StoreVisitServiceType {
+
+    // 직전 답변과 그 상담의 고객 발언을 찾기에 충분한 개수. 되묻기가 몇 번 오가도 이 안에 든다
+    private static final int LOOKBACK = 12;
+    private static final Pattern STORE = Pattern.compile("매장|대리점|지점");
+    private static final Pattern VISIT = Pattern.compile("방문|오시|오셔|오실|가시|가셔|가실|들르|들러");
+    private static final String NONE = "";
+
+    private final ChatMessageRepository messages;
+    private final ConsultRequestRepository consultRequests;
+    private final RuleBasedRoutingFallback rules;
+
+    // 직전 답변이 매장 방문 안내가 아니거나 업무가 하나로 정해지지 않으면 null
+    public String of(ChatMessage current) {
+        if (current == null || current.getSession() == null || current.getSequenceNo() == null) {
+            return null;
+        }
+        List<ChatMessage> recent = messages.findCompletedContextMessagesBefore(
+                current.getSession().getSessionId(), 0, current.getSequenceNo(), ChatMessage.Status.COMPLETED,
+                Set.of(ChatMessage.MessageType.ERROR, ChatMessage.MessageType.BLOCKED), PageRequest.of(0, LOOKBACK));
+        if (recent.isEmpty() || !guidesStoreVisit(recent.getFirst())) {
+            return null;
+        }
+        String asked = askedServiceType(recent);
+        if (!NONE.equals(asked)) {
+            return asked;
+        }
+        // 고객이 업무 이름을 쓰지 않았으면 안내 답변이 말한 업무("명의를 변경하실 수 있습니다")를 쓴다
+        String guide = recent.getFirst().getContent();
+        return rules.hasServiceTypeMention(guide) ? rules.serviceTypeOf(guide) : null;
+    }
+
+    // 고객 발언에서 찾은 업무. 업무 표현이 없으면 NONE, 여러 업무가 섞였으면 null
+    private String askedServiceType(List<ChatMessage> recent) {
+        Set<String> codes = new HashSet<>();
+        for (ChatMessage message : recent.subList(1, recent.size())) {
+            // 앞 상담의 답이나 매장 결과가 나오면 그 앞은 다른 상담이다
+            if (message.getRole() == ChatMessage.Role.ASSISTANT
+                    && (message.getMessageType() == ChatMessage.MessageType.ANSWER
+                        || message.getMessageType() == ChatMessage.MessageType.STORE_RESULT)) {
+                break;
+            }
+            if (message.getRole() != ChatMessage.Role.USER) {
+                continue;
+            }
+            for (String text : texts(message)) {
+                if (!rules.hasServiceTypeMention(text)) {
+                    continue;
+                }
+                String code = rules.serviceTypeOf(text);
+                if (code == null) {
+                    return null;
+                }
+                codes.add(code);
+            }
+        }
+        if (codes.isEmpty()) {
+            return NONE;
+        }
+        return codes.size() == 1 ? codes.iterator().next() : null;
+    }
+
+    // 고객 원문과, 그 발언으로 만든 FAQ 상담의 검색어. 업무 이름이 없는 원문도 검색어에서는 업무 이름으로 정리되기도 한다
+    private List<String> texts(ChatMessage message) {
+        List<String> texts = new ArrayList<>();
+        if (message.getContent() != null) {
+            texts.add(message.getContent());
+        }
+        if (message.getMessageId() != null) {
+            consultRequests.findByOriginMessage_MessageIdOrderBySubqueryOrderAsc(message.getMessageId()).stream()
+                    .filter(request -> request.getIntent() == ConsultRequest.Intent.FAQ && request.getQueryText() != null)
+                    .forEach(request -> texts.add(request.getQueryText()));
+        }
+        return texts;
+    }
+
+    // 되묻기("두 분 모두 매장에 오실 수 있나요?")도 매장 방문을 전제로 하므로 함께 본다
+    private static boolean guidesStoreVisit(ChatMessage message) {
+        String content = message.getContent();
+        return message.getRole() == ChatMessage.Role.ASSISTANT
+                && (message.getMessageType() == ChatMessage.MessageType.ANSWER
+                    || message.getMessageType() == ChatMessage.MessageType.CLARIFICATION)
+                && content != null && STORE.matcher(content).find() && VISIT.matcher(content).find();
+    }
+}

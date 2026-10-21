@@ -2552,6 +2552,58 @@ class QueryRoutingServiceTest {
             assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
         }
 
+        // "명의변경하려면 어떻게 해요?"에 매장 방문을 안내받은 뒤 업무 없이 매장을 찾으면 그 업무로 찾는다
+        @Test
+        void fillsServiceTypeFromStoreVisitGuidance() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+            StoreVisitServiceType visit = org.mockito.Mockito.mock(StoreVisitServiceType.class);
+            given(visit.of(any())).willReturn("NAME_CHANGE");
+            service.setStoreVisitServiceType(visit);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("매장이 어디있는데요?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "NAME_CHANGE");
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "NAME_CHANGE");
+        }
+
+        @Test
+        void keepsServiceTypeStatedInQuestionOverStoreVisitGuidance() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+            StoreVisitServiceType visit = org.mockito.Mockito.mock(StoreVisitServiceType.class);
+            org.mockito.Mockito.lenient().when(visit.of(any())).thenReturn("NAME_CHANGE");
+            service.setStoreVisitServiceType(visit);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("번호이동 가능한 매장 어디예요?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "PORT_IN");
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "PORT_IN");
+        }
+
+        @Test
+        void keepsUndecidedServiceTypeForStoreInfoAfterStoreVisitGuidance() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+            StoreVisitServiceType visit = org.mockito.Mockito.mock(StoreVisitServiceType.class);
+            org.mockito.Mockito.lenient().when(visit.of(any())).thenReturn("NAME_CHANGE");
+            service.setStoreVisitServiceType(visit);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("거기 토요일에도 열어?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "UNDECIDED");
+        }
+
+        @Test
+        void stillAsksServiceTypeWithoutStoreVisitGuidance() {
+            given(llmClient.generate(any())).willReturn(store("{}", "{}"));
+            StoreVisitServiceType visit = org.mockito.Mockito.mock(StoreVisitServiceType.class);
+            given(visit.of(any())).willReturn(null);
+            service.setStoreVisitServiceType(visit);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("매장이 어디있는데요?"), null);
+
+            assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
+            assertThat(r.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+        }
+
         @Test
         void keepsExplicitServiceTypeInStoreInfoQuestion() {
             given(llmClient.generate(any())).willReturn(store("{}", "{}"));

@@ -105,6 +105,8 @@ public class QueryRoutingService {
     private final UnknownFaqRecheck unknownFaqRecheck;
     // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다. 값은 RoutingLlmConfiguration이 정한다
     private boolean requestInventoryEnabled = false;
+    // 없으면 매장 찾기 업무를 앞 상담에서 가져오지 않는다
+    private StoreVisitServiceType storeVisitServiceType;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -155,6 +157,11 @@ public class QueryRoutingService {
     @Autowired(required = false)
     void setRoutingRequestInventory(RoutingRequestInventory inventory) {
         this.requestInventoryEnabled = inventory.enabled();
+    }
+
+    @Autowired(required = false)
+    void setStoreVisitServiceType(StoreVisitServiceType storeVisitServiceType) {
+        this.storeVisitServiceType = storeVisitServiceType;
     }
 
     // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
@@ -391,6 +398,7 @@ public class QueryRoutingService {
         validateFaqSearchQueries(payload, question, analysisQuestion);
         payload = preserveFaqQuestionMeaning(
                 payload, analysisQuestion, question, previousSubject, context, restored, executionId);
+        payload = withVisitedServiceType(payload, userMessage, question);
         ensureSingleConsultSupported(payload, singleConsultOnly, question);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
@@ -1360,6 +1368,39 @@ public class QueryRoutingService {
             undecided.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED);
             return undecided;
         }
+        return filled;
+    }
+
+    // 매장 방문을 안내받은 뒤 업무 없이 매장을 찾으면 그 상담의 업무로 찾는다. 질문에 업무 표현이 있으면 질문을 따른다
+    private LlmRoutingPayload withVisitedServiceType(
+            LlmRoutingPayload payload, ChatMessage userMessage, String question) {
+        if (storeVisitServiceType == null || payload.intent() != QueryRouting.Intent.STORE
+                || payload.extractedConditions().containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)
+                || ruleBasedFallback.hasServiceTypeMention(question)) {
+            return payload;
+        }
+        String serviceType = storeVisitServiceType.of(userMessage);
+        if (serviceType == null) {
+            return payload;
+        }
+        log.info("[라우팅] 매장 방문을 안내한 앞 상담의 업무로 매장을 찾습니다: messageId={}, serviceType={}",
+                userMessage.getMessageId(), serviceType);
+        Map<String, String> extracted = new LinkedHashMap<>(payload.extractedConditions());
+        extracted.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        List<LlmRoutingPayload.SubQueryPayload> subQueries = payload.subQueries().stream()
+                .map(sub -> sub.intent() != ConsultRequest.Intent.STORE
+                        || sub.conditions().containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY) ? sub
+                        : new LlmRoutingPayload.SubQueryPayload(sub.order(), sub.intent(), sub.queryText(),
+                                withEntry(sub.conditions(), FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType),
+                                sub.requestQuote()))
+                .toList();
+        return new LlmRoutingPayload(
+                payload.intent(), payload.confidence(), payload.refinedQuery(), extracted, subQueries);
+    }
+
+    private static Map<String, String> withEntry(Map<String, String> conditions, String key, String value) {
+        Map<String, String> filled = new LinkedHashMap<>(conditions);
+        filled.put(key, value);
         return filled;
     }
 
