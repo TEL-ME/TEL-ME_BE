@@ -32,6 +32,12 @@ import org.springframework.stereotype.Service;
 public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
+    private static final Pattern CORRECTION = Pattern.compile("정정|아니고|아니라(?!면)|아니다|잘못(?:말|알|봤|적|이야기)|다시말");
+    // 상담 대상 단어와 물음이 함께 있으면 완결된 질문
+    // 매장·대리점은 대상을 정하지 못해 제외
+    private static final Pattern SERVICE_TOPIC = Pattern.compile(
+            "(?i)요금제|요금|로밍|유심|이심|esim|번호이동|명의|해지|가입|개통|위약금|약정|데이터|통화|문자|부가서비스|결합|5g|lte|알뜰|청소년|시니어|할인|납부|청구|단말|기기변경|정지|분실|재발급");
+    private static final Pattern QUESTION_FORM = Pattern.compile("[?？]|뭐|무엇|어떤|어떻게|얼마|있나요|있어요|되나요|돼요|인가요|가능|알려");
     private static final Pattern TEMPORAL_REFERENCE = Pattern.compile("그때|아까|앞서|이전에");
     private static final Pattern IMPLICIT = Pattern.compile(
             "^(?:그럼|신청방법|비용|요금|기간|필요한서류|얼마|어떻게신청)");
@@ -218,6 +224,7 @@ public class ChatQuestionResolver {
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
                 || madeOfGenericWords(gated, stabilityGuards)
                 || shortFollowUpWithHistory(compact(gated), context)
+                || isCorrectionOfHistory(noWhitespace) && hasCustomerHistory(context)
                 // "설치 기사님 방문비용은 따로 청구되는 건가요?"처럼 길어도 업무 없이 비용 항목만 물으면 대상 유무는 모델이 판정한다.
                 || stabilityGuards && COST_ITEM.matcher(noWhitespace).find() && hasCustomerHistory(context);
         if (mode == Mode.REGEX_GATED && !candidate) {
@@ -385,6 +392,11 @@ public class ChatQuestionResolver {
         return context != null && java.util.stream.Stream.concat(context.summarySources().stream(), context.history().stream())
                 .anyMatch(message -> message.role() == ChatMessage.Role.USER
                         && !ChatContextFormatter.isSocial(message.content()));
+    }
+
+    static boolean isCorrectionOfHistory(String noWhitespace) {
+        return CORRECTION.matcher(noWhitespace).find()
+                && !(SERVICE_TOPIC.matcher(noWhitespace).find() && QUESTION_FORM.matcher(noWhitespace).find());
     }
 
     static boolean isGenericFollowUp(String question) {

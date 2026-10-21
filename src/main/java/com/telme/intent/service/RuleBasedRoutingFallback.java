@@ -81,6 +81,10 @@ public class RuleBasedRoutingFallback {
         "매장\\s*방문.*(가능|방법|절차)|매장에서.*(처리|신청|예약)"
     );
     private static final Pattern STORE_RESULT_REQUEST_PATTERN = Pattern.compile("찾|어디|위치|주소|곳");
+    // 답하는 말과 구분하려고 요청 어미·지역 근처만 인정
+    private static final Pattern STORE_FIND_REQUEST_PATTERN = Pattern.compile(
+        "[가-힣A-Za-z0-9]+(역|동|구|시)\\s*(근처|주변)|어디|위치|주소|영업시간|알려\\s*(줘|주세요|주실)|찾아\\s*(줘|주세요|주실)"
+    );
 
     private static final List<String> FAQ_KEYWORDS = List.of(
         "요금제", "할인", "약정", "위약금", "로밍", "유심", "eSIM",
@@ -134,6 +138,40 @@ public class RuleBasedRoutingFallback {
     // 매장, 대리점, 지점처럼 매장 자체를 가리키는 낱말이 있는지. 매장 요청 여부의 최소 근거로 쓴다.
     static boolean mentionsStore(String text) {
         return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
+    }
+
+    private static final Pattern STORE_HOURS_PATTERN = Pattern.compile(
+            "영업시간|영업일|영업(?:중|해|하|합)|몇시|열어|열려|열지|열었|열까|닫아|닫는|닫았|닫혀|휴무|쉬는|쉬어|언제까지|마감|문(?:여|닫)");
+    private static final Pattern STORE_CONTACT_PATTERN = Pattern.compile("주차|전화번호|연락처");
+
+    public static boolean asksStoreHours(String text) {
+        return text != null && STORE_HOURS_PATTERN.matcher(text.replaceAll("\\s+", "")).find();
+    }
+
+    static boolean asksStoreInfo(String text) {
+        return asksStoreHours(text) || text != null && STORE_CONTACT_PATTERN.matcher(text.replaceAll("\\s+", "")).find();
+    }
+
+    // 매장 말이 든 문장을 뺀 나머지의 물음 여부
+    private static final Pattern CLAUSE_SPLIT = Pattern.compile("(?<=[?？.!])\\s*|그리고|또한|또|근데|그런데|,");
+    private static final Pattern QUESTION_FORM_PATTERN = Pattern.compile(
+        "[?？]|되나|인가요|있나요|할까요|될까요|어떻게|뭐예요|뭔가요|무엇|얼마|가능한가요|맞나요");
+
+    static boolean hasQuestionBesideStoreRequest(String text) {
+        if (text == null) {
+            return false;
+        }
+        StringBuilder rest = new StringBuilder();
+        for (String clause : CLAUSE_SPLIT.split(text)) {
+            if (!STORE_ENTITY_PATTERN.matcher(clause).find()) {
+                rest.append(clause).append(' ');
+            }
+        }
+        return QUESTION_FORM_PATTERN.matcher(rest).find();
+    }
+
+    static boolean asksStoreLookup(String text) {
+        return mentionsStore(text) && STORE_FIND_REQUEST_PATTERN.matcher(text).find();
     }
 
     public LlmRoutingPayload classify(String text) {

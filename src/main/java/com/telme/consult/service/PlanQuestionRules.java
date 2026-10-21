@@ -45,6 +45,11 @@ public final class PlanQuestionRules {
             "비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중|[와과랑].{1,15}중(에서)?(요금|어느|어떤|뭐|어디|가장|더|무엇)");
     // 요금제 표로 답할 수 없는 다른 서비스의 요금·사용 질문
     private static final Pattern OTHER_SERVICE = Pattern.compile("로밍|해외|국제전화");
+    private static final String DAY_UNIT = "(?:하루|일일|일당|(?<![0-9])1일)";
+    private static final String FEE_UNIT = "(?:요금|가격|비용|이용료|얼마)";
+    private static final Pattern DAILY_FEE = Pattern.compile(
+            DAY_UNIT + "(?:에|당|짜리|마다)?" + FEE_UNIT + "|" + "(?:요금|가격|비용)(?:은|이|는|가)?" + DAY_UNIT);
+    private static final Pattern PLAN_OR_ALLOWANCE = Pattern.compile("(?i)요금제|플랜|데이터|통화|문자|gb|기가|무제한");
     private static final Pattern CHANGES = Pattern.compile(
             "려면|변경|바꾸|바꿔|바꿀|옮기|옮겨|갈아|전환|가입|신청|해지|할인|약정|로밍|자동|갑자기|올랐|부족|계속|안쓰고|따로"
                     + "|될까|나이|연령");
@@ -54,13 +59,39 @@ public final class PlanQuestionRules {
     private static final Pattern OWN_USAGE = Pattern.compile("남은|남았|남아|썼|사용했|보냈|했는지");
     private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*남(은|았|아)");
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
+    private static final Pattern PLAN_WORD = Pattern.compile(
+            "(?i)요금|플랜|데이터|통화|문자|사용량|gb|기가|무제한|5g|lte|알뜰|청소년|시니어|어르신|약정|결합|통신비|통신사|월정액");
+    // 물건 이름 바로 뒤에 추천이 붙는 꼴
+    private static final Pattern OTHER_ITEM_RECOMMENDATION = Pattern.compile(
+            "(?:영화|드라마|예능|애니|노래|음악|책|소설|웹툰|맛집|메뉴|음식|식당|카페|레시피|여행지|여행|노트북|컴퓨터|태블릿|이어폰|헤드폰"
+                    + "|케이스|선물|운동화|옷|화장품|가방|시계|자동차|게임|채널|프로그램)(?:을|를|도|이|가)?(?:하나|한개|한권|한곡|한편|몇개|몇권|몇곡|좀|만)?(?:추천|골라|알려)");
 
     private PlanQuestionRules() {
     }
 
     // 로밍처럼 요금제 표 밖의 서비스를 묻는 질문이면 FAQ가 답한다
     public static boolean asksOtherService(String question) {
-        return question != null && OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
+        if (question == null) {
+            return false;
+        }
+        return OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
+    }
+
+    // 요금제 목록 판정 전용
+    public static boolean asksDailyFee(String question) {
+        if (question == null) {
+            return false;
+        }
+        String text = question.replaceAll("\\s+", "");
+        return DAILY_FEE.matcher(text).find() && !PLAN_OR_ALLOWANCE.matcher(text).find();
+    }
+
+    public static boolean recommendsOtherItem(String question) {
+        if (question == null) {
+            return false;
+        }
+        String text = question.replaceAll("\\s+", "");
+        return OTHER_ITEM_RECOMMENDATION.matcher(text).find() && !PLAN_WORD.matcher(text).find();
     }
 
     // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
@@ -117,7 +148,7 @@ public final class PlanQuestionRules {
         if (MY_USAGE.matcher(text).find() && !USAGE_EXCLUDED.matcher(text).find()) {
             return PlanQuestionType.MY_USAGE;
         }
-        if (PLAN_CATALOG.matcher(text).find() && !asksProcedure(PlanQuestionType.PLAN_CATALOG, text)) {
+        if (PLAN_CATALOG.matcher(text).find() && !asksProcedure(PlanQuestionType.PLAN_CATALOG, text) && !asksDailyFee(text)) {
             return PlanQuestionType.PLAN_CATALOG;
         }
         return PlanQuestionType.NONE;

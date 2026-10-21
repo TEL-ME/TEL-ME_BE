@@ -51,6 +51,42 @@ class ChatQuestionResolverTest {
                 .isEqualTo("그럼 신청 방법은?");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"아 정정할게요 중학생 아니고 초등학교 6학년이에요", "아 아들 아니고 딸이요", "아 잘못말했다 19살이요",
+            "아 확인해보니 24개월 아니고 36개월이었네요", "아 아니다 올리는게 아니라 20만원으로 낮출래요 애가 자꾸 결제해서",
+            "아 형 아니고 동생이요 고1인데 미성년자도 되나? 그리고 분당 서현역 근처 매장도", "아 가입한 게 아니라 해지였어요",
+            "아 로밍 아니고 유심 말이에요"})
+    void correctionWithHistoryIsJudgedByTheModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        verify(model, org.mockito.Mockito.atLeastOnce()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"이번 달에 가입한 게 아니라면 요금제 바꿀 수 있는지 알려주세요", "LTE가 아니라 5G 요금제 뭐 있어요", "5G가 아니고 LTE 요금제는 얼마예요"})
+    void completeQuestionWithCorrectionWordIsNotSentToTheModel(String original) {
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        verify(model, org.mockito.Mockito.never()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void correctionWithoutHistoryDoesNotCallTheModel() {
+        var context = new ChatContext(1L, 5L, null, List.of(), "아 아들 아니고 딸이요", 100);
+
+        var result = resolver.resolve(command("아 아들 아니고 딸이요"), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        verify(model, org.mockito.Mockito.never()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     void resolutionTraceKeepsOriginalAlongsideAnalysisBody() {
         var trace = mock(ExecutionTrace.class);

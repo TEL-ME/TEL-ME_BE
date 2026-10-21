@@ -12,18 +12,43 @@ import com.telme.consult.service.NamedLocationStoreSearchPort.Status;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
 import com.telme.store.entity.StoreServiceType;
+import com.telme.store.dto.res.StoreHoursResponse;
+import com.telme.store.service.StoreHoursQueryService;
 import com.telme.store.service.StoreSearchService;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 
-@RequiredArgsConstructor
+@Slf4j
 public class ChatStoreAnswerProvider {
+    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
+
     private final StoreSearchService nearbySearch;
     private final NamedLocationStoreSearchPort namedSearch;
     private final ChatStoreConverter converter;
+    // null이면 영업시간 답변 생략
+    private final StoreHoursQueryService hoursQuery;
+    private final Clock clock;
     private final StoreSearchAssessment assessment = new StoreSearchAssessment();
+
+    public ChatStoreAnswerProvider(StoreSearchService nearbySearch, NamedLocationStoreSearchPort namedSearch,
+            ChatStoreConverter converter) {
+        this(nearbySearch, namedSearch, converter, null, Clock.systemUTC());
+    }
+
+    public ChatStoreAnswerProvider(StoreSearchService nearbySearch, NamedLocationStoreSearchPort namedSearch,
+            ChatStoreConverter converter, StoreHoursQueryService hoursQuery, Clock clock) {
+        this.nearbySearch = nearbySearch;
+        this.namedSearch = namedSearch;
+        this.converter = converter;
+        this.hoursQuery = hoursQuery;
+        this.clock = clock;
+    }
 
     public GeneratedAnswer generate(AnswerInput input) {
         String location = input.confirmedConditions().get("location");
@@ -66,7 +91,7 @@ public class ChatStoreAnswerProvider {
         return switch (nextStep) {
             case USE_RESULTS -> GeneratedAnswer.withoutSources(new ChatAnswer(
                     ChatMessage.MessageType.STORE_RESULT,
-                    result.context().label() + " 기준으로 찾은 매장이에요.",
+                    result.context().label() + " 기준으로 찾은 매장이에요." + hoursText(input, result.stores()),
                     null, List.of(), converter.toSnapshots(result.stores()), result.context()));
             case OFFER_CONDITION_CHANGE -> guidance(emptyMessage(result.context(), !serviceTypes.isEmpty()),
                     result.context());
@@ -75,6 +100,25 @@ public class ChatStoreAnswerProvider {
                     result.context());
             case SEARCH_REQUIRED -> throw new IllegalStateException("매장 검색이 실행되지 않았습니다.");
         };
+    }
+
+    private String hoursText(AnswerInput input, List<com.telme.chat.dto.res.ChatStoreResponse> stores) {
+        if (hoursQuery == null || stores.isEmpty()) {
+            return "";
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(KOREA));
+        var request = StoreHoursQuestion.parse(input.originalUserQuery(), now.toLocalDate());
+        if (request.isEmpty()) {
+            return "";
+        }
+        try {
+            Map<Long, List<StoreHoursResponse>> hours = hoursQuery.hoursOf(stores.stream()
+                    .map(com.telme.chat.dto.res.ChatStoreResponse::storeId).toList());
+            return StoreHoursAnswerText.of(request.get(), stores, hours, now);
+        } catch (DataAccessException exception) {
+            log.warn("[매장 영업시간] 영업시간을 읽지 못해 매장 목록만 안내합니다. executionId={}", input.executionId(), exception);
+            return "";
+        }
     }
 
     private String emptyMessage(ChatStoreSearchContextResponse context, boolean filtered) {

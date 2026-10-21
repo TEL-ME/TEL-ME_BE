@@ -24,10 +24,12 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +41,10 @@ public class MemberRecommendationAnswerer {
     public static final String DATA_KEY = DataUsageReplyParser.CONDITION_KEY;
     public static final String VOICE_KEY = CallTextReplyParser.VOICE_KEY;
     public static final String SMS_KEY = CallTextReplyParser.SMS_KEY;
+    // 더 싼 요금제를 찾는 질문. 되묻기 조건이 아니라 질문에서 읽은 값이며 CHEAPER는 추천 사용량 기준, CHEAPEST는 사용량과 상관없이 싼 순서
+    public static final String PRICE_KEY = "price_request";
+    public static final String CHEAPER = "cheaper";
+    public static final String CHEAPEST = "cheapest";
     // 데이터 사용량을 받은 뒤에야 물을지 알 수 있는 질문. 앞선 되묻기를 마친 뒤에도 처음 묻는 것은 허용한다
     public static final java.util.Set<String> USAGE_FOLLOW_UP_KEYS = java.util.Set.of(VOICE_KEY, SMS_KEY);
 
@@ -50,6 +56,7 @@ public class MemberRecommendationAnswerer {
     private static final String CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
     private static final int COOLDOWN_MONTHS = 3;
     private static final int MB_PER_GB = 1024;
+    private static final int MAX_CHEAPER = 3;
     // 말한 사용량이 요금제 데이터의 이 비율을 넘으면 한도에 가깝다고 알린다
     private static final double TIGHT_RATIO = 0.75;
     private static final String YOUTH_OPTION = "만 %d~%d세".formatted(
@@ -92,26 +99,35 @@ public class MemberRecommendationAnswerer {
                 }
             }
         }
+        boolean subscribed = subscription != null;
+        Long subscribedPlanId = subscription == null || subscription.currentPlan() == null
+                ? null : subscription.currentPlan().planId();
         AgeGroup age = ageGroup(userId, ageAnswer);
         Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
             return byAnswers(group, answers, active, userId != null, mayAsk,
-                    reuseNote(ageReused && age.fromAnswer(), dataReused));
+                    reuseNote(ageReused && age.fromAnswer(), dataReused), answers.get(PRICE_KEY),
+                    new Subscriber(subscribed, subscribedPlanId));
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
-        boolean allowDowngrade = !changedRecently(subscription.subscriptionId());
+        // 고객이 더 싼 요금제를 직접 찾으면 최근에 바꿨어도 싼 요금제를 권한다. 변경 자체는 막히지 않는다
+        boolean allowDowngrade = answers.get(PRICE_KEY) != null || !changedRecently(subscription.subscriptionId());
         if (group == null) {
             Recommendation general = recommender.recommend(pool(active, null), current, demand, allowDowngrade);
             Recommendation any = recommender.recommend(active, current, demand, allowDowngrade);
             if (mayAsk && !any.plan().equals(general.plan())) {
                 return new Outcome(null, List.of(), List.of(ageQuestion()));
             }
-            return answer(general, current, demand, usage.get(), discountPercent(subscription), note);
+            return answer(general, current, demand, usage.get(), discountPercent(subscription),
+                    cheaperThanCurrent(general, pool(active, null), current, demand, discountPercent(subscription),
+                            answers.get(PRICE_KEY)) + note);
         }
-        return answer(recommender.recommend(pool(active, group), current, demand, allowDowngrade), current, demand,
-                usage.get(), discountPercent(subscription), note);
+        Recommendation recommendation = recommender.recommend(pool(active, group), current, demand, allowDowngrade);
+        return answer(recommendation, current, demand, usage.get(), discountPercent(subscription),
+                cheaperThanCurrent(recommendation, pool(active, group), current, demand, discountPercent(subscription),
+                        answers.get(PRICE_KEY)) + note);
     }
 
     // 나이대 질문의 선택지 글자. 직접 말한 나이도 이 글자로 맞춰 쓴다
@@ -142,7 +158,7 @@ public class MemberRecommendationAnswerer {
     // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.
     // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다
     private Outcome byAnswers(Plan.TargetGroup group, Map<String, String> answers, List<Plan> active,
-            boolean member, boolean mayAsk, String note) {
+            boolean member, boolean mayAsk, String note, String priceRequest, Subscriber subscriber) {
         DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
             return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
@@ -180,10 +196,91 @@ public class MemberRecommendationAnswerer {
         if (mayAsk && !asks.isEmpty()) {
             return new Outcome(null, List.of(), asks);
         }
+        if (priceRequest != null) {
+            return new Outcome(cheaperPlans(usage, fit, pool(active, group), CHEAPEST.equals(priceRequest)) + note,
+                    withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
+        }
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
         return new Outcome(recommendation(usage, fit) + limitNotice(limits, voice, sms) + tail + note,
-                List.of(CATALOG_QUESTION), null);
+                withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
+    }
+
+    // 가입 중인 회원이면 변경, 아니면 가입 화면으로 가는 추천 요금제 링크. 지금 쓰는 요금제를 추천했으면 링크가 없다
+    private record Subscriber(boolean subscribed, Long planId) {
+        String link(Plan recommended) {
+            if (!subscribed) {
+                return PlanTaskLinks.subscribeTo(recommended.getName());
+            }
+            return recommended.getPlanId().equals(planId) ? null : PlanTaskLinks.changeTo(recommended.getName());
+        }
+    }
+
+    private static List<String> withLink(List<String> followUps, String link) {
+        if (link == null) {
+            return followUps;
+        }
+        List<String> withLink = new ArrayList<>(followUps);
+        withLink.add(link);
+        return withLink;
+    }
+
+    // 추천 문장을 맨 앞에 두어 다음 질문의 "그 요금제"가 이 답의 추천을 찾을 수 있게 하고, 이어서 추천한 요금제보다 싼 요금제를 알린다.
+    // 사용량 기준이면 데이터가 많은 순, 사용량과 상관없이면 싼 순서로 3개까지이고, 추천 요금제가 이미 가장 싸면 그렇게 알린다
+    private static String cheaperPlans(DataUsageReplyParser.Result usage, UsageFit fit, List<Plan> pool, boolean regardless) {
+        Plan base = fit.cheapest();
+        String basis = usage.kind() == DataUsageReplyParser.Kind.UNLIMITED ? "데이터를 무제한으로 쓰신다면"
+                : "한 달에 데이터를 %s 쓰신다면".formatted(gb(usage.dataMb()));
+        String head = "%s %s(%s) 요금제를 추천해요.".formatted(basis, base.getName(), summary(base));
+        Comparator<Plan> order = regardless ? Comparator.comparingInt(Plan::getMonthlyFee)
+                : Comparator.comparingDouble((Plan plan) -> dataMb(plan)).reversed().thenComparingInt(Plan::getMonthlyFee);
+        List<Plan> cheaper = pool.stream().filter(plan -> plan.getMonthlyFee() < base.getMonthlyFee())
+                .sorted(order).limit(MAX_CHEAPER).toList();
+        if (cheaper.isEmpty()) {
+            return head + " 이보다 싼 요금제는 없어요.";
+        }
+        String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan)))
+                .collect(Collectors.joining(", "));
+        if (regardless) {
+            return head + " 사용량과 상관없이 싼 순서로는 %s이에요. 한도가 작아서 사용량을 채우지 못할 수 있어요.".formatted(list);
+        }
+        return head + " 더 싼 요금제로는 %s이 있는데, 사용량을 채우지 못하고 모자랄 수 있어요.".formatted(list);
+    }
+
+    // 사용량이 있는 회원이 더 싼 요금제를 찾으면 지금 쓰는 요금제보다 싼 요금제를 덧붙인다(이미 권한 요금제는 뺀다).
+    // 더 싼 요금제가 평균 사용량을 채우는지도 알린다. 더 싼 요금제를 찾는 말이 아니면 빈 글자
+    private static String cheaperThanCurrent(Recommendation recommendation, List<Plan> pool, Plan current, Demand demand,
+            int discountPercent, String priceRequest) {
+        if (priceRequest == null) {
+            return "";
+        }
+        Comparator<Plan> order = CHEAPEST.equals(priceRequest) ? Comparator.comparingInt(Plan::getMonthlyFee)
+                : Comparator.comparingDouble((Plan plan) -> dataMb(plan)).reversed().thenComparingInt(Plan::getMonthlyFee);
+        List<Plan> cheaper = pool.stream()
+                .filter(plan -> plan.getMonthlyFee() < current.getMonthlyFee() && !plan.equals(recommendation.plan()))
+                .sorted(order).limit(MAX_CHEAPER).toList();
+        if (cheaper.isEmpty()) {
+            return recommendation.kind() == Kind.CHEAPER ? "" : " 지금 쓰는 요금제보다 싼 요금제는 없어요.";
+        }
+        String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan, discountPercent)))
+                .collect(Collectors.joining(", "));
+        List<String> fitting = cheaper.stream().filter(plan -> PlanRecommender.fits(plan, demand, PlanRecommender.DOWNGRADE_MARGIN)).map(Plan::getName).toList();
+        String fit = fitting.size() == cheaper.size() ? "모두 평균 사용량을 채워요."
+                : fitting.isEmpty() ? "평균 사용량을 채우지 못하고 모자랄 수 있어요."
+                : "이 중 %s 평균 사용량을 채우고 나머지는 모자랄 수 있어요.".formatted(topic(String.join(", ", fitting)));
+        return " 지금 쓰는 요금제보다 싼 요금제로는 %s이 있어요. %s".formatted(list, fit);
+    }
+
+    // 받침 있는 이름에는 은, 없으면 는을 붙인다
+    static String topic(String name) {
+        char last = name.charAt(name.length() - 1);
+        boolean hangul = last >= '가' && last <= '힣';
+        return name + (hangul && (last - '가') % 28 == 0 ? "는" : "은");
+    }
+
+    private static double dataMb(Plan plan) {
+        Long limit = UsageLimits.of(plan).dataMb();
+        return limit == null ? Double.MAX_VALUE : limit;
     }
 
     // 모르거나 말하지 않은 항목은 0으로 두고, 무제한이라고 한 항목은 한도가 없는 요금제만 채운다
@@ -311,15 +408,15 @@ public class MemberRecommendationAnswerer {
             case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요.%s"
                     .formatted(use, current.getName(), summary(current, discountPercent), discountNote(discountPercent)),
                     List.of(CATALOG_QUESTION), null);
-            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요.%s"
+            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s 월 %s이에요.%s"
                     .formatted(use, plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
-                            current.getName(), PlanFormat.money(currentFee), discountNote(discountPercent)),
-                    List.of(CHANGE_QUESTION), null);
+                            topic(current.getName()), PlanFormat.money(currentFee), discountNote(discountPercent)),
+                    List.of(CHANGE_QUESTION, PlanTaskLinks.changeTo(plan.getName())), null);
             case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요.%s"
                     .formatted(use, current.getName(), summary(current, discountPercent), shortage(current, demand),
                             plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
                             discountNote(discountPercent)),
-                    List.of(CHANGE_QUESTION), null);
+                    List.of(CHANGE_QUESTION, PlanTaskLinks.changeTo(plan.getName())), null);
         };
         return note.isEmpty() ? outcome : new Outcome(outcome.content() + note, outcome.followUps(), null);
     }

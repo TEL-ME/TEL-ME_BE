@@ -68,4 +68,7 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
 
     @Query("select h from StoreHours h where h.id.storeId = :storeId")
     List<StoreHours> findHoursByStoreId(@Param("storeId") Long storeId);
+
+    @Query("select h from StoreHours h where h.id.storeId in :storeIds")
+    List<StoreHours> findHoursByStoreIds(@Param("storeIds") Collection<Long> storeIds);
 }

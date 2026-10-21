@@ -3,7 +3,10 @@ package com.telme.consult.config;
 import com.telme.chat.converter.ChatStoreConverter;
 import com.telme.consult.service.ChatStoreAnswerProvider;
 import com.telme.consult.service.NamedLocationStoreSearchPort;
+import com.telme.store.service.StoreHoursQueryService;
 import com.telme.store.service.StoreSearchService;
+import java.time.Clock;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -21,7 +24,9 @@ public class ConsultStoreSearchConfiguration {
 
     @Bean
     ChatStoreAnswerProvider chatStoreAnswerProvider(
-            StoreSearchService nearbySearch, NamedLocationStoreSearchPort namedSearch, ChatStoreConverter converter) {
-        return new ChatStoreAnswerProvider(nearbySearch, namedSearch, converter);
+            StoreSearchService nearbySearch, NamedLocationStoreSearchPort namedSearch, ChatStoreConverter converter,
+            ObjectProvider<StoreHoursQueryService> hoursQuery, ObjectProvider<Clock> clock) {
+        return new ChatStoreAnswerProvider(nearbySearch, namedSearch, converter,
+                hoursQuery.getIfAvailable(), clock.getIfAvailable(Clock::systemUTC));
     }
 }

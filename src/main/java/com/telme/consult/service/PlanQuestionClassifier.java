@@ -22,7 +22,7 @@ public class PlanQuestionClassifier {
 
     // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 쓴다. 엑사원은 스키마로 답만 내서 한도와 관계없이 짧다
     private static final int MAX_TOKENS = 512;
-    private static final Pattern RELATED = Pattern.compile("요금|플랜|데이터|통화|문자|사용량|약정|위약금|해지|가입|추천|5G|LTE|스탠다드|프리미엄|라이트|베이직|언리미티드|알뜰|청소년|시니어|갈아|바꾸|저렴|싼");
+    private static final Pattern RELATED = Pattern.compile("요금|플랜|데이터|통화|문자|사용량|약정|위약금|해지|가입|추천|5G|LTE|스탠다드|프리미엄|라이트|베이직|언리미티드|알뜰|청소년|시니어|갈아|바꾸|저렴|싼|영상|유튜브|넷플릭스|게임|SNS|스트리밍|화상|와이파이|폰");
 
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
@@ -60,6 +60,12 @@ public class PlanQuestionClassifier {
 
     private static PlanQuestionType guard(PlanQuestionType type, String question) {
         if (type != PlanQuestionType.NONE && PlanQuestionRules.asksOtherService(question)) {
+            return PlanQuestionType.NONE;
+        }
+        if (type == PlanQuestionType.PLAN_CATALOG && PlanQuestionRules.asksDailyFee(question)) {
+            return PlanQuestionType.NONE;
+        }
+        if (type == PlanQuestionType.RECOMMENDATION && PlanQuestionRules.recommendsOtherItem(question)) {
             return PlanQuestionType.NONE;
         }
         if (isMyData(type)) {

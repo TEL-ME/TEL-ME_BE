@@ -258,4 +258,17 @@ class RuleBasedRoutingFallbackTest {
     void classify_matchesLowercaseNetworkNames(String question) {
         assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
     }
+
+    @org.junit.jupiter.api.Test
+    void 매장_찾기_말_말고_따로_묻는_것이_있는지_읽는다() {
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "아 형 아니고 동생이요 고1인데 미성년자도 되나? 그리고 분당 서현역 근처 매장도")).isTrue();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "네 같이 갈 수 있어요. 미성년자도 되나요? 그리고 강남역 근처 매장 어디예요")).isTrue();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "네 같이 갈 수 있어요 그리고 강남역 근처 매장 어디예요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("네 그리고 가까운 매장 찾아주세요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("강남역 근처 매장 어디예요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(null)).isFalse();
+    }
 }

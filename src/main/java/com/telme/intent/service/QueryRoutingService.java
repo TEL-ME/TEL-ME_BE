@@ -305,6 +305,16 @@ public class QueryRoutingService {
             method = QueryRouting.Method.SEARCH;
         }
 
+        if (method == QueryRouting.Method.LLM && payload.intent() == QueryRouting.Intent.UNKNOWN) {
+            LlmRoutingPayload corrected = correctUnknown(question);
+            if (corrected != null) {
+                log.info("[라우팅] UNKNOWN이지만 {} 질문이라 규칙으로 보정합니다: messageId={}",
+                        corrected.intent(), userMessage.getMessageId());
+                payload = corrected;
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         boolean llmRouting = method == QueryRouting.Method.LLM;
         if (method == QueryRouting.Method.LLM
                 && payload.intent() != QueryRouting.Intent.UNKNOWN
@@ -1126,12 +1136,43 @@ public class QueryRoutingService {
             }
         }
 
+        // 새 질문 없이 매장 요청만 있으면 새 질문으로 돌리지 않음(기다리던 상담이 취소됨)
+        if (!extracted.isEmpty() && !asksStoreCondition(waiting.pendingKeys()) && ruleBasedFallback.asksStoreLookup(reply)
+                && RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(reply)) {
+            log.info("[후속분석] 조건 답과 함께 매장 찾기 요청이 있어 새 질문으로 처리합니다: consultRequestId={}",
+                    waiting.consultRequestId());
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(), Collections.emptyMap(), Collections.emptySet(), method, Disposition.NEW_QUESTION);
+        }
+
         return new FollowUpRouteResponse(
             waiting.consultRequestId(),
             extracted.values(),
             extracted.declinedKeys(),
             method,
             disposition(payload.responseType(), extracted));
+    }
+
+    private LlmRoutingPayload correctUnknown(String question) {
+        if (RuleBasedRoutingFallback.asksStoreLookup(question)) {
+            LlmRoutingPayload rule = ruleBasedFallback.classify(question);
+            if (rule.intent() == QueryRouting.Intent.STORE) {
+                return rule;
+            }
+        }
+        String addOnQuery = RoutingIntentCorrection.addOnServiceQuery(question);
+        if (addOnQuery == null) {
+            return null;
+        }
+        return new LlmRoutingPayload(
+                QueryRouting.Intent.FAQ, BigDecimal.valueOf(0.80), addOnQuery, Collections.emptyMap(),
+                List.of(new LlmRoutingPayload.SubQueryPayload(
+                        (short) 1, ConsultRequest.Intent.FAQ, addOnQuery, Collections.emptyMap())));
+    }
+
+    private boolean asksStoreCondition(Set<String> pendingKeys) {
+        return pendingKeys.contains(FollowUpRouteResponse.LOCATION_KEY)
+                || pendingKeys.contains(FollowUpRouteResponse.SERVICE_TYPE_KEY);
     }
 
     private Disposition disposition(ResponseType responseType, ExtractedConditions extracted) {
@@ -1309,7 +1350,17 @@ public class QueryRoutingService {
     // 이 규칙은 LLM이 준 업무를 검증할 때와 같다. BOTH는 FAQ 쪽 표현 때문에 매장 업무가 잘못 걸릴 수 있어 채우지 않는다
     private Map<String, String> withRuleServiceType(
             QueryRouting.Intent intent, Map<String, String> extracted, String question) {
-        return intent == QueryRouting.Intent.STORE ? withRuleServiceType(extracted, question) : extracted;
+        if (intent != QueryRouting.Intent.STORE) {
+            return extracted;
+        }
+        Map<String, String> filled = withRuleServiceType(extracted, question);
+        // 업무와 무관한 매장 정보 질문은 업무 필터 없음
+        if (!filled.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY) && RuleBasedRoutingFallback.asksStoreInfo(question)) {
+            Map<String, String> undecided = new LinkedHashMap<>(filled);
+            undecided.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED);
+            return undecided;
+        }
+        return filled;
     }
 
     // 업무 조건이 없으면 주어진 원문에서 규칙으로 업무를 채운다.

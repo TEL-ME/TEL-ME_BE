@@ -80,6 +80,63 @@ class PlanQuestionClassifierTest {
     }
 
     @Test
+    void 모델이_추천이라고_해도_요금제가_아닌_물건을_골라_달라는_질문은_NONE이다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\"}");
+
+        for (String question : new String[] {"요즘 볼만한 영화 추천해 주세요", "노트북 하나 추천해 주세요", "점심 메뉴 추천해줘",
+                "좋은 노래 추천해줘", "맛집 추천해줘", "저렴한 노트북 추천해줘", "이어폰 추천해줘", "책 한 권 추천해줘", "게임 추천해줘",
+                "영상 편집 프로그램 추천해줘", "유튜브 채널 추천해줘"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.NONE);
+        }
+    }
+
+    @Test
+    void 요금제라는_말이_없어도_습관이나_상황으로_요금제를_고르는_추천은_모델_분류를_따른다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\"}");
+
+        for (String question : new String[] {"데이터 많이 쓰는데 추천해줘", "한 달에 20GB 쓰는데 추천해줘", "청소년인데 추천해줘", "싼 거 추천해줘",
+                "저한테 맞는 거 추천해주세요", "5만원 이하 추천해줘", "어머니가 70세인데 추천해줘", "통신비 줄이고 싶은데 추천해줘",
+                "유튜브 많이 보는데 추천해줘", "영상 많이 보는데 뭐가 나아요?", "게임 많이 하는 고등학생인데 추천 좀", "엄마 폰 뭐로 해드리면 좋을까요",
+                "SNS 많이 하는데 추천해줘", "아이가 게임을 많이 해요 추천해 주세요", "부모님 드릴 건데 추천해줘", "가족 4명 같이 쓸 건데 추천해줘",
+                "웹툰이랑 동영상 많이 봐요 추천 좀", "출퇴근 때 영상 보는데 어떤 게 좋을까요", "재택근무라 화상회의 많이 하는데 뭐가 좋을까요"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.RECOMMENDATION);
+        }
+    }
+
+    @Test
+    void 영상_게임_폰_같은_습관_단어가_든_질문도_모델이_분류한다() {
+        for (String question : new String[] {"영상 많이 보는데 뭐가 나아요?", "게임 많이 하는데 추천해줘", "엄마 폰 뭐로 해드리면 좋을까요",
+                "와이파이 써서 거의 안 쓰는데 추천해줘", "화상회의 많이 하는데 뭐가 좋을까요"}) {
+            assertThat(PlanQuestionClassifier.mentionsPlanTopic(question)).as(question).isTrue();
+        }
+        assertThat(PlanQuestionClassifier.mentionsPlanTopic("신촌 매장 어디 있어요")).isFalse();
+    }
+
+    @Test
+    void 날짜나_남은_일수와_내_정보_질문은_하루_요금_규칙으로_막지_않는다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_PENALTY\"}");
+        assertThat(classifier.classify(1L, "약정 끝나기 1일 남았는데 위약금 얼마예요")).isEqualTo(PlanQuestionType.MY_PENALTY);
+
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_USAGE\"}");
+        for (String question : new String[] {"11일에 개통했는데 이번 달 요금 얼마 나와요", "오늘 하루 요금이 얼마나 나왔어요",
+                "내 하루 평균 사용 요금 얼마예요"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.MY_USAGE);
+        }
+    }
+
+    @Test
+    void 요금제나_제공량_말_없이_하루_요금을_물으면_모델이_목록이라_해도_NONE이다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\"}");
+
+        for (String question : new String[] {"요금은 하루에 얼마정도에요", "하루 요금이 얼마예요", "일일 비용이 얼마나 나와요",
+                "1일 요금이 얼마예요", "하루에 얼마 드나요"}) {
+            assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.NONE);
+        }
+        assertThat(classifier.classify(1L, "하루 2GB 주는 요금제 뭐 있어요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        assertThat(classifier.classify(1L, "5G 스탠다드 얼마예요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+    }
+
+    @Test
     void 모델이_NONE이라고_하면_규칙이_맞다고_해도_NONE이다() {
         when(llm.generate(any())).thenReturn("{\"type\":\"NONE\"}");
 
