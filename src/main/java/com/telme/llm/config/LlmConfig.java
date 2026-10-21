@@ -1,6 +1,7 @@
 package com.telme.llm.config;
 
 import java.time.Duration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,6 +12,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import com.telme.llm.service.GpuInstanceStarter;
+import com.telme.llm.service.GpuWakingLlmClient;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.RecordingLlmClient;
@@ -69,7 +72,8 @@ public class LlmConfig {
                 .build();
     }
 
-    // Ollama와 같은 재시도·기록으로 감싸고, 호출 기록에는 서빙을 구분하도록 provider를 vllm으로 남긴다
+    // Ollama와 같은 재시도, 기록으로 감싸고 호출 기록에는 서빙을 구분하도록 provider를 vllm으로 남긴다
+    // 운영(GPU 인스턴스 ID가 있을 때)은 바깥에서 GPU 기동 요청을 한 번 더 감싼다(VllmGpuConfig)
     @Bean
     @Primary
     @ConditionalOnProperty(name = "llm.provider", havingValue = "vllm")
@@ -77,9 +81,12 @@ public class LlmConfig {
             @Qualifier("baseLlmClient") LlmClient baseLlmClient,
             LlmProperties properties,
             LlmRetryProperties retryProperties,
-            LlmGenerationRecorder recorder) {
-        return new RetryingLlmClient(
+            LlmGenerationRecorder recorder,
+            ObjectProvider<GpuInstanceStarter> gpuInstanceStarter) {
+        LlmClient client = new RetryingLlmClient(
                 new RecordingLlmClient(baseLlmClient, recorder, properties.model(), LlmGenerationRecorder.VLLM),
                 retryProperties);
+        GpuInstanceStarter starter = gpuInstanceStarter.getIfAvailable();
+        return starter == null ? client : new GpuWakingLlmClient(client, starter);
     }
 }

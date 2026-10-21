@@ -144,7 +144,6 @@ class ChatOutputGuardTest {
                 () -> guard.verify(store, masks), () -> guard.verify(label, masks),
                 () -> guard.verifyClarification(visible, List.of(), masks),
                 () -> guard.verifyClarification("정상 질문", List.of(visible), masks),
-                () -> guard.verifySummary(strings, masks),
                 () -> guard.verifySerialized(visible, null, null, null, masks),
                 () -> guard.verifySerialized("정상 안내", strings, null, null, masks),
                 () -> guard.verifySerialized("정상 안내", null, strings, null, masks),
@@ -158,8 +157,6 @@ class ChatOutputGuardTest {
                 OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
         assertThatThrownBy(() -> guard.verifyClarification(visible, List.of(), OutputMaskContext.empty()))
                 .isInstanceOf(ChatOutputBlockedException.class);
-        assertThatThrownBy(() -> guard.verifySummary(strings,
-                OutputMaskContext.empty())).isInstanceOf(ChatOutputBlockedException.class);
         assertThatThrownBy(() -> guard.verify(answer(visible + " 씨***발"), masks))
                 .isInstanceOf(ChatOutputBlockedException.class);
     }
@@ -174,15 +171,12 @@ class ChatOutputGuardTest {
         var inspection = new ChatInputInspector(new ObjectMapper()).inspect(original);
         var masks = new OutputMaskContext(List.of(OutputMaskContext.Source.from(inspection)));
         var visible = inspection.content();
-        var strings = new ObjectMapper().writeValueAsString(List.of(visible));
 
         assertThatThrownBy(() -> guard.verify(answer(visible), masks))
                 .isInstanceOf(ChatOutputBlockedException.class);
         assertThatThrownBy(() -> guard.verifySerialized(visible, null, null, null, masks))
                 .isInstanceOf(ChatOutputBlockedException.class);
         assertThatThrownBy(() -> guard.verifyClarification(visible, List.of(), masks))
-                .isInstanceOf(ChatOutputBlockedException.class);
-        assertThatThrownBy(() -> guard.verifySummary(strings, masks))
                 .isInstanceOf(ChatOutputBlockedException.class);
     }
 

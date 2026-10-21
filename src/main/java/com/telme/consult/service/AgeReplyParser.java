@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import com.telme.plan.entity.Plan;
 import com.telme.subscription.service.SubscriptionEligibilityChecker;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -47,13 +48,18 @@ public final class AgeReplyParser {
         if (found) {
             return groups.size() == 1 ? groups.iterator().next() : null;
         }
+        // 단어는 서로 다른 구분이 함께 나오면 어느 쪽인지 알 수 없어 읽지 않는다
+        Set<Plan.TargetGroup> words = EnumSet.noneOf(Plan.TargetGroup.class);
         if (YOUTH_WORD.matcher(reply).find()) {
-            return Plan.TargetGroup.YOUTH;
+            words.add(Plan.TargetGroup.YOUTH);
         }
         if (SENIOR_WORD.matcher(reply).find()) {
-            return Plan.TargetGroup.SENIOR;
+            words.add(Plan.TargetGroup.SENIOR);
         }
-        return GENERAL_WORD.matcher(reply).find() ? Plan.TargetGroup.GENERAL : null;
+        if (GENERAL_WORD.matcher(reply).find()) {
+            words.add(Plan.TargetGroup.GENERAL);
+        }
+        return words.size() == 1 ? words.iterator().next() : null;
     }
 
     private static Plan.TargetGroup groupOfAges(Matcher exact) {

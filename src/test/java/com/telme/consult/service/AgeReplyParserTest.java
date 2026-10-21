@@ -34,6 +34,14 @@ class AgeReplyParserTest {
     }
 
     @Test
+    void 서로_다른_구분의_단어가_함께_나오면_읽지_않는다() {
+        assertThat(AgeReplyParser.parse("청소년이고 성인이에요")).isNull();
+        assertThat(AgeReplyParser.parse("시니어랑 청소년 요금제")).isNull();
+        assertThat(AgeReplyParser.parse("고등학생이에요")).isEqualTo(TargetGroup.YOUTH);
+        assertThat(AgeReplyParser.parse("청소년 청소년")).isEqualTo(TargetGroup.YOUTH);
+    }
+
+    @Test
     void 범위가_한_구분_안이면_읽는다() {
         assertThat(AgeReplyParser.parse("30~40세")).isEqualTo(TargetGroup.GENERAL);
         assertThat(AgeReplyParser.parse("만 14~18세")).isEqualTo(TargetGroup.YOUTH);

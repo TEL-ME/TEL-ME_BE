@@ -114,6 +114,15 @@ public class MemberRecommendationAnswerer {
                 usage.get(), discountPercent(subscription), note);
     }
 
+    // 나이대 질문의 선택지 글자. 직접 말한 나이도 이 글자로 맞춰 쓴다
+    static String ageOption(Plan.TargetGroup group) {
+        return switch (group) {
+            case YOUTH -> YOUTH_OPTION;
+            case SENIOR -> SENIOR_OPTION;
+            default -> GENERAL_OPTION;
+        };
+    }
+
     // 앞서 "모르겠어요"라고 한 사용량은 다시 쓰지 않는다. 그대로 쓰면 다음 추천이 되묻지 않고 안내로만 끝난다
     private static Map<String, String> withoutUnsure(Map<String, String> remembered) {
         Map<String, String> reusable = new HashMap<>(remembered);

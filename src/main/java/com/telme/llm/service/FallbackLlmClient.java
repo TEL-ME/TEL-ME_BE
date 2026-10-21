@@ -23,7 +23,8 @@ public class FallbackLlmClient implements LlmClient {
             return primary.generate(request);
         } catch (RuntimeException failure) {
             log.warn("[LLM 대체] 주 모델 호출이 실패해 대체 모델로 다시 부릅니다. taskType={}", request.taskType());
-            return fallback.generate(request);
+            // 대체 호출임을 표시해 꺼진 GPU를 켤 신호로 쓴다(GpuWakingLlmClient)
+            return LlmFallbackScope.run(() -> fallback.generate(request));
         }
     }
 
@@ -38,7 +39,7 @@ public class FallbackLlmClient implements LlmClient {
         if (guarded.failedBeforeFirstToken) {
             log.warn("[LLM 대체] 주 모델 스트리밍이 첫 글자 전에 실패해 대체 모델로 다시 부릅니다. taskType={}",
                     request.taskType());
-            fallback.stream(request, handler);
+            LlmFallbackScope.run(() -> fallback.stream(request, handler));
         }
     }
 
