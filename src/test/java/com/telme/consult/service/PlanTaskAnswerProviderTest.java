@@ -181,16 +181,13 @@ class PlanTaskAnswerProviderTest {
     }
 
     @Test
-    @DisplayName("추천 답변이 다른 요금제를 권하면 변경 방법 버튼 옆에 변경 화면 링크를 더하고, 다른 답변은 그대로 낸다")
-    void 추천_답변_링크() {
-        GeneratedAnswer recommended = answer("LTE 맥스를 추천해요.", List.of(PlanTaskAnswerProvider.RECOMMENDATION_CHANGE_QUESTION));
-        GeneratedAnswer plain = answer("FAQ 답변", List.of("요금제 종류 알려줘"));
+    @DisplayName("추천 답변은 업무 처리기가 후속 버튼을 더하지 않고 그대로 낸다")
+    void 추천_답변_그대로() {
+        GeneratedAnswer recommended = answer("LTE 맥스를 추천해요.", List.of("요금제 변경은 어떻게 해요?", "LTE 맥스 변경하러 가기"));
         when(faq.prepare(any(), anyBoolean())).thenReturn(Prepared.answered(recommended));
-        when(faq.generate(any())).thenReturn(plain);
 
         assertThat(provider.prepare(input(Purpose.GENERAL_FAQ, "나한테 맞는 요금제 추천해줘"), true).answer().answer().followUps())
-                .containsExactly(PlanTaskAnswerProvider.RECOMMENDATION_CHANGE_QUESTION, PlanTaskLinks.CHANGE);
-        assertThat(provider.generate(input(Purpose.GENERAL_FAQ, "요금제 종류가 뭐예요"))).isSameAs(plain);
+                .containsExactly("요금제 변경은 어떻게 해요?", "LTE 맥스 변경하러 가기");
     }
 
     @Test

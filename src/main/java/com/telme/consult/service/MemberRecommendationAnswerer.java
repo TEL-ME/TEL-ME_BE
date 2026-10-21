@@ -99,12 +99,16 @@ public static final String CHEAPEST = "cheapest";
                 }
             }
         }
+        boolean subscribed = subscription != null;
+        Long subscribedPlanId = subscription == null || subscription.currentPlan() == null
+                ? null : subscription.currentPlan().planId();
         AgeGroup age = ageGroup(userId, ageAnswer);
         Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (usage.isEmpty()) {
             return byAnswers(group, answers, active, userId != null, mayAsk,
-                    reuseNote(ageReused && age.fromAnswer(), dataReused), answers.get(PRICE_KEY));
+                    reuseNote(ageReused && age.fromAnswer(), dataReused), answers.get(PRICE_KEY),
+                    new Subscriber(subscribed, subscribedPlanId));
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
@@ -149,7 +153,7 @@ public static final String CHEAPEST = "cheapest";
     // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.
     // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다
     private Outcome byAnswers(Plan.TargetGroup group, Map<String, String> answers, List<Plan> active,
-            boolean member, boolean mayAsk, String note, String priceRequest) {
+            boolean member, boolean mayAsk, String note, String priceRequest, Subscriber subscriber) {
         DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
             return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
@@ -194,7 +198,26 @@ public static final String CHEAPEST = "cheapest";
         String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
         return new Outcome(recommendation(usage, fit) + limitNotice(limits, voice, sms) + tail + note,
-                List.of(CATALOG_QUESTION), null);
+                withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
+    }
+
+    // 가입 중인 회원이면 변경, 아니면 가입 화면으로 가는 추천 요금제 링크. 지금 쓰는 요금제를 추천했으면 링크가 없다
+    private record Subscriber(boolean subscribed, Long planId) {
+        String link(Plan recommended) {
+            if (!subscribed) {
+                return PlanTaskLinks.subscribeTo(recommended.getName());
+            }
+            return recommended.getPlanId().equals(planId) ? null : PlanTaskLinks.changeTo(recommended.getName());
+        }
+    }
+
+    private static List<String> withLink(List<String> followUps, String link) {
+        if (link == null) {
+            return followUps;
+        }
+        List<String> withLink = new ArrayList<>(followUps);
+        withLink.add(link);
+        return withLink;
     }
 
     // 추천한 요금제보다 싼 요금제를 알린다. 사용량 기준이면 데이터가 많은 순, 사용량과 상관없이면 싼 순서로 3개까지이고,
@@ -353,12 +376,12 @@ public static final String CHEAPEST = "cheapest";
             case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요.%s"
                     .formatted(use, plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
                             current.getName(), PlanFormat.money(currentFee), discountNote(discountPercent)),
-                    List.of(CHANGE_QUESTION), null);
+                    List.of(CHANGE_QUESTION, PlanTaskLinks.changeTo(plan.getName())), null);
             case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요.%s"
                     .formatted(use, current.getName(), summary(current, discountPercent), shortage(current, demand),
                             plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
                             discountNote(discountPercent)),
-                    List.of(CHANGE_QUESTION), null);
+                    List.of(CHANGE_QUESTION, PlanTaskLinks.changeTo(plan.getName())), null);
         };
         return note.isEmpty() ? outcome : new Outcome(outcome.content() + note, outcome.followUps(), null);
     }

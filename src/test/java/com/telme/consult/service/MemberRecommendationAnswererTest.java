@@ -241,7 +241,9 @@ class MemberRecommendationAnswererTest {
         assertThat(answered(null, GENERAL, "40GB")).contains("로그인하고 요금제에 가입하시면");
         assertThat(answered(userId, GENERAL, "40GB")).contains("가입한 요금제의 사용량이 쌓이면");
         assertThat(answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), false).followUps())
-                .containsExactly("요금제 종류 알려줘");
+                .containsExactly("요금제 종류 알려줘", "5G 스탠다드 가입하러 가기");
+        assertThat(answerer.recommend(userId, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), false).followUps())
+                .containsExactly("요금제 종류 알려줘", "5G 스탠다드 가입하러 가기");
     }
 
     @Test
@@ -360,7 +362,7 @@ class MemberRecommendationAnswererTest {
 
         assertThat(outcome.content()).contains("최근 평균 사용량은 데이터 35GB, 통화 100분, 문자 50건이에요",
                 "5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면", "월 20,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 85,000원이에요");
-        assertThat(outcome.followUps()).containsExactly("요금제 변경은 어떻게 해요?");
+        assertThat(outcome.followUps()).containsExactly("요금제 변경은 어떻게 해요?", "5G 스탠다드 변경하러 가기");
     }
 
     @Test

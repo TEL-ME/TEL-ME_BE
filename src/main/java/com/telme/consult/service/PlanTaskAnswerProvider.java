@@ -9,7 +9,6 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -24,9 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 // 나머지는 그대로 넘긴다. 보안상 채팅에서는 계약을 바꾸지 않는다
 @Slf4j
 public final class PlanTaskAnswerProvider implements AnswerProvider {
-
-    // 요금제 추천 답변(MemberRecommendationAnswerer)이 더 싸거나 큰 요금제를 권할 때 다는 버튼. 이 버튼 옆에 변경 화면 링크를 더한다
-    static final String RECOMMENDATION_CHANGE_QUESTION = "요금제 변경은 어떻게 해요?";
 
     // 대상 요금제를 직전 추천에서 보충하는 업무. 정지·해지는 쓰지 않아 저장된 메시지를 읽지 않는다
     private static final Set<PlanTask> USES_RECOMMENDATION = EnumSet.of(PlanTask.CHANGE, PlanTask.SUBSCRIBE);
@@ -71,19 +67,17 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
         if (answer.isPresent()) {
             return Prepared.answered(answer.get());
         }
-        Prepared prepared = delegate.prepare(input, plansClarification);
-        return prepared == null || prepared.answer() == null ? prepared
-                : new Prepared(prepared.searchResults(), prepared.plan(), withChangeLink(prepared.answer()));
+        return delegate.prepare(input, plansClarification);
     }
 
     @Override
     public GeneratedAnswer generate(AnswerInput input, Prepared prepared) {
-        return withChangeLink(delegate.generate(input, prepared));
+        return delegate.generate(input, prepared);
     }
 
     @Override
     public GeneratedAnswer generate(AnswerInput input) {
-        return taskAnswer(input).orElseGet(() -> withChangeLink(delegate.generate(input)));
+        return taskAnswer(input).orElseGet(() -> delegate.generate(input));
     }
 
     // 업무 요청이 아니면 비어 있다. 업무 판정은 사용자가 이번에 쓴 원문으로만 한다. 문맥으로 풀어쓴 문장에는
@@ -152,20 +146,6 @@ public final class PlanTaskAnswerProvider implements AnswerProvider {
         trace.stage(input.executionId(), "planTask", Map.of("task", task));
         return GeneratedAnswer.withoutSources(new ChatAnswer(ChatMessage.MessageType.ANSWER, outcome.content(),
                 ChatMessage.AnswerBasis.GROUNDED, outcome.followUps(), null));
-    }
-
-    // 추천 답변이 다른 요금제를 권하면 요금제 변경 화면 링크를 더한다
-    private GeneratedAnswer withChangeLink(GeneratedAnswer generated) {
-        if (!enabled || generated == null || generated.answer() == null || generated.answer().followUps() == null
-                || !generated.answer().followUps().contains(RECOMMENDATION_CHANGE_QUESTION)
-                || generated.answer().followUps().contains(PlanTaskLinks.CHANGE)) {
-            return generated;
-        }
-        List<String> followUps = new ArrayList<>(generated.answer().followUps());
-        followUps.add(PlanTaskLinks.CHANGE);
-        ChatAnswer answer = generated.answer();
-        return new GeneratedAnswer(new ChatAnswer(answer.messageType(), answer.content(), answer.answerBasis(),
-                List.copyOf(followUps), answer.storeResults(), answer.storeSearchContext()), generated.sources());
     }
 
     private Long memberOf(AnswerInput input) {
