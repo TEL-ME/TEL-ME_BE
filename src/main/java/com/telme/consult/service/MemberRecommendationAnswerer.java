@@ -112,7 +112,8 @@ public class MemberRecommendationAnswerer {
         }
         String note = reuseNote(ageReused && age.fromAnswer(), false);
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
-        boolean allowDowngrade = !changedRecently(subscription.subscriptionId());
+        // 고객이 더 싼 요금제를 직접 찾으면 최근에 바꿨어도 싼 요금제를 권한다. 변경 자체는 막히지 않는다
+        boolean allowDowngrade = answers.get(PRICE_KEY) != null || !changedRecently(subscription.subscriptionId());
         if (group == null) {
             Recommendation general = recommender.recommend(pool(active, null), current, demand, allowDowngrade);
             Recommendation any = recommender.recommend(active, current, demand, allowDowngrade);
@@ -263,11 +264,18 @@ public class MemberRecommendationAnswerer {
         }
         String list = cheaper.stream().map(plan -> "%s(%s)".formatted(plan.getName(), summary(plan, discountPercent)))
                 .collect(Collectors.joining(", "));
-        List<String> fitting = cheaper.stream().filter(plan -> PlanRecommender.fits(plan, demand)).map(Plan::getName).toList();
+        List<String> fitting = cheaper.stream().filter(plan -> PlanRecommender.fits(plan, demand, PlanRecommender.DOWNGRADE_MARGIN)).map(Plan::getName).toList();
         String fit = fitting.size() == cheaper.size() ? "모두 평균 사용량을 채워요."
                 : fitting.isEmpty() ? "평균 사용량을 채우지 못하고 모자랄 수 있어요."
-                : "이 중 %s은 평균 사용량을 채우고 나머지는 모자랄 수 있어요.".formatted(String.join(", ", fitting));
+                : "이 중 %s 평균 사용량을 채우고 나머지는 모자랄 수 있어요.".formatted(topic(String.join(", ", fitting)));
         return " 지금 쓰는 요금제보다 싼 요금제로는 %s이 있어요. %s".formatted(list, fit);
+    }
+
+    // 받침 있는 이름에는 은, 없으면 는을 붙인다
+    static String topic(String name) {
+        char last = name.charAt(name.length() - 1);
+        boolean hangul = last >= '가' && last <= '힣';
+        return name + (hangul && (last - '가') % 28 == 0 ? "는" : "은");
     }
 
     private static double dataMb(Plan plan) {
@@ -400,9 +408,9 @@ public class MemberRecommendationAnswerer {
             case KEEP -> new Outcome("%s 지금 쓰는 %s(%s)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요.%s"
                     .formatted(use, current.getName(), summary(current, discountPercent), discountNote(discountPercent)),
                     List.of(CATALOG_QUESTION), null);
-            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s은 월 %s이에요.%s"
+            case CHEAPER -> new Outcome("%s %s(%s)으로 바꾸면 사용량을 채우면서 월 %s 아낄 수 있어요. 지금 %s 월 %s이에요.%s"
                     .formatted(use, plan.getName(), summary(plan, discountPercent), PlanFormat.money(gap),
-                            current.getName(), PlanFormat.money(currentFee), discountNote(discountPercent)),
+                            topic(current.getName()), PlanFormat.money(currentFee), discountNote(discountPercent)),
                     List.of(CHANGE_QUESTION, PlanTaskLinks.changeTo(plan.getName())), null);
             case UPGRADE -> new Outcome("%s 지금 쓰는 %s(%s)은 %s 부족해요. %s(%s)을 추천해요. 월 %s이 더 들어요.%s"
                     .formatted(use, current.getName(), summary(current, discountPercent), shortage(current, demand),

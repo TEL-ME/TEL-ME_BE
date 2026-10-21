@@ -593,6 +593,28 @@ class MemberRecommendationAnswererTest {
         assertThat(answerer.recommend(userId, age(GENERAL), true).content()).contains("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면");
     }
 
+    @Test
+    void 최근에_바꾼_회원도_더_싼_요금제를_찾으면_싼_요금제를_권하고_앞뒤가_맞게_안내한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD");
+        at(Instant.parse("2026-09-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null);
+        at(OCT_12);
+        setUsage(35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, Map.of("age_group", GENERAL, "price_request", "cheaper"), true).content();
+
+        assertThat(content).contains("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면", "지금 5G 프리미엄은 월 85,000원이에요")
+                .doesNotContain("그대로 쓰시는 걸 추천해요");
+    }
+
+    @Test
+    void 요금제_이름_뒤에_받침에_맞는_조사를_붙인다() {
+        assertThat(MemberRecommendationAnswerer.topic("5G 프리미엄")).isEqualTo("5G 프리미엄은");
+        assertThat(MemberRecommendationAnswerer.topic("5G 스탠다드")).isEqualTo("5G 스탠다드는");
+        assertThat(MemberRecommendationAnswerer.topic("LTE 플러스")).isEqualTo("LTE 플러스는");
+        assertThat(MemberRecommendationAnswerer.topic("5G 스탠다드, LTE 맥스")).isEqualTo("5G 스탠다드, LTE 맥스는");
+    }
+
     private String answered(Long member, String age, String data) {
         Map<String, String> confirmed = new java.util.HashMap<>(age(age));
         confirmed.put("monthly_data_usage", data);
