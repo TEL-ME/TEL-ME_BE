@@ -51,6 +51,16 @@ class BedrockRequestConverterTest {
     }
 
     @Test
+    @DisplayName("요청에 추론 강도가 있으면 설정값 대신 그 값을 보낸다")
+    void 요청의_추론_강도를_쓴다() {
+        ConverseRequest result = converter.toConverseRequest(LlmRequest.builder()
+                .taskType(TaskType.RAG_ANSWER).userPrompt("질문").reasoningEffort("medium").build());
+
+        assertThat(result.additionalModelRequestFields().asMap().get("reasoning_effort").asString())
+                .isEqualTo("medium");
+    }
+
+    @Test
     @DisplayName("요청에 지정한 temperature와 최대 토큰을 그대로 쓴다")
     void 요청값을_그대로_쓴다() {
         ConverseRequest result = converter.toConverseRequest(LlmRequest.builder()

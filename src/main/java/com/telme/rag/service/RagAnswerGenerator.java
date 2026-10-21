@@ -5,7 +5,9 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
 import com.telme.rag.config.RagAnswerLlmConfiguration;
+import com.telme.rag.config.RagAnswerProperties;
 import com.telme.llm.service.LlmGenerationRecorder;
+import com.telme.llm.exception.LlmStreamCancelledException;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.rag.dto.req.AnswerRequest;
@@ -16,7 +18,9 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
 import com.telme.chat.service.ChatTokenEstimator;
+import com.telme.llm.config.BedrockConfig;
 import com.telme.llm.config.LlmProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import java.util.stream.Collectors;
@@ -28,6 +32,10 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class RagAnswerGenerator implements AnswerGenerator {
 
+    // 가드가 근거에 없는 금액으로 막았을 때 다시 부르는 추론 강도. low에서는 생각은 맞게 하고 답에 다른 금액을 쓰는 일이 있다
+    // ("7,800원이 아니라 7,700원입니다", TELME-205 재현: low 20/30, medium 0/30)
+    static final String AMOUNT_RETRY_REASONING_EFFORT = "medium";
+
     private final LlmClient llmClient;
     private final AnswerContextConverter contextConverter;
     private final AnswerGuard answerGuard;
@@ -35,23 +43,34 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final LlmGenerationRecorder recorder;
     private final ExecutionTrace trace;
     private final int contextSize;
+    // 금액으로 막힌 답을 다시 부를 gpt-oss(Bedrock). 엑사원 대체를 거치지 않는다. null이면 다시 생성하지 않는다
+    private final LlmClient amountRetryClient;
 
     // 모델은 RagAnswerLlmConfiguration이 고른다(rag.answer.bedrock)
     @Autowired
     public RagAnswerGenerator(@Qualifier(RagAnswerLlmConfiguration.RAG_ANSWER_LLM_CLIENT) LlmClient client,
             AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
-            LlmProperties properties) {
-        this(client, converter, guard, checker, recorder, trace, properties.contextSize());
+            LlmProperties properties, RagAnswerProperties answerProperties,
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {
+        this(client, converter, guard, checker, recorder, trace, properties.contextSize(),
+                RagAnswerLlmConfiguration.amountRetryClient(answerProperties, bedrock.getIfAvailable()));
     }
 
     public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace) {
-        this(client, converter, guard, checker, recorder, trace, 8192);
+        this(client, converter, guard, checker, recorder, trace, null);
+    }
+
+    public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
+            LlmClient amountRetryClient) {
+        this(client, converter, guard, checker, recorder, trace, 8192, amountRetryClient);
     }
 
     private RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
-            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace, int size) {
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace, int size,
+            LlmClient amountRetryClient) {
         this.llmClient = client;
         this.contextConverter = converter;
         this.answerGuard = guard;
@@ -59,6 +78,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         this.recorder = recorder;
         this.trace = trace;
         this.contextSize = size;
+        this.amountRetryClient = amountRetryClient;
     }
 
     @Override
@@ -118,17 +138,16 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .promptVersion(AnswerPromptTemplates.promptVersionFor(request.userQuery()))
                 .build();
 
-        CollectingHandler collector =
-                new CollectingHandler(handler, answerGuard, answerEvidence, request.resolvedQuery(),
-                        String.join(" ", request.conditions().values()),
-                        trace, request.executionId(), request.consultRequestId());
-        try {
-            llmClient.stream(llmRequest, collector);
-            collector.rethrowIfFailed();
-        } catch (AnswerGuardException rejection) {
-            if (collector.rejection != rejection) {
-                throw rejection;
-            }
+        String confirmedValues = String.join(" ", request.conditions().values());
+        CollectingHandler collector = new CollectingHandler(handler, answerGuard, answerEvidence,
+                request.resolvedQuery(), confirmedValues, trace, request.executionId(), request.consultRequestId());
+        AnswerGuardException rejection = streamGuarded(llmClient, llmRequest, collector);
+        if (rejection != null && amountRetryClient != null && rejection.kind() == AnswerGuardException.Kind.AMOUNT) {
+            collector = retryWithMoreReasoning(request, llmRequest, handler, answerEvidence, confirmedValues,
+                    rejection);
+            rejection = collector.rejection;
+        }
+        if (rejection != null) {
             // 검사 예외는 기록 클라이언트까지 전달해 실패로 남긴 뒤 기존 안전 안내로 완료한다.
             log.warn("[RagAnswerGenerator] Guard 차단으로 안전 안내 반환 executionId={} reason={}",
                     request.executionId(), rejection.getMessage());
@@ -143,6 +162,78 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 // 모델이 실제로 참고한 근거는 알 수 없어 전달한 검색 결과 전부를 기록
                 .sources(contextConverter.toSources(request.searchResults()))
                 .build();
+    }
+
+    // 가드 예외면 돌려주고, 그 밖의 실패는 그대로 던진다
+    private AnswerGuardException streamGuarded(LlmClient client, LlmRequest llmRequest, CollectingHandler collector) {
+        try {
+            client.stream(llmRequest, collector);
+            collector.rethrowIfFailed();
+            return null;
+        } catch (AnswerGuardException rejection) {
+            if (collector.rejection != rejection) {
+                throw rejection;
+            }
+            return rejection;
+        }
+    }
+
+    /**
+     * 근거에 없는 금액으로 막힌 답을 추론 강도를 올려 gpt-oss로 한 번 다시 생성한다. 엑사원 대체는 거치지 않는다.
+     * 다시 생성이 가드 밖의 이유로 실패하면 처음 막힌 것과 같이 안전 안내로 끝낸다(호출자에게 오류 알림은 넘기지 않는다).
+     * 고객이 끊은 것은 그대로 던진다
+     */
+    private CollectingHandler retryWithMoreReasoning(AnswerRequest request, LlmRequest llmRequest,
+            LlmStreamHandler handler, String answerEvidence, String confirmedValues,
+            AnswerGuardException rejection) {
+        log.info("[RagAnswerGenerator] 근거에 없는 금액으로 막혀 추론 강도 {}로 다시 생성 executionId={} reason={}",
+                AMOUNT_RETRY_REASONING_EFFORT, request.executionId(), rejection.getMessage());
+        var retry = new LinkedHashMap<String, Object>(Map.of("reason", rejection.getMessage(),
+                "reasoningEffort", AMOUNT_RETRY_REASONING_EFFORT));
+        retry.put("consultRequestId", request.consultRequestId());
+        CollectingHandler collector = new CollectingHandler(new WithoutErrors(handler), answerGuard,
+                answerEvidence, request.resolvedQuery(), confirmedValues, trace, request.executionId(),
+                request.consultRequestId());
+        try {
+            AnswerGuardException again = streamGuarded(amountRetryClient,
+                    llmRequest.toBuilder().reasoningEffort(AMOUNT_RETRY_REASONING_EFFORT).build(), collector);
+            retry.put("outcome", again == null ? "PASSED" : "BLOCKED");
+        } catch (LlmStreamCancelledException cancelled) {
+            throw cancelled;
+        } catch (RuntimeException failure) {
+            log.warn("[RagAnswerGenerator] 다시 생성 실패, 안전 안내로 끝냄 executionId={}", request.executionId(), failure);
+            retry.put("outcome", "FAILED");
+            collector.rejection = rejection;
+        }
+        trace.append(request.executionId(), "answerRetries", retry);
+        return collector;
+    }
+
+    // 다시 생성에서는 실패를 호출자에게 알리지 않는다. 처음 답이 이미 막혀 안전 안내로 끝낼 것이기 때문이다
+    private record WithoutErrors(LlmStreamHandler delegate) implements LlmStreamHandler {
+        @Override
+        public void onToken(String token) {
+            delegate.onToken(token);
+        }
+
+        @Override
+        public void onComplete() {
+            delegate.onComplete();
+        }
+
+        @Override
+        public void onError(Throwable error) {
+        }
+
+        @Override
+        public void onProgress() {
+            delegate.onProgress();
+        }
+
+        @Override
+        public void onRetry(int attempt, Throwable cause) {
+            delegate.onRetry(attempt, cause);
+        }
     }
 
     // 잘라낸 답변은 문구로 끝난다. 앞에 "죄송합니다." 같은 서두가 남을 수 있어 포함 여부로 본다

@@ -38,9 +38,12 @@ public class BedrockRequestConverter {
         if (request.systemPrompt() != null && !request.systemPrompt().isBlank()) {
             builder.system(SystemContentBlock.fromText(request.systemPrompt()));
         }
-        if (properties.reasoningEffort() != null && !properties.reasoningEffort().isBlank()) {
+        // 요청에 추론 강도가 있으면 그 값을, 없으면 설정값을 보낸다(답변 생성의 금액 재시도가 medium으로 다시 부른다)
+        String reasoningEffort = request.reasoningEffort() != null && !request.reasoningEffort().isBlank()
+                ? request.reasoningEffort() : properties.reasoningEffort();
+        if (reasoningEffort != null && !reasoningEffort.isBlank()) {
             builder.additionalModelRequestFields(Document.mapBuilder()
-                    .putString("reasoning_effort", properties.reasoningEffort())
+                    .putString("reasoning_effort", reasoningEffort)
                     .build());
         }
         return builder.build();
