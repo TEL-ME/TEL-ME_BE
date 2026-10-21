@@ -412,6 +412,53 @@ class QueryRoutingServiceFollowUpTest {
                 SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
     }
 
+    @ParameterizedTest
+    @DisplayName("매장을 묻는 중이 아닌데 답과 함께 매장 찾기를 요청하면 조건 답으로만 읽지 않고 새 질문으로 처리한다")
+    @ValueSource(strings = {
+            "아 형 아니고 동생이요 고1인데 미성년자도 되나? 그리고 분당 서현역 근처 매장도",
+            "아 형 아니고 동생이요 그리고 서현역 근처 매장도 알려주세요",
+            "네 같이 갈 수 있어요 그리고 강남역 근처 매장 어디예요",
+            "네 그리고 가까운 매장 찾아주세요"})
+    void analyzeFollowUp_treatsStoreRequestWithAnswerAsNewQuestion(String reply) {
+        givenWaiting("both_present");
+        given(llmClient.generate(any())).willReturn("{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":"
+                + "[{\"key\":\"both_present\",\"status\":\"FILLED\",\"value\":\"동생이요\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
+        assertThat(response.conditions()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @DisplayName("매장이 나와도 되묻는 조건에 답하는 말이면 조건 답으로 읽는다")
+    @ValueSource(strings = {
+            "네 같이 매장 갈 수 있어요", "유심을 잃어버렸고 제가 직접 매장에 갈 거예요", "아니요 매장에 같이 못 가요",
+            "매장에서 바로 받을 수 있어요", "네 매장 찾아갈 수 있어요", "매장 방문은 어려워요", "집 근처 대리점에 갈 거예요"})
+    void analyzeFollowUp_keepsAnswerThatMentionsStore(String reply) {
+        givenWaiting("both_present");
+        given(llmClient.generate(any())).willReturn("{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":"
+                + "[{\"key\":\"both_present\",\"status\":\"FILLED\",\"value\":\"예\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        assertThat(response.conditions()).containsExactly(entry("both_present", "예"));
+    }
+
+    @Test
+    @DisplayName("지역을 묻는 중에 매장 찾기 말로 지역을 답하면 조건 답으로 읽는다")
+    void analyzeFollowUp_keepsLocationAnswerWithStoreRequest() {
+        givenWaiting("location");
+        given(llmClient.generate(any())).willReturn(
+                "{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":[{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"서현역\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "서현역 근처 매장 알려주세요");
+
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        assertThat(response.conditions()).containsExactly(entry("location", "서현역"));
+    }
+
     @Test
     @DisplayName("업무를 직접 풀어 쓴 답은 모델이 읽는다")
     void analyzeFollowUp_sendsFreeServiceTypeTextToLlm() {

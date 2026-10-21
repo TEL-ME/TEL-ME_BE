@@ -1126,12 +1126,26 @@ public class QueryRoutingService {
             }
         }
 
+        // 매장을 묻는 중이 아닌데 답과 함께 매장 찾기를 요청했으면 조건 답으로만 읽지 않고 새 질문으로 다시 처리한다.
+        // 그렇지 않으면 앞 질문의 답만 하고 매장 요청은 사라진다
+        if (!extracted.isEmpty() && !asksStoreCondition(waiting.pendingKeys()) && ruleBasedFallback.asksStoreLookup(reply)) {
+            log.info("[후속분석] 조건 답과 함께 매장 찾기 요청이 있어 새 질문으로 처리합니다: consultRequestId={}",
+                    waiting.consultRequestId());
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(), Collections.emptyMap(), Collections.emptySet(), method, Disposition.NEW_QUESTION);
+        }
+
         return new FollowUpRouteResponse(
             waiting.consultRequestId(),
             extracted.values(),
             extracted.declinedKeys(),
             method,
             disposition(payload.responseType(), extracted));
+    }
+
+    private boolean asksStoreCondition(Set<String> pendingKeys) {
+        return pendingKeys.contains(FollowUpRouteResponse.LOCATION_KEY)
+                || pendingKeys.contains(FollowUpRouteResponse.SERVICE_TYPE_KEY);
     }
 
     private Disposition disposition(ResponseType responseType, ExtractedConditions extracted) {
