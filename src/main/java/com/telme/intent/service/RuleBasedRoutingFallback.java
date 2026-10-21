@@ -81,7 +81,7 @@ public class RuleBasedRoutingFallback {
         "매장\\s*방문.*(가능|방법|절차)|매장에서.*(처리|신청|예약)"
     );
     private static final Pattern STORE_RESULT_REQUEST_PATTERN = Pattern.compile("찾|어디|위치|주소|곳");
-    // 매장을 찾아 달라는 말. "매장 찾아갈 수 있어요", "매장 근처에 살아요"처럼 답하는 말과 구분하려고 요청 어미가 붙은 찾기와 지역을 말하는 근처만 본다
+    // 답하는 말과 구분하려고 요청 어미·지역 근처만 인정
     private static final Pattern STORE_FIND_REQUEST_PATTERN = Pattern.compile(
         "[가-힣A-Za-z0-9]+(역|동|구|시)\\s*(근처|주변)|어디|위치|주소|영업시간|알려\\s*(줘|주세요|주실)|찾아\\s*(줘|주세요|주실)"
     );
@@ -140,14 +140,30 @@ public class RuleBasedRoutingFallback {
         return text != null && STORE_ENTITY_PATTERN.matcher(text).find();
     }
 
-    // 영업일·영업시간·주차처럼 어떤 업무로 가든 같은 매장 정보를 묻는 말. 이때는 업무를 되묻지 않는다
     private static final Pattern STORE_INFO_PATTERN = Pattern.compile("영업|운영|열어|열려|열지|닫|몇\\s*시|쉬는|휴무|주차|전화번호|연락처");
 
     static boolean asksStoreInfo(String text) {
         return text != null && STORE_INFO_PATTERN.matcher(text).find();
     }
 
-    // 되묻는 조건과 별개로 매장을 찾아 달라는 말이 들어 있는지
+    // 매장 말이 든 문장을 뺀 나머지의 물음 여부
+    private static final Pattern CLAUSE_SPLIT = Pattern.compile("(?<=[?？.!])\\s*|그리고|또한|또|근데|그런데|,");
+    private static final Pattern QUESTION_FORM_PATTERN = Pattern.compile(
+        "[?？]|되나|인가요|있나요|할까요|될까요|어떻게|뭐예요|뭔가요|무엇|얼마|가능한가요|맞나요");
+
+    static boolean hasQuestionBesideStoreRequest(String text) {
+        if (text == null) {
+            return false;
+        }
+        StringBuilder rest = new StringBuilder();
+        for (String clause : CLAUSE_SPLIT.split(text)) {
+            if (!STORE_ENTITY_PATTERN.matcher(clause).find()) {
+                rest.append(clause).append(' ');
+            }
+        }
+        return QUESTION_FORM_PATTERN.matcher(rest).find();
+    }
+
     static boolean asksStoreLookup(String text) {
         return mentionsStore(text) && STORE_FIND_REQUEST_PATTERN.matcher(text).find();
     }

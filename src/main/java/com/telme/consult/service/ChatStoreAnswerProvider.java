@@ -31,7 +31,7 @@ public class ChatStoreAnswerProvider {
     private final StoreSearchService nearbySearch;
     private final NamedLocationStoreSearchPort namedSearch;
     private final ChatStoreConverter converter;
-    // 없으면 영업일·영업시간을 묻는 말에도 매장 목록만 답한다
+    // null이면 영업시간 답변 생략
     private final StoreHoursQueryService hoursQuery;
     private final Clock clock;
     private final StoreSearchAssessment assessment = new StoreSearchAssessment();
@@ -102,7 +102,6 @@ public class ChatStoreAnswerProvider {
         };
     }
 
-    // 영업일·영업시간을 묻는 말이면 찾은 매장의 해당 요일 영업시간을 본문에 붙인다. 읽지 못해도 매장 안내는 그대로 나간다
     private String hoursText(AnswerInput input, List<com.telme.chat.dto.res.ChatStoreResponse> stores) {
         if (hoursQuery == null || stores.isEmpty()) {
             return "";

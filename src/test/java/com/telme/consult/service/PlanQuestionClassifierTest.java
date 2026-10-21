@@ -132,7 +132,6 @@ class PlanQuestionClassifierTest {
                 "1일 요금이 얼마예요", "하루에 얼마 드나요"}) {
             assertThat(classifier.classify(1L, question)).as(question).isEqualTo(PlanQuestionType.NONE);
         }
-        // 요금제나 제공량을 함께 말하면 요금제 표로 답한다
         assertThat(classifier.classify(1L, "하루 2GB 주는 요금제 뭐 있어요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
         assertThat(classifier.classify(1L, "5G 스탠다드 얼마예요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
     }

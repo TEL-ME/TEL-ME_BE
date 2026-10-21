@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-// 시드 매장과 섞이지 않게 이 테스트가 만든 매장만 읽고, 롤백으로 흔적을 남기지 않는다
+// 시드 매장과 섞이지 않게 만든 매장만 읽고 롤백
 @SpringBootTest
 @Transactional
 class StoreHoursQueryServiceDatabaseTest {

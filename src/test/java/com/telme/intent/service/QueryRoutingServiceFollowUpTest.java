@@ -413,13 +413,12 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @ParameterizedTest
-    @DisplayName("매장을 묻는 중이 아닌데 답과 함께 매장 찾기를 요청하면 조건 답으로만 읽지 않고 새 질문으로 처리한다")
+    @DisplayName("매장을 묻는 중이 아닌데 답과 함께 매장 찾기와 별개의 새 질문이 있으면 조건 답으로만 읽지 않고 새 질문으로 처리한다")
     @ValueSource(strings = {
             "아 형 아니고 동생이요 고1인데 미성년자도 되나? 그리고 분당 서현역 근처 매장도",
-            "아 형 아니고 동생이요 그리고 서현역 근처 매장도 알려주세요",
-            "네 같이 갈 수 있어요 그리고 강남역 근처 매장 어디예요",
-            "네 그리고 가까운 매장 찾아주세요"})
-    void analyzeFollowUp_treatsStoreRequestWithAnswerAsNewQuestion(String reply) {
+            "네 같이 갈 수 있어요. 미성년자도 되나요? 그리고 강남역 근처 매장 어디예요",
+            "동생이요 고1인데 미성년자도 되나 그리고 서현역 근처 매장 찾아줘"})
+    void analyzeFollowUp_treatsStoreRequestWithNewQuestionAsNewQuestion(String reply) {
         givenWaiting("both_present");
         given(llmClient.generate(any())).willReturn("{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":"
                 + "[{\"key\":\"both_present\",\"status\":\"FILLED\",\"value\":\"동생이요\"}]}");
@@ -428,6 +427,24 @@ class QueryRoutingServiceFollowUpTest {
 
         assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.NEW_QUESTION);
         assertThat(response.conditions()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @DisplayName("답과 매장 찾기뿐이면 새 질문으로 돌리지 않고 조건 답으로 읽어 기다리던 상담이 취소되지 않게 한다")
+    @ValueSource(strings = {
+            "네 같이 갈 수 있어요 그리고 강남역 근처 매장 어디예요",
+            "네 그리고 가까운 매장 찾아주세요",
+            "아 형 아니고 동생이요 그리고 서현역 근처 매장도 알려주세요",
+            "예 같이 가요. 근처 매장 위치도 알려줘"})
+    void analyzeFollowUp_keepsAnswerWithStoreRequestOnlyAsConditionResponse(String reply) {
+        givenWaiting("both_present");
+        given(llmClient.generate(any())).willReturn("{\"responseType\":\"CONDITION_RESPONSE\",\"conditions\":"
+                + "[{\"key\":\"both_present\",\"status\":\"FILLED\",\"value\":\"예\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        assertThat(response.conditions()).containsExactly(entry("both_present", "예"));
     }
 
     @ParameterizedTest

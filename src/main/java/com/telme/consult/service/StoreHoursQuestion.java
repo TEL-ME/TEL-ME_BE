@@ -8,16 +8,14 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// 매장 영업일·영업시간을 묻는 말인지와 어느 요일을 묻는지 규칙으로 읽는다. 모델을 부르지 않는다
 final class StoreHoursQuestion {
 
-    // 영업시간·영업일·몇 시·열어·휴무처럼 영업 여부를 묻는 꼴. "영업점", "운영하는 매장 찾아줘"는 영업 여부를 묻는 말이 아니다
     private static final Pattern HOURS_WORD = Pattern.compile(
             "영업시간|영업일|영업(?:중|해|하|합)|몇시|열어|열려|열지|열었|열까|닫아|닫는|닫았|닫혀|휴무|쉬는|쉬어|언제까지|마감|문(?:여|닫)");
     private static final Pattern WEEKDAY_NAME = Pattern.compile("([월화수목금토일])요일");
     private static final Pattern NOW_WORD = Pattern.compile("지금|현재|당장|열었|열려있|영업중|영업해요");
 
-    // days가 비어 있으면 지금 영업 중인지를 묻는 말이다(오늘 요일 기준으로 시각을 비교한다)
+    // days가 비면 지금 영업 여부
     record Request(List<DayOfWeek> days, boolean now, String label) {
     }
 

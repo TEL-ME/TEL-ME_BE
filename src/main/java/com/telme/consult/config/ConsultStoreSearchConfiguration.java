@@ -26,7 +26,6 @@ public class ConsultStoreSearchConfiguration {
     ChatStoreAnswerProvider chatStoreAnswerProvider(
             StoreSearchService nearbySearch, NamedLocationStoreSearchPort namedSearch, ChatStoreConverter converter,
             ObjectProvider<StoreHoursQueryService> hoursQuery, ObjectProvider<Clock> clock) {
-        // 영업시간 조회가 연결되지 않은 구성에서도 매장 안내는 그대로 나간다
         return new ChatStoreAnswerProvider(nearbySearch, namedSearch, converter,
                 hoursQuery.getIfAvailable(), clock.getIfAvailable(Clock::systemUTC));
     }

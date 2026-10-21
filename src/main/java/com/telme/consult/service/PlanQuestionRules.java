@@ -45,8 +45,6 @@ public final class PlanQuestionRules {
             "비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중|[와과랑].{1,15}중(에서)?(요금|어느|어떤|뭐|어디|가장|더|무엇)");
     // 요금제 표로 답할 수 없는 다른 서비스의 요금·사용 질문
     private static final Pattern OTHER_SERVICE = Pattern.compile("로밍|해외|국제전화");
-    // 요금제나 제공량 말 없이 하루 단위 요금을 묻는 말은 월 요금제 표가 아니라 앞서 이야기한 서비스(로밍 등)의 요금이다.
-    // 하루·일일·일당 바로 뒤나 앞에 요금 말이 붙을 때만 본다. "11일에 개통했는데", "약정 끝나기 1일 남았는데"처럼 날짜나 남은 일수는 아니다
     private static final String DAY_UNIT = "(?:하루|일일|일당|(?<![0-9])1일)";
     private static final String FEE_UNIT = "(?:요금|가격|비용|이용료|얼마)";
     private static final Pattern DAILY_FEE = Pattern.compile(
@@ -61,11 +59,9 @@ public final class PlanQuestionRules {
     private static final Pattern OWN_USAGE = Pattern.compile("남은|남았|남아|썼|사용했|보냈|했는지");
     private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*남(은|았|아)");
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
-    // 요금제 이야기에 나오는 단어. 이 말이 있으면 다른 물건을 고르는 말로 보지 않는다
     private static final Pattern PLAN_WORD = Pattern.compile(
             "(?i)요금|플랜|데이터|통화|문자|사용량|gb|기가|무제한|5g|lte|알뜰|청소년|시니어|어르신|약정|결합|통신비|통신사|월정액");
-    // 요금제가 아닌 물건을 골라 달라는 말. 물건 이름 바로 뒤에 추천이 붙을 때만 본다.
-    // "영화 많이 보는데 추천해줘", "게임 많이 하는 고등학생인데 추천 좀"은 습관을 말하며 요금제를 고르는 것이라 걸리지 않는다
+    // 물건 이름 바로 뒤에 추천이 붙는 꼴
     private static final Pattern OTHER_ITEM_RECOMMENDATION = Pattern.compile(
             "(?:영화|드라마|예능|애니|노래|음악|책|소설|웹툰|맛집|메뉴|음식|식당|카페|레시피|여행지|여행|노트북|컴퓨터|태블릿|이어폰|헤드폰"
                     + "|케이스|선물|운동화|옷|화장품|가방|시계|자동차|게임|채널|프로그램)(?:을|를|도|이|가)?(?:하나|한개|한권|한곡|한편|몇개|몇권|몇곡|좀|만)?(?:추천|골라|알려)");
@@ -81,7 +77,7 @@ public final class PlanQuestionRules {
         return OTHER_SERVICE.matcher(question.replaceAll("\\s+", "")).find();
     }
 
-    // 요금제 표로 답할 수 없는 하루 단위 요금 질문(로밍 등). 요금제 목록 판정에만 쓴다. 내 요금·내 위약금 같은 질문은 막지 않는다
+    // 요금제 목록 판정 전용
     public static boolean asksDailyFee(String question) {
         if (question == null) {
             return false;
@@ -90,7 +86,6 @@ public final class PlanQuestionRules {
         return DAILY_FEE.matcher(text).find() && !PLAN_OR_ALLOWANCE.matcher(text).find();
     }
 
-    // 영화·노트북처럼 요금제가 아닌 물건을 골라 달라는 추천 질문인지. 요금제 추천으로 보내지 않는 데 쓴다
     public static boolean recommendsOtherItem(String question) {
         if (question == null) {
             return false;

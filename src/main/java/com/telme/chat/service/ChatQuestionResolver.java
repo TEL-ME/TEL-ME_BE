@@ -32,11 +32,9 @@ import org.springframework.stereotype.Service;
 public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
-    // 앞서 한 말을 고치는 꼴("정정할게요", "아니고", "아니라", "잘못 말했다"). 이 말만으로는 상담 대상을 알 수 없어 앞 발언과 연결되는지 모델이 판정한다.
-    // "아니라면"은 "가입한 달이 아니라면 바꿀 수 있나요"처럼 조건을 말하는 꼴이라 정정이 아니다
     private static final Pattern CORRECTION = Pattern.compile("정정|아니고|아니라(?!면)|아니다|잘못(?:말|알|봤|적|이야기)|다시말");
-    // 정정 꼴이어도 상담 대상(요금제·로밍 등)과 물음이 함께 있으면 그 자체로 완결된 질문이라("LTE가 아니라 5G 요금제 뭐 있어요") 문맥 해석 후보로 보지 않는다.
-    // 매장·대리점은 대상을 정하지 못하는 말이라 넣지 않는다("형 아니고 동생이요 … 매장도"는 앞 업무를 이어받아야 한다)
+    // 상담 대상 단어와 물음이 함께 있으면 완결된 질문
+    // 매장·대리점은 대상을 정하지 못해 제외
     private static final Pattern SERVICE_TOPIC = Pattern.compile(
             "(?i)요금제|요금|로밍|유심|이심|esim|번호이동|명의|해지|가입|개통|위약금|약정|데이터|통화|문자|부가서비스|결합|5g|lte|알뜰|청소년|시니어|할인|납부|청구|단말|기기변경|정지|분실|재발급");
     private static final Pattern QUESTION_FORM = Pattern.compile("[?？]|뭐|무엇|어떤|어떻게|얼마|있나요|있어요|되나요|돼요|인가요|가능|알려");
@@ -226,7 +224,6 @@ public class ChatQuestionResolver {
                 // 상담 대상 낱말 때문에 일반어 규칙에서 빠진 문장("취소 어떻게 해요?")도 대상 유무는 모델이 판정한다.
                 || madeOfGenericWords(gated, stabilityGuards)
                 || shortFollowUpWithHistory(compact(gated), context)
-                // "아 정정할게요 중학생 아니고 초등학교 6학년이에요"처럼 앞 발언을 고치는 말은 업무 이름이 없어 단독 질문으로 처리하면 범위 밖이 된다.
                 || isCorrectionOfHistory(noWhitespace) && hasCustomerHistory(context)
                 // "설치 기사님 방문비용은 따로 청구되는 건가요?"처럼 길어도 업무 없이 비용 항목만 물으면 대상 유무는 모델이 판정한다.
                 || stabilityGuards && COST_ITEM.matcher(noWhitespace).find() && hasCustomerHistory(context);
@@ -397,7 +394,6 @@ public class ChatQuestionResolver {
                         && !ChatContextFormatter.isSocial(message.content()));
     }
 
-    // 앞 발언을 고치는 말이고 그 자체로 완결된 질문이 아닌지
     static boolean isCorrectionOfHistory(String noWhitespace) {
         return CORRECTION.matcher(noWhitespace).find()
                 && !(SERVICE_TOPIC.matcher(noWhitespace).find() && QUESTION_FORM.matcher(noWhitespace).find());

@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// 채팅 답변이 매장 여러 곳의 영업시간을 한 번의 조회로 읽는 곳. DB에 있는 요일만 돌려준다(빠진 요일은 데이터 없음이지 휴무가 아니다)
+// DB에 있는 요일만 반환(빠진 요일은 휴무가 아님)
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

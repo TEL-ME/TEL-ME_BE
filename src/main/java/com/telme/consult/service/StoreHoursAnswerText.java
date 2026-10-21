@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-// 매장 결과 아래에 붙이는 영업시간 문장. 응답 형식은 그대로이고 본문 글자만 늘어난다
 final class StoreHoursAnswerText {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
@@ -18,7 +17,7 @@ final class StoreHoursAnswerText {
     private StoreHoursAnswerText() {
     }
 
-    // 영업시간을 읽을 수 있는 매장이 하나도 없으면 빈 글자다(영업시간 정보가 없는 데이터에서 "정보 없음"만 줄줄이 붙이지 않는다)
+    // 영업시간을 읽은 매장이 없으면 빈 문자열
     static String of(StoreHoursQuestion.Request request, List<ChatStoreResponse> stores,
             Map<Long, List<StoreHoursResponse>> hoursByStore, LocalDateTime now) {
         StringBuilder lines = new StringBuilder();

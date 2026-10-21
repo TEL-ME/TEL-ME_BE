@@ -305,7 +305,6 @@ public class QueryRoutingService {
             method = QueryRouting.Method.SEARCH;
         }
 
-        // 모델이 UNKNOWN으로 본 질문 중 매장 찾기 요청과 부가서비스 질문은 규칙으로 되살린다
         if (method == QueryRouting.Method.LLM && payload.intent() == QueryRouting.Intent.UNKNOWN) {
             LlmRoutingPayload corrected = correctUnknown(question);
             if (corrected != null) {
@@ -1137,9 +1136,9 @@ public class QueryRoutingService {
             }
         }
 
-        // 매장을 묻는 중이 아닌데 답과 함께 매장 찾기를 요청했으면 조건 답으로만 읽지 않고 새 질문으로 다시 처리한다.
-        // 그렇지 않으면 앞 질문의 답만 하고 매장 요청은 사라진다
-        if (!extracted.isEmpty() && !asksStoreCondition(waiting.pendingKeys()) && ruleBasedFallback.asksStoreLookup(reply)) {
+        // 새 질문 없이 매장 요청만 있으면 새 질문으로 돌리지 않음(기다리던 상담이 취소됨)
+        if (!extracted.isEmpty() && !asksStoreCondition(waiting.pendingKeys()) && ruleBasedFallback.asksStoreLookup(reply)
+                && RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(reply)) {
             log.info("[후속분석] 조건 답과 함께 매장 찾기 요청이 있어 새 질문으로 처리합니다: consultRequestId={}",
                     waiting.consultRequestId());
             return new FollowUpRouteResponse(
@@ -1355,7 +1354,7 @@ public class QueryRoutingService {
             return extracted;
         }
         Map<String, String> filled = withRuleServiceType(extracted, question);
-        // "거기 토요일에도 열어?"처럼 업무와 상관없는 매장 정보만 물으면 업무를 되묻지 않고 업무 필터 없이 찾는다
+        // 업무와 무관한 매장 정보 질문은 업무 필터 없음
         if (!filled.containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY) && RuleBasedRoutingFallback.asksStoreInfo(question)) {
             Map<String, String> undecided = new LinkedHashMap<>(filled);
             undecided.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED);
