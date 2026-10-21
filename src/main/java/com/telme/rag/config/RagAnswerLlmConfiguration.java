@@ -20,6 +20,12 @@ public class RagAnswerLlmConfiguration {
         return properties.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
     }
 
+    // 금액으로 막힌 답의 다시 생성은 gpt-oss만 부른다. 엑사원 대체는 Bedrock 장애용이고 엑사원 GPU는 평소 꺼져 있어,
+    // 다시 생성이 실패해도 엑사원으로 넘기지 않고 안전 안내로 끝낸다. null이면 다시 생성하지 않는다
+    public static LlmClient amountRetryClient(RagAnswerProperties properties, LlmClient bedrock) {
+        return properties.bedrock() && properties.amountRetry() ? bedrock : null;
+    }
+
     @Bean(name = RAG_ANSWER_LLM_CLIENT, defaultCandidate = false)
     LlmClient ragAnswerLlmClient(LlmClient llmClient, RagAnswerProperties properties,
             @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {

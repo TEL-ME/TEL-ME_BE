@@ -67,6 +67,27 @@ class RagAnswerLlmClientSelectionTest {
         assertThat(bind(Map.of("rag.answer.bedrock", "false")).bedrock()).isFalse();
     }
 
+    @Test
+    @DisplayName("금액 재시도는 기본 켜짐이고 설정 이름으로 끈다")
+    void 금액_재시도는_기본_켜짐() {
+        assertThat(bind(Map.of()).amountRetry()).isTrue();
+        assertThat(bind(Map.of("rag.answer.amount-retry", "false")).amountRetry()).isFalse();
+        assertThat(new RagAnswerProperties(true).amountRetry()).isTrue();
+    }
+
+    @Test
+    @DisplayName("금액 다시 생성은 대체 없이 gpt-oss만 부르고, 답변이 엑사원이거나 설정이 꺼져 있으면 하지 않는다")
+    void 금액_다시_생성은_gpt_oss만_부른다() {
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, true), bedrock))
+                .isSameAs(bedrock);
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, false), bedrock))
+                .isNull();
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(false, true), bedrock))
+                .isNull();
+        assertThat(RagAnswerLlmConfiguration.amountRetryClient(new RagAnswerProperties(true, true), null))
+                .isNull();
+    }
+
     private static RagAnswerProperties bind(Map<String, Object> values) {
         return new Binder(new MapConfigurationPropertySource(values))
                 .bindOrCreate("rag.answer", RagAnswerProperties.class);

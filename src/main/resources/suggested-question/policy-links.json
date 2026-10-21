@@ -25,16 +25,16 @@
       "question": "단말 할부 기간과 수수료율을 어떻게 확인하고 선택하나요?"
     },
     "DEVICE-02": {
-      "slotId": "DEVICE-0010",
-      "question": "기기변경 신청 가능 시점과 할부금 처리 기준을 알려주세요."
+      "slotId": "DEVICE-0038",
+      "question": "6개월이 지난 뒤 기기변경은 어떤 절차로 진행되나요?"
     },
     "DEVICE-03": {
       "slotId": "DEVICE-0015",
       "question": "기기변경 전 파손 수리 시 자기부담금 비율을 알려주세요."
     },
     "DEVICE-04": {
-      "slotId": "DEVICE-0040",
-      "question": "기기변경 직후 새 단말 교환 절차를 알려주세요."
+      "slotId": "DEVICE-0028",
+      "question": "단말 반품이나 교환은 어떻게 신청해요?"
     },
     "NAME_CHANGE-01": {
       "slotId": "NAME_CHANGE-0007",
@@ -49,8 +49,8 @@
       "question": "할부금이 남아 있으면 신용 심사는 누가 받나요?"
     },
     "PLAN-01": {
-      "slotId": "PLAN-0091",
-      "question": "요금제가 너무 많아서 뭐가 뭔지 모르겠어요"
+      "slotId": "PLAN-0041",
+      "question": "5G, LTE, 알뜰 요금제 구성을 순서대로 안내해 주세요."
     },
     "PLAN-02": {
       "slotId": "PLAN-0012",
@@ -73,8 +73,8 @@
       "question": "개통 후 얼마나 지나야 번호이동할 수 있나요?"
     },
     "PORTING-04": {
-      "slotId": "PORTING-0036",
-      "question": "번호이동 철회는 어떻게 신청하나요?"
+      "slotId": "PORTING-0008",
+      "question": "번호이동 철회 기간이 며칠이에요?"
     },
     "ROAMING-01": {
       "slotId": "ROAMING-0026",
@@ -91,10 +91,6 @@
     "ROAMING-05": {
       "slotId": "ROAMING-0025",
       "question": "현지 도착 후 로밍 설정 절차를 알려주세요."
-    },
-    "SERVICE-03": {
-      "slotId": "SERVICE-0058",
-      "question": "평일이랑 토요일 운영시간이 어떻게 다른가요?"
     },
     "SUBSCRIBE-01": {
       "slotId": "SUBSCRIBE-0037",
@@ -270,10 +266,6 @@
         {
           "to": "USIM-02",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO"
         }
       ]
     },
@@ -283,10 +275,6 @@
         {
           "to": "USIM-01",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO"
         }
       ]
     },
@@ -318,13 +306,6 @@
         {
           "to": "SUBSCRIBE-03",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO",
-          "condition": {
-            "questionContains": "매장"
-          }
         }
       ]
     },
@@ -343,13 +324,6 @@
         {
           "to": "SUBSCRIBE-01",
           "kind": "NEXT"
-        },
-        {
-          "to": "SERVICE-03",
-          "kind": "INFO",
-          "condition": {
-            "questionContains": "매장"
-          }
         }
       ]
     },

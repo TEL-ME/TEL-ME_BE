@@ -198,6 +198,9 @@ rag:
     # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. false면 엑사원
     # gpt-oss로 결정(TELME-180, docs/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
     bedrock: ${RAG_ANSWER_BEDROCK:true}
+    # 가드가 근거에 없는 금액으로 답을 막으면 gpt-oss 추론 강도를 medium으로 올려 한 번 다시 생성한다(TELME-205)
+    # 다시 생성은 gpt-oss만 부르고 실패해도 엑사원으로 대체하지 않는다(안전 안내로 끝남)
+    amount-retry: ${RAG_ANSWER_AMOUNT_RETRY:true}
   evidence-check:
     # 검색이 통과시킨 근거가 질문에 실제로 답하는지 LLM에 한 번 더 묻는다
     # 호출이 하나 늘어 응답이 느려진다. 측정 후 기본값을 정한다
