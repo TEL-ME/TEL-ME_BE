@@ -2,10 +2,12 @@ package com.telme.consult.config;
 
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.repository.SessionRecommendationAnswers;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.PlanTaskAnswerProvider;
 import com.telme.consult.service.PlanTaskHandler;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
@@ -23,7 +25,7 @@ public class PlanTaskAnswerConfiguration {
     @Bean
     static BeanPostProcessor planTaskAnswerDecorator(ObjectProvider<PlanTaskHandler> handlers,
             ObjectProvider<ChatSessionRepository> sessions, ObjectProvider<ExecutionTrace> trace,
-            ObjectProvider<PlanQuestionProperties> properties) {
+            ObjectProvider<PlanQuestionProperties> properties, ObjectProvider<SessionRecommendationAnswers> recommendations) {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
@@ -38,7 +40,9 @@ public class PlanTaskAnswerConfiguration {
                 }
                 PlanQuestionProperties settings = properties.getIfAvailable();
                 // 요금제 답변을 끄면 업무 요청도 지금처럼 기존 경로가 답한다
+                SessionRecommendationAnswers memory = recommendations.getIfAvailable();
                 return new PlanTaskAnswerProvider(answers, tasks, repository::findUserIdBySessionId,
+                        sessionId -> memory == null ? Optional.empty() : memory.latestRecommendation(sessionId),
                         trace.getIfAvailable(ExecutionTrace::noop), settings == null || settings.answerEnabled());
             }
         };

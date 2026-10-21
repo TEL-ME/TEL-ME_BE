@@ -222,6 +222,197 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("데이터 사용량을 숫자로 답하면 모델을 부르지 않고 코드로 읽어 정리한 값으로 넘긴다")
+    void analyzeFollowUp_readsDataUsageWithoutLlm() {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "하루에 2기가쯤 써요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "60GB"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("데이터 사용량을 모른다고 답해도 코드로 읽어 모름으로 넘긴다")
+    void analyzeFollowUp_readsUnsureDataUsageWithoutLlm() {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "잘 모르겠어요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "모름"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("통화량과 문자량도 숫자로 답하면 모델을 부르지 않고 코드로 읽는다")
+    void analyzeFollowUp_readsCallAndTextUsageWithoutLlm() {
+        givenWaiting("monthly_voice_usage");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "한 5시간쯤 해요").conditions())
+                .containsExactly(entry("monthly_voice_usage", "300분"));
+
+        givenWaiting("monthly_sms_usage");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "50건이요").conditions())
+                .containsExactly(entry("monthly_sms_usage", "50건"));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("숫자가 분명하지 않은 사용량 답은 모델이 읽는다")
+    void analyzeFollowUp_sendsVagueDataUsageToLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "많이 써요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.LLM);
+        verify(llmClient).generate(any());
+    }
+
+    @Test
+    @DisplayName("사용량이 들어 있어도 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 읽는다")
+    void analyzeFollowUp_sendsQuestionWithDataUsageToLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        service.analyzeFollowUp(SESSION_ID, "50기가 쓰는데 요금제 바꾸면 위약금 있나요?");
+
+        verify(llmClient).generate(any());
+    }
+
+    @Test
+    @DisplayName("모델이 읽을 수 없는 사용량을 값으로 채워도 받지 않아 되묻게 한다")
+    void analyzeFollowUp_dropsUnreadableUsageFilledByLlm() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn(
+                "{\"conditions\":[{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"많이 써요\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "많이 써요");
+
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.declinedKeys()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("나이대와 사용량을 함께 기다릴 때 읽을 수 없는 값만 빼고 읽을 수 있는 값은 그대로 받는다")
+    void analyzeFollowUp_keepsOnlyReadableRecommendationAnswers() {
+        givenWaiting("age_group", "monthly_data_usage");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"60대예요\"},"
+                + "{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"40GB\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "60대인데 한 달에 40기가 써요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_data_usage", "40GB"));
+    }
+
+    @Test
+    @DisplayName("읽을 수 있는 나이대와 사용량 값은 모델이 채운 그대로 받는다")
+    void analyzeFollowUp_keepsReadableRecommendationAnswers() {
+        for (String age : List.of("만 14~18세", "만 19~64세", "만 65세 이상", "17살이에요", "30대", "청소년", "시니어")) {
+            givenWaiting("age_group", "monthly_data_usage", "monthly_voice_usage", "monthly_sms_usage");
+            given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                    + "{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + age + "\"},"
+                    + "{\"key\":\"monthly_data_usage\",\"status\":\"FILLED\",\"value\":\"잘 모르겠어요\"},"
+                    + "{\"key\":\"monthly_voice_usage\",\"status\":\"FILLED\",\"value\":\"5시간\"},"
+                    + "{\"key\":\"monthly_sms_usage\",\"status\":\"FILLED\",\"value\":\"50건\"}]}");
+
+            FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "알려드릴게요 나이는 " + age + " 입니다");
+
+            assertThat(response.conditions()).as(age).containsOnly(
+                    entry("age_group", age), entry("monthly_data_usage", "잘 모르겠어요"),
+                    entry("monthly_voice_usage", "5시간"), entry("monthly_sms_usage", "50건"));
+        }
+    }
+
+    @Test
+    @DisplayName("고객이 숫자로 말한 나이가 여러 구분에 걸치는데 모델이 선택지 하나로 채우면 받지 않아 되묻게 한다")
+    void analyzeFollowUp_dropsAgeThatModelSnappedToOption() {
+        // 모델이 채운 선택지 값은 모두 읽을 수 있는 값이지만 고객 말과 구분이 다르거나 걸치는 말을 하나로 정한 것이다
+        Map<String, String> snapped = Map.of(
+                "60대예요", "만 65세 이상",
+                "65세 미만이요", "만 19~64세",
+                "10대예요", "만 14~18세",
+                "17살이에요", "만 19~64세");
+        snapped.forEach((reply, option) -> {
+            givenWaiting("age_group");
+            given(llmClient.generate(any())).willReturn(
+                    "{\"conditions\":[{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + option + "\"}]}");
+
+            assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).as(reply).isEmpty();
+        });
+    }
+
+    @Test
+    @DisplayName("고객이 말한 나이와 모델이 채운 선택지가 같은 구분이거나 나이를 숫자로 말하지 않았으면 그대로 받는다")
+    void analyzeFollowUp_keepsAgeThatMatchesTypedAge() {
+        Map<String, String> matching = Map.of(
+                "17살이에요", "만 14~18세",
+                "30대예요", "만 19~64세",
+                "35세", "만 19~64세",
+                "70세예요", "만 65세 이상",
+                "첫 번째요", "만 14~18세",
+                "시니어예요", "만 65세 이상");
+        matching.forEach((reply, option) -> {
+            givenWaiting("age_group");
+            given(llmClient.generate(any())).willReturn(
+                    "{\"conditions\":[{\"key\":\"age_group\",\"status\":\"FILLED\",\"value\":\"" + option + "\"}]}");
+
+            assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).as(reply).containsExactly(entry("age_group", option));
+        });
+    }
+
+    @Test
+    @DisplayName("통화·문자도 모델이 읽을 수 없는 값을 채우면 받지 않는다")
+    void analyzeFollowUp_dropsUnreadableCallAndTextFilledByLlm() {
+        givenWaiting("monthly_voice_usage", "monthly_sms_usage");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"monthly_voice_usage\",\"status\":\"FILLED\",\"value\":\"많이 해요\"},"
+                + "{\"key\":\"monthly_sms_usage\",\"status\":\"FILLED\",\"value\":\"50건\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "통화는 많이 하고 문자는 50건쯤 보내요");
+
+        assertThat(response.conditions()).containsExactly(entry("monthly_sms_usage", "50건"));
+    }
+
+    @Test
+    @DisplayName("거절한 조건과 다른 조건은 사용량 검증과 상관없이 그대로 받는다")
+    void analyzeFollowUp_keepsDeclinedAndOtherConditions() {
+        givenWaiting("age_group", "location");
+        given(llmClient.generate(any())).willReturn("{\"conditions\":["
+                + "{\"key\":\"age_group\",\"status\":\"DECLINED\"},"
+                + "{\"key\":\"location\",\"status\":\"FILLED\",\"value\":\"강남역\"}]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "나이는 말하기 싫고 강남역이요");
+
+        assertThat(response.declinedKeys()).containsExactly("age_group");
+        assertThat(response.conditions()).containsExactly(entry("location", "강남역"));
+    }
+
+    private void givenWaitingDataUsage() {
+        givenWaiting("monthly_data_usage");
+    }
+
+    private void givenWaiting(String... keys) {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.FAQ)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(java.util.Arrays.stream(keys)
+                        .map(key -> ConsultCondition.builder()
+                                .conditionKey(key)
+                                .status(ConsultCondition.Status.PENDING)
+                                .askedMessage(askedMessage)
+                                .build())
+                        .toList())
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+    }
+
+    @Test
     @DisplayName("업무를 직접 풀어 쓴 답은 모델이 읽는다")
     void analyzeFollowUp_sendsFreeServiceTypeTextToLlm() {
         ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();

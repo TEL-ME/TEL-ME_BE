@@ -116,7 +116,7 @@ FAQ 210문항을 앱의 `routeSingleConsult`로 끝까지 돌려 최종 하위 �
 - 판정을 끄면 맞게 나뉜 질문을 다시 합치는 일이 3회 합계 24~30건에서 9~12건으로 준다. 남은 합침은 의도 분류가 처음부터 하나로 낸 것이다("7,700원 내면 택배로도 받을 수 있어요? 며칠 걸려요?" 등).
 - 끄면 한 요청을 잘못 나누는 경우가 앱 클라이언트 3회에서 3건 생겼다. "요금제 변경하려는데 온라인이나 매장에서 하는 절차를 알려줘"(2회)와 "요금제 종류를 저가형, 무제한형으로 나눠서 각각 소개해줘"(1회)로, v4 판정 규칙(처리 경로, 목록 소개는 한 요청)이 잡던 유형이다. 나뉘어도 답이 두 부분으로 나올 뿐 내용이 빠지지는 않는다. 합침은 한쪽 질문에 맞는 FAQ가 답에서 빠질 수 있다.
 - EXAONE 전체 구성은 나누기 정확도는 비슷하지만, 하위 질문의 원문 근거가 맞지 않아 복합 질문 안내로 끝나는 경우가 6건이다(고객이 다시 물어야 한다). EXAONE도 "저가형, 무제한형으로 나눠서 각각 소개해줘"를 판정 호출이 있는데도 나눴다.
-- 결론: 의도 분류가 gpt-oss면 판정 호출을 끈다. 지금 develop은 의도 분류가 EXAONE이라 설정 기본값은 켬(`ROUTING_REQUEST_INVENTORY_ENABLED=true`)으로 두고, Bedrock 전환 때 끈다.
+- 결론: 의도 분류가 gpt-oss면 판정 호출을 끈다. TELME-182까지는 의도 분류가 EXAONE이라 설정 기본값을 켬(`ROUTING_REQUEST_INVENTORY_ENABLED=true`)으로 두었다가, TELME-194에서 라우팅을 기본 gpt-oss로 바꾸면서 기본을 끔(`false`)으로 바꿨다. 끄면 엑사원이 대신 판정하는 것이 아니라 이 호출 자체를 하지 않는다.
 
 ### 과적합 확인 (새 21문항)
 
@@ -318,7 +318,7 @@ ROUTING_REQUEST_INVENTORY_ENABLED=false RUNNER=<같은 경로> bash scripts/rout
 ## 남은 일과 확인할 것
 
 - 되묻기 흐름의 다시 묻기는 별도 이슈로 고친다(4단계 마지막 절). 마지막 확인에서 남은 실패의 대부분이 이것이다(CO-02 포함).
-- 적용(TELME-182): `ROUTING_BEDROCK=true`(`telme.routing.bedrock`)로 라우팅 호출 4개를 gpt-oss로 부른다. Bedrock 호출이 실패하면 그 호출만 EXAONE으로 대체한다. 이때 `ROUTING_REQUEST_INVENTORY_ENABLED=false`로 요청 개수 판정을 함께 끈다(2단계 마지막 절). 의도 분류를 EXAONE으로 되돌리면 둘 다 되돌린다. 다른 호출의 전환 상태는 [GPT_OSS_SWITCH.md](GPT_OSS_SWITCH.md)에 있다.
+- 적용(TELME-182, 기본값은 TELME-194): `ROUTING_BEDROCK`(`telme.routing.bedrock`, 기본 `true`)이 라우팅 호출 4개를 gpt-oss로 부른다. Bedrock 호출이 실패하면 그 호출만 EXAONE으로 대체한다. 요청 개수 판정은 기본으로 하지 않는다(`ROUTING_REQUEST_INVENTORY_ENABLED=false`, 2단계 마지막 절). 의도 분류를 EXAONE으로 되돌리면(`ROUTING_BEDROCK=false`) 요청 개수 판정을 true로 켠다. 다른 호출의 전환 상태는 [GPT_OSS_SWITCH.md](GPT_OSS_SWITCH.md)에 있다.
 - 문맥 판정도 gpt-oss로 바꾸면 `CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS=true`로 흔들림 보완을 켠다([CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md)). 문맥 판정의 출력 한도(최소 512)는 플래그와 관계없이 적용된다. 라우팅(256)·조건 뽑기 등 다른 호출의 출력 한도는 전환 PR에서 Bedrock 요청 쪽에서 함께 정한다. 같은 PR에서 문맥 판정 프롬프트의 비용 항목 목록(`위약금` 없음)과 1차의 요금 규칙이 위약금 질문에 미치는 영향을 확인한다([CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md)).
 - 마지막 확인은 #156(문맥 해석 보강, TELME-165) 없이 돌렸다. #156을 넣고 요청 개수 판정을 끈 구성으로 다시 돌린 결과는 1차 보완(`context-v32-inventory-off-*` 키) 16 / 15 / 15, 2차 보완(`context-v32-rules-inventory-off-*` 키) 14 / 15 / 15로, 넣기 전(16 / 13 / 15)과 흔들림 범위 안에서 같다. 멀티턴은 모두 3 / 3 / 3이다. 같은 1차 코드로 모든 호출을 EXAONE으로 둔 결과(`exaone-context-v32-*` 키)는 16 / 16 / 17이다. MT-03 "데이터 다 쓰면"은 여전히 앞 발언과 연결하지 않고, MT-05는 검색 문제라 그대로다(자세한 내용은 [CONTEXT_RESOLUTION.md](CONTEXT_RESOLUTION.md)).
 - 라우팅과 별개로 볼 것: MT-05처럼 반대 뜻의 FAQ로 답하는 검색·근거 판정 문제, 대상 같은 단어("데이터", "거기")가 있으면 앞 발언을 연결하지 않는 문맥 해석 문제, MT-04처럼 문맥 해석이 실행마다 연결 여부가 흔들리는 문제.

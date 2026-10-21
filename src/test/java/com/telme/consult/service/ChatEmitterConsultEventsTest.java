@@ -1,5 +1,6 @@
 package com.telme.consult.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,6 +16,8 @@ import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
 import com.telme.chat.service.ChatOutputMessage;
 import com.telme.llm.exception.LlmStreamCancelledException;
+
+import java.util.ArrayList;
 
 import org.junit.jupiter.api.Test;
 
@@ -80,5 +83,40 @@ class ChatEmitterConsultEventsTest {
 
         assertThatThrownBy(stream::onProgress).isInstanceOf(LlmStreamCancelledException.class);
         verify(emitters, never()).sendEvent(eq(2L), anyString(), any());
+    }
+    @Test
+    void savesUndeliveredNotificationOnlyWhenTerminalEventIsNotDelivered() {
+        var saved = new ArrayList<String>();
+        var withNotifications = new ChatEmitterConsultEvents(
+                emitters, (executionId, type) -> saved.add(executionId + ":" + type));
+        var failed = new ChatFailure(ChatMessage.Status.FAILED, "AI_PROCESSING_ERROR");
+        var timeout = new ChatFailure(ChatMessage.Status.TIMEOUT, "TIMEOUT");
+        var cancelled = new ChatFailure(ChatMessage.Status.CANCELLED, "CLIENT_DISCONNECTED");
+        when(emitters.complete(eq(1L), any())).thenReturn(true);
+        when(emitters.complete(eq(2L), any())).thenReturn(false);
+        when(emitters.fail(eq(3L), any())).thenReturn(false);
+        when(emitters.fail(eq(4L), any())).thenReturn(false);
+        when(emitters.fail(eq(5L), any())).thenReturn(false);
+
+        withNotifications.completed(1L, null);
+        withNotifications.completed(2L, null);
+        withNotifications.failed(3L, failed);
+        withNotifications.failed(4L, timeout);
+        withNotifications.failed(5L, cancelled);
+
+        assertThat(saved)
+                .containsExactly("2:ANSWER_ARRIVED", "3:ANSWER_FAILED", "4:ANSWER_FAILED");
+    }
+
+    @Test
+    void notificationFailureDoesNotBreakAnswerCompletion() {
+        var withBrokenNotifications = new ChatEmitterConsultEvents(emitters, (executionId, type) -> {
+            throw new IllegalStateException("db down");
+        });
+        when(emitters.complete(eq(2L), any())).thenReturn(false);
+
+        withBrokenNotifications.completed(2L, null);
+
+        verify(emitters).complete(2L, null);
     }
 }

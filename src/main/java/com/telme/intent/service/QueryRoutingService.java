@@ -9,8 +9,12 @@ import com.telme.consult.dto.ClarificationReask;
 import com.telme.consult.entity.ConsultCondition;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.consult.service.AgeReplyParser;
+import com.telme.consult.service.CallTextReplyParser;
+import com.telme.consult.service.DataUsageReplyParser;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.intent.config.RoutingLlmConfiguration;
+import com.telme.intent.config.RoutingRequestInventory;
 import com.telme.intent.converter.IntentConverter;
 import com.telme.intent.dto.res.FollowUpRouteResponse;
 import com.telme.intent.dto.res.FollowUpRouteResponse.Disposition;
@@ -49,7 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -59,6 +62,8 @@ import org.springframework.web.client.RestClientException;
 @Slf4j
 public class QueryRoutingService {
     private static final int MAX_CONSULT_SUB_QUERIES = 3;
+    private static final int MAX_USAGE_REPLY_LENGTH = 30;
+    private static final Pattern TYPED_AGE = Pattern.compile("\\d\\s*(?:세|살|대)");
 
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
@@ -98,9 +103,8 @@ public class QueryRoutingService {
     private final IntentConverter intentConverter;
     private final TransactionTemplate transactionTemplate;
     private final UnknownFaqRecheck unknownFaqRecheck;
-    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다
-    @Value("${telme.routing.request-inventory-enabled:true}")
-    private boolean requestInventoryEnabled = true;
+    // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다. 값은 RoutingLlmConfiguration이 정한다
+    private boolean requestInventoryEnabled = false;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -146,6 +150,11 @@ public class QueryRoutingService {
         this.intentConverter = intentConverter;
         this.transactionTemplate = transactionTemplate;
         this.unknownFaqRecheck = Objects.requireNonNull(unknownFaqRecheck);
+    }
+
+    @Autowired(required = false)
+    void setRoutingRequestInventory(RoutingRequestInventory inventory) {
+        this.requestInventoryEnabled = inventory.enabled();
     }
 
     // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
@@ -1068,6 +1077,13 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
+        // 요금제 추천의 사용량 질문(데이터·통화·문자)에 짧게 답한 것은 모델 없이 읽는다. 단위와 하루·한 달 구분을 코드가 정확히 읽는다
+        // 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 판단한다
+        FollowUpRouteResponse usageReply = readUsageReply(waiting, reply);
+        if (usageReply != null) {
+            return usageReply;
+        }
+
         LlmFollowUpPayload payload;
         QueryRouting.Method method;
 
@@ -1092,7 +1108,7 @@ public class QueryRoutingService {
             method = QueryRouting.Method.RULE;
         }
 
-        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys());
+        ExtractedConditions extracted = toExtractedConditions(payload, waiting.pendingKeys(), reply);
 
         // LLM이 명시적으로 새 질문이라고 판단한 결과는 규칙이 조건 답변으로 덮지 않는다.
         // 그 외에 조건이 하나도 안 잡힌 경우에만 되묻기 반복을 막기 위해 규칙으로 한 번 더 시도한다.
@@ -1101,7 +1117,7 @@ public class QueryRoutingService {
                 && payload.responseType() != ResponseType.NEW_QUESTION) {
             LlmFollowUpPayload rulePayload =
                 ruleBasedFallback.classifyFollowUp(reply, waiting.pendingKeys());
-            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys());
+            ExtractedConditions ruleConditions = toExtractedConditions(rulePayload, waiting.pendingKeys(), reply);
             if (!ruleConditions.isEmpty()
                     || rulePayload.responseType() == ResponseType.NEW_QUESTION) {
                 payload = rulePayload;
@@ -1167,6 +1183,34 @@ public class QueryRoutingService {
         if (subQueryCount > MAX_CONSULT_SUB_QUERIES) {
             throw new TooManyFaqQuestionsException(MAX_CONSULT_SUB_QUERIES);
         }
+    }
+
+    // 사용량 질문 하나만 기다리는 중이고 답이 짧은 숫자 답이면 정리한 값으로 돌려준다. 아니면 null
+    private FollowUpRouteResponse readUsageReply(WaitingConsult waiting, String reply) {
+        if (waiting.pendingKeys().size() != 1 || reply.length() > MAX_USAGE_REPLY_LENGTH || reply.contains("?")) {
+            return null;
+        }
+        String key = waiting.pendingKeys().iterator().next();
+        String value = switch (key) {
+            case DataUsageReplyParser.CONDITION_KEY -> canonicalOf(DataUsageReplyParser.parse(reply));
+            case CallTextReplyParser.VOICE_KEY -> canonicalOf(CallTextReplyParser.parseVoice(reply));
+            case CallTextReplyParser.SMS_KEY -> canonicalOf(CallTextReplyParser.parseSms(reply));
+            default -> null;
+        };
+        if (value == null) {
+            return null;
+        }
+        log.info("[후속분석] 사용량 답을 코드로 읽었습니다: consultRequestId={}, key={}", waiting.consultRequestId(), key);
+        return new FollowUpRouteResponse(
+            waiting.consultRequestId(), Map.of(key, value), Collections.emptySet(), QueryRouting.Method.RULE);
+    }
+
+    private static String canonicalOf(DataUsageReplyParser.Result result) {
+        return result.readable() ? result.canonical() : null;
+    }
+
+    private static String canonicalOf(CallTextReplyParser.Result result) {
+        return result.readable() ? result.canonical() : null;
     }
 
     private LlmFollowUpPayload requestFollowUpAnalysis(String reply, WaitingConsult waiting, Long executionId) {
@@ -1284,7 +1328,7 @@ public class QueryRoutingService {
         return filled;
     }
 
-    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys) {
+    private ExtractedConditions toExtractedConditions(LlmFollowUpPayload payload, Set<String> pendingKeys, String reply) {
         if (payload == null || payload.conditions().isEmpty()) {
             return ExtractedConditions.empty();
         }
@@ -1318,9 +1362,34 @@ public class QueryRoutingService {
                 log.debug("[후속분석] 기준점만 가리키는 위치 표현은 지역명으로 받지 않습니다");
                 continue;
             }
+            if (!isReadableRecommendationAnswer(key, value, reply)) {
+                log.debug("[후속분석] 코드가 읽을 수 없는 요금제 추천 조건 값은 받지 않습니다: {}", key);
+                continue;
+            }
             values.put(key, value);
         }
         return new ExtractedConditions(values, declinedKeys);
+    }
+
+    // 요금제 추천의 나이대·사용량은 코드가 읽을 수 있는 값만 받는다. 모델이 "많이 써요", "60대예요"를 값으로 채워도
+    // 읽지 못하면 비워 두어 다시 묻게 한다(채우면 되묻기가 끝나 추천이 되묻지 않고 안내나 일반 요금제로 끝난다)
+    private static boolean isReadableRecommendationAnswer(String key, String value, String reply) {
+        return switch (key) {
+            case AgeReplyParser.CONDITION_KEY -> isReadableAge(value, reply);
+            case DataUsageReplyParser.CONDITION_KEY -> DataUsageReplyParser.parse(value).readable();
+            case CallTextReplyParser.VOICE_KEY -> CallTextReplyParser.parseVoice(value).readable();
+            case CallTextReplyParser.SMS_KEY -> CallTextReplyParser.parseSms(value).readable();
+            default -> true;
+        };
+    }
+
+    // 고객이 숫자로 나이를 말했으면 코드가 원문에서 읽은 구분과 같을 때만 받는다. 모델은 "60대예요"나 "65세 미만이요"처럼
+    // 여러 구분에 걸치는 답도 선택지 하나로 골라 채우는데, 그러면 되묻지 않고 한쪽으로 정해진다
+    private static boolean isReadableAge(String value, String reply) {
+        if (AgeReplyParser.parse(value) == null) {
+            return false;
+        }
+        return !TYPED_AGE.matcher(reply).find() || AgeReplyParser.parse(value) == AgeReplyParser.parse(reply);
     }
 
     // "미납 요금이 있으신가요?"의 답이 지역일 수는 없는데 "아니요"가 지역으로 들어갔다

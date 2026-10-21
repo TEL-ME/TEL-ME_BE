@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.telme.consult.service.PlanRecommender.Demand;
 import com.telme.consult.service.PlanRecommender.Kind;
 import com.telme.consult.service.PlanRecommender.Recommendation;
+import com.telme.consult.service.PlanRecommender.UsageFit;
 import com.telme.plan.entity.Plan;
 import com.telme.plan.repository.PlanRepository;
 import com.telme.usage.service.UsageGenerator;
@@ -136,6 +137,57 @@ class PlanRecommenderTest {
         assertThat(recommend("FIVE_G_STANDARD", demand(38 * GB), true).kind()).isEqualTo(Kind.KEEP);
     }
 
+    @Test
+    void 말한_사용량에_여유를_둔_가장_싼_요금제를_고른다() {
+        assertFit(usage(null, 40 * GB), "FIVE_G_STANDARD", null);
+        assertFit(usage(null, 1 * GB), "BUDGET_MINI", "FIVE_G_LITE");
+        assertFit(usage(null, 3 * GB), "LTE_BASIC", "FIVE_G_LITE");
+        assertFit(usage(null, 20 * GB), "FIVE_G_STANDARD", null);
+    }
+
+    @Test
+    void 한도에_딱_맞는_사용량도_여유를_두고_더_큰_요금제를_고른다() {
+        // 50GB x 1.2 = 60GB는 5G 스탠다드(50GB)에 들어가지 않는다
+        assertFit(usage(null, 50 * GB), "LTE_MAX", "FIVE_G_PREMIUM");
+    }
+
+    @Test
+    void 가장_싼_요금제가_5G가_아니면_5G_중_가장_싼_요금제도_함께_낸다() {
+        assertFit(usage(null, 10 * GB), "LTE_PLUS", "FIVE_G_STANDARD");
+        assertFit(usage(null, 45 * GB), "LTE_MAX", "FIVE_G_PREMIUM");
+    }
+
+    @Test
+    void 가장_싼_요금제가_5G면_5G_후보를_따로_내지_않는다() {
+        assertFit(usage(null, 100 * GB), "FIVE_G_PREMIUM", null);
+    }
+
+    @Test
+    void 유한한_요금제를_넘는_사용량은_무제한_요금제를_고른다() {
+        assertFit(usage(null, 130 * GB), "FIVE_G_UNLIMITED", null);
+        assertFit(usage(null, 200 * GB), "FIVE_G_UNLIMITED", null);
+    }
+
+    @Test
+    void 말한_사용량도_청소년과_시니어_요금제는_후보에_넣었을_때만_고른다() {
+        assertFit(usage(Plan.TargetGroup.YOUTH, 50 * GB), "FIVE_G_YOUTH", null);
+        assertFit(usage(Plan.TargetGroup.SENIOR, 30 * GB), "FIVE_G_STANDARD", null);
+    }
+
+    @Test
+    void 통화나_문자량이_있으면_그_한도도_채우는_요금제를_고른다() {
+        // 통화 600분 x 1.2 = 720분은 LTE 베이직(700분)도 모자라 통화 무제한 요금제 중 가장 싼 5G 라이트가 필요하다
+        assertFit(recommender.forUsage(candidates(null), new Demand(1 * GB, 600, 0)), "FIVE_G_LITE", null);
+    }
+
+    @Test
+    void 후보에_무제한이_없고_어느_요금제도_채우지_못하면_데이터가_가장_큰_요금제를_고른다() {
+        List<Plan> finite = List.of(plan("FIVE_G_STANDARD"), plan("LTE_MAX"));
+
+        assertFit(recommender.forUsage(finite, new Demand(500 * GB, 0, 0)), "LTE_MAX", "FIVE_G_STANDARD");
+        assertThat(recommender.forUsage(List.of(), new Demand(GB, 0, 0))).isNull();
+    }
+
     // 추천을 따라 요금제를 바꾸면 사용량이 새 한도에 맞춰 줄어드는 사용량 모델 때문에 계속 따라가면 아래로 내려간다.
     // 석 달 안에는 다시 내리지 않고 내릴 때 여유를 더 두면 한 해에 바뀌는 횟수가 제한되고 한도 경계에서 오가지 않는다
     @Test
@@ -166,6 +218,15 @@ class PlanRecommenderTest {
 
     private static long average(List<long[]> window, int index) {
         return Math.round(window.stream().mapToLong(values -> values[index]).average().orElse(0));
+    }
+
+    private UsageFit usage(Plan.TargetGroup extra, long dataMb) {
+        return recommender.forUsage(candidates(extra), new Demand(dataMb, 0, 0));
+    }
+
+    private static void assertFit(UsageFit fit, String cheapest, String fiveG) {
+        assertThat(fit.cheapest().getCode()).isEqualTo(cheapest);
+        assertThat(fit.fiveG() == null ? null : fit.fiveG().getCode()).isEqualTo(fiveG);
     }
 
     private Recommendation recommend(String currentCode, Demand demand, boolean allowDowngrade) {

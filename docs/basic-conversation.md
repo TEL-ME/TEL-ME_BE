@@ -47,7 +47,7 @@
 
 - FAQ 답변 생성 프롬프트에는 정체성·말투 지침을 넣지 않는다. 이름 소개와 인사는 서버 고정 응답과 `ChatPersona.prependGreeting`이 처리한다.
   - 평가 질문 180개 측정(로컬 exaone3.5)에서 지침이 있을 때만 무관 질문의 GROUNDED 답변이 늘었다(develop 3, 지침 포함 4, 지침 제거 2).
-- 프롬프트 버전은 `rag-answer-v4.8`이다. 비교 질문 버전(`-comparison-v2`)까지 `llm_generations.prompt_version` 30자 안에 들어간다.
+- 프롬프트 버전은 `rag-answer-v4.9`이다. 비교 질문 버전(`-comparison-v2`)까지 `llm_generations.prompt_version` 30자 안에 들어간다.
 - 새 근거 부족 문구는 `AnswerPromptTemplates.NO_EVIDENCE_ANSWER`에서 관리한다.
 - 마침표 없는 근거 부족 출력도 Guard가 정규 문구로 정리한다. 답변 근거는 인사를 붙이기 전에 판정한다.
 - 과거 저장 메시지를 새 문구로 일괄 변경하지 않는다.

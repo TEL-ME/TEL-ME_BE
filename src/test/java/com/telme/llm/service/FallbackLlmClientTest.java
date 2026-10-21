@@ -103,4 +103,66 @@ class FallbackLlmClientTest {
         verify(handler).onError(failure);
         verifyNoInteractions(fallback);
     }
+
+    @Test
+    @DisplayName("스트리밍은 글자가 나간 뒤 완료 처리에서 예외가 나면(가드 차단 등) 대체하지 않고 오류로 넘긴다")
+    void 스트리밍_글자가_나간_뒤_완료_처리_예외는_넘긴다() {
+        LlmStreamHandler handler = mock(LlmStreamHandler.class);
+        IllegalStateException rejection = new IllegalStateException("가드 차단");
+        doThrow(rejection).when(handler).onComplete();
+        doAnswer(invocation -> {
+            LlmStreamHandler target = invocation.getArgument(1);
+            target.onToken("답");
+            target.onComplete();
+            return null;
+        }).when(primary).stream(any(), any());
+
+        client.stream(request, handler);
+
+        verify(handler).onError(rejection);
+        verifyNoInteractions(fallback);
+    }
+
+    @Test
+    @DisplayName("대체 모델은 대체 표시(LlmFallbackScope) 안에서 불리고, 주 모델 호출과 끝난 뒤에는 표시가 없다")
+    void 대체_호출만_표시된다() {
+        boolean[] seen = new boolean[2];
+        when(primary.generate(any())).thenAnswer(invocation -> {
+            seen[0] = LlmFallbackScope.active();
+            throw new IllegalStateException("호출 실패");
+        });
+        when(fallback.generate(any())).thenAnswer(invocation -> {
+            seen[1] = LlmFallbackScope.active();
+            return "대체 응답";
+        });
+
+        client.generate(request);
+
+        assertThat(seen[0]).as("주 모델 호출 중").isFalse();
+        assertThat(seen[1]).as("대체 모델 호출 중").isTrue();
+        assertThat(LlmFallbackScope.active()).as("호출이 끝난 뒤").isFalse();
+    }
+
+    @Test
+    @DisplayName("스트리밍도 첫 글자 전 실패로 대체할 때만 표시되고, 대체가 실패해도 표시가 남지 않는다")
+    void 스트리밍_대체도_표시되고_지워진다() {
+        boolean[] seen = new boolean[1];
+        doAnswer(invocation -> {
+            invocation.<LlmStreamHandler>getArgument(1).onError(new IllegalStateException("호출 실패"));
+            return null;
+        }).when(primary).stream(any(), any());
+        doAnswer(invocation -> {
+            seen[0] = LlmFallbackScope.active();
+            throw new IllegalStateException("대체도 실패");
+        }).when(fallback).stream(any(), any());
+
+        try {
+            client.stream(request, mock(LlmStreamHandler.class));
+        } catch (IllegalStateException expected) {
+            // 대체 실패는 그대로 올라온다
+        }
+
+        assertThat(seen[0]).isTrue();
+        assertThat(LlmFallbackScope.active()).isFalse();
+    }
 }

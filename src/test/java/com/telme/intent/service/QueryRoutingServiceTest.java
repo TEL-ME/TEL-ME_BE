@@ -63,6 +63,8 @@ class QueryRoutingServiceTest {
             intentConverter,
             transactionTemplate
         );
+        // 요청 개수 판정은 기본으로 하지 않는다. 이 시험은 판정을 켠 경로를 확인한다
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "requestInventoryEnabled", true);
         org.mockito.Mockito.lenient().when(queryRoutingRepository.saveAndFlush(any()))
                 .thenAnswer(inv -> inv.getArgument(0));
         org.mockito.Mockito.lenient().when(consultRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

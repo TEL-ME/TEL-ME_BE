@@ -417,16 +417,69 @@ class SubscriptionUsageServiceTest {
     }
 
     @Test
-    void 달_중간에_요금제를_바꿔도_그_달_한도는_달_1일에_쓰던_요금제_기준이다() {
+    void 달_중간에_요금제를_바꾸면_적용된_날부터_이번_달_한도도_새_요금제_기준이다() {
         subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
         at(Instant.parse("2026-04-10T03:00:00Z"));
-        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 4월 11일부터 적용
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 4월 11일 0시부터 적용
+
+        // 적용 전인 4월 10일에는 아직 이전 요금제
+        assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(1536L);
 
         at(Instant.parse("2026-04-20T03:00:00Z"));
-        assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(1536L);
+        assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(150L * 1024);
 
         at(Instant.parse("2026-05-03T03:00:00Z"));
         assertThat(usageService.getOverview(userId).usage().data().limit()).isEqualTo(150L * 1024);
+    }
+
+    @Test
+    void 무제한에서_한도_있는_요금제로_바꾸면_이번_달_한도가_생기고_이미_쓴_사용량은_그대로라_초과로_표시된다() {
+        Long subscriptionId = subscribeAt(JANUARY_JOIN, "FIVE_G_UNLIMITED", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("BUDGET_MINI"), null); // 4월 11일 0시부터 1.5GB, 통화 300분, 문자 100건
+        at(Instant.parse("2026-04-30T03:00:00Z"));
+        usageService.getOverview(userId);
+        setMonth(subscriptionId, LocalDate.of(2026, 4, 1), 100 * 1024, 200, 50);
+
+        MonthUsage usage = usageService.getOverview(userId).usage();
+
+        assertThat(usage.data().unlimited()).isFalse();
+        assertThat(usage.data().limit()).isEqualTo(1536L);
+        assertThat(usage.data().used()).isEqualTo(100L * 1024);
+        assertThat(usage.data().exceeded()).isTrue();
+        assertThat(usage.data().remaining()).isZero();
+        assertThat(usage.voice().limit()).isEqualTo(300L);
+        assertThat(usage.voice().used()).isEqualTo(200L);
+        assertThat(usage.voice().exceeded()).isFalse();
+    }
+
+    @Test
+    void 한도_있는_요금제에서_무제한으로_바꾸면_적용된_날부터_이번_달_한도가_없어진다() {
+        subscribeAt(JANUARY_JOIN, "BUDGET_MINI", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_UNLIMITED"), null);
+
+        assertThat(usageService.getOverview(userId).usage().data().unlimited()).isFalse();
+
+        at(Instant.parse("2026-04-20T03:00:00Z"));
+        MonthUsage usage = usageService.getOverview(userId).usage();
+
+        assertThat(usage.data().unlimited()).isTrue();
+        assertThat(usage.data().limit()).isNull();
+        assertThat(usage.data().exceeded()).isFalse();
+    }
+
+    @Test
+    void 이번_달_한도가_바뀌어도_지난_달_한도는_그달_1일에_쓰던_요금제_기준이다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_UNLIMITED", false);
+        at(Instant.parse("2026-04-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("BUDGET_MINI"), null); // 4월 11일 0시부터 적용
+        at(Instant.parse("2026-05-15T03:00:00Z"));
+
+        // 4월 1일에는 아직 무제한이었으므로 바꾼 달이어도 지난 달은 무제한이다
+        assertThat(usageService.getOverview(userId, YearMonth.of(2026, 3)).usage().data().unlimited()).isTrue();
+        assertThat(usageService.getOverview(userId, YearMonth.of(2026, 4)).usage().data().unlimited()).isTrue();
+        assertThat(usageService.getOverview(userId, YearMonth.of(2026, 5)).usage().data().limit()).isEqualTo(1536L);
     }
 
     @Test

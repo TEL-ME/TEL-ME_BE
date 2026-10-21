@@ -48,10 +48,10 @@ class PlanQuestionClientSelectionTest {
     }
 
     @Test
-    @DisplayName("설정을 주지 않으면 꺼져 있고, 설정 이름으로 켠다")
-    void 기본은_꺼져_있고_설정으로_켠다() {
-        assertThat(bind(Map.of()).bedrock()).isFalse();
-        assertThat(bind(Map.of("telme.consult.plan-question.bedrock", "true")).bedrock()).isTrue();
+    @DisplayName("설정을 주지 않으면 켜져 있고, 설정 이름으로 끈다")
+    void 기본은_켜져_있고_설정으로_끈다() {
+        assertThat(bind(Map.of()).bedrock()).isTrue();
+        assertThat(bind(Map.of("telme.consult.plan-question.bedrock", "false")).bedrock()).isFalse();
     }
 
     private static PlanQuestionProperties bind(Map<String, Object> values) {

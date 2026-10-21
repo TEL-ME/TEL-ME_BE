@@ -1,0 +1,11 @@
+# 복사해서 terraform.tfvars로 쓴다(terraform.tfvars는 git에 올리지 않는다)
+alarm_email = "you@example.com"
+
+# 첫 apply는 0. ECR에 이미지를 올리고 SSM 이미지 태그를 쓴 뒤(README 6번) 1로 바꿔 다시 apply
+app_instance_count = 0
+# 파라미터를 처음 만들 때만 쓰인다. 바꿔도 반영되지 않으니 그대로 둔다
+app_image_tag = "initial"
+
+# 도메인(가비아). 인증서는 us-east-1 ACM에서 콘솔로 받았다(www.telme.site, telme.site). 둘 다 비우면 *.cloudfront.net
+domain_names        = ["www.telme.site"]
+acm_certificate_arn = "arn:aws:acm:us-east-1:989624287827:certificate/4492fabc-67cf-4e98-8ee9-35b2710bcd3f"

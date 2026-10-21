@@ -151,7 +151,8 @@ class ChatProcessingDispatchIntegrationTest {
         when(duplicated.getIfAvailable())
                 .thenThrow(new NoUniqueBeanDefinitionException(ChatProcessingPort.class, 2, "처리 구현체 2개"));
         ChatProcessingDispatcher dispatcher = new ChatProcessingDispatcher(
-                duplicated, chatExecutionService, responseTimer, transactionManager);
+                duplicated, chatExecutionService, responseTimer, transactionManager,
+                new com.telme.chat.config.ChatProcessingProperties(4, 100));
 
         try {
             dispatcher.dispatch(command);

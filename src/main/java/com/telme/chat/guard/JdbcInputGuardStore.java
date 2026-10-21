@@ -203,7 +203,7 @@ public class JdbcInputGuardStore {
             String policyVersion,
             Instant now,
             ChatMessageSendResponse response) {
-        // 영수증 정리 이후에도 비동기 답변·종료 요약이 실제 마스크 위치를 확인할 수 있어야 한다.
+        // 영수증 정리 이후에도 비동기 답변이 실제 마스크 위치를 확인할 수 있어야 한다.
         if (response.executionId() != null && !inspection.maskSpans().isEmpty()) {
             jdbc.update(
                     "UPDATE chat_messages SET input_mask_spans=?::jsonb WHERE message_id=? AND session_id=?",

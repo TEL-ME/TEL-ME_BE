@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableConfigurationProperties({
         ChatExecutionProperties.class,
+        ChatProcessingProperties.class,
         ChatContextProperties.class,
         ChatQuestionResolutionProperties.class,
         ChatSummaryProperties.class,

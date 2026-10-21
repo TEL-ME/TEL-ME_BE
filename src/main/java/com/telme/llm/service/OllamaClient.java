@@ -5,14 +5,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.converter.OllamaRequestConverter;
@@ -74,20 +71,8 @@ public class OllamaClient implements LlmClient {
         handler.onComplete();
     }
 
-    // 라이브러리 예외를 실패 원인별 오류 코드로 바꾼다. 중단 예외는 그대로 넘긴다
     private RuntimeException toLlmException(RuntimeException e) {
-        if (e instanceof GeneralException) {
-            return e;
-        }
-        if (e instanceof ResourceAccessException) {
-            boolean timeout = e.getCause() instanceof SocketTimeoutException;
-            return new GeneralException(
-                    timeout ? LlmErrorCode.TIMEOUT : LlmErrorCode.CONNECTION_FAILED);
-        }
-        if (e instanceof RestClientResponseException) {
-            return new GeneralException(LlmErrorCode.MODEL_ERROR);
-        }
-        return e;
+        return LlmHttpErrors.toLlmException(e);
     }
 
     private void readStreamLines(InputStream body, LlmStreamHandler handler) throws IOException {

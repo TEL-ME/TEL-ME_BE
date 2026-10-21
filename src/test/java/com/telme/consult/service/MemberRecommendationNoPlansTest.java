@@ -25,7 +25,7 @@ class MemberRecommendationNoPlansTest {
                 mock(SubscriptionUsageService.class), mock(SubscriptionHistoryRepository.class), plans,
                 mock(UserRepository.class), mock(SubscriptionCalendar.class));
 
-        var outcome = answerer.recommend(null, Map.of("age_group", "만 19~64세", "heavy_data", "예"), false);
+        var outcome = answerer.recommend(null, Map.of("age_group", "만 19~64세", "monthly_data_usage", "40GB"), false);
 
         assertThat(outcome.content()).contains("추천할 수 있는 요금제가 없어요");
         assertThat(outcome.asks()).isNull();

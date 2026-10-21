@@ -31,6 +31,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "llm.provider=ollama",
         "llm.model=routing-record-test",
         "llm.retry.wait-duration=0ms",
+        "telme.routing.request-inventory-enabled=true",
         "spring.datasource.hikari.maximum-pool-size=2"
 })
 class RoutingGenerationRecordIntegrationTest {
