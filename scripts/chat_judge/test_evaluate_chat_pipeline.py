@@ -88,6 +88,20 @@ class PipelineEvaluationTest(unittest.TestCase):
         self.assertEqual("captured_rag_input", provenance)
         self.assertEqual([], judge.actual_sources(turn))
 
+    def test_saved_faq_candidate_answer_is_added_to_generation_context(self):
+        turn = sample_capture()["cases"][0]["turns"][0]
+        source = turn["searches"][0]["results"][0]
+        turn["ragInputs"] = [{"searchResults": [source]}]
+        candidate = {"faqId": 777, "slotId": "TERMINATE-0001", "question": "해지 신청 절차를 알려주세요.",
+                     "answer": "매장, 고객센터, 홈페이지에서 신청하면 즉시 해지됩니다."}
+        unrelated = {"faqId": 778, "slotId": "TERMINATE-0002", "question": "해지하면 번호는요?", "answer": "사라집니다."}
+        turn["pipelineTrace"] = {"searchResults": [{"kind": "FAQ_CANDIDATE", "sources": [candidate, unrelated]}]}
+        turn["savedSources"] = [{"faqId": source["faqId"]}, {"faqId": 777}]
+        sources, provenance = pipeline.generation_sources(turn)
+        self.assertEqual([source["faqId"], 777], [row["faqId"] for row in sources])
+        self.assertEqual("captured_rag_input+saved_sources", provenance)
+        self.assertEqual("매장, 고객센터, 홈페이지에서 신청하면 즉시 해지됩니다.", sources[1]["answer"])
+
     def test_source_ids_are_enriched_only_with_exact_catalog_text(self):
         capture = sample_capture()
         source = capture["cases"][0]["turns"][0]["searches"][0]["results"][0]
@@ -95,6 +109,26 @@ class PipelineEvaluationTest(unittest.TestCase):
         enriched = pipeline.enrich_rag_sources(capture, CATALOG)
         self.assertEqual("BILLING-0001", enriched["cases"][0]["turns"][0]["ragInputs"][0]["searchResults"][0]["slotId"])
         self.assertIsNone(source["slotId"])
+
+    def test_saved_faq_candidate_without_slot_id_is_counted_as_the_same_source(self):
+        # 생성 모델을 거치지 않은 FAQ 후보 답변: 근거가 실행 기록에만 있고 DB에 slot_id가 없다
+        capture = sample_capture()
+        turn = capture["cases"][0]["turns"][0]
+        source = turn["searches"][0]["results"][0]
+        turn["ragInputs"] = []
+        turn["pipelineTrace"] = {"searchResults": [{"kind": "FAQ_CANDIDATE", "sources": [copy.deepcopy(source)]}]}
+        turn["savedSources"] = [{"faqId": source["faqId"]}]
+        enriched = pipeline.enrich_rag_sources(capture, CATALOG)["cases"][0]["turns"][0]
+        self.assertEqual({"applicable": True, "groupCount": 1, "candidateHits": 1,
+                          "ragInputHits": 1, "savedSourceHits": 1}, pipeline.retrieval_stages(enriched))
+        self.assertEqual(["BILLING-0001"], [row["sourceId"] for row in pipeline.generation_sources(enriched)[0]])
+
+    def test_database_name_is_limited_to_names_safe_in_sql(self):
+        for name in ("telme_judge_eval", "telme_judge_20261022", "telme_judge_214_store"):
+            self.assertTrue(runner.DATABASE_NAME.fullmatch(name), name)
+        for name in ("telme_judge_2026-10-22", "telme_judge_", "telme_eval", "Telme_judge_x",
+                     "telme_judge_x; DROP DATABASE telme", "telme_judge_" + "a" * 41):
+            self.assertFalse(runner.DATABASE_NAME.fullmatch(name), name)
 
     def test_quality_citations_and_order_are_validated(self):
         turn = sample_capture()["cases"][0]["turns"][0]

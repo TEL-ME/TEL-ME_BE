@@ -11144,6 +11144,13 @@
     "goldSourceGroups": [],
     "labelProvenance": "curated_flow_fixture",
     "qualityReferenceGroups": [],
+    "clarificationReplies": [
+     {
+      "whenKey": "serviceType",
+      "content": "특별한 업무는 없어요",
+      "auto": true
+     }
+    ],
     "answerSources": [
      "STORE"
     ]

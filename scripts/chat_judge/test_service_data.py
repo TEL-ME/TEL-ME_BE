@@ -45,14 +45,22 @@ class AppMessageTest(unittest.TestCase):
                 service_data.NO_SEARCH_RESULT, service_data.NO_EVIDENCE):
             self.assertIn(sentence, java)
 
+    def test_plan_task_login_guidance_matches_java_composition(self):
+        java = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src/main/java").rglob("*.java"))
+        self.assertIn(f'LOGIN_REQUIRED = "{service_data.PLAN_TASK_LOGIN_REQUIRED}";', java)
+        for prefix in service_data.PLAN_TASK_PREFIXES:
+            self.assertIn(f'"{prefix}" + PlanTaskSupport.LOGIN_REQUIRED', java)
+        self.assertTrue(service_data.is_service_guidance("요금제 변경은 로그인한 뒤 마이페이지의 내 요금제 화면에서 할 수 있어요."))
+        self.assertFalse(service_data.is_service_guidance("요금제 변경은 매장에서만 할 수 있어요."))
+
     def test_recommendation_rule_matches_java_constants(self):
         recommender = (ROOT / "src/main/java/com/telme/consult/service/PlanRecommender.java").read_text(encoding="utf-8")
         answerer = (ROOT / "src/main/java/com/telme/consult/service/MemberRecommendationAnswerer.java").read_text(
             encoding="utf-8")
         self.assertIn(f"MARGIN = {service_data.RECOMMENDATION_MARGIN};", recommender)
         self.assertIn(f"DOWNGRADE_MARGIN = {service_data.DOWNGRADE_MARGIN};", recommender)
-        self.assertIn(f"HEAVY_DATA_MB = {service_data.HEAVY_DATA_GB}L * MB_PER_GB;", answerer)
-        self.assertIn(f"LIGHT_DATA_MB = {service_data.LIGHT_DATA_GB}L * MB_PER_GB;", answerer)
+        self.assertIn(f"MAX_CHEAPER = {service_data.MAX_CHEAPER};", answerer)
+        self.assertIn(f"COOLDOWN_MONTHS = {service_data.COOLDOWN_MONTHS};", answerer)
 
     def test_recommendation_rule_states_whether_the_current_plan_fits(self):
         member = {"subscription": {"subscription": {"currentPlan": {
@@ -61,6 +69,18 @@ class AppMessageTest(unittest.TestCase):
         self.assertTrue(service_data.recommendation_rule_source(member)["answer"].endswith("평균 사용량에 알맞다."))
         member["usageDemand"]["dataMb"] = 45000
         self.assertIn("알맞지 않다(데이터 부족)", service_data.recommendation_rule_source(member)["answer"])
+
+    def test_recommendation_rule_picks_the_5g_plan_that_fits_the_usage(self):
+        # 앱(PlanRecommender.forUsage)은 5G 중 사용량을 채우는 가장 싼 요금제를 고른다. 5G 중 그냥 가장 싼 요금제가 아니다
+        # 안내는 추천 요금제가 LTE일 때만 한다(MemberRecommendationAnswerer). 알뜰 요금제를 추천하면 5G를 알리지 않는다
+        rule = service_data.recommendation_rule_source(None)["answer"]
+        self.assertIn(f"추천한 요금제가 LTE면 5G 요금제 중 말한 사용량의 {service_data.RECOMMENDATION_MARGIN}배 이상을 주는 "
+                      "가장 싼 요금제", rule)
+        self.assertIn("채우는 5G 요금제가 없으면 5G 중 데이터가 가장 많은 요금제", rule)
+        recommender = (ROOT / "src/main/java/com/telme/consult/service/PlanRecommender.java").read_text(encoding="utf-8")
+        self.assertIn("new UsageFit(cheapest, cheapestFittingOrBiggest(fiveG, demand))", recommender)
+        answerer = (ROOT / "src/main/java/com/telme/consult/service/MemberRecommendationAnswerer.java").read_text(encoding="utf-8")
+        self.assertIn("fit.fiveG() != null && plan.getNetworkType() == Plan.NetworkType.LTE", answerer)
 
     def test_service_guidance_matches_whole_template_sentences_only(self):
         self.assertTrue(service_data.is_service_guidance("로그인하시면 이번 달 사용량과 예상 요금을 확인해 드릴 수 있어요."))

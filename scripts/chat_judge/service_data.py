@@ -16,8 +16,8 @@ RULE_SOURCE_ID = "SERVICE:RECOMMENDATION_RULE"
 # 요금제 추천 규칙(PlanRecommender, MemberRecommendationAnswerer). 바뀌면 test_service_data가 Java 상수와 대조한다
 RECOMMENDATION_MARGIN = 1.2
 DOWNGRADE_MARGIN = 1.4
-HEAVY_DATA_GB = 50
-LIGHT_DATA_GB = 3
+MAX_CHEAPER = 3
+COOLDOWN_MONTHS = 3
 # 회원 정보로 답하는 요금제 답변 유형(PlanAnswerProvider). 추천은 요금제 표와 회원 사용량을 함께 쓴다
 MEMBER_ANSWER_TYPES = {"MY_SUBSCRIPTION", "MY_PENALTY", "MY_USAGE", "RECOMMENDATION"}
 PLAN_TABLE_ANSWER_TYPES = {"PLAN_CATALOG", "RECOMMENDATION"}
@@ -62,7 +62,12 @@ def compact(text):
     return re.sub(r"\s+", "", text or "")
 
 
-_GUIDANCE = tuple(compact(sentence) for sentence in SERVICE_GUIDANCE)
+# 요금제 업무 요청에 비회원이면 붙이는 안내(PlanTaskSupport.LOGIN_REQUIRED). 업무 이름을 앞에 붙여 한 문장으로 보낸다
+PLAN_TASK_LOGIN_REQUIRED = "로그인한 뒤 마이페이지의 내 요금제 화면에서 할 수 있어요."
+PLAN_TASK_PREFIXES = ("요금제 변경은 ", "요금제 신청은 ", "요금제 해지는 ", "일시 정지는 ")  # Plan*Answerer
+PLAN_TASK_GUIDANCE = tuple(prefix + PLAN_TASK_LOGIN_REQUIRED for prefix in PLAN_TASK_PREFIXES)
+
+_GUIDANCE = tuple(compact(sentence) for sentence in SERVICE_GUIDANCE + PLAN_TASK_GUIDANCE)
 _FALLBACKS = {compact(sentence) for sentence in SYSTEM_FALLBACKS}
 
 
@@ -104,7 +109,13 @@ def recommendation_rule_source(member_data):
     lines = ["앱의 요금제 추천 규칙",
              f"요금제가 사용량에 알맞다는 것은 데이터·통화·문자 제공량이 각각 평균 사용량의 {RECOMMENDATION_MARGIN}배 이상(무제한 포함)이라는 뜻이다.",
              f"추천은 알맞은 요금제 중 가장 싼 요금제다. 지금 요금제가 알맞으면 그대로 쓰라고 권하고, 더 싼 요금제는 {DOWNGRADE_MARGIN}배 여유가 있을 때만 권한다.",
-             f"사용량을 모르면 데이터를 많이 쓰는 고객은 {HEAVY_DATA_GB}GB, 적게 쓰는 고객은 {LIGHT_DATA_GB}GB 이상 주는 가장 싼 요금제를 추천한다(나이에 맞는 요금제 중)."]
+             f"요금제를 바꾼 지 {COOLDOWN_MONTHS}개월이 안 됐으면 더 싼 요금제를 권하지 않는다. 고객이 더 싼 요금제를 직접 찾으면 권한다.",
+             f"사용 기록이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량의 {RECOMMENDATION_MARGIN}배 이상을 주는 가장 싼 요금제를 "
+             "추천한다(나이에 맞는 요금제 중). 채우는 요금제가 없으면 데이터가 가장 많은 요금제를 추천한다. "
+             f"추천한 요금제가 LTE면 5G 요금제 중 말한 사용량의 {RECOMMENDATION_MARGIN}배 이상을 주는 가장 싼 요금제도 "
+             "함께 알린다(채우는 5G 요금제가 없으면 5G 중 데이터가 가장 많은 요금제). "
+             "추천한 요금제에 통화·문자 한도가 있으면 그 사용량도 묻는다.",
+             f"고객이 더 싼 요금제를 찾으면 추천 요금제보다 싼 요금제를 {MAX_CHEAPER}개까지 함께 알리고 사용량을 채우지 못할 수 있다고 알린다."]
     plan = (((member_data or {}).get("subscription") or {}).get("subscription") or {}).get("currentPlan")
     demand = (member_data or {}).get("usageDemand")
     if plan and isinstance(demand, dict) and "dataMb" in demand:

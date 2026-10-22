@@ -262,7 +262,31 @@ def generation_sources(turn):
             sid = source.get("slotId") or f"faqId:{source['faqId']}"
             result[sid] = {"sourceId": sid, "faqId": source["faqId"],
                            "question": source["question"], "answer": source["answer"]}
-    return list(result.values()) + service, "captured_rag_input" + ("+service_data" if service else "")
+    saved = saved_answer_sources(turn, result)
+    provenance = "captured_rag_input" + ("+saved_sources" if saved else "") + ("+service_data" if service else "")
+    return list(result.values()) + saved + service, provenance
+
+
+def saved_answer_sources(turn, known):
+    """FAQ 후보 답변처럼 생성 모델을 거치지 않은 답은 생성 입력(ragInputs)에 근거가 없다.
+    복합 질문은 한쪽 답만 이 경로일 수 있다. 저장된 근거(savedSources) 중 생성 입력에 없는 FAQ를
+    실행 기록의 검색 결과에서 찾아 근거로 더한다. 판정 모델이 맞는 답을 근거 없음으로 보지 않게 한다."""
+    saved = {source["faqId"] for source in turn.get("savedSources") or [] if source.get("faqId") is not None}
+    result = {}
+    for source in trace_sources(turn):
+        sid = source.get("slotId") or f"faqId:{source.get('faqId')}"
+        if source.get("faqId") in saved and sid not in known and sid not in result:
+            result[sid] = {"sourceId": sid, "faqId": source["faqId"],
+                           "question": source["question"], "answer": source["answer"]}
+    return list(result.values())
+
+
+def trace_sources(turn):
+    """실행 기록(pipelineTrace)과 되묻기 이력의 실행 기록에 남은 검색 결과 근거."""
+    traces = [turn.get("pipelineTrace") or {}] + [exchange.get("pipelineTrace") or {}
+                                                  for exchange in turn.get("clarificationExchanges") or []]
+    return [source for trace in traces for search in trace.get("searchResults") or []
+            for source in search.get("sources") or []]
 
 
 def enrich_rag_sources(capture, catalog):
@@ -270,13 +294,14 @@ def enrich_rag_sources(capture, catalog):
     pairs = {(row["question"], row["answer"]): row["slot_id"] for row in catalog}
     for case in enriched["cases"]:
         for turn in case["turns"]:
-            for request in turn.get("ragInputs", []):
-                for source in request.get("searchResults", []):
-                    if not source.get("slotId"):
-                        sid = pairs.get((source["question"], source["answer"]))
-                        if sid:
-                            source["slotId"] = sid
-                            source["slotIdProvenance"] = "catalog_exact_match"
+            # 실행 기록의 검색 결과도 저장된 근거를 찾는 데 쓰므로(saved_answer_sources) 같은 ID로 맞춘다
+            sources = [source for request in turn.get("ragInputs", []) for source in request.get("searchResults", [])]
+            for source in sources + trace_sources(turn):
+                if not source.get("slotId"):
+                    sid = pairs.get((source.get("question"), source.get("answer")))
+                    if sid:
+                        source["slotId"] = sid
+                        source["slotIdProvenance"] = "catalog_exact_match"
     return service_data.attach_service_sources(enriched)
 
 

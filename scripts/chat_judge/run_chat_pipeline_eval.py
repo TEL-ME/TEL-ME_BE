@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 import urllib.error
@@ -19,6 +20,7 @@ from scripts.chat_judge import judge_chat_flow as judge
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_2.json"
+DATABASE_NAME = re.compile(r"telme_judge_[a-z0-9_]{1,40}")
 
 
 def select_cases(cases, limit=0):
@@ -77,7 +79,7 @@ def wait_http(url, seconds=240):
     raise RuntimeError(f"Service did not become ready: {url}: {last}")
 
 
-def ensure_database(container):
+def ensure_database(container, database="telme_judge_eval"):
     command(["docker", "start", container], stdout=subprocess.DEVNULL)
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
@@ -86,14 +88,14 @@ def ensure_database(container):
             break
         time.sleep(1)
     found = command(["docker", "exec", container, "psql", "-U", "telme", "-d", "postgres", "-Atc",
-                     "SELECT 1 FROM pg_database WHERE datname = 'telme_judge_eval'"], capture_output=True).stdout
+                     f"SELECT 1 FROM pg_database WHERE datname = '{database}'"], capture_output=True).stdout
     if found.strip() != b"1":
         command(["docker", "exec", container, "psql", "-U", "telme", "-d", "postgres", "-v", "ON_ERROR_STOP=1",
-                 "-c", "CREATE DATABASE telme_judge_eval"])
+                 "-c", f"CREATE DATABASE {database}"])
         dump = command(["docker", "exec", container, "pg_dump", "-U", "telme", "-d", "telme"], capture_output=True).stdout
-        command(["docker", "exec", "-i", container, "psql", "-U", "telme", "-d", "telme_judge_eval",
+        command(["docker", "exec", "-i", container, "psql", "-U", "telme", "-d", database,
                  "-v", "ON_ERROR_STOP=1"], input=dump, stdout=subprocess.DEVNULL)
-    counts = command(["docker", "exec", container, "psql", "-U", "telme", "-d", "telme_judge_eval", "-Atc",
+    counts = command(["docker", "exec", container, "psql", "-U", "telme", "-d", database, "-Atc",
                      "SELECT (SELECT count(*) FROM faqs), (SELECT count(*) FROM faq_embeddings)"],
                     capture_output=True).stdout.decode().strip()
     if not counts or any(int(value) < 1150 for value in counts.split("|")):
@@ -114,7 +116,14 @@ def main():
     parser.add_argument("--vllm-container", default="telme-judge-vllm-bounded")
     parser.add_argument("--generator-container", default="telme-ollama")
     parser.add_argument("--postgres-container", default="telme-postgres")
+    # 측정마다 새 평가 DB를 쓰려면 telme_judge_로 시작하는 이름을 준다. 없으면 --postgres-container의 telme DB를 복제한다
+    parser.add_argument("--database", default="telme_judge_eval")
+    # 앱 안 Bedrock 호출의 원본 요청·응답(상담 내용)까지 캡처에 남긴다. 로컬 분석용이라 결과 묶음에 넣지 않는다
+    parser.add_argument("--record-raw", action="store_true")
     args = parser.parse_args()
+    # 이름을 SQL에 그대로 넣으므로 소문자·숫자·밑줄만 받는다("telme_judge_2026-10-22"는 CREATE DATABASE에서 문법 오류)
+    if not DATABASE_NAME.fullmatch(args.database):
+        parser.error("--database must be telme_judge_ followed by 1-40 lowercase letters, digits or underscores")
     if args.out.exists():
         parser.error("Output directory exists; use a new directory to preserve raw results")
     if not 1 <= args.workers <= 8:
@@ -151,13 +160,16 @@ def main():
         manifest["plannedTurns"] = sum(len(case["turns"]) for case in fixtures)
         checkpoint(args.out / "manifest.json", manifest)
         print(f"[pipeline] Capturing {manifest['plannedTurns']} real chat questions", flush=True)
-        manifest["databaseCounts"] = ensure_database(args.postgres_container)
+        manifest["databaseCounts"] = ensure_database(args.postgres_container, args.database)
+        manifest["database"] = args.database
+        manifest["recordRaw"] = args.record_raw
         command(["docker", "stop", args.vllm_container], stdout=subprocess.DEVNULL)
         command(["docker", "start", args.generator_container], stdout=subprocess.DEVNULL)
         wait_http("http://localhost:11434/api/tags", 90)
         env = dict(os.environ)
         env.update({"TELME_CHAT_JUDGE_PROBE": "true", "TELME_CHAT_JUDGE_FIXTURE": str(fixture_path),
-                    "TELME_CHAT_JUDGE_OUT": str(capture_path), "POSTGRES_DB": "telme_judge_eval",
+                    "TELME_CHAT_JUDGE_OUT": str(capture_path), "POSTGRES_DB": args.database,
+                    "TELME_CHAT_JUDGE_RAW": "true" if args.record_raw else "false",
                     "LLM_PROVIDER": "ollama", "PYTHONIOENCODING": "utf-8"})
         gradle = str(ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew"))
         with (args.out / "capture-gradle.log").open("wb") as log:
