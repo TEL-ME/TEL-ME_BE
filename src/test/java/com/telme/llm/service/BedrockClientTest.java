@@ -108,14 +108,24 @@ class BedrockClientTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {400, 403, 500})
-    @DisplayName("권한·설정 오류와 원인 불명 서버 오류는 재시도하지 않는 MODEL_ERROR로 바꾼다")
-    void 서버_오류(int status) {
+    @ValueSource(ints = {400, 403})
+    @DisplayName("권한·설정 오류는 다시 해도 같으므로 REQUEST_REJECTED로 바꾼다")
+    void 요청_거부(int status) {
         when(runtime.converse(any(ConverseRequest.class)))
-                .thenThrow(AwsServiceException.builder().statusCode(status).message("error").build());
+                .thenThrow(AwsServiceException.builder().statusCode(status).message("denied").build());
+
+        assertError(LlmErrorCode.REQUEST_REJECTED);
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=" + status);
+    }
+
+    @Test
+    @DisplayName("원인을 알 수 없는 서버 오류(500)는 MODEL_ERROR로 바꾼다")
+    void 서버_오류() {
+        when(runtime.converse(any(ConverseRequest.class)))
+                .thenThrow(AwsServiceException.builder().statusCode(500).message("error").build());
 
         assertError(LlmErrorCode.MODEL_ERROR);
-        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=" + status);
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=500");
     }
 
     @Test

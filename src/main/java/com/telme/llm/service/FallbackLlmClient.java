@@ -11,10 +11,16 @@ public class FallbackLlmClient implements LlmClient {
 
     private final LlmClient primary;
     private final LlmClient fallback;
+    private final FallbackGate gate;
 
     public FallbackLlmClient(LlmClient primary, LlmClient fallback) {
+        this(primary, fallback, FallbackGate.ALWAYS_FALLBACK);
+    }
+
+    public FallbackLlmClient(LlmClient primary, LlmClient fallback, FallbackGate gate) {
         this.primary = Objects.requireNonNull(primary);
         this.fallback = Objects.requireNonNull(fallback);
+        this.gate = Objects.requireNonNull(gate);
     }
 
     @Override
@@ -22,6 +28,10 @@ public class FallbackLlmClient implements LlmClient {
         try {
             return primary.generate(request);
         } catch (RuntimeException failure) {
+            RuntimeException blocked = gate.blockFallback(request, failure);
+            if (blocked != null) {
+                throw blocked;
+            }
             log.warn("[LLM 대체] 주 모델 호출이 실패해 대체 모델로 다시 부릅니다. taskType={}", request.taskType());
             // 대체 호출임을 표시해 꺼진 GPU를 켤 신호로 쓴다(GpuWakingLlmClient)
             return LlmFallbackScope.run(() -> fallback.generate(request));
@@ -37,6 +47,11 @@ public class FallbackLlmClient implements LlmClient {
             guarded.onError(failure);
         }
         if (guarded.failedBeforeFirstToken) {
+            RuntimeException blocked = gate.blockFallback(request, guarded.failure);
+            if (blocked != null) {
+                handler.onError(blocked);
+                return;
+            }
             log.warn("[LLM 대체] 주 모델 스트리밍이 첫 글자 전에 실패해 대체 모델로 다시 부릅니다. taskType={}",
                     request.taskType());
             LlmFallbackScope.run(() -> fallback.stream(request, handler));
@@ -49,6 +64,7 @@ public class FallbackLlmClient implements LlmClient {
         private final LlmStreamHandler delegate;
         private boolean started;
         private boolean failedBeforeFirstToken;
+        private Throwable failure;
 
         private BeforeFirstTokenHandler(LlmStreamHandler delegate) {
             this.delegate = delegate;
@@ -72,6 +88,7 @@ public class FallbackLlmClient implements LlmClient {
                 return;
             }
             failedBeforeFirstToken = true;
+            failure = error;
         }
 
         @Override

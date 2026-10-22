@@ -1,6 +1,7 @@
 package com.telme.rag.config;
 
 import com.telme.llm.config.BedrockConfig;
+import com.telme.llm.service.AnswerRetryGate;
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
 import org.springframework.beans.factory.ObjectProvider;
@@ -17,7 +18,7 @@ public class RagAnswerLlmConfiguration {
     public static final String RAG_ANSWER_LLM_CLIENT = "ragAnswerLlmClient";
 
     static LlmClient answerClient(RagAnswerProperties properties, LlmClient exaone, LlmClient bedrock) {
-        return properties.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
+        return properties.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone, new AnswerRetryGate()) : exaone;
     }
 
     // 금액으로 막힌 답의 다시 생성은 gpt-oss만 부른다. 엑사원 대체는 Bedrock 장애용이고 엑사원 GPU는 평소 꺼져 있어,
