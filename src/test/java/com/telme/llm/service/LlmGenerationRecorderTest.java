@@ -10,11 +10,14 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.repository.ChatExecutionRepository;
+import com.telme.global.common.exception.GeneralException;
 import com.telme.llm.converter.OllamaRequestConverter;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration;
 import com.telme.llm.entity.LlmGeneration.Status;
 import com.telme.llm.entity.LlmGeneration.TaskType;
+import com.telme.llm.exception.LlmCallException;
+import com.telme.llm.exception.LlmErrorCode;
 import com.telme.llm.repository.LlmGenerationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,6 +59,26 @@ class LlmGenerationRecorderTest {
         assertThat(options.path("maxTokens").asInt()).isEqualTo(1000);
         assertThat(options.has("options")).isFalse();
         verify(converter, never()).toChatRequest(any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("메시지가 없는 GeneralException은 오류 코드와 문구를 오류 내용으로 남긴다")
+    void 메시지_없는_예외는_오류_코드로_남긴다() {
+        var result = LlmGenerationRecorder.Result.failure(1, new GeneralException(LlmErrorCode.TIMEOUT), null, 8000);
+
+        assertThat(result.status()).isEqualTo(Status.TIMEOUT);
+        assertThat(result.errorMessage()).isEqualTo("LLM504-0 LLM 응답 시간이 초과되었습니다.");
+    }
+
+    @Test
+    @DisplayName("원인 상세가 있는 예외는 상세까지 오류 내용으로 남긴다")
+    void 원인_상세를_남긴다() {
+        var result = LlmGenerationRecorder.Result.failure(1,
+                new LlmCallException(LlmErrorCode.INVALID_RESPONSE, "stopReason=end_turn, outputTokens=12"), null, 2064);
+
+        assertThat(result.status()).isEqualTo(Status.MODEL_ERROR);
+        assertThat(result.errorMessage())
+                .isEqualTo("LLM502-1 LLM 응답 형식이 올바르지 않습니다. (stopReason=end_turn, outputTokens=12)");
     }
 
     private LlmRequest request() {
