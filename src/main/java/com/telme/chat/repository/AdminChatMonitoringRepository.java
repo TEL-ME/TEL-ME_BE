@@ -16,7 +16,7 @@ public class AdminChatMonitoringRepository {
     private final AdminChatMonitoringRowMapper rowMapper;
 
     // 사용자 입력 메시지 기준 + trace는 JSONPath로 요약에 쓸 작은 배열만 추출
-    private static final String SELECT = """
+    private static final String SELECT_TEMPLATE = """
             SELECT m.message_id, m.message_type, m.session_id, m.content, m.created_at AS message_created_at,
                    s.user_id, u.name AS user_name, s.guest_id::text AS guest_id,
                    e.execution_id, e.status AS execution_status, e.started_at, e.ended_at, e.total_ms, e.error_code,
@@ -44,12 +44,20 @@ public class AdminChatMonitoringRepository {
             FROM chat_messages m
             JOIN chat_sessions s ON s.session_id = m.session_id
             LEFT JOIN users u ON u.user_id = s.user_id
-            LEFT JOIN chat_executions e ON e.input_message_id = m.message_id
+            %s
             LEFT JOIN chat_messages o ON o.message_id = e.output_message_id
             LEFT JOIN query_routings r ON r.message_id = m.message_id
             CROSS JOIN LATERAL (SELECT e.pipeline_trace AS t) trace
             WHERE m.role = 'USER'
             """;
+
+    // 다시 시도한 질문은 실행이 둘이라 목록에는 가장 최근 실행만 붙임
+    private static final String LATEST_EXECUTION = """
+            LEFT JOIN LATERAL (SELECT x.* FROM chat_executions x WHERE x.input_message_id = m.message_id
+                               ORDER BY x.execution_id DESC LIMIT 1) e ON true""";
+    private static final String GIVEN_EXECUTION = "JOIN chat_executions e ON e.input_message_id = m.message_id AND e.execution_id = ?";
+    private static final String SELECT = SELECT_TEMPLATE.formatted(LATEST_EXECUTION);
+    private static final String SELECT_BY_EXECUTION = SELECT_TEMPLATE.formatted(GIVEN_EXECUTION);
 
     public List<AdminChatMonitoringRow> findPage(long beforeId, AdminChatMonitoringStatus status, int limit) {
         List<Object> args = new ArrayList<>(List.of(beforeId));
@@ -60,8 +68,10 @@ public class AdminChatMonitoringRepository {
                     + " WHERE message_type = 'BLOCKED' AND message_id < ? ORDER BY message_id DESC LIMIT ?)");
             args.addAll(List.of(beforeId, limit));
         } else if (status != null) {
-            sql.append(" AND e.status = ? AND m.message_id IN (SELECT input_message_id FROM chat_executions"
-                    + " WHERE status = ? AND input_message_id < ? ORDER BY input_message_id DESC LIMIT ?)");
+            sql.append(" AND e.status = ? AND m.message_id IN (SELECT x.input_message_id FROM chat_executions x"
+                    + " WHERE x.status = ? AND x.input_message_id < ? AND NOT EXISTS (SELECT 1 FROM chat_executions y"
+                    + " WHERE y.input_message_id = x.input_message_id AND y.execution_id > x.execution_id)"
+                    + " ORDER BY x.input_message_id DESC LIMIT ?)");
             args.addAll(List.of(status.name(), status.name(), beforeId, limit));
         }
         // PK 커서
@@ -70,7 +80,8 @@ public class AdminChatMonitoringRepository {
         return jdbc.query(sql.toString(), rowMapper, args.toArray());
     }
 
-    public Optional<AdminChatMonitoringRow> findByMessageId(long messageId) {
-        return jdbc.query(SELECT + " AND m.message_id = ?", rowMapper, messageId).stream().findFirst();
+    public Optional<AdminChatMonitoringRow> findByExecutionId(long executionId, long messageId) {
+        return jdbc.query(SELECT_BY_EXECUTION + " AND m.message_id = ?", rowMapper, executionId, messageId)
+                .stream().findFirst();
     }
 }

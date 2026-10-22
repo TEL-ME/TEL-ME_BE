@@ -210,6 +210,37 @@ class AdminChatMonitoringIntegrationTest {
     }
 
     @Test
+    @DisplayName("다시 시도한 질문은 한 줄로 나오고 가장 최근 실행의 상태를 보인다")
+    void 다시_시도한_질문은_한_줄이다() throws Exception {
+        long retriedExecutionId = insertRetryExecution(failedMessageId);
+        String before = String.valueOf(runningMessageId + 1);
+
+        mockMvc.perform(admin(get(URL).param("beforeId", before).param("size", "10")))
+                .andExpect(jsonPath("$.result.items[?(@.messageId == " + failedMessageId + ")]", hasSize(1)))
+                .andExpect(jsonPath("$.result.items[?(@.messageId == " + failedMessageId + ")].executionId")
+                        .value((int) retriedExecutionId))
+                .andExpect(jsonPath("$.result.items[?(@.messageId == " + failedMessageId + ")].status")
+                        .value("COMPLETED"));
+        mockMvc.perform(admin(get(URL).param("beforeId", before).param("status", "FAILED").param("size", "10")))
+                .andExpect(jsonPath("$.result.items[?(@.messageId == " + failedMessageId + ")]", hasSize(0)));
+        mockMvc.perform(admin(get(URL).param("beforeId", before).param("status", "COMPLETED").param("size", "10")))
+                .andExpect(jsonPath("$.result.items[?(@.messageId == " + failedMessageId + ")]", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("상세는 연 실행의 상태와 결과를 보인다")
+    void 다시_시도한_질문의_상세는_연_실행을_따른다() throws Exception {
+        long retriedExecutionId = insertRetryExecution(failedMessageId);
+
+        mockMvc.perform(admin(get(URL + "/{id}", retriedExecutionId)))
+                .andExpect(jsonPath("$.result.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.stages.result.state").value("PASSED"));
+        mockMvc.perform(admin(get(URL + "/{id}", failedExecutionId)))
+                .andExpect(jsonPath("$.result.status").value("FAILED"))
+                .andExpect(jsonPath("$.result.stages.result.label").value("실패"));
+    }
+
+    @Test
     @DisplayName("상태 필터와 커서를 함께 쓰면 그 상태에서 beforeId보다 오래된 것만 온다")
     void 상태_필터와_커서() throws Exception {
         String latest = String.valueOf(runningMessageId + 1);
@@ -316,6 +347,14 @@ class AdminChatMonitoringIntegrationTest {
     private static org.springframework.test.web.servlet.request.RequestPostProcessor as(long userId, String role) {
         return authentication(new UsernamePasswordAuthenticationToken(
                 userId, null, List.of(new SimpleGrantedAuthority(role))));
+    }
+
+    private long insertRetryExecution(long messageId) {
+        return jdbc.queryForObject("""
+                INSERT INTO chat_executions(session_id,input_message_id,status,ended_at,attempt)
+                SELECT session_id,input_message_id,'COMPLETED',now(),2 FROM chat_executions
+                WHERE execution_id = ? RETURNING execution_id
+                """, Long.class, failedExecutionId);
     }
 
     private long insertUser(String role, String name) {

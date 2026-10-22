@@ -80,6 +80,21 @@ class RetryingLlmClientTest {
         assertThat(handler.retries).isEmpty();
     }
 
+    @ParameterizedTest
+    @EnumSource(value = LlmErrorCode.class, names = {"TEMPORARILY_UNAVAILABLE", "TIMEOUT"})
+    @DisplayName("한도 초과·일시 장애·시간 초과는 generate도 다시 호출하고, MODEL_ERROR·INVALID_RESPONSE는 하지 않는다")
+    void generate_일시적_오류만_재시도한다(LlmErrorCode code) {
+        FailingClient transientFailure = new FailingClient(new GeneralException(code));
+        assertThatThrownBy(() -> new RetryingLlmClient(transientFailure, properties).generate(request()))
+                .isInstanceOf(GeneralException.class);
+        assertThat(transientFailure.calls).isEqualTo(2);
+
+        FailingClient permanentFailure = new FailingClient(new GeneralException(LlmErrorCode.MODEL_ERROR));
+        assertThatThrownBy(() -> new RetryingLlmClient(permanentFailure, properties).generate(request()))
+                .isInstanceOf(GeneralException.class);
+        assertThat(permanentFailure.calls).isEqualTo(1);
+    }
+
     @Test
     @DisplayName("다시 호출해도 같은 결과인 오류는 재시도하지 않는다")
     void generate_재시도_대상이_아닌_오류는_바로_전달한다() {
@@ -182,7 +197,7 @@ class RetryingLlmClientTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LlmErrorCode.class, names = {"CONNECTION_FAILED", "TIMEOUT"})
+    @EnumSource(value = LlmErrorCode.class, names = {"CONNECTION_FAILED", "TIMEOUT", "TEMPORARILY_UNAVAILABLE"})
     void synchronousFailureBeforeTokenCanRetryAndCompleteOnce(LlmErrorCode code) {
         LlmAttemptClient delegate = mock(LlmAttemptClient.class);
         doAnswer(invocation -> {

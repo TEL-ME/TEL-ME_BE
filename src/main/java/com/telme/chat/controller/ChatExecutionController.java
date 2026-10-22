@@ -1,7 +1,9 @@
 package com.telme.chat.controller;
 
 import com.telme.chat.config.ChatExecutionProperties;
+import com.telme.chat.dto.req.ChatExecutionRetryRequest;
 import com.telme.chat.dto.res.ChatExecutionTraceResponse;
+import com.telme.chat.dto.res.ChatMessageSendResponse;
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.exception.ChatErrorCode;
 import com.telme.chat.service.ChatActor;
@@ -9,6 +11,7 @@ import com.telme.chat.service.ChatActorProvider;
 import com.telme.chat.service.ChatEmitterRegistry;
 import com.telme.chat.service.ChatExecutionState;
 import com.telme.chat.service.ChatFailure;
+import com.telme.chat.service.ChatResponseStopwatch;
 import com.telme.chat.service.ChatSessionService;
 import com.telme.chat.service.ChatExecutionTraceService;
 import com.telme.global.common.CustomResponse;
@@ -17,9 +20,12 @@ import com.telme.global.common.exception.GeneralException;
 import com.telme.notification.service.NotificationService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import java.time.Duration;
 import java.util.function.BooleanSupplier;
@@ -28,9 +34,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -64,6 +74,31 @@ public class ChatExecutionController {
             @PathVariable Long executionId) {
         return CustomResponse.onSuccess(
                 traces.get(chatActorProvider.getCurrentActor(request), sessionId, executionId));
+    }
+
+    @Operation(summary = "답변 다시 시도",
+            description = "답변 생성에 실패해 다시 시도할 수 있는(error 이벤트의 retryable=true, 새로고침 후에는 "
+                    + "메시지 이력의 retryableExecutionId) 실행을 같은 질문으로 다시 처리합니다. 질문은 새로 저장하지 않고 "
+                    + "새 실행 ID를 돌려주므로 그 ID로 구독합니다. 질문마다 한 번만 가능하고, 이 시도가 또 실패하면 "
+                    + "다른 모델로 대체해 답합니다. 원래 질문에 위치를 보냈다면 같은 위치를 본문으로 다시 보냅니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "새 실행 시작"),
+            @ApiResponse(responseCode = "404", description = "CHAT404-0/CHAT404-1: 세션 또는 실행을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "CHAT409-3: 다른 답변이 생성 중, "
+                    + "CHAT409-5: 다시 시도할 수 없는 답변, CHAT409-6: 이미 다시 시도한 질문")
+    })
+    @PostMapping("/{executionId}/retry")
+    public ResponseEntity<CustomResponse<ChatMessageSendResponse>> retry(
+            HttpServletRequest servletRequest,
+            @PathVariable Long sessionId,
+            @PathVariable Long executionId,
+            @Valid @RequestBody(required = false) ChatExecutionRetryRequest request) {
+        ChatResponseStopwatch stopwatch = ChatResponseStopwatch.start();
+        ChatActor actor = chatActorProvider.getCurrentActor(servletRequest);
+        ChatMessageSendResponse response =
+                chatSessionService.retryExecution(actor, sessionId, executionId, request, stopwatch);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CustomResponse.onSuccess(HttpStatus.CREATED, response));
     }
 
     // front작업시 이벤트 별로 emitterRegistry를 확인해서 어떤식으로 token단위로 오는지 확인하기

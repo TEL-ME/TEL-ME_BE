@@ -6,6 +6,7 @@ import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.exception.LlmCallException;
 import com.telme.llm.exception.LlmErrorCode;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,8 @@ import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
 @Slf4j
 @RequiredArgsConstructor
 public class BedrockClient implements LlmClient {
+
+    private static final Set<Integer> TRANSIENT_STATUSES = Set.of(408, 429, 503, 504);
 
     private final BedrockRuntimeClient client;
     private final BedrockRequestConverter converter;
@@ -84,11 +87,17 @@ public class BedrockClient implements LlmClient {
         }
         if (e instanceof AwsServiceException service) {
             String errorCode = service.awsErrorDetails() == null ? null : service.awsErrorDetails().errorCode();
-            if (service.statusCode() >= 400 && service.statusCode() < 500 && service.statusCode() != 429) {
-                log.error("[Bedrock] 설정·권한 오류 status={}, code={}", service.statusCode(), errorCode);
-            } else {
-                log.warn("[Bedrock] 서버 오류·한도 초과 status={}, code={}", service.statusCode(), errorCode);
+            if (TRANSIENT_STATUSES.contains(service.statusCode())) {
+                log.warn("[Bedrock] 일시적 오류 status={}, code={}", service.statusCode(), errorCode);
+                return new LlmCallException(LlmErrorCode.TEMPORARILY_UNAVAILABLE,
+                        "status=" + service.statusCode() + ", code=" + errorCode);
             }
+            if (service.statusCode() >= 400 && service.statusCode() < 500) {
+                log.error("[Bedrock] 설정·권한 오류 status={}, code={}", service.statusCode(), errorCode);
+                return new LlmCallException(LlmErrorCode.REQUEST_REJECTED,
+                        "status=" + service.statusCode() + ", code=" + errorCode);
+            }
+            log.warn("[Bedrock] 서버 오류 status={}, code={}", service.statusCode(), errorCode);
             return new LlmCallException(LlmErrorCode.MODEL_ERROR,
                     "status=" + service.statusCode() + ", code=" + errorCode);
         }

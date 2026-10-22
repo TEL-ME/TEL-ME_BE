@@ -63,7 +63,8 @@ public class RetryingLlmClient implements LlmClient {
     private boolean retryable(Throwable error) {
         return error instanceof GeneralException general
                 && (general.getErrorCode() == LlmErrorCode.CONNECTION_FAILED
-                        || general.getErrorCode() == LlmErrorCode.TIMEOUT);
+                        || general.getErrorCode() == LlmErrorCode.TIMEOUT
+                        || general.getErrorCode() == LlmErrorCode.TEMPORARILY_UNAVAILABLE);
     }
 
     // 설정이 0 이하로 들어와도 최소 한 번은 호출한다
