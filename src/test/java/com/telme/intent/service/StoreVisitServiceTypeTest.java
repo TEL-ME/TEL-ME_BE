@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.entity.ChatMessage.MessageType;
 import com.telme.chat.entity.ChatMessage.Role;
@@ -14,9 +15,13 @@ import com.telme.chat.entity.ChatSession;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.intent.converter.IntentConverter;
+import com.telme.intent.entity.QueryRouting;
+import com.telme.intent.repository.QueryRoutingRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,12 +35,14 @@ class StoreVisitServiceTypeTest {
 
     @Mock ChatMessageRepository messages;
     @Mock ConsultRequestRepository consultRequests;
+    @Mock QueryRoutingRepository routings;
     StoreVisitServiceType finder;
     ChatSession session;
 
     @BeforeEach
     void setUp() {
-        finder = new StoreVisitServiceType(messages, consultRequests, new RuleBasedRoutingFallback());
+        finder = new StoreVisitServiceType(messages, consultRequests, new RuleBasedRoutingFallback(), routings,
+                new IntentConverter(new ObjectMapper()));
         session = ChatSession.builder().sessionId(7L).build();
     }
 
@@ -50,6 +57,41 @@ class StoreVisitServiceTypeTest {
                 bot(MessageType.ANSWER, VISIT_ANSWER));
 
         assertThat(finder.of(current())).isEqualTo("NAME_CHANGE");
+    }
+
+    // 업무 이름 없이 말한 발언("개인 명의로 바꾸려는데")은 규칙으로 업무를 못 찾는다. 그 발언을 라우팅할 때 저장된 업무를 쓴다
+    @Test
+    void 업무_이름이_없는_발언은_라우팅에_저장된_업무를_쓴다() {
+        history(
+                user("퇴사하면서 법인폰을 개인 명의로 바꾸려는데 절차가 어떻게 돼요?"),
+                bot(MessageType.ANSWER, "양도인(회사 측)과 양수인(본인)이 각각 신분증을 지참하고 매장을 함께 방문하시면 됩니다."));
+        given(routings.findByMessage_MessageId(1L)).willReturn(Optional.of(
+                QueryRouting.builder().extractedConditions("{\"serviceType\":\"NAME_CHANGE\"}").build()));
+
+        assertThat(finder.of(current())).isEqualTo("NAME_CHANGE");
+    }
+
+    @Test
+    void 라우팅에_업무가_없으면_발언과_검색어에서_찾는다() {
+        history(
+                user("명의변경하려면 어떻게 해요?"),
+                bot(MessageType.ANSWER, VISIT_ANSWER));
+        given(routings.findByMessage_MessageId(1L)).willReturn(Optional.of(
+                QueryRouting.builder().extractedConditions("{}").build()));
+
+        assertThat(finder.of(current())).isEqualTo("NAME_CHANGE");
+    }
+
+    // 업무를 정하지 않은 매장 정보 질문의 표시값(UNDECIDED)은 업무가 아니다
+    @Test
+    void 라우팅의_업무_미정_표시는_업무로_쓰지_않는다() {
+        history(
+                user("매장 영업시간 알려줘"),
+                bot(MessageType.ANSWER, "매장에 방문하시기 전에 영업시간을 확인해 주세요."));
+        given(routings.findByMessage_MessageId(1L)).willReturn(Optional.of(
+                QueryRouting.builder().extractedConditions("{\"serviceType\":\"UNDECIDED\"}").build()));
+
+        assertThat(finder.of(current())).isNull();
     }
 
     // 방문하지 않아도 된다는 안내는 방문 안내가 아니다(PR #199 리뷰)

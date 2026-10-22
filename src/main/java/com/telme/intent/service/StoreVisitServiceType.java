@@ -4,6 +4,9 @@ import com.telme.chat.entity.ChatMessage;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.consult.entity.ConsultRequest;
 import com.telme.consult.repository.ConsultRequestRepository;
+import com.telme.intent.converter.IntentConverter;
+import com.telme.intent.dto.res.FollowUpRouteResponse;
+import com.telme.intent.repository.QueryRoutingRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -29,10 +32,13 @@ public class StoreVisitServiceType {
                     + "|안\\s*(?:오셔|오시|가셔|가시|방문)");
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.?!])\\s+|\\n");
     private static final String NONE = "";
+    private static final Set<String> SERVICE_TYPES = Set.of("NEW_LINE", "PORT_IN", "NAME_CHANGE", "USIM_REISSUE");
 
     private final ChatMessageRepository messages;
     private final ConsultRequestRepository consultRequests;
     private final RuleBasedRoutingFallback rules;
+    private final QueryRoutingRepository routings;
+    private final IntentConverter converter;
 
     // 직전 답변이 매장 방문 안내가 아니거나 업무가 하나로 정해지지 않으면 null
     public String of(ChatMessage current) {
@@ -67,6 +73,13 @@ public class StoreVisitServiceType {
             if (message.getRole() != ChatMessage.Role.USER) {
                 continue;
             }
+            // 그 발언을 라우팅할 때 모델이 읽고 검증을 통과한 업무가 있으면 쓴다.
+            // "개인 명의로 바꾸려는데"처럼 업무 이름이 없는 발언은 아래 규칙으로는 업무를 찾지 못한다(TELME-214 측정 BS-D06)
+            String routed = routedServiceType(message);
+            if (routed != null) {
+                codes.add(routed);
+                continue;
+            }
             for (String text : texts(message)) {
                 if (!rules.hasServiceTypeMention(text)) {
                     continue;
@@ -82,6 +95,24 @@ public class StoreVisitServiceType {
             return NONE;
         }
         return codes.size() == 1 ? codes.iterator().next() : null;
+    }
+
+    // 발언의 라우팅 기록에 저장된 업무. 저장된 조건은 업무 검증(질문에 적힌 업무와 같은지)을 거친 값이다
+    private String routedServiceType(ChatMessage message) {
+        if (message.getMessageId() == null) {
+            return null;
+        }
+        return routings.findByMessage_MessageId(message.getMessageId())
+                .map(routing -> {
+                    try {
+                        return converter.parseConditions(routing.getExtractedConditions())
+                                .get(FollowUpRouteResponse.SERVICE_TYPE_KEY);
+                    } catch (IllegalArgumentException unreadable) {
+                        return null;
+                    }
+                })
+                .filter(SERVICE_TYPES::contains)
+                .orElse(null);
     }
 
     // 고객 원문과, 그 발언으로 만든 FAQ 상담의 검색어. 업무 이름이 없는 원문도 검색어에서는 업무 이름으로 정리되기도 한다
