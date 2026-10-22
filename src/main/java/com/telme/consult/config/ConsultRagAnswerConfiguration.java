@@ -173,8 +173,10 @@ public class ConsultRagAnswerConfiguration {
                 : extractionClient(clarification, client, bedrockClient.getIfAvailable());
         FaqClarificationPlanner planner = client == null
                 ? null
-                : new FaqClarificationPlanner(new ConditionExtractor(
-                        extraction, extraction == client ? null : client, new ObjectMapper()));
+                : !clarification.extractConditions()
+                        ? FaqClarificationPlanner.withoutConditions()
+                        : new FaqClarificationPlanner(new ConditionExtractor(
+                                extraction, extraction == client ? null : client, new ObjectMapper()));
         return new PurposeRoutingAnswerProvider(
                 new PlanAnswerProvider(
                         new FaqSearchAnswerProvider(searches, answers, trace,

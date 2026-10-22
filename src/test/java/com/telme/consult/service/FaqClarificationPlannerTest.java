@@ -59,6 +59,16 @@ class FaqClarificationPlannerTest {
     }
 
     @Test
+    @DisplayName("FAQ 조건을 뽑지 않는 설정이면 모델을 부르지 않고 되묻지 않는다")
+    void 조건_뽑기를_끄면_되묻지_않는다() {
+        ClarificationPlan plan = FaqClarificationPlanner.withoutConditions().plan(1L, "로밍 신청하고 싶어요", List.of(
+                new FaqSearchResponse(1L, null, "로밍", "로밍은 어떻게 신청하나요?", ANSWER, 0.9, 1, null, 1, null)));
+
+        assertThat(plan.needsClarification()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(client);
+    }
+
+    @Test
     @DisplayName("조건이 없으면 되묻지 않는다")
     void 조건이_없으면_되묻지_않는다() {
         when(client.generate(any())).thenReturn("{\"conditions\":[]}");

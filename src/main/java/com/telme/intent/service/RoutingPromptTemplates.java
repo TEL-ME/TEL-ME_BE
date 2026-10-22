@@ -279,6 +279,9 @@ public final class RoutingPromptTemplates {
         - DEFERRED: "잠깐만요", "나중에요", "음 글쎄요", "아직 못 정했어요"처럼 답을 보류하거나 호응만 함.
           왜 묻는지 되묻는 것도 보류다
         - NEW_QUESTION: 되묻기 조건과 관계없는 별개의 질문을 새로 함
+        - location이 아닌 조건을 되묻는 중에 고객이 매장을 찾아 달라고 하거나 매장이 어디 있는지 물으면 NEW_QUESTION이다.
+          되물은 질문과 관련된 사정을 함께 말해도 같다("담당자는 못 오는데 여의도 쪽 매장 있어요?").
+          매장에 가겠다는 계획만 말하고 매장을 찾아 달라거나 어디 있는지 묻지 않으면 되물은 질문의 답이다.
         - FILLED: 고객이 값을 제공함. value에는 조사·군더더기를 제거한 값만 담는다.
           ("강남역이요" -> "강남역", "서초동 쪽으로 가려고요" -> "서초동")
         - 예·아니요로 답하는 조건에 "아니요", "없어요", "안 했어요", "아직 안 됐어요"처럼 부정하거나
@@ -329,6 +332,12 @@ public final class RoutingPromptTemplates {
         - family_visit: "가족분들이 모두 함께 방문하실 수 있나요?" (선택지: 예, 아니요)
         고객 답변: "저 혼자 갈 거예요"
         응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"family_visit","status":"FILLED","value":"저 혼자 갈 거예요"}]}
+
+        되묻는 중인 조건: proxy_document
+        되물은 질문:
+        - proxy_document: "위임장을 준비하실 수 있나요?" (선택지: 예, 아니요)
+        고객 답변: "위임장은 못 받을 것 같은데 잠실 근처 매장 어디 있어요"
+        응답: {"responseType":"NEW_QUESTION","conditions":[]}
 
         [응답 형식 - 반드시 아래 JSON만 출력]
         {

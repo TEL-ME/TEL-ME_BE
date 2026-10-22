@@ -65,6 +65,17 @@ public class QueryRoutingService {
     private static final int MAX_USAGE_REPLY_LENGTH = 30;
     private static final Pattern TYPED_AGE = Pattern.compile("\\d\\s*(?:세|살|대)");
 
+    // 사용량 단위. "서른 기가 정도요"처럼 고유어 수로 사용량을 말한 답을 나이로 읽지 않게 막는다
+    private static final Pattern USAGE_UNIT = Pattern.compile("기가|메가|테라|[GgMmTt][Bb]|분|시간|건|통|데이터|문자|통화");
+    // 살·세·대 없이 고유어 수만 쓴 답("마흔 정도요")은 사용량일 수 있어, 고쳐 말한다는 말이나 나이를 가리키는 말이 있을 때만 나이로 본다
+    private static final Pattern AGE_MARK = Pattern.compile(
+        "\\d\\s*(?:세|살|대)|살|나이|잘못|정정|틀렸|틀려|오타|고쳐|아니|청소년|중학생|고등학생|성인|대학생|직장인|시니어|어르신");
+    // 살·세 없이 숫자로 나이를 고쳐 말할 때 함께 쓰는 말과 그 숫자
+    private static final Pattern AGE_OR_CORRECTION = Pattern.compile("나이|잘못|정정|틀렸|틀려|오타|고쳐");
+    private static final Pattern LONE_NUMBER = Pattern.compile("(?<!\\d)(\\d{1,3})(?!\\d)");
+    private static final Set<String> USAGE_KEYS = Set.of(
+        DataUsageReplyParser.CONDITION_KEY, CallTextReplyParser.VOICE_KEY, CallTextReplyParser.SMS_KEY);
+
     // LLM이 정의 밖의 키를 만들어내도 여기서 걸러진다
     private static final Set<String> KNOWN_CONDITION_KEYS = Set.of(
         FollowUpRouteResponse.LOCATION_KEY, FollowUpRouteResponse.SERVICE_TYPE_KEY);
@@ -1124,6 +1135,11 @@ public class QueryRoutingService {
 
         // 요금제 추천의 사용량 질문(데이터·통화·문자)에 짧게 답한 것은 모델 없이 읽는다. 단위와 하루·한 달 구분을 코드가 정확히 읽는다
         // 긴 문장이나 물음표가 있는 문장은 새 질문일 수 있어 모델이 판단한다
+        // 나이를 고쳐 말한 답을 먼저 본다. 사용량 규칙은 "나이 29라고요"의 29를 29GB로 읽는다
+        FollowUpRouteResponse ageCorrection = readAgeCorrection(waiting, reply);
+        if (ageCorrection != null) {
+            return ageCorrection;
+        }
         FollowUpRouteResponse usageReply = readUsageReply(waiting, reply);
         if (usageReply != null) {
             return usageReply;
@@ -1266,6 +1282,10 @@ public class QueryRoutingService {
         if (waiting.pendingKeys().size() != 1 || reply.length() > MAX_USAGE_REPLY_LENGTH || reply.contains("?")) {
             return null;
         }
+        // 단위 없이 나이를 말한 답("나이 잘못 말함 중3이에요")의 숫자는 사용량이 아니다. 모델이 읽게 넘긴다
+        if (reply.contains("나이") && !USAGE_UNIT.matcher(reply).find()) {
+            return null;
+        }
         String key = waiting.pendingKeys().iterator().next();
         String value = switch (key) {
             case DataUsageReplyParser.CONDITION_KEY -> canonicalOf(DataUsageReplyParser.parse(reply));
@@ -1279,6 +1299,40 @@ public class QueryRoutingService {
         log.info("[후속분석] 사용량 답을 코드로 읽었습니다: consultRequestId={}, key={}", waiting.consultRequestId(), key);
         return new FollowUpRouteResponse(
             waiting.consultRequestId(), Map.of(key, value), Collections.emptySet(), QueryRouting.Method.RULE);
+    }
+
+    // 사용량을 묻는 중에 사용량 없이 나이만 고쳐 말하면("아 잘못 말했다 19살이요") 나이 정정으로 받는다. 나이는 기다리는
+    // 조건이 아니라 모델에 넘기면 버려지고 같은 사용량 질문만 다시 나간다(TELME-218). 사용량 단위가 있으면 사용량 답이다
+    private FollowUpRouteResponse readAgeCorrection(WaitingConsult waiting, String reply) {
+        if (waiting.pendingKeys().size() != 1 || reply.length() > MAX_USAGE_REPLY_LENGTH || reply.contains("?")) {
+            return null;
+        }
+        String key = waiting.pendingKeys().iterator().next();
+        String age = USAGE_KEYS.contains(key) && !USAGE_UNIT.matcher(reply).find() ? statedAge(reply) : null;
+        if (age == null) {
+            return null;
+        }
+        log.info("[후속분석] 사용량을 묻는 중 나이를 고쳐 말해 나이 정정으로 받습니다: consultRequestId={}",
+                waiting.consultRequestId());
+        return new FollowUpRouteResponse(waiting.consultRequestId(),
+            Map.of(AgeReplyParser.CONDITION_KEY, age), Collections.emptySet(), QueryRouting.Method.RULE);
+    }
+
+    // 답에서 고쳐 말한 나이를 읽는다. 살·세 없이 숫자 하나만 쓴 정정("나이 47로 바꿔주세요", "나 27임 잘못침")은
+    // 나이나 정정을 가리키는 말이 있을 때만 그 숫자를 나이로 본다. 숫자가 둘 이상이면 어느 쪽인지 몰라 읽지 않는다
+    private static String statedAge(String reply) {
+        if (AGE_MARK.matcher(reply).find() && AgeReplyParser.parseStated(reply) != null) {
+            return reply.trim();
+        }
+        if (!AGE_OR_CORRECTION.matcher(reply).find()) {
+            return null;
+        }
+        Matcher number = LONE_NUMBER.matcher(reply);
+        if (!number.find()) {
+            return null;
+        }
+        String age = number.group(1) + "살";
+        return number.find() || AgeReplyParser.parse(age) == null ? null : age;
     }
 
     private static String canonicalOf(DataUsageReplyParser.Result result) {
@@ -1302,7 +1356,7 @@ public class QueryRoutingService {
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
             // v6: 업무를 물었을 때 정한 업무가 없다는 답을 업무 거절(DECLINED)로 읽는다(TELME-214)
-            .promptVersion("routing-follow-up-v6")
+            .promptVersion("routing-follow-up-v7")
             .build();
 
         String json = llmClient.generate(request);

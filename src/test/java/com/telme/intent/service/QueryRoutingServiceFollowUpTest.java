@@ -30,6 +30,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -255,6 +256,44 @@ class QueryRoutingServiceFollowUpTest {
         assertThat(service.analyzeFollowUp(SESSION_ID, "50건이요").conditions())
                 .containsExactly(entry("monthly_sms_usage", "50건"));
         verify(llmClient, never()).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"아 잘못말했다 19살이요", "아 나이 잘못 말했어요 스물셋이에요", "정정할게요 20대 중반이에요"})
+    @DisplayName("사용량을 묻는 중 사용량 없이 나이만 고쳐 말하면 모델 없이 나이 정정으로 받는다")
+    void analyzeFollowUp_readsAgeCorrectionWhileAskingUsage(String reply) {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).containsExactly(entry("age_group", reply));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"나이 31이라고 했어야 했는데 오타, 31살", "정정합니다 나이는 52, 52살", "아까 잘못 썼고 66 맞아요, 66살"})
+    @DisplayName("살·세 없이 숫자 하나로 나이를 고쳐 말해도 사용량으로 읽지 않고 그 숫자를 나이로 받는다")
+    void analyzeFollowUp_readsBareNumberAgeCorrection(String reply, String age) {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.conditions()).containsExactly(entry("age_group", age));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
+    @DisplayName("사용량을 묻는 중 숫자만 답하거나 사용량을 함께 말하면 나이 정정으로 읽지 않는다")
+    void analyzeFollowUp_doesNotReadBareNumberOrUsageAsAgeCorrection() {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        assertThat(service.analyzeFollowUp(SESSION_ID, "20").conditions()).doesNotContainKey("age_group");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "마흔 기가 정도요").conditions()).doesNotContainKey("age_group");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "쉰 정도요").conditions()).doesNotContainKey("age_group");
+        assertThat(service.analyzeFollowUp(SESSION_ID, "25살인데 10기가 정도 써요").conditions())
+                .containsExactly(entry("monthly_data_usage", "10GB"));
     }
 
     @Test

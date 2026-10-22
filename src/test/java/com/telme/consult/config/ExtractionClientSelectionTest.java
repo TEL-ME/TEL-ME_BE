@@ -22,7 +22,7 @@ class ExtractionClientSelectionTest {
     @Test
     @DisplayName("플래그가 꺼져 있으면 엑사원으로 조건을 뽑는다")
     void 꺼져_있으면_엑사원이다() {
-        var properties = new FaqClarificationProperties(true, false);
+        var properties = new FaqClarificationProperties(true, false, true);
 
         assertThat(ConsultRagAnswerConfiguration.extractionClient(properties, exaone, bedrock)).isSameAs(exaone);
     }
@@ -30,7 +30,7 @@ class ExtractionClientSelectionTest {
     @Test
     @DisplayName("플래그가 켜져 있어도 Bedrock을 쓸 수 없으면 엑사원으로 뽑는다")
     void bedrock이_없으면_엑사원이다() {
-        var properties = new FaqClarificationProperties(true, true);
+        var properties = new FaqClarificationProperties(true, true, true);
 
         assertThat(ConsultRagAnswerConfiguration.extractionClient(properties, exaone, null)).isSameAs(exaone);
     }
@@ -38,7 +38,7 @@ class ExtractionClientSelectionTest {
     @Test
     @DisplayName("플래그가 켜져 있고 Bedrock을 쓸 수 있으면 Bedrock으로 뽑고 실패하면 엑사원으로 대체한다")
     void 켜져_있으면_bedrock이다() {
-        var properties = new FaqClarificationProperties(true, true);
+        var properties = new FaqClarificationProperties(true, true, true);
 
         var client = ConsultRagAnswerConfiguration.extractionClient(properties, exaone, bedrock);
 
@@ -56,6 +56,9 @@ class ExtractionClientSelectionTest {
         var defaults = binder.bindOrCreate("telme.consult.faq-clarification", FaqClarificationProperties.class);
 
         assertThat(defaults.bedrock()).isTrue();
+        // FAQ 조건은 기본으로 뽑지 않는다(TELME-218). 되묻기 경로 자체(enabled)는 켜 둔다
+        assertThat(defaults.enabled()).isTrue();
+        assertThat(defaults.extractConditions()).isFalse();
         assertThat(ConsultRagAnswerConfiguration.extractionClient(defaults, exaone, bedrock))
                 .isInstanceOf(FallbackLlmClient.class);
         var off = new Binder(new MapConfigurationPropertySource(Map.of("telme.consult.faq-clarification.bedrock", "false")))
