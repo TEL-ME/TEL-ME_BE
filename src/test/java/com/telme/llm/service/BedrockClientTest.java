@@ -28,6 +28,8 @@ import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
 import software.amazon.awssdk.services.bedrockruntime.model.Message;
 import software.amazon.awssdk.services.bedrockruntime.model.ReasoningContentBlock;
 import software.amazon.awssdk.services.bedrockruntime.model.ReasoningTextBlock;
+import software.amazon.awssdk.services.bedrockruntime.model.StopReason;
+import software.amazon.awssdk.services.bedrockruntime.model.TokenUsage;
 
 class BedrockClientTest {
 
@@ -55,12 +57,29 @@ class BedrockClientTest {
     }
 
     @Test
+    @DisplayName("답 글이 없으면 종료 사유와 출력 토큰 수를 오류 내용에 남긴다")
+    void 빈_응답은_종료_사유를_남긴다() {
+        when(runtime.converse(any(ConverseRequest.class))).thenReturn(ConverseResponse.builder()
+                .output(ConverseOutput.fromMessage(Message.builder().content(
+                        ContentBlock.fromReasoningContent(ReasoningContentBlock.fromReasoningText(
+                                ReasoningTextBlock.builder().text("생각만 하다 잘림").build()))).build()))
+                .stopReason(StopReason.MAX_TOKENS)
+                .usage(TokenUsage.builder().inputTokens(300).outputTokens(1000).totalTokens(1300).build())
+                .build());
+
+        assertThatThrownBy(() -> client.generate(request()))
+                .hasMessage("LLM502-1 LLM 응답 형식이 올바르지 않습니다. (stopReason=max_tokens, outputTokens=1000)");
+    }
+
+    @Test
     @DisplayName("호출 시간 초과는 TIMEOUT으로 바꾼다")
     void 시간_초과() {
         when(runtime.converse(any(ConverseRequest.class)))
                 .thenThrow(ApiCallTimeoutException.builder().message("timeout").build());
 
         assertError(LlmErrorCode.TIMEOUT);
+        assertThatThrownBy(() -> client.generate(request()))
+                .hasMessage("LLM504-0 LLM 응답 시간이 초과되었습니다. (ApiCallTimeoutException)");
     }
 
     @Test
@@ -70,6 +89,9 @@ class BedrockClientTest {
                 .thenThrow(SdkClientException.builder().message("Unable to load credentials").build());
 
         assertError(LlmErrorCode.CONNECTION_FAILED);
+        // SDK 메시지는 기록에 넣지 않는다
+        assertThatThrownBy(() -> client.generate(request()))
+                .hasMessage("LLM503-0 LLM 서버에 연결할 수 없습니다. (SdkClientException)");
     }
 
     @Test
@@ -79,6 +101,7 @@ class BedrockClientTest {
                 .thenThrow(AwsServiceException.builder().statusCode(503).message("unavailable").build());
 
         assertError(LlmErrorCode.MODEL_ERROR);
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=503");
     }
 
     @Test

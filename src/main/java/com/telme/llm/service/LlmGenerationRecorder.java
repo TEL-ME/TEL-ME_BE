@@ -109,7 +109,18 @@ public class LlmGenerationRecorder {
         }
 
         public static Result failure(int attempt, Throwable error, Integer firstTokenMs, long totalMs) {
-            return new Result(attempt, toStatus(error), firstTokenMs, recordableMillis(totalMs), error.getMessage());
+            return new Result(attempt, toStatus(error), firstTokenMs, recordableMillis(totalMs), describe(error));
+        }
+
+        // GeneralException은 메시지가 없어 그대로 두면 오류 내용이 비므로 오류 코드와 문구로 대신한다
+        private static String describe(Throwable error) {
+            if (error.getMessage() != null) {
+                return error.getMessage();
+            }
+            if (error instanceof GeneralException general) {
+                return general.getErrorCode().getCode() + " " + general.getErrorCode().getMessage();
+            }
+            return error.getClass().getSimpleName();
         }
 
         // INTEGER 범위를 넘는 시간은 음수로 넘치거나 최대값으로 왜곡하지 않고 측정 불가로 남긴다.
