@@ -61,6 +61,11 @@ public class ChatExecution {
     @Column(name = "error_code", length = 50)
     private String errorCode;
 
+    // 같은 질문을 처리한 횟수. 사용자가 다시 시도하면 2다.
+    @Column(name = "attempt", nullable = false)
+    @Builder.Default
+    private int attempt = 1;
+
     // 서버 처리 시간(ms). 측정하지 못한 실행은 null이다.
     @Column(name = "total_ms")
     private Integer totalMs;

@@ -40,6 +40,14 @@ public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Lo
             ChatExecution.Status status
     );
 
+    // 질문마다 다시 시도는 한 번만 허용한다
+    boolean existsByInputMessage_MessageIdAndAttemptGreaterThan(Long inputMessageId, int attempt);
+
+    Optional<ChatExecution> findFirstBySession_SessionIdOrderByExecutionIdDesc(Long sessionId);
+
+    @Query("select execution.attempt from ChatExecution execution where execution.executionId = :executionId")
+    Optional<Integer> findAttempt(@Param("executionId") Long executionId);
+
     @Query("""
             select execution.executionId
             from ChatExecution execution

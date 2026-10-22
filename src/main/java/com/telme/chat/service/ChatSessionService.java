@@ -2,6 +2,7 @@ package com.telme.chat.service;
 
 import com.telme.chat.converter.ChatMessageConverter;
 import com.telme.chat.converter.ChatSessionConverter;
+import com.telme.chat.dto.req.ChatExecutionRetryRequest;
 import com.telme.chat.dto.req.ChatMessageSendRequest;
 import com.telme.chat.dto.req.ChatSessionCreateRequest;
 import com.telme.chat.dto.req.ChatSessionTitleUpdateRequest;
@@ -21,6 +22,7 @@ import com.telme.chat.repository.ChatExecutionRepository;
 import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.repository.ChatSessionRepository;
 import com.telme.global.common.exception.GeneralException;
+import com.telme.llm.exception.LlmErrorCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -113,7 +115,14 @@ public class ChatSessionService {
                 .map(ChatExecution::getExecutionId)
                 .orElse(null);
 
-        return new ChatMessageHistoryResponse(messages, nextBeforeSequenceNo, hasOlderMessages, runningExecutionId);
+        Long retryableExecutionId = chatExecutionRepository
+                .findFirstBySession_SessionIdOrderByExecutionIdDesc(sessionId)
+                .filter(ChatSessionService::isRetryable)
+                .map(ChatExecution::getExecutionId)
+                .orElse(null);
+
+        return new ChatMessageHistoryResponse(
+                messages, nextBeforeSequenceNo, hasOlderMessages, runningExecutionId, retryableExecutionId);
     }
 
     public ChatExecutionState getExecution(ChatActor actor, Long executionId) {
@@ -234,6 +243,60 @@ public class ChatSessionService {
         }
         inputGuard.record(guarded, actor, sessionId, request, response);
         return response;
+    }
+
+    // 답변 생성이 실패해 사용자가 다시 시도할 수 있는 실행인지. 같은 입력 메시지를 새 실행으로 다시 처리한다.
+    // 새 질문이 아니므로 입력 가드·게스트 일일 제한·질문 메시지 저장을 거치지 않는다.
+    @Transactional
+    public ChatMessageSendResponse retryExecution(
+            ChatActor actor,
+            Long sessionId,
+            Long executionId,
+            ChatExecutionRetryRequest request,
+            ChatResponseStopwatch stopwatch
+    ) {
+        ChatCoordinates coordinates = request == null
+                ? null : ChatCoordinates.optional(request.latitude(), request.longitude());
+        ChatSession session = getOwnedSessionForUpdate(actor, sessionId);
+        if (session.getStatus() == ChatSession.Status.CLOSED) {
+            throw new GeneralException(ChatErrorCode.SESSION_CLOSED);
+        }
+        ChatExecution failed = chatExecutionRepository.findContextExecution(executionId)
+                .filter(execution -> sessionId.equals(execution.getSession().getSessionId()))
+                .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
+        ChatMessage inputMessage = failed.getInputMessage();
+        if (chatExecutionRepository.existsByInputMessage_MessageIdAndAttemptGreaterThan(
+                inputMessage.getMessageId(), 1)) {
+            throw new GeneralException(ChatErrorCode.RETRY_ALREADY_USED);
+        }
+        if (findRunningExecution(sessionId).isPresent()) {
+            throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
+        }
+        // 그 뒤에 다른 질문이 이어졌다면 이미 지나간 답변이다
+        boolean latest = chatExecutionRepository.findFirstBySession_SessionIdOrderByExecutionIdDesc(sessionId)
+                .map(execution -> execution.getExecutionId().equals(executionId))
+                .orElse(false);
+        if (!latest || !isRetryable(failed)) {
+            throw new GeneralException(ChatErrorCode.RETRY_NOT_AVAILABLE);
+        }
+
+        ChatExecution execution = chatExecutionRepository.save(ChatExecution.builder()
+                .session(session)
+                .inputMessage(inputMessage)
+                .status(ChatExecution.Status.RUNNING)
+                .attempt(failed.getAttempt() + 1)
+                .build());
+        session.touch(Instant.now());
+        eventPublisher.publishEvent(new ChatProcessingCommand(execution.getExecutionId(), sessionId,
+                inputMessage.getMessageId(), inputMessage.getContent(), coordinates, stopwatch));
+        return chatMessageConverter.toSendResponse(inputMessage, execution);
+    }
+
+    // 모델 호출 실패로 끝났고 아직 다시 시도하지 않은 실행
+    private static boolean isRetryable(ChatExecution execution) {
+        return execution.getStatus() == ChatExecution.Status.FAILED
+                && execution.getAttempt() == 1
+                && LlmErrorCode.RETRYABLE_FAILURE.getCode().equals(execution.getErrorCode());
     }
 
     private ChatSession getOwnedSessionForUpdate(ChatActor actor, Long sessionId) {

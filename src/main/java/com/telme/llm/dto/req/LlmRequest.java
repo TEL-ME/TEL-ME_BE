@@ -29,15 +29,13 @@ public record LlmRequest(
         // false면 사고 모드를 지원하는 모델에서 끈다. null이면 모델 기본값
         Boolean think,
         // gpt-oss(Bedrock) 추론 강도(low, medium, high). null이면 llm.bedrock.reasoning-effort. 다른 모델은 쓰지 않는다
-        String reasoningEffort,
-        // 사용자가 다시 시도를 눌러 들어온 호출. 주 모델이 또 실패하면 대체 모델을 쓴다(AnswerRetryGate)
-        boolean afterUserRetry
+        String reasoningEffort
 ) {
     public LlmRequest(Long executionId, TaskType taskType, String systemPrompt, String userPrompt,
             ResponseFormat format, Double temperature, Integer maxTokens, Integer contextCount,
             String promptVersion) {
         this(executionId, null, taskType, systemPrompt, userPrompt, format, temperature, maxTokens,
-                contextCount, promptVersion, null, null, null, false);
+                contextCount, promptVersion, null, null, null);
     }
 
     public LlmRequest {

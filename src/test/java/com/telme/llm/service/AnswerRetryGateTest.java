@@ -12,9 +12,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 class AnswerRetryGateTest {
 
-    private final AnswerRetryGate gate = new AnswerRetryGate();
-    private final LlmRequest first = LlmRequest.builder().userPrompt("u").build();
-    private final LlmRequest afterRetry = first.toBuilder().afterUserRetry(true).build();
+    private final AnswerRetryGate gate = new AnswerRetryGate(executionId -> executionId == RETRIED_EXECUTION_ID);
+    private final LlmRequest first = LlmRequest.builder().executionId(1L).userPrompt("u").build();
+    private final LlmRequest afterRetry = first.toBuilder().executionId(RETRIED_EXECUTION_ID).build();
+    private static final long RETRIED_EXECUTION_ID = 2L;
 
     @ParameterizedTest
     @EnumSource(value = LlmErrorCode.class,
@@ -37,6 +38,14 @@ class AnswerRetryGateTest {
     @DisplayName("사용자가 다시 시도한 호출이 또 실패하면 대체한다")
     void 사용자_재시도_뒤_실패는_대체한다() {
         assertThat(gate.blockFallback(afterRetry, new GeneralException(LlmErrorCode.TIMEOUT))).isNull();
+    }
+
+    @Test
+    @DisplayName("실행 ID가 없는 호출은 첫 호출로 본다")
+    void 실행_ID가_없으면_첫_호출이다() {
+        LlmRequest noExecution = LlmRequest.builder().userPrompt("u").build();
+
+        assertThat(gate.blockFallback(noExecution, new GeneralException(LlmErrorCode.TIMEOUT))).isNotNull();
     }
 
     @Test
