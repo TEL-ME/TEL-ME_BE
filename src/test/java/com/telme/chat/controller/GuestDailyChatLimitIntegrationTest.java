@@ -5,9 +5,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.repository.ChatMessageRepository;
 import com.telme.chat.service.ChatProcessingPort;
 import com.telme.chat.service.HttpSessionChatActorProvider;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +34,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 // 동시 전송까지 확인하려고 테스트 트랜잭션 없이 실제로 커밋하고 끝나면 지운다. 한도는 3으로 줄여 확인한다
 @SpringBootTest(properties = "chat.guest-limit.daily-messages=3")
@@ -40,8 +47,16 @@ class GuestDailyChatLimitIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     // 접수까지만 확인한다. 답변 생성은 돌리지 않는다
     @MockitoBean
@@ -78,19 +93,43 @@ class GuestDailyChatLimitIntegrationTest {
         assertThat(questionCount(guest)).isEqualTo(3);
     }
 
+    // 하루를 통째로 당기면 KST로 자르든 UTC로 자르든 '어제'라서 경계를 못 잡는다. KST 0시 바로 앞뒤를 둘 다 찍어야
+    // UTC로 잘못 자를 때(경계가 KST 오전 9시) 테스트를 돌리는 시각과 관계없이 한쪽이 틀린다.
+    // 세션 시간대를 UTC로 두어 로컬 DB(TZ=Asia/Seoul)에서도 운영 RDS·CI(UTC)와 같은 조건으로 확인한다
+    @ParameterizedTest(name = "DB 세션 시간대 {0}")
+    @ValueSource(strings = {"UTC", "Asia/Seoul"})
+    @DisplayName("한국 시간 0시 1초 전 질문은 세지 않고, 0시 1초 후 질문은 센다")
+    void 한국_시간_0시로_하루를_자른다(String sessionTimeZone) {
+        UUID guestId = persistGuest();
+        long sessionId = persistSession(guestId);
+        Instant todayStart = LocalDate.now(KST).atStartOfDay(KST).toInstant();
+        persistQuestion(sessionId, todayStart.minusSeconds(1));
+        persistQuestion(sessionId, todayStart.minusSeconds(1));
+        persistQuestion(sessionId, todayStart.plusSeconds(1));
+
+        Long counted = transactionTemplate.execute(status -> {
+            jdbcTemplate.execute("set local time zone '" + sessionTimeZone + "'");
+            return chatMessageRepository.countGuestQuestionsToday(guestId);
+        });
+
+        assertThat(counted).isEqualTo(1);
+    }
+
     @Test
-    @DisplayName("어제(한국 시간) 보낸 질문은 오늘 한도에 들어가지 않는다")
-    void 어제_질문은_세지_않는다() throws Exception {
+    @DisplayName("서버 쪽 실패나 취소로 답을 받지 못한 질문은 한도에 들어가지 않는다")
+    void 실패한_질문은_세지_않는다() throws Exception {
         MockHttpSession guest = guestSession(persistGuest());
         for (int i = 1; i <= 3; i++) {
-            send(guest, "어제 질문 " + i);
+            assertThat(send(guest, "질문 " + i).getResponse().getStatus()).isEqualTo(201);
         }
-        jdbcTemplate.update("""
-                update chat_messages set created_at = created_at - interval '1 day'
-                where session_id in (select session_id from chat_sessions where guest_id = ?)
-                """, guestId(guest));
+        assertThat(send(guest, "넘는 질문").getResponse().getStatus()).isEqualTo(429);
 
-        assertThat(send(guest, "오늘 첫 질문").getResponse().getStatus()).isEqualTo(201);
+        setExecutionStatus(guest, "질문 1", "FAILED");
+        setExecutionStatus(guest, "질문 2", "CANCELLED");
+
+        assertThat(send(guest, "다시 보낸 질문 1").getResponse().getStatus()).isEqualTo(201);
+        assertThat(send(guest, "다시 보낸 질문 2").getResponse().getStatus()).isEqualTo(201);
+        assertThat(send(guest, "또 넘는 질문").getResponse().getStatus()).isEqualTo(429);
     }
 
     @Test
@@ -207,6 +246,32 @@ class GuestDailyChatLimitIntegrationTest {
                 """, Long.class, guestId(guest));
     }
 
+    // 경계 시각을 정확히 찍으려고 API를 거치지 않고 질문을 직접 넣는다
+    private long persistSession(UUID guestId) {
+        return jdbcTemplate.queryForObject(
+                "insert into chat_sessions (guest_id, title) values (?, '게스트 한도') returning session_id",
+                Long.class, guestId);
+    }
+
+    private void persistQuestion(long sessionId, Instant createdAt) {
+        jdbcTemplate.update("""
+                insert into chat_messages (session_id, sequence_no, role, message_type, content, status, created_at)
+                values (?, (select coalesce(max(sequence_no), 0) + 1 from chat_messages where session_id = ?),
+                        'USER', 'QUESTION', '경계 질문', 'COMPLETED', ?)
+                """, sessionId, sessionId, Timestamp.from(createdAt));
+    }
+
+    private void setExecutionStatus(MockHttpSession guest, String question, String status) {
+        int updated = jdbcTemplate.update("""
+                update chat_executions set status = ?
+                where input_message_id in (
+                    select message.message_id from chat_messages message
+                    join chat_sessions session on session.session_id = message.session_id
+                    where session.guest_id = ? and message.content = ?)
+                """, status, guestId(guest), question);
+        assertThat(updated).isEqualTo(1);
+    }
+
     private JsonNode body(MvcResult result) throws Exception {
         return objectMapper.readTree(result.getResponse().getContentAsByteArray());
     }
@@ -216,8 +281,8 @@ class GuestDailyChatLimitIntegrationTest {
         Instant now = Instant.now();
         jdbcTemplate.update(
                 "insert into guests (guest_id, created_at, last_seen_at, expires_at) values (?, ?, ?, ?)",
-                guestId, java.sql.Timestamp.from(now), java.sql.Timestamp.from(now),
-                java.sql.Timestamp.from(now.plusSeconds(86_400)));
+                guestId, Timestamp.from(now), Timestamp.from(now),
+                Timestamp.from(now.plusSeconds(86_400)));
         guests.add(guestId);
         return guestId;
     }
