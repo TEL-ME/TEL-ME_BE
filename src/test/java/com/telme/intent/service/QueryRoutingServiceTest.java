@@ -2620,19 +2620,17 @@ class QueryRoutingServiceTest {
             assertThat(r.extractedConditions()).doesNotContainKey("location");
         }
 
-        // 모델이 가끔 FAQ로 내는 매장 찾기 요청은 매장 찾기로 되돌린다
+        // 매장과 '어디'가 있어도 예약·신청 방법을 묻는 질문이다. 모델의 FAQ 분류를 규칙이 매장 찾기로 바꾸지 않는다(PR #199 리뷰)
         @Test
-        void correctsStoreLookupRoutedToFaq() {
+        void keepsFaqForStoreReservationProcedureQuestion() {
             routingJson("""
-                {"intent":"FAQ","confidence":0.96,"refinedQuery":"명의변경 가능한 매장 위치 안내",
-                 "extractedConditions":{"serviceType":"NAME_CHANGE"},
-                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"명의변경 가능한 매장 위치 안내"}]}
+                {"intent":"FAQ","confidence":0.96,"refinedQuery":"명의변경 매장 방문 예약 방법",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"명의변경 매장 방문 예약 방법"}]}
                 """);
 
-            IntentRouteResponse r = service.routeSingleConsult(msg("명의변경 하러 매장 가야 하는데 어디로 가면 될까요?"), null);
+            IntentRouteResponse r = service.routeSingleConsult(msg("명의변경 매장 방문 예약은 어디서 해요?"), null);
 
-            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.STORE);
-            assertThat(r.extractedConditions()).containsEntry("serviceType", "NAME_CHANGE");
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
         }
 
         @Test

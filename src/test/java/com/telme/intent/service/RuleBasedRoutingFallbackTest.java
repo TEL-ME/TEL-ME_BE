@@ -65,6 +65,24 @@ class RuleBasedRoutingFallbackTest {
         assertThat(result.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.STORE);
     }
 
+    // 업무 표현이 둘이면 먼저 걸린 번호이동을 고르지 않고 업무 없이 찾는다(PR #199 리뷰).
+    // 모델 호출이 실패해 규칙으로 분류할 때도 같은 함수를 쓴다
+    @Test
+    void classify_storeWithTwoServicesLeavesServiceTypeEmpty() {
+        LlmRoutingPayload result = fallback.classify("번호이동 말고 신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
+        assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+    }
+
+    @Test
+    void classify_storeWithOneServiceKeepsIt() {
+        LlmRoutingPayload result = fallback.classify("신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.extractedConditions()).containsEntry("serviceType", "NEW_LINE");
+    }
+
     @Test
     void storeVisitPolicyIsFaqRatherThanStoreLookup() {
         LlmRoutingPayload result = fallback.classify(
@@ -142,11 +160,11 @@ class RuleBasedRoutingFallbackTest {
     }
 
     @Test
-    @DisplayName("여러 패턴이 동시에 매칭될 경우 우선순위에 따라 결정론적으로 serviceType을 추출한다")
-    void extract_conditions_priority() {
+    @DisplayName("여러 업무가 함께 매칭되면 한쪽을 고르지 않고 serviceType을 비운다(두 업무를 다 하는 매장이 빠지지 않게)")
+    void extract_conditions_multiple_services_leave_service_type_empty() {
         LlmRoutingPayload result = fallback.classify("신규 개통도 하고 유심 재발급도 대리점에서 가능한가요?");
 
-        assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
     }
 
     @Test

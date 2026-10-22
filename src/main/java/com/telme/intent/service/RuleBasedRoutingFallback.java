@@ -292,13 +292,12 @@ public class RuleBasedRoutingFallback {
         return reply;
     }
 
+    // 업무 표현이 여럿이면("번호이동 말고 신규 개통") 먼저 걸린 업무를 고르지 않고 비운다(필터 없이 검색)
     private Map<String, String> extractConditions(String text) {
         Map<String, String> conditions = new HashMap<>();
-        for (ServiceTypeRule rule : SERVICE_TYPE_RULES) {
-            if (rule.pattern().matcher(text).find()) {
-                conditions.put(SERVICE_TYPE_KEY, rule.code());
-                break;
-            }
+        String serviceType = serviceTypeOf(text);
+        if (serviceType != null) {
+            conditions.put(SERVICE_TYPE_KEY, serviceType);
         }
         return conditions;
     }

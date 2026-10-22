@@ -322,20 +322,6 @@ public class QueryRoutingService {
             }
         }
 
-        // 매장을 찾아 달라는 단독 질문을 모델이 가끔 FAQ로 낸다("명의변경 하러 매장 가야 하는데 어디로 가면 될까요?",
-        // 같은 문장 8회 중 1회). FAQ에는 매장 위치 답이 없으므로 규칙도 매장 찾기로 보면 매장 찾기로 되돌린다
-        if (method == QueryRouting.Method.LLM
-                && payload.intent() == QueryRouting.Intent.FAQ
-                && payload.subQueries().size() <= 1) {
-            LlmRoutingPayload store = storeLookupInsteadOfFaq(question);
-            if (store != null) {
-                log.info("[라우팅] FAQ로 분류됐지만 매장 찾기 요청이라 매장 찾기로 보정합니다: messageId={}",
-                        userMessage.getMessageId());
-                payload = store;
-                method = QueryRouting.Method.RULE;
-            }
-        }
-
         boolean llmRouting = method == QueryRouting.Method.LLM;
         if (method == QueryRouting.Method.LLM
                 && payload.intent() != QueryRouting.Intent.UNKNOWN
@@ -1217,17 +1203,6 @@ public class QueryRoutingService {
                 QueryRouting.Intent.FAQ, BigDecimal.valueOf(0.80), addOnQuery, Collections.emptyMap(),
                 List.of(new LlmRoutingPayload.SubQueryPayload(
                         (short) 1, ConsultRequest.Intent.FAQ, addOnQuery, Collections.emptyMap())));
-    }
-
-    // "매장 어디서든 돼요?"처럼 어느 매장에서나 되는지 묻는 것은 매장 찾기가 아니라 정책 질문이다
-    private static final Pattern ANY_STORE = Pattern.compile("어디(?:서든|에서든|에서나|든|나)");
-
-    private LlmRoutingPayload storeLookupInsteadOfFaq(String question) {
-        if (!RuleBasedRoutingFallback.asksStoreLookup(question) || ANY_STORE.matcher(question).find()) {
-            return null;
-        }
-        LlmRoutingPayload rule = ruleBasedFallback.classify(question);
-        return rule.intent() == QueryRouting.Intent.STORE ? rule : null;
     }
 
     private boolean asksStoreCondition(Set<String> pendingKeys) {

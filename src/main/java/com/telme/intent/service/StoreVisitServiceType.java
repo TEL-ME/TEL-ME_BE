@@ -23,6 +23,11 @@ public class StoreVisitServiceType {
     private static final int LOOKBACK = 12;
     private static final Pattern STORE = Pattern.compile("매장|대리점|지점");
     private static final Pattern VISIT = Pattern.compile("방문|오시|오셔|오실|가시|가셔|가실|들르|들러");
+    // 방문하지 않아도 된다는 안내("매장 방문 없이 온라인으로 신청할 수 있습니다", PR #199 리뷰)
+    private static final Pattern NO_VISIT = Pattern.compile(
+            "(?:방문|오시|오실|가시|가실)(?:하지|하실|할|지)?\\s*(?:없이|않|안\\s|필요\\s*(?:없|가\\s*없)|대신)"
+                    + "|안\\s*(?:오셔|오시|가셔|가시|방문)");
+    private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.?!])\\s+|\\n");
     private static final String NONE = "";
 
     private final ChatMessageRepository messages;
@@ -93,12 +98,21 @@ public class StoreVisitServiceType {
         return texts;
     }
 
-    // 되묻기("두 분 모두 매장에 오실 수 있나요?")도 매장 방문을 전제로 하므로 함께 본다
+    // 되묻기("두 분 모두 매장에 오실 수 있나요?")도 매장 방문을 전제로 하므로 함께 본다.
+    // 매장과 방문이 한 문장에 있고 그 방문을 부정하지 않는 문장이 있어야 한다. 다른 문장의 부정은 보지 않는다
     private static boolean guidesStoreVisit(ChatMessage message) {
         String content = message.getContent();
-        return message.getRole() == ChatMessage.Role.ASSISTANT
-                && (message.getMessageType() == ChatMessage.MessageType.ANSWER
-                    || message.getMessageType() == ChatMessage.MessageType.CLARIFICATION)
-                && content != null && STORE.matcher(content).find() && VISIT.matcher(content).find();
+        if (message.getRole() != ChatMessage.Role.ASSISTANT
+                || (message.getMessageType() != ChatMessage.MessageType.ANSWER
+                    && message.getMessageType() != ChatMessage.MessageType.CLARIFICATION)
+                || content == null) {
+            return false;
+        }
+        for (String sentence : SENTENCE_END.split(content)) {
+            if (STORE.matcher(sentence).find() && VISIT.matcher(sentence).find() && !NO_VISIT.matcher(sentence).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -52,6 +52,44 @@ class StoreVisitServiceTypeTest {
         assertThat(finder.of(current())).isEqualTo("NAME_CHANGE");
     }
 
+    // 방문하지 않아도 된다는 안내는 방문 안내가 아니다(PR #199 리뷰)
+    @Test
+    void 매장_방문_없이_된다는_안내_뒤에는_업무를_잇지_않는다() {
+        history(
+                user("번호이동 방법 알려줘"),
+                bot(MessageType.ANSWER, "매장 방문 없이 온라인으로 번호이동을 신청할 수 있습니다."));
+
+        assertThat(finder.of(current())).isNull();
+    }
+
+    @Test
+    void 방문하실_필요_없다는_안내_뒤에도_업무를_잇지_않는다() {
+        history(
+                user("유심 재발급 어떻게 해요?"),
+                bot(MessageType.ANSWER, "택배로 받으시면 매장에 가실 필요 없이 2~3일 안에 받아보실 수 있어요."));
+
+        assertThat(finder.of(current())).isNull();
+    }
+
+    // 부정은 방문을 말한 그 문장에서만 본다. 다른 문장의 '않'은 방문 안내를 막지 않는다
+    @Test
+    void 다른_문장에_부정이_있어도_방문을_안내한_문장이_있으면_업무를_쓴다() {
+        history(
+                user("명의변경하려면 어떻게 해요?"),
+                bot(MessageType.ANSWER, "미납 요금이 있으면 진행되지 않습니다. 두 분이 신분증을 가지고 같이 매장에 오시면 됩니다."));
+
+        assertThat(finder.of(current())).isEqualTo("NAME_CHANGE");
+    }
+
+    @Test
+    void 온라인과_방문을_함께_안내하면_방문_안내로_본다() {
+        history(
+                user("유심 재발급 어떻게 해요?"),
+                bot(MessageType.ANSWER, "온라인으로 신청하시면 택배로 받을 수 있습니다. 바로 받으시려면 매장에 방문하시면 됩니다."));
+
+        assertThat(finder.of(current())).isEqualTo("USIM_REISSUE");
+    }
+
     @Test
     void 매장_방문을_묻는_되묻기_뒤에도_업무를_쓴다() {
         history(
