@@ -174,6 +174,33 @@ class StoreVisitServiceTypeTest {
     }
 
     @Test
+    void 방문과_무관한_되묻기_뒤에도_업무를_쓴다() {
+        history(
+                user("다른 통신사에서 번호이동 하려면 뭐뭐 준비해야 돼요?"),
+                bot(MessageType.CLARIFICATION, "현재 미납 요금이 있으신가요?"));
+
+        assertThat(finder.of(current())).isEqualTo("PORT_IN");
+    }
+
+    @Test
+    void 되묻기_앞_발언에_업무가_없으면_쓰지_않는다() {
+        history(
+                user("로밍 요금 알려줘"),
+                bot(MessageType.CLARIFICATION, "어느 나라에서 쓰실 건가요?"));
+
+        assertThat(finder.of(current())).isNull();
+    }
+
+    @Test
+    void 매장이나_온라인에서_신청한다는_안내_뒤에도_업무를_쓴다() {
+        history(
+                user("유심 재발급 어떻게 해요?"),
+                bot(MessageType.ANSWER, "단말이 지원되는지 먼저 확인하시고, 매장이나 온라인에서 신청하시면 됩니다."));
+
+        assertThat(finder.of(current())).isEqualTo("USIM_REISSUE");
+    }
+
+    @Test
     void 직전_답변이_매장_방문_안내가_아니면_쓰지_않는다() {
         history(
                 user("명의변경하려면 어떻게 해요?"),
