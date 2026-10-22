@@ -349,10 +349,13 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         List<Map<String, Object>> storeResults = new ArrayList<>();
         List<ChatStoreSearchContextResponse> storeContexts = new ArrayList<>();
         boolean hasGroundedAnswer = false;
+        // 모든 하위 질문이 FAQ 근거 없음일 때만 상담원 연결을 안내한다
+        boolean allHandoff = true;
         boolean faqOnly = consultTurns.stream().allMatch(turn -> turn.purpose() == Purpose.GENERAL_FAQ);
         for (int i = 0; i < consultTurns.size(); i++) {
             ConsultTurn part = consultTurns.get(i);
             GeneratedAnswer generated = generatePart(part, preparedTurns.get(i), inputs.get(i), prepareds.get(i));
+            allHandoff &= generated.answer().handoff();
             boolean grounded = part.purpose() == Purpose.GENERAL_FAQ
                     && generated.answer().answerBasis() == ChatMessage.AnswerBasis.GROUNDED;
             String content = partContent(part, generated, grounded);
@@ -403,7 +406,8 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
                         : uniqueStores.isEmpty() ? ChatMessage.AnswerBasis.NO_EVIDENCE : null,
                 SuggestedQuestions.oneFromEach(followUpsPerAnswer),
                 uniqueStores.isEmpty() ? null : List.copyOf(uniqueStores.values()),
-                sameContext ? commonContext : null);
+                sameContext ? commonContext : null,
+                allHandoff);
         if (faqOnly) {
             combined = withNoAnswerSuggestion(combined, command.content());
         }
@@ -575,7 +579,7 @@ public final class ConsultChatProcessingService implements ChatProcessingPort {
         }
         return new ChatAnswer(answer.messageType(),
                 answer.content() + "\n\n" + NO_ANSWER_SUGGESTION_GUIDE,
-                answer.answerBasis(), suggestions, answer.storeResults(), answer.storeSearchContext());
+                answer.answerBasis(), suggestions, answer.storeResults(), answer.storeSearchContext(), answer.handoff());
     }
 
     private void fail(ChatProcessingCommand command, RuntimeException exception) {

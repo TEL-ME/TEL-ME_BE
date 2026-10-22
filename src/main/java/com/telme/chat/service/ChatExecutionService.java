@@ -80,7 +80,7 @@ public class ChatExecutionService {
         execution.complete(message, ending.at(), ending.totalMs());
         if (!preserveConsultation) session.resume();
         session.touch(ending.at());
-        ChatExecutionState output = flushed(execution);
+        ChatExecutionState output = flushed(execution).withHandoff(answer.handoff());
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
 

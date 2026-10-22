@@ -94,6 +94,7 @@ class RagSearchResultAnswerGeneratorTest {
         assertThat(actual.answer().messageType()).isEqualTo(ChatMessage.MessageType.ANSWER);
         assertThat(actual.answer().content()).isEqualTo("강남역 인근 매장을 안내해 드릴게요.");
         assertThat(actual.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.GROUNDED);
+        assertThat(actual.answer().handoff()).isFalse();
         assertThat(actual.sources()).containsExactly(source);
         assertThat(actual.answer().followUps()).isEmpty();
     }
@@ -151,6 +152,7 @@ class RagSearchResultAnswerGeneratorTest {
         assertThat(result.answer().content())
                 .isEqualTo(RagSearchResultAnswerGenerator.NO_SEARCH_RESULT_ANSWER);
         assertThat(result.answer().answerBasis()).isEqualTo(ChatMessage.AnswerBasis.NO_EVIDENCE);
+        assertThat(result.answer().handoff()).isTrue();
     }
 
     @Test
@@ -174,6 +176,7 @@ class RagSearchResultAnswerGeneratorTest {
 
         verify(handler).onToken(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
         assertThat(result.answer().content()).isEqualTo(AnswerPromptTemplates.NO_EVIDENCE_ANSWER);
+        assertThat(result.answer().handoff()).isTrue();
     }
 
     @Test

@@ -85,7 +85,9 @@ public final class RagSearchResultAnswerGenerator implements SearchResultAnswerG
                         Objects.requireNonNull(
                                 suggestedQuestions.suggest(result.answerBasis(), results),
                                 "suggestedQuestions"),
-                        null),
+                        null,
+                        null,
+                        result.answerBasis() == ChatMessage.AnswerBasis.NO_EVIDENCE),
                 result.sources());
     }
 

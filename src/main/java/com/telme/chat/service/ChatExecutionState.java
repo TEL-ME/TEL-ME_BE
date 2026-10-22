@@ -11,6 +11,13 @@ public record ChatExecutionState(
         ChatOutputMessage outputMessage
 ) {
 
+    ChatExecutionState withHandoff(boolean handoff) {
+        if (outputMessage == null) {
+            return this;
+        }
+        return new ChatExecutionState(sessionId, executionId, status, errorCode, outputMessage.withHandoff(handoff));
+    }
+
     static ChatExecutionState of(ChatExecution execution) {
         ChatMessage output = execution.getOutputMessage();
         return new ChatExecutionState(
