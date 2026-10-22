@@ -33,11 +33,11 @@ public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
     private static final Pattern CORRECTION = Pattern.compile("정정|아니고|아니라(?!면)|아니다|잘못(?:말|알|봤|적|이야기)|다시말");
-    // 상담 대상 단어와 물음이 함께 있으면 완결된 질문
+    // 상담 대상 단어와 물음이 함께 있으면 완결된 질문. '있어요', '돼요'는 평서문에도 쓰여 물음 꼴에서 뺌
     // 매장·대리점은 대상을 정하지 못해 제외
     private static final Pattern SERVICE_TOPIC = Pattern.compile(
             "(?i)요금제|요금|로밍|유심|이심|esim|번호이동|명의|해지|가입|개통|위약금|약정|데이터|통화|문자|부가서비스|결합|5g|lte|알뜰|청소년|시니어|할인|납부|청구|단말|기기변경|정지|분실|재발급");
-    private static final Pattern QUESTION_FORM = Pattern.compile("[?？]|뭐|무엇|어떤|어떻게|얼마|있나요|있어요|되나요|돼요|인가요|가능|알려");
+    private static final Pattern QUESTION_FORM = Pattern.compile("[?？]|뭐|무엇|어떤|어떻게|얼마|있나요|되나요|인가요|가능|알려");
     private static final Pattern TEMPORAL_REFERENCE = Pattern.compile("그때|아까|앞서|이전에");
     private static final Pattern IMPLICIT = Pattern.compile(
             "^(?:그럼|신청방법|비용|요금|기간|필요한서류|얼마|어떻게신청)");
@@ -270,7 +270,9 @@ public class ChatQuestionResolver {
             String judged = withoutLeadingTag(question);
             // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
             boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
-                    || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches();
+                    || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches()
+                    // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄
+                    || isCorrectionOfHistory(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context);
             Reference reference = generic ? Reference.OMITTED : judgeReference(command, judged);
             var analysis = mapper.createObjectNode();
             analysis.put("reference", reference.name());
@@ -329,10 +331,29 @@ public class ChatQuestionResolver {
                 || !sourcesOutput.path("sources").isArray() || !sourcesOutput.path("anchorIndex").isIntegralNumber() || !sourcesOutput.path("referenceScope").isTextual()) {
             throw new IllegalArgumentException("이전 발언 연결 판정 형식이 올바르지 않습니다.");
         }
-        analysis.set("sources", sourcesOutput.path("sources"));
+        analysis.set("sources", withoutCurrentQuestionEntry(sourcesOutput.path("sources"), ordered.size()));
         analysis.set("anchorIndex", sourcesOutput.path("anchorIndex"));
         analysis.set("referenceScope", sourcesOutput.path("referenceScope"));
         return validateResolution(question, analysis, sources);
+    }
+
+    // 모델이 현재 질문을 발언 N+1로 덧붙인 항목은 정정 연결과 무관해 떼고 검증
+    private JsonNode withoutCurrentQuestionEntry(JsonNode assessments, int sourceCount) {
+        if (!stabilityGuards || assessments.size() != sourceCount + 1) {
+            return assessments;
+        }
+        var kept = mapper.createArrayNode();
+        boolean dropped = false;
+        for (JsonNode entry : assessments) {
+            int parent = entry.path("parentIndex").asInt(-1);
+            if (entry.path("index").asInt(-1) == sourceCount + 1 && entry.path("targetCount").asInt(-1) == 0
+                    && parent >= 1 && parent <= sourceCount && !dropped) {
+                dropped = true;
+                continue;
+            }
+            kept.add(entry);
+        }
+        return dropped ? kept : assessments;
     }
 
     // AI 서버 장애·시간 초과·사용자 취소는 질문 문제가 아니므로 확인 안내로 바꾸지 않고 기존 실패 처리로 넘긴다.

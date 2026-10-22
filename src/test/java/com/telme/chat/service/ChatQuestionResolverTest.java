@@ -95,6 +95,75 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"LTE 말고 5G 쓰고 있어요 정정할게요", "5G 아니고 LTE 쓰고 있어요",
+            "아 정정할게요 유심 말고 eSIM 쓰면 돼요", "무제한 아니고 데이터 50GB 쓰고 있어요 정정할게요"})
+    void correctionWithServiceWordSkipsTheReferenceModelAndLinksTheHistory(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    private static final String CORRECTION_QUESTION = "LTE 말고 5G 쓰고 있어요 정정할게요";
+
+    private static String sourcesWithExtraEntry(int targetCount, int index) {
+        return "{\"reference\":\"OMITTED\",\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":" + index + ",\"targetCount\":" + targetCount + ",\"parentIndex\":1}],"
+                + "\"anchorIndex\":0,\"referenceScope\":\"RECENT\"}";
+    }
+
+    @Test
+    void guardedResolverDropsTheCurrentQuestionEntryTheModelAppended() throws Exception {
+        respond(model, sourcesWithExtraEntry(0, 2));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = guarded.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        verify(model, org.mockito.Mockito.times(1)).generate(any());
+    }
+
+    @Test
+    void unguardedResolverStillRejectsTheExtraEntry() throws Exception {
+        respond(model, sourcesWithExtraEntry(0, 2));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = resolver.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 3})
+    void guardedResolverKeepsRejectingOtherExtraEntries(int variant) throws Exception {
+        // 새 업무로 센 항목(targetCount 1)이나 번호가 어긋난 항목(3)은 현재 질문 항목으로 보지 않는다
+        respond(model, variant == 1 ? sourcesWithExtraEntry(1, 2) : sourcesWithExtraEntry(0, 3));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = guarded.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isTrue();
+        verify(model, org.mockito.Mockito.times(2)).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LTE가 아니라 5G 요금제 뭐 있어요?", "5G 아니고 LTE 요금제는 얼마예요"})
+    void correctionWordInsideACompleteQuestionStillGoesToTheReferenceDecision(String original) {
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"이번 달에 가입한 게 아니라면 요금제 바꿀 수 있는지 알려주세요", "LTE가 아니라 5G 요금제 뭐 있어요", "5G가 아니고 LTE 요금제는 얼마예요"})
     void completeQuestionWithCorrectionWordIsNotSentToTheModel(String original) {
         var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
@@ -632,7 +701,7 @@ class ChatQuestionResolverTest {
     void invalidSourceAnalysisIsAskedOnceMoreWhenGuarded() {
         String question = "그건 얼마야?";
         String invalid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
-                + "{\"index\":2,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+                + "{\"index\":3,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
         String valid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         when(model.generate(any())).thenReturn(invalid, valid);
