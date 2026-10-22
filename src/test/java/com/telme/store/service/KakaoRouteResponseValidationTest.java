@@ -86,6 +86,21 @@ class KakaoRouteResponseValidationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(StoreErrorCode.ROUTE_UNAVAILABLE));
     }
 
+    @Test
+    void 보강_인자_누락은_NPE가_아닌_연동_오류() {
+        var converter = new StoreRouteConverter();
+        var transit = StoreRouteResponse.builder().mode(RouteMode.TRANSIT).distanceMeters(100)
+                .durationSeconds(10).steps(List.of()).build();
+        var walk = StoreRouteResponse.builder().mode(RouteMode.WALK).distanceMeters(100)
+                .durationSeconds(10).steps(List.of()).build();
+        assertThatThrownBy(() -> converter.prependOriginWalk(null, walk))
+                .isInstanceOfSatisfying(GeneralException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(StoreErrorCode.ROUTE_UNAVAILABLE));
+        assertThatThrownBy(() -> converter.prependOriginWalk(transit, null))
+                .isInstanceOfSatisfying(GeneralException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(StoreErrorCode.ROUTE_UNAVAILABLE));
+    }
+
     private static Stream<Arguments> invalidStructures() {
         var cases = new java.util.ArrayList<Arguments>();
         for (RouteMode mode : RouteMode.values()) {
@@ -94,8 +109,13 @@ class KakaoRouteResponseValidationTest {
                 add(cases, mode, "/routes/0/summary", "null");
                 add(cases, mode, "/routes/0/summary/distance", "-1");
                 add(cases, mode, "/routes/0/summary/duration", "-1");
+                add(cases, mode, "/routes/0/sections", "null");
+                add(cases, mode, "/routes/0/sections", "[]");
                 add(cases, mode, "/routes/0/sections/0", "null");
+                add(cases, mode, "/routes/0/sections/0/roads", "null");
+                add(cases, mode, "/routes/0/sections/0/roads", "[]");
                 add(cases, mode, "/routes/0/sections/0/roads/0", "null");
+                add(cases, mode, "/routes/0/sections/0/roads/0/vertexes", "[]");
                 for (String vertices : List.of("[null,37.5]", "[127,null]", "[127]", "[181,37]")) {
                     add(cases, mode, "/routes/0/sections/0/roads/0/vertexes", vertices);
                 }
@@ -114,8 +134,17 @@ class KakaoRouteResponseValidationTest {
                         "[[127,null]]", "[[127,91]]", "[[\"NaN\",37]]")) {
                     add(cases, mode, step + "/path/points", points);
                 }
-                if (mode != RouteMode.TRANSIT) {
+                if (mode == RouteMode.TRANSIT) {
+                    add(cases, mode, route + "/steps", "null");
+                    add(cases, mode, route + "/steps", "[]");
+                    add(cases, mode, route + "/properties/transfers", "-1");
+                    add(cases, mode, route + "/properties/fare/value", "-1");
+                } else {
+                    add(cases, mode, route + "/legs", "null");
+                    add(cases, mode, route + "/legs", "[]");
                     add(cases, mode, route + "/legs/0", "null");
+                    add(cases, mode, route + "/legs/0/steps", "null");
+                    add(cases, mode, route + "/legs/0/steps", "[]");
                 }
             }
         }
@@ -139,8 +168,8 @@ class KakaoRouteResponseValidationTest {
                 """;
         if (mode == RouteMode.TRANSIT) {
             return """
-                    {"status":"OK","routes":[{"properties":{"totalDistance":1000,"totalTime":600},
-                    "steps":[%s]}]}
+                    {"status":"OK","routes":[{"properties":{"totalDistance":1000,"totalTime":600,
+                    "transfers":0,"fare":{"value":1400}},"steps":[%s]}]}
                     """.formatted(step);
         }
         return """

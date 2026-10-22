@@ -159,7 +159,8 @@ class KakaoRouteMetricValidationTest {
     private static String responseBody(RouteMode mode) {
         if (mode == RouteMode.CAR) {
             return """
-                    {"routes":[{"result_code":0,"summary":{"distance":1000,"duration":600}}]}
+                    {"routes":[{"result_code":0,"summary":{"distance":1000,"duration":600},
+                    "sections":[{"roads":[{"vertexes":[126.978,37.567]}]}]}]}
                     """;
         }
         String step = """

@@ -24,6 +24,10 @@ public class StoreRouteConverter {
     private static final String TRANSIT_STEP_SUBWAY = "SUBWAY";
 
     public StoreRouteResponse prependOriginWalk(StoreRouteResponse transit, StoreRouteResponse walk) {
+        requireObject(transit, "transit");
+        requireObject(walk, "walk");
+        requireObject(transit.steps(), "transit.steps");
+        requireObject(walk.steps(), "walk.steps");
         List<Step> steps = new ArrayList<>(walk.steps());
         steps.addAll(transit.steps());
         return StoreRouteResponse.builder()
@@ -40,16 +44,19 @@ public class StoreRouteConverter {
     public StoreRouteResponse toCarResponse(KakaoNaviDirectionsResponse.Route route) {
         requireObject(route, "route");
         requireObject(route.summary(), "summary");
+        int distance = requireMetric(route.summary().distance(), "summary.distance");
+        int duration = requireMetric(route.summary().duration(), "summary.duration");
         List<Coordinate> path = new ArrayList<>();
-        for (var section : elementsOrEmpty(route.sections(), "sections")) {
-            for (var road : elementsOrEmpty(section.roads(), "sections.roads")) {
+        for (var section : requireElements(route.sections(), "sections")) {
+            for (var road : requireElements(section.roads(), "sections.roads")) {
                 if (road.vertexes() != null) {
                     appendVertexes(path, road.vertexes());
                 }
             }
         }
-        int distance = requireMetric(route.summary().distance(), "summary.distance");
-        int duration = requireMetric(route.summary().duration(), "summary.duration");
+        if ((distance > 0 || duration > 0) && path.isEmpty()) {
+            throw invalidResponse("sections.roads.vertexes");
+        }
         Step step = new Step(StepType.DRIVE, null, distance, duration, null, path);
         return new StoreRouteResponse(RouteMode.CAR, distance, duration, null, null, List.of(step));
     }
@@ -57,26 +64,34 @@ public class StoreRouteConverter {
     public StoreRouteResponse toTransitResponse(KakaoTransitRouteResponse.Route route) {
         KakaoTransitRouteResponse.RouteProperties properties =
                 requireObject(requireObject(route, "route").properties(), "properties");
-        List<Step> steps = elementsOrEmpty(route.steps(), "steps").stream()
+        int distance = requireMetric(properties.totalDistance(), "properties.totalDistance");
+        int duration = requireMetric(properties.totalTime(), "properties.totalTime");
+        List<Step> steps = requireElements(route.steps(), "steps").stream()
                 .map(this::toTransitStep)
                 .toList();
-        Integer fare = properties.fare() == null ? null : properties.fare().value();
-        return new StoreRouteResponse(RouteMode.TRANSIT,
-                requireMetric(properties.totalDistance(), "properties.totalDistance"),
-                requireMetric(properties.totalTime(), "properties.totalTime"), fare, properties.transfers(), steps);
+        if ((distance > 0 || duration > 0) && steps.isEmpty()) {
+            throw invalidResponse("steps");
+        }
+        Integer fare = properties.fare() == null ? null
+                : requireNonNegative(properties.fare().value(), "fare.value");
+        Integer transfers = requireNonNegative(properties.transfers(), "transfers");
+        return new StoreRouteResponse(RouteMode.TRANSIT, distance, duration, fare, transfers, steps);
     }
 
     // 도보·자전거 응답은 legs[].steps[] 구조다. 경유지를 쓰지 않으므로 leg는 하나지만 여러 개여도 순서대로 이어 붙인다
     public StoreRouteResponse toLegResponse(RouteMode mode, KakaoLegRouteResponse.Route route) {
         requireObject(requireObject(route, "route").properties(), "properties");
+        int distance = requireMetric(route.properties().totalDistance(), "properties.totalDistance");
+        int duration = requireMetric(route.properties().totalTime(), "properties.totalTime");
         StepType type = mode == RouteMode.BICYCLE ? StepType.BICYCLE : StepType.WALK;
-        List<Step> steps = elementsOrEmpty(route.legs(), "legs").stream()
-                .flatMap(leg -> elementsOrEmpty(leg.steps(), "legs.steps").stream())
+        List<Step> steps = requireElements(route.legs(), "legs").stream()
+                .flatMap(leg -> requireElements(leg.steps(), "legs.steps").stream())
                 .map(step -> toLegStep(type, step))
                 .toList();
-        return new StoreRouteResponse(mode,
-                requireMetric(route.properties().totalDistance(), "properties.totalDistance"),
-                requireMetric(route.properties().totalTime(), "properties.totalTime"), null, null, steps);
+        if ((distance > 0 || duration > 0) && steps.isEmpty()) {
+            throw invalidResponse("legs.steps");
+        }
+        return new StoreRouteResponse(mode, distance, duration, null, null, steps);
     }
 
     private Step toTransitStep(KakaoTransitRouteResponse.Step step) {
@@ -153,6 +168,16 @@ public class StoreRouteConverter {
         return new Coordinate(latitude, longitude);
     }
 
+    private <T> List<T> requireElements(List<T> values, String field) {
+        if (values == null || values.isEmpty()) {
+            throw invalidResponse(field);
+        }
+        for (T value : values) {
+            requireObject(value, field);
+        }
+        return values;
+    }
+
     private <T> List<T> elementsOrEmpty(List<T> values, String field) {
         if (values == null) {
             return List.of();
@@ -161,6 +186,14 @@ public class StoreRouteConverter {
             requireObject(value, field);
         }
         return values;
+    }
+
+    private Integer requireNonNegative(Integer value, String field) {
+        if (value != null && value < 0) {
+            log.warn("[KakaoRoute] 음수 필드 field={}", field);
+            throw new GeneralException(StoreErrorCode.ROUTE_UNAVAILABLE);
+        }
+        return value;
     }
 
     private <T> T requireObject(T value, String field) {
