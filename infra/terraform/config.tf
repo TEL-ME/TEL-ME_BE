@@ -27,6 +27,10 @@ locals {
 
     ROUTING_REQUEST_INVENTORY_ENABLED = "false"
 
+    # 매장 길찾기: 대중교통 출발지 → 첫 경로 좌표 도보를 추가 조회, 실제 경로 거리 50km 넘으면 안내 안 함
+    KAKAO_ROUTE_TRANSIT_ORIGIN_WALK_ENABLED = "true"
+    STORE_ROUTE_MAX_DISTANCE_METERS         = "50000"
+
     # 시연용: 요금제 가입, 변경을 바로 적용하고 가입 당월, 월 1회 변경 제한을 생략
     TELME_SUBSCRIPTION_DEMO_MODE = "true"
 
