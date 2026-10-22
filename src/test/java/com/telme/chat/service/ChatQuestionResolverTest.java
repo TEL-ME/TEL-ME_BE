@@ -47,7 +47,7 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?"})
+    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?", "한 20기가 정도요", "50GB 정도요", "마흔 정도요"})
     void followUpWithItemOrReferenceStillGoesThroughTheReferenceModel(String original) throws Exception {
         respond(model, explicit());
         var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
@@ -95,7 +95,7 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"LTE 말고 5G 쓰고 있어요 정정할게요", "5G 아니고 LTE 쓰고 있어요",
+    @ValueSource(strings = {"LTE 말고 5G 쓰고 있어요 정정할게요",
             "아 정정할게요 유심 말고 eSIM 쓰면 돼요", "무제한 아니고 데이터 50GB 쓰고 있어요 정정할게요"})
     void correctionWithServiceWordSkipsTheReferenceModelAndLinksTheHistory(String original) throws Exception {
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
@@ -154,7 +154,9 @@ class ChatQuestionResolverTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"명의 정정하고 싶어요", "가입 정보 정정하려고 합니다", "청구서 주소 정정하고 싶어요",
-            "요금제를 잘못알고 가입해서 해지하고 싶어요"})
+            "요금제를 잘못알고 가입해서 해지하고 싶어요",
+            "결제 얘기가 아니라 폰 액정이 깨졌는데 보험 있으면 얼마 내요?", "엄마 명의가 아니라 제 명의인데 해지 돼요",
+            "LTE 아니고 5G 요금제 있어요", "5G 아니고 LTE 쓰고 있어요"})
     void correctionWordInANewRequestStillGoesToTheReferenceModel(String original) throws Exception {
         respond(model, explicit());
         var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);

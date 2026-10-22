@@ -33,6 +33,8 @@ public class ChatQuestionResolver {
     private static final Pattern TARGET_REFERENCE = Pattern.compile(
             "그(?:건|것|거|쪽|요금제|상품|서비스)|이(?:건|것|거)");
     private static final Pattern CORRECTION = Pattern.compile("정정|아니고|아니라(?!면)|아니다|잘못(?:말|알|봤|적|이야기)|다시말");
+    // 정정을 직접 말하는 낱말. 아니고·아니라는 새 질문에도 쓰여 따로 본다
+    private static final Pattern EXPLICIT_CORRECTION = Pattern.compile("정정|잘못(?:말|알|봤|적|이야기)|다시말");
     // 상담 대상 단어와 물음이 함께 있으면 완결된 질문. '있어요', '돼요'는 평서문에도 쓰여 물음 꼴에서 뺌
     // 매장·대리점은 대상을 정하지 못해 제외
     private static final Pattern SERVICE_TOPIC = Pattern.compile(
@@ -65,7 +67,8 @@ public class ChatQuestionResolver {
     private static final Pattern CONVERSATION_ORDINAL = Pattern.compile(
             "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한)|처음(?:물어본|문의한|말한|질문한)");
     // 질문 항목 없이 대상 이름만 말하는 'X는요?'꼴은 앞 질문의 항목을 이어받음
-    private static final Pattern TOPIC_ONLY_FOLLOW_UP = Pattern.compile("^(?:그럼|그러면|그리고)?(?!그)(?!.*(?:비용|요금|가격|금액|기간|시간|방법|절차|서류|준비물|조건|자격|혜택|수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비|처리|신청|변경|취소|접수|진행))[가-힣A-Za-z0-9]{1,8}(?:은|는|도)요$");
+    // '20기가 정도요'의 정도요는 대상 이름이 아니라 수량 답이라 도요 앞이 '정'이면 제외
+    private static final Pattern TOPIC_ONLY_FOLLOW_UP = Pattern.compile("^(?:그럼|그러면|그리고)?(?!그)(?!.*(?:비용|요금|가격|금액|기간|시간|방법|절차|서류|준비물|조건|자격|혜택|수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비|처리|신청|변경|취소|접수|진행))[가-힣A-Za-z0-9]{1,8}(?:은|는|(?<!정)도)요$");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무에 딸려 청구되는 비용 항목. 업무 이름 없이 이것만 물으면 앞 업무의 항목일 수 있어 길이와 관계없이 모델 후보로 본다.
     private static final Pattern COST_ITEM = Pattern.compile("수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비");
@@ -272,7 +275,7 @@ public class ChatQuestionResolver {
             boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
                     || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches()
                     // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄. 하려는 일을 말하면 새 요청이라 제외
-                    || isCorrectionOfHistory(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context)
+                    || isOmittedTargetCorrection(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context)
                             && !INTENT_STATEMENT.matcher(compact(judged)).find();
             Reference reference = generic ? Reference.OMITTED : judgeReference(command, judged);
             var analysis = mapper.createObjectNode();
@@ -425,6 +428,15 @@ public class ChatQuestionResolver {
     static boolean isCorrectionOfHistory(String noWhitespace) {
         return CORRECTION.matcher(noWhitespace).find()
                 && !(SERVICE_TOPIC.matcher(noWhitespace).find() && QUESTION_FORM.matcher(noWhitespace).find());
+    }
+
+    // 모델 없이 대상 생략으로 볼 정정 말. 아니고·아니라만 있는 말은 "LTE 아니고 5G 요금제 있어요"처럼 새 질문일 수 있어 업무 낱말이나 물음이 있으면 모델에 맡김
+    static boolean isOmittedTargetCorrection(String noWhitespace) {
+        if (!isCorrectionOfHistory(noWhitespace)) {
+            return false;
+        }
+        return EXPLICIT_CORRECTION.matcher(noWhitespace).find()
+                || !SERVICE_TOPIC.matcher(noWhitespace).find() && !QUESTION_FORM.matcher(noWhitespace).find();
     }
 
     static boolean isGenericFollowUp(String question) {
