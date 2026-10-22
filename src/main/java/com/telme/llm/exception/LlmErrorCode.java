@@ -16,7 +16,10 @@ public enum LlmErrorCode implements BaseErrorCode {
     TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "LLM504-0", "LLM 응답 시간이 초과되었습니다."),
     MODEL_ERROR(HttpStatus.BAD_GATEWAY, "LLM502-0", "LLM 서버가 오류를 반환했습니다."),
     INVALID_RESPONSE(HttpStatus.BAD_GATEWAY, "LLM502-1", "LLM 응답 형식이 올바르지 않습니다."),
-    STREAM_INTERRUPTED(HttpStatus.BAD_GATEWAY, "LLM502-2", "LLM 응답이 완료되기 전에 끊겼습니다.");
+    STREAM_INTERRUPTED(HttpStatus.BAD_GATEWAY, "LLM502-2", "LLM 응답이 완료되기 전에 끊겼습니다."),
+    TEMPORARILY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "LLM503-1", "LLM 서버가 일시적으로 요청을 처리하지 못합니다."),
+    REQUEST_REJECTED(HttpStatus.BAD_GATEWAY, "LLM502-3", "LLM 서버가 요청을 거부했습니다."),
+    RETRYABLE_FAILURE(HttpStatus.BAD_GATEWAY, "LLM502-4", "답변 생성에 실패했습니다. 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String code;

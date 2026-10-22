@@ -545,6 +545,25 @@ class ConsultGuardedAnswerDeliveryIntegrationTest {
                 String.class, executionId)).containsExactly("TIMEOUT", "CONNECTION_FAILED");
     }
 
+    @Test
+    void retryableFailureIsStoredAndSentWithRetryableFlag() {
+        var attempts = new AtomicInteger();
+        script = stream -> {
+            attempts.incrementAndGet();
+            stream.onError(new GeneralException(LlmErrorCode.RETRYABLE_FAILURE));
+        };
+        processor.request(command);
+
+        assertThat(attempts.get()).isEqualTo(1);
+        assertThat(emitter.names()).containsExactly("start", "error");
+        assertThat(emitter.tokens()).isEmpty();
+        assertFailedHistory("FAILED", LlmErrorCode.RETRYABLE_FAILURE.getCode());
+        assertReadableFailureGuidance();
+        JsonNode payload = objectMapper.valueToTree(emitter.events.getLast().data());
+        assertThat(payload.path("retryable").asBoolean()).isTrue();
+        assertThat(payload.path("message").asText()).contains("다시 시도");
+    }
+
     private void assertReadableFailureGuidance() {
         JsonNode payload = objectMapper.valueToTree(emitter.events.getLast().data());
         assertThat(payload.path("message").asText()).isNotBlank();

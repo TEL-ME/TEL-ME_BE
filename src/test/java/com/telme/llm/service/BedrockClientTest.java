@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -94,14 +96,36 @@ class BedrockClientTest {
                 .hasMessage("LLM503-0 LLM 서버에 연결할 수 없습니다. (SdkClientException)");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {408, 429, 503, 504})
+    @DisplayName("한도 초과·일시 서버 장애·응답 지연은 재시도 대상인 TEMPORARILY_UNAVAILABLE로 바꾼다")
+    void 일시적_오류(int status) {
+        when(runtime.converse(any(ConverseRequest.class)))
+                .thenThrow(AwsServiceException.builder().statusCode(status).message("busy").build());
+
+        assertError(LlmErrorCode.TEMPORARILY_UNAVAILABLE);
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=" + status);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 403})
+    @DisplayName("권한·설정 오류는 다시 해도 같으므로 REQUEST_REJECTED로 바꾼다")
+    void 요청_거부(int status) {
+        when(runtime.converse(any(ConverseRequest.class)))
+                .thenThrow(AwsServiceException.builder().statusCode(status).message("denied").build());
+
+        assertError(LlmErrorCode.REQUEST_REJECTED);
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=" + status);
+    }
+
     @Test
-    @DisplayName("Bedrock이 오류를 돌려주면 MODEL_ERROR로 바꾼다")
+    @DisplayName("원인을 알 수 없는 서버 오류(500)는 MODEL_ERROR로 바꾼다")
     void 서버_오류() {
         when(runtime.converse(any(ConverseRequest.class)))
-                .thenThrow(AwsServiceException.builder().statusCode(503).message("unavailable").build());
+                .thenThrow(AwsServiceException.builder().statusCode(500).message("error").build());
 
         assertError(LlmErrorCode.MODEL_ERROR);
-        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=503");
+        assertThatThrownBy(() -> client.generate(request())).hasMessageContaining("status=500");
     }
 
     @Test

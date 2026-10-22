@@ -138,6 +138,27 @@ class GuestDailyChatLimitIntegrationTest {
     }
 
     @Test
+    @DisplayName("실패한 뒤 다시 시도 중이거나 다시 시도로 답을 받은 질문은 한도에 들어간다")
+    void 다시_시도한_질문은_센다() throws Exception {
+        MockHttpSession guest = guestSession(persistGuest());
+        for (int i = 1; i <= 3; i++) {
+            assertThat(send(guest, "질문 " + i).getResponse().getStatus()).isEqualTo(201);
+        }
+        setExecutionStatus(guest, "질문 1", "FAILED");
+        assertThat(guestLimit(guest).path("remaining").asInt()).isEqualTo(1);
+
+        long retryId = insertRetryExecution(guest, "질문 1", "RUNNING");
+        assertThat(guestLimit(guest).path("remaining").asInt()).isZero();
+
+        jdbcTemplate.update("update chat_executions set status = 'COMPLETED' where execution_id = ?", retryId);
+        assertThat(guestLimit(guest).path("remaining").asInt()).isZero();
+        assertThat(send(guest, "넘는 질문").getResponse().getStatus()).isEqualTo(429);
+
+        jdbcTemplate.update("update chat_executions set status = 'FAILED' where execution_id = ?", retryId);
+        assertThat(guestLimit(guest).path("remaining").asInt()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("한도는 게스트마다 따로 세고 회원은 제한하지 않는다")
     void 다른_게스트와_회원은_영향받지_않는다() throws Exception {
         MockHttpSession full = guestSession(persistGuest());
@@ -286,6 +307,18 @@ class GuestDailyChatLimitIntegrationTest {
                     where session.guest_id = ? and message.content = ?)
                 """, status, guestId(guest), question);
         assertThat(updated).isEqualTo(1);
+    }
+
+    private long insertRetryExecution(MockHttpSession guest, String question, String status) {
+        return jdbcTemplate.queryForObject("""
+                insert into chat_executions (session_id, input_message_id, status, attempt)
+                select execution.session_id, execution.input_message_id, ?, 2
+                from chat_executions execution
+                join chat_messages message on message.message_id = execution.input_message_id
+                join chat_sessions session on session.session_id = message.session_id
+                where session.guest_id = ? and message.content = ?
+                returning execution_id
+                """, Long.class, status, guestId(guest), question);
     }
 
     private JsonNode body(MvcResult result) throws Exception {

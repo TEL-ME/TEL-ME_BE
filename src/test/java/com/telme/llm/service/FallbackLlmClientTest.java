@@ -1,6 +1,7 @@
 package com.telme.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -164,5 +165,33 @@ class FallbackLlmClientTest {
 
         assertThat(seen[0]).isTrue();
         assertThat(LlmFallbackScope.active()).isFalse();
+    }
+
+    @Test
+    @DisplayName("대체를 막는 게이트면 generate는 대체 모델을 부르지 않고 게이트의 예외를 던진다")
+    void 게이트가_막으면_generate는_대체하지_않는다() {
+        IllegalStateException blocked = new IllegalStateException("재시도 안내");
+        FallbackLlmClient gated = new FallbackLlmClient(primary, fallback, (r, f) -> blocked);
+        when(primary.generate(any())).thenThrow(new IllegalStateException("호출 실패"));
+
+        assertThatThrownBy(() -> gated.generate(request)).isSameAs(blocked);
+        verifyNoInteractions(fallback);
+    }
+
+    @Test
+    @DisplayName("대체를 막는 게이트면 스트리밍은 첫 글자 전 실패에 대체하지 않고 게이트의 예외를 onError로 넘긴다")
+    void 게이트가_막으면_stream은_대체하지_않는다() {
+        IllegalStateException blocked = new IllegalStateException("재시도 안내");
+        FallbackLlmClient gated = new FallbackLlmClient(primary, fallback, (r, f) -> blocked);
+        LlmStreamHandler handler = mock(LlmStreamHandler.class);
+        doAnswer(invocation -> {
+            invocation.<LlmStreamHandler>getArgument(1).onError(new IllegalStateException("호출 실패"));
+            return null;
+        }).when(primary).stream(any(), any());
+
+        gated.stream(request, handler);
+
+        verify(handler).onError(blocked);
+        verifyNoInteractions(fallback);
     }
 }

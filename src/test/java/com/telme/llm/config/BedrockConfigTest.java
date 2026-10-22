@@ -23,6 +23,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
+import com.telme.llm.service.RetryingLlmClient;
 import com.telme.llm.service.LlmGenerationRecorder;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.rag.service.FaqEvidenceJudge;
@@ -70,11 +71,25 @@ class BedrockConfigTest {
                     assertThat(context).hasSingleBean(FaqEvidenceJudge.class);
                     assertThat(context.getBean(FaqEvidenceJudge.class))
                             .extracting("llmClient")
-                            .isSameAs(context.getBean(BedrockConfig.JUDGE_LLM_CLIENT));
+                            .isSameAs(context.getBean(BedrockConfig.EVIDENCE_JUDGE_LLM_CLIENT));
                 });
         runner.withUserConfiguration(FaqEvidenceJudge.class)
                 .withBean(ObjectMapper.class, ObjectMapper::new)
                 .run(context -> assertThat(context).doesNotHaveBean(FaqEvidenceJudge.class));
+    }
+
+    @Test
+    @DisplayName("공용 Bedrock 빈은 순간 장애를 재시도하고, 근거 판정 빈은 재시도하지 않는다")
+    void 재시도는_판정을_뺀_공용_빈에만_있다() {
+        runner.withPropertyValues("llm.bedrock.enabled=true", "llm.bedrock.region=us-east-1")
+                .run(context -> {
+                    assertThat(context.getBean(BedrockConfig.JUDGE_LLM_CLIENT)).isInstanceOf(RetryingLlmClient.class);
+                    assertThat(context.getBean(BedrockConfig.EVIDENCE_JUDGE_LLM_CLIENT))
+                            .isNotInstanceOf(RetryingLlmClient.class);
+                    BedrockRetryProperties retry = context.getBean(BedrockRetryProperties.class);
+                    assertThat(retry.maxAttempts()).isEqualTo(2);
+                    assertThat(retry.waitDuration()).isEqualTo(Duration.ofSeconds(2));
+                });
     }
 
     @Test

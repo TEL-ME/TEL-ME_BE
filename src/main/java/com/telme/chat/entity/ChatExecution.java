@@ -18,7 +18,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "chat_executions")
@@ -60,6 +62,11 @@ public class ChatExecution {
 
     @Column(name = "error_code", length = 50)
     private String errorCode;
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(name = "attempt", nullable = false)
+    @Builder.Default
+    private int attempt = 1;
 
     // 서버 처리 시간(ms). 측정하지 못한 실행은 null이다.
     @Column(name = "total_ms")

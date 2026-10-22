@@ -40,6 +40,13 @@ public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Lo
             ChatExecution.Status status
     );
 
+    boolean existsByInputMessage_MessageIdAndAttemptGreaterThan(Long inputMessageId, int attempt);
+
+    Optional<ChatExecution> findFirstBySession_SessionIdOrderByExecutionIdDesc(Long sessionId);
+
+    @Query("select execution.attempt from ChatExecution execution where execution.executionId = :executionId")
+    Optional<Integer> findAttempt(@Param("executionId") Long executionId);
+
     @Query("""
             select execution.executionId
             from ChatExecution execution

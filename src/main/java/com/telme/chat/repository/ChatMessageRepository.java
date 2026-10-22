@@ -94,7 +94,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     Optional<ChatMessage> findByIdWithSession(@Param("messageId") Long messageId);
 
     // created_at이 DB 시각으로 채워지므로 "오늘"도 DB 시각으로 자른다(앱 서버 시계와 어긋나지 않게)
-    // 서버 쪽 실패(FAILED)나 취소(CANCELLED)로 답을 받지 못한 질문은 세지 않는다. 처리 중(RUNNING)인 질문은 센다
+    // 서버 쪽 실패(FAILED)나 취소(CANCELLED)로 답을 받지 못한 질문은 세지 않는다. 처리 중(RUNNING)이거나 다시 시도로 답을 받은 질문은 센다
     @Query(value = """
             select count(*)
             from chat_messages message
@@ -104,10 +104,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
               and message.role = 'USER'
               and message.message_type = 'QUESTION'
               and message.created_at >= date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul'
-              and not exists (
-                  select 1 from chat_executions execution
-                  where execution.input_message_id = message.message_id
-                    and execution.status in ('FAILED', 'CANCELLED'))
+              and (
+                  not exists (
+                      select 1 from chat_executions execution
+                      where execution.input_message_id = message.message_id
+                        and execution.status in ('FAILED', 'CANCELLED'))
+                  or exists (
+                      select 1 from chat_executions execution
+                      where execution.input_message_id = message.message_id
+                        and execution.status in ('RUNNING', 'COMPLETED')))
             """, nativeQuery = true)
     long countGuestQuestionsToday(@Param("guestId") UUID guestId);
 }
