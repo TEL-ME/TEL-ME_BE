@@ -104,10 +104,17 @@ public class StoreRouteConverter {
     }
 
     private String findLineName(KakaoTransitRouteResponse.StepProperties properties) {
-        if (properties.vehicles() == null || properties.vehicles().isEmpty()) {
+        if (!TRANSIT_STEP_BUS.equals(properties.type()) && !TRANSIT_STEP_SUBWAY.equals(properties.type())) {
             return null;
         }
-        return properties.vehicles().get(0).name();
+        List<KakaoTransitRouteResponse.Vehicle> vehicles = properties.vehicles();
+        // 탑승 단계인데 노선명이 없으면 사용할 수 없는 안내를 정상 응답으로 내리지 않는다.
+        if (vehicles == null || vehicles.isEmpty() || vehicles.get(0) == null
+                || vehicles.get(0).name() == null || vehicles.get(0).name().isBlank()) {
+            log.warn("[KakaoTransit] 탑승 단계 노선명 누락 type={}", properties.type());
+            throw new GeneralException(StoreErrorCode.ROUTE_UNAVAILABLE);
+        }
+        return vehicles.get(0).name();
     }
 
     private List<Coordinate> toCoordinates(List<List<Double>> points) {

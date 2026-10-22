@@ -158,7 +158,7 @@ class KakaoRouteMetricValidationTest {
                     """;
         }
         String step = """
-                {"properties":{"type":"BUS","distance":1000,"time":600},
+                {"properties":{"type":"BUS","distance":1000,"time":600,"vehicles":[{"name":"76"}]},
                  "path":{"points":[[126.978,37.567]]}}
                 """;
         if (mode == RouteMode.TRANSIT) {
