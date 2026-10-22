@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 @EnableConfigurationProperties({StoreSearchProperties.class, KakaoLocalProperties.class,
-        KakaoRouteProperties.class, StoreRouteProperties.class})
+        KakaoRouteProperties.class, StoreRouteProperties.class, StoreRouteUsageProperties.class})
 public class StoreConfig {
 
     private static final String KAKAO_AUTH_SCHEME = "KakaoAK ";
