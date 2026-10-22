@@ -18,7 +18,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "chat_executions")
@@ -62,6 +64,7 @@ public class ChatExecution {
     private String errorCode;
 
     // 같은 질문을 처리한 횟수. 사용자가 다시 시도하면 2다.
+    @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(name = "attempt", nullable = false)
     @Builder.Default
     private int attempt = 1;
