@@ -1,5 +1,8 @@
 package com.telme.store.config;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,20 +11,46 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties({StoreSearchProperties.class, KakaoLocalProperties.class})
+@EnableConfigurationProperties({StoreSearchProperties.class, KakaoLocalProperties.class,
+        KakaoRouteProperties.class, StoreRouteProperties.class, StoreRouteUsageProperties.class})
 public class StoreConfig {
 
     private static final String KAKAO_AUTH_SCHEME = "KakaoAK ";
 
     @Bean
     public RestClient kakaoLocalRestClient(RestClient.Builder builder, KakaoLocalProperties properties) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.connectTimeout());
-        requestFactory.setReadTimeout(properties.readTimeout());
+        return kakaoRestClient(builder, properties.baseUrl(), properties.restApiKey(),
+                properties.connectTimeout(), properties.readTimeout(), true);
+    }
+
+    @Bean
+    public RestClient kakaoRouteRestClient(RestClient.Builder builder, KakaoRouteProperties properties) {
+        return kakaoRestClient(builder, properties.mapBaseUrl(), properties.restApiKey(),
+                properties.connectTimeout(), properties.readTimeout(), false);
+    }
+
+    @Bean
+    public RestClient kakaoNaviRestClient(RestClient.Builder builder, KakaoRouteProperties properties) {
+        return kakaoRestClient(builder, properties.naviBaseUrl(), properties.restApiKey(),
+                properties.connectTimeout(), properties.readTimeout(), false);
+    }
+
+    private RestClient kakaoRestClient(RestClient.Builder builder, String baseUrl, String restApiKey,
+                                       Duration connectTimeout, Duration readTimeout, boolean followRedirects) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String method) throws IOException {
+                super.prepareConnection(connection, method);
+                // 경로 호출 1회 예약이 자동 리다이렉트의 추가 외부 요청으로 늘어나지 않도록 한다.
+                connection.setInstanceFollowRedirects(followRedirects);
+            }
+        };
+        requestFactory.setConnectTimeout(connectTimeout);
+        requestFactory.setReadTimeout(readTimeout);
 
         return builder
-                .baseUrl(properties.baseUrl())
-                .defaultHeader(HttpHeaders.AUTHORIZATION, KAKAO_AUTH_SCHEME + properties.restApiKey())
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, KAKAO_AUTH_SCHEME + restApiKey)
                 .requestFactory(requestFactory)
                 .build();
     }

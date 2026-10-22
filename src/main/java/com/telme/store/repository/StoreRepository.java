@@ -66,6 +66,8 @@ public interface StoreRepository extends JpaRepository<Store, Long>, JpaSpecific
             @Param("storeId") Long storeId,
             @Param("status") Store.Status status);
 
+    Optional<Store> findByStoreIdAndStatus(Long storeId, Store.Status status);
+
     @Query("select h from StoreHours h where h.id.storeId = :storeId")
     List<StoreHours> findHoursByStoreId(@Param("storeId") Long storeId);
 

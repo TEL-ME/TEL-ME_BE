@@ -29,6 +29,12 @@ public class StoreQueryService {
         return storeConverter.toDetailResponse(store, storeRepository.findHoursByStoreId(storeId));
     }
 
+    // 길찾기처럼 좌표만 필요한 곳이 업무·영업시간까지 읽지 않도록 매장만 조회한다. 폐점 매장은 상세와 같이 404다
+    public Store getOpenStore(long storeId) {
+        return storeRepository.findByStoreIdAndStatus(storeId, Store.Status.OPEN)
+                .orElseThrow(() -> new GeneralException(StoreErrorCode.STORE_NOT_FOUND));
+    }
+
     // 매장 응답의 업무 목록과 같은 순서(업무 ID 순)로 내려 칩 순서가 화면마다 달라지지 않게 한다
     public StoreServiceTypeListResponse getServiceTypes() {
         return storeConverter.toServiceTypeListResponse(
