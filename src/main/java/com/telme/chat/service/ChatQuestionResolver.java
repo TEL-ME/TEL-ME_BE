@@ -64,6 +64,8 @@ public class ChatQuestionResolver {
     // 대화 속 발언을 순서로 가리키는 꼴. '처음 신청한'은 "처음 신청한 사람도"처럼 일반 문장에도 쓰여 제외한다.
     private static final Pattern CONVERSATION_ORDINAL = Pattern.compile(
             "(첫|두|세|네)번째로?(?:물어본|문의한|말한|질문한)|처음(?:물어본|문의한|말한|질문한)");
+    // 질문 항목 없이 대상 이름만 말하는 'X는요?'꼴은 앞 질문의 항목을 이어받음
+    private static final Pattern TOPIC_ONLY_FOLLOW_UP = Pattern.compile("^(?:그럼|그러면|그리고)?(?!그)(?!.*(?:비용|요금|가격|금액|기간|시간|방법|절차|서류|준비물|조건|자격|혜택|수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비|처리|신청|변경|취소|접수|진행))[가-힣A-Za-z0-9]{1,8}(?:은|는|도)요$");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무에 딸려 청구되는 비용 항목. 업무 이름 없이 이것만 물으면 앞 업무의 항목일 수 있어 길이와 관계없이 모델 후보로 본다.
     private static final Pattern COST_ITEM = Pattern.compile("수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비");
@@ -267,7 +269,8 @@ public class ChatQuestionResolver {
             List<ChatContextMessage> ordered = orderedSources(sources);
             String judged = withoutLeadingTag(question);
             // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
-            boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find();
+            boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
+                    || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches();
             Reference reference = generic ? Reference.OMITTED : judgeReference(command, judged);
             var analysis = mapper.createObjectNode();
             analysis.put("reference", reference.name());

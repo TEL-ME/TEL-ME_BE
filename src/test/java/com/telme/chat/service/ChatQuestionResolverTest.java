@@ -33,6 +33,34 @@ class ChatQuestionResolverTest {
     private final ChatContextMessage source = customer(501L, 1, "해외 로밍 신청을 알아보고 있어요.");
 
     @ParameterizedTest
+    @ValueSource(strings = {"문자는요?", "로밍도요?", "그럼 데이터는요?", "미국은요?"})
+    void topicOnlyFollowUpSkipsTheReferenceModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?"})
+    void followUpWithItemOrReferenceStillGoesThroughTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"바라야 그럼 신청 방법은?", "안녕 바라야, 그럼 신청 방법은?",
             "그럼 신청 방법은? 고마워 바라야"})
     void addressedFollowUpStillResolvesTheSameCustomerSource(String original) throws Exception {
