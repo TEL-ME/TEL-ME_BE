@@ -50,7 +50,7 @@ public class AdminChatMonitoringQueryService {
         var trace = traceConverter.toResponse(execution,
                 traceRepository.findRouting(inputMessageId),
                 traceRepository.findModelAttemptsWithTime(executionId));
-        AdminChatMonitoringRow row = monitoringRepository.findByMessageId(inputMessageId)
+        AdminChatMonitoringRow row = monitoringRepository.findByExecutionId(executionId, inputMessageId)
                 .orElseThrow(() -> new GeneralException(ChatErrorCode.EXECUTION_NOT_FOUND));
         return converter.toDetail(trace, row, summarizer.summarize(row));
     }
