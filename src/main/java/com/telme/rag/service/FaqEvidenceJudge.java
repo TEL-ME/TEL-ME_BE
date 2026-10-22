@@ -28,7 +28,7 @@ public class FaqEvidenceJudge {
     private final ObjectMapper objectMapper;
 
     public FaqEvidenceJudge(
-            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) LlmClient llmClient, ObjectMapper objectMapper) {
+            @Qualifier(BedrockConfig.EVIDENCE_JUDGE_LLM_CLIENT) LlmClient llmClient, ObjectMapper objectMapper) {
         this.llmClient = llmClient;
         this.objectMapper = objectMapper;
     }
