@@ -20,6 +20,8 @@ public enum ChatErrorCode implements BaseErrorCode {
     ANSWER_ALREADY_STARTED(HttpStatus.CONFLICT, "CHAT409-2", "이미 답변 생성을 시작한 채팅 실행입니다."),
     EXECUTION_IN_PROGRESS(HttpStatus.CONFLICT, "CHAT409-3", "이전 질문에 대한 답변을 생성하고 있습니다."),
     INPUT_REQUEST_CONFLICT(HttpStatus.CONFLICT, "CHAT409-4", "같은 요청 식별자를 다른 입력에 사용할 수 없습니다."),
+    GUEST_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "CHAT429-0",
+            "오늘 비회원으로 보낼 수 있는 질문을 모두 사용했습니다. 로그인하면 이어서 대화할 수 있습니다."),
     OUTPUT_POLICY_BLOCKED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-0",
             "답변을 안전하게 제공하지 못했습니다. 다른 표현으로 질문해 주세요."),
     OUTPUT_CHECK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-1",

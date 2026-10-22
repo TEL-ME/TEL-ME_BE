@@ -12,7 +12,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         ChatContextProperties.class,
         ChatQuestionResolutionProperties.class,
         ChatSummaryProperties.class,
-        ChatSessionTitleProperties.class
+        ChatSessionTitleProperties.class,
+        ChatGuestLimitProperties.class
 })
 public class ChatConfig {
 }

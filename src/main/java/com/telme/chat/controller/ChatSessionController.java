@@ -133,7 +133,8 @@ public class ChatSessionController {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
-                    description = "정상 접수 및 마스킹 후 정상 접수. executionId와 executionStatus가 있으며 기존 SSE 흐름을 이어갑니다.",
+                    description = "정상 접수 및 마스킹 후 정상 접수. executionId와 executionStatus가 있으며 기존 SSE 흐름을 이어갑니다. "
+                            + "게스트이면 이 질문을 접수한 뒤 오늘 남은 질문 수(guestQuestionsRemaining)가 함께 옵니다.",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(type = "object"),
@@ -160,6 +161,25 @@ public class ChatSessionController {
                                                         "executionId": 901,
                                                         "executionStatus": "RUNNING",
                                                         "createdAt": "2026-10-08T00:00:00Z"
+                                                      }
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "guest",
+                                            summary = "게스트 정상 접수",
+                                            value = """
+                                                    {
+                                                      "isSuccess": true,
+                                                      "code": "201",
+                                                      "message": "Created",
+                                                      "result": {
+                                                        "sessionId": 123,
+                                                        "messageId": 501,
+                                                        "sequenceNo": 1,
+                                                        "executionId": 901,
+                                                        "executionStatus": "RUNNING",
+                                                        "createdAt": "2026-10-08T00:00:00Z",
+                                                        "guestQuestionsRemaining": 7
                                                       }
                                                     }
                                                     """),
@@ -305,7 +325,22 @@ public class ChatSessionController {
                                                       }
                                                     }
                                                     """)
-                            }))
+                            })),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "게스트가 오늘(한국 시간 0시 기준) 보낼 수 있는 질문 수를 모두 쓴 경우(CHAT429-0). 회원은 제한하지 않습니다.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "guestDailyLimit",
+                                    summary = "게스트 하루 질문 수 초과",
+                                    value = """
+                                            {
+                                              "isSuccess": false,
+                                              "code": "CHAT429-0",
+                                              "message": "오늘 비회원으로 보낼 수 있는 질문을 모두 사용했습니다. 로그인하면 이어서 대화할 수 있습니다."
+                                            }
+                                            """)))
     })
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<CustomResponse<ChatMessageSendResponse>> sendMessage(
