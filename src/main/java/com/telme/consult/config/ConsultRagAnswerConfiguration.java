@@ -38,6 +38,7 @@ import com.telme.rag.service.AnswerGenerator;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
 import com.telme.chat.service.ExecutionTrace;
+import java.util.function.Supplier;
 
 import com.telme.faq.config.SearchProperties;
 import com.telme.rag.service.FaqEvidenceJudge;
@@ -149,6 +150,17 @@ public class ConsultRagAnswerConfiguration {
         return new RagSearchResultAnswerGenerator(answers, streamHandlers, suggestedQuestions);
     }
 
+    // 조건을 뽑지 않으면 조건 뽑기 클라이언트를 만들지 않는다
+    static FaqClarificationPlanner clarificationPlanner(
+            FaqClarificationProperties clarification, LlmClient client, Supplier<LlmClient> bedrock) {
+        if (!clarification.extractConditions()) {
+            return FaqClarificationPlanner.withoutConditions();
+        }
+        LlmClient extraction = extractionClient(clarification, client, bedrock.get());
+        return new FaqClarificationPlanner(new ConditionExtractor(
+                extraction, extraction == client ? null : client, new ObjectMapper()));
+    }
+
     static LlmClient extractionClient(FaqClarificationProperties clarification, LlmClient exaone, LlmClient bedrock) {
         return clarification.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
     }
@@ -168,15 +180,9 @@ public class ConsultRagAnswerConfiguration {
             @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrockClient) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
-        LlmClient extraction = client == null
-                ? null
-                : extractionClient(clarification, client, bedrockClient.getIfAvailable());
         FaqClarificationPlanner planner = client == null
                 ? null
-                : !clarification.extractConditions()
-                        ? FaqClarificationPlanner.withoutConditions()
-                        : new FaqClarificationPlanner(new ConditionExtractor(
-                                extraction, extraction == client ? null : client, new ObjectMapper()));
+                : clarificationPlanner(clarification, client, bedrockClient::getIfAvailable);
         return new PurposeRoutingAnswerProvider(
                 new PlanAnswerProvider(
                         new FaqSearchAnswerProvider(searches, answers, trace,

@@ -3,12 +3,17 @@ package com.telme.consult.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.FallbackLlmClient;
 import com.telme.llm.service.LlmClient;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -18,6 +23,35 @@ class ExtractionClientSelectionTest {
 
     private final LlmClient exaone = mock(LlmClient.class);
     private final LlmClient bedrock = mock(LlmClient.class);
+
+    private static final List<FaqSearchResponse> SOURCES = List.of(new FaqSearchResponse(1L, null, "번호이동",
+            "번호이동 하려면 뭐 가져가요", "신분증만 있으면 됩니다. 밀린 요금이 있으면 먼저 내셔야 합니다.", 0.9, 1, null, 1, null));
+
+    @Test
+    @DisplayName("조건 뽑기를 켜면 조건 뽑기 모델을 불러 되물을 조건을 정한다")
+    void 조건_뽑기를_켜면_모델로_조건을_뽑는다() {
+        when(exaone.generate(any())).thenReturn("""
+                {"conditions":[{"key":"unpaid_bill","question":"현재 밀린 요금이 있으신가요?",
+                 "options":["예","아니요"],"evidence":"밀린 요금이 있으면 먼저 내셔야 합니다"}]}""");
+        var planner = ConsultRagAnswerConfiguration.clarificationPlanner(
+                new FaqClarificationProperties(true, false, true), exaone, () -> bedrock);
+
+        assertThat(planner.plan(1L, "번호이동 하고 싶어요", SOURCES).first().key()).isEqualTo("unpaid_bill");
+        verify(exaone).generate(any());
+    }
+
+    @Test
+    @DisplayName("조건 뽑기를 끄면 Bedrock 클라이언트를 꺼내지 않고 모델도 부르지 않는다")
+    void 조건_뽑기를_끄면_모델을_부르지_않는다() {
+        Supplier<LlmClient> bedrockSupplier = () -> {
+            throw new AssertionError("조건을 뽑지 않으면 조건 뽑기 클라이언트를 만들지 않아야 합니다.");
+        };
+        var planner = ConsultRagAnswerConfiguration.clarificationPlanner(
+                new FaqClarificationProperties(true, true, false), exaone, bedrockSupplier);
+
+        assertThat(planner.plan(1L, "번호이동 하고 싶어요", SOURCES).needsClarification()).isFalse();
+        verifyNoInteractions(exaone, bedrock);
+    }
 
     @Test
     @DisplayName("플래그가 꺼져 있으면 엑사원으로 조건을 뽑는다")
