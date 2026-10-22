@@ -111,6 +111,43 @@ class ConsultNoAnswerSuggestionProcessingTest {
         return saved.getValue();
     }
 
+    @Test
+    void singleFaqNoEvidenceKeepsHandoffAfterSuggestionIsAttached() {
+        when(noAnswer.suggest(QUESTION)).thenReturn(List.of("분실 신고는 어떻게 하나요?"));
+
+        ChatAnswer saved = processSingle(Purpose.GENERAL_FAQ, faqNoEvidence());
+
+        assertThat(saved.followUps()).isNotEmpty();
+        assertThat(saved.handoff()).isTrue();
+    }
+
+    @Test
+    void multipleFaqAllWithoutEvidenceHandsOff() {
+        ChatAnswer saved = processMultiple(faqNoEvidence(), faqNoEvidence());
+
+        assertThat(saved.handoff()).isTrue();
+    }
+
+    @Test
+    void multipleFaqWithSomeEvidenceDoesNotHandOff() {
+        ChatAnswer saved = processMultiple(answer(ChatMessage.AnswerBasis.GROUNDED), faqNoEvidence());
+
+        assertThat(saved.handoff()).isFalse();
+    }
+
+    @Test
+    void multipleWithNonFaqWithoutEvidenceDoesNotHandOff() {
+        ChatAnswer storeNotFound = answer(ChatMessage.AnswerBasis.NO_EVIDENCE);
+
+        ChatAnswer saved = processMultiple(faqNoEvidence(), storeNotFound);
+
+        assertThat(saved.handoff()).isFalse();
+    }
+
+    private static ChatAnswer faqNoEvidence() {
+        return answer(ChatMessage.AnswerBasis.NO_EVIDENCE).withHandoff(true);
+    }
+
     private ChatAnswer processMultiple(ChatAnswer first, ChatAnswer second) {
         prepareEvents();
         var processor = processor(ignored -> AnalyzedTurn.compound(List.of(
