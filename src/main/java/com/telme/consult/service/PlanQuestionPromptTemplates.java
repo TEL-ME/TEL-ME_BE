@@ -1,12 +1,17 @@
 package com.telme.consult.service;
 
+import com.telme.plan.entity.Plan;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public final class PlanQuestionPromptTemplates {
 
     private PlanQuestionPromptTemplates() {}
 
-    public static final String PROMPT_VERSION = "plan-question-v4";
+    // v5: 판매 중인 요금제 목록을 주고 질문이 가리키는 요금제와 목록에 없는 요금제 여부를 함께 받는다(TELME-217)
+    public static final String PROMPT_VERSION = "plan-question-v5";
 
-    public static final String SYSTEM_PROMPT = """
+    private static final String TYPE_RULES = """
         당신은 통신사 챗봇의 질문 분류기입니다.
         고객 질문이 아래 중 어디에 속하는지 type 하나만 고르십시오.
 
@@ -33,12 +38,45 @@ public final class PlanQuestionPromptTemplates {
           가입·변경 자격, 방법, 절차, 가능 여부, 용어 뜻을 묻는 질문은 NONE입니다.
           로밍, 유심, 부가서비스, 단말기, 수수료 같은 다른 요금도 NONE입니다.
           예) "청소년 요금제는 몇 살까지 가입할 수 있나요?", "해외에서 데이터 로밍을 쓰면 요금이 얼마나 나와요?" -> NONE
+          어떤 혜택(OTT, 음악, 워치 등)이 들어 있는 요금제나 특정 대상(군인, 어린이, 어르신 등) 전용 요금제가 있는지, 몇 종류인지 묻는 질문은
+          요금제 상품을 묻는 것이므로 PLAN_CATALOG입니다. 판매 중인 목록에 없으면 unknownPlan을 true로 둡니다.
+          예) "왓챠 들어간 요금제 있어요?", "대학생 전용 요금제 있나요?" -> PLAN_CATALOG
         - RECOMMENDATION은 고객에게 맞는 요금제를 정해 달라는 경우만 해당합니다.
           요금제를 고르는 방법·절차를 묻는 질문이나 요금제 종류끼리 비교해 설명해 달라는 질문은 NONE입니다.
           예) "요금제를 고르는 방법을 알려주세요", "일반 요금제와 무제한 요금제는 뭐가 달라요?" -> NONE
         - 판단이 애매하면 NONE을 고르십시오.
+        """;
+
+    private static final String PLAN_RULES = """
+
+        [요금제 고르기]
+        type이 PLAN_CATALOG일 때만 아래 판매 중인 요금제 목록을 보고 plans와 unknownPlan을 채웁니다. 그 밖의 type이면 plans는 [], unknownPlan은 false입니다.
+        - plans: 고객이 이름으로 가리킨 요금제의 코드. 망 이름을 뺀 이름("스탠다드")으로 불러도 그 요금제입니다.
+          5G, 청소년, 가장 싼 요금제처럼 조건으로만 말하면 []입니다. 이름이 목록의 요금제와 정확히 같지 않으면 고르지 않습니다.
+        - 판매 중인 요금제는 아래 목록이 전부입니다. 요금제마다 망(5G, LTE, 알뜰), 대상(일반, 청소년 만 14~18세, 시니어 만 65세 이상),
+          월정액, 데이터·통화·문자 제공량만 있고 그 밖의 혜택이나 전용 대상은 없습니다.
+        - unknownPlan: 고객이 목록에 없는 요금제 이름을 대거나, 목록에 없는 혜택(OTT, 음악, 워치, 가족 결합 등)이나
+          대상(군인, 대학생, 어린이 등)을 조건으로 요금제를 물으면 true입니다. 이때 plans는 []입니다.
+          망, 일반·청소년·시니어 대상(어르신, 중고생처럼 다른 말로 불러도 같음), 가격, 데이터 양을 조건으로 물으면 false입니다.
+          예) "5G 스탠다드 플러스는 얼마예요?" -> 목록에 그런 이름이 없으므로 unknownPlan true
+          예) "디즈니 플러스 들어간 요금제 있어요?", "대학생 전용 요금제 있나요?" -> unknownPlan true
+          예) "고등학생이 쓸 수 있는 요금제 있어요?" -> 청소년 요금제가 있으므로 unknownPlan false
+        """;
+
+    private static final String OUTPUT = """
 
         JSON만 출력하십시오.
-        {"type": "RECOMMENDATION | MY_SUBSCRIPTION | MY_PENALTY | MY_USAGE | PLAN_CATALOG | NONE 중 하나"}
+        {"type": "RECOMMENDATION | MY_SUBSCRIPTION | MY_PENALTY | MY_USAGE | PLAN_CATALOG | NONE 중 하나", "plans": ["요금제 코드"], "unknownPlan": false}
         """;
+
+    // 판매 중인 요금제가 없으면 요금제 고르기 없이 type만 고른다
+    public static String systemPrompt(List<Plan> plans) {
+        if (plans.isEmpty()) {
+            return TYPE_RULES + OUTPUT;
+        }
+        String catalog = plans.stream()
+                .map(plan -> "- " + plan.getCode() + ": " + plan.getName())
+                .collect(Collectors.joining("\n", "\n[판매 중인 요금제]\n", "\n"));
+        return TYPE_RULES + PLAN_RULES + catalog + OUTPUT;
+    }
 }

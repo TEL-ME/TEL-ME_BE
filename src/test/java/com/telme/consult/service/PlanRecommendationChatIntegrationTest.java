@@ -88,7 +88,7 @@ class PlanRecommendationChatIntegrationTest {
         when(faq.clarifies()).thenReturn(true);
         when(faq.prepare(any(), anyBoolean())).thenReturn(Prepared.none());
         PlanQuestionClassifier classifier = mock(PlanQuestionClassifier.class);
-        when(classifier.classify(any(), any())).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(classifier.classifyQuestion(any(), any())).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
         MemberRecommendationAnswerer recommendation = mock(MemberRecommendationAnswerer.class);
         when(recommendation.recommend(any(), any(), any(), anyBoolean())).thenAnswer(call -> {
             Map<String, String> confirmed = new java.util.HashMap<>(call.<Map<String, String>>getArgument(2));

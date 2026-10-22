@@ -25,6 +25,43 @@ class AgeReplyParserTest {
     }
 
     @Test
+    void 나이대의_초반_중반_후반으로_좁혀_한_구분에_들면_읽는다() {
+        assertThat(AgeReplyParser.parse("60대 초반이에요")).isEqualTo(TargetGroup.GENERAL);
+        assertThat(AgeReplyParser.parse("60대 후반")).isEqualTo(TargetGroup.SENIOR);
+        assertThat(AgeReplyParser.parse("60대 중반")).isNull();
+        assertThat(AgeReplyParser.parse("10대 후반")).isNull();
+    }
+
+    @Test
+    void 고유어로_말한_나이를_읽는다() {
+        assertThat(AgeReplyParser.parse("어머니 연세가 일흔이세요")).isEqualTo(TargetGroup.SENIOR);
+        assertThat(AgeReplyParser.parse("서른다섯이요")).isEqualTo(TargetGroup.GENERAL);
+        assertThat(AgeReplyParser.parse("네 스물 한 살이에요")).isEqualTo(TargetGroup.GENERAL);
+        assertThat(AgeReplyParser.parse("열여덟 살")).isEqualTo(TargetGroup.YOUTH);
+        assertThat(AgeReplyParser.parse("예순다섯")).isEqualTo(TargetGroup.SENIOR);
+    }
+
+    @Test
+    void 나이를_물었을_때_숫자만_답하면_나이로_읽는다() {
+        assertThat(AgeReplyParser.parse("52")).isEqualTo(TargetGroup.GENERAL);
+        assertThat(AgeReplyParser.parse("만 70이요")).isEqualTo(TargetGroup.SENIOR);
+        assertThat(AgeReplyParser.parse("16입니다.")).isEqualTo(TargetGroup.YOUTH);
+        assertThat(AgeReplyParser.parse("2개요")).isNull();
+        assertThat(AgeReplyParser.parse("52 아니면 53")).isNull();
+    }
+
+    @Test
+    void 나이가_아닌_고유어_수는_읽지_않는다() {
+        assertThat(AgeReplyParser.parse("열심히 쓸 거예요")).isNull();
+        assertThat(AgeReplyParser.parse("두 개 쓸 거예요")).isNull();
+    }
+
+    @Test
+    void 고유어_나이가_두_구분에_걸치면_읽지_않는다() {
+        assertThat(AgeReplyParser.parse("열일곱 아니면 스물이요")).isNull();
+    }
+
+    @Test
     void 말로_적은_구분도_읽는다() {
         assertThat(AgeReplyParser.parse("청소년")).isEqualTo(TargetGroup.YOUTH);
         assertThat(AgeReplyParser.parse("시니어")).isEqualTo(TargetGroup.SENIOR);

@@ -10,6 +10,7 @@ import com.telme.consult.service.PlanQuestionType;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.plan.repository.PlanRepository;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,6 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class PlanQuestionEvaluationProbe {
 
     @Autowired LlmClient llmClient;
+    @Autowired PlanRepository planRepository;
 
     @Test
     void 개발용_평가셋으로_채점한다() {
@@ -65,7 +67,7 @@ class PlanQuestionEvaluationProbe {
     private void score(String name, List<Case> cases) {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
-                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
+                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false), planRepository);
         System.out.println("EVAL|" + name + "|" + PlanQuestionPromptTemplates.PROMPT_VERSION);
 
         Map<PlanQuestionType, int[]> perType = new LinkedHashMap<>();
@@ -94,7 +96,7 @@ class PlanQuestionEvaluationProbe {
     void 기존_FAQ_질문을_요금제_질문으로_가져가는지_확인한다() throws Exception {
         Recording recording = new Recording(llmClient);
         PlanQuestionClassifier classifier =
-                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
+                new PlanQuestionClassifier(recording, new ObjectMapper(), new PlanQuestionProperties(true, true, false), planRepository);
         JsonNode faqs = new ObjectMapper().readTree(new File("scripts/data/faq_full_1150.json"));
 
         int captured = 0;

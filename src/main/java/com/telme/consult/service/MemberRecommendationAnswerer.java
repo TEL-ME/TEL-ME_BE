@@ -384,8 +384,15 @@ public class MemberRecommendationAnswerer {
         return new MissingCondition(SMS_KEY, "한 달에 문자는 대략 몇 건 보내세요? 잘 모르시면 모른다고 해 주세요.", List.of(), null);
     }
 
+    // "별로 안 써요"처럼 정도만 말한 답은 값을 지어내지 않고 이 구간 중에서 고르게 한다(다시 물을 때도 같은 버튼이 간다).
+    // 범위는 큰 쪽으로 읽는다(DataUsageReplyParser). 일반 요금제에서 구간마다 추천이 달라지도록 나눴다
+    // (여유 1.2배 기준 미니·라이트·스탠다드·맥스·프리미엄·언리미티드)
+    static final List<String> DATA_OPTIONS =
+            List.of("1GB 이하", "1~5GB", "5~20GB", "20~50GB", "50~100GB", "무제한으로 써요", "잘 모르겠어요");
+
     private static MissingCondition dataQuestion() {
-        return new MissingCondition(DATA_KEY, "한 달에 데이터를 얼마나 쓰세요? 대략 몇 GB인지 채팅으로 알려주세요. 잘 모르시면 모른다고 해 주세요.", List.of(), null);
+        return new MissingCondition(DATA_KEY, "한 달에 데이터를 얼마나 쓰세요? 아래에서 고르시거나 대략 몇 GB인지 알려주세요.",
+                DATA_OPTIONS, null);
     }
 
     // 요금제를 바꾼 지 얼마 안 됐으면 곧바로 다시 바꾸라고 권하지 않는다

@@ -91,7 +91,8 @@ class PlanQuestionRulesTest {
                 "지금 무슨 요금제 쓰고 있죠",
                 "현재 가입돼 있는 요금제가 뭔지 알려줘요", "현재 요금제 이름이랑 월 요금 알려줘");
         assertMarker(PlanQuestionType.MY_PENALTY, true,
-                "저 약정 몇 개월 남았어요", "지금 해지하면 얼마 내요", "약정 남은 기간 알려줘", "오늘 해지하면 위약금 내야 해요");
+                "저 약정 몇 개월 남았어요", "지금 해지하면 얼마 내요", "약정 남은 기간 알려줘", "오늘 해지하면 위약금 내야 해요",
+                "약정 걸고 쓴 지 몇 달째인지 궁금해요");
         assertMarker(PlanQuestionType.MY_USAGE, true,
                 "이번 달 데이터 얼마나 썼어", "데이터 얼마 남았어요", "남은 데이터 알려줘", "문자 몇 건 보냈는지 궁금해요");
     }
@@ -117,6 +118,45 @@ class PlanQuestionRulesTest {
                 "알뜰 세이브는 문자를 몇 건 보낼 수 있나요", "데이터는 얼마나 쓸 수 있어요");
         assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제를 바꿀 수 있나요", "청소년 요금제에 가입할 수 있어요",
                 "통화 품질을 개선할 수 있나요 얼마나 걸려요");
+    }
+
+    // 내 정보를 알 수 있는지 묻는 말은 알려 달라는 요청이다. 어떻게, 어디서 확인하는지는 방법 질문이다
+    @Test
+    void 내_정보를_알_수_있는지_묻는_말은_절차_질문이_아니다() {
+        assertProcedure(PlanQuestionType.MY_USAGE, false,
+                "이번 달 데이터 아직 얼마 남았는지 알 수 있나요", "이번 달 청구될 요금 미리 좀 알 수 있어요");
+        assertProcedure(PlanQuestionType.MY_USAGE, true, "남은 데이터는 어떻게 확인할 수 있나요", "사용량은 어디서 볼 수 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제 종류를 알 수 있나요");
+    }
+
+    // 해 달라는 부탁과 제외 표현과 함께 쓴 "중에"는 방법이나 비교를 묻는 말이 아니다
+    @Test
+    void 부탁하는_말과_목록을_좁히는_중에는_절차나_비교가_아니다() {
+        assertProcedure(PlanQuestionType.RECOMMENDATION, false, "요금제 하나 골라주실 수 있나요", "추천 좀 해줄 수 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, false, "5G 요금제 중에서 언리미티드 말고 뭐 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "5G랑 LTE 중에 뭐가 더 싸요", "요금제를 바꿀 수 있나요");
+    }
+
+    // 모델이 목록·추천으로 판정한 뒤에는 변경·가입 낱말로 뒤집지 않는다. 규칙 분류에서는 그대로 쓴다
+    @Test
+    void 모델_판정_뒤에는_변경_가입_낱말만으로_방법_질문으로_보지_않는다() {
+        String situation = "동생 폰 바꿔주려는데 청소년 요금제 몇 개 있어요";
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, situation)).isFalse();
+        assertThat(PlanQuestionRules.asksProcedure(PlanQuestionType.PLAN_CATALOG, situation)).isTrue();
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, "시니어 요금제로 바꾸려면 어떻게 해요")).isTrue();
+    }
+
+    // 통화를 '전화'라고 불러도 같은 규칙을 탄다(리뷰)
+    @Test
+    void 통화를_전화라고_불러도_같게_읽는다() {
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, "이번 달 전화 얼마나 쓸 수 있어요?")).isFalse();
+        assertType(PlanQuestionType.MY_USAGE, "이번 달 전화 몇 분 했어요", "내 전화 얼마나 썼는지 확인해줘");
+    }
+
+    @Test
+    void 해_달라는_말_뒤의_가능은_부탁이다() {
+        assertProcedure(PlanQuestionType.RECOMMENDATION, false, "요금제 하나 골라줘 가능?", "싼 요금제 추천 가능할까요");
+        assertProcedure(PlanQuestionType.RECOMMENDATION, true, "청소년 요금제 가입 가능한가요");
     }
 
     @Test

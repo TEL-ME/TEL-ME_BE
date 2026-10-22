@@ -88,10 +88,15 @@ public final class PlanAnswerProvider implements AnswerProvider {
     }
 
     // 분류에 넣은 문장과 결과를 남겨, 같은 입력으로 분류 모델을 다시 비교할 수 있게 한다
-    private PlanQuestionType classify(Long executionId, String question) {
-        PlanQuestionType type = classifier.classify(executionId, question);
-        trace.append(executionId, "planQuestionClassifications", Map.of("question", question, "type", type.name()));
-        return type;
+    private PlanQuestion classify(Long executionId, String question) {
+        PlanQuestion classified = classifier.classifyQuestion(executionId, question);
+        Map<String, Object> record = new HashMap<>(Map.of("question", question, "type", classified.type().name()));
+        if (classified.mention() != null) {
+            record.put("plans", classified.mention().planCodes());
+            record.put("unknownPlan", classified.mention().unknownPlan());
+        }
+        trace.append(executionId, "planQuestionClassifications", record);
+        return classified;
     }
 
     private Outcome planOutcome(AnswerInput input, boolean mayAsk, boolean mayAskUsageFollowUp) {
@@ -102,10 +107,16 @@ public final class PlanAnswerProvider implements AnswerProvider {
         String question = input.resolvedUserQuery() == null || input.resolvedUserQuery().isBlank()
                 ? input.originalUserQuery() : input.resolvedUserQuery();
         // 문맥으로 풀어쓴 문장은 "나", "내" 같은 본인 표현이 사라질 수 있어 사용자가 쓴 원문으로 먼저 분류한다
-        PlanQuestionType type = classify(input.executionId(), input.originalUserQuery());
-        if (type == PlanQuestionType.NONE && !question.equals(input.originalUserQuery())) {
-            type = classify(input.executionId(), question);
+        PlanQuestion classified = classify(input.executionId(), input.originalUserQuery());
+        // 원문에 요금제 이름이 없어("그 요금제 통화는 무제한이에요?") 고른 요금제가 비면 문맥으로 풀어쓴 문장으로 다시 고른다
+        if (!question.equals(input.originalUserQuery()) && (classified.type() == PlanQuestionType.NONE
+                || classified.type() == PlanQuestionType.PLAN_CATALOG && pointsToNoPlan(classified))) {
+            PlanQuestion resolved = classify(input.executionId(), question);
+            if (classified.type() == PlanQuestionType.NONE || resolved.type() == PlanQuestionType.PLAN_CATALOG) {
+                classified = resolved;
+            }
         }
+        PlanQuestionType type = classified.type();
         // 후속 질문 버튼의 문구에는 이전 답을 되풀이하는 추천·내 정보 답변을 하지 않는다. 요금제 표 안내는 FAQ 대신 쓴다
         if (type != PlanQuestionType.PLAN_CATALOG && FaqButtonQuestions.contains(input.originalUserQuery())) {
             return Outcome.NONE;
@@ -113,7 +124,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
         String content;
         List<String> followUps = List.of();
         if (type == PlanQuestionType.PLAN_CATALOG) {
-            content = catalog.answer(question);
+            content = classified.mention() == null ? catalog.answer(question) : catalog.answer(question, classified.mention());
         } else if (type == PlanQuestionType.MY_SUBSCRIPTION || type == PlanQuestionType.MY_PENALTY
                 || type == PlanQuestionType.MY_USAGE) {
             // 개인 정보는 이 채팅방 주인(회원)의 것만 읽는다. 회원이 아니면 로그인 안내를 준다
@@ -148,6 +159,10 @@ public final class PlanAnswerProvider implements AnswerProvider {
         trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name()));
         return new Outcome(GeneratedAnswer.withoutSources(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, followUps, null)), null);
+    }
+
+    private static boolean pointsToNoPlan(PlanQuestion classified) {
+        return classified.mention() != null && classified.mention().planCodes().isEmpty() && !classified.mention().unknownPlan();
     }
 
     // 질문에 직접 말한 나이대·사용량은 앞서 저장된 답보다 우선하는 확정된 답으로 본다(이미 말했으니 되묻지 않는다).

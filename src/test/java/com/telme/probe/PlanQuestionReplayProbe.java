@@ -10,6 +10,7 @@ import com.telme.llm.config.BedrockConfig;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.service.LlmClient;
 import com.telme.llm.service.LlmStreamHandler;
+import com.telme.plan.repository.PlanRepository;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +40,7 @@ class PlanQuestionReplayProbe {
 
     @Autowired LlmClient exaone;
     @Autowired @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) LlmClient bedrock;
+    @Autowired PlanRepository planRepository;
 
     @Test
     void 같은_입력으로_두_모델을_비교한다() throws Exception {
@@ -57,7 +59,7 @@ class PlanQuestionReplayProbe {
         List<Future<List<String>>> futures = new ArrayList<>();
         for (Map<String, Object> run : runs) {
             LlmClient client = "exaone".equals(run.get("model")) ? exaone : bedrock;
-            futures.add(pool.submit(() -> replay(mapper, inputs, client, run)));
+            futures.add(pool.submit(() -> replay(mapper, inputs, client, run, planRepository)));
         }
         List<String> lines = new ArrayList<>();
         for (Future<List<String>> future : futures) {
@@ -68,11 +70,12 @@ class PlanQuestionReplayProbe {
         System.out.println("PLAN_REPLAY|" + PlanQuestionPromptTemplates.PROMPT_VERSION + "|" + lines.size() + " rows");
     }
 
-    private static List<String> replay(ObjectMapper mapper, JsonNode inputs, LlmClient client, Map<String, Object> run)
+    private static List<String> replay(ObjectMapper mapper, JsonNode inputs, LlmClient client, Map<String, Object> run,
+            PlanRepository planRepository)
             throws Exception {
         Recording recording = new Recording(client);
         PlanQuestionClassifier classifier =
-                new PlanQuestionClassifier(recording, mapper, new PlanQuestionProperties(true, true, false));
+                new PlanQuestionClassifier(recording, mapper, new PlanQuestionProperties(true, true, false), planRepository);
         List<String> lines = new ArrayList<>();
         for (JsonNode input : inputs) {
             recording.reset();
