@@ -70,14 +70,15 @@ public class StoreController {
     @Operation(
             summary = "매장까지 길찾기",
             description = "현재 위치(출발지)에서 매장까지의 경로를 이동 수단(CAR 자가용, TRANSIT 대중교통, WALK 도보, BICYCLE 자전거)별로 "
-                    + "반환합니다. steps의 path를 순서대로 이어 지도에 그리면 됩니다. 좌표는 위도·경도 순서이며, 출발지 좌표는 "
-                    + "경로 재사용을 위해 소수점 3자리(도보·자전거는 4자리)로 반올림해 조회하므로 경로의 시작점이 약간 다를 수 있습니다. "
-                    + "출발지와 매장이 같은 위치면 거리 0에 steps가 빈 배열입니다. 경로는 수단에 따라 2~10분간 재사용합니다.")
+                    + "반환합니다. steps의 path를 순서대로 이어 지도에 그리면 됩니다. 좌표는 위도·경도 순서이며, "
+                    + "출발 좌표는 반올림하지 않고 요청값 그대로 사용합니다. 경로 응답은 서버에 저장하거나 다른 요청에 재사용하지 않으며, "
+                    + "허용된 요청마다 외부 API를 조회합니다. 일일 예산 소진은 STORE503-4, 운영 중단은 STORE503-3입니다. "
+                    + "출발지와 매장이 같은 위치면 거리 0에 steps가 빈 배열입니다.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공"),
         @ApiResponse(responseCode = "400", description = "STORE400-5: 최대 이동 거리 초과, COMMON400-1: 요청값 형식 오류"),
         @ApiResponse(responseCode = "404", description = "STORE404-0: 매장이 없거나 폐점함, STORE404-1: 두 지점 사이의 경로를 찾지 못함"),
-        @ApiResponse(responseCode = "503", description = "STORE503-2: 길찾기 서비스 연결 실패·호출 한도 초과 (FE는 카카오맵 링크로 대신한다)")
+        @ApiResponse(responseCode = "503", description = "STORE503-2: 외부 연동/집계 실패, STORE503-3: 운영 중단, STORE503-4: 일일 호출 예산 소진")
     })
     @GetMapping("/{storeId}/route")
     public CustomResponse<StoreRouteResponse> getRoute(
