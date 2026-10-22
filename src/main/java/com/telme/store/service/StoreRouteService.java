@@ -20,12 +20,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class StoreRouteService {
 
+    private final StoreRouteUsageGuard usageGuard;
     private final StoreQueryService storeQueryService;
     private final StoreRouteProperties storeRouteProperties;
     private final Map<RouteMode, StoreRouteClient> clients = new EnumMap<>(RouteMode.class);
 
     public StoreRouteService(StoreQueryService storeQueryService,
-                             List<StoreRouteClient> routeClients, StoreRouteProperties storeRouteProperties) {
+                             List<StoreRouteClient> routeClients, StoreRouteProperties storeRouteProperties,
+                             StoreRouteUsageGuard usageGuard) {
+        this.usageGuard = usageGuard;
         this.storeQueryService = storeQueryService;
         this.storeRouteProperties = storeRouteProperties;
         routeClients.forEach(client -> clients.put(client.mode(), client));
@@ -37,6 +40,7 @@ public class StoreRouteService {
     }
 
     public StoreRouteResponse getRoute(long storeId, StoreRouteRequest request) {
+        usageGuard.checkEnabled();
         Store store = storeQueryService.getOpenStore(storeId);
         RouteMode mode = request.mode();
         RouteEndpoints endpoints = new RouteEndpoints(

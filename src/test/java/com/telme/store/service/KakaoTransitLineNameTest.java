@@ -32,6 +32,8 @@ import org.springframework.web.client.RestClient;
 
 class KakaoTransitLineNameTest {
 
+    private final KakaoRouteCalls calls = new KakaoRouteCalls(mock(StoreRouteUsageGuard.class));
+
     private static final RouteEndpoints ENDPOINTS = new RouteEndpoints(
             new BigDecimal("37.566"), new BigDecimal("126.978"),
             new BigDecimal("37.497942"), new BigDecimal("127.027621"));
@@ -45,7 +47,7 @@ class KakaoTransitLineNameTest {
         server = MockRestServiceServer.bindTo(builder).build();
         client = new KakaoTransitRouteClient(builder.build(), new StoreRouteConverter(), walkClient,
                 new KakaoRouteProperties("http://kakao.test", "http://kakao.test", "test-key",
-                        Duration.ofSeconds(2), Duration.ofSeconds(5), true));
+                        Duration.ofSeconds(2), Duration.ofSeconds(5), true), calls);
     }
 
     @ParameterizedTest(name = "{0} vehicles={1}")

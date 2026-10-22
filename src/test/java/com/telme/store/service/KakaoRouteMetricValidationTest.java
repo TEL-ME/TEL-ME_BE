@@ -1,6 +1,7 @@
 package com.telme.store.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -33,6 +34,8 @@ import org.springframework.web.client.RestClient;
 
 class KakaoRouteMetricValidationTest {
 
+    private final KakaoRouteCalls calls = new KakaoRouteCalls(mock(StoreRouteUsageGuard.class));
+
     private static final RouteEndpoints ENDPOINTS = new RouteEndpoints(
             new BigDecimal("37.566"), new BigDecimal("126.978"),
             new BigDecimal("37.497942"), new BigDecimal("127.027621"));
@@ -49,12 +52,13 @@ class KakaoRouteMetricValidationTest {
         server = MockRestServiceServer.bindTo(builder).build();
         restClient = builder.build();
         converter = new StoreRouteConverter();
-        walkClient = new KakaoWalkRouteClient(restClient, converter);
+        walkClient = new KakaoWalkRouteClient(restClient, converter, calls);
         clients = Map.of(
-                RouteMode.CAR, new KakaoNaviCarRouteClient(restClient, converter),
-                RouteMode.TRANSIT, new KakaoTransitRouteClient(restClient, converter, walkClient, properties(false)),
+                RouteMode.CAR, new KakaoNaviCarRouteClient(restClient, converter, calls),
+                RouteMode.TRANSIT, new KakaoTransitRouteClient(restClient, converter, walkClient,
+                        properties(false), calls),
                 RouteMode.WALK, walkClient,
-                RouteMode.BICYCLE, new KakaoBicycleRouteClient(restClient, converter));
+                RouteMode.BICYCLE, new KakaoBicycleRouteClient(restClient, converter, calls));
     }
 
     @ParameterizedTest(name = "{0} {1} explicitNull={2}")
@@ -99,7 +103,8 @@ class KakaoRouteMetricValidationTest {
         JsonNode body = MAPPER.readTree(responseBody(RouteMode.WALK));
         replaceMetric(body, "/route/properties/totalDistance", true);
         expectResponse(RouteMode.WALK, body.toString());
-        StoreRouteClient transit = new KakaoTransitRouteClient(restClient, converter, walkClient, properties(true));
+        StoreRouteClient transit =
+                new KakaoTransitRouteClient(restClient, converter, walkClient, properties(true), calls);
 
         StoreRouteResponse result = transit.findRoute(ENDPOINTS);
 

@@ -14,6 +14,7 @@ import com.telme.store.service.RouteEndpoints;
 import com.telme.store.service.StoreQueryService;
 import com.telme.store.service.StoreRouteClient;
 import com.telme.store.service.StoreRouteService;
+import com.telme.store.service.StoreRouteUsageGuard;
 import java.util.List;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -123,6 +124,18 @@ class StoreRouteApiIntegrationTest {
         assertThat(CAR.calls).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("예산 소진과 운영 중단은 서로 다른 코드와 메시지를 반환한다")
+    void 운영_차단_코드() throws Exception {
+        for (StoreErrorCode code : List.of(StoreErrorCode.ROUTE_DAILY_LIMIT_EXCEEDED,
+                StoreErrorCode.ROUTE_DISABLED)) {
+            CAR.respondWith(() -> { throw new GeneralException(code); });
+            mvc.perform(route(101, "CAR")).andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value(code.getCode()))
+                    .andExpect(jsonPath("$.message").value(code.getMessage()));
+        }
+    }
+
     private MockHttpServletRequestBuilder route(long storeId, String mode) {
         return get("/api/v1/stores/{storeId}/route", storeId)
                 .param("mode", mode)
@@ -137,9 +150,9 @@ class StoreRouteApiIntegrationTest {
         @Primary
         StoreRouteService stubStoreRouteService(
                 StoreQueryService storeQueryService,
-                StoreRouteProperties routeProperties) {
+                StoreRouteProperties routeProperties, StoreRouteUsageGuard usageGuard) {
             return new StoreRouteService(storeQueryService,
-                    List.of(CAR, new StubClient(RouteMode.TRANSIT), WALK, BICYCLE), routeProperties);
+                    List.of(CAR, new StubClient(RouteMode.TRANSIT), WALK, BICYCLE), routeProperties, usageGuard);
         }
     }
 

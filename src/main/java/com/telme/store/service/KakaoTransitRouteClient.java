@@ -33,6 +33,7 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
     private final StoreRouteConverter storeRouteConverter;
     private final KakaoWalkRouteClient kakaoWalkRouteClient;
     private final KakaoRouteProperties kakaoRouteProperties;
+    private final KakaoRouteCalls kakaoRouteCalls;
 
     @Override
     public RouteMode mode() {
@@ -42,7 +43,8 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
     // 경로는 카카오가 먼저 주는 것(추천 순)을 쓴다
     @Override
     public StoreRouteResponse findRoute(RouteEndpoints endpoints) {
-        KakaoTransitRouteResponse response = KakaoRouteCalls.call(TAG, () -> kakaoRouteRestClient.get()
+        KakaoTransitRouteResponse response = kakaoRouteCalls.call(RouteMode.TRANSIT, TAG,
+                () -> kakaoRouteRestClient.get()
                 .uri(uri -> uri.path(TRANSIT_PATH)
                         .queryParam("start_x", endpoints.originX())
                         .queryParam("start_y", endpoints.originY())

@@ -1,9 +1,12 @@
 package com.telme.store.service;
 
 import com.telme.global.common.exception.GeneralException;
+import com.telme.store.dto.req.RouteMode;
 import com.telme.store.exception.StoreErrorCode;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -11,12 +14,14 @@ import org.springframework.web.client.RestClientResponseException;
 // 키·권한 오류(401/403)·호출 한도(429)·카카오 장애·타임아웃은 사용자가 고칠 수 없는 실패라 하나의 503으로 알리고,
 // 원인은 로그로 구분한다. 출발지 좌표는 사용자 위치라 로그에 남기지 않는다
 @Slf4j
-final class KakaoRouteCalls {
+@Component
+@RequiredArgsConstructor
+public final class KakaoRouteCalls {
 
-    private KakaoRouteCalls() {
-    }
+    private final StoreRouteUsageGuard usageGuard;
 
-    static <T> T call(String tag, Supplier<T> request) {
+    <T> T call(RouteMode mode, String tag, Supplier<T> request) {
+        usageGuard.acquire(mode);
         try {
             return request.get();
         } catch (RestClientResponseException e) {

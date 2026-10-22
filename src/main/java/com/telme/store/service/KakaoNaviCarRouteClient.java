@@ -26,6 +26,7 @@ public class KakaoNaviCarRouteClient implements StoreRouteClient {
 
     private final RestClient kakaoNaviRestClient;
     private final StoreRouteConverter storeRouteConverter;
+    private final KakaoRouteCalls kakaoRouteCalls;
 
     @Override
     public RouteMode mode() {
@@ -34,7 +35,7 @@ public class KakaoNaviCarRouteClient implements StoreRouteClient {
 
     @Override
     public StoreRouteResponse findRoute(RouteEndpoints endpoints) {
-        KakaoNaviDirectionsResponse response = KakaoRouteCalls.call(TAG, () -> kakaoNaviRestClient.get()
+        KakaoNaviDirectionsResponse response = kakaoRouteCalls.call(RouteMode.CAR, TAG, () -> kakaoNaviRestClient.get()
                 .uri(uri -> uri.path(DIRECTIONS_PATH)
                         .queryParam("origin", endpoints.originX() + "," + endpoints.originY())
                         .queryParam("destination", endpoints.destinationX() + "," + endpoints.destinationY())

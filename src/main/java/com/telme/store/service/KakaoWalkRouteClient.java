@@ -8,7 +8,9 @@ import org.springframework.web.client.RestClient;
 @Component
 public class KakaoWalkRouteClient extends KakaoLegRouteClient {
 
-    public KakaoWalkRouteClient(RestClient kakaoRouteRestClient, StoreRouteConverter storeRouteConverter) {
-        super(kakaoRouteRestClient, storeRouteConverter, RouteMode.WALK, "/v2/routing/walk", "KakaoWalk");
+    public KakaoWalkRouteClient(RestClient kakaoRouteRestClient, StoreRouteConverter storeRouteConverter,
+                                 KakaoRouteCalls kakaoRouteCalls) {
+        super(kakaoRouteRestClient, storeRouteConverter, RouteMode.WALK, "/v2/routing/walk",
+                "KakaoWalk", kakaoRouteCalls);
     }
 }

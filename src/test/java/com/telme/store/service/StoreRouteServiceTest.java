@@ -34,6 +34,7 @@ class StoreRouteServiceTest {
     private final StoreRouteClient transitClient = mockClient(RouteMode.TRANSIT);
     private final StoreRouteClient walkClient = mockClient(RouteMode.WALK);
     private final StoreRouteClient bicycleClient = mockClient(RouteMode.BICYCLE);
+    private final StoreRouteUsageGuard usageGuard = mock(StoreRouteUsageGuard.class);
     private StoreRouteService service;
 
     @BeforeEach
@@ -45,7 +46,7 @@ class StoreRouteServiceTest {
                 .build();
         when(storeQueryService.getOpenStore(STORE_ID)).thenReturn(store);
         service = new StoreRouteService(storeQueryService,
-                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0));
+                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0), usageGuard);
     }
 
     @Test
@@ -100,6 +101,18 @@ class StoreRouteServiceTest {
     }
 
     @Test
+    @DisplayName("기능 OFF면 매장 DB 조회와 외부 호출 전에 차단한다")
+    void 기능_중단() {
+        org.mockito.Mockito.doThrow(new GeneralException(StoreErrorCode.ROUTE_DISABLED))
+                .when(usageGuard).checkEnabled();
+        assertThatThrownBy(() -> service.getRoute(STORE_ID, request(RouteMode.CAR, 37.5, 127)))
+                .isInstanceOfSatisfying(GeneralException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(StoreErrorCode.ROUTE_DISABLED));
+        verify(storeQueryService, never()).getOpenStore(org.mockito.ArgumentMatchers.anyLong());
+        verify(carClient, never()).findRoute(any());
+    }
+
+    @Test
     @DisplayName("없거나 폐점한 매장이면 경로를 조회하지 않고 404다")
     void 매장_없음() {
         when(storeQueryService.getOpenStore(99L)).thenThrow(new GeneralException(StoreErrorCode.STORE_NOT_FOUND));
@@ -114,7 +127,7 @@ class StoreRouteServiceTest {
     @DisplayName("이동 수단 중 클라이언트가 없는 것이 있으면 시작할 때 실패한다")
     void 클라이언트_누락() {
         assertThatThrownBy(() -> new StoreRouteService(storeQueryService,
-                List.of(carClient, transitClient, walkClient), new StoreRouteProperties(0)))
+                List.of(carClient, transitClient, walkClient), new StoreRouteProperties(0), usageGuard))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("BICYCLE");
     }
@@ -163,7 +176,8 @@ class StoreRouteServiceTest {
 
     private StoreRouteService limitedService(int maxDistance) {
         return new StoreRouteService(storeQueryService,
-                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(maxDistance));
+                List.of(carClient, transitClient, walkClient, bicycleClient),
+                new StoreRouteProperties(maxDistance), usageGuard);
     }
 
     private StoreRouteClient findClient(RouteMode mode) {

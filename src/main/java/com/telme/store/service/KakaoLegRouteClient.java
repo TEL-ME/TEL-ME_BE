@@ -20,6 +20,7 @@ abstract class KakaoLegRouteClient implements StoreRouteClient {
             "START_LINK_NOT_FOUND", "END_LINK_NOT_FOUND", "TOO_MANY_SEARCH_LINK", "TOO_FAR_AWAY",
             "ROUTE_RESULT_NOT_FOUND");
 
+    private final KakaoRouteCalls kakaoRouteCalls;
     private final RestClient kakaoRouteRestClient;
     private final StoreRouteConverter storeRouteConverter;
     private final RouteMode mode;
@@ -27,7 +28,8 @@ abstract class KakaoLegRouteClient implements StoreRouteClient {
     private final String tag;
 
     KakaoLegRouteClient(RestClient kakaoRouteRestClient, StoreRouteConverter storeRouteConverter,
-                        RouteMode mode, String path, String tag) {
+                        RouteMode mode, String path, String tag, KakaoRouteCalls kakaoRouteCalls) {
+        this.kakaoRouteCalls = kakaoRouteCalls;
         this.kakaoRouteRestClient = kakaoRouteRestClient;
         this.storeRouteConverter = storeRouteConverter;
         this.mode = mode;
@@ -42,7 +44,7 @@ abstract class KakaoLegRouteClient implements StoreRouteClient {
 
     @Override
     public StoreRouteResponse findRoute(RouteEndpoints endpoints) {
-        KakaoLegRouteResponse response = KakaoRouteCalls.call(tag, () -> kakaoRouteRestClient.get()
+        KakaoLegRouteResponse response = kakaoRouteCalls.call(mode, tag, () -> kakaoRouteRestClient.get()
                 .uri(uri -> uri.path(path)
                         .queryParam("start_x", endpoints.originX())
                         .queryParam("start_y", endpoints.originY())

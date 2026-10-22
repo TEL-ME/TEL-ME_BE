@@ -1,6 +1,7 @@
 package com.telme.store.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -34,6 +35,8 @@ import org.springframework.web.client.RestClient;
 // 출발지는 서울 시청 근처, 도착지는 강남역 근처 좌표다
 class KakaoRouteClientTest {
 
+    private final KakaoRouteCalls calls = new KakaoRouteCalls(mock(StoreRouteUsageGuard.class));
+
     private static final String BASE_URL = "http://kakao.test";
     private static final String AUTH = "KakaoAK test-key";
     private static final RouteEndpoints ENDPOINTS = new RouteEndpoints(
@@ -54,13 +57,13 @@ class KakaoRouteClientTest {
         server = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
         StoreRouteConverter converter = new StoreRouteConverter();
-        carClient = new KakaoNaviCarRouteClient(restClient, converter);
+        carClient = new KakaoNaviCarRouteClient(restClient, converter, calls);
         transitClient = new KakaoTransitRouteClient(restClient, converter,
-                new KakaoWalkRouteClient(restClient, converter),
+                new KakaoWalkRouteClient(restClient, converter, calls),
                 new KakaoRouteProperties(BASE_URL, BASE_URL, "test-key",
-                        java.time.Duration.ofSeconds(2), java.time.Duration.ofSeconds(5), false));
-        walkClient = new KakaoWalkRouteClient(restClient, converter);
-        bicycleClient = new KakaoBicycleRouteClient(restClient, converter);
+                        java.time.Duration.ofSeconds(2), java.time.Duration.ofSeconds(5), false), calls);
+        walkClient = new KakaoWalkRouteClient(restClient, converter, calls);
+        bicycleClient = new KakaoBicycleRouteClient(restClient, converter, calls);
     }
 
     @Test

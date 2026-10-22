@@ -36,6 +36,8 @@ import org.springframework.web.client.RestClient;
 
 class KakaoTransitOriginWalkTest {
 
+    private final KakaoRouteCalls calls = new KakaoRouteCalls(mock(StoreRouteUsageGuard.class));
+
     private static final RouteEndpoints ENDPOINTS = new RouteEndpoints(
             new BigDecimal("37.566"), new BigDecimal("126.978"),
             new BigDecimal("37.497942"), new BigDecimal("127.027621"));
@@ -191,7 +193,7 @@ class KakaoTransitOriginWalkTest {
     private KakaoTransitRouteClient createClient(boolean enabled) {
         KakaoRouteProperties properties = new KakaoRouteProperties("http://kakao.test", "http://kakao.test",
                 "test-key", Duration.ofSeconds(2), Duration.ofSeconds(5), enabled);
-        return new KakaoTransitRouteClient(restClient, new StoreRouteConverter(), walkClient, properties);
+        return new KakaoTransitRouteClient(restClient, new StoreRouteConverter(), walkClient, properties, calls);
     }
 
     private void expectTransit(String points) {
