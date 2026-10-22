@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 import urllib.error
@@ -19,6 +20,7 @@ from scripts.chat_judge import judge_chat_flow as judge
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE = ROOT / "scripts/chat_judge/data/chat_pipeline_quality_v2_2.json"
+DATABASE_NAME = re.compile(r"telme_judge_[a-z0-9_]{1,40}")
 
 
 def select_cases(cases, limit=0):
@@ -119,8 +121,9 @@ def main():
     # 앱 안 Bedrock 호출의 원본 요청·응답(상담 내용)까지 캡처에 남긴다. 로컬 분석용이라 결과 묶음에 넣지 않는다
     parser.add_argument("--record-raw", action="store_true")
     args = parser.parse_args()
-    if not args.database.startswith("telme_judge_"):
-        parser.error("--database must start with telme_judge_")
+    # 이름을 SQL에 그대로 넣으므로 소문자·숫자·밑줄만 받는다("telme_judge_2026-10-22"는 CREATE DATABASE에서 문법 오류)
+    if not DATABASE_NAME.fullmatch(args.database):
+        parser.error("--database must be telme_judge_ followed by 1-40 lowercase letters, digits or underscores")
     if args.out.exists():
         parser.error("Output directory exists; use a new directory to preserve raw results")
     if not 1 <= args.workers <= 8:

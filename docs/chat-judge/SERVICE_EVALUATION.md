@@ -26,7 +26,7 @@ python -u -X utf8 -m scripts.chat_judge.run_chat_pipeline_eval --capture-only   
   - '현재 위치 사용'으로 답한 뒤 되묻기가 이어지는 동안에는 그 좌표를 다음 답에도 붙인다. 프론트(`heldCoords.ts`)와 같은 동작이다. 서버는 좌표를 저장하지 않아, 붙이지 않으면 업무에 답한 뒤 지역을 다시 묻는다.
   - `actor`가 `MEMBER`인 대화는 테스트 회원(`judge-member@telme.test`) 세션으로 보낸다. 평가 DB에 없으면 만든다.
 - **평가 DB는 `telme_judge_`로 시작하는 DB만 쓴다.** 기본은 `telme_judge_eval`이고, `--database`로 측정마다 새 DB를 줄 수 있다. 없으면 `--postgres-container`의 `telme` DB를 복제한다. 다른 컨테이너의 DB를 쓰려면 `POSTGRES_PORT`를 맞춘다(예: `telme-flow-postgres`는 5440).
-- 앱 설정은 환경 변수 그대로 쓰고, 실제 적용된 값을 캡처의 `appConfig`에 남긴다. 회색 구간 근거 판정이 앱 쪽에서 Bedrock을 부르므로, 그 호출을 막으려면 `SEARCH_GRAY_ZONE_ENABLED=false`로 끈다.
+- 앱 설정은 환경 변수 그대로 쓰고, 실제 적용된 값을 캡처의 `appConfig`에 남긴다. 회색 구간 근거 판정이 앱 쪽에서 Bedrock을 부르므로, 그 호출을 막으려면 `SEARCH_GRAYZONE_ENABLED=false`로 끈다(위 예시처럼 `true`로 켰다면 같은 이름으로 바꿔야 한다).
 - 지명으로 찾는 매장 대화는 `KAKAO_REST_API_KEY`가 있어야 한다. 없으면 실행기가 빼고 `manifest.json`의 `skippedCases`에 남긴다.
 - 로컬 생성 모델(EXAONE, `telme-ollama`)로 돌릴 때 16GB GPU에서는 생성이 끝난 뒤 Ollama를 내리고 판정용 vLLM을 올린다. 실행기가 그 순서로 컨테이너를 켜고 끈다.
 
