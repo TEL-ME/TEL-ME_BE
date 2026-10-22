@@ -153,6 +153,21 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"명의 정정하고 싶어요", "가입 정보 정정하려고 합니다", "청구서 주소 정정하고 싶어요",
+            "요금제를 잘못알고 가입해서 해지하고 싶어요"})
+    void correctionWordInANewRequestStillGoesToTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"LTE가 아니라 5G 요금제 뭐 있어요?", "5G 아니고 LTE 요금제는 얼마예요"})
     void correctionWordInsideACompleteQuestionStillGoesToTheReferenceDecision(String original) {
         var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);

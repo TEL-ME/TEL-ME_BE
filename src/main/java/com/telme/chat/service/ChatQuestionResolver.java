@@ -271,8 +271,9 @@ public class ChatQuestionResolver {
             // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
             boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
                     || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches()
-                    // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄
-                    || isCorrectionOfHistory(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context);
+                    // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄. 하려는 일을 말하면 새 요청이라 제외
+                    || isCorrectionOfHistory(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context)
+                            && !INTENT_STATEMENT.matcher(compact(judged)).find();
             Reference reference = generic ? Reference.OMITTED : judgeReference(command, judged);
             var analysis = mapper.createObjectNode();
             analysis.put("reference", reference.name());
