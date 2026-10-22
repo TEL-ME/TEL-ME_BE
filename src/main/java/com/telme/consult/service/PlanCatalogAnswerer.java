@@ -47,7 +47,9 @@ public class PlanCatalogAnswerer {
         // 영문 대소문자 구분 없이 망 이름(5G, LTE)을 찾는다
         String text = question.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
         List<Plan> named = mention != null
-                ? plans.stream().filter(plan -> mention.planCodes().contains(plan.getCode())).toList()
+                // 모델이 고른 요금제도 "프리미엄 빼고"처럼 뺀다고 한 것은 상세로 보여주지 않는다
+                ? plans.stream().filter(plan -> mention.planCodes().contains(plan.getCode()))
+                        .filter(plan -> !excludedByName(text, plan, plans)).toList()
                 : namedPlans(text, plans);
         if (!named.isEmpty()) {
             return detail(named);

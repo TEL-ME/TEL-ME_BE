@@ -146,6 +146,13 @@ class PlanCatalogAnswererTest {
     }
 
     // 요금제 이름이나 망 이름을 뗀 이름 뒤의 제외 표현은 그 요금제만 뺀다(망 전체를 빼지 않는다)
+    // 모델이 뺀다고 한 요금제를 골라도 상세로 보여주지 않고 남은 조건으로 거른다(리뷰)
+    @Test
+    void 모델이_고른_요금제라도_뺀다고_한_것은_보여주지_않는다() {
+        String answer = answerer.answer("프리미엄 빼고 5G 요금제 알려줘", new PlanQuestion.Mention(List.of("FIVE_G_PREMIUM"), false));
+        assertThat(answer).contains("5G 스탠다드").doesNotContain("5G 프리미엄");
+    }
+
     @Test
     void 이름으로_뺀_요금제만_목록에서_제외한다() {
         assertThat(answerer.answer("LTE 맥스 제외하고 LTE 요금제 목록 보여주세요")).contains("LTE 플러스", "LTE 베이직").doesNotContain("LTE 맥스");

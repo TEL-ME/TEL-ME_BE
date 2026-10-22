@@ -146,6 +146,13 @@ class PlanQuestionRulesTest {
         assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, "시니어 요금제로 바꾸려면 어떻게 해요")).isTrue();
     }
 
+    // 통화를 '전화'라고 불러도 같은 규칙을 탄다(리뷰)
+    @Test
+    void 통화를_전화라고_불러도_같게_읽는다() {
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, "이번 달 전화 얼마나 쓸 수 있어요?")).isFalse();
+        assertType(PlanQuestionType.MY_USAGE, "이번 달 전화 몇 분 했어요", "내 전화 얼마나 썼는지 확인해줘");
+    }
+
     @Test
     void 해_달라는_말_뒤의_가능은_부탁이다() {
         assertProcedure(PlanQuestionType.RECOMMENDATION, false, "요금제 하나 골라줘 가능?", "싼 요금제 추천 가능할까요");

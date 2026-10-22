@@ -26,8 +26,8 @@ public final class PlanQuestionRules {
     private static final Pattern PENALTY_EXCLUDED = Pattern.compile("면제|어떻게알");
 
     private static final Pattern MY_USAGE = Pattern.compile(
-            "(내|제)(사용량|데이터|통화|문자)|이번달(사용량|데이터|통화|문자|요금.{0,6}(얼마|나올|예상|나와)|예상)"
-                    + "|남은(데이터|통화|문자)(가|는|량)?(얼마|몇)|(데이터|통화|문자).{0,4}(얼마나(썼|사용했|남았|남아)|확인|조회)"
+            "(내|제)(사용량|데이터|통화|전화|문자)|이번달(사용량|데이터|통화|전화|문자|요금.{0,6}(얼마|나올|예상|나와)|예상)"
+                    + "|남은(데이터|통화|전화|문자)(가|는|량)?(얼마|몇)|(데이터|통화|전화|문자).{0,4}(얼마나(썼|사용했|남았|남아)|확인|조회)"
                     + "|사용량(을|좀)?(알려|확인|조회|얼마)|예상요금|청구될요금");
     private static final Pattern USAGE_EXCLUDED = Pattern.compile(
             "이월|넘길|넘어가|넘겨|다음달|선물|양도|공유|손주|이전|못쓰면|로밍|하루|보낼");
@@ -49,7 +49,7 @@ public final class PlanQuestionRules {
     // "청소년 요금제 중에서 알뜰 청소년 빼고"처럼 제외 표현과 함께 쓴 "중에"는 비교가 아니라 목록을 좁히는 말이다
     private static final Pattern EXCLUDES = Pattern.compile("말고|빼고|제외|아닌");
     // 데이터·통화·문자를 얼마나 쓸 수 있는지는 가능 여부가 아니라 제공량을 묻는 질문이다
-    private static final Pattern ALLOWANCE_AMOUNT = Pattern.compile("(통화|문자|데이터).{0,6}(얼마나|몇)|(얼마나|몇).{0,6}(통화|문자|데이터)");
+    private static final Pattern ALLOWANCE_AMOUNT = Pattern.compile("(통화|전화|문자|데이터).{0,6}(얼마나|몇)|(얼마나|몇).{0,6}(통화|전화|문자|데이터)");
     private static final Pattern COMPARES = Pattern.compile(
             "비교|차이|중에|중뭐|중어느|중어떤|달라|것과|것중|[와과랑].{1,15}중(에서)?(요금|어느|어떤|뭐|어디|가장|더|무엇)");
     // 요금제 표로 답할 수 없는 다른 서비스의 요금·사용 질문

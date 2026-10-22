@@ -108,8 +108,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
                 ? input.originalUserQuery() : input.resolvedUserQuery();
         // 문맥으로 풀어쓴 문장은 "나", "내" 같은 본인 표현이 사라질 수 있어 사용자가 쓴 원문으로 먼저 분류한다
         PlanQuestion classified = classify(input.executionId(), input.originalUserQuery());
-        if (classified.type() == PlanQuestionType.NONE && !question.equals(input.originalUserQuery())) {
-            classified = classify(input.executionId(), question);
+        // 원문에 요금제 이름이 없어("그 요금제 통화는 무제한이에요?") 고른 요금제가 비면 문맥으로 풀어쓴 문장으로 다시 고른다
+        if (!question.equals(input.originalUserQuery()) && (classified.type() == PlanQuestionType.NONE
+                || classified.type() == PlanQuestionType.PLAN_CATALOG && pointsToNoPlan(classified))) {
+            PlanQuestion resolved = classify(input.executionId(), question);
+            if (classified.type() == PlanQuestionType.NONE || resolved.type() == PlanQuestionType.PLAN_CATALOG) {
+                classified = resolved;
+            }
         }
         PlanQuestionType type = classified.type();
         // 후속 질문 버튼의 문구에는 이전 답을 되풀이하는 추천·내 정보 답변을 하지 않는다. 요금제 표 안내는 FAQ 대신 쓴다
@@ -154,6 +159,10 @@ public final class PlanAnswerProvider implements AnswerProvider {
         trace.stage(input.executionId(), "planAnswer", Map.of("type", type.name()));
         return new Outcome(GeneratedAnswer.withoutSources(new ChatAnswer(
                 ChatMessage.MessageType.ANSWER, content, ChatMessage.AnswerBasis.GROUNDED, followUps, null)), null);
+    }
+
+    private static boolean pointsToNoPlan(PlanQuestion classified) {
+        return classified.mention() != null && classified.mention().planCodes().isEmpty() && !classified.mention().unknownPlan();
     }
 
     // 질문에 직접 말한 나이대·사용량은 앞서 저장된 답보다 우선하는 확정된 답으로 본다(이미 말했으니 되묻지 않는다).

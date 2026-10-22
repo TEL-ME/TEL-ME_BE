@@ -450,6 +450,37 @@ class PlanAnswerProviderTest {
         verifyNoInteractions(catalog);
     }
 
+    // 원문에 요금제 이름이 없어 모델이 요금제를 고르지 못하면 풀어쓴 문장으로 다시 고른다(리뷰: 이어받기 질문)
+    @Test
+    void 원문에서_고른_요금제가_없으면_풀어쓴_문장으로_다시_고른다() {
+        String original = "아까 그 요금제 통화는 무제한이에요?";
+        String rewritten = "5G 스탠다드 요금제 통화는 무제한이에요?";
+        PlanQuestion.Mention standard = new PlanQuestion.Mention(List.of("FIVE_G_STANDARD"), false);
+        when(classifier.classifyQuestion(1L, original))
+                .thenReturn(new PlanQuestion(PlanQuestionType.PLAN_CATALOG, new PlanQuestion.Mention(List.of(), false)));
+        when(classifier.classifyQuestion(1L, rewritten)).thenReturn(new PlanQuestion(PlanQuestionType.PLAN_CATALOG, standard));
+        when(catalog.answer(rewritten, standard)).thenReturn("5G 스탠다드 안내");
+        AnswerInput input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, original, rewritten, Map.of(),
+                rewritten, null);
+
+        assertThat(provider.prepare(input, true).answer().answer().content()).isEqualTo("5G 스탠다드 안내");
+    }
+
+    // 가리키는 요금제가 원래 없는 질문("거기서 제일 싼 건")은 다시 고른 결과가 목록 질문이 아니면 원문 분류를 쓴다
+    @Test
+    void 다시_고른_결과가_요금제_목록이_아니면_원문_분류를_쓴다() {
+        String original = "거기서 제일 싼 건 얼마예요?";
+        String rewritten = "5G 요금제 중에서 제일 싼 건 얼마예요?";
+        PlanQuestion.Mention none = new PlanQuestion.Mention(List.of(), false);
+        when(classifier.classifyQuestion(1L, original)).thenReturn(new PlanQuestion(PlanQuestionType.PLAN_CATALOG, none));
+        when(classifier.classifyQuestion(1L, rewritten)).thenReturn(PlanQuestion.of(PlanQuestionType.NONE));
+        when(catalog.answer(rewritten, none)).thenReturn("5G 라이트 안내");
+        AnswerInput input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, original, rewritten, Map.of(),
+                rewritten, null);
+
+        assertThat(provider.prepare(input, true).answer().answer().content()).isEqualTo("5G 라이트 안내");
+    }
+
     @Test
     void 원문이_해당_없음이면_풀어쓴_문장으로_다시_분류해_후속_질문을_처리한다() {
         String original = "그건 얼마예요";
