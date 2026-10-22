@@ -22,6 +22,8 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.service.RagAnswerGenerator;
 import com.telme.subscription.service.SubscriptionEligibilityChecker;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -40,12 +42,17 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,6 +64,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
+import software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock;
 
 /** 실제 Chat API부터 상담 처리와 FAQ 검색까지 실행하고, Judge 입력을 별도 파일에 고정한다. */
 // 생성 서빙은 TELME_CHAT_JUDGE_LLM_PROVIDER로 바꿀 수 있다(ollama 또는 vllm, docs/SERVING_COMPARISON.md T4)
@@ -107,12 +119,17 @@ class ChatJudgeCaptureProbe {
     private final List<SearchTrace> searchTraces = new ArrayList<>();
     private final List<LlmRequest> llmRequests = new ArrayList<>();
     private final List<AnswerRequest> ragInputs = new ArrayList<>();
+    // Bedrock 호출 기록. 클라이언트 빈을 감싼 쪽(BedrockCallRecording)이 채운다
+    private static final List<Map<String, Object>> BEDROCK_CALLS = new ArrayList<>();
+    // 켜면 Bedrock 호출의 원본 요청·응답(상담 내용)까지 남긴다. 로컬 측정에서만 쓰고 결과 묶음에는 넣지 않는다
+    private static final boolean RECORD_RAW = "true".equals(System.getenv("TELME_CHAT_JUDGE_RAW"));
 
     @Test
     void capturesActualChatAnswers() throws Exception {
         String database = jdbc.queryForObject("SELECT current_database()", String.class);
-        if (!"telme_judge_eval".equals(database)) {
-            throw new IllegalStateException("평가는 telme_judge_eval DB에서만 실행합니다: " + database);
+        // 측정마다 새 평가 DB(telme_judge_로 시작)를 쓸 수 있다. 운영·개발 DB에서는 돌지 않게 이름으로 막는다
+        if (database == null || !database.startsWith("telme_judge_")) {
+            throw new IllegalStateException("평가는 telme_judge_로 시작하는 평가 DB에서만 실행합니다: " + database);
         }
         doAnswer(invocation -> {
             FaqSearchRequest request = invocation.getArgument(0);
@@ -251,6 +268,9 @@ class ChatJudgeCaptureProbe {
         List<JsonNode> replies = new ArrayList<>();
         fixture.path("clarificationReplies").forEach(replies::add);
         List<Map<String, Object>> exchanges = new ArrayList<>();
+        // 프론트(heldCoords.ts)처럼 '현재 위치'로 답한 좌표를 되묻기가 이어지는 동안 다음 답에도 붙인다.
+        // 서버는 좌표를 저장하지 않아, 붙이지 않으면 업무를 답한 뒤 지역을 다시 묻는다
+        JsonNode heldCoordinates = null;
         while (exchanges.size() < MAX_CLARIFICATION_REPLIES && isClarification(result)) {
             List<String> askedKeys = askedKeys(result);
             JsonNode reply = pickReply(replies, askedKeys);
@@ -268,8 +288,10 @@ class ChatJudgeCaptureProbe {
             exchange.put("customerReply", reply);
             exchanges.add(exchange);
             JsonNode coordinates = reply.path("coordinates");
-            result = captureTurn(session, sessionId, fixture, reply.path("content").asText(),
-                    coordinates.isObject() ? coordinates : null);
+            if (coordinates.isObject()) {
+                heldCoordinates = coordinates;
+            }
+            result = captureTurn(session, sessionId, fixture, reply.path("content").asText(), heldCoordinates);
         }
         result.put("clarificationExchanges", exchanges);
         return result;
@@ -309,6 +331,9 @@ class ChatJudgeCaptureProbe {
         }
         synchronized (ragInputs) {
             ragInputs.clear();
+        }
+        synchronized (BEDROCK_CALLS) {
+            BEDROCK_CALLS.clear();
         }
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("content", content);
@@ -393,6 +418,9 @@ class ChatJudgeCaptureProbe {
             result.put("ragInputs", List.copyOf(ragInputs));
         }
         result.put("generatorCallRecords", generations);
+        synchronized (BEDROCK_CALLS) {
+            result.put("bedrockCalls", List.copyOf(BEDROCK_CALLS));
+        }
         result.put("outputMessage", outputMessage);
         result.put("savedSources", savedSources);
         // 요금제 답변(planAnswer)처럼 FAQ 밖 데이터로 답한 경로를 Judge가 알 수 있게 실행 기록을 남긴다
@@ -595,6 +623,74 @@ class ChatJudgeCaptureProbe {
             return MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
+        }
+    }
+
+    // Bedrock 클라이언트를 감싸 호출마다 토큰·지연을 남긴다. Bedrock을 끈 실행(llm.bedrock.enabled=false)에는 빈이 없어 그대로다.
+    // 앱 코드는 상담 내용이라 모델 입출력을 남기지 않으므로 측정에서만 여기서 남긴다
+    @TestConfiguration
+    static class BedrockCallRecording {
+        @Bean
+        static BeanPostProcessor bedrockCallRecorder() {
+            return new BeanPostProcessor() {
+                @Override
+                public Object postProcessAfterInitialization(Object bean, String beanName) {
+                    if (!(bean instanceof BedrockRuntimeClient client)) {
+                        return bean;
+                    }
+                    return Proxy.newProxyInstance(BedrockRuntimeClient.class.getClassLoader(),
+                            new Class<?>[] {BedrockRuntimeClient.class}, (proxy, method, args) -> {
+                                if ("converse".equals(method.getName()) && args != null && args.length == 1
+                                        && args[0] instanceof ConverseRequest request) {
+                                    return recordConverse(client, request);
+                                }
+                                try {
+                                    return method.invoke(client, args);
+                                } catch (InvocationTargetException e) {
+                                    throw e.getCause();
+                                }
+                            });
+                }
+            };
+        }
+
+        private static ConverseResponse recordConverse(BedrockRuntimeClient client, ConverseRequest request) {
+            long started = System.nanoTime();
+            Map<String, Object> call = new LinkedHashMap<>();
+            call.put("modelId", request.modelId());
+            // 시스템 프롬프트 첫 줄로 어느 호출인지 알 수 있다. 고정 문구라 상담 내용이 없다
+            String system = request.system().stream().map(SystemContentBlock::text).filter(Objects::nonNull)
+                    .collect(Collectors.joining("\n"));
+            call.put("systemHead", system.lines().findFirst().orElse(""));
+            try {
+                ConverseResponse response = client.converse(request);
+                call.put("elapsedMs", Duration.ofNanos(System.nanoTime() - started).toMillis());
+                if (response.usage() != null) {
+                    call.put("inputTokens", response.usage().inputTokens());
+                    call.put("outputTokens", response.usage().outputTokens());
+                }
+                call.put("latencyMs", response.metrics() == null ? null : response.metrics().latencyMs());
+                call.put("stopReason", response.stopReasonAsString());
+                if (RECORD_RAW) {
+                    call.put("system", system);
+                    call.put("messages", request.messages().stream().map(message -> Map.of(
+                            "role", message.roleAsString(),
+                            "text", message.content().stream().map(ContentBlock::text).filter(Objects::nonNull)
+                                    .collect(Collectors.joining("\n")))).toList());
+                    call.put("response", response.output() == null || response.output().message() == null ? null
+                            : response.output().message().content().stream().map(ContentBlock::text)
+                                    .filter(Objects::nonNull).collect(Collectors.joining()));
+                }
+                return response;
+            } catch (RuntimeException e) {
+                call.put("elapsedMs", Duration.ofNanos(System.nanoTime() - started).toMillis());
+                call.put("error", e.getClass().getSimpleName());
+                throw e;
+            } finally {
+                synchronized (BEDROCK_CALLS) {
+                    BEDROCK_CALLS.add(call);
+                }
+            }
         }
     }
 

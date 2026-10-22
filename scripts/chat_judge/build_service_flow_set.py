@@ -9,7 +9,8 @@
 되묻기 답변(clarificationReplies)은 앱이 되물을 때만 쓰고, 마지막 응답을 판정한다. 회원 답변의 인정 근거는 캡처할 때
 남긴 회원 계정 데이터라 라벨에는 sourceId만 적고 판정할 때 채운다.
 v2는 v1 36개에 별도 작성자가 쓴 52개(flows_v2_written.json)를 더한다. 매장 30, 되묻기 30, 회원 28개 대화다.
-요금제 추천 시나리오의 고객 답변 두 개는 앱의 조건 이름(age_group, heavy_data)에 순서대로 연결한다.
+요금제 추천 시나리오의 고객 답변 두 개는 앱의 조건 이름(age_group, monthly_data_usage)에 순서대로 연결한다.
+추천한 요금제에 통화·문자 한도가 있으면 앱이 그 사용량도 묻는다. 시나리오에 답이 없으므로 '잘 모르겠어요'를 채운다(auto).
 v1 파일은 고정해 두고 build(version=1)로 다시 만들 수 있다.
 사용: python -X utf8 -m scripts.chat_judge.build_service_flow_set
 """
@@ -25,8 +26,11 @@ PLANS = ROOT / "scripts/chat_judge/data/quality_sources/plans_snapshot.json"
 OUTPUT = ROOT / "scripts/chat_judge/data/chat_pipeline_flows_v2.json"
 PROVENANCE = {"flows_written.json": "flow_v1_agent_written_scenario; human_review_pending",
               "flows_v2_written.json": "flow_v2_agent_written_scenario; human_review_pending"}
-# 요금제 추천 되묻기의 조건 이름(MemberRecommendationAnswerer.AGE_KEY, HEAVY_KEY). 시나리오는 나이, 데이터 순으로 답한다
-RECOMMENDATION_KEYS = ("age_group", "heavy_data")
+# 요금제 추천 되묻기의 조건 이름(MemberRecommendationAnswerer.AGE_KEY, DATA_KEY). 시나리오는 나이, 데이터 순으로 답한다
+RECOMMENDATION_KEYS = ("age_group", "monthly_data_usage")
+# 추천한 요금제에 한도가 있을 때 앱이 더 묻는 조건(VOICE_KEY, SMS_KEY). 시나리오에 답이 없어 모른다고 답한다
+USAGE_FOLLOW_UP_KEYS = ("monthly_voice_usage", "monthly_sms_usage")
+USAGE_FOLLOW_UP_REPLY = "잘 모르겠어요"
 # '현재 위치 사용' 프리셋. 평가 DB(telme_judge_eval)에서 그 지역 매장 좌표의 평균이다
 CURRENT_LOCATIONS = {
     "강남구": (37.5081, 127.0359), "영등포구": (37.5050, 126.9015), "해운대구": (35.1919, 129.1434),
@@ -80,6 +84,7 @@ def recommendation_keys(case, turn, replies):
     if case["suite"] == "clarification_flow" and not turn.get("faqSlotIds") and len(unkeyed) == 2:
         for row, key in zip(unkeyed, RECOMMENDATION_KEYS):
             row["whenKey"] = key
+        replies += [{"whenKey": key, "content": USAGE_FOLLOW_UP_REPLY, "auto": True} for key in USAGE_FOLLOW_UP_KEYS]
     return replies
 
 

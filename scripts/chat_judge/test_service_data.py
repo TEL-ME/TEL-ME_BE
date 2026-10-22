@@ -45,14 +45,22 @@ class AppMessageTest(unittest.TestCase):
                 service_data.NO_SEARCH_RESULT, service_data.NO_EVIDENCE):
             self.assertIn(sentence, java)
 
+    def test_plan_task_login_guidance_matches_java_composition(self):
+        java = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "src/main/java").rglob("*.java"))
+        self.assertIn(f'LOGIN_REQUIRED = "{service_data.PLAN_TASK_LOGIN_REQUIRED}";', java)
+        for prefix in service_data.PLAN_TASK_PREFIXES:
+            self.assertIn(f'"{prefix}" + PlanTaskSupport.LOGIN_REQUIRED', java)
+        self.assertTrue(service_data.is_service_guidance("요금제 변경은 로그인한 뒤 마이페이지의 내 요금제 화면에서 할 수 있어요."))
+        self.assertFalse(service_data.is_service_guidance("요금제 변경은 매장에서만 할 수 있어요."))
+
     def test_recommendation_rule_matches_java_constants(self):
         recommender = (ROOT / "src/main/java/com/telme/consult/service/PlanRecommender.java").read_text(encoding="utf-8")
         answerer = (ROOT / "src/main/java/com/telme/consult/service/MemberRecommendationAnswerer.java").read_text(
             encoding="utf-8")
         self.assertIn(f"MARGIN = {service_data.RECOMMENDATION_MARGIN};", recommender)
         self.assertIn(f"DOWNGRADE_MARGIN = {service_data.DOWNGRADE_MARGIN};", recommender)
-        self.assertIn(f"HEAVY_DATA_MB = {service_data.HEAVY_DATA_GB}L * MB_PER_GB;", answerer)
-        self.assertIn(f"LIGHT_DATA_MB = {service_data.LIGHT_DATA_GB}L * MB_PER_GB;", answerer)
+        self.assertIn(f"MAX_CHEAPER = {service_data.MAX_CHEAPER};", answerer)
+        self.assertIn(f"COOLDOWN_MONTHS = {service_data.COOLDOWN_MONTHS};", answerer)
 
     def test_recommendation_rule_states_whether_the_current_plan_fits(self):
         member = {"subscription": {"subscription": {"currentPlan": {
