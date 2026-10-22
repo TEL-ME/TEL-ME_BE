@@ -260,6 +260,14 @@ class PlanQuestionClassifierTest {
         assertThat(classifier.classify(1L, "남은 데이터는 어떻게 확인할 수 있나요")).isEqualTo(PlanQuestionType.NONE);
     }
 
+    @Test
+    void 모델이_목록으로_판정한_사정_설명_문장은_변경_낱말이_있어도_그대로_쓴다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\"}");
+
+        assertThat(classifier.classify(1L, "엄마 폰 바꿔드리려는데 시니어 요금제 뭐 있어요")).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        assertThat(classifier.classify(1L, "시니어 요금제로 바꾸려면 어떻게 해요")).isEqualTo(PlanQuestionType.NONE);
+    }
+
     private static Plan plan(String code, String name) {
         return Plan.builder().code(code).name(name).build();
     }

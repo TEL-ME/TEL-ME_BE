@@ -71,7 +71,8 @@ class PlanCatalogAnswererTest {
 
     @Test
     void 요금제_개수를_물으면_판매_중인_전체_종류를_알려준다() {
-        assertThat(answerer.answer("요금제가 다 해서 몇 가지예요")).contains("총 15종", "[5G]", "[LTE]", "[알뜰]");
+        assertThat(answerer.answer("요금제가 다 해서 몇 가지예요"))
+                .contains("일반 요금제는 9종이에요. 청소년 3종, 시니어 3종은 따로 있어요.", "[5G]", "[LTE]", "[알뜰]");
     }
 
     @Test
@@ -126,6 +127,31 @@ class PlanCatalogAnswererTest {
         assertThat(answerer.answer("5G 프리미엄 플러스 얼마예요", new PlanQuestion.Mention(List.of(), true)))
                 .startsWith("말씀하신 요금제는 판매 중인 요금제에 없어요")
                 .contains("5G 프리미엄", "LTE 플러스");
+    }
+
+    // FAQ와 같은 기준(일반 라인업)으로 세고 연령 요금제는 따로 알린다
+    @Test
+    void 개수는_일반_라인업으로_세고_청소년_시니어는_따로_알린다() {
+        assertThat(answerer.answer("LTE 요금제는 몇 개예요"))
+                .startsWith("일반 LTE 요금제는 3종이에요. 청소년 1종, 시니어 1종은 따로 있어요.");
+        assertThat(answerer.answer("요금제 몇 종류 있어요")).startsWith("일반 요금제는 9종이에요. 청소년 3종, 시니어 3종은 따로 있어요.");
+        assertThat(answerer.answer("시니어 요금제 몇 개예요")).startsWith("판매 중인 요금제는 총 3종이에요.");
+    }
+
+    // 나이 답에서 쓰는 대상 낱말(어르신, 고등학생 등)도 대상 조건으로 읽는다
+    @Test
+    void 청소년_시니어를_다른_말로_불러도_그_대상으로_거른다() {
+        assertThat(answerer.answer("어르신 전용 요금제는 몇 종류예요")).startsWith("판매 중인 요금제는 총 3종이에요.");
+        assertThat(answerer.answer("고등학생이 쓸 요금제 알려줘")).contains("5G 청소년", "LTE 청소년").doesNotContain("5G 스탠다드");
+    }
+
+    // 요금제 이름이나 망 이름을 뗀 이름 뒤의 제외 표현은 그 요금제만 뺀다(망 전체를 빼지 않는다)
+    @Test
+    void 이름으로_뺀_요금제만_목록에서_제외한다() {
+        assertThat(answerer.answer("LTE 맥스 제외하고 LTE 요금제 목록 보여주세요")).contains("LTE 플러스", "LTE 베이직").doesNotContain("LTE 맥스");
+        assertThat(answerer.answer("프리미엄 빼고 5G 요금제 알려줘")).contains("5G 스탠다드").doesNotContain("5G 프리미엄");
+        assertThat(answerer.answer("알뜰 미니는 필요 없고 다른 알뜰 요금제 뭐 있어요")).contains("알뜰 세이브").doesNotContain("알뜰 미니");
+        assertThat(answerer.answer("알뜰은 필요없고 요금제 목록 보여줘")).contains("5G 스탠다드").doesNotContain("알뜰 세이브");
     }
 
     @Test

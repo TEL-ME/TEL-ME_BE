@@ -99,11 +99,11 @@ public class PlanQuestionClassifier {
             return PlanQuestionType.NONE;
         }
         if (isMyData(type)) {
-            return PlanQuestionRules.hasPersonalMarker(type, question) && !PlanQuestionRules.asksProcedure(type, question)
+            return PlanQuestionRules.hasPersonalMarker(type, question) && !PlanQuestionRules.asksMethod(type, question)
                     ? type : PlanQuestionType.NONE;
         }
         boolean listOrRecommend = type == PlanQuestionType.PLAN_CATALOG || type == PlanQuestionType.RECOMMENDATION;
-        return listOrRecommend && PlanQuestionRules.asksProcedure(type, question) ? PlanQuestionType.NONE : type;
+        return listOrRecommend && PlanQuestionRules.asksMethod(type, question) ? PlanQuestionType.NONE : type;
     }
 
     private static boolean isMyData(PlanQuestionType type) {

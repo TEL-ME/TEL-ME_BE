@@ -129,6 +129,29 @@ class PlanQuestionRulesTest {
         assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제 종류를 알 수 있나요");
     }
 
+    // 해 달라는 부탁과 제외 표현과 함께 쓴 "중에"는 방법이나 비교를 묻는 말이 아니다
+    @Test
+    void 부탁하는_말과_목록을_좁히는_중에는_절차나_비교가_아니다() {
+        assertProcedure(PlanQuestionType.RECOMMENDATION, false, "요금제 하나 골라주실 수 있나요", "추천 좀 해줄 수 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, false, "5G 요금제 중에서 언리미티드 말고 뭐 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "5G랑 LTE 중에 뭐가 더 싸요", "요금제를 바꿀 수 있나요");
+    }
+
+    // 모델이 목록·추천으로 판정한 뒤에는 변경·가입 낱말로 뒤집지 않는다. 규칙 분류에서는 그대로 쓴다
+    @Test
+    void 모델_판정_뒤에는_변경_가입_낱말만으로_방법_질문으로_보지_않는다() {
+        String situation = "동생 폰 바꿔주려는데 청소년 요금제 몇 개 있어요";
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, situation)).isFalse();
+        assertThat(PlanQuestionRules.asksProcedure(PlanQuestionType.PLAN_CATALOG, situation)).isTrue();
+        assertThat(PlanQuestionRules.asksMethod(PlanQuestionType.PLAN_CATALOG, "시니어 요금제로 바꾸려면 어떻게 해요")).isTrue();
+    }
+
+    @Test
+    void 해_달라는_말_뒤의_가능은_부탁이다() {
+        assertProcedure(PlanQuestionType.RECOMMENDATION, false, "요금제 하나 골라줘 가능?", "싼 요금제 추천 가능할까요");
+        assertProcedure(PlanQuestionType.RECOMMENDATION, true, "청소년 요금제 가입 가능한가요");
+    }
+
     @Test
     void 방법_자격_비교_로밍_질문은_요금제_답변이_아니라_FAQ가_답한다() {
         assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제 표 보는 법 좀 알려주세요",

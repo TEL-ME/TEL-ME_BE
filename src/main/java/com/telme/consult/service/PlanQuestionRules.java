@@ -1,5 +1,6 @@
 package com.telme.consult.service;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // 일반 정책 질문을 가로채지 않도록 표현이 분명할 때만 NONE이 아닌 값을 주는 규칙 기반 분류
@@ -41,6 +42,12 @@ public final class PlanQuestionRules {
     private static final Pattern CAN_DO = Pattern.compile("수있(어요|나요|을까요|습니까|는지|을지|죠)");
     // "이번 달 데이터 얼마 남았는지 알 수 있나요?"는 본인 정보를 알려 달라는 요청이다. 방법은 "어떻게", "어디서"로 따로 걸린다
     private static final Pattern KNOW_CAN_DO = Pattern.compile("(알|확인할|조회할|볼)수있");
+    // "추천 좀 해줄 수 있어요?"처럼 해 달라는 부탁은 가능 여부를 묻는 말이 아니다
+    private static final Pattern ASKS_FAVOR = Pattern.compile("(줄|주실|주시|줘|드릴)수있");
+    // "추천 가능?"처럼 해 달라는 말 바로 뒤의 "가능"은 가능 여부가 아니라 부탁이다
+    private static final Pattern FAVOR_POSSIBLE = Pattern.compile("(추천|골라|찾아|알려)(해|해줘|줘|주는거|해주는거)?가능");
+    // "청소년 요금제 중에서 알뜰 청소년 빼고"처럼 제외 표현과 함께 쓴 "중에"는 비교가 아니라 목록을 좁히는 말이다
+    private static final Pattern EXCLUDES = Pattern.compile("말고|빼고|제외|아닌");
     // 데이터·통화·문자를 얼마나 쓸 수 있는지는 가능 여부가 아니라 제공량을 묻는 질문이다
     private static final Pattern ALLOWANCE_AMOUNT = Pattern.compile("(통화|문자|데이터).{0,6}(얼마나|몇)|(얼마나|몇).{0,6}(통화|문자|데이터)");
     private static final Pattern COMPARES = Pattern.compile(
@@ -98,16 +105,31 @@ public final class PlanQuestionRules {
     }
 
     // 요금제 목록·추천 질문이 아니라 방법, 자격, 가능 여부, 뜻, 비교를 묻는 질문이면 FAQ가 답한다
+    // 규칙 분류용. 목록 질문은 변경·가입 낱말(CHANGES)이 있어도 방법 질문으로 본다
     public static boolean asksProcedure(PlanQuestionType type, String question) {
+        return asksMethod(type, question)
+                || type == PlanQuestionType.PLAN_CATALOG && CHANGES.matcher(question.replaceAll("\\s+", "")).find();
+    }
+
+    // 모델이 목록·추천으로 판정한 뒤의 보정. 변경·가입 낱말은 "아버지 폰 바꿔드리려고 하는데", "따로 결제하기 귀찮아서"처럼
+    // 사정을 말한 문장도 막아 모델 판정을 뒤집어 쓰지 않는다. 어떻게·방법·비교·가능 여부를 묻는 말만 FAQ로 보낸다(TELME-217)
+    public static boolean asksMethod(PlanQuestionType type, String question) {
         String text = question.replaceAll("\\s+", "");
-        if (HOW_OR_IF.matcher(text).find() || COMPARES.matcher(text).find()) {
+        if (HOW_OR_IF.matcher(FAVOR_POSSIBLE.matcher(text).replaceAll("")).find() || compares(text)) {
             return true;
         }
-        if (CAN_DO.matcher(text).find() && !ALLOWANCE_AMOUNT.matcher(text).find()
-                && !(isMyData(type) && KNOW_CAN_DO.matcher(text).find())) {
-            return true;
+        return CAN_DO.matcher(text).find() && !ALLOWANCE_AMOUNT.matcher(text).find() && !ASKS_FAVOR.matcher(text).find()
+                && !(isMyData(type) && KNOW_CAN_DO.matcher(text).find());
+    }
+
+    private static boolean compares(String text) {
+        Matcher compare = COMPARES.matcher(text);
+        while (compare.find()) {
+            if (!"중에".equals(compare.group()) || !EXCLUDES.matcher(text).find()) {
+                return true;
+            }
         }
-        return type == PlanQuestionType.PLAN_CATALOG && CHANGES.matcher(text).find();
+        return false;
     }
 
     private static boolean isMyData(PlanQuestionType type) {

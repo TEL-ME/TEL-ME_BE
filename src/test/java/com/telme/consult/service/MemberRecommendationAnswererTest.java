@@ -60,7 +60,20 @@ class MemberRecommendationAnswererTest {
 
         assertThat(outcome.content()).isNull();
         assertThat(outcome.asks()).extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
-        assertThat(outcome.asks().get(1).options()).isEmpty();
+        assertThat(outcome.asks().get(1).options()).isEqualTo(MemberRecommendationAnswerer.DATA_OPTIONS);
+    }
+
+    // "별로 안 써요"처럼 정도만 말한 고객도 고를 수 있게 사용량 구간을 버튼으로 준다. 구간마다 추천이 달라야 의미가 있다
+    @Test
+    void 데이터_사용량_버튼은_모두_읽히고_구간마다_다른_요금제를_추천한다() {
+        List<String> expected = List.of("알뜰 미니", "5G 라이트", "5G 스탠다드", "LTE 맥스", "5G 프리미엄", "5G 언리미티드");
+        List<String> amounts = MemberRecommendationAnswerer.DATA_OPTIONS.subList(0, expected.size());
+        for (int index = 0; index < expected.size(); index++) {
+            assertThat(answered(null, "만 19~64세", amounts.get(index))).as(amounts.get(index))
+                    .contains(expected.get(index) + "(월");
+        }
+        assertThat(MemberRecommendationAnswerer.DATA_OPTIONS.getLast()).isEqualTo("잘 모르겠어요");
+        assertThat(answered(null, "만 19~64세", "잘 모르겠어요")).contains("사용량을 잘 모르시면");
     }
 
     @Test

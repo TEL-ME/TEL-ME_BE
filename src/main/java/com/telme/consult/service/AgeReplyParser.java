@@ -23,7 +23,10 @@ public final class AgeReplyParser {
     private static final Pattern EXACT_AGE = Pattern.compile(
             "(\\d{1,3})\\s*(?:(?:세|살)?\\s*(?:~|-|에서|부터)\\s*(\\d{1,3}))?\\s*(?:세|살)(?:\\s*(미만|이하|이상|초과))?");
     // 60대 초반·중반·후반은 그 10살 안의 앞·가운데·뒤 셋 또는 넷 살로 좁힌다
-    private static final Pattern DECADE = Pattern.compile("(\\d{1,2})\\s*대(?:\\s*(초반|중반|후반))?");
+    // 나이를 물었을 때 숫자만 답한 것("43", "만 43이요")은 나이다. 다른 말이 붙으면 다른 수일 수 있어 읽지 않는다
+    private static final Pattern BARE_AGE = Pattern.compile(
+            "^\\s*(?:만\\s*)?(\\d{1,3})\\s*(?:이요|요|입니다|이에요|예요|이세요|세요)?\\s*[.!~]*\\s*$");
+    private static final Pattern DECADE =Pattern.compile("(\\d{1,2})\\s*대(?:\\s*(초반|중반|후반))?");
     // 고유어 수 나이("일흔", "서른다섯", "열여덟 살"). 열은 "열심히"처럼 다른 말에도 들어가 뒤에 수나 살·세가 올 때만 읽는다
     private static final Map<String, Integer> NATIVE_TENS = Map.of(
             "열", 10, "스물", 20, "스무", 20, "서른", 30, "마흔", 40, "쉰", 50, "예순", 60, "일흔", 70, "여든", 80, "아흔", 90);
@@ -36,8 +39,9 @@ public final class AgeReplyParser {
             "(?<![가-힣])(스물|스무|서른|마흔|쉰|예순|일흔|여든|아흔|열)\\s*(" + UNIT_WORDS + ")?(\\s*(?:살|세))?");
     // 하나~아홉만 쓴 답은 "한 번", "두 개"와 구분하려고 살·세가 붙을 때만 읽는다
     private static final Pattern NATIVE_UNIT_AGE = Pattern.compile("(?<![가-힣])(" + UNIT_WORDS + ")\\s*(?:살|세)");
-    private static final Pattern YOUTH_WORD = Pattern.compile("청소년|중학생|고등학생|중딩|고딩");
-    private static final Pattern SENIOR_WORD = Pattern.compile("시니어|어르신|실버");
+    // 대상 구분을 가리키는 낱말. 요금제 목록의 대상 조건(PlanCatalogAnswerer)도 같은 낱말로 읽는다
+    static final Pattern YOUTH_WORD = Pattern.compile("청소년|중학생|고등학생|중딩|고딩");
+    static final Pattern SENIOR_WORD = Pattern.compile("시니어|어르신|실버");
     private static final Pattern GENERAL_WORD = Pattern.compile("성인|대학생|직장인");
 
     private AgeReplyParser() {
@@ -53,6 +57,13 @@ public final class AgeReplyParser {
         while (exact.find()) {
             found = true;
             groups.add(groupOfAges(exact));
+        }
+        if (!found) {
+            Matcher bare = BARE_AGE.matcher(reply);
+            if (bare.matches()) {
+                int age = Integer.parseInt(bare.group(1));
+                return groupOfRange(age, age);
+            }
         }
         if (!found) {
             Matcher decade = DECADE.matcher(reply);

@@ -42,6 +42,15 @@ class AgeReplyParserTest {
     }
 
     @Test
+    void 나이를_물었을_때_숫자만_답하면_나이로_읽는다() {
+        assertThat(AgeReplyParser.parse("52")).isEqualTo(TargetGroup.GENERAL);
+        assertThat(AgeReplyParser.parse("만 70이요")).isEqualTo(TargetGroup.SENIOR);
+        assertThat(AgeReplyParser.parse("16입니다.")).isEqualTo(TargetGroup.YOUTH);
+        assertThat(AgeReplyParser.parse("2개요")).isNull();
+        assertThat(AgeReplyParser.parse("52 아니면 53")).isNull();
+    }
+
+    @Test
     void 나이가_아닌_고유어_수는_읽지_않는다() {
         assertThat(AgeReplyParser.parse("열심히 쓸 거예요")).isNull();
         assertThat(AgeReplyParser.parse("두 개 쓸 거예요")).isNull();
