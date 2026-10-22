@@ -43,7 +43,7 @@ import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
  *
  * 실행: CONTEXT_PROBE=true CONTEXT_PROBE_OUT=<결과 jsonl> [CONTEXT_PROBE_CLIENTS=bedrock,router] [CONTEXT_PROBE_REPEATS=3]
  *       [CONTEXT_PROBE_KEYS=cases,...] [CONTEXT_PROBE_ROUTER_URL=http://127.0.0.1:11435] [CONTEXT_PROBE_OLLAMA_MODEL=ab-chat]
- *       [CONTEXT_PROBE_GUARDS=true] [LLM_BEDROCK_REGION=ap-northeast-1]
+ *       [CONTEXT_PROBE_GUARDS=true] [CONTEXT_PROBE_MODE=REGEX_GATED|HISTORY_GATED|LLM_ALL] [CONTEXT_PROBE_CASES=<입력 json>] [LLM_BEDROCK_REGION=ap-northeast-1]
  *       ./gradlew test --tests '*ContextResolutionClientProbe'
  * Bedrock 자격 증명은 AWS 기본 자격 증명(AWS_PROFILE 등)을 쓴다. 채점은 정답 관계와 이전 발언 번호가 모두 맞아야 일치다.
  */
@@ -57,7 +57,8 @@ class ContextResolutionClientProbe {
 
     @Test
     void compareClients() throws Exception {
-        JsonNode fixtures = mapper.readTree(Files.readString(Path.of("scripts/context-resolution-evaluation/cases.json")));
+        JsonNode fixtures = mapper.readTree(Files.readString(Path.of(System.getenv().getOrDefault(
+                "CONTEXT_PROBE_CASES", "scripts/context-resolution-evaluation/cases.json"))));
         List<String> keys = list("CONTEXT_PROBE_KEYS", DEFAULT_KEYS);
         List<String> clients = list("CONTEXT_PROBE_CLIENTS", List.of("bedrock", "router"));
         int repeats = Integer.parseInt(System.getenv().getOrDefault("CONTEXT_PROBE_REPEATS", "3"));
@@ -126,7 +127,8 @@ class ContextResolutionClientProbe {
         };
         // 흔들림 보완(chat.question-resolution.stability-guards)은 CONTEXT_PROBE_GUARDS로 고른다. 기본은 켬
         boolean guards = Boolean.parseBoolean(System.getenv().getOrDefault("CONTEXT_PROBE_GUARDS", "true"));
-        var resolver = new ChatQuestionResolver(recording, mapper, ExecutionTrace.noop(), Mode.REGEX_GATED, guards);
+        Mode mode = Mode.valueOf(System.getenv().getOrDefault("CONTEXT_PROBE_MODE", "REGEX_GATED"));
+        var resolver = new ChatQuestionResolver(recording, mapper, ExecutionTrace.noop(), mode, guards);
         var context = new ChatContext(1L, INPUT_MESSAGE_ID, null, history, question, 100);
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("client", clientName);

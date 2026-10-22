@@ -227,7 +227,10 @@ public class ChatQuestionResolver {
                 || isCorrectionOfHistory(noWhitespace) && hasCustomerHistory(context)
                 // "설치 기사님 방문비용은 따로 청구되는 건가요?"처럼 길어도 업무 없이 비용 항목만 물으면 대상 유무는 모델이 판정한다.
                 || stabilityGuards && COST_ITEM.matcher(noWhitespace).find() && hasCustomerHistory(context);
-        if (mode == Mode.REGEX_GATED && !candidate) {
+        if (mode == Mode.HISTORY_GATED) {
+            candidate = candidate || hasCustomerHistory(context);
+        }
+        if (mode != Mode.LLM_ALL && !candidate) {
             Resolution result = new Resolution(question, false, List.of());
             recordResolution(command, question, result);
             return result;
