@@ -63,7 +63,7 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
             throw new GeneralException(StoreErrorCode.ROUTE_NOT_FOUND);
         }
         if (!STATUS_OK.equals(response.status()) || response.routes() == null || response.routes().isEmpty()
-                || response.routes().get(0).properties() == null) {
+                || response.routes().get(0) == null || response.routes().get(0).properties() == null) {
             throw KakaoRouteCalls.createUnexpectedException(TAG, "status=" + response.status());
         }
         StoreRouteResponse transit = storeRouteConverter.toTransitResponse(response.routes().get(0));

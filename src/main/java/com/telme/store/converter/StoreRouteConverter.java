@@ -28,8 +28,8 @@ public class StoreRouteConverter {
         steps.addAll(transit.steps());
         return StoreRouteResponse.builder()
                 .mode(RouteMode.TRANSIT)
-                .distanceMeters(transit.distanceMeters() + walk.distanceMeters())
-                .durationSeconds(transit.durationSeconds() + walk.durationSeconds())
+                .distanceMeters(addMetrics(transit.distanceMeters(), walk.distanceMeters(), "totalDistance"))
+                .durationSeconds(addMetrics(transit.durationSeconds(), walk.durationSeconds(), "totalTime"))
                 .fare(transit.fare())
                 .transfers(transit.transfers())
                 .steps(List.copyOf(steps))
@@ -38,13 +38,15 @@ public class StoreRouteConverter {
 
     // 자동차는 안내 단위 없이 도로별 좌표를 이어 한 구간으로 내려 준다
     public StoreRouteResponse toCarResponse(KakaoNaviDirectionsResponse.Route route) {
+        requireObject(route, "route");
+        requireObject(route.summary(), "summary");
         List<Coordinate> path = new ArrayList<>();
-        if (route.sections() != null) {
-            route.sections().stream()
-                    .filter(section -> section.roads() != null)
-                    .flatMap(section -> section.roads().stream())
-                    .filter(road -> road.vertexes() != null)
-                    .forEach(road -> appendVertexes(path, road.vertexes()));
+        for (var section : elementsOrEmpty(route.sections(), "sections")) {
+            for (var road : elementsOrEmpty(section.roads(), "sections.roads")) {
+                if (road.vertexes() != null) {
+                    appendVertexes(path, road.vertexes());
+                }
+            }
         }
         int distance = requireMetric(route.summary().distance(), "summary.distance");
         int duration = requireMetric(route.summary().duration(), "summary.duration");
@@ -53,8 +55,9 @@ public class StoreRouteConverter {
     }
 
     public StoreRouteResponse toTransitResponse(KakaoTransitRouteResponse.Route route) {
-        KakaoTransitRouteResponse.RouteProperties properties = route.properties();
-        List<Step> steps = route.steps() == null ? List.of() : route.steps().stream()
+        KakaoTransitRouteResponse.RouteProperties properties =
+                requireObject(requireObject(route, "route").properties(), "properties");
+        List<Step> steps = elementsOrEmpty(route.steps(), "steps").stream()
                 .map(this::toTransitStep)
                 .toList();
         Integer fare = properties.fare() == null ? null : properties.fare().value();
@@ -65,10 +68,10 @@ public class StoreRouteConverter {
 
     // 도보·자전거 응답은 legs[].steps[] 구조다. 경유지를 쓰지 않으므로 leg는 하나지만 여러 개여도 순서대로 이어 붙인다
     public StoreRouteResponse toLegResponse(RouteMode mode, KakaoLegRouteResponse.Route route) {
+        requireObject(requireObject(route, "route").properties(), "properties");
         StepType type = mode == RouteMode.BICYCLE ? StepType.BICYCLE : StepType.WALK;
-        List<Step> steps = route.legs() == null ? List.of() : route.legs().stream()
-                .filter(leg -> leg.steps() != null)
-                .flatMap(leg -> leg.steps().stream())
+        List<Step> steps = elementsOrEmpty(route.legs(), "legs").stream()
+                .flatMap(leg -> elementsOrEmpty(leg.steps(), "legs.steps").stream())
                 .map(step -> toLegStep(type, step))
                 .toList();
         return new StoreRouteResponse(mode,
@@ -77,7 +80,8 @@ public class StoreRouteConverter {
     }
 
     private Step toTransitStep(KakaoTransitRouteResponse.Step step) {
-        KakaoTransitRouteResponse.StepProperties properties = step.properties();
+        KakaoTransitRouteResponse.StepProperties properties =
+                requireObject(requireObject(step, "step").properties(), "steps.properties");
         return new Step(toTransitStepType(properties.type()), properties.guidance(),
                 requireMetric(properties.distance(), "steps.properties.distance"),
                 requireMetric(properties.time(), "steps.properties.time"), findLineName(properties),
@@ -85,7 +89,8 @@ public class StoreRouteConverter {
     }
 
     private Step toLegStep(StepType type, KakaoLegRouteResponse.Step step) {
-        KakaoLegRouteResponse.StepProperties properties = step.properties();
+        KakaoLegRouteResponse.StepProperties properties =
+                requireObject(requireObject(step, "step").properties(), "steps.properties");
         return new Step(type, properties.guidance(),
                 requireMetric(properties.distance(), "steps.properties.distance"),
                 requireMetric(properties.time(), "steps.properties.time"),
@@ -121,23 +126,67 @@ public class StoreRouteConverter {
         if (points == null) {
             return List.of();
         }
-        return points.stream()
-                .filter(point -> point != null && point.size() >= 2)
-                .map(point -> new Coordinate(point.get(1), point.get(0)))
-                .toList();
+        List<Coordinate> coordinates = new ArrayList<>();
+        for (List<Double> point : elementsOrEmpty(points, "path.points")) {
+            if (point.size() < 2) {
+                throw invalidResponse("path.points: 좌표 부족");
+            }
+            coordinates.add(coordinate(point.get(0), point.get(1)));
+        }
+        return List.copyOf(coordinates);
     }
 
-    // [x1, y1, x2, y2, ...] 쌍을 맞춰 읽고, 짝이 안 맞는 마지막 값은 버린다
     private void appendVertexes(List<Coordinate> path, List<Double> vertexes) {
-        for (int i = 0; i + 1 < vertexes.size(); i += 2) {
-            path.add(new Coordinate(vertexes.get(i + 1), vertexes.get(i)));
+        if (vertexes.size() % 2 != 0) {
+            throw invalidResponse("vertexes: 좌표 부족");
         }
+        for (int i = 0; i < vertexes.size(); i += 2) {
+            path.add(coordinate(vertexes.get(i), vertexes.get(i + 1)));
+        }
+    }
+
+    private Coordinate coordinate(Double longitude, Double latitude) {
+        if (longitude == null || latitude == null || !Double.isFinite(longitude) || !Double.isFinite(latitude)
+                || longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+            throw invalidResponse("path: 잘못된 좌표");
+        }
+        return new Coordinate(latitude, longitude);
+    }
+
+    private <T> List<T> elementsOrEmpty(List<T> values, String field) {
+        if (values == null) {
+            return List.of();
+        }
+        for (T value : values) {
+            requireObject(value, field);
+        }
+        return values;
+    }
+
+    private <T> T requireObject(T value, String field) {
+        if (value == null) {
+            throw invalidResponse(field);
+        }
+        return value;
+    }
+
+    private int addMetrics(int first, int second, String field) {
+        long total = (long) first + second;
+        if (first < 0 || second < 0 || total > Integer.MAX_VALUE) {
+            throw invalidResponse(field);
+        }
+        return (int) total;
+    }
+
+    private GeneralException invalidResponse(String field) {
+        log.warn("[KakaoRoute] 잘못된 응답 구조·값 field={}", field);
+        return new GeneralException(StoreErrorCode.ROUTE_UNAVAILABLE);
     }
 
     // 누락된 측정값은 도착(0m·0초)과 다르므로 정상 응답으로 위장하지 않는다.
     private int requireMetric(Integer value, String field) {
-        if (value == null) {
-            log.warn("[KakaoRoute] 거리·시간 필드 누락 field={}", field);
+        if (value == null || value < 0) {
+            log.warn("[KakaoRoute] 거리·시간 필드 누락 또는 음수 field={}", field);
             throw new GeneralException(StoreErrorCode.ROUTE_UNAVAILABLE);
         }
         return value;

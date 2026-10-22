@@ -46,6 +46,9 @@ public class KakaoNaviCarRouteClient implements StoreRouteClient {
             throw KakaoRouteCalls.createUnexpectedException(TAG, "routes가 비어 있음");
         }
         KakaoNaviDirectionsResponse.Route route = response.routes().get(0);
+        if (route == null) {
+            throw KakaoRouteCalls.createUnexpectedException(TAG, "routes[0]가 null");
+        }
         Integer resultCode = route.resultCode();
         if (resultCode != null && resultCode == RESULT_SAME_POINT) {
             return StoreRouteResponse.arrived(RouteMode.CAR);

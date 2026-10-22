@@ -281,7 +281,7 @@ class KakaoRouteClientTest {
                 "roads":[{"name":"세종대로","distance":100,"duration":20,
                           "vertexes":[126.9779,37.5663,127.0,37.5]},
                          {"name":"테헤란로","distance":50,"duration":10,
-                          "vertexes":[127.027621,37.497942,127.5]}],
+                          "vertexes":[127.027621,37.497942]}],
                 "guides":[]}]}]}
             """;
 
