@@ -87,7 +87,6 @@ class ChatExecutionRetryApiIntegrationTest {
                         "select count(m) from ChatMessage m where m.session.sessionId = :id and m.role = 'USER'",
                         Long.class).setParameter("id", sessionId).getSingleResult()).isEqualTo(1L);
         history(sessionId).andExpectRetryable(null);
-        // 대체 게이트가 보는 값: 처음 실행은 아니고, 다시 시도한 실행만 true
         assertThat(retryLookup.afterUserRetry(failedId)).isFalse();
         assertThat(retryLookup.afterUserRetry(retriedId)).isTrue();
     }

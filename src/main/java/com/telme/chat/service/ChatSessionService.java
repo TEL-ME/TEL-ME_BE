@@ -245,8 +245,7 @@ public class ChatSessionService {
         return response;
     }
 
-    // 답변 생성이 실패해 사용자가 다시 시도할 수 있는 실행인지. 같은 입력 메시지를 새 실행으로 다시 처리한다.
-    // 새 질문이 아니므로 입력 가드·게스트 일일 제한·질문 메시지 저장을 거치지 않는다.
+    // 새 질문이 아니라 같은 입력 메시지의 재처리라 입력 가드·일일 제한·질문 저장을 거치지 않음
     @Transactional
     public ChatMessageSendResponse retryExecution(
             ChatActor actor,
@@ -272,7 +271,6 @@ public class ChatSessionService {
         if (findRunningExecution(sessionId).isPresent()) {
             throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
         }
-        // 그 뒤에 다른 질문이 이어졌다면 이미 지나간 답변이다
         boolean latest = chatExecutionRepository.findFirstBySession_SessionIdOrderByExecutionIdDesc(sessionId)
                 .map(execution -> execution.getExecutionId().equals(executionId))
                 .orElse(false);
@@ -292,7 +290,6 @@ public class ChatSessionService {
         return chatMessageConverter.toSendResponse(inputMessage, execution);
     }
 
-    // 모델 호출 실패로 끝났고 아직 다시 시도하지 않은 실행
     private static boolean isRetryable(ChatExecution execution) {
         return execution.getStatus() == ChatExecution.Status.FAILED
                 && execution.getAttempt() == 1

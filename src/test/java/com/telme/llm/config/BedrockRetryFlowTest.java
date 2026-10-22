@@ -38,8 +38,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
-// 운영과 같은 순서(Bedrock → 호출 기록 → 자동 재시도 → 답변 생성의 대체 게이트)로 이어,
-// 실제 AWS SDK가 가짜 서버의 오류 응답을 어떻게 읽어 재시도·사용자 재시도·엑사원 대체로 가는지 확인한다. 실제 Bedrock은 부르지 않는다
+// 운영과 같은 순서로 이은 체인에 실제 AWS SDK와 가짜 서버로 재시도·사용자 재시도·엑사원 대체 흐름 확인
 class BedrockRetryFlowTest {
 
     private static final String MODEL = "openai.gpt-oss-120b-1:0";

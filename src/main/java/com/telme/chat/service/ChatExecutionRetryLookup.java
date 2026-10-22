@@ -5,7 +5,6 @@ import com.telme.llm.service.UserRetryLookup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// 실행의 시도 횟수가 2 이상이면 사용자가 다시 시도한 실행이다
 @Component
 @RequiredArgsConstructor
 public class ChatExecutionRetryLookup implements UserRetryLookup {

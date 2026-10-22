@@ -36,7 +36,6 @@ public record ChatFailure(ChatMessage.Status status, String errorCode) {
                 || ChatErrorCode.OUTPUT_CHECK_FAILED.getCode().equals(errorCode);
     }
 
-    /** 사용자가 다시 시도 버튼으로 같은 답변 생성을 한 번 더 요청할 수 있는 실패인지 알린다. */
     @JsonProperty("retryable")
     public boolean retryable() {
         return status == ChatMessage.Status.FAILED && LlmErrorCode.RETRYABLE_FAILURE.getCode().equals(errorCode);

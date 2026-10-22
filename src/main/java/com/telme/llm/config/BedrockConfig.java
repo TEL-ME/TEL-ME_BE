@@ -17,8 +17,8 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClientBuilder;
 
-// Bedrock LLM. 답변 생성용 LlmClient(@Primary Ollama, Fake)와 섞이지 않게
-// 이름(JUDGE_LLM_CLIENT, 근거 판정은 EVIDENCE_JUDGE_LLM_CLIENT)으로만 주입받게 한다. llm.bedrock.enabled가 false면 빈을 만들지 않는다
+// 검색 근거 판정 전용 LLM. 답변 생성용 LlmClient(@Primary Ollama, Fake)와 섞이지 않게
+// 이름(JUDGE_LLM_CLIENT)으로만 주입받게 한다. llm.bedrock.enabled가 false면 빈을 만들지 않는다
 @Configuration
 @EnableConfigurationProperties({BedrockProperties.class, BedrockRetryProperties.class})
 public class BedrockConfig {
@@ -51,9 +51,7 @@ public class BedrockConfig {
                         .retryStrategy(AwsRetryStrategy.doNotRetry()));
     }
 
-    // 근거 판정을 뺀 모든 Bedrock 호출(답변 생성, 라우팅, 질문 해소 등)이 쓴다.
-    // 순간 장애(시간 초과·429·503)는 한 번 더 부른 뒤 실패로 넘겨, 곧바로 엑사원으로 대체되지 않게 한다
-    // 기록이 재시도 안쪽이라 시도마다 llm_generations에 한 줄씩 남는다(executionId가 있을 때만)
+    // 근거 판정 외 Bedrock 호출용. 순간 장애는 재시도
     @Bean(name = JUDGE_LLM_CLIENT, defaultCandidate = false)
     @ConditionalOnProperty(name = "llm.bedrock.enabled", havingValue = "true")
     public LlmClient judgeLlmClient(
@@ -65,7 +63,7 @@ public class BedrockConfig {
                 recordingClient(bedrockRuntimeClient, properties, recorder), retryProperties.toRetryProperties());
     }
 
-    // 근거 판정 전용. 실패하면 호출하는 쪽 규칙으로 처리하고 재시도는 지연만 길어져 재시도하지 않는다
+    // 근거 판정 전용. 재시도 없음
     @Bean(name = EVIDENCE_JUDGE_LLM_CLIENT, defaultCandidate = false)
     @ConditionalOnProperty(name = "llm.bedrock.enabled", havingValue = "true")
     public LlmClient evidenceJudgeLlmClient(
@@ -75,6 +73,7 @@ public class BedrockConfig {
         return recordingClient(bedrockRuntimeClient, properties, recorder);
     }
 
+    // 호출마다 llm_generations에 모델·지연·결과를 남긴다(executionId가 있을 때만)
     private static RecordingLlmClient recordingClient(
             BedrockRuntimeClient bedrockRuntimeClient, BedrockProperties properties, LlmGenerationRecorder recorder) {
         return new RecordingLlmClient(

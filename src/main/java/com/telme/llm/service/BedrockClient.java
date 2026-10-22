@@ -23,7 +23,6 @@ import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
 @RequiredArgsConstructor
 public class BedrockClient implements LlmClient {
 
-    // 한도 초과·서버 일시 장애·응답 지연은 잠시 뒤 다시 부르면 성공할 수 있어 재시도 대상으로 구분한다
     private static final Set<Integer> TRANSIENT_STATUSES = Set.of(408, 429, 503, 504);
 
     private final BedrockRuntimeClient client;
@@ -93,7 +92,6 @@ public class BedrockClient implements LlmClient {
                 return new LlmCallException(LlmErrorCode.TEMPORARILY_UNAVAILABLE,
                         "status=" + service.statusCode() + ", code=" + errorCode);
             }
-            // 다시 호출해도 같은 결과인 요청·권한·설정 오류. 사용자 재시도 대상이 아니라 바로 대체 모델로 넘긴다
             if (service.statusCode() >= 400 && service.statusCode() < 500) {
                 log.error("[Bedrock] 설정·권한 오류 status={}, code={}", service.statusCode(), errorCode);
                 return new LlmCallException(LlmErrorCode.REQUEST_REJECTED,
