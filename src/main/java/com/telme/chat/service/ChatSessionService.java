@@ -208,7 +208,7 @@ public class ChatSessionService {
         if (findRunningExecution(sessionId).isPresent()) {
             throw new GeneralException(ChatErrorCode.EXECUTION_IN_PROGRESS);
         }
-        guestDailyChatLimit.check(actor);
+        Integer guestQuestionsRemaining = guestDailyChatLimit.check(actor);
 
         Instant completedAt = Instant.now();
         ChatMessage message = chatMessageAppender.append(session, ChatMessage.builder()
@@ -227,7 +227,8 @@ public class ChatSessionService {
         session.touch(completedAt);
         eventPublisher.publishEvent(new ChatProcessingCommand(execution.getExecutionId(), sessionId,
                 message.getMessageId(), message.getContent(), coordinates, stopwatch));
-        ChatMessageSendResponse response = chatMessageConverter.toSendResponse(message, execution);
+        ChatMessageSendResponse response = chatMessageConverter.toSendResponse(message, execution)
+                .withGuestQuestionsRemaining(guestQuestionsRemaining);
         if (guarded.notice() != null) {
             response = response.withInputGuard(guarded.notice());
         }

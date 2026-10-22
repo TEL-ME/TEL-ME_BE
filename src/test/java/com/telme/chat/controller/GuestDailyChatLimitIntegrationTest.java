@@ -1,6 +1,7 @@
 package com.telme.chat.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -82,10 +83,14 @@ class GuestDailyChatLimitIntegrationTest {
     @DisplayName("게스트는 하루 한도까지 질문하고, 넘으면 CHAT429-0을 받으며 질문이 저장되지 않는다")
     void 한도를_넘으면_거절한다() throws Exception {
         MockHttpSession guest = guestSession(persistGuest());
+        assertThat(guestLimit(guest).path("remaining").asInt()).isEqualTo(3);
 
         for (int i = 1; i <= 3; i++) {
-            assertThat(send(guest, "요금제 질문 " + i).getResponse().getStatus()).isEqualTo(201);
+            MvcResult accepted = send(guest, "요금제 질문 " + i);
+            assertThat(accepted.getResponse().getStatus()).isEqualTo(201);
+            assertThat(body(accepted).path("result").path("guestQuestionsRemaining").asInt()).isEqualTo(3 - i);
         }
+        assertThat(guestLimit(guest).path("remaining").asInt()).isZero();
 
         MvcResult rejected = send(guest, "요금제 질문 4");
         assertThat(rejected.getResponse().getStatus()).isEqualTo(429);
@@ -146,8 +151,13 @@ class GuestDailyChatLimitIntegrationTest {
 
         MockHttpSession member = memberSession(persistUser());
         for (int i = 1; i <= 4; i++) {
-            assertThat(send(member, "회원 질문 " + i).getResponse().getStatus()).isEqualTo(201);
+            MvcResult accepted = send(member, "회원 질문 " + i);
+            assertThat(accepted.getResponse().getStatus()).isEqualTo(201);
+            assertThat(body(accepted).path("result").has("guestQuestionsRemaining")).isFalse();
         }
+        JsonNode memberLimit = guestLimit(member);
+        assertThat(memberLimit.path("limited").asBoolean()).isFalse();
+        assertThat(memberLimit.path("remaining").isNull()).isTrue();
     }
 
     @Test
@@ -226,6 +236,12 @@ class GuestDailyChatLimitIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MessageRequest(content, requestId))))
                 .andReturn();
+    }
+
+    private JsonNode guestLimit(MockHttpSession actor) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/chat/guest-limit").session(actor)).andReturn();
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
+        return body(result).path("result");
     }
 
     private long createSession(MockHttpSession actor) throws Exception {
