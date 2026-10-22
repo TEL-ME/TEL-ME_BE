@@ -105,6 +105,8 @@ public class QueryRoutingService {
     private final UnknownFaqRecheck unknownFaqRecheck;
     // 끄면 의도 분류가 나눈 FAQ 하위 질문 개수를 그대로 쓰고 하위 질문마다 원문 근거만 확인한다. 값은 RoutingLlmConfiguration이 정한다
     private boolean requestInventoryEnabled = false;
+    // 없으면 매장 찾기 업무를 앞 상담에서 가져오지 않는다
+    private StoreVisitServiceType storeVisitServiceType;
 
     public QueryRoutingService(
             LlmClient llmClient,
@@ -155,6 +157,11 @@ public class QueryRoutingService {
     @Autowired(required = false)
     void setRoutingRequestInventory(RoutingRequestInventory inventory) {
         this.requestInventoryEnabled = inventory.enabled();
+    }
+
+    @Autowired(required = false)
+    void setStoreVisitServiceType(StoreVisitServiceType storeVisitServiceType) {
+        this.storeVisitServiceType = storeVisitServiceType;
     }
 
     // Context 없이 질문만으로 분류한다. 멀티턴 지시어를 풀어야 하면 아래 오버로드를 쓴다
@@ -391,6 +398,7 @@ public class QueryRoutingService {
         validateFaqSearchQueries(payload, question, analysisQuestion);
         payload = preserveFaqQuestionMeaning(
                 payload, analysisQuestion, question, previousSubject, context, restored, executionId);
+        payload = withVisitedServiceType(payload, userMessage, question);
         ensureSingleConsultSupported(payload, singleConsultOnly, question);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
         ensureSingleConsultSupported(result, singleConsultOnly, question);
@@ -901,7 +909,7 @@ public class QueryRoutingService {
             if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
                 // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
                 // 원문 구간을 확정하지 못하면 모델 검색어로 되돌아가지 않고 조건을 비워 되묻는다.
-                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context);
+                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context, question);
                 // 모델이 업무를 비워도 이 요청의 원문 인용 구간에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
                 // 인용이 없으면 채우지 않는다. 검색어는 모델이 다시 쓴 문장이라 업무 근거로 쓰지 않는다.
                 String section = sub.requestQuote() == null || sub.requestQuote().isBlank()
@@ -951,6 +959,26 @@ public class QueryRoutingService {
 
     private Set<String> tokens(Pattern pattern, String text) {
         return tokens(pattern, text, false);
+    }
+
+    private String serviceTypeEvidence(String question, ChatContext context) {
+        return ruleBasedFallback.hasServiceTypeMention(question) ? question : groundingText(question, context);
+    }
+
+    // 띄어쓰기를 무시하고 맞출 때 지명 뒤에 올 수 있는 말. "대구 수성구쪽에"는 받고, "제 주변"의 '제 주'처럼 낱말 중간에서 끝나면 받지 않는다
+    private static final String LOCATION_SUFFIX = "(?:$|[^가-힣A-Za-z0-9]|(?:에서|에|으로|로|쪽|근처|부근|인근|은|는|이|가|도|요)+(?![가-힣]))";
+
+    // 모델이 지역의 띄어쓰기를 바꿔 내기도 한다("대구 수성구" → "대구수성구"). 원문에 그대로 없으면 띄어쓰기만 다른 지명이 있는지 본다
+    private static boolean mentionsLocation(String evidence, String value) {
+        if (evidence.contains(value)) {
+            return true;
+        }
+        String body = value.replaceAll("\\s+", "").codePoints()
+                .mapToObj(Character::toString)
+                .map(Pattern::quote)
+                .collect(Collectors.joining("\\s*"));
+        return !body.isEmpty()
+                && Pattern.compile("(?<![가-힣A-Za-z0-9])" + body + "(?=" + LOCATION_SUFFIX + ")").matcher(evidence).find();
     }
 
     private Set<String> tokens(Pattern pattern, String text, boolean candidatePlace) {
@@ -1003,12 +1031,19 @@ public class QueryRoutingService {
 
     private Map<String, String> validConditions(
             Map<String, String> conditions, String question, ChatContext context) {
+        return validConditions(conditions, question, context, question);
+    }
+
+    // question은 이 조건의 원문 근거(복합 질문이면 그 요청의 구간), wholeQuestion은 고객 질문 전체.
+    // 업무는 구간에 업무 이름이 없으면 질문 전체의 업무 이름과 어긋나지 않는지 본다
+    private Map<String, String> validConditions(
+            Map<String, String> conditions, String question, ChatContext context, String wholeQuestion) {
         if (conditions == null || conditions.isEmpty()) {
             return Collections.emptyMap();
         }
         String locationEvidence = referenceText(PLACE, question, context);
-        String serviceTypeEvidence = ruleBasedFallback.hasServiceTypeMention(question)
-                ? question : groundingText(question, context);
+        String serviceTypeEvidence = serviceTypeEvidence(question, context);
+        String wholeServiceTypeEvidence = serviceTypeEvidence(wholeQuestion, context);
         Map<String, String> valid = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : conditions.entrySet()) {
             String key = entry.getKey();
@@ -1020,14 +1055,14 @@ public class QueryRoutingService {
             }
             if (FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
                     && (!SERVICE_TYPES.contains(value)
-                        || !ruleBasedFallback.matchesServiceType(value, serviceTypeEvidence))) {
+                        || !ruleBasedFallback.supportsServiceType(value, serviceTypeEvidence, wholeServiceTypeEvidence))) {
                 continue;
             }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
                 continue;
             }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
-                    && (!locationEvidence.contains(value)
+                    && (!mentionsLocation(locationEvidence, value)
                         || (!tokens(PLACE, value).isEmpty()
                             && !tokens(PLACE, locationEvidence).containsAll(tokens(PLACE, value))))) {
                 continue;
@@ -1266,7 +1301,8 @@ public class QueryRoutingService {
             .temperature(0.0)
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v5")
+            // v6: 업무를 물었을 때 정한 업무가 없다는 답을 업무 거절(DECLINED)로 읽는다(TELME-214)
+            .promptVersion("routing-follow-up-v6")
             .build();
 
         String json = llmClient.generate(request);
@@ -1360,6 +1396,39 @@ public class QueryRoutingService {
             undecided.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, FollowUpRouteResponse.SERVICE_TYPE_UNDECIDED);
             return undecided;
         }
+        return filled;
+    }
+
+    // 매장 방문을 안내받은 뒤 업무 없이 매장을 찾으면 그 상담의 업무로 찾는다. 질문에 업무 표현이 있으면 질문을 따른다
+    private LlmRoutingPayload withVisitedServiceType(
+            LlmRoutingPayload payload, ChatMessage userMessage, String question) {
+        if (storeVisitServiceType == null || payload.intent() != QueryRouting.Intent.STORE
+                || payload.extractedConditions().containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY)
+                || ruleBasedFallback.hasServiceTypeMention(question)) {
+            return payload;
+        }
+        String serviceType = storeVisitServiceType.of(userMessage);
+        if (serviceType == null) {
+            return payload;
+        }
+        log.info("[라우팅] 매장 방문을 안내한 앞 상담의 업무로 매장을 찾습니다: messageId={}, serviceType={}",
+                userMessage.getMessageId(), serviceType);
+        Map<String, String> extracted = new LinkedHashMap<>(payload.extractedConditions());
+        extracted.put(FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType);
+        List<LlmRoutingPayload.SubQueryPayload> subQueries = payload.subQueries().stream()
+                .map(sub -> sub.intent() != ConsultRequest.Intent.STORE
+                        || sub.conditions().containsKey(FollowUpRouteResponse.SERVICE_TYPE_KEY) ? sub
+                        : new LlmRoutingPayload.SubQueryPayload(sub.order(), sub.intent(), sub.queryText(),
+                                withEntry(sub.conditions(), FollowUpRouteResponse.SERVICE_TYPE_KEY, serviceType),
+                                sub.requestQuote()))
+                .toList();
+        return new LlmRoutingPayload(
+                payload.intent(), payload.confidence(), payload.refinedQuery(), extracted, subQueries);
+    }
+
+    private static Map<String, String> withEntry(Map<String, String> conditions, String key, String value) {
+        Map<String, String> filled = new LinkedHashMap<>(conditions);
+        filled.put(key, value);
         return filled;
     }
 

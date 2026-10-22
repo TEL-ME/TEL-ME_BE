@@ -65,6 +65,24 @@ class RuleBasedRoutingFallbackTest {
         assertThat(result.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.STORE);
     }
 
+    // 업무 표현이 둘이면 먼저 걸린 번호이동을 고르지 않고 업무 없이 찾는다(PR #199 리뷰).
+    // 모델 호출이 실패해 규칙으로 분류할 때도 같은 함수를 쓴다
+    @Test
+    void classify_storeWithTwoServicesLeavesServiceTypeEmpty() {
+        LlmRoutingPayload result = fallback.classify("번호이동 말고 신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
+        assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+    }
+
+    @Test
+    void classify_storeWithOneServiceKeepsIt() {
+        LlmRoutingPayload result = fallback.classify("신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.extractedConditions()).containsEntry("serviceType", "NEW_LINE");
+    }
+
     @Test
     void storeVisitPolicyIsFaqRatherThanStoreLookup() {
         LlmRoutingPayload result = fallback.classify(
@@ -142,11 +160,11 @@ class RuleBasedRoutingFallbackTest {
     }
 
     @Test
-    @DisplayName("여러 패턴이 동시에 매칭될 경우 우선순위에 따라 결정론적으로 serviceType을 추출한다")
-    void extract_conditions_priority() {
+    @DisplayName("여러 업무가 함께 매칭되면 한쪽을 고르지 않고 serviceType을 비운다(두 업무를 다 하는 매장이 빠지지 않게)")
+    void extract_conditions_multiple_services_leave_service_type_empty() {
         LlmRoutingPayload result = fallback.classify("신규 개통도 하고 유심 재발급도 대리점에서 가능한가요?");
 
-        assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
     }
 
     @Test
@@ -270,5 +288,35 @@ class RuleBasedRoutingFallbackTest {
         assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("네 그리고 가까운 매장 찾아주세요")).isFalse();
         assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("강남역 근처 매장 어디예요")).isFalse();
         assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(null)).isFalse();
+    }
+
+    // 업무 이름이 없는 문장은 모델이 읽은 업무를 받는다("유심 깨짐"처럼 낱말 목록으로 다 잡을 수 없는 표현)
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "아빠 명의로 된 폰을 제 앞으로 돌리려고 하는데 그거 처리해주는 매장 가까운 데가 어디예요? | NAME_CHANGE",
+        "세컨폰 하나 만들려고요. 매장 위치요 | NEW_LINE",
+        "쓰던 번호 그대로 TELME로 옮기고 싶어요. 제 주변에 매장 있나요? | PORT_IN",
+        "유심 깨짐 ㅠ 대리점 어디있음? | USIM_REISSUE"
+    })
+    void acceptsServiceTypeReadByModelWhenNoServiceIsNamed(String question, String serviceType) {
+        assertThat(fallback.supportsServiceType(serviceType, question, question)).isTrue();
+    }
+
+    @Test
+    void acceptsServiceTypeReadByModelOnlyWhenItMatchesTheNamedService() {
+        assertThat(fallback.supportsServiceType("NAME_CHANGE", "명의변경 가능한 매장 찾아줘", "명의변경 가능한 매장 찾아줘")).isTrue();
+        assertThat(fallback.supportsServiceType("PORT_IN", "명의변경 가능한 매장 찾아줘", "명의변경 가능한 매장 찾아줘")).isFalse();
+        // 업무 이름이 여럿이면 어느 쪽인지 알 수 없어 받지 않는다(필터 없이 검색)
+        assertThat(fallback.supportsServiceType("NEW_LINE", "번호이동 말고 신규 개통 매장", "번호이동 말고 신규 개통 매장")).isFalse();
+    }
+
+    // 복합 질문의 매장 요청은 자기 구간을 먼저 보고, 구간에 업무 이름이 없으면 질문 전체의 업무 이름과 맞춘다
+    @Test
+    void checksServiceTypeOfStoreRequestAgainstItsSectionThenTheWholeQuestion() {
+        String whole = "명의변경 서류 알려주고 근처 매장도 찾아줘";
+        assertThat(fallback.supportsServiceType("NAME_CHANGE", "근처 매장도 찾아줘", whole)).isTrue();
+        assertThat(fallback.supportsServiceType("PORT_IN", "근처 매장도 찾아줘", whole)).isFalse();
+        String twoServices = "유심 재발급 비용 알려주고 번호이동 되는 매장 찾아줘";
+        assertThat(fallback.supportsServiceType("PORT_IN", "번호이동 되는 매장 찾아줘", twoServices)).isTrue();
     }
 }
