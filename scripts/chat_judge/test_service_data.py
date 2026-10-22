@@ -72,11 +72,15 @@ class AppMessageTest(unittest.TestCase):
 
     def test_recommendation_rule_picks_the_5g_plan_that_fits_the_usage(self):
         # 앱(PlanRecommender.forUsage)은 5G 중 사용량을 채우는 가장 싼 요금제를 고른다. 5G 중 그냥 가장 싼 요금제가 아니다
+        # 안내는 추천 요금제가 LTE일 때만 한다(MemberRecommendationAnswerer). 알뜰 요금제를 추천하면 5G를 알리지 않는다
         rule = service_data.recommendation_rule_source(None)["answer"]
-        self.assertIn(f"5G 요금제 중 말한 사용량의 {service_data.RECOMMENDATION_MARGIN}배 이상을 주는 가장 싼 요금제", rule)
+        self.assertIn(f"추천한 요금제가 LTE면 5G 요금제 중 말한 사용량의 {service_data.RECOMMENDATION_MARGIN}배 이상을 주는 "
+                      "가장 싼 요금제", rule)
         self.assertIn("채우는 5G 요금제가 없으면 5G 중 데이터가 가장 많은 요금제", rule)
         recommender = (ROOT / "src/main/java/com/telme/consult/service/PlanRecommender.java").read_text(encoding="utf-8")
         self.assertIn("new UsageFit(cheapest, cheapestFittingOrBiggest(fiveG, demand))", recommender)
+        answerer = (ROOT / "src/main/java/com/telme/consult/service/MemberRecommendationAnswerer.java").read_text(encoding="utf-8")
+        self.assertIn("fit.fiveG() != null && plan.getNetworkType() == Plan.NetworkType.LTE", answerer)
 
     def test_service_guidance_matches_whole_template_sentences_only(self):
         self.assertTrue(service_data.is_service_guidance("로그인하시면 이번 달 사용량과 예상 요금을 확인해 드릴 수 있어요."))
