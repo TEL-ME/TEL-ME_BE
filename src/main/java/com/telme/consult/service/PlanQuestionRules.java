@@ -39,6 +39,8 @@ public final class PlanQuestionRules {
             "어떻게(해|하|바꿔|바꾸|가입|신청|변경|골라|고르|알아|봐|받|신고|등록|확인)|어디서|어디에서|방법|절차|요령|기준|조건"
                     + "|자격|누가|몇살|가능|무슨뜻|란무엇|이란|라는게|[는할]법|되는거");
     private static final Pattern CAN_DO = Pattern.compile("수있(어요|나요|을까요|습니까|는지|을지|죠)");
+    // "이번 달 데이터 얼마 남았는지 알 수 있나요?"는 본인 정보를 알려 달라는 요청이다. 방법은 "어떻게", "어디서"로 따로 걸린다
+    private static final Pattern KNOW_CAN_DO = Pattern.compile("(알|확인할|조회할|볼)수있");
     // 데이터·통화·문자를 얼마나 쓸 수 있는지는 가능 여부가 아니라 제공량을 묻는 질문이다
     private static final Pattern ALLOWANCE_AMOUNT = Pattern.compile("(통화|문자|데이터).{0,6}(얼마나|몇)|(얼마나|몇).{0,6}(통화|문자|데이터)");
     private static final Pattern COMPARES = Pattern.compile(
@@ -57,7 +59,8 @@ public final class PlanQuestionRules {
     private static final Pattern OWN_STATE =
             Pattern.compile("지금|현재|오늘|이번\\s*달|가입한\\s*요금제|가입돼|가입되어|쓰고\\s*있|사용\\s*중|당장");
     private static final Pattern OWN_USAGE = Pattern.compile("남은|남았|남아|썼|사용했|보냈|했는지");
-    private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*남(은|았|아)");
+    // 약정이 얼마나 남았는지, 몇 달째인지는 본인 계약을 묻는 말이다
+    private static final Pattern OWN_CONTRACT = Pattern.compile("약정.*(남(은|았|아)|몇(달|개월)째)");
     private static final Pattern GENERAL_COMPARISON = Pattern.compile("비교|차이|중에|달라|나아요|나은|것과|것\\s*중");
     private static final Pattern PLAN_WORD = Pattern.compile(
             "(?i)요금|플랜|데이터|통화|문자|사용량|gb|기가|무제한|5g|lte|알뜰|청소년|시니어|어르신|약정|결합|통신비|통신사|월정액");
@@ -100,10 +103,16 @@ public final class PlanQuestionRules {
         if (HOW_OR_IF.matcher(text).find() || COMPARES.matcher(text).find()) {
             return true;
         }
-        if (CAN_DO.matcher(text).find() && !ALLOWANCE_AMOUNT.matcher(text).find()) {
+        if (CAN_DO.matcher(text).find() && !ALLOWANCE_AMOUNT.matcher(text).find()
+                && !(isMyData(type) && KNOW_CAN_DO.matcher(text).find())) {
             return true;
         }
         return type == PlanQuestionType.PLAN_CATALOG && CHANGES.matcher(text).find();
+    }
+
+    private static boolean isMyData(PlanQuestionType type) {
+        return type == PlanQuestionType.MY_SUBSCRIPTION || type == PlanQuestionType.MY_PENALTY
+                || type == PlanQuestionType.MY_USAGE;
     }
 
     // 모델이 내 정보 질문이라고 해도 본인을 가리키는 표현이 없으면 일반 질문으로 본다

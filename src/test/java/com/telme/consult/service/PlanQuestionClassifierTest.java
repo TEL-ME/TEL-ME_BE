@@ -12,6 +12,8 @@ import com.telme.consult.config.PlanQuestionProperties;
 import com.telme.llm.dto.req.LlmRequest;
 import com.telme.llm.entity.LlmGeneration.TaskType;
 import com.telme.llm.service.LlmClient;
+import com.telme.plan.entity.Plan;
+import com.telme.plan.repository.PlanRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,11 +22,12 @@ import org.mockito.ArgumentCaptor;
 class PlanQuestionClassifierTest {
 
     LlmClient llm = mock(LlmClient.class);
+    PlanRepository plans = mock(PlanRepository.class);
     PlanQuestionClassifier classifier;
 
     @BeforeEach
     void setUp() {
-        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(true, true, false));
+        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(true, true, false), plans);
     }
 
     @Test
@@ -181,7 +184,7 @@ class PlanQuestionClassifierTest {
 
     @Test
     void 꺼져_있으면_모델을_부르지_않고_규칙으로_분류한다() {
-        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(false, true, false));
+        classifier = new PlanQuestionClassifier(llm, new ObjectMapper(), new PlanQuestionProperties(false, true, false), plans);
 
         assertThat(classifier.classify(1L, "내 요금제 뭐야")).isEqualTo(PlanQuestionType.MY_SUBSCRIPTION);
         assertThat(classifier.classify(1L, "요금제 변경은 어떻게 해요")).isEqualTo(PlanQuestionType.NONE);
@@ -206,6 +209,59 @@ class PlanQuestionClassifierTest {
         assertThat(request.promptVersion()).isEqualTo(PlanQuestionPromptTemplates.PROMPT_VERSION);
         assertThat(request.responseSchema().toString())
                 .contains("RECOMMENDATION", "MY_SUBSCRIPTION", "MY_PENALTY", "MY_USAGE", "PLAN_CATALOG", "NONE");
+    }
+
+    @Test
+    void 판매_중인_요금제_목록을_주고_모델이_고른_요금제를_함께_받는다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE))
+                .thenReturn(List.of(plan("FIVE_G_PREMIUM", "5G 프리미엄"), plan("LTE_PLUS", "LTE 플러스")));
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\",\"plans\":[\"FIVE_G_PREMIUM\",\"GONE\"],\"unknownPlan\":false}");
+
+        PlanQuestion classified = classifier.classifyQuestion(1L, "프리미엄 요금제 얼마예요");
+
+        assertThat(classified.type()).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        // 판매 중이 아닌 코드는 버린다
+        assertThat(classified.mention().planCodes()).containsExactly("FIVE_G_PREMIUM");
+        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm).generate(captor.capture());
+        assertThat(captor.getValue().systemPrompt()).contains("- FIVE_G_PREMIUM: 5G 프리미엄", "- LTE_PLUS: LTE 플러스");
+        assertThat(captor.getValue().responseSchema().toString()).contains("FIVE_G_PREMIUM", "unknownPlan");
+    }
+
+    @Test
+    void 목록에_없는_요금제라고_하면_고른_요금제를_두지_않는다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(plan("FIVE_G_PREMIUM", "5G 프리미엄")));
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\",\"plans\":[\"FIVE_G_PREMIUM\"],\"unknownPlan\":true}");
+
+        PlanQuestion.Mention mention = classifier.classifyQuestion(1L, "5G 프리미엄 플러스 얼마예요").mention();
+
+        assertThat(mention.unknownPlan()).isTrue();
+        assertThat(mention.planCodes()).isEmpty();
+    }
+
+    @Test
+    void 요금제_목록_질문이_아니거나_규칙으로_분류하면_고른_요금제가_없다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(plan("FIVE_G_PREMIUM", "5G 프리미엄")));
+        when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\",\"plans\":[],\"unknownPlan\":false}");
+        assertThat(classifier.classifyQuestion(1L, "요금제 추천해줘").mention()).isNull();
+
+        when(llm.generate(any())).thenThrow(new IllegalStateException("down"));
+        PlanQuestion fallback = classifier.classifyQuestion(1L, "5G 프리미엄 요금제 얼마예요");
+        assertThat(fallback.type()).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        assertThat(fallback.mention()).isNull();
+    }
+
+    @Test
+    void 본인_사용량을_알_수_있는지_묻는_말과_전화_사용량_질문도_내_정보_질문으로_받는다() {
+        when(llm.generate(any())).thenReturn("{\"type\":\"MY_USAGE\"}");
+
+        assertThat(classifier.classify(1L, "이번 달 데이터 아직 얼마 남았는지 알 수 있나요")).isEqualTo(PlanQuestionType.MY_USAGE);
+        assertThat(classifier.classify(1L, "이번 달 전화 몇 분 했어요")).isEqualTo(PlanQuestionType.MY_USAGE);
+        assertThat(classifier.classify(1L, "남은 데이터는 어떻게 확인할 수 있나요")).isEqualTo(PlanQuestionType.NONE);
+    }
+
+    private static Plan plan(String code, String name) {
+        return Plan.builder().code(code).name(name).build();
     }
 
     @Test

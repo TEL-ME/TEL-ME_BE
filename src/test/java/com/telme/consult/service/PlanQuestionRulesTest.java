@@ -91,7 +91,8 @@ class PlanQuestionRulesTest {
                 "지금 무슨 요금제 쓰고 있죠",
                 "현재 가입돼 있는 요금제가 뭔지 알려줘요", "현재 요금제 이름이랑 월 요금 알려줘");
         assertMarker(PlanQuestionType.MY_PENALTY, true,
-                "저 약정 몇 개월 남았어요", "지금 해지하면 얼마 내요", "약정 남은 기간 알려줘", "오늘 해지하면 위약금 내야 해요");
+                "저 약정 몇 개월 남았어요", "지금 해지하면 얼마 내요", "약정 남은 기간 알려줘", "오늘 해지하면 위약금 내야 해요",
+                "약정 걸고 쓴 지 몇 달째인지 궁금해요");
         assertMarker(PlanQuestionType.MY_USAGE, true,
                 "이번 달 데이터 얼마나 썼어", "데이터 얼마 남았어요", "남은 데이터 알려줘", "문자 몇 건 보냈는지 궁금해요");
     }
@@ -117,6 +118,15 @@ class PlanQuestionRulesTest {
                 "알뜰 세이브는 문자를 몇 건 보낼 수 있나요", "데이터는 얼마나 쓸 수 있어요");
         assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제를 바꿀 수 있나요", "청소년 요금제에 가입할 수 있어요",
                 "통화 품질을 개선할 수 있나요 얼마나 걸려요");
+    }
+
+    // 내 정보를 알 수 있는지 묻는 말은 알려 달라는 요청이다. 어떻게, 어디서 확인하는지는 방법 질문이다
+    @Test
+    void 내_정보를_알_수_있는지_묻는_말은_절차_질문이_아니다() {
+        assertProcedure(PlanQuestionType.MY_USAGE, false,
+                "이번 달 데이터 아직 얼마 남았는지 알 수 있나요", "이번 달 청구될 요금 미리 좀 알 수 있어요");
+        assertProcedure(PlanQuestionType.MY_USAGE, true, "남은 데이터는 어떻게 확인할 수 있나요", "사용량은 어디서 볼 수 있어요");
+        assertProcedure(PlanQuestionType.PLAN_CATALOG, true, "요금제 종류를 알 수 있나요");
     }
 
     @Test

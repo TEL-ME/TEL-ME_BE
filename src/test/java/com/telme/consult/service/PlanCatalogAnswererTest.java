@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -108,6 +109,32 @@ class PlanCatalogAnswererTest {
 
         jdbc.update("UPDATE plans SET status = 'DISCONTINUED'");
         assertThat(answerer.answer("요금제 뭐가 있어요")).isNull();
+    }
+
+    // 분류 모델이 고른 요금제가 있으면 질문 속 낱말로 찾지 않는다("유튜브 프리미엄"의 '프리미엄'을 5G 프리미엄으로 읽지 않는다)
+    @Test
+    void 모델이_고른_요금제만_상세로_알려준다() {
+        String answer = answerer.answer("5G 스탠다드랑 프리미엄 중 하나요", new PlanQuestion.Mention(List.of("FIVE_G_STANDARD"), false));
+        assertThat(answer).contains("5G 스탠다드", "65,000원").doesNotContain("5G 프리미엄");
+
+        assertThat(answerer.answer("유튜브 프리미엄 포함된 요금제 있어요", new PlanQuestion.Mention(List.of(), false)))
+                .doesNotContain("월정액 85,000원");
+    }
+
+    @Test
+    void 목록에_없는_요금제는_없다고_말하고_전체_목록을_보여준다() {
+        assertThat(answerer.answer("5G 프리미엄 플러스 얼마예요", new PlanQuestion.Mention(List.of(), true)))
+                .startsWith("말씀하신 요금제는 판매 중인 요금제에 없어요")
+                .contains("5G 프리미엄", "LTE 플러스");
+    }
+
+    @Test
+    void 말고_빼고로_뺀_대상은_목록에서_제외한다() {
+        String general = answerer.answer("청소년이나 시니어 말고 일반 요금제는 몇 종류예요");
+        assertThat(general).contains("총 9종").doesNotContain("청소년", "시니어");
+
+        assertThat(answerer.answer("5G 말고 LTE 요금제 알려줘")).contains("LTE 맥스").doesNotContain("5G 스탠다드");
+        assertThat(answerer.answer("시니어 요금제 빼고 제일 싼 요금제")).contains("알뜰 미니").doesNotContain("알뜰 시니어");
     }
 
     @Test

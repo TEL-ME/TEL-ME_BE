@@ -93,7 +93,7 @@ class PlanAnswerProcessingTest {
     @Test
     void 나이대를_모르면_답변_메시지를_열기_전에_나이대를_선택지로_되묻는다() {
         when(faq.clarifies()).thenReturn(true);
-        when(classifier.classify(anyLong(), eq("요금제 추천해줘"))).thenReturn(PlanQuestionType.RECOMMENDATION);
+        when(classifier.classifyQuestion(anyLong(), eq("요금제 추천해줘"))).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
         MissingCondition ask = new MissingCondition("age_group", "나이대가 어떻게 되세요?",
                 List.of("만 14~18세", "만 19~64세", "만 65세 이상"), null);
         when(recommendation.recommend(any(), any(), any(), eq(true)))
@@ -116,8 +116,8 @@ class PlanAnswerProcessingTest {
     }
 
     private void stubPlanAnswer() {
-        when(classifier.classify(anyLong(), eq(PLAN_QUESTION))).thenReturn(PlanQuestionType.PLAN_CATALOG);
-        when(classifier.classify(anyLong(), eq("분실 신고 절차"))).thenReturn(PlanQuestionType.NONE);
+        when(classifier.classifyQuestion(anyLong(), eq(PLAN_QUESTION))).thenReturn(PlanQuestion.of(PlanQuestionType.PLAN_CATALOG));
+        when(classifier.classifyQuestion(anyLong(), eq("분실 신고 절차"))).thenReturn(PlanQuestion.of(PlanQuestionType.NONE));
         when(catalog.answer(PLAN_QUESTION)).thenReturn(PLAN_ANSWER);
     }
 

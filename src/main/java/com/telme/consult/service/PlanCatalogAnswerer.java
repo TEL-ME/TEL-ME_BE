@@ -24,18 +24,31 @@ public class PlanCatalogAnswerer {
     private static final Pattern PRICE_BAND = Pattern.compile("(?<!\\d)(\\d{1,4})만원대");
     private static final Pattern PRICE_UNDER = Pattern.compile("(?<!\\d)(\\d{1,4})만원(이하|안쪽|이내|미만)");
     private static final int WON_PER_MAN = 10_000;
+    // 낱말 바로 뒤나 "청소년이나 시니어 말고"처럼 다른 대상을 하나 더 든 뒤에 오는 제외 표현(띄어쓰기를 뺀 문장 기준)
+    private static final Pattern EXCLUDED_AFTER = Pattern.compile(
+            "(?:요금제)?(?:은|는|이나|나|랑|이랑|과|와|,)?(?:[가-힣A-Z0-9]{1,4}(?:요금제)?)?(?:말고|빼고|제외|아닌)");
 
     private final PlanRepository planRepository;
 
     // 판매 중인 요금제가 없으면 null
     public String answer(String question) {
+        return answer(question, null);
+    }
+
+    // mention은 분류 모델이 판매 중인 목록에서 고른 요금제. 없으면(규칙 분류) 질문에서 요금제 이름을 직접 찾는다
+    public String answer(String question, PlanQuestion.Mention mention) {
         List<Plan> plans = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
         if (plans.isEmpty()) {
             return null;
         }
+        if (mention != null && mention.unknownPlan()) {
+            return "말씀하신 요금제는 판매 중인 요금제에 없어요. 판매 중인 전체 요금제는 아래와 같아요.\n\n" + list(plans);
+        }
         // 영문 대소문자 구분 없이 망 이름(5G, LTE)을 찾는다
         String text = question.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
-        List<Plan> named = namedPlans(text, plans);
+        List<Plan> named = mention != null
+                ? plans.stream().filter(plan -> mention.planCodes().contains(plan.getCode())).toList()
+                : namedPlans(text, plans);
         if (!named.isEmpty()) {
             return detail(named);
         }
@@ -75,13 +88,14 @@ public class PlanCatalogAnswerer {
     }
 
     private List<Plan> filter(String text, List<Plan> plans, boolean generalOnly) {
-        List<Plan.NetworkType> networks = new ArrayList<>();
-        if (text.contains("5G")) networks.add(Plan.NetworkType.FIVE_G);
-        if (text.contains("LTE")) networks.add(Plan.NetworkType.LTE);
-        if (text.contains("알뜰")) networks.add(Plan.NetworkType.BUDGET);
-        List<Plan.TargetGroup> groups = new ArrayList<>();
-        if (text.contains("청소년")) groups.add(Plan.TargetGroup.YOUTH);
-        if (text.contains("시니어")) groups.add(Plan.TargetGroup.SENIOR);
+        Selected<Plan.NetworkType> networks = new Selected<>();
+        networks.read(text, "5G", Plan.NetworkType.FIVE_G);
+        networks.read(text, "LTE", Plan.NetworkType.LTE);
+        networks.read(text, "알뜰", Plan.NetworkType.BUDGET);
+        Selected<Plan.TargetGroup> groups = new Selected<>();
+        groups.read(text, "청소년", Plan.TargetGroup.YOUTH);
+        groups.read(text, "시니어", Plan.TargetGroup.SENIOR);
+        groups.read(text, "일반", Plan.TargetGroup.GENERAL);
         boolean unlimited = text.contains("무제한");
         Matcher band = PRICE_BAND.matcher(text);
         Matcher under = PRICE_UNDER.matcher(text);
@@ -90,13 +104,36 @@ public class PlanCatalogAnswerer {
         boolean exclusiveMax = max != null && "미만".equals(under.group(2));
 
         return plans.stream()
-                .filter(plan -> networks.isEmpty() || networks.contains(plan.getNetworkType()))
+                .filter(plan -> networks.isEmpty() || networks.accepts(plan.getNetworkType()))
                 .filter(plan -> groups.isEmpty() ? !generalOnly || plan.getTargetGroup() == Plan.TargetGroup.GENERAL
-                        : groups.contains(plan.getTargetGroup()))
+                        : groups.accepts(plan.getTargetGroup()))
                 .filter(plan -> !unlimited || plan.isUnlimited())
                 .filter(plan -> bandMin == null || plan.getMonthlyFee() >= bandMin && plan.getMonthlyFee() < bandMin + WON_PER_MAN)
                 .filter(plan -> max == null || (exclusiveMax ? plan.getMonthlyFee() < max : plan.getMonthlyFee() <= max))
                 .toList();
+    }
+
+    // 질문이 고른 값과 뺀 값. "청소년이나 시니어 말고"처럼 낱말 뒤에 제외 표현이 오면 뺀 값이다.
+    // 고른 값이 있으면 그것만, 뺀 값만 있으면 나머지를 받는다
+    private static final class Selected<T> {
+        private final List<T> included = new ArrayList<>();
+        private final List<T> excluded = new ArrayList<>();
+
+        void read(String text, String word, T value) {
+            int index = text.indexOf(word);
+            if (index < 0) {
+                return;
+            }
+            (EXCLUDED_AFTER.matcher(text.substring(index + word.length())).lookingAt() ? excluded : included).add(value);
+        }
+
+        boolean isEmpty() {
+            return included.isEmpty() && excluded.isEmpty();
+        }
+
+        boolean accepts(T value) {
+            return included.isEmpty() ? !excluded.contains(value) : included.contains(value);
+        }
     }
 
     private String extreme(List<Plan> matched, boolean cheapest, String text) {
