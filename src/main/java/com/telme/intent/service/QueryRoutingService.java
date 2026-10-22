@@ -322,6 +322,20 @@ public class QueryRoutingService {
             }
         }
 
+        // 매장을 찾아 달라는 단독 질문을 모델이 가끔 FAQ로 낸다("명의변경 하러 매장 가야 하는데 어디로 가면 될까요?",
+        // 같은 문장 8회 중 1회). FAQ에는 매장 위치 답이 없으므로 규칙도 매장 찾기로 보면 매장 찾기로 되돌린다
+        if (method == QueryRouting.Method.LLM
+                && payload.intent() == QueryRouting.Intent.FAQ
+                && payload.subQueries().size() <= 1) {
+            LlmRoutingPayload store = storeLookupInsteadOfFaq(question);
+            if (store != null) {
+                log.info("[라우팅] FAQ로 분류됐지만 매장 찾기 요청이라 매장 찾기로 보정합니다: messageId={}",
+                        userMessage.getMessageId());
+                payload = store;
+                method = QueryRouting.Method.RULE;
+            }
+        }
+
         boolean llmRouting = method == QueryRouting.Method.LLM;
         if (method == QueryRouting.Method.LLM
                 && payload.intent() != QueryRouting.Intent.UNKNOWN
@@ -909,7 +923,7 @@ public class QueryRoutingService {
             if (sub.intent() == ConsultRequest.Intent.STORE && normalized.size() > 1) {
                 // FAQ 또는 다른 매장 요청의 업무와 지역을 이 요청에 섞지 않는다.
                 // 원문 구간을 확정하지 못하면 모델 검색어로 되돌아가지 않고 조건을 비워 되묻는다.
-                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context);
+                conditions = validConditions(conditions, ownSection != null ? ownSection : "", context, question);
                 // 모델이 업무를 비워도 이 요청의 원문 인용 구간에 업무가 있으면 채운다. 다른 요청의 원문은 보지 않는다.
                 // 인용이 없으면 채우지 않는다. 검색어는 모델이 다시 쓴 문장이라 업무 근거로 쓰지 않는다.
                 String section = sub.requestQuote() == null || sub.requestQuote().isBlank()
@@ -959,6 +973,26 @@ public class QueryRoutingService {
 
     private Set<String> tokens(Pattern pattern, String text) {
         return tokens(pattern, text, false);
+    }
+
+    private String serviceTypeEvidence(String question, ChatContext context) {
+        return ruleBasedFallback.hasServiceTypeMention(question) ? question : groundingText(question, context);
+    }
+
+    // 띄어쓰기를 무시하고 맞출 때 지명 뒤에 올 수 있는 말. "대구 수성구쪽에"는 받고, "제 주변"의 '제 주'처럼 낱말 중간에서 끝나면 받지 않는다
+    private static final String LOCATION_SUFFIX = "(?:$|[^가-힣A-Za-z0-9]|(?:에서|에|으로|로|쪽|근처|부근|인근|은|는|이|가|도|요)+(?![가-힣]))";
+
+    // 모델이 지역의 띄어쓰기를 바꿔 내기도 한다("대구 수성구" → "대구수성구"). 원문에 그대로 없으면 띄어쓰기만 다른 지명이 있는지 본다
+    private static boolean mentionsLocation(String evidence, String value) {
+        if (evidence.contains(value)) {
+            return true;
+        }
+        String body = value.replaceAll("\\s+", "").codePoints()
+                .mapToObj(Character::toString)
+                .map(Pattern::quote)
+                .collect(Collectors.joining("\\s*"));
+        return !body.isEmpty()
+                && Pattern.compile("(?<![가-힣A-Za-z0-9])" + body + "(?=" + LOCATION_SUFFIX + ")").matcher(evidence).find();
     }
 
     private Set<String> tokens(Pattern pattern, String text, boolean candidatePlace) {
@@ -1011,12 +1045,19 @@ public class QueryRoutingService {
 
     private Map<String, String> validConditions(
             Map<String, String> conditions, String question, ChatContext context) {
+        return validConditions(conditions, question, context, question);
+    }
+
+    // question은 이 조건의 원문 근거(복합 질문이면 그 요청의 구간), wholeQuestion은 고객 질문 전체.
+    // 업무는 구간에 업무 이름이 없으면 질문 전체의 업무 이름과 어긋나지 않는지 본다
+    private Map<String, String> validConditions(
+            Map<String, String> conditions, String question, ChatContext context, String wholeQuestion) {
         if (conditions == null || conditions.isEmpty()) {
             return Collections.emptyMap();
         }
         String locationEvidence = referenceText(PLACE, question, context);
-        String serviceTypeEvidence = ruleBasedFallback.hasServiceTypeMention(question)
-                ? question : groundingText(question, context);
+        String serviceTypeEvidence = serviceTypeEvidence(question, context);
+        String wholeServiceTypeEvidence = serviceTypeEvidence(wholeQuestion, context);
         Map<String, String> valid = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : conditions.entrySet()) {
             String key = entry.getKey();
@@ -1028,14 +1069,14 @@ public class QueryRoutingService {
             }
             if (FollowUpRouteResponse.SERVICE_TYPE_KEY.equals(key)
                     && (!SERVICE_TYPES.contains(value)
-                        || !ruleBasedFallback.matchesServiceType(value, serviceTypeEvidence))) {
+                        || !ruleBasedFallback.supportsServiceType(value, serviceTypeEvidence, wholeServiceTypeEvidence))) {
                 continue;
             }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key) && RelativeLocation.isOnlyRelative(value)) {
                 continue;
             }
             if (FollowUpRouteResponse.LOCATION_KEY.equals(key)
-                    && (!locationEvidence.contains(value)
+                    && (!mentionsLocation(locationEvidence, value)
                         || (!tokens(PLACE, value).isEmpty()
                             && !tokens(PLACE, locationEvidence).containsAll(tokens(PLACE, value))))) {
                 continue;
@@ -1178,6 +1219,17 @@ public class QueryRoutingService {
                         (short) 1, ConsultRequest.Intent.FAQ, addOnQuery, Collections.emptyMap())));
     }
 
+    // "매장 어디서든 돼요?"처럼 어느 매장에서나 되는지 묻는 것은 매장 찾기가 아니라 정책 질문이다
+    private static final Pattern ANY_STORE = Pattern.compile("어디(?:서든|에서든|에서나|든|나)");
+
+    private LlmRoutingPayload storeLookupInsteadOfFaq(String question) {
+        if (!RuleBasedRoutingFallback.asksStoreLookup(question) || ANY_STORE.matcher(question).find()) {
+            return null;
+        }
+        LlmRoutingPayload rule = ruleBasedFallback.classify(question);
+        return rule.intent() == QueryRouting.Intent.STORE ? rule : null;
+    }
+
     private boolean asksStoreCondition(Set<String> pendingKeys) {
         return pendingKeys.contains(FollowUpRouteResponse.LOCATION_KEY)
                 || pendingKeys.contains(FollowUpRouteResponse.SERVICE_TYPE_KEY);
@@ -1274,7 +1326,8 @@ public class QueryRoutingService {
             .temperature(0.0)
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
-            .promptVersion("routing-follow-up-v5")
+            // v6: 업무를 물었을 때 정한 업무가 없다는 답을 업무 거절(DECLINED)로 읽는다(TELME-214)
+            .promptVersion("routing-follow-up-v6")
             .build();
 
         String json = llmClient.generate(request);

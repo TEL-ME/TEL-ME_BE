@@ -1972,22 +1972,23 @@ class QueryRoutingServiceTest {
             assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("location");
         }
 
+        // 질문에 적힌 업무와 다른 모델 업무는 알려진 코드여도 버리고 질문의 업무로 찾는다
         @ParameterizedTest
-        @ValueSource(strings = {"PORT_IN", "NAME_CHANGE", "USIM_REISSUE", "NEW_LINE"})
-        void unsupportedServiceTypeIsRemovedEvenIfItIsKnownCode(String serviceType) {
+        @ValueSource(strings = {"PORT_IN", "NAME_CHANGE", "NEW_LINE"})
+        void serviceTypeContradictingQuestionIsReplacedEvenIfItIsKnownCode(String serviceType) {
             given(llmClient.generate(any())).willReturn(("""
-                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 매장",
+                {"intent":"STORE","confidence":0.9,"refinedQuery":"강남역 유심 재발급 매장",
                  "extractedConditions":{"location":"강남역","serviceType":"%s"},
-                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 매장",
+                 "subQueries":[{"order":1,"intent":"STORE","queryText":"강남역 유심 재발급 매장",
                   "conditions":{"location":"강남역","serviceType":"%s"}}]}
                 """).formatted(serviceType, serviceType));
 
-            IntentRouteResponse result = service.routeSingleConsult(msg("강남역 매장 알려줘"), null);
+            IntentRouteResponse result = service.routeSingleConsult(msg("강남역 유심 재발급 매장 알려줘"), null);
 
             assertThat(result.extractedConditions()).containsEntry("location", "강남역")
-                    .doesNotContainKey("serviceType");
+                    .containsEntry("serviceType", "USIM_REISSUE");
             assertThat(result.subQueries().getFirst().conditions()).containsEntry("location", "강남역")
-                    .doesNotContainKey("serviceType");
+                    .containsEntry("serviceType", "USIM_REISSUE");
         }
 
         @Test
@@ -2550,6 +2551,100 @@ class QueryRoutingServiceTest {
             IntentRouteResponse r = service.routeSingleConsult(msg(question), null);
 
             assertThat(r.extractedConditions()).doesNotContainKey("serviceType");
+        }
+
+        // 업무 이름 없이 말해도 모델이 읽은 업무를 받는다(규칙 "명의.*변경"에는 걸리지 않는 문장)
+        @Test
+        void acceptsServiceTypeReadByModelFromParaphrase() {
+            given(llmClient.generate(any())).willReturn(store("{\"serviceType\":\"NAME_CHANGE\"}", "{\"serviceType\":\"NAME_CHANGE\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(
+                    msg("아빠 명의로 된 폰을 제 앞으로 돌리려고 하는데 그거 처리해주는 매장 가까운 데가 어디예요?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "NAME_CHANGE");
+            assertThat(r.subQueries().getFirst().conditions()).containsEntry("serviceType", "NAME_CHANGE");
+        }
+
+        // 질문에 업무 이름이 있으면 모델 값이 그 업무와 같아야 받는다
+        @Test
+        void rejectsServiceTypeReadByModelThatContradictsNamedService() {
+            given(llmClient.generate(any())).willReturn(store("{\"serviceType\":\"NEW_LINE\"}", "{\"serviceType\":\"NEW_LINE\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("번호이동 되는 매장 근처에 있어요?"), null);
+
+            assertThat(r.extractedConditions()).doesNotContainEntry("serviceType", "NEW_LINE");
+        }
+
+        @Test
+        void rejectsServiceTypeReadByModelWhenQuestionNamesTwoServices() {
+            given(llmClient.generate(any())).willReturn(store("{\"serviceType\":\"NEW_LINE\"}", "{\"serviceType\":\"NEW_LINE\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("번호이동 말고 신규 개통 하려는데 매장 어디예요?"), null);
+
+            // 업무 필터 없이 찾는다(UNDECIDED)
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "UNDECIDED");
+        }
+
+        // 모델이 지역의 띄어쓰기를 바꿔 내도 원문에 있는 지역이면 받는다
+        @Test
+        void acceptsLocationWhoseSpacingDiffersFromQuestion() {
+            given(llmClient.generate(any())).willReturn(store(
+                    "{\"location\":\"대구수성구\",\"serviceType\":\"USIM_REISSUE\"}",
+                    "{\"location\":\"대구수성구\",\"serviceType\":\"USIM_REISSUE\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("대구 수성구 쪽에 유심 새로 받을 수 있는 매장 있어요?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("location", "대구수성구").containsEntry("serviceType", "USIM_REISSUE");
+        }
+
+        @Test
+        void acceptsLocationWrittenWithSpacesWhenModelJoinsThem() {
+            given(llmClient.generate(any())).willReturn(store(
+                    "{\"location\":\"대구 수성구\"}", "{\"location\":\"대구 수성구\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("대구수성구쪽에 매장 있어요?"), null);
+
+            assertThat(r.extractedConditions()).containsEntry("location", "대구 수성구");
+        }
+
+        // "제 주변에"의 띄어쓰기를 빼면 '제주'가 보이지만 지명이 아니다. 모델이 지어낸 '제주'는 받지 않는다(평가셋 SF14)
+        @Test
+        void rejectsLocationThatOnlyAppearsAcrossWordsWhenSpacesAreIgnored() {
+            given(llmClient.generate(any())).willReturn(store(
+                    "{\"location\":\"제주\",\"serviceType\":\"PORT_IN\"}",
+                    "{\"location\":\"제주\",\"serviceType\":\"PORT_IN\"}"));
+
+            IntentRouteResponse r = service.routeSingleConsult(
+                    msg("쓰던 번호 그대로 TELME로 옮기고 싶어요. 제 주변에 매장 있나요?"), null);
+
+            assertThat(r.extractedConditions()).doesNotContainKey("location");
+        }
+
+        // 모델이 가끔 FAQ로 내는 매장 찾기 요청은 매장 찾기로 되돌린다
+        @Test
+        void correctsStoreLookupRoutedToFaq() {
+            routingJson("""
+                {"intent":"FAQ","confidence":0.96,"refinedQuery":"명의변경 가능한 매장 위치 안내",
+                 "extractedConditions":{"serviceType":"NAME_CHANGE"},
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"명의변경 가능한 매장 위치 안내"}]}
+                """);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("명의변경 하러 매장 가야 하는데 어디로 가면 될까요?"), null);
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.STORE);
+            assertThat(r.extractedConditions()).containsEntry("serviceType", "NAME_CHANGE");
+        }
+
+        @Test
+        void keepsFaqForAnyStorePolicyQuestion() {
+            routingJson("""
+                {"intent":"FAQ","confidence":0.96,"refinedQuery":"명의변경 매장 제한",
+                 "subQueries":[{"order":1,"intent":"FAQ","queryText":"명의변경은 매장 어디서든 되나요"}]}
+                """);
+
+            IntentRouteResponse r = service.routeSingleConsult(msg("명의변경은 매장 어디서든 되나요?"), null);
+
+            assertThat(r.intent()).isEqualTo(QueryRouting.Intent.FAQ);
         }
 
         // "명의변경하려면 어떻게 해요?"에 매장 방문을 안내받은 뒤 업무 없이 매장을 찾으면 그 업무로 찾는다

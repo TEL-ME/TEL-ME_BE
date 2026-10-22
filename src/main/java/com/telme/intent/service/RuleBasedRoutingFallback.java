@@ -322,6 +322,20 @@ public class RuleBasedRoutingFallback {
         return code != null && code.equals(serviceTypeOf(text));
     }
 
+    // LLM이 읽은 업무를 받을지. 업무 이름 없이 말한 업무("아빠 명의로 된 폰을 제 앞으로 돌리려고", "칩이 맛갔는데")는
+    // 낱말 목록으로 다 잡을 수 없어 모델 값을 받는다. 모델은 업무 없는 매장 질문에 업무를 지어내지 않았다(TELME-214 측정 0/104).
+    // 업무 이름이 명시돼 있으면 그 업무와 같아야 받는다. 먼저 이 요청의 원문 구간을, 구간에 없으면 질문 전체를 본다.
+    // "번호이동 말고 신규 개통"처럼 업무 이름이 여럿이면 받지 않는다(필터 없이 검색)
+    boolean supportsServiceType(String code, String ownText, String wholeText) {
+        if (code == null) {
+            return false;
+        }
+        if (ownText != null && hasServiceTypeMention(ownText)) {
+            return matchesServiceType(code, ownText);
+        }
+        return wholeText == null || !hasServiceTypeMention(wholeText) || matchesServiceType(code, wholeText);
+    }
+
     /** 버튼 문구를 그대로 누른 답이면 그 업무 코드, 아니면 null. 직접 쓴 문장은 모델이 읽는다. */
     public String serviceTypeOfOption(String reply) {
         if (reply == null) {

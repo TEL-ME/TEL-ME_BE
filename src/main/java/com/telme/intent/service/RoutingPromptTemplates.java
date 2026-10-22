@@ -285,6 +285,9 @@ public final class RoutingPromptTemplates {
           부정 뒤에 사정을 덧붙여 답한 것도 값을 준 것이다. FILLED로 두고 value에는 고객 답변을 담는다.
         - DECLINED: 고객이 값 제공을 명시적으로 거부하거나 원하지 않음을 밝힘. value는 null.
           부정하는 답은 거부가 아니다. 대답 자체를 하지 않겠다고 할 때만 DECLINED다.
+        - serviceType을 되묻는 중에 네 업무 중 정한 것이 없다고 답하면 serviceType은 DECLINED다(업무 없이 매장을 찾는다).
+          정한 업무가 없다, 아무 업무나 상관없다, 업무는 매장에 가서 말하겠다, 위치만 알면 된다, 아직 정하지 않았다,
+          그냥 이것저것 물어보러 간다는 답이 여기에 해당한다. 이런 답은 DEFERRED도 NEW_QUESTION도 아니다.
         - 답변만으로 확인할 수 없는 조건은 conditions 배열에 넣지 않는다. 추측해서 채우지 마십시오.
         - 입력에 되물은 질문이 있으면 고객 답변이 그 질문에 답하는지로 판단한다. 고객이 다른 사정을 덧붙여도
           질문에 대한 답이 들어 있으면 CONDITION_RESPONSE이고 그 조건은 FILLED다.
@@ -304,6 +307,10 @@ public final class RoutingPromptTemplates {
         되묻는 중인 조건: location
         고객 답변: "홍대입구역 근처에서 번호이동 하려고요"
         응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"location","status":"FILLED","value":"홍대입구역"},{"key":"serviceType","status":"FILLED","value":"PORT_IN"}]}
+
+        되묻는 중인 조건: serviceType
+        고객 답변: "따로 정한 업무는 없는데 가서 여쭤볼게요"
+        응답: {"responseType":"CONDITION_RESPONSE","conditions":[{"key":"serviceType","status":"DECLINED","value":null}]}
 
         되묻는 중인 조건: location
         고객 답변: "음 글쎄요"
