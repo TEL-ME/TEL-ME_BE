@@ -6,17 +6,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.telme.global.common.exception.GeneralException;
-import com.telme.store.config.StoreRouteCacheProperties;
 import com.telme.store.config.StoreRouteProperties;
 import com.telme.store.dto.req.RouteMode;
 import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.exception.StoreErrorCode;
 import com.telme.store.service.RouteEndpoints;
 import com.telme.store.service.StoreQueryService;
-import com.telme.store.service.StoreRouteCache;
 import com.telme.store.service.StoreRouteClient;
 import com.telme.store.service.StoreRouteService;
-import java.time.Clock;
 import java.util.List;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,9 +136,9 @@ class StoreRouteApiIntegrationTest {
         @Bean
         @Primary
         StoreRouteService stubStoreRouteService(
-                StoreQueryService storeQueryService, Clock clock, StoreRouteCacheProperties properties,
+                StoreQueryService storeQueryService,
                 StoreRouteProperties routeProperties) {
-            return new StoreRouteService(storeQueryService, new StoreRouteCache(clock, properties),
+            return new StoreRouteService(storeQueryService,
                     List.of(CAR, new StubClient(RouteMode.TRANSIT), WALK, BICYCLE), routeProperties);
         }
     }

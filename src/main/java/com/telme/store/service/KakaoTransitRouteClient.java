@@ -81,7 +81,6 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
         RouteEndpoints walkEndpoints = new RouteEndpoints(endpoints.originLatitude(), endpoints.originLongitude(),
                 BigDecimal.valueOf(first.latitude()), BigDecimal.valueOf(first.longitude()));
         try {
-            // 출발지는 상위 캐시에서 반올림한 값을 유지해야 캐시와 경로의 시작점이 일치한다.
             StoreRouteResponse walk = kakaoWalkRouteClient.findRoute(walkEndpoints);
             if (walk.steps().isEmpty()) {
                 return transit;

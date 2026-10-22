@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.telme.global.common.exception.GeneralException;
-import com.telme.store.config.StoreRouteCacheProperties;
 import com.telme.store.config.StoreRouteProperties;
 import com.telme.store.dto.req.RouteMode;
 import com.telme.store.dto.req.StoreRouteRequest;
@@ -18,10 +17,6 @@ import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.entity.Store;
 import com.telme.store.exception.StoreErrorCode;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +29,6 @@ class StoreRouteServiceTest {
 
     private static final long STORE_ID = 7L;
 
-    private final MutableClock clock = new MutableClock(Instant.parse("2026-10-21T00:00:00Z"));
     private final StoreQueryService storeQueryService = mock(StoreQueryService.class);
     private final StoreRouteClient carClient = mockClient(RouteMode.CAR);
     private final StoreRouteClient transitClient = mockClient(RouteMode.TRANSIT);
@@ -50,7 +44,7 @@ class StoreRouteServiceTest {
                 .longitude(new BigDecimal("127.027621"))
                 .build();
         when(storeQueryService.getOpenStore(STORE_ID)).thenReturn(store);
-        service = new StoreRouteService(storeQueryService, new StoreRouteCache(clock, defaultCacheProperties()),
+        service = new StoreRouteService(storeQueryService,
                 List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0));
     }
 
@@ -70,56 +64,29 @@ class StoreRouteServiceTest {
         verify(carClient, never()).findRoute(any());
     }
 
-    @Test
-    @DisplayName("출발지는 자동차·대중교통은 소수점 3자리, 도보·자전거는 4자리로 반올림해 조회한다")
-    void 출발지_반올림() {
-        when(carClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.CAR));
-        when(walkClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.WALK));
+    @ParameterizedTest
+    @EnumSource(RouteMode.class)
+    @DisplayName("모든 수단은 같은 요청도 매번 조회하고 출발 좌표를 그대로 전달한다")
+    void 같은_요청도_원본_좌표로_매번_조회(RouteMode mode) {
+        StoreRouteClient client = findClient(mode);
+        when(client.findRoute(any())).thenReturn(StoreRouteResponse.arrived(mode));
 
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.56634, 126.97796));
-        service.getRoute(STORE_ID, request(RouteMode.WALK, 37.56634, 126.97796));
+        service.getRoute(STORE_ID, request(mode, 37.566349, 126.977969));
+        service.getRoute(STORE_ID, request(mode, 37.566349, 126.977969));
 
-        ArgumentCaptor<RouteEndpoints> car = ArgumentCaptor.forClass(RouteEndpoints.class);
-        verify(carClient).findRoute(car.capture());
-        assertThat(car.getValue().originLatitude()).isEqualByComparingTo("37.566");
-        assertThat(car.getValue().originLongitude()).isEqualByComparingTo("126.978");
-        ArgumentCaptor<RouteEndpoints> walk = ArgumentCaptor.forClass(RouteEndpoints.class);
-        verify(walkClient).findRoute(walk.capture());
-        assertThat(walk.getValue().originLatitude()).isEqualByComparingTo("37.5663");
-        assertThat(walk.getValue().originLongitude()).isEqualByComparingTo("126.9780");
+        ArgumentCaptor<RouteEndpoints> captor = ArgumentCaptor.forClass(RouteEndpoints.class);
+        verify(client, times(2)).findRoute(captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(endpoints -> {
+            assertThat(endpoints.originLatitude()).isEqualByComparingTo("37.566349");
+            assertThat(endpoints.originLongitude()).isEqualByComparingTo("126.977969");
+            assertThat(endpoints.destinationLatitude()).isEqualByComparingTo("37.497942");
+            assertThat(endpoints.destinationLongitude()).isEqualByComparingTo("127.027621");
+        });
     }
 
     @Test
-    @DisplayName("반올림하면 같은 출발지는 유효 기간 안에서 다시 조회하지 않는다")
-    void 같은_출발지는_재사용() {
-        when(carClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.CAR));
-
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.56634, 126.97796));
-        clock.advance(Duration.ofMinutes(1));
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.56601, 126.97801));
-
-        verify(carClient, times(1)).findRoute(any());
-    }
-
-    @Test
-    @DisplayName("자동차 경로는 2분이 지나면 다시 조회하고, 다른 수단의 경로는 따로 저장한다")
-    void 수단별_유효_기간() {
-        when(carClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.CAR));
-        when(walkClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.WALK));
-
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.5663, 126.9779));
-        service.getRoute(STORE_ID, request(RouteMode.WALK, 37.5663, 126.9779));
-        clock.advance(Duration.ofMinutes(3));
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.5663, 126.9779));
-        service.getRoute(STORE_ID, request(RouteMode.WALK, 37.5663, 126.9779));
-
-        verify(carClient, times(2)).findRoute(any());
-        verify(walkClient, times(1)).findRoute(any());
-    }
-
-    @Test
-    @DisplayName("조회에 실패하면 저장하지 않아 다음 요청이 다시 조회한다")
-    void 실패는_저장하지_않음() {
+    @DisplayName("조회에 실패해도 다음 요청은 다시 조회한다")
+    void 실패_후_재조회() {
         when(carClient.findRoute(any()))
                 .thenThrow(new GeneralException(StoreErrorCode.ROUTE_UNAVAILABLE))
                 .thenReturn(StoreRouteResponse.arrived(RouteMode.CAR));
@@ -147,28 +114,9 @@ class StoreRouteServiceTest {
     @DisplayName("이동 수단 중 클라이언트가 없는 것이 있으면 시작할 때 실패한다")
     void 클라이언트_누락() {
         assertThatThrownBy(() -> new StoreRouteService(storeQueryService,
-                new StoreRouteCache(clock, defaultCacheProperties()),
                 List.of(carClient, transitClient, walkClient), new StoreRouteProperties(0)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("BICYCLE");
-    }
-
-    @Test
-    @DisplayName("조정한 정밀도의 같은 출발지는 같은 외부 요청 좌표와 캐시를 사용한다")
-    void 설정한_정밀도와_캐시_일치() {
-        StoreRouteCacheProperties properties = new StoreRouteCacheProperties(Duration.ofMinutes(2),
-                Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(10), 5, 6);
-        service = new StoreRouteService(storeQueryService, new StoreRouteCache(clock, properties),
-                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0));
-        when(carClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.CAR));
-
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.566349, 126.977969));
-        service.getRoute(STORE_ID, request(RouteMode.CAR, 37.566351, 126.977971));
-
-        ArgumentCaptor<RouteEndpoints> captor = ArgumentCaptor.forClass(RouteEndpoints.class);
-        verify(carClient).findRoute(captor.capture());
-        assertThat(captor.getValue().originLatitude()).isEqualByComparingTo("37.56635");
-        assertThat(captor.getValue().originLongitude()).isEqualByComparingTo("126.97797");
     }
 
     @ParameterizedTest
@@ -184,7 +132,7 @@ class StoreRouteServiceTest {
 
     @ParameterizedTest
     @EnumSource(RouteMode.class)
-    @DisplayName("설정 거리와 같으면 허용하고 같은 요청은 캐시를 재사용한다")
+    @DisplayName("설정 거리와 같으면 허용하고 같은 요청도 매번 조회한다")
     void 거리_상한_포함(RouteMode mode) {
         service = limitedService(20_000);
         StoreRouteClient client = findClient(mode);
@@ -194,12 +142,12 @@ class StoreRouteServiceTest {
         assertThat(service.getRoute(STORE_ID, request(mode, 37.5663, 126.9779))).isSameAs(expected);
         assertThat(service.getRoute(STORE_ID, request(mode, 37.5663, 126.9779))).isSameAs(expected);
 
-        verify(client).findRoute(any());
+        verify(client, times(2)).findRoute(any());
     }
 
     @ParameterizedTest
     @EnumSource(RouteMode.class)
-    @DisplayName("상한을 1m 초과하면 거리 초과 오류이고 실패한 경로는 캐시하지 않는다")
+    @DisplayName("상한을 1m 초과하면 매 요청마다 거리 초과 오류다")
     void 거리_상한_초과(RouteMode mode) {
         service = limitedService(20_000);
         StoreRouteClient client = findClient(mode);
@@ -214,7 +162,7 @@ class StoreRouteServiceTest {
     }
 
     private StoreRouteService limitedService(int maxDistance) {
-        return new StoreRouteService(storeQueryService, new StoreRouteCache(clock, defaultCacheProperties()),
+        return new StoreRouteService(storeQueryService,
                 List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(maxDistance));
     }
 
@@ -232,11 +180,6 @@ class StoreRouteServiceTest {
                 .steps(List.of()).build();
     }
 
-    private static StoreRouteCacheProperties defaultCacheProperties() {
-        return new StoreRouteCacheProperties(Duration.ofMinutes(2), Duration.ofMinutes(5),
-                Duration.ofMinutes(10), Duration.ofMinutes(10), 3, 4);
-    }
-
     private static StoreRouteRequest request(RouteMode mode, double latitude, double longitude) {
         return new StoreRouteRequest(mode, latitude, longitude);
     }
@@ -247,31 +190,4 @@ class StoreRouteServiceTest {
         return client;
     }
 
-    private static final class MutableClock extends Clock {
-
-        private Instant now;
-
-        MutableClock(Instant now) {
-            this.now = now;
-        }
-
-        void advance(Duration duration) {
-            now = now.plus(duration);
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneId.of("UTC");
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return now;
-        }
-    }
 }

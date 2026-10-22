@@ -12,13 +12,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.KakaoRouteProperties;
-import com.telme.store.config.StoreRouteCacheProperties;
 import com.telme.store.converter.StoreRouteConverter;
 import com.telme.store.dto.req.RouteMode;
 import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.exception.StoreErrorCode;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,21 +89,14 @@ class KakaoTransitLineNameTest {
     }
 
     @Test
-    @DisplayName("노선명이 없는 실패는 캐시하지 않아 다음 요청에서 새 응답으로 다시 조회할 수 있다")
+    @DisplayName("노선명이 없는 실패 후 다음 요청에서 새 응답으로 다시 조회할 수 있다")
     void 실패_후_재조회() {
         expectTransit("SUBWAY", "[]");
         expectTransit("SUBWAY", "[{\"name\":\"분당선\"}]");
-        StoreRouteCache cache = new StoreRouteCache(Clock.systemUTC(),
-                new StoreRouteCacheProperties(Duration.ofMinutes(2), Duration.ofMinutes(5),
-                        Duration.ofMinutes(10), Duration.ofMinutes(10), 3, 4));
-
-        assertThatThrownBy(() -> cache.getOrLoad(RouteMode.TRANSIT, ENDPOINTS, () -> client.findRoute(ENDPOINTS)))
-                .isInstanceOf(GeneralException.class);
-        StoreRouteResponse retried = cache.getOrLoad(RouteMode.TRANSIT, ENDPOINTS, () -> client.findRoute(ENDPOINTS));
-        StoreRouteResponse cached = cache.getOrLoad(RouteMode.TRANSIT, ENDPOINTS, () -> client.findRoute(ENDPOINTS));
+        assertThatThrownBy(() -> client.findRoute(ENDPOINTS)).isInstanceOf(GeneralException.class);
+        StoreRouteResponse retried = client.findRoute(ENDPOINTS);
 
         assertThat(retried.steps().get(0).lineName()).isEqualTo("분당선");
-        assertThat(cached).isSameAs(retried);
         server.verify();
     }
 

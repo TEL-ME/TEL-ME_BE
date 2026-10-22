@@ -14,7 +14,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.KakaoRouteProperties;
-import com.telme.store.config.StoreRouteCacheProperties;
 import com.telme.store.converter.StoreRouteConverter;
 import com.telme.store.dto.req.RouteMode;
 import com.telme.store.dto.res.StoreRouteResponse;
@@ -23,7 +22,6 @@ import com.telme.store.dto.res.StoreRouteResponse.Step;
 import com.telme.store.dto.res.StoreRouteResponse.StepType;
 import com.telme.store.exception.StoreErrorCode;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -188,23 +186,6 @@ class KakaoTransitOriginWalkTest {
         when(walkClient.findRoute(any())).thenReturn(StoreRouteResponse.arrived(RouteMode.WALK));
 
         assertThat(client.findRoute(ENDPOINTS).distanceMeters()).isEqualTo(1000);
-    }
-
-    @Test
-    @DisplayName("보강된 전체 경로를 캐시하므로 캐시 적중 시 두 API 모두 다시 조회하지 않는다")
-    void 보강_결과_캐시() {
-        expectTransit("[[126.978,37.567]]");
-        StoreRouteCache cache = new StoreRouteCache(Clock.systemUTC(),
-                new StoreRouteCacheProperties(Duration.ofMinutes(2), Duration.ofMinutes(5),
-                        Duration.ofMinutes(10), Duration.ofMinutes(10), 3, 4));
-
-        StoreRouteResponse first = cache.getOrLoad(RouteMode.TRANSIT, ENDPOINTS, () -> client.findRoute(ENDPOINTS));
-        StoreRouteResponse second = cache.getOrLoad(RouteMode.TRANSIT, ENDPOINTS, () -> client.findRoute(ENDPOINTS));
-
-        assertThat(first.steps()).hasSize(2);
-        assertThat(second).isSameAs(first);
-        verify(walkClient).findRoute(any());
-        server.verify();
     }
 
     private KakaoTransitRouteClient createClient(boolean enabled) {
