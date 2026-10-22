@@ -142,7 +142,7 @@ class ChatQuestionResolverTest {
     @ParameterizedTest
     @ValueSource(ints = {1, 3})
     void guardedResolverKeepsRejectingOtherExtraEntries(int variant) throws Exception {
-        // 새 업무로 센 항목(targetCount 1)이나 번호가 어긋난 항목(3)은 현재 질문 항목으로 보지 않는다
+        // 새 업무로 센 항목(targetCount 1)과 번호가 어긋난 항목(3)은 현재 질문 항목이 아님
         respond(model, variant == 1 ? sourcesWithExtraEntry(1, 2) : sourcesWithExtraEntry(0, 3));
         var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
 

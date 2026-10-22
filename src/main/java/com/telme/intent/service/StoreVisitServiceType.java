@@ -26,7 +26,7 @@ public class StoreVisitServiceType {
     private static final int LOOKBACK = 12;
     private static final Pattern STORE = Pattern.compile("매장|대리점|지점");
     private static final Pattern VISIT = Pattern.compile("방문|오시|오셔|오실|가시|가셔|가실|들르|들러");
-    // "매장이나 온라인에서 신청하시면 됩니다"처럼 방문 낱말 없이 매장을 이용 방법으로 안내하는 꼴
+    // 방문 낱말 없이 매장을 이용 방법으로 안내하는 꼴
     private static final Pattern STORE_CHANNEL = Pattern.compile("매장(?:이나|에서|으로|을\\s*통해)");
     // 방문하지 않아도 된다는 안내("매장 방문 없이 온라인으로 신청할 수 있습니다", PR #199 리뷰)
     private static final Pattern NO_VISIT = Pattern.compile(
@@ -131,7 +131,7 @@ public class StoreVisitServiceType {
         return texts;
     }
 
-    // 되묻기는 방문 낱말이 없어도 상담이 이어지는 중이라 본다("현재 미납 요금이 있으신가요?")
+    // 되묻기는 방문 낱말이 없어도 상담이 이어지는 중
     private static boolean continuesConsult(ChatMessage message) {
         return message.getRole() == ChatMessage.Role.ASSISTANT
                 && message.getMessageType() == ChatMessage.MessageType.CLARIFICATION
