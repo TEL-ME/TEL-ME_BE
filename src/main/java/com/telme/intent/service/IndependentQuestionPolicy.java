@@ -131,6 +131,22 @@ final class IndependentQuestionPolicy {
         return new int[] {start, originalOffset};
     }
 
+    // 띄어쓰기를 지운 인용으로 정한 검색어를 원문 띄어쓰기로 되돌린다. 붙여 쓴 검색어는 검색 점수가 크게 낮다
+    // ("번이 철회하면 제 회선은 어떻게 돼요" 0.854 → 붙여 쓰면 0.740, TELME-225). 모델이 띄어 쓴 검색어와 원문에 없는 말은 그대로 둔다
+    static String withOriginalSpacing(String text, String question) {
+        if (text == null || text.isBlank() || question == null || text.strip().chars().anyMatch(Character::isWhitespace)) {
+            return text;
+        }
+        String normalized = RoutingQuestionNormalizer.quoteKey(question);
+        String key = RoutingQuestionNormalizer.quoteKey(text);
+        int start = normalized.indexOf(key);
+        if (key.isEmpty() || start < 0) {
+            return text;
+        }
+        int[] positions = originalPositions(normalized, question);
+        return question.substring(positions[start], positions[start + key.length() - 1] + 1).strip();
+    }
+
     // 정규화 문자열의 각 글자가 원문의 몇 번째 글자인지. 정규화는 공백만 지우거나 하나로 줄인다.
     private static int[] originalPositions(String normalized, String question) {
         int[] positions = new int[normalized.length()];

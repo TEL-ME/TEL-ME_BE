@@ -164,7 +164,7 @@ class QueryRoutingServiceTest {
         var result = service.routeSingleConsult(msg(original), null);
 
         assertThat(result.subQueries()).extracting(query -> query.queryText())
-                .containsExactly("유심재발급비용", "로밍신청방법");
+                .containsExactly("유심 재발급 비용", "로밍 신청 방법");
         var requests = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient, org.mockito.Mockito.atLeastOnce()).generate(requests.capture());
         assertThat(requests.getAllValues()).allSatisfy(request ->
@@ -185,7 +185,7 @@ class QueryRoutingServiceTest {
         var result = service.routeSingleConsult(msg("유심 재발급 비용과 로밍 신청 방법 알려줘"), null);
 
         assertThat(result.subQueries()).extracting(query -> query.queryText())
-                .containsExactly("유심재발급비용", "로밍신청방법");
+                .containsExactly("유심 재발급 비용", "로밍 신청 방법");
         var requests = ArgumentCaptor.forClass(LlmRequest.class);
         verify(llmClient, org.mockito.Mockito.atLeastOnce()).generate(requests.capture());
         assertThat(requests.getAllValues()).extracting(LlmRequest::systemPrompt)
@@ -499,6 +499,25 @@ class QueryRoutingServiceTest {
 
         assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
                 .containsExactly("로밍 신청 방법", "유심 재발급 비용");
+    }
+
+    // 인용으로 되돌린 검색어는 띄어쓰기를 지운 발화에서 뽑은 것이라 원문 띄어쓰기로 되돌린다(TELME-225)
+    @Test
+    void quoteFallbackQueryKeepsOriginalSpacing() {
+        given(llmClient.generate(any())).willReturn("""
+                {"intent":"FAQ","confidence":0.97,"subQueries":[
+                  {"order":1,"intent":"FAQ","queryText":"번호이동 철회 시 회선 처리","requestQuote":"번이철회하면제회선은어떻게돼요"},
+                  {"order":2,"intent":"FAQ","queryText":"번호이동 철회 기한","requestQuote":"기한도있어요"}]}
+                """, """
+                {"decision":"MULTIPLE","requestCount":2}
+                """, """
+                {"unsafe":[true,true]}
+                """);
+
+        var result = service.routeSingleConsult(msg("번이 철회하면 제 회선은 어떻게 돼요? 기한도 있어요?"), null);
+
+        assertThat(result.subQueries()).extracting(IntentRouteResponse.IntentSubQueryResponse::queryText)
+                .containsExactly("번이 철회하면 제 회선은 어떻게 돼요", "기한도 있어요");
     }
 
     @Test
