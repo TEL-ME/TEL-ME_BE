@@ -24,13 +24,22 @@ public record KakaoTransitRouteResponse(String status, List<Route> routes) {
     public record Step(StepProperties properties, Path path) {
     }
 
+    // stops: 그 단계의 정류장·역. 걷는 단계는 [출발한 곳, 도착할 곳] 두 개다
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record StepProperties(String guidance, String type, Integer distance, Integer time,
-                                 List<Vehicle> vehicles) { // type: BUS, SUBWAY, WALKING
+                                 List<Vehicle> vehicles, List<Stop> stops) { // type: BUS, SUBWAY, WALKING
+
+        public StepProperties(String guidance, String type, Integer distance, Integer time, List<Vehicle> vehicles) {
+            this(guidance, type, distance, time, vehicles, null);
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Vehicle(String name) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Stop(String name) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
