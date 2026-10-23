@@ -22,6 +22,7 @@ public class StoreRouteConverter {
 
     private static final String TRANSIT_STEP_BUS = "BUS";
     private static final String TRANSIT_STEP_SUBWAY = "SUBWAY";
+    private static final String TRANSIT_STEP_WALKING = "WALKING";
 
     public StoreRouteResponse prependOriginWalk(StoreRouteResponse transit, StoreRouteResponse walk) {
         requireObject(transit, "transit");
@@ -97,10 +98,28 @@ public class StoreRouteConverter {
     private Step toTransitStep(KakaoTransitRouteResponse.Step step) {
         KakaoTransitRouteResponse.StepProperties properties =
                 requireObject(requireObject(step, "step").properties(), "steps.properties");
-        return new Step(toTransitStepType(properties.type()), properties.guidance(),
+        return new Step(toTransitStepType(properties.type()), toTransitGuidance(properties),
                 requireMetric(properties.distance(), "steps.properties.distance"),
                 requireMetric(properties.time(), "steps.properties.time"), findLineName(properties),
                 toCoordinates(step.path() == null ? null : step.path().points()));
+    }
+
+    // 카카오는 걷는 단계 안내 앞에 그 단계가 도착할 정류장·역 이름을 띄어 쓰지 않고 한 번 더 붙여 보낸다.
+    // "왕십리왕십리역까지 도보로 이동", "왕십리(성동구청)왕십리역까지 도보로 이동", "왕십리왕십리역 환승"처럼 와서 앞의 이름을 뗀다.
+    // 뗀 뒤 문구도 같은 이름으로 다시 시작할 때만 떼어, "판교역 1번 출구까지 역사 내 이동"처럼 원래 이름으로 시작하는 문구는 그대로 둔다
+    private String toTransitGuidance(KakaoTransitRouteResponse.StepProperties properties) {
+        String guidance = properties.guidance();
+        if (guidance == null || !TRANSIT_STEP_WALKING.equals(properties.type())
+                || properties.stops() == null || properties.stops().isEmpty()) {
+            return guidance;
+        }
+        KakaoTransitRouteResponse.Stop arrival = properties.stops().get(properties.stops().size() - 1);
+        String name = arrival == null || arrival.name() == null ? "" : arrival.name().strip();
+        if (name.isEmpty() || !guidance.startsWith(name)) {
+            return guidance;
+        }
+        String rest = guidance.substring(name.length());
+        return rest.startsWith(name.substring(0, Math.min(2, name.length()))) ? rest : guidance;
     }
 
     private Step toLegStep(StepType type, KakaoLegRouteResponse.Step step) {
