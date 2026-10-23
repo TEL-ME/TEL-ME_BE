@@ -27,6 +27,6 @@ public final class ChatPersona {
 
     public static ChatAnswer decorate(String input, ChatAnswer answer) {
         return new ChatAnswer(answer.messageType(), prependGreeting(input, answer.content()), answer.answerBasis(),
-                answer.followUps(), answer.storeResults(), answer.storeSearchContext());
+                answer.followUps(), answer.storeResults(), answer.storeSearchContext(), answer.handoff());
     }
 }

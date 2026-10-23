@@ -177,6 +177,46 @@ class ChatExecutionServiceIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("상담원 연결 표시는 저장되어 늦게 구독해도 같은 값으로 읽힌다")
+    void 상담원_연결_표시를_저장하고_다시_읽는다() {
+        var question = send("파이썬 리스트 정렬 알려줘");
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime());
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "파이썬 리스트 정렬 알려줘", null, stopwatch));
+        try {
+            ChatExecutionState completed = chatExecutionService.completeAnswer(question.executionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", ChatMessage.AnswerBasis.NO_EVIDENCE,
+                            null, null).withHandoff(true));
+
+            ChatExecutionState reread = chatSessionService.getExecution(actor, question.executionId());
+
+            assertThat(completed.outputMessage().handoff()).isTrue();
+            assertThat(reread.outputMessage().handoff()).isTrue();
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
+    }
+
+    @Test
+    @DisplayName("상담원 연결 표시가 없는 답변은 다시 읽어도 false다")
+    void 상담원_연결_표시가_없으면_false로_읽는다() {
+        var question = send("유심 재발급 비용 알려줘");
+        var stopwatch = new ChatResponseStopwatch(System.nanoTime());
+        var registration = responseTimer.register(new ChatProcessingCommand(
+                question.executionId(), sessionId, question.messageId(), "유심 재발급 비용 알려줘", null, stopwatch));
+        try {
+            chatExecutionService.completeAnswer(question.executionId(),
+                    new ChatAnswer(ChatMessage.MessageType.ANSWER, "답변입니다.", ChatMessage.AnswerBasis.GROUNDED,
+                            null, null));
+
+            assertThat(chatSessionService.getExecution(actor, question.executionId())
+                    .outputMessage().handoff()).isFalse();
+        } finally {
+            responseTimer.release(question.executionId(), registration);
+        }
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",

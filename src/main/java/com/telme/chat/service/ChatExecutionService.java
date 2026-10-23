@@ -75,6 +75,7 @@ public class ChatExecutionService {
                 followUps,
                 stores,
                 searchContext,
+                answer.handoff(),
                 ending.at()
         );
         execution.complete(message, ending.at(), ending.totalMs());

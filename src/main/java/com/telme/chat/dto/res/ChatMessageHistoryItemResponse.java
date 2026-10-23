@@ -28,7 +28,9 @@ public record ChatMessageHistoryItemResponse(
         @Schema(description = "현재 사용자가 남긴 평가. 미작성 또는 피드백 기능 비활성화 시 null")
         MyFeedback myFeedback,
         @Schema(description = "매장 검색 기준. 지역 검색에는 거리 기준이 없으며 radiusMeters는 null")
-        ChatStoreSearchContextResponse storeSearchContext
+        ChatStoreSearchContextResponse storeSearchContext,
+        @Schema(description = "FAQ에서 근거를 찾지 못한 답변이면 true. 상담원 연결을 안내할 수 있다")
+        boolean handoff
 ) {
     public record MyFeedback(
             String rating,

@@ -102,7 +102,8 @@ public class ChatExecutionController {
     }
 
     // front작업시 이벤트 별로 emitterRegistry를 확인해서 어떤식으로 token단위로 오는지 확인하기
-    @Operation(summary = "AI 답변 실행 구독", description = "실행 중인 답변 생성 과정을 SSE로 실시간 구독합니다.")
+    @Operation(summary = "AI 답변 실행 구독", description = "실행 중인 답변 생성 과정을 SSE로 실시간 구독합니다. "
+                    + "complete 이벤트의 outputMessage.handoff가 true이면 FAQ 근거를 찾지 못한 답변이라 상담원 연결을 안내할 수 있습니다. 히스토리 조회의 handoff와 같은 값입니다.")
     @GetMapping(value = "/{executionId}/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(
             HttpServletRequest servletRequest,

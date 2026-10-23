@@ -55,7 +55,8 @@ public class ChatMessageConverter {
                 message.getCompletedAt(),
                 ratable,
                 myFeedback,
-                parseSearchContext(message)
+                parseSearchContext(message),
+                message.isHandoff()
         );
     }
 

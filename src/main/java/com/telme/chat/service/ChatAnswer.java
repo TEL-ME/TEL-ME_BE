@@ -12,12 +12,24 @@ public record ChatAnswer(
         ChatMessage.AnswerBasis answerBasis,
         List<String> followUps,
         List<Map<String, Object>> storeResults,
-        ChatStoreSearchContextResponse storeSearchContext
+        ChatStoreSearchContextResponse storeSearchContext,
+        // FAQ에서 근거를 찾지 못한 답변이라 프론트가 상담원 연결을 안내한다. 저장하지 않고 완료 이벤트로만 내려간다
+        boolean handoff
 ) {
 
     public ChatAnswer(ChatMessage.MessageType messageType, String content,
             ChatMessage.AnswerBasis answerBasis, List<String> followUps, List<Map<String, Object>> storeResults) {
-        this(messageType, content, answerBasis, followUps, storeResults, null);
+        this(messageType, content, answerBasis, followUps, storeResults, null, false);
+    }
+
+    public ChatAnswer(ChatMessage.MessageType messageType, String content, ChatMessage.AnswerBasis answerBasis,
+            List<String> followUps, List<Map<String, Object>> storeResults,
+            ChatStoreSearchContextResponse storeSearchContext) {
+        this(messageType, content, answerBasis, followUps, storeResults, storeSearchContext, false);
+    }
+
+    public ChatAnswer withHandoff(boolean handoff) {
+        return new ChatAnswer(messageType, content, answerBasis, followUps, storeResults, storeSearchContext, handoff);
     }
 
     public ChatAnswer {
