@@ -65,9 +65,12 @@ public class QueryRoutingService {
     private static final int MAX_USAGE_REPLY_LENGTH = 30;
     private static final Pattern TYPED_AGE = Pattern.compile("\\d\\s*(?:세|살|대)");
 
-    // 사용량 단위. "서른 기가 정도요"처럼 고유어 수로 사용량을 말한 답을 나이로 읽지 않게 막는다
+    // 사용량 단위. "서른 기가 정도요"처럼 고유어 수로 사용량을 말한 답을 나이로 읽지 않게 막는다.
+    // 한 글자 단위(분, 건, 통, 개)는 수 뒤에서만 본다. "그건", "분명", "보통", "6개월"은 단위가 아니다
     private static final Pattern USAGE_UNIT = Pattern.compile(
-        "기가|메가|테라|지비|엠비|[GgMmTt][Bb]|\\d\\s*[Gg](?![A-Za-z])|\\d\\s*개|분|시간|건|통|데이터|문자|통화");
+        "기가|메가|테라|지비|엠비|[GgMmTt][Bb]|데이터|문자|통화"
+            + "|(?:\\d|(?<![가-힣])(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|백|천))\\s*(?:시간|분|건|통|개(?!월))"
+            + "|\\d\\s*[Gg](?![A-Za-z])");
     // 양이 아니라 사용 정도를 말한 사용량 답("무제한으로 써요", "거의 안 써요"). 신분을 곁들여도 나이 정정이 아니다
     private static final Pattern USAGE_WORD = Pattern.compile(
         "무제한|언리미티드|모르|몰라|모름|안\\s*써|안\\s*쓰|거의|많이|적게|조금|별로|와이파이|써요|써여|(?<![말못])씀|쓰는|쓰고");
@@ -79,9 +82,10 @@ public class QueryRoutingService {
     // "17살 아니고 20이에요"처럼 앞의 나이를 부정하고 고친 답. 부정 표현 뒤의 나이가 지금 나이다
     private static final Pattern NEGATED = Pattern.compile("아니고|아니구|아니라|아닌데|아닌|아님|말고|말구");
     // 부정한 쪽이 나이였음을 보여 주는 말(AGE_WORD 밖)
-    private static final Pattern NEGATED_AGE_WORD = Pattern.compile("\\d\\s*대|나이|미성년|청년|학생|어른|살|세");
+    // 세는 어미("해주세요")의 세와 구분해 숫자 뒤이거나 따로 쓴 것만 본다
+    private static final Pattern NEGATED_AGE_WORD = Pattern.compile("\\d\\s*대|나이|미성년|청년|학생|어른|살|\\d\\s*세|(?<![가-힣])세");
     // 살·세를 붙여 분명히 나이로 말한 것. 부정 표현 앞에 나이가 없어도("아닌데 저 쉰 살이에요") 나이로 본다
-    private static final Pattern EXPLICIT_AGE = Pattern.compile("살|세");
+    private static final Pattern EXPLICIT_AGE = Pattern.compile("살|\\d\\s*세|(?<![가-힣])세");
     // 학년("중3", "고1", "2학년")의 숫자는 나이도 사용량도 아니다
     private static final Pattern SCHOOL_GRADE = Pattern.compile("(?<![가-힣])[초중고]\\s*[1-6](?!\\d)|\\d\\s*학년");
     // 매장을 찾는 답은 사용량이나 나이로 가로채지 않고 모델이 새 질문으로 판단한다
@@ -89,7 +93,14 @@ public class QueryRoutingService {
     // 살·세 없이 "나이" 뒤에 숫자 하나로 고쳐 말한 답("나이 47로 바꿔주세요")의 그 숫자. 뒤에 다른 단위가 붙으면 나이가 아니다
     private static final Pattern LONE_NUMBER = Pattern.compile(
         "(?<!\\d)(\\d{1,3})(?!\\d)(?!\\s*(?:년|개월|월|원|만|천|%|번|호선|층|명|회선|일|주|시|등))");
-    private static final Pattern ANY_NUMBER = Pattern.compile("\\d+");
+    // 수 하나. 나이 범위("만 14~18세")는 하나로 센다
+    private static final Pattern ANY_NUMBER = Pattern.compile("\\d+(?:\\s*[~-]\\s*\\d+)?");
+    // 살·세를 붙인 나이와 고쳐 말한다는 말이 함께 있으면 나이 정정이다. "모르고", "조금 전에"가 섞여도 사용량 답이 아니다
+    private static final Pattern TYPED_EXACT_AGE = Pattern.compile("\\d\\s*(?:살|세)");
+    private static final Pattern CORRECTING = Pattern.compile("잘못|정정|틀렸|틀려|오타|고쳐|바꿔|바꿀|다시|눌렀|눌러|착각|실수");
+    // 앞서 한 답을 고친다는 말. 단위 없이 이 말과 함께 온 사용량 답은 무엇을 고친 것인지 알 수 없다
+    private static final Pattern CORRECTION_MARK = Pattern.compile(
+        "아니|아냐|아뇨|ㄴㄴ|잘못|오타|틀렸|틀려|틀림|정정|고쳐|바꿔|바꿀|다시|착각|실수");
     private static final Set<String> USAGE_KEYS = Set.of(
         DataUsageReplyParser.CONDITION_KEY, CallTextReplyParser.VOICE_KEY, CallTextReplyParser.SMS_KEY);
 
@@ -1302,22 +1313,36 @@ public class QueryRoutingService {
         }
         // 단위 없이 나이나 학년을 말한 답("나이 29라고요", "중3이에요", "청소년 아니고 20이에요")의 숫자는 사용량이 아니다.
         // 매장을 찾는 답도 가로채지 않는다
-        boolean saysAge = reply.contains("나이") || SCHOOL_GRADE.matcher(reply).find()
+        boolean saysAge = reply.contains("나이") || SCHOOL_GRADE.matcher(reply).find() || correctsTypedAge(reply)
                 || AGE_WORD.matcher(reply).find() && ANY_NUMBER.matcher(reply).find() && !USAGE_WORD.matcher(reply).find();
         if (saysAge && !USAGE_UNIT.matcher(reply).find() || STORE_WORD.matcher(reply).find()) {
             return null;
         }
         String key = waiting.pendingKeys().iterator().next();
-        String value = usageValue(key, reply);
-        // "10기가 아니고 20기가요"처럼 사용량을 부정하고 고친 답은 두 양을 함께 읽지 못한다. 마지막 부정 표현 뒤의 양을 읽는다
+        // 앞의 사용량을 부정하고 고친 답("10기가 아니고 20이요", "20 아니고 30이요", "10기가 말고 잘 모르겠어요")은
+        // 마지막 부정 표현 뒤만 읽는다. 문장 전체를 읽으면 단위가 붙은 앞쪽 값, 곧 고객이 지운 값을 받는다
         Matcher negated = NEGATED.matcher(reply);
-        if (value == null && USAGE_UNIT.matcher(reply).find() && negated.find()) {
+        if (negated.find()) {
+            int start = negated.start();
             int end = negated.end();
             while (negated.find()) {
+                start = negated.start();
                 end = negated.end();
             }
-            value = usageValue(key, reply.substring(end));
+            String before = reply.substring(0, start);
+            if (USAGE_UNIT.matcher(before).find() || usageValue(key, before) != null) {
+                String corrected = usageValue(key, reply.substring(end));
+                return corrected == null ? null : new FollowUpRouteResponse(
+                    waiting.consultRequestId(), Map.of(key, corrected), Collections.emptySet(), QueryRouting.Method.RULE);
+            }
         }
+        // 고쳐 말한다는 말과 함께 단위 없는 숫자나 사용 정도만 말한 답("아니 38이요", "오타 50이요",
+        // "조금 전에 고른 거 틀림 예순일곱")은 사용량을 고친 것인지 나이를 고친 것인지 코드가 가리지 못한다.
+        // 틀린 값을 저장하지 않도록 읽지 않고 모델에 넘긴다(TELME-218)
+        if (CORRECTION_MARK.matcher(reply).find() && !USAGE_UNIT.matcher(reply).find()) {
+            return null;
+        }
+        String value = usageValue(key, reply);
         if (value == null) {
             return null;
         }
@@ -1334,7 +1359,7 @@ public class QueryRoutingService {
                 || !USAGE_KEYS.contains(waiting.pendingKeys().iterator().next())) {
             return null;
         }
-        if (USAGE_UNIT.matcher(reply).find() || USAGE_WORD.matcher(reply).find()
+        if (USAGE_UNIT.matcher(reply).find() || USAGE_WORD.matcher(reply).find() && !correctsTypedAge(reply)
                 || SCHOOL_GRADE.matcher(reply).find() || STORE_WORD.matcher(reply).find()) {
             return null;
         }
@@ -1378,12 +1403,26 @@ public class QueryRoutingService {
         }
         String before = reply.substring(0, start);
         String after = reply.substring(end).trim();
-        boolean negatesAge = AgeReplyParser.parse(before) != null || AGE_WORD.matcher(before).find()
+        // 단위 없는 숫자만 부정한 답("20 아니고 30이요")은 사용량을 고친 것일 수 있어 나이로 보지 않는다
+        boolean negatesAge = AgeReplyParser.parseStated(before) != null || AGE_WORD.matcher(before).find()
                 || NEGATED_AGE_WORD.matcher(before).find() || EXPLICIT_AGE.matcher(after).find();
-        if (!negatesAge || after.isEmpty() || numberCount(after) > 1 || AgeReplyParser.parse(after) == null) {
+        if (!negatesAge || after.isEmpty() || numberCount(after) > 1) {
             return null;
         }
-        return after;
+        if (AgeReplyParser.parse(after) != null) {
+            return after;
+        }
+        // 앞에서 나이를 부정했으니 뒤의 숫자 하나는 어미와 상관없이 나이다("나이 그거 아님 24임", "30살 말고 40으로 해주세요")
+        Matcher number = LONE_NUMBER.matcher(after);
+        if (!number.find()) {
+            return null;
+        }
+        String age = number.group(1) + "살";
+        return AgeReplyParser.parse(age) == null ? null : age;
+    }
+
+    private static boolean correctsTypedAge(String reply) {
+        return TYPED_EXACT_AGE.matcher(reply).find() && CORRECTING.matcher(reply).find();
     }
 
     private static int numberCount(String reply) {
