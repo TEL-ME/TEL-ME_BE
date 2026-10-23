@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,66 @@ public class PlanQuestionClassifier {
             return mention;
         }
     }
+
+    // 추천받을 요금제를 쓸 사람(본인 또는 가족)과 그 사람의 나이대·한 달 데이터 사용량. 모르는 값은 null이다.
+    // 나이대와 쓸 사람·사용량은 따로 묻되 동시에 보낸다. 쓸 사람·사용량을 읽지 못하면 null이라 지금처럼 본인 요금제로 보고 묻는다
+    public Subscriber subscriber(Long executionId, String question) {
+        if (!properties.enabled() || question == null || question.isBlank()) {
+            return null;
+        }
+        CompletableFuture<JsonNode> usage = CompletableFuture.supplyAsync(() -> subscriberReply(executionId, question,
+                PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT, PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION,
+                SUBSCRIBER_USAGE_SCHEMA));
+        JsonNode age = subscriberReply(executionId, question, PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT,
+                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, SUBSCRIBER_AGE_SCHEMA);
+        JsonNode user = usage.join();
+        if (user == null || !user.path("user").isTextual() || !user.path("monthlyDataGb").isNumber()) {
+            log.info("[요금제 추천 대상] 쓸 사람을 읽지 못해 본인 요금제로 보고 묻습니다. executionId={}", executionId);
+            return null;
+        }
+        double dataGb = user.path("monthlyDataGb").asDouble();
+        Plan.TargetGroup group = age == null ? null : enumValue(Plan.TargetGroup.class, age.path("targetGroup").asText(""));
+        return new Subscriber("OTHER".equals(user.path("user").textValue()), group,
+                dataGb > 0 && dataGb <= MAX_DATA_GB ? dataGb : null);
+    }
+
+    // 스키마의 칸만 있는 JSON 객체. 실패하거나 읽지 못하면 null
+    private JsonNode subscriberReply(Long executionId, String question, String prompt, String version, Map<String, Object> schema) {
+        try {
+            String reply = llmClient.generate(LlmRequest.builder()
+                    .executionId(executionId)
+                    .taskType(TaskType.ROUTING)
+                    .systemPrompt(prompt)
+                    .userPrompt(question)
+                    .temperature(0.0)
+                    .maxTokens(MAX_TOKENS)
+                    .promptVersion(version)
+                    .responseSchema(schema)
+                    .think(false)
+                    .build());
+            JsonNode root = reply == null || reply.isBlank() ? null : objectMapper.readTree(reply);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fields = (Map<String, Object>) schema.get("properties");
+            return root != null && root.isObject() && root.size() == fields.size() ? root : null;
+        } catch (Exception exception) {
+            log.warn("[요금제 추천 대상] 모델 호출에 실패했습니다. promptVersion={}, executionId={}", version, executionId, exception);
+            return null;
+        }
+    }
+
+    /** other: 가족 등 다른 사람이 쓸 요금제. group·monthlyDataGb: 쓸 사람의 나이대와 한 달 데이터 사용량, 모르면 null */
+    public record Subscriber(boolean other, Plan.TargetGroup group, Double monthlyDataGb) {
+    }
+
+    private static final double MAX_DATA_GB = 10_000;
+    private static final Map<String, Object> SUBSCRIBER_AGE_SCHEMA = Map.of("type", "object",
+            "properties", Map.of("targetGroup", Map.of("type", "string", "enum", List.of("YOUTH", "GENERAL", "SENIOR", "UNKNOWN"))),
+            "required", List.of("targetGroup"), "additionalProperties", false);
+    private static final Map<String, Object> SUBSCRIBER_USAGE_SCHEMA = Map.of("type", "object",
+            "properties", Map.of(
+                    "user", Map.of("type", "string", "enum", List.of("SELF", "OTHER")),
+                    "monthlyDataGb", Map.of("type", "number")),
+            "required", List.of("user", "monthlyDataGb"), "additionalProperties", false);
 
     private LlmRequest conditionsRequest(Long executionId, String question, List<Plan> plans) {
         return LlmRequest.builder()

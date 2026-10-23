@@ -22,6 +22,7 @@ import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.service.ConsultChatProcessingService.Prepared;
+import com.telme.plan.entity.Plan;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -260,6 +261,80 @@ class PlanAnswerProviderTest {
         Prepared prepared = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true);
 
         assertThat(prepared.answer().answer().content()).isEqualTo("청소년 추천");
+    }
+
+    // 규칙은 가족 이야기가 섞이면 나이·사용량을 읽지 않는다. 그때는 모델이 읽은 쓸 사람과 나이대·사용량을 쓰고,
+    // 다른 사람이 쓸 요금제면 회원 본인 정보와 앞서 한 답 없이 추천한다(TELME-227)
+    @Test
+    void 가족이_쓸_요금제는_모델이_읽은_나이대와_사용량으로_회원_정보_없이_추천한다() {
+        String question = "고딩 딸 한 달에 10기가 쓰는데 요금제 추천해 주세요";
+        previous = Map.of("age_group", "만 19~64세", "monthly_data_usage", "50GB");
+        provider = provider(true);
+        when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(classifier.subscriber(1L, question))
+                .thenReturn(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.YOUTH, 10.0));
+        Map<String, String> read = Map.of("age_group", "만 14~18세", "monthly_data_usage", "10GB");
+        when(recommendation.recommendForOther(read, true, true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("딸 추천", List.of(), null));
+
+        Prepared prepared = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true);
+
+        assertThat(prepared.answer().answer().content()).isEqualTo("딸 추천");
+        verify(recommendation, never()).recommend(any(), any(), any(), anyBoolean());
+        verify(recommendation, never()).recommend(any(), any(), any(), anyBoolean(), anyBoolean());
+        verify(trace).append(1L, "planSubscribers", Map.of("question", question, "user", "OTHER",
+                "targetGroup", "YOUTH", "monthlyDataGb", 10.0));
+    }
+
+    // 모델이 읽은 나이대로 추천하면 추천 답변기가 기준 나이대를 밝히도록 알린다. 되묻기로 받은 나이면 알리지 않는다
+    @Test
+    void 모델이_읽은_나이대로_추천할_때만_그렇다고_알린다() {
+        String question = "칠순 넘었는데 요금제 추천해 주세요";
+        when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(classifier.subscriber(1L, question)).thenReturn(new PlanQuestionClassifier.Subscriber(false, Plan.TargetGroup.SENIOR, null));
+        when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), true, true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("모델 나이 추천", List.of(), null));
+        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true)
+                .answer().answer().content()).isEqualTo("모델 나이 추천");
+
+        Map<String, String> answered = Map.of("age_group", "만 19~64세");
+        when(recommendation.recommend(77L, answered, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("답한 나이 추천", List.of(), null));
+        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, answered), true)
+                .answer().answer().content()).isEqualTo("답한 나이 추천");
+    }
+
+    @Test
+    void 본인_요금제면_모델이_읽은_값을_되묻기_답보다_뒤에_두고_지금처럼_추천한다() {
+        String question = "아내는 시니어 요금제 쓰는데 제 거 한 달 5기가면 뭐가 좋아요";
+        Map<String, String> confirmed = Map.of("monthly_data_usage", "3GB");
+        when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(classifier.subscriber(1L, question)).thenReturn(new PlanQuestionClassifier.Subscriber(false, null, 5.0));
+        when(recommendation.recommend(77L, confirmed, Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("본인 추천", List.of(), null));
+
+        Prepared prepared = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, confirmed), true);
+
+        assertThat(prepared.answer().answer().content()).isEqualTo("본인 추천");
+    }
+
+    @Test
+    void 규칙이_나이를_읽으면_모델에_묻지_않고_모델이_실패하면_지금처럼_추천한다() {
+        String stated = "저 17살인데 요금제 추천해줘";
+        when(classifier.classifyQuestion(1L, stated)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(recommendation.recommend(77L, Map.of("age_group", "만 14~18세"), Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("말한 나이 추천", List.of(), null));
+        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, stated, stated, Map.of()), true)
+                .answer().answer().content()).isEqualTo("말한 나이 추천");
+        verify(classifier, never()).subscriber(anyLong(), any());
+
+        String unknown = "어머니 요금제 추천해 주세요";
+        when(classifier.classifyQuestion(1L, unknown)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(recommendation.recommend(77L, Map.of(), Map.of(), true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("그대로", List.of(), null));
+        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, unknown, unknown, Map.of()), true)
+                .answer().answer().content()).isEqualTo("그대로");
+        verify(classifier).subscriber(1L, unknown);
     }
 
     @Test

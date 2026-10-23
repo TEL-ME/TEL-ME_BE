@@ -3,8 +3,10 @@ package com.telme.consult.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -308,6 +310,53 @@ class PlanQuestionClassifierTest {
         // 분류 응답 형식처럼 모르는 칸이 있으면 읽지 않는다
         doReturn(listReply, listReply).when(llm).generate(any());
         assertThat(classifier.classifyQuestion(1L, "LTE 요금제 뭐 있어요").mention().conditions()).isNull();
+    }
+
+    // 나이대와 쓸 사람·사용량은 두 호출로 동시에 묻는다
+    @Test
+    void 추천받을_요금제를_쓸_사람과_나이대_사용량을_모델에서_받는다() {
+        replies("{\"targetGroup\":\"YOUTH\"}", "{\"user\":\"OTHER\",\"monthlyDataGb\":10}");
+
+        assertThat(classifier.subscriber(5L, "고딩 딸 한 달에 10기가 써요 요금제 추천"))
+                .isEqualTo(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.YOUTH, 10.0));
+
+        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm, times(2)).generate(captor.capture());
+        assertThat(captor.getAllValues()).extracting(LlmRequest::promptVersion).containsExactlyInAnyOrder(
+                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION);
+        assertThat(captor.getAllValues()).allSatisfy(request -> {
+            assertThat(request.executionId()).isEqualTo(5L);
+            assertThat(request.userPrompt()).isEqualTo("고딩 딸 한 달에 10기가 써요 요금제 추천");
+        });
+    }
+
+    @Test
+    void 모르는_나이대와_사용량은_비워_두고_쓸_사람을_읽지_못하거나_꺼져_있으면_없다() {
+        replies("{\"targetGroup\":\"UNKNOWN\"}", "{\"user\":\"SELF\",\"monthlyDataGb\":0}");
+        assertThat(classifier.subscriber(1L, "요금제 추천")).isEqualTo(new PlanQuestionClassifier.Subscriber(false, null, null));
+
+        // 나이대만 못 읽으면 나이대 없이 쓴다
+        replies("oops", "{\"user\":\"OTHER\",\"monthlyDataGb\":0}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isEqualTo(new PlanQuestionClassifier.Subscriber(true, null, null));
+
+        replies("{\"targetGroup\":\"SENIOR\"}", "{\"user\":\"OTHER\"}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
+        reset(llm);
+        doThrow(new IllegalStateException("down")).when(llm).generate(any());
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
+        LlmClient off = mock(LlmClient.class);
+        PlanQuestionClassifier disabled = new PlanQuestionClassifier(off, new ObjectMapper(),
+                new PlanQuestionProperties(false, true, false), plans);
+        assertThat(disabled.subscriber(1L, "고딩 딸 요금제 추천")).isNull();
+        verify(off, never()).generate(any());
+    }
+
+    private void replies(String age, String usage) {
+        reset(llm);
+        when(llm.generate(any())).thenAnswer(invocation -> PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION
+                .equals(invocation.<LlmRequest>getArgument(0).promptVersion()) ? age : usage);
     }
 
     @Test

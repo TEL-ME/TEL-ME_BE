@@ -74,6 +74,11 @@ public final class DataUsageReplyParser {
 
     // 질문 속에 단위를 붙여 말한 한 달 사용량만 읽는다. 단위 없는 숫자는 요금·개수 같은 다른 양일 수 있어 읽지 않고,
     // 무제한·모름도 사용량으로 읽지 않는다. 값이 분명한 경우에만 AMOUNT이다
+    // 모델이 읽은 GB 사용량을 되묻기 답과 같은 글자("10GB", "1536MB")로 바꾼다
+    public static String canonicalGb(double gb) {
+        return new Result(Kind.AMOUNT, Math.round(gb * MB_PER_GB)).canonical();
+    }
+
     public static Result parseStated(String text) {
         if (text == null || text.isBlank()) {
             return Result.UNREADABLE;
