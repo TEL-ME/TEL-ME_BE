@@ -32,6 +32,10 @@ public final class ChatInputInspector {
     private static final Pattern BRIDGED_MASK = Pattern.compile(
             "(?<=\\S)" + Pattern.quote(String.valueOf(INSPECTION_BOUNDARY)) + "(?=\\S)");
     private static final Pattern RESIDENT = Pattern.compile("(?<!\\d)(\\d{6})[ -]?(\\d{7})(?!\\d)");
+    private static final Pattern SPACED_RESIDENT =
+            Pattern.compile("(?<!\\d)(\\d{6}) *+(?:- *+)?(\\d{7})(?!\\d)");
+    private static final Pattern COMMA_MONEY_AFTER_CARD =
+            Pattern.compile("(?=[ -]) *+(?:- *+)?(\\d{1,3}(?:,\\d{3})+)(?= *원)");
     private static final Pattern DECLARED_RESIDENT = Pattern.compile(
             "(?:주민등록번호|주민번호)(?:는|은|가|이)?\\s*[:：]?\\s*$");
     private static final Pattern CONDITION_UNIT = Pattern.compile(
@@ -217,15 +221,26 @@ public final class ChatInputInspector {
     }
 
     private MaskedContent mask(String input, List<Detection> detections) {
+        return mask(input, detections, true);
+    }
+
+    private MaskedContent mask(String input, List<Detection> detections, boolean expandedSpacing) {
         // 숫자와 구분자만 길이가 같은 문자로 정규화해 원문 위치를 보존한다.
         String numeric = numericForm(input);
-        List<Span> residents = findResidentSpans(numeric);
-        var cards = CardCandidateScanner.findCandidates(numeric, this::validCard);
+        if (expandedSpacing) {
+            numeric = normalizeNumberSpacing(numeric);
+        }
+        List<Span> residents = findResidentSpans(numeric, expandedSpacing ? SPACED_RESIDENT : RESIDENT);
+        var cards = expandedSpacing
+                ? CardCandidateScanner.findCandidates(numeric, this::validCard)
+                : CardCandidateScanner.findPreviousCandidates(numeric, this::validCard);
+        Set<Integer> moneyStarts = expandedSpacing ? separatedMoneyStarts(numeric, cards) : Set.of();
         List<Span> spans = new ArrayList<>(residents);
         List<Span> acceptedCards = new ArrayList<>();
         for (var candidate : cards) {
             if (covered(residents, candidate.start(), candidate.end())
-                    || declaredResidentCondition(numeric, candidate, residents)) {
+                    || declaredResidentCondition(numeric, candidate, residents)
+                    || moneyStarts.stream().anyMatch(start -> candidate.start() < start && start < candidate.end())) {
                 continue;
             }
             Span card = new Span(candidate.start(), candidate.end(), "[카드번호]");
@@ -242,9 +257,21 @@ public final class ChatInputInspector {
         return render(input, protectedSpans, ambiguous);
     }
 
-    private List<Span> findResidentSpans(String numeric) {
+    private Set<Integer> separatedMoneyStarts(String numeric, List<CardCandidateScanner.Candidate> cards) {
+        Set<Integer> starts = new HashSet<>();
+        for (var card : cards) {
+            Matcher money = COMMA_MONEY_AFTER_CARD.matcher(numeric).region(card.end(), numeric.length());
+            // 유효 번호 뒤 완전한 쉼표 금액과 원 단위가 확인된 경우에만 긴 카드 후보에서 제외한다.
+            if (money.lookingAt() && ambiguousConditionUnit(numeric, money.end(1))) {
+                starts.add(money.start(1));
+            }
+        }
+        return starts;
+    }
+
+    private List<Span> findResidentSpans(String numeric, Pattern pattern) {
         List<Span> spans = new ArrayList<>();
-        Matcher resident = RESIDENT.matcher(numeric);
+        Matcher resident = pattern.matcher(numeric);
         while (resident.find()) {
             if (residentDate(resident.group(1), resident.group(2).charAt(0))) {
                 spans.add(new Span(resident.start(), resident.end(), "[주민등록번호]"));
@@ -305,7 +332,7 @@ public final class ChatInputInspector {
 
     String previousFingerprintContent(String input) {
         String numeric = numericForm(input);
-        List<Span> spans = findResidentSpans(numeric);
+        List<Span> spans = findResidentSpans(numeric, RESIDENT);
         Matcher card = CARD.matcher(numeric);
         while (card.find()) {
             // 전체 후보가 검증을 통과하면 길이와 단위에 관계없이 전체를 보호한다.
@@ -323,6 +350,11 @@ public final class ChatInputInspector {
         }
         spans.sort(Comparator.comparingInt(Span::start));
         return render(input, spans, false).fingerprintContent();
+    }
+
+    String previousV3FingerprintContent(String input) {
+        // 저장된 v3 요청 해시와 비교할 때만 당시 경계를 재현하며 새 저장·모델 입력에는 쓰지 않는다.
+        return mask(input, new ArrayList<>(), false).fingerprintContent();
     }
 
     private MaskedContent render(String input, List<Span> spans, boolean ambiguous) {
@@ -347,6 +379,16 @@ public final class ChatInputInspector {
                 result.append(input, cursor, input.length()).toString(),
                 fingerprintContent.append(input, cursor, input.length()).toString(),
                 inspectionContent.append(input, cursor, input.length()).toString(), maskSpans, ambiguous);
+    }
+
+    private String normalizeNumberSpacing(String numeric) {
+        // 원문 위치를 유지하고 줄바꿈으로 나뉜 별도 숫자 항목은 연결하지 않는다.
+        StringBuilder normalized = new StringBuilder(numeric.length());
+        for (int index = 0; index < numeric.length(); index++) {
+            char value = numeric.charAt(index);
+            normalized.append(value == '\t' || Character.getType(value) == Character.SPACE_SEPARATOR ? ' ' : value);
+        }
+        return normalized.toString();
     }
 
     private String numericForm(String input) {

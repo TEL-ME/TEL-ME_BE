@@ -83,6 +83,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /** 분석·생성만 대체하며 활성 처리기, 접수 API, 상태 저장 및 기록 조회는 실제 구현을 사용한다. */
 @SpringBootTest(
@@ -509,9 +513,50 @@ class ChatInputGuardIntegrationTest {
         verifyNoInteractions(analyzer, answers);
     }
 
+    @Test
+    @DisplayName("금액 일부가 가려진 v3 영수증은 재전송 시 유지하고 새 요청에서는 금액을 보존한다")
+    void 과거_금액_경계_영수증과_새_요청을_구분한다() throws Exception {
+        long sid = session(identity);
+        UUID oldKey = UUID.randomUUID();
+        String input = "카드번호 4111 1111 1111 1111 3,000원 납부 문의";
+        String oldContent = "카드번호 ***,000원 납부 문의";
+        var first = body(request(sid, identity, "카드번호 4111 1111 1111 1111 납부 문의", oldKey, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        String oldHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n카드번호 [카드번호],000원 납부 문의\nnull\nnull")
+                        .getBytes(StandardCharsets.UTF_8)));
+        jdbc.update("UPDATE chat_messages SET content=? WHERE message_id=?",
+                oldContent, first.at("/result/messageId").asLong());
+        jdbc.update("UPDATE chat_input_guard_events SET policy_version='chat-input-guard-v3',"
+                + " sanitized_content=?, request_fingerprint=? WHERE session_id=?", oldContent, oldHash, sid);
+        clearInvocations(analyzer, answers);
+
+        assertThat(body(request(sid, identity, input, oldKey, 201))).isEqualTo(first);
+        request(sid, identity, input + " 다른 문의", oldKey, 409);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        verifyNoInteractions(analyzer, answers);
+
+        UUID newKey = UUID.randomUUID();
+        var accepted = body(request(sid, identity, input, newKey, 201));
+        waitCompleted(accepted.at("/result/executionId").asLong());
+        assertThat(analyzedContent.get()).isEqualTo("카드번호 *** 3,000원 납부 문의");
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(oldContent);
+        assertThat(body(request(sid, identity, input, newKey, 201))).isEqualTo(accepted);
+        request(sid, identity, input.replace("3,000", "4,900"), newKey, 409);
+        assertThat(count("chat_messages")).isEqualTo(4);
+        assertThat(count("chat_executions")).isEqualTo(2);
+        assertThat(count("chat_input_guard_events")).isEqualTo(2);
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "카드번호 411111 1111111 111 납부 문의 | 카드번호 *** 납부 문의",
+        "카드번호 4111 1111 1111 1111 3,000원 납부 문의, 약정 18개월"
+                + " | 카드번호 *** 3,000원 납부 문의, 약정 18개월",
+        "카드번호 4111\t1111\t1111\t1111\t18,000원 납부 문의, 약정 24개월"
+                + " | 카드번호 ***\t18,000원 납부 문의, 약정 24개월",
+        "카드번호 3782\u00a08224\u00a06310\u00a0005\u00a02,000원 납부 문의, 약정 12개월"
+                + " | 카드번호 ***\u00a02,000원 납부 문의, 약정 12개월",
         "고객번호 1234567890123 4111 1111 1111 1111 납부 문의 | 고객번호 1234567890123 *** 납부 문의",
         "제 카드번호는 4111111111111111인데요 납부 방법은요? | 제 카드번호는 ***인데요 납부 방법은요?",
         "주민번호 990101-1234567 4개월 약정 문의 | 주민번호 *** 4개월 약정 문의",
@@ -1275,6 +1320,95 @@ class ChatInputGuardIntegrationTest {
         assertThat(snapshot.messages())
                 .noneMatch(
                         value -> value.content().contains("차단") || value.content().contains("오류"));
+    }
+
+    static Stream<Arguments> 공백_번호_조건() {
+        return Stream.of("", " ", "-", "  ", "\t", "\u00a0", "\u202f", "\u3000", " \t\u00a0 ")
+                .flatMap(separator -> Stream.of(
+                        Arguments.of("주민번호", "990101" + separator + "1234567"),
+                        Arguments.of("카드번호", String.join(separator, "4111", "1111", "1111", "1111"))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("공백_번호_조건")
+    @DisplayName("공백 번호를 실제 저장·이력·상담 입력 전에 가리고 금액·약정 기간을 유지한다")
+    void 공백_번호를_가린_문의만_저장하고_전달한다(String kind, String number) throws Exception {
+        long sid = session(identity);
+        String safe = "🙂 " + kind + " ***, 요금 7,700원 약정 18개월 문의";
+        var accepted = send(sid, "🙂 " + kind + " " + number + ", 요금 7,700원 약정 18개월 문의");
+        waitCompleted(accepted.at("/result/executionId").asLong());
+
+        assertThat(accepted.at("/result/inputGuard/action").asText()).isEqualTo("MASKED");
+        assertThat(accepted.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(analyzedContent.get()).isEqualTo(safe);
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(safe);
+        long mid = accepted.at("/result/messageId").asLong();
+        assertThat(jdbc.queryForObject("SELECT content FROM chat_messages WHERE message_id=?", String.class, mid))
+                .isEqualTo(safe);
+        var spans = mapper.readTree(jdbc.queryForObject(
+                "SELECT input_mask_spans::text FROM chat_messages WHERE message_id=?", String.class, mid));
+        assertThat(spans.get(0).path("start").asInt()).isEqualTo(safe.indexOf("***"));
+        assertThat(spans.get(0).path("end").asInt()).isEqualTo(safe.indexOf("***") + 3);
+        assertThat(jdbc.queryForObject(
+                "SELECT sanitized_content FROM chat_input_guard_events WHERE session_id=?", String.class, sid))
+                .isEqualTo(safe);
+    }
+
+    @ParameterizedTest
+    @MethodSource("공백_번호_조건")
+    @DisplayName("공백 형식의 번호만 입력하면 상담을 실행하거나 제재하지 않고 재입력을 안내한다")
+    void 공백_번호만_있으면_상담을_실행하지_않는다(String kind, String number) throws Exception {
+        long sid = session(identity);
+        var result = send(sid, kind + " " + number);
+
+        assertThat(result.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(result.at("/result/inputGuard/violationCount").asInt()).isZero();
+        assertThat(result.at("/result").hasNonNull("executionId")).isFalse();
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText()).isEqualTo(kind + " ***");
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"  ", "\t", "\u00a0", "\u202f", " \t\u00a0 "})
+    @DisplayName("공백 번호와 기간이 모호하면 전체를 보호하고 추측한 조건으로 상담하지 않는다")
+    void 공백_번호의_모호한_기간을_재입력으로_안내한다(String separator) throws Exception {
+        long sid = session(identity);
+        String number = String.join(separator, "4111", "1111", "1111", "1111");
+        var result = send(sid, "카드 " + number + separator + "18개월로 약정 문의");
+
+        assertThat(result.at("/result/inputGuard/action").asText()).isEqualTo("REWRITE_REQUIRED");
+        assertThat(history(sid).at("/result/messages").get(0).path("content").asText())
+                .isEqualTo("카드 ***개월로 약정 문의");
+        assertThat(count("chat_executions")).isZero();
+        verifyNoInteractions(analyzer, answers);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"  ", "\t", "\u00a0", "\u202f"})
+    @DisplayName("공백 규칙 확대 전 v3 기록은 당시 해시로만 비교하고 다른 문의·금액·기간은 계속 거절한다")
+    void 공백_확대가_기존_v3_기록의_비교를_바꾸지_않는다(String separator) throws Exception {
+        long sid = session(identity);
+        UUID key = UUID.randomUUID();
+        String input = "카드 4111111111111111, 카드번호 "
+                + String.join(separator, "4111", "1111", "1111", "1111") + " 요금 7,700원 약정 18개월 문의";
+        var first = body(request(sid, identity, input, key, 201));
+        waitCompleted(first.at("/result/executionId").asLong());
+        String legacy = input.replace("4111111111111111", "[카드번호]");
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest((sid + "\n" + legacy + "\nnull\nnull").getBytes(StandardCharsets.UTF_8)));
+        jdbc.update("UPDATE chat_input_guard_events SET policy_version='chat-input-guard-v3',"
+                + " request_fingerprint=? WHERE session_id=?", hash, sid);
+        clearInvocations(analyzer, answers);
+
+        assertThat(body(request(sid, identity, input, key, 201))).isEqualTo(first);
+        request(sid, identity, input + " 다른 문의", key, 409);
+        request(sid, identity, input.replace("7,700원", "8,800원"), key, 409);
+        request(sid, identity, input.replace("18개월", "24개월"), key, 409);
+        assertThat(count("chat_messages")).isEqualTo(2);
+        assertThat(count("chat_executions")).isEqualTo(1);
+        assertThat(count("chat_input_guard_events")).isEqualTo(1);
+        verifyNoInteractions(analyzer, answers);
     }
 
     private AnalyzedTurn storeTurn(ChatProcessingCommand command) {

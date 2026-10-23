@@ -52,6 +52,9 @@ public class ChatInputGuardService {
             if ("chat-input-guard-v2".equals(cached.get().policyVersion())) {
                 // 실제 배포된 이전 정책의 영수증만 당시 경계로 비교하며 새 영수증에는 저장하지 않는다.
                 compared = fingerprint(sessionId, inspector.previousFingerprintContent(request.content()), request);
+            } else if ("chat-input-guard-v3".equals(cached.get().policyVersion())
+                    && !inspector.policyVersion().equals(cached.get().policyVersion())) {
+                compared = fingerprint(sessionId, inspector.previousV3FingerprintContent(request.content()), request);
             } else if (!inspector.policyVersion().equals(cached.get().policyVersion())) {
                 throw new GeneralException(ChatErrorCode.INPUT_REQUEST_CONFLICT);
             }
