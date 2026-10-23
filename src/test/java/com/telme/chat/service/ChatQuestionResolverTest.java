@@ -47,6 +47,35 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"보험 없으면요?", "그럼 보험 있으면요?", "신분증 없으면요?", "카드 아니면요?", "혼자 가면 안되면요"})
+    void conditionFlipFollowUpSkipsTheReferenceModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"신청하려고 하는데 없으면요?", "로밍 신청 안 하고 지내면요?",
+            "신분증 없으면 가입 안 되나요?", "유심 없으면요 어떻게 해요?"})
+    void longerOrNewRequestWithConditionStillGoesThroughTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?", "한 20기가 정도요", "50GB 정도요", "마흔 정도요"})
     void followUpWithItemOrReferenceStillGoesThroughTheReferenceModel(String original) throws Exception {
         respond(model, explicit());

@@ -69,6 +69,9 @@ public class ChatQuestionResolver {
     // 질문 항목 없이 대상 이름만 말하는 'X는요?'꼴은 앞 질문의 항목을 이어받음
     // '20기가 정도요'의 정도요는 대상 이름이 아니라 수량 답이라 도요 앞이 '정'이면 제외
     private static final Pattern TOPIC_ONLY_FOLLOW_UP = Pattern.compile("^(?:그럼|그러면|그리고)?(?!그)(?!.*(?:비용|요금|가격|금액|기간|시간|방법|절차|서류|준비물|조건|자격|혜택|수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비|처리|신청|변경|취소|접수|진행))[가-힣A-Za-z0-9]{1,8}(?:은|는|(?<!정)도)요$");
+    // "보험 없으면요?"처럼 앞 질문의 조건만 뒤집어 말하는 짧은 '~면요?'꼴. 공백과 문장 부호를 뗀 문장에 쓴다
+    private static final Pattern CONDITION_FLIP_FOLLOW_UP = Pattern.compile(
+            "^(?:그럼|그러면|그리고|근데)?(?!그)[가-힣A-Za-z0-9]{1,8}(?:없으|있으|아니라|아니|안하|못하|안되|못되|모르)면요$");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무에 딸려 청구되는 비용 항목. 업무 이름 없이 이것만 물으면 앞 업무의 항목일 수 있어 길이와 관계없이 모델 후보로 본다.
     private static final Pattern COST_ITEM = Pattern.compile("수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비");
@@ -274,6 +277,8 @@ public class ChatQuestionResolver {
             // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
             boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
                     || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches()
+                    // 앞 질문의 조건만 뒤집는 짧은 말은 문장에 사물이 있어도 모델 없이 대상 생략으로 본다. 하려는 일을 말하면 새 요청이라 제외
+                    || CONDITION_FLIP_FOLLOW_UP.matcher(compact(judged)).matches() && !INTENT_STATEMENT.matcher(compact(judged)).find()
                     // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄. 하려는 일을 말하면 새 요청이라 제외
                     || isOmittedTargetCorrection(judged.replaceAll("[\\p{javaWhitespace}\\p{Zs}]+", "")) && hasCustomerHistory(context)
                             && !INTENT_STATEMENT.matcher(compact(judged)).find();
