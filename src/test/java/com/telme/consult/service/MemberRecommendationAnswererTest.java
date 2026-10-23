@@ -96,6 +96,42 @@ class MemberRecommendationAnswererTest {
                 .extracting(MissingCondition::key).containsExactly("monthly_data_usage");
     }
 
+    // 가족이 쓸 요금제는 회원의 생년월일·가입 요금제·사용량을 쓰지 않고, 링크와 회원 사용량 안내도 붙이지 않는다(TELME-227)
+    @Test
+    void 다른_사람이_쓸_요금제는_회원_정보_없이_받은_답으로만_추천한다() {
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        subscribeAndUse("FIVE_G_PREMIUM", 100 * GB, 300, 100);
+        entityManager.clear();
+
+        assertThat(answerer.recommendForOther(Map.of(), true, false).asks())
+                .extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
+
+        Outcome outcome = answerer.recommendForOther(Map.of("age_group", "만 14~18세", "monthly_data_usage", "10GB"), false, false);
+        assertThat(outcome.content())
+                .contains("한 달에 데이터를 10GB 쓰신다면 LTE 청소년(월 39,000원, 데이터 20GB) 요금제를 추천해요")
+                .doesNotContain("로그인", "가입한 요금제의 사용량");
+        assertThat(outcome.followUps()).noneMatch(followUp -> followUp.contains("요금제 변경") || followUp.contains("가입"));
+
+        // 쓸 사람의 사용량을 모르면 본인 가입 안내 대신 쓸 사람의 사용량을 묻는다(#212 리뷰)
+        assertThat(answerer.recommendForOther(Map.of("age_group", "만 65세 이상", "monthly_data_usage", "잘 모르겠어요"), false, false)
+                .content()).contains("쓰실 분이 한 달에 데이터를 얼마나 쓰시는지").doesNotContain("가입하신 뒤");
+    }
+
+    // 모델이 질문에서 읽은 나이대로 추천하면 기준 나이대를 밝힌다. 생년월일이 있어 그 나이대를 쓰지 않았으면 밝히지 않는다
+    @Test
+    void 모델이_읽은_나이대로_추천하면_기준_나이대를_답에_밝힌다() {
+        Map<String, String> read = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB");
+        String note = "말씀하신 내용을 보고 만 65세 이상 기준으로 추천했어요. 나이대가 다르면 나이와 함께 다시 물어봐 주세요.";
+
+        assertThat(answerer.recommendForOther(read, false, true).content()).contains(note);
+        assertThat(answerer.recommendForOther(read, false, false).content()).doesNotContain("말씀하신 내용을 보고");
+        assertThat(answerer.recommend(null, read, Map.of(), false, true).content()).contains(note);
+
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+        assertThat(answerer.recommend(userId, read, Map.of(), false, true).content()).doesNotContain("말씀하신 내용을 보고");
+    }
+
     @Test
     void 나이대와_말한_사용량으로_여유를_둔_요금제를_추천한다() {
         assertThat(answered(null, "만 14~18세", "50GB"))

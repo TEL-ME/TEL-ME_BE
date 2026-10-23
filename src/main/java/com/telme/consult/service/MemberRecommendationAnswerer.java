@@ -77,9 +77,26 @@ public class MemberRecommendationAnswerer {
         return recommend(userId, confirmed, Map.of(), mayAsk);
     }
 
+    // 가족 등 다른 사람이 쓸 요금제. 회원의 생년월일, 가입 요금제, 사용량과 앞서 한 답은 그 사람 것이 아니라 쓰지 않고
+    // 이번 질문에서 받은 답만 쓴다. 가입·변경 링크와 회원 사용량 안내는 회원 본인 회선 기준이라 붙이지 않는다(TELME-227)
+    // ageFromModel은 아래 recommend와 같다
+    public Outcome recommendForOther(Map<String, String> confirmed, boolean mayAsk, boolean ageFromModel) {
+        List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
+        AgeGroup age = ageGroup(null, confirmed.get(AGE_KEY));
+        return byAnswers(age.group(), confirmed, active, false, mayAsk,
+                readAgeNote(ageFromModel && age.fromAnswer(), confirmed.get(AGE_KEY)), confirmed.get(PRICE_KEY), null);
+    }
+
     // 회원이 아니면 userId는 null. confirmed는 이번 질문의 되묻기 답, previous는 같은 채팅방에서 앞서 한 답이고
     // 앞서 한 답은 다시 묻지 않고 쓴다. mayAsk가 false이면 되묻지 않는다
     public Outcome recommend(Long userId, Map<String, String> confirmed, Map<String, String> remembered, boolean mayAsk) {
+        return recommend(userId, confirmed, remembered, mayAsk, false);
+    }
+
+    // ageFromModel: confirmed의 나이대를 고객의 답이 아니라 모델이 질문에서 읽었다("고딩 딸"). 그 나이대로 추천했으면
+    // 기준 나이대를 답에 밝혀, 경계 나이("60대 후반", "정년퇴직")를 잘못 읽었을 때 고객이 알아챌 수 있게 한다(TELME-227)
+    public Outcome recommend(Long userId, Map<String, String> confirmed, Map<String, String> remembered, boolean mayAsk,
+            boolean ageFromModel) {
         Map<String, String> previous = withoutUnsure(remembered);
         Map<String, String> answers = new HashMap<>(previous);
         answers.putAll(confirmed);
@@ -105,12 +122,13 @@ public class MemberRecommendationAnswerer {
         AgeGroup age = ageGroup(userId, ageAnswer);
         Plan.TargetGroup group = age.group();
         List<Plan> active = planRepository.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE);
+        String readNote = readAgeNote(ageFromModel && age.fromAnswer(), ageAnswer);
         if (usage.isEmpty()) {
             return byAnswers(group, answers, active, userId != null, mayAsk,
-                    reuseNote(ageReused && age.fromAnswer(), dataReused), answers.get(PRICE_KEY),
+                    reuseNote(ageReused && age.fromAnswer(), dataReused) + readNote, answers.get(PRICE_KEY),
                     new Subscriber(subscribed, subscribedPlanId));
         }
-        String note = reuseNote(ageReused && age.fromAnswer(), false);
+        String note = reuseNote(ageReused && age.fromAnswer(), false) + readNote;
         Demand demand = new Demand(usage.get().dataMb(), usage.get().voiceMinutes(), usage.get().smsCount());
         // 고객이 더 싼 요금제를 직접 찾으면 최근에 바꿨어도 싼 요금제를 권한다. 변경 자체는 막히지 않는다
         boolean allowDowngrade = answers.get(PRICE_KEY) != null || !changedRecently(subscription.subscriptionId());
@@ -156,12 +174,13 @@ public class MemberRecommendationAnswerer {
     }
 
     // 사용량이 없으면 나이대와 한 달 데이터 사용량을 묻고, 말한 사용량에 여유를 둔 요금제를 추천한다.
-    // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다
+    // 고른 요금제에 통화·문자 한도가 있으면 그 항목도 묻는다. subscriber가 null이면 다른 사람이 쓸 요금제라 링크와 사용량 안내를 붙이지 않는다
     private Outcome byAnswers(Plan.TargetGroup group, Map<String, String> answers, List<Plan> active,
             boolean member, boolean mayAsk, String note, String priceRequest, Subscriber subscriber) {
         DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
-            return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
+            return nudge(subscriber == null ? "쓰실 분이 한 달에 데이터를 얼마나 쓰시는지 대략 알려주시면 맞는 요금제를 추천해 드릴 수 있어요."
+                    : "사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
         }
         boolean answered = usage.readable();
         if (mayAsk && (group == null || !answered)) {
@@ -198,12 +217,12 @@ public class MemberRecommendationAnswerer {
         }
         if (priceRequest != null) {
             return new Outcome(cheaperPlans(usage, fit, pool(active, group), CHEAPEST.equals(priceRequest)) + note,
-                    withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
+                    withLink(List.of(CATALOG_QUESTION), subscriber == null ? null : subscriber.link(fit.cheapest())), null);
         }
-        String tail = member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
+        String tail = subscriber == null ? "" : member ? " 가입한 요금제의 사용량이 쌓이면 더 정확히 추천해 드려요."
                 : " 로그인하고 요금제에 가입하시면 평소 사용량에 맞춰 더 정확히 추천해 드려요.";
         return new Outcome(recommendation(usage, fit) + limitNotice(limits, voice, sms) + tail + note,
-                withLink(List.of(CATALOG_QUESTION), subscriber.link(fit.cheapest())), null);
+                withLink(List.of(CATALOG_QUESTION), subscriber == null ? null : subscriber.link(fit.cheapest())), null);
     }
 
     // 가입 중인 회원이면 변경, 아니면 가입 화면으로 가는 추천 요금제 링크. 지금 쓰는 요금제를 추천했으면 링크가 없다
@@ -363,6 +382,10 @@ public class MemberRecommendationAnswerer {
     }
 
     // 앞서 한 답을 다시 묻지 않고 썼으면 답변 끝에 알린다
+    private static String readAgeNote(boolean read, String ageOption) {
+        return read ? " 말씀하신 내용을 보고 %s 기준으로 추천했어요. 나이대가 다르면 나이와 함께 다시 물어봐 주세요.".formatted(ageOption) : "";
+    }
+
     private static String reuseNote(boolean age, boolean data) {
         if (!age && !data) {
             return "";

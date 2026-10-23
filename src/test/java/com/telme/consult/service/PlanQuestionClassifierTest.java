@@ -2,8 +2,12 @@ package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -249,6 +253,126 @@ class PlanQuestionClassifierTest {
         PlanQuestion fallback = classifier.classifyQuestion(1L, "5G 프리미엄 요금제 얼마예요");
         assertThat(fallback.type()).isEqualTo(PlanQuestionType.PLAN_CATALOG);
         assertThat(fallback.mention()).isNull();
+    }
+
+    @Test
+    void 요금제를_고르지_않은_목록_질문은_목록_조건을_한_번_더_받는다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE))
+                .thenReturn(List.of(plan("FIVE_G_UNLIMITED", "5G 언리미티드"), plan("LTE_PLUS", "LTE 플러스")));
+        when(llm.generate(any())).thenReturn(
+                "{\"type\":\"PLAN_CATALOG\",\"plans\":[],\"unknownPlan\":false}",
+                "{\"networks\":[\"FIVE_G\"],\"excludedNetworks\":[],\"targetGroups\":[],\"excludedTargetGroups\":[\"YOUTH\"],"
+                        + "\"unlimited\":\"ANY\",\"excludedPlans\":[\"FIVE_G_UNLIMITED\",\"GONE\"]}");
+
+        PlanQuestion.Mention mention = classifier.classifyQuestion(3L, "무제한은 비싸서요 언리미티드 말고 5G 요금제 뭐 있어요").mention();
+
+        assertThat(mention.planCodes()).isEmpty();
+        assertThat(mention.conditions().networks()).containsExactly(Plan.NetworkType.FIVE_G);
+        assertThat(mention.conditions().excludedTargetGroups()).containsExactly(Plan.TargetGroup.YOUTH);
+        assertThat(mention.conditions().unlimited()).isEqualTo(PlanQuestion.Unlimited.ANY);
+        // 판매 중이 아닌 코드는 버린다
+        assertThat(mention.conditions().excludedPlans()).containsExactly("FIVE_G_UNLIMITED");
+        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm, times(2)).generate(captor.capture());
+        LlmRequest conditions = captor.getAllValues().get(1);
+        assertThat(conditions.executionId()).isEqualTo(3L);
+        assertThat(conditions.promptVersion()).isEqualTo(PlanQuestionPromptTemplates.CONDITIONS_PROMPT_VERSION);
+        assertThat(conditions.systemPrompt()).contains("- FIVE_G_UNLIMITED: 5G 언리미티드");
+        assertThat(conditions.responseSchema().toString()).contains("excludedNetworks", "BUDGET", "SENIOR", "EXCLUDE", "LTE_PLUS");
+    }
+
+    @Test
+    void 요금제를_골랐거나_목록에_없는_요금제면_목록_조건을_묻지_않는다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(plan("FIVE_G_PREMIUM", "5G 프리미엄")));
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\",\"plans\":[\"FIVE_G_PREMIUM\"],\"unknownPlan\":false}");
+        assertThat(classifier.classifyQuestion(1L, "프리미엄 얼마예요").mention().conditions()).isNull();
+
+        when(llm.generate(any())).thenReturn("{\"type\":\"PLAN_CATALOG\",\"plans\":[],\"unknownPlan\":true}");
+        assertThat(classifier.classifyQuestion(1L, "넷플릭스 들어간 요금제 있어요").mention().conditions()).isNull();
+
+        when(llm.generate(any())).thenReturn("{\"type\":\"RECOMMENDATION\",\"plans\":[],\"unknownPlan\":false}");
+        assertThat(classifier.classifyQuestion(1L, "요금제 추천해줘").mention()).isNull();
+
+        verify(llm, times(3)).generate(any());
+    }
+
+    @Test
+    void 목록_조건을_받지_못하면_조건_없이_두어_답변이_낱말로_읽는다() {
+        when(plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE)).thenReturn(List.of(plan("FIVE_G_PREMIUM", "5G 프리미엄")));
+        String listReply = "{\"type\":\"PLAN_CATALOG\",\"plans\":[],\"unknownPlan\":false}";
+
+        when(llm.generate(any())).thenReturn(listReply).thenThrow(new IllegalStateException("down"));
+        PlanQuestion failed = classifier.classifyQuestion(1L, "LTE 요금제 뭐 있어요");
+        assertThat(failed.type()).isEqualTo(PlanQuestionType.PLAN_CATALOG);
+        assertThat(failed.mention().planCodes()).isEmpty();
+        assertThat(failed.mention().conditions()).isNull();
+
+        // 칸이 빠졌거나 타입이나 값이 틀리면 읽지 않는다(#212 리뷰). Bedrock은 응답 스키마를 보내지 않는다
+        String full = "\"excludedNetworks\":[],\"targetGroups\":[],\"excludedTargetGroups\":[],\"excludedPlans\":[]";
+        for (String broken : new String[] {"{}", "{\"networks\":\"LTE\",\"unlimited\":\"ANY\"," + full + "}",
+                "{\"networks\":[\"LTE\",\"WIFI\"],\"unlimited\":\"ANY\"," + full + "}",
+                "{\"networks\":[\"LTE\"],\"unlimited\":\"SOME\"," + full + "}",
+                "{\"networks\":[\"LTE\"]," + full + "}"}) {
+            reset(llm);
+            doReturn(listReply, broken).when(llm).generate(any());
+            assertThat(classifier.classifyQuestion(1L, "LTE 요금제 목록 알려줘").mention().conditions()).as(broken).isNull();
+        }
+
+        // 분류 응답 형식처럼 모르는 칸이 있으면 읽지 않는다
+        reset(llm);
+        doReturn(listReply, listReply).when(llm).generate(any());
+        assertThat(classifier.classifyQuestion(1L, "LTE 요금제 뭐 있어요").mention().conditions()).isNull();
+    }
+
+    // 나이대와 쓸 사람·사용량은 두 호출로 동시에 묻는다
+    @Test
+    void 추천받을_요금제를_쓸_사람과_나이대_사용량을_모델에서_받는다() {
+        replies("{\"targetGroup\":\"YOUTH\"}", "{\"user\":\"OTHER\",\"monthlyDataGb\":10}");
+
+        assertThat(classifier.subscriber(5L, "고딩 딸 한 달에 10기가 써요 요금제 추천"))
+                .isEqualTo(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.YOUTH, 10.0));
+
+        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm, times(2)).generate(captor.capture());
+        assertThat(captor.getAllValues()).extracting(LlmRequest::promptVersion).containsExactlyInAnyOrder(
+                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION);
+        assertThat(captor.getAllValues()).allSatisfy(request -> {
+            assertThat(request.executionId()).isEqualTo(5L);
+            assertThat(request.userPrompt()).isEqualTo("고딩 딸 한 달에 10기가 써요 요금제 추천");
+        });
+    }
+
+    @Test
+    void 모르는_나이대와_사용량은_비워_두고_쓸_사람을_읽지_못하거나_꺼져_있으면_없다() {
+        replies("{\"targetGroup\":\"UNKNOWN\"}", "{\"user\":\"SELF\",\"monthlyDataGb\":0}");
+        assertThat(classifier.subscriber(1L, "요금제 추천")).isEqualTo(new PlanQuestionClassifier.Subscriber(false, null, null));
+
+        // 나이대만 못 읽으면 나이대 없이 쓴다
+        replies("oops", "{\"user\":\"OTHER\",\"monthlyDataGb\":0}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isEqualTo(new PlanQuestionClassifier.Subscriber(true, null, null));
+
+        replies("{\"targetGroup\":\"SENIOR\"}", "{\"user\":\"OTHER\"}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
+        // SELF, OTHER가 아니면 본인으로 보지 않고 읽지 못한 것으로 둔다(#212 리뷰)
+        replies("{\"targetGroup\":\"SENIOR\"}", "{\"user\":\"UNKNOWN\",\"monthlyDataGb\":10}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
+        reset(llm);
+        doThrow(new IllegalStateException("down")).when(llm).generate(any());
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
+        LlmClient off = mock(LlmClient.class);
+        PlanQuestionClassifier disabled = new PlanQuestionClassifier(off, new ObjectMapper(),
+                new PlanQuestionProperties(false, true, false), plans);
+        assertThat(disabled.subscriber(1L, "고딩 딸 요금제 추천")).isNull();
+        verify(off, never()).generate(any());
+    }
+
+    private void replies(String age, String usage) {
+        reset(llm);
+        when(llm.generate(any())).thenAnswer(invocation -> PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION
+                .equals(invocation.<LlmRequest>getArgument(0).promptVersion()) ? age : usage);
     }
 
     @Test
