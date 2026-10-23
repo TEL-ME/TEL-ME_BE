@@ -271,7 +271,7 @@ class PlanAnswerProviderTest {
         previous = Map.of("age_group", "만 19~64세", "monthly_data_usage", "50GB");
         provider = provider(true);
         when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
-        when(classifier.subscriber(1L, question, true))
+        when(classifier.subscriber(1L, question))
                 .thenReturn(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.YOUTH, 10.0));
         Map<String, String> read = Map.of("age_group", "만 14~18세", "monthly_data_usage", "10GB");
         when(recommendation.recommendForOther(read, true, true))
@@ -291,7 +291,7 @@ class PlanAnswerProviderTest {
     void 모델이_읽은_나이대로_추천할_때만_그렇다고_알린다() {
         String question = "칠순 넘었는데 요금제 추천해 주세요";
         when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
-        when(classifier.subscriber(1L, question, true)).thenReturn(new PlanQuestionClassifier.Subscriber(false, Plan.TargetGroup.SENIOR, null));
+        when(classifier.subscriber(1L, question)).thenReturn(new PlanQuestionClassifier.Subscriber(false, Plan.TargetGroup.SENIOR, null));
         when(recommendation.recommend(77L, Map.of("age_group", "만 65세 이상"), Map.of(), true, true))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("모델 나이 추천", List.of(), null));
         assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true)
@@ -309,7 +309,7 @@ class PlanAnswerProviderTest {
         String question = "아내는 시니어 요금제 쓰는데 제 거 한 달 5기가면 뭐가 좋아요";
         Map<String, String> confirmed = Map.of("monthly_data_usage", "3GB");
         when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
-        when(classifier.subscriber(1L, question, true)).thenReturn(new PlanQuestionClassifier.Subscriber(false, null, 5.0));
+        when(classifier.subscriber(1L, question)).thenReturn(new PlanQuestionClassifier.Subscriber(false, null, 5.0));
         when(recommendation.recommend(77L, confirmed, Map.of(), true))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("본인 추천", List.of(), null));
 
@@ -318,15 +318,16 @@ class PlanAnswerProviderTest {
         assertThat(prepared.answer().answer().content()).isEqualTo("본인 추천");
     }
 
+    // 규칙이 나이를 읽어도 쓸 사람을 묻는다. 본인이면 규칙 값이 우선하고, 모델이 실패하면 지금처럼 본인 요금제로 추천한다
     @Test
-    void 규칙이_나이를_읽으면_나이대는_묻지_않고_모델이_실패하면_지금처럼_추천한다() {
+    void 규칙이_나이를_읽어도_쓸_사람을_묻고_본인이면_규칙_값을_쓴다() {
         String stated = "저 17살인데 요금제 추천해줘";
         when(classifier.classifyQuestion(1L, stated)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(classifier.subscriber(1L, stated)).thenReturn(new PlanQuestionClassifier.Subscriber(false, Plan.TargetGroup.GENERAL, null));
         when(recommendation.recommend(77L, Map.of("age_group", "만 14~18세"), Map.of(), true))
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("말한 나이 추천", List.of(), null));
         assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, stated, stated, Map.of()), true)
                 .answer().answer().content()).isEqualTo("말한 나이 추천");
-        verify(classifier).subscriber(1L, stated, false);
 
         String unknown = "어머니 요금제 추천해 주세요";
         when(classifier.classifyQuestion(1L, unknown)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
@@ -334,29 +335,40 @@ class PlanAnswerProviderTest {
                 .thenReturn(new MemberRecommendationAnswerer.Outcome("그대로", List.of(), null));
         assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, unknown, unknown, Map.of()), true)
                 .answer().answer().content()).isEqualTo("그대로");
-        verify(classifier).subscriber(1L, unknown, true);
     }
 
-    // 규칙의 가족 낱말 목록에 없는 호칭에 숫자 나이가 붙으면 규칙이 나이를 읽는다. 회원이면 생년월일이 대신 쓰일 수 있어
-    // 쓸 사람을 모델에 묻고, 비회원은 읽은 나이와 사용량이 그 사람의 것이라 묻지 않는다(#212 리뷰)
+    // 규칙의 가족 낱말 목록에 없는 호칭이면 규칙이 나이·사용량을 읽는다. 다른 사람이 쓸 요금제면 회원이든 아니든
+    // 규칙 값, 앞서 한 답, 회원 정보를 쓰지 않고 모델이 그 사람 기준으로 읽은 값과 되묻기 답만 쓴다(#212 리뷰)
     @Test
-    void 규칙이_가족의_나이를_읽어도_회원이면_쓸_사람을_물어_가족_추천으로_보낸다() {
-        String question = "할머니 만 75세 한 달에 5기가 쓰세요 요금제 추천해 주세요";
+    void 다른_사람이_쓸_요금제면_규칙이_원문에서_읽은_값과_앞서_한_답을_쓰지_않는다() {
+        previous = Map.of("monthly_data_usage", "50GB");
+        provider = provider(true);
+        String question = "할머니 만 75세 요금제 추천해 주세요. 저는 한 달에 50GB 써요.";
         when(classifier.classifyQuestion(1L, question)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
-        when(classifier.subscriber(1L, question, false)).thenReturn(new PlanQuestionClassifier.Subscriber(true, null, 5.0));
-        Map<String, String> stated = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "5GB");
-        when(recommendation.recommendForOther(stated, true, false))
-                .thenReturn(new MemberRecommendationAnswerer.Outcome("할머니 추천", List.of(), null));
+        when(classifier.subscriber(1L, question)).thenReturn(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.SENIOR, null));
+        Map<String, String> modelOnly = Map.of("age_group", "만 65세 이상");
+        when(recommendation.recommendForOther(modelOnly, true, true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome(null, List.of(),
+                        List.of(new MissingCondition("monthly_data_usage", "데이터는 얼마나 쓰세요?", List.of(), null))));
 
-        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true)
-                .answer().answer().content()).isEqualTo("할머니 추천");
+        for (Optional<Long> owner : List.of(Optional.of(77L), Optional.<Long>empty())) {
+            sessionOwner = owner;
+            Prepared prepared = provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true);
+            assertThat(prepared.plan().needsClarification()).isTrue();
+        }
+        verify(recommendation, never()).recommend(any(), any(), any(), anyBoolean());
+        verify(recommendation, never()).recommend(any(), any(), any(), anyBoolean(), anyBoolean());
 
-        sessionOwner = Optional.empty();
-        when(recommendation.recommend(null, stated, Map.of(), true))
-                .thenReturn(new MemberRecommendationAnswerer.Outcome("비회원 추천", List.of(), null));
-        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, question, question, Map.of()), true)
-                .answer().answer().content()).isEqualTo("비회원 추천");
-        verify(classifier).subscriber(anyLong(), any(), anyBoolean());
+        // 되묻기로 받은 할머니 사용량은 쓴다. 더 싼 요금제를 찾는 말도 그대로 쓴다
+        String cheaper = "할머니 만 75세 좀 더 싼 요금제 추천해 주세요";
+        when(classifier.classifyQuestion(1L, cheaper)).thenReturn(PlanQuestion.of(PlanQuestionType.RECOMMENDATION));
+        when(classifier.subscriber(1L, cheaper)).thenReturn(new PlanQuestionClassifier.Subscriber(true, Plan.TargetGroup.SENIOR, null));
+        Map<String, String> answered = Map.of("monthly_data_usage", "2GB");
+        when(recommendation.recommendForOther(Map.of("age_group", "만 65세 이상", "monthly_data_usage", "2GB",
+                "price_request", MemberRecommendationAnswerer.CHEAPER), true, true))
+                .thenReturn(new MemberRecommendationAnswerer.Outcome("할머니 2GB 추천", List.of(), null));
+        assertThat(provider.prepare(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, cheaper, cheaper, answered), true)
+                .answer().answer().content()).isEqualTo("할머니 2GB 추천");
     }
 
     @Test

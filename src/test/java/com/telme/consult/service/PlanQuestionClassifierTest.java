@@ -369,17 +369,6 @@ class PlanQuestionClassifierTest {
         verify(off, never()).generate(any());
     }
 
-    @Test
-    void 규칙이_나이를_읽었으면_나이대는_묻지_않고_쓸_사람과_사용량만_묻는다() {
-        replies("{\"targetGroup\":\"YOUTH\"}", "{\"user\":\"OTHER\",\"monthlyDataGb\":5}");
-
-        assertThat(classifier.subscriber(1L, "할머니 만 75세 한 달에 5기가 쓰세요 요금제 추천해 주세요", false))
-                .isEqualTo(new PlanQuestionClassifier.Subscriber(true, null, 5.0));
-        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
-        verify(llm).generate(captor.capture());
-        assertThat(captor.getValue().promptVersion()).isEqualTo(PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION);
-    }
-
     private void replies(String age, String usage) {
         reset(llm);
         when(llm.generate(any())).thenAnswer(invocation -> PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION

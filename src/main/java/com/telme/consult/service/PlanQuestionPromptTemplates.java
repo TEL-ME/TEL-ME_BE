@@ -98,7 +98,7 @@ public final class PlanQuestionPromptTemplates {
         {"networks": [], "excludedNetworks": [], "targetGroups": [], "excludedTargetGroups": [], "unlimited": "ANY", "excludedPlans": []}
         """;
 
-    // 추천 질문에서 규칙이 나이를 읽지 못했을 때만 부른다. 규칙은 가족 이야기가 섞이면 나이와 사용량을 읽지 않아 다시 물었고,
+    // 추천 질문마다 부른다. 규칙은 가족 이야기가 섞이면 나이와 사용량을 읽지 않아 다시 물었고,
     // 회원이 가족 요금제를 물으면 회원 본인의 생년월일과 사용량으로 추천했다(TELME-227).
     // 나이대와 쓸 사람·사용량을 한 번에 받으면 나이를 알 수 없는 가족("엄마가 60대", "시어머니")에도 나이대를 넣는 일이 늘어 두 호출로 나눴다
     // age-v2: 곧 대학 가는 사람·대학 새내기(만 18~19세)를 GENERAL로 넣어 청소년 요금제 대상에게 일반 요금제를 추천했다(흐름셋 CF29)

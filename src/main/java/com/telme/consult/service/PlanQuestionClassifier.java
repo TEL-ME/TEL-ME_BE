@@ -99,21 +99,17 @@ public class PlanQuestionClassifier {
     }
 
     // 추천받을 요금제를 쓸 사람(본인 또는 가족)과 그 사람의 나이대·한 달 데이터 사용량. 모르는 값은 null이다.
-    // 나이대와 쓸 사람·사용량은 따로 묻되 동시에 보낸다. 쓸 사람·사용량을 읽지 못하면 null이라 지금처럼 본인 요금제로 보고 묻는다
+    // 나이대와 쓸 사람·사용량은 따로 묻되 동시에 보낸다. 쓸 사람·사용량을 읽지 못하면 null이라 지금처럼 본인 요금제로 보고 묻는다.
+    // user는 SELF나 OTHER만 받는다
     public Subscriber subscriber(Long executionId, String question) {
-        return subscriber(executionId, question, true);
-    }
-
-    // withAge가 false면 나이대는 묻지 않는다(규칙이 질문에서 나이를 이미 읽었을 때). user는 SELF나 OTHER만 받는다
-    public Subscriber subscriber(Long executionId, String question, boolean withAge) {
         if (!properties.enabled() || question == null || question.isBlank()) {
             return null;
         }
         CompletableFuture<JsonNode> usage = CompletableFuture.supplyAsync(() -> subscriberReply(executionId, question,
                 PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT, PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION,
                 SUBSCRIBER_USAGE_SCHEMA));
-        JsonNode age = withAge ? subscriberReply(executionId, question, PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT,
-                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, SUBSCRIBER_AGE_SCHEMA) : null;
+        JsonNode age = subscriberReply(executionId, question, PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT,
+                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, SUBSCRIBER_AGE_SCHEMA);
         JsonNode user = usage.join();
         if (user == null || !USERS.contains(user.path("user").asText("")) || !user.path("monthlyDataGb").isNumber()) {
             log.info("[요금제 추천 대상] 쓸 사람을 읽지 못해 본인 요금제로 보고 묻습니다. executionId={}", executionId);

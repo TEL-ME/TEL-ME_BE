@@ -137,11 +137,13 @@ public final class PlanAnswerProvider implements AnswerProvider {
             followUps = memberAnswer == null ? List.of() : memberAnswer.followUps();
         } else if (type == PlanQuestionType.RECOMMENDATION) {
             Long member = memberOf(input);
-            PlanQuestionClassifier.Subscriber subscriber = subscriber(input, member);
+            PlanQuestionClassifier.Subscriber subscriber = subscriber(input);
             boolean forOther = subscriber != null && subscriber.other();
-            // 다른 사람이 쓸 요금제면 이 채팅방에서 앞서 한 답(고객 본인의 나이·사용량일 수 있음)을 쓰지 않는다
+            // 다른 사람이 쓸 요금제면 이 채팅방에서 앞서 한 답과 규칙이 원문에서 읽은 나이·사용량(고객 본인의 것일 수 있음)을 쓰지 않고
+            // 되묻기로 받은 답과 모델이 그 사람 기준으로 읽은 값만 쓴다. 더 싼 요금제를 찾는 말은 사람과 관계없어 그대로 쓴다(#212 리뷰)
             Map<String, String> previous = forOther ? Map.of() : previousAnswers.apply(input.sessionId());
-            Map<String, String> stated = withStated(input.originalUserQuery(), input.confirmedConditions());
+            Map<String, String> stated = forOther ? withPriceRequest(input.originalUserQuery(), input.confirmedConditions())
+                    : withStated(input.originalUserQuery(), input.confirmedConditions());
             Map<String, String> confirmed = withSubscriber(subscriber, stated);
             boolean ageFromModel = !stated.containsKey(MemberRecommendationAnswerer.AGE_KEY)
                     && confirmed.containsKey(MemberRecommendationAnswerer.AGE_KEY);
@@ -191,28 +193,32 @@ public final class PlanAnswerProvider implements AnswerProvider {
     }
 
     // 요금제를 쓸 사람과 그 사람의 나이대·사용량을 모델에 묻는다. 규칙처럼 저장하지 않고 되묻기 다음 턴에도 처음 질문으로 다시 읽는다.
-    // 규칙이 질문에서 나이를 읽었으면 나이대는 묻지 않는다. 이때 비회원은 쓸 사람도 묻지 않는다: 규칙의 가족 낱말 목록에 없는
-    // 호칭("할머니 만 75세")이어도 읽은 나이와 사용량이 그 사람의 것이라 추천이 같다. 회원은 생년월일·가입 정보가 대신 쓰일 수 있어 묻는다(#212 리뷰)
-    private PlanQuestionClassifier.Subscriber subscriber(AnswerInput input, Long member) {
-        boolean ruleAge = StatedRecommendationAnswers.of(input.originalUserQuery()).containsKey(MemberRecommendationAnswerer.AGE_KEY);
-        if (ruleAge && member == null) {
-            return null;
-        }
-        PlanQuestionClassifier.Subscriber subscriber = classifier.subscriber(input.executionId(), input.originalUserQuery(), !ruleAge);
+    // 규칙이 나이를 읽었어도 묻는다: 규칙의 가족 낱말 목록에 없는 호칭("할머니 만 75세")이면 규칙은 본인 질문으로 읽고,
+    // 한 문장에 고객 본인의 사용량이 섞이면("저는 50GB 써요") 그 값을 가족의 것으로 쓴다(#212 리뷰)
+    private PlanQuestionClassifier.Subscriber subscriber(AnswerInput input) {
+        PlanQuestionClassifier.Subscriber subscriber = classifier.subscriber(input.executionId(), input.originalUserQuery());
         Map<String, Object> record = new HashMap<>(Map.of("question", input.originalUserQuery()));
         if (subscriber != null) {
             record.put("user", subscriber.other() ? "OTHER" : "SELF");
-            // 규칙이 나이를 읽어 나이대를 묻지 않았으면 남기지 않는다(모델이 모른다고 한 것과 구분)
-            if (!ruleAge) {
-                record.put("targetGroup", subscriber.group() == null ? "UNKNOWN" : subscriber.group().name());
-            }
+            record.put("targetGroup", subscriber.group() == null ? "UNKNOWN" : subscriber.group().name());
             record.put("monthlyDataGb", subscriber.monthlyDataGb() == null ? 0 : subscriber.monthlyDataGb());
         }
         trace.append(input.executionId(), "planSubscribers", record);
         return subscriber;
     }
 
-    // 모델이 읽은 나이대·사용량은 규칙과 되묻기로 받은 값이 없을 때만 쓴다
+    // 되묻기로 받은 답에 질문의 더 싼 요금제 요청만 더한다(다른 사람이 쓸 요금제)
+    private static Map<String, String> withPriceRequest(String question, Map<String, String> confirmed) {
+        String price = StatedRecommendationAnswers.of(question).get(MemberRecommendationAnswerer.PRICE_KEY);
+        if (price == null || confirmed.containsKey(MemberRecommendationAnswerer.PRICE_KEY)) {
+            return confirmed;
+        }
+        Map<String, String> merged = new HashMap<>(confirmed);
+        merged.put(MemberRecommendationAnswerer.PRICE_KEY, price);
+        return merged;
+    }
+
+    // 모델이 읽은 나이대·사용량은 규칙(본인 요금제)과 되묻기로 받은 값이 없을 때만 쓴다
     private static Map<String, String> withSubscriber(PlanQuestionClassifier.Subscriber subscriber, Map<String, String> confirmed) {
         if (subscriber == null) {
             return confirmed;

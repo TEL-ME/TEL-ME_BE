@@ -24,7 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * TELME-227 추천 질문의 쓸 사람·나이대·사용량 비교. 규칙(StatedRecommendationAnswers)이 읽은 값과 분류 모델(gpt-oss)이 읽은 값을
- * 함께 남긴다. 규칙이 나이를 읽었으면 회원 경로(PlanAnswerProvider)처럼 나이대는 묻지 않고 쓸 사람과 사용량만 묻는다. 회차(SUBSCRIBER_RUNS)를 동시에 돌린다.
+ * 함께 남긴다. 앱(PlanAnswerProvider)처럼 규칙이 나이를 읽었어도 모델에 묻는다. 회차(SUBSCRIBER_RUNS)를 동시에 돌린다.
  * 실행: SUBSCRIBER_PROBE=true SUBSCRIBER_INPUT=<[{id, question}] json> SUBSCRIBER_OUT=<결과 jsonl> LLM_PROVIDER=ollama
  *       LLM_BEDROCK_ENABLED=true AWS_PROFILE=... ./gradlew test --tests '*SubscriberReplayProbe'
  */
@@ -54,8 +54,7 @@ class SubscriberReplayProbe {
                     String rule = stated.get(MemberRecommendationAnswerer.AGE_KEY);
                     String ruleData = stated.get(MemberRecommendationAnswerer.DATA_KEY);
                     long startedAt = System.currentTimeMillis();
-                    // 규칙이 나이를 읽었으면 회원 경로처럼 쓸 사람과 사용량만 묻는다(비회원은 묻지 않는다)
-                    PlanQuestionClassifier.Subscriber model = classifier.subscriber(null, question, rule == null);
+                    PlanQuestionClassifier.Subscriber model = classifier.subscriber(null, question);
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("run", current);
                     row.put("id", input.path("id").asText());
