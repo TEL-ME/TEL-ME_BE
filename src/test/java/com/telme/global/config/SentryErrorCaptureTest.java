@@ -45,6 +45,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -120,6 +121,31 @@ class SentryErrorCaptureTest {
         assertThat(event.getRequest()).isNotNull();
         assertThat(event.getRequest().getUrl()).endsWith("/api/v1/faqs");
         assertThat(event.getRequest().getQueryString()).isNull();
+    }
+
+    @Test
+    @DisplayName("CloudFront가 넘긴 IP·위치 헤더와 DB 오류의 입력값은 지우고 보낸다")
+    void IP_위치_헤더와_DB_입력값을_지우고_보낸다() throws Exception {
+        when(faqQueryService.getFaqs(any())).thenThrow(new DataIntegrityViolationException(
+                "could not execute statement [ERROR: duplicate key value violates unique constraint \"uk_users_email\"\n"
+                        + "  Detail: Key (email)=(tester@example.com) already exists.]"));
+
+        mockMvc.perform(get("/api/v1/faqs")
+                        .header("User-Agent", "Mozilla/5.0")
+                        .header("CloudFront-Viewer-Address", "203.0.113.10:51234")
+                        .header("CloudFront-Viewer-Latitude", "37.56650")
+                        .header("CloudFront-Viewer-Longitude", "126.97800")
+                        .header("CloudFront-Viewer-Postal-Code", "04524")
+                        .header("CloudFront-Viewer-City", "Seoul"))
+                .andExpect(status().isInternalServerError());
+
+        assertThat(EVENTS).hasSize(1);
+        SentryEvent event = EVENTS.get(0);
+        assertThat(event.getRequest().getHeaders()).containsOnlyKeys("User-Agent");
+        assertThat(event.getExceptions()).allSatisfy(exception ->
+                assertThat(exception.getValue()).doesNotContain("tester@example.com"));
+        assertThat(event.getExceptions()).anySatisfy(exception ->
+                assertThat(exception.getValue()).contains(SentryConfig.DETAIL_FILTERED));
     }
 
     @Test
