@@ -30,9 +30,10 @@ public record StoreRouteResponse(
         this(mode, distanceMeters, durationSeconds, fare, transfers, steps, null, List.of());
     }
 
-    // 출발지와 도착지가 같아 갈 필요가 없을 때의 응답이다
+    // 출발지와 도착지가 같아 갈 필요가 없을 때의 응답이다. 대중교통은 도보 보강을 하지 않았으므로 originWalkIncluded를 false로 둔다
     public static StoreRouteResponse arrived(RouteMode mode) {
-        return new StoreRouteResponse(mode, 0, 0, null, null, List.of());
+        Boolean originWalkIncluded = mode == RouteMode.TRANSIT ? false : null;
+        return new StoreRouteResponse(mode, 0, 0, null, null, List.of(), originWalkIncluded, List.of());
     }
 
     public StoreRouteResponse withAlternatives(List<StoreRouteResponse> alternatives) {

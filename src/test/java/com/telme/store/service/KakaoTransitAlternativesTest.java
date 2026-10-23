@@ -149,7 +149,16 @@ class KakaoTransitAlternativesTest {
 
         assertThat(walk.alternatives()).isEmpty();
         assertThat(walk.originWalkIncluded()).isNull();
-        assertThat(StoreRouteResponse.arrived(RouteMode.TRANSIT).alternatives()).isEmpty();
+        assertThat(StoreRouteResponse.arrived(RouteMode.WALK).originWalkIncluded()).isNull();
+    }
+
+    @Test
+    @DisplayName("대중교통에서 출발지와 도착지가 같으면 도보 보강을 하지 않았으므로 originWalkIncluded는 false다")
+    void 대중교통_도착_응답은_도보_보강_false() {
+        StoreRouteResponse arrived = StoreRouteResponse.arrived(RouteMode.TRANSIT);
+
+        assertThat(arrived.originWalkIncluded()).isFalse();
+        assertThat(arrived.alternatives()).isEmpty();
     }
 
     private KakaoTransitRouteClient createClient(boolean originWalkEnabled) {
