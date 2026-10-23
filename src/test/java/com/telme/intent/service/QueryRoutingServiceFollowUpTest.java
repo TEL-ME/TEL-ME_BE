@@ -272,9 +272,57 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"나이 31이라고 했어야 했는데 오타, 31살", "정정합니다 나이는 52, 52살", "아까 잘못 썼고 66 맞아요, 66살"})
-    @DisplayName("살·세 없이 숫자 하나로 나이를 고쳐 말해도 사용량으로 읽지 않고 그 숫자를 나이로 받는다")
+    @CsvSource({"나이 31이라고 했어야 했는데 오타, 31살", "정정합니다 나이는 52, 52살", "나이 오타 66이요, 66살"})
+    @DisplayName("살·세 없이 '나이'와 숫자 하나로 고쳐 말하면 사용량으로 읽지 않고 그 숫자를 나이로 받는다")
     void analyzeFollowUp_readsBareNumberAgeCorrection(String reply, String age) {
+        givenWaitingDataUsage();
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.conditions()).containsExactly(entry("age_group", age));
+        verify(llmClient, never()).generate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "monthly_data_usage|아 잘못 눌렀어요 50이요|50GB",
+        "monthly_voice_usage|아 잘못 눌렀어요 50이요|50분",
+        "monthly_sms_usage|오타 50개요|50건",
+        "monthly_data_usage|아 잘못 썼다 50G요|50GB",
+        "monthly_data_usage|대학생인데 잘 모르겠어요|모름",
+        "monthly_data_usage|25살인데 무제한이요|무제한",
+        "monthly_data_usage|아 3기가 아니고 30기가요|30GB",
+        "monthly_sms_usage|문자 20건 말고 2건이요|2건"})
+    @DisplayName("정정하는 말이나 신분이 섞여도 사용량을 답했으면 나이를 바꾸지 않고 사용량으로 받는다")
+    void analyzeFollowUp_keepsUsageAnswerWithCorrectionWords(String key, String reply, String value) {
+        givenWaiting(key);
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.conditions()).containsExactly(entry(key, value));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"어르신이라 거의 안 써요",
+        "아 잘못 말했다 95년생이요", "잘못 눌렀어요 24개월 약정이요", "아 잘못 말함 중3이에요", "정정할게요 고1이에요",
+        "성인이고 강남역 매장 찾아주세요", "2호선 강남역 근처 매장 찾아줘"})
+    @DisplayName("사용 정도를 말한 답, 출생연도, 학년, 다른 수, 매장 요청은 나이나 사용량으로 가로채지 않고 모델에 넘긴다")
+    void analyzeFollowUp_leavesAmbiguousRepliesToLlm(String reply) {
+        givenWaitingDataUsage();
+        given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        verify(llmClient).generate(any());
+        assertThat(response.conditions()).doesNotContainKeys("age_group", "monthly_data_usage");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {"17살 아니고 20이에요|20이에요", "청소년 아니고 25예요|25예요",
+        "65세 아니고 60이에요|60이에요", "미성년자 아니고 스물넷|스물넷", "나이 22 아니구 32요|32요",
+        "아닌데 저 마흔 살이에요|저 마흔 살이에요"})
+    @DisplayName("앞의 나이를 부정하고 고친 답은 부정 표현 뒤의 나이를 받는다")
+    void analyzeFollowUp_readsAgeAfterNegation(String reply, String age) {
         givenWaitingDataUsage();
 
         FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);

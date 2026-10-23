@@ -250,6 +250,8 @@ class PlanRecommendationChatIntegrationTest {
         assertThat(asked.size()).isEqualTo(6);
         assertThat(asked.get(5).path("messageType").asText()).isEqualTo("CLARIFICATION");
         assertThat(asked.get(5).path("content").asText()).contains("한 달에 데이터를 얼마나 쓰세요");
+        // 바꾼 나이대를 알려 같은 질문이 그냥 반복돼 보이지 않게 한다
+        assertThat(asked.get(5).path("content").asText()).startsWith("나이대를 만 14~18세로 바꿨어요.");
 
         waitCompleted(send(sessionId, "40GB"));
 
