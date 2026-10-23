@@ -33,6 +33,34 @@ class ChatQuestionResolverTest {
     private final ChatContextMessage source = customer(501L, 1, "해외 로밍 신청을 알아보고 있어요.");
 
     @ParameterizedTest
+    @ValueSource(strings = {"문자는요?", "로밍도요?", "그럼 데이터는요?", "미국은요?"})
+    void topicOnlyFollowUpSkipsTheReferenceModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?", "한 20기가 정도요", "50GB 정도요", "마흔 정도요"})
+    void followUpWithItemOrReferenceStillGoesThroughTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"바라야 그럼 신청 방법은?", "안녕 바라야, 그럼 신청 방법은?",
             "그럼 신청 방법은? 고마워 바라야"})
     void addressedFollowUpStillResolvesTheSameCustomerSource(String original) throws Exception {
@@ -64,6 +92,92 @@ class ChatQuestionResolverTest {
 
         assertThat(result.sourceMessageIds()).containsExactly(501L);
         verify(model, org.mockito.Mockito.atLeastOnce()).generate(org.mockito.ArgumentMatchers.any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LTE 말고 5G 쓰고 있어요 정정할게요",
+            "아 정정할게요 유심 말고 eSIM 쓰면 돼요", "무제한 아니고 데이터 50GB 쓰고 있어요 정정할게요"})
+    void correctionWithServiceWordSkipsTheReferenceModelAndLinksTheHistory(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    private static final String CORRECTION_QUESTION = "LTE 말고 5G 쓰고 있어요 정정할게요";
+
+    private static String sourcesWithExtraEntry(int targetCount, int index) {
+        return "{\"reference\":\"OMITTED\",\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
+                + "{\"index\":" + index + ",\"targetCount\":" + targetCount + ",\"parentIndex\":1}],"
+                + "\"anchorIndex\":0,\"referenceScope\":\"RECENT\"}";
+    }
+
+    @Test
+    void guardedResolverDropsTheCurrentQuestionEntryTheModelAppended() throws Exception {
+        respond(model, sourcesWithExtraEntry(0, 2));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = guarded.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isFalse();
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        verify(model, org.mockito.Mockito.times(1)).generate(any());
+    }
+
+    @Test
+    void unguardedResolverStillRejectsTheExtraEntry() throws Exception {
+        respond(model, sourcesWithExtraEntry(0, 2));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = resolver.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 3})
+    void guardedResolverKeepsRejectingOtherExtraEntries(int variant) throws Exception {
+        // 새 업무로 센 항목(targetCount 1)과 번호가 어긋난 항목(3)은 현재 질문 항목이 아님
+        respond(model, variant == 1 ? sourcesWithExtraEntry(1, 2) : sourcesWithExtraEntry(0, 3));
+        var context = new ChatContext(1L, 5L, null, List.of(source), CORRECTION_QUESTION, 100);
+
+        var result = guarded.resolve(command(CORRECTION_QUESTION), context);
+
+        assertThat(result.needsClarification()).isTrue();
+        verify(model, org.mockito.Mockito.times(2)).generate(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"명의 정정하고 싶어요", "가입 정보 정정하려고 합니다", "청구서 주소 정정하고 싶어요",
+            "요금제를 잘못알고 가입해서 해지하고 싶어요",
+            "결제 얘기가 아니라 폰 액정이 깨졌는데 보험 있으면 얼마 내요?", "엄마 명의가 아니라 제 명의인데 해지 돼요",
+            "LTE 아니고 5G 요금제 있어요", "5G 아니고 LTE 쓰고 있어요"})
+    void correctionWordInANewRequestStillGoesToTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LTE가 아니라 5G 요금제 뭐 있어요?", "5G 아니고 LTE 요금제는 얼마예요"})
+    void correctionWordInsideACompleteQuestionStillGoesToTheReferenceDecision(String original) {
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(model);
     }
 
     @ParameterizedTest
@@ -604,7 +718,7 @@ class ChatQuestionResolverTest {
     void invalidSourceAnalysisIsAskedOnceMoreWhenGuarded() {
         String question = "그건 얼마야?";
         String invalid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0},"
-                + "{\"index\":2,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
+                + "{\"index\":3,\"targetCount\":0,\"parentIndex\":1}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
         String valid = "{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"referenceScope\":\"RECENT\",\"anchorIndex\":0}";
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         when(model.generate(any())).thenReturn(invalid, valid);

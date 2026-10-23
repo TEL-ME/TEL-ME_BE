@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-// 업무 질문에 매장 방문을 안내받은 뒤 "매장 어디예요?"처럼 업무 없이 매장을 찾으면, 그 상담의 업무를 쓴다.
+// 업무 질문에 되묻기나 매장 방문·이용 안내를 받은 뒤 "매장 어디예요?"처럼 업무 없이 매장을 찾으면, 그 상담의 업무를 쓴다.
 // 문맥 해석은 이런 질문을 앞 대화와 무관한 질문으로 보고 문맥을 넘기지 않아, 저장된 메시지를 직접 읽는다
 @Component
 @RequiredArgsConstructor
@@ -26,6 +26,8 @@ public class StoreVisitServiceType {
     private static final int LOOKBACK = 12;
     private static final Pattern STORE = Pattern.compile("매장|대리점|지점");
     private static final Pattern VISIT = Pattern.compile("방문|오시|오셔|오실|가시|가셔|가실|들르|들러");
+    // 방문 낱말 없이 매장을 이용 방법으로 안내하는 꼴
+    private static final Pattern STORE_CHANNEL = Pattern.compile("매장(?:이나|에서|으로|을\\s*통해)");
     // 방문하지 않아도 된다는 안내("매장 방문 없이 온라인으로 신청할 수 있습니다", PR #199 리뷰)
     private static final Pattern NO_VISIT = Pattern.compile(
             "(?:방문|오시|오실|가시|가실)(?:하지|하실|할|지)?\\s*(?:없이|않|안\\s|필요\\s*(?:없|가\\s*없)|대신)"
@@ -40,7 +42,7 @@ public class StoreVisitServiceType {
     private final QueryRoutingRepository routings;
     private final IntentConverter converter;
 
-    // 직전 답변이 매장 방문 안내가 아니거나 업무가 하나로 정해지지 않으면 null
+    // 직전이 되묻기도 매장 방문·이용 안내도 아니거나 업무가 하나로 정해지지 않으면 null
     public String of(ChatMessage current) {
         if (current == null || current.getSession() == null || current.getSequenceNo() == null) {
             return null;
@@ -48,7 +50,7 @@ public class StoreVisitServiceType {
         List<ChatMessage> recent = messages.findCompletedContextMessagesBefore(
                 current.getSession().getSessionId(), 0, current.getSequenceNo(), ChatMessage.Status.COMPLETED,
                 Set.of(ChatMessage.MessageType.ERROR, ChatMessage.MessageType.BLOCKED), PageRequest.of(0, LOOKBACK));
-        if (recent.isEmpty() || !guidesStoreVisit(recent.getFirst())) {
+        if (recent.isEmpty() || !continuesConsult(recent.getFirst())) {
             return null;
         }
         String asked = askedServiceType(recent);
@@ -129,6 +131,14 @@ public class StoreVisitServiceType {
         return texts;
     }
 
+    // 되묻기는 방문 낱말이 없어도 상담이 이어지는 중
+    private static boolean continuesConsult(ChatMessage message) {
+        return message.getRole() == ChatMessage.Role.ASSISTANT
+                && message.getMessageType() == ChatMessage.MessageType.CLARIFICATION
+                && message.getContent() != null
+                || guidesStoreVisit(message);
+    }
+
     // 되묻기("두 분 모두 매장에 오실 수 있나요?")도 매장 방문을 전제로 하므로 함께 본다.
     // 매장과 방문이 한 문장에 있고 그 방문을 부정하지 않는 문장이 있어야 한다. 다른 문장의 부정은 보지 않는다
     private static boolean guidesStoreVisit(ChatMessage message) {
@@ -140,7 +150,9 @@ public class StoreVisitServiceType {
             return false;
         }
         for (String sentence : SENTENCE_END.split(content)) {
-            if (STORE.matcher(sentence).find() && VISIT.matcher(sentence).find() && !NO_VISIT.matcher(sentence).find()) {
+            if (STORE.matcher(sentence).find()
+                    && (VISIT.matcher(sentence).find() || STORE_CHANNEL.matcher(sentence).find())
+                    && !NO_VISIT.matcher(sentence).find()) {
                 return true;
             }
         }

@@ -199,6 +199,8 @@ chat:
     # 세션 제목을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
     bedrock: ${CHAT_SESSION_TITLE_BEDROCK:true}
   question-resolution:
+    # REGEX_GATED: 규칙에 걸린 후속 질문만 모델 판정, HISTORY_GATED: 앞 고객 발언이 있으면 모두 모델 판정, LLM_ALL: 모든 질문
+    mode: ${CHAT_QUESTION_RESOLUTION_MODE:HISTORY_GATED}
     # 문맥 해석을 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
     bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
     # gpt-oss 문맥 판정의 흔들림 보완(docs/CONTEXT_RESOLUTION.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
