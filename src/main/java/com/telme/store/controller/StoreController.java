@@ -2,6 +2,7 @@ package com.telme.store.controller;
 
 import com.telme.global.common.CustomResponse;
 import com.telme.store.dto.req.StoreNearbySearchRequest;
+import com.telme.store.dto.req.StoreOriginWalkRequest;
 import com.telme.store.dto.req.StoreRouteRequest;
 import com.telme.store.dto.res.StoreDetailResponse;
 import com.telme.store.dto.res.StoreNearbySearchResponse;
@@ -85,6 +86,16 @@ public class StoreController {
             @Parameter(description = "도착지 매장 ID") @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId,
             @Valid @ParameterObject @ModelAttribute StoreRouteRequest request) {
         return CustomResponse.onSuccess(storeRouteService.getRoute(storeId, request));
+    }
+
+    @Operation(summary = "선택한 경로의 출발 도보 조회",
+            description = "출발지에서 선택한 대중교통 경로의 첫 좌표까지 도보를 반환합니다. "
+                    + "WALK 호출 예산과 최대 이동 거리 제한을 적용하며 서버는 응답을 저장하지 않습니다.")
+    @GetMapping("/{storeId}/route/origin-walk")
+    public CustomResponse<StoreRouteResponse> getOriginWalk(
+            @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId,
+            @Valid @ParameterObject @ModelAttribute StoreOriginWalkRequest request) {
+        return CustomResponse.onSuccess(storeRouteService.getOriginWalk(storeId, request));
     }
 
     @Operation(summary = "업무 종류 목록", description = "업무 선택 칩에 쓸 업무 코드와 이름을 반환합니다.")
