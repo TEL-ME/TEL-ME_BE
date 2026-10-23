@@ -2,6 +2,7 @@ package com.telme.store.controller;
 
 import com.telme.store.config.StoreOriginWalkProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -19,6 +20,12 @@ public class StoreRouteClientIpResolver {
     }
 
     public String resolve(HttpServletRequest request) {
+        // framework 전략의 ForwardedHeaderFilter는 IP를 바꾸고 전달 헤더를 감춘다.
+        // 가공된 값 대신 원본 소켓 IP와 헤더로 신뢰 프록시를 판별한다.
+        while (request instanceof HttpServletRequestWrapper wrapper
+                && wrapper.getRequest() instanceof HttpServletRequest original) {
+            request = original;
+        }
         String peer = request.getRemoteAddr();
         String forwarded = request.getHeader("X-Forwarded-For");
         if (!isTrusted(peer) || forwarded == null || forwarded.length() > MAX_FORWARDED_LENGTH) {
