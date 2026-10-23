@@ -260,6 +260,13 @@ public class AnswerGuard {
             if (isSafeUserReference(sentence)) {
                 invented.removeAll(asked);
             }
+            if (invented.equals(Set.of(ComparisonClaim.CHEAPER))) {
+                String quote = ComparisonPriceRecovery.recover(sentence, context, userQuery);
+                if (quote != null) {
+                    kept.append(kept.isEmpty() ? "" : " ").append(quote);
+                    continue;
+                }
+            }
             if (invented.isEmpty()) {
                 kept.append(kept.isEmpty() ? "" : " ").append(sentence);
                 continue;
