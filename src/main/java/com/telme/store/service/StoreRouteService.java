@@ -58,6 +58,12 @@ public class StoreRouteService {
         if (maxDistance > 0 && response.distanceMeters() > maxDistance) {
             throw new GeneralException(StoreErrorCode.ROUTE_DISTANCE_EXCEEDED);
         }
+        // 첫 경로가 거리 안이어도 더 돌아가는 대체 경로가 한도를 넘을 수 있어 같은 기준으로 뺀다
+        if (maxDistance > 0 && response.alternatives().stream().anyMatch(route -> route.distanceMeters() > maxDistance)) {
+            return response.withAlternatives(response.alternatives().stream()
+                    .filter(route -> route.distanceMeters() <= maxDistance)
+                    .toList());
+        }
         return response;
     }
 }

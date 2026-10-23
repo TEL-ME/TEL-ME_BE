@@ -9,6 +9,8 @@ import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.dto.res.StoreRouteResponse.Coordinate;
 import com.telme.store.exception.StoreErrorCode;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +42,7 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
         return RouteMode.TRANSIT;
     }
 
-    // 경로는 카카오가 먼저 주는 것(추천 순)을 쓴다
+    // 카카오가 추천 순으로 주는 경로 중 첫 경로를 응답의 값으로, 나머지를 alternatives로 내린다. 카카오 호출은 한 번이다
     @Override
     public StoreRouteResponse findRoute(RouteEndpoints endpoints) {
         KakaoTransitRouteResponse response = kakaoRouteCalls.call(RouteMode.TRANSIT, TAG,
@@ -67,7 +69,21 @@ public class KakaoTransitRouteClient implements StoreRouteClient {
             throw KakaoRouteCalls.createUnexpectedException(TAG, "status=" + response.status());
         }
         StoreRouteResponse transit = storeRouteConverter.toTransitResponse(response.routes().get(0));
-        return prependOriginWalk(endpoints, transit);
+        return prependOriginWalk(endpoints, transit)
+                .withAlternatives(toAlternatives(response.routes().subList(1, response.routes().size())));
+    }
+
+    // 첫 경로는 해석하지 못하면 실패로 알리지만, 나머지 경로는 해석하지 못한 것만 빼고 내린다
+    private List<StoreRouteResponse> toAlternatives(List<KakaoTransitRouteResponse.Route> routes) {
+        List<StoreRouteResponse> alternatives = new ArrayList<>();
+        for (int i = 0; i < routes.size(); i++) {
+            try {
+                alternatives.add(storeRouteConverter.toTransitResponse(routes.get(i)));
+            } catch (GeneralException e) {
+                log.warn("[KakaoTransit] 대체 경로 생략 index={} code={}", i + 1, e.getErrorCode().getCode());
+            }
+        }
+        return alternatives;
     }
 
     private StoreRouteResponse prependOriginWalk(RouteEndpoints endpoints, StoreRouteResponse transit) {
