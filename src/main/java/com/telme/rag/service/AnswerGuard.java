@@ -6,6 +6,8 @@ import java.math.BigInteger;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -231,9 +233,14 @@ public class AnswerGuard {
     /** confirmedValues는 되묻기로 받아 저장한 조건 값이다. 모델이 가져온 값이 아니라 고객이 확인해 준 값이다. */
     public String applyEvidencePolicy(
             String answer, String context, String userQuery, String confirmedValues) {
+        return applyEvidencePolicy(answer, context, userQuery, confirmedValues, ignored -> Set.of());
+    }
+
+    String applyEvidencePolicy(String answer, String context, String userQuery, String confirmedValues,
+            Function<List<String>, Set<String>> review) {
         String filtered = trimAfterNoEvidence(answer, context);
         filtered = trimUngroundedChannels(filtered, context, userQuery);
-        filtered = trimUngroundedComparisons(filtered, context, userQuery);
+        filtered = trimUngroundedComparisons(filtered, context, userQuery, review);
         filtered = trimUngroundedPolicyAttributes(filtered, context, userQuery);
         filtered = trimUnsupportedPolicyClaims(filtered, context, userQuery);
         filtered = trimContradictedChargeClaims(filtered, context);
@@ -247,33 +254,57 @@ public class AnswerGuard {
     }
 
     public String trimUngroundedComparisons(String answer, String context, String userQuery) {
+        return trimUngroundedComparisons(answer, context, userQuery, ignored -> Set.of());
+    }
+
+    private String trimUngroundedComparisons(String answer, String context, String userQuery,
+            Function<List<String>, Set<String>> review) {
         if (answer == null || answer.isBlank()) {
             return answer == null ? "" : answer;
         }
-
         Set<ComparisonClaim> grounded = comparisonsIn(context);
         Set<ComparisonClaim> asked = comparisonsIn(userQuery);
-        StringBuilder kept = new StringBuilder();
-        for (String sentence : SENTENCE.split(answer.strip())) {
+        List<String> sentences = List.of(SENTENCE.split(answer.strip()));
+        Set<String> rejected = new LinkedHashSet<>();
+        List<String> candidates = new ArrayList<>();
+        for (String sentence : sentences) {
             Set<ComparisonClaim> invented = comparisonsIn(sentence);
             invented.removeAll(grounded);
             if (isSafeUserReference(sentence)) {
                 invented.removeAll(asked);
             }
-            if (invented.equals(Set.of(ComparisonClaim.CHEAPER))) {
-                String quote = ComparisonPriceRecovery.recover(sentence, context, userQuery);
-                if (quote != null) {
-                    kept.append(kept.isEmpty() ? "" : " ").append(quote);
-                    continue;
+            if (!invented.isEmpty()) {
+                rejected.add(sentence);
+                if (canReviewComparison(sentence, context, userQuery)) {
+                    candidates.add(sentence);
                 }
             }
-            if (invented.isEmpty()) {
+        }
+        Set<String> approved = candidates.isEmpty() ? Set.of() : review.apply(List.copyOf(candidates));
+        StringBuilder kept = new StringBuilder();
+        for (String sentence : sentences) {
+            if (!rejected.contains(sentence) || approved.contains(sentence)) {
                 kept.append(kept.isEmpty() ? "" : " ").append(sentence);
-                continue;
+            } else {
+                log.warn("[AnswerGuard] 근거로 확인되지 않은 비교 문장 제거: {}", sentence);
             }
-            log.warn("[AnswerGuard] 근거에 없는 비교 표현으로 문장 제거: {} | {}", invented, sentence);
         }
         return kept.isEmpty() ? AnswerPromptTemplates.NO_EVIDENCE_ANSWER : kept.toString();
+    }
+
+    private boolean canReviewComparison(String sentence, String context, String userQuery) {
+        if (sentence.length() > 1000 || context == null || context.length() > 12000
+                || userQuery == null || userQuery.length() > 4000) {
+            return false;
+        }
+        try {
+            // 삭제될 문장을 먼저 검사하므로 수치 오류가 기존 재생성 경로를 새로 발동시키지는 않는다.
+            verifyAmounts(sentence, context, "");
+            verifyMeasures(sentence, context, "");
+            return !ComparisonClaimPrecheck.hasUngroundedWeekMeasure(sentence, context);
+        } catch (AnswerGuardException rejected) {
+            return false;
+        }
     }
 
     public String trimUngroundedChannels(String answer, String context, String userQuery) {

@@ -14,6 +14,9 @@ import com.telme.rag.dto.req.AnswerRequest;
 import com.telme.rag.dto.res.AnswerResult;
 import com.telme.rag.exception.AnswerGuardException;
 import java.util.Objects;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import com.telme.chat.service.ExecutionTrace;
@@ -45,6 +48,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
     private final int contextSize;
     // 금액으로 막힌 답을 다시 부를 gpt-oss(Bedrock). 엑사원 대체를 거치지 않는다. null이면 다시 생성하지 않는다
     private final LlmClient amountRetryClient;
+    private final ComparisonEvidenceJudge comparisonJudge;
 
     // 모델은 RagAnswerLlmConfiguration이 고른다(rag.answer.bedrock)
     @Autowired
@@ -52,9 +56,11 @@ public class RagAnswerGenerator implements AnswerGenerator {
             AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
             LlmProperties properties, RagAnswerProperties answerProperties,
-            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock) {
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrock,
+            ComparisonEvidenceJudge comparisonJudge) {
         this(client, converter, guard, checker, recorder, trace, properties.contextSize(),
-                RagAnswerLlmConfiguration.amountRetryClient(answerProperties, bedrock.getIfAvailable()));
+                RagAnswerLlmConfiguration.amountRetryClient(answerProperties, bedrock.getIfAvailable()),
+                comparisonJudge);
     }
 
     public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
@@ -65,12 +71,18 @@ public class RagAnswerGenerator implements AnswerGenerator {
     public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
             LlmClient amountRetryClient) {
-        this(client, converter, guard, checker, recorder, trace, 8192, amountRetryClient);
+        this(client, converter, guard, checker, recorder, trace, amountRetryClient, null);
+    }
+
+    public RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
+            EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace,
+            LlmClient amountRetryClient, ComparisonEvidenceJudge comparisonJudge) {
+        this(client, converter, guard, checker, recorder, trace, 8192, amountRetryClient, comparisonJudge);
     }
 
     private RagAnswerGenerator(LlmClient client, AnswerContextConverter converter, AnswerGuard guard,
             EvidenceRelevanceChecker checker, LlmGenerationRecorder recorder, ExecutionTrace trace, int size,
-            LlmClient amountRetryClient) {
+            LlmClient amountRetryClient, ComparisonEvidenceJudge comparisonJudge) {
         this.llmClient = client;
         this.contextConverter = converter;
         this.answerGuard = guard;
@@ -79,6 +91,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         this.trace = trace;
         this.contextSize = size;
         this.amountRetryClient = amountRetryClient;
+        this.comparisonJudge = comparisonJudge;
     }
 
     @Override
@@ -139,12 +152,16 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 .build();
 
         String confirmedValues = String.join(" ", request.conditions().values());
+        Function<List<String>, Set<String>> comparisonReview = comparisonJudge == null ? null
+                : comparisonJudge.newReview(request.executionId(), request.consultRequestId(),
+                        request.resolvedQuery(), answerEvidence);
         CollectingHandler collector = new CollectingHandler(handler, answerGuard, answerEvidence,
-                request.resolvedQuery(), confirmedValues, trace, request.executionId(), request.consultRequestId());
+                request.resolvedQuery(), confirmedValues, trace, request.executionId(), request.consultRequestId(),
+                comparisonReview);
         AnswerGuardException rejection = streamGuarded(llmClient, llmRequest, collector);
         if (rejection != null && amountRetryClient != null && rejection.kind() == AnswerGuardException.Kind.AMOUNT) {
             collector = retryWithMoreReasoning(request, llmRequest, handler, answerEvidence, confirmedValues,
-                    rejection);
+                    rejection, comparisonReview);
             rejection = collector.rejection;
         }
         if (rejection != null) {
@@ -185,7 +202,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
      */
     private CollectingHandler retryWithMoreReasoning(AnswerRequest request, LlmRequest llmRequest,
             LlmStreamHandler handler, String answerEvidence, String confirmedValues,
-            AnswerGuardException rejection) {
+            AnswerGuardException rejection, Function<List<String>, Set<String>> comparisonReview) {
         log.info("[RagAnswerGenerator] 근거에 없는 금액으로 막혀 추론 강도 {}로 다시 생성 executionId={} reason={}",
                 AMOUNT_RETRY_REASONING_EFFORT, request.executionId(), rejection.getMessage());
         var retry = new LinkedHashMap<String, Object>(Map.of("reason", rejection.getMessage(),
@@ -193,7 +210,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         retry.put("consultRequestId", request.consultRequestId());
         CollectingHandler collector = new CollectingHandler(new WithoutErrors(handler), answerGuard,
                 answerEvidence, request.resolvedQuery(), confirmedValues, trace, request.executionId(),
-                request.consultRequestId());
+                request.consultRequestId(), comparisonReview);
         try {
             AnswerGuardException again = streamGuarded(amountRetryClient,
                     llmRequest.toBuilder().reasoningEffort(AMOUNT_RETRY_REASONING_EFFORT).build(), collector);
@@ -280,6 +297,7 @@ public class RagAnswerGenerator implements AnswerGenerator {
         private final String context;
         private final String userQuery;
         private final String confirmedValues;
+        private final Function<List<String>, Set<String>> comparisonReview;
         private final StringBuilder collected = new StringBuilder();
         private String answer = "";
         private RuntimeException failure;
@@ -291,12 +309,14 @@ public class RagAnswerGenerator implements AnswerGenerator {
 
         private CollectingHandler(
                 LlmStreamHandler delegate, AnswerGuard answerGuard, String context, String userQuery,
-                String confirmedValues, ExecutionTrace trace, Long executionId, Long consultRequestId) {
+                String confirmedValues, ExecutionTrace trace, Long executionId, Long consultRequestId,
+                Function<List<String>, Set<String>> comparisonReview) {
             this.delegate = delegate;
             this.answerGuard = answerGuard;
             this.context = context;
             this.userQuery = userQuery;
             this.confirmedValues = confirmedValues;
+            this.comparisonReview = comparisonReview;
             this.trace = trace;
             this.executionId = executionId;
             this.consultRequestId = consultRequestId;
@@ -318,8 +338,11 @@ public class RagAnswerGenerator implements AnswerGenerator {
                 return;
             }
             try {
-                answer = answerGuard.applyEvidencePolicy(
-                        collected.toString().strip(), context, userQuery, confirmedValues);
+                answer = comparisonReview == null
+                        ? answerGuard.applyEvidencePolicy(
+                                collected.toString().strip(), context, userQuery, confirmedValues)
+                        : answerGuard.applyEvidencePolicy(
+                                collected.toString().strip(), context, userQuery, confirmedValues, comparisonReview);
                 // 상담 경로의 delegate.onToken은 진행 신호(onProgress)로만 전달된다.
                 // 최종 답변은 저장 후 별도로 전송하므로 여기의 기록은 전송을 늦추지 않는다.
                 recordGuard(
