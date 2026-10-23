@@ -15,6 +15,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 class IndependentQuestionPolicyTest {
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "번이철회하면제회선은어떻게돼요|번이 철회하면 제 회선은 어떻게 돼요? 기한도 있어요?|번이 철회하면 제 회선은 어떻게 돼요",
+            "기한도있어요?|번이 철회하면 제 회선은 어떻게 돼요? 기한도 있어요?|기한도 있어요?",
+            "신청방법|번호이동 비용과 신청방법 그리고 필요서류 알려줘|신청방법",
+            "로밍 요금|로밍요금과 유심재발급방법 알려줘|로밍 요금",
+            "없는문구|로밍요금과 유심재발급방법 알려줘|없는문구"})
+    void restoresOriginalSpacingOnlyForQuotesFoundInTheQuestion(String text, String question, String expected) {
+        assertThat(IndependentQuestionPolicy.withOriginalSpacing(text, question)).isEqualTo(expected);
+    }
+
     @Test
     void recoversLiteralSourceWhenModelDropsOneParticleFromQuote() {
         var sub = new LlmRoutingPayload.SubQueryPayload((short) 2, ConsultRequest.Intent.FAQ,

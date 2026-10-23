@@ -397,7 +397,7 @@ public class QueryRoutingService {
         }
         validateFaqSearchQueries(payload, question, analysisQuestion);
         payload = preserveFaqQuestionMeaning(
-                payload, analysisQuestion, question, previousSubject, context, restored, executionId);
+                payload, analysisQuestion, question, promptQuestion, previousSubject, context, restored, executionId);
         payload = withVisitedServiceType(payload, userMessage, question);
         ensureSingleConsultSupported(payload, singleConsultOnly, question);
         IntentRouteResponse result = executeInTransaction(userMessage, payload, method);
@@ -567,8 +567,10 @@ public class QueryRoutingService {
     }
 
     // current는 현재 발화, question은 복원된 발언을 포함한 검색 대상 근거다.
+    // spaced는 띄어쓰기를 지우기 전의 현재 발화다. current(띄어쓰기를 지운 발화)의 인용으로 정한 검색어를 되돌리는 데 쓴다
     private LlmRoutingPayload preserveFaqQuestionMeaning(LlmRoutingPayload payload, String current,
-            String question, String previousSubject, ChatContext context, boolean restored, Long executionId) {
+            String question, String spaced, String previousSubject, ChatContext context, boolean restored,
+            Long executionId) {
         if (payload.intent() != QueryRouting.Intent.FAQ || payload.subQueries().isEmpty()) {
             return payload;
         }
@@ -615,6 +617,7 @@ public class QueryRoutingService {
             } else {
                 queryText = removeUngroundedQueryWords(payload, sub, current, previousSubject);
             }
+            queryText = IndependentQuestionPolicy.withOriginalSpacing(queryText, spaced);
             safe.add(new LlmRoutingPayload.SubQueryPayload(
                     sub.order(), sub.intent(), queryText, sub.conditions(), sub.requestQuote()));
         }
@@ -897,7 +900,8 @@ public class QueryRoutingService {
                 log.info("[라우팅] 복합 질문의 FAQ 검색어를 원문 근거로 확인하지 못해 원문 구간을 사용합니다: order={}",
                         sub.order());
                 String section = IndependentQuestionPolicy.ownSectionText(normalized, sub, question);
-                queryText = section != null ? section : IndependentQuestionPolicy.verifiedQuote(sub, question);
+                queryText = section != null ? section : IndependentQuestionPolicy.withOriginalSpacing(
+                        IndependentQuestionPolicy.verifiedQuote(sub, question), question);
             }
             Map<String, String> conditions = sub.conditions();
             if (sub.intent() == ConsultRequest.Intent.STORE && storeCount == 1
