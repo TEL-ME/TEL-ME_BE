@@ -56,21 +56,26 @@ public class PlanCatalogAnswerer {
         }
         boolean cheapest = CHEAPEST.matcher(text).find();
         boolean priciest = PRICIEST.matcher(text).find();
-        List<Plan> matched = filter(text, plans, cheapest || priciest);
+        PlanQuestion.Conditions conditions = mention == null ? null : mention.conditions();
+        List<Plan> matched = filter(text, plans, cheapest || priciest, conditions);
+        // 대상을 물었는지도 모델 조건이 있으면 그것으로 본다. "엄마는 시니어 요금제 쓰는데"처럼 이유로 꺼낸 대상은 묻지 않은 것이다
+        boolean groupAsked = conditions != null
+                ? !conditions.targetGroups().isEmpty() || !conditions.excludedTargetGroups().isEmpty()
+                : asksTargetGroup(text);
         if (cheapest || priciest) {
-            return extreme(matched, cheapest, text);
+            return extreme(matched, cheapest, groupAsked);
         }
         if (matched.isEmpty()) {
             return "조건에 맞는 요금제를 찾지 못했어요. 판매 중인 전체 요금제는 아래와 같아요.\n\n" + list(plans);
         }
-        String head = COUNT.matcher(text).find() ? count(text, matched) : "요금제 안내예요.";
+        String head = COUNT.matcher(text).find() ? count(matched, groupAsked) : "요금제 안내예요.";
         return head + "\n\n" + list(matched);
     }
 
     // 개수는 FAQ처럼 일반 라인업 기준으로 세고 청소년·시니어 요금제는 따로 알린다. 대상을 직접 물으면 그 대상을 센다
-    private String count(String text, List<Plan> matched) {
+    private String count(List<Plan> matched, boolean groupAsked) {
         List<Plan> general = matched.stream().filter(plan -> plan.getTargetGroup() == Plan.TargetGroup.GENERAL).toList();
-        if (general.isEmpty() || general.size() == matched.size() || asksTargetGroup(text)) {
+        if (general.isEmpty() || general.size() == matched.size() || groupAsked) {
             return "판매 중인 요금제는 총 %d종이에요.".formatted(matched.size());
         }
         long youth = matched.stream().filter(plan -> plan.getTargetGroup() == Plan.TargetGroup.YOUTH).count();
@@ -147,18 +152,29 @@ public class PlanCatalogAnswerer {
         return same == 1 ? parts[1] : null;
     }
 
-    private List<Plan> filter(String text, List<Plan> plans, boolean generalOnly) {
-        // 뺀 요금제 이름은 지운 뒤 망·대상을 읽는다. "LTE 맥스 제외하고 LTE 요금제"를 LTE를 빼라는 말로 읽지 않게 한다
-        String conditions = withoutExcludedNames(text, plans);
+    // 모델이 읽은 조건(망, 대상, 무제한, 뺄 요금제)이 있으면 그것을 쓰고, 없으면(규칙 분류, 요금제를 고른 질문, 조건 호출 실패) 질문의 낱말로 읽는다.
+    // 가격 조건("5만원 이하", "3만원대")은 숫자라 어느 쪽이든 낱말로 읽는다
+    private List<Plan> filter(String text, List<Plan> plans, boolean generalOnly, PlanQuestion.Conditions modelConditions) {
         Selected<Plan.NetworkType> networks = new Selected<>();
-        networks.read(conditions, "5G", Plan.NetworkType.FIVE_G);
-        networks.read(conditions, "LTE", Plan.NetworkType.LTE);
-        networks.read(conditions, "알뜰", Plan.NetworkType.BUDGET);
         Selected<Plan.TargetGroup> groups = new Selected<>();
-        groups.read(conditions, AgeReplyParser.YOUTH_WORD, Plan.TargetGroup.YOUTH);
-        groups.read(conditions, AgeReplyParser.SENIOR_WORD, Plan.TargetGroup.SENIOR);
-        groups.read(conditions, "일반", Plan.TargetGroup.GENERAL);
-        boolean unlimited = text.contains("무제한");
+        PlanQuestion.Unlimited unlimited;
+        if (modelConditions != null) {
+            networks.included.addAll(modelConditions.networks());
+            networks.excluded.addAll(modelConditions.excludedNetworks());
+            groups.included.addAll(modelConditions.targetGroups());
+            groups.excluded.addAll(modelConditions.excludedTargetGroups());
+            unlimited = modelConditions.unlimited();
+        } else {
+            // 뺀 요금제 이름은 지운 뒤 망·대상을 읽는다. "LTE 맥스 제외하고 LTE 요금제"를 LTE를 빼라는 말로 읽지 않게 한다
+            String conditions = withoutExcludedNames(text, plans);
+            networks.read(conditions, "5G", Plan.NetworkType.FIVE_G);
+            networks.read(conditions, "LTE", Plan.NetworkType.LTE);
+            networks.read(conditions, "알뜰", Plan.NetworkType.BUDGET);
+            groups.read(conditions, AgeReplyParser.YOUTH_WORD, Plan.TargetGroup.YOUTH);
+            groups.read(conditions, AgeReplyParser.SENIOR_WORD, Plan.TargetGroup.SENIOR);
+            groups.read(conditions, "일반", Plan.TargetGroup.GENERAL);
+            unlimited = text.contains("무제한") ? PlanQuestion.Unlimited.ONLY : PlanQuestion.Unlimited.ANY;
+        }
         Matcher band = PRICE_BAND.matcher(text);
         Matcher under = PRICE_UNDER.matcher(text);
         Integer bandMin = band.find() ? Integer.parseInt(band.group(1)) * WON_PER_MAN : null;
@@ -169,10 +185,12 @@ public class PlanCatalogAnswerer {
                 .filter(plan -> networks.isEmpty() || networks.accepts(plan.getNetworkType()))
                 .filter(plan -> groups.isEmpty() ? !generalOnly || plan.getTargetGroup() == Plan.TargetGroup.GENERAL
                         : groups.accepts(plan.getTargetGroup()))
-                .filter(plan -> !unlimited || plan.isUnlimited())
+                .filter(plan -> unlimited == PlanQuestion.Unlimited.ANY
+                        || plan.isUnlimited() == (unlimited == PlanQuestion.Unlimited.ONLY))
                 .filter(plan -> bandMin == null || plan.getMonthlyFee() >= bandMin && plan.getMonthlyFee() < bandMin + WON_PER_MAN)
                 .filter(plan -> max == null || (exclusiveMax ? plan.getMonthlyFee() < max : plan.getMonthlyFee() <= max))
-                .filter(plan -> !excludedByName(text, plan, plans))
+                .filter(plan -> modelConditions != null ? !modelConditions.excludedPlans().contains(plan.getCode())
+                        : !excludedByName(text, plan, plans))
                 .toList();
     }
 
@@ -203,14 +221,13 @@ public class PlanCatalogAnswerer {
         }
     }
 
-    private String extreme(List<Plan> matched, boolean cheapest, String text) {
+    private String extreme(List<Plan> matched, boolean cheapest, boolean groupAsked) {
         if (matched.isEmpty()) {
             return null;
         }
         Comparator<Plan> byFee = Comparator.comparingInt(Plan::getMonthlyFee);
         int fee = (cheapest ? matched.stream().min(byFee) : matched.stream().max(byFee)).orElseThrow().getMonthlyFee();
         List<Plan> picked = matched.stream().filter(plan -> plan.getMonthlyFee() == fee).toList();
-        boolean groupAsked = asksTargetGroup(text);
         return "%s가장 %s 요금제예요.\n\n%s".formatted(groupAsked ? "" : "일반 요금제 중 ", cheapest ? "저렴한" : "비싼", list(picked));
     }
 

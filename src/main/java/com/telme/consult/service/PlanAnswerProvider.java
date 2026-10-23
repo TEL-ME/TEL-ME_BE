@@ -94,6 +94,9 @@ public final class PlanAnswerProvider implements AnswerProvider {
         if (classified.mention() != null) {
             record.put("plans", classified.mention().planCodes());
             record.put("unknownPlan", classified.mention().unknownPlan());
+            if (classified.mention().conditions() != null) {
+                record.put("conditions", classified.mention().conditions());
+            }
         }
         trace.append(executionId, "planQuestionClassifications", record);
         return classified;

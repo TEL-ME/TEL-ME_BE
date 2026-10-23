@@ -2,6 +2,7 @@ package com.telme.consult.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.telme.plan.entity.Plan;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -168,6 +169,56 @@ class PlanCatalogAnswererTest {
 
         assertThat(answerer.answer("5G 말고 LTE 요금제 알려줘")).contains("LTE 맥스").doesNotContain("5G 스탠다드");
         assertThat(answerer.answer("시니어 요금제 빼고 제일 싼 요금제")).contains("알뜰 미니").doesNotContain("알뜰 시니어");
+    }
+
+    // 모델이 읽은 목록 조건이 있으면 질문의 낱말 대신 그것으로 거른다. 이유로 꺼낸 망·대상 낱말은 조건이 아니다(TELME-227)
+    @Test
+    void 모델이_읽은_목록_조건이_있으면_낱말_대신_그_조건으로_거른다() {
+        PlanQuestion.Conditions lte = conditions(List.of(Plan.NetworkType.LTE), List.of(), List.of(), List.of(),
+                PlanQuestion.Unlimited.ANY, List.of());
+        assertThat(answerer.answer("LTE 요금제 몇개에요? 5G는 안터지는 동네라서요", listMention(lte)))
+                .startsWith("일반 LTE 요금제는 3종이에요. 청소년 1종, 시니어 1종은 따로 있어요.")
+                .doesNotContain("5G 스탠다드");
+
+        PlanQuestion.Conditions noBudget = conditions(List.of(), List.of(Plan.NetworkType.BUDGET), List.of(), List.of(),
+                PlanQuestion.Unlimited.ANY, List.of());
+        assertThat(answerer.answer("알뜰 같은 건 됐고요 요금제 종류 쭉 알려주실래요?", listMention(noBudget)))
+                .contains("5G 스탠다드", "LTE 맥스").doesNotContain("알뜰 세이브", "알뜰 미니");
+
+        PlanQuestion.Conditions fiveGWithoutUnlimitedPlan = conditions(List.of(Plan.NetworkType.FIVE_G), List.of(), List.of(),
+                List.of(), PlanQuestion.Unlimited.ANY, List.of("FIVE_G_UNLIMITED"));
+        assertThat(answerer.answer("무제한은 너무 비싸서요 5G 언리미티드 아닌 걸로 5G 요금제 뭐 있어요?", listMention(fiveGWithoutUnlimitedPlan)))
+                .contains("5G 프리미엄", "5G 스탠다드").doesNotContain("5G 언리미티드", "LTE 맥스");
+    }
+
+    @Test
+    void 모델_조건으로_무제한을_빼거나_대상을_고르고_대상을_물었는지도_조건으로_본다() {
+        PlanQuestion.Conditions limited = conditions(List.of(Plan.NetworkType.FIVE_G), List.of(), List.of(), List.of(),
+                PlanQuestion.Unlimited.EXCLUDE, List.of());
+        assertThat(answerer.answer("무제한은 필요없어요 5G 요금제 보여줘", listMention(limited)))
+                .contains("5G 프리미엄", "5G 라이트").doesNotContain("5G 언리미티드");
+
+        PlanQuestion.Conditions youth = conditions(List.of(), List.of(), List.of(Plan.TargetGroup.YOUTH), List.of(),
+                PlanQuestion.Unlimited.ANY, List.of());
+        assertThat(answerer.answer("엄마는 5G 시니어 쓰시고 저는 고딩인데 청소년 요금제 몇개 있어요?", listMention(youth)))
+                .startsWith("판매 중인 요금제는 총 3종이에요.").doesNotContain("시니어");
+
+        // 이유로 꺼낸 "시니어"는 대상을 물은 것이 아니라 일반 라인업으로 센다
+        PlanQuestion.Conditions any = conditions(List.of(), List.of(), List.of(), List.of(), PlanQuestion.Unlimited.ANY, List.of());
+        assertThat(answerer.answer("엄마 시니어 요금제 내드리느라 부담돼요 요금제 전체 몇 개예요?", listMention(any)))
+                .startsWith("일반 요금제는 9종이에요.");
+        assertThat(answerer.answer("시니어 요금제 쓰는 엄마 대신 묻는데 제일 싼 요금제 뭐예요", listMention(any)))
+                .startsWith("일반 요금제 중 가장 저렴한 요금제예요.").contains("알뜰 미니");
+    }
+
+    private static PlanQuestion.Mention listMention(PlanQuestion.Conditions conditions) {
+        return new PlanQuestion.Mention(List.of(), false, conditions);
+    }
+
+    private static PlanQuestion.Conditions conditions(List<Plan.NetworkType> networks, List<Plan.NetworkType> excludedNetworks,
+            List<Plan.TargetGroup> groups, List<Plan.TargetGroup> excludedGroups, PlanQuestion.Unlimited unlimited,
+            List<String> excludedPlans) {
+        return new PlanQuestion.Conditions(networks, excludedNetworks, groups, excludedGroups, unlimited, excludedPlans);
     }
 
     @Test

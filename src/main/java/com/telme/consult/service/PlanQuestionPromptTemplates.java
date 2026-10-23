@@ -69,14 +69,50 @@ public final class PlanQuestionPromptTemplates {
         {"type": "RECOMMENDATION | MY_SUBSCRIPTION | MY_PENALTY | MY_USAGE | PLAN_CATALOG | NONE 중 하나", "plans": ["요금제 코드"], "unknownPlan": false}
         """;
 
+    // 요금제 이름을 고르지 않은 요금제 표 질문에만 따로 부른다. 분류 응답에 조건 칸을 붙이면 모델이 이름을 조건으로 옮기거나
+    // 목록에 없는 요금제 질문을 NONE으로 바꾸는 일이 늘었다(TELME-227 측정)
+    // v2: 묶음의 가격·데이터를 묻는 질문("시니어 요금제는 얼마예요")도 그 묶음을 조건으로 받는다. v1은 목록·개수만 말해 조건을 비웠다
+    public static final String CONDITIONS_PROMPT_VERSION = "plan-list-conditions-v2";
+
+    private static final String CONDITION_RULES = """
+        당신은 통신사 챗봇에서 요금제 목록, 개수, 가격, 데이터를 묻는 질문의 조건을 읽는 역할입니다.
+        고객이 알고 싶어 하는 요금제 묶음의 조건만 고릅니다. 묶음의 가격이나 데이터를 물어도 그 묶음이 조건입니다.
+          예) "청소년 요금제는 데이터 몇 기가씩 줘요?" -> targetGroups [YOUTH]
+        - networks: 고객이 보고 싶어 하는 망(FIVE_G, LTE, BUDGET). BUDGET은 알뜰 요금제입니다. 말하지 않았으면 [].
+        - excludedNetworks: 고객이 빼 달라거나 필요 없다고 한 망.
+        - targetGroups: 고객이 보고 싶어 하는 대상(GENERAL 일반, YOUTH 청소년·중고생, SENIOR 시니어·어르신). 말하지 않았으면 [].
+        - excludedTargetGroups: 고객이 빼 달라거나 필요 없다고 한 대상.
+        - unlimited: 데이터 무제한 요금제만 원하면 ONLY, 무제한 요금제를 빼 달라면 EXCLUDE, 그 밖에는 ANY.
+        - excludedPlans: 고객이 이름으로 빼 달라고 한 요금제의 코드. 망 이름을 뺀 이름("스탠다드")으로 불러도 그 요금제입니다.
+        - 가격 조건은 고르지 않습니다.
+        - 이유나 사정으로 꺼낸 말은 조건이 아닙니다. 고객이 실제로 보고 싶어 하는 것만 고릅니다.
+          예) "LTE 요금제 몇 개예요? 5G는 안 터지는 동네라서요" -> networks [LTE], excludedNetworks []
+          예) "무제한은 너무 비싸서요 5G 언리미티드 아닌 걸로 5G 요금제 뭐 있어요?" -> networks [FIVE_G], excludedPlans [5G 언리미티드의 코드], unlimited ANY
+          예) "알뜰 같은 건 됐고요 요금제 종류 쭉 알려주실래요?" -> excludedNetworks [BUDGET]
+          예) "LTE 베이직이나 LTE 플러스 말고 다른 LTE 요금제" -> networks [LTE], excludedPlans [두 요금제의 코드]
+        """;
+
+    private static final String CONDITION_OUTPUT = """
+
+        JSON만 출력하십시오.
+        {"networks": [], "excludedNetworks": [], "targetGroups": [], "excludedTargetGroups": [], "unlimited": "ANY", "excludedPlans": []}
+        """;
+
+    public static String conditionsSystemPrompt(List<Plan> plans) {
+        return CONDITION_RULES + catalog(plans) + CONDITION_OUTPUT;
+    }
+
+    private static String catalog(List<Plan> plans) {
+        return plans.stream()
+                .map(plan -> "- " + plan.getCode() + ": " + plan.getName())
+                .collect(Collectors.joining("\n", "\n[판매 중인 요금제]\n", "\n"));
+    }
+
     // 판매 중인 요금제가 없으면 요금제 고르기 없이 type만 고른다
     public static String systemPrompt(List<Plan> plans) {
         if (plans.isEmpty()) {
             return TYPE_RULES + OUTPUT;
         }
-        String catalog = plans.stream()
-                .map(plan -> "- " + plan.getCode() + ": " + plan.getName())
-                .collect(Collectors.joining("\n", "\n[판매 중인 요금제]\n", "\n"));
-        return TYPE_RULES + PLAN_RULES + catalog + OUTPUT;
+        return TYPE_RULES + PLAN_RULES + catalog(plans) + OUTPUT;
     }
 }
