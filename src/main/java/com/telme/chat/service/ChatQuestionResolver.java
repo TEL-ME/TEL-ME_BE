@@ -72,6 +72,12 @@ public class ChatQuestionResolver {
     // "보험 없으면요?"처럼 앞 질문의 조건만 뒤집어 말하는 짧은 '~면요?'꼴. 공백과 문장 부호를 뗀 문장에 쓴다
     private static final Pattern CONDITION_FLIP_FOLLOW_UP = Pattern.compile(
             "^(?:그럼|그러면|그리고|근데)?(?!그)[가-힣A-Za-z0-9]{1,8}(?:없으|있으|아니라|아니|안하|못하|안되|못되|모르)면요$");
+    // 문장 첫머리의 "그 차단", "그 회선"은 같은 문장 안에 가리킬 대상이 없어 앞 대화를 받는 말이다. 문장 중간의 "그 서비스"는 제외한다
+    // "그 혹시", "그 저기", "그 왜"처럼 "그"가 군더더기인 문장은 혼자 완결되므로, 그 뒤에 상담 업무 낱말이 올 때만 본다
+    private static final Pattern DEMONSTRATIVE_START = Pattern.compile("^(?:(?:근데|그럼|그러면|그리고|아|저기)[\\s,.]*)?그\\s+"
+            + "(?:서비스|상품|요금|회선|번호|폰|휴대폰|단말|유심|기기|한도|등급|혜택|할인|포인트|차단|정지|해지|신청|변경|건|것|거|경우"
+            + "|부분|내용|조건|서류|방법|절차|문자|내역|청구|할부|약정|위약금|가입|개통|취소|환불|결제|납부|보험|매장|기간|비용|금액"
+            + "|데이터|로밍|명의|멤버십|부가)");
     private static final Pattern TOPIC_CAPABLE = Pattern.compile("요금|변경|취소|신청|접수|처리|진행");
     // 업무에 딸려 청구되는 비용 항목. 업무 이름 없이 이것만 물으면 앞 업무의 항목일 수 있어 길이와 관계없이 모델 후보로 본다.
     private static final Pattern COST_ITEM = Pattern.compile("수수료|위약금|할부금|방문비|출장비|부가세|설치비|가입비");
@@ -233,6 +239,7 @@ public class ChatQuestionResolver {
                 || madeOfGenericWords(gated, stabilityGuards)
                 || shortFollowUpWithHistory(compact(gated), context)
                 || isCorrectionOfHistory(noWhitespace) && hasCustomerHistory(context)
+                || DEMONSTRATIVE_START.matcher(gated).find() && hasCustomerHistory(context)
                 // "설치 기사님 방문비용은 따로 청구되는 건가요?"처럼 길어도 업무 없이 비용 항목만 물으면 대상 유무는 모델이 판정한다.
                 || stabilityGuards && COST_ITEM.matcher(noWhitespace).find() && hasCustomerHistory(context);
         if (mode == Mode.HISTORY_GATED) {
@@ -277,6 +284,7 @@ public class ChatQuestionResolver {
             // "첫 번째로 문의한 거 위약금은?"처럼 대화 속 발언을 순서로 가리키면 다른 낱말이 있어도 모델 없이 대상 생략으로 본다.
             boolean generic = isGenericFollowUp(judged, stabilityGuards) || CONVERSATION_ORDINAL.matcher(compact(judged)).find()
                     || TOPIC_ONLY_FOLLOW_UP.matcher(compact(judged)).matches()
+                    || DEMONSTRATIVE_START.matcher(judged).find()
                     // 앞 질문의 조건만 뒤집는 짧은 말은 문장에 사물이 있어도 모델 없이 대상 생략으로 본다. 하려는 일을 말하면 새 요청이라 제외
                     || CONDITION_FLIP_FOLLOW_UP.matcher(compact(judged)).matches() && !INTENT_STATEMENT.matcher(compact(judged)).find()
                     // 정정 말은 문장에 대상 낱말이 있어도 앞 대화의 값을 고치는 것이라 모델 없이 대상 생략으로 봄. 하려는 일을 말하면 새 요청이라 제외

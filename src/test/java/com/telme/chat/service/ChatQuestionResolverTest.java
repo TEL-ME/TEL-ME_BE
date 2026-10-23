@@ -61,6 +61,54 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"그 차단 푸는 건 어떻게 해요", "근데 그 회선 정지는 어떻게 해요", "그럼 그 한도는 올릴 수도 있어요?",
+            "그 회선 명의를 얼마 전에 제 앞으로 바꿨는데, 그래도 바로 할 수 있나요?", "그 서비스는요?",
+            "그 요금은 하루에 얼마인지 알려주세요", "그 등급 올리려면 뭘 해야 돼요?"})
+    void sentenceStartingWithDemonstrativeNounSkipsTheReferenceModel(String original) throws Exception {
+        respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).containsExactly(501L);
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-sources");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"명의 변경을 하려는데 그 서비스에 필요한 서류는요?", "그리고 유심 재발급 신청 방법은요?",
+            "그런데 유심 재발급 비용은요?"})
+    void demonstrativeInsideOrOnlyLookingLikeOneStillGoesThroughTheReferenceModel(String original) throws Exception {
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = resolver.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    // 군더더기 "그"로 시작해도 혼자 완결된 문장은 앞 대화를 받는 말로 보지 않고 모델이 판정한다
+    @ParameterizedTest
+    @ValueSource(strings = {"그 혹시 로밍 요금제 종류가 뭐뭐 있어요?", "그 저기 명의변경 할 때 필요한 서류가 뭔가요",
+            "그 있잖아요 매장 몇 시까지 하는지 알려주세요", "그 왜 폰 잃어버렸을 때 분실 신고는 어디서 해요"})
+    void fillerGeuStartingCompleteQuestionGoesThroughTheReferenceModel(String original) throws Exception {
+        var historyGated = new ChatQuestionResolver(model, mapper, ExecutionTrace.noop(), Mode.HISTORY_GATED, true);
+        respond(model, explicit());
+        var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
+
+        var result = historyGated.resolve(command(original), context);
+
+        assertThat(result.sourceMessageIds()).isEmpty();
+        var request = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(model).generate(request.capture());
+        assertThat(request.getValue().promptVersion()).isEqualTo("context-v32-reference");
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"신청하려고 하는데 없으면요?", "로밍 신청 안 하고 지내면요?",
             "신분증 없으면 가입 안 되나요?", "유심 없으면요 어떻게 해요?"})
     void longerOrNewRequestWithConditionStillGoesThroughTheReferenceModel(String original) throws Exception {
@@ -76,7 +124,7 @@ class ChatQuestionResolverTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "그 서비스는요?", "한 20기가 정도요", "50GB 정도요", "마흔 정도요"})
+    @ValueSource(strings = {"유심 가격은요?", "멤버십 혜택은요?", "한 20기가 정도요", "50GB 정도요", "마흔 정도요"})
     void followUpWithItemOrReferenceStillGoesThroughTheReferenceModel(String original) throws Exception {
         respond(model, explicit());
         var context = new ChatContext(1L, 5L, null, List.of(source), original, 100);
@@ -500,7 +548,7 @@ class ChatQuestionResolverTest {
     void modelOutageIsPassedToFailureHandlingInsteadOfAskingTheCustomer(String code) {
         var outage = new GeneralException(LlmErrorCode.valueOf(code));
         when(model.generate(any())).thenThrow(outage);
-        String question = "그 서비스 해지는 어떻게 해요?";
+        String question = "해지하려는데 그건 어디서 신청해요?";
         assertThatThrownBy(() -> resolver.resolve(command(question),
                 new ChatContext(1L, 5L, null, List.of(source), question, 100))).isSameAs(outage);
     }
@@ -509,13 +557,13 @@ class ChatQuestionResolverTest {
     void cancelledRequestIsNotTurnedIntoClarification() {
         var cancelled = new LlmStreamCancelledException();
         when(model.generate(any())).thenThrow(cancelled);
-        assertThatThrownBy(() -> resolver.resolve(command("그 서비스 해지는 어떻게 해요?"), null)).isSameAs(cancelled);
+        assertThatThrownBy(() -> resolver.resolve(command("해지하려는데 그건 어디서 신청해요?"), null)).isSameAs(cancelled);
     }
 
     @Test
     void bothModelRequestsCarryTheirOwnSchemaAndDisableThinking() throws Exception {
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
-        String question = "그 서비스 해지는 어떻게 해요?";
+        String question = "해지하려는데 그건 어디서 신청해요?";
         resolver.resolve(command(question), new ChatContext(1L, 5L, null, List.of(source), question, 100));
         var requests = ArgumentCaptor.forClass(LlmRequest.class);
         org.mockito.Mockito.verify(model, org.mockito.Mockito.times(2)).generate(requests.capture());
@@ -557,7 +605,7 @@ class ChatQuestionResolverTest {
     @Test
     void responseWithBrokenFormatStillAsksForClarification() {
         when(model.generate(any())).thenThrow(new GeneralException(LlmErrorCode.INVALID_RESPONSE));
-        assertThat(resolver.resolve(command("그 서비스 해지는 어떻게 해요?"), null).needsClarification()).isTrue();
+        assertThat(resolver.resolve(command("해지하려는데 그건 어디서 신청해요?"), null).needsClarification()).isTrue();
     }
 
     @ParameterizedTest
@@ -569,7 +617,7 @@ class ChatQuestionResolverTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"요금 안 내면 언제 정지되나요?", "요금 너무 많이 나왔어요", "요금제 변경은 어떻게 해요?",
-            "그 서비스 해지는 어떻게 해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?",
+            "해지하려는데 그건 어디서 신청해요?", "이심 신청은요?", "이전 설치 신청 방법은?", "아까 신청한 유심 재발급을 취소할 수 있나요?",
             "위약금 얼마나 나와요?", "수수료는 얼마예요?"})
     void anyBusinessWordLeavesTheTargetDecisionToTheModel(String question) {
         assertThat(ChatQuestionResolver.isGenericFollowUp(question)).isFalse();
@@ -773,7 +821,7 @@ class ChatQuestionResolverTest {
     // gpt-oss는 내부 추론도 출력 한도를 써서 한도가 작으면 답이 비거나 잘린다. 흔들림 보완과 관계없이 두 요청 모두 512 이상이다
     @Test
     void outputTokenLimitIsAtLeast512WithOrWithoutGuards() throws Exception {
-        String question = "그 서비스 해지는 어떻게 해요?";
+        String question = "해지하려는데 그건 어디서 신청해요?";
         var context = new ChatContext(1L, 5L, null, List.of(source), question, 100);
         respond(model, omitted("[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}]"));
         guarded.resolve(command(question), context);
