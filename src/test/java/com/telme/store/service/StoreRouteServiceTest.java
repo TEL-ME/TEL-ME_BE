@@ -46,7 +46,8 @@ class StoreRouteServiceTest {
                 .build();
         when(storeQueryService.getOpenStore(STORE_ID)).thenReturn(store);
         service = new StoreRouteService(storeQueryService,
-                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0), usageGuard);
+                List.of(carClient, transitClient, walkClient, bicycleClient), new StoreRouteProperties(0),
+                usageGuard, mock(StoreOriginWalkGuard.class));
     }
 
     @Test
@@ -127,7 +128,8 @@ class StoreRouteServiceTest {
     @DisplayName("이동 수단 중 클라이언트가 없는 것이 있으면 시작할 때 실패한다")
     void 클라이언트_누락() {
         assertThatThrownBy(() -> new StoreRouteService(storeQueryService,
-                List.of(carClient, transitClient, walkClient), new StoreRouteProperties(0), usageGuard))
+                List.of(carClient, transitClient, walkClient), new StoreRouteProperties(0),
+                usageGuard, mock(StoreOriginWalkGuard.class)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("BICYCLE");
     }
@@ -177,7 +179,7 @@ class StoreRouteServiceTest {
     private StoreRouteService limitedService(int maxDistance) {
         return new StoreRouteService(storeQueryService,
                 List.of(carClient, transitClient, walkClient, bicycleClient),
-                new StoreRouteProperties(maxDistance), usageGuard);
+                new StoreRouteProperties(maxDistance), usageGuard, mock(StoreOriginWalkGuard.class));
     }
 
     private StoreRouteClient findClient(RouteMode mode) {

@@ -176,7 +176,8 @@ class KakaoTransitAlternativesTest {
                 .build());
         return new StoreRouteService(storeQueryService,
                 List.of(mockClient(RouteMode.CAR), transitClient, mockClient(RouteMode.WALK), mockClient(RouteMode.BICYCLE)),
-                new StoreRouteProperties(maxDistanceMeters), mock(StoreRouteUsageGuard.class));
+                new StoreRouteProperties(maxDistanceMeters), mock(StoreRouteUsageGuard.class),
+                mock(StoreOriginWalkGuard.class));
     }
 
     private static StoreRouteClient mockClient(RouteMode mode) {

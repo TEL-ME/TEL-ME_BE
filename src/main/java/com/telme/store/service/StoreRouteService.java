@@ -3,6 +3,7 @@ package com.telme.store.service;
 import com.telme.global.common.exception.GeneralException;
 import com.telme.store.config.StoreRouteProperties;
 import com.telme.store.dto.req.RouteMode;
+import com.telme.store.dto.req.StoreOriginWalkRequest;
 import com.telme.store.dto.req.StoreRouteRequest;
 import com.telme.store.dto.res.StoreRouteResponse;
 import com.telme.store.entity.Store;
@@ -21,13 +22,15 @@ import org.springframework.stereotype.Service;
 public class StoreRouteService {
 
     private final StoreRouteUsageGuard usageGuard;
+    private final StoreOriginWalkGuard originWalkGuard;
     private final StoreQueryService storeQueryService;
     private final StoreRouteProperties storeRouteProperties;
     private final Map<RouteMode, StoreRouteClient> clients = new EnumMap<>(RouteMode.class);
 
     public StoreRouteService(StoreQueryService storeQueryService,
                              List<StoreRouteClient> routeClients, StoreRouteProperties storeRouteProperties,
-                             StoreRouteUsageGuard usageGuard) {
+                             StoreRouteUsageGuard usageGuard, StoreOriginWalkGuard originWalkGuard) {
+        this.originWalkGuard = originWalkGuard;
         this.usageGuard = usageGuard;
         this.storeQueryService = storeQueryService;
         this.storeRouteProperties = storeRouteProperties;
@@ -49,6 +52,20 @@ public class StoreRouteService {
                 store.getLatitude(),
                 store.getLongitude());
         return loadRoute(mode, endpoints);
+    }
+
+    public StoreRouteResponse getOriginWalk(long storeId, StoreOriginWalkRequest request, String clientIp) {
+        usageGuard.checkEnabled();
+        originWalkGuard.checkDistance(request);
+        originWalkGuard.acquire(clientIp);
+        // 폐점·없는 매장에 대해 외부 호출 예산을 쓰지 않는다. 외부 호출 중 DB 연결은 유지하지 않는다.
+        storeQueryService.getOpenStore(storeId);
+        RouteEndpoints endpoints = new RouteEndpoints(
+                BigDecimal.valueOf(request.originLatitude()),
+                BigDecimal.valueOf(request.originLongitude()),
+                BigDecimal.valueOf(request.destinationLatitude()),
+                BigDecimal.valueOf(request.destinationLongitude()));
+        return loadRoute(RouteMode.WALK, endpoints);
     }
 
     private StoreRouteResponse loadRoute(RouteMode mode, RouteEndpoints endpoints) {

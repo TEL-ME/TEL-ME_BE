@@ -366,6 +366,13 @@ store:
   route:
     # 카카오가 반환한 실제 경로 거리(m). 0은 제한 없음. 조회 후 검사하므로 호출 쿼터는 사용한다.
     max-distance-meters: ${STORE_ROUTE_MAX_DISTANCE_METERS:0}
+    origin-walk:
+      # 외부 API 호출 전 검사. 출발 도보 전용이며 0(무제한)은 허용하지 않는다.
+      max-straight-distance-meters: ${STORE_ROUTE_ORIGIN_WALK_MAX_STRAIGHT_DISTANCE_METERS:3000}
+      # IP별 서버 메모리 제한. 첫 요청부터 60초 동안 허용할 횟수. 여러 대면 대수만큼 느슨해진다.
+      requests-per-minute: ${STORE_ROUTE_ORIGIN_WALK_REQUESTS_PER_MINUTE:30}
+      # X-Forwarded-For를 신뢰할 프록시 IP/CIDR만 쉼표로 지정. 기본은 헤더를 신뢰하지 않는다.
+      trusted-proxies: ${STORE_ROUTE_ORIGIN_WALK_TRUSTED_PROXIES:}
     enabled: ${STORE_ROUTE_ENABLED:true}
     # KST 날짜별 호출 예약 예산. 공급자의 실제 한도·다른 서비스 사용량을 확인해 조정한다. 0은 차단이다.
     car-daily-limit: ${STORE_ROUTE_CAR_DAILY_LIMIT:9000}
