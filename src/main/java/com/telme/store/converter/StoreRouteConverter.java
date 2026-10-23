@@ -38,6 +38,8 @@ public class StoreRouteConverter {
                 .fare(transit.fare())
                 .transfers(transit.transfers())
                 .steps(List.copyOf(steps))
+                .originWalkIncluded(true)
+                .alternatives(transit.alternatives())
                 .build();
     }
 
@@ -76,7 +78,7 @@ public class StoreRouteConverter {
         Integer fare = properties.fare() == null ? null
                 : requireNonNegative(properties.fare().value(), "fare.value");
         Integer transfers = requireNonNegative(properties.transfers(), "transfers");
-        return new StoreRouteResponse(RouteMode.TRANSIT, distance, duration, fare, transfers, steps);
+        return new StoreRouteResponse(RouteMode.TRANSIT, distance, duration, fare, transfers, steps, false, List.of());
     }
 
     // 도보·자전거 응답은 legs[].steps[] 구조다. 경유지를 쓰지 않으므로 leg는 하나지만 여러 개여도 순서대로 이어 붙인다
