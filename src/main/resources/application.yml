@@ -342,7 +342,8 @@ sentry:
   dsn: ${SENTRY_DSN:}
   # 베타 기록만 거를 수 있도록 배포 환경마다 local·beta·production으로 나눈다
   environment: ${SENTRY_ENVIRONMENT:local}
-  # 요청 헤더·IP·쿠키 같은 사용자 정보를 보내지 않는다. 쿼리스트링(위치 좌표 등)은 이 설정으로 막히지 않아 SentryConfig에서 지운다
+  # 인증 헤더·IP·쿠키 같은 사용자 정보를 보내지 않는다. 쿼리스트링(위치 좌표 등), CloudFront 위치 헤더, DB 오류의 입력값,
+  # 답변 검사 로그의 문장은 이 설정으로 막히지 않아 SentryConfig에서 지운다
   send-default-pii: false
   in-app-includes: com.telme
   # 없는 경로(404)·허용 안 된 메서드(405)·지원 안 하는 형식(415)은 요청 쪽 실수인데, 전역 예외 처리의 마지막 Exception 처리에 걸려
