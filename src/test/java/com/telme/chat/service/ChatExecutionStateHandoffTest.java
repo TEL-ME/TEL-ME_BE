@@ -1,41 +1,42 @@
 package com.telme.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.telme.chat.entity.ChatExecution;
 import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.entity.ChatSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class ChatExecutionStateHandoffTest {
 
-    private static ChatExecutionState completed() {
-        return new ChatExecutionState(1L, 2L, ChatExecution.Status.COMPLETED, null,
-                new ChatOutputMessage(1L, 2L, 3L, 1, ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED));
-    }
-
     @Test
-    @DisplayName("상담원 연결 표시는 기본으로 꺼져 있다")
+    @DisplayName("출력 메시지의 상담원 연결 표시는 기본으로 꺼져 있다")
     void defaultsToFalse() {
-        assertThat(completed().outputMessage().handoff()).isFalse();
+        var output = new ChatOutputMessage(
+                1L, 2L, 3L, 1, ChatMessage.MessageType.ANSWER, ChatMessage.Status.COMPLETED);
+
+        assertThat(output.handoff()).isFalse();
     }
 
     @Test
-    @DisplayName("상담원 연결 표시를 켜면 출력 메시지에만 반영된다")
-    void withHandoffSetsOutputMessage() {
-        ChatExecutionState state = completed().withHandoff(true);
+    @DisplayName("저장된 메시지의 상담원 연결 표시를 출력 메시지로 옮긴다")
+    void readsHandoffFromStoredMessage() {
+        ChatSession session = mock(ChatSession.class);
+        when(session.getSessionId()).thenReturn(1L);
+        ChatExecution execution = mock(ChatExecution.class);
+        when(execution.getExecutionId()).thenReturn(2L);
+        ChatMessage message = mock(ChatMessage.class);
+        when(message.getSession()).thenReturn(session);
+        when(message.getMessageId()).thenReturn(3L);
+        when(message.getSequenceNo()).thenReturn(1);
+        when(message.getMessageType()).thenReturn(ChatMessage.MessageType.ANSWER);
+        when(message.getStatus()).thenReturn(ChatMessage.Status.COMPLETED);
+        when(message.isHandoff()).thenReturn(true);
 
-        assertThat(state.outputMessage().handoff()).isTrue();
-        assertThat(state.executionId()).isEqualTo(2L);
-        assertThat(state.status()).isEqualTo(ChatExecution.Status.COMPLETED);
-    }
-
-    @Test
-    @DisplayName("출력 메시지가 없으면 그대로 돌려준다")
-    void withoutOutputMessage() {
-        ChatExecutionState state = new ChatExecutionState(1L, 2L, ChatExecution.Status.COMPLETED, null, null);
-
-        assertThat(state.withHandoff(true)).isSameAs(state);
+        assertThat(ChatOutputMessage.of(execution, message).handoff()).isTrue();
     }
 
     @Test

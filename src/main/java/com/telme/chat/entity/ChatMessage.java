@@ -94,6 +94,10 @@ public class ChatMessage {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    // FAQ에서 근거를 찾지 못한 답변이라 상담원 연결을 안내한다
+    @Column(name = "handoff", nullable = false)
+    private boolean handoff;
+
     public void complete(
             MessageType messageType,
             String content,
@@ -109,6 +113,14 @@ public class ChatMessage {
             MessageType messageType, String content, AnswerBasis answerBasis, String followUps,
             String storeResults, String storeSearchContext, Instant completedAt
     ) {
+        complete(messageType, content, answerBasis, followUps, storeResults, storeSearchContext, false, completedAt);
+    }
+
+    public void complete(
+            MessageType messageType, String content, AnswerBasis answerBasis, String followUps,
+            String storeResults, String storeSearchContext, boolean handoff, Instant completedAt
+    ) {
+        this.handoff = handoff;
         this.messageType = messageType;
         this.content = content;
         this.answerBasis = answerBasis;

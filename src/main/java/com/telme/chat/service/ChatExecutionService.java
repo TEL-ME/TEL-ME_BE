@@ -75,12 +75,13 @@ public class ChatExecutionService {
                 followUps,
                 stores,
                 searchContext,
+                answer.handoff(),
                 ending.at()
         );
         execution.complete(message, ending.at(), ending.totalMs());
         if (!preserveConsultation) session.resume();
         session.touch(ending.at());
-        ChatExecutionState output = flushed(execution).withHandoff(answer.handoff());
+        ChatExecutionState output = flushed(execution);
         requestPostProcessing(execution, message.getSequenceNo());
         return output;
 
