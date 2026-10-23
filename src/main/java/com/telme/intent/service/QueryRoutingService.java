@@ -100,7 +100,7 @@ public class QueryRoutingService {
     private static final Pattern CORRECTING = Pattern.compile("잘못|정정|틀렸|틀려|오타|고쳐|바꿔|바꿀|다시|눌렀|눌러|착각|실수");
     // 앞서 한 답을 고친다는 말. 단위 없이 이 말과 함께 온 사용량 답은 무엇을 고친 것인지 알 수 없다
     private static final Pattern CORRECTION_MARK = Pattern.compile(
-        "아니|아냐|아뇨|ㄴㄴ|잘못|오타|틀렸|틀려|틀림|정정|고쳐|바꿔|바꿀|다시|착각|실수");
+        "아니|아냐|아뇨|ㄴㄴ|말고|말구|잘못|오타|틀렸|틀려|틀림|정정|고쳐|바꿔|바꿀|다시|착각|실수");
     private static final Set<String> USAGE_KEYS = Set.of(
         DataUsageReplyParser.CONDITION_KEY, CallTextReplyParser.VOICE_KEY, CallTextReplyParser.SMS_KEY);
 
@@ -1173,6 +1173,14 @@ public class QueryRoutingService {
         if (ageCorrection != null) {
             return ageCorrection;
         }
+        // 사용량을 묻는 중 고쳐 말하는 답에 단위 없는 수가 있는데 나이로도 사용량으로도 읽지 못한 답("아니 38이요", "오타 50이요")은
+        // 모델에 넘기지 않고 같은 질문을 다시 묻는다. 모델은 지금 묻는 사용량 질문만 보고 그 수를 사용량으로 채운다(TELME-218)
+        if (waitingForUsage(waiting, reply) && (ambiguousCorrection(reply) || mentionsAge(reply))) {
+            log.info("[후속분석] 무엇을 고쳤는지 알 수 없는 답이라 같은 질문을 다시 묻습니다: consultRequestId={}",
+                    waiting.consultRequestId());
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(), Collections.emptyMap(), Collections.emptySet(), QueryRouting.Method.RULE);
+        }
 
         LlmFollowUpPayload payload;
         QueryRouting.Method method;
@@ -1330,16 +1338,22 @@ public class QueryRoutingService {
                 end = negated.end();
             }
             String before = reply.substring(0, start);
+            String after = reply.substring(end);
             if (USAGE_UNIT.matcher(before).find() || usageValue(key, before) != null) {
-                String corrected = usageValue(key, reply.substring(end));
-                return corrected == null ? null : new FollowUpRouteResponse(
-                    waiting.consultRequestId(), Map.of(key, corrected), Collections.emptySet(), QueryRouting.Method.RULE);
+                String corrected = usageValue(key, after);
+                if (corrected != null) {
+                    return new FollowUpRouteResponse(
+                        waiting.consultRequestId(), Map.of(key, corrected), Collections.emptySet(), QueryRouting.Method.RULE);
+                }
+                // 뒤에 고친 값이 있는데 읽지 못하면 지운 값을 받지 않는다. 뒤에 수가 없으면 덧붙인 말이다
+                // ("한 30기가요 정확한 건 아니고요")
+                if (ANY_NUMBER.matcher(after).find()) {
+                    return null;
+                }
             }
         }
-        // 고쳐 말한다는 말과 함께 단위 없는 숫자나 사용 정도만 말한 답("아니 38이요", "오타 50이요",
-        // "조금 전에 고른 거 틀림 예순일곱")은 사용량을 고친 것인지 나이를 고친 것인지 코드가 가리지 못한다.
-        // 틀린 값을 저장하지 않도록 읽지 않고 모델에 넘긴다(TELME-218)
-        if (CORRECTION_MARK.matcher(reply).find() && !USAGE_UNIT.matcher(reply).find()) {
+        // 고쳐 말하는 답에 단위 없는 수가 있으면 무엇을 고친 것인지 코드가 가리지 못한다(ambiguousCorrection)
+        if (ambiguousCorrection(reply)) {
             return null;
         }
         String value = usageValue(key, reply);
@@ -1419,6 +1433,23 @@ public class QueryRoutingService {
         }
         String age = number.group(1) + "살";
         return AgeReplyParser.parse(age) == null ? null : age;
+    }
+
+    // 사용량 질문 하나를 기다리는 중의 짧은 답. 물음표나 매장을 찾는 말이 있으면 새 질문일 수 있어 모델이 본다
+    private static boolean waitingForUsage(WaitingConsult waiting, String reply) {
+        return waiting.pendingKeys().size() == 1 && USAGE_KEYS.contains(waiting.pendingKeys().iterator().next())
+                && reply.length() <= MAX_USAGE_REPLY_LENGTH && !reply.contains("?") && !STORE_WORD.matcher(reply).find();
+    }
+
+    // 고쳐 말하는 말과 함께 단위 없는 수(고유어 수 포함)가 있는 답. 사용 정도만 말한 답("ㄴㄴ 무제한이요 잘못말했어")은 아니다
+    private static boolean ambiguousCorrection(String reply) {
+        return CORRECTION_MARK.matcher(reply).find() && !USAGE_UNIT.matcher(reply).find()
+                && (ANY_NUMBER.matcher(reply).find() || AgeReplyParser.parse(reply) != null);
+    }
+
+    // 나이를 말했는데 규칙이 나이로 읽지 못한 답("몰라서 아무거나 눌렀어요 나이 45")
+    private static boolean mentionsAge(String reply) {
+        return !USAGE_UNIT.matcher(reply).find() && (reply.contains("나이") || TYPED_EXACT_AGE.matcher(reply).find());
     }
 
     private static boolean correctsTypedAge(String reply) {

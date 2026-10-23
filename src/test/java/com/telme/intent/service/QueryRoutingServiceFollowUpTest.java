@@ -309,10 +309,8 @@ class QueryRoutingServiceFollowUpTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"어르신이라 거의 안 써요",
-        "아 잘못 말했다 95년생이요", "잘못 눌렀어요 24개월 약정이요", "아 잘못 말함 중3이에요", "정정할게요 고1이에요",
-        "성인이고 강남역 매장 찾아주세요", "2호선 강남역 근처 매장 찾아줘",
-        "아 잘못 눌렀어요 50이요", "아니 38이요", "ㄴㄴ 저 19 맞아요", "조금 전에 고른 거 틀림 예순일곱"})
-    @DisplayName("사용 정도를 말한 답, 출생연도, 학년, 다른 수, 매장 요청, 고쳐 말하며 단위 없이 숫자만 말한 답은 가로채지 않고 모델에 넘긴다")
+        "성인이고 강남역 매장 찾아주세요", "2호선 강남역 근처 매장 찾아줘"})
+    @DisplayName("사용 정도를 말한 답과 매장 요청은 나이나 사용량으로 가로채지 않고 모델에 넘긴다")
     void analyzeFollowUp_leavesAmbiguousRepliesToLlm(String reply) {
         givenWaitingDataUsage();
         given(llmClient.generate(any())).willReturn("{\"conditions\":[]}");
@@ -355,6 +353,41 @@ class QueryRoutingServiceFollowUpTest {
     @CsvSource({"그건 잘못 눌렀어요 나이 20이에요, 20살", "나이 잘못 말한 건데 20이에요, 20살"})
     @DisplayName("'그건', '건데'의 건은 사용량 단위가 아니어서 '나이'와 숫자로 고친 답을 사용량으로 읽지 않는다")
     void analyzeFollowUp_doesNotTakeKoreanWordsAsUsageUnit(String reply, String age) {
+        givenWaitingDataUsage();
+
+        assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).containsExactly(entry("age_group", age));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"아 잘못 눌렀어요 50이요", "아니 38이요", "ㄴㄴ 저 19 맞아요", "잘못됐어요 66 맞음",
+        "조금 전에 고른 거 틀림 예순일곱", "몰라서 아무거나 눌렀어요 나이 45", "아 잘못 말했다 95년생이요",
+        "잘못 눌렀어요 24개월 약정이요", "아 잘못 말함 중3이에요", "정정할게요 고1이에요"})
+    @DisplayName("고쳐 말하며 단위 없는 수만 말해 무엇을 고쳤는지 모르는 답은 모델에 넘기지 않고 같은 질문을 다시 묻는다")
+    void analyzeFollowUp_asksAgainWhenCorrectionIsAmbiguous(String reply) {
+        givenWaiting("monthly_sms_usage");
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, reply);
+
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.DEFERRED);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "ㄴㄴ 무제한이요 잘못말했어|무제한", "아뇨 잘 모르겠어요|모름", "한 30기가요 정확한 건 아니고요|30GB",
+        "50기가 정도 쓰는데 매달 같은 건 아닌데|50GB"})
+    @DisplayName("고쳐 말하는 말이 있어도 수 없이 사용 정도만 말했거나 사용량 뒤에 덧붙인 부정이면 사용량으로 받는다")
+    void analyzeFollowUp_readsUsageWithCorrectionWordsWithoutBareNumber(String reply, String value) {
+        givenWaitingDataUsage();
+
+        assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).containsExactly(entry("monthly_data_usage", value));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {"미성년자 말고 20이요|20이요", "학생 말고 25요|25요", "서른 살 말고 40이에요|40이에요"})
+    @DisplayName("'말고'로 앞의 나이를 부정하고 고친 답은 사용량이 아니라 뒤의 나이로 받는다")
+    void analyzeFollowUp_readsAgeAfterMalgo(String reply, String age) {
         givenWaitingDataUsage();
 
         assertThat(service.analyzeFollowUp(SESSION_ID, reply).conditions()).containsExactly(entry("age_group", age));
