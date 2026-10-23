@@ -76,6 +76,33 @@ docker run --rm --env-file .env -e POSTGRES_HOST=host.docker.internal -p 127.0.0
 
 EC2 배포에서는 로컬 `.env` 대신 RDS 접속값을 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` 환경변수로 전달합니다. Docker 이미지 빌드는 테스트를 제외하며, 테스트는 아래 Gradle 빌드와 CI에서 실행합니다.
 
+## 대중교통 출발 도보 조회 제한
+
+`GET /api/v1/stores/{storeId}/route/origin-walk`는 출발지에서 선택한 경로의 첫 좌표까지 조회합니다.
+다음 환경변수는 외부 API를 호출하기 전에 검사하며, 변경 후 서버를 재시작해야 합니다.
+`.env.example`에 예시가 있고 `bootRun`·IDE 실행에서는 실행 환경변수로도 전달해야 합니다.
+
+| 환경변수 | 기본값 | 의미 |
+| --- | --- | --- |
+| `STORE_ROUTE_ORIGIN_WALK_MAX_STRAIGHT_DISTANCE_METERS` | `3000` | 두 좌표의 직선거리 상한(m). 초과하면 `400 / STORE400-5` |
+| `STORE_ROUTE_ORIGIN_WALK_REQUESTS_PER_MINUTE` | `30` | IP별 첫 허용 요청부터 60초 동안 허용할 요청 수. 초과하면 `429 / STORE429-0` |
+| `STORE_ROUTE_ORIGIN_WALK_TRUSTED_PROXIES` | 빈 값 | 신뢰할 프록시 IP/CIDR 목록(쉼표 구분). 빈 값이면 `X-Forwarded-For`를 무시 |
+
+거리 상한과 요청 수는 양수만 허용하며, 빈 값이면 기본값을 사용합니다. 초과 요청은 카카오 호출과 일일 예산 차감 전에 차단됩니다.
+거리 초과는 분당 횟수도 사용하지 않습니다. 거리 검사를 통과한 시도는 매장 없음·외부 장애 등으로 실패해도 분당 횟수에 포함됩니다.
+기존 `STORE_ROUTE_MAX_DISTANCE_METERS`는 실제 경로에 대한 **조회 후** 제한이므로 함께 유지합니다.
+
+프론트에서 서로 다른 경로를 처음 선택하면 요청 수에 포함되고, 같은 경로 재선택은 프론트 캐시를 사용하므로 요청 수가 늘지 않습니다.
+기본 30회는 경로 11개를 연속 선택하는 경우를 허용합니다. 같은 공인 IP의 사용자들은 횟수를 공유하므로 시연·운영 트래픽에 맞춰 조정합니다.
+분당 제한은 서버별 메모리에 저장되어 재시작 시 초기화되고, 서버가 여러 대면 대수만큼 느슨해집니다. 공용 일일 WALK 예산은 기존 DB 제한을 유지합니다.
+활성 IP가 서버당 10,000개에 도달하면 기존 IP의 제한을 유지하고 새 IP 요청을 429로 거절하며, 만료된 항목을 정리한 뒤 다시 받습니다.
+이 방어는 요청 좌표가 실제 대중교통 응답에 포함됐는지 증명하지는 않습니다.
+
+배포의 CloudFront→ALB 경로에서는 두 프록시의 실제 대역을 모두 신뢰하도록 설정해야 합니다. 빠지면 프록시 IP로 합산될 수 있습니다.
+`infra/terraform/config.tf`는 VPC 대역과 기존 CloudFront origin-facing 관리형 prefix list의 대역을 SSM 환경변수로 전달합니다.
+코드 머지만으로 기존 SSM 값이 추가되지는 않으므로 Terraform 반영 후 앱 인스턴스 교체/재시작이 필요합니다.
+운영에서는 서로 다른 사용자 요청이 서로 다른 IP로 집계되는지 수동 확인해야 합니다. 모든 IP 대역을 신뢰하도록 설정하지 않습니다.
+
 ## Ollama (선택)
 
 LLM 기능을 개발하거나 확인할 때만 필요합니다. 두 방식 중 하나를 선택합니다.

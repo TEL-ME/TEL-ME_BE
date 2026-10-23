@@ -30,6 +30,13 @@ locals {
     # 매장 길찾기: 대중교통 출발지 → 첫 경로 좌표 도보를 추가 조회, 실제 경로 거리 50km 넘으면 안내 안 함
     KAKAO_ROUTE_TRANSIT_ORIGIN_WALK_ENABLED = "true"
     STORE_ROUTE_MAX_DISTANCE_METERS         = "50000"
+    STORE_ROUTE_ORIGIN_WALK_MAX_STRAIGHT_DISTANCE_METERS = "3000"
+    STORE_ROUTE_ORIGIN_WALK_REQUESTS_PER_MINUTE          = "30"
+    # CloudFront→ALB 경유 요청의 실제 사용자 IP를 구분한다. SG도 같은 CloudFront prefix list만 허용한다.
+    STORE_ROUTE_ORIGIN_WALK_TRUSTED_PROXIES = join(",", concat(
+      [var.vpc_cidr],
+      sort([for entry in data.aws_ec2_managed_prefix_list.cloudfront.entries : entry.cidr])
+    ))
 
     # 시연용: 요금제 가입, 변경을 바로 적용하고 가입 당월, 월 1회 변경 제한을 생략
     TELME_SUBSCRIPTION_DEMO_MODE = "true"
