@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class StoreController {
     private final StoreSearchService storeSearchService;
     private final StoreQueryService storeQueryService;
     private final StoreRouteService storeRouteService;
+    private final StoreRouteClientIpResolver clientIpResolver;
 
     @Operation(
             summary = "가까운 매장 검색",
@@ -90,12 +92,20 @@ public class StoreController {
 
     @Operation(summary = "선택한 경로의 출발 도보 조회",
             description = "출발지에서 선택한 대중교통 경로의 첫 좌표까지 도보를 반환합니다. "
-                    + "WALK 호출 예산과 최대 이동 거리 제한을 적용하며 서버는 응답을 저장하지 않습니다.")
+                    + "외부 호출 전에 출발 도보 직선거리 상한과 IP별 분당 요청 제한을 적용합니다. "
+                    + "WALK 호출 예산과 실제 경로 거리 제한도 적용하며 서버는 응답을 저장하지 않습니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "400", description = "STORE400-5: 거리 상한 초과, COMMON400-1: 요청값 형식 오류"),
+        @ApiResponse(responseCode = "429", description = "STORE429-0: 출발 도보 요청 빈도 초과. 잠시 후 재시도"),
+        @ApiResponse(responseCode = "503", description = "STORE503-2/3/4: 외부 연동 실패, 운영 중단, 일일 예산 소진")
+    })
     @GetMapping("/{storeId}/route/origin-walk")
     public CustomResponse<StoreRouteResponse> getOriginWalk(
+            HttpServletRequest servletRequest,
             @PathVariable @Positive(message = "매장 ID는 1 이상이어야 합니다.") long storeId,
             @Valid @ParameterObject @ModelAttribute StoreOriginWalkRequest request) {
-        return CustomResponse.onSuccess(storeRouteService.getOriginWalk(storeId, request));
+        return CustomResponse.onSuccess(storeRouteService.getOriginWalk(
+                storeId, request, clientIpResolver.resolve(servletRequest)));
     }
 
     @Operation(summary = "업무 종류 목록", description = "업무 선택 칩에 쓸 업무 코드와 이름을 반환합니다.")

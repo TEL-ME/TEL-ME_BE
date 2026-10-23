@@ -14,6 +14,7 @@ import com.telme.store.service.RouteEndpoints;
 import com.telme.store.service.StoreQueryService;
 import com.telme.store.service.StoreRouteClient;
 import com.telme.store.service.StoreRouteService;
+import com.telme.store.service.StoreOriginWalkGuard;
 import com.telme.store.service.StoreRouteUsageGuard;
 import java.util.List;
 import java.util.function.Supplier;
@@ -150,9 +151,9 @@ class StoreRouteApiIntegrationTest {
         @Primary
         StoreRouteService stubStoreRouteService(
                 StoreQueryService storeQueryService,
-                StoreRouteProperties routeProperties, StoreRouteUsageGuard usageGuard) {
+                StoreRouteProperties routeProperties, StoreRouteUsageGuard usageGuard, StoreOriginWalkGuard originWalkGuard) {
             return new StoreRouteService(storeQueryService,
-                    List.of(CAR, new StubClient(RouteMode.TRANSIT), WALK, BICYCLE), routeProperties, usageGuard);
+                    List.of(CAR, new StubClient(RouteMode.TRANSIT), WALK, BICYCLE), routeProperties, usageGuard, originWalkGuard);
         }
     }
 
