@@ -3,9 +3,6 @@ package com.telme.consult.service;
 import com.telme.consult.converter.ConsultAnalysisConverter;
 import com.telme.consult.converter.FollowupConditionConverter.Resolution;
 import com.telme.consult.repository.PendingClarificationFinder.Candidate;
-import com.telme.consult.dto.DialogueDecision;
-import com.telme.consult.dto.DialogueDecision.Action;
-import com.telme.consult.dto.DialogueDecision.MessageOrigin;
 import com.telme.consult.dto.DialogueInput.LocationStatus;
 import com.telme.consult.dto.DialogueInput.Purpose;
 import com.telme.consult.service.FollowupContextService.Context;
@@ -112,22 +109,10 @@ public class ConsultTurnPreparationService {
     // 대기가 풀린 것처럼 보인다. 바꿀 조건이 없으면 기존 질문의 대기를 그대로 둔다
     private ConsultService.PreparationResult keepWaiting(
             ConsultService.PreparationResult result, Resolution resolution, Candidate candidate) {
-        if (result.waitingForReply()) {
+        if (result.waitingForReply() || !resolution.updates().isEmpty()) {
             return result;
         }
-        if (resolution.updates().isEmpty()) {
-            return new ConsultService.PreparationResult(null, candidate.questionMessageId());
-        }
-        // FAQ 조건을 묻는 중 다른 조건만 고친 경우(요금제 추천의 사용량을 묻는 중 나이를 고침)도 진행이 나온다.
-        // 고친 조건은 저장하고 기존 질문은 그대로 기다린다(TELME-218)
-        var prepared = result.prepared();
-        var decision = prepared.decision();
-        var keeping = new DialogueDecision(decision.consultRequestId(), Action.ASK, decision.conditions(),
-                candidate.field(), candidate.questionText(), MessageOrigin.TEMPLATE);
-        return new ConsultService.PreparationResult(
-                new ConsultService.PreparedTurn(prepared.sessionId(), prepared.expectedVersion(), keeping,
-                        prepared.clarificationPlan()),
-                candidate.questionMessageId());
+        return new ConsultService.PreparationResult(null, candidate.questionMessageId());
     }
 
     private Purpose purpose(String intent) {

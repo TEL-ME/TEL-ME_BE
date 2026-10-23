@@ -47,14 +47,6 @@ public final class AgeReplyParser {
     private AgeReplyParser() {
     }
 
-    // 나이를 묻지 않은 자리에서 나이를 말했는지 읽는다. 숫자만 쓴 답("20")은 사용량 같은 다른 수일 수 있어 읽지 않는다
-    public static Plan.TargetGroup parseStated(String reply) {
-        if (reply == null || BARE_AGE.matcher(reply).matches()) {
-            return null;
-        }
-        return parse(reply);
-    }
-
     public static Plan.TargetGroup parse(String reply) {
         if (reply == null || reply.isBlank()) {
             return null;

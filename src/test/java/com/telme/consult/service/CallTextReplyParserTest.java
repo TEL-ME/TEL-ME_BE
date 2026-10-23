@@ -41,6 +41,11 @@ class CallTextReplyParserTest {
     }
 
     @Test
+    void 개월의_개는_문자_수로_읽지_않는다() {
+        assertThat(CallTextReplyParser.parseSms("약정 24개월 남았어요").readable()).isFalse();
+    }
+
+    @Test
     void 하루_사용량은_한_달로_바꿔_읽는다() {
         assertThat(voice("하루 10분")).isEqualTo(300);
         assertThat(voice("매일 1시간")).isEqualTo(1800);

@@ -234,8 +234,7 @@ public class ConsultChatPersistenceService {
                         executionId,
                         result.prepared() == null
                                 ? ClarificationReask.text(question)
-                                : withReceivedAge(result.prepared().decision(),
-                                        withReceivedService(result.prepared().decision(), question)),
+                                : withReceivedService(result.prepared().decision(), question),
                         optionsOf((String) pending.getFirst().get("follow_ups")));
         if (result.prepared() != null) {
             consultService.persistWaitingChanges(result);
@@ -311,17 +310,6 @@ public class ConsultChatPersistenceService {
         }
         String label = RuleBasedRoutingFallback.serviceTypeLabel(service.value());
         return label == null ? question : label + " 업무로 확인했어요.\n" + question;
-    }
-
-    // 요금제 추천의 사용량을 묻는 중 나이를 고쳐 말했으면 바꾼 나이대를 먼저 알린다. 알리지 않으면 고객은 나이가
-    // 바뀐 줄 모르고 같은 질문만 다시 받는다(TELME-218)
-    private String withReceivedAge(DialogueDecision decision, String question) {
-        var age = decision.conditions().get(AgeReplyParser.CONDITION_KEY);
-        if (age == null || age.status() != ConditionStatus.FILLED || AgeReplyParser.CONDITION_KEY.equals(decision.waitingField())) {
-            return question;
-        }
-        var group = AgeReplyParser.parse(age.value());
-        return group == null ? question : "나이대를 " + MemberRecommendationAnswerer.ageOption(group) + "로 바꿨어요.\n" + question;
     }
 
     // 준비·모델 호출은 끝내고, 메시지와 상담 상태 저장만 함께 묶는다.

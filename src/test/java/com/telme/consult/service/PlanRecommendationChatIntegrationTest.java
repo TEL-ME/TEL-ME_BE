@@ -58,7 +58,6 @@ import org.springframework.test.web.servlet.MockMvc;
 class PlanRecommendationChatIntegrationTest {
 
     static final String QUESTION = "요금제 추천해줘";
-    static final String CORRECTION = "아 잘못 말했다 17살이요";
     static final List<String> OPTIONS = List.of("만 14~18세", "만 19~64세", "만 65세 이상");
 
     @Autowired MockMvc mvc;
@@ -234,32 +233,6 @@ class PlanRecommendationChatIntegrationTest {
         assertThat(last.get(7).path("content").asText()).isEqualTo("추천 답변: 만 19~64세/2GB");
     }
 
-    @Test
-    void 사용량을_묻는_중_나이를_고치면_나이를_바꾸고_사용량을_다시_묻는다() throws Exception {
-        long sessionId = createSession();
-
-        waitCompleted(send(sessionId, QUESTION));
-        waitCompleted(send(sessionId, "만 19~64세"));
-        waitCompleted(send(sessionId, CORRECTION));
-
-        assertThat(states.load(sessionId, requestId.get()).conditions().get("age_group"))
-                .isEqualTo(Condition.filled(CORRECTION));
-        assertThat(states.findPendingClarificationMessageId(sessionId, requestId.get(), "monthly_data_usage"))
-                .isPresent();
-        JsonNode asked = history(sessionId).path("result").path("messages");
-        assertThat(asked.size()).isEqualTo(6);
-        assertThat(asked.get(5).path("messageType").asText()).isEqualTo("CLARIFICATION");
-        assertThat(asked.get(5).path("content").asText()).contains("한 달에 데이터를 얼마나 쓰세요");
-        // 바꾼 나이대를 알려 같은 질문이 그냥 반복돼 보이지 않게 한다
-        assertThat(asked.get(5).path("content").asText()).startsWith("나이대를 만 14~18세로 바꿨어요.");
-
-        waitCompleted(send(sessionId, "40GB"));
-
-        JsonNode last = history(sessionId).path("result").path("messages");
-        assertThat(last.get(last.size() - 1).path("messageType").asText()).isEqualTo("ANSWER");
-        assertThat(last.get(last.size() - 1).path("content").asText()).isEqualTo("추천 답변: " + CORRECTION + "/40GB");
-    }
-
     private AnalyzedTurn analyze(ChatProcessingCommand command) {
         if (requestId.get() == 0) {
             long id = jdbc.queryForObject("INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,"
@@ -272,14 +245,6 @@ class PlanRecommendationChatIntegrationTest {
         }
         var context = contexts.loadVerified(command);
         var candidate = context.candidates().getFirst();
-        // 라우팅이 나이 정정으로 읽은 결과를 분석기(ConsultTurnAnalysisAdapter)와 같은 경로로 넘긴다
-        if (CORRECTION.equals(command.content())) {
-            var resolution = new com.telme.consult.converter.FollowupConditionConverter().resolve(
-                    context, candidate.consultRequestId(), Map.of("age_group", command.content()));
-            var correction = turns.prepareWaitingUpdate(context, resolution, LocationStatus.MISSING);
-            return new AnalyzedTurn(correction.preparation(), null, correction.purpose(),
-                    correction.originalUserQuery(), correction.searchQuery());
-        }
         var followup = turns.prepareFollowup(context, new Selection(candidate.consultRequestId(),
                 candidate.questionMessageId(), candidate.field(), Map.of(candidate.field(), Condition.filled(command.content()))),
                 LocationStatus.MISSING);
