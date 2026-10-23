@@ -179,7 +179,8 @@ public class MemberRecommendationAnswerer {
             boolean member, boolean mayAsk, String note, String priceRequest, Subscriber subscriber) {
         DataUsageReplyParser.Result usage = DataUsageReplyParser.parse(answers.get(DATA_KEY));
         if (usage.kind() == DataUsageReplyParser.Kind.UNSURE) {
-            return nudge("사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
+            return nudge(subscriber == null ? "쓰실 분이 한 달에 데이터를 얼마나 쓰시는지 대략 알려주시면 맞는 요금제를 추천해 드릴 수 있어요."
+                    : "사용량을 잘 모르시면 가입하신 뒤 사용량이 쌓였을 때 맞춰 추천해 드릴 수 있어요.");
         }
         boolean answered = usage.readable();
         if (mayAsk && (group == null || !answered)) {

@@ -307,7 +307,19 @@ class PlanQuestionClassifierTest {
         assertThat(failed.mention().planCodes()).isEmpty();
         assertThat(failed.mention().conditions()).isNull();
 
+        // 칸이 빠졌거나 타입이나 값이 틀리면 읽지 않는다(#212 리뷰). Bedrock은 응답 스키마를 보내지 않는다
+        String full = "\"excludedNetworks\":[],\"targetGroups\":[],\"excludedTargetGroups\":[],\"excludedPlans\":[]";
+        for (String broken : new String[] {"{}", "{\"networks\":\"LTE\",\"unlimited\":\"ANY\"," + full + "}",
+                "{\"networks\":[\"LTE\",\"WIFI\"],\"unlimited\":\"ANY\"," + full + "}",
+                "{\"networks\":[\"LTE\"],\"unlimited\":\"SOME\"," + full + "}",
+                "{\"networks\":[\"LTE\"]," + full + "}"}) {
+            reset(llm);
+            doReturn(listReply, broken).when(llm).generate(any());
+            assertThat(classifier.classifyQuestion(1L, "LTE 요금제 목록 알려줘").mention().conditions()).as(broken).isNull();
+        }
+
         // 분류 응답 형식처럼 모르는 칸이 있으면 읽지 않는다
+        reset(llm);
         doReturn(listReply, listReply).when(llm).generate(any());
         assertThat(classifier.classifyQuestion(1L, "LTE 요금제 뭐 있어요").mention().conditions()).isNull();
     }
@@ -342,6 +354,10 @@ class PlanQuestionClassifierTest {
         replies("{\"targetGroup\":\"SENIOR\"}", "{\"user\":\"OTHER\"}");
         assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
 
+        // SELF, OTHER가 아니면 본인으로 보지 않고 읽지 못한 것으로 둔다(#212 리뷰)
+        replies("{\"targetGroup\":\"SENIOR\"}", "{\"user\":\"UNKNOWN\",\"monthlyDataGb\":10}");
+        assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
+
         reset(llm);
         doThrow(new IllegalStateException("down")).when(llm).generate(any());
         assertThat(classifier.subscriber(1L, "어머니 요금제 추천")).isNull();
@@ -351,6 +367,17 @@ class PlanQuestionClassifierTest {
                 new PlanQuestionProperties(false, true, false), plans);
         assertThat(disabled.subscriber(1L, "고딩 딸 요금제 추천")).isNull();
         verify(off, never()).generate(any());
+    }
+
+    @Test
+    void 규칙이_나이를_읽었으면_나이대는_묻지_않고_쓸_사람과_사용량만_묻는다() {
+        replies("{\"targetGroup\":\"YOUTH\"}", "{\"user\":\"OTHER\",\"monthlyDataGb\":5}");
+
+        assertThat(classifier.subscriber(1L, "할머니 만 75세 한 달에 5기가 쓰세요 요금제 추천해 주세요", false))
+                .isEqualTo(new PlanQuestionClassifier.Subscriber(true, null, 5.0));
+        ArgumentCaptor<LlmRequest> captor = ArgumentCaptor.forClass(LlmRequest.class);
+        verify(llm).generate(captor.capture());
+        assertThat(captor.getValue().promptVersion()).isEqualTo(PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION);
     }
 
     private void replies(String age, String usage) {

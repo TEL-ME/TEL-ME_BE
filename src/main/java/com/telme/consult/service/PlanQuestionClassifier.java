@@ -101,16 +101,21 @@ public class PlanQuestionClassifier {
     // 추천받을 요금제를 쓸 사람(본인 또는 가족)과 그 사람의 나이대·한 달 데이터 사용량. 모르는 값은 null이다.
     // 나이대와 쓸 사람·사용량은 따로 묻되 동시에 보낸다. 쓸 사람·사용량을 읽지 못하면 null이라 지금처럼 본인 요금제로 보고 묻는다
     public Subscriber subscriber(Long executionId, String question) {
+        return subscriber(executionId, question, true);
+    }
+
+    // withAge가 false면 나이대는 묻지 않는다(규칙이 질문에서 나이를 이미 읽었을 때). user는 SELF나 OTHER만 받는다
+    public Subscriber subscriber(Long executionId, String question, boolean withAge) {
         if (!properties.enabled() || question == null || question.isBlank()) {
             return null;
         }
         CompletableFuture<JsonNode> usage = CompletableFuture.supplyAsync(() -> subscriberReply(executionId, question,
                 PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT, PlanQuestionPromptTemplates.SUBSCRIBER_USAGE_PROMPT_VERSION,
                 SUBSCRIBER_USAGE_SCHEMA));
-        JsonNode age = subscriberReply(executionId, question, PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT,
-                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, SUBSCRIBER_AGE_SCHEMA);
+        JsonNode age = withAge ? subscriberReply(executionId, question, PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT,
+                PlanQuestionPromptTemplates.SUBSCRIBER_AGE_PROMPT_VERSION, SUBSCRIBER_AGE_SCHEMA) : null;
         JsonNode user = usage.join();
-        if (user == null || !user.path("user").isTextual() || !user.path("monthlyDataGb").isNumber()) {
+        if (user == null || !USERS.contains(user.path("user").asText("")) || !user.path("monthlyDataGb").isNumber()) {
             log.info("[요금제 추천 대상] 쓸 사람을 읽지 못해 본인 요금제로 보고 묻습니다. executionId={}", executionId);
             return null;
         }
@@ -149,12 +154,13 @@ public class PlanQuestionClassifier {
     }
 
     private static final double MAX_DATA_GB = 10_000;
+    private static final Set<String> USERS = Set.of("SELF", "OTHER");
     private static final Map<String, Object> SUBSCRIBER_AGE_SCHEMA = Map.of("type", "object",
             "properties", Map.of("targetGroup", Map.of("type", "string", "enum", List.of("YOUTH", "GENERAL", "SENIOR", "UNKNOWN"))),
             "required", List.of("targetGroup"), "additionalProperties", false);
     private static final Map<String, Object> SUBSCRIBER_USAGE_SCHEMA = Map.of("type", "object",
             "properties", Map.of(
-                    "user", Map.of("type", "string", "enum", List.of("SELF", "OTHER")),
+                    "user", Map.of("type", "string", "enum", List.copyOf(USERS)),
                     "monthlyDataGb", Map.of("type", "number")),
             "required", List.of("user", "monthlyDataGb"), "additionalProperties", false);
 
@@ -190,14 +196,16 @@ public class PlanQuestionClassifier {
                 "required", List.copyOf(properties.keySet()), "additionalProperties", false);
     }
 
-    // 모르는 칸이 있으면 읽지 않는다. 모르는 값과 판매 중이 아닌 요금제 코드는 버린다
+    // 여섯 칸이 모두 있고 배열 칸은 허용값만 담은 배열, unlimited는 허용값일 때만 읽는다. 하나라도 어긋나면 null이라
+    // 답변이 질문의 낱말로 조건을 읽는다(Bedrock은 응답 스키마를 보내지 않아 형식을 프롬프트로만 요구한다).
+    // 판매 중이 아닌 요금제 코드는 버린다
     private PlanQuestion.Conditions parseConditions(String json, List<Plan> plans) {
         if (json == null || json.isBlank()) {
             return null;
         }
         try {
             JsonNode root = objectMapper.readTree(json);
-            if (root == null || !root.isObject()) {
+            if (root == null || !root.isObject() || root.size() != CONDITION_FIELDS.size()) {
                 return null;
             }
             for (Iterator<String> names = root.fieldNames(); names.hasNext(); ) {
@@ -205,13 +213,20 @@ public class PlanQuestionClassifier {
                     return null;
                 }
             }
+            List<Plan.NetworkType> networks = enums(Plan.NetworkType.class, root.path("networks"));
+            List<Plan.NetworkType> excludedNetworks = enums(Plan.NetworkType.class, root.path("excludedNetworks"));
+            List<Plan.TargetGroup> groups = enums(Plan.TargetGroup.class, root.path("targetGroups"));
+            List<Plan.TargetGroup> excludedGroups = enums(Plan.TargetGroup.class, root.path("excludedTargetGroups"));
+            PlanQuestion.Unlimited unlimited = root.path("unlimited").isTextual()
+                    ? enumValue(PlanQuestion.Unlimited.class, root.path("unlimited").textValue()) : null;
+            List<String> excludedPlans = texts(root.path("excludedPlans"));
+            if (networks == null || excludedNetworks == null || groups == null || excludedGroups == null || unlimited == null
+                    || excludedPlans == null) {
+                return null;
+            }
             Set<String> active = plans.stream().map(Plan::getCode).collect(Collectors.toSet());
-            return new PlanQuestion.Conditions(enums(Plan.NetworkType.class, root.path("networks")),
-                    enums(Plan.NetworkType.class, root.path("excludedNetworks")),
-                    enums(Plan.TargetGroup.class, root.path("targetGroups")),
-                    enums(Plan.TargetGroup.class, root.path("excludedTargetGroups")),
-                    enumValue(PlanQuestion.Unlimited.class, root.path("unlimited").asText("")),
-                    texts(root.path("excludedPlans")).stream().filter(active::contains).distinct().toList());
+            return new PlanQuestion.Conditions(networks, excludedNetworks, groups, excludedGroups, unlimited,
+                    excludedPlans.stream().filter(active::contains).distinct().toList());
         } catch (Exception exception) {
             return null;
         }
@@ -220,14 +235,21 @@ public class PlanQuestionClassifier {
     private static final Set<String> CONDITION_FIELDS = Set.of(
             "networks", "excludedNetworks", "targetGroups", "excludedTargetGroups", "unlimited", "excludedPlans");
 
+    // 허용값만 담은 배열이 아니면 null
     private static <E extends Enum<E>> List<E> enums(Class<E> type, JsonNode values) {
+        if (!values.isArray()) {
+            return null;
+        }
         List<E> result = new ArrayList<>();
-        values.forEach(value -> {
-            E parsed = enumValue(type, value.asText(""));
-            if (parsed != null && !result.contains(parsed)) {
+        for (JsonNode value : values) {
+            E parsed = value.isTextual() ? enumValue(type, value.textValue()) : null;
+            if (parsed == null) {
+                return null;
+            }
+            if (!result.contains(parsed)) {
                 result.add(parsed);
             }
-        });
+        }
         return result;
     }
 
@@ -239,13 +261,18 @@ public class PlanQuestionClassifier {
         }
     }
 
+    // 문자열만 담은 배열이 아니면 null
     private static List<String> texts(JsonNode values) {
+        if (!values.isArray()) {
+            return null;
+        }
         List<String> result = new ArrayList<>();
-        values.forEach(value -> {
-            if (value.isTextual()) {
-                result.add(value.textValue());
+        for (JsonNode value : values) {
+            if (!value.isTextual()) {
+                return null;
             }
-        });
+            result.add(value.textValue());
+        }
         return result;
     }
 

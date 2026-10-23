@@ -137,7 +137,7 @@ public final class PlanAnswerProvider implements AnswerProvider {
             followUps = memberAnswer == null ? List.of() : memberAnswer.followUps();
         } else if (type == PlanQuestionType.RECOMMENDATION) {
             Long member = memberOf(input);
-            PlanQuestionClassifier.Subscriber subscriber = subscriber(input);
+            PlanQuestionClassifier.Subscriber subscriber = subscriber(input, member);
             boolean forOther = subscriber != null && subscriber.other();
             // 다른 사람이 쓸 요금제면 이 채팅방에서 앞서 한 답(고객 본인의 나이·사용량일 수 있음)을 쓰지 않는다
             Map<String, String> previous = forOther ? Map.of() : previousAnswers.apply(input.sessionId());
@@ -190,17 +190,22 @@ public final class PlanAnswerProvider implements AnswerProvider {
         return merged;
     }
 
-    // 규칙이 질문에서 나이를 읽으면 본인 요금제다(규칙은 가족 이야기가 섞이면 읽지 않는다). 그 밖에는 요금제를 쓸 사람과
-    // 그 사람의 나이대·사용량을 모델에 묻는다. 규칙처럼 저장하지 않고 되묻기 다음 턴에도 처음 질문으로 다시 읽는다
-    private PlanQuestionClassifier.Subscriber subscriber(AnswerInput input) {
-        if (StatedRecommendationAnswers.of(input.originalUserQuery()).containsKey(MemberRecommendationAnswerer.AGE_KEY)) {
+    // 요금제를 쓸 사람과 그 사람의 나이대·사용량을 모델에 묻는다. 규칙처럼 저장하지 않고 되묻기 다음 턴에도 처음 질문으로 다시 읽는다.
+    // 규칙이 질문에서 나이를 읽었으면 나이대는 묻지 않는다. 이때 비회원은 쓸 사람도 묻지 않는다: 규칙의 가족 낱말 목록에 없는
+    // 호칭("할머니 만 75세")이어도 읽은 나이와 사용량이 그 사람의 것이라 추천이 같다. 회원은 생년월일·가입 정보가 대신 쓰일 수 있어 묻는다(#212 리뷰)
+    private PlanQuestionClassifier.Subscriber subscriber(AnswerInput input, Long member) {
+        boolean ruleAge = StatedRecommendationAnswers.of(input.originalUserQuery()).containsKey(MemberRecommendationAnswerer.AGE_KEY);
+        if (ruleAge && member == null) {
             return null;
         }
-        PlanQuestionClassifier.Subscriber subscriber = classifier.subscriber(input.executionId(), input.originalUserQuery());
+        PlanQuestionClassifier.Subscriber subscriber = classifier.subscriber(input.executionId(), input.originalUserQuery(), !ruleAge);
         Map<String, Object> record = new HashMap<>(Map.of("question", input.originalUserQuery()));
         if (subscriber != null) {
             record.put("user", subscriber.other() ? "OTHER" : "SELF");
-            record.put("targetGroup", subscriber.group() == null ? "UNKNOWN" : subscriber.group().name());
+            // 규칙이 나이를 읽어 나이대를 묻지 않았으면 남기지 않는다(모델이 모른다고 한 것과 구분)
+            if (!ruleAge) {
+                record.put("targetGroup", subscriber.group() == null ? "UNKNOWN" : subscriber.group().name());
+            }
             record.put("monthlyDataGb", subscriber.monthlyDataGb() == null ? 0 : subscriber.monthlyDataGb());
         }
         trace.append(input.executionId(), "planSubscribers", record);

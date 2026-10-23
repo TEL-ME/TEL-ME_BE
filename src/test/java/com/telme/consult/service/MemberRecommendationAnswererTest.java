@@ -111,6 +111,10 @@ class MemberRecommendationAnswererTest {
                 .contains("한 달에 데이터를 10GB 쓰신다면 LTE 청소년(월 39,000원, 데이터 20GB) 요금제를 추천해요")
                 .doesNotContain("로그인", "가입한 요금제의 사용량");
         assertThat(outcome.followUps()).noneMatch(followUp -> followUp.contains("요금제 변경") || followUp.contains("가입"));
+
+        // 쓸 사람의 사용량을 모르면 본인 가입 안내 대신 쓸 사람의 사용량을 묻는다(#212 리뷰)
+        assertThat(answerer.recommendForOther(Map.of("age_group", "만 65세 이상", "monthly_data_usage", "잘 모르겠어요"), false, false)
+                .content()).contains("쓰실 분이 한 달에 데이터를 얼마나 쓰시는지").doesNotContain("가입하신 뒤");
     }
 
     // 모델이 질문에서 읽은 나이대로 추천하면 기준 나이대를 밝힌다. 생년월일이 있어 그 나이대를 쓰지 않았으면 밝히지 않는다

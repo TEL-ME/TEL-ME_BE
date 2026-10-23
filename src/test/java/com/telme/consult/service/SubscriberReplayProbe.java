@@ -23,8 +23,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * TELME-227 추천 질문의 쓸 사람·나이대·사용량 비교. PlanAnswerProvider처럼 규칙(StatedRecommendationAnswers)이 나이를 읽으면
- * 모델을 부르지 않고, 아니면 분류 모델(gpt-oss)이 읽은 값을 함께 남긴다. 회차(SUBSCRIBER_RUNS)를 동시에 돌린다.
+ * TELME-227 추천 질문의 쓸 사람·나이대·사용량 비교. 규칙(StatedRecommendationAnswers)이 읽은 값과 분류 모델(gpt-oss)이 읽은 값을
+ * 함께 남긴다. 규칙이 나이를 읽었으면 회원 경로(PlanAnswerProvider)처럼 나이대는 묻지 않고 쓸 사람과 사용량만 묻는다. 회차(SUBSCRIBER_RUNS)를 동시에 돌린다.
  * 실행: SUBSCRIBER_PROBE=true SUBSCRIBER_INPUT=<[{id, question}] json> SUBSCRIBER_OUT=<결과 jsonl> LLM_PROVIDER=ollama
  *       LLM_BEDROCK_ENABLED=true AWS_PROFILE=... ./gradlew test --tests '*SubscriberReplayProbe'
  */
@@ -54,7 +54,8 @@ class SubscriberReplayProbe {
                     String rule = stated.get(MemberRecommendationAnswerer.AGE_KEY);
                     String ruleData = stated.get(MemberRecommendationAnswerer.DATA_KEY);
                     long startedAt = System.currentTimeMillis();
-                    PlanQuestionClassifier.Subscriber model = rule == null ? classifier.subscriber(null, question) : null;
+                    // 규칙이 나이를 읽었으면 회원 경로처럼 쓸 사람과 사용량만 묻는다(비회원은 묻지 않는다)
+                    PlanQuestionClassifier.Subscriber model = classifier.subscriber(null, question, rule == null);
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("run", current);
                     row.put("id", input.path("id").asText());
@@ -64,7 +65,7 @@ class SubscriberReplayProbe {
                     row.put("model", model == null || model.group() == null ? null : model.group().name());
                     row.put("modelUser", model == null ? null : model.other() ? "OTHER" : "SELF");
                     row.put("modelData", model == null ? null : model.monthlyDataGb());
-                    row.put("modelMs", rule == null ? System.currentTimeMillis() - startedAt : null);
+                    row.put("modelMs", System.currentTimeMillis() - startedAt);
                     lines.add(mapper.writeValueAsString(row));
                 }
                 return lines;
