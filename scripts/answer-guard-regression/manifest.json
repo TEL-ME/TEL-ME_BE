@@ -1,0 +1,9 @@
+{
+  "java/com/telme/rag/service/ComparisonHistoryReplayTest.java": "689eca425d23c0c3c5414a565f4d9ee7db50d292a9e56b17b22bc1354349d870",
+  "java/com/telme/rag/service/ComparisonLocalContractTest.java": "384adfaf874f604ddb7bd0ac412e8490c96f7098caefdd817c62969af9911a9b",
+  "regression.init.gradle": "c2e7d67dd7c654e54c91750394b4f71c80e65ee3670416154cd94e0723e3c41d",
+  "resources/answer-guard-recovery/cases.json": "2228f801ddc9328cb2518784bf1825ab4bc2a050d08a94caf877d34c2fd306c7",
+  "resources/answer-guard-recovery/history-baseline.json": "399e0c58e2d95ca91d6c5e3618b9fe3cfee8766dcafd44dad14f851905c38e21",
+  "resources/answer-guard-recovery/history.json": "9de257fa203db830d259df2c8ba23b5b51a3bfea2bcc3ed3a19fac420bc1c984",
+  "resources/answer-guard-recovery/recovery-safety.json": "72a56e09b49150b9d3627ba74f270b982c62d97d5aaed484c13d29214acff9d1"
+}
