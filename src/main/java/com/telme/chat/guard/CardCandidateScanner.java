@@ -16,13 +16,22 @@ final class CardCandidateScanner {
     private record DigitGroup(int start, int end) {}
 
     static List<Candidate> findCandidates(String numeric, Predicate<String> validator) {
+        return findCandidates(numeric, validator, true);
+    }
+
+    static List<Candidate> findPreviousCandidates(String numeric, Predicate<String> validator) {
+        return findCandidates(numeric, validator, false);
+    }
+
+    private static List<Candidate> findCandidates(
+            String numeric, Predicate<String> validator, boolean expandedSpacing) {
         List<DigitGroup> groups = findGroups(numeric);
         List<Candidate> candidates = new ArrayList<>();
         for (int start = 0; start < groups.size(); start++) {
             StringBuilder digits = new StringBuilder(MAX_DIGITS);
             for (int end = start; end < groups.size(); end++) {
                 DigitGroup group = groups.get(end);
-                if (end > start && !connected(numeric, groups.get(end - 1).end(), group.start())) {
+                if (end > start && !connected(numeric, groups.get(end - 1).end(), group.start(), expandedSpacing)) {
                     break;
                 }
                 if (digits.length() + group.end() - group.start() > MAX_DIGITS) {
@@ -54,9 +63,23 @@ final class CardCandidateScanner {
         return groups;
     }
 
-    private static boolean connected(String numeric, int previousEnd, int nextStart) {
-        return nextStart == previousEnd + 1
-                && (numeric.charAt(previousEnd) == ' ' || numeric.charAt(previousEnd) == '-');
+    private static boolean connected(String numeric, int previousEnd, int nextStart, boolean expandedSpacing) {
+        if (!expandedSpacing) {
+            return nextStart == previousEnd + 1
+                    && (numeric.charAt(previousEnd) == ' ' || numeric.charAt(previousEnd) == '-');
+        }
+        boolean hyphenFound = false;
+        for (int index = previousEnd; index < nextStart; index++) {
+            char separator = numeric.charAt(index);
+            if (separator == ' ') {
+                continue;
+            }
+            if (separator != '-' || hyphenFound) {
+                return false;
+            }
+            hyphenFound = true;
+        }
+        return nextStart > previousEnd;
     }
 
     private static boolean digit(char value) {
