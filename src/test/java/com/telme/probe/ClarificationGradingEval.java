@@ -34,7 +34,9 @@ class ClarificationGradingEval {
         ObjectMapper objectMapper = new ObjectMapper();
         ConditionExtractor extractor = new ConditionExtractor(extractionClient(), objectMapper);
         JsonNode cases;
-        try (InputStream stream = getClass().getResourceAsStream(CASES)) {
+        // 다른 문항 파일(블라인드 문장 등)은 EVAL_CASES로 넣는다(TELME-218)
+        String file = System.getenv("EVAL_CASES");
+        try (InputStream stream = file != null ? new java.io.FileInputStream(file) : getClass().getResourceAsStream(CASES)) {
             cases = objectMapper.readTree(stream).get("cases");
         }
 
@@ -52,8 +54,14 @@ class ClarificationGradingEval {
                         0.8, 1, null, rank, null));
                 rank++;
             }
+            // EVAL_TOP1=true면 앱(FaqClarificationPlanner)처럼 1위 FAQ만 넘긴다
+            if ("true".equals(System.getenv("EVAL_TOP1")) && sources.size() > 1) {
+                sources.subList(1, sources.size()).clear();
+            }
             String question = each.get("question").asText();
+            long startedAt = System.nanoTime();
             List<MissingCondition> conditions = extractor.extract(null, question, sources);
+            System.out.printf("TIME|%s|%d%n", each.get("id").asText(), (System.nanoTime() - startedAt) / 1_000_000);
 
             int expected = each.get("expect").asInt();
             String verdict;
@@ -73,7 +81,7 @@ class ClarificationGradingEval {
             System.out.printf("GRADE|%s|%s|%s|%s|%s|나온 것 %d|%s%n",
                     verdict, each.get("id").asText(), each.get("kind").asText(), question,
                     each.get("about").asText(), conditions.size(),
-                    conditions.stream().map(MissingCondition::question)
+                    conditions.stream().map(condition -> condition.question() + " [근거 " + rankOf(sources, condition.evidence()) + "위]")
                             .reduce((a, b) -> a + " / " + b).orElse(""));
         }
 
@@ -87,6 +95,16 @@ class ClarificationGradingEval {
     }
 
     private CountingLlmClient counted;
+
+    // 조건의 근거 문장이 몇 위 FAQ 답에 있는지(없으면 0)
+    private static int rankOf(List<FaqSearchResponse> sources, String evidence) {
+        for (int i = 0; i < sources.size(); i++) {
+            if (evidence != null && sources.get(i).answer().contains(evidence)) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
 
 
     // EVAL_EXTRACTOR=bedrock이면 조건 뽑기를 Bedrock으로(LLM_BEDROCK_ENABLED=true 필요, 유료)

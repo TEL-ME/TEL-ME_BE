@@ -46,8 +46,9 @@ public final class CallTextReplyParser {
     public static final String SMS_KEY = "monthly_sms_usage";
 
     private enum Channel {
-        VOICE("분", "시간|분", "건|개|통", Map.of("시간", 60L, "분", 1L)),
-        SMS("건", "건|개|통", "시간|분", Map.of("건", 1L, "개", 1L, "통", 1L));
+        // "개월"의 개는 문자 수가 아니다("약정 24개월 남았어요")
+        VOICE("분", "시간|분", "건|개(?!월)|통", Map.of("시간", 60L, "분", 1L)),
+        SMS("건", "건|개(?!월)|통", "시간|분", Map.of("건", 1L, "개", 1L, "통", 1L));
 
         private final String unit;
         private final Pattern amount;

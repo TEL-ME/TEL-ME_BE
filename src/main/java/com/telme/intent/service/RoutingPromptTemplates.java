@@ -365,8 +365,24 @@ public final class RoutingPromptTemplates {
                 prompt.append("\n");
             });
         }
+        if (pendingKeys != null && !pendingKeys.isEmpty() && pendingKeys.stream().noneMatch(STORE_CONDITION_KEYS::contains)) {
+            prompt.append(STORE_REQUEST_NOTE);
+        }
         return prompt.append("고객 답변: \"").append(reply).append("\"").toString();
     }
+
+    private static final Set<String> STORE_CONDITION_KEYS = Set.of("location", "serviceType");
+
+    // 매장 조건이 아닌 조건(FAQ 조건, 요금제 추천 사용량)을 되묻는 중에만 붙인다. 시스템 프롬프트에 두면 모델이 업무를 묻는 중에도
+    // 적용해, 업무를 말하며 매장 위치를 물은 답("명의변경 할 건데 매장 어디 있어요?")을 새 질문으로 읽었다(TELME-218)
+    private static final String STORE_REQUEST_NOTE = """
+        [참고] 지금 묻는 조건은 매장 조건이 아니다. 고객이 매장을 찾아 달라고 하거나 매장이 어디 있는지 물으면 NEW_QUESTION이고 conditions는 빈 배열이다.
+        자기 사정이나 계획을 먼저 말하고 매장을 찾아 달라고 해도 같다. 이때는 FILLED도 DEFERRED도 아니다.
+        - "위임장은 못 받을 것 같은데 잠실 근처 매장 어디 있어요" -> NEW_QUESTION
+        - "기억이 안 나서 직접 가서 물어볼게요, 근처 매장 찾아 주세요" -> NEW_QUESTION
+        매장에 가겠다는 계획만 말하고 매장을 찾아 달라거나 어디 있는지 묻지 않으면 되물은 질문의 답이다.
+        - "네 매장에 직접 갈 거예요" -> 되물은 질문의 답
+        """;
 
     // Context가 없으면 질문만 넘겨 기존 단일 질문 프롬프트와 같은 형태를 유지한다
     public static String routingUserPrompt(ChatContext context, String question) {

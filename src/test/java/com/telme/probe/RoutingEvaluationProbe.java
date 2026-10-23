@@ -442,8 +442,12 @@ class RoutingEvaluationProbe {
     private List<Map<String, Object>> runFollowupOnce(List<JsonNode> cases, String runName) throws Exception {
         var client = new LocalOllamaClient(mapper, null);
         var service = routingService(client);
+        // 앱의 메서드는 대기 상담(WaitingConsult)을 받는다. 비공개 레코드라 리플렉션으로 만들어 넘긴다
+        Class<?> waitingType = Class.forName("com.telme.intent.service.QueryRoutingService$WaitingConsult");
+        var waitingConstructor = waitingType.getDeclaredConstructor(Long.class, java.util.Set.class, Map.class);
+        waitingConstructor.setAccessible(true);
         Method analyze = accessible(QueryRoutingService.class, "requestFollowUpAnalysis",
-                String.class, java.util.Set.class, Map.class);
+                String.class, waitingType, Long.class);
         List<Map<String, Object>> records = new ArrayList<>();
         for (JsonNode item : cases) {
             java.util.Set<String> keys = new java.util.LinkedHashSet<>();
@@ -478,7 +482,7 @@ class RoutingEvaluationProbe {
             }
             row.put("method", "LLM");
             try {
-                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, keys, asked);
+                var payload = (com.telme.intent.dto.res.LlmFollowUpPayload) analyze.invoke(service, reply, waitingConstructor.newInstance(1L, keys, asked), null);
                 row.put("response_type", payload.responseType().name());
                 row.put("conditions", mapper.convertValue(payload.conditions(), List.class));
                 row.put("failed", false);

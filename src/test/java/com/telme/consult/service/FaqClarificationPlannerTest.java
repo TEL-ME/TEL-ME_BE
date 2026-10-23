@@ -44,6 +44,31 @@ class FaqClarificationPlannerTest {
     }
 
     @Test
+    @DisplayName("조건은 1위 FAQ에서만 뽑아 2위 FAQ에만 있는 조건은 묻지 않는다")
+    void 조건은_1위_FAQ에서만_뽑는다() {
+        when(client.generate(any())).thenReturn("""
+                {"conditions":[{"key":"unpaid_bill","question":"현재 밀린 요금이 있으신가요?",
+                 "options":["예","아니요"],"evidence":"밀린 요금이 있으면 먼저 내셔야 합니다"}]}""");
+
+        ClarificationPlan plan = planner.plan(1L, "로밍 신청하고 싶어요", List.of(
+                new FaqSearchResponse(1L, null, "로밍", "로밍은 어떻게 신청하나요?", ANSWER, 0.9, 1, null, 1, null),
+                new FaqSearchResponse(2L, null, "번호이동", "번호이동 하려면 뭐 가져가요",
+                        "신분증만 있으면 됩니다. 밀린 요금이 있으면 먼저 내셔야 합니다.", 0.8, 1, null, 2, null)));
+
+        assertThat(plan.needsClarification()).isFalse();
+    }
+
+    @Test
+    @DisplayName("FAQ 조건을 뽑지 않는 설정이면 모델을 부르지 않고 되묻지 않는다")
+    void 조건_뽑기를_끄면_되묻지_않는다() {
+        ClarificationPlan plan = FaqClarificationPlanner.withoutConditions().plan(1L, "로밍 신청하고 싶어요", List.of(
+                new FaqSearchResponse(1L, null, "로밍", "로밍은 어떻게 신청하나요?", ANSWER, 0.9, 1, null, 1, null)));
+
+        assertThat(plan.needsClarification()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(client);
+    }
+
+    @Test
     @DisplayName("조건이 없으면 되묻지 않는다")
     void 조건이_없으면_되묻지_않는다() {
         when(client.generate(any())).thenReturn("{\"conditions\":[]}");

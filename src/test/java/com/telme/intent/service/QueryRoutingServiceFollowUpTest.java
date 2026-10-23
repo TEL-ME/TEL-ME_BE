@@ -688,4 +688,17 @@ class QueryRoutingServiceFollowUpTest {
         assertThatThrownBy(() -> service.analyzeFollowUp(null, "강남역"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    @DisplayName("매장 조건이 아닌 조건을 되묻는 중에만 매장 요청을 새 질문으로 보라는 규칙을 붙인다")
+    void followUpUserPrompt_addsStoreRequestNoteOnlyForNonStoreConditions() {
+        assertThat(RoutingPromptTemplates.followUpUserPrompt(java.util.Set.of("unpaid_bill"), "강남역 매장 어디예요"))
+                .contains("지금 묻는 조건은 매장 조건이 아니다");
+        assertThat(RoutingPromptTemplates.followUpUserPrompt(java.util.Set.of("monthly_data_usage"), "근처 매장 찾아줘"))
+                .contains("지금 묻는 조건은 매장 조건이 아니다");
+        assertThat(RoutingPromptTemplates.followUpUserPrompt(java.util.Set.of("serviceType"), "명의변경 할 건데 매장 어디 있어요"))
+                .doesNotContain("지금 묻는 조건은 매장 조건이 아니다");
+        assertThat(RoutingPromptTemplates.followUpUserPrompt(java.util.Set.of("location"), "강남역이요"))
+                .doesNotContain("지금 묻는 조건은 매장 조건이 아니다");
+    }
 }

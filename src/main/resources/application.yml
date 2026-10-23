@@ -271,6 +271,9 @@ telme:
       enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
       # 조건 뽑기를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
       bedrock: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:true}
+      # FAQ 근거에서 되물을 조건을 뽑는다. 근거 답을 그대로 전하는 정책이라 기본은 끔(TELME-218).
+      # 꺼도 요금제 추천의 나이·사용량 되묻기는 나간다. enabled를 끄면 그것까지 꺼진다
+      extract-conditions: ${CONSULT_FAQ_CLARIFICATION_EXTRACT_CONDITIONS:false}
     # 비교·FAQ 후보 근거 검증 gpt-oss(Bedrock) 사용(실패 시 엑사원 대체). 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK이고
     # 호출마다 따로 끄면 엑사원이다. docs/EVIDENCE_RESOLVER_COMPARISON.md
     evidence-resolver:

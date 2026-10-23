@@ -1302,7 +1302,8 @@ public class QueryRoutingService {
             .maxTokens(300)
             // 부정하는 답을 값으로, 유심 새로 받기를 재발급으로 읽고, 되물은 질문을 함께 받는 판(TELME-175 4단계)
             // v6: 업무를 물었을 때 정한 업무가 없다는 답을 업무 거절(DECLINED)로 읽는다(TELME-214)
-            .promptVersion("routing-follow-up-v6")
+            // v8: 매장 조건이 아닌 조건을 되묻는 중 매장을 찾으면 새 질문으로 본다. 이 규칙은 사용자 프롬프트에만 붙인다(TELME-218)
+            .promptVersion("routing-follow-up-v8")
             .build();
 
         String json = llmClient.generate(request);
