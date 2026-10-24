@@ -20,6 +20,7 @@ import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.consult.service.ConsultChatProcessingService.AnswerInput;
 import com.telme.consult.service.ConsultChatProcessingService.GeneratedAnswer;
 import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
@@ -847,6 +848,102 @@ class FaqSearchAnswerProviderTest {
             assertThat(candidate.needsJudgment()).isTrue();
             assertThat(candidate.result()).isSameAs(high);
         });
+    }
+
+    @Test
+    @DisplayName("문맥을 풀어 쓴 검색어로 못 찾으면 고객 원문으로 한 번 더 찾고, 그 후보는 모두 풀어 쓴 질문으로 판정한다")
+    void 문맥_질문을_못_찾으면_원문으로_다시_찾는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var penalty = new FaqSearchResponse(245L, "CONTRACT-0001", "CONTRACT", "약정 중간에 해지하면 위약금이 얼마나 나오나요?",
+                "12개월 미만이면 100%입니다.", 0.90, 1, null, 1, "QUESTION_ONLY");
+        List<String> queries = new ArrayList<>();
+        when(searches.searchGrayZone(any())).thenAnswer(invocation -> {
+            FaqSearchRequest request = invocation.getArgument(0);
+            queries.add(request.kind() + ":" + request.query());
+            return FaqGrayZoneSearchResponse.allPassed(
+                    request.kind() == FaqSearchKind.ORIGINAL ? List.of(penalty) : List.of());
+        });
+        List<String> judgedQuestions = new ArrayList<>();
+        List<FaqGrayZoneSearchResponse> judged = new ArrayList<>();
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) -> {
+            judgedQuestions.add(question);
+            judged.add(candidates);
+            List<FaqSearchResponse> kept = candidates.questionAnswer().stream()
+                    .map(candidate -> candidate.result()).toList();
+            return new FaqGrayZoneSelector.Selection(kept, List.of());
+        };
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED, List.of(), null)));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector, question -> question.contains("5G 스탠다드"))
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그거 해지하면 위약금은?", "5G 스탠다드 해지 위약금",
+                        Map.of(), "5G 스탠다드 해지 위약금", null, true, null, Map.of()));
+
+        assertThat(queries).containsExactly("RESOLVED:5G 스탠다드 해지 위약금", "ORIGINAL:그거 해지하면 위약금은?");
+        assertThat(judgedQuestions).containsOnly("5G 스탠다드 해지 위약금");
+        assertThat(judged.get(1).questionAnswer()).singleElement()
+                .satisfies(candidate -> assertThat(candidate.needsJudgment()).isTrue());
+        verify(answers).generate(any(), org.mockito.ArgumentMatchers.eq(List.of(penalty)));
+    }
+
+    @Test
+    @DisplayName("문맥 질문을 풀어 쓴 검색어로 찾았거나 판정기가 꺼져 있으면 원문으로 다시 찾지 않는다")
+    void 문맥_질문을_찾았거나_판정기가_없으면_원문으로_찾지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED, List.of(), null)));
+        var input = new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그거 해지하면 위약금은?", "5G 스탠다드 해지 위약금",
+                Map.of(), "5G 스탠다드 해지 위약금", null, true, null, Map.of());
+
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of(source())));
+        FaqGrayZoneSelector keepAll = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of());
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), keepAll, question -> true).generate(input);
+        verify(searches, times(1)).searchGrayZone(any());
+
+        // 판정기가 없으면 원문 후보를 판정할 수 없어 다시 찾지 않는다
+        FaqSearchService plain = mock(FaqSearchService.class);
+        when(plain.search(any())).thenReturn(List.of());
+        new FaqSearchAnswerProvider(plain, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), null, question -> true).generate(input);
+        verify(plain, times(1)).search(any());
+    }
+
+    // 부가서비스를 물었을 때 원문으로 찾으면 회선 해지·가입 FAQ로 잘못 답했다("컬러링 → 그거 해지 어떻게 해요?")
+    @Test
+    @DisplayName("문맥을 풀어 쓴 질문이 요금제를 가리키지 않으면 원문으로 다시 찾지 않는다")
+    void 요금제가_아니면_원문으로_찾지_않는다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(answers.generate(any(), any())).thenReturn(GeneratedAnswer.withoutSources(new ChatAnswer(
+                ChatMessage.MessageType.ANSWER, "답변", ChatMessage.AnswerBasis.GROUNDED, List.of(), null)));
+        when(searches.searchGrayZone(any())).thenReturn(FaqGrayZoneSearchResponse.allPassed(List.of()));
+        FaqGrayZoneSelector none = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of());
+        List<String> checked = new ArrayList<>();
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), none, question -> {
+                    checked.add(question);
+                    return false;
+                })
+                .generate(new AnswerInput(1L, 2L, 3L, Purpose.GENERAL_FAQ, "그거 해지 어떻게 해요?", "컬러링 해지 방법",
+                        Map.of(), "컬러링 해지 방법", null, true, null, Map.of()));
+
+        assertThat(checked).containsExactly("컬러링 해지 방법");
+        verify(searches, times(1)).searchGrayZone(any());
     }
 
     @Test

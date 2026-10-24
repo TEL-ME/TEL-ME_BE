@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.Set;
 
 /** 사용자 원문을 우선 검색하고 근거가 없을 때 정제 질문으로 보완한다. */
@@ -40,6 +41,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     private final RefinedQuerySelector refinedQueries;
     // null이면 회색 구간 판정을 쓰지 않는 기존 검색이다
     private final FaqGrayZoneSelector grayZone;
+    // 문맥을 풀어 쓴 질문이 요금제를 가리키는지. 원문 재검색은 이때만 한다
+    private final Predicate<String> aboutPlan;
 
     public FaqSearchAnswerProvider(
             FaqSearchService searches, SearchResultAnswerGenerator answers) {
@@ -111,6 +114,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
             SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries,
             FaqGrayZoneSelector grayZone) {
+        this(searches, answers, trace, comparisonEvidence, candidateEvidence, sourceConverter, planner,
+                suggestedQuestions, refinedQueries, grayZone, question -> false);
+    }
+
+    public FaqSearchAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, FaqClarificationPlanner planner,
+            SuggestedQuestions suggestedQuestions, RefinedQuerySelector refinedQueries,
+            FaqGrayZoneSelector grayZone, Predicate<String> aboutPlan) {
         this.searches = Objects.requireNonNull(searches);
         this.answers = Objects.requireNonNull(answers);
         this.trace = Objects.requireNonNull(trace);
@@ -121,6 +134,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         this.suggestedQuestions = Objects.requireNonNull(suggestedQuestions);
         this.refinedQueries = Objects.requireNonNull(refinedQueries);
         this.grayZone = grayZone;
+        this.aboutPlan = Objects.requireNonNull(aboutPlan);
     }
 
     @Override
@@ -248,8 +262,16 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
         // 호칭 제거는 문맥 복원과 구분한다. 같은 상담 본문이면 임베딩을 한 번만 호출한다.
         if (!original.equals(resolved)) {
             List<FaqSearchResponse> results = search(input, resolved, FaqSearchKind.RESOLVED);
-            return !results.isEmpty() || resolved.equals(refined)
-                    ? results : search(input, refined, FaqSearchKind.REFINED);
+            if (results.isEmpty() && !resolved.equals(refined)) {
+                results = search(input, refined, FaqSearchKind.REFINED);
+            }
+            // 문맥을 풀어 쓴 검색어는 "5G 스탠다드 해지 위약금"처럼 명사를 늘어놓아 FAQ 질문과 덜 비슷하고, 앞 대화의 상품 이름이
+            // 그 상품 FAQ 쪽으로 끌어 하한 아래로 떨어진다. 그래도 못 찾으면 고객 원문("그거 해지하면 위약금은?")으로 한 번 더 찾는다.
+            // 원문에는 대상이 빠져 있어 대상이 요금제일 때만 찾는다. 요금제의 해지·위약금·명의변경 같은 규정은 요금제와 관계없이 같지만,
+            // 부가서비스("컬러링", "데이터 쉐어링")를 물었을 때 원문으로 찾으면 회선 해지·가입 FAQ로 잘못 답했고 판정기가 막지 못했다.
+            // 후보는 점수와 관계없이 모두 판정기가 문맥을 풀어 쓴 질문으로 판정한다. 판정기가 꺼져 있으면 찾지 않는다
+            return results.isEmpty() && grayZone != null && aboutPlan.test(resolved)
+                    ? searchOriginalForResolved(input, original) : results;
         }
         List<FaqSearchResponse> results = search(input, original, FaqSearchKind.ORIGINAL);
         if (!results.isEmpty() || original.equals(refined)) {
@@ -267,6 +289,10 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     private List<FaqSearchResponse> search(AnswerInput input, String query, FaqSearchKind kind) {
         return search(input, query, kind.name(), SEARCH_TOP_K, false, true);
+    }
+
+    private List<FaqSearchResponse> searchOriginalForResolved(AnswerInput input, String original) {
+        return search(input, original, FaqSearchKind.ORIGINAL.name(), SEARCH_TOP_K, false, true, true);
     }
 
     private List<FaqSearchResponse> searchComparisonCandidate(
@@ -296,17 +322,26 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
     // useGrayZone이 false면 회색 구간이 켜져 있어도 판정을 붙이기 전 임계값으로 검색한다
     private List<FaqSearchResponse> search(AnswerInput input, String query, String kind, int topK,
             boolean unfilteredCandidates, boolean useGrayZone) {
+        return search(input, query, kind, topK, unfilteredCandidates, useGrayZone, false);
+    }
+
+    // judgeAll이면 통과 선 이상의 후보도 판정기에 넘긴다(재검색, 문맥 질문의 원문 검색)
+    private List<FaqSearchResponse> search(AnswerInput input, String query, String kind, int topK,
+            boolean unfilteredCandidates, boolean useGrayZone, boolean judgeAll) {
         query = ConsultationQuestion.extract(query);
         boolean grayZoneSearch = !unfilteredCandidates && grayZone != null && useGrayZone;
-        Map<String, Object> request = Map.of("query", query, "kind", kind, "topK", topK,
+        Map<String, Object> request = new java.util.LinkedHashMap<>(Map.of("query", query, "kind", kind, "topK", topK,
                 "candidateMode", unfilteredCandidates, "grayZone", grayZoneSearch,
-                "consultRequestId", input.consultRequestId());
+                "consultRequestId", input.consultRequestId()));
+        if (judgeAll) {
+            request.put("judgeAll", true);
+        }
         trace.append(input.executionId(), "searchRequests", request);
         try {
             FaqSearchRequest searchRequest = unfilteredCandidates ? new FaqSearchRequest(query, topK)
                                                                   : new FaqSearchRequest(query, topK, FaqSearchKind.valueOf(kind));
             var found = unfilteredCandidates ? searches.searchCandidates(searchRequest)
-                    : grayZoneSearch ? searchGrayZone(input, searchRequest)
+                    : grayZoneSearch ? searchGrayZone(input, searchRequest, judgeAll)
                     : searches.search(searchRequest);
             var results = List.copyOf(found);
             trace.append(input.executionId(), "searchResults", Map.of(
@@ -330,11 +365,12 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
 
     // 판정은 검색 문장이 아니라 고객이 실제로 물은 질문으로 한다. 원문·문맥 복원·재검색 어느 경로든 같다
     // 어떤 후보를 왜 남기고 뺐는지(판정 결과·위쪽 구간 여부·지연)를 검색마다 실행 기록에 남긴다. 모델이 쓴 문장은 넣지 않는다
-    private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest) {
+    private List<FaqSearchResponse> searchGrayZone(AnswerInput input, FaqSearchRequest searchRequest, boolean judgeAll) {
         var candidates = searches.searchGrayZone(searchRequest);
         // 재검색 문장은 FAQ 말투로 다듬어져 점수가 높게 나온다. 원문 검색에서 판정기가 막은 FAQ가 통과 선을 넘어
-        // 판정 없이 들어오지 않게 재검색 후보는 모두 판정한다. 원문에서 받은 판정은 같은 실행 안에서 다시 쓴다
-        if (searchRequest.kind() == FaqSearchKind.REFINED) {
+        // 판정 없이 들어오지 않게 재검색 후보는 모두 판정한다. 원문에서 받은 판정은 같은 실행 안에서 다시 쓴다.
+        // 문맥 질문을 원문으로 다시 찾을 때도(judgeAll) 원문에 대상이 빠져 있어 모두 판정한다
+        if (searchRequest.kind() == FaqSearchKind.REFINED || judgeAll) {
             candidates = candidates.judgingAll();
         }
         long started = System.nanoTime();

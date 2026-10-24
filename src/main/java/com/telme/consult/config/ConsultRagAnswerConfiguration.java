@@ -34,6 +34,8 @@ import com.telme.faq.config.EmbeddingProperties;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.intent.service.QueryRoutingService;
 import com.telme.intent.service.RuleBasedRoutingFallback;
+import com.telme.plan.entity.Plan;
+import com.telme.plan.repository.PlanRepository;
 import com.telme.rag.service.AnswerGenerator;
 import com.telme.rag.converter.AnswerContextConverter;
 import com.telme.llm.service.LlmStreamHandler;
@@ -177,7 +179,8 @@ public class ConsultRagAnswerConfiguration {
             PlanCatalogAnswerer planCatalog, MemberPlanAnswerer memberPlans,
             MemberRecommendationAnswerer recommendations, ChatSessionRepository chatSessions,
             SessionRecommendationAnswers recommendationAnswers, PlanQuestionProperties planProperties,
-            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrockClient) {
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrockClient,
+            ObjectProvider<PlanRepository> planRepository) {
         // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
         LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
         FaqClarificationPlanner planner = client == null
@@ -189,10 +192,22 @@ public class ConsultRagAnswerConfiguration {
                                 comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
                                 routing::refinedSearchQuery,
                                 // 꺼져 있으면 null이라 기존 검색을 그대로 쓴다
-                                JudgingFaqGrayZoneSelector.fromSettings(searchProperties, evidenceJudge.getIfAvailable())),
+                                JudgingFaqGrayZoneSelector.fromSettings(searchProperties, evidenceJudge.getIfAvailable()),
+                                question -> aboutPlan(question, planRepository.getIfAvailable())),
                         planClassifier, planCatalog, memberPlans, recommendations, chatSessions::findUserIdBySessionId,
                         recommendationAnswers::of,
                         comparisonEvidence, trace, planProperties.answerEnabled()),
                 storeAnswers::generate);
+    }
+
+    // 문맥을 풀어 쓴 질문이 요금제를 가리키는지. "요금제"라고 했거나 판매 중인 요금제 이름이 있으면 그렇다(띄어쓰기·대소문자 무시).
+    // 요금제 저장소가 없는 설정(일부 테스트)에서는 "요금제"라는 말만 본다
+    static boolean aboutPlan(String question, PlanRepository plans) {
+        if (question == null || question.isBlank()) {
+            return false;
+        }
+        String compact = question.replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
+        return compact.contains("요금제") || plans != null && plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE).stream()
+                .anyMatch(plan -> compact.contains(plan.getName().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT)));
     }
 }
