@@ -223,7 +223,7 @@ class DialogueServiceTest {
         assertEquals("serviceType", result.waitingField());
         assertEquals("어떤 업무로 매장을 찾으시나요?", result.message());
         assertEquals(MessageOrigin.TEMPLATE, result.messageOrigin());
-        assertEquals(java.util.List.of("유심 재발급", "번호이동", "신규 개통", "명의변경"), result.options());
+        assertEquals(java.util.List.of("유심 재발급", "번호이동", "신규 개통", "명의변경", "업무 상관없이 볼게요"), result.options());
         assertEquals(ConditionStatus.PENDING, result.conditions().get("serviceType").status());
     }
 
