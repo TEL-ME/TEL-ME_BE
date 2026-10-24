@@ -114,9 +114,19 @@ public class RuleBasedRoutingFallback {
         new ServiceTypeOption("명의변경", "NAME_CHANGE")
     );
 
-    /** 업무 되묻기 버튼 문구. */
+    // 업무를 고르지 않고 지역 기준으로 매장 전체를 볼 때 누르는 버튼. 업무 버튼 뒤에 그려진다
+    static final String SERVICE_TYPE_SKIP_OPTION = "업무 상관없이 볼게요";
+
+    /** 업무 되묻기 버튼 문구. 업무 네 개와 업무를 고르지 않는 버튼 순서다. */
     public static List<String> serviceTypeOptions() {
-        return SERVICE_TYPE_OPTIONS.stream().map(ServiceTypeOption::label).toList();
+        return java.util.stream.Stream.concat(
+                SERVICE_TYPE_OPTIONS.stream().map(ServiceTypeOption::label),
+                java.util.stream.Stream.of(SERVICE_TYPE_SKIP_OPTION)).toList();
+    }
+
+    /** 업무를 고르지 않는 버튼 문구를 그대로 누른 답인지. 직접 쓴 문장은 모델이 읽는다. */
+    public boolean isServiceTypeSkip(String reply) {
+        return reply != null && SERVICE_TYPE_SKIP_OPTION.equals(reply.strip());
     }
 
     public static String serviceTypeLabel(String code) {

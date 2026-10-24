@@ -1101,6 +1101,17 @@ public class QueryRoutingService {
                 QueryRouting.Method.RULE);
         }
 
+        // 업무를 고르지 않는 버튼은 업무 필터 없이 검색하겠다는 답이다. 모델 없이 거절로 읽는다
+        if (ruleBasedFallback.isServiceTypeSkip(reply)
+                && waiting.pendingKeys().contains(FollowUpRouteResponse.SERVICE_TYPE_KEY)) {
+            log.info("[후속분석] 업무를 고르지 않는 선택지를 코드로 읽었습니다: consultRequestId={}", waiting.consultRequestId());
+            return new FollowUpRouteResponse(
+                waiting.consultRequestId(),
+                Collections.emptyMap(),
+                Set.of(FollowUpRouteResponse.SERVICE_TYPE_KEY),
+                QueryRouting.Method.RULE);
+        }
+
         // 버튼을 그대로 누르거나 업무 이름만 짧게 답한 것은 모델 없이 읽는다. 네 가지뿐이라 LLM이 판단할 여지가 없다
         String pickedServiceType = ruleBasedFallback.serviceTypeOfShortReply(reply);
         if (pickedServiceType != null

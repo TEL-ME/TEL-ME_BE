@@ -255,6 +255,25 @@ class RuleBasedRoutingFallbackTest {
         assertThat(fallback.serviceTypeOfShortReply(reply)).isEqualTo(code);
     }
 
+    @Test
+    @DisplayName("업무 되묻기 선택지는 업무 네 개 뒤에 업무를 고르지 않는 버튼이 온다")
+    void serviceTypeOptions_endWithSkipOption() {
+        assertThat(RuleBasedRoutingFallback.serviceTypeOptions())
+                .containsExactly("유심 재발급", "번호이동", "신규 개통", "명의변경", "업무 상관없이 볼게요");
+        assertThat(RuleBasedRoutingFallback.serviceTypeLabel("USIM_REISSUE")).isEqualTo("유심 재발급");
+    }
+
+    @Test
+    @DisplayName("업무를 고르지 않는 버튼 문구만 그대로 읽고 업무로는 읽지 않는다")
+    void isServiceTypeSkip_readsOnlyTheButtonText() {
+        assertThat(fallback.isServiceTypeSkip("업무 상관없이 볼게요")).isTrue();
+        assertThat(fallback.isServiceTypeSkip(" 업무 상관없이 볼게요 ")).isTrue();
+        assertThat(fallback.isServiceTypeSkip("업무 상관없어요")).isFalse();
+        assertThat(fallback.isServiceTypeSkip("번호이동 업무 상관없이 볼게요")).isFalse();
+        assertThat(fallback.isServiceTypeSkip(null)).isFalse();
+        assertThat(fallback.serviceTypeOfShortReply("업무 상관없이 볼게요")).isNull();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"유심 재발급 하려고요", "유심 재발급 어떻게 해요?", "명의변경 하려면 뭐 필요해",
             "신촌에서 번호이동이요", "유심 재발급 비용이요", "유심이요"})

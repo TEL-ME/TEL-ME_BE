@@ -222,6 +222,33 @@ class QueryRoutingServiceFollowUpTest {
     }
 
     @Test
+    @DisplayName("업무를 고르지 않는 선택지를 누르면 모델을 부르지 않고 업무 거절로 읽는다")
+    void analyzeFollowUp_readsServiceTypeSkipOptionAsDeclinedWithoutLlm() {
+        ChatMessage askedMessage = ChatMessage.builder().messageId(99L).build();
+        ConsultRequest waiting = ConsultRequest.builder()
+                .consultRequestId(WAITING_CONSULT_REQUEST_ID)
+                .subqueryOrder((short) 1)
+                .intent(ConsultRequest.Intent.STORE)
+                .status(ConsultRequest.Status.WAITING_CONDITION)
+                .conditions(List.of(ConsultCondition.builder()
+                        .conditionKey("serviceType")
+                        .status(ConsultCondition.Status.PENDING)
+                        .askedMessage(askedMessage)
+                        .build()))
+                .build();
+        given(consultRequestRepository.findByLatestAskedQuestion(
+                SESSION_ID, ConsultRequest.Status.WAITING_CONDITION)).willReturn(List.of(waiting));
+
+        FollowUpRouteResponse response = service.analyzeFollowUp(SESSION_ID, "업무 상관없이 볼게요");
+
+        assertThat(response.method()).isEqualTo(QueryRouting.Method.RULE);
+        assertThat(response.conditions()).isEmpty();
+        assertThat(response.declinedKeys()).containsExactly("serviceType");
+        assertThat(response.disposition()).isEqualTo(FollowUpRouteResponse.Disposition.CONDITION_RESPONSE);
+        verify(llmClient, never()).generate(any());
+    }
+
+    @Test
     @DisplayName("데이터 사용량을 숫자로 답하면 모델을 부르지 않고 코드로 읽어 정리한 값으로 넘긴다")
     void analyzeFollowUp_readsDataUsageWithoutLlm() {
         givenWaitingDataUsage();
