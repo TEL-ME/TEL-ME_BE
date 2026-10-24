@@ -80,7 +80,7 @@ class ChatQuestionResolutionModeTest {
     }
 
     private static final ChatProcessingCommand FOLLOW_UP = new ChatProcessingCommand(
-            1L, 1L, 1L, "그 회선 명의를 얼마 전에 제 앞으로 바꿨는데, 그래도 바로 할 수 있나요?");
+            1L, 1L, 1L, "밀린 거 다 내면 얼마 만에 다시 쓸 수 있어요");
 
     private static ChatContext withHistory() {
         var earlier = new ChatContextMessage(501L, 1, ChatMessage.Role.USER,
