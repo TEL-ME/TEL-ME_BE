@@ -381,14 +381,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 "judgments", selection.judgments(),
                 "elapsedMs", (System.nanoTime() - started) / 1_000_000,
                 "consultRequestId", input.consultRequestId()));
-        // 관리자 점수 통계가 판정 전 임계값이 아니라 실제로 근거를 찾았는지로도 셀 수 있게 남긴다(TELME-233).
-        // 판정기가 거절한 후보와 바로 통과한 후보가 섞여도 판정 덕분에 찾은 것으로 세지 않도록, 근거에 바로 통과한
-        // FAQ가 하나도 없을 때만 판정으로 통과한 검색으로 남긴다. kept는 합치면서 중복·topK로 빠질 수 있어 근거를 직접 본다
-        Set<Long> passedWithoutJudgment = candidates.passedWithoutJudgmentFaqIds();
-        boolean passedByJudge = !selection.results().isEmpty() && selection.results().stream()
-                .noneMatch(result -> passedWithoutJudgment.contains(result.faqId()));
-        searches.recordGrayZoneOutcome(candidates.searchScoreId(),
-                !selection.judgments().isEmpty(), !selection.results().isEmpty(), passedByJudge);
+        // 관리자 점수 통계가 판정 전 임계값이 아니라 실제로 근거를 찾았는지로도 셀 수 있게 남긴다(TELME-233)
+        searches.recordGrayZoneOutcome(candidates.searchScoreId(), selection.outcome(candidates));
         return selection.results();
     }
 

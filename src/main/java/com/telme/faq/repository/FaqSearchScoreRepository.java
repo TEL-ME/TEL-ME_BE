@@ -1,6 +1,7 @@
 package com.telme.faq.repository;
 
 import com.telme.faq.dto.req.FaqSearchKind;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -19,15 +20,14 @@ public class FaqSearchScoreRepository {
     
     private final JdbcTemplate jdbcTemplate;
     
-    public record Summary(long total, long scored, long passed,long refinedPassed, long aboveThreshold, Outcome outcome) {
+    public record Summary(long total, long scored, long passed,long refinedPassed, long aboveThreshold,
+            OutcomeCounts outcomeCounts) {
     }
 
-    // 회색 구간 판정 뒤 결과(V46)로 센 건수. 결과를 남긴 검색(judged가 NULL이 아닌 것)만 센다.
-    // 네 건수는 겹치지 않는다. passedDirectly: 근거에 판정 없이 통과한 FAQ가 있음(판정한 후보가 함께 있었어도 여기),
-    // passedByJudge: 근거가 모두 판정을 거친 후보, rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음,
-    // belowFloor: 후보가 모두 아래 선 미만이라 판정 없이 근거 없음
-    public record Outcome(long recorded, long passedDirectly, long passedByJudge, long rejectedByJudge,
-            long belowFloor, long refinedPassed) {
+    // 회색 구간 판정 뒤 결과(gray_zone_outcome, FaqGrayZoneOutcome)별 건수. 결과를 남긴 검색만 센다.
+    // 질문별 첫 검색의 여섯 건수는 겹치지 않아 합이 recorded다. refinedFinalPassed는 정제 검색에서 근거를 찾은 수다
+    public record OutcomeCounts(long recorded, long passedDirectly, long passedByJudge, long passedOnJudgeFailure,
+            long rejectedByJudge, long droppedOnJudgeFailure, long belowFloor, long refinedFinalPassed) {
     }
     
     public record BucketCount(int bucket, long count) {
@@ -41,12 +41,11 @@ public class FaqSearchScoreRepository {
                 + "VALUES (?, ?, ?, ?) RETURNING search_score_id", Long.class, kind.name(), qaTopScore, qaThreshold, passed);
     }
 
-    // 판정기를 거쳤는지(judged), 판정 뒤 근거로 쓴 FAQ가 있었는지(finalPassed), 그 근거가 모두 판정을 거친 후보인지
-    // (passedByJudge)를 남긴다. save와 같은 이유로 따로 저장한다. 이미 지워진 기록이면 0을 돌려준다
+    // 회색 구간 판정 뒤 결과를 남긴다. save와 같은 이유로 따로 저장한다. 이미 지워진 기록이면 0을 돌려준다
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1)
-    public int markOutcome(long searchScoreId, boolean judged, boolean finalPassed, boolean passedByJudge) {
-        return jdbcTemplate.update("UPDATE faq_search_scores SET judged = ?, final_passed = ?, passed_by_judge = ? "
-                + "WHERE search_score_id = ?", judged, finalPassed, passedByJudge, searchScoreId);
+    public int markOutcome(long searchScoreId, FaqGrayZoneOutcome outcome) {
+        return jdbcTemplate.update("UPDATE faq_search_scores SET gray_zone_outcome = ? WHERE search_score_id = ?",
+                outcome.name(), searchScoreId);
     }
 
     public int deleteCreatedBefore(Instant cutoff) {
@@ -58,7 +57,8 @@ public class FaqSearchScoreRepository {
     // 한 번 더 돌아 같이 세면 실패가 두 번 잡히므로 refined_passed에만 쓴다.
     // scored는 분포(buckets)에 들어가는 건수다. 점수가 없는 검색은 total에만 들어간다.
     // 임계값 이상 여부는 검색 당시 임계값으로 센다. passed도 당시 설정으로 정해져 둘을 비교할 수 있다.
-    // passed·above_threshold는 회색 구간 판정 전 기준이고, 판정 뒤 실제 결과는 outcome으로 따로 센다
+    // passed·above_threshold는 회색 구간 판정 전 기준이고, 판정 뒤 실제 결과는 outcomeCounts로 따로 센다.
+    // gray_zone_outcome 값은 FaqGrayZoneOutcome 이름이다. 정제 검색의 근거 찾음은 PASSED로 시작하는 세 값이다
     public Summary findSummary(Instant from, Instant to) {
         return jdbcTemplate.queryForObject("""
                 SELECT count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS total,
@@ -66,18 +66,21 @@ public class FaqSearchScoreRepository {
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND passed) AS passed,
                        count(*) FILTER (WHERE kind = 'REFINED' AND passed) AS refined_passed,
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND qa_top_score >= qa_threshold) AS above_threshold,
-                       count(judged) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS outcome_recorded,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND final_passed AND NOT passed_by_judge) AS passed_directly,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND passed_by_judge) AS passed_by_judge,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND judged AND NOT final_passed) AS rejected_by_judge,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND NOT judged AND NOT final_passed) AS below_floor,
-                       count(*) FILTER (WHERE kind = 'REFINED' AND final_passed) AS refined_final_passed
+                       count(gray_zone_outcome) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS outcome_recorded,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'PASSED_DIRECTLY') AS passed_directly,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'PASSED_BY_JUDGE') AS passed_by_judge,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'PASSED_ON_JUDGE_FAILURE') AS passed_on_judge_failure,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'REJECTED_BY_JUDGE') AS rejected_by_judge,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'DROPPED_ON_JUDGE_FAILURE') AS dropped_on_judge_failure,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND gray_zone_outcome = 'BELOW_FLOOR') AS below_floor,
+                       count(*) FILTER (WHERE kind = 'REFINED' AND gray_zone_outcome IN ('PASSED_DIRECTLY', 'PASSED_BY_JUDGE', 'PASSED_ON_JUDGE_FAILURE')) AS refined_final_passed
                 FROM faq_search_scores
                 WHERE created_at >= ? AND created_at < ?
                 """, (rs, i) -> new Summary(rs.getLong("total"), rs.getLong("scored"), rs.getLong("passed"),
                       rs.getLong("refined_passed"), rs.getLong("above_threshold"),
-                      new Outcome(rs.getLong("outcome_recorded"), rs.getLong("passed_directly"),
-                              rs.getLong("passed_by_judge"), rs.getLong("rejected_by_judge"),
+                      new OutcomeCounts(rs.getLong("outcome_recorded"), rs.getLong("passed_directly"),
+                              rs.getLong("passed_by_judge"), rs.getLong("passed_on_judge_failure"),
+                              rs.getLong("rejected_by_judge"), rs.getLong("dropped_on_judge_failure"),
                               rs.getLong("below_floor"), rs.getLong("refined_final_passed"))),
                 Timestamp.from(from), Timestamp.from(to));
     }

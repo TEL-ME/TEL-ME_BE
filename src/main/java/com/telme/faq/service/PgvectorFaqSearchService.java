@@ -9,6 +9,7 @@ import com.telme.faq.dto.req.FaqSearchVector;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.faq.repository.FaqNearestMatch;
 import com.telme.faq.repository.FaqSearchScoreRepository;
@@ -84,12 +85,12 @@ public class PgvectorFaqSearchService implements FaqSearchService {
 
     // 기록 실패가 답변을 막지 않도록 recordScore처럼 여기서 삼킨다
     @Override
-    public void recordGrayZoneOutcome(Long searchScoreId, boolean judged, boolean finalPassed, boolean passedByJudge) {
-        if (searchScoreId == null) {
+    public void recordGrayZoneOutcome(Long searchScoreId, FaqGrayZoneOutcome outcome) {
+        if (searchScoreId == null || outcome == null) {
             return;
         }
         try {
-            scoreRepository.markOutcome(searchScoreId, judged, finalPassed, passedByJudge);
+            scoreRepository.markOutcome(searchScoreId, outcome);
         } catch (RuntimeException e) {
             log.warn("[PgvectorFaqSearchService] 검색 판정 결과 기록 실패 searchScoreId={}", searchScoreId, e);
         }

@@ -23,11 +23,13 @@ public record AdminSearchScoreResponse(
     public record Bucket(double min, double max, long count) {
     }
 
-    // 선(qaPass 등)은 현재 설정값이다. 건수는 판정 결과를 남긴 질문만 센다(recorded = 아래 네 건수의 합).
-    // 네 건수는 겹치지 않는다. passedDirectly: 근거에 판정 없이 통과한 FAQ가 있음(판정한 후보가 함께 있었어도 여기),
-    // passedByJudge: 근거가 모두 판정을 거친 후보(판정기가 통과시켜 찾은 질문), rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음,
-    // belowFloor: 후보가 모두 아래 선 미만이라 근거 없음,
-    // refinedPassed: 첫 검색은 비었지만 정제 질문 검색에서 판정까지 거쳐 근거를 찾은 질문 수
+    // 선(qaPass 등)은 현재 설정값이다. 건수는 판정 결과를 남긴 질문만 센다(recorded = 아래 여섯 건수의 합, 서로 겹치지 않는다).
+    // passedDirectly: 근거에 판정 없이 통과한 FAQ가 있음(판정한 후보가 함께 있었어도 여기),
+    // passedByJudge: 판정기가 답할 수 있다고 본 FAQ로 근거를 찾음, passedOnJudgeFailure: 판정 실패 뒤 점수로 남긴 후보만 근거,
+    // rejectedByJudge: 판정기가 후보를 모두 거절해 근거 없음, droppedOnJudgeFailure: 판정 실패로 버린 후보가 있고 근거 없음,
+    // belowFloor: 후보가 모두 아래 선 미만이라 근거 없음.
+    // refinedFinalPassed: 첫 검색은 비었지만 정제 질문 검색에서 판정까지 거쳐 근거를 찾은 질문 수
+    // (바깥 refinedPassed는 판정 전 기준이라 이름을 나눈다)
     public record GrayZone(
             boolean enabled,
             double qaPass,
@@ -37,9 +39,11 @@ public record AdminSearchScoreResponse(
             long recorded,
             long passedDirectly,
             long passedByJudge,
+            long passedOnJudgeFailure,
             long rejectedByJudge,
+            long droppedOnJudgeFailure,
             long belowFloor,
-            long refinedPassed
+            long refinedFinalPassed
             ) {
     }
 }

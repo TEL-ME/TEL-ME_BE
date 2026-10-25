@@ -2,8 +2,11 @@ package com.telme.consult.service;
 
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.rag.service.FaqEvidenceJudge.Verdict;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** 회색 구간 검색 결과에서 판정이 필요한 후보를 판정해 답변 근거를 고른다(TELME-160). */
 public interface FaqGrayZoneSelector {
@@ -17,6 +20,30 @@ public interface FaqGrayZoneSelector {
         public Selection {
             results = List.copyOf(results);
             judgments = List.copyOf(judgments);
+        }
+
+        /**
+         * 관리자 점수 통계용 결과(TELME-233). candidates는 판정에 넘긴 검색 결과다.
+         * Judgment.kept는 합치면서 중복·topK로 빠질 수 있어 최종 근거(results)를 직접 본다.
+         * 판정 결과가 ANSWERABLE·NOT_ANSWERABLE이 아니면(실패, 판정 없음) 판정기가 정한 것으로 보지 않는다
+         */
+        public FaqGrayZoneOutcome outcome(FaqGrayZoneSearchResponse candidates) {
+            Set<Long> passedWithoutJudgment = candidates.passedWithoutJudgmentFaqIds();
+            if (results.stream().anyMatch(result -> passedWithoutJudgment.contains(result.faqId()))) {
+                return FaqGrayZoneOutcome.PASSED_DIRECTLY;
+            }
+            if (!results.isEmpty()) {
+                Set<Long> answerable = judgments.stream().filter(judgment -> judgment.verdict() == Verdict.ANSWERABLE)
+                        .map(Judgment::faqId).collect(Collectors.toSet());
+                // 판정 필요 후보가 근거로 남는 길은 ANSWERABLE과 판정 실패 뒤 위쪽 구간 둘뿐이다
+                return results.stream().anyMatch(result -> answerable.contains(result.faqId()))
+                        ? FaqGrayZoneOutcome.PASSED_BY_JUDGE : FaqGrayZoneOutcome.PASSED_ON_JUDGE_FAILURE;
+            }
+            if (judgments.isEmpty()) {
+                return FaqGrayZoneOutcome.BELOW_FLOOR;
+            }
+            return judgments.stream().allMatch(judgment -> judgment.verdict() == Verdict.NOT_ANSWERABLE)
+                    ? FaqGrayZoneOutcome.REJECTED_BY_JUDGE : FaqGrayZoneOutcome.DROPPED_ON_JUDGE_FAILURE;
         }
     }
 

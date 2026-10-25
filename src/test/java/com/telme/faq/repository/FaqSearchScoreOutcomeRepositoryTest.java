@@ -3,6 +3,7 @@ package com.telme.faq.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.telme.faq.dto.req.FaqSearchKind;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +38,7 @@ class FaqSearchScoreOutcomeRepositoryTest {
 
         Map<String, Object> row = row(id);
         assertThat(row.get("passed")).isEqualTo(true);
-        assertThat(row.get("judged")).isNull();
-        assertThat(row.get("final_passed")).isNull();
-        assertThat(row.get("passed_by_judge")).isNull();
+        assertThat(row.get("gray_zone_outcome")).isNull();
     }
 
     @Test
@@ -47,13 +46,11 @@ class FaqSearchScoreOutcomeRepositoryTest {
     void 판정_결과를_채운다() {
         long id = save();
 
-        int updated = repository.markOutcome(id, true, true, false);
+        int updated = repository.markOutcome(id, FaqGrayZoneOutcome.DROPPED_ON_JUDGE_FAILURE);
 
         assertThat(updated).isEqualTo(1);
         Map<String, Object> row = row(id);
-        assertThat(row.get("judged")).isEqualTo(true);
-        assertThat(row.get("final_passed")).isEqualTo(true);
-        assertThat(row.get("passed_by_judge")).isEqualTo(false);
+        assertThat(row.get("gray_zone_outcome")).isEqualTo("DROPPED_ON_JUDGE_FAILURE");
         // 판정 전 기준 통과 여부는 그대로 남는다
         assertThat(row.get("passed")).isEqualTo(true);
     }
@@ -61,7 +58,7 @@ class FaqSearchScoreOutcomeRepositoryTest {
     @Test
     @DisplayName("없는 기록이면 아무것도 바꾸지 않는다")
     void 없는_기록은_0() {
-        assertThat(repository.markOutcome(-1L, true, true, true)).isZero();
+        assertThat(repository.markOutcome(-1L, FaqGrayZoneOutcome.PASSED_DIRECTLY)).isZero();
     }
 
     private long save() {
@@ -72,6 +69,6 @@ class FaqSearchScoreOutcomeRepositoryTest {
 
     private Map<String, Object> row(long id) {
         return jdbcTemplate.queryForMap(
-                "SELECT passed, judged, final_passed, passed_by_judge FROM faq_search_scores WHERE search_score_id = ?", id);
+                "SELECT passed, gray_zone_outcome FROM faq_search_scores WHERE search_score_id = ?", id);
     }
 }

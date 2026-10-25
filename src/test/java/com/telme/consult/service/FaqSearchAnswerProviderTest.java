@@ -24,6 +24,7 @@ import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
@@ -821,7 +822,7 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
-    @DisplayName("회색 구간 판정이 끝나면 판정 여부와 최종 근거 여부를 검색 점수 기록에 남긴다")
+    @DisplayName("회색 구간 판정이 끝나면 판정 뒤 결과를 검색 점수 기록에 남긴다")
     void 회색_구간_판정_결과를_점수_기록에_남긴다() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
@@ -838,11 +839,11 @@ class FaqSearchAnswerProviderTest {
                 FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
                 .prepare(input(), false);
 
-        verify(searches).recordGrayZoneOutcome(7L, true, true, true);
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_BY_JUDGE);
     }
 
     @Test
-    @DisplayName("판정 없이 근거도 못 찾은 회색 구간 검색은 판정 안 함, 근거 없음으로 남긴다")
+    @DisplayName("판정 없이 근거도 못 찾은 회색 구간 검색은 아래 선 미만으로 남긴다")
     void 판정_없이_빈_검색도_점수_기록에_남긴다() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
@@ -857,11 +858,11 @@ class FaqSearchAnswerProviderTest {
                 .prepare(input(), false);
 
         // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 남는다
-        verify(searches, times(2)).recordGrayZoneOutcome(7L, false, false, false);
+        verify(searches, times(2)).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.BELOW_FLOOR);
     }
 
     @Test
-    @DisplayName("판정기가 거절한 후보와 바로 통과한 후보가 섞이면 근거가 남아도 판정으로 통과한 검색으로 남기지 않는다")
+    @DisplayName("판정기가 거절한 후보와 바로 통과한 후보가 섞이면 근거가 남아도 바로 통과로 남긴다")
     void 바로_통과가_섞이면_판정으로_통과가_아니다() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
@@ -880,11 +881,11 @@ class FaqSearchAnswerProviderTest {
                 FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
                 .prepare(input(), false);
 
-        verify(searches).recordGrayZoneOutcome(7L, true, true, false);
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_DIRECTLY);
     }
 
     @Test
-    @DisplayName("판정으로 살린 FAQ가 다른 벡터에서 바로 통과한 FAQ와 같으면 판정으로 통과한 검색으로 남기지 않는다")
+    @DisplayName("판정으로 살린 FAQ가 다른 벡터에서 바로 통과한 FAQ와 같으면 바로 통과로 남긴다")
     void 같은_FAQ가_바로_통과했으면_판정으로_통과가_아니다() {
         FaqSearchService searches = mock(FaqSearchService.class);
         var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
@@ -903,7 +904,7 @@ class FaqSearchAnswerProviderTest {
                 FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
                 .prepare(input(), false);
 
-        verify(searches).recordGrayZoneOutcome(7L, true, true, false);
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_DIRECTLY);
     }
 
     @Test

@@ -85,7 +85,7 @@ class AdminSearchScoreControllerTest {
     void 관리자는_200을_반환한다() throws Exception {
         when(adminSearchScoreQueryService.getScores(any())).thenReturn(new AdminSearchScoreResponse(
                 0.72, 10, 9, 7, 1, 6, List.of(new AdminSearchScoreResponse.Bucket(0.7, 0.75, 3)),
-                new AdminSearchScoreResponse.GrayZone(true, 0.80, 0.69, 0.90, 0.80, 8, 4, 2, 1, 1, 1)));
+                new AdminSearchScoreResponse.GrayZone(true, 0.80, 0.69, 0.90, 0.80, 10, 4, 2, 1, 1, 1, 1, 1)));
 
         mockMvc.perform(get(URL).param("from", "2026-10-01T00:00:00Z"))
                 .andExpect(status().isOk())
@@ -93,7 +93,9 @@ class AdminSearchScoreControllerTest {
                 .andExpect(jsonPath("$.result.aboveThreshold").value(6))
                 .andExpect(jsonPath("$.result.buckets[0].count").value(3))
                 .andExpect(jsonPath("$.result.grayZone.qaFloor").value(0.69))
-                .andExpect(jsonPath("$.result.grayZone.passedByJudge").value(2));
+                .andExpect(jsonPath("$.result.grayZone.passedByJudge").value(2))
+                .andExpect(jsonPath("$.result.grayZone.passedOnJudgeFailure").value(1))
+                .andExpect(jsonPath("$.result.grayZone.refinedFinalPassed").value(1));
     }
 
     @Test

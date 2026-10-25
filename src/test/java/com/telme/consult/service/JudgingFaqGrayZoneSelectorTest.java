@@ -19,6 +19,7 @@ import com.telme.faq.config.SearchProperties;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse.Candidate;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.rag.service.FaqEvidenceJudge;
 import com.telme.rag.service.FaqEvidenceJudge.Verdict;
 import java.time.Duration;
@@ -211,6 +212,71 @@ class JudgingFaqGrayZoneSelectorTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("llm.bedrock.enabled");
         verify(judge, never()).judge(any(), any(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 근거에 바로 통과한 FAQ가 있으면 판정 거절이 섞여도 바로 통과다")
+    void 결과_바로_통과() {
+        verdicts(Map.of(2L, Verdict.NOT_ANSWERABLE));
+
+        assertThat(outcomeOf(List.of(), List.of(pass(1L, 0.85, QA), judgeNeeded(2L, 0.75, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.PASSED_DIRECTLY);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 같은 FAQ가 다른 벡터에서 바로 통과했으면 판정으로 살렸어도 바로 통과다")
+    void 결과_같은_FAQ가_바로_통과() {
+        verdicts(Map.of(1L, Verdict.ANSWERABLE));
+
+        assertThat(outcomeOf(List.of(judgeNeeded(1L, 0.85, QO)), List.of(pass(1L, 0.82, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.PASSED_DIRECTLY);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 판정기가 살린 FAQ가 근거에 있으면 판정 실패로 남긴 후보가 섞여도 판정기가 통과시킨 것이다")
+    void 결과_판정기가_통과() {
+        verdicts(Map.of(2L, Verdict.ANSWERABLE, 3L, Verdict.FAILED));
+
+        assertThat(outcomeOf(List.of(), List.of(judgeNeeded(3L, 0.76, QA), judgeNeeded(2L, 0.70, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.PASSED_BY_JUDGE);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 판정이 실패했는데 점수가 높아 남긴 후보뿐이면 판정기가 살린 것으로 세지 않는다")
+    void 결과_판정_실패로_통과() {
+        verdicts(Map.of(5L, Verdict.FAILED, 6L, Verdict.NOT_ANSWERABLE));
+
+        assertThat(outcomeOf(List.of(), List.of(judgeNeeded(5L, 0.75, QA), judgeNeeded(6L, 0.70, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.PASSED_ON_JUDGE_FAILURE);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 판정기가 모두 거절하면 판정 거절이다")
+    void 결과_판정기가_거절() {
+        verdicts(Map.of(5L, Verdict.NOT_ANSWERABLE, 6L, Verdict.NOT_ANSWERABLE));
+
+        assertThat(outcomeOf(List.of(), List.of(judgeNeeded(5L, 0.75, QA), judgeNeeded(6L, 0.70, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.REJECTED_BY_JUDGE);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 판정 실패로 버린 후보가 있으면 다른 후보를 거절했어도 판정 거절로 세지 않는다")
+    void 결과_판정_실패로_버림() {
+        verdicts(Map.of(5L, Verdict.NOT_ANSWERABLE, 6L, Verdict.FAILED));
+
+        assertThat(outcomeOf(List.of(), List.of(judgeNeeded(5L, 0.75, QA), judgeNeeded(6L, 0.70, QA))))
+                .isEqualTo(FaqGrayZoneOutcome.DROPPED_ON_JUDGE_FAILURE);
+    }
+
+    @Test
+    @DisplayName("판정 뒤 결과: 판정할 후보도 없이 비면 아래 선 미만이다")
+    void 결과_아래_선_미만() {
+        assertThat(outcomeOf(List.of(), List.of())).isEqualTo(FaqGrayZoneOutcome.BELOW_FLOOR);
+    }
+
+    private FaqGrayZoneOutcome outcomeOf(List<Candidate> questionOnly, List<Candidate> questionAnswer) {
+        FaqGrayZoneSearchResponse candidates = new FaqGrayZoneSearchResponse(questionOnly, questionAnswer);
+        return selector.select(1L, 2L, QUESTION, candidates, 3).outcome(candidates);
     }
 
     private Selection select(List<Candidate> questionOnly, List<Candidate> questionAnswer) {

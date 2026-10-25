@@ -5,7 +5,7 @@ import com.telme.faq.dto.req.AdminSearchScoreRequest;
 import com.telme.faq.dto.res.AdminSearchScoreResponse;
 import com.telme.faq.repository.FaqSearchScoreRepository;
 import com.telme.faq.repository.FaqSearchScoreRepository.BucketCount;
-import com.telme.faq.repository.FaqSearchScoreRepository.Outcome;
+import com.telme.faq.repository.FaqSearchScoreRepository.OutcomeCounts;
 import com.telme.faq.repository.FaqSearchScoreRepository.Summary;
 import java.time.Instant;
 import java.util.List;
@@ -32,14 +32,15 @@ public class AdminSearchScoreQueryService {
         Summary summary = repository.findSummary(from, to);
         return new AdminSearchScoreResponse(threshold, summary.total(), summary.scored(), summary.passed(), 
                 summary.refinedPassed(), summary.aboveThreshold(), 
-                toBuckets(repository.findBuckets(from, to)), toGrayZone(summary.outcome()));
+                toBuckets(repository.findBuckets(from, to)), toGrayZone(summary.outcomeCounts()));
     }
 
-    private AdminSearchScoreResponse.GrayZone toGrayZone(Outcome outcome) {
+    private AdminSearchScoreResponse.GrayZone toGrayZone(OutcomeCounts counts) {
         SearchProperties.GrayZone zone = searchProperties.grayZone();
         return new AdminSearchScoreResponse.GrayZone(zone.enabled(), zone.qaPass(), zone.qaFloor(),
-                zone.questionPass(), zone.questionFloor(), outcome.recorded(), outcome.passedDirectly(),
-                outcome.passedByJudge(), outcome.rejectedByJudge(), outcome.belowFloor(), outcome.refinedPassed());
+                zone.questionPass(), zone.questionFloor(), counts.recorded(), counts.passedDirectly(),
+                counts.passedByJudge(), counts.passedOnJudgeFailure(), counts.rejectedByJudge(),
+                counts.droppedOnJudgeFailure(), counts.belowFloor(), counts.refinedFinalPassed());
     }
     
     // 검색이 없던 칸도 0으로 채워 그래프 막대가 항상 같은 자리에 오게 한다

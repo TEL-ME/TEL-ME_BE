@@ -81,16 +81,20 @@ class AdminSearchScoreQueryServiceTest {
     }
 
     @Test
-    @DisplayName("판정 결과를 남긴 질문만 바로 통과, 판정으로 통과, 판정 거절, 아래 선 미만으로 겹치지 않게 나눠 세고 현재 선을 함께 준다")
+    @DisplayName("판정 결과를 남긴 질문만 결과별로 겹치지 않게 나눠 세고, 판정 실패는 판정기가 정한 결과와 따로 센다")
     void 판정_결과로_나눠_센다() {
-        insertOutcome("ORIGINAL", 0.85, true, false, true, false);   // 바로 통과
-        // 판정한 후보는 거절됐지만 바로 통과한 FAQ가 근거로 남음: 판정으로 통과한 것이 아니라 바로 통과로 센다
-        insertOutcome("ORIGINAL", 0.90, true, true, true, false);
-        insertOutcome("RESOLVED", 0.74, true, true, true, true);     // 판정으로 통과(판정 전 기준으로도 통과)
-        insertOutcome("ORIGINAL", 0.70, false, true, true, true);    // 판정으로 통과(판정 전 기준으로는 미달)
-        insertOutcome("ORIGINAL", 0.75, true, true, false, false);   // 판정 거절(판정 전 기준으로는 통과)
-        insertOutcome("ORIGINAL", 0.50, false, false, false, false); // 아래 선 미만
-        insertOutcome("REFINED", 0.72, false, true, true, true);     // 정제 검색: 질문 수가 아니라 정제 통과에만 들어간다
+        insertOutcome("ORIGINAL", 0.85, true, "PASSED_DIRECTLY");
+        insertOutcome("ORIGINAL", 0.90, true, "PASSED_DIRECTLY");          // 판정 거절 후보가 섞였어도 바로 통과
+        insertOutcome("RESOLVED", 0.74, true, "PASSED_BY_JUDGE");          // 판정 전 기준으로도 통과
+        insertOutcome("ORIGINAL", 0.70, false, "PASSED_BY_JUDGE");         // 판정 전 기준으로는 미달
+        insertOutcome("ORIGINAL", 0.75, true, "PASSED_ON_JUDGE_FAILURE");  // 판정 실패, 점수가 높아 남김
+        insertOutcome("ORIGINAL", 0.75, true, "REJECTED_BY_JUDGE");        // 판정 전 기준으로는 통과
+        insertOutcome("ORIGINAL", 0.70, false, "DROPPED_ON_JUDGE_FAILURE"); // 판정 실패, 점수가 낮아 버림
+        insertOutcome("ORIGINAL", 0.50, false, "BELOW_FLOOR");
+        // 정제 검색: 질문 수가 아니라 정제 통과에만 들어간다. 판정 실패 뒤 남긴 것도 근거를 찾은 것이다
+        insertOutcome("REFINED", 0.72, false, "PASSED_BY_JUDGE");
+        insertOutcome("REFINED", 0.76, false, "PASSED_ON_JUDGE_FAILURE");
+        insertOutcome("REFINED", 0.71, false, "REJECTED_BY_JUDGE");
 
         AdminSearchScoreResponse.GrayZone grayZone = service.getScores(new AdminSearchScoreRequest(FROM, TO)).grayZone();
 
@@ -101,23 +105,24 @@ class AdminSearchScoreQueryServiceTest {
         assertThat(grayZone.questionPass()).isEqualTo(0.90);
         assertThat(grayZone.questionFloor()).isEqualTo(0.80);
         // setUp의 기록은 판정 결과가 없어(NULL) 세지 않는다
-        assertThat(grayZone.recorded()).isEqualTo(6);
+        assertThat(grayZone.recorded()).isEqualTo(8);
         assertThat(grayZone.passedDirectly()).isEqualTo(2);
         assertThat(grayZone.passedByJudge()).isEqualTo(2);
+        assertThat(grayZone.passedOnJudgeFailure()).isEqualTo(1);
         assertThat(grayZone.rejectedByJudge()).isEqualTo(1);
+        assertThat(grayZone.droppedOnJudgeFailure()).isEqualTo(1);
         assertThat(grayZone.belowFloor()).isEqualTo(1);
-        assertThat(grayZone.refinedPassed()).isEqualTo(1);
-        assertThat(grayZone.passedDirectly() + grayZone.passedByJudge() + grayZone.rejectedByJudge()
-                + grayZone.belowFloor()).isEqualTo(grayZone.recorded());
+        assertThat(grayZone.refinedFinalPassed()).isEqualTo(2);
+        assertThat(grayZone.passedDirectly() + grayZone.passedByJudge() + grayZone.passedOnJudgeFailure()
+                + grayZone.rejectedByJudge() + grayZone.droppedOnJudgeFailure() + grayZone.belowFloor())
+                .isEqualTo(grayZone.recorded());
     }
 
-    private void insertOutcome(String kind, double score, boolean passed, boolean judged, boolean finalPassed,
-            boolean passedByJudge) {
+    private void insertOutcome(String kind, double score, boolean passed, String outcome) {
         jdbcTemplate.update("""
-                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, judged, final_passed,
-                                               passed_by_judge, created_at)
-                VALUES (?, ?, 0.72, ?, ?, ?, ?, ?::timestamptz + interval '1 hour')
-                """, kind, score, passed, judged, finalPassed, passedByJudge, FROM.toString());
+                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, gray_zone_outcome, created_at)
+                VALUES (?, ?, 0.72, ?, ?, ?::timestamptz + interval '1 hour')
+                """, kind, score, passed, outcome, FROM.toString());
     }
 
     private void insert(Double score, boolean passed) {
