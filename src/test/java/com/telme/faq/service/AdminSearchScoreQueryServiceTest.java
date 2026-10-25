@@ -81,14 +81,16 @@ class AdminSearchScoreQueryServiceTest {
     }
 
     @Test
-    @DisplayName("판정 결과를 남긴 질문만 바로 통과, 판정 후 통과, 판정 거절, 아래 선 미만으로 나눠 세고 현재 선을 함께 준다")
+    @DisplayName("판정 결과를 남긴 질문만 바로 통과, 판정으로 통과, 판정 거절, 아래 선 미만으로 겹치지 않게 나눠 세고 현재 선을 함께 준다")
     void 판정_결과로_나눠_센다() {
-        insertOutcome("ORIGINAL", 0.85, true, false, true);   // 바로 통과
-        insertOutcome("RESOLVED", 0.74, true, true, true);    // 판정 후 통과(판정 전 기준으로도 통과)
-        insertOutcome("ORIGINAL", 0.70, false, true, true);   // 판정 후 통과(판정 전 기준으로는 미달)
-        insertOutcome("ORIGINAL", 0.75, true, true, false);   // 판정 거절(판정 전 기준으로는 통과)
-        insertOutcome("ORIGINAL", 0.50, false, false, false); // 아래 선 미만
-        insertOutcome("REFINED", 0.72, false, true, true);    // 정제 검색: 질문 수가 아니라 정제 통과에만 들어간다
+        insertOutcome("ORIGINAL", 0.85, true, false, true, false);   // 바로 통과
+        // 판정한 후보는 거절됐지만 바로 통과한 FAQ가 근거로 남음: 판정으로 통과한 것이 아니라 바로 통과로 센다
+        insertOutcome("ORIGINAL", 0.90, true, true, true, false);
+        insertOutcome("RESOLVED", 0.74, true, true, true, true);     // 판정으로 통과(판정 전 기준으로도 통과)
+        insertOutcome("ORIGINAL", 0.70, false, true, true, true);    // 판정으로 통과(판정 전 기준으로는 미달)
+        insertOutcome("ORIGINAL", 0.75, true, true, false, false);   // 판정 거절(판정 전 기준으로는 통과)
+        insertOutcome("ORIGINAL", 0.50, false, false, false, false); // 아래 선 미만
+        insertOutcome("REFINED", 0.72, false, true, true, true);     // 정제 검색: 질문 수가 아니라 정제 통과에만 들어간다
 
         AdminSearchScoreResponse.GrayZone grayZone = service.getScores(new AdminSearchScoreRequest(FROM, TO)).grayZone();
 
@@ -99,19 +101,23 @@ class AdminSearchScoreQueryServiceTest {
         assertThat(grayZone.questionPass()).isEqualTo(0.90);
         assertThat(grayZone.questionFloor()).isEqualTo(0.80);
         // setUp의 기록은 판정 결과가 없어(NULL) 세지 않는다
-        assertThat(grayZone.recorded()).isEqualTo(5);
-        assertThat(grayZone.passedDirectly()).isEqualTo(1);
-        assertThat(grayZone.passedAfterJudgment()).isEqualTo(2);
+        assertThat(grayZone.recorded()).isEqualTo(6);
+        assertThat(grayZone.passedDirectly()).isEqualTo(2);
+        assertThat(grayZone.passedByJudge()).isEqualTo(2);
         assertThat(grayZone.rejectedByJudge()).isEqualTo(1);
         assertThat(grayZone.belowFloor()).isEqualTo(1);
         assertThat(grayZone.refinedPassed()).isEqualTo(1);
+        assertThat(grayZone.passedDirectly() + grayZone.passedByJudge() + grayZone.rejectedByJudge()
+                + grayZone.belowFloor()).isEqualTo(grayZone.recorded());
     }
 
-    private void insertOutcome(String kind, double score, boolean passed, boolean judged, boolean finalPassed) {
+    private void insertOutcome(String kind, double score, boolean passed, boolean judged, boolean finalPassed,
+            boolean passedByJudge) {
         jdbcTemplate.update("""
-                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, judged, final_passed, created_at)
-                VALUES (?, ?, 0.72, ?, ?, ?, ?::timestamptz + interval '1 hour')
-                """, kind, score, passed, judged, finalPassed, FROM.toString());
+                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, judged, final_passed,
+                                               passed_by_judge, created_at)
+                VALUES (?, ?, 0.72, ?, ?, ?, ?, ?::timestamptz + interval '1 hour')
+                """, kind, score, passed, judged, finalPassed, passedByJudge, FROM.toString());
     }
 
     private void insert(Double score, boolean passed) {

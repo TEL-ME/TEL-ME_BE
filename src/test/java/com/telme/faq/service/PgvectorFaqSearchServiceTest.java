@@ -433,15 +433,15 @@ class PgvectorFaqSearchServiceTest {
     @Test
     @DisplayName("판정 결과는 검색 때 남긴 같은 기록에 채운다")
     void 판정_결과를_같은_기록에_채운다() {
-        grayZoneService.recordGrayZoneOutcome(7L, true, false);
+        grayZoneService.recordGrayZoneOutcome(7L, true, true, false);
 
-        verify(scoreRepository).markOutcome(7L, true, false);
+        verify(scoreRepository).markOutcome(7L, true, true, false);
     }
 
     @Test
     @DisplayName("기록 번호가 없으면 판정 결과를 남기지 않는다")
     void 기록_번호가_없으면_판정_결과를_남기지_않는다() {
-        grayZoneService.recordGrayZoneOutcome(null, true, true);
+        grayZoneService.recordGrayZoneOutcome(null, true, true, true);
 
         verifyNoInteractions(scoreRepository);
     }
@@ -449,9 +449,9 @@ class PgvectorFaqSearchServiceTest {
     @Test
     @DisplayName("판정 결과 기록이 실패해도 예외를 밖으로 내보내지 않는다")
     void 판정_결과_기록_실패를_삼킨다() {
-        doThrow(new IllegalStateException("db down")).when(scoreRepository).markOutcome(anyLong(), anyBoolean(), anyBoolean());
+        doThrow(new IllegalStateException("db down")).when(scoreRepository).markOutcome(anyLong(), anyBoolean(), anyBoolean(), anyBoolean());
 
-        assertThatCode(() -> grayZoneService.recordGrayZoneOutcome(7L, true, true)).doesNotThrowAnyException();
+        assertThatCode(() -> grayZoneService.recordGrayZoneOutcome(7L, true, true, true)).doesNotThrowAnyException();
     }
 
     @Test

@@ -24,8 +24,9 @@ public record AdminSearchScoreResponse(
     }
 
     // 선(qaPass 등)은 현재 설정값이다. 건수는 판정 결과를 남긴 질문만 센다(recorded = 아래 네 건수의 합).
-    // passedDirectly: 판정 없이 통과, passedAfterJudgment: 판정을 거쳐 근거를 찾음(통과 선 이상 후보가 함께 있었을 수 있다),
-    // rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음, belowFloor: 후보가 모두 아래 선 미만이라 근거 없음,
+    // 네 건수는 겹치지 않는다. passedDirectly: 근거에 판정 없이 통과한 FAQ가 있음(판정한 후보가 함께 있었어도 여기),
+    // passedByJudge: 근거가 모두 판정을 거친 후보(판정기가 통과시켜 찾은 질문), rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음,
+    // belowFloor: 후보가 모두 아래 선 미만이라 근거 없음,
     // refinedPassed: 첫 검색은 비었지만 정제 질문 검색에서 판정까지 거쳐 근거를 찾은 질문 수
     public record GrayZone(
             boolean enabled,
@@ -35,7 +36,7 @@ public record AdminSearchScoreResponse(
             double questionFloor,
             long recorded,
             long passedDirectly,
-            long passedAfterJudgment,
+            long passedByJudge,
             long rejectedByJudge,
             long belowFloor,
             long refinedPassed

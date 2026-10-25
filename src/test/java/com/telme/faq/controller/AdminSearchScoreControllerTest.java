@@ -93,7 +93,7 @@ class AdminSearchScoreControllerTest {
                 .andExpect(jsonPath("$.result.aboveThreshold").value(6))
                 .andExpect(jsonPath("$.result.buckets[0].count").value(3))
                 .andExpect(jsonPath("$.result.grayZone.qaFloor").value(0.69))
-                .andExpect(jsonPath("$.result.grayZone.passedAfterJudgment").value(2));
+                .andExpect(jsonPath("$.result.grayZone.passedByJudge").value(2));
     }
 
     @Test

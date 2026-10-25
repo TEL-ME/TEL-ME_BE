@@ -25,8 +25,8 @@ public interface FaqSearchService {
         return FaqGrayZoneSearchResponse.allPassed(search(request));
     }
 
-    // 회색 구간 판정이 끝난 뒤 searchGrayZone이 남긴 점수 기록에 판정 여부와 최종 근거 여부를 채운다.
-    // 기록 번호가 없거나 점수를 기록하지 않는 구현은 아무것도 하지 않는다
-    default void recordGrayZoneOutcome(Long searchScoreId, boolean judged, boolean finalPassed) {
+    // 회색 구간 판정이 끝난 뒤 searchGrayZone이 남긴 점수 기록에 판정 여부, 최종 근거 여부,
+    // 근거가 모두 판정을 거친 후보인지를 채운다. 기록 번호가 없거나 점수를 기록하지 않는 구현은 아무것도 하지 않는다
+    default void recordGrayZoneOutcome(Long searchScoreId, boolean judged, boolean finalPassed, boolean passedByJudge) {
     }
 }

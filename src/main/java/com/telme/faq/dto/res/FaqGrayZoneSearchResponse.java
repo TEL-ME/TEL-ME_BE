@@ -1,6 +1,9 @@
 package com.telme.faq.dto.res;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 // 회색 구간 검색 결과. 벡터별 상위 결과를 점수 구간으로 나눈 채 돌려준다(아래 선 미만은 이미 뺐다)
 // 호출하는 쪽이 판정 필요 후보를 판정한 뒤 DualVectorMerger로 합친다. 측정과 같은 순서다(docs/GRAY_ZONE_UPPER_BAND.md)
@@ -27,6 +30,14 @@ public record FaqGrayZoneSearchResponse(List<Candidate> questionOnly, List<Candi
 
     private static List<Candidate> judgingAll(List<Candidate> candidates) {
         return candidates.stream().map(candidate -> new Candidate(candidate.result(), true)).toList();
+    }
+
+    // 판정 없이 통과하는 후보의 FAQ 번호. 두 벡터에 같은 FAQ가 있으면 한 쪽만 바로 통과여도 들어간다
+    public Set<Long> passedWithoutJudgmentFaqIds() {
+        return Stream.concat(questionOnly.stream(), questionAnswer.stream())
+                .filter(candidate -> !candidate.needsJudgment())
+                .map(candidate -> candidate.result().faqId())
+                .collect(Collectors.toSet());
     }
 
     // 판정 없이 모두 통과로 볼 결과. 회색 구간을 지원하지 않는 검색 구현이 쓴다

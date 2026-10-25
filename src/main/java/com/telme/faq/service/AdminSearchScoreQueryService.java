@@ -39,7 +39,7 @@ public class AdminSearchScoreQueryService {
         SearchProperties.GrayZone zone = searchProperties.grayZone();
         return new AdminSearchScoreResponse.GrayZone(zone.enabled(), zone.qaPass(), zone.qaFloor(),
                 zone.questionPass(), zone.questionFloor(), outcome.recorded(), outcome.passedDirectly(),
-                outcome.passedAfterJudgment(), outcome.rejectedByJudge(), outcome.belowFloor(), outcome.refinedPassed());
+                outcome.passedByJudge(), outcome.rejectedByJudge(), outcome.belowFloor(), outcome.refinedPassed());
     }
     
     // 검색이 없던 칸도 0으로 채워 그래프 막대가 항상 같은 자리에 오게 한다

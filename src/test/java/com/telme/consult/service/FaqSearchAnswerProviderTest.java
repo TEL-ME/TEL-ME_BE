@@ -838,7 +838,7 @@ class FaqSearchAnswerProviderTest {
                 FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
                 .prepare(input(), false);
 
-        verify(searches).recordGrayZoneOutcome(7L, true, true);
+        verify(searches).recordGrayZoneOutcome(7L, true, true, true);
     }
 
     @Test
@@ -857,7 +857,53 @@ class FaqSearchAnswerProviderTest {
                 .prepare(input(), false);
 
         // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 남는다
-        verify(searches, times(2)).recordGrayZoneOutcome(7L, false, false);
+        verify(searches, times(2)).recordGrayZoneOutcome(7L, false, false, false);
+    }
+
+    @Test
+    @DisplayName("판정기가 거절한 후보와 바로 통과한 후보가 섞이면 근거가 남아도 판정으로 통과한 검색으로 남기지 않는다")
+    void 바로_통과가_섞이면_판정으로_통과가_아니다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var rejected = new FaqSearchResponse(9L, "USIM-0001", "USIM", "유심", "답변", 0.75, 1, null, 1, "Q_A");
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), false),
+                        new FaqGrayZoneSearchResponse.Candidate(rejected, true)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(9L, "USIM-0001", "Q_A", 0.75, true,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, true, true, false);
+    }
+
+    @Test
+    @DisplayName("판정으로 살린 FAQ가 다른 벡터에서 바로 통과한 FAQ와 같으면 판정으로 통과한 검색으로 남기지 않는다")
+    void 같은_FAQ가_바로_통과했으면_판정으로_통과가_아니다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        // 질문 벡터에서는 판정 필요, Q_A 벡터에서는 통과 선 이상인 같은 FAQ(1번)
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), true)),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), false)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(1L, null, "QUESTION_ONLY", 0.85, false,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.ANSWERABLE, true, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, true, true, false);
     }
 
     @Test

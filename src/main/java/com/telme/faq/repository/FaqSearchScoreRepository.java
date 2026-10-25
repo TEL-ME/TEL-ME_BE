@@ -23,9 +23,10 @@ public class FaqSearchScoreRepository {
     }
 
     // 회색 구간 판정 뒤 결과(V46)로 센 건수. 결과를 남긴 검색(judged가 NULL이 아닌 것)만 센다.
-    // passedDirectly: 판정 없이 통과, passedAfterJudgment: 판정을 거쳐 근거를 찾음(통과 선 이상 후보가 함께 있었을 수 있다),
-    // rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음, belowFloor: 후보가 모두 아래 선 미만이라 판정 없이 근거 없음
-    public record Outcome(long recorded, long passedDirectly, long passedAfterJudgment, long rejectedByJudge,
+    // 네 건수는 겹치지 않는다. passedDirectly: 근거에 판정 없이 통과한 FAQ가 있음(판정한 후보가 함께 있었어도 여기),
+    // passedByJudge: 근거가 모두 판정을 거친 후보, rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음,
+    // belowFloor: 후보가 모두 아래 선 미만이라 판정 없이 근거 없음
+    public record Outcome(long recorded, long passedDirectly, long passedByJudge, long rejectedByJudge,
             long belowFloor, long refinedPassed) {
     }
     
@@ -40,12 +41,12 @@ public class FaqSearchScoreRepository {
                 + "VALUES (?, ?, ?, ?) RETURNING search_score_id", Long.class, kind.name(), qaTopScore, qaThreshold, passed);
     }
 
-    // 판정기를 거쳤는지(judged)와 판정 뒤 근거로 쓴 FAQ가 있었는지(finalPassed)를 남긴다. save와 같은 이유로 따로 저장한다.
-    // 이미 지워진 기록이면 0을 돌려준다
+    // 판정기를 거쳤는지(judged), 판정 뒤 근거로 쓴 FAQ가 있었는지(finalPassed), 그 근거가 모두 판정을 거친 후보인지
+    // (passedByJudge)를 남긴다. save와 같은 이유로 따로 저장한다. 이미 지워진 기록이면 0을 돌려준다
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1)
-    public int markOutcome(long searchScoreId, boolean judged, boolean finalPassed) {
-        return jdbcTemplate.update("UPDATE faq_search_scores SET judged = ?, final_passed = ? WHERE search_score_id = ?",
-                judged, finalPassed, searchScoreId);
+    public int markOutcome(long searchScoreId, boolean judged, boolean finalPassed, boolean passedByJudge) {
+        return jdbcTemplate.update("UPDATE faq_search_scores SET judged = ?, final_passed = ?, passed_by_judge = ? "
+                + "WHERE search_score_id = ?", judged, finalPassed, passedByJudge, searchScoreId);
     }
 
     public int deleteCreatedBefore(Instant cutoff) {
@@ -66,8 +67,8 @@ public class FaqSearchScoreRepository {
                        count(*) FILTER (WHERE kind = 'REFINED' AND passed) AS refined_passed,
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND qa_top_score >= qa_threshold) AS above_threshold,
                        count(judged) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED')) AS outcome_recorded,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND NOT judged AND final_passed) AS passed_directly,
-                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND judged AND final_passed) AS passed_after_judgment,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND final_passed AND NOT passed_by_judge) AS passed_directly,
+                       count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND passed_by_judge) AS passed_by_judge,
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND judged AND NOT final_passed) AS rejected_by_judge,
                        count(*) FILTER (WHERE kind IN ('ORIGINAL', 'RESOLVED') AND NOT judged AND NOT final_passed) AS below_floor,
                        count(*) FILTER (WHERE kind = 'REFINED' AND final_passed) AS refined_final_passed
@@ -76,7 +77,7 @@ public class FaqSearchScoreRepository {
                 """, (rs, i) -> new Summary(rs.getLong("total"), rs.getLong("scored"), rs.getLong("passed"),
                       rs.getLong("refined_passed"), rs.getLong("above_threshold"),
                       new Outcome(rs.getLong("outcome_recorded"), rs.getLong("passed_directly"),
-                              rs.getLong("passed_after_judgment"), rs.getLong("rejected_by_judge"),
+                              rs.getLong("passed_by_judge"), rs.getLong("rejected_by_judge"),
                               rs.getLong("below_floor"), rs.getLong("refined_final_passed"))),
                 Timestamp.from(from), Timestamp.from(to));
     }
