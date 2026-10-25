@@ -25,13 +25,22 @@ public class FaqSearchScoreRepository {
     public record BucketCount(int bucket, long count) {
     }
     
-    // 검색이 바깥 트랜잭션 안에서 불려도 기록 실패가 그 트랜잭션을 망치지 않도록 따로 저장한다
+    // 검색이 바깥 트랜잭션 안에서 불려도 기록 실패가 그 트랜잭션을 망치지 않도록 따로 저장한다.
+    // 회색 구간 판정이 끝난 뒤 같은 기록에 결과를 채울 수 있게 기록 번호를 돌려준다
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1)
-    public void save(FaqSearchKind kind, Double qaTopScore, boolean passed, Double qaThreshold) {
-        jdbcTemplate.update("INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed) "
-                + "VALUES (?, ?, ?, ?)", kind.name(), qaTopScore, qaThreshold, passed);
+    public Long save(FaqSearchKind kind, Double qaTopScore, boolean passed, Double qaThreshold) {
+        return jdbcTemplate.queryForObject("INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed) "
+                + "VALUES (?, ?, ?, ?) RETURNING search_score_id", Long.class, kind.name(), qaTopScore, qaThreshold, passed);
     }
-    
+
+    // 판정기를 거쳤는지(judged)와 판정 뒤 근거로 쓴 FAQ가 있었는지(finalPassed)를 남긴다. save와 같은 이유로 따로 저장한다.
+    // 이미 지워진 기록이면 0을 돌려준다
+    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1)
+    public int markOutcome(long searchScoreId, boolean judged, boolean finalPassed) {
+        return jdbcTemplate.update("UPDATE faq_search_scores SET judged = ?, final_passed = ? WHERE search_score_id = ?",
+                judged, finalPassed, searchScoreId);
+    }
+
     public int deleteCreatedBefore(Instant cutoff) {
         return jdbcTemplate.update("DELETE FROM faq_search_scores WHERE created_at < ?", Timestamp.from(cutoff));
     }

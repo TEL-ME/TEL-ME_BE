@@ -402,6 +402,33 @@ class PgvectorFaqSearchServiceTest {
     }
 
     @Test
+    @DisplayName("회색 구간 검색은 판정 결과를 채울 수 있게 점수 기록 번호를 함께 돌려준다")
+    void 회색_구간_검색은_기록_번호를_돌려준다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.25)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of());
+        when(scoreRepository.save(any(), any(), anyBoolean(), anyDouble())).thenReturn(7L);
+
+        FaqGrayZoneSearchResponse result = grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
+
+        assertThat(result.searchScoreId()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("점수 기록이 실패하면 기록 번호 없이 회색 구간 결과만 돌려준다")
+    void 회색_구간_기록_실패면_번호가_없다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.25)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of());
+        doThrow(new IllegalStateException("db down")).when(scoreRepository).save(any(), any(), anyBoolean(), anyDouble());
+
+        FaqGrayZoneSearchResponse result = grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
+
+        assertThat(result.searchScoreId()).isNull();
+        assertThat(result.questionAnswer()).extracting(c -> c.result().faqId()).containsExactly(1L);
+    }
+
+    @Test
     @DisplayName("회색 구간을 지원하지 않는 구현은 기존 검색 결과를 모두 통과로 돌려준다")
     void 기본_구현은_모두_통과() {
         FaqSearchResponse found = new FaqSearchResponse(1L, "BILLING-0001", "BILLING", "질문", "답변", 0.9, 1,
