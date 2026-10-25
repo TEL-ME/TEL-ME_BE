@@ -82,6 +82,19 @@ public class PgvectorFaqSearchService implements FaqSearchService {
                 searchScoreId);
     }
 
+    // 기록 실패가 답변을 막지 않도록 recordScore처럼 여기서 삼킨다
+    @Override
+    public void recordGrayZoneOutcome(Long searchScoreId, boolean judged, boolean finalPassed) {
+        if (searchScoreId == null) {
+            return;
+        }
+        try {
+            scoreRepository.markOutcome(searchScoreId, judged, finalPassed);
+        } catch (RuntimeException e) {
+            log.warn("[PgvectorFaqSearchService] 검색 판정 결과 기록 실패 searchScoreId={}", searchScoreId, e);
+        }
+    }
+
     private List<FaqGrayZoneSearchResponse.Candidate> toCandidates(
             List<FaqNearestMatch> matches, double pass, double floor, FaqEmbeddingTextVariant variant) {
         return toResponses(matches, floor, variant).stream()

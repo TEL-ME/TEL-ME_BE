@@ -821,6 +821,46 @@ class FaqSearchAnswerProviderTest {
     }
 
     @Test
+    @DisplayName("회색 구간 판정이 끝나면 판정 여부와 최종 근거 여부를 검색 점수 기록에 남긴다")
+    void 회색_구간_판정_결과를_점수_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), true)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(1L, "ROAMING-0001", "Q_A", 0.75, false,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.ANSWERABLE, true, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, true, true);
+    }
+
+    @Test
+    @DisplayName("판정 없이 근거도 못 찾은 회색 구간 검색은 판정 안 함, 근거 없음으로 남긴다")
+    void 판정_없이_빈_검색도_점수_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(), List.of(), 7L));
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of());
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 남는다
+        verify(searches, times(2)).recordGrayZoneOutcome(7L, false, false);
+    }
+
+    @Test
     @DisplayName("재검색 후보는 통과 선 이상이어도 모두 판정하고, 원문 검색 후보는 점수대로 둔다")
     void 재검색_후보는_모두_판정한다() {
         FaqSearchService searches = mock(FaqSearchService.class);
