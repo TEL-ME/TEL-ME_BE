@@ -24,6 +24,7 @@ import com.telme.faq.dto.req.FaqSearchKind;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.faq.service.FaqSearchService;
 import com.telme.consult.exception.FaqAnswerSearchException;
 import com.telme.llm.exception.LlmStreamCancelledException;
@@ -818,6 +819,92 @@ class FaqSearchAnswerProviderTest {
                 .containsKey("elapsedMs");
         assertThat((Map<String, Object>) recorded.getAllValues().get(1))
                 .containsEntry("query", "로밍 신청").containsEntry("kind", "REFINED");
+    }
+
+    @Test
+    @DisplayName("회색 구간 판정이 끝나면 판정 뒤 결과를 검색 점수 기록에 남긴다")
+    void 회색_구간_판정_결과를_점수_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), true)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(1L, "ROAMING-0001", "Q_A", 0.75, false,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.ANSWERABLE, true, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_BY_JUDGE);
+    }
+
+    @Test
+    @DisplayName("판정 없이 근거도 못 찾은 회색 구간 검색은 아래 선 미만으로 남긴다")
+    void 판정_없이_빈_검색도_점수_기록에_남긴다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(), List.of(), 7L));
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(), List.of());
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        // 원문 검색이 비어 재검색까지 하므로 검색마다 한 번씩 남는다
+        verify(searches, times(2)).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.BELOW_FLOOR);
+    }
+
+    @Test
+    @DisplayName("판정기가 거절한 후보와 바로 통과한 후보가 섞이면 근거가 남아도 바로 통과로 남긴다")
+    void 바로_통과가_섞이면_판정으로_통과가_아니다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        var rejected = new FaqSearchResponse(9L, "USIM-0001", "USIM", "유심", "답변", 0.75, 1, null, 1, "Q_A");
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(List.of(),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), false),
+                        new FaqGrayZoneSearchResponse.Candidate(rejected, true)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(9L, "USIM-0001", "Q_A", 0.75, true,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.NOT_ANSWERABLE, false, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_DIRECTLY);
+    }
+
+    @Test
+    @DisplayName("판정으로 살린 FAQ가 다른 벡터에서 바로 통과한 FAQ와 같으면 바로 통과로 남긴다")
+    void 같은_FAQ가_바로_통과했으면_판정으로_통과가_아니다() {
+        FaqSearchService searches = mock(FaqSearchService.class);
+        var answers = mock(FaqSearchAnswerProvider.SearchResultAnswerGenerator.class);
+        // 질문 벡터에서는 판정 필요, Q_A 벡터에서는 통과 선 이상인 같은 FAQ(1번)
+        when(searches.searchGrayZone(any())).thenReturn(new FaqGrayZoneSearchResponse(
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), true)),
+                List.of(new FaqGrayZoneSearchResponse.Candidate(source(), false)), 7L));
+        var judgment = new FaqGrayZoneSelector.Judgment(1L, null, "QUESTION_ONLY", 0.85, false,
+                com.telme.rag.service.FaqEvidenceJudge.Verdict.ANSWERABLE, true, false, 1800L);
+        FaqGrayZoneSelector selector = (executionId, consultRequestId, question, candidates, topK) ->
+                new FaqGrayZoneSelector.Selection(List.of(source()), List.of(judgment));
+
+        new FaqSearchAnswerProvider(searches, answers, ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new AnswerContextConverter(), null, RagSearchResultAnswerGenerator.SuggestedQuestions.none(),
+                FaqSearchAnswerProvider.RefinedQuerySelector.unchecked(), selector)
+                .prepare(input(), false);
+
+        verify(searches).recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_DIRECTLY);
     }
 
     @Test

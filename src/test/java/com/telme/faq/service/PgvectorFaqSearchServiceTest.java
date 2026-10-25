@@ -1,11 +1,13 @@
 package com.telme.faq.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -25,6 +27,7 @@ import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
 import com.telme.faq.entity.Faq;
 import com.telme.faq.entity.FaqEmbedding;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import com.telme.faq.repository.FaqEmbeddingRepository;
 import com.telme.faq.repository.FaqNearestMatch;
 import com.telme.faq.repository.FaqSearchScoreRepository;
@@ -399,6 +402,57 @@ class PgvectorFaqSearchServiceTest {
         grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
 
         verify(scoreRepository).save(FaqSearchKind.ORIGINAL, 0.375, false, THRESHOLD);
+    }
+
+    @Test
+    @DisplayName("회색 구간 검색은 판정 결과를 채울 수 있게 점수 기록 번호를 함께 돌려준다")
+    void 회색_구간_검색은_기록_번호를_돌려준다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.25)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of());
+        when(scoreRepository.save(any(), any(), anyBoolean(), anyDouble())).thenReturn(7L);
+
+        FaqGrayZoneSearchResponse result = grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
+
+        assertThat(result.searchScoreId()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("점수 기록이 실패하면 기록 번호 없이 회색 구간 결과만 돌려준다")
+    void 회색_구간_기록_실패면_번호가_없다() {
+        when(embeddingClient.embed("질문")).thenReturn(QUERY_VECTOR);
+        when(repository.findNearest(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of(matchOf(1L, "BILLING", "질문", 0.25)));
+        when(repository.findNearestByQuestionVector(QUERY_VECTOR, 3, MODEL)).thenReturn(List.of());
+        doThrow(new IllegalStateException("db down")).when(scoreRepository).save(any(), any(), anyBoolean(), anyDouble());
+
+        FaqGrayZoneSearchResponse result = grayZoneService.searchGrayZone(new FaqSearchRequest("질문", 3, FaqSearchKind.ORIGINAL));
+
+        assertThat(result.searchScoreId()).isNull();
+        assertThat(result.questionAnswer()).extracting(c -> c.result().faqId()).containsExactly(1L);
+    }
+
+    @Test
+    @DisplayName("판정 결과는 검색 때 남긴 같은 기록에 채운다")
+    void 판정_결과를_같은_기록에_채운다() {
+        grayZoneService.recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_BY_JUDGE);
+
+        verify(scoreRepository).markOutcome(7L, FaqGrayZoneOutcome.PASSED_BY_JUDGE);
+    }
+
+    @Test
+    @DisplayName("기록 번호가 없으면 판정 결과를 남기지 않는다")
+    void 기록_번호가_없으면_판정_결과를_남기지_않는다() {
+        grayZoneService.recordGrayZoneOutcome(null, FaqGrayZoneOutcome.PASSED_BY_JUDGE);
+
+        verifyNoInteractions(scoreRepository);
+    }
+
+    @Test
+    @DisplayName("판정 결과 기록이 실패해도 예외를 밖으로 내보내지 않는다")
+    void 판정_결과_기록_실패를_삼킨다() {
+        doThrow(new IllegalStateException("db down")).when(scoreRepository).markOutcome(anyLong(), any());
+
+        assertThatCode(() -> grayZoneService.recordGrayZoneOutcome(7L, FaqGrayZoneOutcome.PASSED_BY_JUDGE)).doesNotThrowAnyException();
     }
 
     @Test

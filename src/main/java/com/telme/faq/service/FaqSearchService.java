@@ -3,6 +3,7 @@ package com.telme.faq.service;
 import com.telme.faq.dto.req.FaqSearchRequest;
 import com.telme.faq.dto.res.FaqGrayZoneSearchResponse;
 import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.entity.FaqGrayZoneOutcome;
 import java.util.List;
 
 public interface FaqSearchService {
@@ -23,5 +24,10 @@ public interface FaqSearchService {
     // 회색 구간을 지원하지 않는 구현은 기존 검색 결과를 모두 통과로 돌려준다
     default FaqGrayZoneSearchResponse searchGrayZone(FaqSearchRequest request) {
         return FaqGrayZoneSearchResponse.allPassed(search(request));
+    }
+
+    // 회색 구간 판정이 끝난 뒤 searchGrayZone이 남긴 점수 기록에 판정 뒤 결과를 채운다.
+    // 기록 번호가 없거나 점수를 기록하지 않는 구현은 아무것도 하지 않는다
+    default void recordGrayZoneOutcome(Long searchScoreId, FaqGrayZoneOutcome outcome) {
     }
 }

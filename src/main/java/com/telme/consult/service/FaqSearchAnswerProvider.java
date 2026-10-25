@@ -381,6 +381,8 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
                 "judgments", selection.judgments(),
                 "elapsedMs", (System.nanoTime() - started) / 1_000_000,
                 "consultRequestId", input.consultRequestId()));
+        // 관리자 점수 통계가 판정 전 임계값이 아니라 실제로 근거를 찾았는지로도 셀 수 있게 남긴다(TELME-233)
+        searches.recordGrayZoneOutcome(candidates.searchScoreId(), selection.outcome(candidates));
         return selection.results();
     }
 
