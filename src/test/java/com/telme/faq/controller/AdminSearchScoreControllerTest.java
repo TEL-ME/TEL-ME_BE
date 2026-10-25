@@ -84,13 +84,16 @@ class AdminSearchScoreControllerTest {
     @DisplayName("ADMIN이면 200과 임계값·분포를 반환한다")
     void 관리자는_200을_반환한다() throws Exception {
         when(adminSearchScoreQueryService.getScores(any())).thenReturn(new AdminSearchScoreResponse(
-                0.72, 10, 9, 7, 1, 6, List.of(new AdminSearchScoreResponse.Bucket(0.7, 0.75, 3))));
+                0.72, 10, 9, 7, 1, 6, List.of(new AdminSearchScoreResponse.Bucket(0.7, 0.75, 3)),
+                new AdminSearchScoreResponse.GrayZone(true, 0.80, 0.69, 0.90, 0.80, 8, 4, 2, 1, 1, 1)));
 
         mockMvc.perform(get(URL).param("from", "2026-10-01T00:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result.threshold").value(0.72))
                 .andExpect(jsonPath("$.result.aboveThreshold").value(6))
-                .andExpect(jsonPath("$.result.buckets[0].count").value(3));
+                .andExpect(jsonPath("$.result.buckets[0].count").value(3))
+                .andExpect(jsonPath("$.result.grayZone.qaFloor").value(0.69))
+                .andExpect(jsonPath("$.result.grayZone.passedAfterJudgment").value(2));
     }
 
     @Test

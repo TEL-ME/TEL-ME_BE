@@ -5,6 +5,7 @@ import com.telme.faq.dto.req.AdminSearchScoreRequest;
 import com.telme.faq.dto.res.AdminSearchScoreResponse;
 import com.telme.faq.repository.FaqSearchScoreRepository;
 import com.telme.faq.repository.FaqSearchScoreRepository.BucketCount;
+import com.telme.faq.repository.FaqSearchScoreRepository.Outcome;
 import com.telme.faq.repository.FaqSearchScoreRepository.Summary;
 import java.time.Instant;
 import java.util.List;
@@ -31,7 +32,14 @@ public class AdminSearchScoreQueryService {
         Summary summary = repository.findSummary(from, to);
         return new AdminSearchScoreResponse(threshold, summary.total(), summary.scored(), summary.passed(), 
                 summary.refinedPassed(), summary.aboveThreshold(), 
-                toBuckets(repository.findBuckets(from, to)));
+                toBuckets(repository.findBuckets(from, to)), toGrayZone(summary.outcome()));
+    }
+
+    private AdminSearchScoreResponse.GrayZone toGrayZone(Outcome outcome) {
+        SearchProperties.GrayZone zone = searchProperties.grayZone();
+        return new AdminSearchScoreResponse.GrayZone(zone.enabled(), zone.qaPass(), zone.qaFloor(),
+                zone.questionPass(), zone.questionFloor(), outcome.recorded(), outcome.passedDirectly(),
+                outcome.passedAfterJudgment(), outcome.rejectedByJudge(), outcome.belowFloor(), outcome.refinedPassed());
     }
     
     // 검색이 없던 칸도 0으로 채워 그래프 막대가 항상 같은 자리에 오게 한다

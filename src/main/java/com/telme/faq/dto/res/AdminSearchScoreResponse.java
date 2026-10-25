@@ -8,6 +8,7 @@ import java.util.List;
 //passed: 첫 검색으로 근거를 찾은 질문 수(이중 벡터면 질문 벡터로 통과한 것 포함),
 //refinedPassed: 첫 검색은 비었지만 정제 질문으로 근거를 찾은 질문 수,
 //aboveThreshold: Q_A 1위 점수가 검색 당시 임계값 이상인 질문 수. buckets는 Q_A 1위 점수 분포(0~1, 0.05 간격)
+//threshold·passed·refinedPassed·aboveThreshold는 회색 구간 판정 전 기준(비교용)이고, 판정 뒤 실제 결과는 grayZone에 있다
 public record AdminSearchScoreResponse(
         double threshold,
         long total,
@@ -15,9 +16,29 @@ public record AdminSearchScoreResponse(
         long passed,
         long refinedPassed,
         long aboveThreshold,
-        List<Bucket> buckets
+        List<Bucket> buckets,
+        GrayZone grayZone
         ) {
     // min 이상 max 미만. 마지막 칸만 1.0을 포함한다
     public record Bucket(double min, double max, long count) {
+    }
+
+    // 선(qaPass 등)은 현재 설정값이다. 건수는 판정 결과를 남긴 질문만 센다(recorded = 아래 네 건수의 합).
+    // passedDirectly: 판정 없이 통과, passedAfterJudgment: 판정을 거쳐 근거를 찾음(통과 선 이상 후보가 함께 있었을 수 있다),
+    // rejectedByJudge: 판정한 후보를 모두 거절해 근거 없음, belowFloor: 후보가 모두 아래 선 미만이라 근거 없음,
+    // refinedPassed: 첫 검색은 비었지만 정제 질문 검색에서 판정까지 거쳐 근거를 찾은 질문 수
+    public record GrayZone(
+            boolean enabled,
+            double qaPass,
+            double qaFloor,
+            double questionPass,
+            double questionFloor,
+            long recorded,
+            long passedDirectly,
+            long passedAfterJudgment,
+            long rejectedByJudge,
+            long belowFloor,
+            long refinedPassed
+            ) {
     }
 }
