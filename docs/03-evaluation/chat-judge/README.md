@@ -167,6 +167,8 @@ python -X utf8 -m unittest discover -s scripts/chat_judge -p "test_*.py" -t .
 | [20261016-v2-judge-ensemble](results/20261016-v2-judge-ensemble/README.md) | v2 답변을 세 모델로 판정하고 결합, DeepSeek 리전 비교 |
 | [20261016-v2_1-service-data](results/20261016-v2_1-service-data/README.md) | 요금제 표 근거와 앱 고정 문구 규칙 반영 |
 | [20261016-flows-v1](results/20261016-flows-v1/README.md) | 흐름 평가셋 v1 첫 캡처와 판정(드러난 앱 문제) |
-| [20261017-label-fixes](results/20261017-label-fixes/README.md) | 라벨 수정과 기준 보완 뒤 재판정. **가장 최근 수치** |
+| [20261017-label-fixes](results/20261017-label-fixes/README.md) | 라벨 수정과 기준 보완 뒤 재판정 |
 | [20261017-situation-context](results/20261017-situation-context/README.md) | FAQ 질문 문장을 상황 맥락으로 넘기는 시험. 나빠지거나 같아서 되돌렸다 |
 | [20261018-answer-generation](results/20261018-answer-generation/README.md) | 답변 생성 모델(엑사원 vs gpt-oss) 채점과 사람 검토. 13번은 gpt-oss로 결정 |
+| [20261019-serving-t4](results/20261019-serving-t4/README.md) | 대체 서빙(Ollama vs vLLM)별 EXAONE 답변 정확도 |
+| [20261024-app-path-gptoss-exaone](results/20261024-app-path-gptoss-exaone/README.md) | 앱 전체 경로 gpt-oss vs 모든 단계 EXAONE, 갈린 턴 사람 검토와 판정 기준 7가지. **가장 최근 수치** |
