@@ -150,7 +150,7 @@ GPU 서버는 평소 꺼 두고, 5분 안에 대체가 2번 나면 켜며, 30분
 
 ## 측정으로 정한 결정
 
-<p align="center"><img src="docs/readme/results.svg" alt="라우팅, 검색, 근거 판정, 답변 생성, 되묻기, 문맥 해석, 장애 대체의 변경 전후 수치"></p>
+<p align="center"><img src="docs/readme/results.svg" alt="라우팅, 검색, 근거 판정, 답변 생성, 앱 전체 경로 답변, 되묻기, 문맥 해석, 장애 대체의 변경 전후 수치"></p>
 
 | 바꾼 것 | 이전 → 이후 | 조건 · 문서 |
 | --- | --- | --- |
@@ -158,13 +158,14 @@ GPU 서버는 평소 꺼 두고, 5분 안에 대체가 2번 나면 켜며, 30분
 | **검색** 단일 → 이중 벡터 | Recall@3 0.375 → **0.463**<br>Recall@1 0.312 → **0.412** | 긍정 질문 80문항 · [문서](docs/01-pipeline/03-retrieval/search-tuning.md) |
 | **근거 판정** 애매한 구간 판정기 | 정답 근거 61 → **74** / 110<br>엉뚱한 근거 10 → **2** / 68 | 실제 채팅 API · [문서](docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md) |
 | **답변 생성** EXAONE → gpt-oss | 통과율 43% → **73~74%** | 정답 근거 고정 217개, Judge 3종 · [문서](docs/03-evaluation/chat-judge/results/20261018-answer-generation/README.md) |
+| **앱 전체 경로** 모든 단계 EXAONE → gpt-oss | 통과율 39.4% → **78.5%**<br>흐름셋 49.5% → **69.9%** | 품질셋 307턴·흐름셋 93턴, 1회, Judge 3종 + 갈린 턴 사람 검토 · [문서](docs/03-evaluation/chat-judge/results/20261024-app-path-gptoss-exaone/README.md) |
 | **되묻기** 조건 뽑기 EXAONE → gpt-oss | 22% → **72~81%** | 평가셋 32건, 3회 · [문서](docs/01-pipeline/05-clarification/clarification-extraction-model.md) |
 | **문맥 해석** 후속 질문 규칙 보완 | 1 / 30 → **19** / 30 | 후속 질문 10건 × 3회 · [문서](docs/01-pipeline/02-context-routing/context-resolution.md) |
 | **답변 검사** 금액으로 막힌 답 재생성 | 틀린 금액 20 / 30 → **0** / 30 | 재현 입력 3개 × 10회 · [문서](docs/04-operations/gpt-oss-switch.md) |
 | **장애 대체** Ollama → vLLM | p95 27.6초 → **8.8초**<br>분당 18.1 → **54.0**턴 | 동시 대화 5개 · [문서](docs/04-operations/serving-comparison.md) |
 | **매장 검색** Haversine → PostGIS KNN | 92ms → **0.31ms** | 매장 100만 곳 · [문서](docs/02-features/store/store-nearest-search.md) |
 
-> 실제 고객 대화가 아니라 고정한 평가 문장으로 잰 값입니다. 근거 판정의 61 → 74는 요금제 질문을 요금제 업무로 보내기 전(#151) 값이며, 이후 같은 평가셋에서는 57 → 68입니다.
+> 실제 고객 대화가 아니라 고정한 평가 문장으로 잰 값입니다. 답변 생성의 73~74%는 정답 근거를 고정하고 생성 단계만 잰 값이고, 앱 전체 경로의 78.5%는 검색·라우팅까지 포함한 값입니다. 근거 판정의 61 → 74는 요금제 질문을 요금제 업무로 보내기 전(#151) 값이며, 이후 같은 평가셋에서는 57 → 68입니다.
 
 <br>
 
