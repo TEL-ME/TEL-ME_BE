@@ -160,7 +160,7 @@ public final class FaqSearchAnswerProvider implements AnswerProvider {
             var resolution = resolveComparison(input, original);
             boolean retried = false;
             // 비교 답변은 원문 검색 결과에서 그대로 인용할 FAQ를 고른다. 회색 구간 판정으로 결과가 바뀌면 인용하던 FAQ가
-            // 빠지거나 뒤로 밀려 답하지 못할 수 있다(docs/GRAY_ZONE_UPPER_BAND.md 5.7절). 그때만 판정을 붙이기 전
+            // 빠지거나 뒤로 밀려 답하지 못할 수 있다(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.7절). 그때만 판정을 붙이기 전
             // 검색 결과로 한 번 더 고른다. 인용문은 비교 답변기가 다시 확인하므로 판정이 뺀 FAQ가 들어와도 그대로 답하지 않는다
             if (resolution.answer() == null && grayZone != null) {
                 List<FaqSearchResponse> beforeGrayZone = search(input, input.originalUserQuery(),

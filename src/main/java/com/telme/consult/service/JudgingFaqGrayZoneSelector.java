@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
  * 판정 필요 후보를 FAQ마다 한 번씩 동시에 판정하고, 벡터별로 남긴 뒤 질문 벡터 우선으로 합친다.
  * 측정 기준 함수(scripts/gray_zone_upper_band_bedrock.py의 served)와 같은 순서다. 판정으로 빠진 자리는 다음 후보가 채운다.
  *
- * <p>판정 실패(시간 초과·호출 오류·응답 해석 실패)는 점수 구간마다 다르게 처리한다(docs/GRAY_ZONE_UPPER_BAND.md 4.3절).
+ * <p>판정 실패(시간 초과·호출 오류·응답 해석 실패)는 점수 구간마다 다르게 처리한다(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 4.3절).
  * 판정을 붙이기 전에도 버리던 아래쪽은 버리고, 바로 통과하던 위쪽(기존 임계값 이상)은 통과시켜 장애 때 지금과 같게 한다.
  */
 public final class JudgingFaqGrayZoneSelector implements FaqGrayZoneSelector {

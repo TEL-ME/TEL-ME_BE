@@ -71,7 +71,7 @@ import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse;
 import software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock;
 
 /** 실제 Chat API부터 상담 처리와 FAQ 검색까지 실행하고, Judge 입력을 별도 파일에 고정한다. */
-// 생성 서빙은 TELME_CHAT_JUDGE_LLM_PROVIDER로 바꿀 수 있다(ollama 또는 vllm, docs/SERVING_COMPARISON.md T4)
+// 생성 서빙은 TELME_CHAT_JUDGE_LLM_PROVIDER로 바꿀 수 있다(ollama 또는 vllm, docs/04-operations/serving-comparison.md T4)
 @SpringBootTest(properties = {
         "llm.provider=${TELME_CHAT_JUDGE_LLM_PROVIDER:ollama}",
         "telme.consult.persistence-enabled=true",

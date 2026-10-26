@@ -17,7 +17,7 @@ import java.util.Optional;
  *
  * <p>사용자 문장으로 질문+답변 벡터(Q_A) 후보를 찾아 점수가 하한 이상인 첫 FAQ를 쓴다. 2·3위 후보는 대부분
  * 엉뚱해서 1개만 보여 준다. 질문을 그대로 보내도 답이 안 나오는 FAQ는 버튼을 눌러도 답이 없으므로 건너뛰고
- * 다음 후보를 본다. 설계·측정: docs/FOLLOWUP_RECOMMENDATION.md 11절
+ * 다음 후보를 본다. 설계·측정: docs/01-pipeline/06-answer-generation/followup-recommendation.md 11절
  */
 @Slf4j
 public final class FaqCandidateNoAnswerSuggestions implements NoAnswerSuggestions {

@@ -15,7 +15,7 @@ import java.util.Objects;
  *
  * <p>라우터가 나눈 하위 질문 문장은 짧아 그대로 보내면 검색을 통과하지 못하므로 버튼으로 쓰지 않는다.
  * FAQ 쪽은 그 문장과 가까운 실제 FAQ 질문, 매장 쪽은 매장 버튼 문장(지역·업무 포함)으로 만든다.
- * 설계·측정: docs/FOLLOWUP_RECOMMENDATION.md 11.6절
+ * 설계·측정: docs/01-pipeline/06-answer-generation/followup-recommendation.md 11.6절
  */
 public final class CompoundPartSuggestions implements CompoundQuestionSuggestions {
     private static final String LOCATION_KEY = "location";

@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceResolver {
-    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 250이면 JSON이 끊긴 사례가 있다(docs/EVIDENCE_RESOLVER_COMPARISON.md)
+    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 250이면 JSON이 끊긴 사례가 있다(docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md)
     private static final int MAX_OUTPUT_TOKENS = 512;
     private static final Pattern FAQ_ID = Pattern.compile("(?:ID\\s*)?(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUESTION_WORD = Pattern.compile("[가-힣A-Za-z0-9]{2,}");
@@ -41,7 +41,7 @@ public class LlmFaqCandidateEvidenceResolver implements FaqCandidateEvidenceReso
             """;
 
     /**
-     * 판정 방식(TELME-184, docs/EVIDENCE_RESOLVER_COMPARISON.md). questionTermCheck: 질문 낱말이 FAQ 문답에 모두 있어야
+     * 판정 방식(TELME-184, docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md). questionTermCheck: 질문 낱말이 FAQ 문답에 모두 있어야
      * 통과(TELME-87). customerMessageContext: 고객 원문을 함께 넘긴다. verifier: 모델이 고른 FAQ를 한 번 더 확인한다(없으면 생략).
      */
     public record Options(boolean questionTermCheck, boolean customerMessageContext, CandidateVerifier verifier) {

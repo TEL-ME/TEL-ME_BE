@@ -4,7 +4,7 @@
 
 측정은 실제 배포 구성(앱 EC2 → GPU EC2, RDS, us-east-1 Bedrock)에서 하고, 숫자는 앱(채팅 API)으로 잰다. 로컬 PC에서 잰 엑사원 시간은 쓰지 않는다.
 
-2026-10-19 측정 결과와 판단(vLLM + TEI)은 [docs/SERVING_COMPARISON.md](../../docs/SERVING_COMPARISON.md)에 있다.
+2026-10-19 측정 결과와 판단(vLLM + TEI)은 [docs/04-operations/serving-comparison.md](../../docs/04-operations/serving-comparison.md)에 있다.
 
 ## 파일
 
@@ -18,11 +18,11 @@
 | `calls.sql` | 측정 구간의 LLM 호출을 서빙·작업·결과별로 세고, 서버가 잰 턴 시간을 본다 |
 | `run.sh`, `series.sh` | 앱 EC2에서 시나리오 하나(`app.env`를 만들고 앱을 다시 띄운 뒤 부하·집계) 또는 여러 개를 차례로 돈다 |
 | `embed_check.py` | T2: 같은 질문을 Ollama·TEI bge-m3로 임베딩해 벡터와 검색 상위 FAQ를 비교한다 |
-| `capture_remote.py` | T4: 이 PC에서 캡처 프로브로 서비스 품질셋 답변을 모으고, EXAONE·임베딩만 GPU EC2를 부른다. 판정은 `docs/chat-judge/SERVICE_EVALUATION.md` 2~3절 |
+| `capture_remote.py` | T4: 이 PC에서 캡처 프로브로 서비스 품질셋 답변을 모으고, EXAONE·임베딩만 GPU EC2를 부른다. 판정은 `docs/03-evaluation/chat-judge/service-evaluation.md` 2~3절 |
 
 ## 앱 설정 (`app.env`)
 
-공통으로 DB(RDS), 전환 플래그(`docs/GPT_OSS_SWITCH.md` "전환 켜기")를 넣고 서빙만 바꾼다. GPU EC2 주소는 사설 IP다.
+공통으로 DB(RDS), 전환 플래그(`docs/04-operations/gpt-oss-switch.md` "전환 켜기")를 넣고 서빙만 바꾼다. GPU EC2 주소는 사설 IP다.
 
 | | Ollama | vLLM + TEI |
 |---|---|---|

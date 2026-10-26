@@ -22,7 +22,7 @@ class JudgeValidationTest(unittest.TestCase):
                             for search in turn["searches"] for result in search["results"]))
 
     def test_review_form_has_no_existing_labels(self):
-        form = (ROOT / "docs/chat-judge/judge-validation-v1-review-form.md").read_text(encoding="utf-8")
+        form = (ROOT / "docs/03-evaluation/chat-judge/judge-validation-v1-review-form.md").read_text(encoding="utf-8")
         self.assertNotIn("SHOULD_ABSTAIN |", form)
         for item in json.loads(validation.DATASET.read_text(encoding="utf-8"))["items"][:5]:
             self.assertIn(f"`{item['id']}`", form)

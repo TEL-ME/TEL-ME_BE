@@ -35,7 +35,7 @@ public class ConsultTurnRoutingConfiguration {
 
     // 판정 없이 기존 통과 임계값(search.similarity-threshold, search.dual-vector)으로 원문을 검색한다.
     // 회색 구간(search.gray-zone)을 켜도 재확인 기준은 그대로라, 판정기로만 살릴 수 있는 점수의 질문은 UNKNOWN으로 남는다
-    // (docs/GRAY_ZONE_UPPER_BAND.md 8.2절). 점수 기록은 남기지 않는다(kind 없음)
+    // (docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 8.2절). 점수 기록은 남기지 않는다(kind 없음)
     @Bean
     @ConditionalOnMissingBean(UnknownFaqRecheck.class)
     UnknownFaqRecheck consultUnknownFaqRecheck(FaqSearchService searches) {

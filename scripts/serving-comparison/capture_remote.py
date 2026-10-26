@@ -2,7 +2,7 @@
 
 S1(Bedrock 즉시 장애)과 같은 조건으로, Bedrock을 끄고 모든 LLM 호출을 엑사원이 받게 한다. 회색 구간 판정과 후보 판정기는
 Bedrock 전용이라 장애 때처럼 꺼진 상태(예전 기준)가 된다. 캡처는 이 PC의 평가 DB(telme-flow-postgres 5440,
-telme_judge_eval)에서 돌고, 엑사원·임베딩만 GPU EC2를 부른다. 판정은 docs/chat-judge/SERVICE_EVALUATION.md 2~3절대로 한다.
+telme_judge_eval)에서 돌고, 엑사원·임베딩만 GPU EC2를 부른다. 판정은 docs/03-evaluation/chat-judge/service-evaluation.md 2~3절대로 한다.
 
 사용(저장소 루트에서): python -X utf8 scripts/serving-comparison/capture_remote.py --provider vllm --gpu <GPU 공인 IP> --out .measure/t4-vllm
 """

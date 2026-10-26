@@ -1,4 +1,4 @@
-"""TELME-182 요금제 질문 분류 비교(docs/PLAN_QUESTION_MODEL.md).
+"""TELME-182 요금제 질문 분류 비교(docs/02-features/plan/plan-question-model.md).
 
 select:  Judge 평가셋(TELME-180의 v2.2, 흐름 v2)에서 질문에 요금제 낱말(분류기의 낱말 검사와 같은 정규식)이 든 대화를 고른다.
 extract: 캡처(capture.json)의 실행 기록에서 분류 입력(planQuestionClassifications)을 꺼내 replay 입력을 만든다.

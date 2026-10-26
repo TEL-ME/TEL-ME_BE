@@ -24,11 +24,11 @@ public class RoutingLlmConfiguration {
         // 설정과 라우팅 모델이 어긋나면 값을 바꾸지 않고 경고만 남긴다
         if (usesBedrock && inventory) {
             log.warn("라우팅을 gpt-oss(Bedrock)로 부르는데 요청 개수 판정(ROUTING_REQUEST_INVENTORY_ENABLED)이 켜져 있다. "
-                    + "맞게 나뉜 질문을 다시 합칠 수 있다(docs/ROUTING_CALL_COMPARISON.md 2단계)");
+                    + "맞게 나뉜 질문을 다시 합칠 수 있다(docs/01-pipeline/02-context-routing/routing-call-comparison.md 2단계)");
         }
         if (!usesBedrock && !inventory) {
             log.warn("라우팅을 엑사원으로 부르는데 요청 개수 판정(ROUTING_REQUEST_INVENTORY_ENABLED)이 꺼져 있다. "
-                    + "질문을 잘못 나누는 경우가 늘 수 있다(docs/ROUTING_CALL_COMPARISON.md C절)");
+                    + "질문을 잘못 나누는 경우가 늘 수 있다(docs/01-pipeline/02-context-routing/routing-call-comparison.md C절)");
         }
         return usesBedrock ? new FallbackLlmClient(bedrock, exaone) : exaone;
     }

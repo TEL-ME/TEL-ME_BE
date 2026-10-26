@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // 회색 구간 검색 결과. 벡터별 상위 결과를 점수 구간으로 나눈 채 돌려준다(아래 선 미만은 이미 뺐다)
-// 호출하는 쪽이 판정 필요 후보를 판정한 뒤 DualVectorMerger로 합친다. 측정과 같은 순서다(docs/GRAY_ZONE_UPPER_BAND.md)
+// 호출하는 쪽이 판정 필요 후보를 판정한 뒤 DualVectorMerger로 합친다. 측정과 같은 순서다(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md)
 // searchScoreId는 이 검색의 점수 기록 번호다. 판정이 끝난 뒤 같은 기록에 결과를 채운다. 기록을 끄거나 실패하면 null
 public record FaqGrayZoneSearchResponse(List<Candidate> questionOnly, List<Candidate> questionAnswer, Long searchScoreId) {
 

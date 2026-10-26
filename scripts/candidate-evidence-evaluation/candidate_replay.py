@@ -1,4 +1,4 @@
-"""TELME-182 후보 근거 검증 비교(docs/EVIDENCE_RESOLVER_COMPARISON.md "복합 질문 입력 확인" 절).
+"""TELME-182 후보 근거 검증 비교(docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md "복합 질문 입력 확인" 절).
 
 extract: 캡처의 실행 기록에서 근거 검증 입력(faqCandidateEvidenceInputs의 문장·인용문 재시도 허용)과
          같은 상담의 후보(searchResults의 FAQ_CANDIDATE)를 묶어 replay 입력을 만든다.

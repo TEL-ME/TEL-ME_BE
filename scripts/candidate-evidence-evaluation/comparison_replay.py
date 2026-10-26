@@ -1,4 +1,4 @@
-"""TELME-184 비교 근거 검증 재확인(docs/EVIDENCE_RESOLVER_COMPARISON.md "비교 근거 검증 재확인" 절).
+"""TELME-184 비교 근거 검증 재확인(docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md "비교 근거 검증 재확인" 절).
 
 extract: 캡처의 실행 기록에서 비교 근거 검증 입력(comparisonEvidenceInputs의 첫 시도 문장, 원문 검색 결과는
          originalFaqIds 순서대로 같은 상담의 searchResults에서)을 꺼내

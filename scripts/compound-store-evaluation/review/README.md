@@ -1,6 +1,6 @@
 # 리뷰 반영 후 실측 원시 자료
 
-[FAQ와 매장 복합 상담 문서](../../../docs/COMPOUND_FAQ_STORE.md)의 리뷰 반영 실측 원시 자료다. 모든 실행은 같은 평가 DB와 모델에서 실제 Spring 채팅 API로 했다.
+[FAQ와 매장 복합 상담 문서](../../../docs/01-pipeline/compound-faq-store.md)의 리뷰 반영 실측 원시 자료다. 모든 실행은 같은 평가 DB와 모델에서 실제 Spring 채팅 API로 했다.
 
 | 파일 | 코드 | 내용 |
 | --- | --- | --- |

@@ -78,7 +78,7 @@ JSON만 출력하십시오.
 """
 
 # 운영 판정 프롬프트(evidence-check-v4, FaqEvidencePromptTemplates)와 같은 문자열이다. B3에 비교 규칙 한 줄을 더했다
-# (judge_stability_bedrock.py의 v4a, docs/GRAY_ZONE_UPPER_BAND.md 5.8절). 이 파일의 측정(3·4절)은 B3로 했다
+# (judge_stability_bedrock.py의 v4a, docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.8절). 이 파일의 측정(3·4절)은 B3로 했다
 B4_SYSTEM_PROMPT = """당신은 통신사 FAQ 검색 결과를 검수합니다.
 고객 질문에 답할 정보가 FAQ에 있는지 아래 순서대로 판단하십시오.
 
