@@ -137,6 +137,8 @@ variable "github_oidc_subjects" {
   default = [
     "repo:TEL-ME@326893416/TEL-ME_BE@1362451590:ref:refs/heads/develop",
     "repo:TEL-ME@326893416/TEL-ME_FE@1362451895:ref:refs/heads/develop",
+    "repo:TEL-ME@326893416/TEL-ME_BE@1362451590:ref:refs/heads/main",
+    "repo:TEL-ME@326893416/TEL-ME_FE@1362451895:ref:refs/heads/main",
   ]
 }
 
