@@ -29,10 +29,10 @@ env:
 jobs:
   deploy:
     # workflow_run의 branches 필터는 브랜치 이름만 본다. 포크에서 main이라는 이름으로 PR을 열어도 걸리므로
-    # 이 레포 main에 push된 커밋의 CI만 배포한다
+    # 이 레포 main에 push된 커밋의 CI만 배포한다. 수동 실행도 main을 골랐을 때만 배포한다
     if: >-
       vars.DEPLOY_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_repository.full_name == github.repository))
