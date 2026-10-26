@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="450" viewBox="0 0 1200 450" role="img" aria-labelledby="t d">
+  <title id="t">Bedrock 장애 대체 흐름</title>
+  <desc id="d">LLM 호출은 Bedrock gpt-oss로 보낸다. 실패하면 2초 뒤 한 번 재시도하고, 답변 생성의 첫 실패는 다시 시도를 안내하며, 그 밖의 호출은 EXAONE으로 대체한다. 5분 안에 대체가 2번 나면 GPU 서버를 켜고 30분 동안 쓰이지 않으면 끈다.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10z" fill="#9A929D"/>
+    </marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10z" fill="#C34074"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; fill: #2B262D; }
+    .title { font-size: 24px; font-weight: 800; }
+    .sub { font-size: 15px; fill: #6B6470; }
+    .h { font-size: 16px; font-weight: 800; }
+    .hw { font-size: 16px; font-weight: 800; fill: #FFFFFF; }
+    .d { font-size: 13px; fill: #4A444F; }
+    .dw { font-size: 13px; fill: #D9D3DB; }
+    .e { font-size: 12.5px; font-weight: 700; fill: #9A929D; }
+    .ep { font-size: 12.5px; font-weight: 700; fill: #C34074; }
+    .k { font-size: 13px; fill: #6B6470; }
+    .big { font-size: 28px; font-weight: 800; fill: #C34074; }
+    .was { font-size: 18px; font-weight: 700; fill: #9A929D; }
+    .step { font-size: 14.5px; font-weight: 800; }
+    .stepd { font-size: 12.5px; font-weight: 400; fill: #6B6470; }
+  </style>
+
+  <rect x="1" y="1" width="1198" height="448" rx="22" fill="#FFFFFF" stroke="#E6E1E7" stroke-width="2"/>
+  <text x="40" y="54" class="title">외부 LLM이 멈춰도 상담은 이어진다</text>
+  <text x="40" y="82" class="sub">평소에는 Bedrock gpt-oss가 답하고, 실패한 호출만 EXAONE으로 넘긴다. 실패가 반복되면 꺼 둔 GPU 서버를 자동으로 켠다</text>
+
+  <!-- 1행: 호출 → Bedrock → 성공 -->
+  <rect x="40" y="112" width="160" height="68" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+  <text x="60" y="141" class="h">LLM 호출</text>
+  <text x="60" y="163" class="d">문맥 · 라우팅 · 생성 등</text>
+
+  <rect x="240" y="112" width="250" height="68" rx="14" fill="#2B262D"/>
+  <text x="260" y="141" class="hw">Bedrock gpt-oss-120b</text>
+  <text x="260" y="163" class="dw">도쿄 리전 · 제한 시간 8초</text>
+
+  <rect x="560" y="112" width="140" height="68" rx="14" fill="#FBEAF1" stroke="#C34074" stroke-width="2"/>
+  <text x="580" y="141" class="h">답변 진행</text>
+  <text x="580" y="163" class="d">평소 경로</text>
+
+  <path d="M200 146 H234" stroke="#9A929D" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <path d="M490 146 H554" stroke="#C34074" stroke-width="2" fill="none" marker-end="url(#ap)"/>
+  <text x="508" y="138" class="ep">성공</text>
+
+  <!-- 결과 카드 -->
+  <rect x="740" y="104" width="420" height="84" rx="16" fill="#FBEAF1"/>
+  <text x="762" y="130" class="k">장애 재현 · 동시 대화 5개 · 턴 시간 p95</text>
+  <text x="762" y="172" class="was">Ollama 27.6초 →<tspan class="big" dx="10">vLLM 8.8초</tspan></text>
+  <text x="1140" y="130" class="k" text-anchor="end">처리량 분당 18 → 54턴</text>
+
+  <!-- 2행: 실패 → 재시도 → 분기 -->
+  <path d="M365 180 V220" stroke="#9A929D" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <text x="374" y="206" class="e">실패 · 시간 초과</text>
+  <rect x="240" y="226" width="250" height="60" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+  <text x="260" y="253" class="h">2초 뒤 한 번 재시도</text>
+  <text x="260" y="274" class="d">같은 요청을 한 번 더 보냄</text>
+
+  <path d="M490 256 H554" stroke="#9A929D" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <text x="502" y="248" class="e">또 실패</text>
+  <rect x="560" y="226" width="200" height="60" rx="14" fill="#FFFFFF" stroke="#B9B1BC" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="580" y="253" class="h">답변 생성의</text>
+  <text x="580" y="274" class="h">첫 실패인가?</text>
+
+  <path d="M760 246 H806 V232 H814" stroke="#9A929D" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <path d="M760 266 H806 V300 H814" stroke="#9A929D" stroke-width="2" fill="none" marker-end="url(#a)"/>
+  <text x="768" y="238" class="e">예</text>
+  <text x="764" y="290" class="e">아니오</text>
+
+  <rect x="820" y="204" width="340" height="56" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+  <text x="840" y="228" class="h">‘다시 시도’ 안내</text>
+  <text x="840" y="249" class="d">다시 시도한 실행이 또 실패하면 EXAONE으로</text>
+  <rect x="820" y="272" width="340" height="56" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+  <text x="840" y="296" class="h">그 호출만 EXAONE 3.5로 대체</text>
+  <text x="840" y="317" class="d">vLLM · GPU EC2(g6.xlarge) · 서울 리전</text>
+
+  <!-- GPU 서버 상태 -->
+  <line x1="40" y1="346" x2="1160" y2="346" stroke="#EEEAF0" stroke-width="2"/>
+  <text x="40" y="374" class="k" style="font-weight:700">GPU 서버 상태</text>
+  <g>
+    <rect x="40" y="386" width="260" height="46" rx="12" fill="#F6F4F7"/>
+    <text x="60" y="414" class="step">평소 중지<tspan class="stepd" dx="12">비용 없음</tspan></text>
+    <path d="M308 409 h18" stroke="#9A929D" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="332" y="386" width="270" height="46" rx="12" fill="#F6F4F7"/>
+    <text x="352" y="414" class="step">5분 안에 대체 2번<tspan class="stepd" dx="12">한 번은 안 켬</tspan></text>
+    <path d="M610 409 h18" stroke="#9A929D" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="634" y="386" width="250" height="46" rx="12" fill="#FBEAF1" stroke="#C34074"/>
+    <text x="654" y="414" class="step" style="fill:#A3315F">자동 기동<tspan class="stepd" dx="12">준비까지 약 2분</tspan></text>
+    <path d="M892 409 h18" stroke="#9A929D" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="916" y="386" width="244" height="46" rx="12" fill="#F6F4F7"/>
+    <text x="936" y="414" class="step">30분 유휴<tspan class="stepd" dx="12">자동으로 다시 중지</tspan></text>
+  </g>
+</svg>

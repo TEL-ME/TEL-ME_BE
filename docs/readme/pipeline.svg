@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="t d">
+  <title id="t">TEL-ME 답변 파이프라인</title>
+  <desc id="d">입력 검사, 문맥 해석, 라우팅, 검색·판정, 되묻기·생성, 답변 검사의 6단계. 검색·판정과 답변 검사에서 근거를 두 번 확인한다.</desc>
+  <style>
+    text { font-family: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; fill: #2B262D; }
+    .title { font-size: 24px; font-weight: 800; }
+    .sub { font-size: 15px; fill: #6B6470; }
+    .num { font-size: 13px; font-weight: 800; fill: #FFFFFF; }
+    .name { font-size: 18px; font-weight: 800; }
+    .desc { font-size: 13.5px; fill: #4A444F; }
+    .chip { font-size: 12px; font-weight: 700; fill: #6B6470; }
+    .chip-pink { font-size: 12px; font-weight: 700; fill: #C34074; }
+    .tag { font-size: 11.5px; font-weight: 800; fill: #FFFFFF; }
+    .label { font-size: 14.5px; font-weight: 800; }
+    .detail { font-size: 13.5px; fill: #4A444F; }
+    .strip { font-size: 14.5px; font-weight: 700; fill: #FFFFFF; }
+  </style>
+
+  <rect x="1" y="1" width="1198" height="478" rx="22" fill="#FFFFFF" stroke="#E6E1E7" stroke-width="2"/>
+  <g transform="translate(14 0)">
+
+  <text x="40" y="54" class="title">질문 하나가 답이 되기까지</text>
+  <text x="40" y="82" class="sub">예) “유심 재발급 비용 얼마예요?” → 6단계를 거쳐 → “7,700원이며, 매장에서 바로 받으실 수 있습니다.” + 참고 FAQ 3개</text>
+
+  <!-- 단계 카드: x = 40 + i*184, 폭 172 -->
+  <g>
+    <rect x="40" y="110" width="172" height="186" rx="16" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <circle cx="66" cy="138" r="13" fill="#2B262D"/><text x="66" y="142.5" class="num" text-anchor="middle">0</text>
+    <text x="58" y="182" class="name">입력 검사</text>
+    <text x="58" y="210" class="desc">욕설 경고·반복 제한</text>
+    <text x="58" y="230" class="desc">주민·카드번호 가림</text>
+    <rect x="58" y="254" width="74" height="24" rx="12" fill="#FFFFFF" stroke="#DAD4DC"/><text x="95" y="270.5" class="chip" text-anchor="middle">코드 규칙</text>
+  </g>
+  <g>
+    <rect x="224" y="110" width="172" height="186" rx="16" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <circle cx="250" cy="138" r="13" fill="#2B262D"/><text x="250" y="142.5" class="num" text-anchor="middle">1</text>
+    <text x="242" y="182" class="name">문맥 해석</text>
+    <text x="242" y="210" class="desc">생략된 대상을</text>
+    <text x="242" y="230" class="desc">앞 대화에서 찾아 연결</text>
+    <rect x="242" y="254" width="68" height="24" rx="12" fill="#FFFFFF" stroke="#DAD4DC"/><text x="276" y="270.5" class="chip" text-anchor="middle">gpt-oss</text>
+  </g>
+  <g>
+    <rect x="408" y="110" width="172" height="186" rx="16" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <circle cx="434" cy="138" r="13" fill="#2B262D"/><text x="434" y="142.5" class="num" text-anchor="middle">2</text>
+    <text x="426" y="182" class="name">라우팅</text>
+    <text x="426" y="210" class="desc">FAQ·매장·요금제 분기</text>
+    <text x="426" y="230" class="desc">복합 질문은 나눠 처리</text>
+    <rect x="426" y="254" width="68" height="24" rx="12" fill="#FFFFFF" stroke="#DAD4DC"/><text x="460" y="270.5" class="chip" text-anchor="middle">gpt-oss</text>
+  </g>
+  <g>
+    <rect x="592" y="110" width="172" height="186" rx="16" fill="#FBEAF1" stroke="#C34074" stroke-width="2"/>
+    <circle cx="618" cy="138" r="13" fill="#C34074"/><text x="618" y="142.5" class="num" text-anchor="middle">3</text>
+    <rect x="672" y="126" width="80" height="24" rx="12" fill="#C34074"/><text x="712" y="142.5" class="tag" text-anchor="middle">근거 확인 ①</text>
+    <text x="610" y="182" class="name">검색·판정</text>
+    <text x="610" y="210" class="desc">이중 벡터 상위 3개</text>
+    <text x="610" y="230" class="desc">애매하면 판정기 확인</text>
+    <rect x="610" y="254" width="128" height="24" rx="12" fill="#FFFFFF" stroke="#E7B6C9"/><text x="674" y="270.5" class="chip-pink" text-anchor="middle">bge-m3 · gpt-oss</text>
+  </g>
+  <g>
+    <rect x="776" y="110" width="172" height="186" rx="16" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <circle cx="802" cy="138" r="13" fill="#2B262D"/><text x="802" y="142.5" class="num" text-anchor="middle">4</text>
+    <text x="794" y="182" class="name">되묻기·생성</text>
+    <text x="794" y="210" class="desc">빠진 조건은 먼저 확인</text>
+    <text x="794" y="230" class="desc">찾은 근거로만 답변</text>
+    <rect x="794" y="254" width="68" height="24" rx="12" fill="#FFFFFF" stroke="#DAD4DC"/><text x="828" y="270.5" class="chip" text-anchor="middle">gpt-oss</text>
+  </g>
+  <g>
+    <rect x="960" y="110" width="172" height="186" rx="16" fill="#FBEAF1" stroke="#C34074" stroke-width="2"/>
+    <circle cx="986" cy="138" r="13" fill="#C34074"/><text x="986" y="142.5" class="num" text-anchor="middle">5</text>
+    <rect x="1040" y="126" width="80" height="24" rx="12" fill="#C34074"/><text x="1080" y="142.5" class="tag" text-anchor="middle">근거 확인 ②</text>
+    <text x="978" y="182" class="name">답변 검사</text>
+    <text x="978" y="210" class="desc">근거 없는 금액·조건</text>
+    <text x="978" y="230" class="desc">지우거나 답을 막음</text>
+    <rect x="978" y="254" width="74" height="24" rx="12" fill="#FFFFFF" stroke="#E7B6C9"/><text x="1015" y="270.5" class="chip-pink" text-anchor="middle">코드 규칙</text>
+  </g>
+
+  <!-- 단계 사이 화살표 -->
+  <g fill="#B9B1BC">
+    <path d="M214 197 l8 6 -8 6z"/><path d="M398 197 l8 6 -8 6z"/><path d="M582 197 l8 6 -8 6z"/>
+    <path d="M766 197 l8 6 -8 6z"/><path d="M950 197 l8 6 -8 6z"/>
+  </g>
+
+  <!-- 업무 갈래와 실시간 전송 -->
+  <g fill="none" stroke="#B9B1BC" stroke-width="2">
+    <path d="M494 296 V316 H216 V334"/>
+    <path d="M494 316 H580 V334"/>
+    <path d="M1046 296 V334"/>
+  </g>
+  <rect x="40" y="334" width="352" height="64" rx="14" fill="#FFFFFF" stroke="#DAD4DC"/>
+  <text x="60" y="361" class="label">매장 업무</text>
+  <text x="60" y="384" class="detail">PostGIS 최근접 검색 · 카카오 장소 · 길찾기</text>
+  <rect x="404" y="334" width="352" height="64" rx="14" fill="#FFFFFF" stroke="#DAD4DC"/>
+  <text x="424" y="361" class="label">요금제 업무</text>
+  <text x="424" y="384" class="detail">요금제 표 · 회원 사용량으로 추천 → 가입 화면</text>
+  <rect x="768" y="334" width="364" height="64" rx="14" fill="#FFFFFF" stroke="#DAD4DC"/>
+  <text x="788" y="361" class="label">실시간 전송 (SSE)</text>
+  <text x="788" y="384" class="detail">응답 중 · 완료 · 실패, 검사를 통과한 답만 전송</text>
+
+  <!-- 모델 띠 -->
+  <rect x="40" y="418" width="1092" height="40" rx="12" fill="#2B262D"/>
+  <text x="586" y="443.5" class="strip" text-anchor="middle">LLM 호출은 Bedrock gpt-oss-120b(도쿄)  ·  장애 때는 EXAONE 3.5 7.8B(vLLM, GPU EC2)로 대체</text>
+  </g>
+</svg>
