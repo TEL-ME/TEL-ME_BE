@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="t d">
+  <title id="t">TEL-ME 배포 흐름</title>
+  <desc id="d">main에 push되면 백엔드는 CI 통과 후 이미지를 ECR에 올리고 Parameter Store의 태그를 바꾼 뒤 ASG Instance Refresh로 서버를 교체한다. 프론트엔드는 lint·테스트·빌드 후 S3에 올리고 CloudFront 캐시를 비운다.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10z" fill="#9A929D"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; fill: #2B262D; }
+    .title { font-size: 24px; font-weight: 800; }
+    .sub { font-size: 15px; fill: #6B6470; }
+    .row { font-size: 14px; font-weight: 800; fill: #6B6470; }
+    .h { font-size: 15px; font-weight: 800; }
+    .hw { font-size: 15px; font-weight: 800; fill: #FFFFFF; }
+    .d { font-size: 12.5px; fill: #4A444F; }
+    .dw { font-size: 12.5px; fill: #D9D3DB; }
+    .foot { font-size: 13px; fill: #6B6470; }
+  </style>
+
+  <rect x="1" y="1" width="1198" height="428" rx="22" fill="#FFFFFF" stroke="#E6E1E7" stroke-width="2"/>
+  <text x="40" y="54" class="title">main에 올라간 코드만 운영에 나간다</text>
+  <text x="40" y="82" class="sub">develop에 머지돼도 배포되지 않고, develop → main 머지가 배포 시점이다. AWS 키 없이 GitHub OIDC로 배포 역할을 빌린다</text>
+
+  <!-- 백엔드: 카드 x = 40 + i*190, 폭 170 -->
+  <text x="40" y="122" class="row">백엔드 · TEL-ME_BE</text>
+  <g>
+    <rect x="40" y="136" width="170" height="80" rx="14" fill="#2B262D"/>
+    <text x="58" y="166" class="hw">main push</text>
+    <text x="58" y="190" class="dw">develop → main 머지</text>
+    <rect x="230" y="136" width="170" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="248" y="166" class="h">CI</text>
+    <text x="248" y="190" class="d">빌드 · 테스트 통과 시</text>
+    <rect x="420" y="136" width="170" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="438" y="166" class="h">Docker 이미지</text>
+    <text x="438" y="190" class="d">amd64 · 커밋 SHA 태그</text>
+    <rect x="610" y="136" width="170" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="628" y="166" class="h">ECR</text>
+    <text x="628" y="190" class="d">같은 커밋이면 건너뜀</text>
+    <rect x="800" y="136" width="170" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="818" y="166" class="h">Parameter Store</text>
+    <text x="818" y="190" class="d">배포할 태그 기록</text>
+    <rect x="990" y="136" width="170" height="80" rx="14" fill="#FBEAF1" stroke="#C34074" stroke-width="2"/>
+    <text x="1008" y="166" class="h">Instance Refresh</text>
+    <text x="1008" y="190" class="d">새 서버 먼저 띄우고 교체</text>
+  </g>
+  <g stroke="#9A929D" stroke-width="2" fill="none">
+    <path d="M212 176 H224" marker-end="url(#a)"/><path d="M402 176 H414" marker-end="url(#a)"/>
+    <path d="M592 176 H604" marker-end="url(#a)"/><path d="M782 176 H794" marker-end="url(#a)"/>
+    <path d="M972 176 H984" marker-end="url(#a)"/>
+  </g>
+  <text x="1160" y="238" class="d" text-anchor="end">교체가 실패하면 Parameter Store를 이전 태그로 되돌린다</text>
+
+  <!-- 프론트엔드 -->
+  <text x="40" y="282" class="row">프론트엔드 · TEL-ME_FE</text>
+  <g>
+    <rect x="40" y="296" width="170" height="80" rx="14" fill="#2B262D"/>
+    <text x="58" y="326" class="hw">main push</text>
+    <text x="58" y="350" class="dw">develop → main 머지</text>
+    <rect x="230" y="296" width="360" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="248" y="326" class="h">lint · 테스트 · 빌드</text>
+    <text x="248" y="350" class="d">빌드 단계에 지도 키·Sentry·GA·Clarity 값을 넣는다</text>
+    <rect x="610" y="296" width="360" height="80" rx="14" fill="#F6F4F7" stroke="#E6E1E7"/>
+    <text x="628" y="326" class="h">S3 업로드</text>
+    <text x="628" y="350" class="d">assets는 1년 캐시, index.html은 매번 확인</text>
+    <rect x="990" y="296" width="170" height="80" rx="14" fill="#FBEAF1" stroke="#C34074" stroke-width="2"/>
+    <text x="1008" y="326" class="h">CloudFront</text>
+    <text x="1008" y="350" class="d">캐시 무효화 /*</text>
+  </g>
+  <g stroke="#9A929D" stroke-width="2" fill="none">
+    <path d="M212 336 H224" marker-end="url(#a)"/><path d="M592 336 H604" marker-end="url(#a)"/>
+    <path d="M972 336 H984" marker-end="url(#a)"/>
+  </g>
+
+  <text x="40" y="410" class="foot">두 워크플로 모두 저장소 변수 DEPLOY_ENABLED=true일 때만 돌고, 수동 실행도 main을 골랐을 때만 배포한다.</text>
+</svg>

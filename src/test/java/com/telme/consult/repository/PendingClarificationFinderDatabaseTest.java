@@ -1,0 +1,135 @@
+package com.telme.consult.repository;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.telme.consult.dto.DialogueInput.*;
+import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
+import com.telme.consult.service.DialogueService;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+class PendingClarificationFinderDatabaseTest extends LocalConsultDatabaseTest {
+    private long ask(long rid) {
+        long question = message(session, "ASSISTANT", "CLARIFICATION", "COMPLETED");
+        var decision =
+                new DialogueService()
+                        .decide(
+                                new com.telme.consult.dto.DialogueInput(
+                                        rid,
+                                        Purpose.NEARBY_STORE,
+                                        Map.of(),
+                                        Map.of(),
+                                        LocationStatus.MISSING));
+        states.save(
+                session,
+                states.load(session, rid).version(),
+                decision,
+                new MessageLinks(question, null, null));
+        return question;
+    }
+
+    @Test
+    void findsExistingRequestAndQuestionBeforeUserReply() {
+        long rid = request(session);
+        long question = ask(rid);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+        assertEquals(1, found.size());
+        assertEquals(rid, found.getFirst().consultRequestId());
+        assertEquals(question, found.getFirst().questionMessageId());
+        assertEquals("location", found.getFirst().field());
+    }
+
+    @Test
+    void excludesAnotherSessionAndQuestionsAfterInput() {
+        long rid = request(session);
+        long oldInput = message(session, "USER", "QUESTION", "COMPLETED");
+        ask(rid);
+        var finder = new PendingClarificationFinder(jdbc);
+        assertTrue(finder.findBefore(session, oldInput).isEmpty());
+        long otherSession = session(2L, null);
+        long otherInput = message(otherSession, "USER", "QUESTION", "COMPLETED");
+        assertTrue(finder.findBefore(session, otherInput).isEmpty());
+    }
+
+    @Test
+    void keepsMultipleCandidatesAndExcludesCancelledRequest() {
+        long first = request(session);
+        ask(first);
+        long second = request(session);
+        ask(second);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+        var finder = new PendingClarificationFinder(jdbc);
+        assertEquals(2, finder.findBefore(session, reply).size());
+        states.cancel(session, second, states.load(session, second).version());
+        assertEquals(first, finder.findBefore(session, reply).getFirst().consultRequestId());
+    }
+
+    private void reask(long rid) {
+        jdbc.update(
+                "UPDATE consult_conditions SET reask_count=reask_count+1 WHERE consult_request_id=?",
+                rid);
+    }
+
+    private int reasks(java.util.List<PendingClarificationFinder.Candidate> found, long rid) {
+        return found.stream().filter(c -> c.consultRequestId() == rid).findFirst().orElseThrow().reasks();
+    }
+
+    @Test
+    void readsReaskCountPerConsult() {
+        long first = request(session);
+        ask(first);
+        long second = request(session);
+        ask(second);
+        reask(first);
+        reask(first);
+        reask(second);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(2, reasks(found, first));
+        assertEquals(1, reasks(found, second));
+    }
+
+    @Test
+    void keepsReaskCountAfterAnotherConsultAskedAndFinished() {
+        long first = request(session);
+        ask(first);
+        reask(first);
+        long second = request(session);
+        ask(second);
+        states.cancel(session, second, states.load(session, second).version());
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals(1, found.size());
+        assertEquals(1, reasks(found, first));
+    }
+
+    @Test
+    void splitConsultUsesSubQueryAsOriginalQuery() {
+        long first = request(session);
+        long origin = jdbc.queryForObject(
+                "SELECT origin_message_id FROM consult_requests WHERE consult_request_id=?", Long.class, first);
+        jdbc.update("UPDATE consult_requests SET query_text='번호이동 필요 서류', intent='FAQ' WHERE consult_request_id=?", first);
+        ask(first);
+        long second = jdbc.queryForObject(
+                "INSERT INTO consult_requests(session_id,origin_message_id,subquery_order,intent,query_text)"
+                        + " VALUES (?,?,1,'FAQ','유심 재발급 비용') RETURNING consult_request_id",
+                Long.class, session, origin);
+        long single = request(session);
+        ask(single);
+        long reply = message(session, "USER", "QUESTION", "COMPLETED");
+
+        var found = new PendingClarificationFinder(jdbc).findBefore(session, reply);
+
+        assertEquals("번호이동 필요 서류", found.stream()
+                .filter(c -> c.consultRequestId() == first).findFirst().orElseThrow().originalUserQuery());
+        assertEquals("test", found.stream()
+                .filter(c -> c.consultRequestId() == single).findFirst().orElseThrow().originalUserQuery());
+    }
+}

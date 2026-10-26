@@ -1,0 +1,194 @@
+[
+  {
+    "eval_id": "BX-001",
+    "category": "BILLING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "청구서를 다시 발송받으면 요금이 얼마예요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "BILLING-0028"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 재발송 비용를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-002",
+    "category": "BILLING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "요금이 두 번 나갔는데 환불 접수는 언제까지 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "BILLING-0013"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 환불 접수 기한를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-003",
+    "category": "DEVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "단말기 할부 계약서를 다시 받으려면 뭐가 필요해요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "DEVICE-0001"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 할부 계약서 재발급 서류를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-004",
+    "category": "DEVICE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "폰을 분실하면 위치 추적도 바로 되나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "DEVICE-0011"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 분실 단말 위치 추적를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-005",
+    "category": "PLAN",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "데이터 선물하기는 다른 통신사에도 가능한가요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PLAN-0023"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 통신사 간 데이터 선물를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-007",
+    "category": "PORTING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동 신청하면 완료 안내는 어떤 방법으로 오나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PORTING-0001"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 완료 알림 채널를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-008",
+    "category": "PORTING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "번호이동을 철회하면 복원 수수료가 얼마예요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "PORTING-0004"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 철회 복원 비용를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-009",
+    "category": "ROAMING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "로밍 요금 자동 차단 전에 경고 문자가 오나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "ROAMING-0008"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 차단 전 경고 알림를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-010",
+    "category": "ROAMING",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "해외에서 듀얼번호로 본인 인증 문자를 받을 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "ROAMING-0004"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 듀얼번호 본인인증 문자를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-013",
+    "category": "SUBSCRIBE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "신규 개통은 주말에도 온라인 상담원과 통화할 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SUBSCRIBE-0011"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 온라인 상담원 주말 운영를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-014",
+    "category": "SUBSCRIBE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "미성년자 가입에 쓰는 가족관계증명서는 발급 후 며칠까지 유효해요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "SUBSCRIBE-0002"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 가족관계증명서 유효기간를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-015",
+    "category": "TERMINATE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "일시 정지를 신청하면 확인 문자는 누구에게 오나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "TERMINATE-0004"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 정지 확인 알림 수신자를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-016",
+    "category": "TERMINATE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "약정 중간에 해지하면 위약금 납부 영수증은 어디서 받아요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "TERMINATE-0010"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 위약금 영수증 발급를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-018",
+    "category": "USIM",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "eSIM 발급 후 QR코드는 언제까지 사용할 수 있나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "USIM-0011"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 eSIM QR 사용기한를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-019",
+    "category": "NAME_CHANGE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의변경에 쓰는 인감증명서는 발급 후 며칠까지 유효해요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "NAME_CHANGE-0001"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 인감증명서 유효기간를 질문. 독립 확인용 아님."
+  },
+  {
+    "eval_id": "BX-020",
+    "category": "NAME_CHANGE",
+    "type": "UNRELATED",
+    "unrelated_kind": "ADJACENT_HARD",
+    "question": "명의변경 신용 심사를 받으면 신용점수가 내려가나요?",
+    "expected_slot_id": null,
+    "related_slot_id": [
+      "NAME_CHANGE-0009"
+    ],
+    "note": "실험용 후보: 관련 FAQ가 다루지 않는 심사의 신용점수 영향를 질문. 독립 확인용 아님."
+  }
+]

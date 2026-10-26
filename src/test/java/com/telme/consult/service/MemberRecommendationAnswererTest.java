@@ -1,0 +1,713 @@
+package com.telme.consult.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+import com.telme.consult.dto.MissingCondition;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberRecommendationAnswerer.Outcome;
+import com.telme.member.entity.User;
+import com.telme.member.repository.UserRepository;
+import com.telme.plan.repository.PlanRepository;
+import com.telme.subscription.service.SubscriptionCommandService;
+import com.telme.usage.service.SubscriptionUsageService;
+import jakarta.persistence.EntityManager;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@TestPropertySource(properties = "telme.subscription.demo-mode=false")
+@Transactional
+class MemberRecommendationAnswererTest {
+
+    static final long GB = 1024;
+    static final String GENERAL = "만 19~64세";
+    // 2026-01-05(월) 정오(KST) 가입, 1월 6일 9시 개통
+    static final Instant JANUARY_JOIN = Instant.parse("2026-01-05T03:00:00Z");
+    static final Instant OCT_12 = Instant.parse("2026-10-12T03:00:00Z");
+
+    @MockitoBean Clock clock;
+
+    @Autowired MemberRecommendationAnswerer answerer;
+    @Autowired SubscriptionCommandService commandService;
+    @Autowired SubscriptionUsageService usageService;
+    @Autowired UserRepository userRepository;
+    @Autowired PlanRepository planRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired EntityManager entityManager;
+
+    Long userId;
+
+    @BeforeEach
+    void setUp() {
+        userId = userRepository.save(User.builder().email("recommend@test.com").name("추천").build()).getUserId();
+        at(OCT_12);
+    }
+
+    @Test
+    void 사용량을_모르는_비회원은_나이대와_데이터_사용량을_순서대로_되묻는다() {
+        Outcome outcome = answerer.recommend(null, Map.of(), true);
+
+        assertThat(outcome.content()).isNull();
+        assertThat(outcome.asks()).extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
+        assertThat(outcome.asks().get(1).options()).isEqualTo(MemberRecommendationAnswerer.DATA_OPTIONS);
+    }
+
+    // "별로 안 써요"처럼 정도만 말한 고객도 고를 수 있게 사용량 구간을 버튼으로 준다. 구간마다 추천이 달라야 의미가 있다
+    @Test
+    void 데이터_사용량_버튼은_모두_읽히고_구간마다_다른_요금제를_추천한다() {
+        List<String> expected = List.of("알뜰 미니", "5G 라이트", "5G 스탠다드", "LTE 맥스", "5G 프리미엄", "5G 언리미티드");
+        List<String> amounts = MemberRecommendationAnswerer.DATA_OPTIONS.subList(0, expected.size());
+        for (int index = 0; index < expected.size(); index++) {
+            assertThat(answered(null, "만 19~64세", amounts.get(index))).as(amounts.get(index))
+                    .contains(expected.get(index) + "(월");
+        }
+        assertThat(MemberRecommendationAnswerer.DATA_OPTIONS.getLast()).isEqualTo("잘 모르겠어요");
+        assertThat(answered(null, "만 19~64세", "잘 모르겠어요")).contains("사용량을 잘 모르시면");
+    }
+
+    @Test
+    void 가입하지_않은_회원과_개통_전_회원도_사용량이_없으니_되묻는다() {
+        assertThat(answerer.recommend(userId, Map.of(), true).asks())
+                .extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
+
+        commandService.subscribe(userId, planId("FIVE_G_STANDARD"), null);
+
+        assertThat(answerer.recommend(userId, Map.of(), true).asks())
+                .extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
+    }
+
+    @Test
+    void 생년월일이_있으면_나이대는_묻지_않고_데이터_사용량만_묻는다() {
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+
+        assertThat(answerer.recommend(userId, Map.of(), true).asks())
+                .extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+    }
+
+    // 가족이 쓸 요금제는 회원의 생년월일·가입 요금제·사용량을 쓰지 않고, 링크와 회원 사용량 안내도 붙이지 않는다(TELME-227)
+    @Test
+    void 다른_사람이_쓸_요금제는_회원_정보_없이_받은_답으로만_추천한다() {
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        subscribeAndUse("FIVE_G_PREMIUM", 100 * GB, 300, 100);
+        entityManager.clear();
+
+        assertThat(answerer.recommendForOther(Map.of(), true, false).asks())
+                .extracting(MissingCondition::key).containsExactly("age_group", "monthly_data_usage");
+
+        Outcome outcome = answerer.recommendForOther(Map.of("age_group", "만 14~18세", "monthly_data_usage", "10GB"), false, false);
+        assertThat(outcome.content())
+                .contains("한 달에 데이터를 10GB 쓰신다면 LTE 청소년(월 39,000원, 데이터 20GB) 요금제를 추천해요")
+                .doesNotContain("로그인", "가입한 요금제의 사용량");
+        assertThat(outcome.followUps()).noneMatch(followUp -> followUp.contains("요금제 변경") || followUp.contains("가입"));
+
+        // 쓸 사람의 사용량을 모르면 본인 가입 안내 대신 쓸 사람의 사용량을 묻는다(#212 리뷰)
+        assertThat(answerer.recommendForOther(Map.of("age_group", "만 65세 이상", "monthly_data_usage", "잘 모르겠어요"), false, false)
+                .content()).contains("쓰실 분이 한 달에 데이터를 얼마나 쓰시는지").doesNotContain("가입하신 뒤");
+    }
+
+    // 모델이 질문에서 읽은 나이대로 추천하면 기준 나이대를 밝힌다. 생년월일이 있어 그 나이대를 쓰지 않았으면 밝히지 않는다
+    @Test
+    void 모델이_읽은_나이대로_추천하면_기준_나이대를_답에_밝힌다() {
+        Map<String, String> read = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB");
+        String note = "말씀하신 내용을 보고 만 65세 이상 기준으로 추천했어요. 나이대가 다르면 나이와 함께 다시 물어봐 주세요.";
+
+        assertThat(answerer.recommendForOther(read, false, true).content()).contains(note);
+        assertThat(answerer.recommendForOther(read, false, false).content()).doesNotContain("말씀하신 내용을 보고");
+        assertThat(answerer.recommend(null, read, Map.of(), false, true).content()).contains(note);
+
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+        assertThat(answerer.recommend(userId, read, Map.of(), false, true).content()).doesNotContain("말씀하신 내용을 보고");
+    }
+
+    @Test
+    void 나이대와_말한_사용량으로_여유를_둔_요금제를_추천한다() {
+        assertThat(answered(null, "만 14~18세", "50GB"))
+                .contains("한 달에 데이터를 50GB 쓰신다면 5G 청소년(월 55,000원, 데이터 80GB) 요금제를 추천해요");
+        assertThat(answered(null, "만 14~18세", "3GB"))
+                .contains("한 달에 데이터를 3GB 쓰신다면 알뜰 청소년(월 20,000원, 데이터 5GB) 요금제를 추천해요");
+        assertThat(answered(null, "만 65세 이상", "30GB"))
+                .contains("한 달에 데이터를 30GB 쓰신다면 5G 스탠다드(월 65,000원, 데이터 50GB) 요금제를 추천해요");
+        assertThat(answered(null, "만 19~64세", "200GB"))
+                .contains("한 달에 데이터를 200GB 쓰신다면 5G 언리미티드(월 105,000원, 데이터 무제한) 요금제를 추천해요");
+        assertThat(answered(null, "만 19~64세", "무제한"))
+                .contains("데이터를 무제한으로 쓰신다면 5G 언리미티드(월 105,000원, 데이터 무제한) 요금제를 추천해요");
+    }
+
+    @Test
+    void 한도에_가까운_사용량이면_모자랄_수_있다고_알린다() {
+        assertThat(answered(null, GENERAL, "40GB")).contains("한도에 가까워서 사용량이 늘면 모자랄 수 있어요");
+        assertThat(answered(null, GENERAL, "30GB")).doesNotContain("한도에 가까워서");
+        assertThat(answered(null, GENERAL, "무제한")).doesNotContain("한도에 가까워서");
+    }
+
+    @Test
+    void 사용량이_1GB보다_적으면_MB로_안내한다() {
+        assertThat(answered(null, GENERAL, "50MB")).contains("한 달에 데이터를 50MB 쓰신다면");
+        assertThat(answered(null, GENERAL, "1000MB")).contains("한 달에 데이터를 1000MB 쓰신다면");
+        assertThat(answered(null, GENERAL, "1GB")).contains("한 달에 데이터를 1GB 쓰신다면");
+    }
+
+    @Test
+    void 가장_싼_요금제가_LTE면_5G_중_가장_싼_요금제도_함께_안내한다() {
+        assertThat(answered(null, GENERAL, "45GB"))
+                .contains("LTE 맥스(월 69,000원, 데이터 100GB) 요금제를 추천해요")
+                .contains("5G로 쓰시려면 5G 프리미엄(월 85,000원, 데이터 150GB) 요금제가 가장 저렴해요");
+        assertThat(answered(null, GENERAL, "40GB")).doesNotContain("5G로 쓰시려면");
+        // 알뜰 요금제는 5G 후보를 붙이지 않는다
+        assertThat(answered(null, GENERAL, "1GB")).contains("알뜰 미니").doesNotContain("5G로 쓰시려면");
+    }
+
+    @Test
+    void 더_싼_요금제를_찾으면_사용량에_맞는_가장_싼_요금제와_더_싼_요금제를_함께_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "10GB", "price_request", "cheaper");
+
+        Outcome outcome = answerer.recommend(null, answers, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.", "더 싼 요금제로는",
+                "모자랄 수 있어요");
+        // 데이터가 많은 순으로 싼 요금제 3개까지
+        assertThat(outcome.content().indexOf("5G 라이트")).isLessThan(outcome.content().indexOf("LTE 베이직"));
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘", "LTE 플러스 가입하러 가기");
+        // 이어서 "그 요금제로 가입할래"라고 하면 싼 요금제 목록이 아니라 추천한 요금제를 대상으로 찾는다
+        assertThat(PlanTaskAnswerProvider.targetSentence(outcome.content()))
+                .isEqualTo("한 달에 데이터를 10GB 쓰신다면 LTE 플러스(월 49,000원, 데이터 15GB) 요금제를 추천해요.");
+    }
+
+    @Test
+    void 사용량과_상관없이_싼_요금제를_찾으면_싼_순서로_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "10GB", "price_request", "cheapest");
+
+        String content = answerer.recommend(null, answers, true).content();
+
+        assertThat(content).contains("사용량과 상관없이 싼 순서로는 알뜰 미니");
+        assertThat(content.indexOf("알뜰 미니")).isLessThan(content.indexOf("알뜰 세이브"));
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).contains("LTE 플러스").doesNotContain("알뜰 미니");
+    }
+
+    @Test
+    void 사용량이_있는_회원이_더_싼_요금제를_찾으면_그대로_쓰라는_안내에_싼_요금제를_덧붙인다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+        Map<String, String> answers = Map.of("age_group", GENERAL, "price_request", "cheaper");
+
+        Outcome outcome = answerer.recommend(userId, answers, true);
+
+        assertThat(outcome.content()).contains("그대로 쓰시는 걸 추천해요", "지금 쓰는 요금제보다 싼 요금제로는", "5G 라이트")
+                .containsPattern("평균 사용량을 채우지 못하고 모자랄 수 있어요|나머지는 모자랄 수 있어요|모두 평균 사용량을 채워요");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+        assertThat(PlanTaskAnswerProvider.targetSentence(outcome.content())).doesNotContain("싼 요금제로는");
+    }
+
+    @Test
+    void 사용량이_있는_회원이_가장_싼_요금제를_쓰면_더_싼_요금제가_없다고_알린다() {
+        subscribeAndUse("BUDGET_MINI", 1 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, Map.of("age_group", GENERAL, "price_request", "cheaper"), true);
+
+        assertThat(outcome.content()).contains("지금 쓰는 요금제보다 싼 요금제는 없어요");
+    }
+
+    @Test
+    void 더_싼_요금제를_찾는_말이_없으면_회원_답변에_싼_요금제를_덧붙이지_않는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+
+        assertThat(answerer.recommend(userId, age(GENERAL), true).content()).doesNotContain("보다 싼 요금제");
+    }
+
+    @Test
+    void 추천한_요금제가_이미_가장_싸면_더_싼_요금제가_없다고_알린다() {
+        Map<String, String> answers = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB", "monthly_voice_usage", "100분",
+                "monthly_sms_usage", "10건", "price_request", "cheaper");
+
+        assertThat(answerer.recommend(null, answers, true).content()).contains("알뜰 미니", "이보다 싼 요금제는 없어요");
+    }
+
+    @Test
+    void 숫자_없이_많다고만_답하면_다시_묻고_되묻지_못하면_안내한다() {
+        Map<String, String> vague = Map.of("age_group", GENERAL, "monthly_data_usage", "많이 써요");
+
+        assertThat(answerer.recommend(null, vague, true).asks())
+                .extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+        assertThat(answerer.recommend(null, vague, false).content()).contains("사용량을 알려주시면");
+    }
+
+    @Test
+    void 사용량을_모른다고_답하면_되묻지_않고_가입_뒤_추천을_안내한다() {
+        Outcome outcome = answerer.recommend(null, Map.of("monthly_data_usage", "모름"), true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("사용량을 잘 모르시면");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    @Test
+    void 추천한_요금제에_통화나_문자_한도가_있으면_그_항목을_되묻는다() {
+        // 1GB는 통화 300분, 문자 100건 한도가 있는 알뜰 미니
+        Outcome both = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "1GB"), true);
+        assertThat(both.content()).isNull();
+        assertThat(both.asks()).extracting(MissingCondition::key).containsExactly("monthly_voice_usage", "monthly_sms_usage");
+        assertThat(both.asks().get(0).options()).isEmpty();
+
+        // 4GB 이하 구간의 LTE 베이직은 통화만 한도가 있다
+        Outcome voiceOnly = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "3GB"), true);
+        assertThat(voiceOnly.asks()).extracting(MissingCondition::key).containsExactly("monthly_voice_usage");
+    }
+
+    @Test
+    void 통화나_문자_한도가_없는_요금제를_추천하면_묻지_않는다() {
+        Outcome outcome = answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("5G 스탠다드").doesNotContain("통화·문자를 많이 쓰신다면");
+    }
+
+    @Test
+    void 통화량을_말하면_그_한도를_채우는_요금제로_올려_추천한다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "600분", "monthly_sms_usage", "거의 없음");
+
+        Outcome outcome = answerer.recommend(null, confirmed, true);
+
+        // 통화 600분의 1.2배는 700분 한도의 LTE 베이직도 넘어 통화 무제한인 5G 라이트가 된다
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("5G 라이트(월 45,000원, 데이터 8GB)").doesNotContain("통화·문자를 많이 쓰신다면");
+    }
+
+    @Test
+    void 통화량이_적으면_한도가_있는_요금제를_그대로_추천한다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "100분", "monthly_sms_usage", "20건");
+
+        Outcome outcome = answerer.recommend(null, confirmed, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("알뜰 미니(월 15,000원, 데이터 1.5GB)");
+    }
+
+    @Test
+    void 통화나_문자를_모르거나_되묻지_못하면_한도를_알리고_추천한다() {
+        Map<String, String> unsure = Map.of("age_group", GENERAL, "monthly_data_usage", "1GB",
+                "monthly_voice_usage", "모름", "monthly_sms_usage", "모름");
+        assertThat(answerer.recommend(null, unsure, true).content())
+                .contains("알뜰 미니").contains("이 요금제는 통화 300분, 문자 100건까지 쓸 수 있으니");
+
+        Map<String, String> unasked = Map.of("age_group", GENERAL, "monthly_data_usage", "3GB");
+        Outcome outcome = answerer.recommend(null, unasked, false);
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("LTE 베이직").contains("이 요금제는 통화 700분까지 쓸 수 있으니");
+    }
+
+    @Test
+    void 숫자_없이_많이_한다고만_답하면_통화를_다시_묻는다() {
+        Map<String, String> confirmed = Map.of("age_group", GENERAL, "monthly_data_usage", "3GB", "monthly_voice_usage", "많이 해요");
+
+        assertThat(answerer.recommend(null, confirmed, true).asks())
+                .extracting(MissingCondition::key).containsExactly("monthly_voice_usage");
+    }
+
+    @Test
+    void 비회원_답변에는_로그인_안내를_회원_답변에는_사용량_안내를_붙인다() {
+        assertThat(answered(null, GENERAL, "40GB")).contains("로그인하고 요금제에 가입하시면");
+        assertThat(answered(userId, GENERAL, "40GB")).contains("가입한 요금제의 사용량이 쌓이면");
+        assertThat(answerer.recommend(null, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), false).followUps())
+                .containsExactly("요금제 종류 알려줘", "5G 스탠다드 가입하러 가기");
+        assertThat(answerer.recommend(userId, Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), false).followUps())
+                .containsExactly("요금제 종류 알려줘", "5G 스탠다드 가입하러 가기");
+    }
+
+    @Test
+    void 데이터_사용량_답이_없으면_되묻지_못하는_경로에서_추천하지_않고_전체_요금제를_안내한다() {
+        Outcome outcome = answerer.recommend(null, Map.of(), false);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("사용량을 알려주시면");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    @Test
+    void 같은_채팅방에서_앞서_한_답은_다시_묻지_않고_쓰며_썼다고_알린다() {
+        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB", "monthly_sms_usage", "50건");
+
+        Outcome outcome = answerer.recommend(null, Map.of(), previous, true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("LTE 시니어(월 29,000원, 데이터 8GB)")
+                .endsWith("앞서 알려주신 나이대와 데이터 사용량 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 앞서_모르겠다고_한_사용량은_다시_쓰지_않고_되묻는다() {
+        // 저장된 값은 "모름"일 수도, 말한 그대로("잘 모르겠어요")일 수도 있다
+        for (String unsure : List.of("모름", "잘 모르겠어요")) {
+            Outcome outcome = answerer.recommend(null, Map.of(),
+                    Map.of("age_group", GENERAL, "monthly_data_usage", unsure), true);
+
+            assertThat(outcome.asks()).as(unsure).extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+        }
+        // 이번 질문에서 새로 알려주면 그 답을 쓰고, 모르겠다는 답을 앞서 썼다고 알리지 않는다
+        Outcome answered = answerer.recommend(null, Map.of("monthly_data_usage", "40GB"),
+                Map.of("age_group", GENERAL, "monthly_data_usage", "모름"), true);
+
+        assertThat(answered.asks()).isNull();
+        assertThat(answered.content()).contains("한 달에 데이터를 40GB 쓰신다면").doesNotContain("데이터 사용량 답을 기준으로");
+        // 이번 질문에서 모르겠다고 하면 되묻지 않고 안내한다
+        assertThat(answerer.recommend(null, Map.of("monthly_data_usage", "모름"), Map.of("age_group", GENERAL), true).content())
+                .contains("사용량을 잘 모르시면");
+    }
+
+    @Test
+    void 이번에_한_답이_앞서_한_답보다_우선하고_이번_답은_앞서_썼다고_알리지_않는다() {
+        Map<String, String> previous = Map.of("age_group", "만 65세 이상", "monthly_data_usage", "3GB");
+
+        String content = answerer.recommend(null, Map.of("age_group", "만 14~18세", "monthly_data_usage", "50GB"), previous, false)
+                .content();
+
+        assertThat(content).contains("5G 청소년(월 55,000원").doesNotContain("앞서 알려주신");
+    }
+
+    @Test
+    void 직접_입력한_나이도_나이대로_읽고_다시_묻지_않는다() {
+        assertThat(answered(null, "17살이에요", "3GB")).contains("알뜰 청소년");
+        assertThat(answered(null, "70대예요", "30GB")).contains("5G 스탠다드");
+        assertThat(answered(null, "20대예요", "3GB")).doesNotContain("청소년");
+
+        Outcome previousTyped = answerer.recommend(null, Map.of("monthly_data_usage", "40GB"),
+                Map.of("age_group", "20대예요"), true);
+
+        assertThat(previousTyped.asks()).isNull();
+        assertThat(previousTyped.content()).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 직접_입력한_나이가_구분_둘에_걸치거나_알_수_없으면_나이대를_되묻는다() {
+        for (String vague : List.of("10대예요", "60대예요", "비밀이에요", "10살")) {
+            assertThat(answerer.recommend(null, Map.of("age_group", vague, "monthly_data_usage", "3GB"), true).asks())
+                    .as(vague).extracting(MissingCondition::key).containsExactly("age_group");
+        }
+    }
+
+    @Test
+    void 일부만_앞서_답했으면_나머지만_되묻고_쓴_것만_알린다() {
+        Outcome ask = answerer.recommend(null, Map.of(), Map.of("age_group", GENERAL), true);
+        assertThat(ask.asks()).extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+
+        String content = answerer.recommend(null, Map.of("monthly_data_usage", "40GB"), Map.of("age_group", GENERAL), false).content();
+        assertThat(content).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 생년월일이_있으면_앞서_한_나이대_답은_쓰지_않아서_썼다고_알리지_않는다() {
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+
+        String content = answerer.recommend(userId, Map.of("monthly_data_usage", "40GB"), Map.of("age_group", "만 65세 이상"), false)
+                .content();
+
+        assertThat(content).doesNotContain("시니어").doesNotContain("앞서 알려주신");
+    }
+
+    @Test
+    void 사용량이_있는_회원에게는_앞서_한_데이터_사용량_답을_썼다고_알리지_않는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, Map.of(), Map.of("age_group", GENERAL, "monthly_data_usage", "40GB"), true).content();
+
+        assertThat(content).endsWith("앞서 알려주신 나이대 답을 기준으로 했어요.");
+    }
+
+    @Test
+    void 이미_답한_항목은_다시_묻지_않는다() {
+        assertThat(answerer.recommend(null, Map.of("age_group", GENERAL), true).asks())
+                .extracting(MissingCondition::key).containsExactly("monthly_data_usage");
+        assertThat(answerer.recommend(null, Map.of("monthly_data_usage", "40GB"), true).asks())
+                .extracting(MissingCondition::key).containsExactly("age_group");
+    }
+
+    @Test
+    void 사용량보다_큰_요금제를_쓰면_더_싼_요금제로_바꾸라고_하고_절약액을_알려준다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 35 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        assertThat(outcome.content()).contains("최근 평균 사용량은 데이터 35GB, 통화 100분, 문자 50건이에요",
+                "5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면", "월 20,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 85,000원이에요");
+        assertThat(outcome.followUps()).containsExactly("요금제 변경은 어떻게 해요?", "5G 스탠다드 변경하러 가기");
+    }
+
+    @Test
+    void 약정_중이면_할인을_적용한_금액으로_절약액을_알려준다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 35 * GB, 100, 50, true); // 85,000원 - 25% = 63,750원
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        // 5G 스탠다드 65,000원 - 25% = 48,750원이라 차이는 정가 기준 20,000원이 아니라 15,000원
+        assertThat(outcome.content()).contains("월 15,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 63,750원이에요",
+                "월 금액은 모두 약정 할인 25%를 적용한 금액이에요").doesNotContain("월 20,000원 아낄");
+        // 괄호 안 요약도 같은 기준의 할인가라서 정가(65,000원)와 섞이지 않는다
+        assertThat(outcome.content()).contains("5G 스탠다드(월 48,750원, 데이터 50GB)으로 바꾸면")
+                .doesNotContain("월 65,000원");
+    }
+
+    @Test
+    void 약정_중에_그대로_쓰라고_할_때도_현재_요금제를_할인가로_보여준다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50, true);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains("지금 쓰는 5G 스탠다드(월 48,750원, 데이터 50GB)이 사용량에 알맞아요",
+                "월 금액은 모두 약정 할인 25%를 적용한 금액이에요").doesNotContain("월 65,000원");
+    }
+
+    @Test
+    void 약정_중에_더_큰_요금제를_권할_때도_할인을_적용한_차이를_알려준다() {
+        subscribeAndUse("FIVE_G_LITE", 20 * GB, 100, 50, true);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        // 5G 라이트 45,000원 → 5G 스탠다드 65,000원은 정가 차이 20,000원이고 약정 할인 후에는 15,000원
+        assertThat(outcome.content()).contains("월 15,000원이 더 들어요", "월 금액은 모두 약정 할인 25%를 적용한 금액이에요",
+                "지금 쓰는 5G 라이트(월 33,750원, 데이터 8GB)", "5G 스탠다드(월 48,750원, 데이터 50GB)을 추천해요")
+                .doesNotContain("월 20,000원이 더", "월 65,000원", "월 45,000원");
+    }
+
+    @Test
+    void 약정이_만료됐으면_할인_없이_정가로_절약액을_알려준다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_PREMIUM", true);
+        at(Instant.parse("2028-02-12T03:00:00Z")); // 약정 24개월이 지남
+        setUsage(35 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        assertThat(outcome.content()).contains("월 20,000원 아낄 수 있어요", "지금 5G 프리미엄은 월 85,000원이에요")
+                .doesNotContain("약정 할인");
+    }
+
+    @Test
+    void 지금_요금제가_사용량에_알맞으면_그대로_쓰라고_한다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, age(GENERAL), true);
+
+        assertThat(outcome.content()).contains("지금 쓰는 5G 스탠다드(월 65,000원, 데이터 50GB)이 사용량에 알맞아요", "그대로 쓰시는 걸 추천해요");
+        assertThat(outcome.followUps()).containsExactly("요금제 종류 알려줘");
+    }
+
+    // 추천 답변 문구가 바뀌면 신청·변경이 직전 추천을 찾는 문구(SessionRecommendationAnswers)와 어긋나므로 함께 확인한다
+    @Test
+    void 더_싼_요금제를_권하는_답변에서_직전_추천_요금제만_찾는다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.CHEAPER_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content))
+                .isEqualTo("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면 사용량을 채우면서 월 20,000원 아낄 수 있어요.");
+    }
+
+    @Test
+    void 더_큰_요금제를_권하는_답변에서_직전_추천_요금제만_찾는다() {
+        subscribeAndUse("FIVE_G_LITE", 20 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.UPGRADE_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).isEqualTo("5G 스탠다드(월 65,000원, 데이터 50GB)을 추천해요.");
+    }
+
+    @Test
+    void 그대로_쓰라는_답변에서는_지금_요금제를_직전_추천으로_찾는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains(SessionRecommendationAnswers.KEEP_MARK);
+        assertThat(PlanTaskAnswerProvider.targetSentence(content)).isEqualTo(
+                "지금 쓰는 5G 스탠다드(월 65,000원, 데이터 50GB)이 사용량에 알맞아요. 그대로 쓰시는 걸 추천해요.");
+    }
+
+    @Test
+    void 한도가_모자라면_어떤_항목이_모자란지_알리고_더_큰_요금제를_추천한다() {
+        subscribeAndUse("FIVE_G_LITE", 20 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains("지금 쓰는 5G 라이트(월 45,000원, 데이터 8GB)은 데이터가 부족해요",
+                "5G 스탠다드(월 65,000원, 데이터 50GB)을 추천해요", "월 20,000원이 더 들어요");
+    }
+
+    @Test
+    void 통화_한도가_모자라면_통화가_부족하다고_알린다() {
+        subscribeAndUse("BUDGET_SAVE", 1 * GB, 600, 10);
+
+        String content = answerer.recommend(userId, age(GENERAL), true).content();
+
+        assertThat(content).contains("지금 쓰는 알뜰 세이브", "통화가 부족해요", "5G 라이트(월 45,000원");
+    }
+
+    @Test
+    void 나이에_따라_추천이_달라지고_생년월일도_없으면_나이대를_되묻는다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, Map.of(), true);
+
+        assertThat(outcome.content()).isNull();
+        assertThat(outcome.asks()).hasSize(1);
+        assertThat(outcome.asks().getFirst().key()).isEqualTo("age_group");
+        assertThat(outcome.asks().getFirst().question()).contains("나이대가 어떻게 되세요");
+        assertThat(outcome.asks().getFirst().options()).containsExactly("만 14~18세", "만 19~64세", "만 65세 이상");
+    }
+
+    @Test
+    void 되묻지_못하는_경로에서는_일반_요금제로만_추천한다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, Map.of(), false);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("지금 쓰는 5G 스탠다드").contains("그대로 쓰시는 걸 추천해요");
+    }
+
+    @Test
+    void 나이에_따라_추천이_달라지지_않으면_되묻지_않는다() {
+        subscribeAndUse("FIVE_G_PREMIUM", 100 * GB, 100, 50);
+
+        Outcome outcome = answerer.recommend(userId, Map.of(), true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("지금 쓰는 5G 프리미엄");
+    }
+
+    @Test
+    void 되묻기에_답한_나이대의_요금제까지_넣어_추천한다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+
+        Outcome youth = answerer.recommend(userId, age("만 14~18세"), false);
+        Outcome general = answerer.recommend(userId, age("만 19~64세"), false);
+
+        assertThat(youth.content()).contains("5G 청소년(월 55,000원, 데이터 80GB)으로 바꾸면", "월 10,000원 아낄 수 있어요");
+        assertThat(general.content()).contains("지금 쓰는 5G 스탠다드").doesNotContain("청소년");
+    }
+
+    @Test
+    void 시니어_요금제는_65세_이상이라고_답했을_때만_권한다() {
+        subscribeAndUse("FIVE_G_LITE", 5 * GB, 100, 50);
+
+        assertThat(answerer.recommend(userId, age("만 65세 이상"), false).content())
+                .contains("LTE 시니어(월 29,000원, 데이터 8GB)으로 바꾸면", "월 16,000원 아낄 수 있어요");
+        assertThat(answerer.recommend(userId, age("만 19~64세"), false).content()).doesNotContain("시니어");
+    }
+
+    @Test
+    void 생년월일이_저장돼_있으면_되묻지_않고_그_나이대로_추천한다() {
+        subscribeAndUse("FIVE_G_STANDARD", 20 * GB, 100, 50);
+        jdbc.update("UPDATE users SET birth_date = '2010-05-01' WHERE user_id = ?", userId); // 만 16세
+        entityManager.clear();
+
+        Outcome outcome = answerer.recommend(userId, Map.of(), true);
+
+        assertThat(outcome.asks()).isNull();
+        assertThat(outcome.content()).contains("5G 청소년(월 55,000원");
+
+        jdbc.update("UPDATE users SET birth_date = '1990-05-01' WHERE user_id = ?", userId);
+        entityManager.clear();
+        assertThat(answerer.recommend(userId, Map.of(), true).asks()).isNull();
+        assertThat(answerer.recommend(userId, Map.of(), true).content()).doesNotContain("청소년");
+    }
+
+    @Test
+    void 요금제를_바꾼_지_석_달이_안_됐으면_더_싼_요금제는_권하지_않는다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD");
+        at(Instant.parse("2026-09-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null); // 9월 11일부터 적용
+        at(OCT_12);
+        setUsage(35 * GB, 100, 50);
+
+        assertThat(answerer.recommend(userId, age(GENERAL), true).content()).contains("지금 쓰는 5G 프리미엄", "그대로 쓰시는 걸 추천해요");
+
+        at(Instant.parse("2027-01-12T03:00:00Z")); // 변경 후 석 달이 지남
+        setUsage(35 * GB, 100, 50);
+        assertThat(answerer.recommend(userId, age(GENERAL), true).content()).contains("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면");
+    }
+
+    @Test
+    void 최근에_바꾼_회원도_더_싼_요금제를_찾으면_싼_요금제를_권하고_앞뒤가_맞게_안내한다() {
+        subscribeAt(JANUARY_JOIN, "FIVE_G_STANDARD");
+        at(Instant.parse("2026-09-10T03:00:00Z"));
+        commandService.changePlan(userId, planId("FIVE_G_PREMIUM"), null);
+        at(OCT_12);
+        setUsage(35 * GB, 100, 50);
+
+        String content = answerer.recommend(userId, Map.of("age_group", GENERAL, "price_request", "cheaper"), true).content();
+
+        assertThat(content).contains("5G 스탠다드(월 65,000원, 데이터 50GB)으로 바꾸면", "지금 5G 프리미엄은 월 85,000원이에요")
+                .doesNotContain("그대로 쓰시는 걸 추천해요");
+    }
+
+    @Test
+    void 요금제_이름_뒤에_받침에_맞는_조사를_붙인다() {
+        assertThat(MemberRecommendationAnswerer.topic("5G 프리미엄")).isEqualTo("5G 프리미엄은");
+        assertThat(MemberRecommendationAnswerer.topic("5G 스탠다드")).isEqualTo("5G 스탠다드는");
+        assertThat(MemberRecommendationAnswerer.topic("LTE 플러스")).isEqualTo("LTE 플러스는");
+        assertThat(MemberRecommendationAnswerer.topic("5G 스탠다드, LTE 맥스")).isEqualTo("5G 스탠다드, LTE 맥스는");
+    }
+
+    private String answered(Long member, String age, String data) {
+        Map<String, String> confirmed = new java.util.HashMap<>(age(age));
+        confirmed.put("monthly_data_usage", data);
+        return answerer.recommend(member, confirmed, false).content();
+    }
+
+    private static Map<String, String> age(String answer) {
+        return Map.of("age_group", answer);
+    }
+
+    private void subscribeAndUse(String planCode, long dataMb, int voice, int sms) {
+        subscribeAndUse(planCode, dataMb, voice, sms, false);
+    }
+
+    private void subscribeAndUse(String planCode, long dataMb, int voice, int sms, boolean contract) {
+        subscribeAt(JANUARY_JOIN, planCode, contract);
+        at(OCT_12);
+        setUsage(dataMb, voice, sms);
+    }
+
+    private void subscribeAt(Instant joinedAt, String planCode) {
+        subscribeAt(joinedAt, planCode, false);
+    }
+
+    private void subscribeAt(Instant joinedAt, String planCode, boolean contract) {
+        at(joinedAt);
+        commandService.subscribe(userId, planId(planCode), null, contract);
+    }
+
+    // 사용량 행을 만든 뒤 모든 달의 값을 같게 고정해 평균이 곧 이 값이 되게 한다
+    private void setUsage(long dataMb, int voice, int sms) {
+        usageService.getOverview(userId);
+        jdbc.update("UPDATE subscription_usages SET used_data_mb = ?, used_voice_minutes = ?, used_sms_count = ? "
+                + "WHERE subscription_id IN (SELECT subscription_id FROM user_subscriptions WHERE user_id = ?)",
+                dataMb, voice, sms, userId);
+        entityManager.clear();
+    }
+
+    private void at(Instant instant) {
+        when(clock.instant()).thenReturn(instant);
+    }
+
+    private Long planId(String code) {
+        return planRepository.findAll().stream()
+                .filter(plan -> plan.getCode().equals(code)).findFirst().orElseThrow().getPlanId();
+    }
+}

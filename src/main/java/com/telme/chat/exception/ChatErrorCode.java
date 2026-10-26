@@ -1,0 +1,35 @@
+package com.telme.chat.exception;
+
+import com.telme.global.common.code.BaseErrorCode;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@AllArgsConstructor
+public enum ChatErrorCode implements BaseErrorCode {
+
+    UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "CHAT401-0", "채팅 이용을 위한 인증 정보가 없습니다."),
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST, "CHAT400-0", "유효하지 않은 채팅 목록 커서입니다."),
+    INVALID_PERIOD(HttpStatus.BAD_REQUEST, "CHAT400-1", "조회 기간의 시작이 끝보다 늦습니다."),
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404-0", "채팅 세션을 찾을 수 없습니다."),
+    EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404-1", "채팅 실행 이력을 찾을 수 없습니다."),
+    MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT404-2", "채팅 메시지를 찾을 수 없습니다."),
+    SESSION_CLOSED(HttpStatus.CONFLICT, "CHAT409-0", "종료된 채팅 세션에는 메시지를 보낼 수 없습니다."),
+    EXECUTION_NOT_RUNNING(HttpStatus.CONFLICT, "CHAT409-1", "이미 종료된 채팅 실행입니다."),
+    ANSWER_ALREADY_STARTED(HttpStatus.CONFLICT, "CHAT409-2", "이미 답변 생성을 시작한 채팅 실행입니다."),
+    EXECUTION_IN_PROGRESS(HttpStatus.CONFLICT, "CHAT409-3", "이전 질문에 대한 답변을 생성하고 있습니다."),
+    INPUT_REQUEST_CONFLICT(HttpStatus.CONFLICT, "CHAT409-4", "같은 요청 식별자를 다른 입력에 사용할 수 없습니다."),
+    RETRY_NOT_AVAILABLE(HttpStatus.CONFLICT, "CHAT409-5", "다시 시도할 수 없는 답변입니다."),
+    RETRY_ALREADY_USED(HttpStatus.CONFLICT, "CHAT409-6", "이미 다시 시도한 질문입니다."),
+    GUEST_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "CHAT429-0",
+            "오늘 비회원으로 보낼 수 있는 질문을 모두 사용했습니다. 로그인하면 이어서 대화할 수 있습니다."),
+    OUTPUT_POLICY_BLOCKED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-0",
+            "답변을 안전하게 제공하지 못했습니다. 다른 표현으로 질문해 주세요."),
+    OUTPUT_CHECK_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "CHAT500-1",
+            "답변을 안전하게 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+
+    private final HttpStatus status;
+    private final String code;
+    private final String message;
+}

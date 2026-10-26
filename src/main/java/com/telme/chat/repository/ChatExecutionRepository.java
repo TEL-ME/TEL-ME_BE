@@ -1,0 +1,87 @@
+package com.telme.chat.repository;
+
+import com.telme.chat.entity.ChatExecution;
+import jakarta.persistence.LockModeType;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface ChatExecutionRepository extends JpaRepository<ChatExecution, Long> {
+
+    // now()는 트랜잭션 시작 시각이라 락 대기·처리 시간이 빠진다. 호출한 순간의 DB 시계를 읽는다.
+    @Query(value = "select clock_timestamp()", nativeQuery = true)
+    Instant currentDatabaseTime();
+
+    @Query("""
+            select execution
+            from ChatExecution execution
+            join fetch execution.session
+            join fetch execution.inputMessage
+            where execution.executionId = :executionId
+            """)
+    Optional<ChatExecution> findContextExecution(@Param("executionId") Long executionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select execution
+            from ChatExecution execution
+            where execution.executionId = :executionId
+            """)
+    Optional<ChatExecution> findExecutionByIdForUpdate(@Param("executionId") Long executionId);
+
+    Optional<ChatExecution> findFirstBySession_SessionIdAndStatusOrderByStartedAtDesc(
+            Long sessionId,
+            ChatExecution.Status status
+    );
+
+    boolean existsByInputMessage_MessageIdAndAttemptGreaterThan(Long inputMessageId, int attempt);
+
+    Optional<ChatExecution> findFirstBySession_SessionIdOrderByExecutionIdDesc(Long sessionId);
+
+    @Query("select execution.attempt from ChatExecution execution where execution.executionId = :executionId")
+    Optional<Integer> findAttempt(@Param("executionId") Long executionId);
+
+    @Query("""
+            select execution.executionId
+            from ChatExecution execution
+            where execution.status = :status
+              and execution.startedAt <= :startedBefore
+              and execution.executionId > :afterId
+            order by execution.executionId
+            """)
+    List<Long> findExecutionIdsStartedBefore(
+            @Param("status") ChatExecution.Status status,
+            @Param("startedBefore") Instant startedBefore,
+            @Param("afterId") Long afterId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select execution
+            from ChatExecution execution
+            where execution.executionId = :executionId
+              and execution.session.userId = :userId
+            """)
+    Optional<ChatExecution> findMemberExecution(
+            @Param("executionId") Long executionId,
+            @Param("userId") Long userId
+    );
+
+    @Query("""
+            select execution
+            from ChatExecution execution
+            where execution.executionId = :executionId
+              and execution.session.userId is null
+              and execution.session.guestId = :guestId
+            """)
+    Optional<ChatExecution> findGuestExecution(
+            @Param("executionId") Long executionId,
+            @Param("guestId") UUID guestId
+    );
+}

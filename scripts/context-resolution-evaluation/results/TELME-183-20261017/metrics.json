@@ -1,0 +1,134 @@
+{
+  "issue": "TELME-183",
+  "measuredAt": "2026-10-17",
+  "scope": "문맥 해석",
+  "runs": {
+    "context-1": {
+      "total": 243,
+      "correct": 222,
+      "basicCorrect": 202,
+      "invalidResolutionCount": 0,
+      "groups": {
+        "cases": {
+          "total": 80,
+          "correct": 79
+        },
+        "accuracyCases": {
+          "total": 30,
+          "correct": 29
+        },
+        "unseenCases": {
+          "total": 29,
+          "correct": 26
+        },
+        "costCases": {
+          "total": 11,
+          "correct": 9
+        },
+        "gateCases": {
+          "total": 9,
+          "correct": 8
+        },
+        "reviewCases": {
+          "total": 10,
+          "correct": 8
+        },
+        "confirmationCases": {
+          "total": 20,
+          "correct": 20
+        },
+        "evidenceValidationCases": {
+          "total": 20,
+          "correct": 20
+        },
+        "sourceSelectionCases": {
+          "total": 4,
+          "correct": 3
+        },
+        "blindCases": {
+          "total": 30,
+          "correct": 20
+        }
+      },
+      "callLatency": {
+        "context-v32-reference": {
+          "count": 174,
+          "medianMs": 685.0,
+          "p95Ms": 865
+        },
+        "context-v32-sources": {
+          "count": 110,
+          "medianMs": 2042.0,
+          "p95Ms": 3199
+        }
+      }
+    },
+    "context-2": {
+      "total": 243,
+      "correct": 222,
+      "basicCorrect": 202,
+      "invalidResolutionCount": 0,
+      "groups": {
+        "cases": {
+          "total": 80,
+          "correct": 79
+        },
+        "accuracyCases": {
+          "total": 30,
+          "correct": 29
+        },
+        "unseenCases": {
+          "total": 29,
+          "correct": 26
+        },
+        "costCases": {
+          "total": 11,
+          "correct": 9
+        },
+        "gateCases": {
+          "total": 9,
+          "correct": 8
+        },
+        "reviewCases": {
+          "total": 10,
+          "correct": 8
+        },
+        "confirmationCases": {
+          "total": 20,
+          "correct": 20
+        },
+        "evidenceValidationCases": {
+          "total": 20,
+          "correct": 20
+        },
+        "sourceSelectionCases": {
+          "total": 4,
+          "correct": 3
+        },
+        "blindCases": {
+          "total": 30,
+          "correct": 20
+        }
+      },
+      "callLatency": {
+        "context-v32-reference": {
+          "count": 174,
+          "medianMs": 662.0,
+          "p95Ms": 723
+        },
+        "context-v32-sources": {
+          "count": 110,
+          "medianMs": 1942.0,
+          "p95Ms": 2898
+        }
+      }
+    }
+  },
+  "comparisons": {
+    "context": {
+      "bothCorrect": 222,
+      "bothWrong": 21,
+      "decisionChanged": []
+    }
+  }
+}

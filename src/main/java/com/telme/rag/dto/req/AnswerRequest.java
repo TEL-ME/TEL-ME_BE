@@ -1,0 +1,53 @@
+package com.telme.rag.dto.req;
+
+import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.chat.service.ChatContext;
+import java.util.List;
+import java.util.Map;
+
+import lombok.Builder;
+
+@Builder
+public record AnswerRequest(
+        // null이면 호출 기록을 남기지 않음
+        Long executionId,
+        // Existing consultation reference, used only to correlate execution subqueries.
+        Long consultRequestId,
+        // 정제된 질의가 아니라 사용자 원문
+        String userQuery,
+        // 되묻기로 확정된 조건
+        Map<String, String> conditions,
+        // 조건 이름으로 그때 되물은 질문 문구를 찾는다. 없으면 조건 이름을 그대로 쓴다
+        Map<String, String> conditionLabels,
+        // 비어 있으면 근거 없음으로 처리
+        List<FaqSearchResponse> searchResults,
+        String resolvedQuery,
+        ChatContext chatContext
+) {
+    public AnswerRequest(Long executionId, Long consultRequestId, String userQuery,
+            Map<String, String> conditions, List<FaqSearchResponse> searchResults) {
+        this(executionId, consultRequestId, userQuery, conditions, Map.of(), searchResults,
+                userQuery, null);
+    }
+
+    public AnswerRequest(Long executionId, String userQuery, Map<String, String> conditions,
+            List<FaqSearchResponse> searchResults) {
+        this(executionId, null, userQuery, conditions, searchResults);
+    }
+
+    public AnswerRequest {
+        if (userQuery == null || userQuery.isBlank()) {
+            throw new IllegalArgumentException("사용자 질문은 비어 있을 수 없습니다.");
+        }
+        if (conditions == null) {
+            conditions = Map.of();
+        }
+        if (conditionLabels == null) {
+            conditionLabels = Map.of();
+        }
+        if (searchResults == null) {
+            searchResults = List.of();
+        }
+        resolvedQuery = resolvedQuery == null || resolvedQuery.isBlank() ? userQuery : resolvedQuery.strip();
+    }
+}

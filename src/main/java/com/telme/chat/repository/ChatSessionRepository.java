@@ -1,0 +1,159 @@
+package com.telme.chat.repository;
+
+import com.telme.chat.entity.ChatSession;
+import jakarta.persistence.LockModeType;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
+
+    @Query("""
+            select case when count(session) > 0 then true else false end
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.title is not null
+              and trim(session.title) <> ''
+            """)
+    boolean hasTitle(@Param("sessionId") Long sessionId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.title = :title
+            where session.sessionId = :sessionId
+              and (session.title is null or trim(session.title) = '')
+            """)
+    int updateTitleIfMissing(
+            @Param("sessionId") Long sessionId,
+            @Param("title") String title
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.summary = :summary,
+                session.summaryThroughSequenceNo = :throughSequenceNo
+            where session.sessionId = :sessionId
+              and session.summaryThroughSequenceNo = :expectedSequenceNo
+              and session.summaryThroughSequenceNo < :throughSequenceNo
+            """)
+    int updateSummaryIfCurrent(
+            @Param("sessionId") Long sessionId,
+            @Param("summary") String summary,
+            @Param("expectedSequenceNo") Integer expectedSequenceNo,
+            @Param("throughSequenceNo") Integer throughSequenceNo
+    );
+
+    // 로그인 시 게스트로 만든 채팅 세션을 회원 계정으로 승계. guest_id는 이력 보존을 위해 유지
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update ChatSession session
+            set session.userId = :userId
+            where session.guestId = :guestId
+              and session.userId is null
+            """)
+    int succeedGuestSessions(@Param("guestId") UUID guestId, @Param("userId") Long userId);
+
+    // 게스트 세션이거나 없는 세션이면 비어 있다
+    @Query("select session.userId from ChatSession session where session.sessionId = :sessionId")
+    Optional<Long> findUserIdBySessionId(@Param("sessionId") Long sessionId);
+
+    boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
+
+    boolean existsBySessionIdAndUserIdIsNullAndGuestId(Long sessionId, UUID guestId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
+            """)
+    Optional<ChatSession> findSessionByIdForUpdate(@Param("sessionId") Long sessionId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.userId = :userId
+            """)
+    Optional<ChatSession> findMemberSessionByIdForUpdate(
+            @Param("sessionId") Long sessionId,
+            @Param("userId") Long userId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select session
+            from ChatSession session
+            where session.sessionId = :sessionId
+              and session.userId is null
+              and session.guestId = :guestId
+            """)
+    Optional<ChatSession> findGuestSessionByIdForUpdate(
+            @Param("sessionId") Long sessionId,
+            @Param("guestId") UUID guestId
+    );
+
+    @Query("""
+            select session
+            from ChatSession session
+            where session.userId = :userId
+            order by session.lastActiveAt desc, session.sessionId desc
+            """)
+    List<ChatSession> findFirstMemberSessions(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select session
+            from ChatSession session
+            where session.userId = :userId
+              and (session.lastActiveAt < :cursorTime
+                   or (session.lastActiveAt = :cursorTime and session.sessionId < :cursorId))
+            order by session.lastActiveAt desc, session.sessionId desc
+            """)
+    List<ChatSession> findMemberSessionsBefore(
+            @Param("userId") Long userId,
+            @Param("cursorTime") Instant cursorTime,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select session
+            from ChatSession session
+            where session.userId is null
+              and session.guestId = :guestId
+            order by session.lastActiveAt desc, session.sessionId desc
+            """)
+    List<ChatSession> findFirstGuestSessions(
+            @Param("guestId") UUID guestId,
+            Pageable pageable
+    );
+
+    @Query("""
+            select session
+            from ChatSession session
+            where session.userId is null
+              and session.guestId = :guestId
+              and (session.lastActiveAt < :cursorTime
+                   or (session.lastActiveAt = :cursorTime and session.sessionId < :cursorId))
+            order by session.lastActiveAt desc, session.sessionId desc
+            """)
+    List<ChatSession> findGuestSessionsBefore(
+            @Param("guestId") UUID guestId,
+            @Param("cursorTime") Instant cursorTime,
+            @Param("cursorId") Long cursorId,
+            Pageable pageable
+    );
+}

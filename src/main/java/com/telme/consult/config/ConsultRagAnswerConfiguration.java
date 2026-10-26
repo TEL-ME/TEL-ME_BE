@@ -1,0 +1,213 @@
+package com.telme.consult.config;
+
+import com.telme.consult.repository.SuggestedQuestionFaqFinder;
+import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
+import com.telme.consult.service.CompoundPartSuggestions;
+import com.telme.consult.service.QueryRoutingAnalysisProvider.CompoundQuestionSuggestions;
+import com.telme.consult.service.FaqCandidateNoAnswerSuggestions;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
+import com.telme.consult.service.ChatStoreAnswerProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.consult.service.ConditionExtractor;
+import com.telme.consult.service.FaqClarificationPlanner;
+import com.telme.consult.service.FaqSearchAnswerProvider;
+import com.telme.consult.service.JudgingFaqGrayZoneSelector;
+import com.telme.llm.service.LlmClient;
+import com.telme.consult.service.FaqSearchAnswerProvider.SearchResultAnswerGenerator;
+import com.telme.consult.service.RagSearchResultAnswerGenerator;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.StreamHandlerFactory;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
+import com.telme.consult.service.PolicyLinkSuggestedQuestions;
+import com.telme.consult.service.SuggestedQuestionRecommender;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberPlanAnswerer;
+import com.telme.consult.service.MemberRecommendationAnswerer;
+import com.telme.consult.service.PlanAnswerProvider;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
+import com.telme.consult.service.PurposeRoutingAnswerProvider;
+import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
+import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.service.FaqSearchService;
+import com.telme.intent.service.QueryRoutingService;
+import com.telme.intent.service.RuleBasedRoutingFallback;
+import com.telme.plan.entity.Plan;
+import com.telme.plan.repository.PlanRepository;
+import com.telme.rag.service.AnswerGenerator;
+import com.telme.rag.converter.AnswerContextConverter;
+import com.telme.llm.service.LlmStreamHandler;
+import com.telme.chat.service.ExecutionTrace;
+import java.util.function.Supplier;
+
+import com.telme.faq.config.SearchProperties;
+import com.telme.rag.service.FaqEvidenceJudge;
+import com.telme.llm.config.BedrockConfig;
+import com.telme.llm.service.FallbackLlmClient;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+/** FAQ 검색 결과를 RAG 답변으로 변환하는 후속 연결 설정이다. */
+@Configuration(proxyBeanMethods = false)
+@Conditional(ConsultChatEnabledCondition.class)
+@EnableConfigurationProperties({FaqClarificationProperties.class, SuggestedQuestionProperties.class})
+public class ConsultRagAnswerConfiguration {
+    @Bean
+    StreamHandlerFactory consultAnswerStreamHandlerFactory(ConsultChatEvents events) {
+        return executionId -> {
+            LlmStreamHandler delegate = events.stream(executionId);
+            return new LlmStreamHandler() {
+                @Override
+                public void onToken(String token) {
+                    // 검증된 내용도 저장 전에는 전송하지 않는다. 최종 저장 후 처리기가 보낸다.
+                    delegate.onProgress();
+                }
+
+                @Override
+                public void onProgress() {
+                    delegate.onProgress();
+                }
+
+                @Override
+                public void onRetry(int attempt, Throwable cause) {
+                    delegate.onRetry(attempt, cause);
+                }
+
+                @Override
+                public void onComplete() {}
+
+                @Override
+                public void onError(Throwable error) {}
+            };
+        };
+    }
+
+    // 연결표·FAQ 규칙. 아래 버튼 중 켜진 것이 있을 때만 기동 중에 한 번 읽고, 형식 오류면 기동이 실패한다
+    @Bean
+    @Lazy
+    SuggestedQuestionRecommender suggestedQuestionRecommender() {
+        return SuggestedQuestionRecommender.load(new ObjectMapper());
+    }
+
+    // 꺼져 있으면 DB와 연결표를 읽지 않는다
+    @Bean
+    SuggestedQuestions consultSuggestedQuestions(
+            SuggestedQuestionProperties properties,
+            ObjectProvider<SuggestedQuestionRecommender> recommender,
+            ObjectProvider<JdbcTemplate> jdbc,
+            ObjectProvider<EmbeddingProperties> embedding) {
+        if (!properties.enabled()) {
+            return SuggestedQuestions.none();
+        }
+        return new PolicyLinkSuggestedQuestions(
+                recommender.getObject(),
+                new SuggestedQuestionFaqFinder(jdbc.getObject(), embedding.getObject().model()),
+                properties.storeChipEnabled());
+    }
+
+    // 추천 질문과 이 버튼이 모두 켜져 있을 때만 동작한다
+    @Bean
+    NoAnswerSuggestions consultNoAnswerSuggestions(
+            SuggestedQuestionProperties properties,
+            FaqSearchService searches,
+            ObjectProvider<SuggestedQuestionRecommender> recommender) {
+        if (!properties.enabled() || !properties.noAnswerEnabled()) {
+            return NoAnswerSuggestions.none();
+        }
+        return new FaqCandidateNoAnswerSuggestions(searches, recommender.getObject());
+    }
+
+    // FAQ와 매장 찾기가 섞인 질문의 버튼. FAQ 버튼은 답을 못 할 때 버튼, 매장 버튼은 매장 칩 플래그를 따른다
+    @Bean
+    CompoundQuestionSuggestions consultCompoundQuestionSuggestions(
+            SuggestedQuestionProperties properties,
+            FaqSearchService searches,
+            ObjectProvider<SuggestedQuestionRecommender> recommender,
+            ObjectProvider<RuleBasedRoutingFallback> serviceTypes) {
+        boolean faq = properties.enabled() && properties.noAnswerEnabled();
+        boolean store = properties.enabled() && properties.storeChipEnabled();
+        if (!faq && !store) {
+            return CompoundQuestionSuggestions.none();
+        }
+        SuggestedQuestionRecommender data = recommender.getObject();
+        return new CompoundPartSuggestions(
+                faq ? new FaqCandidateNoAnswerSuggestions(searches, data) : null,
+                store ? data : null,
+                serviceTypes.getIfAvailable(RuleBasedRoutingFallback::new));
+    }
+
+    @Bean
+    SearchResultAnswerGenerator consultRagAnswerGenerator(
+            AnswerGenerator answers,
+            StreamHandlerFactory streamHandlers,
+            SuggestedQuestions suggestedQuestions) {
+        return new RagSearchResultAnswerGenerator(answers, streamHandlers, suggestedQuestions);
+    }
+
+    // 조건을 뽑지 않으면 조건 뽑기 클라이언트를 만들지 않는다
+    static FaqClarificationPlanner clarificationPlanner(
+            FaqClarificationProperties clarification, LlmClient client, Supplier<LlmClient> bedrock) {
+        if (!clarification.extractConditions()) {
+            return FaqClarificationPlanner.withoutConditions();
+        }
+        LlmClient extraction = extractionClient(clarification, client, bedrock.get());
+        return new FaqClarificationPlanner(new ConditionExtractor(
+                extraction, extraction == client ? null : client, new ObjectMapper()));
+    }
+
+    static LlmClient extractionClient(FaqClarificationProperties clarification, LlmClient exaone, LlmClient bedrock) {
+        return clarification.bedrock() && bedrock != null ? new FallbackLlmClient(bedrock, exaone) : exaone;
+    }
+
+    @Bean
+    AnswerProvider consultAnswerProvider(
+            FaqSearchService searches, SearchResultAnswerGenerator answers, ExecutionTrace trace,
+            ChatStoreAnswerProvider storeAnswers, ObjectProvider<LlmClient> llmClient,
+            FaqClarificationProperties clarification,
+            ComparisonEvidenceResolver comparisonEvidence, FaqCandidateEvidenceResolver candidateEvidence,
+            AnswerContextConverter sourceConverter, SuggestedQuestions suggestedQuestions,
+            QueryRoutingService routing, SearchProperties searchProperties,
+            ObjectProvider<FaqEvidenceJudge> evidenceJudge, PlanQuestionClassifier planClassifier,
+            PlanCatalogAnswerer planCatalog, MemberPlanAnswerer memberPlans,
+            MemberRecommendationAnswerer recommendations, ChatSessionRepository chatSessions,
+            SessionRecommendationAnswers recommendationAnswers, PlanQuestionProperties planProperties,
+            @Qualifier(BedrockConfig.JUDGE_LLM_CLIENT) ObjectProvider<LlmClient> bedrockClient,
+            ObjectProvider<PlanRepository> planRepository) {
+        // 꺼져 있거나 모델을 쓸 수 없으면 되묻지 않고 지금처럼 바로 답한다
+        LlmClient client = clarification.enabled() ? llmClient.getIfAvailable() : null;
+        FaqClarificationPlanner planner = client == null
+                ? null
+                : clarificationPlanner(clarification, client, bedrockClient::getIfAvailable);
+        return new PurposeRoutingAnswerProvider(
+                new PlanAnswerProvider(
+                        new FaqSearchAnswerProvider(searches, answers, trace,
+                                comparisonEvidence, candidateEvidence, sourceConverter, planner, suggestedQuestions,
+                                routing::refinedSearchQuery,
+                                // 꺼져 있으면 null이라 기존 검색을 그대로 쓴다
+                                JudgingFaqGrayZoneSelector.fromSettings(searchProperties, evidenceJudge.getIfAvailable()),
+                                question -> aboutPlan(question, planRepository.getIfAvailable())),
+                        planClassifier, planCatalog, memberPlans, recommendations, chatSessions::findUserIdBySessionId,
+                        recommendationAnswers::of,
+                        comparisonEvidence, trace, planProperties.answerEnabled()),
+                storeAnswers::generate);
+    }
+
+    // 문맥을 풀어 쓴 질문이 요금제를 가리키는지. "요금제"라고 했거나 판매 중인 요금제 이름이 있으면 그렇다(띄어쓰기·대소문자 무시).
+    // 요금제 저장소가 없는 설정(일부 테스트)에서는 "요금제"라는 말만 본다
+    static boolean aboutPlan(String question, PlanRepository plans) {
+        if (question == null || question.isBlank()) {
+            return false;
+        }
+        String compact = question.replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT);
+        return compact.contains("요금제") || plans != null && plans.findByStatusOrderBySortOrderAscPlanIdAsc(Plan.Status.ACTIVE).stream()
+                .anyMatch(plan -> compact.contains(plan.getName().replaceAll("\\s+", "").toUpperCase(java.util.Locale.ROOT)));
+    }
+}

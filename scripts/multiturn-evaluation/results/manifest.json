@@ -1,0 +1,128 @@
+{
+  "baseCommit": "3516b246a91c48de8683a180e64c98200a583f88",
+  "changesNotCommitted": true,
+  "codeFileSha256": {
+    "src/main/java/com/telme/chat/config/ChatSummaryProperties.java": "753440d40a417fbd4bf26f72a9edad4113c0ef64f88faacc313bcb8e5e362736",
+    "src/main/java/com/telme/chat/service/ChatContext.java": "4d8ad9e38580f7ae53dc9917ce3bcd39a80bcea1eef358e3d24dec66ae7d87e1",
+    "src/main/java/com/telme/chat/service/ChatContextBuilder.java": "31e4a40b102114f32c749ba2ec1fc4052793a1bde6ea4e3eb1497bf182f255b2",
+    "src/main/java/com/telme/chat/service/ChatSummaryPrompt.java": "b7bb094535ca663ba7377733bcb5ccbba8484092e3b67e02a9e91297622aca05",
+    "src/main/java/com/telme/chat/service/ChatSummaryService.java": "ab72f8c2bcc9b03bfb1bd031391a2f9a65d7ae185d0d00d36bfa32da9ec589de",
+    "src/main/java/com/telme/chat/service/ChatSummaryStore.java": "ad4fee6336fc023ecd06536453a4c2c9fffa7521c12b1cf8fdf30dfd0642c950",
+    "src/main/java/com/telme/chat/service/ChatTokenEstimator.java": "edb3b4783b1bb0f5a52870ee40dd127ff40e1f8cfdb44c9ec45dafc665fee1dc",
+    "src/main/java/com/telme/consult/config/ConsultTurnRoutingConfiguration.java": "042d2ab7c9a4aec0f51350ee07493ee927b532d4390644eebe9b648625dba2d7",
+    "src/main/java/com/telme/consult/service/ConsultChatProcessingService.java": "f939ae07b05f18a3e6d92df3f27244b5851a8be271cea43918b2e3c4a1b605f2",
+    "src/main/java/com/telme/consult/service/ConsultTurnAnalysisAdapter.java": "b79f9cf8e5dbeeafb2ac522e8406abb11190182859918acffac1080daa54db87",
+    "src/main/java/com/telme/consult/service/FaqSearchAnswerProvider.java": "5e710160dabd58975b68067f93a268cc7ab141411f2bef3464b63b847f82c417",
+    "src/main/java/com/telme/consult/service/FollowupContextService.java": "9ce4b62624b4b876e3d4105cea7d135377098c722b5f918289319caa55dce730",
+    "src/main/java/com/telme/consult/service/QueryRoutingAnalysisProvider.java": "31a6362555e0b3997e002230d7c2c434cf99b1298e45baf985e3621f968fe8a3",
+    "src/main/java/com/telme/consult/service/RagSearchResultAnswerGenerator.java": "5bd76c7ffa2fce24b23438cb289259ab3a22afdc996beae58921ef0006973adb",
+    "src/main/java/com/telme/intent/service/QueryRoutingService.java": "59f9168a9b6f53e6e0be4d9bd7ccac72f9be421c62b12b6202edd07f23dd1ce3",
+    "src/main/java/com/telme/rag/dto/req/AnswerRequest.java": "0dda67a47ed5ec7c4a9e392fca0e4bf1d1f98321d3720c977bae0e4f76634411",
+    "src/main/java/com/telme/rag/service/AnswerPromptTemplates.java": "d21cc5218420423e5162b3637ed02c7fd2abac58aefbf316119486b760068c1d",
+    "src/main/java/com/telme/rag/service/RagAnswerGenerator.java": "4c46d3eb3f1167b802ff13fe20deb9546799ca39ae772d411d3201277b4debc0",
+    "src/test/java/com/telme/chat/service/ChatContextBuilderIntegrationTest.java": "080a43de845c501da17c4f99f01cb7e69edbaebe256cf5adfa5ee70d7f22632d",
+    "src/test/java/com/telme/chat/service/ChatSummaryFlowIntegrationTest.java": "7c7e68563d50c75ba310efd11ea6026c48405ed88016b853e324b025627af3d6",
+    "src/test/java/com/telme/chat/service/ChatSummaryServiceTest.java": "4077abce0dfbbf30059efb6a8861cec8838a1b85e685883c9ac2b809d7d4791a",
+    "src/test/java/com/telme/consult/config/ConsultChatPipelineConfigurationTest.java": "35982bc170e6daca4b39fcd334b16f8eca499a0711f32ce43932e3fbb231f180",
+    "src/test/java/com/telme/consult/config/ConsultTurnRoutingConfigurationTest.java": "46bb07fc30dcf54b6af868660962faf13cf88453b64379470051e1319cc14b35",
+    "src/test/java/com/telme/probe/PromptRelationComparisonProbeTest.java": "22035b6a9ba6ce7901a297098701b068f1cf6897e0f460c1900d695ac7dd4d69",
+    "src/test/java/com/telme/rag/service/AnswerPromptTemplatesTest.java": "652f50f9d539a18d058ace30dd4075f083b68f5cf9ab3d87a7341f7e6310f9ea",
+    "src/main/java/com/telme/chat/converter/ChatContextFormatter.java": "d20958a97745fe890c119ffe213da189c4361b4cb951724fcc1539311f2fe503",
+    "src/main/java/com/telme/chat/converter/ChatSummaryConverter.java": "787e7252988c11ed8ad36b1aa27ff8cf03a669244fea6684feed155f2c1c5ad2",
+    "src/main/java/com/telme/chat/service/ChatQuestionResolver.java": "b3d584ae4c1dd36e5b8b19ea5e1c0e322f59bc3b3b39ef7e276693c669be56d0",
+    "src/test/java/com/telme/chat/converter/ChatContextFormatterTest.java": "aea78de9f8babf7ddbad55611de0972efe99bb4b3306d8c02ef84631ddbae7f8",
+    "src/test/java/com/telme/chat/converter/ChatSummaryConverterTest.java": "6139e62130561666d2bd0f3b0f0644d1a7a4704199338364c21e9da45e54c559",
+    "src/test/java/com/telme/chat/service/ChatGroundedSummaryIntegrationTest.java": "d2f50359dfae30789a49574311e60206b259f688f32c01a9a61c22ceb852af0e",
+    "src/test/java/com/telme/chat/service/ChatQuestionResolverTest.java": "fc2b405cab4d1190376096f86ad8e56ba1a1114f2c81af20dcfbfa8a64916d3c",
+    "src/test/java/com/telme/chat/service/ChatSummaryLiveEvaluationTest.java": "d0a7a443ddcd7280a6187fd8e0fa16cf64e3c7ff2e3d59133393a09a7e05a454",
+    "src/test/java/com/telme/consult/service/MultiturnChatIntegrationTest.java": "b18afe00bc637eb963a171853165e217b94b6e763446989d94f7736945a11db3",
+    "src/test/java/com/telme/consult/service/MultiturnLiveApiEvaluationTest.java": "5530e3f9c0a5cf2e8f66cc0ba078b464dbadd5649390266b0bd3e3d159bf276c"
+  },
+  "models": [
+    {
+      "name": "bge-m3:latest",
+      "digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "bert",
+        "families": [
+          "bert"
+        ],
+        "parameter_size": "566.70M",
+        "quantization_level": "F16",
+        "context_length": 8192,
+        "embedding_length": 1024
+      }
+    },
+    {
+      "name": "exaone3.5:7.8b",
+      "digest": "c7c4e3d1ca22fe9225f18b35eb719f67e2ca96a42e7fd17294a45b83ba8fbf03",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "exaone",
+        "families": [
+          "exaone"
+        ],
+        "parameter_size": "7.8B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 32768,
+        "embedding_length": 4096
+      }
+    }
+  ],
+  "archives": [
+    {
+      "source": ".measure\\telme121\\summary-comparison\\raw-1791337476782.jsonl",
+      "archive": "scripts/multiturn-evaluation/results/V1-summary-comparison/raw/final-summary.jsonl.gz",
+      "uncompressedSha256": "82c1fdd87f9f4cb62c9b6311652ff26d287b2b62719e5cf791723632fbf4c005",
+      "bytes": 1135561,
+      "isFinal": true
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\boundaries-1791337823504.jsonl",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-boundaries.jsonl.gz",
+      "uncompressedSha256": "0cca6a2eb2fbb1837a95325deb4d2e3d2fd3a2fb3374fd50dc1d93853636c684",
+      "bytes": 26962,
+      "isFinal": true
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\cases-1791337823504.jsonl",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-cases.jsonl.gz",
+      "uncompressedSha256": "57372aa51d0358f28e8ad210d34fc092b23b0bdb2771a31272bb5e411764e2fa",
+      "bytes": 111319,
+      "isFinal": true
+    },
+    {
+      "source": ".measure\\telme121\\live-api\\model-1791337823504.jsonl",
+      "archive": "scripts/multiturn-evaluation/results/V2-live-api/raw/final-model.jsonl.gz",
+      "uncompressedSha256": "6674c2b5b8d596d0ee9df406a7897afe4e729395f90fcce8f53a554dae71fb91",
+      "bytes": 287981,
+      "isFinal": true
+    }
+  ],
+  "selectedInputs": {
+    "summary": "D:\\finalproject\\TEL-ME_BE\\.measure\\telme121\\summary-comparison\\raw-1791337476782.jsonl",
+    "api": "D:\\finalproject\\TEL-ME_BE\\.measure\\telme121\\live-api\\cases-1791337823504.jsonl",
+    "boundaries": "D:\\finalproject\\TEL-ME_BE\\.measure\\telme121\\live-api\\boundaries-1791337823504.jsonl",
+    "checks": "D:\\finalproject\\TEL-ME_BE\\.measure\\telme121\\full-checks-final.log"
+  },
+  "faqSnapshot": {
+    "faqs": {
+      "sha256": "502cadb981611b9f59eed3db25102613136d65f66ca9a02fe647710f15d9ca46",
+      "bytes": 409588
+    },
+    "faq_embeddings": {
+      "sha256": "61f35b4307459423ec5e957f493fa5a5bcdfe9779071174b441f0c44d0e098ff",
+      "bytes": 29422758
+    },
+    "sourceDatabase": "telme",
+    "targetDatabase": "telme_121_verification",
+    "copiedFaqCount": 1150
+  },
+  "liveApiRows": 8,
+  "boundaryRows": 3,
+  "buildCommand": "gradlew.bat clean test build --build-cache",
+  "intermediateRunsOmitted": 15
+}

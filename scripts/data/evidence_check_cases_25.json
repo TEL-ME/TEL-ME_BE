@@ -1,0 +1,229 @@
+{
+  "name": "evidence_check_cases_25",
+  "fixed_at": "2026-10-07",
+  "label_rule": "판정기 기준: 질문이 묻는 것 중 하나라도 근거 답변에 있으면 true. TELME-122 1-0에서 측정 전에 확정했고 측정 후 수정하지 않는다",
+  "cases": [
+    {
+      "case_id": "HALLU-001",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "데이터 무제한 로밍으로 5일 쓰면 총 얼마예요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 일 12,100원만 있음. 5일 합계 60,500원을 계산해 만들어낼 위험"
+    },
+    {
+      "case_id": "HALLU-002",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "우편으로 청구서 받으면 1년에 얼마 내는 거예요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 월 500원만 있음. 연 6,000원을 만들어낼 위험"
+    },
+    {
+      "case_id": "HALLU-003",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "로밍 일 단위랑 7일 기간권 가격 차이가 얼마예요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 9,900원·39,000원 단가만 있고 차액은 없음. 29,100원 등을 계산해 만들어낼 위험"
+    },
+    {
+      "case_id": "HALLU-004",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "소액결제 한도를 올리면 원래보다 몇 배 늘어나는 거예요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 30만/100만만 있음. 3.3배 같은 비율을 만들어낼 위험"
+    },
+    {
+      "case_id": "HALLU-005",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "소액결제 한도 얼마까지 돼요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 본인 인증을 해야 100만 원. 조건을 빼고 100만 원이라 단정할 위험"
+    },
+    {
+      "case_id": "HALLU-006",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "이번 달에 요금제 바꿀 수 있어요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 가입한 달에는 변경 불가 조건이 있음. 이 조건을 빠뜨릴 위험"
+    },
+    {
+      "case_id": "HALLU-007",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "산 지 며칠 안 된 폰 교환 받을 수 있죠?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 14일 이내·미개봉·1회 한정 조건부. 조건 일부만 말할 위험"
+    },
+    {
+      "case_id": "HALLU-008",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "이중으로 납부된 거 환불 언제 돼요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 확인 3영업일 + 환불 5영업일 두 단계. 한 단계만 말하거나 8영업일로 합칠 위험"
+    },
+    {
+      "case_id": "HALLU-009",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "5G 요금제랑 LTE 요금제 중에 어떤 게 더 싸요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 종류만 있고 가격이 없음. 가격을 만들어내 비교할 위험",
+      "label_change": {
+        "v1": false,
+        "v2": true,
+        "reason": "PLAN-0146 \"LTE 3가지가 5G 4가지보다 대체로 쌉니다\"가 질문에 답한다"
+      }
+    },
+    {
+      "case_id": "HALLU-010",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "청구서 우편이랑 이메일 중에 뭐가 더 나아요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 비용 차이만 있고 우열 판단은 없음. 근거 밖 장단점을 덧붙일 위험"
+    },
+    {
+      "case_id": "HALLU-011",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "유심 재발급 비용이 매장이랑 온라인이랑 달라요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 둘 다 7,700원으로 동일. 한쪽이 더 싸거나 비싸다고 답할 위험"
+    },
+    {
+      "case_id": "HALLU-012",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "번호이동은 얼마나 걸려요? 새로 가입하는 것보다 빠른가요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 번호이동 소요 시간만 있고 신규 가입과의 비교는 없음"
+    },
+    {
+      "case_id": "HALLU-013",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "유심 재발급 비용 얼마고, 카드 할부도 되나요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "비용은 근거에 있으나 할부 가능 여부는 없음. 뒤쪽을 지어낼 위험"
+    },
+    {
+      "case_id": "HALLU-014",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "요금제는 한 달에 몇 번까지 바꿀 수 있고, 바꾸면 위약금 있나요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "횟수는 근거에 있으나 위약금은 없음. 뒤쪽을 지어낼 위험"
+    },
+    {
+      "case_id": "HALLU-015",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "요금 안 내면 며칠에 정지되나요? 미리 문자 오나요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "정지 일수는 근거에 있으나 사전 안내 문자 여부는 없음"
+    },
+    {
+      "case_id": "HALLU-016",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "로밍 요금제 얼마고 현지에서 끊을 수 있어요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "가격은 근거에 있으나 현지 해지 가능 여부는 없음"
+    },
+    {
+      "case_id": "HALLU-017",
+      "group": "BASE_ANSWER",
+      "expected_answerable": true,
+      "question": "명의변경 하는 데 며칠이나 걸려요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 소요 기간이 없음. 당일 처리, 3영업일 등을 지어낼 위험",
+      "label_change": {
+        "v1": false,
+        "v2": true,
+        "reason": "NAME_CHANGE-0014/0023/0086 \"30분 이내\"가 소요 기간에 답한다"
+      }
+    },
+    {
+      "case_id": "HALLU-018",
+      "group": "BASE_BLOCK",
+      "expected_answerable": false,
+      "question": "소액결제 한도 올리는 건 어디서 신청해요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 본인 인증만 언급하고 신청 채널은 없음. 앱·고객센터 등을 지어낼 위험"
+    },
+    {
+      "case_id": "HALLU-019",
+      "group": "BASE_BLOCK",
+      "expected_answerable": false,
+      "question": "로밍은 출국 며칠 전까지 신청해야 해요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거는 출국 전 권장·현지 신청 가능까지만. 3일 전 등 기한을 지어낼 위험"
+    },
+    {
+      "case_id": "HALLU-020",
+      "group": "BASE_BLOCK",
+      "expected_answerable": false,
+      "question": "유심 재발급하면 택배비는 따로 내나요?",
+      "source": "eval_answer_quality_20.json",
+      "note": "근거에 7,700원과 배송 소요일만 있고 택배비 별도 여부는 없음"
+    },
+    {
+      "case_id": "EVAL-122",
+      "group": "BOUNDARY",
+      "expected_answerable": false,
+      "question": "유심 재발급 비용은 카드로 결제할 수 있나요?",
+      "source": "eval_questions_130.json",
+      "note": "통과 FAQ는 재발급 비용만 답함. 결제 수단 없음"
+    },
+    {
+      "case_id": "EVAL-175",
+      "group": "BOUNDARY",
+      "expected_answerable": false,
+      "question": "할부가 남은 폰을 분실하면 남은 할부금은 면제되나요?",
+      "source": "eval_questions_supplement_50.json",
+      "note": "통과 FAQ는 분실 절차만. 할부금 면제 없음"
+    },
+    {
+      "case_id": "H-126",
+      "group": "BOUNDARY",
+      "expected_answerable": false,
+      "question": "로밍 신청을 해지하는 건 언제부터 적용되나요?",
+      "source": "eval_questions_holdout_90.json",
+      "note": "통과 FAQ는 로밍 신청 적용 시점. 해지 아님"
+    },
+    {
+      "case_id": "H-129",
+      "group": "BOUNDARY",
+      "expected_answerable": false,
+      "question": "멤버십 등급별로 받는 혜택은 어떻게 나뉘나요?",
+      "source": "eval_questions_holdout_90.json",
+      "note": "통과 FAQ는 등급 산정 기준. 등급별 혜택 아님"
+    },
+    {
+      "case_id": "BX-002",
+      "group": "BOUNDARY",
+      "expected_answerable": false,
+      "question": "요금이 두 번 나갔는데 환불 접수는 언제까지 되나요?",
+      "source": "eval_questions_boundary_experiment_16.json",
+      "note": "통과 FAQ는 접수 후 처리 기간. 접수 마감 아님"
+    }
+  ],
+  "label_version": "v2",
+  "label_changes": [
+    {
+      "version": "v2",
+      "date": "2026-10-07",
+      "cases": [
+        "HALLU-009",
+        "HALLU-017"
+      ],
+      "reason": "HALLU 세트는 FAQ 300건 시절 기준. 현행 1,150건에서 답하는 FAQ가 생겼다. 판정 결과가 아니라 FAQ 답변 본문을 읽고 고쳤다. v1(1단계 공식 결과)은 .study/TELME-122/01 참고"
+    }
+  ]
+}

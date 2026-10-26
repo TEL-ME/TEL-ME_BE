@@ -1,0 +1,6 @@
+# S1 Bedrock 즉시 장애: Bedrock 주소를 앱 컨테이너 자신(127.0.0.1)으로 돌린다. 443을 듣는 곳이 없어 연결이 바로 거부되고,
+# FallbackLlmClient가 곧바로 엑사원으로 넘긴다. 지역을 바꿨으면 주소도 같이 바꾼다
+services:
+  app:
+    extra_hosts:
+      - "bedrock-runtime.us-east-1.amazonaws.com:127.0.0.1"

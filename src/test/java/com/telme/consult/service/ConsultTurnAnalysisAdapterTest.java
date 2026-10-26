@@ -1,0 +1,424 @@
+package com.telme.consult.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.telme.chat.service.ChatProcessingCommand;
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatContext;
+import com.telme.chat.service.ChatContextMessage;
+import com.telme.chat.service.ChatQuestionResolver;
+import com.telme.chat.service.ExecutionTrace;
+import com.telme.llm.service.LlmClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.telme.chat.entity.ChatMessage;
+import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.dto.DialogueDecision;
+import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueDecision.MessageOrigin;
+import com.telme.consult.dto.DialogueInput.Condition;
+import com.telme.consult.dto.DialogueInput.LocationStatus;
+import com.telme.consult.dto.DialogueInput.Purpose;
+import com.telme.consult.entity.ConsultRequest;
+import com.telme.consult.repository.PendingClarificationFinder.Candidate;
+import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisResult;
+import com.telme.consult.service.ConsultTurnAnalysisAdapter.FollowupAnalysis;
+import com.telme.consult.service.FollowupContextService.Context;
+import com.telme.consult.service.FollowupSelectionValidator.ResolvedFollowup;
+import com.telme.consult.service.FollowupSelectionValidator.Selection;
+import com.telme.intent.dto.res.IntentRouteResponse.IntentSubQueryResponse;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+class ConsultTurnAnalysisAdapterTest {
+    private final ConsultTurnPreparationService preparation =
+            mock(ConsultTurnPreparationService.class);
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "유심을 잃어버렸어요", "안녕 바라야, 유심을 잃어버렸어요",
+            "[문의] 안녕 바라야, 유심을 잃어버렸어요 😊"})
+    void standaloneQuestionKeepsOriginalSearchAndRefinementValidation(String raw) {
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var context = new Context(1, 10, raw, List.of());
+        var prepared = mock(ConsultService.PreparationResult.class);
+        when(preparation.prepareAnalysis(org.mockito.ArgumentMatchers.anyLong(), any(), any()))
+                .thenReturn(prepared);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            assertThat(input.historyResolved()).isFalse();
+            assertThat(input.routingContext()).isNull();
+            return new AnalysisResult(new IntentSubQueryResponse(101L, (short) 1,
+                    ConsultRequest.Intent.FAQ, "유심 분실 시 재발급 방법", Map.of()), null, LocationStatus.MISSING);
+        }, preparation, new FollowupConditionConverter(), resolver);
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, raw));
+        assertThat(turn.originalUserQuery()).isEqualTo(raw);
+        assertThat(turn.resolvedUserQuery()).isEqualTo("유심을 잃어버렸어요");
+
+        var searches = mock(com.telme.faq.service.FaqSearchService.class);
+        when(searches.search(any())).thenReturn(List.of());
+        var selector = mock(FaqSearchAnswerProvider.RefinedQuerySelector.class);
+        when(selector.select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L))
+                .thenReturn("유심을 잃어버렸어요");
+        var provider = new FaqSearchAnswerProvider(searches, (input, results) ->
+                ConsultChatProcessingService.GeneratedAnswer.withoutSources(new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER, "mock", null, List.of(), null)), ExecutionTrace.noop(),
+                ComparisonEvidenceResolver.passthrough(), FaqCandidateEvidenceResolver.disabled(),
+                new com.telme.rag.converter.AnswerContextConverter(), null,
+                RagSearchResultAnswerGenerator.SuggestedQuestions.none(), selector);
+        provider.generate(new ConsultChatProcessingService.AnswerInput(3, 1, 101, Purpose.GENERAL_FAQ,
+                turn.originalUserQuery(), turn.searchQuery(), Map.of(), turn.resolvedUserQuery(), turn.context()));
+        var request = org.mockito.ArgumentCaptor.forClass(com.telme.faq.dto.req.FaqSearchRequest.class);
+        verify(searches).search(request.capture());
+        assertThat(request.getValue().query()).isEqualTo("유심을 잃어버렸어요");
+        verify(selector).select("유심을 잃어버렸어요", "유심 분실 시 재발급 방법", 3L);
+        verifyNoInteractions(model);
+    }
+
+    @Test
+    void pureConversationBypassesResolutionEvenWhenAllQuestionsUseTheModel() {
+        var context = new Context(1, 10, "안녕 바라야", List.of());
+        var model = mock(LlmClient.class);
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop(),
+                com.telme.chat.config.ChatQuestionResolutionProperties.Mode.LLM_ALL);
+        var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, analysis,
+                preparation, new FollowupConditionConverter(), resolver);
+
+        var answer = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer();
+
+        assertThat(answer.content()).isEqualTo(com.telme.chat.service.ChatPersona.GREETING);
+        verifyNoInteractions(model, analysis, preparation);
+    }
+
+    @Test
+    void newQuestionWhileWaitingResolvesBeforeRoutingAndDoesNotConsumePendingCandidate() {
+        var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "로밍 요금제는 어떻게 골라요?", null);
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE");
+        var context = new Context(1, 10, "그럼 신청 방법은?", List.of(candidate),
+                new ChatContext(1L, 10L, null, List.of(previous), "그럼 신청 방법은?", 100));
+        var model = mock(LlmClient.class);
+        when(model.generate(any())).thenReturn("{\"sources\":[{\"index\":1,\"targetCount\":1,\"parentIndex\":0}],\"anchorIndex\":1,\"referenceScope\":\"RECENT\"}");
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "로밍 신청 안내", null, List.of(), null);
+        var calls = new java.util.ArrayList<Context>();
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            calls.add(input);
+            return calls.size() == 1 ? AnalysisResult.rerouteRequest() : AnalysisResult.direct(answer);
+        }, preparation, new FollowupConditionConverter(), resolver);
+
+        assertThat(adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer())
+                .isSameAs(answer);
+        assertThat(calls).hasSize(2);
+        assertThat(calls.get(0).candidates()).containsExactly(candidate);
+        assertThat(calls.get(1).candidates()).isEmpty();
+        assertThat(calls.get(1).resolvedQuestion()).contains(previous.content(), context.message());
+        assertThat(calls.get(1).routingContext().history()).containsExactly(previous);
+        assertThat(calls.get(1).historyResolved()).isTrue();
+        assertThat(context.candidates()).containsExactly(candidate);
+        org.mockito.Mockito.verify(model).generate(any());
+        org.mockito.Mockito.verify(preparation).cancelWaiting(1L, java.util.Set.of(101L));
+        org.mockito.Mockito.verifyNoMoreInteractions(preparation);
+    }
+
+    @Test
+    void independentQuestionDoesNotPassPreviousTopicToAnalysis() {
+        var previous = new ChatContextMessage(5L, 5, ChatMessage.Role.USER,
+                ChatMessage.MessageType.QUESTION, "로밍 요금제는 어떻게 골라요?", null);
+        var context = new Context(1, 10, "미성년자도 가입 되나요", List.of(),
+                new ChatContext(1L, 10L, null, List.of(previous), "미성년자도 가입 되나요", 100));
+        var model = mock(LlmClient.class);
+        // 이전 발언이 있는 짧은 질문이라 현재 대상 판정을 한 번 부르고, 대상이 있다고 판정한다.
+        when(model.generate(any())).thenReturn("{\"reference\":\"EXPLICIT\"}");
+        var resolver = new ChatQuestionResolver(model, new ObjectMapper(), ExecutionTrace.noop());
+        var answer = new ChatAnswer(ChatMessage.MessageType.ANSWER, "신규 가입 조건", null, List.of(), null);
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context, input -> {
+            assertThat(input.routingContext()).isNull();
+            assertThat(input.resolvedQuestion()).isEqualTo(context.message());
+            return AnalysisResult.direct(answer);
+        }, preparation, new FollowupConditionConverter(), resolver);
+        assertThat(adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, context.message())).directAnswer())
+                .isSameAs(answer);
+        verify(model).generate(any());
+        verifyNoInteractions(preparation);
+    }
+
+    @Test
+    void gpsResolvesWaitingLocationAndIsPassedAsVerifiedCoordinateStatus() {
+        var context = new Context(1, 10, "내 주변에서 찾아줘", List.of(new Candidate(
+                101L, "location", 9L, "어느 지역인가요?", "매장 찾아줘", "매장", "STORE")));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareFollowup(any(), any(), any())).thenAnswer(invocation -> {
+            Selection selection = invocation.getArgument(1);
+            assertThat(selection.updates().get("location").status())
+                    .isEqualTo(com.telme.consult.dto.DialogueInput.ConditionStatus.COORDINATES);
+            assertThat((LocationStatus) invocation.getArgument(2)).isEqualTo(LocationStatus.COORDINATES_AVAILABLE);
+            return new ConsultTurnPreparationService.PreparedFollowup(
+                    new ConsultService.PreparationResult(null, 9L),
+                    new ResolvedFollowup(101, 10, "location", selection.updates()),
+                    Purpose.NEARBY_STORE, "매장 찾아줘", "매장");
+        });
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+        adapter.analyze(new ChatProcessingCommand(100L, 1L, 10L, "내 주변에서 찾아줘",
+                new com.telme.chat.service.ChatCoordinates(37.5, 127)));
+    }
+
+    @Test
+    void answerNotRecognizedAfterReaskIsTreatedAsDeclinedAndContinues() {
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE", List.of(), 1);
+        var context = new Context(1, 10, "글쎄요", List.of(candidate));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareFollowup(any(), any(), any())).thenAnswer(invocation -> {
+            Selection selection = invocation.getArgument(1);
+            assertThat(selection.updates()).containsOnlyKeys("location");
+            assertThat(selection.updates().get("location").status())
+                    .isEqualTo(com.telme.consult.dto.DialogueInput.ConditionStatus.DECLINED);
+            assertThat((LocationStatus) invocation.getArgument(2)).isEqualTo(LocationStatus.DECLINED);
+            return new ConsultTurnPreparationService.PreparedFollowup(
+                    new ConsultService.PreparationResult(null, 9L),
+                    new ResolvedFollowup(101, 10, "location", selection.updates()),
+                    Purpose.NEARBY_STORE, "매장 찾아줘", "매장");
+        });
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "글쎄요"));
+
+        assertThat(turn.answeredField()).isEqualTo("location");
+        org.mockito.Mockito.verify(preparation, org.mockito.Mockito.never())
+                .prepareWaitingUpdate(any(), any(), any());
+    }
+
+    @Test
+    void firstUnrecognizedAnswerKeepsWaitingInsteadOfDeclining() {
+        var candidate = new Candidate(101L, "location", 9L, "어느 지역인가요?",
+                "매장 찾아줘", "매장", "STORE");
+        var context = new Context(1, 10, "글쎄요", List.of(candidate));
+        var preparation = mock(ConsultTurnPreparationService.class);
+        when(preparation.prepareWaitingUpdate(any(), any(), any())).thenReturn(
+                new ConsultTurnPreparationService.PreparedWaitingUpdate(
+                        new ConsultService.PreparationResult(null, 9L),
+                        Purpose.NEARBY_STORE, "매장 찾아줘", "매장"));
+        var adapter = new ConsultTurnAnalysisAdapter(command -> context,
+                value -> new AnalysisResult(null, new FollowupAnalysis(101, Map.of()), LocationStatus.MISSING),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "글쎄요"));
+
+        assertThat(turn.preparation().waitingForReply()).isTrue();
+        org.mockito.Mockito.verify(preparation, org.mockito.Mockito.never())
+                .prepareFollowup(any(), any(), any());
+    }
+
+    @Test
+    void mismatchedMessageCannotReachAnalysis() {
+        var analysis = mock(ConsultTurnAnalysisAdapter.AnalysisProvider.class);
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> new Context(1, 99, "강남역이요", List.of()),
+                        analysis,
+                        preparation,
+                        new FollowupConditionConverter());
+        assertThatThrownBy(() -> adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "강남역이요")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(analysis, preparation);
+    }
+
+    @Test
+    void followupKeepsExistingConsultationAndAnsweredField() {
+        var context =
+                new Context(
+                        1,
+                        10,
+                        "강남역이요",
+                        List.of(
+                                new Candidate(
+                                        101L,
+                                        "location",
+                                        9L,
+                                        "어느 지역인가요?",
+                                        "유심 재발급할 매장을 알려줘",
+                                        "유심 매장",
+                                        "STORE")));
+        var selection =
+                new Selection(101, 9, "location", Map.of("location", Condition.filled("강남역")));
+        var result = new ConsultService.PreparationResult(null, 9L);
+        when(preparation.prepareFollowup(any(), any(), any()))
+                .thenReturn(
+                        new ConsultTurnPreparationService.PreparedFollowup(
+                                result,
+                                new ResolvedFollowup(101, 10, "location", selection.updates()),
+                                Purpose.NEARBY_STORE,
+                                "유심 재발급할 매장을 알려줘",
+                                "유심 매장"));
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        value ->
+                                new AnalysisResult(
+                                        null,
+                                        new FollowupAnalysis(
+                                                101L, Map.of("location", "강남역")),
+                                        LocationStatus.MISSING),
+                        preparation,
+                        new FollowupConditionConverter());
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "강남역이요"));
+        assertThat(turn.preparation()).isSameAs(result);
+        assertThat(turn.answeredField()).isEqualTo("location");
+        assertThat(turn.originalUserQuery()).isEqualTo("유심 재발급할 매장을 알려줘");
+        assertThat(turn.searchQuery()).isEqualTo("유심 매장");
+        assertThat(turn.context()).isNull();
+    }
+
+    @Test
+    void initialQuestionUsesStoredAnalysisIdWithoutFollowupField() {
+        var context = new Context(1, 10, "요금 납부 방법", List.of());
+        var query =
+                new IntentSubQueryResponse(
+                        101L, (short) 1, ConsultRequest.Intent.FAQ, "요금 납부 방법", Map.of());
+        var result = new ConsultService.PreparationResult(null, 9L);
+        when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING)).thenReturn(result);
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        value -> new AnalysisResult(query, null, LocationStatus.MISSING),
+                        preparation,
+                        new FollowupConditionConverter());
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "요금 납부 방법"));
+        assertThat(turn.preparation()).isSameAs(result);
+        assertThat(turn.answeredField()).isNull();
+        assertThat(turn.originalUserQuery()).isEqualTo("요금 납부 방법");
+        assertThat(turn.searchQuery()).isEqualTo("요금 납부 방법");
+    }
+
+    @Test
+    void multipleFaqQuestionsArePreparedSeparately() {
+        var context = new Context(1, 10, "요금제와 로밍 알려줘", List.of());
+        var first = new IntentSubQueryResponse(
+                101L, (short) 1, ConsultRequest.Intent.FAQ, "요금제 종류", Map.of());
+        var second = new IntentSubQueryResponse(
+                102L, (short) 2, ConsultRequest.Intent.FAQ, "로밍 신청 방법", Map.of());
+        for (var query : List.of(first, second)) {
+            when(preparation.prepareAnalysis(1, query, LocationStatus.MISSING))
+                    .thenReturn(new ConsultService.PreparationResult(
+                            new ConsultService.PreparedTurn(1, 1,
+                                    new DialogueDecision(query.consultRequestId(), Action.PROCEED,
+                                            Map.of(), null, null, MessageOrigin.NONE)), null));
+        }
+        var adapter = new ConsultTurnAnalysisAdapter(
+                command -> context,
+                value -> AnalysisResult.compound(List.of(first, second)),
+                preparation, new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "요금제와 로밍 알려줘"));
+
+        assertThat(turn.consultTurns()).extracting(ConsultChatProcessingService.ConsultTurn::queryText)
+                .containsExactly("요금제 종류", "로밍 신청 방법");
+        assertThat(turn.consultTurns()).extracting(
+                faq -> faq.preparation().prepared().decision().consultRequestId())
+                .containsExactly(101L, 102L);
+    }
+
+    @Test
+    void directGuidanceDoesNotPrepareConsultation() {
+        var context = new Context(1, 10, "오늘 날씨 어때?", List.of());
+        var answer =
+                new ChatAnswer(
+                        ChatMessage.MessageType.ANSWER,
+                        "통신 관련 질문을 입력해 주세요.",
+                        ChatMessage.AnswerBasis.OUT_OF_SCOPE,
+                        List.of(),
+                        null);
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        value -> AnalysisResult.direct(answer),
+                        preparation,
+                        new FollowupConditionConverter());
+
+        var turn = adapter.analyze(new ChatProcessingCommand(3L, 1L, 10L, "오늘 날씨 어때?"));
+
+        assertThat(turn.directAnswer()).isSameAs(answer);
+        assertThat(turn.preparation()).isNull();
+        verifyNoInteractions(preparation);
+    }
+
+    @Test
+    void correctionWhileWaitingKeepsQuestionWithoutMarkingItAnswered() {
+        var context =
+                new Context(
+                        1,
+                        10,
+                        "유심 재발급으로 바꿀게요",
+                        List.of(
+                                new Candidate(
+                                        101L,
+                                        "location",
+                                        9L,
+                                        "어느 지역인가요?",
+                                        "유심 재발급할 매장을 알려줘",
+                                        "유심 매장",
+                                        "STORE")));
+        when(preparation.prepareWaitingUpdate(any(), any(), any()))
+                .thenReturn(
+                        new ConsultTurnPreparationService.PreparedWaitingUpdate(
+                                new ConsultService.PreparationResult(
+                                        new ConsultService.PreparedTurn(
+                                                1L,
+                                                1,
+                                                new DialogueDecision(
+                                                        101L,
+                                                        Action.ASK,
+                                                        Map.of(
+                                                                "serviceType",
+                                                                Condition.filled("USIM_REISSUE")),
+                                                        "location",
+                                                        "어느 지역인가요?",
+                                                        MessageOrigin.TEMPLATE)),
+                                                9L),
+                                Purpose.NEARBY_STORE,
+                                "유심 재발급할 매장을 알려줘",
+                                "유심 매장"));
+        var adapter =
+                new ConsultTurnAnalysisAdapter(
+                        command -> context,
+                        value ->
+                                new AnalysisResult(
+                                        null,
+                                        new FollowupAnalysis(
+                                                101L,
+                                                Map.of("serviceType", "USIM_REISSUE")),
+                                        LocationStatus.MISSING),
+                        preparation,
+                        new FollowupConditionConverter());
+
+        var turn =
+                adapter.analyze(
+                        new ChatProcessingCommand(3L, 1L, 10L, "유심 재발급으로 바꿀게요"));
+
+        assertThat(turn.preparation().waitingForReply()).isTrue();
+        assertThat(turn.answeredField()).isNull();
+        assertThat(turn.originalUserQuery()).isEqualTo("유심 재발급할 매장을 알려줘");
+        assertThat(turn.searchQuery()).isEqualTo("유심 매장");
+    }
+
+    @Test
+    void missingAnalysisKindIsRejected() {
+        assertThatThrownBy(() -> new AnalysisResult(null, null, LocationStatus.MISSING))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+}

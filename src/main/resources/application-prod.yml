@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    # AWS RDS/Aurora PostgreSQL은 SSL 접속을 기본으로 강제/권장하므로 sslmode를 명시한다.
+    # 인증서 검증까지 하려면 verify-full + sslrootcert(RDS 루트 CA 번들 경로)를 추가로 지정한다.
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5432}/${POSTGRES_DB}?sslmode=require
+  flyway:
+    # db/dev-migration(샘플 시드 데이터)은 로컬 전용이다. 운영에서는 스키마 마이그레이션만 적용한다.
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      client:
+        registration:
+          # 운영은 CloudFront(HTTPS) → ALB(HTTP) → 앱 순서라 앱이 받는 Host는 ALB 주소, X-Forwarded-Proto는 http다.
+          # {baseUrl}로 만들면 http://<ALB 주소>/... 가 되어 콘솔 등록값과 달라지므로 서비스 주소로 고정한다.
+          # 화면과 API가 같은 도메인이라 FRONTEND_URL을 쓴다. 값이 없으면 지금처럼 요청 주소({baseUrl})로 만든다
+          # (설정 바인딩은 못 찾은 ${...}를 글자 그대로 남기므로 기본값 없이 두면 깨진 주소가 나간다)
+          kakao:
+            redirect-uri: "${FRONTEND_URL:{baseUrl}}/login/oauth2/code/{registrationId}"
+          google:
+            redirect-uri: "${FRONTEND_URL:{baseUrl}}/login/oauth2/code/{registrationId}"
+
+server:
+  # 앞단 프록시(ALB)가 붙이는 X-Forwarded-* 헤더를 요청의 scheme·포트·클라이언트 주소에 반영한다.
+  # 운영은 CloudFront → ALB 구간이 HTTP라 X-Forwarded-Proto가 http로 와서, 이 설정만으로는 https 주소가 되지 않는다.
+  # 그래서 OAuth redirect-uri는 위에서 FRONTEND_URL로 고정한다
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        # 운영은 항상 HTTPS라 쿠키를 HTTPS 연결에서만 전송하도록 강제. 로컬은 http라 여기서만 켠다.
+        secure: true
+
+faq:
+  # 내부 검색 테스트 API. 환경변수 설정과 무관하게 운영에서는 항상 차단.
+  search-test-api-enabled: false

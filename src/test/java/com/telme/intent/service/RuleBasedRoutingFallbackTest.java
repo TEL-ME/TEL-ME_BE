@@ -1,0 +1,341 @@
+package com.telme.intent.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.telme.consult.entity.ConsultRequest;
+import com.telme.intent.dto.res.LlmFollowUpPayload;
+import com.telme.intent.dto.res.LlmRoutingPayload;
+import com.telme.intent.entity.QueryRouting.Intent;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+class RuleBasedRoutingFallbackTest {
+
+    private RuleBasedRoutingFallback fallback;
+
+    @BeforeEach
+    void setUp() {
+        fallback = new RuleBasedRoutingFallback();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"네,", "네, 고마워요", "😊", "?!", "1️⃣", "₩"})
+    void acknowledgementsAndSymbolsAreNotLocations(String reply) {
+        var result = fallback.classifyFollowUp(reply, Set.of("location"));
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.DEFERRED);
+        assertThat(result.conditions()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("null 또는 빈 문자열이 전달되면 UNKNOWN으로 안전하게 반환한다")
+    void classify_null_and_blank() {
+        LlmRoutingPayload nullResult = fallback.classify(null);
+        assertThat(nullResult.intent()).isEqualTo(Intent.UNKNOWN);
+        assertThat(nullResult.subQueries()).isEmpty();
+
+        LlmRoutingPayload blankResult = fallback.classify("   ");
+        assertThat(blankResult.intent()).isEqualTo(Intent.UNKNOWN);
+        assertThat(blankResult.subQueries()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("FAQ 키워드(요금제 등)가 포함된 경우 FAQ 의도로 분류한다")
+    void classify_faq_keyword() {
+        LlmRoutingPayload result = fallback.classify("로밍 요금제 가입 방법 알려주세요");
+
+        assertThat(result.intent()).isEqualTo(Intent.FAQ);
+        assertThat(result.confidence().doubleValue()).isGreaterThanOrEqualTo(0.80);
+        assertThat(result.subQueries()).hasSize(1);
+        assertThat(result.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+    }
+
+    @Test
+    @DisplayName("매장 키워드(대리점, 위치 등)가 포함된 경우 STORE 의도로 분류한다")
+    void classify_store_keyword() {
+        LlmRoutingPayload result = fallback.classify("가장 가까운 직영점 위치 어디야?");
+
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
+        assertThat(result.confidence().doubleValue()).isGreaterThanOrEqualTo(0.80);
+        assertThat(result.subQueries()).hasSize(1);
+        assertThat(result.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.STORE);
+    }
+
+    // 업무 표현이 둘이면 먼저 걸린 번호이동을 고르지 않고 업무 없이 찾는다(PR #199 리뷰).
+    // 모델 호출이 실패해 규칙으로 분류할 때도 같은 함수를 쓴다
+    @Test
+    void classify_storeWithTwoServicesLeavesServiceTypeEmpty() {
+        LlmRoutingPayload result = fallback.classify("번호이동 말고 신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
+        assertThat(result.subQueries().getFirst().conditions()).doesNotContainKey("serviceType");
+    }
+
+    @Test
+    void classify_storeWithOneServiceKeepsIt() {
+        LlmRoutingPayload result = fallback.classify("신규 개통 하려는데 매장 어디예요?");
+
+        assertThat(result.extractedConditions()).containsEntry("serviceType", "NEW_LINE");
+    }
+
+    @Test
+    void storeVisitPolicyIsFaqRatherThanStoreLookup() {
+        LlmRoutingPayload result = fallback.classify(
+                "유심 분실 시 매장 방문과 택배 신청 중 어떻게 재발급받나요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.FAQ);
+        assertThat(result.subQueries()).singleElement()
+                .extracting(LlmRoutingPayload.SubQueryPayload::intent)
+                .isEqualTo(ConsultRequest.Intent.FAQ);
+    }
+
+    @Test
+    void storeVisitPossibilityWithoutLookupIsFaq() {
+        assertThat(fallback.classify("매장 방문이 가능한가요?").intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"강남역 매장 알려줘", "강남역 매장 있나요?"})
+    void naturalStoreLookupIsStore(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.STORE);
+    }
+
+    @Test
+    void storeVisitProcedureIsStillFaq() {
+        assertThat(fallback.classify("매장 방문 방법 알려줘").intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @Test
+    void visitPhraseWithStoreResultRequestIsStore() {
+        assertThat(fallback.classify("강남역 매장 방문 가능한 곳 알려줘").intent()).isEqualTo(Intent.STORE);
+    }
+
+    @Test
+    @DisplayName("FAQ 키워드와 매장 키워드가 모두 포함된 경우 BOTH로 분류하고 서브질의 2개를 생성한다")
+    void classify_both_keywords() {
+        LlmRoutingPayload result = fallback.classify("로밍 요금제 변경 방법 알려주고 강남역 대리점 찾아줘");
+
+        assertThat(result.intent()).isEqualTo(Intent.BOTH);
+        assertThat(result.confidence().doubleValue()).isEqualTo(0.70);
+        assertThat(result.subQueries()).hasSize(2);
+        assertThat(result.subQueries().get(0).intent()).isEqualTo(ConsultRequest.Intent.FAQ);
+        assertThat(result.subQueries().get(1).intent()).isEqualTo(ConsultRequest.Intent.STORE);
+    }
+
+    @Test
+    @DisplayName("통신 업무와 무관한 질문은 UNKNOWN 의도로 분류한다")
+    void classify_unknown() {
+        LlmRoutingPayload result = fallback.classify("오늘 저녁 메뉴 추천해줘");
+
+        assertThat(result.intent()).isEqualTo(Intent.UNKNOWN);
+        assertThat(result.confidence().doubleValue()).isEqualTo(0.50);
+        assertThat(result.subQueries()).isEmpty();
+    }
+
+    @Test
+    void ordinaryPhraseContainingCancelSyllablesIsNotTelecomIntent() {
+        assertThat(fallback.classify("전세 대출 한도는 어떻게 정해지나요?").intent())
+                .isEqualTo(Intent.UNKNOWN);
+    }
+
+    @Test
+    @DisplayName("유심 재발급 관련 키워드가 있으면 serviceType 조건으로 USIM_REISSUE를 추출한다")
+    void extract_conditions_serviceType() {
+        LlmRoutingPayload result = fallback.classify("유심 재발급 받으려면 대리점 어디로 가야 하나요?");
+
+        assertThat(result.intent()).isEqualTo(Intent.STORE);
+        assertThat(result.extractedConditions()).containsEntry("serviceType", "USIM_REISSUE");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"USIM 재발급", "usim 교체", "유심 재발급"})
+    void equivalentUsimNamesUseTheSameServiceType(String query) {
+        assertThat(fallback.classify(query + " 가능한 매장 찾아줘").extractedConditions())
+                .containsEntry("serviceType", "USIM_REISSUE");
+    }
+
+    @Test
+    @DisplayName("여러 업무가 함께 매칭되면 한쪽을 고르지 않고 serviceType을 비운다(두 업무를 다 하는 매장이 빠지지 않게)")
+    void extract_conditions_multiple_services_leave_service_type_empty() {
+        LlmRoutingPayload result = fallback.classify("신규 개통도 하고 유심 재발급도 대리점에서 가능한가요?");
+
+        assertThat(result.extractedConditions()).doesNotContainKey("serviceType");
+    }
+
+    @Test
+    void specificStoreLookupWithPhoneWordIsNotCompoundQuestion() {
+        assertThat(fallback.classify("가까운 휴대폰 매장 위치 알려줘").intent())
+                .isEqualTo(Intent.STORE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"잠깐만요", "네", "넵", "음 글쎄요", "나중에요", "이따 알려드릴게요", "생각 좀 해볼게요"})
+    @DisplayName("호응·보류 표현은 지역으로 보지 않아 되묻기를 유지할 수 있도록 빈 조건을 반환한다")
+    void classifyFollowUp_ackOrDeferral_returnsNoCondition(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.DEFERRED);
+        assertThat(result.conditions())
+                .noneMatch(condition -> "location".equals(condition.key()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5G 요금제는 얼마예요?", "로밍 방법 알려주세요", "가까운 매장 찾아줘"})
+    @DisplayName("되묻기와 관계없는 새 질문은 후속 조건값으로 사용하지 않는다")
+    void classifyFollowUp_newQuestion_isSeparated(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.NEW_QUESTION);
+        assertThat(result.conditions()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"강남역이요", "신촌", "홍대입구역 쪽으로 가려고요"})
+    @DisplayName("실제 지역 답변은 그대로 location 조건으로 추출한다")
+    void classifyFollowUp_realLocation_returnsFilledCondition(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.FILLED);
+    }
+
+    @Test
+    @DisplayName("명시적으로 거절하면 대기 중이던 조건을 DECLINED로 표시한다")
+    void classifyFollowUp_declined_marksDeclined() {
+        LlmFollowUpPayload result = fallback.classifyFollowUp("그냥 알려주기 싫어요", Set.of("location"));
+
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.DECLINED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"현재 위치에서 가까운 매장을 찾아줘", "근처 매장", "여기서 찾아줘"})
+    @DisplayName("지명 없이 기준점만 말한 답은 문장째 지역명으로 받지 않는다")
+    void 기준점만_말한_답은_지역이_아니다(String reply) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.conditions()).noneMatch(condition -> "location".equals(condition.key()));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "강남역 근처요, 강남역",
+            "판교 근처요, 판교",
+            "신촌 주변요, 신촌",
+            "신촌에서 가까운 곳, 신촌"})
+    @DisplayName("기준점 표현이 있어도 지명이 함께 있으면 지명을 뽑는다(접미사 없는 지명 포함)")
+    void 지명과_함께면_지명을_뽑는다(String reply, String place) {
+        LlmFollowUpPayload result = fallback.classifyFollowUp(reply, Set.of("location"));
+
+        assertThat(result.responseType()).isEqualTo(LlmFollowUpPayload.ResponseType.CONDITION_RESPONSE);
+        assertThat(result.conditions())
+                .anyMatch(condition -> "location".equals(condition.key())
+                        && condition.status() == LlmFollowUpPayload.Status.FILLED
+                        && place.equals(condition.value()));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "유심 재발급, USIM_REISSUE",
+            "유심 재발급이요, USIM_REISSUE",
+            "명의변경이라고, NAME_CHANGE",
+            "명의 변경이요., NAME_CHANGE",
+            "번호이동이에요, PORT_IN",
+            "신규 개통입니다, NEW_LINE"
+    })
+    @DisplayName("업무 이름에 어미만 붙은 짧은 답은 규칙으로 업무를 읽는다")
+    void serviceTypeOfShortReply_readsServiceNameWithEnding(String reply, String code) {
+        assertThat(fallback.serviceTypeOfShortReply(reply)).isEqualTo(code);
+    }
+
+    @Test
+    @DisplayName("업무 되묻기 선택지는 업무 네 개 뒤에 업무를 고르지 않는 버튼이 온다")
+    void serviceTypeOptions_endWithSkipOption() {
+        assertThat(RuleBasedRoutingFallback.serviceTypeOptions())
+                .containsExactly("유심 재발급", "번호이동", "신규 개통", "명의변경", "업무 상관없이 볼게요");
+        assertThat(RuleBasedRoutingFallback.serviceTypeLabel("USIM_REISSUE")).isEqualTo("유심 재발급");
+    }
+
+    @Test
+    @DisplayName("업무를 고르지 않는 버튼 문구만 그대로 읽고 업무로는 읽지 않는다")
+    void isServiceTypeSkip_readsOnlyTheButtonText() {
+        assertThat(fallback.isServiceTypeSkip("업무 상관없이 볼게요")).isTrue();
+        assertThat(fallback.isServiceTypeSkip(" 업무 상관없이 볼게요 ")).isTrue();
+        assertThat(fallback.isServiceTypeSkip("업무 상관없어요")).isFalse();
+        assertThat(fallback.isServiceTypeSkip("번호이동 업무 상관없이 볼게요")).isFalse();
+        assertThat(fallback.isServiceTypeSkip(null)).isFalse();
+        assertThat(fallback.serviceTypeOfShortReply("업무 상관없이 볼게요")).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"유심 재발급 하려고요", "유심 재발급 어떻게 해요?", "명의변경 하려면 뭐 필요해",
+            "신촌에서 번호이동이요", "유심 재발급 비용이요", "유심이요"})
+    @DisplayName("동사가 붙거나 다른 말이 섞인 답은 규칙으로 업무를 읽지 않는다")
+    void serviceTypeOfShortReply_leavesSentencesToModel(String reply) {
+        assertThat(fallback.serviceTypeOfShortReply(reply)).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"telme 가입 방법 알려줘", "Telme 가입 방법 알려줘", "TELME 가입 방법 알려줘", "텔미 가입 방법 알려줘"})
+    @DisplayName("영문 키워드는 대소문자와 상관없이 FAQ 질문으로 읽는다")
+    void classify_matchesFaqKeywordsRegardlessOfCase(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"5g 알려줘", "lte 알려줘", "esim 알려줘", "usim 알려줘"})
+    @DisplayName("소문자로 쓴 망·유심 이름도 FAQ 질문으로 읽는다")
+    void classify_matchesLowercaseNetworkNames(String question) {
+        assertThat(fallback.classify(question).intent()).isEqualTo(Intent.FAQ);
+    }
+
+    @org.junit.jupiter.api.Test
+    void 매장_찾기_말_말고_따로_묻는_것이_있는지_읽는다() {
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "아 형 아니고 동생이요 고1인데 미성년자도 되나? 그리고 분당 서현역 근처 매장도")).isTrue();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "네 같이 갈 수 있어요. 미성년자도 되나요? 그리고 강남역 근처 매장 어디예요")).isTrue();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(
+                "네 같이 갈 수 있어요 그리고 강남역 근처 매장 어디예요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("네 그리고 가까운 매장 찾아주세요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest("강남역 근처 매장 어디예요")).isFalse();
+        assertThat(RuleBasedRoutingFallback.hasQuestionBesideStoreRequest(null)).isFalse();
+    }
+
+    // 업무 이름이 없는 문장은 모델이 읽은 업무를 받는다("유심 깨짐"처럼 낱말 목록으로 다 잡을 수 없는 표현)
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "아빠 명의로 된 폰을 제 앞으로 돌리려고 하는데 그거 처리해주는 매장 가까운 데가 어디예요? | NAME_CHANGE",
+        "세컨폰 하나 만들려고요. 매장 위치요 | NEW_LINE",
+        "쓰던 번호 그대로 TELME로 옮기고 싶어요. 제 주변에 매장 있나요? | PORT_IN",
+        "유심 깨짐 ㅠ 대리점 어디있음? | USIM_REISSUE"
+    })
+    void acceptsServiceTypeReadByModelWhenNoServiceIsNamed(String question, String serviceType) {
+        assertThat(fallback.supportsServiceType(serviceType, question, question)).isTrue();
+    }
+
+    @Test
+    void acceptsServiceTypeReadByModelOnlyWhenItMatchesTheNamedService() {
+        assertThat(fallback.supportsServiceType("NAME_CHANGE", "명의변경 가능한 매장 찾아줘", "명의변경 가능한 매장 찾아줘")).isTrue();
+        assertThat(fallback.supportsServiceType("PORT_IN", "명의변경 가능한 매장 찾아줘", "명의변경 가능한 매장 찾아줘")).isFalse();
+        // 업무 이름이 여럿이면 어느 쪽인지 알 수 없어 받지 않는다(필터 없이 검색)
+        assertThat(fallback.supportsServiceType("NEW_LINE", "번호이동 말고 신규 개통 매장", "번호이동 말고 신규 개통 매장")).isFalse();
+    }
+
+    // 복합 질문의 매장 요청은 자기 구간을 먼저 보고, 구간에 업무 이름이 없으면 질문 전체의 업무 이름과 맞춘다
+    @Test
+    void checksServiceTypeOfStoreRequestAgainstItsSectionThenTheWholeQuestion() {
+        String whole = "명의변경 서류 알려주고 근처 매장도 찾아줘";
+        assertThat(fallback.supportsServiceType("NAME_CHANGE", "근처 매장도 찾아줘", whole)).isTrue();
+        assertThat(fallback.supportsServiceType("PORT_IN", "근처 매장도 찾아줘", whole)).isFalse();
+        String twoServices = "유심 재발급 비용 알려주고 번호이동 되는 매장 찾아줘";
+        assertThat(fallback.supportsServiceType("PORT_IN", "번호이동 되는 매장 찾아줘", twoServices)).isTrue();
+    }
+}

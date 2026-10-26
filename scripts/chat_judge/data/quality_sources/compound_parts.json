@@ -1,0 +1,673 @@
+{
+ "note": "복합 질문을 고객 문장에서 부분 질문(subQuestion)으로 나눈 결과. 별도 작성자가 썼다. 빌더는 subQuestion을 쓰고, 필수 사실은 decision이 APPLY인 곳만 proposedRequiredFacts(부분 질문이 묻지 않는 사실을 뺀 것)로, 나머지는 currentRequiredFacts로 둔다. 결정은 LABEL_REVIEW.md D2(2026-10-17, 문항별).",
+ "items": [
+  {
+   "id": "C001",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "해외 나가면 무제한 로밍은 하루 얼마예요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "무제한 하루 요금만 묻고 FAQ 전부 12,100원 명시.",
+     "proposedRequiredFacts": [
+      "데이터 무제한 로밍은 하루 12,100원이다"
+     ],
+     "currentRequiredFacts": [
+      "데이터 무제한 로밍은 하루 12,100원이다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "그리고 거기서 유심 잃어버리면 홈페이지로 분실신고 되나요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "홈페이지 신고 가능 여부만 묻는다. '신고하면 즉시 이용 정지된다'는 묻지 않은 결과라 제거.",
+     "proposedRequiredFacts": [
+      "홈페이지에서 분실 신고할 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "홈페이지에서 분실 신고할 수 있다",
+      "신고하면 즉시 이용 정지된다"
+     ],
+     "decision": "KEEP"
+    }
+   ]
+  },
+  {
+   "id": "C002",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "개통한 지 두 달 됐는데 다른 통신사로 번호이동 되나요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "3개월 조건으로 두 달째는 안 된다는 답이 나온다.",
+     "proposedRequiredFacts": [
+      "번호이동은 개통 후 3개월이 지나야 가능하다"
+     ],
+     "currentRequiredFacts": [
+      "번호이동은 개통 후 3개월이 지나야 가능하다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "안 되면 기기변경은 언제부터 가능한지도 알려줘요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "시점만 묻는다. 할부 승계 내용은 묻지 않았고 현재 사실에도 없음.",
+     "proposedRequiredFacts": [
+      "기기 변경은 개통 후 6개월이 지나야 가능하다"
+     ],
+     "currentRequiredFacts": [
+      "기기 변경은 개통 후 6개월이 지나야 가능하다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C003",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "요금 밀린 게 좀 있는데 이 상태로 명의변경이랑 번호이동 각각 되나요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "한 문장에 두 질문이 술어를 공유해 연속 구간으로 나눌 수 없어 전체 문장을 사용. 이 부분은 명의변경.",
+     "proposedRequiredFacts": [
+      "미납 요금이 있으면 완납해야 명의변경이 진행된다"
+     ],
+     "currentRequiredFacts": [
+      "미납 요금이 있으면 완납해야 명의변경이 진행된다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "요금 밀린 게 좀 있는데 이 상태로 명의변경이랑 번호이동 각각 되나요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "전체 문장 공유, 이 부분은 번호이동. 일부 FAQ는 '기존 통신사 미납'으로 표현하나 내용 동일.",
+     "proposedRequiredFacts": [
+      "미납 요금이 있으면 번호이동이 진행되지 않는다",
+      "완납 후 신청해야 한다"
+     ],
+     "currentRequiredFacts": [
+      "미납 요금이 있으면 번호이동이 진행되지 않는다",
+      "완납 후 신청해야 한다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C004",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "종이 청구서 받으면 돈 나가요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "종이(우편) 청구서 비용만 묻는다. '이메일과 모바일 알림은 무료이다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "우편 청구서는 월 500원이 부과된다"
+     ],
+     "currentRequiredFacts": [
+      "우편 청구서는 월 500원이 부과된다",
+      "이메일과 모바일 알림은 무료이다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "그리고 요금납부확인서는 어디서 떼는지도 알려주세요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "핵심은 '홈페이지'. '즉시·무료'는 묻지 않은 세부지만 한 사실 안에 묶여 있어 유지. 채점 시 장소만 확인해도 충분하다고 봄.",
+     "proposedRequiredFacts": [
+      "요금납부확인서는 홈페이지에서 즉시 무료로 발급된다"
+     ],
+     "currentRequiredFacts": [
+      "요금납부확인서는 홈페이지에서 즉시 무료로 발급된다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C005",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "지금 약정 11개월째인데 해지하면 위약금 얼마나 물어야 돼요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "11개월 → 12개월 미만 100%. 구체 금액은 FAQ에 없고 비율로 답하는 것이 FAQ 범위.",
+     "proposedRequiredFacts": [
+      "12개월 미만이라 할인 반환금의 100%를 반환해야 한다"
+     ],
+     "currentRequiredFacts": [
+      "12개월 미만이라 할인 반환금의 100%를 반환해야 한다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "새 폰 할부로 사면 이자 몇 프로인지도요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "이율만 묻고 FAQ 전부 연 5.9%.",
+     "proposedRequiredFacts": [
+      "할부 수수료는 연 5.9%이다"
+     ],
+     "currentRequiredFacts": [
+      "할부 수수료는 연 5.9%이다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C006",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "두 달 해외 가는데 폰 일시정지하면 요금 얼마나 나와요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "직접 묻는 건 요금(기본료 50%). 기간 한도는 명시적 질문은 아니나 '두 달'이 1회 최대 30일을 넘으므로 정확한 답에 필요해 유지(애매함).",
+     "proposedRequiredFacts": [
+      "일시 정지는 연간 최대 90일, 1회 최대 30일까지 가능하다",
+      "정지 기간에는 기본료의 50%가 부과된다"
+     ],
+     "currentRequiredFacts": [
+      "일시 정지는 연간 최대 90일, 1회 최대 30일까지 가능하다",
+      "정지 기간에는 기본료의 50%가 부과된다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "로밍 켜고 쓰면 하루에 얼마인지도 같이 알려주세요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "하루 요금 두 가지 모두 FAQ 전부에 있음. 7일권은 하루 요금이 아니라 불필요.",
+     "proposedRequiredFacts": [
+      "일 단위 로밍은 9,900원이다",
+      "데이터 무제한은 하루 12,100원이다"
+     ],
+     "currentRequiredFacts": [
+      "일 단위 로밍은 9,900원이다",
+      "데이터 무제한은 하루 12,100원이다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C007",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "엄마 폰 명의를 제 걸로 옮기고 제 폰도 하나 새로 개통하려는데 매장에서 각각 얼마나 걸려요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "'매장에서 각각 얼마나 걸려요'를 두 부분이 공유해 전체 문장 사용. 이 부분은 명의변경 소요 시간.",
+     "proposedRequiredFacts": [
+      "명의변경은 매장에서 30분 이내에 처리된다"
+     ],
+     "currentRequiredFacts": [
+      "명의변경은 매장에서 30분 이내에 처리된다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "엄마 폰 명의를 제 걸로 옮기고 제 폰도 하나 새로 개통하려는데 매장에서 각각 얼마나 걸려요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "전체 문장 공유, 이 부분은 신규 개통 소요 시간.",
+     "proposedRequiredFacts": [
+      "신규 개통은 매장에서 30분 안에 된다"
+     ],
+     "currentRequiredFacts": [
+      "신규 개통은 매장에서 30분 안에 된다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C008",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "보험 있으면 배터리 수리비 얼마나 내요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "보험 있는 경우만 묻는다. '미가입자는 수리비 전액을 부담한다'는 묻지 않아 제거. 배터리 수리비 절대 금액은 FAQ에 없음(비율로 답하는 범위).",
+     "proposedRequiredFacts": [
+      "보험 가입자는 수리비의 30%만 부담한다"
+     ],
+     "currentRequiredFacts": [
+      "보험 가입자는 수리비의 30%만 부담한다",
+      "미가입자는 수리비 전액을 부담한다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "유심은 오늘 바로 바꿀 수 있나요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "당일 교체 가능 여부만 묻는다. '비용은 7,700원이다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "매장을 방문하면 즉시 발급된다"
+     ],
+     "currentRequiredFacts": [
+      "매장을 방문하면 즉시 발급된다",
+      "비용은 7,700원이다"
+     ],
+     "decision": "APPLY"
+    }
+   ]
+  },
+  {
+   "id": "C009",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "가족한테 데이터 한 번에 얼마나 보낼 수 있어요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "1회 한도만 묻는다. '한 달에 2회까지 가능하다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "한 번에 최대 2GB까지 보낼 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "한 번에 최대 2GB까지 보낼 수 있다",
+      "한 달에 2회까지 가능하다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "그리고 소액결제 한 달 한도도 알려줘",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "월 한도 30만 원은 FAQ 전부에 있음. 상향 100만 원은 일부 FAQ에만 있어 추가하지 않음.",
+     "proposedRequiredFacts": [
+      "휴대폰 결제는 월 30만 원까지 가능하다"
+     ],
+     "currentRequiredFacts": [
+      "휴대폰 결제는 월 30만 원까지 가능하다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C010",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "외국인 친구가 가입하려는데 여권 말고 뭐 필요해요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "여권 외 필요한 것 = 외국인등록증.",
+     "proposedRequiredFacts": [
+      "외국인등록증과 여권을 함께 지참해야 한다"
+     ],
+     "currentRequiredFacts": [
+      "외국인등록증과 여권을 함께 지참해야 한다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "제일 싼 요금제 얼마인지도 알려주세요",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "가격만 묻는다. '기본 데이터 1.5GB가 제공된다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "알뜰 미니가 월 15,000원으로 가장 저렴하다"
+     ],
+     "currentRequiredFacts": [
+      "알뜰 미니가 월 15,000원으로 가장 저렴하다",
+      "기본 데이터 1.5GB가 제공된다"
+     ],
+     "decision": "APPLY"
+    }
+   ]
+  },
+  {
+   "id": "C011",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "요금제 비싼 걸로 올리면 멤버십 등급도 바로 올라가나요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "'바로'는 반영 시점을 묻는 것이라 갱신 시점(매년 1월)도 질문 범위로 보고 유지. 기준(직전 1년 납부액)은 같은 사실에 묶여 있음.",
+     "proposedRequiredFacts": [
+      "등급은 바로 반영되지 않는다",
+      "등급은 직전 1년 납부액 기준으로 매년 1월에 갱신된다"
+     ],
+     "currentRequiredFacts": [
+      "등급은 바로 반영되지 않는다",
+      "등급은 직전 1년 납부액 기준으로 매년 1월에 갱신된다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "이번 달 중간에 바꾸면 요금 계산은 어떻게 돼요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "적용 시점과 일할 계산 모두 요금 계산 방식에 해당.",
+     "proposedRequiredFacts": [
+      "변경 신청일 다음 날 00:00부터 새 요금제가 적용된다",
+      "그 달 요금은 일할 계산된다"
+     ],
+     "currentRequiredFacts": [
+      "변경 신청일 다음 날 00:00부터 새 요금제가 적용된다",
+      "그 달 요금은 일할 계산된다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C012",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "새 폰 할부로 사려는데 몇 개월 할부 돼요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "기간만 묻는다. 수수료는 묻지 않았고 현재 사실에도 없음.",
+     "proposedRequiredFacts": [
+      "할부 기간은 24개월 또는 30개월 중 선택할 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "할부 기간은 24개월 또는 30개월 중 선택할 수 있다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "그 김에 이심으로 바꾸면 비용은 얼마예요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "비용만 묻는다. 'eSIM을 지원하는 단말인지 먼저 확인해야 한다'는 묻지 않은 조건이라 제거(FAQ 전부에 있긴 함).",
+     "proposedRequiredFacts": [
+      "eSIM 발급 비용은 2,750원이다"
+     ],
+     "currentRequiredFacts": [
+      "eSIM 발급 비용은 2,750원이다",
+      "eSIM을 지원하는 단말인지 먼저 확인해야 한다"
+     ],
+     "decision": "KEEP"
+    }
+   ]
+  },
+  {
+   "id": "C013",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "분실신고는 어디서 하고",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "장소만 묻는다. '신고하면 즉시 이용 정지된다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "고객센터나 홈페이지에서 신고할 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "고객센터나 홈페이지에서 신고할 수 있다",
+      "신고하면 즉시 이용 정지된다"
+     ],
+     "decision": "KEEP"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "명의도용 신고하면 어떻게 처리돼요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "처리 절차(조사 기간, 결과) 모두 질문 범위.",
+     "proposedRequiredFacts": [
+      "신고 접수 후 3영업일 이내에 조사가 진행된다",
+      "도용이 확인되면 해당 요금은 전액 취소된다"
+     ],
+     "currentRequiredFacts": [
+      "신고 접수 후 3영업일 이내에 조사가 진행된다",
+      "도용이 확인되면 해당 요금은 전액 취소된다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C014",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "번호 해지는 어디서 해요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "장소만 묻는다. '신청 즉시 해지된다'는 묻지 않아 제거.",
+     "proposedRequiredFacts": [
+      "매장, 고객센터, 홈페이지 중 편한 방법으로 신청하면 된다"
+     ],
+     "currentRequiredFacts": [
+      "매장, 고객센터, 홈페이지 중 편한 방법으로 신청하면 된다",
+      "신청 즉시 해지된다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "해지하고 나서 해지확인서는 언제까지 뗄 수 있는지도요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "기한 3년, FAQ 전부 명시.",
+     "proposedRequiredFacts": [
+      "해지일로부터 최근 3년분까지 발급받을 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "해지일로부터 최근 3년분까지 발급받을 수 있다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C015",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "번호이동 저녁에도 처리돼요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "저녁 처리 여부만 묻는다. '처리 시간 안에는 평균 2시간 이내에 완료된다'는 묻지 않아 제거. 일부 FAQ는 '09:00~20:00만 처리'로 표현, 같은 내용.",
+     "proposedRequiredFacts": [
+      "20:00 이후부터 다음 날 09:00 전까지는 처리되지 않는다"
+     ],
+     "currentRequiredFacts": [
+      "20:00 이후부터 다음 날 09:00 전까지는 처리되지 않는다",
+      "처리 시간 안에는 평균 2시간 이내에 완료된다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "매장은 평일 몇 시까지 여는지도 알려줘요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "묻는 건 평일 마감(19:00). 여는 시간 10:00은 묻지 않았지만 한 사실에 묶여 있어 유지, 채점 시 19:00만 확인해도 충분하다고 봄.",
+     "proposedRequiredFacts": [
+      "평일은 10:00에 열고 19:00에 닫는다"
+     ],
+     "currentRequiredFacts": [
+      "평일은 10:00에 열고 19:00에 닫는다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C016",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "아빠 폰을 제 명의로 바꾸려면 서류 뭐 필요해요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "서류만 묻는다. '원칙적으로 두 사람이 함께 매장을 방문해야 한다'는 서류가 아니라 방문 조건이라 제거. 위임장은 조건부 서류라 유지.",
+     "proposedRequiredFacts": [
+      "양도인과 양수인의 신분증이 각각 필요하다",
+      "대리인이 방문하면 위임장이 필요하다"
+     ],
+     "currentRequiredFacts": [
+      "양도인과 양수인의 신분증이 각각 필요하다",
+      "원칙적으로 두 사람이 함께 매장을 방문해야 한다",
+      "대리인이 방문하면 위임장이 필요하다"
+     ],
+     "decision": "KEEP"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "아빠가 잃어버린 유심 재발급을 제가 대신 받으러 가면 뭐 챙겨야 하는지도요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "대리 수령 준비물 세 가지, FAQ 전부 명시.",
+     "proposedRequiredFacts": [
+      "대리인은 위임장, 대리인 신분증, 가입자 신분증 사본이 필요하다"
+     ],
+     "currentRequiredFacts": [
+      "대리인은 위임장, 대리인 신분증, 가입자 신분증 사본이 필요하다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C017",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "데이터 별로 안 쓰는데 싼 요금제 뭐 있어요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "어떤 요금제가 있는지 묻고 FAQ 둘 다 세이브·미니. 가격·데이터량은 묻지 않았고 FAQ에도 없음.",
+     "proposedRequiredFacts": [
+      "알뜰 요금제로 세이브와 미니 2가지가 있다"
+     ],
+     "currentRequiredFacts": [
+      "알뜰 요금제로 세이브와 미니 2가지가 있다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "개통은 매장이랑 인터넷 중 어디가 빨라요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "두 사실로 매장이 빠르다는 결론이 나온다. '매장이 더 빠르다'는 일부 FAQ(SUBSCRIBE-0011, 0031 등)에 명시되지 않아 추가하지 않음.",
+     "proposedRequiredFacts": [
+      "매장은 30분이면 된다",
+      "인터넷은 다음 날 된다"
+     ],
+     "currentRequiredFacts": [
+      "매장은 30분이면 된다",
+      "인터넷은 다음 날 된다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C018",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "번호이동 철회랑 폰 반품 각각 기한이랑 조건이 어떻게 돼요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "두 부분이 술어를 공유해 같은 구간 사용, 이 부분은 번호이동 철회의 기한·조건. '원래 통신사로 돌아간다'는 기한·조건이 아닌 결과라 제거(애매함). FAQ가 주는 조건은 14일·접수처뿐이고 그 외 철회 조건은 FAQ에 없음.",
+     "proposedRequiredFacts": [
+      "14일 안에 고객센터나 매장에 말하면 된다"
+     ],
+     "currentRequiredFacts": [
+      "14일 안에 고객센터나 매장에 말하면 된다",
+      "원래 통신사로 돌아간다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "번호이동 철회랑 폰 반품 각각 기한이랑 조건이 어떻게 돼요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "같은 구간 공유, 이 부분은 폰 반품. 기한과 조건 모두 FAQ 전부에 있음.",
+     "proposedRequiredFacts": [
+      "개통일로부터 14일 이내에 매장이나 고객센터로 신청한다",
+      "미개봉이거나 사용 흔적이 없는 상태여야 한다",
+      "반품·교환은 1회에 한해 가능하다"
+     ],
+     "currentRequiredFacts": [
+      "개통일로부터 14일 이내에 매장이나 고객센터로 신청한다",
+      "미개봉이거나 사용 흔적이 없는 상태여야 한다",
+      "반품·교환은 1회에 한해 가능하다"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C019",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "요금이 두 번 빠져나갔는데 환불 대신 다음 달 요금에서 빼줄 수 있어요?",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "차감 가능 여부만 묻는다. 환불 기간(5영업일)은 묻지 않음.",
+     "proposedRequiredFacts": [
+      "다음 달 요금에서 차감하는 방식도 선택할 수 있다"
+     ],
+     "currentRequiredFacts": [
+      "다음 달 요금에서 차감하는 방식도 선택할 수 있다"
+     ]
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "그리고 오늘 가입한 부가서비스 바로 해지하면 이번 달 요금 안 나오죠?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "요금이 나오는지만 묻는다. '월 이용료는 일할 계산되지 않는다'는 이유 설명이라 제거. '가입 당일'은 SERVICE-0036만 명시하나 나머지도 해지한 달 전액 청구로 같은 의미.",
+     "proposedRequiredFacts": [
+      "가입 당일 해지해도 그 달 요금은 전액 청구된다"
+     ],
+     "currentRequiredFacts": [
+      "가입 당일 해지해도 그 달 요금은 전액 청구된다",
+      "월 이용료는 일할 계산되지 않는다"
+     ],
+     "decision": "KEEP"
+    }
+   ]
+  },
+  {
+   "id": "C020",
+   "parts": [
+    {
+     "partIndex": 0,
+     "subQuestion": "회선 한도 초과라서 새로 개통이 안 된대요. 몇 개까지 되는 거예요?",
+     "changed": true,
+     "uncoveredAsk": null,
+     "comment": "회선 수 한도만 묻는다. '본인 명의로 이미 개통된 회선이 있는지 확인해야 한다'는 묻지 않은 조언이라 제거. '몇 개까지'의 대상이 앞 문장에 있어 함께 포함.",
+     "proposedRequiredFacts": [
+      "성인은 1인당 최대 5회선이다"
+     ],
+     "currentRequiredFacts": [
+      "성인은 1인당 최대 5회선이다",
+      "본인 명의로 이미 개통된 회선이 있는지 확인해야 한다"
+     ],
+     "decision": "APPLY"
+    },
+    {
+     "partIndex": 1,
+     "subQuestion": "안 쓰는 회선 하나 해지하려면 어떻게 하는지도 알려주세요",
+     "changed": false,
+     "uncoveredAsk": null,
+     "comment": "해지 방법을 묻고 사실이 신청 경로를 담고 있어 유지. '즉시'는 한 사실에 묶여 있음(C014와 달리 별도 사실이 아니라 분리하지 않음).",
+     "proposedRequiredFacts": [
+      "매장, 고객센터, 홈페이지 중 한 곳에서 신청하면 즉시 해지된다"
+     ],
+     "currentRequiredFacts": [
+      "매장, 고객센터, 홈페이지 중 한 곳에서 신청하면 즉시 해지된다"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,315 @@
+package com.telme.member.service;
+
+import static com.telme.member.entity.SocialAccount.Provider.GOOGLE;
+import static com.telme.member.entity.SocialAccount.Provider.KAKAO;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.telme.global.common.exception.GeneralException;
+import com.telme.member.entity.SocialAccount;
+import com.telme.member.entity.User;
+import com.telme.member.exception.MemberErrorCode;
+import com.telme.member.repository.SocialAccountRepository;
+import com.telme.member.repository.UserRepository;
+import java.sql.SQLException;
+import java.util.Optional;
+import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
+
+class SocialMemberFinderTest {
+
+    private final SocialAccountRepository socialAccountRepository = mock(SocialAccountRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
+    private final MemberStatusChecker memberStatusChecker = new MemberStatusChecker();
+    private final TransactionTemplate transactionTemplate = new TransactionTemplate() {
+        @Override
+        public <T> T execute(TransactionCallback<T> action) {
+            return action.doInTransaction(null);
+        }
+    };
+    private final SocialMemberFinder finder = new SocialMemberFinder(
+            socialAccountRepository, userRepository, memberStatusChecker, transactionTemplate);
+
+    @Test
+    @DisplayName("이미 연결된 계정이 있으면 그 회원을 반환하고 새로 만들지 않는다")
+    void 기존_연결이_있으면_그대로_반환() {
+        User user = User.builder().userId(1L).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(KAKAO).providerUserId("kakao-1").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-1"))
+                .thenReturn(Optional.of(account));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-1", "a@example.com", null);
+
+        assertThat(result).isEqualTo(user);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("연결된 회원이 정지 상태면 예외를 던진다")
+    void 정지된_회원은_거부() {
+        User user = User.builder().userId(1L).status(User.Status.SUSPENDED).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(KAKAO).providerUserId("kakao-2").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-2"))
+                .thenReturn(Optional.of(account));
+
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-2", "a@example.com", null))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
+    }
+
+    @Test
+    @DisplayName("연결이 없으면 회원과 소셜 계정을 새로 만든다")
+    void 신규_생성() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-3")).thenReturn(Optional.empty());
+        User saved = User.builder().userId(2L).build();
+        when(userRepository.save(any(User.class))).thenReturn(saved);
+
+        User result = finder.findOrCreate(KAKAO, "kakao-3", "b@example.com", null);
+
+        assertThat(result).isEqualTo(saved);
+        verify(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+    }
+
+    @Test
+    @DisplayName("신규 카카오 회원은 카카오 닉네임을 이름으로 저장한다")
+    void 신규_생성시_닉네임을_이름으로_저장() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-name")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-name", null, "카카오닉네임");
+
+        assertThat(result.getName()).isEqualTo("카카오닉네임");
+        verify(userRepository).save(argThat(user -> "카카오닉네임".equals(user.getName())));
+    }
+
+    @Test
+    @DisplayName("기존 카카오 회원의 이름이 비어 있으면 다음 로그인에서 닉네임으로 한 번 보완한다")
+    void 기존_회원의_빈_이름을_닉네임으로_보완() {
+        User user = User.builder().userId(21L).build();
+        SocialAccount account = SocialAccount.builder()
+                .user(user).provider(KAKAO).providerUserId("kakao-fill-name").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-fill-name"))
+                .thenReturn(Optional.of(account));
+        when(userRepository.setNameIfMissing(21L, "새닉네임")).thenReturn(1);
+
+        User result = finder.findOrCreate(KAKAO, "kakao-fill-name", null, "새닉네임");
+
+        assertThat(result.getName()).isEqualTo("새닉네임");
+        verify(userRepository).setNameIfMissing(21L, "새닉네임");
+    }
+
+    @Test
+    @DisplayName("기존 회원에게 저장된 이름은 카카오 닉네임으로 덮어쓰지 않는다")
+    void 기존_이름은_닉네임으로_덮어쓰지_않음() {
+        User user = User.builder().userId(22L).name("기존이름").build();
+        SocialAccount account = SocialAccount.builder()
+                .user(user).provider(KAKAO).providerUserId("kakao-keep-name").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-keep-name"))
+                .thenReturn(Optional.of(account));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-keep-name", null, "바뀐닉네임");
+
+        assertThat(result.getName()).isEqualTo("기존이름");
+        verify(userRepository, never()).setNameIfMissing(any(), any());
+    }
+
+    @Test
+    @DisplayName("동시 최초 로그인으로 UNIQUE 충돌이 나면 재조회해서 승자의 회원을 반환한다")
+    void 동시_최초_로그인_충돌시_승자를_반환() {
+        User winnerUser = User.builder().userId(3L).build();
+        SocialAccount winnerAccount = SocialAccount.builder()
+                .user(winnerUser).provider(KAKAO).providerUserId("kakao-4").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-4"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(winnerAccount));
+        when(userRepository.save(any(User.class))).thenReturn(User.builder().userId(99L).build());
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+
+        User result = finder.findOrCreate(KAKAO, "kakao-4", null, null);
+
+        assertThat(result).isEqualTo(winnerUser);
+    }
+
+    @Test
+    @DisplayName("소셜 계정 UNIQUE 위반이 아닌 데이터 무결성 오류는 그대로 전파된다")
+    void 다른_제약_위반은_그대로_전파() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-5")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(User.builder().userId(4L).build());
+        doThrow(new DataIntegrityViolationException("value too long"))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-5", null, null))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .isNotInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("이메일이 기존 회원과 일치하면 새 회원을 만들지 않고 연결 필요 예외를 던진다")
+    void 이메일이_일치하면_생성을_중단한다() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-6")).thenReturn(Optional.empty());
+        User existing = User.builder().userId(7L).email("match@example.com").build();
+        when(userRepository.findByEmail("match@example.com")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> finder.findOrCreate(KAKAO, "kakao-6", "match@example.com", null))
+                .isInstanceOf(SocialEmailAlreadyLinkedException.class)
+                .extracting(e -> ((SocialEmailAlreadyLinkedException) e).getMatchedUserId())
+                .isEqualTo(7L);
+        verify(userRepository, never()).save(any());
+        verify(socialAccountRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("linkExisting은 기존 회원에 새 소셜 계정을 연결한다")
+    void linkExisting_정상_연결() {
+        User existing = User.builder().userId(8L).email("link@example.com").name("이메일가입이름").build();
+
+        User result = finder.linkExisting(KAKAO, "kakao-7", "provider@example.com", existing);
+
+        assertThat(result).isEqualTo(existing);
+        assertThat(result.getName()).isEqualTo("이메일가입이름");
+        verify(userRepository, never()).setNameIfMissing(any(), any());
+        verify(socialAccountRepository).saveAndFlush(argThat(account ->
+                account.getUser().equals(existing)
+                        && account.getProvider() == KAKAO
+                        && account.getProviderUserId().equals("kakao-7")
+                        && account.getEmail().equals("provider@example.com")));
+    }
+
+    @Test
+    @DisplayName("소셜 제공자가 이메일을 주지 않으면 연결 계정의 이메일도 null로 저장한다")
+    void linkExisting_소셜_이메일이_없으면_null_저장() {
+        User existing = User.builder().userId(8L).email("telme@example.com").build();
+
+        finder.linkExisting(KAKAO, "kakao-no-email", null, existing);
+
+        verify(socialAccountRepository).saveAndFlush(argThat(account -> account.getEmail() == null));
+    }
+
+    @Test
+    @DisplayName("이미 해당 provider가 연결된 회원이면 거부한다")
+    void linkExisting_이미_provider가_있으면_거부() {
+        User existing = User.builder().userId(9L).email("link2@example.com").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_user_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-8", "provider@example.com", existing))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+    }
+
+    @Test
+    @DisplayName("같은 회원의 동시 중복 연결 요청은 이미 연결된 상태로 그대로 성공 처리한다")
+    void linkExisting_같은_회원의_동시_요청은_성공_처리() {
+        User existing = User.builder().userId(10L).email("link3@example.com").build();
+        SocialAccount alreadyLinked = SocialAccount.builder().user(existing).provider(KAKAO).providerUserId("kakao-9").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-9"))
+                .thenReturn(Optional.of(alreadyLinked));
+
+        User result = finder.linkExisting(KAKAO, "kakao-9", "provider@example.com", existing);
+
+        assertThat(result).isEqualTo(existing);
+    }
+
+    @Test
+    @DisplayName("이미 연결된 자기 자신의 계정을 다시 연결해도, user-provider 제약이 먼저 보고돼도 성공 처리한다")
+    void linkExisting_같은_회원의_같은_계정_재연결은_어느_제약이_보고되든_성공_처리() {
+        User existing = User.builder().userId(12L).email("link5@example.com").build();
+        SocialAccount alreadyLinked = SocialAccount.builder().user(existing).provider(KAKAO).providerUserId("kakao-11").build();
+        // 동시 중복 클릭 시 uk_social_provider가 아니라 uk_social_user_provider가 먼저 보고될 수도 있다
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_user_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-11"))
+                .thenReturn(Optional.of(alreadyLinked));
+
+        User result = finder.linkExisting(KAKAO, "kakao-11", "provider@example.com", existing);
+
+        assertThat(result).isEqualTo(existing);
+    }
+
+    @Test
+    @DisplayName("다른 회원에게 이미 연결된 소셜 계정이면 거부한다")
+    void linkExisting_다른_회원에_연결된_계정이면_거부() {
+        User existing = User.builder().userId(11L).email("link4@example.com").build();
+        User otherUser = User.builder().userId(99L).build();
+        SocialAccount linkedToOther = SocialAccount.builder().user(otherUser).provider(KAKAO).providerUserId("kakao-10").build();
+        ConstraintViolationException constraintViolation = new ConstraintViolationException(
+                "could not execute statement", new SQLException("duplicate key", "23505"), "uk_social_provider");
+        doThrow(new DataIntegrityViolationException("insert failed", constraintViolation))
+                .when(socialAccountRepository).saveAndFlush(any(SocialAccount.class));
+        when(socialAccountRepository.findByProviderAndProviderUserId(KAKAO, "kakao-10"))
+                .thenReturn(Optional.of(linkedToOther));
+
+        assertThatThrownBy(() -> finder.linkExisting(KAKAO, "kakao-10", "provider@example.com", existing))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.SOCIAL_ACCOUNT_ALREADY_LINKED);
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작을 고르면 이메일이 같은 기존 회원이 있어도 연결하지 않고 새 회원을 만든다")
+    void 새_계정으로_시작은_이메일_대조_없이_생성() {
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-new")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = finder.createWithoutEmailMatch(GOOGLE, "google-new", "match@example.com", "구글 사용자");
+
+        assertThat(result.getName()).isEqualTo("구글 사용자");
+        verify(userRepository, never()).findByEmail(any());
+        verify(socialAccountRepository).saveAndFlush(argThat(account -> account.getProvider() == GOOGLE
+                && "google-new".equals(account.getProviderUserId())
+                && "match@example.com".equals(account.getEmail())
+                && account.getUser() == result));
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작을 다시 요청해 이미 만든 소셜 계정이 있으면 그 회원을 그대로 쓴다")
+    void 새_계정으로_시작_중복_요청은_기존_회원_반환() {
+        User user = User.builder().userId(31L).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(GOOGLE).providerUserId("google-again").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-again"))
+                .thenReturn(Optional.of(account));
+
+        User result = finder.createWithoutEmailMatch(GOOGLE, "google-again", "match@example.com", "구글 사용자");
+
+        assertThat(result).isEqualTo(user);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("새 계정으로 시작이라도 이미 만든 회원이 정지 상태면 거부한다")
+    void 새_계정으로_시작_정지된_회원은_거부() {
+        User user = User.builder().userId(32L).status(User.Status.SUSPENDED).build();
+        SocialAccount account = SocialAccount.builder().user(user).provider(GOOGLE).providerUserId("google-suspended").build();
+        when(socialAccountRepository.findByProviderAndProviderUserId(GOOGLE, "google-suspended"))
+                .thenReturn(Optional.of(account));
+
+        assertThatThrownBy(() -> finder.createWithoutEmailMatch(GOOGLE, "google-suspended", null, null))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getErrorCode())
+                .isEqualTo(MemberErrorCode.ACCOUNT_SUSPENDED);
+    }
+}

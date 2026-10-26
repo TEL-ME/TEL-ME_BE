@@ -1,0 +1,146 @@
+package com.telme.faq.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.telme.faq.dto.req.AdminSearchScoreRequest;
+import com.telme.faq.dto.res.AdminSearchScoreResponse;
+import java.sql.Timestamp;
+import java.time.Instant;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@Transactional
+class AdminSearchScoreQueryServiceTest {
+
+    // 다른 테스트가 남긴 기록과 섞이지 않도록 먼 미래의 하루만 본다
+    private static final Instant FROM = Instant.parse("2100-01-01T00:00:00Z");
+    private static final Instant TO = Instant.parse("2100-01-02T00:00:00Z");
+
+    @Autowired
+    private AdminSearchScoreQueryService service;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        insert(0.95, true);
+        insert(1.0, true);    // 마지막 칸(0.95~1.0)에 들어가야 한다
+        insert(0.73, true);
+        insert(0.71, true);   // 임계값 미만이지만 질문 벡터로 통과한 검색
+        insert(0.40, false);
+        insert(-0.10, false); // 음수는 첫 칸
+        insert(null, false);  // 후보가 없던 검색: 건수에는 들어가고 분포에서는 빠진다
+        insert(0.75, false, 0.80); // 당시 임계값이 0.80이던 검색: 지금 기준(0.72)으로는 넘지만 당시 기준으로는 미달
+        // 원문이 빈 질문의 정제 검색: 질문 수·분포에는 들어가지 않고 정제로 근거를 찾은 수에만 들어간다
+        insertRefined(0.74, true);
+        // 이전 대화로 지시어를 풀어 쓴 질문의 첫 검색: 원문 대신 검색하므로 질문 수·분포에 들어간다
+        insert("RESOLVED", 0.86, true, 0.72);
+        insertRefined(0.30, false);
+        jdbcTemplate.update("INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, "
+                + "passed, created_at) VALUES ('ORIGINAL', 0.99, 0.72, true, ?)",
+                Timestamp.from(TO)); // 기간 밖(끝 시각과 같음)
+    }
+
+    @Test
+    @DisplayName("검색 수, 분포 대상 수, 실제 통과 수, 당시 임계값 이상 수와 현재 임계값을 반환한다")
+    void 요약을_반환한다() {
+        AdminSearchScoreResponse response = service.getScores(new AdminSearchScoreRequest(FROM, TO));
+
+        assertThat(response.threshold()).isEqualTo(0.72);
+        assertThat(response.total()).isEqualTo(9);
+        assertThat(response.scored()).isEqualTo(8);
+        assertThat(response.passed()).isEqualTo(5);
+        assertThat(response.refinedPassed()).isEqualTo(1);
+        // 0.95, 1.0, 0.73만. 0.75는 당시 임계값(0.80) 미만이라 빠진다
+        assertThat(response.aboveThreshold()).isEqualTo(4);
+        assertThat(response.buckets().stream().mapToLong(AdminSearchScoreResponse.Bucket::count).sum())
+                .isEqualTo(response.scored());
+    }
+
+    @Test
+    @DisplayName("1위 점수를 0.05 간격 20칸으로 나누고 빈 칸은 0으로 채운다")
+    void 분포를_20칸으로_나눈다() {
+        var buckets = service.getScores(new AdminSearchScoreRequest(FROM, TO)).buckets();
+
+        assertThat(buckets).hasSize(20);
+        assertThat(buckets.get(0).count()).isEqualTo(1);   // -0.10
+        assertThat(buckets.get(8).count()).isEqualTo(1);   // 0.40
+        assertThat(buckets.get(14).count()).isEqualTo(2);  // 0.71, 0.73 (정제 검색 0.74는 빠진다)
+        assertThat(buckets.get(14).min()).isEqualTo(0.7);
+        assertThat(buckets.get(19).count()).isEqualTo(2);  // 0.95, 1.0
+        assertThat(buckets.get(19).max()).isEqualTo(1.0);
+        assertThat(buckets.get(17).count()).isEqualTo(1);  // 0.86 (RESOLVED)
+        assertThat(buckets.get(10).count()).isZero();
+    }
+
+    @Test
+    @DisplayName("판정 결과를 남긴 질문만 결과별로 겹치지 않게 나눠 세고, 판정 실패는 판정기가 정한 결과와 따로 센다")
+    void 판정_결과로_나눠_센다() {
+        insertOutcome("ORIGINAL", 0.85, true, "PASSED_DIRECTLY");
+        insertOutcome("ORIGINAL", 0.90, true, "PASSED_DIRECTLY");          // 판정 거절 후보가 섞였어도 바로 통과
+        insertOutcome("RESOLVED", 0.74, true, "PASSED_BY_JUDGE");          // 판정 전 기준으로도 통과
+        insertOutcome("ORIGINAL", 0.70, false, "PASSED_BY_JUDGE");         // 판정 전 기준으로는 미달
+        insertOutcome("ORIGINAL", 0.75, true, "PASSED_ON_JUDGE_FAILURE");  // 판정 실패, 점수가 높아 남김
+        insertOutcome("ORIGINAL", 0.75, true, "REJECTED_BY_JUDGE");        // 판정 전 기준으로는 통과
+        insertOutcome("ORIGINAL", 0.70, false, "DROPPED_ON_JUDGE_FAILURE"); // 판정 실패, 점수가 낮아 버림
+        insertOutcome("ORIGINAL", 0.50, false, "BELOW_FLOOR");
+        // 정제 검색: 질문 수가 아니라 정제 통과에만 들어간다. 판정 실패 뒤 남긴 것도 근거를 찾은 것이다
+        insertOutcome("REFINED", 0.72, false, "PASSED_BY_JUDGE");
+        insertOutcome("REFINED", 0.76, false, "PASSED_ON_JUDGE_FAILURE");
+        insertOutcome("REFINED", 0.71, false, "REJECTED_BY_JUDGE");
+
+        AdminSearchScoreResponse.GrayZone grayZone = service.getScores(new AdminSearchScoreRequest(FROM, TO)).grayZone();
+
+        // 테스트 설정은 회색 구간이 꺼져 있고, 선은 기본값이다
+        assertThat(grayZone.enabled()).isFalse();
+        assertThat(grayZone.qaPass()).isEqualTo(0.80);
+        assertThat(grayZone.qaFloor()).isEqualTo(0.69);
+        assertThat(grayZone.questionPass()).isEqualTo(0.90);
+        assertThat(grayZone.questionFloor()).isEqualTo(0.80);
+        // setUp의 기록은 판정 결과가 없어(NULL) 세지 않는다
+        assertThat(grayZone.recorded()).isEqualTo(8);
+        assertThat(grayZone.passedDirectly()).isEqualTo(2);
+        assertThat(grayZone.passedByJudge()).isEqualTo(2);
+        assertThat(grayZone.passedOnJudgeFailure()).isEqualTo(1);
+        assertThat(grayZone.rejectedByJudge()).isEqualTo(1);
+        assertThat(grayZone.droppedOnJudgeFailure()).isEqualTo(1);
+        assertThat(grayZone.belowFloor()).isEqualTo(1);
+        assertThat(grayZone.refinedFinalPassed()).isEqualTo(2);
+        assertThat(grayZone.passedDirectly() + grayZone.passedByJudge() + grayZone.passedOnJudgeFailure()
+                + grayZone.rejectedByJudge() + grayZone.droppedOnJudgeFailure() + grayZone.belowFloor())
+                .isEqualTo(grayZone.recorded());
+    }
+
+    private void insertOutcome(String kind, double score, boolean passed, String outcome) {
+        jdbcTemplate.update("""
+                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, gray_zone_outcome, created_at)
+                VALUES (?, ?, 0.72, ?, ?, ?::timestamptz + interval '1 hour')
+                """, kind, score, passed, outcome, FROM.toString());
+    }
+
+    private void insert(Double score, boolean passed) {
+        insert(score, passed, 0.72);
+    }
+
+    private void insert(Double score, boolean passed, double threshold) {
+        insert("ORIGINAL", score, passed, threshold);
+    }
+
+    private void insertRefined(Double score, boolean passed) {
+        insert("REFINED", score, passed, 0.72);
+    }
+
+    private void insert(String kind, Double score, boolean passed, double threshold) {
+        jdbcTemplate.update("""
+                INSERT INTO faq_search_scores (kind, qa_top_score, qa_threshold, passed, created_at)
+                VALUES (?, ?, ?, ?, ?::timestamptz + interval '1 hour')
+                """, kind, score, threshold, passed, FROM.toString());
+    }
+}

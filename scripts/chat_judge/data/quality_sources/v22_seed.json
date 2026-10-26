@@ -1,0 +1,387 @@
+{
+ "note": "v2.2 확장 시드. random.Random(2210)으로 복합 질문에 쓰지 않은 단일 질문에서 뽑았다. 부분 답은 분야마다 2개, 복합 질문은 나머지에서 서로 다른 분야 두 개씩. nearbyFaqs는 평가 DB의 FAQ 임베딩 기준 시드 FAQ와 가장 가까운 6개다.",
+ "compound": [
+  {
+   "id": "C021",
+   "keys": [
+    "A004",
+    "A072"
+   ]
+  },
+  {
+   "id": "C022",
+   "keys": [
+    "A063",
+    "A100"
+   ]
+  },
+  {
+   "id": "C023",
+   "keys": [
+    "A112",
+    "A082"
+   ]
+  },
+  {
+   "id": "C024",
+   "keys": [
+    "A033",
+    "A104"
+   ]
+  },
+  {
+   "id": "C025",
+   "keys": [
+    "A116",
+    "A032"
+   ]
+  },
+  {
+   "id": "C026",
+   "keys": [
+    "A039",
+    "A090"
+   ]
+  },
+  {
+   "id": "C027",
+   "keys": [
+    "A068",
+    "A055"
+   ]
+  },
+  {
+   "id": "C028",
+   "keys": [
+    "A034",
+    "A045"
+   ]
+  },
+  {
+   "id": "C029",
+   "keys": [
+    "A047",
+    "A021"
+   ]
+  },
+  {
+   "id": "C030",
+   "keys": [
+    "A003",
+    "A097"
+   ]
+  },
+  {
+   "id": "C031",
+   "keys": [
+    "A066",
+    "A007"
+   ]
+  },
+  {
+   "id": "C032",
+   "keys": [
+    "A025",
+    "A115"
+   ]
+  },
+  {
+   "id": "C033",
+   "keys": [
+    "A054",
+    "A009"
+   ]
+  },
+  {
+   "id": "C034",
+   "keys": [
+    "A067",
+    "A096"
+   ]
+  },
+  {
+   "id": "C035",
+   "keys": [
+    "A078",
+    "A070"
+   ]
+  },
+  {
+   "id": "C036",
+   "keys": [
+    "A061",
+    "A006"
+   ]
+  },
+  {
+   "id": "C037",
+   "keys": [
+    "A046",
+    "A085"
+   ]
+  },
+  {
+   "id": "C038",
+   "keys": [
+    "A020",
+    "A028"
+   ]
+  },
+  {
+   "id": "C039",
+   "keys": [
+    "A088",
+    "A099"
+   ]
+  },
+  {
+   "id": "C040",
+   "keys": [
+    "A015",
+    "A038"
+   ]
+  }
+ ],
+ "partial": [
+  {
+   "id": "P001",
+   "key": "A008",
+   "nearbySlotIds": [
+    "BILLING-0046",
+    "BILLING-0018",
+    "BILLING-0095",
+    "BILLING-0123",
+    "BILLING-0067",
+    "BILLING-0074"
+   ]
+  },
+  {
+   "id": "P002",
+   "key": "A010",
+   "nearbySlotIds": [
+    "BILLING-0094",
+    "BILLING-0101",
+    "BILLING-0073",
+    "BILLING-0045",
+    "BILLING-0017",
+    "BILLING-0031"
+   ]
+  },
+  {
+   "id": "P003",
+   "key": "A018",
+   "nearbySlotIds": [
+    "DEVICE-0100",
+    "DEVICE-0060",
+    "DEVICE-0036",
+    "DEVICE-0056",
+    "DEVICE-0004",
+    "DEVICE-0124"
+   ]
+  },
+  {
+   "id": "P004",
+   "key": "A013",
+   "nearbySlotIds": [
+    "DEVICE-0120",
+    "DEVICE-0044",
+    "DEVICE-0028",
+    "DEVICE-0008",
+    "DEVICE-0116",
+    "DEVICE-0040"
+   ]
+  },
+  {
+   "id": "P005",
+   "key": "A035",
+   "nearbySlotIds": [
+    "NAME_CHANGE-0023",
+    "NAME_CHANGE-0014",
+    "NAME_CHANGE-0026",
+    "NAME_CHANGE-0032",
+    "NAME_CHANGE-0074",
+    "NAME_CHANGE-0029"
+   ]
+  },
+  {
+   "id": "P006",
+   "key": "A036",
+   "nearbySlotIds": [
+    "NAME_CHANGE-0020",
+    "NAME_CHANGE-0005",
+    "NAME_CHANGE-0080",
+    "NAME_CHANGE-0026",
+    "NAME_CHANGE-0029",
+    "NAME_CHANGE-0032"
+   ]
+  },
+  {
+   "id": "P007",
+   "key": "A043",
+   "nearbySlotIds": [
+    "PLAN-0007",
+    "PLAN-0067",
+    "PLAN-0002",
+    "PLAN-0012",
+    "PLAN-0142",
+    "PLAN-0132"
+   ]
+  },
+  {
+   "id": "P008",
+   "key": "A040",
+   "nearbySlotIds": [
+    "PLAN-0126",
+    "PLAN-0006",
+    "PLAN-0106",
+    "PLAN-0001",
+    "PLAN-0081",
+    "PLAN-0091"
+   ]
+  },
+  {
+   "id": "P009",
+   "key": "A059",
+   "nearbySlotIds": [
+    "PORTING-0060",
+    "PORTING-0104",
+    "PORTING-0008",
+    "PORTING-0040",
+    "PORTING-0004",
+    "PORTING-0096"
+   ]
+  },
+  {
+   "id": "P010",
+   "key": "A051",
+   "nearbySlotIds": [
+    "PORTING-0077",
+    "PORTING-0001",
+    "PORTING-0005",
+    "PORTING-0037",
+    "PORTING-0029",
+    "PORTING-0009"
+   ]
+  },
+  {
+   "id": "P011",
+   "key": "A065",
+   "nearbySlotIds": [
+    "ROAMING-0025",
+    "ROAMING-0080",
+    "ROAMING-0035",
+    "ROAMING-0015",
+    "ROAMING-0010",
+    "ROAMING-0060"
+   ]
+  },
+  {
+   "id": "P012",
+   "key": "A062",
+   "nearbySlotIds": [
+    "ROAMING-0042",
+    "ROAMING-0072",
+    "ROAMING-0067",
+    "ROAMING-0017",
+    "ROAMING-0047",
+    "PORTING-0113"
+   ]
+  },
+  {
+   "id": "P013",
+   "key": "A076",
+   "nearbySlotIds": [
+    "SERVICE-0042",
+    "SERVICE-0027",
+    "SERVICE-0037",
+    "SERVICE-0032",
+    "SERVICE-0002",
+    "SERVICE-0022"
+   ]
+  },
+  {
+   "id": "P014",
+   "key": "A080",
+   "nearbySlotIds": [
+    "SERVICE-0031",
+    "SERVICE-0021",
+    "SERVICE-0036",
+    "SERVICE-0056",
+    "SERVICE-0016",
+    "TERMINATE-0085"
+   ]
+  },
+  {
+   "id": "P015",
+   "key": "A093",
+   "nearbySlotIds": [
+    "SUBSCRIBE-0108",
+    "SUBSCRIBE-0124",
+    "SUBSCRIBE-0012",
+    "SUBSCRIBE-0092",
+    "SUBSCRIBE-0056",
+    "SUBSCRIBE-0088"
+   ]
+  },
+  {
+   "id": "P016",
+   "key": "A086",
+   "nearbySlotIds": [
+    "SUBSCRIBE-0075",
+    "SUBSCRIBE-0027",
+    "SUBSCRIBE-0051",
+    "SUBSCRIBE-0055",
+    "SUBSCRIBE-0059",
+    "SUBSCRIBE-0103"
+   ]
+  },
+  {
+   "id": "P017",
+   "key": "A108",
+   "nearbySlotIds": [
+    "TERMINATE-0100",
+    "TERMINATE-0104",
+    "TERMINATE-0108",
+    "TERMINATE-0112",
+    "TERMINATE-0088",
+    "TERMINATE-0020"
+   ]
+  },
+  {
+   "id": "P018",
+   "key": "A106",
+   "nearbySlotIds": [
+    "TERMINATE-0091",
+    "TERMINATE-0043",
+    "TERMINATE-0047",
+    "TERMINATE-0055",
+    "TERMINATE-0023",
+    "TERMINATE-0067"
+   ]
+  },
+  {
+   "id": "P019",
+   "key": "A109",
+   "nearbySlotIds": [
+    "USIM-0054",
+    "USIM-0002",
+    "USIM-0026",
+    "USIM-0094",
+    "USIM-0074",
+    "USIM-0010"
+   ]
+  },
+  {
+   "id": "P020",
+   "key": "A120",
+   "nearbySlotIds": [
+    "NAME_CHANGE-0085",
+    "USIM-0110",
+    "USIM-0070",
+    "NAME_CHANGE-0076",
+    "NAME_CHANGE-0073",
+    "USIM-0098"
+   ]
+  }
+ ]
+}

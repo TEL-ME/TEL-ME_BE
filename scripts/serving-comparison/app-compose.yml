@@ -1,0 +1,21 @@
+# 앱 EC2에서 측정용으로 앱을 띄운다. 설정 값은 app.env(README "앱 설정")에서 읽는다
+#   정상:          docker compose -f app-compose.yml up -d
+#   S1 즉시 장애:  docker compose -f app-compose.yml -f fault-refuse.yml up -d
+#   S2 응답 없음:  docker compose -f app-compose.yml -f fault-hang.yml up -d
+# 시나리오를 바꿀 때는 down 뒤 up -d로 앱 컨테이너를 다시 만든다(extra_hosts·environment는 재시작만으로 바뀌지 않는다)
+services:
+  app:
+    image: ${APP_IMAGE:-telme-app:serving}
+    container_name: telme-app
+    restart: unless-stopped
+    env_file: app.env
+    ports:
+      - "8080:8080"
+    networks:
+      - serving
+
+networks:
+  serving:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

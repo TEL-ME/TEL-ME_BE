@@ -1,0 +1,289 @@
+package com.telme.consult.config;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+
+import com.telme.chat.entity.ChatMessage;
+import com.telme.chat.repository.ChatMessageRepository;
+import com.telme.chat.service.ChatQuestionResolver;
+import com.telme.chat.service.ChatEmitterRegistry;
+import com.telme.chat.service.ChatProcessingPort;
+import com.telme.chat.service.ExecutionTrace;
+import com.telme.consult.converter.ConfirmedConditionConverter;
+import com.telme.consult.converter.FollowupConditionConverter;
+import com.telme.consult.service.ConsultChatEvents;
+import com.telme.consult.service.ComparisonEvidenceResolver;
+import com.telme.chat.repository.ChatSessionRepository;
+import com.telme.consult.service.MemberPlanAnswerer;
+import com.telme.consult.repository.SessionRecommendationAnswers;
+import com.telme.consult.service.MemberRecommendationAnswerer;
+import com.telme.consult.service.PlanCatalogAnswerer;
+import com.telme.consult.service.PlanQuestionClassifier;
+import com.telme.consult.service.FaqCandidateEvidenceResolver;
+import com.telme.rag.converter.AnswerContextConverter;
+import com.telme.consult.service.ConsultChatPersistenceService;
+import com.telme.consult.service.ConsultChatProcessingService;
+import com.telme.consult.service.ConsultChatProcessingService.AnswerProvider;
+import com.telme.consult.service.ConsultChatProcessingService.TurnAnalyzer;
+import com.telme.consult.service.ConsultTurnAnalysisAdapter.AnalysisProvider;
+import com.telme.consult.service.ConsultTurnAnalysisAdapter.ContextProvider;
+import com.telme.consult.service.ConsultTurnPreparationService;
+import com.telme.consult.service.PurposeRoutingAnswerProvider;
+import com.telme.consult.service.QueryRoutingAnalysisProvider.FollowupAnalysisProvider;
+import com.telme.consult.service.ConsultChatProcessingService.NoAnswerSuggestions;
+import com.telme.consult.service.FaqCandidateNoAnswerSuggestions;
+import com.telme.consult.service.PolicyLinkSuggestedQuestions;
+import com.telme.consult.service.RagSearchResultAnswerGenerator;
+import com.telme.consult.service.RagSearchResultAnswerGenerator.SuggestedQuestions;
+import com.telme.faq.config.EmbeddingProperties;
+import com.telme.faq.dto.res.FaqSearchResponse;
+import com.telme.faq.service.FaqSearchService;
+import com.telme.intent.service.QueryRoutingService;
+import com.telme.llm.service.LlmClient;
+import com.telme.rag.service.AnswerGenerator;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import com.telme.faq.config.SearchProperties;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.time.LocalDate;
+import java.util.List;
+
+class ConsultChatPipelineConfigurationTest {
+    private final ApplicationContextRunner runner =
+            new ApplicationContextRunner()
+                    .withUserConfiguration(
+                            ConsultTurnRoutingConfiguration.class,
+                            ConsultRagAnswerConfiguration.class,
+                            ConsultStoreSearchConfiguration.class,
+                            ConsultChatProcessingConfiguration.class)
+                    .withBean(com.telme.store.service.StoreSearchService.class,
+                            () -> mock(com.telme.store.service.StoreSearchService.class))
+                    .withBean(com.telme.chat.converter.ChatStoreConverter.class,
+                            com.telme.chat.converter.ChatStoreConverter::new)
+                    .withBean(ChatMessageRepository.class, () -> mock(ChatMessageRepository.class))
+                    .withBean(ChatEmitterRegistry.class, () -> mock(ChatEmitterRegistry.class))
+                    .withBean(ExecutionTrace.class, () -> mock(ExecutionTrace.class))
+                    .withBean(QueryRoutingService.class, () -> mock(QueryRoutingService.class))
+                    .withBean(ChatQuestionResolver.class, () -> mock(ChatQuestionResolver.class))
+                    .withBean(
+                            FollowupAnalysisProvider.class,
+                            () -> mock(FollowupAnalysisProvider.class))
+                    .withBean(ContextProvider.class, () -> mock(ContextProvider.class))
+                    .withBean(
+                            ConsultTurnPreparationService.class,
+                            () -> mock(ConsultTurnPreparationService.class))
+                    .withBean(FollowupConditionConverter.class, FollowupConditionConverter::new)
+                    .withBean(FaqSearchService.class, () -> mock(FaqSearchService.class))
+                    .withBean(ComparisonEvidenceResolver.class,
+                            () -> mock(ComparisonEvidenceResolver.class))
+                    .withBean(FaqCandidateEvidenceResolver.class,
+                            () -> mock(FaqCandidateEvidenceResolver.class))
+                    .withBean(AnswerContextConverter.class, AnswerContextConverter::new)
+                    .withBean(AnswerGenerator.class, () -> mock(AnswerGenerator.class))
+                    .withBean(
+                            ConsultChatPersistenceService.class,
+                            () -> mock(ConsultChatPersistenceService.class))
+                    .withBean(PlanQuestionClassifier.class, () -> mock(PlanQuestionClassifier.class))
+                    .withBean(PlanCatalogAnswerer.class, () -> mock(PlanCatalogAnswerer.class))
+                    .withBean(MemberPlanAnswerer.class, () -> mock(MemberPlanAnswerer.class))
+                    .withBean(MemberRecommendationAnswerer.class, () -> mock(MemberRecommendationAnswerer.class))
+                    .withBean(SessionRecommendationAnswers.class, () -> mock(SessionRecommendationAnswers.class))
+                    .withBean(ChatSessionRepository.class, () -> mock(ChatSessionRepository.class))
+                    .withBean(PlanQuestionProperties.class, () -> new PlanQuestionProperties(true, true, false))
+                    .withBean(ConfirmedConditionConverter.class, ConfirmedConditionConverter::new)
+                    .withBean(SearchProperties.class, () -> searchProperties(SearchProperties.GrayZone.DISABLED));
+
+    private static SearchProperties searchProperties(SearchProperties.GrayZone grayZone) {
+        return new SearchProperties(0.72, new SearchProperties.DualVector(true, 0.88),
+                new SearchProperties.ScoreRecording(false, java.time.Duration.ofDays(90)), grayZone);
+    }
+
+    @Test
+    void grayZoneWithoutEvidenceJudgeFailsAtStartup() {
+        // 회색 구간을 켰는데 판정기(llm.bedrock)가 꺼져 있으면 판정 없이 아래쪽 후보를 근거로 쓰게 되므로 기동을 막는다
+        runner.withAllowBeanDefinitionOverriding(true)
+                .withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(SearchProperties.class,
+                        () -> searchProperties(new SearchProperties.GrayZone(true, 0.80, 0.69, 0.88, 0.80)))
+                .run(context -> assertThat(context).getFailure()
+                        .hasRootCauseInstanceOf(IllegalStateException.class)
+                        .rootCause().hasMessageContaining("llm.bedrock.enabled"));
+    }
+
+    @Test
+    void namedLocationImplementationReplacesUnavailableAdapter() {
+        var named = mock(com.telme.consult.service.NamedLocationStoreSearchPort.class);
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(com.telme.consult.service.NamedLocationStoreSearchPort.class, () -> named)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(com.telme.consult.service.NamedLocationStoreSearchPort.class);
+                    assertThat(context.getBean(com.telme.consult.service.NamedLocationStoreSearchPort.class))
+                            .isSameAs(named);
+                });
+    }
+
+    @Test
+    void enabledPipelineRegistersOneChatProcessingPortAndRealFaqRagAdapters() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context).hasSingleBean(ChatProcessingPort.class);
+                            assertThat(context).hasSingleBean(ConsultChatProcessingService.class);
+                            assertThat(context).hasSingleBean(TurnAnalyzer.class);
+                            assertThat(context).hasSingleBean(AnalysisProvider.class);
+                            assertThat(context).hasSingleBean(AnswerProvider.class);
+                            assertThat(context).hasSingleBean(PurposeRoutingAnswerProvider.class);
+                            assertThat(context)
+                                    .hasSingleBean(RagSearchResultAnswerGenerator.class);
+                            assertThat(context).hasSingleBean(ConsultChatEvents.class);
+                            assertThat(context.getBean(ConsultChatEvents.class))
+                                    .isInstanceOf(
+                                            com.telme.consult.service.ChatEmitterConsultEvents.class);
+                        });
+    }
+
+    @Test
+    void faqClarificationIsEnabledByDefaultWhenLlmClientExists() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(LlmClient.class, () -> mock(LlmClient.class))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(AnswerProvider.class).clarifies()).isTrue();
+                });
+    }
+
+    @Test
+    void suggestedQuestionsAreOffByDefault() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(SuggestedQuestions.class))
+                                    .isNotInstanceOf(PolicyLinkSuggestedQuestions.class);
+                        });
+    }
+
+    // 켜면 기동할 때 연결표를 읽는다. 형식 오류면 여기서 기동이 실패한다
+    @Test
+    void enabledSuggestedQuestionsLoadPolicyLinks() {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true")
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(SuggestedQuestions.class))
+                                    .isInstanceOf(PolicyLinkSuggestedQuestions.class);
+                        });
+    }
+
+    // 매장 버튼은 추천 질문 안의 옵션이다. 켜야 매장을 언급한 답변 뒤에 매장 찾기 버튼이 붙는다
+    @ParameterizedTest
+    @CsvSource({"false, ''", "true, 유심 재발급 가능한 매장을 알려주세요."})
+    void storeChipFlagControlsStoreQuestion(boolean storeChip, String expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true",
+                        "telme.consult.suggested-questions.store-chip-enabled=" + storeChip)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            var top = new FaqSearchResponse(1L, null, "USIM", "유심 재발급 비용이 얼마예요?",
+                                    "매장에서 바로 재발급할 수 있습니다.", 0.9, 1, LocalDate.of(2026, 10, 1), 1, "Q_A");
+                            var actual = context.getBean(SuggestedQuestions.class)
+                                    .suggest(ChatMessage.AnswerBasis.GROUNDED, List.of(top));
+                            assertThat(actual).isEqualTo(expected.isEmpty() ? List.of() : List.of(expected));
+                        });
+    }
+
+    // 답을 못 할 때 버튼은 추천 질문과 이 플래그가 모두 켜져 있어야 동작한다
+    @ParameterizedTest
+    @CsvSource({"false, false, false", "true, false, false", "false, true, false", "true, true, true"})
+    void noAnswerFlagNeedsSuggestedQuestions(boolean enabled, boolean noAnswer, boolean expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=" + enabled,
+                        "telme.consult.suggested-questions.no-answer-enabled=" + noAnswer)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(NoAnswerSuggestions.class)
+                                    instanceof FaqCandidateNoAnswerSuggestions).isEqualTo(expected);
+                        });
+    }
+
+    // FAQ와 매장이 섞인 질문의 버튼: FAQ 버튼은 답을 못 할 때 버튼, 매장 버튼은 매장 칩 플래그를 따른다
+    @ParameterizedTest
+    @CsvSource({"false, false, false", "true, false, true", "false, true, true"})
+    void compoundButtonsFollowNoAnswerAndStoreChipFlags(boolean noAnswer, boolean storeChip, boolean expected) {
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true",
+                        "telme.consult.suggested-questions.enabled=true",
+                        "telme.consult.suggested-questions.no-answer-enabled=" + noAnswer,
+                        "telme.consult.suggested-questions.store-chip-enabled=" + storeChip)
+                .withBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class))
+                .withBean(EmbeddingProperties.class,
+                        () -> new EmbeddingProperties("bge-m3", 1024, null, null, null))
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context.getBean(
+                                    com.telme.consult.service.QueryRoutingAnalysisProvider.CompoundQuestionSuggestions.class)
+                                    instanceof com.telme.consult.service.CompoundPartSuggestions).isEqualTo(expected);
+                        });
+    }
+
+    @Test
+    void customSseEventsReplaceNoopEvents() {
+        ConsultChatEvents events = mock(ConsultChatEvents.class);
+
+        runner.withPropertyValues(
+                        "telme.consult.chat-integration-enabled=true",
+                        "telme.consult.persistence-enabled=true",
+                        "telme.consult.rag-integration-enabled=true")
+                .withBean(ConsultChatEvents.class, () -> events)
+                .run(
+                        context -> {
+                            assertThat(context).hasNotFailed();
+                            assertThat(context).hasSingleBean(ConsultChatEvents.class);
+                            assertThat(context.getBean(ConsultChatEvents.class)).isSameAs(events);
+                        });
+    }
+}

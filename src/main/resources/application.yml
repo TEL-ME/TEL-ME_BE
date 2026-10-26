@@ -5,7 +5,383 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:telme}
     username: ${POSTGRES_USER:telme}
     password: ${POSTGRES_PASSWORD:telme}
+  lifecycle:
+    # 웹 서버가 진행 중인 요청을 기다리는 시간. 기본 30초는 SSE로 연결된 채팅 턴이 있으면 끝까지 쓰이는데, 앱 서버는 `docker run`에
+    # --stop-timeout 없이 떠서(infra/terraform/user_data/app.sh) 강제 종료 시간이 docker 기본 10초다.
+    # 이 값과 아래 chat.processing.shutdown-wait에 Tomcat 종료 지연(실측 약 2초)과 JVM 종료를 더한 시간이 10초 안에 들어야 정상 종료 처리가 끝까지 돈다.
+    # 배포에서 --stop-timeout을 늘리면 두 값도 함께 늘린다. ALB가 종료 전에 120초 동안 요청을 마무리하게 두므로 대부분의 턴은 그 전에 끝난다
+    timeout-per-shutdown-phase: ${SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:3s}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: none
+  flyway:
+    # db/migration: 스키마(항상 적용). db/dev-migration: 로컬 개발용 샘플 데이터(prod 프로파일에서는 제외).
+    locations: classpath:db/migration,classpath:db/dev-migration
+    # 운영 DB(AWS RDS)를 실수로 날리는 사고를 막기 위한 전역 안전장치. 로컬에서 스키마를 초기화하고
+    # 싶으면 `podman-compose down -v`로 볼륨을 지우는 쪽을 쓰고, 이 값은 프로파일별로 풀지 않는다.
+    clean-disabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            # 빈 값이면 앱이 기동조차 안 되므로(Spring의 필수 검증), 카카오 키 없는 팀원도
+            # 앱은 뜨게 더미값을 기본값으로 둔다 — 실제 카카오 로그인만 안 될 뿐 다른 기능엔 영향 없음
+            client-id: ${KAKAO_CLIENT_ID:dummy-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:dummy-client-secret}
+            # 카카오는 기본값(client_secret_basic)이 아니라 이 방식을 요구한다
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            # 카카오 개발자 콘솔의 "카카오 로그인 리다이렉트 URI"에 등록한 값과 반드시 일치해야 한다
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # account_email은 카카오 정책상 비즈 앱 전환이 되어 있어야 동의항목 설정 자체가 열린다(KOE205).
+            # 비즈 전환 전까지 임시로 빼둔다 — 이메일 없이도 로그인·가입은 정상 동작하고(SocialMemberFinder가
+            # email=null을 그대로 처리), 기존 이메일 계정 자동 발견은 불가. 전환되면 다시 추가.
+            scope: profile_nickname
+          google:
+            # 키가 없는 환경에서도 앱이 기동하도록 더미값을 기본값으로 둔다.
+            # 실제 Google 로그인은 GOOGLE_CLIENT_ID/SECRET을 설정한 환경에서만 동작한다.
+            client-id: ${GOOGLE_CLIENT_ID:dummy-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:dummy-google-client-secret}
+            scope: openid, profile, email
+        provider:
+          # 카카오는 Spring Security의 공통 프로바이더 목록(google 등)에 없어 직접 지정한다
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            # 카카오 사용자 정보 응답의 최상위 식별자 필드명
+            user-name-attribute: id
+
+server:
+  servlet:
+    session:
+      cookie:
+        # 브라우저 기본값(SameSite 미지정 시 Lax 취급)에 기대지 않고 서버가 명시
+        same-site: lax
+
+springdoc:
+  default-consumes-media-type: application/json;charset=UTF-8
+  default-produces-media-type: application/json;charset=UTF-8
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+  api-docs:
+    path: /v3/api-docs
+  show-actuator: false
+
+ollama:
+  url: ${OLLAMA_URL:http://localhost:11434}
+
+# llm.provider=vllm일 때 EXAONE을 부르는 vLLM 서버(OpenAI 호환 API). 서버의 --served-model-name은 llm.model과 같아야 한다
+vllm:
+  url: ${VLLM_URL:http://localhost:8000}
+  # 같은 VPC라 켜져 있으면 연결이 바로 된다. GPU가 꺼져 있을 때 대체 호출마다 5초(llm.connect-timeout)씩 기다리지 않게 짧게 둔다.
+  # 응답 대기는 llm.read-timeout을 그대로 쓴다
+  connect-timeout: ${VLLM_CONNECT_TIMEOUT:1s}
+  gpu:
+    # 평소 꺼 두는 GPU EC2. Bedrock이 실패해 엑사원으로 대체되면 꺼져 있을 때 켠다(끄는 건 GPU 안의 30분 유휴 스크립트).
+    # 조건 추출 파싱 재시도처럼 엑사원을 직접 부르는 호출로는 켜지 않는다.
+    # 비우면(로컬/CI) 자동 기동을 하지 않는다. 운영은 Terraform이 SSM으로 넣는다
+    instance-id: ${VLLM_GPU_INSTANCE_ID:}
+    region: ${VLLM_GPU_REGION:ap-northeast-2}
+    # 이 간격 안에서는 상태 확인·기동 요청을 다시 보내지 않는다
+    start-interval: 1m
+    # start-window 안에 Bedrock 실패 대체가 start-min-fallbacks번 이상일 때만 켠다.
+    # 8초 시간 초과, 429 같은 일시 오류 한 번으로는 켜지 않는다(한 번 켜면 30분 이상 과금)
+    start-min-fallbacks: 2
+    start-window: 5m
+
+kakao:
+  local:
+    # 지명·주소 → 좌표 변환(매장 찾기). 카카오 로그인과 같은 앱의 REST API 키를 쓰고, 콘솔에서 카카오맵(로컬) 사용 설정이 켜져 있어야 한다.
+    # 더미 키로도 앱은 뜨고, 호출만 STORE503-1로 실패한다
+    rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
+  route:
+    # 매장 길찾기. 대중교통·도보·자전거는 카카오맵 REST API, 자동차는 카카오모빌리티 길찾기 API를 부른다.
+    # 로컬 검색과 같은 키를 쓴다. 더미 키로도 앱은 뜨고, 호출만 STORE503-2로 실패한다
+    rest-api-key: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:dummy-client-id}}
+    # 켜면 대중교통 출발지 → 첫 경로 좌표의 도보를 추가 조회한다. 적용하려면 재시작이 필요하다.
+    transit-origin-walk-enabled: ${KAKAO_ROUTE_TRANSIT_ORIGIN_WALK_ENABLED:false}
+
+llm:
+  # fake: Ollama 없이 고정 응답 / ollama: Ollama의 EXAONE 호출 / vllm: vLLM의 EXAONE 호출(vllm.url)
+  provider: ${LLM_PROVIDER:fake}
+  model: ${LLM_MODEL:exaone3.5:7.8b}
+  connect-timeout: 5s
+  read-timeout: 60s
+  # 8192면 약 6GB를 쓰고 프롬프트·근거·이전 대화·출력이 모두 들어간다. 모델 자체는 32768까지 지원
+  context-size: ${LLM_CONTEXT_SIZE:8192}
+  retry:
+    # 첫 토큰 전 실패에만 적용. 토큰이 나간 뒤 재시도하면 답이 중복된다
+    max-attempts: 2
+    wait-duration: 1s
+  # 검색 근거 판정용 Bedrock(답변 생성은 위 provider 그대로). 회색 구간(search.gray-zone)과 함께 기본 켜짐
+  # 키는 설정에 두지 않는다. AWS_BEARER_TOKEN_BEDROCK(Bedrock API 키) 또는 AWS 기본 자격 증명을 SDK가 찾는다.
+  # 음성용 AWS 키(AWS_ACCESS_KEY_ID)만 있으면 그 키로 부르다 권한이 없어 판정이 모두 실패하므로 Bedrock 키를 함께 넣는다
+  bedrock:
+    enabled: ${LLM_BEDROCK_ENABLED:true}
+    region: ${LLM_BEDROCK_REGION:us-east-1}
+    model: ${LLM_BEDROCK_MODEL:openai.gpt-oss-120b-1:0}
+    # 넘으면 판정 실패로 처리한다. 5초 초과 호출도 대부분 9초 안에 끝나 8초(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.5절)
+    timeout: ${LLM_BEDROCK_TIMEOUT:8s}
+    # 순간 장애(시간 초과·429·503 등) 재시도, 근거 판정 제외. max-attempts는 첫 호출 포함 횟수
+    retry:
+      max-attempts: ${LLM_BEDROCK_RETRY_MAX_ATTEMPTS:2}
+      wait-duration: ${LLM_BEDROCK_RETRY_WAIT:2s}
+    reasoning-effort: low
+    max-tokens: 1000
+    # 동시에 진행되는 Bedrock 호출 수 상한과 연결 대기 시간. 넘치면 판정 실패로 처리한다
+    # 분당 호출 수 한도는 아니다(평균 1.5초면 분당 약 max-connections × 40회 정도)
+    max-connections: ${LLM_BEDROCK_MAX_CONNECTIONS:50}
+    connection-acquire-timeout: 1s
+    # 비우면 지역 기본 주소. 서빙 비교의 응답 없음 장애를 만들 때만 쓴다(scripts/serving-comparison/fault-hang.yml)
+    endpoint: ${LLM_BEDROCK_ENDPOINT:}
+
+embedding:
+  # ollama: Ollama /api/embed(주소 기본 ollama.url) / tei: text-embeddings-inference /embed(서버가 띄운 bge-m3)
+  provider: ${EMBEDDING_PROVIDER:ollama}
+  url: ${EMBEDDING_URL:${ollama.url}}
+  model: ${EMBEDDING_MODEL:bge-m3}
+  dimension: 1024
+  connect-timeout: 5s
+  search-read-timeout: 15s
+  batch-read-timeout: 120s
+  # 콜드 로드 방지 기동 시 워밍업. 기본 꺼짐 — 실제 배포 환경에서만 true로 켠다.
+  warmup-enabled: ${EMBEDDING_WARMUP_ENABLED:false}
+
+search:
+  # 격자 측정 결과: FAQ 1,150건 + 임베딩 텍스트 Q_A + bge-m3 + 평가셋 130건 기준
+  similarity-threshold: ${SEARCH_SIMILARITY_THRESHOLD:0.72}
+  dual-vector:
+    # 질문만 벡터(QUESTION_ONLY)를 함께 검색해 합친다. 1,150건 백필과 실측을 마치고 켰다(TELME-83)
+    # 실측: Recall@3 0.375 → 0.463(30 → 37), 무관 70건 거부 62건 유지, ANSWER 30건 22건 유지
+    enabled: ${SEARCH_DUAL_VECTOR_ENABLED:true}
+    # 거부율을 현행 그대로 지키면서 Recall이 최대인 지점(0.87 이하로 내리면 EVAL-175가 통과한다)
+    # 측정 조건: FAQ 1,150건 + bge-m3 + 평가셋 130건, 보강 50건, 2026-09-29
+    question-threshold: ${SEARCH_DUAL_VECTOR_QUESTION_THRESHOLD:0.88}
+  score-recording:
+    # 관리자 운영 상태의 검색 점수 분포용으로 검색마다 1위 점수를 남긴다(TELME-123)
+    enabled: ${SEARCH_SCORE_RECORDING_ENABLED:true}
+    # 이 기간이 지난 기록은 매일 새벽에 지운다. 분포 화면은 최근 기간만 본다
+    retention: ${SEARCH_SCORE_RECORDING_RETENTION:90d}
+  gray-zone:
+    # 채팅 답변용 검색에서 점수 구간 일부를 판정기(llm.bedrock)로 한 번 더 확인한다. 기본 켜짐(TELME-160)
+    # pass 이상은 판정 없이 통과, floor ~ pass는 판정기가 통과시켜야 근거, floor 미만은 버린다
+    # 채팅 API 측정: 정답 근거 61 → 74, 엉뚱한 근거 10 → 2, holdout 9 (docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.8절)
+    # 로컬에서 Bedrock 키 없이 쓰려면 SEARCH_GRAY_ZONE_ENABLED=false로 끈다. llm.bedrock만 끄면 기동하지 않는다
+    enabled: ${SEARCH_GRAY_ZONE_ENABLED:true}
+    qa-pass: 0.80
+    qa-floor: 0.69
+    # 기존 질문 임계값(0.88)보다 높여 0.88 ~ 0.90도 판정한다. 0.92와 결과가 같아 0.90 (docs 4.5절)
+    question-pass: 0.90
+    question-floor: 0.80
+
+member:
+  guest:
+    # 비회원 세션 유지 기간. guests.expires_at 계산에 사용.
+    ttl: ${GUEST_TTL:30d}
+  oauth2:
+    # 소셜 로그인 성공/실패 후 리다이렉트할 프론트엔드 기준 URL. 프론트 미배포 상태에서도
+    # 앱은 뜨도록 로컬 더미값을 기본값으로 둔다.
+    frontend-uri: ${FRONTEND_URL:http://localhost:3000}
+
+chat:
+  summary:
+    # 대화 요약을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SUMMARY_BEDROCK:true}
+  session-title:
+    # 세션 제목을 gpt-oss(Bedrock)로 만든다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_SESSION_TITLE_BEDROCK:true}
+  question-resolution:
+    # REGEX_GATED: 규칙에 걸린 후속 질문만 모델 판정, HISTORY_GATED: 앞 고객 발언이 있으면 모두 모델 판정, LLM_ALL: 모든 질문
+    mode: ${CHAT_QUESTION_RESOLUTION_MODE:HISTORY_GATED}
+    # 문맥 해석을 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+    bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
+    # gpt-oss 문맥 판정의 흔들림 보완(docs/01-pipeline/02-context-routing/context-resolution.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
+    stability-guards: ${CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS:false}
+  processing:
+    # 채팅 턴을 동시에 처리하는 수와 처리를 기다릴 수 있는 턴 수. 대기열이 넘치면 그 턴은 바로 실패로 끝난다
+    # 배포 값은 예상 동시 사용자 수와 GPU·Bedrock 처리량으로 정한다(TELME-187 T1 실측)
+    threads: ${CHAT_PROCESSING_THREADS:4}
+    queue-capacity: ${CHAT_PROCESSING_QUEUE:100}
+    # 재배포(SIGTERM) 때 진행 중인 채팅 턴이 끝나기를 기다리는 시간(N). 넘으면 남은 턴을 실패로 기록하고 끊는다.
+    # 웹 서버 종료 대기(spring.lifecycle.timeout-per-shutdown-phase 3초)가 먼저 쓰이고 이 대기가 이어진다. 둘에 Tomcat 종료 지연(약 2초)을 더한 시간이 강제 종료 시간(T)보다 짧아야 한다.
+    # T는 앱이 아니라 배포 설정이고 지금은 docker 기본 10초라 기본값 2초로 합 약 8초(실측)를 맞췄다. 운영 값은 배포 담당자가 환경 변수로 정한다.
+    shutdown-wait: ${CHAT_PROCESSING_SHUTDOWN_WAIT:2s}
+  guest-limit:
+    # 게스트(비로그인)가 하루(한국 시간 0시 기준)에 보낼 수 있는 질문 수. 0이면 제한 없음. 회원은 제한하지 않는다(TELME-213)
+    daily-messages: ${CHAT_GUEST_DAILY_MESSAGES:10}
+
+rag:
+  answer:
+    # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. false면 엑사원
+    # gpt-oss로 결정(TELME-180, docs/03-evaluation/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
+    bedrock: ${RAG_ANSWER_BEDROCK:true}
+    # 가드가 근거에 없는 금액으로 답을 막으면 gpt-oss 추론 강도를 medium으로 올려 한 번 다시 생성한다(TELME-205)
+    # 다시 생성은 gpt-oss만 부르고 실패해도 엑사원으로 대체하지 않는다(안전 안내로 끝남)
+    amount-retry: ${RAG_ANSWER_AMOUNT_RETRY:true}
+  comparison-check:
+    # 삭제할 비교 문장만 답변당 한 번 재검증한다. 판정 불확실/실패/비활성은 기존처럼 삭제한다.
+    enabled: ${RAG_COMPARISON_CHECK_ENABLED:true}
+    max-tokens: 1000
+    max-sentences: 4
+    max-input-chars: 12000
+  evidence-check:
+    # 검색이 통과시킨 근거가 질문에 실제로 답하는지 LLM에 한 번 더 묻는다
+    # 호출이 하나 늘어 응답이 느려진다. 측정 후 기본값을 정한다
+    enabled: ${RAG_EVIDENCE_CHECK_ENABLED:false}
+    max-tokens: 300
+
+faq:
+  # 내부 검색 테스트 API(FaqSearchController). 로컬/개발 편의용, 운영에서는 반드시 꺼야 한다.
+  search-test-api-enabled: ${FAQ_SEARCH_TEST_API_ENABLED:false}
+  embedding-text:
+    # 임베딩에 넣을 텍스트 구성. QUESTION_ONLY | Q_A | CATEGORY_Q_A | Q_A_HEAD200
+    # 바꾸면 기존 벡터가 무효라 faq.reembed로 전량 재임베딩해야 한다
+    variant: ${FAQ_EMBEDDING_TEXT_VARIANT:Q_A}
+  reembed:
+    # 전량 재임베딩(FaqReembedRunner). true로 기동하면 faqs 전체를 다시 임베딩하고 exit-after면 종료
+    # 건너뛰기가 없어 재실행은 처음부터 다시 돈다
+    enabled: ${FAQ_REEMBED_ENABLED:false}
+    batch-size: 50
+    exit-after: true
+  batch-load:
+    # FAQ 배치 적재(FaqBatchLoadRunner). true로 기동하면 path의 JSON을 적재하고 exit-after면 종료
+    # 이미 적재된 slot_id는 건너뛰므로 같은 파일을 다시 돌려도 안전 (내용이 달라도 DB를 덮어쓰지 않음)
+    enabled: ${FAQ_BATCH_LOAD_ENABLED:false}
+    path: ${FAQ_BATCH_LOAD_PATH:scripts/data/faq_full_300.json}
+    # embedBatch 1회 건수 = 트랜잭션 1개 건수
+    # Ollama가 요청을 순차 처리하므로 50 상한
+    batch-size: 50
+    exit-after: true
+
+telme:
+  feedback:
+    # 관리자 싫어요 조회 화면이 이 값에 묶여 있어 기본으로 켠다.
+    enabled: ${TELME_FEEDBACK_ENABLED:true}
+  consult:
+    # 채팅은 ConsultChatProcessingService가 처리하므로 네 설정을 모두 켜 둔다. 하나라도 끄면 채팅 처리 구현이 없어 요청이 실패한다.
+    # LLM_PROVIDER 기본값이 fake라 실제 모델(ollama)을 쓰려면 LLM_PROVIDER를 따로 지정한다
+    persistence-enabled: ${CONSULT_PERSISTENCE_ENABLED:true}
+    llm-enabled: ${CONSULT_LLM_ENABLED:true}
+    chat-integration-enabled: ${CONSULT_CHAT_INTEGRATION_ENABLED:true}
+    rag-integration-enabled: ${CONSULT_RAG_INTEGRATION_ENABLED:true}
+    # FAQ 되묻기. 조건을 못 뽑으면 되묻기를 건너뛰고 예전처럼 답해서 켜 둔다
+    faq-clarification:
+      enabled: ${CONSULT_FAQ_CLARIFICATION_ENABLED:true}
+      # 조건 뽑기를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+      bedrock: ${CONSULT_FAQ_CLARIFICATION_BEDROCK:true}
+      # FAQ 근거에서 되물을 조건을 뽑는다. 근거 답을 그대로 전하는 정책이라 기본은 끔(TELME-218).
+      # 꺼도 요금제 추천의 나이·사용량 되묻기는 나간다. enabled를 끄면 그것까지 꺼진다
+      extract-conditions: ${CONSULT_FAQ_CLARIFICATION_EXTRACT_CONDITIONS:false}
+    # 비교·FAQ 후보 근거 검증 gpt-oss(Bedrock) 사용(실패 시 엑사원 대체). 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK이고
+    # 호출마다 따로 끄면 엑사원이다. docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md
+    evidence-resolver:
+      comparison-bedrock: ${CONSULT_COMPARISON_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
+      candidate-bedrock: ${CONSULT_CANDIDATE_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
+      # 후보 근거 검증에서 단어 검사 대신 고객 원문, 대상 낱말 규칙, 회색 구간 판정기로 확인한다(TELME-184)
+      candidate-judge: ${CONSULT_CANDIDATE_EVIDENCE_JUDGE:true}
+    # 요금제·내 정보 질문 분류. 꺼지면 규칙으로만 분류한다
+    plan-question:
+      enabled: ${CONSULT_PLAN_QUESTION_ENABLED:true}
+      # 분류를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
+      bedrock: ${CONSULT_PLAN_QUESTION_BEDROCK:true}
+      # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
+      answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
+    suggested-questions:
+      # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/01-pipeline/06-answer-generation/followup-recommendation.md).
+      # 독립 검증(7절)과 실제 채팅 경로 확인(7.2절)을 마쳐 기본으로 켠다. 환경변수에 false를 넣으면 끈다
+      enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:true}
+      # 매장 방문이 필요한 답변 뒤 매장 찾기 버튼(문서 10절). 위 추천 질문이 켜져 있을 때만 동작한다.
+      # [현재 위치 사용] → GPS 매장 검색 확인(10.3절)을 마쳐 기본으로 켠다
+      store-chip-enabled: ${CONSULT_SUGGESTED_QUESTIONS_STORE_CHIP_ENABLED:true}
+      # 답을 못 할 때 "혹시 이런 내용을 찾으셨나요?" + FAQ 질문 1개(문서 11절). 위 추천 질문이 켜져 있을 때만 동작한다.
+      # 통신 주변 무관 질문에 엉뚱한 버튼이 뜨는 제한이 있어 켜는 결정 전까지 끈다
+      no-answer-enabled: ${CONSULT_SUGGESTED_QUESTIONS_NO_ANSWER_ENABLED:false}
+  subscription:
+    # 시연용. 켜면 가입·변경이 즉시 적용되고 가입 당월·월 1회 변경 제한도 생략한다.
+    # 끄면 정책대로 가입은 다음 날 09:00 개통, 변경은 다음 날 0시 적용(FAQ와 같은 동작)
+    demo-mode: ${TELME_SUBSCRIPTION_DEMO_MODE:false}
+  routing:
+    # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
+    # 비워 두면 라우팅 모델을 따라간다: gpt-oss(Bedrock)면 하지 않고(맞게 나뉜 질문을 다시 합치므로), 엑사원이면 한다
+    # (docs/01-pipeline/02-context-routing/routing-call-comparison.md 2단계). true/false를 주면 그 값을 쓴다
+    request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:}
+    # 라우팅 호출 4개(의도 분류, 요청 개수 판정, 검색어 검증, 후속 분석)를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다.
+    # 1·3·4단계는 gpt-oss로 확정(docs/01-pipeline/02-context-routing/routing-call-comparison.md). false면 엑사원이고 이때는 위 요청 개수 판정이 켜진다
+    bedrock: ${ROUTING_BEDROCK:true}
+
+speech:
+  tts:
+    # 챗봇 답변 듣기(Amazon Polly). 키는 AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY 환경 변수로만 넣고, 없으면 앱은 뜨고 음성 요청만 SPEECH503-0으로 실패한다
+    region: ${SPEECH_TTS_REGION:ap-northeast-2}
+    voice-id: ${SPEECH_TTS_VOICE_ID:Seoyeon}
+    engine: ${SPEECH_TTS_ENGINE:neural}
+    # Polly 1회 한도가 3,000자라 더 긴 답변은 문장 끝에서 잘라 읽는다
+    max-text-length: 3000
+    # 팀 공용 크레딧 보호. 하루 10만 자는 neural 기준 약 1.6달러
+    requests-per-minute: ${SPEECH_TTS_REQUESTS_PER_MINUTE:10}
+    daily-character-limit: ${SPEECH_TTS_DAILY_CHARACTER_LIMIT:100000}
+    cache-max-size: 20MB
+    cache-ttl: 1h
+  stt:
+    # 음성 질문 인식(Amazon Transcribe 실시간 인식). 키는 위 Polly와 같은 환경 변수를 쓴다
+    region: ${SPEECH_STT_REGION:ap-northeast-2}
+    language-code: ko-KR
+    max-duration: 30s
+    timeout: 20s
+    # 요청마다 최소 15초 과금. 하루 60분은 약 1.44달러이고, 게스트는 쿠키만 지우면 새로 발급돼 서비스 전체 상한이 실제 비용 상한이다
+    requests-per-minute: ${SPEECH_STT_REQUESTS_PER_MINUTE:5}
+    daily-duration-limit: ${SPEECH_STT_DAILY_DURATION_LIMIT:60m}
+    # 요금제명·통신 용어 인식을 돕는 사용자 지정 어휘(Transcribe 콘솔, 서울 리전). 비우면 어휘 없이 인식한다
+    vocabulary-name: ${SPEECH_STT_VOCABULARY_NAME:}
+
+# 서버 오류 수집(Sentry). DSN은 설정에 두지 않고 SENTRY_DSN 환경 변수로만 넣는다(공개 저장소). 비어 있으면 Sentry가 꺼진다.
+# 배포 버전은 SENTRY_RELEASE 환경 변수를 넣으면 그대로 쓴다
+sentry:
+  dsn: ${SENTRY_DSN:}
+  # 베타 기록만 거를 수 있도록 배포 환경마다 local·beta·production으로 나눈다
+  environment: ${SENTRY_ENVIRONMENT:local}
+  # 인증 헤더·IP·쿠키 같은 사용자 정보를 보내지 않는다. 쿼리스트링(위치 좌표 등), CloudFront 위치 헤더, DB 오류의 입력값,
+  # 답변 검사 로그의 문장은 이 설정으로 막히지 않아 SentryConfig에서 지운다
+  send-default-pii: false
+  in-app-includes: com.telme
+  # 없는 경로(404)·허용 안 된 메서드(405)·지원 안 하는 형식(415)은 요청 쪽 실수인데, 전역 예외 처리의 마지막 Exception 처리에 걸려
+  # 500 + ERROR로 남는다. 서버 장애가 아니라 보내지 않는다. 응답 코드를 바로잡는 일은 별도로 다룬다
+  ignored-exceptions-for-type:
+    - org.springframework.web.servlet.resource.NoResourceFoundException
+    - org.springframework.web.HttpRequestMethodNotSupportedException
+    - org.springframework.web.HttpMediaTypeNotSupportedException
+  logging:
+    # ERROR 로그를 오류로 보낸다. 처리되지 않은 예외(전역 예외 처리의 [Unhandled Exception])와 채팅 AI 처리 실패가 여기에 남는다.
+    # GeneralException은 WARN이라 보내지 않는다. 5xx 중 사람이 고쳐야 하는 코드만 전역 예외 처리(ALERT_CODES)에서 ERROR로 올려 보낸다.
+    # 4xx 제외는 전역 예외 처리(GlobalExceptionHandler)가 모든 예외를 먼저 처리하는 것에 기대고 있다. Sentry가 따로 등록하는 예외 수집기
+    # (SentryExceptionResolver)는 상태 코드를 보지 않고 받은 예외를 모두 보내는데, 지금은 순서가 뒤(exception-resolver-order 기본값 1)라 닿지 않는다.
+    # 이 순서를 앞당기거나 전역 예외 처리의 마지막 Exception 처리를 지우면 4xx도 수집된다
+    minimum-event-level: error
+    # 오류 직전의 INFO 이상 로그를 흐름 기록으로 붙인다
+    minimum-breadcrumb-level: info
+
+store:
+  route:
+    # 카카오가 반환한 실제 경로 거리(m). 0은 제한 없음. 조회 후 검사하므로 호출 쿼터는 사용한다.
+    max-distance-meters: ${STORE_ROUTE_MAX_DISTANCE_METERS:0}
+    origin-walk:
+      # 외부 API 호출 전 검사. 출발 도보 전용이며 0(무제한)은 허용하지 않는다.
+      max-straight-distance-meters: ${STORE_ROUTE_ORIGIN_WALK_MAX_STRAIGHT_DISTANCE_METERS:3000}
+      # IP별 서버 메모리 제한. 첫 요청부터 60초 동안 허용할 횟수. 여러 대면 대수만큼 느슨해진다.
+      requests-per-minute: ${STORE_ROUTE_ORIGIN_WALK_REQUESTS_PER_MINUTE:30}
+      # X-Forwarded-For를 신뢰할 프록시 IP/CIDR만 쉼표로 지정. 기본은 헤더를 신뢰하지 않는다.
+      trusted-proxies: ${STORE_ROUTE_ORIGIN_WALK_TRUSTED_PROXIES:}
+    enabled: ${STORE_ROUTE_ENABLED:true}
+    # KST 날짜별 호출 예약 예산. 공급자의 실제 한도·다른 서비스 사용량을 확인해 조정한다. 0은 차단이다.
+    car-daily-limit: ${STORE_ROUTE_CAR_DAILY_LIMIT:9000}
+    transit-daily-limit: ${STORE_ROUTE_TRANSIT_DAILY_LIMIT:900}
+    walk-daily-limit: ${STORE_ROUTE_WALK_DAILY_LIMIT:900}
+    bicycle-daily-limit: ${STORE_ROUTE_BICYCLE_DAILY_LIMIT:900}

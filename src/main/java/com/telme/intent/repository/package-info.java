@@ -1,0 +1,2 @@
+// 질의 라우팅 도메인 Repository 계층. 구현 예정
+package com.telme.intent.repository;

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="t d">
+  <title id="t">검색 점수 구간과 근거 판정</title>
+  <desc id="d">Q_A 벡터는 0.69 미만 버림, 0.69~0.80 판정기 확인, 0.80 이상 통과. 질문 벡터는 0.80 미만 버림, 0.80~0.90 판정기 확인, 0.90 이상 통과. 판정기 도입 후 정답 근거 61에서 74, 엉뚱한 근거 10에서 2.</desc>
+  <style>
+    text { font-family: Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; fill: #2B262D; }
+    .title { font-size: 24px; font-weight: 800; }
+    .sub { font-size: 15px; fill: #6B6470; }
+    .axis { font-size: 13px; fill: #6B6470; }
+    .bar-name { font-size: 17px; font-weight: 800; }
+    .bar-sub { font-size: 13px; fill: #6B6470; }
+    .seg { font-size: 14px; font-weight: 800; }
+    .seg-w { font-size: 14px; font-weight: 800; fill: #FFFFFF; }
+    .k { font-size: 13.5px; fill: #6B6470; }
+    .big { font-size: 34px; font-weight: 800; fill: #C34074; }
+    .was { font-size: 20px; font-weight: 700; fill: #9A929D; }
+    .note { font-size: 13.5px; fill: #4A444F; }
+  </style>
+
+  <rect x="1" y="1" width="1198" height="398" rx="22" fill="#FFFFFF" stroke="#E6E1E7" stroke-width="2"/>
+
+  <text x="40" y="54" class="title">점수가 애매한 FAQ만 판정기가 한 번 더 읽는다</text>
+  <text x="40" y="82" class="sub">검색 점수는 ‘비슷함’일 뿐 ‘답할 수 있음’이 아니다 → 애매한 구간은 Bedrock gpt-oss가 “이 FAQ로 질문에 답할 수 있나”를 판정</text>
+
+  <!-- 축: 0.60 = x230, 1.00 = x880 (1625px / 1.0) -->
+  <!-- Q_A 벡터 -->
+  <text x="40" y="158" class="bar-name">Q_A 벡터</text>
+  <text x="40" y="179" class="bar-sub">FAQ 질문 + 답변</text>
+  <rect x="230" y="134" width="160" height="48" rx="10" fill="#ECE8EE"/>
+  <rect x="376" y="134" width="179" height="48" fill="#F3C9DA"/>
+  <rect x="555" y="134" width="325" height="48" rx="10" fill="#2B262D"/>
+  <rect x="555" y="134" width="20" height="48" fill="#2B262D"/>
+  <text x="303" y="163" class="seg" text-anchor="middle" fill="#6B6470">버림</text>
+  <text x="465.5" y="163" class="seg" text-anchor="middle" style="fill:#A3315F">판정기 확인</text>
+  <text x="717.5" y="163" class="seg-w" text-anchor="middle">통과</text>
+  <line x1="424.75" y1="128" x2="424.75" y2="188" stroke="#2B262D" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="376" y="204" class="axis" text-anchor="middle">0.69</text>
+  <text x="424.75" y="204" class="axis" text-anchor="middle">0.72</text>
+  <text x="555" y="204" class="axis" text-anchor="middle">0.80</text>
+
+  <!-- 질문 벡터 -->
+  <text x="40" y="252" class="bar-name">질문 벡터</text>
+  <text x="40" y="273" class="bar-sub">FAQ 질문만</text>
+  <rect x="230" y="228" width="325" height="48" rx="10" fill="#ECE8EE"/>
+  <rect x="545" y="228" width="10" height="48" fill="#ECE8EE"/>
+  <rect x="555" y="228" width="162.5" height="48" fill="#F3C9DA"/>
+  <rect x="717.5" y="228" width="162.5" height="48" rx="10" fill="#2B262D"/>
+  <rect x="717.5" y="228" width="20" height="48" fill="#2B262D"/>
+  <text x="392.5" y="257" class="seg" text-anchor="middle" fill="#6B6470">버림</text>
+  <text x="636.25" y="257" class="seg" text-anchor="middle" style="fill:#A3315F">판정기 확인</text>
+  <text x="798.75" y="257" class="seg-w" text-anchor="middle">통과</text>
+  <line x1="685" y1="222" x2="685" y2="282" stroke="#2B262D" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="555" y="298" class="axis" text-anchor="middle">0.80</text>
+  <text x="685" y="298" class="axis" text-anchor="middle">0.88</text>
+  <text x="717.5" y="298" class="axis" text-anchor="middle">0.90</text>
+
+  <!-- 결과 -->
+  <rect x="920" y="118" width="240" height="190" rx="16" fill="#FBEAF1"/>
+  <text x="944" y="148" class="k">정답 근거 · 답할 수 있는 110문항</text>
+  <text x="944" y="190" class="was">61 →<tspan class="big" dx="10">74</tspan></text>
+  <text x="944" y="230" class="k">엉뚱한 근거 · 답이 없는 68문항</text>
+  <text x="944" y="272" class="was">10 →<tspan class="big" dx="10">2</tspan></text>
+  <text x="944" y="296" class="k" style="font-size:12px">실제 채팅 API · 판정기 없음 → 있음</text>
+
+  <!-- 설명 -->
+  <line x1="40" y1="326" x2="1160" y2="326" stroke="#EEEAF0" stroke-width="2"/>
+  <text x="40" y="352" class="note">두 벡터는 점수를 섞지 않고 각자 기준으로 고른 뒤 합친다(질문 벡터 우선, 상위 3개).</text>
+  <text x="40" y="376" class="note">점선은 판정이 실패했을 때 쓰는 예전 기준(Q_A 0.72 / 질문 0.88)이다. 판정 1회 중앙값은 약 1.5초, 제한 시간은 8초다.</text>
+</svg>

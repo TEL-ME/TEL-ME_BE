@@ -1,0 +1,576 @@
+package com.telme.chat.guard;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+class ChatInputInspectorTest {
+    private final ChatInputInspector inspector = new ChatInputInspector(new ObjectMapper());
+
+    @Test
+    @DisplayName("저장 문구의 실제 번호 마스크 위치만 반환하고 직접 입력한 별표와 구분한다")
+    void 원문_번호_없이_실제_마스크_위치만_보존한다() {
+        var result = inspector.inspect("*** 카드 4111111111111111 주민번호 990101-1234567 문의");
+        assertThat(result.content()).isEqualTo("*** 카드 *** 주민번호 *** 문의");
+        assertThat(result.maskSpans()).hasSize(2);
+        assertThat(result.maskSpans()).allSatisfy(span -> {
+            assertThat(span.start()).isGreaterThan(0);
+            assertThat(result.content().substring(span.start(), span.end())).isEqualTo("***");
+        });
+        assertThat(result.maskSpans().getFirst().start()).isEqualTo(result.content().indexOf("***", 3));
+        assertThat(result.maskSpans().toString()).doesNotContain("4111", "990101", "1234567");
+        assertThat(inspector.inspect("카드 *** 문의").maskSpans()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "씨발",
+                "씨 팔",
+                "씨.발",
+                "씨*발",
+                "씨123발",
+                "개새끼",
+                "개새키",
+                "병신아",
+                "븅신",
+                "ㅅㅂ",
+                "ㅆㅂ",
+                "ㅂㅅ",
+                "ㅄ",
+                "ㅅ.ㅂ 요금 왜 이래",
+                "너 ㅂㅅ아",
+                "ㅈㄹ",
+                "지랄하네",
+                "이거ㅅㅂ",
+                "서비스ㅂㅅ같아",
+                "씨\u200B발",
+                "병쉰",
+                "개새기",
+                "씨벌",
+                "시발"
+            })
+    @DisplayName("명확한 욕설과 지원하는 초성·변형을 감지한다")
+    void 욕설과_초성을_감지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "안녕하세요",
+                "감사합니다",
+                "요금 때문에 짜증 나요",
+                "서비스가 최악이에요. 해지 방법 알려주세요",
+                "시발점이 뭐예요?",
+                "시발역 안내",
+                "시발열차 시간",
+                "18개월 약정",
+                "18시 방문",
+                "월 7700원",
+                "ㅂㅅ역 근처 매장",
+                "개통 비용 알려주세요"
+            })
+    @DisplayName("정상 단어·숫자·불만과 정의하지 않은 초성 조합은 차단하지 않는다")
+    void 정상_입력은_보존한다(String input) {
+        InputInspection result = inspector.inspect(input);
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.content()).isEqualTo(input);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "유심 다시 발급받고 싶어요",
+                "택배는 몇 시 발송돼요?",
+                "오후 3시 발송인가요",
+                "새 요금제 출시 발표 언제예요?",
+                "개통 시 발신 제한이 있나요?",
+                "병 신청은 어디서 해요",
+                "아저씨 발 사이즈",
+                "유심 다시발급받고 싶어요",
+                "새 요금제 출시발표 언제예요?",
+                "개통시발신 제한이 있나요?",
+                "병신청은 어디서 해요",
+                "아저씨발사이즈",
+                "몇시발송돼요?",
+                "영수증은 몇 시 발행되나요?",
+                "다시.발급받고 싶어요",
+                "신청서 다시\n발급해주세요",
+                "유심 다시\u200B발급해주세요",
+                "입대할 병 신임 교육은 어디서 하나요?"
+            })
+    @DisplayName("정상 단어의 일부를 공백·구분자 너머로 연결하거나 긴 단어에서 잘라 욕설로 판단하지 않는다")
+    void 정상_단어의_경계를_넘어_욕설을_만들지_않는다(String input) {
+        InputInspection result = inspector.inspect(input);
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.detections()).isEmpty();
+        assertThat(result.content()).isEqualTo(input);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "씨 발",
+                "병 신아",
+                "씨.발놈아",
+                "개 새 끼야",
+                "너는 병신같아",
+                "너는 병신같은 놈이야",
+                "지랄하지마",
+                "씨발입니다",
+                "출시 발표 언제예요? 씨발",
+                "아저씨 발 사이즈, 너는 병신아",
+                "유심 다시 발급받고 싶어요. 이거ㅅㅂ",
+                "시발역 안내, 서비스ㅂㅅ같아"
+            })
+    @DisplayName("단어 경계를 확인해도 지원하는 분리 욕설·어미와 다른 구간의 실제 욕설은 감지한다")
+    void 정상_문장과_섞인_실제_욕설은_계속_감지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "씨발ㅋㅋ",
+                "씨발ㅎㅎ",
+                "씨발ㅠㅠ",
+                "씨발ㅜㅜ",
+                "ㅅㅂㅋㅋ",
+                "ㅂㅅㅠㅠ",
+                "병신아ㅋㅋ",
+                "씨.발ㅋㅋ",
+                "서비스ㅂㅅ같은 서비스",
+                "씨발아\n\n요금 문의"
+            })
+    @DisplayName("지원하는 웃음·울음 자모와 어미가 붙어도 명확한 욕설은 감지한다")
+    void 지원_자모와_어미가_붙은_욕설을_감지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "다시 발급ㅋㅋ",
+                "출시 발표ㅠㅠ",
+                "시발점ㅎㅎ",
+                "시발역ㅋㅋ",
+                "병 신청ㅎㅎ",
+                "아저씨 발 사이즈ㅠㅠ",
+                "ㅂㅅ역ㅋㅋ"
+            })
+    @DisplayName("자모 지원을 넓혀도 정상 단어와 지원하지 않는 초성 조합은 보호한다")
+    void 장식_자모가_있어도_정상_단어는_보존한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "'씨발'이라고 들었는데 어떻게 신고하나요?",
+                "상담원이 저한테 '병신'이라고 했어요. 신고 방법 알려주세요",
+                "직원이 '씨발'이라고 말했어요",
+                "친구가 나에게 ‘병신’이라고 했어요",
+                "상대방이 ‘ㅅㅂ’라고 불렀어요"
+            })
+    @DisplayName("명확한 수신·타인 발화 설명에서는 해당 인용 구간만 예외 처리한다")
+    void 명확한_피해_인용을_보존한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "너는 '병신'이라고 했어요",
+                "상담원에게 '병신'이라고 했어요",
+                "직원에게 '씨발'이라고 말했어요",
+                "상담원이 '병신'이라고 했어요. 너도 씨발",
+                "'씨발'이라고 들었어요. 너도 병신아"
+            })
+    @DisplayName("발화 주체가 다른 인용이나 피해 설명 밖의 실제 욕설까지 함께 허용하지 않는다")
+    void 인용_예외가_다른_공격을_허용하지_않는다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "'ㅂㅅ'이 무슨 뜻이에요?",
+                "'병신'이라는 욕을 들었어요",
+                "상담원한테 ‘병신’이라는 욕을 들었어요",
+                "ㅅㅂ이 무슨 뜻이에요?",
+                "병신이 무슨 뜻이에요?"
+            })
+    @DisplayName("명확한 단어 설명과 인용 피해 설명에서 해당 구간만 예외 처리한다")
+    void 지원하는_인용은_통과한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "너는 '병신'이야",
+                "'병신'이라는 욕을 들었어요. 너도 개새끼야",
+                "씨발 '병신'이 무슨 뜻이에요?",
+                "시발점 같은 소리 하지마 씨발"
+            })
+    @DisplayName("인용·정상 단어가 있어도 다른 구간의 욕설은 감지한다")
+    void 예외로_전체_문장을_허용하지_않는다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @Test
+    @DisplayName("민감번호만 치환하고 남은 상담 질문은 유지한다")
+    void 개인정보를_가리고_질문을_유지한다() {
+        String input = "주민등록번호 990101-1234567, 카드 4111-1111-1111-1111인데 유심 비용 알려주세요";
+        InputInspection result = inspector.inspect(input);
+        assertThat(result.content()).isEqualTo("주민등록번호 ***, 카드 ***인데 유심 비용 알려주세요");
+        assertThat(result.fingerprintContent())
+                .isEqualTo("주민등록번호 [주민등록번호], 카드 [카드번호]인데 유심 비용 알려주세요");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.toString()).doesNotContain("990101", "4111");
+        assertThat(result.detections())
+                .extracting(InputInspection.Detection::ruleId)
+                .containsExactly("PII_RESIDENT_NUMBER", "PII_PAYMENT_CARD");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "990101-1234567", "9901011234567", "９９０１０１－１２３４５６７",
+        "4222222222222", "40000000000002", "41111111111111113", "411111111111111118",
+        "4111-1111-1111-1111", "4111 1111 1111 1111", "4111111111111111",
+        "378282246310005", "4000000000000000006", "2221000000000009"
+    })
+    @DisplayName("지원 번호는 자릿수·구분자와 무관하게 숫자를 남기지 않고 고정 별표로 바꾼다")
+    void 번호_전체를_같은_별표로_가린다(String number) {
+        var result = inspector.inspect(number);
+
+        assertThat(result.content()).isEqualTo("***");
+        assertThat(result.fingerprintContent()).isIn("[주민등록번호]", "[카드번호]");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.toString()).doesNotContain(number, result.fingerprintContent());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "990101-1234567 유심 재발급은 어떻게 해요? | *** 유심 재발급은 어떻게 해요?",
+        "로밍 신청 방법 알려주세요 4111111111111111 | 로밍 신청 방법 알려주세요 ***",
+        "65세이고 주민번호 990101-1234567인데 시니어 요금제 가입 가능한가요?"
+                + " | 65세이고 주민번호 ***인데 시니어 요금제 가입 가능한가요?",
+        "제 카드번호는 4111111111111111이고 이번 달 요금 123원 납부 방법은요?"
+                + " | 제 카드번호는 ***이고 이번 달 요금 123원 납부 방법은요?",
+        "주민번호 990101-1234567 카드 4111111111111111 유심 재발급"
+                + " | 주민번호 *** 카드 *** 유심 재발급"
+    })
+    @DisplayName("마스킹 전후에 있는 문의·나이·금액·기간 조건은 그대로 보존한다")
+    void 번호_앞뒤의_문의와_조건을_보존한다(String input, String expected) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(expected);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "65세인데 시니어 요금제 가입 가능한가요?",
+        "생년월일은 1960-01-01이고 명의변경 방법이 궁금해요",
+        "주민등록번호 변경 후 명의변경은 어떻게 하나요?",
+        "주민번호 없이 유심 재발급 가능한가요?",
+        "이번 달 요금은 123원이고 약정은 18개월이에요"
+    })
+    @DisplayName("민감번호가 없는 정상 숫자와 주민번호 관련 상담 조건을 삭제하지 않는다")
+    void 정상_상담_조건을_마스킹하지_않는다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(input);
+        assertThat(result.fingerprintContent()).isEqualTo(input);
+        assertThat(result.wasMasked()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("개인정보와 욕설이 섞여도 안전한 내용과 욕설 사유만 반환한다")
+    void 개인정보를_가린_욕설_입력을_반환한다() {
+        InputInspection result = inspector.inspect("씨발 카드 4111111111111111 요금 왜 이래");
+        assertThat(result.hasProfanity()).isTrue();
+        assertThat(result.content()).isEqualTo("씨발 카드 *** 요금 왜 이래");
+        assertThat(result.content()).doesNotContain("4111111111111111");
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "990101-1234567",
+                "4111 1111 1111 1111",
+                "제 카드번호는 4111111111111111입니다",
+                "카드 4111111111111111",
+                "주민번호 990101-1234567, 카드번호 4111111111111111"
+            })
+    @DisplayName("번호만 제시한 입력은 욕설로 세지 않고 문의 재입력이 필요하다")
+    void 문의가_남지_않으면_재입력_대상이다(String input) {
+        InputInspection result = inspector.inspect(input);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @Test
+    @DisplayName("전각 숫자와 지원 구분자도 원문 위치를 유지하면서 마스킹한다")
+    void 전각_개인정보도_마스킹한다() {
+        var result = inspector.inspect("카드 ４１１１－１１１１－１１１１－１１１１ 요금 문의");
+        assertThat(result.content()).isEqualTo("카드 *** 요금 문의");
+        assertThat(result.hasQuestion()).isTrue();
+        var resident = inspector.inspect("주민등록번호 ９９０１０１–１２３４５６７ 유심 비용");
+        assertThat(resident.content()).isEqualTo("주민등록번호 *** 유심 비용");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "123원 요금 문의", "500원 요금 문의", "17개 문의", "123번 문의",
+        "27개월 약정 문의", "12개월 약정 문의", "요금 18원 문의", "약정 18개월 문의", ", 18GB 요금 문의"
+    })
+    @DisplayName("전체 후보가 카드 검증에 실패하거나 설명 단어로 분리된 숫자 조건은 보존한다")
+    void 카드번호_뒤의_금액과_수량을_유지한다(String tail) {
+        var result = inspector.inspect("카드 4111111111111111 " + tail);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "4111 1111 1111 1111 3번 | ***번",
+        "41111111111111113번 | ***번",
+        "4111-1111-1111-1111-3번 | ***번",
+        "4111111111111111 18개월 약정 문의 | ***개월 약정 문의",
+        "4111-1111-1111-1111-18개월 약정 문의 | ***개월 약정 문의",
+        "４１１１ １１１１ １１１１ １１１１ ３번 | ***번",
+        "４１１１－１１１１－１１１１－１１１１－１８개월 | ***개월",
+        "4111111111111111 003원 문의 | ***원 문의",
+        "4111111111111111 18 원 문의 | *** 원 문의"
+    })
+    @DisplayName("17~19자리 전체 후보도 유효하면 단위나 공백·하이픈으로 끝 숫자를 잘라 노출하지 않는다")
+    void 모호한_숫자_묶음은_전체_번호를_보호한다(String input, String expected) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).isEqualTo(expected);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "4111111111111111, 18개월 문의 | ***, 18개월 문의",
+        "4111-1111-1111-1111 약정 18개월 문의 | *** 약정 18개월 문의",
+        "4111111111111111 수량 3개 문의 | *** 수량 3개 문의",
+        "4111111111111111 요금 18원 문의 | *** 요금 18원 문의",
+        "４１１１－１１１１－１１１１－１１１１ 약정 １８개월 문의 | *** 약정 １８개월 문의"
+    })
+    @DisplayName("설명 단어·쉼표로 번호와 분리된 금액·기간·수량은 상담 조건으로 보존한다")
+    void 명확히_분리된_숫자_조건은_보존한다(String input, String expected) {
+        assertThat(inspector.inspect(input).content()).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "개 4111111111111111 새끼",
+        "씨 990101-1234567 발",
+        "개 ４１１１－１１１１－１１１１－１１１１ 새끼"
+    })
+    @DisplayName("공백을 둔 민감번호 마스크는 양옆 글자를 새 욕설로 연결하지 않는다")
+    void 마스킹_경계에서_욕설을_만들지_않는다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.content()).contains("***").doesNotContain("\uFFFC");
+        assertThat(result.fingerprintContent()).doesNotContain("\uFFFC");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "시4111111111111111발", "씨4111111111111111발", "개4111111111111111새끼",
+        "ㅅ4111111111111111ㅂ", "씨990101-1234567발", "시４１１１－１１１１－１１１１－１１１１발",
+        "시.4111111111111111.발", "씨*4111111111111111*발"
+    })
+    @DisplayName("공백 없이 욕설 사이에 민감번호를 끼워도 마스킹한 내용으로 욕설을 감지한다")
+    void 번호를_끼운_욕설_우회를_감지한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isTrue();
+        assertThat(result.content()).contains("***").doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(result.fingerprintContent()).doesNotContain("4111", "990101", "1234567", "\uFFFC");
+        assertThat(result.maskSpans()).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "다시4111111111111111발급 문의", "출시4111111111111111발표 문의",
+        "시4111111111111111발점이 뭐예요?", "개4111111111111111통 문의",
+        "'씨4111111111111111발'이라고 들었어요", "'시4111111111111111발'이라는 말의 뜻이 뭐예요?"
+    })
+    @DisplayName("번호 경계의 추가 검사도 정상 단어와 지원하는 피해 인용·뜻 질문은 유지한다")
+    void 번호_경계의_정상_문맥과_인용을_유지한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasProfanity()).isFalse();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("번호를 끼운 욕설도 기존 유형 문구 해시와 실제 마스크 위치는 유지한다")
+    void 번호_우회_검사로_재전송_문구와_마스크_위치를_바꾸지_않는다() {
+        var result = inspector.inspect("시4111111111111111발");
+
+        assertThat(result.content()).isEqualTo("시***발");
+        assertThat(result.fingerprintContent()).isEqualTo("시[카드번호]발");
+        assertThat(result.maskSpans()).containsExactly(new MaskSpan(1, 4));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "개 4111111111111111 새끼 유심 문의 | 개 *** 새끼 유심 문의",
+        "씨 990101-1234567 발 요금 문의 | 씨 *** 발 요금 문의"
+    })
+    @DisplayName("표시 문구가 같아도 실제 번호 마스크와 사용자가 쓴 별표 욕설을 구분한다")
+    void 같은_표시의_번호_마스크와_별표_욕설을_구분한다(String original, String literal) {
+        var masked = inspector.inspect(original);
+        var written = inspector.inspect(literal);
+
+        assertThat(masked.content()).isEqualTo(written.content()).isEqualTo(literal);
+        assertThat(masked.wasMasked()).isTrue();
+        assertThat(masked.hasProfanity()).isFalse();
+        assertThat(masked.hasQuestion()).isTrue();
+        assertThat(written.wasMasked()).isFalse();
+        assertThat(written.hasProfanity()).isTrue();
+        assertThat(masked.fingerprintContent()).isNotEqualTo(written.fingerprintContent());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "개새끼 4111111111111111", "4111111111111111 개새끼",
+        "개 *** 새끼 4111111111111111", "씨 990101-1234567 발 개새끼"
+    })
+    @DisplayName("마스킹 경계를 분리해도 실제 욕설과 사용자가 입력한 별표 우회 욕설은 계속 감지한다")
+    void 번호_외부의_실제_욕설을_유지한다(String input) {
+        assertThat(inspector.inspect(input).hasProfanity()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "4111 1111 1111 1111 3번", "카드 4111-1111-1111-1111-18개월",
+        "카드 4111111111111111 18개월입니다", "카드 4111111111111111 18개월은",
+        "카드 ４１１１－１１１１－１１１１－１１１１－１８개월"
+    })
+    @DisplayName("번호를 가린 뒤 소개 문구와 단위만 남으면 실제 문의를 다시 입력해야 한다")
+    void 번호와_단위만_남으면_재입력을_요청한다(String input) {
+        var result = inspector.inspect(input);
+
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+        assertThat(result.hasProfanity()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "카드 4111111111111111 18개월 약정 문의",
+        "카드 4111111111111111 약정 18개월 문의",
+        "카드 4111111111111111 27개월 문의",
+        "카드 4111111111111111 분실 신고", "카드 4111111111111111 원하는 요금제 문의"
+    })
+    @DisplayName("번호 뒤 단위를 제외하더라도 실제 문의·숫자 조건·단위와 비슷한 단어는 유지한다")
+    void 단위_제외로_실제_문의를_없애지_않는다(String input) {
+        assertThat(inspector.inspect(input).hasQuestion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("번호와 함께 입력한 피해 인용 예외와 유형별 재전송 문구를 유지한다")
+    void 인용_예외와_유형별_비교_문구를_유지한다() {
+        assertThat(inspector.inspect("'병신'이라는 욕을 들었어요. 카드 4111111111111111 문의")
+                .hasProfanity()).isFalse();
+        var resident = inspector.inspect("990101-1234567");
+        var card = inspector.inspect("4111111111111111");
+        assertThat(resident.content()).isEqualTo(card.content()).isEqualTo("***");
+        assertThat(resident.fingerprintContent()).isEqualTo("[주민등록번호]");
+        assertThat(card.fingerprintContent()).isEqualTo("[카드번호]");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"원 납부 문의", "개인정보를 가려주세요", "원하는 요금제 문의", "일반 요금 문의", "세부 정보 문의"})
+    @DisplayName("유효한 19자리 카드의 끝 그룹이나 단위와 비슷한 정상 단어를 숫자 조건으로 잘라 남기지 않는다")
+    void 긴_카드번호와_단위_유사_단어의_경계를_보존한다(String tail) {
+        // 전체 19자리와 앞의 16자리가 모두 Luhn을 통과하는 합성 번호다.
+        var result = inspector.inspect("카드 4111111111111111 003 " + tail);
+
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
+        assertThat(result.content()).doesNotContain("003", "4111");
+        assertThat(result.hasQuestion()).isTrue();
+        assertThat(result.wasMasked()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"개인정보를 가려주세요", "원하는 요금제 문의", "일반 요금 문의", "세부 정보 문의"})
+    @DisplayName("17~18자리 카드 뒤 일반 단어도 숫자 단위로 오인하지 않는다")
+    void 긴_카드_뒤의_일반_단어를_단위로_오인하지_않는다(String tail) {
+        var result = inspector.inspect("카드 4111111111111111 18 " + tail);
+
+        assertThat(result.content()).isEqualTo("카드 *** " + tail);
+        assertThat(result.content()).doesNotContain("18", "4111");
+    }
+
+    @Test
+    @DisplayName("허용 길이 안의 긴 소개 문구도 스택 오류 없이 재입력 대상으로 판단한다")
+    void 긴_소개_문구가_있어도_검사를_마친다() {
+        String input = "4111111111111111 " + "제".repeat(1900);
+        assertThat(input.length()).isLessThanOrEqualTo(2000);
+        var result = inspector.inspect(input);
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isFalse();
+    }
+
+    @Test
+    @DisplayName("반복된 소개 표현 뒤의 실제 문의는 보존한다")
+    void 긴_입력_뒤의_정상_문의를_유지한다() {
+        var result = inspector.inspect("4111111111111111 " + "카드번호".repeat(300) + "문의");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.hasQuestion()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1234567890123456", "4111111111111112", "991332-1234567"})
+    @DisplayName("임의의 긴 숫자·검증값 불일치·유효하지 않은 날짜를 민감번호로 단정하지 않는다")
+    void 지원_형식에_맞지_않는_숫자는_보존한다(String input) {
+        assertThat(inspector.inspect(input).content()).isEqualTo(input);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2221000000000009", "2720990000000007"})
+    @DisplayName("2로 시작하는 지원 Mastercard 범위의 번호도 마스킹한다")
+    void 이_시리즈_카드번호를_마스킹한다(String number) {
+        var result = inspector.inspect("카드 " + number + " 요금 문의");
+        assertThat(result.wasMasked()).isTrue();
+        assertThat(result.content()).isEqualTo("카드 *** 요금 문의");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2220990000000002", "2721000000000004"})
+    @DisplayName("지원 범위 밖의 2로 시작하는 긴 숫자는 카드로 단정하지 않는다")
+    void 이_시리즈_범위의_경계를_검증한다(String number) {
+        assertThat(inspector.inspect(number).wasMasked()).isFalse();
+    }
+}

@@ -1,0 +1,422 @@
+[
+ {
+  "id": "U001",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "유심 재발급 7,700원만 있고 멤버십 등급별 할인·면제는 어느 답변에도 없음"
+ },
+ {
+  "id": "U002",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "명의도용 조사 3영업일·요금 취소만 있고 조사 중 회선 정지 여부는 없음"
+ },
+ {
+  "id": "U003",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "일시 정지 기간·기본료 50%만 있고 정지 중 문자 수신 가능 여부는 없음"
+ },
+ {
+  "id": "U004",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "7일 기간권 가격 39,000원만 있고 제공 데이터량·소진 후 속도 제한은 없음"
+ },
+ {
+  "id": "U005",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "일반 이월(잔여 50%)과 선물 한도만 있고 선물받은 데이터의 이월 여부는 없음"
+ },
+ {
+  "id": "U006",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "보험 가입 시 자기부담 30%만 있고 월 보험료·가입 기한은 없음"
+ },
+ {
+  "id": "U007",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "우편 청구서 월 500원만 있고 고령자 면제 규정은 없음"
+ },
+ {
+  "id": "U008",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "이중 납부 확인 3영업일·환불 5영업일만 있고 이자 지급 여부는 없음"
+ },
+ {
+  "id": "U009",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "eSIM 발급비 2,750원만 있고 결제 시점(현장/익월 청구)은 없음"
+ },
+ {
+  "id": "U010",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "할부 기간·연 5.9%만 있고 중도 완납 시 잔여 수수료 면제 여부는 없음"
+ },
+ {
+  "id": "U011",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "단말 반품 조건(14일·미사용·1회)만 있고 유심비 환불 여부는 없음"
+ },
+ {
+  "id": "U012",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "미납 정지·직권 해지 단계만 있고 직권 해지 후 번호 복구 가능 여부는 없음"
+ },
+ {
+  "id": "U013",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "멤버십 등급 구분·산정 기준만 있고 등급별 혜택(영화·카페 할인)은 없음"
+ },
+ {
+  "id": "U014",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "듀얼번호 월 3,300원만 있고 지원 국가(베트남 포함 여부)는 없음"
+ },
+ {
+  "id": "U015",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "이월 비율·해지 절차만 있고 해지 시 이월 데이터 현금 환산 여부는 없음"
+ },
+ {
+  "id": "U016",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "명의변경 수수료·양수인 신용심사만 있고 약정 승계/위약금 정산 여부는 없음"
+ },
+ {
+  "id": "U017",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "번호이동 철회 시 회선 자동 복원만 있고 함께 산 단말 할부 처리 방법은 없음"
+ },
+ {
+  "id": "U018",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "시니어 요금제 가입 연령(만 65세)만 있고 월정액·데이터량은 없음"
+ },
+ {
+  "id": "U019",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "가입사실확인서 홈페이지 무료 발급만 있고 영문 발급 여부는 없음"
+ },
+ {
+  "id": "U020",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "매장 운영시간(평일 10~19시 등)만 있고 점심시간 여부는 없음"
+ },
+ {
+  "id": "U021",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "1회 최대 30일·종료 후 재신청만 있고 정지 종료 시 자동 해제인지 해제 신청이 필요한지는 명시 없음"
+ },
+ {
+  "id": "U022",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "언리미티드 무제한·속도 제한 없음만 있고 테더링(핫스팟) 적용 여부는 없음"
+ },
+ {
+  "id": "U023",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "요금제 9종 목록에 '5G 프리미엄 플러스'는 없고 해당 상품 요금 정보 없음"
+ },
+ {
+  "id": "U024",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "LTE는 베이직·플러스·맥스 3종뿐, 'LTE 슬림' 요금제 정보 없음"
+ },
+ {
+  "id": "U025",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "청소년·시니어 요금제만 있고 군인 전용 요금제 정보 없음"
+ },
+ {
+  "id": "U026",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "요금제 가격·데이터만 있고 넷플릭스·유튜브 프리미엄 포함 요금제 정보 없음"
+ },
+ {
+  "id": "U027",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "부가서비스 가입·해지 일반 규칙만 있고 스팸 차단 서비스 이름·요금 없음"
+ },
+ {
+  "id": "U028",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "부가서비스 일반 규칙만 있고 컬러링 서비스 월 이용료 없음"
+ },
+ {
+  "id": "U029",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "결합 상품 언급은 번호이동 관련뿐, 인터넷·IPTV 결합 할인율 없음"
+ },
+ {
+  "id": "U030",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "요금제 9종·워치 로밍만 있고 키즈워치 전용 요금제 정보 없음"
+ },
+ {
+  "id": "U031",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "로밍 신청·요금만 있고 해상·기내 로밍 상품 정보 없음"
+ },
+ {
+  "id": "U032",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "24개월 약정 반환금 규정만 있고 선택약정 25% 할인 신청 방법 없음"
+ },
+ {
+  "id": "U033",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "단말 보험 자기부담 30%만 있고 '폰케어 플러스' 상품·보장 범위 없음"
+ },
+ {
+  "id": "U034",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "기기변경 조건·eSIM만 있고 중고폰 반납 보상 프로그램·보상금 없음"
+ },
+ {
+  "id": "U035",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "명의변경 수수료·번호이동만 있고 전화번호 변경 절차·수수료 없음"
+ },
+ {
+  "id": "U036",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "해지 시 번호 소멸·정지로 번호 유지만 있고 해지 번호 보관 제도 유무는 없음"
+ },
+ {
+  "id": "U037",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "미납 정지·재개만 있고 통신 장애 요금 보상 규정 없음"
+ },
+ {
+  "id": "U038",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "가입·대리인 서류만 있고 장애인 복지 할인 신청 서류 없음"
+ },
+ {
+  "id": "U039",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "요금제·일시 정지만 있고 기초생활수급자 통신비 감면 정보 없음"
+ },
+ {
+  "id": "U040",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "명의변경 대리 서류·일반 해지 방법만 있고 사망자 명의 해지 서류 없음"
+ },
+ {
+  "id": "U041",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "단말 할부금 분할 납부만 있고 월 통신요금 분할 납부 가능 여부 없음"
+ },
+ {
+  "id": "U042",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "미납 정지 단계·할부 이자만 있고 연체 가산금 비율 없음"
+ },
+ {
+  "id": "U043",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "유심 재발급·가입 서류만 있고 자급제폰 유심 장착 사용·등록 절차 없음"
+ },
+ {
+  "id": "U044",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "증명서 발급·납부 방법만 있고 통신요금 현금영수증 발급 여부 없음"
+ },
+ {
+  "id": "U045",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "법인 개통 심사·회선 한도만 있고 세금계산서 발급 여부 없음"
+ },
+ {
+  "id": "U046",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "분실 신고·즉시 정지만 있고 위치 추적 서비스 정보 없음"
+ },
+ {
+  "id": "U047",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "외국인 가입 서류·회선 한도만 있고 비자 만료·연장 심사 중 회선 처리 없음"
+ },
+ {
+  "id": "U048",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "부가서비스 해지·이중 납부 환불만 있고 미고지 가입 부가서비스 소급 환불 규정 없음"
+ },
+ {
+  "id": "U049",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "개인 계정의 이번 달 청구 금액은 FAQ로 알 수 없음(요금제 가격대만 있음)"
+ },
+ {
+  "id": "U050",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "개인 회선의 잔여 데이터량은 FAQ로 알 수 없음(앱 확인 안내뿐)"
+ },
+ {
+  "id": "U051",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "약정 반환금 일반 규정만 있고 개인 약정 잔여 개월·정확한 위약금은 계정 정보 필요"
+ },
+ {
+  "id": "U052",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "등급 체계·확인 방법만 있고 해당 고객의 현재 등급은 계정 정보 필요"
+ },
+ {
+  "id": "U053",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "할부 처리 일반 규칙만 있고 개인 잔여 할부금은 계정 정보 필요"
+ },
+ {
+  "id": "U054",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "번호이동 소요 시간만 있고 개인 신청 건 진행 상태 조회는 불가"
+ },
+ {
+  "id": "U055",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "소액결제 한도만 있고 개인 결제 내역은 계정 정보 필요"
+ },
+ {
+  "id": "U056",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "자사 재발급 7,700원만 있고 SK텔레콤 비용은 없음(타사 정책)"
+ },
+ {
+  "id": "U057",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "번호이동 서류·소요 시간만 있고 KT 공시지원금은 없음(타사 정책)"
+ },
+ {
+  "id": "U058",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "자사 로밍 요금만 있고 LG유플러스 로밍 요금은 없음(타사 정책)"
+ },
+ {
+  "id": "U059",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "제조사 서비스센터 수리 안내만 있고 S24 울트라 액정 정가 수리비 없음"
+ },
+ {
+  "id": "U060",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "자사 단말 보험 자기부담 30%만 있고 애플케어플러스 중복 보상 여부 없음"
+ },
+ {
+  "id": "U061",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "기기변경·번호이동 조건만 있고 카카오톡 백업 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U062",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "번호이동·기기변경만 있고 사진·연락처 이전 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U063",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "침수 시 서비스센터 수리 안내만 있고 자가 응급 조치 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U064",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "로밍 연결 시 재부팅 언급만 있고 아이폰 강제 재부팅 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U065",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "배터리 이상 시 교환·기기변경 조건만 있고 배터리 절약 설정 없음(범위 밖)"
+ },
+ {
+  "id": "U066",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "로밍·유심 연결 문제만 있고 공유기 설정 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U067",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "회선 정지·분실 신고만 있고 은행 지급정지 신청 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U068",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "미성년 가입 조건만 있고 구글 패밀리 링크 설정 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U069",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "데이터 이월·선물만 있고 저장공간 정리 방법 없음(범위 밖)"
+ },
+ {
+  "id": "U070",
+  "verdict": "NOT_ANSWERABLE",
+  "answeringSlotIds": [],
+  "reason": "워치 로밍 별도 신청만 있고 블루투스 재페어링 방법 없음(범위 밖)"
+ }
+]

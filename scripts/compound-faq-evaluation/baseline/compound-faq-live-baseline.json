@@ -1,0 +1,70 @@
+[ {
+  "id" : "MULTI-001",
+  "retrieval" : "ACTUAL_SEARCH",
+  "question" : "요금제 종류와 유심 재발급 비용 알려줘",
+  "parts" : [ {
+    "answer_basis" : "GROUNDED",
+    "elapsed_ms" : 1765,
+    "question" : "5G와 LTE 요금제는 각각 몇 종류인가요?",
+    "actual_faq_ids" : [ 117, 101, 903 ],
+    "expected_faq_ids" : [ 117 ],
+    "answer" : "5G 요금제는 4종류 (라이트, 스탠다드, 프리미엄, 언리미티드)이고, LTE 요금제는 3종류 (베이직, 플러스, 맥스)입니다."
+  }, {
+    "answer_basis" : "GROUNDED",
+    "elapsed_ms" : 782,
+    "question" : "물리 유심 재발급 비용은 얼마인가요?",
+    "actual_faq_ids" : [ 297, 273, 526 ],
+    "expected_faq_ids" : [ 297 ],
+    "answer" : "물리 유심 재발급 비용은 7,700원입니다."
+  } ],
+  "combined_answer" : "1. 5G와 LTE 요금제는 각각 몇 종류인가요?\n5G 요금제는 4종류 (라이트, 스탠다드, 프리미엄, 언리미티드)이고, LTE 요금제는 3종류 (베이직, 플러스, 맥스)입니다.\n\n2. 물리 유심 재발급 비용은 얼마인가요?\n물리 유심 재발급 비용은 7,700원입니다.",
+  "combined_basis" : "GROUNDED",
+  "saved_faq_ids" : [ 117, 101, 903, 297, 273, 526 ],
+  "stream_events" : [ "1. 5G와 LTE 요금제는 각각 몇 종류인가요?\n5G 요금제는 4종류 (라이트, 스탠다드, 프리미엄, 언리미티드)이고, LTE 요금제는 3종류 (베이직, 플러스, 맥스)입니다.\n\n2. 물리 유심 재발급 비용은 얼마인가요?\n물리 유심 재발급 비용은 7,700원입니다." ]
+}, {
+  "id" : "MULTI-002",
+  "retrieval" : "ACTUAL_SEARCH",
+  "question" : "명의 변경 서류와 번호 이동 서류 알려줘",
+  "parts" : [ {
+    "answer_basis" : "NO_EVIDENCE",
+    "elapsed_ms" : 0,
+    "question" : "명의 변경에 필요한 서류는 무엇인가요?",
+    "actual_faq_ids" : [ ],
+    "expected_faq_ids" : [ 65 ],
+    "answer" : "안내드릴 수 있는 정보가 없습니다."
+  }, {
+    "answer_basis" : "GROUNDED",
+    "elapsed_ms" : 1229,
+    "question" : "번호 이동에 필요한 서류는 무엇인가요?",
+    "actual_faq_ids" : [ 125, 133 ],
+    "expected_faq_ids" : [ 125 ],
+    "answer" : "번호 이동을 위해서는 본인의 신분증이 필요합니다. 또한, 이전 통신사에 미납 요금이 있다면 이를 완납하셔야 합니다."
+  } ],
+  "combined_answer" : "1. 명의 변경에 필요한 서류는 무엇인가요?\n안내드릴 수 있는 정보가 없습니다.\n\n2. 번호 이동에 필요한 서류는 무엇인가요?\n번호 이동을 위해서는 본인의 신분증이 필요합니다. 또한, 이전 통신사에 미납 요금이 있다면 이를 완납하셔야 합니다.",
+  "combined_basis" : "GROUNDED",
+  "saved_faq_ids" : [ 125, 133 ],
+  "stream_events" : [ "1. 명의 변경에 필요한 서류는 무엇인가요?\n안내드릴 수 있는 정보가 없습니다.\n\n2. 번호 이동에 필요한 서류는 무엇인가요?\n번호 이동을 위해서는 본인의 신분증이 필요합니다. 또한, 이전 통신사에 미납 요금이 있다면 이를 완납하셔야 합니다." ]
+}, {
+  "id" : "MULTI-003",
+  "retrieval" : "ACTUAL_SEARCH",
+  "question" : "명의 변경 서류와 없는 혜택 알려줘",
+  "parts" : [ {
+    "answer_basis" : "NO_EVIDENCE",
+    "elapsed_ms" : 1,
+    "question" : "명의 변경에 필요한 서류는 무엇인가요?",
+    "actual_faq_ids" : [ ],
+    "expected_faq_ids" : [ 65 ],
+    "answer" : "안내드릴 수 있는 정보가 없습니다."
+  }, {
+    "answer_basis" : "NO_EVIDENCE",
+    "elapsed_ms" : 0,
+    "question" : "명의 변경 시 무료 해외 항공권을 주나요?",
+    "actual_faq_ids" : [ ],
+    "expected_faq_ids" : [ ],
+    "answer" : "안내드릴 수 있는 정보가 없습니다."
+  } ],
+  "combined_answer" : "1. 명의 변경에 필요한 서류는 무엇인가요?\n안내드릴 수 있는 정보가 없습니다.\n\n2. 명의 변경 시 무료 해외 항공권을 주나요?\n안내드릴 수 있는 정보가 없습니다.",
+  "combined_basis" : "NO_EVIDENCE",
+  "saved_faq_ids" : [ ],
+  "stream_events" : [ "1. 명의 변경에 필요한 서류는 무엇인가요?\n안내드릴 수 있는 정보가 없습니다.\n\n2. 명의 변경 시 무료 해외 항공권을 주나요?\n안내드릴 수 있는 정보가 없습니다." ]
+} ]

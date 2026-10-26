@@ -1,0 +1,451 @@
+package com.telme.consult.service;
+
+import com.telme.chat.service.ChatAnswer;
+import com.telme.chat.service.ChatExecutionService;
+import com.telme.chat.service.ChatExecutionState;
+import com.telme.chat.service.ChatFailure;
+import com.telme.chat.service.ConsultationQuestion;
+import com.telme.consult.dto.ClarificationReask;
+import com.telme.consult.dto.DialogueDecision;
+import com.telme.consult.dto.DialogueDecision.Action;
+import com.telme.consult.dto.DialogueInput.ConditionStatus;
+import com.telme.consult.exception.ConsultErrorCode;
+import com.telme.consult.repository.JdbcConsultStateStore;
+import com.telme.consult.repository.JdbcConsultStateStore.MessageLinks;
+import com.telme.consult.service.ConsultChatProcessingService.ConsultTurn;
+import com.telme.global.common.exception.GeneralException;
+import com.telme.intent.service.RuleBasedRoutingFallback;
+import com.telme.rag.dto.res.AnswerResult.AnswerSource;
+import com.telme.rag.service.AnswerSourcesReady;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = "telme.consult.persistence-enabled", havingValue = "true")
+public class ConsultChatPersistenceService {
+    private final JdbcTemplate jdbc;
+    private final ChatExecutionService chatExecutionService;
+    private final ConsultService consultService;
+    private final JdbcConsultStateStore stateStore;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
+
+    public record ConsultCompletion(long consultRequestId, int expectedVersion) {
+        public ConsultCompletion {
+            if (consultRequestId <= 0 || expectedVersion < 0) {
+                throw new IllegalArgumentException("완료할 상담 참조가 올바르지 않습니다.");
+            }
+        }
+    }
+
+    // 실제 답변 생성을 시작하기 전에 GENERATING 메시지를 먼저 만든다.
+    // 이후 completeAnswer/fail은 같은 메시지를 완료 또는 실패 상태로 갱신한다.
+    @Transactional
+    public ChatExecutionState startAnswer(long executionId, long sessionId) {
+        ChatExecutionState state = chatExecutionService.startAnswer(executionId);
+        if (state.sessionId() != sessionId || state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        return state;
+    }
+
+    @Transactional
+    public ChatExecutionState failAnswer(
+            long executionId, long sessionId, ChatFailure failure) {
+        Objects.requireNonNull(failure, "failure");
+        ChatExecutionState state = chatExecutionService.fail(executionId, failure);
+        if (state.sessionId() != sessionId || state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        return state;
+    }
+
+    /** 상담 요청을 만들지 않는 UNKNOWN 안내 답변을 정상 완료한다. */
+    @Transactional
+    public ChatExecutionState persistDirectAnswer(
+            long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, false);
+    }
+
+    @Transactional
+    public ChatExecutionState persistBasicConversation(long executionId, long sessionId, ChatAnswer answer) {
+        return persistDirectAnswer(executionId, sessionId, answer, true);
+    }
+
+    private ChatExecutionState persistDirectAnswer(
+            long executionId, long sessionId, ChatAnswer answer, boolean preserveConsultation) {
+        Objects.requireNonNull(answer, "answer");
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        ChatExecutionState state = preserveConsultation
+                ? chatExecutionService.completeBasicConversation(executionId, answer)
+                : chatExecutionService.completeAnswer(executionId, answer);
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        return state;
+    }
+
+    // 나눠 보내기 안내로 끝난 복합 질문은 하위 상담을 처리하지 않으므로, 안내 저장과 같은 트랜잭션에서 상담을 취소한다.
+    @Transactional
+    public ChatExecutionState persistSplitGuidance(
+            long executionId, long sessionId, ChatAnswer answer, List<ConsultService.PreparedTurn> turns) {
+        if (turns.isEmpty() || turns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+            throw new IllegalArgumentException("취소할 하위 상담이 올바르지 않습니다.");
+        }
+        ChatExecutionState state = persistDirectAnswer(executionId, sessionId, answer);
+        for (ConsultService.PreparedTurn turn : turns) {
+            stateStore.cancel(sessionId, turn.decision().consultRequestId(), turn.expectedVersion());
+        }
+        return state;
+    }
+
+    // 답변 저장에 성공했을 때만 상담도 완료한다.
+    @Transactional
+    public ChatExecutionState persistFinalAnswer(
+            long executionId,
+            long sessionId,
+            long consultRequestId,
+            int expectedVersion,
+            ChatAnswer answer) {
+        return persistFinalAnswer(
+                executionId,
+                sessionId,
+                consultRequestId,
+                expectedVersion,
+                answer,
+                List.of());
+    }
+
+    @Transactional
+    public ChatExecutionState persistFinalAnswer(
+            long executionId,
+            long sessionId,
+            long consultRequestId,
+            int expectedVersion,
+            ChatAnswer answer,
+            List<AnswerSource> sources) {
+        return persistFinalAnswers(executionId, sessionId,
+                List.of(new ConsultCompletion(consultRequestId, expectedVersion)), answer, sources);
+    }
+
+    @Transactional
+    public ChatExecutionState persistFinalAnswers(
+            long executionId,
+            long sessionId,
+            List<ConsultCompletion> completions,
+            ChatAnswer answer,
+            List<AnswerSource> sources) {
+        Objects.requireNonNull(answer, "answer");
+        completions = List.copyOf(Objects.requireNonNull(completions, "completions"));
+        if (completions.isEmpty() || completions.stream()
+                .map(ConsultCompletion::consultRequestId).distinct().count() != completions.size()) {
+            throw new IllegalArgumentException("완료할 상담 요청이 중복되었거나 비어 있습니다.");
+        }
+        sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        ChatExecutionState state = chatExecutionService.completeAnswer(executionId, answer);
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        for (ConsultCompletion completion : completions) {
+            stateStore.complete(sessionId, completion.consultRequestId(),
+                    completion.expectedVersion(), state.outputMessage().messageId());
+        }
+        if (!sources.isEmpty()) {
+            eventPublisher.publishEvent(
+                    new AnswerSourcesReady(state.outputMessage().messageId(), sources));
+        }
+        return state;
+    }
+
+    // 조건 변경 저장 후 기존 질문 재전송
+    @Transactional
+    public ChatExecutionState persistWaiting(
+            long executionId, long sessionId, ConsultService.PreparationResult result) {
+        if (result == null
+                || !result.waitingForReply()
+                || result.prepared() != null && result.prepared().sessionId() != sessionId) {
+            throw new IllegalArgumentException("기존 질문 대기 결과가 필요합니다.");
+        }
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        Integer count =
+                jdbc.queryForObject(
+                        """
+                        SELECT count(*) FROM consult_conditions c
+                        JOIN consult_requests r ON r.consult_request_id=c.consult_request_id
+                        JOIN chat_messages m ON m.message_id=c.asked_message_id
+                        JOIN chat_sessions s ON s.session_id=m.session_id
+                        WHERE r.session_id=? AND m.session_id=? AND m.message_id=?
+                          AND r.status='WAITING_CONDITION' AND c.status='PENDING'
+                          AND m.role='ASSISTANT' AND m.message_type='CLARIFICATION'
+                          AND m.status='COMPLETED' AND s.status='NEED_CLARIFICATION'
+                        """,
+                        Integer.class,
+                        sessionId,
+                        sessionId,
+                        result.pendingMessageId());
+        if (count == null || count == 0) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        var pending =
+                jdbc.queryForList(
+                        "SELECT content,follow_ups::text AS follow_ups FROM chat_messages WHERE message_id=?",
+                        result.pendingMessageId());
+        // 저장된 되묻기에는 첫 질문의 인사가 붙어 있을 수 있다. 다시 물을 때 인사를 반복하지 않는다
+        String question = ConsultationQuestion.extract(
+                ClarificationReask.questionOf((String) pending.getFirst().get("content")));
+        // 조건 변경만 받은 턴은 안내 문구 없이 질문만 재전송
+        ChatExecutionState execution =
+                chatExecutionService.askClarification(
+                        executionId,
+                        result.prepared() == null
+                                ? ClarificationReask.text(question)
+                                : withReceivedService(result.prepared().decision(), question),
+                        optionsOf((String) pending.getFirst().get("follow_ups")));
+        if (result.prepared() != null) {
+            consultService.persistWaitingChanges(result);
+        } else {
+            jdbc.update(
+                    "UPDATE consult_conditions SET reask_count=reask_count+1"
+                            + " WHERE asked_message_id=? AND status='PENDING'",
+                    result.pendingMessageId());
+        }
+        return execution;
+    }
+
+    private List<String> optionsOf(String followUps) {
+        if (followUps == null || followUps.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(followUps, new TypeReference<List<String>>() {});
+        } catch (Exception malformed) {
+            return List.of();
+        }
+    }
+
+    // 복합 질문에서 답한 부분과 되묻는 부분을 한 되묻기 메시지로 저장한다
+    @Transactional
+    public ChatExecutionState persistCompoundClarification(
+            long executionId,
+            long sessionId,
+            List<ConsultService.PreparedTurn> answeredTurns,
+            ConsultService.PreparedTurn asking,
+            String content,
+            List<String> options,
+            List<AnswerSource> sources) {
+        Objects.requireNonNull(asking, "asking");
+        if (answeredTurns.isEmpty()
+                || asking.sessionId() != sessionId
+                || asking.decision().action() != Action.ASK
+                || answeredTurns.stream().anyMatch(turn -> turn.sessionId() != sessionId)) {
+            throw new IllegalArgumentException("복합 질문 되묻기 저장에 필요한 상담 결과가 올바르지 않습니다.");
+        }
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != sessionId) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        for (ConsultService.PreparedTurn answered : answeredTurns) {
+            persistReadyTurn(executionId, answered, null);
+        }
+        ChatExecutionState state = chatExecutionService.askClarification(executionId, content, options);
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        long messageId = state.outputMessage().messageId();
+        consultService.persist(asking, new MessageLinks(messageId, null, null));
+        for (ConsultService.PreparedTurn answered : answeredTurns) {
+            stateStore.completeInClarification(sessionId, answered.decision().consultRequestId(),
+                    answered.expectedVersion() + 1, messageId);
+        }
+        if (!sources.isEmpty()) {
+            eventPublisher.publishEvent(new AnswerSourcesReady(messageId, sources));
+        }
+        return state;
+    }
+
+    // 받은 업무를 먼저 알려 같은 질문이 반복돼 보이지 않게 함
+    private String withReceivedService(DialogueDecision decision, String question) {
+        var service = decision.conditions().get("serviceType");
+        if (service == null || service.status() != ConditionStatus.FILLED) {
+            return question;
+        }
+        String label = RuleBasedRoutingFallback.serviceTypeLabel(service.value());
+        return label == null ? question : label + " 업무로 확인했어요.\n" + question;
+    }
+
+    // 준비·모델 호출은 끝내고, 메시지와 상담 상태 저장만 함께 묶는다.
+    @Transactional
+    public ChatExecutionState persistClarification(
+            long executionId, ConsultService.PreparedTurn prepared) {
+        return persistClarification(executionId, prepared, null);
+    }
+
+    @Transactional
+    public ChatExecutionState persistClarification(
+            long executionId, ConsultService.PreparedTurn prepared, String answeredField) {
+        if (prepared == null || prepared.decision().action() != Action.ASK) {
+            throw new IllegalArgumentException("저장할 되묻기 결과가 필요합니다.");
+        }
+        if (answeredField != null && answeredField.isBlank()) {
+            throw new IllegalArgumentException("반영할 후속 답변 조건이 필요합니다.");
+        }
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT session_id FROM chat_executions WHERE execution_id=? FOR UPDATE",
+                        Long.class,
+                        executionId);
+        if (sessions.isEmpty() || sessions.getFirst() != prepared.sessionId()) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        ChatExecutionState state =
+                chatExecutionService.askClarification(
+                        executionId, prepared.decision().message(), prepared.decision().options());
+        if (state.outputMessage() == null) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        Long inputMessageId =
+                answeredField == null
+                        ? null
+                        : jdbc.queryForObject(
+                                "SELECT input_message_id FROM chat_executions WHERE execution_id=?",
+                                Long.class,
+                                executionId);
+        consultService.persist(
+                prepared,
+                new MessageLinks(
+                        state.outputMessage().messageId(), inputMessageId, answeredField));
+        return state;
+    }
+
+    // 조건은 채웠지만 검색·최종 답변이 남아 있으므로 실행은 종료하지 않는다.
+    @Transactional
+    public void persistReadyFollowup(
+            long executionId, ConsultService.PreparedTurn prepared, String answeredField) {
+        if (answeredField == null || answeredField.isBlank()) {
+            throw new IllegalArgumentException("반영할 후속 답변 조건이 필요합니다.");
+        }
+        persistReadyTurn(executionId, prepared, answeredField);
+    }
+
+    @Transactional
+    public void persistReadyTurn(
+            long executionId, ConsultService.PreparedTurn prepared, String answeredField) {
+        if (prepared == null
+                || prepared.decision().action() == Action.ASK
+                || answeredField != null && answeredField.isBlank()) {
+            throw new IllegalArgumentException("진행할 상담 판단이 필요합니다.");
+        }
+        var inputs =
+                jdbc.queryForList(
+                        """
+                        SELECT e.input_message_id FROM chat_executions e
+                        JOIN chat_messages m ON m.message_id=e.input_message_id
+                        WHERE e.execution_id=? AND e.session_id=? AND m.session_id=?
+                          AND e.status='RUNNING' AND m.role='USER'
+                          AND m.message_type='QUESTION' AND m.status='COMPLETED'
+                        FOR UPDATE OF e
+                        """,
+                        Long.class,
+                        executionId,
+                        prepared.sessionId(),
+                        prepared.sessionId());
+        if (inputs.isEmpty()) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        var sessions =
+                jdbc.queryForList(
+                        "SELECT status FROM chat_sessions WHERE session_id=? FOR UPDATE",
+                        String.class,
+                        prepared.sessionId());
+        if (sessions.isEmpty() || "CLOSED".equals(sessions.getFirst())) {
+            throw new GeneralException(ConsultErrorCode.STATE_CONFLICT);
+        }
+        consultService.persist(
+                prepared,
+                new MessageLinks(
+                        null, answeredField == null ? null : inputs.getFirst(), answeredField));
+    }
+
+    @Transactional
+    public void persistReadyTurns(long executionId, long sessionId,
+            List<ConsultService.PreparedTurn> preparedTurns) {
+        preparedTurns = List.copyOf(Objects.requireNonNull(preparedTurns, "preparedTurns"));
+        if (preparedTurns.size() < 2 || preparedTurns.stream()
+                .anyMatch(prepared -> prepared.sessionId() != sessionId)
+                || preparedTurns.stream().map(prepared -> prepared.decision().consultRequestId())
+                .distinct().count() != preparedTurns.size()) {
+            throw new IllegalArgumentException("서로 다른 FAQ 상담 요청이 필요합니다.");
+        }
+        for (ConsultService.PreparedTurn prepared : preparedTurns) {
+            persistReadyTurn(executionId, prepared, null);
+        }
+    }
+
+    // 조건을 채운 요청과 나머지 요청을 함께 저장한 뒤 답변 생성을 시작한다.
+    @Transactional
+    public void persistCompoundReadyTurns(long executionId, long sessionId, List<ConsultTurn> turns) {
+        validateCompound(sessionId, turns);
+        for (ConsultTurn turn : turns) {
+            persistReadyTurn(executionId, turn.preparation().prepared(), turn.answeredField());
+        }
+    }
+
+    private void validateCompound(long sessionId, List<ConsultTurn> turns) {
+        if (turns == null || turns.size() < 2 || turns.size() > 3 || turns.stream().anyMatch(turn -> turn == null
+                || turn.preparation().waitingForReply() || turn.preparation().prepared() == null
+                || turn.preparation().prepared().sessionId() != sessionId)
+                || turns.stream().map(turn -> turn.preparation().prepared().decision().consultRequestId())
+                        .distinct().count() != turns.size()) {
+            throw new IllegalArgumentException("같은 채팅방의 서로 다른 하위 상담 요청이 필요합니다.");
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(turns.size(), "?"));
+        var parameters = new java.util.ArrayList<Object>();
+        turns.forEach(turn -> parameters.add(turn.preparation().prepared().decision().consultRequestId()));
+        parameters.add(sessionId);
+        var origins = jdbc.queryForList("SELECT origin_message_id FROM consult_requests"
+                + " WHERE consult_request_id IN (" + placeholders + ") AND session_id=?",
+                Long.class, parameters.toArray());
+        if (origins.size() != turns.size() || origins.stream().distinct().count() != 1) {
+            throw new IllegalArgumentException("같은 원문에서 만든 하위 상담 요청이 필요합니다.");
+        }
+    }
+}

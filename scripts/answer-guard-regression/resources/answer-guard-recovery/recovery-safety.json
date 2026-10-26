@@ -1,0 +1,1275 @@
+[
+  {
+    "id": "country-sentence",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "아래 요금은 일본에서만 적용됩니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "미국에서 일주일 로밍할 건데 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "country-newline",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "아래 요금은 일본에서만 적용됩니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "미국에서 일주일 로밍할 건데 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "country-heading",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일본 전용 요금\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "미국에서 일주일 로밍할 건데 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "vip-sentence",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "다음 상품은 VIP 고객에게만 제공됩니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "VIP가 아닌데 일주일 로밍은 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "vip-newline",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "VIP 고객 전용 상품입니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일반 고객인데 일주일 로밍은 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "child-sentence",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "아래 가격은 만 12세 이하 고객에게만 적용됩니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "성인인데 일주일 로밍은 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "date-window",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "아래 요금은 지난달까지 적용된 가격입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "이번 달에 일주일 로밍하면 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "counterexample",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "다음은 잘못된 요금 안내의 예시입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "hypothetical",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "실제 상품이 아니라 가정한 예시입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "원문 추천 문장 밖의 적용 조건/사실성 범위를 보존해야 함."
+  },
+  {
+    "id": "country-tail",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 단, 위 가격은 일본에서만 적용됩니다.",
+    "query": "미국에서 일주일 로밍하면 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "뒤따르는 조건/정정이 원문 추천의 적용을 제한함."
+  },
+  {
+    "id": "vip-tail",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 단, 위 상품은 VIP 고객만 가입할 수 있습니다.",
+    "query": "VIP가 아닌데 일주일 로밍하면 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "뒤따르는 조건/정정이 원문 추천의 적용을 제한함."
+  },
+  {
+    "id": "revoked-tail",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 위 상품은 판매가 종료되어 신청할 수 없습니다.",
+    "query": "일주일 로밍 상품을 지금 신청하려면 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "뒤따르는 조건/정정이 원문 추천의 적용을 제한함."
+  },
+  {
+    "id": "wrong-example-tail",
+    "group": "cross-sentence-scope",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 위 문장은 잘못된 요금 안내이므로 사용하지 마십시오.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "뒤따르는 조건/정정이 원문 추천의 적용을 제한함."
+  },
+  {
+    "id": "negated-to-ten",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일이 아니라 열흘 가요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "negated-to-three",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일이 아니라 삼일 가요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "negated-unknown",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일은 아니고 일정은 아직 몰라요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "departure-date-ten",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "이번 달 7일에 출국해서 열흘 동안 쓸 건데 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "departure-date-unknown",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "이번 달 7일에 출국해요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "relative-departure-ten",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 뒤 출국해서 열흘 동안 쓸 건데 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "past-period-ten",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 전에는 국내에 있었고 이번 여행은 열흘인데 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "excluded-product",
+    "group": "query-period-meaning",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일 기간권 말고 다른 상품을 원해요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": "날짜/상대 시점/부정/제외를 이용 기간의 확정값으로 인정하면 안 됨."
+  },
+  {
+    "id": "correct-korean-week",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "correct-numeric-week",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "correct-one-week",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "한 주 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "confirmed-week-with-question",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "여행 기간은 일주일이에요. 어떤 로밍 상품이 좋을까요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "quote-only-source",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "newline-valid-source",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다.\n일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "narrow-amount-space",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000 원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "nonbreaking-amount-space",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000 원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "unpunctuated-source",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다"
+    ],
+    "note": ""
+  },
+  {
+    "id": "leading-trailing-space",
+    "group": "positive-controls",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "  일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.  ",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": " 7일 기간권이 39,000원으로 가장 저렴합니다. ",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "country-inline",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일본에서만 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "미국에서 일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "vip-inline",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "VIP 고객이면 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "VIP가 아닌데 일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "wrong-price",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 29,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "wrong-product",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 무제한이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "wrong-duration",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "10일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "negated-numeric-duration",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일이 아니라 10일 가요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "date-and-numeric-duration",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일에 출국해서 10일 동안 써요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "unknown-duration",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "기간은 아직 몰라요. 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "comparison-speed",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴하고 빠릅니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "comparison-convenience",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴하고 편리합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "negated-claim",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴하지 않습니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "empty-evidence",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "duplicate-source",
+    "group": "negative-controls",
+    "category": "INVALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [],
+    "note": ""
+  },
+  {
+    "id": "alternate-word-order",
+    "group": "coverage-limit",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "가장 저렴한 상품은 39,000원짜리 7일 기간권입니다.",
+    "allowed": [
+      "가장 저렴한 상품은 39,000원짜리 7일 기간권입니다.",
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "natural-is-particle",
+    "group": "coverage-limit",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 가장 저렴하고 가격은 39,000원입니다.",
+    "allowed": [
+      "7일 기간권이 가장 저렴하고 가격은 39,000원입니다.",
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "source-with-bullet",
+    "group": "coverage-limit",
+    "category": "VALID",
+    "origin": "assistant-review",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "- 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "7일 기간권이 39,000원으로 가장 저렴합니다.",
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "mutation-0-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일본에서만 적용됩니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-0-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일본에서만 적용됩니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-0-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일본에서만 적용됩니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-0-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 일본에서만 적용됩니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-0-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n일본에서만 적용됩니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-0-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 일본에서만 적용됩니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "VIP 전용입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "VIP 전용입니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "VIP 전용입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. VIP 전용입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\nVIP 전용입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-1-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. VIP 전용입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "현재 판매하지 않습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "현재 판매하지 않습니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "현재 판매하지 않습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 현재 판매하지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n현재 판매하지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-2-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 현재 판매하지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "위 내용은 잘못된 예시입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "위 내용은 잘못된 예시입니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "위 내용은 잘못된 예시입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 위 내용은 잘못된 예시입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n위 내용은 잘못된 예시입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-3-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 위 내용은 잘못된 예시입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "다음은 실제 상품이 아닌 가정입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "다음은 실제 상품이 아닌 가정입니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "다음은 실제 상품이 아닌 가정입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 다음은 실제 상품이 아닌 가정입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n다음은 실제 상품이 아닌 가정입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-4-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 다음은 실제 상품이 아닌 가정입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "어린이만 이용할 수 있습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "어린이만 이용할 수 있습니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "어린이만 이용할 수 있습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 어린이만 이용할 수 있습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n어린이만 이용할 수 있습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-5-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 어린이만 이용할 수 있습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "내일부터 이 가격은 적용되지 않습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "내일부터 이 가격은 적용되지 않습니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "내일부터 이 가격은 적용되지 않습니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 내일부터 이 가격은 적용되지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n내일부터 이 가격은 적용되지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-6-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 내일부터 이 가격은 적용되지 않습니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-prefix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "이전에만 적용하던 가격입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-prefix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "이전에만 적용하던 가격입니다.\n일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-prefix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "이전에만 적용하던 가격입니다. 일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-suffix-sentence",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 이전에만 적용하던 가격입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-suffix-line",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.\n이전에만 적용하던 가격입니다.",
+    "allowed": []
+  },
+  {
+    "id": "mutation-7-suffix-nbsp",
+    "group": "scope-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다. 이전에만 적용하던 가격입니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-0",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 아닌데 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-1",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일은 예전 일정이고 지금은 열흘 가요.",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-2",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 뒤 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-3",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "7일 상품은 제외하고 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-4",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요? 단 VIP 상품은 빼주세요.",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-5",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "여행 기간은 일주일인지 아직 몰라요. 어떤 로밍 상품이 좋을까요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-6",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "107일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-7",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "7일에 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-8",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "일주일 로밍 뭐가 제일 싸요? 실제 기간은 10일이에요.",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-9",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "1일 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "query-mutation-10",
+    "group": "query-mutations",
+    "category": "INVALID",
+    "origin": "hardening-generated",
+    "query": "한 달 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "allowed": []
+  },
+  {
+    "id": "positive-days-1",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-generated",
+    "query": "1일 로밍은 뭐가 싸요?",
+    "answer": "1일 이용권이 9,900원으로 가장 저렴합니다.",
+    "evidence": "1일이면 1일 이용권 9,900원이 가장 유리합니다.",
+    "allowed": [
+      "1일이면 1일 이용권 9,900원이 가장 유리합니다."
+    ]
+  },
+  {
+    "id": "positive-days-3",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-generated",
+    "query": "3일 로밍은 뭐가 싸요?",
+    "answer": "3일 이용권이 19,000원으로 가장 저렴합니다.",
+    "evidence": "3일이면 3일 이용권 19,000원이 가장 유리합니다.",
+    "allowed": [
+      "3일이면 3일 이용권 19,000원이 가장 유리합니다."
+    ]
+  },
+  {
+    "id": "positive-days-14",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-generated",
+    "query": "14일 로밍은 뭐가 싸요?",
+    "answer": "14일 이용권이 69,000원으로 가장 저렴합니다.",
+    "evidence": "14일이면 14일 이용권 69,000원이 가장 유리합니다.",
+    "allowed": [
+      "14일이면 14일 이용권 69,000원이 가장 유리합니다."
+    ]
+  },
+  {
+    "id": "positive-days-30",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-generated",
+    "query": "30일 로밍은 뭐가 싸요?",
+    "answer": "30일 이용권이 100,000원으로 가장 저렴합니다.",
+    "evidence": "30일이면 30일 이용권 100,000원이 가장 유리합니다.",
+    "allowed": [
+      "30일이면 30일 이용권 100,000원이 가장 유리합니다."
+    ]
+  },
+  {
+    "id": "positive-natural-query-0",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-authored",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일간 로밍은 뭐가 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "positive-natural-query-1",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-authored",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "일주일 여행하는데 로밍 뭐가 제일 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  },
+  {
+    "id": "positive-natural-query-2",
+    "group": "positive-generalization",
+    "category": "VALID",
+    "origin": "hardening-authored",
+    "faqQuestion": "로밍 상품 안내를 알려주세요.",
+    "evidence": "일주일이면 7일 기간권 39,000원이 가장 유리합니다. 일 단위 요금제는 9,900원, 데이터 무제한은 하루 12,100원이라 같은 기간을 쓰시면 기간권보다 비쌉니다.",
+    "query": "7일간 여행가는데 로밍은 뭐가 싸요?",
+    "answer": "7일 기간권이 39,000원으로 가장 저렴합니다.",
+    "allowed": [
+      "일주일이면 7일 기간권 39,000원이 가장 유리합니다."
+    ],
+    "note": ""
+  }
+]
