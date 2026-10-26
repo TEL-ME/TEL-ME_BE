@@ -169,10 +169,12 @@ GitHub Actions가 `telme-github-deploy` 역할(OIDC)로 같은 일을 한다. AW
 
 | 레포 | 워크플로 | 언제 | 저장소 변수(Settings → Secrets and variables → Actions → Variables) |
 |---|---|---|---|
-| TEL-ME_BE | `.github/workflows/deploy.yml` | develop의 CI가 통과한 뒤, 또는 수동 실행 | `DEPLOY_ENABLED=true` |
-| TEL-ME_FE | `.github/workflows/deploy.yml` | develop push, 또는 수동 실행 | `DEPLOY_ENABLED=true`, `CLOUDFRONT_DISTRIBUTION_ID`, `VITE_KAKAO_MAP_KEY` |
+| TEL-ME_BE | `.github/workflows/deploy.yml` | main의 CI가 통과한 뒤, 또는 수동 실행 | `DEPLOY_ENABLED=true` |
+| TEL-ME_FE | `.github/workflows/deploy.yml` | main push, 또는 수동 실행 | `DEPLOY_ENABLED=true`, `CLOUDFRONT_DISTRIBUTION_ID`, `VITE_KAKAO_MAP_KEY` |
 
 `DEPLOY_ENABLED`가 없으면 워크플로는 건너뛴다. 2차 apply가 끝난 뒤에 켠다.
+
+운영 배포는 develop → main 머지(Create a merge commit) 때 일어난다. develop 머지만으로는 배포되지 않는다. 역할을 맡을 수 있는 브랜치는 `variables.tf`의 `github_oidc_subjects`(develop·main)다. BE 워크플로는 `workflow_run`이라 기본 브랜치(develop)에 있는 `deploy.yml`을 읽으므로, 이 파일을 바꾸면 develop에 먼저 머지해야 main 머지 때 반영된다.
 
 교체가 실패·취소되거나 35분 안에 끝나지 않으면 워크플로가 SSM 이미지 태그를 이전 값으로 되돌린다(시간 초과면 교체도 취소). 최소 정상 100%라 옛 서버는 그대로 남는다.
 

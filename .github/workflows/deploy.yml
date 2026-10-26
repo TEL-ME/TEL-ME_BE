@@ -1,13 +1,13 @@
 name: Deploy
 
-# develop의 CI가 통과하면 백엔드 이미지를 ECR에 올리고 앱 서버를 새 이미지로 교체
+# main의 CI가 통과하면 백엔드 이미지를 ECR에 올리고 앱 서버를 새 이미지로 교체
 # 인프라(infra/terraform)를 apply하기 전에는 돌지 않게, 저장소 변수 DEPLOY_ENABLED=true일 때만 실행
-# AWS 키는 쓰지 않는다. GitHub OIDC로 telme-github-deploy 역할을 빌린다(develop 브랜치만 허용)
+# AWS 키는 쓰지 않는다. GitHub OIDC로 telme-github-deploy 역할을 빌린다(develop·main 브랜치만 허용)
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [develop]
+    branches: [main]
   workflow_dispatch:
 
 # 배포는 한 번에 하나씩. 진행 중인 배포는 끊지 않고 다음 배포가 기다린다
@@ -28,11 +28,11 @@ env:
 
 jobs:
   deploy:
-    # workflow_run의 branches 필터는 브랜치 이름만 본다. 포크에서 develop이라는 이름으로 PR을 열어도 걸리므로
-    # 이 레포 develop에 push된 커밋의 CI만 배포한다
+    # workflow_run의 branches 필터는 브랜치 이름만 본다. 포크에서 main이라는 이름으로 PR을 열어도 걸리므로
+    # 이 레포 main에 push된 커밋의 CI만 배포한다. 수동 실행도 main을 골랐을 때만 배포한다
     if: >-
       vars.DEPLOY_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_repository.full_name == github.repository))
@@ -43,7 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # workflow_run은 기본으로 develop의 최신 커밋을 받으므로, CI가 검사한 커밋을 정확히 받는다
+          # workflow_run은 기본으로 기본 브랜치(develop)의 최신 커밋을 받으므로, CI가 검사한 커밋을 정확히 받는다
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: 이미지 태그(커밋 SHA)
