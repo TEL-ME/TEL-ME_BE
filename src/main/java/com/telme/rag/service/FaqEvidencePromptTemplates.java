@@ -1,7 +1,7 @@
 package com.telme.rag.service;
 
 // 회색 구간 FAQ 하나씩 판정하는 프롬프트. B3(TELME-122, TELME-156)에 비교 규칙 한 줄을 더한 v4(TELME-160)
-// B3는 비교·비율을 묻는 질문을 근거가 있어도 30% 정도 막아 판정 시험 합격이 흔들렸다(docs/GRAY_ZONE_UPPER_BAND.md 5.8절).
+// B3는 비교·비율을 묻는 질문을 근거가 있어도 30% 정도 막아 판정 시험 합격이 흔들렸다(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.8절).
 // scripts/gray_zone_upper_band_bedrock.py의 B4_SYSTEM_PROMPT와 글자까지 같아야 하며 테스트가 비교한다.
 // 고치면 버전을 올리고 판정 시험(scripts/judge_stability_bedrock.py)과 180셋 측정을 다시 한다
 public final class FaqEvidencePromptTemplates {

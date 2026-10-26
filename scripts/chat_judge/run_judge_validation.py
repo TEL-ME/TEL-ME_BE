@@ -6,7 +6,7 @@
 Bedrock 모델은 --bedrock-model로 고른다(유료 호출이라 --allow-bedrock-call이 필요하다). 판정 경로와 코드 규칙은 vLLM과 같다.
 사용: python -X utf8 -m scripts.chat_judge.run_judge_validation --out .measure/judge-validation-<날짜>.json.gz
       python -X utf8 -m scripts.chat_judge.run_judge_validation --bedrock-model deepseek-v3.2 --allow-bedrock-call --out <결과>
-      python -X utf8 -m scripts.chat_judge.run_judge_validation --judged <기존 결과> --review-b docs/chat-judge/judge-validation-v1-review-form.md
+      python -X utf8 -m scripts.chat_judge.run_judge_validation --judged <기존 결과> --review-b docs/03-evaluation/chat-judge/judge-validation-v1-review-form.md
 """
 import argparse
 import collections

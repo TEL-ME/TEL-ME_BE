@@ -2,7 +2,7 @@
 
 """새 평가셋이 기존 평가셋과 겹치는지 검사: 질문 텍스트 유사도 + 정답 slot_id 겹침
 
-임베딩을 쓰지 않아 검색 점수를 보지 않고 계산된다 (docs/DUAL_VECTOR_VS_RERANKER.md 13.1절)
+임베딩을 쓰지 않아 검색 점수를 보지 않고 계산된다 (docs/01-pipeline/03-retrieval/dual-vector-vs-reranker.md 13.1절)
 """
 
 from __future__ import annotations

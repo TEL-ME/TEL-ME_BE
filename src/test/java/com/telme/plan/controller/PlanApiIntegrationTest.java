@@ -130,7 +130,7 @@ class PlanApiIntegrationTest {
         Map<String, int[]> policy = new LinkedHashMap<>();
         Map<String, BigDecimal> policyData = new LinkedHashMap<>();
         Pattern row = Pattern.compile("^\\| (\\S+ \\S+) \\| ([\\d,]+)원 \\| (무제한|[\\d.]+GB) \\|$");
-        List<String> lines = Files.readAllLines(Path.of("docs/POLICY.md"));
+        List<String> lines = Files.readAllLines(Path.of("docs/00-overview/policy.md"));
         boolean inPlanTable = false;
         for (String line : lines) {
             if (line.startsWith("#### ")) {
@@ -170,7 +170,7 @@ class PlanApiIntegrationTest {
         Pattern row = Pattern.compile("^\\| ((?:5G|LTE|알뜰) \\S+) \\| ([^|]+?) \\| ([^|]+?) \\|$");
         Map<String, String[]> policy = new LinkedHashMap<>();
         boolean inPlan07 = false;
-        for (String line : Files.readAllLines(Path.of("docs/POLICY.md"))) {
+        for (String line : Files.readAllLines(Path.of("docs/00-overview/policy.md"))) {
             if (line.startsWith("#### ")) {
                 inPlan07 = line.startsWith("#### PLAN-07");
             }

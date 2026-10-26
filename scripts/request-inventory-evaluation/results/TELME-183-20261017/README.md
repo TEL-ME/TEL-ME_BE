@@ -1,6 +1,6 @@
 # TELME-183 요청 개수 판정 원시 결과
 
-[비교 보고서](../../../../docs/EXAONE_REPEAT_EVALUATION.md)의 2026-10-17 네이티브 Ollama 0.34.0 반복 평가 자료입니다.
+[비교 보고서](../../../../docs/03-evaluation/model-comparison/exaone-repeat-evaluation.md)의 2026-10-17 네이티브 Ollama 0.34.0 반복 평가 자료입니다.
 과거 PR 스냅샷의 평가이며 최신 develop의 회귀 테스트 결과가 아닙니다.
 
 - `metrics.json`: 이 단계의 회차별 채점 집계와 반복 비교. Git에서 확인할 수 있는 요약입니다.

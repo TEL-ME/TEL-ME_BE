@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 // 이중 벡터 검색 결과 합치기: 중복 제거 → 질문만 벡터(QUESTION_ONLY) 결과 우선 → topK 컷 → 순위 재부여
-// 두 벡터는 점수 분포가 달라 점수로 섞어 정렬하지 않고 우선순위로 합친다 (docs/EVAL_SET_SUPPLEMENT.md 6절)
+// 두 벡터는 점수 분포가 달라 점수로 섞어 정렬하지 않고 우선순위로 합친다 (docs/01-pipeline/03-retrieval/eval-set-supplement.md 6절)
 // topK로 다시 잘라야 LLM에 넘어가는 근거 수가 단일 벡터 검색과 같아진다
 public final class DualVectorMerger {
 

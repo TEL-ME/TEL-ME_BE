@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
-POLICY_PATH = DOCS_DIR / "POLICY.md"
-TAXONOMY_PATH = DOCS_DIR / "FAQ_TAXONOMY.md"
+POLICY_PATH = DOCS_DIR / "00-overview/policy.md"
+TAXONOMY_PATH = DOCS_DIR / "00-overview/faq-taxonomy.md"
 
 EXPECTED_CATEGORIES = 10
 EXPECTED_QUESTION_TYPES = 5

@@ -8,7 +8,7 @@
 결과는 scripts/data/faq_unanswerable.json에 쓰고, build_suggested_question_data.py가 slotIds를 읽어
   - 대표 질문이 이 목록에 있으면 오류를 낸다
   - 답을 못 할 때 보여 줄 FAQ 후보에서 뺀다(faq-rules.json unanswerableSlotIds)
-docs/FOLLOWUP_RECOMMENDATION.md 11.4절. 라우터·검색·답변 생성이 바뀌면 다시 돌린다.
+docs/01-pipeline/06-answer-generation/followup-recommendation.md 11.4절. 라우터·검색·답변 생성이 바뀌면 다시 돌린다.
 
 실제 LLM(ollama)으로 띄운 로컬 앱이 필요하다(FAQ 1,150개에 1시간 반 이상). 답이 안 나오면 한 번 더 보내고,
 LLM 결과가 매번 같지 않으므로 한 번이라도 안 나오면 목록에 넣는다. 질문마다 새 채팅방을 쓴다.

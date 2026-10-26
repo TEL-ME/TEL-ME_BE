@@ -138,7 +138,7 @@ public class StoreSearchService {
 
     // 정적 조건은 모두 StoreTag로 바꿔 StoreTagCondition 하나로 묶는다. 새 정적 조건은 요청 필드를 StoreTag로
     // 바꿔
-    // 같은 조건에 더한다(docs/STORE_SEARCH_OPERATIONS.md 2절)
+    // 같은 조건에 더한다(docs/02-features/store/store-search-operations.md 2절)
     private List<StoreSearchCondition> toConditions(StoreNearbySearchRequest request) {
         List<StoreSearchCondition> conditions = new ArrayList<>();
         Set<StoreServiceType.Code> serviceTypes = request.serviceTypes();

@@ -1,6 +1,6 @@
 # 복합 FAQ와 비교 질문 평가 자료
 
-이번 PR의 검증 결과와 재현 방법은 [평가 문서](../../docs/COMPOUND_COMPARISON_QUALITY.md)에 정리했다. 리뷰할 때는 최신 비교 결과와 채팅 API 결과를 먼저 확인한다. 모델 호출 입력과 원문 출력, 수정 전 재현 및 중간 진단은 `runs/comparison-evidence-v4.json.gz`에 보관했다.
+이번 PR의 검증 결과와 재현 방법은 [평가 문서](../../docs/01-pipeline/compound-comparison-quality.md)에 정리했다. 리뷰할 때는 최신 비교 결과와 채팅 API 결과를 먼저 확인한다. 모델 호출 입력과 원문 출력, 수정 전 재현 및 중간 진단은 `runs/comparison-evidence-v4.json.gz`에 보관했다.
 
 | 자료 | 내용 |
 | --- | --- |

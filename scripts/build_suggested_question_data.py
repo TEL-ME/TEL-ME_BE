@@ -2,7 +2,7 @@
 
 """후속 질문 추천 데이터 생성: 정책 연결표(4차)와 FAQ별 규칙 메타데이터를 앱 리소스 JSON으로 내보낸다
 
-설계·검증 근거: docs/FOLLOWUP_RECOMMENDATION.md 8절. 연결표를 바꾸면 이 파일을 고치고 다시 실행한다.
+설계·검증 근거: docs/01-pipeline/06-answer-generation/followup-recommendation.md 8절. 연결표를 바꾸면 이 파일을 고치고 다시 실행한다.
 연결표·대표 질문·규칙의 원본은 이 파일 하나이고, 생성된 JSON은 손으로 고치지 않는다.
 
 출력

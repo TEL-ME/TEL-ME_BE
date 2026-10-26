@@ -1,7 +1,25 @@
 # FAQ 생성, 검증, 측정 스크립트
 
-기준 문서: `docs/POLICY.md`, `docs/FAQ_TAXONOMY.md`
-측정 결과, 결정 근거: `docs/SEARCH_TUNING.md`, `docs/TOPK_LATENCY.md`(top-k별 정답률, 지연시간), `docs/SEARCH_FAILURE_ANALYSIS.md`(실패 원인 분류), `docs/EVAL_SET_SUPPLEMENT.md`(평가셋 보강, 이중 벡터 사전 검증)
+## 문서와 실행 도구 연결
+
+설계·실험의 읽는 순서는 [문서 목차](../docs/README.md)를 따른다. 이 디렉토리는 실행 목적과 Python 모듈 의존에 맞춰 기존 경로를 유지한다. 아래 표는 탐색 안내이며, 실제 명령·환경변수·비용·데이터 변경 여부는 연결된 문서에서 확인한다.
+
+| 목적 | 설계·결과 문서 | 실행 도구·입력 |
+| --- | --- | --- |
+| 정책·FAQ 데이터 생성과 검증 | [공통 기준](../docs/00-overview/README.md) | `telme_docs.py`, `generate_faq.py`, `check_policy.py`, `data/` |
+| 문맥·라우팅 | [문맥·라우팅](../docs/01-pipeline/README.md#02-문맥과-라우팅) | `context-resolution-evaluation/`, `spacing-routing-evaluation/` |
+| 검색 품질·임계값 | [검색](../docs/01-pipeline/README.md#03-faq-검색) | `measure_search_quality.py`, `analyze_search_grid.py`, `data/` |
+| 근거 판정 | [근거 판정](../docs/01-pipeline/README.md#04-근거-판정) | `gray_zone_upper_band_bedrock.py`, `candidate-evidence-evaluation/` |
+| 되묻기·생성 | [채팅 파이프라인](../docs/01-pipeline/README.md) | `condition-extraction-evaluation/`, `answer-generation-evaluation/` |
+| 매장·요금제 | [독립 기능](../docs/02-features/README.md) | `check_stores.py`, `compound-store-evaluation/`, `plan-question-evaluation/` |
+| 전체 품질 평가 | [평가 절차](../docs/03-evaluation/chat-judge/service-evaluation.md) | `chat_judge/`, `chat_judge/data/` |
+| 서빙·모델 전환 | [운영](../docs/04-operations/README.md) | `serving-comparison/`, `bedrock-switch-evaluation/` |
+
+측정 도구가 별도 보관된 문서는 저장소만으로 재현 가능하다고 표시하지 않는다. 과거 결과의 입력·라벨·원시 출력은 경로 컨벤션에 맞추기 위해 재작성하지 않는다.
+
+
+기준 문서: `docs/00-overview/policy.md`, `docs/00-overview/faq-taxonomy.md`
+측정 결과, 결정 근거: `docs/01-pipeline/03-retrieval/search-tuning.md`, `docs/01-pipeline/03-retrieval/topk-latency.md`(top-k별 정답률, 지연시간), `docs/01-pipeline/03-retrieval/search-failure-analysis.md`(실패 원인 분류), `docs/01-pipeline/03-retrieval/eval-set-supplement.md`(평가셋 보강, 이중 벡터 사전 검증)
 
 | 스크립트 | 역할 | Ollama |
 | --- | --- | --- |
@@ -14,9 +32,9 @@
 | `analyze_search_grid.py` | 원시 결과로 구성 × top-k × 임계값 격자 계산 | - |
 | `classify_search_failures.py` | 원시 결과의 실패를 질문 쪽 / 문서 쪽으로 분류, 개선 전후 비교 | 필요 |
 | `simulate_dual_vector.py` | `Q_A`, `QUESTION_ONLY` 원시 결과를 합쳐 이중 벡터를 임계값별로 시뮬레이션 | - |
-| `gray_zone_upper_band_bedrock.py` | 회색 구간 판정을 Q_A 0.72 위로 넓혔을 때 정답·엉뚱한 근거·holdout 측정 (Bedrock 판정, 기본은 예상 비용만, `--run`으로 실행). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` | 필요 |
-| `judge_stability_bedrock.py` | 판정 시험 25건을 운영 판정 방식(FAQ 하나씩 1회)으로 반복해 회차별 합격 여부를 보거나(`--runs`), 경계 쌍만 쌍마다 여러 번 보내 답 됨 비율을 본다(`--pair-repeat`). 판정 프롬프트 후보 비교(`--prompt`), 운영과 같은 방식(`--served`). 결과: `docs/GRAY_ZONE_UPPER_BAND.md` 5.8절 | 필요 |
-| `bedrock-switch-evaluation/run_flow_scenarios.py` | 되묻기 완주·복합·FAQ+매장 복합·멀티턴 22개 대화를 실제 채팅 API로 끝까지 진행해 턴별 답변과 근거 FAQ 기록 (채점은 사람이 원문 대조). 결과: `docs/BEDROCK_SWITCH_EVALUATION.md` | 앱 경유 |
+| `gray_zone_upper_band_bedrock.py` | 회색 구간 판정을 Q_A 0.72 위로 넓혔을 때 정답·엉뚱한 근거·holdout 측정 (Bedrock 판정, 기본은 예상 비용만, `--run`으로 실행). 결과: `docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md` | 필요 |
+| `judge_stability_bedrock.py` | 판정 시험 25건을 운영 판정 방식(FAQ 하나씩 1회)으로 반복해 회차별 합격 여부를 보거나(`--runs`), 경계 쌍만 쌍마다 여러 번 보내 답 됨 비율을 본다(`--pair-repeat`). 판정 프롬프트 후보 비교(`--prompt`), 운영과 같은 방식(`--served`). 결과: `docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md` 5.8절 | 필요 |
+| `bedrock-switch-evaluation/run_flow_scenarios.py` | 되묻기 완주·복합·FAQ+매장 복합·멀티턴 22개 대화를 실제 채팅 API로 끝까지 진행해 턴별 답변과 근거 FAQ 기록 (채점은 사람이 원문 대조). 결과: `docs/03-evaluation/model-comparison/bedrock-switch-evaluation.md` | 앱 경유 |
 | `make_selfretrieval_eval.py` | 자기검색 평가셋 생성 | - |
 | `build_suggested_question_data.py` | 추천 질문 연결표·규칙의 원본. 앱 리소스 JSON과 기대 추천 파일 생성 (`--check`: 최신 여부만 확인) | - |
 | `check_suggested_questions_live.py` | 실행 중인 앱에 질문을 보내 추천 질문 검토표 생성 (`sample`, `representatives`: 되묻기는 첫 선택지로 이어서 답해 최종 답으로 확인) | 앱 경유 |
@@ -86,7 +104,7 @@ python3 scripts/check_duplicates.py --self-test
 
 - `--field`: `question`(기본) / `answer` / `both` - **세 가지를 모두 실행**
   - 질문만 같은 중복과 답변만 같은 중복은 서로 검출되지 않음
-  - 실제로 답변이 사실상 같은 FAQ 233쌍이 `question`, `both` 검사를 통과한 사례 있음 (`docs/SEARCH_TUNING.md` 11절)
+  - 실제로 답변이 사실상 같은 FAQ 233쌍이 `question`, `both` 검사를 통과한 사례 있음 (`docs/01-pipeline/03-retrieval/search-tuning.md` 11절)
 - `--threshold` 기본 0.95, `--batch` 기본 50
 - 임계값 미만이어도 최고 유사도는 출력
 
@@ -104,9 +122,9 @@ python3 scripts/check_eval_questions.py --self-test
 | 파일 | 구성 | 용도 |
 | --- | --- | --- |
 | `eval_questions_130.json` | SIMILAR 40 / VARIANT 40 / UNRELATED 50 | 확정값 기준 평가셋. 기존 문서 수치와 비교하려면 수정하지 않는다 |
-| `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/EVAL_SET_SUPPLEMENT.md`). 130건과 함께 측정 |
-| `eval_questions_holdout_90.json` | UNRELATED(`ADJACENT_HARD`) 90: 1차 60 + 2차 30 | 1차는 거부 성능 확인, 2차는 결과를 보고 보강한 경계 스트레스 분석. 두 구간을 별도 집계하며 90건 합계는 참고값이다 (`docs/DUAL_VECTOR_VS_RERANKER.md` 13.1절). **임계값 재탐색에 쓰지 않는다** |
-| `eval_questions_boundary_experiment_16.json` | UNRELATED(`ADJACENT_HARD`) 16 | 기존 결과와 FAQ를 보고 작성한 경계 탐색용. 고정 90건과 분리하며 독립 검증에 쓰지 않는다. 결과: `docs/BOUNDARY_EXPERIMENT_20261001.md` |
+| `eval_questions_supplement_50.json` | ANSWER 30 / UNRELATED(`ADJACENT_HARD`) 20 | 보강 평가셋 (`docs/01-pipeline/03-retrieval/eval-set-supplement.md`). 130건과 함께 측정 |
+| `eval_questions_holdout_90.json` | UNRELATED(`ADJACENT_HARD`) 90: 1차 60 + 2차 30 | 1차는 거부 성능 확인, 2차는 결과를 보고 보강한 경계 스트레스 분석. 두 구간을 별도 집계하며 90건 합계는 참고값이다 (`docs/01-pipeline/03-retrieval/dual-vector-vs-reranker.md` 13.1절). **임계값 재탐색에 쓰지 않는다** |
+| `eval_questions_boundary_experiment_16.json` | UNRELATED(`ADJACENT_HARD`) 16 | 기존 결과와 FAQ를 보고 작성한 경계 탐색용. 고정 90건과 분리하며 독립 검증에 쓰지 않는다. 결과: `docs/01-pipeline/03-retrieval/boundary-experiment-20261001.md` |
 
 질문 유형
 
@@ -183,7 +201,7 @@ FAQ 한 건마다 벡터를 둘 저장한다. 검색이 둘 다 조회해 합친
 | `embedding` | `faq.embedding-text.variant` 구성(기본 `Q_A` = 질문 + 답변) | 답변 내용을 묻는 질문 |
 | `embedding_question` | 질문만(`QUESTION_ONLY` 고정) | 표현을 바꿔 묻는 질문 |
 
-**왜 두 벌인가.** `Q_A`는 답변이 훨씬 길어 벡터가 답변 단어에 끌려간다. 뜻은 같은데 말투가 다른 질문을 놓친다. 질문끼리 비교하는 벡터를 하나 더 두면 그걸 잡는다. 전환이 아니라 병행인 이유는, `QUESTION_ONLY`로 바꾸면 답변에만 있는 값을 묻는 질문을 잃기 때문이다. 근거는 `docs/SEARCH_TUNING.md` 15절.
+**왜 두 벌인가.** `Q_A`는 답변이 훨씬 길어 벡터가 답변 단어에 끌려간다. 뜻은 같은데 말투가 다른 질문을 놓친다. 질문끼리 비교하는 벡터를 하나 더 두면 그걸 잡는다. 전환이 아니라 병행인 이유는, `QUESTION_ONLY`로 바꾸면 답변에만 있는 값을 묻는 질문을 잃기 때문이다. 근거는 `docs/01-pipeline/03-retrieval/search-tuning.md` 15절.
 
 두 번째 구성은 **설정으로 열지 않고 코드에 고정**했다. 임베딩 구성이 설정 축 2개가 되면 측정할 조합이 배로 늘어난다.
 
@@ -233,7 +251,7 @@ docker exec telme-postgres psql -U telme -d telme -tAc \
     where e.faq_version <> f.version;"
 ```
 
-**코퍼스 지문.** 재임베딩은 `embedding`(`Q_A`)도 다시 계산한다. 기존 측정치와 비교하려면 지문이 같아야 한다. 기준값은 `docs/EVAL_SET_SUPPLEMENT.md` 4.1절.
+**코퍼스 지문.** 재임베딩은 `embedding`(`Q_A`)도 다시 계산한다. 기존 측정치와 비교하려면 지문이 같아야 한다. 기준값은 `docs/01-pipeline/03-retrieval/eval-set-supplement.md` 4.1절.
 
 ```bash
 docker exec telme-postgres psql -U telme -d telme -tAc \
@@ -315,7 +333,7 @@ python3 scripts/simulate_dual_vector.py \
 - `--qa`와 `--qo`는 **같은 평가셋**이어야 한다(다르면 멈춘다). 원시 결과에 수집 벡터가 기록돼, 둘을 바꿔 넣어도 멈춘다
 - **`--qo-thresholds`는 쉼표 구분이다.** 공백으로 나누면 인자 오류
 - 출력: 임계값별 기존 긍정 / `ANSWER` / 무관 거부 / 경계 무관 거부, 그리고 선택 규칙에 맞는 t
-- 선택 규칙(`docs/DUAL_VECTOR_VS_RERANKER.md` 3.3절): 무관 거부를 평가셋(입력 파일)마다 현행 이상으로 지키고 `ANSWER` 정답 수가 줄지 않는 t 중 정답 합계(기존 긍정 + `ANSWER`) 최대, 같으면 높은 t. 현행에서 맞았는데 놓친 문항은 고르는 조건이 아니라 결과 끝에 "주의"로 따로 출력
+- 선택 규칙(`docs/01-pipeline/03-retrieval/dual-vector-vs-reranker.md` 3.3절): 무관 거부를 평가셋(입력 파일)마다 현행 이상으로 지키고 `ANSWER` 정답 수가 줄지 않는 t 중 정답 합계(기존 긍정 + `ANSWER`) 최대, 같으면 높은 t. 현행에서 맞았는데 놓친 문항은 고르는 조건이 아니라 결과 끝에 "주의"로 따로 출력
 - 파일 이름에 `QUESTION_ONLY`가 없으면 경고가 뜬다. 코퍼스 구성을 `EVAL_SET_SUPPLEMENT.md` 4.1절 지문으로 확인하라는 뜻이다
 - 고른 값은 운영 임계값으로 서버를 다시 띄워 `--vector DUAL`로 실측해 시뮬레이션과 맞는지 확인한다
 
@@ -357,7 +375,7 @@ python3 scripts/classify_search_failures.py --self-test
 - 원인: 사용자 질문과 정답 FAQ 질문의 유사도가 기준선 이상이면 문서 쪽(B는 답변 희석, C, D는 비슷한 FAQ에 밀림), 미만이면 질문 쪽
 - 기준선: 생략하면 첫 파일의 A 그룹 최솟값. **전후 비교 때는 `--cutoff`로 고정**: 기준선이 움직이면 비교가 안 됨
 - 파일을 여러 개 넣으면 원인별 건수 비교표와 원인이 바뀐 문항 목록 출력
-- 결과, 해석: `docs/SEARCH_FAILURE_ANALYSIS.md`
+- 결과, 해석: `docs/01-pipeline/03-retrieval/search-failure-analysis.md`
 
 ---
 
@@ -394,7 +412,7 @@ python3 -c "import json,sys; sys.path.insert(0,'scripts'); import generate_store
 - 컬럼명은 판본마다 달라 못 찾으면 `--lat-col` 등으로 지정한다
 - 커밋된 `scripts/data/stores.json`은 위 기준으로 생성한 뒤 `phone`만 NULL로 정리한 판본이다. CSV에서 다시 생성하면 난수 스트림이 달라져 업무, 영업시간, 상태 배분이 바뀐다. 지금 데이터의 분포를 유지해야 하면 3)으로 SQL만 다시 뽑는다
 - 시드 SQL은 손으로 고치지 않는다. `check_stores.py`가 `to_sql(stores.json)`과 파일을 대조해 불일치를 잡는다
-- 이미 머지된 시드 SQL은 재생성하지 않는다. Flyway 체크섬이 깨져 앱이 기동하지 않는다. 데이터가 바뀌면 새 버전 파일을 추가한다 (`docs/flyway.md`)
+- 이미 머지된 시드 SQL은 재생성하지 않는다. Flyway 체크섬이 깨져 앱이 기동하지 않는다. 데이터가 바뀌면 새 버전 파일을 추가한다 (`docs/04-operations/flyway.md`)
 
 ---
 

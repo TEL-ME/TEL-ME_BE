@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class LlmComparisonEvidenceResolver implements ComparisonEvidenceResolver {
-    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 작으면 JSON이 끊긴다(docs/EVIDENCE_RESOLVER_COMPARISON.md).
+    // gpt-oss(Bedrock)는 답 앞의 내부 추론도 출력 한도를 써서 한도가 작으면 JSON이 끊긴다(docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md).
     // 엑사원은 출력이 짧아 한도를 올려도 응답이 같다
     private static final int MAX_OUTPUT_TOKENS = 800;
     private static final Pattern FAQ_ID = Pattern.compile("(?:ID\\s*)?(\\d+)", Pattern.CASE_INSENSITIVE);

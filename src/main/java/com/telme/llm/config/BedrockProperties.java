@@ -14,7 +14,7 @@ public record BedrockProperties(
         @DefaultValue("us-east-1") String region,
         @DefaultValue("openai.gpt-oss-120b-1:0") String model,
         // 호출 1회 전체 제한. 넘으면 판정 실패로 처리한다. 끝까지 기다린 호출 119회 중 5초 초과 5.9%, 8초 초과 0.8%,
-        // 최대 8.6초라 대부분 조금 느린 호출이다(docs/GRAY_ZONE_UPPER_BAND.md 5.5절)
+        // 최대 8.6초라 대부분 조금 느린 호출이다(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.5절)
         @DefaultValue("8s") Duration timeout,
         // gpt-oss의 생각 길이. 기본값은 길게 생각해 느리고 비싸다. low로도 판정 시험 합격(TELME-122)
         // gpt-oss가 아닌 모델로 바꾸면 비워 둔다

@@ -47,7 +47,7 @@ __pycache__/
 *.pyc
 scripts/data/.embed_cache.json
 
-### 검색 품질 측정 원시 결과 (재생성 가능, docs/SEARCH_TUNING.md 13절) ###
+### 검색 품질 측정 원시 결과 (재생성 가능, docs/01-pipeline/03-retrieval/search-tuning.md 13절) ###
 .measure/
 
 # 문맥 판정 평가 실행 결과 (원시 기록은 저장소에 두지 않는다)

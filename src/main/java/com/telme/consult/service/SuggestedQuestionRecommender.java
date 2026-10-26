@@ -22,7 +22,7 @@ import java.util.stream.Stream;
  * 정상 답변 아래 추천 질문을 정책 연결표로 고른다. LLM을 쓰지 않는다.
  *
  * <p>기준 FAQ의 정책에서 이어지는 정책을 앞에서부터 보고, 그 정책의 대표 질문(실제 FAQ 질문)을 최대 2개 돌려준다.
- * 연결표와 규칙 데이터는 scripts/build_suggested_question_data.py가 만든다. 설계·검증: docs/FOLLOWUP_RECOMMENDATION.md 8절
+ * 연결표와 규칙 데이터는 scripts/build_suggested_question_data.py가 만든다. 설계·검증: docs/01-pipeline/06-answer-generation/followup-recommendation.md 8절
  */
 public final class SuggestedQuestionRecommender {
     static final int MAX_QUESTIONS = 2;

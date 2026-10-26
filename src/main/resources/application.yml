@@ -128,7 +128,7 @@ llm:
     enabled: ${LLM_BEDROCK_ENABLED:true}
     region: ${LLM_BEDROCK_REGION:us-east-1}
     model: ${LLM_BEDROCK_MODEL:openai.gpt-oss-120b-1:0}
-    # 넘으면 판정 실패로 처리한다. 5초 초과 호출도 대부분 9초 안에 끝나 8초(docs/GRAY_ZONE_UPPER_BAND.md 5.5절)
+    # 넘으면 판정 실패로 처리한다. 5초 초과 호출도 대부분 9초 안에 끝나 8초(docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.5절)
     timeout: ${LLM_BEDROCK_TIMEOUT:8s}
     # 순간 장애(시간 초과·429·503 등) 재시도, 근거 판정 제외. max-attempts는 첫 호출 포함 횟수
     retry:
@@ -173,7 +173,7 @@ search:
   gray-zone:
     # 채팅 답변용 검색에서 점수 구간 일부를 판정기(llm.bedrock)로 한 번 더 확인한다. 기본 켜짐(TELME-160)
     # pass 이상은 판정 없이 통과, floor ~ pass는 판정기가 통과시켜야 근거, floor 미만은 버린다
-    # 채팅 API 측정: 정답 근거 61 → 74, 엉뚱한 근거 10 → 2, holdout 9 (docs/GRAY_ZONE_UPPER_BAND.md 5.8절)
+    # 채팅 API 측정: 정답 근거 61 → 74, 엉뚱한 근거 10 → 2, holdout 9 (docs/01-pipeline/04-evidence-judgment/gray-zone-upper-band.md 5.8절)
     # 로컬에서 Bedrock 키 없이 쓰려면 SEARCH_GRAY_ZONE_ENABLED=false로 끈다. llm.bedrock만 끄면 기동하지 않는다
     enabled: ${SEARCH_GRAY_ZONE_ENABLED:true}
     qa-pass: 0.80
@@ -203,7 +203,7 @@ chat:
     mode: ${CHAT_QUESTION_RESOLUTION_MODE:HISTORY_GATED}
     # 문맥 해석을 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다. false면 엑사원
     bedrock: ${CHAT_QUESTION_RESOLUTION_BEDROCK:true}
-    # gpt-oss 문맥 판정의 흔들림 보완(docs/CONTEXT_RESOLUTION.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
+    # gpt-oss 문맥 판정의 흔들림 보완(docs/01-pipeline/02-context-routing/context-resolution.md). 위 bedrock이 true면 이 값과 관계없이 켜진다
     stability-guards: ${CHAT_QUESTION_RESOLUTION_STABILITY_GUARDS:false}
   processing:
     # 채팅 턴을 동시에 처리하는 수와 처리를 기다릴 수 있는 턴 수. 대기열이 넘치면 그 턴은 바로 실패로 끝난다
@@ -221,7 +221,7 @@ chat:
 rag:
   answer:
     # 답변 생성을 gpt-oss(Bedrock)로 부른다. 첫 글자를 보내기 전에 실패하면 엑사원으로 대체한다. false면 엑사원
-    # gpt-oss로 결정(TELME-180, docs/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
+    # gpt-oss로 결정(TELME-180, docs/03-evaluation/chat-judge/results/20261018-answer-generation). Bedrock 답은 다 받은 뒤 한 번에 보낸다
     bedrock: ${RAG_ANSWER_BEDROCK:true}
     # 가드가 근거에 없는 금액으로 답을 막으면 gpt-oss 추론 강도를 medium으로 올려 한 번 다시 생성한다(TELME-205)
     # 다시 생성은 gpt-oss만 부르고 실패해도 엑사원으로 대체하지 않는다(안전 안내로 끝남)
@@ -281,7 +281,7 @@ telme:
       # 꺼도 요금제 추천의 나이·사용량 되묻기는 나간다. enabled를 끄면 그것까지 꺼진다
       extract-conditions: ${CONSULT_FAQ_CLARIFICATION_EXTRACT_CONDITIONS:false}
     # 비교·FAQ 후보 근거 검증 gpt-oss(Bedrock) 사용(실패 시 엑사원 대체). 두 값의 기본은 CONSULT_EVIDENCE_RESOLVER_BEDROCK이고
-    # 호출마다 따로 끄면 엑사원이다. docs/EVIDENCE_RESOLVER_COMPARISON.md
+    # 호출마다 따로 끄면 엑사원이다. docs/01-pipeline/04-evidence-judgment/evidence-resolver-comparison.md
     evidence-resolver:
       comparison-bedrock: ${CONSULT_COMPARISON_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
       candidate-bedrock: ${CONSULT_CANDIDATE_EVIDENCE_BEDROCK:${CONSULT_EVIDENCE_RESOLVER_BEDROCK:true}}
@@ -295,7 +295,7 @@ telme:
       # 요금제 목록 질문에 FAQ 대신 요금제 테이블로 답한다. 문제가 생기면 false로 끈다
       answer-enabled: ${CONSULT_PLAN_ANSWER_ENABLED:true}
     suggested-questions:
-      # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/FOLLOWUP_RECOMMENDATION.md).
+      # 정상 답변 아래 추천 질문 버튼(정책 연결표, docs/01-pipeline/06-answer-generation/followup-recommendation.md).
       # 독립 검증(7절)과 실제 채팅 경로 확인(7.2절)을 마쳐 기본으로 켠다. 환경변수에 false를 넣으면 끈다
       enabled: ${CONSULT_SUGGESTED_QUESTIONS_ENABLED:true}
       # 매장 방문이 필요한 답변 뒤 매장 찾기 버튼(문서 10절). 위 추천 질문이 켜져 있을 때만 동작한다.
@@ -311,10 +311,10 @@ telme:
   routing:
     # 의도 분류가 FAQ 하위 질문을 나눴을 때 요청 개수를 LLM으로 한 번 더 판정한다. EXAONE 의도 분류의 과잉 분해를 막는 장치다.
     # 비워 두면 라우팅 모델을 따라간다: gpt-oss(Bedrock)면 하지 않고(맞게 나뉜 질문을 다시 합치므로), 엑사원이면 한다
-    # (docs/ROUTING_CALL_COMPARISON.md 2단계). true/false를 주면 그 값을 쓴다
+    # (docs/01-pipeline/02-context-routing/routing-call-comparison.md 2단계). true/false를 주면 그 값을 쓴다
     request-inventory-enabled: ${ROUTING_REQUEST_INVENTORY_ENABLED:}
     # 라우팅 호출 4개(의도 분류, 요청 개수 판정, 검색어 검증, 후속 분석)를 gpt-oss(Bedrock)로 부른다. 실패하면 엑사원으로 대체한다.
-    # 1·3·4단계는 gpt-oss로 확정(docs/ROUTING_CALL_COMPARISON.md). false면 엑사원이고 이때는 위 요청 개수 판정이 켜진다
+    # 1·3·4단계는 gpt-oss로 확정(docs/01-pipeline/02-context-routing/routing-call-comparison.md). false면 엑사원이고 이때는 위 요청 개수 판정이 켜진다
     bedrock: ${ROUTING_BEDROCK:true}
 
 speech:
